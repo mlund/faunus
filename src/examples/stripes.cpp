@@ -8,11 +8,11 @@ namespace Faunus {
     // let's make a new pair potential
     struct CoreShell : public PairPotentialBase {
       double a1,a2,eps;
-      inline CoreShell(InputMap& in, string dir="general") {
-        name="Coreshell";
-        in.cd (dir+"/coreshell");
-        a1 = pow( in("radius",1.0), 2);
-        a2 = pow( in("radius",2.5), 2);
+      inline CoreShell(InputMap& in, string dir="") : PairPotentialBase(dir) {
+        name = "Core-shell potential";
+        in.cd ( jsondir + "/coreshell" );
+        a1 = pow( in("core_radius",1.0), 2);
+        a2 = pow( in("shell_radius",2.5), 2);
         eps = in("epsilon", 0.2);
       }
       template<class Tparticle>
@@ -29,19 +29,13 @@ int main() {
   InputMap in("stripes.json");            // open parameter file for user input
   Tspace spc(in);                         // simulation space, particles etc.
   Energy::Nonbonded<Tspace,Potential::CoreShell> pot(in);// Hamiltonian, non-bonded only
-  Group salt;                             // group for salt particles
-  salt.addParticles(spc,in);              // add according to user input
-
-  for (auto &i : spc.p)                   // place particles
-    i.z()=0;                              // in XY plane
-  spc.trial=spc.p;                        // trial coords must be in sync
 
   spc.load("state");                      // load old configuration if any
 
   Move::AtomicTranslation<Tspace> mv(in,pot,spc);// particle move class
-  mv.dir=Point(1,1,0);                    // move only in xy plane
-  mv.setGroup(salt);                      // move class acts on salt group
-  mv.move( in("steps",1e3) );             // move salt randomly 'steps' times
+
+  for (int i=0; i<1e3; i++)
+    mv.move();
 
   spc.save("state");                      // save final state
   FormatPQR::save("stripes.pqr", spc.p);  // save PQR file for i.e. VMD
@@ -73,8 +67,8 @@ int main() {
  =============
  @includelineno examples/stripes.cpp
 
- stripes.run
- =============
- @includelineno examples/stripes.run
+ stripes.json
+ ============
+ @includelineno examples/stripes.json
 
 */

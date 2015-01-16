@@ -73,15 +73,13 @@ namespace Faunus {
         virtual string _brief();
         //void initCutoff(size_t, float);       //!< Initialize all cut-off distances to single value
         //void setCutoff(size_t, size_t, float);//!< Specialized cut-off for a pair
-      protected:
-        string jsonsection;
       public:
         typedef PairMatrix<double> Tcutoff;
         Tcutoff rcut2;                        //!< Squared cut-off distance (angstrom^2)
         PairPotentialBase(std::string="");
         virtual ~PairPotentialBase();
+        string jsondir;    //!< Prefix used for user input specific to the potential
         string name;       //!< Name of potential
-        string prefix;     //!< Prefix used for user input specific to the potential
         string brief();    //!< Brief, one-lined information string
         virtual void setTemperature(double); //!< Set temperature [K]
 
@@ -1309,7 +1307,7 @@ namespace Faunus {
       public:
         Cardinaux(InputMap &in, const string &dir="") {
           name="Cardinaux";
-          in.cd ( dir+"/cardinaux" );
+          in.cd ( jsondir+"/cardinaux" );
           alpha=in.get<int>("alpha", 90);
           alphahalf=0.5*alpha;
           for (auto &i : atom)
@@ -1451,8 +1449,8 @@ namespace Faunus {
             setCutoff();
           }
 
-          CombinedPairPotential(InputMap &in, const string &dir1="", const string &dir2="") :
-            PairPotentialBase(dir1+dir2), first(in,dir1), second(in,dir2) {
+          CombinedPairPotential(InputMap &in, const string &dir="") :
+            PairPotentialBase(dir), first(in,dir), second(in,dir) {
               name=first.name+"+"+second.name;
               setCutoff();
             }

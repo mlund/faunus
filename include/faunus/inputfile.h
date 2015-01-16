@@ -48,7 +48,7 @@ namespace Faunus {
        *
        * ~~~~
        *   InputMap in( "input.json" );
-       *   in.cd( "general/system" );
+       *   in.cd( "system" );
        *   double T = in.get( "temperature", 298.15 );
        *   in.cd(); // back to upper level (root)
        * ~~~~
@@ -57,8 +57,8 @@ namespace Faunus {
        *
        * ~~~~
        *   {
-       *     "general" : {
-       *        "system" : { "temperature":341. },
+       *     "system" : {
+       *        "temperature":341.,
        *        "other subsection" : { ... }
        *     }
        *   }
@@ -163,7 +163,7 @@ namespace Faunus {
       } else return false;
     }
 
-    cd("general");
+    cd("system");
     string atomfile = get<string>("atomlist", "");
     if ( !atomfile.empty() )
       atom.includefile(atomfile);
@@ -194,7 +194,7 @@ namespace Faunus {
 #endif
         << endl;
       for (auto &m : map) {
-        f << std::left << setw(35) << m.first << setw(20) << m.second;
+        f << std::left << setw(45) << m.first << setw(20) << m.second;
         if ( !keyinfo[m.first].empty() )
           f << "# " << keyinfo[m.first];
         f << endl;
@@ -245,7 +245,7 @@ namespace Faunus {
 
   inline UnitTest::UnitTest(InputMap &in) {
     cnt=0;
-    in.cd ("general/unittest");
+    in.cd ("system/unittest");
     file = in.get<string>( "testfile","" );
     stable = in.get<bool>( "stable", true );
     include( file );

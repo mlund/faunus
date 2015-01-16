@@ -69,8 +69,7 @@ namespace Faunus {
         if (v.is<Tobj>())
           return v;
       } else {
-        std::cerr << "Error: JSON file " + file + " not loaded." << endl;
-        exit(1);
+        throw std::runtime_error("JSON file " + file + " not loaded.");
       }
       return Tval();
     }

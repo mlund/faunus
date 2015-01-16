@@ -44,14 +44,12 @@ namespace Faunus {
       return _getVolume();
     }
 
-    Sphere::Sphere(double radius) {
-      setRadius(radius);
+    Sphere::Sphere(double radius) : Geometrybase("Sphere") { 
       len = Point(r,diameter,0);
     }
 
     void Sphere::setRadius(double radius) {
       assert(radius>0 && "Radius must be larger than zero.");
-      name="Spherical";
       r = radius; 
       r2 = r*r; 
       diameter = 2*r; 
@@ -159,7 +157,7 @@ namespace Faunus {
      * @param length Length of the Cylinder (angstrom)
      * @param radius Radius of the Cylinder (angstrom)
      */
-    Cylinder::Cylinder(double length, double radius) {
+    Cylinder::Cylinder(double length, double radius) : Geometrybase("Cylinder") {
       init(length, radius);
     }
 
@@ -172,13 +170,13 @@ namespace Faunus {
      * `length` | Cylinder length [angstrom]
      * `radius` | Cylinder radius [angstrom] 
      */
-    Cylinder::Cylinder(InputMap &in, const string &dir) {
-      in.cd( dir+"/cylinder" );
+    Cylinder::Cylinder(InputMap &in, const string &sec) : Geometrybase("Cylinder", sec) {
+      in.cd( jsondir + "/cylinder" );
       init( in.get("length", 0.0), in.get("radius", 0.0) );
     }
 
     void Cylinder::init(double length, double radius) {
-      name="Cylindrical (hard ends)";
+      name="Cylinder (hard ends)";
       assert(length>0 && radius>0 && "Cylinder length and radius must be bigger than zero.");
       _len=length;
       setVolume( pc::pi*radius*radius*_len );

@@ -30,17 +30,19 @@ namespace Faunus {
         private:
           virtual string _info()=0;
         protected:
+          std::string jsondir;
           TcoordFunc p2c; // function to convert point to internal coordinate
         public:
-          ExternalPotentialBase() : p2c(nullptr) {}
+          ExternalPotentialBase( const string dir="") : jsondir(dir), p2c(nullptr) {
+            if ( jsondir.empty() )
+              jsondir = "energy";
+          }
 
           virtual ~ExternalPotentialBase() {}
 
-          template<typename T> void setCoordinateFunc(T f) { p2c=f; }
+          template<typename T> void setCoordinateFunc(T f) { p2c = f; }
 
-          string info() {
-            return _info();
-          }
+          string info() { return _info(); }
 
           template<class Tparticle>
             Point field(const Tparticle &) { return Point(0,0,0); }
@@ -94,6 +96,7 @@ namespace Faunus {
     template<class T=double, bool linearize=false>
       class GouyChapman : public ExternalPotentialBase<> {
         private:
+          typedef ExternalPotentialBase<> base;
           Potential::DebyeHuckel dh;
           T c0;          //!< Ion concentration (1/A^3)
           T rho;         //!< Surface charge density (e/A^2)
@@ -104,7 +107,7 @@ namespace Faunus {
           T offset;      //!< Distance off set for hiding GC surface behind the box surface
           std::string _info();
         public:
-          GouyChapman(InputMap&);          //!< Constructor
+          GouyChapman(InputMap&, string dir=""); //!< Constructor
           void setSurfPositionZ(T*);       //!< Set surface position on z-axis
           T surfDist(const Point&);        //!< Point<->GC surface distance
           template<typename Tparticle>
@@ -124,24 +127,24 @@ namespace Faunus {
      * bulk salt concentration.
      */
     template<class T, bool linearize>
-      GouyChapman<T,linearize>::GouyChapman(InputMap &in) : dh(in) {
-        string prefix = "gouychapman_";
+      GouyChapman<T,linearize>::GouyChapman(InputMap &in, string dir) : base(dir), dh(in) {
         name = "Gouy-Chapman";
-        c0 = dh.ionicStrength() * pc::Nav / 1e27; // assuming 1:1 salt, so c0=I
+        jsondir += "/gouychapman";
+        in.cd ( jsondir );
+        c0 = dh.ionicStrength() * 1.0_molar; // assuming 1:1 salt, so c0=I
         lB = dh.bjerrumLength();
         k  = 1/dh.debyeLength();
-        //linearize = in(prefix+"linearize",false);
-        phi0 = in(prefix+"phi0",0.); // Unitless potential = beta*e*phi0
-        if ( std::abs(phi0)>1e-6 )
+        phi0 = in( "phi0", 0.0 ); // Unitless potential = beta*e*phi0
+        if ( std::abs(phi0) > 1e-6 )
           rho = sqrt(2*c0/(pc::pi*lB))*sinh(.5*phi0); //Evans&Wennerstrom,Colloidal Domain p 138-140
         else {
-          rho = 1/in(prefix+"qarea",0.);
+          rho = 1/in( "qarea", 0.0 );
           if (rho>1e9)
-            rho = in(prefix+"rho",0.);
-          phi0 = 2.*asinh(rho * sqrt(.5*lB*pc::pi/c0 ));//[Evans..]
+            rho = in( "rho", 0.0 );
+          phi0 = 2.*asinh(rho * sqrt(0.5*lB*pc::pi/c0 ));//[Evans..]
         }
         gamma0 = tanh(phi0/4); // assuming z=1  [Evans..]
-        offset = in(prefix+"offset",0.);
+        offset = in( "offset", 0.0 );
       }
 
     /**
@@ -150,7 +153,7 @@ namespace Faunus {
      */
     template<class T, bool linearize>
       T GouyChapman<T,linearize>::surfDist(const Point &p) {
-        assert(p2c!=nullptr && "Surface distance function not set!");
+        assert(p2c!=nullptr && "Did you call `setSurfPositionZ()` ?");
         return p2c(p);
       }
 
@@ -421,6 +424,9 @@ namespace Faunus {
         else if (type.compare("r3")     == 0) _type = R3;
         else if (type.compare("linear") == 0) _type = LINEAR;
         else                                  _type = SQWL;
+
+        if ( _depth < 0 )
+          throw std::runtime_error( "Square well depth must be positive." ); 
       }
 
     template<class T>
@@ -434,6 +440,7 @@ namespace Faunus {
     template<class T>
       template<typename Tparticle>
       T StickyWall<T>::operator()(const Tparticle &p) {
+        assert( this->p2c!=nullptr && "Did you call `setSurfPositionZ()` ?" );
         if (_depth > 1e-6) {                               // save CPU cycles if _depth is zero
           double value=0;
           if (_type == SQWL) {

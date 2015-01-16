@@ -35,29 +35,19 @@ namespace Faunus {
         bool _overlap=true;
         Tpvec v;
         do {
-          if (mol.isAtomic()) {
-            for (auto &id: mol.atoms) { // for each atom type id
-              int n; // number of atoms to insert
-              if (atom[id].activity>1e-9)
-                n=1;
-              else 
-                n = atom[id].Ninit;
-              v.reserve( n );
-              while (n-- > 0) {
-                v.push_back( Tparticle() );
-                v.back() = atom[id];   // set part type
-                Geometry::QuaternionRotate rot;
-                Point u;
-                u.ranunit(slump);
-                rot.setAxis(geo, {0,0,0}, u, pc::pi * slump());
-                v.back().rotate(rot);
-                geo.randompos( v.back() );
-                v.back() = v.back().cwiseProduct(dir) + offset;
-                geo.boundary( v.back() );
-              }
-              atom[id].Ninit = -1;
+          if (mol.isAtomic()) { // insert atomic species
+            v = mol.getRandomConformation();
+            for (auto &i : v) { // for each atom type id
+              Geometry::QuaternionRotate rot;
+              Point u;
+              u.ranunit(slump);
+              rot.setAxis( geo, {0,0,0}, u, pc::pi * slump() );
+              i.rotate(rot);
+              geo.randompos( i );
+              i = i.cwiseProduct(dir) + offset;
+              geo.boundary( i );
             }
-          } else {
+          } else { // insert molecule
             v = mol.getRandomConformation();
             Point a, b;
             geo.randompos(a);                  // random point in container
@@ -163,7 +153,7 @@ namespace Faunus {
         TinserterFunc inserterFunctor;              //!< Function for insertion into space
 
         /** @brief Constructor - by default data is initialized; mass set to unity */
-        inline MoleculeData( const Tjson &molecule=Tjson()) : _isAtomic(false), Ninit(0) {
+        inline MoleculeData( const Tjson &molecule=Tjson()) : Ninit(0), _isAtomic(false) {
           readJSON(molecule);
           auto ins = RandomInserter<MoleculeData<Tpvec>>();
           ins.dir    << json::value<string>( molecule.second, "insdir", "1 1 1" );
@@ -184,8 +174,12 @@ namespace Faunus {
 
         /** @brief Get a random conformation */
         Tpvec getRandomConformation() {
+          if ( conformations.empty() )
+            throw std::runtime_error("No configurations for molecule '"+name+"'");
+
           assert( size_t(confDist.max()) == conformations.size()-1 );
           assert( atoms.size() == conformations.front().size() );
+
           return conformations[ confDist(slump.eng) ];
         }
 
@@ -247,8 +241,8 @@ namespace Faunus {
           for (auto &i : json::object("dihedrals", molecule.second) )
             dihedrals.push_back( Bonded::DihedralData(i) );
 
+          // read conformation from disk
           {
-            // read conformation from disk
             string structure = json::value<string>( molecule.second, "structure", "" );
             if ( !structure.empty() ) {
               Tpvec v;
@@ -317,13 +311,14 @@ namespace Faunus {
 
           // for atomic groups, add particles
           if ( isAtomic() ) {
-            Tpvec _vec;
             Tparticle _p;
+            Tpvec _vec;
+            _vec.reserve( atoms.size() );
             for (auto id : atoms) {
               _p = atom[id];
               _vec.push_back( _p );
             }
-            conformations.push_back( _vec );
+            pushConformation( _vec );
           }
         }
 
@@ -409,8 +404,9 @@ namespace Faunus {
 
         /** @brief Read JSON file given through `InputMap` */
         bool includefile(InputMap &in) {
-          in.cd ("general");
+          in.cd ("system");
           string file = in( "moleculelist", string("") );
+          assert( !file.empty() && "Empty json file for molecules");
           return base::includefile(file);
         }
 

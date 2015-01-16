@@ -5,20 +5,21 @@ cp -f $source_tests_dir/water2.test . 2> /dev/null
 cp -f $source_tests_dir/water2.state state 2> /dev/null
 
 echo '{
-  "general" : {
+  "system" : {
     "cuboid"   : { "len" : 27. },
-    "coulomb"  : { "epsr":1.0, "cutoff":9. },
     "mcloop"   : { "macro":10, "micro":400 },
     "unittest" : { "testfile":"water2.test", "stable":false },
-    "ewald"    : { "precision":0.01, "epsr_surf":1e11, "cutoff":9, "alpha":0.2 },
- 
     "atomlist"              : "water2.json",
     "moleculelist"          : "water2.json",
     "moleculecombinations"  : "water2.json"
   },
 
-  "hamiltonian" : {
-    "nonbonded" : { "cutoff_g2g":10. }
+  "energy" : {
+    "nonbonded" : {
+      "coulomb" : { "epsr" : 1.0 },
+      "ewald"   : { "precision":0.01, "epsr_surf":1e11, "cutoff":9, "alpha":0.2 },
+      "cutoff_g2g" : 10.
+    }
   },
 
   "atomlist" : {

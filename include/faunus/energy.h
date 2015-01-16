@@ -47,10 +47,10 @@ namespace Faunus {
     template<class Tspace>
       class Energybase {
         protected:
-          string prefix;  // inputmap section
-          virtual std::string _info()=0;
+          string jsondir; // inputmap section
           char w; //!< Width of info output
           Tspace* spc;
+          virtual std::string _info()=0;
 
           /** @brief Determines if given particle vector is the trial vector */
           template<class Tpvec>
@@ -66,7 +66,10 @@ namespace Faunus {
 
           inline virtual ~Energybase() {}
 
-          inline Energybase(const string &pfx="") : prefix(pfx), w(25), spc(nullptr) {}
+          inline Energybase(const string &dir="") : jsondir(dir), w(25), spc(nullptr) {
+            if ( jsondir.empty() )
+              jsondir = "energy";
+          }
 
           inline virtual void setSpace(Tspace &s) { spc=&s; } 
 
@@ -261,9 +264,9 @@ namespace Faunus {
           typename Tspace::GeometryType geo;
           Tpairpot pairpot;
 
-          Nonbonded(InputMap &in, const string &dir="hamiltonian")
-            : Tbase(dir+"/nonbonded"), geo(in), pairpot(in, "general") {
-              in.cd ( Tbase::prefix );
+          Nonbonded(InputMap &in, const string &dir="")
+            : Tbase(dir), geo(in), pairpot(in, Tbase::jsondir+"/nonbonded" ) {
+              in.cd ( Tbase::jsondir + "/nonbonded" );
               static_assert(
                   std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
                   "Tpairpot must be a pair potential" );
@@ -422,7 +425,7 @@ namespace Faunus {
           typename Tspace::GeometryType geo;
           Tpairpot pairpot;
 
-          NonbondedVector(InputMap &in, const string &dir="hamiltonian")
+          NonbondedVector(InputMap &in, const string &dir="energy")
             : Tbase(dir+"/nonbonded"), geo(in), pairpot(in) {
               static_assert(
                   std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
@@ -672,7 +675,7 @@ namespace Faunus {
         public:
           bool noPairPotentialCutoff; //!< Set if range of pairpot is longer than rcut (default: false)
 
-          NonbondedCutg2g(InputMap &in, string dir="hamiltonian") : base(in,dir) {
+          NonbondedCutg2g(InputMap &in, string dir="energy") : base(in,dir) {
             noPairPotentialCutoff=false;
             rcut2 = pow( in("cutoff_g2g", pc::infty), 2);
             base::name += " (g2g cut=" + std::to_string(sqrt(rcut2))
@@ -978,8 +981,7 @@ namespace Faunus {
             o << textio::indent(textio::SUBSUB) << std::left << setw(7) << i
               << setw(7) << j << pot.brief() + "\n";
             _infolist += o.str();
-            pot.name.clear();   // potentially save a
-            pot.prefix.clear(); // little bit of memory
+            pot.name.clear();   // potentially save a little bit of memory
             Tbase::add(i,j,pot);// create and add functor to pair list
             force_list[ typename Tbase::Tpair(i,j) ]
               = ForceFunctionObject<decltype(pot)>(pot);
@@ -2221,10 +2223,12 @@ namespace Faunus {
 
           Hamiltonian( const json::Tval &js ) {
             Tbase::name = "Hamiltonian";
-            json::Tobj m = json::object("hamiltonian", js);
+            json::Tobj m = json::object("energy", js);
             for ( auto &i : m ) {
-              if (i.first=="nb_lj")
+              if (i.first=="nonbonded") {
+                // todo: check for "type" in nonbonded, i.e. "lj", "coulomblj" etc.
                 push_back( Energy::Nonbonded<Tspace, Potential::LennardJonesLB>(js) ); 
+              }
             }
           }
 

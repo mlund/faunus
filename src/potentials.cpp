@@ -13,9 +13,9 @@ namespace Faunus {
 
   namespace Potential {
 
-    PairPotentialBase::PairPotentialBase(std::string pfx) {
-      prefix=pfx;
-      jsonsection = "pairpotential";
+    PairPotentialBase::PairPotentialBase(std::string section) : jsondir(section) {
+      if ( jsondir.empty() ) 
+        jsondir = "system";
       rcut2.resize(atom.size());
     }
 
@@ -64,7 +64,7 @@ namespace Faunus {
 
     Harmonic::Harmonic(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="Harmonic";
-      in.cd ( dir+"/hamonic" );
+      in.cd ( jsondir+"/hamonic" );
       k  = in("k", 0.0);
       req= in("req", 0.0);
     }
@@ -88,7 +88,7 @@ namespace Faunus {
 
     FENE::FENE(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="FENE";
-      in.cd ( dir+"/fene" );
+      in.cd ( jsondir+"/fene" );
       k  = in( "stiffness", 0.0);
       r02 = pow( in( "maxsep", 0.0), 2);
       r02inv = 1/r02;
@@ -103,7 +103,7 @@ namespace Faunus {
 
     Hertz::Hertz(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name = "Hertz";
-      in.cd ( dir+"/hertz" );
+      in.cd ( jsondir+"/hertz" );
       E = in( "_E", 0.0);
     }
 
@@ -123,7 +123,7 @@ namespace Faunus {
 
     YukawaGel::YukawaGel(InputMap &in, const string &dir) : Coulomb(in, dir) {
       name = "YukawaGel";
-      in.cd ( dir+"/yukawagel" );
+      in.cd ( jsondir+"/yukawagel" );
 
       Z  = in("yukawagel_Z", 0.0);
       nc = in("yukawagel_nc", 0.0);
@@ -159,7 +159,7 @@ namespace Faunus {
 
     CosAttract::CosAttract(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="CosAttract";
-      in.cd ( dir+"/cosattract" );
+      in.cd ( jsondir+"/cosattract" );
       eps = in("eps", 0.0);
       rc  = in("rc",  0.0);
       wc  = in("wc",  0.0);
@@ -201,11 +201,11 @@ namespace Faunus {
 
     /**
      * @param in InputMap is scanned for the `lj_eps` and should be in units of kT
-     * @param pfx Prefix for InputMap - default is `ls_`
+     * @param dir Prefix for InputMap - default is `ls_`
      */
     LennardJones::LennardJones(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="Lennard-Jones";
-      in.cd ( dir+"/ljsimple" );
+      in.cd ( jsondir+"/ljsimple" );
       eps = 4*in("eps", 0.);
       string unit = in.get<string>("unit", "kT");
       if ( unit=="kJ/mol" )
@@ -237,11 +237,11 @@ namespace Faunus {
     /**
      * @param in is scanned for the keywords `prefix_threshold` (angstrom)
      *        and `prefix_depth` (kT).
-     * @param pfx InputMap keyword prefix. Default is `squarewell`
+     * @param dir Root section for input
      */
     SquareWell::SquareWell(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="Square Well";
-      in.cd ( dir+"/squarewell" );
+      in.cd ( jsondir+"/squarewell" );
       threshold = in( "threshold", 0.0 );
       depth     = in( "depth", 0.0 );
     }
@@ -292,10 +292,11 @@ namespace Faunus {
 
     /**
      * @param in InputMap is scanned for the keyword `softrep_sigma` which should be in angstrom
+     * @param dir Base input section
      */
     SoftRepulsion::SoftRepulsion(InputMap &in, const string &dir) {
       name="Repulsive r6";
-      in.cd ( dir+"/softrep" );
+      in.cd ( jsondir+"/softrep" );
       sigma6 = pow( in( "sigma", 5.0 ), 6);
     }
 
@@ -318,11 +319,11 @@ namespace Faunus {
 
     /**
      * @param in InputMap is scanned for the keyword `lj_eps` and should be in units of kT
-     * @param pfx InputMap prefix
+     * @param dir InputMap prefix
      */
     R12Repulsion::R12Repulsion(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="r12-Repulsion";
-      in.cd ( dir+"/lj" );
+      in.cd ( jsondir+"/lj" );
       eps = 4*in( "eps", 0.05 );
     }
 
@@ -348,7 +349,7 @@ namespace Faunus {
      */
     Coulomb::Coulomb(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="Coulomb";
-      in.cd ( dir+"/coulomb" );
+      in.cd ( jsondir+"/coulomb" );
       epsilon_r = in("epsr",80. );
       depsdt = in("depsdt", -0.368 ) * pc::T() / epsilon_r;
       lB=pc::lB( epsilon_r );

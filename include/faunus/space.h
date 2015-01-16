@@ -187,6 +187,8 @@ namespace Faunus {
          * will insert accordingly.
          */
         Space(InputMap &in) : geo(in) {
+          in.cd ("system");
+          pc::setT( in("temperature", 298.15 ) );
           molecule.includefile(in);
           for (auto mol : molecule)
             while (mol.Ninit-- > 0)

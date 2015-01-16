@@ -17,28 +17,21 @@ typedef Space<Tgeometry,PointParticle> Tspace;
 int main() {
   cout << textio::splash();           // show faunus banner and credits
 
-  InputMap mcp("bulk.input");         // open user input file
+  InputMap mcp("bulk.json");          // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
   EnergyDrift sys;                    // class for tracking system energy drifts
 
   // Construct Hamiltonian and Space
   Tspace spc(mcp);
+
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
 
-  pot.setSpace(spc);
-
   // Markov moves and analysis
-  Move::Isobaric<Tspace> iso(mcp,pot,spc);
-  Move::AtomicTranslation<Tspace> mv(mcp,pot,spc);
+  Move::Propagator<Tspace> mv(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf_ab(0.1);      // 0.1 angstrom resolution
   Analysis::VirialPressure virial;
   Average<double> pm;
-
-  // Add salt
-  Group salt;
-  salt.addParticles(spc, mcp);
-  mv.setGroup(salt);
 
   spc.load("state");                               // load old config. from disk (if any)
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store initial total system energy
@@ -52,15 +45,11 @@ int main() {
 
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      if (slump() < 0.5)
-        sys+=mv.move( salt.size() );  // translate salt
-      else 
-        sys+=iso.move();              // isobaric volume move
+      sys += mv.move();
 
       if (slump() < 0.05) {
-        rdf_ab.sample(spc,salt,atom["Na"].id,atom["Cl"].id);
+        //rdf_ab.sample(spc,salt,atom["Na"].id,atom["Cl"].id);
         virial.sample(spc,pot);
-        //pm+=pot.first.pairpot.first.virial(spc.p,spc.geo);
       }
     } // end of micro loop
 
@@ -76,13 +65,11 @@ int main() {
 
   // perform unit tests (irrelevant for the simulation)
   UnitTest test(mcp);                    // class for unit testing
-  iso.test(test);
   mv.test(test);
   sys.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + mv.info() + iso.info()
-    + virial.info() + test.info();
+  cout << loop.info() + sys.info() + mv.info() + virial.info() + test.info();
 
   return test.numFailed();
 }
@@ -106,6 +93,10 @@ int main() {
   Information about the input file can be found in `src/examples/bulk.run`.
 
   ![Na-Cl distribution function with various electrostatic potentials.](wolf.png)
+
+  bulk.json
+  =========
+  @includelineno examples/bulk.json
 
   bulk.cpp
   ========

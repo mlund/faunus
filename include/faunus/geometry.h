@@ -47,6 +47,7 @@ namespace Faunus {
       protected:
         RandomTwister<> slp;
         string name;                                        //!< Name of the geometry
+        string jsondir;                                     //!< Default input section
         inline int anint(double x) const {
           return int(x>0. ? x+.5 : x-.5);
         }
@@ -64,7 +65,15 @@ namespace Faunus {
         virtual double sqdist(const Point &a, const Point &b) const=0; //!< Squared distance between two points
         virtual Point vdist(const Point&, const Point&)=0;  //!< Distance in vector form
 
-        inline Geometrybase() {}
+        /**
+         * @brief Constructor
+         * @param name Name of geometry
+         * @param sec Name of input section to look for parameters
+         */
+        inline Geometrybase( const string &name, const string &sec="") : name(name), jsondir(sec) {
+          if ( jsondir.empty() )
+            jsondir = "system";
+        }
         virtual ~Geometrybase();
     };
 
@@ -94,8 +103,8 @@ namespace Faunus {
          * :---------------- | :----------------------
          * radius`   | Sphere radius [angstrom]
          */
-        inline Sphere(InputMap &in, const string &dir="general") {
-          in.cd( dir+"/sphere" ); 
+        inline Sphere(InputMap &in, const string &sec="") : Geometrybase("Sphere",sec) {
+          in.cd( jsondir + "/sphere" );
           setRadius(
               in.get("radius", -1.0, "Spherical container radius (A)") );
         }
@@ -146,9 +155,8 @@ namespace Faunus {
          * `cuboid_zlen`     | z sidelength [angstrom]
          * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
          */
-        inline Cuboid(InputMap &in, const string &dir="general") {
-          name="cuboid";
-          in.cd( dir+"/"+name );
+        inline Cuboid(InputMap &in, const string &sec="") : Geometrybase("Cuboid", sec) {
+          in.cd( jsondir + "/cuboid" );
           string scaledirstr = in.get<string>("scaledir","XYZ");
           if (scaledirstr=="XY")
             scaledir=XY;
@@ -224,7 +232,7 @@ namespace Faunus {
      */
     class Cuboidslit : public Cuboid {
       public:
-        Cuboidslit(InputMap &in, const string &dir="general") : Cuboid(in,dir) {
+        Cuboidslit(InputMap &in, const string &dir="") : Cuboid(in,dir) {
           name="Cuboid XY-periodicity";
         }
 
@@ -281,7 +289,7 @@ namespace Faunus {
       public:
         Point len;                     //!< Dummy
         Cylinder(double, double);      //!< Construct from length and radius
-        Cylinder(InputMap&, const string& dir="general"); //!< Construct from inputmap
+        Cylinder(InputMap&, const string& dir=""); //!< Construct from inputmap
         bool setlen(const Point&);     //!< Set length via vector (dummy function)
         void randompos(Point &);
         void boundary(Point &) const;
@@ -300,7 +308,7 @@ namespace Faunus {
     class PeriodicCylinder : public Cylinder {
       public:
         PeriodicCylinder(double, double);
-        PeriodicCylinder(InputMap&, const string& dir="general");
+        PeriodicCylinder(InputMap&, const string& dir="");
 
         void boundary(Point&) const;
 

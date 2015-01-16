@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
-# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
-# TO UPDATE THE TEST.
-
 source_tests_dir="`dirname $0`"
 cp -f $source_tests_dir/polymers.test . 2> /dev/null
 cp -f $source_tests_dir/polymers.state state 2> /dev/null
@@ -12,22 +8,15 @@ cp -f $source_tests_dir/polymers.state state 2> /dev/null
 # Create input file with atom properties
 #-----------------------------------------------------------
 echo '{
-
-  // dp = Displacement parameter [angstrom]
-  // q  = Valency/charge number [e]
-  // r  = Radius [angstrom]
-
   "atomlist" : {
-    "Na" : { "q": 1.0, "r":2.0, "dp":110, "Ninit":0  },  // sodium ion
-    "Cl" : { "q":-1.0, "r":2.0, "dp":110, "Ninit":32 },  // chloride ion
-    "MM" : { "q": 1.0, "r":3.0, "dp":10 }                // monomer
+    "Na" : { "q": 1.0, "r":2.0, "dp":110 },
+    "Cl" : { "q":-1.0, "r":2.0, "dp":110 },
+    "MM" : { "q": 1.0, "r":3.0, "dp":10 }
   },
 
   "moleculelist" : {
-    "salt" : { "atoms":"Na Cl", "atomic":true, "Ninit":1 },
-
-    "polymer" :
-    {
+    "counterions" : { "atoms":"Cl", "atomic":true, "Ninit":32 },
+    "polymer" : {
       "structure":"polymers.aam", "Ninit":8,
       "bonds" : {
         "0 1" : { "type":"harmonic", "k":0.0557, "req":0.0 }, // kT/AA^2, AA
@@ -37,14 +26,14 @@ echo '{
     }
   },
 
-  "hamiltonian" : {
-    "nonbonded" : {}
+  "energy" : {
+    "nonbonded" : { "coulomb" : { "epsr" : 78.7 } }
   },
 
   "moves" : {
     "atomtranslate" : {
-      "salt"    : { "prop":1.0, "peratom":true },
-      "polymer" : { "prop":1.0, "permol":true, "peratom":true }
+      "counterions" : { "prop":1.0, "peratom":true },
+      "polymer"     : { "prop":1.0, "permol":true, "peratom":true }
     },
     "moltransrot" : {
       "polymer" : { "dp":50, "dprot":6, "permol":true, "dir":"1 1 1" } 
@@ -58,10 +47,9 @@ echo '{
     "isobaric" : { "dp":2, "pressure":113.2, "prop":0.1 }
   },
 
-  "general" : {
+  "system" : {
     "cuboid"       : { "len" : 200. },
     "sphere"       : { "radius" : 100. },
-    "coulomb"      : { "epsr" : 78.7 },
     "mcloop"       : { "macro":10, "micro":20000 },
     "unittest"     : { "testfile":"polymers.test", "stable":false },
     "atomlist"     : "polymers.json",

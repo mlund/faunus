@@ -112,7 +112,7 @@ namespace Faunus {
     private:
       typedef TimedCounter<int> base;
     public:
-      inline MCLoop(InputMap &in, string dir="general") {
+      inline MCLoop(InputMap &in, string dir="system") {
         in.cd (dir+"/mcloop");
         base::set( {in("macro", 10), in("micro", 1000)} );
       }

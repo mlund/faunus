@@ -10,33 +10,34 @@ cp -f $source_tests_dir/bulk.state state 2> /dev/null
 
 echo '{
   "atomlist" : {
-    "Na" : { "q": 1.0, "sigma":3.33, "eps":0.01158968, "dp":1.0 },  // sodium ion
-    "Cl" : { "q":-1.0, "sigma":4.40, "eps":0.4184,     "dp":1.0 }   // chloride ion
+    "Na" : { "q": 1.0, "sigma":3.33, "eps":0.01158968, "dp":1.0, "Ninit":1152 },
+    "Cl" : { "q":-1.0, "sigma":4.40, "eps":0.4184,     "dp":1.0, "Ninit":1152 }
+  },
+
+  "moleculelist" : {
+    "NaCl" : { "atoms":"Na Cl", "Ninit":1, "atomic":true }
+  },
+
+  "energy" : {
+    "nonbonded" : { "coulomb" : { "epsr":1, "cutoff":14. } }
+  },
+
+  "moves" : {
+    "isobaric" : { "dp":0, "pressure":11, "prop":0.1 },
+    "atomtranslate" : { 
+      "NaCl" : { "peratom":true }
+    }
+  },
+
+  "system" : {
+    "temperature"  : 1100.,
+    "cuboid"       : { "len" : 80. },
+    "mcloop"       : { "macro":5, "micro":40 },
+    "unittest"     : { "testfile":"bulk.test", "stable":false },
+    "atomlist"     : "bulk.json",
+    "moleculelist" : "bulk.json"
   }
 }' > bulk.json
-
-echo "
-atomlist        bulk.json    # atom properties
-cuboid_len      80           # angstrom
-
-temperature     1100         # K
-epsilon_r       1            # dielectric const.
-coulomb_cut     14.          # coulomb cutoff [angstrom]
-
-loop_macrosteps 5            # number of macro loops
-loop_microsteps 40           # number of micro loops
-
-tion1  Na
-nion1  1152                  # number of sodium atoms
-tion2  Cl
-nion2  1152                  # number of chloride atoms
-
-npt_dV 0                     # 0.04 (0=no volume displacement=NVT)
-npt_P  11.                   # external pressure [mM]
-
-test_stable        no
-test_file          bulk.test
-" > bulk.input
 
 exe=./bulk
 if [ -x $exe ]; then

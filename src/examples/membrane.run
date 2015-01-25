@@ -26,10 +26,10 @@ echo '{
   },
 
   "moves" : {
-    "atomtranslate" : { "lipid" : { "prop":0.5 } },
+    "atomtranslate" : { "lipid" : { "prob":0.5 } },
     "pivot"         : { "lipid" : { "permol":true,  "minlen":1, "maxlen":2, "dp":6 } },
     "moltransrot"   : { "lipid" : { "permol":true, "dp":2.0, "dprot":0.5 } },
-    "isobaric"      : { "dp":0.5, "pressure":0, "prop":0.2 }
+    "isobaric"      : { "dp":0.5, "pressure":0, "prob":0.2 }
   },
 
   "system" : {

@@ -638,11 +638,12 @@ namespace Faunus {
      * particle-particle cutoff plus the maximum radii of the two groups,
      * @f$ r_{cut}^{g2g} = r_{cut}^{p2p} + a_{g1} + a_{g2} @f$.
      *
-     * Upon construction the `InputMap` is searched for: 
+     * Upon construction the `InputMap` is searched for the following in
+     * section `energy/nonbonded/`:
      *
      * Keyword      |  Description
      * :----------- |  :------------------------------------
-     * `g2g_cutoff` |  Cutoff (angstrom) [default: infinity]
+     * `cutoff_g2g` |  Cutoff (angstrom) [default: infinity]
      *
      */
     template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace,Tpairpot> >
@@ -1039,7 +1040,7 @@ namespace Faunus {
     /**
      * @brief Energy from external pressure for use in the NPT-ensemble.
      *
-     * @details This will count the number of particles in the system and
+     * This will count the number of particles in the system and
      * calculate the energy contribution to the pressure at a given
      * volume and external pressure.
      *
@@ -1053,6 +1054,9 @@ namespace Faunus {
      *
      * To groups from being counted against `N`, insert them into
      * `ignored`.
+     *
+     * Upon construction, this will look for input section `moves/isobaric`
+     * for the keyword `pressure` (units of mM). See also `Move::Isobaric`.
      *
      * @date Lund, 2011
      */
@@ -1103,14 +1107,13 @@ namespace Faunus {
 
           ExternalPressure(InputMap &in) {
             this->name="External Pressure";
-            P=in.get<double>("npt_P",0,
-                "NPT external pressure P/kT (mM)") * 1.0e-3_molar;
-            assert(P>=0 && "Specify non-negative pressure");
+            in.cd ( "moves/isobaric" );
+            P = in( "pressure", 0.0 ) * 1.0_mM;
+            if (P < 0)
+              throw std::runtime_error( "Negative pressure forbidden." );
           }
 
-          auto tuple() -> decltype(std::make_tuple(this)) {
-            return std::make_tuple(this);
-          }
+          auto tuple() -> decltype(std::make_tuple(this)) { return std::make_tuple(this); }
 
           /** @brief External energy working on system. pV/kT-lnV */
           double external(const Tpvec&p) FOVERRIDE {
@@ -1123,9 +1126,9 @@ namespace Faunus {
             // should this group be ignored?
             if ( ignore.count(&g)!=0 )
               return 0;
-            int N=g.numMolecules();
-            double V=this->getSpace().geo.getVolume();
-            return -N*log(V);
+            int N = g.numMolecules();
+            double V = this->getSpace().geo.getVolume();
+            return - N * log(V);
           }
       };
 
@@ -1339,23 +1342,24 @@ namespace Faunus {
      * tension, @f$\gamma@f$, is not comparable to a true, macroscopic
      * tension.
      *
-     * Upon construction the following keywords are read from `InputMap`:
+     * Upon construction the following keywords are read from `InputMap` in
+     * sectio `energy/hydrophobicsasa`:
      *
-     *  Keyword                | Comment
-     *  :--------------------- | :--------------
-     *  `sasahydro_sasafile`   | SASA file - one column (angstrom^2)
-     *  `sasahydro_duplicate`  | read SASA file n times (default: 1)
-     *  `sasahydro_tension`    | surface tension (default: 0 dyne/cm)
-     *  `sasahydro_threshold`  | surface distance threshold (default: 3.0 angstrom)
-     *  `sasahydro_uofr`       | set to "yes" if U(r) should be sampled (default: "no")
-     *  `sasahydro_dr`         | distance resolution of U(r) (default: 0.5 angstrom)
+     *  Keyword      | Comment
+     *  :----------- | :--------------------------------------------------------
+     *  `sasafile`   | SASA file - one column (angstrom^2)
+     *  `duplicate`  | read SASA file n times (default: 1)
+     *  `tension`    | surface tension (default: 0 dyne/cm)
+     *  `threshold`  | surface distance threshold (default: 3.0 angstrom)
+     *  `uofr`       | set to "yes" if U(r) should be sampled (default: "no")
+     *  `dr`         | distance resolution of U(r) (default: 0.5 angstrom)
      *
      *  The `sasafile` should be a single column file with SASA values for each particle in
      *  the system (angstrom^2). Alternatively one can load the file several times using
      *  the `duplicate` option. To generate a SASA file of a protein, use the vmd-sasa.tcl
      *  VMD script, found in the `scripts` folder.
      *
-     *  If `sasahydro_uofr` is specified, the hydrophobic interaction
+     *  If `uofr` is specified, the hydrophobic interaction
      *  energy is averaged as a function of mass center separation between groups and
      *  saved to disk upon calling the destructor.
      *
@@ -1380,7 +1384,8 @@ namespace Faunus {
           vector<bool> v;      // bool for all particles; true=active
           vector<double> sasa; // sasa for all particles
           double threshold;    // surface-surface distance threshold
-          double tension, tension_dyne;
+          double tension;
+          double tension_dyne;
           int duplicate;       // how many times to load sasa file
           string file;         // sasa file
 
@@ -1441,20 +1446,23 @@ namespace Faunus {
           }
 
         public:
-          HydrophobicSASA(InputMap &in) {
-            string pfx="sasahydro_";
+
+          HydrophobicSASA(InputMap &in, const string dir="") : base(dir) {
             base::name = "Hydrophobic SASA";
-            threshold = in.get<double>(pfx+"threshold", 3.0);
-            tension_dyne = in.get<double>(pfx+"tension", 0);
+            in.cd ( base::jsondir + "/hydrophobicsasa" );
             tension = tension_dyne * 1e-23 / (pc::kB * pc::T());  // dyne/cm converted to kT/A^2, 1dyne/cm = 0.001 J/m^2
-            file = in.get(pfx+"sasafile", string());
-            duplicate = in.get(pfx+"duplicate", 0);
-            sample_uofr = in.get<bool>(pfx+"uofr", false);
-            dr = in.get<double>(pfx+"dr", 0.5);
+            threshold = in.get( "threshold", 3.0 );
+            tension_dyne = in.get( "tension", 0.0 );
+            file = in.get( "sasafile", string() );
+            duplicate = in.get( "duplicate", 0 );
+            sample_uofr = in.get( "uofr", false );
+            dr = in.get<double>( "dr", 0.5 );
             loadSASA(file, duplicate);
           }
 
           ~HydrophobicSASA() { save(); }
+
+          auto tuple() -> decltype(std::make_tuple(this)) { return std::make_tuple(this); }
 
           /** @brief Group-to-group energy */
           double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
@@ -1987,22 +1995,23 @@ namespace Faunus {
     /**
      * @brief General energy class for handling penalty function (PF) methods.
      *
-     * @details User-defined reaction coordinate(s) are provided by an external function, f.
+     * User-defined reaction coordinate(s) are provided by an external function, f.
      * f is a member of a class given as a template argument.
-     * The return type of f can be either a double or a pair of doubles.
+     * The return type of f can be either a double (1D penalty) or a pair of
+     * doubles (2D penalty).
      * The dimensionality of the penalty function is inferred from the return value of f.
-     * The InputMap class is scanned for the following keys:
+     * The InputMap class is scanned for the following keys in section `energy/penaltyfunction`:
      *
-     * Key              | Description
-     * :--------------- | :-----------------------------
-     * `penalty_update` | number of moves between updates of PF
-     * `penalty_size`   | total number of points in the PF
-     * `penalty_bw1`    | bin width of 1st coordinate
-     * `penalty_bw2`    | bin width of 2nd coordinate
-     * `penalty_lo1`    | lower limit of 1st coordinate
-     * `penalty_hi1`    | upper limit of 1st coordinate
-     * `penalty_lo2`    | lower limit of 2nd coordinate
-     * `penalty_hi2`    | upper limit of 2nd coordinate
+     * Keyword       | Description
+     * :------------ | :------------------------------------
+     * `update`      | number of moves between updates of PF
+     * `size`        | total number of points in the PF
+     * `bw1`         | bin width of 1st coordinate
+     * `bw2`         | bin width of 2nd coordinate
+     * `lo1`         | lower limit of 1st coordinate
+     * `hi1`         | upper limit of 1st coordinate
+     * `lo2`         | lower limit of 2nd coordinate
+     * `hi2`         | upper limit of 2nd coordinate
      */
     template<class Tspace, class Tfunction>
        class PenaltyEnergy : public Energybase<Tspace> {

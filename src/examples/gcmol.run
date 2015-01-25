@@ -41,9 +41,9 @@ echo '{
   },
 
   "moves" : {
-     "gc" : { "prop":1.0, "molcombfile":"gcmol.json" },
+     "gc" : { "molcombfile":"gcmol.json" },
      "moltransrot" : {
-        "water" : { "dp":0.5, "dprot":0.5, "prop":0.005, "permol":true } 
+        "water" : { "dp":0.5, "dprot":0.5, "prob":0.005, "permol":true } 
      } 
   }
 

@@ -18,17 +18,29 @@ if [ "$proc" == "3" ]; then Tscale=2.0; fi
 
 cp -f $source_tests_dir/temper.test$proc mpi$proc.temper.test 2> /dev/null
 
-echo "
-loop_macrosteps         2000    # number of temper moves
-loop_microsteps         10000   # number of translational moves per temper move
-cuboid_len              4       # Box side length Angstrom
-temper_runfraction      1.0     # Set to one/zero to turn on/off tempering
-temper_format           XYZ     # Exchange only coordinates while tempering
-mv_particle_genericdp   0.5     # translational displacement [angstrom]
-Tscale                  $Tscale # Reduced temperature
-test_stable             no
-test_file               mpi$proc.temper.test
-" > mpi$proc.temper.input
+echo '{
+  "atomlist" : { "A" : { "dp":0.5 } },
+
+  "moleculelist" : {
+    "myparticles" : { "atoms":"A", "atomic":true, "Ninit":1 }
+  },
+
+  "moves" : {
+    "atomtranslate" : {
+      "myparticles" : { }
+    },
+    "temper" : { "format":"XYZ" }
+  },
+
+  "system" : {
+    "Tscale"       : '$Tscale',
+    "cuboid"       : { "len" : 4. },
+    "mcloop"       : { "macro":2000, "micro":10000 },
+    "unittest"     : { "testfile":"mpi'$proc'.temper.test", "stable":false },
+    "atomlist"     : "mpi'$proc'.temper.json",
+    "moleculelist" : "mpi'$proc'.temper.json"
+  }
+}' > mpi$proc.temper.json
 done
 
 exe=./temper
@@ -36,7 +48,6 @@ exe=./temper
 if [ -x $exe ]; then
   $mpicommand -np 4 $exe
   rc=$?
-  #rm mpi*
   exit $rc
 fi
 exit 1

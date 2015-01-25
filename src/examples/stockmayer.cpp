@@ -33,7 +33,6 @@ int main() {
   while ( loop[0] ) {                            // Markov chain 
     while ( loop[1] ) {
       sys += mv.move();
-
       if (slump()>0.5)
         dian.sampleMuCorrelationAndKirkwood(spc);
       if (slump()>0.99)
@@ -70,7 +69,7 @@ int main() {
   ~~~~~~~~~~~~~~~~~~~
 
   stockmayer.cpp
-  ============
+  ==============
 
   @includelineno examples/stockmayer.cpp
 

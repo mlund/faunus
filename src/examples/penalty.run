@@ -16,9 +16,31 @@ if [ "$rank" == "0" ]; then seed=-13; fi
 if [ "$rank" == "1" ]; then seed=-17; fi 
 if [ "$rank" == "2" ]; then seed=-19; fi 
 if [ "$rank" == "3" ]; then seed=-23; fi 
+
+echo '{
+  "atomlist" : { "A" : { "dp":0.5 } },
+
+  "moleculelist" : {
+    "myparticles" : { "atoms":"A", "atomic":true, "Ninit":1 }
+  },
+
+  "moves" : {
+    "atomtranslate" : {
+      "myparticles" : { }
+    }
+  },
+
+  "system" : {
+    "Tscale"       : '$Tscale',
+    "cuboid"       : { "len" : 4. },
+    "mcloop"       : { "macro":50, "micro":250000 },
+    "unittest"     : { "testfile":"penalty.test", "stable":false },
+    "atomlist"     : "mpi'$proc'.penalty.json",
+    "moleculelist" : "mpi'$proc'.penalty.json"
+  }
+}' > mpi$proc.penalty.json
+
 echo "
-loop_macrosteps         50        # 2 * number of updates of penalty function
-loop_microsteps         250000    # number of moves between printing histograms
 penalty_update          500000    # number of moves between updates
 penalty_size            2000      # must be >= max number of points in the histogram (i.e. 41x41=1681)
 penalty_bw1             0.1       # bin width of 1st coordinate
@@ -27,12 +49,6 @@ penalty_lo1             -2.0      # lower limit of 1st coordinate
 penalty_hi1             2.0       # upper limit of 1st coordinate
 penalty_lo2             -2.0      # lower limit of 2nd coordinate
 penalty_hi2             2.0       # upper limit of 2nd coordinate
-cuboid_len              4         # box side length Angstrom
-mv_particle_genericdp   0.5       # translational displacement [Angstrom]
-seed_value              $seed     # random seed
-
-test_stable        no
-test_file          penalty.test
 " > mpi$rank.penalty.input
 done
 

@@ -5,7 +5,7 @@ cp -f $source_tests_dir/polymers.test . 2> /dev/null
 cp -f $source_tests_dir/polymers.state state 2> /dev/null
 
 #-----------------------------------------------------------
-# Create input file with atom properties
+# Create input file with atom proberties
 #-----------------------------------------------------------
 echo '{
   "atomlist" : {
@@ -32,8 +32,8 @@ echo '{
 
   "moves" : {
     "atomtranslate" : {
-      "counterions" : { "prop":1.0, "peratom":true },
-      "polymer"     : { "prop":1.0, "permol":true, "peratom":true }
+      "counterions" : { "prob":1.0, "peratom":true },
+      "polymer"     : { "prob":1.0, "permol":true, "peratom":true }
     },
     "moltransrot" : {
       "polymer" : { "dp":50, "dprot":6, "permol":true, "dir":"1 1 1" } 
@@ -44,7 +44,7 @@ echo '{
     "pivot" : {
       "polymer" : { "dp":6.3, "minlen":1, "maxlen":1000, "permol":true }
     },
-    "isobaric" : { "dp":2, "pressure":113.2, "prop":0.1 }
+    "isobaric" : { "dp":2, "pressure":113.2, "prob":0.1 }
   },
 
   "system" : {

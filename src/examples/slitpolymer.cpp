@@ -15,11 +15,10 @@ int main() {
   Energy::ExternalPotential<Tspace,Potential::GouyChapman<double,true> > pot(mcp);
   pot.expot.setSurfPositionZ( &spc.geo.len_half.z() ); // Pass position of GC surface
 
-  // MC moves
-  Move::Propagator<Tspace> mv(mcp,pot,spc);
-
+  Move::Propagator<Tspace> mv(mcp,pot,spc);           // assembly of all MC moves
   Analysis::PolymerShape shape;                       // sample polymer shape
   Analysis::LineDistribution<> surfmapall;            // monomer-surface histogram
+
   spc.load("state");                                  // Load start configuration, if any
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Store total system energy
 

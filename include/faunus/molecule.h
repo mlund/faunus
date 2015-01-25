@@ -27,15 +27,21 @@ namespace Faunus {
       Point dir;         //!< Scalars for random mass center position. Default (1,1,1)
       Point offset;      //!< Added to random position. Default (0,0,0)
       bool checkOverlap; //!< Set to true to enable container overlap check
+      int maxtrials;     //!< Maximum number of overlap checks if `checkOverlap==true`
 
-      RandomInserter() : dir(1,1,1), offset(0,0,0), checkOverlap(true) { name = "random"; }
+      RandomInserter() : dir(1,1,1), offset(0,0,0), checkOverlap(true), maxtrials(2e3) { name = "random"; }
 
       Tpvec operator() (Geometry::Geometrybase &geo, const Tpvec &p, TMoleculeData &mol) {
         bool _overlap=true;
         Tpvec v;
+        int cnt = 0;
         do {
+          if (cnt++ > maxtrials)
+            throw std::runtime_error( "Max. # of overlap checks reached upon insertion." );
+
+          v = mol.getRandomConformation();
+
           if (mol.isAtomic()) { // insert atomic species
-            v = mol.getRandomConformation();
             for (auto &i : v) { // for each atom type id
               Geometry::QuaternionRotate rot;
               Point u;
@@ -47,7 +53,6 @@ namespace Faunus {
               geo.boundary( i );
             }
           } else { // insert molecule
-            v = mol.getRandomConformation();
             Point a, b;
             geo.randompos(a);                  // random point in container
             a = a.cwiseProduct(dir);           // apply user defined directions (default: 1,1,1)
@@ -62,6 +67,7 @@ namespace Faunus {
           }
 
           assert( !v.empty() );
+
           _overlap=false;
           if ( checkOverlap )                  // check for container overlap
             for ( auto &i : v )
@@ -102,7 +108,7 @@ namespace Faunus {
    *    "mymolecule" : { "atoms":"ARG ARG GLU", "structure":"peptide.aam" }
    * ~~~~
    *
-   * The key of type string is the `name` followed, in no particular order,
+   * The key of type string is the molecule `name` followed, in no particular order,
    * by properties:
    *
    * Key           | Type    | Description

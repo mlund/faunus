@@ -73,7 +73,7 @@ namespace Faunus {
         std::map<int, Average<double> > q;       //!< Map of average charges per site
         std::vector<processdata> process;        //!< Vector of processes.
 
-        EquilibriumController(InputMap&, string="eq_");
+        EquilibriumController( InputMap& );
 
         bool include(string);                      //!< Read equilibrium processes
 
@@ -171,11 +171,12 @@ namespace Faunus {
      *
      * The `InputMap` is searched for:
      *
-     * - `processfile` Name of process file
+     * - `processfile` Name of process file. 
+     *
+     * Note that the current (cd'ed) section will be scanned.
      */
-    EquilibriumController::EquilibriumController(InputMap &in, string pfx) {
-      string prefix=pfx;
-      include( in.get<string>(prefix+"processfile","eq.process"));
+    EquilibriumController::EquilibriumController(InputMap &in) {
+      include( in( "processfile", string() ) );
     }
 
     bool EquilibriumController::includeJSON(const string &file) {
@@ -366,9 +367,7 @@ namespace Faunus {
             this->name="Equilibrium State Energy";
           }
 
-          auto tuple() -> decltype(std::make_tuple(this)) {
-            return std::make_tuple(this);
-          }
+          auto tuple() -> decltype(std::make_tuple(this)) { return std::make_tuple(this); }
 
           template<class Tpvec>
             int findSites(const Tpvec &p) {

@@ -13,54 +13,22 @@ using namespace Faunus;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid> Tspace;
-//typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
 typedef CombinedPairPotential<DebyeHuckelShift,CutShift<LennardJones> > Tpairpot;
 
 int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
 
-  InputMap mcp("manybody.input");
+  InputMap mcp("manybody.json");
   FormatXTC xtc(1000);                 // XTC gromacs trajectory format
   EnergyDrift sys;                     // class for tracking system energy drifts
-  UnitTest test(mcp);
-  bool inPlane = mcp.get<bool>("molecule_plane");
 
   Tspace spc(mcp);
-  auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
-    + Energy::ExternalPressure<Tspace>(mcp)
+  auto pot
+    = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::HydrophobicSASA<Tspace>(mcp)
-    + Energy::EquilibriumEnergy<Tspace>(mcp);// + myenergy<Tspace>(mcp);
+    + Energy::EquilibriumEnergy<Tspace>(mcp);
 
   auto eqenergy = &pot.second;
-
-  // Add molecules
-  int N1 = mcp.get("molecule1_N",0);
-  int N2 = mcp.get("molecule2_N",0);
-  string file;
-  vector<Group> pol(N1+N2);
-  for (int i=0; i<N1+N2; i++) {
-    if (i>=N1)
-      file = mcp.get<string>("molecule2");
-    else
-      file = mcp.get<string>("molecule1");
-    Tspace::ParticleVector v;
-    FormatAAM::load(file,v);
-    Geometry::FindSpace fs;
-    fs.allowMatterOverlap=true;
-    if (inPlane)
-      fs.dir=Point(1,1,0);
-    fs.find(spc.geo,spc.p,v);
-    pol[i] = spc.insert(v);
-    pol[i].name=file;
-    spc.enroll( pol[i] );
-  }
-  Group allpol( pol.front().front(), pol.back().back() );
-
-  // Add atomic species
-  Group salt;
-  salt.addParticles(spc, mcp);
-  salt.name="Atomic Species";
-  spc.enroll(salt);
 
   Analysis::RadialDistribution<> rdf(0.5);
   Analysis::ChargeMultipole mpol;
@@ -69,77 +37,53 @@ int main(int argc, char** argv) {
 
   spc.load("state"); // load previous state, if any
 
-  Move::Isobaric<Tspace> iso(mcp,pot,spc);
-  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
-  Move::AtomicTranslation<Tspace> mv(mcp,pot,spc);
-  Move::SwapMove<Tspace> tit(mcp,pot,spc,*eqenergy);
-  
-  gmv.mpi=&mpi;
-  tit.mpi=&mpi;
-  if (inPlane)
-    for (auto &m : pol)
-      gmv.directions[ m.name ]=Point(1,1,0);
+  Move::Propagator<Tspace> mv(mcp,pot,spc);
+  mv.setMPI( &mpi );
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Store total system energy
 
   std::ofstream cmfile, energyfile;
 
-  if (mpi.isMaster()) {
+  if ( mpi.isMaster() ) {
     cmfile.open("cm.xyz");
     energyfile.open("energy.dat");
-    cout << atom.info() << spc.info() << pot.info() << tit.info()
-      << textio::header("MC Simulation Begins!");
+    cout << eqenergy->info();
+    cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
   }
 
   vector<Point> cm_vec; // vector of mass centers
+  auto pol = spc.findMolecules("protein");
 
   MCLoop loop(mcp);
   while ( loop[0] ) {  // Markov chain
     while ( loop[1] ) {
-      int k,i= slump.range(0,3);
-      switch (i) {
-        case 0: // move all proteins
-          k=pol.size();
-          while (k-->0) {
-            gmv.setGroup( *slump.element( pol.begin(), pol.end() ) );
-            sys+=gmv.move();
+      sys += mv.move();
+
+      double rnd = slump();
+      if ( rnd > 0.995 ) {
+        // sample molecule-molecule g(r)
+        for (auto i=pol.begin(); i!=pol.end()-1; i++)
+          for (auto j=i+1; j!=pol.end(); j++)
+            rdf( spc.geo.dist( (*i)->cm, (*j)->cm) )++;
+
+        cm_vec.clear();
+        for (auto &i : pol)
+          cm_vec.push_back( i->cm );
+        debye.sample(cm_vec,spc.geo.getVolume());
+
+        if (mpi.isMaster())
+          if (cmfile) {
+            cmfile << cm_vec.size() << "\n" << "cm" << "\n";
+            for (auto &m : cm_vec)
+              cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << "\n";
           }
-
-          if (slump()>0.995) {
-            // sample g(r)
-            for (auto i=pol.begin(); i!=pol.end()-1; i++)
-              for (auto j=i+1; j!=pol.end(); j++)
-                rdf( spc.geo.dist(i->cm,j->cm) )++;
-
-            cm_vec.clear();
-            for (auto &i : pol)
-              cm_vec.push_back(i.cm);
-            debye.sample(cm_vec,spc.geo.getVolume());
-
-            if (mpi.isMaster())
-              if (cmfile) {
-                cmfile << cm_vec.size() << "\n" << "cm" << "\n";
-                for (auto &m : cm_vec)
-                  cmfile << "H " << ((m+spc.geo.len_half)/10).transpose() << "\n";
-              }
-            if (energyfile)
-              energyfile << loop.innerCount() << " " << sys.current()
-                << " " << std::cbrt(spc.geo.getVolume()) << "\n";
-          }
-          break;
-        case 1: // volume move (NPT)
-          sys+=iso.move();
-          break;
-        case 2: // titration move
-          sys+=tit.move();
-          mpol.sample(pol,spc);
-          break;
-        case 3: // move atomic species
-          mv.setGroup(salt);
-          sys+=mv.move();
-          break;
+        if (energyfile)
+          energyfile << loop.innerCount() << " " << sys.current()
+            << " " << std::cbrt(spc.geo.getVolume()) << "\n";
       }
-      if (slump()>0.99 ) {
+      //mpol.sample(pol,spc);
+
+      if ( rnd > 0.99 ) {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc.p);
       }
@@ -157,12 +101,10 @@ int main(int argc, char** argv) {
       debye2.save("debye.g2g.dat");
     }
 
-
   } // end of macro loop
 
   if (mpi.isMaster()) {
-    cout << tit.info() + loop.info() + sys.info() + gmv.info() + mv.info()
-      + iso.info() + mpol.info() << endl;
+    cout << loop.info() + sys.info() + mv.info() + mpol.info() << endl;
 
     // save first molecule with average charges (as opposed to instantaneous)
     eqenergy->eq.copyAvgCharge(spc.p);

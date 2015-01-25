@@ -72,20 +72,23 @@ namespace Faunus {
      *
      * This is an external potential due to a charged Gouy-Chapman surface
      *
-     * During construction, the `InputMap` is searched for the following keywords:
+     * During construction, the `InputMap` is searched for the following keywords
+     * in section `energy/gouychapman`:
      *
-     * Keyword                 | Description
-     * ----------------------- | ------------------------------------------------
-     * `dh_ionicstrength`      | Ionic strength [mol/l]
-     * `gouychapman_phi0`      | Surface potential [unitless, i.e. phi_0*e/kT]
-     * `gouychapman_qarea`     | Surface charge density (if phi0 not defined)
-     * `gouychapman_rho`       | Surface charge density [1/A^2] (if qarea not defined)
-     * `gouychapman_offset`    | Shift GC surface [A] (default: 0)
+     * Keyword           | Description
+     * ----------------- | ------------------------------------------------
+     * `phi0`            | Surface potential [unitless, i.e. phi_0*e/kT]
+     * `qarea`           | Surface charge density (if phi0 not defined)
+     * `rho`             | Surface charge density [1/A^2] (if qarea not defined)
+     * `offset`          | Shift GC surface [A] (default: 0)
+     *
+     * The ionic strength is read by `Potential::DebyeHuckel` from the `system`
+     * section.
      *
      * Code example:
      * 
      *     typedef Potential::GouyChapman<> Txp;
-     *     InputMap in("input");
+     *     InputMap in("input.json");
      *     Cuboidslit geo(in);
      *     Energy::ExternalPotential<Txp> pot(in);
      *     pot.expot.setSurfPositionZ( &geo.len_half.z() );
@@ -104,7 +107,7 @@ namespace Faunus {
           T gamma0;      //!< Gouy-chapman coefficient ()
           T lB;          //!< Bjerrum length (A)
           T k;           //!< Inv. debye len (1/A)
-          T offset;      //!< Distance off set for hiding GC surface behind the box surface
+          T offset;      //!< Distance offset for hiding GC surface behind the box surface
           std::string _info();
         public:
           GouyChapman(InputMap&, string dir=""); //!< Constructor

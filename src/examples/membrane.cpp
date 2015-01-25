@@ -66,7 +66,6 @@ int main() {
 
   auto nonbonded = std::get<0>( pot.tuple() );
   auto bonded    = std::get<1>( pot.tuple() );
-  auto eqenergy  = std::get<3>( pot.tuple() );
 
   nonbonded->noPairPotentialCutoff=true;
   Tspace spc(mcp);

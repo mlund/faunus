@@ -244,7 +244,6 @@ namespace Faunus {
           string title;                    //!< Title of move (mandatory!)
           string cite;                     //!< Reference, url, DOI etc.
           string jsondir;                  //!< inputmap section
-          string prefix;                   //!< TO BE DELETED!
           char w;                          //!< info text width. Adjust this in constructor if needed.
           unsigned long int cnt;           //!< total number of trial moves
           virtual bool run() const;        //!< Runfraction test
@@ -253,7 +252,7 @@ namespace Faunus {
           double alternateReturnEnergy;    //!< Alternative return energy
 
           struct MolListData {
-            double prop;  // probability of performing a move
+            double prob;  // probability of performing a move
             bool perAtom; // repeat move for each molecule?
             bool perMol;  // repeat move for atom in molecules?
             int repeat;   // total number of repeats
@@ -263,12 +262,12 @@ namespace Faunus {
             double dp1;   // displacement parameter 1
             double dp2;   // displacement parameter 2
 
-            MolListData() : prop(1.0), perAtom(false), perMol(false),
+            MolListData() : prob(1.0), perAtom(false), perMol(false),
             repeat(1), Nattempts(0), Naccepted(0), dir(1,1,1), dp1(0), dp2(0) {}
 
             MolListData(const json::Tval &i) {
               *this = MolListData();
-              prop = json::value<double>(i, "prop", 1);
+              prob = json::value<double>(i, "prob", 1);
               dir << json::value<string>(i, "dir", "1 1 1");
               perMol = json::value<bool>(i, "permol", false);
               perAtom = json::value<bool>(i, "peratom", false);
@@ -291,6 +290,10 @@ namespace Faunus {
           int randomMolId();                 //!< Random mol id from mollist
           int currentMolId;                  //!< Current molid to act upon
           virtual void readJSON(const json::Tobj&);//!< Setup via json object
+
+#ifdef ENABLE_MPI
+          Faunus::MPI::MPIController* mpiPtr;
+#endif
       };
 
     /**
@@ -312,6 +315,9 @@ namespace Faunus {
         w=22;
         runfraction=1;
         useAlternateReturnEnergy=false; //this has no influence on metropolis sampling!
+#ifdef ENABLE_MPI
+        mpiPtr=nullptr;
+#endif
       }
 
     template<class Tspace>
@@ -410,7 +416,7 @@ namespace Faunus {
         if ( ! mollist.empty() ) {
           currentMolId = randomMolId();
           n = mollist[ currentMolId ].repeat;
-          runfraction = mollist[ currentMolId ].prop;
+          runfraction = mollist[ currentMolId ].prob;
         }
 
         if ( run() ) {
@@ -584,14 +590,14 @@ namespace Faunus {
      *
      * By default the InputMap is read from section `moves/atomtranslate`
      * with each element being the molecule name with the following
-     * values:
+     * properties:
      *
      * Value                | Description
      * :------------------- | :-------------------------------------------------------------
      * `dir`                | Move directions (default: "1 1 1" = xyz)
      * `peratom`            | Repeat move for each atom in molecule (default: false)
      * `permol`             | Repeat move for each molecule in system (default: false)
-     * `prop`               | Probability of performing the move (default: 1)
+     * `prob`               | Probability of performing the move (default: 1)
      *
      * Example:
      *
@@ -618,10 +624,8 @@ namespace Faunus {
           auto it = spc->molList().find( i.first ); // is molecule defined?
           if ( it != spc->molList().end() )
             this->addMol( it->id, typename Movebase<Tspace>::MolListData(i.second) );
-          else {
-            std::cerr << "Error: Molecule '" << i.first << "' not defined." << endl;
-            exit(1);
-          }
+          else
+            throw std::runtime_error( "Error: Molecule '" + i.first + "' not defined." );
         }
       }
 
@@ -892,9 +896,6 @@ namespace Faunus {
           void setGroup(Group&); //!< Select Group to move
           bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
           std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
-#ifdef ENABLE_MPI
-          Faunus::MPI::MPIController* mpi;
-#endif
       };
 
     /**
@@ -904,18 +905,19 @@ namespace Faunus {
      * with each element being the molecule name with the following
      * values:
      *
-     * Value                | Description
-     * :------------------- | :-------------------------------------------------------------
-     * `dir`                | Move directions (default: "1 1 1" = xyz)
-     * `permol`             | Repeat move for each molecule in system (default: true) 
-     * `prop`               | Probability of performing the move (default: 1)
-     * `dp`                 | Translational displacement parameter
-     * `dprot`              | Angular displacement parameter
+     * Value      | Description
+     * :--------- | :-------------------------------------------------------------
+     * `dir`      | Move directions (default: "1 1 1" = xyz)
+     * `permol`   | Repeat move for each molecule in system (default: true) 
+     * `prob`     | Probability of performing the move (default: 1)
+     * `dp`       | Translational displacement parameter (angstrom, default: 0)
+     * `dprot`    | Angular displacement parameter (radians, default: 0)
      *
      * Example:
      *
-     *     translaterotate {
-     *       "water" : { "dp":0.5, "dprot":0.5 }
+     *     moltransrot {
+     *       "water"   : { "dp":0.5, "dprot":0.5 },
+     *       "polymer" : { ... }
      *     } 
      *
      * Atomic displacement parameters are read from `AtomData`.
@@ -943,10 +945,6 @@ namespace Faunus {
             this->addMol( it->id, d );
           }
         }
-
-#ifdef ENABLE_MPI
-        mpi=nullptr;
-#endif
       }
 
     template<class Tspace>
@@ -1029,15 +1027,15 @@ namespace Faunus {
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
 #ifdef ENABLE_MPI
-        if (mpi!=nullptr) {
+        if (base::mpiPtr!=nullptr) {
           double du=0;
-          auto s = Faunus::MPI::splitEven(*mpi, spc->groupList().size());
+          auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
           for (auto i=s.first; i<=s.second; ++i) {
             auto gi=spc->groupList()[i];
             if (gi!=igroup)
               du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
           }
-          return (unew-uold) + Faunus::MPI::reduceDouble(*mpi, du);
+          return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
         }
 #endif
 
@@ -1102,6 +1100,7 @@ namespace Faunus {
         private:
           typedef TranslateRotate<Tspace> base;
           typedef opair<Group*> Tpair;
+
           std::vector<Tpair> pairlist; // interacting groups
 
           typename base::map_type angle2; //!< Temporary storage for angular movement
@@ -1166,22 +1165,22 @@ namespace Faunus {
             double du=0;
 
 #ifdef ENABLE_MPI
-            if (!pairlist.empty()) {
+            if (!pairlist.empty() && base::mpiPtr!=nullptr) {
 
               // group <-> group
-              auto s = Faunus::MPI::splitEven(*mpi, pairlist.size());
+              auto s = Faunus::MPI::splitEven(*base::mpiPtr, pairlist.size());
               for (size_t i=s.first; i<=s.second; ++i)
                 du += base::pot->g2g(base::spc->trial,*pairlist[i].first,*pairlist[i].second)
                   - base::pot->g2g(base::spc->p,*pairlist[i].first,*pairlist[i].second);
 
               // group <-> external potential
-              s = Faunus::MPI::splitEven(*mpi, base::spc->groupList().size());
+              s = Faunus::MPI::splitEven(*base::mpiPtr, base::spc->groupList().size());
               for (size_t i=s.first; i<=s.second; ++i) {
                 auto gi=base::spc->groupList()[i];
                 du += base::pot->g_external(base::spc->trial, *gi) - base::pot->g_external(base::spc->p, *gi);
               }
 
-              return Faunus::MPI::reduceDouble(*mpi, du);
+              return Faunus::MPI::reduceDouble(*base::mpiPtr, du);
             }
 #endif
 
@@ -1231,9 +1230,6 @@ namespace Faunus {
             base::title+=" (N-body)";
             setGroup(s.groupList());
           }
-#ifdef ENABLE_MPI
-          Faunus::MPI::MPIController* mpi;
-#endif
       };
 
     /**
@@ -1253,11 +1249,11 @@ namespace Faunus {
      * for arbitrary probability functions.
      *
      * Upon construction, the `InputMap` is scanned for the
-     * following keywords,
+     * following keywords in the section `moves/moltransrot`,
      *
-     * Keyword                | Description
-     * :--------------------- | :----------------
-     * `transrot_clustersize` | Surface threshold from mobile ion to particle in group (angstrom)
+     * Keyword         | Description
+     * :---------------| :----------------
+     * `clusterradius` | Surface threshold from mobile ion to particle in group (angstrom)
      *
      * @todo Energy evaluation puts all moved particles in an index vector used
      * to sum the interaction energy with static particles. This could be optimized
@@ -1299,7 +1295,7 @@ namespace Faunus {
       TranslateRotateCluster<Tspace>::TranslateRotateCluster(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(in,e,s,pfx) {
         base::title="Cluster "+base::title;
         base::cite="doi:10/cj9gnn";
-        threshold = in.get<double>(pfx+"_clustersize",0);
+        threshold = in.get( "clusterradius", 0.0 );
         gmobile=nullptr;
       }
 
@@ -1864,12 +1860,13 @@ namespace Faunus {
      * @brief Reptation move for linear polymers
      *
      * This will perform a reptation move of a linear, non-uniform polymer chain.
-     * During construction, the InputMap is searched for the following keywords:
+     * During construction, the InputMap is searched, molecule-wise, for the following keywords
+     * in the section `moves/reptation`:
      *
-     * Key                     | Description
-     * :---------------------- | :---------------------------
-     * `reptation_runfraction` | Probability to perform a move (defaults=1)
-     * `reptation_bondlength`  | The bond length while moving head groups. Use -1 to use existing bondlength.
+     * Key           | Description
+     * :------------ | :---------------------------------------------------------------------------
+     * `prob`        | Probability to perform a move (defaults=1)
+     * `bondlength`  | The bond length while moving head groups. Use -1 to use existing bondlength.
      *
      * @date Lund 2012
      */
@@ -2021,13 +2018,13 @@ namespace Faunus {
      * @details This class will perform a volume displacement and scale atomic
      * as well as molecular groups as long as these are known to Space -
      * see Space.enroll().
-     * The InputMap class is scanned for the following keys:
+     * The InputMap class is scanned for the following keys in `moves/isobaric`:
      *
-     * Key              | Description
-     * :--------------- | :-----------------------------
-     * `npt_dV`         | Volume displacement parameter
-     * `npt_P`          | Pressure [mM]
-     * `npt_runfraction`| Runfraction [default=1]
+     * Key     | Description
+     * :-------| :-----------------------------
+     * `dV`    | Volume displacement parameter
+     * `P`     | Pressure [mM]
+     * `prob`  | Runfraction [default=1]
      *
      * Note that new volumes are generated according to
      * \f$ V^{\prime} = \exp\left ( \log V \pm \delta dp \right ) \f$
@@ -2073,7 +2070,7 @@ namespace Faunus {
         in.cd ( base::jsondir );
         dp = in( "dp", 0.0 );
         P = in( "pressure", 0.0 ) * 1.0_mM;
-        base::runfraction = in( "prop", 1.0 );
+        base::runfraction = in( "prob", 1.0 );
         if (dp<1e-6)
           base::runfraction=0;
 
@@ -2226,7 +2223,7 @@ namespace Faunus {
      *
      * Key                | Description
      * :----------------- | :-----------------------------
-     * `nvt_dz`            | Length displacement parameter
+     * `nvt_dz`           | Length displacement parameter
      * `nvt_runfraction`  | Runfraction [default=1]
      *
      */
@@ -2423,7 +2420,7 @@ namespace Faunus {
      *
      * ~~~~
      * "moves" : {
-     *   "atomgc" : { "molecule":"mysalt", "prop":1.0 }
+     *   "atomgc" : { "molecule":"mysalt", "prob":1.0 }
      * }
      * ~~~~
      *
@@ -2688,6 +2685,7 @@ namespace Faunus {
           using base::spc;
           using base::w;
           using base::runfraction;
+          using base::mpiPtr;
           enum extradata {VOLUME=0};    //!< Structure of extra data to send
           typedef std::map<string, Average<double> > map_type;
           map_type accmap;              //!< Acceptance map
@@ -2707,7 +2705,6 @@ namespace Faunus {
           double _energyChange();
           std::ofstream temperPath;
 
-          Faunus::MPI::MPIController *mpiPtr; //!< Controller class for MPI calls
           Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
           Faunus::MPI::ParticleTransmitter<Tpvec> pt;//!< Class for transmitting particles over MPI
 
@@ -2727,20 +2724,22 @@ namespace Faunus {
           Energy::Energybase<Tspace> &e,
           Tspace &s,
           Faunus::MPI::MPIController &mpi,
-          string dir) : base(e,s,dir), mpiPtr(&mpi) {
+          string dir) : base(e,s,dir) {
+
         this->title = "Parallel Tempering";
-        this->jsontitle += "/temper";
+        this->jsondir += "/temper";
+        this->mpiPtr = &mpi;
         partner=-1;
         this->useAlternateReturnEnergy=true; //we don't want to return dU from partner replica (=drift)
         in.cd ( this->jsondir );
-        this->runfraction = in( "prop",1.0 );
+        this->runfraction = in( "prob",1.0 );
         pt.recvExtra.resize(1);
         pt.sendExtra.resize(1);
         pt.setFormat( in.get<string>("format", "XYZQI") );
         setEnergyFunction(
             Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,Tpvec> );
         this->haveCurrentEnergy=false;
-        //temperPath.open(textio::prefix+"temperpath.dat");
+        assert( this->mpiPtr != nullptr );
       }
 
     template<class Tspace>
@@ -3036,8 +3035,8 @@ namespace Faunus {
         base::w=30;
         igroup=nullptr;
         cntr=nullptr;
-        geometry=in.get<string>(base::prefix+"_geometry","planar");
-        this->runfraction=in.get<double>(base::prefix+"_runfraction",1.0);
+        geometry = in( "geometry", string("planar") );
+        this->runfraction=in( "prob", 1.0 );
       }
 
     template<class Tspace>
@@ -3445,7 +3444,7 @@ namespace Faunus {
             init();
             base::jsondir += "/gc";
             in.cd ( base::jsondir );
-            base::runfraction = in( "prop", 1.0 );
+            base::runfraction = in( "prob", 1.0 );
             string combfile = in.get<string>( "molcombfile", "");
             assert( !combfile.empty() );
             comb.includefile(combfile); // load combinations
@@ -3457,11 +3456,20 @@ namespace Faunus {
      *
      * Upon construction this class will add an instance of
      * Energy::EquilibriumEnergy to the Hamiltonian. For details
-     * about the titration procedure see Energy::EquilibriumController.
+     * about the titration procedure see `Energy::EquilibriumController`.
+     *
+     * Upon construction the following are read from input section
+     * `moves/titrate`:
+     *
+     *  Keyword       |  Description
+     * :------------- |  :---------------------------------
+     * `processfile`  |  json file name with processes
+     * `prob`         |  probability of running (default: 1)
      */
     template<class Tspace>
       class SwapMove : public Movebase<Tspace> {
         private:
+          typedef Movebase<Tspace> base;
           std::map<int, Average<double> > accmap; //!< Site acceptance map
           string _info();
           void _trialMove();
@@ -3476,8 +3484,9 @@ namespace Faunus {
           }
 
         protected:
-          using Movebase<Tspace>::spc;
-          using Movebase<Tspace>::pot;
+          using base::spc;
+          using base::pot;
+
           double _energyChange();
           int ipart;                              //!< Particle to be swapped
           Energy::EquilibriumEnergy<Tspace>* eqpot;
@@ -3495,7 +3504,7 @@ namespace Faunus {
               eqpot->findSites( this->spc->p );
               size_t i = eqpot->eq.sites.size();
               while (i-->0)
-                du+=Movebase<Tspace>::move();
+                du += base::move();
               eqpot->eq.sampleCharge(spc->p);
             }
             return du;
@@ -3503,20 +3512,15 @@ namespace Faunus {
 
           template<class Tpvec>
             void applycharges(Tpvec &);
-
-#ifdef ENABLE_MPI
-          Faunus::MPI::MPIController* mpi;
-#endif
       };
 
     template<class Tspace>
       template<class Tenergy> SwapMove<Tspace>::SwapMove(
-          InputMap &in, Tenergy &e, Tspace &spc, string dir) : Movebase<Tspace>(e,spc,dir) {
+          InputMap &in, Tenergy &e, Tspace &spc, string dir) : base(e,spc,dir) {
 
         this->title="Site Titration - Swap Move";
-        this->jsondir += "/titrate";
-        in.cd ( this->prefix );
-        this->runfraction = in( "prop", 1.0 );
+        in.cd ( this->jsondir + "/titrate" );
+        this->runfraction = in( "prob", 1.0 );
 
         auto t = e.tuple();
         auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
@@ -3529,16 +3533,14 @@ namespace Faunus {
 
         ipart=-1;
 
-        string processfile = in.get<string>( "processfile", "" );
+        string processfile = in( "processfile", string() );
+        assert( !processfile.empty() );
         eqpot->eq.include( processfile );
         findSites(spc.p);
 
         /* Sync particle charges with `AtomMap` */
         for (auto i : eqpot->eq.sites)
           spc.trial[i].charge = spc.p[i].charge = atom[ spc.p[i].id ].charge;
-#ifdef ENABLE_MPI
-        mpi=nullptr;
-#endif
       }
 
     /**
@@ -3578,14 +3580,14 @@ namespace Faunus {
         double uold = pot->external(spc->p) + pot->i_total(spc->p,ipart);
         double unew = pot->external(spc->trial) + pot->i_total(spc->trial,ipart);
 #ifdef ENABLE_MPI
-        if (mpi!=nullptr) {
+        if ( base::mpiPtr != nullptr ) {
           double sum=0;
-          auto r = Faunus::MPI::splitEven(*mpi, (int)spc->p.size());
+          auto r = Faunus::MPI::splitEven(*base::mpiPtr, (int)spc->p.size());
           for (int i=r.first; i<=r.second; ++i)
             if (i!=ipart)
               sum+=pot->i2i(spc->trial,i,ipart) - pot->i2i(spc->p,i,ipart);
 
-          sum = Faunus::MPI::reduceDouble(*mpi, sum);
+          sum = Faunus::MPI::reduceDouble(*base::mpiPtr, sum);
 
           return sum + pot->i_external(spc->trial, ipart) - pot->i_external(spc->p, ipart)
             + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
@@ -3786,6 +3788,14 @@ namespace Faunus {
           }
 
           void test(UnitTest &t) { for (auto i : mPtr) i->test(t); }
+
+#ifdef ENABLE_MPI
+          void setMPI( Faunus::MPI::MPIController* mpi ) {
+            base::mpiPtr = mpi;
+            for ( auto i : mPtr )
+              i->mpiPtr = mpi;
+          }
+#endif
 
       };
 

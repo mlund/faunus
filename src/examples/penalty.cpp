@@ -31,38 +31,43 @@ struct coordinates { //function that defines the reaction coordinates
     return std::make_pair(p[pg->front()].x(),p[pg->front()].y());
   }
 };
+
 Group* coordinates::pg;
 
 int main() {
-  Faunus::MPI::MPIController mpi;                  //init MPI
-  InputMap mcp(textio::prefix+"penalty.input");    //read input file
-  MCLoop loop(mcp);                                //handle mc loops
-  auto pot = myenergy()                            //our custom potential!
+  Faunus::MPI::MPIController mpi;                     // init MPI
+  InputMap mcp(textio::prefix+"penalty.input");       // read input file
+
+  auto pot
+    = myenergy()                                      // our custom potential!
     + Energy::PenaltyEnergy<Tspace,coordinates>(mpi, mcp);
-  auto penalty = &pot.second;                      //penalty function
-  Tspace spc(mcp);                                 //create simulation space
-  spc.insert( PointParticle() );                   //insert a single particle
-  Group mygroup(0,0);                              //group with single particle
-  spc.enroll(mygroup);                             //tell space about group
-  EnergyDrift sys;                                 //class for tracking system energy drifts
-  Move::AtomicTranslation<Tspace> trans(mcp,pot,spc); //translational move
-  trans.setGroup(mygroup);                            //set translation group
-  coordinates::pg = &mygroup;                         //set penalized group
-  sys.init( Energy::systemEnergy(spc,pot,spc.p) ); // store total energy
-  int seed_value = mcp.get<int>("seed_value",-13);
-  slump.seed(seed_value);
+  auto penalty = &pot.second;                         // penalty function
+
+  Tspace spc(mcp);                                    // create simulation space
+  Move::AtomicTranslation<Tspace> trans(mcp,pot,spc); // translational move
+  coordinates::pg = &mygroup;                         // set penalized group
+
+  EnergyDrift sys;                                    // class for tracking system energy drifts
+  sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // store total energy
+
+  slump.seed();
   int sweeps = 0;
-  while ( loop[0] ) {                 //start markov chain
+
+  MCLoop loop(mcp);                                   // handle mc loops
+  while ( loop[0] ) {                                 // start markov chain
     while ( loop[1] ) {
-      sys(trans.recycle());                    //translate particle
+      sys(trans.recycle());                           // translate particle
       ++sweeps;
       //increment the histogram and/or update the penalty function using waste recycling
       sys += penalty->update(penalty->coordpair,sys.weight,sys.rejection); 
     }
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
+
     // save to disk
-    if (sweeps == 2.5e5) penalty->save(textio::prefix+"init_"); // initial histogram obtained without penalty
-    else penalty->save(textio::prefix);
+    if (sweeps == 2.5e5)
+      penalty->save(textio::prefix+"init_"); // initial histogram obtained without penalty
+    else
+      penalty->save(textio::prefix);
   }
   // perform unit 
   UnitTest test(mcp);

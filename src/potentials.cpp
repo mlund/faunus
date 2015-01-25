@@ -64,7 +64,7 @@ namespace Faunus {
 
     Harmonic::Harmonic(InputMap &in, const string &dir) : PairPotentialBase(dir) {
       name="Harmonic";
-      in.cd ( jsondir+"/hamonic" );
+      in.cd ( jsondir+"/harmonic" );
       k  = in("k", 0.0);
       req= in("req", 0.0);
     }
@@ -73,31 +73,6 @@ namespace Faunus {
       using namespace Faunus::textio;
       std::ostringstream o;
       o << name + ": k=" << k << kT+"/"+angstrom+squared+" req=" << req << _angstrom; 
-      return o.str();
-    }
-
-    /**
-     * @param k_kT   Stiffness or bond strength [kT]
-     * @param rmax_A Maximum length after which the energy goes to infinity [angstrom]
-     */
-    FENE::FENE(double k_kT, double rmax_A) : k(k_kT) {
-      name="FENE";
-      r02=rmax_A*rmax_A;
-      r02inv=1/r02;
-    }
-
-    FENE::FENE(InputMap &in, const string &dir) : PairPotentialBase(dir) {
-      name="FENE";
-      in.cd ( jsondir+"/fene" );
-      k  = in( "stiffness", 0.0);
-      r02 = pow( in( "maxsep", 0.0), 2);
-      r02inv = 1/r02;
-    }
-
-    string FENE::_brief() {
-      using namespace Faunus::textio;
-      std::ostringstream o;
-      o << name+": k=" << k << kT+"/"+angstrom+squared+" r0=" << sqrt(r02) << _angstrom; 
       return o.str();
     }
 
@@ -193,23 +168,6 @@ namespace Faunus {
     string HardSphere::info(char w) {
       using namespace Faunus::textio;
       return textio::indent(SUB)+name+"\n";
-    }
-
-    LennardJones::LennardJones() : eps(0) {
-      name="Lennard-Jones";
-    }
-
-    /**
-     * @param in InputMap is scanned for the `lj_eps` and should be in units of kT
-     * @param dir Prefix for InputMap - default is `ls_`
-     */
-    LennardJones::LennardJones(InputMap &in, const string &dir) : PairPotentialBase(dir) {
-      name="Lennard-Jones";
-      in.cd ( jsondir+"/ljsimple" );
-      eps = 4*in("eps", 0.);
-      string unit = in.get<string>("unit", "kT");
-      if ( unit=="kJ/mol" )
-        eps *= 1.0_kJmol;
     }
 
     string LennardJones::_brief() {
@@ -406,25 +364,6 @@ namespace Faunus {
       o << Coulomb::info(w)
         << textio::pad(textio::SUB,w,"Excess polarization") << 2*c*bjerrumLength() << endl;
       return o.str();
-    }
-
-    /**
-     * In addition to the keywords from Potential::Coulomb, InputMap is searched for:
-     *
-     * - `dh_ionicstrength` [mol/l] 
-     * - `dh_debyelength` [angstrom] (only if I=0, default)
-     */
-    DebyeHuckel::DebyeHuckel(InputMap &in, const string &dir) : Coulomb(in, dir) {
-      double I;
-      const double zero=1e-10;
-      name="Debye-Huckel";
-      c=8 * lB * pc::pi * pc::Nav / 1e27;
-      I=in( "ionicstrength", 0.0 );  // [mol/l]
-      z_count = in( "countervalency", 0.0 );  // [e]
-      k2_count=0;
-      k=sqrt( I*c );
-      if (k<zero)
-        k = 1/in( "debyelength", 1.0/zero ); // [A]
     }
 
     string DebyeHuckel::_brief() {

@@ -142,12 +142,13 @@ namespace Faunus {
      * It is important to note that distances should be calculated without
      * periodicity and if molecules cross periodic boundaries, these
      * must be made whole before performing the analysis.
-     * The `InputMap` is scanned for the following keywords:
+     * The `InputMap` is scanned for the following keywords in section
+     * `analysis/scatter`:
      *
      * - `qmin` Minimum q value (1/angstrom)
      * - `qmax` Maximum q value (1/angstrom)
      * - `dr` q spacing (1/angstrom)
-     * - `sofq_cutoff` Cutoff distance (angstrom). *Experimental!*
+     * - `cutoff` Cutoff distance (angstrom). *Experimental!*
      *
      * See also <http://dx.doi.org/10.1016/S0022-2860(96)09302-7>
      */
@@ -162,10 +163,11 @@ namespace Faunus {
           std::map<T,Average<T> > I; //!< Sampled, average I(q)
 
           DebyeFormula(InputMap &in) : geo(10) {
-            qmin=in.get<double>("qmin",-1);
-            qmax=in.get<double>("qmax",-1);
-            dq=in.get<double>("dq",-1);
-            rc=in.get<double>("sofq_cutoff",1e9);
+            in.cd ("analysis/scatter");
+            qmin=in.get("qmin",-1.0);
+            qmax=in.get("qmax",-1.0);
+            dq=in.get("dq",-1.0);
+            rc=in.get("cutoff",1.0e9);
           }
 
           /**

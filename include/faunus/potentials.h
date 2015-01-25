@@ -151,11 +151,21 @@ namespace Faunus {
 
     /**
      * @brief Harmonic pair potential
-     * @details The harmonic potential has the form
+     *
+     * The harmonic potential has the form
      * \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
      * (kT/angstrom^2) and req is the equilibrium distance (angstrom).
+     *
+     * Upon construction from InputMap, the following keywords are searched
+     * for in section `harmonic` (default root dir is `system`):
+     *
+     * Keyword   | Description
+     * :-------- | :-----------------------------------------------
+     * req       | Equilibrium distance (angstrom)
+     * k         | Force constant (kT/angstrom^2). See note below.
+     *
      * @note We do not multiply with 1/2 which must be included in the
-     * supplied force constant, k
+     * supplied force constant, `k`.
      */
     class Harmonic : public PairPotentialBase {
       private:
@@ -165,9 +175,7 @@ namespace Faunus {
         double k;   //!< Force constant (kT/A^2) - Remember to divide by two!
         double req; //!< Equilibrium distance (angstrom)
 
-        inline Harmonic( double k=0, double req=0 ) : k(k), req(req) {
-          name = "Harmonic";
-        };
+        inline Harmonic( double k=0, double req=0 ) : k(k), req(req) { name = "Harmonic"; };
 
         Harmonic( InputMap&, const string &dir="" );
 
@@ -194,13 +202,13 @@ namespace Faunus {
      * for \f$r_c\leq r \leq r_c+w_c\f$. For \f$r<r_c\f$, \f$\beta u=-\epsilon\f$,
      * while zero for \f$r>r_c+w_c\f$.
      *
-     * The InputMap parameters are:
+     * The InputMap parameters, searched for in `cosattract` are:
      *
-     * Key                | Description
-     * :----------------- | :---------------------------
-     * `cosattract_eps`   | Depth, \f$\epsilon\f$ [kT]
-     * `cosattract_rc`    | Width, r_c [angstrom]
-     * `cosattract_wc`    | Decay range, w_c [angstrom] 
+     * Key     | Description
+     * :-------| :---------------------------
+     * `eps`   | Depth, \f$\epsilon\f$ [kT]
+     * `rc`    | Width, r_c [angstrom]
+     * `wc`    | Decay range, w_c [angstrom] 
      *
      */
     class CosAttract : public PairPotentialBase {
@@ -258,25 +266,44 @@ namespace Faunus {
 
     /**
      * @brief Finite Extensible Nonlinear Elastic (FENE) potential
-     * @details This is an anharmonic bonding potential with the form:
+     *
+     * This is an anharmonic bonding potential with the form:
      * @f[
      *     \beta u(r) = -\frac{k r_0^2}{2}\ln \left [ 1-(r/r_0)^2 \right ]
      * @f]
      * for \f$r<r_0\f$, otherwise infinity. The input parameters read by InputMap
-     * are as follows:
-     * - `fene_stiffness` Bond stiffness, `k` [kT]
-     * - `fene_maxsep` Maximum separation, `r_0` [angstrom]
+     * from section `fene` are as follows:
+     *
+     * - `stiffness` Bond stiffness, `k` [kT]
+     * - `maxsep` Maximum separation, `r_0` [angstrom]
      *
      * More info: doi:10.1103/PhysRevE.59.4248
-     * 
      */
     class FENE : public PairPotentialBase {
       private:
-        double k,r02,r02inv;
-        string _brief();
+        double k, r02, r02inv;
+
+        string _brief() {
+          using namespace Faunus::textio;
+          std::ostringstream o;
+          o << name+": k=" << k << kT+"/"+angstrom+squared+" r0=" << sqrt(r02) << _angstrom; 
+          return o.str();
+        }
+
       public:
-        FENE(double,double); // Constructor
-        FENE(InputMap&, const string &dir=""); // Constructor
+        FENE(double k_kT, double rmax_A) : k(k_kT) {
+          name="FENE";
+          r02=rmax_A*rmax_A;
+          r02inv=1/r02;
+        }
+
+        FENE( InputMap &in, const string &dir="" ) : PairPotentialBase(dir) {
+          name="FENE";
+          in.cd ( jsondir+"/fene" );
+          k  = in( "stiffness", 0.0);
+          r02 = pow( in( "maxsep", 0.0), 2);
+          r02inv = 1/r02;
+        }
 
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -344,7 +371,8 @@ namespace Faunus {
 
     /**
      * @brief Lennard-Jones (12-6) pair potential
-     * @details The Lennard-Jones potential has the form:
+     *
+     * The Lennard-Jones potential has the form:
      * @f$
      * \beta u=4\epsilon_{lj}
      * \left ((\sigma_{ij}/r_{ij})^{12}-(\sigma_{ij}/r_{ij})^6\right )
@@ -353,6 +381,14 @@ namespace Faunus {
      * \f$\sigma_{ij} = (\sigma_i+\sigma_j)/2\f$
      * and \f$\epsilon_{lj}=\epsilon\f$
      * is the same for all pairs in this class.
+     *
+     * Upon construction the input section `ljsimple` is scanned for
+     * the following:
+     *
+     * Keyword    |  Description
+     * :--------- |  :------------------------
+     * `eps`      |  Interaction strength
+     * `unit`     |  Unit of interaction strength - can be `kJ/mol` or `kT` (default)  
      */
     class LennardJones : public PairPotentialBase {
       private:
@@ -364,8 +400,20 @@ namespace Faunus {
         }
         double eps;
       public:
-        LennardJones();
-        LennardJones(InputMap&, const string &dir="");
+        LennardJones() : eps(0) { name="Lennard-Jones"; }
+
+        /**
+         * @param in InputMap is scanned for the `lj_eps` and should be in units of kT
+         * @param dir Prefix for InputMap - default is `ls_`
+         */
+        LennardJones(InputMap &in, const string &dir="") : PairPotentialBase(dir) {
+          name="Lennard-Jones";
+          in.cd ( jsondir+"/ljsimple" );
+          eps = 4*in("eps", 0.);
+          string unit = in.get<string>("unit", "kT");
+          if ( unit=="kJ/mol" )
+            eps *= 1.0_kJmol;
+        }
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -412,9 +460,9 @@ namespace Faunus {
           double rc2; // squared cut-off distance
         public:
           CutShift(InputMap &in, const string &dir="") : Tpairpot(in,dir) {
-            rc2=pow(in.get<double>(Tpairpot::prefix+"_cutoff", pc::infty),2);
+            rc2 = pow( in.get( "cutoff", pc::infty ), 2 );
             Tpairpot::name+=" (rcut="
-              + std::to_string(sqrt(rc2)) + textio::_angstrom + ")";
+              + std::to_string( sqrt(rc2) ) + textio::_angstrom + ")";
           }
           template<class Tparticle>
             double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -425,33 +473,26 @@ namespace Faunus {
     /** @brief Lorentz-Berthelot Mixing Rule for sigma and epsilon */
     struct LorentzBerthelot {
       string name;
-
       inline LorentzBerthelot() : name("Lorentz-Berthelot Mixing") {}
-
-      inline double mixSigma(double sigma1, double sigma2) const {
-        return 0.5*(sigma1+sigma2);
-      }
-
-      inline double mixEpsilon(double eps1, double eps2) const {
-        return sqrt(eps1*eps2);
-      }
+      inline double mixSigma(double sigma1, double sigma2) const { return 0.5 * ( sigma1 + sigma2 ); }
+      inline double mixEpsilon(double eps1, double eps2) const { return sqrt( eps1 * eps2 ); }
     };
 
     /**
      * @brief Lennard-Jones with arbitrary mixing rule
      *
      * @details This is a template for Lennard-Jones pair interactions where the
-     * template parameter must be a class for the epsilon and sigma mixed rules.
+     * template parameter must be a class for the epsilon and sigma mixing rules.
      * The atomic values for sigma and epsilon are taken from `AtomMap` via the
      * global instance `atom`.
      * In your InputMap configuration file you would typically set the atom list
      * file using the keyword `atomlist`.
      * Note that sigma for each atom is set to two times the radius found in
-     * `AtomMap`. Epsilon is stored internally in `kT*4`.
+     * `AtomMap`. Epsilon is stored internally in units of `4kT`.
      *
      * For example:
      * 
-     *     InputMap mcp("myconfig");
+     *     InputMap mcp( "config.json" );
      *     LennardJonesMixed<LorentzBerthelot> lj(mcp);
      *
      */
@@ -596,7 +637,7 @@ namespace Faunus {
 
         template<class T>
           inline WeeksChandlerAndersen(const T &dummy, const string &dir="")
-            : Tbase( dummy, dir ), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
+          : Tbase( dummy, dir ), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
             name="WeeksChandlerAnderson";
           }
 
@@ -799,12 +840,13 @@ namespace Faunus {
      * where \f$\lambda_B\f$ is the Bjerrum length and \c z are the valencies.
      *
      * Upon construction, the following parameters are read from the
-     * `InputMap`:
+     * `InputMap` in section `coulomb`. Note that the default root section
+     * in the json file is `system` but may be changed by instantiating
+     * classes.
      *
      * Keyword        |  Description
      * :------------- | :---------------------
-     *  `temperature` | Absolute temperature (K) [default: 298.15 K]
-     *  `epsilon_r`   | Relative dielectric constant [default: 80]
+     *  `epsr`        | Relative dielectric constant [default: 80]
      *  `depsdt`      | Dielectric constant temperature derivative [default: -0.368]
      */
     class Coulomb : public PairPotentialBase {
@@ -967,7 +1009,7 @@ namespace Faunus {
       public:
 
         YukawaGel(InputMap&, const string &dir);
-      
+
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             double m = a.radius+b.radius;
@@ -1015,10 +1057,17 @@ namespace Faunus {
 
     /**
      * @brief Debye-Huckel/Yukawa potential
-     * @details Coulomb with an exponential term to describe salt screening:
+     *
+     * Coulomb with an exponential term to describe salt screening:
      * \f[ \beta w_{ij} = \frac{e^2}{4\pi\epsilon_0\epsilon_rk_BT}
      * \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
      * where \f$\kappa=1/D\f$ is the inverse Debye screening length.
+     *
+     * Upon construction, the following keywords will be read from
+     * input section `coulomb` (in addition to those read be `Coulomb`):
+     *
+     * - `ionicstrength` [mol/l] 
+     * - `debyelength` [angstrom] (only if I=0, default)
      */
     class DebyeHuckel : public Coulomb {
       private:
@@ -1026,9 +1075,20 @@ namespace Faunus {
       protected:
         double c,k,k2_count, z_count;
         Average<double> k2_count_avg;
+
       public:
 
-        DebyeHuckel(InputMap&, const string &dir="");  //!< Construction from InputMap
+        DebyeHuckel(InputMap &in, const string &dir="") : Coulomb(in, dir) {
+          const double zero=1e-10;
+          name="Debye-Huckel";
+          c = 8*lB*pc::pi*pc::Nav/1e27;
+          double I=in( "ionicstrength", 0.0 );  // [mol/l]
+          z_count = in( "countervalency", 0.0 );  // [e]
+          k2_count=0;
+          k=sqrt( I*c );
+          if (k<zero)
+            k = 1/in( "debyelength", 1.0/zero ); // [A]
+        }
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
@@ -1231,9 +1291,9 @@ namespace Faunus {
      * where @f$r_c@f$ is a spherical cut-off beyond which the
      * energy is zero.
      * See more in for example <http://dx.doi.org/10/fm7qm5>.
-     * The cut-off distance is read from the InputMap with the following
+     * The cut-off distance is read from the InputMap (section `coulomb`) with the following
      * keyword:
-     * - `dh_cutoff` Spherical cut-off in angstroms
+     * - `cutoff` Spherical cut-off in angstroms (default: infinity)
      */
     class DebyeHuckelShift : public DebyeHuckel {
       private:
@@ -1241,7 +1301,7 @@ namespace Faunus {
         double u_rc,dudrc;
       public:
         DebyeHuckelShift(InputMap &in, const string &dir="") : DebyeHuckel(in,dir) {
-          rc=in.get<double>("dh_cutoff",sqrt(std::numeric_limits<double>::max()));
+          rc = in( "cutoff", sqrt( std::numeric_limits<double>::max() ) );
           rc2=rc*rc;
 #ifdef FAU_APPROXMATH
           u_rc = exp_cawley(-k*rc)/rc; // use approx. func even here!

@@ -26,25 +26,24 @@ struct myenergy : public Energy::Energybase<Tspace> {  //custom energy class
 
 int main() {
   Faunus::MPI::MPIController mpi;               //init MPI
-  InputMap mcp(textio::prefix+"temper.input");  //read input file
-  MCLoop loop(mcp);                             //handle mc loops
+  InputMap mcp(textio::prefix+"temper.json");   //read input file
   myenergy<Tspace> pot;                         //our custom potential!
+  mcp.cd ("system");
   pot.Tscale = mcp.get("Tscale",1.0);           //temperature from input
   Tspace spc(mcp);                              //create simulation space
-  spc.insert( PointParticle() );                //insert a single particle
-  Group mygroup(0,0);                           //group with single particle
-  spc.enroll(mygroup);                          //tell space about group
 
   Analysis::LineDistribution<> dst(.05);        //distribution func.
   Move::ParallelTempering<Tspace> pt(mcp,pot,spc,mpi);//temper move
   Move::AtomicTranslation<Tspace> trans(mcp,pot,spc); //translational move
-  trans.setGroup(mygroup);                      //set translation group
 
   EnergyDrift sys;                              // class for tracking system energy drifts
+  cout << "hej2" << endl;
   sys.init(Energy::systemEnergy(spc,pot,spc.p));// store initial total system energy
+  cout << "hej3" << endl;
 
-  mpi.cout << spc.info() << loop.info();        //print initial info
+  mpi.cout << spc.info();                       //print initial info
                                                
+  MCLoop loop(mcp);                             //handle mc loops
   while ( loop[0] ) {                           //start markov chain
     while ( loop[1] ) {                        
       sys+=trans.move();                        //translate particle
@@ -89,7 +88,7 @@ int main() {
   $ cmake . -DENABLE_MPI=on
   $ make
   $ cd src/examples
-  $ ./temper.run
+  $ ./temper.run mpirun
   ~~~
 
   The tempering routine in Faunus is general and implemented in
@@ -97,20 +96,33 @@ int main() {
   given simply by giving different input files for each replica.
   The input files, `mpi$rank.temper.input`, for this example look like this:
 
-  ~~~
-  loop_macrosteps       2000 # number of temper moves
-  loop_microsteps       10000# number of translational moves per temper move
-  cuboid_len            4    # Box side length Angstrom
-  temper_runfraction    1.0  # Set to one/zero to turn on/off tempering
-  temper_format         XYZ  # Exchange only coordinates while tempering
-  mv_particle_genericdp 0.5  # translational displacement [angstrom]
-  Tscale                1.0  # Reduced temperature
-  ~~~
+  ~~~~
+  {
+    "atomlist" : { "A" : { "dp":0.5 } },
+
+    "moleculelist" : {
+      "myparticles" : { "atoms":"A", "atomic":true, "Ninit":1 }
+    },
+
+    "moves" : {
+      "temper"        : { "prob":1.0, "format":"XYZ" },
+      "atomtranslate" : { "myparticles" : {} }
+    },
+
+    "system" : {
+      "Tscale"       : 1.0,
+      "cuboid"       : { "len" : 4. },
+      "mcloop"       : { "macro":2000, "micro":10000 },
+      "unittest"     : { "testfile":"mpi2.temper.test", "stable":false },
+      "atomlist"     : "mpi2.temper.json",
+      "moleculelist" : "mpi2.temper.json"
+    }
+  }
+  ~~~~
 
   temper.cpp
   ==========
 
   @includelineno examples/temper.cpp
-
 */
 

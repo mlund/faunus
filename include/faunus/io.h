@@ -152,7 +152,7 @@ namespace Faunus {
   class DipoleWRL {
     public:
       template<class Tspace>
-        void saveDipoleWRL(const string &filename, Tspace &spc, Group &sol) {
+        void saveDipoleWRL(const string &filename, const Tspace &spc, const Group &sol) {
           auto L = spc.geo.len.x();
           auto L2 = L/2;
 
@@ -404,7 +404,7 @@ namespace Faunus {
         static std::string p2s(const Tparticle &a, int i) {
           std::ostringstream o;
           o.precision(5);
-          o << a.transpose() << "\n" << a.dir.transpose() << "\n"
+          o << a.transpose() << " " << a.dir.transpose() << " "
             << a.patchdir.transpose() << "\n";
           return o.str();
         }
@@ -415,6 +415,7 @@ namespace Faunus {
           o << s;
           o >> a.x() >> a.y() >> a.z() >> a.dir.x() >> a.dir.y() >> a.dir.z()
             >> a.patchdir.x() >> a.patchdir.y() >> a.patchdir.z();
+          a.init();
           return a;
         }
     public:

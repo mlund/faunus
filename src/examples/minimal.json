@@ -1,6 +1,23 @@
-{ "atomlist" :
-  {
-    "Na" : { "q": 1.0, "sigma":4.0, "dp":40. }, // sodium ion
-    "Cl" : { "q":-1.0, "sigma":4.0, "dp":30. }  // chloride ion
+{
+  "atomlist" : {
+    "A" : { "eps": 0.15, "sigma":4.0, "dp":40. }, // sodium ion
+    "B" : { "eps": 0.20, "sigma":10.0, "dp":10. }  // chloride ion
+  },
+  "moleculelist" : { 
+    "salt" : { "atoms":"A B", "atomic":true, "Ninit":50 }
+  },
+  "moves" : {
+    "atomtranslate" : {
+      "salt" : { "peratom":true }
+    }
+  },
+  "energy" : {
+    "nonbonded" : {}
+  },
+  "system" : {
+    "temperature" : 298.15,
+    "cuboid" : { "len":50. },
+    "atomlist"     : "minimal.json",
+    "moleculelist" : "minimal.json"
   }
 }

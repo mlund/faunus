@@ -87,32 +87,25 @@ TEST_CASE("Particles", "...")
 
 TEST_CASE("Polar Test","Ion-induced dipole test (polarization)") 
 {
-  std::ofstream js("polar_test.json"), inp("polar_test.input");
-  js << "{ \"atomlist\" : \n { \n "
-    << "\"sol1\" : {\"q\":1, \"dp\":0, \"dprot\":0, \"alpha\":\"0 0 0 0 0 0\"},\n"
-    << "\"sol2\" : {\"q\":0, \"dp\":0, \"dprot\":0, \"alpha\":\"2.6 0 0 2.6 0 2.6\"}\n } \n }";
-  inp << "cuboid_len 10\n" << "temperature 298\n"
-    << "epsilon_r 1\n tion1 sol1\n tion2 sol2\n nion1 1\n nion2 1\n";
-  js.close();
-  inp.close();
-
-  ::atom.includefile("polar_test.json");
-  InputMap in("polar_test.input");
   using namespace Faunus::Potential;
   typedef CombinedPairPotential<Coulomb,IonDipole> Tpair;
   typedef Space<Geometry::Cuboid, DipoleParticle> Tspace;
-  Energy::NonbondedVector<Tspace,Tpair> pot(in);
+
+  InputMap in("unittests.json");
   Tspace spc(in);
-  Group sol;
-  sol.addParticles(spc, in);
-  Move::PolarizeMove<Move::AtomicTranslation<Tspace> > trans(in,pot,spc);
-  trans.setGroup(sol);
+  Energy::NonbondedVector<Tspace,Tpair> pot(in);
+  Move::PolarizeMove<Move::AtomicTranslation<Tspace> > mv(in,pot,spc);
+
+  auto m = spc.molList().find( "multipoles" );
+  spc.insert( m->id, m->getRandomConformation() );
 
   spc.p[0] = Point(0,0,0);
   spc.p[1] = Point(0,0,4);
   spc.trial = spc.p;
-  CHECK(trans.move(1) == Approx(-5.69786)); // check energy change
-  CHECK(spc.p[1].muscalar == Approx(0.162582)); // check induced moment
+
+  CHECK( spc.p.size() == 2 );
+  CHECK( mv.move(1) == Approx(-5.69786) ); // check energy change
+  CHECK( spc.p[1].muscalar == Approx(0.162582) ); // check induced moment
 }
 
 TEST_CASE("Groups", "Check group range and size properties")

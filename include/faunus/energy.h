@@ -579,7 +579,7 @@ namespace Faunus {
               for (auto &pi : p) {
                 for (auto &pj : p)
                   if (&pi!=&pj)
-                    E.col(i) = E.col(i) + pairpot.field(pj,geo.vdist(pi,pj));
+                    E.col(i) = E.col(i) + pairpot.field( pj, geo.vdist( pi, pj ) );
                 i++;
               }
             }
@@ -1426,8 +1426,8 @@ namespace Faunus {
             sasa.clear();
             while (n-->0)
               sasa.insert(sasa.end(), t.begin(), t.end());
-            if (sasa.empty())
-              std::cerr << "Warning: No SASA data loaded from "+file+"\n";
+            if ( sasa.empty() && !file.empty() )
+              throw std::runtime_error( "No SASA data loaded from "+file );
           }
 
           /** @brief Save U(r) to disk if sampled */

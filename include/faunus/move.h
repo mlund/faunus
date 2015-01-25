@@ -79,14 +79,14 @@ namespace Faunus {
      *
      * ### Update frequency ###
      *
-     *  Updating induced moments is an iterative N*N operation and
-     *  very inefficient for MC moves that update only a subset of the system.
-     *  In liquid systems that propagate only slowly as a function of MC steps
-     *  one may attempt to update induced dipoles less frequently at the
-     *  expense of some accuracy.
-     *  For repeating moves -- i.e. molecular translate/rotate or atomic
-     *  translation -- polarisation is updated only after all moves have
-     *  been carried out.
+     * Updating induced moments is an iterative N*N operation and
+     * very inefficient for MC moves that update only a subset of the system.
+     * In liquid systems that propagate only slowly as a function of MC steps
+     * one may attempt to update induced dipoles less frequently at the
+     * expense of accuracy.
+     * For repeating moves -- i.e. molecular translate/rotate or atomic
+     * translation -- polarisation is updated only after all moves have
+     * been carried out.
      *
      * @note Will currently not work for Grand Caninical moves
      */
@@ -109,8 +109,10 @@ namespace Faunus {
            */
           template<typename Tenergy,typename Tparticles>
             void induceDipoles(Tenergy &pot, Tparticles &p) { 
-              Eigen::VectorXd mu_err_norm( (int)p.size() );
+
               int cnt=0;
+              Eigen::VectorXd mu_err_norm( (int)p.size() );
+
               do {
                 cnt++;
                 mu_err_norm.setZero();
@@ -125,12 +127,11 @@ namespace Faunus {
                   if (p[i].muscalar > 1e-6)
                     p[i].mu = mu_trial/p[i].muscalar;      // update article dip.
                 }
-                if ( cnt > max_iter ) {
-                  std::cerr << "Error: Field induction aborted after "
-                    << max_iter << " iterations." << endl;
-                  exit(1);
-                }
+                if ( cnt > max_iter )
+                  throw std::runtime_error("Field induction reached maximum number of iterations.");
+
               } while ( mu_err_norm.maxCoeff() > threshold ); // is threshold OK?
+
               numIter += cnt; // average number of iterations
             }
 
@@ -147,15 +148,15 @@ namespace Faunus {
             updateDip = ( Ntrials == updateAt ); 
 
             if ( updateDip ) {
-              field.resize(3,Tmove::spc->trial.size());
-              induceDipoles(*Tmove::pot,Tmove::spc->trial);
+              field.resize( 3, spc->trial.size() );
+              induceDipoles( *pot, spc->trial );
             }
           }
 
           double _energyChange() FOVERRIDE {
             if ( updateDip )
-              return Energy::systemEnergy(*spc,*pot,spc->trial)
-                - Energy::systemEnergy(*spc,*pot,spc->p);
+              return Energy::systemEnergy( *spc, *pot, spc->trial )
+                - Energy::systemEnergy( *spc, *pot, spc->p );
             else
               return Tmove::_energyChange();
           }
@@ -410,8 +411,6 @@ namespace Faunus {
           currentMolId = randomMolId();
           n = mollist[ currentMolId ].repeat;
           runfraction = mollist[ currentMolId ].prop;
-          //assert( n>0 );
-          //assert( currentMolId >=0 );
         }
 
         if ( run() ) {
@@ -575,9 +574,7 @@ namespace Faunus {
           Average<unsigned long long int> gsize; //!< Average size of igroup;
 
         public:
-          AtomicTranslation(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="");
-          void setGroup(Group&); //!< Select group in which to randomly pick particles from
-          void setParticle(int); //!< Select single particle in Space::p to move
+          AtomicTranslation(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="", string="/atomtranslate");
           void setGenericDisplacement(double); //!< Set single displacement for all atoms
           Point dir;             //!< Translation directions (default: x=y=z=1)
       };
@@ -606,10 +603,10 @@ namespace Faunus {
      */
     template<class Tspace>
       AtomicTranslation<Tspace>::AtomicTranslation(InputMap &in,Energy::Energybase<Tspace> &e,
-          Tspace &s, string dir) : Movebase<Tspace>(e,s,dir) {
+          Tspace &s, string dir, string subdir) : Movebase<Tspace>(e,s,dir) {
 
         base::title="Single Particle Translation";
-        base::jsondir += "/atomtranslate";
+        base::jsondir += subdir;
         iparticle=-1;
         igroup=nullptr;
         dir={1,1,1};
@@ -635,20 +632,6 @@ namespace Faunus {
     template<class Tspace>
       void AtomicTranslation<Tspace>::setGenericDisplacement(double dp) {
         genericdp=dp;
-      }
-
-    template<class Tspace>
-      void AtomicTranslation<Tspace>::setGroup(Group &g) {
-        igroup=&g;
-        iparticle=-1;
-        this->currentMolId=g.molId;
-      }
-
-    template<class Tspace>
-      void AtomicTranslation<Tspace>::setParticle(int i) {
-        iparticle=i;
-        igroup=nullptr;
-        this->currentMolId=-1;
       }
 
     template<class Tspace>
@@ -803,18 +786,22 @@ namespace Faunus {
       };
 
     template<class Tspace>
-      AtomicRotation<Tspace>::AtomicRotation(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string dir) : base(in,e,s,dir) {
+      AtomicRotation<Tspace>::AtomicRotation(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string dir) : base(in,e,s,dir,"/atomrotate") {
         base::title="Single Particle Rotation";
       }
 
     template<class Tspace>
       void AtomicRotation<Tspace>::_trialMove() {
-        if (igroup!=nullptr) {
-          iparticle=igroup->random();
-          gsize += igroup->size();
-        }
+        if ( ! this->mollist.empty() ) {
+          igroup = spc->randomMol( this->currentMolId );
+          if ( igroup != nullptr ) {
+            iparticle = igroup->random();
+            gsize += igroup->size();
+          } else return;
+        } else return;
+
         if (iparticle>-1) {
-          assert(iparticle<(int)spc->p.size() && "Trial particle out of range");
+          assert( iparticle<(int)spc->p.size() && "Trial particle out of range");
           double dprot = atom[spc->p[iparticle].id ].dprot;
           if (dprot<1e-6)
             dprot = base::genericdp;
@@ -2430,7 +2417,19 @@ namespace Faunus {
 
     /**
      * @brief Grand Canonical insertion of arbitrary M:X salt pairs
-     * @author Bjorn Persson and Mikael Lund
+     *
+     * This will do GC moves of salt pairs, automatically combined
+     * from their valencies. JSON input:
+     *
+     * ~~~~
+     * "moves" : {
+     *   "atomgc" : { "molecule":"mysalt", "prop":1.0 }
+     * }
+     * ~~~~
+     *
+     * where `mysalt` must be an atomic molecule. Only atom types with
+     * non-zero activities will be considered.
+     *
      * @date Lund 2010-2011
      * @warning Untested for asymmetric salt in this branch
      */
@@ -2475,25 +2474,38 @@ namespace Faunus {
           }
 
         public:
-          GrandCanonicalSalt(InputMap&, Energy::Energybase<Tspace>&, Tspace&, Group&, string="saltbath");
+          GrandCanonicalSalt(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="");
       };
 
     template<class Tspace>
       GrandCanonicalSalt<Tspace>::GrandCanonicalSalt(
-          InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, Group &g, string pfx) :
-        base(e,s,pfx), tracker(s) {
+          InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string dir) :
+        base(e,s,dir), tracker(s) {
+          w=30;
           base::title="Grand Canonical Salt";
           base::useAlternateReturnEnergy=true;
-          w=30;
-          base::runfraction = in.get<double>(pfx+"_runfraction",1.0);
-          saltPtr=&g;
+          base::jsondir += "/atomgc";
+          in.cd ( base::jsondir );
+
+          string saltname = in( "molecule", string() );
+          auto v = spc->findMolecules( saltname );
+          if ( v.empty() ) { // insert if no atomic species found
+            auto it = spc->molList().find( saltname ); 
+            if ( it != spc->molList().end() )
+              saltPtr = spc->insert( it->id, it->getRandomConformation(spc->geo, spc->p) );
+          } else {
+            if ( v.size() != 1 )
+              throw std::runtime_error( "Number of atomic GC groups must be exactly ONE." );
+            if ( v.front()->isMolecular() )
+              throw std::runtime_error( "Atomic GC group must be atomic.");
+            saltPtr=v.front();
+          }
           add(*saltPtr);
         }
 
     template<class Tspace>
       void GrandCanonicalSalt<Tspace>::add(Group &g) {
         assert( g.isAtomic() && "Salt group must be atomic" );
-        spc->enroll(g);
         tracker.clear();
         for (auto i : g) {
           auto id=spc->p[i].id;
@@ -3328,7 +3340,7 @@ namespace Faunus {
                 auto molid = p.first;
                 if ( spc->molecule[molid].isAtomic() ) {
                   assert(1==2 && "Under construction");
-                  auto g = spc->insert( molid, p.second );
+                  spc->insert( molid, p.second );
                   atomTrack.update( spc->p );
                 }
                 else {
@@ -3697,16 +3709,22 @@ namespace Faunus {
      * @brief Multiple moves controlled via JSON input
      *
      * This is a move class that randomly picks between a number of
-     * moves as defined in a JSON file. The available moves are shown
+     * moves as defined in a JSON file in the section `moves`.
+     * The available moves are shown
      * in the table below; each can occur only once and are picked
      * with uniform weight.
      *
      * Keyword         | Move class                | Description
      * :-------------- | :------------------------ | :----------------
      * `atomtranslate` | `Move::AtomicTranslation` | Translate atoms
-     * `moltransrot`   | `Move::TranslateRotate`   | Translate/rotate molecules
+     * `atomrotate`    | `Move::AtomicRotation`    | Rotate atoms
+     * `atomgc`        | `Move::GrandCanonicalSalt`| GC salt move (muVT ensemble)
+     * `crankshaft`    | `Move::CrankShaft`        | Crank shaft polymer move
+     * `gc`            | `Move::GreenGC`           | Grand canonical move (muVT ensemble)
      * `isobaric`      | `Move::Isobaric`          | Volume move (NPT ensemple)
-     * `gc`            | `Move::GreenGC`           | Grand canonical move
+     * `moltransrot`   | `Move::TranslateRotate`   | Translate/rotate molecules
+     * `pivot`         | `Move::Pivot`             | Pivot polymer move
+     * `titrate`       | `Move::SwapMove`          | Particle swap move
      */
     template<typename Tspace, bool polarise=false, typename base=Movebase<Tspace>>
       class Propagator : public base {
@@ -3741,6 +3759,10 @@ namespace Faunus {
               for ( auto &i : in.getMap() ) {
                 if (i.first=="atomtranslate")
                   mPtr.push_back( toPtr( AtomicTranslation<Tspace>(in,e,s) ) );
+                if (i.first=="atomrotate")
+                  mPtr.push_back( toPtr( AtomicRotation<Tspace>(in,e,s) ) );
+                if (i.first=="atomgc")
+                  mPtr.push_back( toPtr( GrandCanonicalSalt<Tspace>(in,e,s) ) );
                 if (i.first=="moltransrot")
                   mPtr.push_back( toPtr( TranslateRotate<Tspace>(in,e,s) ) );
                 if (i.first=="isobaric")
@@ -3754,10 +3776,8 @@ namespace Faunus {
                 if (i.first=="pivot")
                   mPtr.push_back( toPtr( Pivot<Tspace>(in,e,s) ) );
               }
-              if ( mPtr.empty() ) {
-                std::cerr << "Error: No moves defined - check JSON file" << endl;
-                exit(1);
-              }
+              if ( mPtr.empty() )
+                throw std::runtime_error("No moves defined - check JSON file");
             }
 
           double move(int n=1) FOVERRIDE {

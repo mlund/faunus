@@ -31,7 +31,6 @@ namespace Faunus {
       RandomInserter() : dir(1,1,1), offset(0,0,0), checkOverlap(true) { name = "random"; }
 
       Tpvec operator() (Geometry::Geometrybase &geo, const Tpvec &p, TMoleculeData &mol) {
-        typedef typename Tpvec::value_type Tparticle;
         bool _overlap=true;
         Tpvec v;
         do {
@@ -175,7 +174,8 @@ namespace Faunus {
         /** @brief Get a random conformation */
         Tpvec getRandomConformation() {
           if ( conformations.empty() )
-            throw std::runtime_error("No configurations for molecule '"+name+"'");
+            throw std::runtime_error("No configurations for molecule '" + name +
+                "'.Perhaps you forgot to specity the 'atomic' keyword?");
 
           assert( size_t(confDist.max()) == conformations.size()-1 );
           assert( atoms.size() == conformations.front().size() );

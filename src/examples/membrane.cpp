@@ -13,6 +13,7 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &b, Tpotmap &m, Tinput &in
   using namespace Potential;
 
   // non-bonded interactions
+  in.cd ("system");
   auto hid=atom["HD"].id;
   auto tid=atom["TL"].id;
   double sigma   = in("lipid_sigma", 10);  // angstrom
@@ -47,12 +48,12 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &b, Tpotmap &m, Tinput &in
 }
 
 typedef Space<Geometry::Cuboid> Tspace;
-typedef Potential::PotentialMap<Potential::DebyeHuckelLJ> Tpairpot;
+typedef Potential::PotentialMap<Potential::DebyeHuckel> Tpairpot;
 
 int main() {
 
   cout << textio::splash();      // show faunus banner and credits
-  InputMap mcp("membrane.input");//read input file
+  InputMap mcp("membrane.json"); //read input file
 
   FormatXTC xtc(1000);
   EnergyDrift sys;               // class for tracking system energy drifts
@@ -70,47 +71,26 @@ int main() {
   nonbonded->noPairPotentialCutoff=true;
   Tspace spc(mcp);
 
-  // Load and add polymer to Space
-  string file = mcp.get<string>("lipid_file","");
-  int Nlipid=mcp("lipid_N",1);
-  vector<Group> lipids(Nlipid);
-  for (int i=0; i<Nlipid; i++) {
-    Tspace::ParticleVector v;                   // temporary, empty particle vector
-    FormatAAM::load(file,v);                    // load AAM structure into v
-    Geometry::FindSpace().find(spc.geo,spc.p,v);// find empty spot in particle vector
-    Group pol = spc.insert(v);                  // Insert into Space
-    if (slump()>0.5)
-      std::swap( spc.p[pol.front()].z(), spc.p[pol.back()].z() );
-    if (slump()<mcp("lipid_chargefraction", 0.0))
-      spc.p[ pol.front() ].charge = -1;
-    pol.name="lipid";
-    lipids[i]=pol;
-    spc.enroll(lipids[i]);
-  }
+  auto lipids = spc.findMolecules("lipid");
 
-  // Set up bonded and non-bonded interactions
-  Group allLipids(lipids.front().front(), lipids.back().back());
+  Group allLipids( lipids.front()->front(), lipids.back()->back() );
   allLipids.setMolSize(3);
   MakeDesernoMembrane(allLipids, *bonded, nonbonded->pairpot, mcp);
 
   // Place all lipids in xy plane (z=0);
-  for (auto &g : lipids) {
-    double dz=spc.p[ g.back() ].z();
-    for (auto i : g) {
+  for ( auto g : lipids ) {
+    double dz = spc.p[ g->back() ].z();
+    for (auto i : *g) {
       spc.p[i].z() -= dz;
-      spc.geo.boundary(spc.p[i]);
-      g.setMassCenter(spc);
+      spc.geo.boundary( spc.p[i] );
     }
+    g->setMassCenter( spc );
   }
   spc.trial=spc.p;   // sync. particle trial vector
   spc.load("state"); // load old config. from disk (if any)
 
   // Markov moves and analysis
-  Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
-  Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
-  Move::Pivot<Tspace> piv(mcp,pot,spc);
-  Move::Isobaric<Tspace> iso(mcp,pot,spc);
-  Move::SwapMove<Tspace> swap(mcp,pot,spc);
+  Move::Propagator<Tspace> mv(mcp, pot, spc);
   Analysis::BilayerStructure lipidstruct;
   Analysis::VirialPressure virial;
 
@@ -121,37 +101,13 @@ int main() {
   MCLoop loop(mcp);                      // class for handling mc loops
   while ( loop[0] ) {                    // Markov chain 
     while ( loop[1] ) {
-      Group g;
-      decltype(lipids)::iterator it;     // iterator for lipids
-      int k = lipids.size();
-      int i = slump.range(0,2);
-      switch (i) {
-        case 0:
-          mv.setGroup(allLipids);
-          sys+=mv.move(allLipids.size());// translate lipid monomers
-          break;
-        case 1:
-          while (k-->0) {
-            it = slump.element( lipids.begin(), lipids.end() );
-            if (slump()>0.5) {
-              gmv.setGroup(*it);         // tell what to move
-              sys+=gmv.move();           // lipid translate/rotate
-            } else {
-              piv.setGroup(*it);         // tell what to move
-              sys+=piv.move();           // lipid pivot
-            }
-          }
-          break;
-        case 2:
-          sys+=iso.move();
-          break;
-      }
+      sys += mv.move();
       double ran = slump();
-      if (ran>0.99) {
+      if ( ran > 0.99 ) {
         xtc.setbox( spc.geo.len );
         xtc.save("traj.xtc", spc.p);
       }
-      if (ran>0.90) {
+      if ( ran > 0.90 ) {
         virial.sample(spc, pot);
         lipidstruct.sample(spc.geo, spc.p, allLipids);
       }
@@ -169,14 +125,11 @@ int main() {
 
   // perform unit tests
   UnitTest test(mcp);
-  iso.test(test);
   mv.test(test);
-  gmv.test(test);
-  piv.test(test);
   sys.test(test);
   lipidstruct.test(test);
 
-  cout << loop.info() + mv.info() + gmv.info() + iso.info() + piv.info()
+  cout << loop.info() + mv.info()
     + lipidstruct.info() + sys.info() + virial.info() + test.info();
 
   return test.numFailed();

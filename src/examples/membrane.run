@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
-# DO NOT COMMIT ANY MODIFIED VERSIONS UNLESS TO UPDATE THE TEST.
-
 source_tests_dir="`dirname $0`"
 cp -f $source_tests_dir/membrane.test . 2> /dev/null
 cp -f $source_tests_dir/membrane.state state 2> /dev/null
@@ -15,6 +12,39 @@ echo '{
   "atomlist" : {
     "HD" : { "r":5.0, "dp":4.0 },  // head group
     "TL" : { "r":5.0, "dp":2.0 }   // tail group
+  },
+
+  "moleculelist" : {
+    "lipid" : { "structure":"lipid.aam", "Ninit":'$Nlipid' }
+  },
+
+  "energy" : {
+    "nonbonded" : {
+      "cutoff_g2g" : 40.,
+      "coulomb" : { "epsr" : 80.0, "ionicstrength":0.05 }
+    }
+  },
+
+  "moves" : {
+    "atomtranslate" : { "lipid" : { "prop":0.5 } },
+    "pivot"         : { "lipid" : { "permol":true,  "minlen":1, "maxlen":2, "dp":6 } },
+    "moltransrot"   : { "lipid" : { "permol":true, "dp":2.0, "dprot":0.5 } },
+    "isobaric"      : { "dp":0.5, "pressure":0, "prop":0.2 }
+  },
+
+  "system" : {
+    "temperature"  : 298,
+    "coulomb"      : { "epsr" : 80.0, "ionicstrength":0.05 },
+    "cosattract"   : { "wc":'`python -c "print $sigma*1.6"`',
+                       "rc":'`python -c "print $sigma*2**(1/6.)"`', "eps":'$epsilon'  },
+    "cuboid"       : { "scaledir":"xy",
+                       "xyzlen" : "'`python -c "print $box, $box, $box*2"`'" },
+    "mcloop"       : { "macro":10, "micro":1000 },
+    "unittest"     : { "testfile":"membrane.test", "stable":false },
+    "atomlist"     : "membrane.json",
+    "moleculelist" : "membrane.json",
+    "lipid_epsilon": "epsilon",
+    "lipid_sigma"  : "sigma"
   }
 }' > membrane.json
 
@@ -22,55 +52,7 @@ echo "3
  HD  0 0.00  0.00   0.00   0.0   1  "`python -c "print 0.5*$sigma"`"
  TL  1 0.00  0.00   5.00   0.0   1  "`python -c "print 0.5*$sigma"`"
  TL  2 0.00  0.00  10.00   0.0   1  "`python -c "print 0.5*$sigma"`"
-" > membrane.aam
-
-echo "
-atomlist               membrane.json
-loop_macrosteps        10
-loop_microsteps        1000
-cuboid_len             -1        # Box side length Angstrom
-cuboid_xlen            $box
-cuboid_ylen            $box
-cuboid_zlen            "`python -c "print $box*2"`"
-
-temperature            298       # Kelvin
-epsilon_r              80        # Water dielectric const
-dh_ionicstrength       0.050     # mol/l
-excess_polarization    0
-
-lipid_N                $Nlipid   # Number of lipids
-lipid_epsilon          $epsilon  # kT
-lipid_sigma            $sigma    # angstrom
-lipid_chargefraction   0.0
-lipid_file             membrane.aam
-
-g2g_cutoff             40
-
-cosattract_eps         $epsilon
-cosattract_wc          "`python -c "print $sigma*1.6"`"
-cosattract_rc          "`python -c "print $sigma*2**(1/6.)"`"
-
-mv_particle_genericdp   10.
-mv_particle_runfraction 0.5
-
-transrot_transdp       2.0
-transrot_rotdp         0.5
-transrot_runfraction   1
-
-pivit_minlen           1
-pivot_maxlen           2
-pivot_dp               6
-pivot_runfraction      1
-
-# Constant pressure
-npt_P                  0
-npt_dV                 0.5         # log(dV)
-npt_runfraction        0.2
-cuboid_scaledir        XY
-
-test_stable            no
-test_file              membrane.test
-" > membrane.input
+" > lipid.aam
 }
 
 #-----------------------------------------------------------
@@ -86,7 +68,7 @@ if [ -x $exe ]; then
   mkinput
   $exe
   rc=$?
-  rm -f membrane.input membrane.json
+  #rm -f membrane.json
   exit $rc
 fi
 exit 1

@@ -64,10 +64,10 @@ namespace Faunus {
       setRadius( cbrt( 3*vol/(4*pc::pi) ) );
     }
 
-    bool Sphere::setlen(const Point &l) {
-      if (l.x()<=0) return false;
-      Sphere::setRadius(l.x());
-      return true;
+    void Sphere::setlen(const Point &l) {
+      Sphere::setRadius( l.x() );
+      if ( getVolume()<1e-9 )
+        throw std::runtime_error( "Sphere volume is zero." );
     }
 
     void Sphere::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {
@@ -94,20 +94,15 @@ namespace Faunus {
       return (a.squaredNorm()>r2) ? true:false;
     }
 
-    bool Cuboid::setlen(const Point &l) {
-      //if ( l.squaredNorm() < 1e-6 ) {
-      //  std::cerr << "Error: cuboid volume is zero. " << endl;
-      //  exit(1);
-      //}
-      assert(l.x()>0 && l.y()>0 && l.z()>0);
-      if (l.x()<=0||l.y()<=0||l.z()<=0) 
-        return false;
+    void Cuboid::setlen(const Point &l) {
+      if ( l.x()<1e-9 || l.y()<1e-9 || l.z()<1e-9 )
+        throw std::runtime_error( "Cuboud volume is zero" );
+
       len = l;                    // Cuboid sidelength
       len_half=l*0.5;             // half Cuboid sidelength
       len_inv.x()=1/len.x();      // inverse Cuboid side length
       len_inv.y()=1/len.y();
       len_inv.z()=1/len.z();
-      return true;
     }
 
     void Cuboid::_setVolume(double newV) {
@@ -162,15 +157,14 @@ namespace Faunus {
     }
 
     /**
-     * The InputMap is scanned for the following parameters
-     * (section `general`):
+     * The InputMap is scanned for the following parameters in section `system/cylinder`:
      *
      * Key      | Description
      * :------- | :-------------------------
      * `length` | Cylinder length [angstrom]
      * `radius` | Cylinder radius [angstrom] 
      */
-    Cylinder::Cylinder(InputMap &in, const string &sec) : Geometrybase("Cylinder", sec) {
+    Cylinder::Cylinder(InputMap &in, const string &dir) : Geometrybase( "Cylinder", dir ) {
       in.cd( jsondir + "/cylinder" );
       init( in.get("length", 0.0), in.get("radius", 0.0) );
     }
@@ -186,9 +180,10 @@ namespace Faunus {
      * Dummy function not be used other than for compatibility
      * reasons. Sets length to x component of vector.
      */
-    bool Cylinder::setlen(const Point &l) {
+    void Cylinder::setlen(const Point &l) {
       init( l.x(), r); 
-      return true;
+      if ( getVolume() < 1e-9 )
+        throw std::runtime_error( "Cylinder volume is zero." );
     }
 
     void Cylinder::_setVolume(double newV) {

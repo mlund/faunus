@@ -840,10 +840,10 @@ namespace Faunus {
               double _lB;
             public:
               IonDipole(InputMap &in, const string &dir="") {
-                pc::setT ( in.get<double>("temperature", 298.15, "Absolute temperature (K)") );
-                double epsilon_r = in.get<double>("epsilon_r",80., "Dielectric constant");
-                _lB=pc::lB( epsilon_r );
+                name="Ion-dipole";
+                _lB = Coulomb(in,dir).bjerrumLength();
               }
+
               /**
                * @brief Ion-dipole
                * @param a Dipole particle A

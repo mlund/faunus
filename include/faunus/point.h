@@ -3,6 +3,7 @@
 
 #ifndef SWIG
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #endif
 
 namespace Faunus {
@@ -508,12 +509,70 @@ namespace Faunus {
       double pcanglsw;
       double pcangl;
       double halfl;
+      double chiral_angle, panglsw, pangl;  // are these needed? From AtomData
 
       inline CigarParticle() : halfl(0) {}
 
       /** @brief Copy constructor for Eigen derivatives */
       template<typename OtherDerived>
         CigarParticle(const Eigen::MatrixBase<OtherDerived>& other) : PointParticle(other) {}
+
+      /**
+       * @brief Initialize patchy spherocylinder - run at start and after patch changes
+       *
+       * Calculates cosine of angles, patch direction including chirality
+       * and vector corresponding to sides of patch that are used in
+       * calculations of interactions. 
+       * This function must be called at the beginning of calculations and after changes
+       * of patch properties.
+       * It shall be also after a lot of move to remove accumulated comouptation errors
+       */
+      inline void init() {
+        const double zero = 1e-9;
+        if ( halfl > zero ) {
+          Point vec;
+          Eigen::Quaterniond Q;
+          pcangl = std::cos( 0.5 * patchangle );
+          pcanglsw = std::cos( 0.5 * patchangle + panglsw );
+
+          if ( dir.squaredNorm() < zero )
+            dir = {1,0,0};
+
+          if ( patchdir.squaredNorm() < zero )
+            patchdir = {0,1,0};
+
+          dir.normalize();
+
+          patchdir = patchdir - dir*patchdir.dot(dir); // perp. project
+          patchdir.normalize();
+
+          /* calculate patch sides */
+          if ( chiral_angle < zero )
+            vec = dir;
+          else {
+            chdir = dir;
+            Q = Eigen::AngleAxisd( 0.5*chiral_angle, patchdir );
+            chdir = Q * chdir; // rotate
+            vec = chdir;
+          }          
+
+          /* create side vector by rotating patch vector by half size of patch*/
+          /* the first side */
+          patchsides[0] = patchdir;
+          Q = Eigen::AngleAxisd( 0.5*pangl + panglsw, vec );
+          patchsides[0] = Q * patchsides[0]; // rotate
+          patchsides[0].normalize();
+
+          /* the second side */
+          patchsides[1] = patchdir;
+          Q = Eigen::AngleAxisd( -0.5*pangl - panglsw, vec );
+          patchsides[1] = Q * patchsides[1]; // rotate
+          patchsides[1].normalize();
+
+          if ( patchsides[0].squaredNorm() < zero )
+            throw std::runtime_error( "Patch side vector has zero size." );
+        }
+      }
 
       /** @brief Generic copy operator for Eigen derivatives */
       template<typename OtherDerived>
@@ -537,6 +596,10 @@ namespace Faunus {
             patchangle = d.pangl;
             pcanglsw = std::cos(0.5*d.pangl + d.panglsw);
             pcangl = std::cos(0.5*d.pangl);
+            chiral_angle = d.chiral_angle;
+            pangl = d.pangl;
+            panglsw = d.panglsw;
+            init();
             return *this;
           }
 

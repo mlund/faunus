@@ -8,58 +8,38 @@ typedef CombinedPairPotential<CosAttractMixed<>,WeeksChandlerAndersen> Tpair;
 typedef CigarSphereSplit<Tpair,Tpair,Tpair> Tpairpot;
 
 int main() {
-  cout << textio::splash();                 // show faunus banner and credits
-  InputMap mcp("cigars2fibrils.input");     // open user input file
-  MCLoop loop(mcp);                         // class for handling mc loops
-  FormatMXYZ mxyz;                          // MXYZ structure file I/O
-  EnergyDrift sys;                         // class for tracking system energy drifts
+  cout << textio::splash();
+  InputMap mcp("cigars2fibrils.json");
+  FormatMXYZ mxyz;
+  EnergyDrift sys;
 
   // Energy functions and space
   Tspace spc(mcp);
   Energy::NonbondedVector<Tspace,Tpairpot> pot(mcp);
 
   // Markov moves and analysis
-  Move::AtomicTranslation<Tspace> mv(mcp, pot, spc);
-  Move::AtomicRotation<Tspace> rot(mcp, pot, spc);
+  Move::Propagator<Tspace> mv( mcp, pot, spc );
 
-  // Add cigars
-  Group cigars;
-  cigars.addParticles(spc, mcp);
-  cigars.name="PSC";
-  for (auto i : cigars) {
-    spc.p[i].dir.ranunit(slump);
-    spc.p[i].patchdir.ranunit(slump);
-    Geometry::cigar_initialize(spc.geo, spc.p[i]);
-    spc.trial[i]=spc.p[i];
-  }
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );      // store initial total system energy
+  sys.init( Energy::systemEnergy( spc,pot,spc.p ) );
 
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
-  mxyz.save("cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount());
+  MCLoop loop( mcp );
+  mxyz.save( "cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount() );
+
   while ( loop[0] ) {  // Markov chain 
-    while ( loop[1] ) {
-      int i= slump.range(0,1);
-      switch (i) {
-        case 0:
-          mv.setGroup(cigars);
-          sys+=mv.move( cigars.size() );  // translate cigars
-          break;
-        case 1:
-          rot.setGroup(cigars);
-          sys+=rot.move( cigars.size() ); // translate cigars
-          break;
-      }
-    } // end of micro loop
+    while ( loop[1] )
+      sys += mv.move();
+
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
 
     cout << loop.timing();
 
-    mxyz.save("cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount());
+    mxyz.save( "cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount() );
   } // end of macro loop
 
   // print information about simulationat the end
-  cout << loop.info() + sys.info() + mv.info() + rot.info();
+  cout << loop.info() + sys.info() + mv.info();
 }
 
 /**

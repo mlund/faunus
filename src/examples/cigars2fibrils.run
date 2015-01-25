@@ -21,29 +21,46 @@ cp -f $source_tests_dir/cigarsenergy.test . 2> /dev/null
 #/ pdis - distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [angstrom]
 #/ pswitch - distance on which attraction switches to zero on PatchySpherocylinder [angstrom]
 #/ chiral_angle - angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
-echo '{ "atomlist" :
+echo '{
+  "atomlist" :
   {
-    //patchy spherocylinder with non-attractive ends - patch is only on cylindrical part
-    "CPSC" : { "sigma":10.0, "eps":2.479, "dp":1.0, "dprot":5.0, "patchtype":2,
-              "len":30.0, "patchangle":80.0, "patchangleswitch":5.0, "patchswitch":6.0, "patchdistance":11.2246204831, "patchchiralangle":0.0},
-    //patchy spherocylinder with attractive ends - attractive wedge goes all the way toward the ends
-    "PSC" : { "sigma":10.0, "eps":2.479, "dp":1.0, "dprot":5.0, "patchtype":1,
-              "len":30.0, "patchangle":80.0, "patchangleswitch":5.0, "patchswitch":6.0, "patchdistance":11.2246204831, "patchchiralangle":0.0}
+    // PSC w. non-attractive ends - patch is only on cylindrical part
+    "CPSC" : {
+      "sigma":10.0, "eps":2.479, "dp":1.0, "dprot":5.0, "patchtype":2,
+      "len":30.0, "patchangle":80.0, "patchangleswitch":5.0,
+      "patchswitch":6.0, "patchdistance":11.2246204831, "patchchiralangle":0.0
+    },
+
+    // PSC w. attractive ends - attractive wedge goes all the way toward the ends
+    "PSC" : {
+      "sigma":10.0, "eps":2.479, "dp":1.0, "dprot":5.0, "patchtype":1,
+      "len":30.0, "patchangle":80.0, "patchangleswitch":5.0,
+      "patchswitch":6.0, "patchdistance":11.2246204831, "patchchiralangle":0.0
+    }
+  },
+
+  "moleculelist" : {
+    "PSCbulk" : { "atoms":"PSC", "atomic":true, "Ninit":30  }
+  },
+
+  "moves" : {
+    "atomtranslate" : {
+      "PSCbulk" : { "peratom":true }
+    },
+    "atomrotate" : {
+      "PSCbulk" : { "peratom":true }
+    }
+  },
+
+  "system" : {
+    "temperature"  : 298.15,
+    "cuboid"       : { "len" : 100. },
+    "mcloop"       : { "macro":20, "micro":2000 },
+    "atomlist"     : "cigars2fibrils.json",
+    "moleculelist" : "cigars2fibrils.json"
   }
+
 }' > cigars2fibrils.json
-
-#-----------------------------------------------------------
-# Create user input file
-#-----------------------------------------------------------
-echo "atomlist               cigars2fibrils.json
-cuboid_len         100
-temperature        298.15
-loop_macrosteps    20
-loop_microsteps    20000
-tion1              PSC
-nion1              30
-" > cigars2fibrils.input
-
 
 #-----------------------------------------------------------
 # Run simulation

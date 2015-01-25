@@ -3,30 +3,37 @@ from subprocess import call
 from shutil import copyfile
 
 def mkinput():
-  # create input file
-  def fmt(key,val,info): return "%-25s %-20s # %s\n" % (key,val,info)
-  print >> open('./grand.input', 'w+'),\
-      fmt("temperature", 300, "(kelvin)"),\
-      fmt("epsilon_r", 80, "dielectric constant"),\
-      fmt("sphere_radius", 80, "radius of container (angstrom)"),\
-      fmt("atomlist", "grand.json", "atom property file"),\
-      fmt("loop_macrosteps", 10, "number of macro loops"),\
-      fmt("loop_microsteps", 100000, "number of micro loops"),\
-      fmt("tion1", "Na", "ion type 1"),\
-      fmt("tion2", "Cl", "ion type 2"),\
-      fmt("nion1", 20, "initial number of ion type 1"),\
-      fmt("nion2", 20, "initial number of ion type 2"),\
-      fmt("saltbath_runfraction", 1.0, "chance of running GC move (1=100%)"),\
-      fmt("mv_particle_runfraction", 0.01, "chance of translating particles (1=100%)"),\
-      fmt("test_stable", "no", "create (yes) or check test file (no)"),\
-      fmt("test_file", "grand.test", "name of test file to create or load")
 
   # create json file
-  print >> open('./grand.json', 'w+'), json.dumps(
-      {'atomlist': {
-        'Na': {'q': 1.0, 'r':2.0, 'dp':50, 'activity':0.05},
-        'Cl': {'q':-1.0, 'r':2.0, 'dp':50, 'activity':0.05}
-        }}, indent=2)
+  print >> open('grand.json', 'w+'), json.dumps(
+      {
+        'atomlist': {
+          'Na': {'q': 1.0, 'r':2.0, 'dp':50, 'activity':0.05},
+          'Cl': {'q':-1.0, 'r':2.0, 'dp':50, 'activity':0.05}
+          },
+        'moleculelist': {
+          'salt': {'atoms':'Na Cl', 'atomic':True, 'Ninit':20 }
+          },
+        'moves': {
+          'atomtranslate' : {
+            'salt' : { 'prop':0.01, 'permol':True }
+            },
+          'atomgc' : { 'molecule':'salt' }
+          },
+        'energy' : {
+          'nonbonded' : { 'coulomb' : { 'epsr' : 80. } }
+          },
+        'system': {
+          'temperature'  : 300,
+          'sphere'       : { 'radius' : 80. },
+          'coulomb'      : { 'epsr' : 80. },
+          'mcloop'       : { 'macro':10, 'micro':100000 },
+          'unittest'     : { 'testfile':'grand.test', 'stable':False },
+          'atomlist'     : 'grand.json',
+          'moleculelist' : 'grand.json'
+          }
+        }, 
+      indent=4 )
 
 exe="./grand"
 if (os.access(exe,os.X_OK)):

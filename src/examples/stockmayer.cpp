@@ -1,48 +1,40 @@
 #include <faunus/faunus.h>
 #include <faunus/multipole.h>
-using namespace Faunus;                          // use Faunus namespace
+
+using namespace Faunus;
 using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid,DipoleParticle> Tspace; 
-typedef CombinedPairPotential<LennardJones,DipoleDipole> Tpair;
-
-#ifdef POLARIZE
-typedef Move::PolarizeMove<AtomicTranslation<Tspace> > TmoveTran;
-typedef Move::PolarizeMove<AtomicRotation<Tspace> > TmoveRot;
-#else
-typedef Move::AtomicTranslation<Tspace> TmoveTran;   
-typedef Move::AtomicRotation<Tspace> TmoveRot;
-#endif
+typedef CombinedPairPotential<LennardJonesLB,DipoleDipole> Tpair;
 
 int main() {
-  //::atom.includefile("stockmayer.json");         // load atom properties
-  InputMap in("stockmayer.input");               // open parameter file for user input
+  InputMap in("stockmayer.json");                // open parameter file for user input
+  Tspace spc(in);                                // sim.space, particles etc.
+
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
-  EnergyDrift sys;                               // class for tracking system energy drifts
-  Tspace spc(in);                // create simulation space, particles etc.
-  Group sol;
-  sol.addParticles(spc, in);                     // group for particles
-  MCLoop loop(in);                               // class for mc loop counting
-  TmoveTran trans(in,pot,spc);
-  TmoveRot rot(in,pot,spc);
-  trans.setGroup(sol);                                // tells move class to act on sol group
-  rot.setGroup(sol);                                  // tells move class to act on sol group
+
+#ifdef __POLARIZE
+  Move::Propagator<Tspace,true> mv(in,pot,spc);
+#else
+  Move::Propagator<Tspace,false> mv(in,pot,spc);
+#endif
+
   spc.load("state");
-  spc.trial = spc.p;
-  UnitTest test(in);               // class for unit testing
+
   Analysis::DipoleAnalysis dian(spc,in);
   DipoleWRL sdp;
   FormatXTC xtc(spc.geo.len.norm());
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );   // initial energy
-  while ( loop[0] ) {                         // Markov chain 
-    while ( loop[1] ) {
-      if (slump() > 0.5)
-        sys+=trans.move( sol.size() );                // translate
-      else
-        sys+=rot.move( sol.size() );                  // rotate
 
-      if (slump()<0.5)
+  EnergyDrift sys;                               // class for tracking system energy drifts
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// initial energy
+
+  MCLoop loop(in);                               // class for mc loop counting
+  while ( loop[0] ) {                            // Markov chain 
+    while ( loop[1] ) {
+      sys += mv.move();
+
+      if (slump()>0.5)
         dian.sampleMuCorrelationAndKirkwood(spc);
       if (slump()>0.99)
         xtc.save(textio::prefix+"out.xtc", spc.p);  
@@ -52,34 +44,34 @@ int main() {
     cout << loop.timing() << std::flush;
   }
 
-  // perform unit tests
-  trans.test(test);
-  rot.test(test);
+  UnitTest test(in);
+  mv.test(test);
   sys.test(test);
-  sdp.saveDipoleWRL("stockmayer.wrl",spc,sol);
+  sdp.saveDipoleWRL("stockmayer.wrl", spc, Group(0, spc.p.size()-1) );
   FormatPQR().save("confout.pqr", spc.p);
-  std::cout << spc.info() + pot.info() + trans.info()
-    + rot.info() + sys.info() + test.info() + dian.info(); // final info
   dian.save();
   spc.save("state");
+
+  std::cout << spc.info() + pot.info() + mv.info()
+    + sys.info() + test.info() + dian.info(); // final info
 
   return test.numFailed();
 }
 /**  @page example_stockmayer Example: Stockmayer potential
 
- This will simulate a Stockmayer potential in a cubic box.
+  This will simulate a Stockmayer potential in a cubic box.
 
- Run this example from the `examples` directory:
+  Run this example from the `examples` directory:
 
- ~~~~~~~~~~~~~~~~~~~
- $ make
- $ cd src/examples
- $ ./stockmayer.run
- ~~~~~~~~~~~~~~~~~~~
+  ~~~~~~~~~~~~~~~~~~~
+  $ make
+  $ cd src/examples
+  $ ./stockmayer.run
+  ~~~~~~~~~~~~~~~~~~~
 
- stockmayer.cpp
- ============
+  stockmayer.cpp
+  ============
 
- @includelineno examples/stockmayer.cpp
+  @includelineno examples/stockmayer.cpp
 
 */

@@ -98,6 +98,11 @@ namespace Faunus {
       return std::find_if( begin(), end(), [&name](const value_type &i){return i.name==name;} );
     }
 
+    /** @brief Find element by name */
+    iterator find(const string &name) {
+      return std::find_if( begin(), end(), [&name](const value_type &i){return i.name==name;} );
+    }
+
     /** @brief Access element by string */
     const_reference operator[](const std::string &name) const { return *find(name); }
   

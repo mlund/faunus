@@ -1,52 +1,36 @@
 #!/bin/bash
 
-# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
-# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
-# TO UPDATE THE TEST.
-
 source_tests_dir="`dirname $0`"
 cp -f $source_tests_dir/cigarsenergy.test . 2> /dev/null
 
-#-----------------------------------------------------------
-# Create input file with atom properties
-#-----------------------------------------------------------
-#/ sigma - size paralemter [angstrom]
-#/ eps - interaction strength per unit length [kJ/mol/angstrom]
-#/ dp - Translational displacement parameter [angstrom]
-#/ dprot - Rotational displacement parameter [degrees]
-#/ patchtype - Type of patch on spherocylinder 1 - attractive ends 2 - non-attractive ends
-#/ len - spherocylinder length [angstrom]
-#/ pangl - angle of attrative patch on PatchySpherocylinder [degrees]
-#/ panglsw - angle of angluar switch on sides of patch on PatchySpherocylinder [degrees]
-#/ pdis - distance to which attraction is flat (typicaly end of repulsion) on attrative patch on PatchySpherocylinder [angstrom]
-#/ pswitch - distance on which attraction switches to zero on PatchySpherocylinder [angstrom]
-#/ chiral_angle - angle of chirality (rotation of patch) on PatchySpherocylinder [degrees]
 echo '{ "atomlist" :
   {
-    //patchy spherocylinder with non-attractive ends - patch is only on cylindrical part
-    "CPSC" : { "sigma":10.0, "eps":2.479, "dp":2.0, "dprot":9.0, "patchtype":2,
-              "len":40.0, "patchangle":80.0, "patchangleswitch":5.0, "patchswitch":6.0, "patchdistance":11.2246204831, "patchchiralangle":0.0},
-    //patchy spherocylinder with attractive ends - attractive wedge goes all the way toward the ends
-    "PSC" : { "sigma":10.0, "eps":2.479, "dp":2.0, "dprot":9.0, "patchtype":1,
-              "len":40.0, "patchangle":80.0, "patchangleswitch":5.0, "patchswitch":6.0, "patchdistance":11.2246204831, "patchchiralangle":0.0}
+    // PSC w. non-attractive ends - patch is only on cylindrical part
+    "CPSC" : {
+       "sigma":10.0, "eps":2.479, "dp":2.0, "dprot":9.0, "patchtype":2,
+       "len":40.0, "patchangle":80.0, "patchangleswitch":5.0, "patchswitch":6.0,
+       "patchdistance":11.2246204831, "patchchiralangle":0.0
+    },
+    // PSC w. attractive ends - attractive wedge goes all the way toward the ends
+    "PSC" : {
+      "sigma":10.0, "eps":2.479, "dp":2.0, "dprot":9.0, "patchtype":1,
+      "len":40.0, "patchangle":80.0, "patchangleswitch":5.0, "patchswitch":6.0,
+      "patchdistance":11.2246204831, "patchchiralangle":0.0
+    }
+  },
+  "moleculelist" : {
+    "mol1" : { "atoms":"PSC", "atomic":true, "Ninit":30  },
+    "mol2" : { "atoms":"CPSC", "atomic":true, "Ninit":30  }
+  },
+
+  "system" : {
+    "temperature"  : 298.,
+    "cuboid"       : { "len" : 2000 },
+    "unittest"     : { "testfile":"cigarsenergy.test", "stable":false },
+    "atomlist"     : "cigarsenergy.json",
+    "moleculelist" : "cigarsenergy.json"
   }
 }' > cigarsenergy.json
-
-#-----------------------------------------------------------
-# Create user input file
-#-----------------------------------------------------------
-echo "atomlist               cigarsenergy.json
-loop_macrosteps        1
-loop_microsteps        1
-cuboid_len             2000     # Box side length Angstrom
-temperature            298     # Kelvin
-tion1                  PSC
-nion1                  30
-tion2                  CPSC
-nion2                  30
-test_stable            no
-test_file              cigarsenergy.test
-" > cigarsenergy.input
 
 #-----------------------------------------------------------
 # Make file with molecule of four atoms
@@ -122,7 +106,7 @@ exe=./cigarsenergy
 if [ -x $exe ]; then
   $exe
   rc=$?
-  rm -f cigarsenergy.json cigarsenergy.input cigarsenergy.xyz
+  rm -f cigarsenergy.json cigarsenergy.xyz
   exit $rc
 fi
 exit 1

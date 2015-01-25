@@ -7,32 +7,17 @@ typedef CombinedPairPotential<CosAttractMixed<>,WeeksChandlerAndersen> Tpair;
 typedef CigarSphereSplit<Tpair,Tpair,Tpair> Tpairpot;
 
 int main() {
-//  cout << textio::splash();           // show faunus banner and credits
-  InputMap mcp("cigarsenergy.input");   // open user input file
-  FormatMXYZ mxyz;                      // xyz structure file I/O
-  UnitTest test(mcp); 
+  InputMap mcp("cigarsenergy.json");   // open user input file
 
-  // Energy functions and space
   Tspace spc(mcp);
-  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp);
+  UnitTest test(mcp); 
+  Energy::NonbondedVector<Tspace,Tpairpot> pot(mcp);
 
-  // Load and add cigars to Space
-  Group cigars;
-  cigars.addParticles(spc, mcp);
-  cigars.name="PSC";
-  spc.enroll(cigars);
-
-  cout << atom.info() << cigars.info() << spc.info() << pot.info();
-
-  mxyz.load("cigarsenergy.xyz", spc.p, spc.geo.len);
-  for (auto i : cigars) {
-    Geometry::cigar_initialize(spc.geo, spc.p[i]);
-    spc.trial[i]=spc.p[i];
-  }
+  FormatMXYZ::load("cigarsenergy.xyz", spc.p, spc.geo.len);
 
   test("energy", Energy::systemEnergy(spc,pot,spc.p), 1e-3 );
 
-  cout << test.info();
+  std::cout << pot.info() << test.info();
 
   return test.numFailed();
 }

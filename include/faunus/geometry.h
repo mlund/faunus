@@ -68,9 +68,9 @@ namespace Faunus {
         /**
          * @brief Constructor
          * @param name Name of geometry
-         * @param sec Name of input section to look for parameters
+         * @param dir Name of input section to look for parameters. If empty (default), fallback to default "system".
          */
-        inline Geometrybase( const string &name, const string &sec="") : name(name), jsondir(sec) {
+        inline Geometrybase( const string &name, const string &dir="") : name(name), jsondir(dir) {
           if ( jsondir.empty() )
             jsondir = "system";
         }
@@ -90,20 +90,20 @@ namespace Faunus {
         string _info(char);
       public:
         Point len;
-        bool setlen(const Point&);              //!< Reset radius (angstrom)
+        void setlen(const Point&);              //!< Reset radius (angstrom)
         void setRadius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
 
         /**
          * @brief Construct from InputMap
          *
-         * Keywords in default dir `general` are scanned for,
+         * Keywords in default dir `system/sphere` are scanned for,
          *
-         * Key               | Description
-         * :---------------- | :----------------------
+         * Key       | Description
+         * :-------- | :-----------------------
          * radius`   | Sphere radius [angstrom]
          */
-        inline Sphere(InputMap &in, const string &sec="") : Geometrybase("Sphere",sec) {
+        inline Sphere(InputMap &in, const string &dir="") : Geometrybase("Sphere", dir) {
           in.cd( jsondir + "/sphere" );
           setRadius(
               in.get("radius", -1.0, "Spherical container radius (A)") );
@@ -145,32 +145,29 @@ namespace Faunus {
       public:
 
         /**
-         * The InputMap is scanned for the following parameters:
+         * The InputMap is scanned for the following parameters in section `system/cuboid`:
          *
-         * Key               | Description
-         * :---------------- | :-------------------------------------------------------
-         * `cuboid_len`      | Uniform sidelength [angstrom]. If negative, continue to...
-         * `cuboid_xlen`     | x sidelength [angstrom]
-         * `cuboid_ylen`     | y sidelength [angstrom]
-         * `cuboid_zlen`     | z sidelength [angstrom]
-         * `cuboid_scaledir` | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
+         * Key           | Description
+         * :------------ | :-------------------------------------------------------
+         * `len`         | Uniform sidelength [angstrom]. If negative, continue to...
+         * `xyzlen`      | Vector of sidelengths (specifies as string, i.e. "10 20 5"
+         * `scaledir`    | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
          */
-        inline Cuboid(InputMap &in, const string &sec="") : Geometrybase("Cuboid", sec) {
+        inline Cuboid(InputMap &in, const string &dir="") : Geometrybase("Cuboid", dir) {
           in.cd( jsondir + "/cuboid" );
+
           string scaledirstr = in.get<string>("scaledir","XYZ");
-          if (scaledirstr=="XY")
-            scaledir=XY;
-          else
-            scaledir=XYZ;
-          double cubelen=in.get( "len", -1.0 );
-          if (cubelen<1e-6) {
+          scaledir = ( scaledirstr=="XY" ) ? XY : XYZ;
+
+          double cubelen = in.get( "len", -1.0 );
+          if ( cubelen < 1e-9 )
             len << in.get<string>( "xyzlen", "0 0 0" );
-          } else
-            len.x()=len.y()=len.z()=cubelen;
+          else
+            len.x() = len.y() = len.z() = cubelen;
           setlen(len);
         }
 
-        bool setlen(const Point&);               //!< Reset Cuboid sidelengths
+        void setlen(const Point&);               //!< Reset Cuboid sidelengths
         Point len;                               //!< Sidelengths
         Point len_half;                          //!< Half sidelength
         Point randompos();           
@@ -290,7 +287,7 @@ namespace Faunus {
         Point len;                     //!< Dummy
         Cylinder(double, double);      //!< Construct from length and radius
         Cylinder(InputMap&, const string& dir=""); //!< Construct from inputmap
-        bool setlen(const Point&);     //!< Set length via vector (dummy function)
+        void setlen(const Point&);     //!< Set length via vector (dummy function)
         void randompos(Point &);
         void boundary(Point &) const;
         bool collision(const Point&, double, collisiontype=BOUNDARY) const;

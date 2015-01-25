@@ -6,13 +6,11 @@ using namespace Faunus::Potential;
 typedef Space<Geometry::Sphere,PointParticle> Tspace;
 
 int main() {
-  InputMap mcp("grand.input");                  // open user input file
+  InputMap mcp("grand.json");                   // open user input file
   Tspace spc(mcp);                              // simulation space
   Energy::Nonbonded<Tspace,CoulombHS> pot(mcp); // hamiltonian
   pot.setSpace(spc);                            // share space w. hamiltonian
 
-  Group salt;                                   // group for salt particles
-  salt.addParticles(spc, mcp);
   spc.load("state",Tspace::RESIZE);             // load old config. from disk (if any)
 
   // Two different Widom analysis methods
@@ -22,9 +20,7 @@ int main() {
   widom1.add(spc.p);
   widom2.add(spc.p);
 
-  Move::GrandCanonicalSalt<Tspace> gc(mcp,pot,spc,salt);
-  Move::AtomicTranslation<Tspace> mv(mcp,pot,spc);
-  mv.setGroup(salt);
+  Move::Propagator<Tspace> mv(mcp,pot,spc);
 
   EnergyDrift sys;                              // class for tracking system energy drifts
   sys.init(Energy::systemEnergy(spc,pot,spc.p));// store initial total system energy
@@ -34,10 +30,7 @@ int main() {
   MCLoop loop(mcp);                             // class for handling mc loops
   while ( loop[0] ) {
     while ( loop[1] ) {
-      if (slump() < 0.5)
-        sys+=mv.move( salt.size() );            // translate salt
-      else 
-        sys+=gc.move();                         // grand canonical exchange
+      sys+=mv.move();                           // move!
       widom1.sample(spc,pot,1);
       widom2.sample(spc.p,spc.geo);
     }                                           // end of micro loop
@@ -49,12 +42,11 @@ int main() {
   spc.save("state");                            // final simulation state
 
   UnitTest test(mcp);                           // class for unit testing
-  gc.test(test);
   mv.test(test);
   sys.test(test);
   widom1.test(test);
 
-  cout << loop.info() + sys.info() + mv.info() + gc.info() + test.info()
+  cout << loop.info() + sys.info() + mv.info() + test.info()
     + widom1.info() + widom2.info();
 
   return test.numFailed();
@@ -82,50 +74,12 @@ int main() {
   Input
   =====
 
-  In this example a python script is used to generate the following two input files
-  as well as run the executable.
-
-  grand.input
-  -----------
-
-      temperature               300                  # (kelvin)
-      epsilon_r                 80                   # dielectric constant
-      sphere_radius             80                   # radius of container (angstrom)
-      atomlist                  grand.json           # atom property file
-      loop_macrosteps           10                   # number of macro loops
-      loop_microsteps           20000                # number of micro loops
-      tion1                     Na                   # ion type 1
-      tion2                     Cl                   # ion type 2
-      nion1                     20                   # initial number of ion type 1
-      nion2                     20                   # initial number of ion type 2
-      saltbath_runfraction      1.0                  # chance of running GC move (1=100%)
-      mv_particle_runfraction   0.01                 # chance of translating particles (1=100%)
-      test_stable               no                   # create (yes) or check test file (no)
-      test_file                 grand.test           # name of test file to create or load
+  In this example a python script is used to generate the input json file as
+  well as run the executable.
 
   grand.json
   ----------
-
-  Atom properties are described in a JSON file -- for more details of
-  possible properties, see `Faunus::AtomMap`. Note that standard python
-  supports reading and writing of the JSON file format.
-
-      {
-        "atomlist": {
-          "Na": {
-            "q": 1.0, 
-            "r": 2.0, 
-            "dp": 50, 
-            "activity": 0.05
-          }, 
-          "Cl": {
-            "q": -1.0, 
-            "r": 2.0, 
-            "dp": 50, 
-            "activity": 0.05
-          }
-        }
-      }
+  @includelineno examples/grand.json  
 
   Output
   ======
@@ -138,6 +92,4 @@ int main() {
   grand.cpp
   =========
   @includelineno examples/grand.cpp
-
- 
 */

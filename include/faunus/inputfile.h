@@ -66,9 +66,9 @@ namespace Faunus {
        */
       inline void cd( std::string dir="" ) {
         if ( isjson ) { 
-          if ( dir.empty() ) {
+          if ( dir.empty() )
             jsdir = js;
-          } else {
+          else {
             std::replace( dir.begin(), dir.end(), '/', ' ');
             jsdir = json::cd( js, textio::words2vec<std::string>( dir ) ); 
           }
@@ -137,8 +137,15 @@ namespace Faunus {
   inline bool InputMap::include(string filename) {
     string line,key,val;
 
-    isjson = std::regex_match( filename,
-        std::regex( "(.+?)(\\.json)", std::regex_constants::icase) );
+    /*
+     *  Warning this will not work on gcc 4.8 but quietly compiles...
+     *
+     *    isjson = std::regex_match( filename,
+     *      std::regex( "(.+?)(\\.json)", std::regex_constants::icase) );
+     */
+
+    if ( filename.find(".json") != std::string::npos )
+      isjson = true;
 
     if ( isjson ) {
       jsdir = js = json::open( filename );
@@ -169,7 +176,7 @@ namespace Faunus {
       atom.includefile(atomfile);
 
     if ( atom.empty() )
-     std::cerr << "Warning: AtomMap is empty." << endl; 
+      std::cerr << "Warning: AtomMap is empty." << endl; 
 
     return true;
   }

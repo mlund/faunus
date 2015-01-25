@@ -12,7 +12,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
 
 # Clang
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(CMAKE_CXX_FLAGS "-Wextra -pedantic -std=c++1y -Wno-unused-parameter -Wno-unknown-pragmas")
+  set(CMAKE_CXX_FLAGS "-Wextra -pedantic -std=c++11 -Wno-unused-parameter -Wno-unknown-pragmas")
   if(APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
   endif()

@@ -8,30 +8,37 @@ source_tests_dir="`dirname $0`"
 cp -f $source_tests_dir/stockmayer.test . 2> /dev/null
 cp -f $source_tests_dir/stockmayer.state state 2> /dev/null
 
-echo '{ "atomlist" :
-  {
-    "sol" : { "sigma":1.0, "mu":"0 0 0.415", "dp":0.3, "dprot":180, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0"}
+echo '{
+  "atomlist" : {
+    "dip" : { "sigma":1.0, "eps":0.17211, "mu":"0 0 0.415", "dp":0.3, "dprot":180,
+              "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0" }
+  },
+
+  "moleculelist" : {
+    "sol" : { "atoms":"dip", "Ninit":100, "atomic":true }
+  },
+
+  "energy" : {
+    "nonbonded" : {
+       "coulomb" : { "epsr":1, "cutoff":14., "cutoffdip":4.3 }
+    }
+  },
+
+  "moves" : {
+    "atomtranslate" : { "sol" : { "peratom":true } },
+    "atomrotate" : { "sol" : { "peratom":true } }
+  },
+
+  "system" : {
+    "temperature"  : 300.,
+    "cuboid"       : { "len" : 8.939 },
+    "mcloop"       : { "macro":10, "micro":1000 },
+    "unittest"     : { "testfile":"stockmayer.test", "stable":false },
+    "atomlist"     : "stockmayer.json",
+    "coulomb" : { "epsr":1, "cutoff":14., "cutoffdip":4.3 },
+    "moleculelist" : "stockmayer.json"
   }
 }' > stockmayer.json
-
-echo "
-atomlist           stockmayer.json   # atom properties
-cuboid_len         8.939        # angstrom
-                  
-temperature        300        # K
-epsilon_r          1            # dielectric const.
-dipdip_cutoff      4.3          # dipole cutoff [angstrom]
-lj_eps             0.069        # Uniform LJ epsilon parameter [kT]
-                  
-loop_macrosteps    10           # number of macro loops
-loop_microsteps    1000         # number of micro loops
-
-tion1              sol 
-nion1              100
-
-test_stable        no
-test_file          stockmayer.test
-" > stockmayer.input
 
 exe=./stockmayer
 if [ -x $exe ]; then

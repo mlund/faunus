@@ -486,15 +486,16 @@ namespace Faunus {
     string DebyeHuckel::info(char w) {
       using namespace Faunus::textio;
       std::ostringstream o;
-      o << Coulomb::info(w);
-      o << pad(SUB,w,"Ionic strength") << ionicStrength() << " mol/l" << endl;
-      o << pad(SUB,w+1,"Debye length, 1/"+textio::kappa) << debyeLength() << " " << 1/k << " "+angstrom << endl;
-      if (k2_count_avg.cnt>0) {
+      o << Coulomb::info(w)
+        << pad(SUB,w,"Ionic strength") << ionicStrength() << " mol/l" << endl
+        << pad(SUB,w+1,"Debye length, 1/"+textio::kappa) << debyeLength() << " "
+        << 1/k << " "+angstrom << endl;
+      if ( k2_count_avg.cnt > 0 ) {
         double k2_s = k*k - k2_count;
-        o << pad(SUB,w+1,"Debye length, 1/"+textio::kappa)
-          << 1/sqrt(k2_count_avg.avg()) << " "+angstrom+" (counter ions)\n"
-          << pad(SUB,w+1,"Debye length, 1/"+textio::kappa)
-          << 1/sqrt(k2_s) << " "+angstrom+" (salt)" << endl;
+        o << pad( SUB, w+1, "Debye length, 1/"+textio::kappa )
+          << 1/sqrt( k2_count_avg.avg()) << " "+angstrom+" (counter ions)\n"
+          << pad( SUB, w+1,"Debye length, 1/"+textio::kappa )
+          << 1/sqrt( k2_s ) << " "+angstrom+" (salt)" << endl;
       }
       return o.str();
     }

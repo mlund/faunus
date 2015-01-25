@@ -267,6 +267,14 @@ namespace Faunus {
           return -1;
         }
 
+        /** @brief Returns pointer to random molecule of type `molid` */
+        inline Group* randomMol( int molId ) {
+          auto v = findMolecules( molId );
+          if ( !v.empty() )
+            return *slump.element( v.begin(), v.end() );
+          return nullptr;
+        }
+
         /** @brief Returns vector of molecules with matching molid */
         inline std::vector<Group*> findMolecules( int molId ) const {
           std::vector<Group*> v;
@@ -667,8 +675,6 @@ namespace Faunus {
   template<class Tgeometry, class Tparticle>
     Group* Space<Tgeometry,Tparticle>::insert(PropertyBase::Tid molId, const p_vec &pin) {
       if ( !pin.empty() ) {
-        int nold=p.size();
-
         // insert atomic groups into existing group, if present
         if (molecule[molId].isAtomic() && !g.empty()) {
           int max=-1, imax=-1; 
@@ -680,15 +686,12 @@ namespace Faunus {
               }
           // group exists -- now add particles
           if (imax>=0) {
-            cout << "Adding to existing group..." << endl;
             p.insert( p.begin() + g[imax]->back()+1, pin.begin(), pin.end() );
             trial.insert( trial.begin() + g[imax]->back()+1, pin.begin(), pin.end() );
             g[imax]->setback( g[imax]->back() + pin.size() );
             for (auto i : g)
               if (*i > *g[imax])
                 i->shift( pin.size() );
-
-            assert(nold+pin.size()==p.size());
             return g[imax];
           }
         }

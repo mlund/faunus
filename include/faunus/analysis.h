@@ -1222,10 +1222,10 @@ namespace Faunus {
         Table2D<double,double> kw, mucorr_angle;
         Table2D<double,Average<double> > mucorr, mucorr_dist; 
         Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
-        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t;
-        Average<double> mu_abs;
+        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t, groupDipole;
+        vector<Average<double>> mu_abs;
 
-        int sampleKW;
+        int sampleKW, atomsize;
         double cutoff2, N;
         double const_Diel, const_DielTinfoil, const_DielCM, const_DielRF, epsRF, constEpsRF;
 
@@ -1240,7 +1240,8 @@ namespace Faunus {
             const_Diel = pc::e*pc::e*1e10/(3*pc::kT()*pc::e0);
             updateConstants(spc.geo.getVolume());
             updateDielectricConstantRF(in.get("epsilon_rf",80.));
-            load(in.get("dipole_data_ext", string("")));
+            atomsize = atom.size();
+            mu_abs.resize(atomsize-1);
           }
 
         void setCutoff(double cutoff) {
@@ -1264,7 +1265,7 @@ namespace Faunus {
          * @param spc The space.
          */
         template<class Tspace>
-          void sampleDP(const Tspace &spc) {
+          void sampleDP(Tspace &spc) {
             Point origin(0,0,0);
             Point mu(0,0,0);        // In e\AA
             Point mu_box(0,0,0);    // In e\AA
@@ -1275,7 +1276,9 @@ namespace Faunus {
               } else {
                 mu_box += i.mu*i.muscalar;
               }
-              mu_abs += i.muscalar;
+              for(int j = 0; j < atomsize-1; j++)
+                if(int(i.id) == j+1)
+                  mu_abs[j] += i.muscalar;
             }
             mu_box += mu;
             samplePP(spc,mu,mu_box);
@@ -1315,16 +1318,25 @@ namespace Faunus {
             HM2_box(sca)++;
             M2_box += sca;
             diel_std.add(getDielTinfoil());
+            
+            double mus_group = 0.0;
+            for (auto gi : spc.groupList()) {
+              Point m = Geometry::dipoleMoment(spc, *gi);
+              for (auto i : *gi)
+                m += spc.p[i].muscalar*spc.p[i].mu;
+              mus_group += m.norm();
+            }
+            groupDipole += (mus_group / double(spc.groupList().size()));
           }
 
         /**
-         * @brief Samples g(r), \f$ <\mu(0) \cdot \mu(r)> \f$, \f$ <\frac{1}{2} ( 3 \mu(0) \cdot \mu(r) - 1 )> \f$, Histogram(\f$ \mu(0) \cdot \mu(r) \f$) and distant-dependent Kirkwood-factor.
+         * @brief Samples g(r), \f$ <\hat{\mu}(0) \cdot \hat{\mu}(r)> \f$, \f$ <\frac{1}{2} ( 3 \hat{\mu}(0) \cdot \hat{\mu}(r) - 1 )> \f$, Histogram(\f$ \hat{\mu}(0) \cdot \hat{\mu}(r) \f$) and distant-dependent Kirkwood-factor.
          * 
          * @param spc The space
          *
          */
         template<class Tspace>
-          void sampleMuCorrelationAndKirkwood(Tspace &spc) {
+          void sampleMuCorrelationAndKirkwood(const Tspace &spc) {
             double r, sca;
             int N = spc.p.size() - 1;
             for (int i = 0; i < N; i++) {
@@ -1351,6 +1363,24 @@ namespace Faunus {
           // 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
           return ( 1 + M2_box.avg()*const_DielTinfoil); 
         }  
+        
+        /**
+         * @brief Returns dielectric constant, \f$ \varepsilon_r \f$, according to
+         * \f$ \frac{\varepsilon_r - 1}{\varepsilon_r + 2} \left[1 - \frac{\varepsilon_r - 1}{\varepsilon_r + 2}\tilde{T}(0) \right]^{-1} = \frac{4\pi}{3}\frac{\langle M^2 \rangle}{3Vk_BT} \f$
+         * where
+         * \f$ \tilde{T}(0) = erf(\alpha R_c) - ((\alpha R_c)^4 + 2(\alpha R_c)^2 + 3 )\frac{2\alpha R_ce^{-\alpha^2R_c^2}}{3\sqrt{\pi}}    \f$
+         * 
+         * @param kappa Damping-coefficient used in the Wolf potential
+         * @param Rc Cut-off for the electrostatic potential
+         * 
+         * @warning Needs to be checked!
+         */
+        double getDielWolf(double kappa, double Rc) {
+          double kappaRc = kappa*Rc;
+          double kappaRc2 = kappaRc*kappaRc;
+          double T = erf_x(kappaRc) - (2/(3*sqrt(pc::pi)))*exp(-kappaRc2)*(kappaRc2*kappaRc2 + 2.0*kappaRc2 + 3.0);
+          return (((T + 2.0)*M2_box.avg()*const_DielTinfoil + 1.0)/( (T - 2.0)*M2_box.avg()*const_DielTinfoil + 1.0 ));
+        }
 
         /**
          * @brief Returns dielectric constant ( Clausius-Mossotti ).
@@ -1364,30 +1394,29 @@ namespace Faunus {
         }  
 
         /**
-         * @brief Returns dielectric constant ( Reaction Field ).
+         * @brief Returns dielectric constant when
+         * \f$ \varepsilon_r = \varepsilon_{RF} \f$
+         * according to 
+         * \f$ \frac{(2\varepsilon_r + 1)(\varepsilon_r - 1)}{9\varepsilon_r} = \frac{4\pi}{3}\frac{\langle M^2 \rangle}{3Vk_BT} \f$
          * 
          * @warning Needs to be checked!
          */
         double getDielRF() {
           double avgRF = M2_box.avg()*const_DielRF;
-          double sqrtRF = 0;
-          if(-4*constEpsRF*avgRF + 1 > 0)
-            sqrtRF = 3*sqrt(-4*constEpsRF*avgRF + 1);
-          double one = 0.5*(2*constEpsRF - 4*avgRF + 1 + sqrtRF)/(constEpsRF + avgRF - 1);
-          //double two = 0.5*(2*constEpsRF - 4*avgRF + 1 - sqrtRF)/(constEpsRF + avgRF - 1);
-          return one;
+          double tempEps = 2.25*avgRF + 0.25 + 0.75*sqrt(9*avgRF*avgRF + 2*avgRF + 1);
+          return tempEps;
         }  
 
         /**
          * @brief Saves data to files. 
          * @param ext Extention of filename
          * 
-         * @note \f$ g(r) \rightarrow \f$ gofr.dat+nbr
-         *       \f$ \mu(0)\cdot\mu(r) \rightarrow \f$ mucorr.dat+nbr
-         *       \f$ <\frac{1}{2} ( 3 \mu(0) \cdot \mu(r) - 1 )> \rightarrow \f$ mucorr_dist.dat+nbr
+         * @note \f$ g(r) \rightarrow \f$ gofr.dat+ext
+         *       \f$ \mu(0)\cdot\mu(r) \rightarrow \f$ mucorr.dat+ext
+         *       \f$ <\frac{1}{2} ( 3 \mu(0) \cdot \mu(r) - 1 )> \rightarrow \f$ mucorr_dist.dat+ext
          * 
          */
-        void save(string ext="") {
+        void save(string ext="", bool reset=false) {
           rdf.save("gofr.dat"+ext);
           mucorr.save("mucorr.dat"+ext);
           mucorr_angle.save("mucorr_angle.dat"+ext);
@@ -1415,7 +1444,36 @@ namespace Faunus {
             if (M2.cnt != 0)       f << "M2 " << M2.cnt << " " << M2.avg() << " " << M2.sqsum << "\n";
             if (M2_box.cnt != 0)   f << "M2_box " << M2_box.cnt << " " << M2_box.avg() << " " << M2_box.sqsum << "\n";
             if (diel_std.cnt != 0) f << "diel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum;
-            if (mu_abs.cnt != 0)      f << "mu_abs " << mu_abs.cnt << " " << mu_abs.avg() << " " << mu_abs.sqsum << "\n";
+            for(int j = 0; j < atomsize -1 ; j++)
+              if (mu_abs[j].cnt != 0)      
+                f << "mu_abs_" << atom[j+1].name << " " << mu_abs[j].cnt << " " << mu_abs[j].avg() << " " << mu_abs[j].sqsum << "\n";
+          }
+          
+          if(reset) {
+            rdf.clear();
+            mucorr.clear();
+            mucorr_angle.clear();
+            mucorr_dist.clear();
+            kw.clear();
+            HM_x.clear();
+            HM_y.clear();
+            HM_z.clear();
+            HM_x_box.clear();
+            HM_y_box.clear();
+            HM_z_box.clear();
+            HM2.clear();
+            HM2_box.clear();
+            M_x.reset();
+            M_y.reset();
+            M_z.reset();
+            M_x_box.reset();
+            M_y_box.reset();
+            M_z_box.reset();
+            M2.reset();
+            M2_box.reset();
+            diel_std.reset();
+            for(int j = 0; j < atomsize -1 ; j++)
+              mu_abs[j].reset();
           }
         }
 
@@ -1438,6 +1496,7 @@ namespace Faunus {
 
           string filename = "dipoledata.dat"+ext;
           std::ifstream f(filename.c_str());
+          int cnt_mu_abs = 0;
           if (f) {
             while (!f.eof()) {
               string name;
@@ -1490,10 +1549,11 @@ namespace Faunus {
                 Average<double> diel_stdt(average,sqsum,cnt);
                 diel_std = diel_std + diel_stdt;
               }
-              if(name == "mu_abs") {
-                mu_abs.reset();
+              size_t found = name.find("mu_abs");
+              if (found != string::npos) {
                 Average<double> mu_abst(average,sqsum,cnt);
-                mu_abs = mu_abs + mu_abst;
+                mu_abs[cnt_mu_abs] = mu_abs[cnt_mu_abs] + mu_abst;
+                cnt_mu_abs++;
               }
             }
           }
@@ -1512,14 +1572,14 @@ namespace Faunus {
             << percent << "\n"
             << indent(SUB) << bracket("M") << setw(25) << "( " << M_x_box.avg()
             << " , " << M_y_box.avg() << " , " << M_z_box.avg()
-            << " ) eA\n" 
+            << " ) eA\n"
             << indent(SUBSUB) << sigma << setw(25) << "( " << M_x_box.stdev()
             << " , " << M_y_box.stdev() << " , " << M_z_box.stdev()
-            << " )\n"
-            << indent(SUB) << bracket("|"+mu+"|") << setw(25) << mu_abs.avg()
-            << " eA, "+sigma+"=" << mu_abs.stdev()
-            << ", "+sigma+"/"+bracket("|"+mu+"|")+"="
-            << 100 * mu_abs.stdev() / mu_abs.avg() << percent << "\n";
+            << " )\n";
+            for(int j = 0; j < atomsize - 1; j++) {
+              o << indent(SUB) << bracket("|"+mu+"|") << "(" << atom[j+1].name << ")" << setw(20) << mu_abs[j].avg() << " eÅ, "+sigma+"=" << mu_abs[j].stdev() << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs[j].stdev()/mu_abs[j].avg()) << percent << endl;
+            }
+            o << indent(SUBSUB) << bracket("|"+mu+"|") << setw(25) << groupDipole.avg() << " eÅ, "+sigma+"=" << groupDipole.stdev() << endl;
           return o.str();
         }
     };

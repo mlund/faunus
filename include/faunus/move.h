@@ -616,6 +616,7 @@ namespace Faunus {
         iparticle=-1;
         igroup=nullptr;
         dir={1,1,1};
+        genericdp = 5;
         this->w=30; //width of output
 
         in.cd ( base::jsondir );

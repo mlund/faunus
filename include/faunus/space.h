@@ -354,10 +354,9 @@ namespace Faunus {
         }
       }
 
-      if (rc==false) {
-        std::cerr << "Space sanity check failed. This is serious!";
-        std::exit(1);
-      }
+      if ( rc==false )
+        throw std::runtime_error("Space sanity check failed.");
+
       return rc;
     }
 

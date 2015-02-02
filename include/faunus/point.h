@@ -40,7 +40,7 @@ namespace Faunus {
     void clear() { setZero(); }
 
     /**
-     * @brief Generate a random unit vector
+     * @brief Convert into random unit vector
      *
      * Based on the von Neumann method described in
      * *Allen and Tildesley*, page 349, which ensures
@@ -53,17 +53,17 @@ namespace Faunus {
      *            a class derived from `RandomBase`.
      */
     template<typename Trandombase>
-      void ranunit(Trandombase &ran) {
-        PointBase::Tvec u;
+      PointBase& ranunit(Trandombase &ran) {
         Tcoord r2;
         do {
-          u.x()=2*( ran()-0.5 );
-          u.y()=2*( ran()-0.5 );
-          u.z()=2*( ran()-0.5 );
-          r2=u.squaredNorm();
+          x()=2*( ran()-0.5 );
+          y()=2*( ran()-0.5 );
+          z()=2*( ran()-0.5 );
+          r2 = squaredNorm();
         } while (r2>1);
-        *this = u/std::sqrt(r2);
-        assert(std::abs(norm()-1)<1e-7); // is it really a unit vector?
+        *this = *this/std::sqrt(r2);
+        assert( std::abs( norm()-1 ) < 1e-7 ); // is it really a unit vector?
+        return *this;
       }
 
     /**

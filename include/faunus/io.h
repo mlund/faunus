@@ -841,7 +841,7 @@ namespace Faunus {
    * @param fasta FASTA sequence, capital letters.
    * @return vector of atom id's
    */
-  inline std::vector<int> FastaToAtoms(const string &fasta) {
+  inline std::vector<PointParticle::Tid> FastaToAtoms(const string &fasta) {
 
     std::map<char,string> map = {
       {'A',"ALA"},
@@ -866,7 +866,7 @@ namespace Faunus {
       {'V',"VAL"}
     };
 
-    std::vector<int> atomid;
+    std::vector<PointParticle::Tid> atomid;
     atomid.reserve( fasta.size() );
 
     for (auto c : fasta) {
@@ -876,10 +876,10 @@ namespace Faunus {
         if (id>0)
           atomid.push_back( atom[ it->second ].id );
         else
-          std::cerr << "! Residue '" << it->second << "' not found in atom list." << endl;
+          throw std::runtime_error( "Fasta residue '"+it->second+"' not defined in atom list." );
       }
       else
-        std::cerr << "! Unknown character '" << c << "' in fasta sequence." << endl;
+        throw std::runtime_error( "Unknown character '"+string(1,c)+"' in fasta sequence." );
     }
     assert( fasta.size() == atomid.size() );
     return atomid;

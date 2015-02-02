@@ -118,6 +118,7 @@ namespace Faunus {
    * `atomic`      | bool    | `true` if molecule is to be considered as a collection of free atomic species (default: false)
    * `bonds`       | string  | List of harmonic bonds - index 0 corresponds to first atom in structure
    * `dihedrals`   | string  | List of dihedrals (under construction!)
+   * `fasta`       | string  | Construct bonded chain from fasta sequence (hardcoded k and req)
    * `insdir`      | string  | Directions for generation of random position. Default: "1 1 1" = XYZ
    * `insoffset`   | string  | Translate generated random position. Default: "0 0 0" = no translation
    * `Ninit`       | int     | Initial number of molecules
@@ -259,13 +260,39 @@ namespace Faunus {
                     atoms.push_back(p.id);
                 }
               }
-              else {
-                std::cerr << "Error: structure " + structure + " not loaded." << endl;
-                exit(1);
-              }
+              else
+                throw std::runtime_error("Structure " + structure + " not loaded.");
             }
           }
 
+          // construct flexible peptide from fasta sequence
+          string fasta = json::value<string>( molecule.second, "fasta", "" );
+          if ( !fasta.empty() ) {
+            assert( atoms.empty() );
+            atoms = FastaToAtoms( fasta ); // -> atomid
+            atoms.insert( atoms.begin(), atom["NTR"].id );
+            atoms.push_back( atom["CTR"].id );
+            double req=4.9, k=0.76;
+            Tpvec v;
+            Point u;
+            typename Tpvec::value_type a;
+            v.reserve( atoms.size() );
+            for ( auto i : atoms ) {
+              a = atom[i];
+              if ( v.empty() )
+                a = Point(0,0,0);
+              else {
+                u.ranunit( slump );   // position randomly
+                a = v.back() + req*u; // around previous particle
+              }
+              v.push_back( a );
+            }
+            pushConformation( v );
+            bonds.reserve( v.size()-1 );
+            for ( size_t i=0; i<v.size()-1; i++ )
+              bonds.push_back( Bonded::BondData( i, i+1, k, req, Bonded::BondData::Type::HARMONIC ) ); 
+          }
+ 
           // read tracjectory w. conformations from disk
           string traj = json::value<string>( molecule.second, "traj", "" );
           if ( !traj.empty() ) {
@@ -295,16 +322,12 @@ namespace Faunus {
                   if ( w.size() == conformations.size() )
                     confDist = std::discrete_distribution<>(w.begin(), w.end());
                   else
-                    std::cerr << "Warning: Number of weights does not match conformations." << endl; 
-                } else {
-                  std::cerr << "Error: Weight file " + weightfile + " not found." << endl;
-                  exit(1);
-                }
+                    throw std::runtime_error("Number of weights does not match conformations.");
+                } else
+                  throw std::runtime_error("Weight file " + weightfile + " not found.");
               }
-            } else {
-              std::cerr << "Error: trajectory " + traj + " not loaded or empty." << endl;
-              exit(1);
-            }
+            } else
+              throw std::runtime_error("Error: trajectory " + traj + " not loaded or empty.");
           }
 
           // add atoms to atom list

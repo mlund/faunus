@@ -56,7 +56,7 @@ namespace Faunus {
 
       Type type;  //!< Bond type (default: HARMONIC)
 
-      inline BondData( int i, int j, double k, double req, Type type ) : k(k), req(req), type(type) {
+      inline BondData( int i, int j, double k, double req, Type type=Type::HARMONIC ) : k(k), req(req), type(type) {
         index = {i,j};
       }
 

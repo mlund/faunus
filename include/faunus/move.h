@@ -3379,7 +3379,7 @@ namespace Faunus {
               << "  " << string(4*w,'-') << "\n";
 
             for (auto &m : spc->molecule) {
-              if ( m.activity > 1e-6 )
+              if ( m.activity > 1e-10 )
                 if ( molTrack.getAvg(m.id).cnt>0 )
                   o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
                     << setw(w) << molTrack.getAvg(m.id)/V/1.0_molar

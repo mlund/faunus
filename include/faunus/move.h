@@ -177,7 +177,9 @@ namespace Faunus {
             std::ostringstream o;
             using namespace textio;
             o << pad(SUB,Tmove::w,"Polarisation updates") << numIter.cnt << "\n"
-              << pad(SUB,Tmove::w,"Polarisation iterations") << numIter.avg() << "\n"
+              << pad(SUB,Tmove::w,"Polarisation threshold") << threshold << "\n"
+              << pad(SUB,Tmove::w,"Polarisation iterations") << numIter.avg()
+              << " (max. " << max_iter << ")" << "\n"
               << Tmove::_info();
             return o.str();
           }
@@ -616,7 +618,7 @@ namespace Faunus {
         iparticle=-1;
         igroup=nullptr;
         dir={1,1,1};
-        genericdp = 5;
+        genericdp = 0;
         this->w=30; //width of output
 
         in.cd ( base::jsondir );

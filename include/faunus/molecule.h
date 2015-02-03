@@ -46,7 +46,7 @@ namespace Faunus {
               Geometry::QuaternionRotate rot;
               Point u;
               u.ranunit(slump);
-              rot.setAxis( geo, {0,0,0}, u, pc::pi * slump() );
+              rot.setAxis( geo, {0,0,0}, u, 2 * pc::pi * slump() );
               i.rotate(rot);
               geo.randompos( i );
               i = i.cwiseProduct(dir) + offset;
@@ -182,7 +182,7 @@ namespace Faunus {
         Tpvec getRandomConformation() {
           if ( conformations.empty() )
             throw std::runtime_error("No configurations for molecule '" + name +
-                "'.Perhaps you forgot to specity the 'atomic' keyword?");
+                "'. Perhaps you forgot to specity the 'atomic' keyword?");
 
           assert( size_t(confDist.max()) == conformations.size()-1 );
           assert( atoms.size() == conformations.front().size() );

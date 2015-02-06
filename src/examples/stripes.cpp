@@ -51,14 +51,16 @@ int main() {
  As has been shown (http://dx.doi.org/10.1038/nmat820),
  this simple system shows remarkable phases with strong ordering.
  This particular example also shows how to create a simple, custom pair
- potential that takes user input from the main input file.
+ potential that takes user input from a json file.
 
- Run this example from the `examples` directory:
+ Run this example from the `examples` directory and for the first run,
+ just ignore any potential warnings about infinite energy which is
+ caused by initial particle overlap.
 
  ~~~~~~~~~~~~~~~~~~~
  $ make example_stripes
  $ cd src/examples
- $ ./stripes.run
+ $ ./stripes.py
  ~~~~~~~~~~~~~~~~~~~
 
  ![Stripes? T=0.18, rho=0.291, N=1000](stripes.jpg)

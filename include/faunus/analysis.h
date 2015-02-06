@@ -1410,6 +1410,7 @@ namespace Faunus {
         /**
          * @brief Saves data to files. 
          * @param ext Extention of filename
+         * @param reset If true, reset all averages after save (default: false)
          * 
          * @note \f$ g(r) \rightarrow \f$ gofr.dat+ext
          *       \f$ \mu(0)\cdot\mu(r) \rightarrow \f$ mucorr.dat+ext

@@ -7,11 +7,11 @@ eps=`python -c "print 1./$T"`
 
 echo '{
   "atomlist" : {
-    "CS" : { "r":0.5, "dp":0.9, "Ninit":'$N' }
+    "CS" : { "r":0.5, "dp":0.9 }
   },
 
   "moleculelist" : {
-    "mymol" : { "atoms":"CS", "atomic":true, "Ninit":1, "insdir":"1 1 0" }
+    "mymol" : { "atoms":"CS", "atomic":true, "Ninit":'$N', "insdir":"1 1 0" }
   },
 
   "energy" : {

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+echo '{
+
+  "energy" : {
+    "nonbonded" : {
+       "coulomb" : { "epsr":80.0 }
+    }
+  },
+
+  "system" : {
+    "temperature"  : 298.15,
+    "coulomb" : { "epsr":80.0 }
+  }
+  
+}' > keesom.json
+
+exe=./keesom
+if [ -x $exe ]; then
+ $exe
+ rc=$?
+ exit $rc
+fi
+exit 1

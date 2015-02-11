@@ -22,7 +22,7 @@ int main() {
 
   spc.load("state");
 
-  Analysis::DipoleAnalysis dian(spc,in);
+  Analysis::MultipoleAnalysis dian(spc,in);
   DipoleWRL sdp;
   FormatXTC xtc(spc.geo.len.norm());
 

@@ -469,7 +469,6 @@ typedef CombinedPairPotential<TpairLJ,TpairDDW> Tpair;
         }
     };
 
-
     class IonIonTest : public Coulomb {
       private:
         string _brief() { return "Coulomb Test"; }
@@ -593,16 +592,15 @@ int main() {
   //  cout << spc.p[n].transpose() << " " << spc.p[n].charge << endl;
   //return 0;
   
-  /*
   IonIonQ pairQ(in);
   IonIonFanourgakis pairFN(in);
   IonIonTest pairT(in);
   MultipoleOrgWolf<true,false,false,false> pairW(in,0.0);
-  MultipoleWolf<true,false,false,false> pairF(in,0.0);
+  MultipoleWolf<true,false,false,false> pairF(in,"",0.0);
   MultipoleOrgWolf<true,false,false,false> pairWD(in,kappa);
-  MultipoleWolf<true,false,false,false> pairFD(in,kappa);
-  */
+  MultipoleWolf<true,false,false,false> pairFD(in,"",kappa);
   
+  /*
   DipoleDipoleTest pairQ(in);
   DipoleDipoleFanourgakis pairFN(in);
   DipoleDipoleTest pairT(in);
@@ -610,6 +608,7 @@ int main() {
   MultipoleWolf<false,false,true,false> pairF(in,0.0);
   MultipoleOrgWolf<false,false,true,false> pairWD(in,kappa);
   MultipoleWolf<false,false,true,false> pairFD(in,kappa);
+  */
   
   savePotential(Coulomb(in), atom["sol"].id, atom["sol"].id, "pot_dipdip_C.dat");
   savePotential(pairQ, atom["sol"].id, atom["sol"].id, "pot_dipdip_Q.dat");

@@ -1222,6 +1222,7 @@ namespace Faunus {
         Table2D<double,double> kw, mucorr_angle;
         Table2D<double,Average<double> > mucorr, mucorr_dist; 
         Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
+        Histogram<double,unsigned int> HQ_xx,HQ_xy,HQ_xz,HQ_yx,HQ_yy,HQ_yz,HQ_zx,HQ_zy,HQ_zz, HQ_xx_box,HQ_xy_box,HQ_xz_box,HQ_yx_box,HQ_yy_box,HQ_yz_box,HQ_zx_box,HQ_zy_box,HQ_zz_box;
         Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t, groupDipole;
         Average<double> Q_xx,Q_xy,Q_xz,Q_yx,Q_yy,Q_yz,Q_zx,Q_zy,Q_zz,Q_xx_box,Q_xy_box,Q_xz_box,Q_yx_box,Q_yy_box,Q_yz_box,Q_zx_box,Q_zy_box,Q_zz_box;
         vector<Average<double>> mu_abs;
@@ -1234,7 +1235,9 @@ namespace Faunus {
         template<class Tspace, class Tinputmap>
           MultipoleAnalysis(const Tspace &spc, Tinputmap &in) : 
             rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),HM_x(0.1),HM_y(0.1),
-            HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1) {
+            HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1),
+            HQ_xx(0.1),HQ_xy(0.1),HQ_xz(0.1),HQ_yx(0.1),HQ_yy(0.1),HQ_yz(0.1),HQ_zx(0.1),HQ_zy(0.1),HQ_zz(0.1),
+            HQ_xx_box(0.1),HQ_xy_box(0.1),HQ_xz_box(0.1),HQ_yx_box(0.1),HQ_yy_box(0.1),HQ_yz_box(0.1),HQ_zx_box(0.1),HQ_zy_box(0.1),HQ_zz_box(0.1) {
             sampleKW = 0;
             setCutoff(spc.geo.len_half.x());
             N = spc.p.size();
@@ -1272,6 +1275,8 @@ namespace Faunus {
             Point mu_box(0,0,0);      // In e\AA
             Tensor<double> quad;      // In e\AA^2
             Tensor<double> quad_box;  // In e\AA^2
+            quad.setZero();
+            quad_box.setZero();
 
             for (auto &i : spc.p) {
               if (spc.geo.sqdist(i,origin)<cutoff2) {
@@ -1334,6 +1339,24 @@ namespace Faunus {
             M2_box += sca;
             diel_std.add(getDielTinfoil());
             
+            HQ_xx(quad(0,0))++;
+            HQ_xy(quad(0,1))++;
+            HQ_xz(quad(0,2))++;
+            HQ_yx(quad(1,0))++;
+            HQ_yy(quad(1,1))++;
+            HQ_yz(quad(1,2))++;
+            HQ_zx(quad(2,0))++;
+            HQ_zy(quad(2,1))++;
+            HQ_zz(quad(2,2))++;
+            HQ_xx_box(quad_box(0,0))++;
+            HQ_xy_box(quad_box(0,1))++;
+            HQ_xz_box(quad_box(0,2))++;
+            HQ_yx_box(quad_box(1,0))++;
+            HQ_yy_box(quad_box(1,1))++;
+            HQ_yz_box(quad_box(1,2))++;
+            HQ_zx_box(quad_box(2,0))++;
+            HQ_zy_box(quad_box(2,1))++;
+            HQ_zz_box(quad_box(2,2))++;        
             Q_xx += quad(0,0);
             Q_xy += quad(0,1);
             Q_xz += quad(0,2);
@@ -1462,6 +1485,25 @@ namespace Faunus {
           HM_x_box.save("hist_dip_x_box.dat"+ext);
           HM_y_box.save("hist_dip_y_box.dat"+ext);
           HM_z_box.save("hist_dip_z_box.dat"+ext);
+          HQ_xx.save("hist_quad_xx.dat"+ext);
+          HQ_xy.save("hist_quad_xy.dat"+ext);
+          HQ_xz.save("hist_quad_xz.dat"+ext);
+          HQ_yx.save("hist_quad_yx.dat"+ext);
+          HQ_yy.save("hist_quad_yy.dat"+ext);
+          HQ_yz.save("hist_quad_yz.dat"+ext);
+          HQ_zx.save("hist_quad_zx.dat"+ext);
+          HQ_zy.save("hist_quad_zy.dat"+ext);
+          HQ_zz.save("hist_quad_zz.dat"+ext);
+          HQ_xx_box.save("hist_quad_xx_box.dat"+ext);
+          HQ_xy_box.save("hist_quad_xy_box.dat"+ext);
+          HQ_xz_box.save("hist_quad_xz_box.dat"+ext);
+          HQ_yx_box.save("hist_quad_yx_box.dat"+ext);
+          HQ_yy_box.save("hist_quad_yy_box.dat"+ext);
+          HQ_yz_box.save("hist_quad_yz_box.dat"+ext);
+          HQ_zx_box.save("hist_quad_zx_box.dat"+ext);
+          HQ_zy_box.save("hist_quad_zy_box.dat"+ext);
+          HQ_zz_box.save("hist_quad_zz_box.dat"+ext);
+          
           HM2.save("hist_dip2.dat"+ext);
           HM2_box.save("hist_dip2_box.dat"+ext);
 
@@ -1521,6 +1563,24 @@ namespace Faunus {
             M_x_box.reset();
             M_y_box.reset();
             M_z_box.reset();
+            HQ_xx.clear();
+            HQ_xy.clear();
+            HQ_xz.clear();
+            HQ_yx.clear();
+            HQ_yy.clear();
+            HQ_yz.clear();
+            HQ_zx.clear();
+            HQ_zy.clear();
+            HQ_zz.clear();
+            HQ_xx_box.clear();
+            HQ_xy_box.clear();
+            HQ_xz_box.clear();
+            HQ_yx_box.clear();
+            HQ_yy_box.clear();
+            HQ_yz_box.clear();
+            HQ_zx_box.clear();
+            HQ_zy_box.clear();
+            HQ_zz_box.clear();
             Q_xx.reset();
             Q_xy.reset();
             Q_xz.reset();
@@ -1561,6 +1621,24 @@ namespace Faunus {
           HM_x_box.load("hist_dip_x_box.dat"+ext);
           HM_y_box.load("hist_dip_y_box.dat"+ext);
           HM_z_box.load("hist_dip_z_box.dat"+ext);
+          HQ_xx.load("hist_dip_xx.dat"+ext);
+          HQ_xy.load("hist_dip_xy.dat"+ext);
+          HQ_xz.load("hist_dip_xz.dat"+ext);
+          HQ_yx.load("hist_dip_yx.dat"+ext);
+          HQ_yy.load("hist_dip_yy.dat"+ext);
+          HQ_yz.load("hist_dip_yz.dat"+ext);
+          HQ_zx.load("hist_dip_zx.dat"+ext);
+          HQ_zy.load("hist_dip_zy.dat"+ext);
+          HQ_zz.load("hist_dip_zz.dat"+ext);
+          HQ_xx_box.load("hist_dip_xx_box.dat"+ext);
+          HQ_xy_box.load("hist_dip_xy_box.dat"+ext);
+          HQ_xz_box.load("hist_dip_xz_box.dat"+ext);
+          HQ_yx_box.load("hist_dip_yx_box.dat"+ext);
+          HQ_yy_box.load("hist_dip_yy_box.dat"+ext);
+          HQ_yz_box.load("hist_dip_yz_box.dat"+ext);
+          HQ_zx_box.load("hist_dip_zx_box.dat"+ext);
+          HQ_zy_box.load("hist_dip_zy_box.dat"+ext);
+          HQ_zz_box.load("hist_dip_zz_box.dat"+ext);
           HM2.load("hist_dip2.dat"+ext);
           HM2_box.load("hist_dip2_box.dat"+ext);
 

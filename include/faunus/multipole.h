@@ -951,7 +951,7 @@ namespace Faunus {
         DipoleDipoleRF(InputMap &in, const string &dir="") : DipoleDipole(in) {
           name+=" Reaction Field";
           in.cd ( jsondir+"/coulomb" );
-          rc2 = pow(in("cutoff",pc::infty), 2);
+          rc2 = pow(in("cutoff_rf",pc::infty), 2);
           eps_r = in("epsr",1.0 );
           eps_rf = in("epsilon_rf",80.0);
           _lB = pc::lB( eps_r );

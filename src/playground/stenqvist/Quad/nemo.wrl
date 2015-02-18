@@ -1,0 +1,828 @@
+#VRML V2.0 utf8
+
+Viewpoint {description"View 1"position 17.878  0.00    0.00
+orientation 0 1 0 0 }
+ Shape {appearance Appearance { material Material {
+diffuseColor 0.9 0.9 0.9 transparency 1.0 }}
+geometry Box { size  8.939 8.939 8.939}}
+Shape {appearance Appearance {material Material {
+emissiveColor 0.8 1.0 0.6 }}
+geometry IndexedLineSet {coord Coordinate {
+point [
+-4.4695  4.4695  4.4695
+4.4695  4.4695  4.4695
+4.4695  4.4695  -4.4695
+-4.4695  4.4695  -4.4695
+-4.4695  -4.4695  4.4695
+4.4695  -4.4695  4.4695
+4.4695  -4.4695  -4.4695
+-4.4695  -4.4695  -4.4695
+]}
+coordIndex [
+0, 1, 2, 3, 0, -1,
+4, 5, 6, 7, 4, -1,
+0, 4, -1,
+1, 5, -1,
+2, 6, -1,
+3, 7, -1,
+]}}
+Transform { translation  3.54123  4.18391 -3.56801
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   3.54123  4.18391 -3.56801
+ rotation  0.394512   0  -0.757922 2.1171
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   -2.2287 -0.930345   3.10711
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    -2.2287 -0.930345   3.10711
+ rotation  -0.752041   0  0.0680607 2.28576
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  4.11268  3.89504 -3.11235
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   4.11268  3.89504 -3.11235
+ rotation  0.656871   0  -0.751585 1.63118
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  0.065674   3.77811 -0.958375
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   0.065674   3.77811 -0.958375
+ rotation  -0.576213   0  0.698281 1.13215
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -4.39832 0.452208  1.36251
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -4.39832 0.452208  1.36251
+ rotation  0.0119926   0  0.570722 0.607538
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   -3.92956   -2.25319 -0.0149467
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    -3.92956   -2.25319 -0.0149467
+ rotation  -0.410503   0  0.70952 2.18068
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   3.2232 -1.90608 0.909169
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    3.2232 -1.90608 0.909169
+ rotation  0.112849   0  -0.128257 2.96992
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  3.16008 -2.68159  1.05248
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   3.16008 -2.68159  1.05248
+ rotation  0.351975   0  0.385627 2.59227
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.0093  3.1574 2.99742
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.0093  3.1574 2.99742
+ rotation  0.398302   0  -0.475267 2.47272
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.04716 -3.67907 -4.07385
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.04716 -3.67907 -4.07385
+ rotation  -0.388071   0  0.637463 0.842481
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  3.92217 -3.87568 0.721321
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   3.92217 -3.87568 0.721321
+ rotation  0.849874   0  -0.526062 1.53959
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   -4.39444    3.06543 0.00164506
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    -4.39444    3.06543 0.00164506
+ rotation  -0.421812   0  -0.559893 0.776803
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.53843 -4.44874  2.04871
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.53843 -4.44874  2.04871
+ rotation  0.88267   0  -0.287055 1.95212
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.86488 -2.61501  4.16694
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.86488 -2.61501  4.16694
+ rotation  -0.686497   0  0.268883 0.82903
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.54664 -1.01897  -3.3861
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.54664 -1.01897  -3.3861
+ rotation  0.574176   0  0.0137774 0.611799
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -0.694623   1.62283   3.24994
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -0.694623   1.62283   3.24994
+ rotation  0.291307   0  0.324478 2.69038
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation 3.40444 -1.1094 1.18124
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  3.40444 -1.1094 1.18124
+ rotation  -0.487386   0  0.543313 2.32344
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   3.88456 -0.797953   1.72384
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    3.88456 -0.797953   1.72384
+ rotation  -0.941576   0  0.0845965 1.90287
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.42893 -1.31945  -4.0663
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.42893 -1.31945  -4.0663
+ rotation  0.93779   0  -0.346099 1.54312
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  0.526332   3.39493 -0.540839
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   0.526332   3.39493 -0.540839
+ rotation  -0.757486   0  0.565215 1.23796
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  2.20153 -4.42763 -4.33679
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   2.20153 -4.42763 -4.33679
+ rotation  0.715738   0  -0.55128 2.01388
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   -4.2717 -0.712798 -0.189473
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    -4.2717 -0.712798 -0.189473
+ rotation  0.474501   0  0.554782 2.32324
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation 4.26934 1.16447 1.11668
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  4.26934 1.16447 1.11668
+ rotation  -0.476135   0  0.235578 0.560047
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  1.47175 -0.47549  1.68896
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   1.47175 -0.47549  1.68896
+ rotation  -0.535012   0  -0.437487 0.763023
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   -3.7909   3.65036 -0.059413
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    -3.7909   3.65036 -0.059413
+ rotation  -0.107848   0  -0.709179 0.799966
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  1.80097 -4.02422  2.39924
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   1.80097 -4.02422  2.39924
+ rotation  0.698336   0  0.683707 1.78424
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -0.288485  -1.25984   2.20355
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -0.288485  -1.25984   2.20355
+ rotation  0.205149   0  -0.813974 2.14536
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  3.95419  2.20436 -3.98658
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   3.95419  2.20436 -3.98658
+ rotation  -0.550073   0  -0.511217 2.2921
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.08046 0.436864  2.55791
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.08046 0.436864  2.55791
+ rotation  -0.753301   0  0.548971 1.94139
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation 4.24872  1.8392 4.21914
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  4.24872  1.8392 4.21914
+ rotation  -0.940609   0  -0.26026 1.79055
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  -3.55289 -0.263137 -0.394539
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   -3.55289 -0.263137 -0.394539
+ rotation  -0.270213   0  0.913478 1.8799
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -4.36544   3.4977 -2.63027
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -4.36544   3.4977 -2.63027
+ rotation  0.383023   0  -0.416573 2.54007
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.90684    0.864 -1.48334
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.90684    0.864 -1.48334
+ rotation  0.711773   0  0.701996 1.5949
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   1.6983 -4.36464  3.09144
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    1.6983 -4.36464  3.09144
+ rotation  0.788857   0  -0.501432 1.93408
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation 1.33963 1.70066 0.85839
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  1.33963 1.70066 0.85839
+ rotation  -0.581375   0  0.127858 0.6376
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -0.408527   3.86941  -1.50275
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -0.408527   3.86941  -1.50275
+ rotation  -0.858254   0  0.513052 1.55747
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  -4.44125  -2.76914 -0.263295
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   -4.44125  -2.76914 -0.263295
+ rotation  0.0761458   0  0.378644 2.74506
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   4.31655 0.0281735   2.89202
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    4.31655 0.0281735   2.89202
+ rotation  -0.446148   0  0.150508 2.65134
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  2.11164 -4.31667  3.80805
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   2.11164 -4.31667  3.80805
+ rotation  0.968991   0  -0.244069 1.53223
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -0.694877   2.51029   3.27669
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -0.694877   2.51029   3.27669
+ rotation  -0.148528   0  -0.129368 2.94333
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -4.02118  2.74534 -2.81837
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -4.02118  2.74534 -2.81837
+ rotation  -0.513822   0  -0.0529934 2.59878
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -3.46622 -1.71606 0.394411
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -3.46622 -1.71606 0.394411
+ rotation  -0.772662   0  0.587111 1.81465
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   -2.53607   -4.32772 -0.0507953
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    -2.53607   -4.32772 -0.0507953
+ rotation  0.720102   0  -0.68035 1.43407
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation 0.473303 -1.45784   2.5407
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  0.473303 -1.45784   2.5407
+ rotation  -0.0766898   0  -0.943765 1.24338
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -3.85168 0.987149 -4.43474
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -3.85168 0.987149 -4.43474
+ rotation  -0.483052   0  -0.650185 2.19746
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  4.28812 -1.25308 0.106675
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   4.28812 -1.25308 0.106675
+ rotation  0.087702   0  0.376892 2.74426
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   3.95228 -0.456047   2.43393
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    3.95228 -0.456047   2.43393
+ rotation  -0.827758   0  0.244091 2.10042
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.54911  -3.2014 -4.43336
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.54911  -3.2014 -4.43336
+ rotation  -0.258767   0  0.441485 0.537199
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  -3.13384   4.14511 -0.293185
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   -3.13384   4.14511 -0.293185
+ rotation  -0.215401   0  -0.725006 0.857681
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   3.79491  -1.94868 0.0786954
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    3.79491  -1.94868 0.0786954
+ rotation  -0.00419673   0  0.555894 2.55214
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   0.789436    2.89171 -0.0321047
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    0.789436    2.89171 -0.0321047
+ rotation  -0.356268   0  0.478044 0.638758
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -2.95794 -1.58641 0.993835
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -2.95794 -1.58641 0.993835
+ rotation  -0.77719   0  0.627504 1.52373
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  -2.35886 -0.591258   3.79049
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   -2.35886 -0.591258   3.79049
+ rotation  -0.676691   0  -0.683451 1.84817
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  2.87511 -3.39148  1.34947
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   2.87511 -3.39148  1.34947
+ rotation  0.551635   0  0.20515 2.51233
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  -4.09847 -0.272164   1.40549
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   -4.09847 -0.272164   1.40549
+ rotation  0.0929171   0  0.297562 0.317015
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  1.47724 0.915733  1.04269
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   1.47724 0.915733  1.04269
+ rotation  -0.58016   0  0.413438 0.792915
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  3.59825 -3.39953 -1.37129
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   3.59825 -3.39953 -1.37129
+ rotation  -0.649344   0  0.693211 1.88888
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -2.39397 0.438894  -1.0058
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -2.39397 0.438894  -1.0058
+ rotation  0.65107   0  0.73774 1.75022
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  1.04743   2.1929 0.292692
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   1.04743   2.1929 0.292692
+ rotation  -0.212183   0  0.377319 0.447693
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -3.96241 -1.00169  1.26546
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -3.96241 -1.00169  1.26546
+ rotation  0.0759754   0  -0.0851954 0.114401
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  3.55967 -3.38776 0.153243
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   3.55967 -3.38776 0.153243
+ rotation  0.166458   0  -0.416925 2.67603
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -0.761992  -4.21391  -3.58214
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -0.761992  -4.21391  -3.58214
+ rotation  -0.667681   0  0.112707 0.743851
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.45352 0.745464 -2.07953
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.45352 0.745464 -2.07953
+ rotation  0.944804   0  0.324215 1.52356
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -3.91855 -2.64163   1.1044
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -3.91855 -2.64163   1.1044
+ rotation  0.334157   0  -0.190236 0.394681
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  -4.3798 -3.40215   1.2104
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   -4.3798 -3.40215   1.2104
+ rotation  -0.036618   0  -0.77917 0.894714
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.63639 -1.56394  4.12434
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.63639 -1.56394  4.12434
+ rotation  0.884187   0  -0.0925425 1.09519
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  1.7467 0.20788 1.34391
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   1.7467 0.20788 1.34391
+ rotation  -0.247759   0  -0.000594504 0.250367
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -4.07149  1.52553 -3.93332
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -4.07149  1.52553 -3.93332
+ rotation  -0.683669   0  -0.0387965 2.38731
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -3.37446 0.277784 -4.40393
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -3.37446 0.277784 -4.40393
+ rotation  -0.0754401   0  -0.242354 2.88496
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.25624   3.8364   2.6224
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.25624   3.8364   2.6224
+ rotation  0.480844   0  -0.317611 2.52743
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -0.799858 -0.775541   2.10482
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -0.799858 -0.775541   2.10482
+ rotation  0.224404   0  -0.440877 2.6241
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.67595 -4.37841  1.25549
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.67595 -4.37841  1.25549
+ rotation  0.952716   0  0.257194 1.73332
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  2.77028  3.89542 -2.95407
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   2.77028  3.89542 -2.95407
+ rotation  -0.0524414   0  0.0681965 3.05546
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  1.04742 -1.02751  2.11499
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   1.04742 -1.02751  2.11499
+ rotation  -0.727011   0  -0.5115 1.09498
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  3.58732  2.51069 -3.41237
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   3.58732  2.51069 -3.41237
+ rotation  -0.544209   0  -0.737426 1.98237
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  -1.23638 -0.142076   2.05679
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   -1.23638 -0.142076   2.05679
+ rotation  -0.27234   0  -0.648844 2.36103
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -2.55885 -1.53281  1.70171
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -2.55885 -1.53281  1.70171
+ rotation  -0.869124   0  0.422269 1.83124
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   2.4547 -3.70621  1.98006
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    2.4547 -3.70621  1.98006
+ rotation  0.334027   0  0.88354 1.9053
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -4.03877 -1.88428  1.24076
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -4.03877 -1.88428  1.24076
+ rotation  -0.329788   0  -0.0502988 0.340121
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -2.02682 -4.27673 0.523049
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -2.02682 -4.27673 0.523049
+ rotation  0.680517   0  -0.702314 1.36031
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   4.07085  -3.35404 -0.732911
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    4.07085  -3.35404 -0.732911
+ rotation  -0.733949   0  0.666839 1.70017
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.54116 -2.13763  3.59265
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.54116 -2.13763  3.59265
+ rotation  0.077005   0  -0.239953 0.254753
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -2.21317 -1.29873  2.38838
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -2.21317 -1.29873  2.38838
+ rotation  -0.915953   0  0.212962 1.91784
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  -2.90316 0.0933865  -0.48367
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   -2.90316 0.0933865  -0.48367
+ rotation  0.590117   0  0.526995 2.22886
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation   3.38946  -2.65164 0.0287068
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation    3.38946  -2.65164 0.0287068
+ rotation  0.171658   0  0.159525 2.90505
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  2.86116 -4.27626 -2.68237
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   2.86116 -4.27626 -2.68237
+ rotation  -0.471935   0  0.456609 2.4252
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  2.87447  4.38329 -3.91629
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   2.87447  4.38329 -3.91629
+ rotation  0.479401   0  -0.877596 1.57042
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  -1.48305 -0.336599  -3.05277
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   -1.48305 -0.336599  -3.05277
+ rotation  0.417195   0  -0.296678 0.537426
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  -2.84512 -0.229525   4.19625
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   -2.84512 -0.229525   4.19625
+ rotation  -0.329294   0  -0.811398 2.07477
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  4.20102  1.74082 0.554115
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   4.20102  1.74082 0.554115
+ rotation  -0.739142   0  -0.170318 0.861026
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -3.95452  2.15572 -3.39941
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -3.95452  2.15572 -3.39941
+ rotation  -0.552564   0  -0.0154372 2.5559
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.27513 0.375644 -2.71905
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.27513 0.375644 -2.71905
+ rotation  0.580336   0  -0.0461379 0.621392
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  3.09686 -3.68587 -2.07374
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   3.09686 -3.68587 -2.07374
+ rotation  -0.930032   0  0.269995 1.82274
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  3.10106  3.16258 -3.06436
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   3.10106  3.16258 -3.06436
+ rotation  -0.408669   0  -0.692574 2.20734
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -1.07001 0.970824  3.18534
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -1.07001 0.970824  3.18534
+ rotation  -0.633349   0  0.480785 2.22231
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation 4.44555 1.57694 3.53273
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  4.44555 1.57694 3.53273
+ rotation  -0.886007   0  -0.20788 1.99815
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -0.683446    4.0147  -2.22855
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -0.683446    4.0147  -2.22855
+ rotation  -0.937922   0  0.156769 1.25624
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -4.44575 0.831257  2.99808
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -4.44575 0.831257  2.99808
+ rotation  -0.437644   0  -0.093194 2.67767
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation  4.17148  2.36185 0.122474
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation   4.17148  2.36185 0.122474
+ rotation  -0.129487   0  -0.0972431 0.162652
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}
+Transform { translation -0.760862   4.27183   -2.9452
+ children [ DEF par_0 Shape{ appearance Appearance { material
+ Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}
+  geometry Sphere {radius 0.5}}]}
+Transform { translation  -0.760862   4.27183   -2.9452
+ rotation  -0.929658   0  -0.127287 1.21777
+ children[DEF tip_0 Shape{appearance Appearance{material Material{
+diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  0.15  height  0.3}}]}

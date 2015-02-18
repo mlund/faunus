@@ -998,7 +998,7 @@ namespace Faunus {
         protected:
           double _lB;
         public:
-          MultipoleWolf(InputMap &in, const string &dir="", double kappa=0.0) : wolf(kappa, // double kappa=0.0) : wolf(in("kappa", 0.0),
+          MultipoleWolf(InputMap &in, const string &dir="") : wolf(in("kappa", 0.0),
               in("cutoff",pc::infty)) {
             name="Multipole Wolf";
             _lB = pc::lB(in("epsr",80.0));

@@ -596,9 +596,9 @@ int main() {
   IonIonFanourgakis pairFN(in);
   IonIonTest pairT(in);
   MultipoleOrgWolf<true,false,false,false> pairW(in,0.0);
-  MultipoleWolf<true,false,false,false> pairF(in,"",0.0);
+  MultipoleWolf<true,false,false,false> pairF(in,"");
   MultipoleOrgWolf<true,false,false,false> pairWD(in,kappa);
-  MultipoleWolf<true,false,false,false> pairFD(in,"",kappa);
+  MultipoleWolf<true,false,false,false> pairFD(in,"");
   
   /*
   DipoleDipoleTest pairQ(in);

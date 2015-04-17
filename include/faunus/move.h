@@ -953,7 +953,6 @@ namespace Faunus {
     template<class Tspace>
       void TranslateRotate<Tspace>::setGroup(Group &g) {
         assert( this->mollist.empty() && "Use either JSON data or setGroup");
-        assert(&g!=nullptr);
         assert(!g.name.empty() && "Group should have a name.");
         assert(g.isMolecular());
         assert(spc->geo.sqdist(g.cm,g.cm_trial)<1e-6 && "Trial CM mismatch");
@@ -1307,7 +1306,6 @@ namespace Faunus {
 
     template<class Tspace>
       void TranslateRotateCluster<Tspace>::setMobile(Group &g) {
-        assert(&g!=nullptr);
         gmobile=&g;
       }
 
@@ -3044,14 +3042,12 @@ namespace Faunus {
 
     template<class Tspace>
       void FlipFlop<Tspace>::setGroup(Group &g) {
-        assert(&g!=nullptr);
         assert(g.isMolecular());
         igroup=&g;
       }
 
     template<class Tspace>
       void FlipFlop<Tspace>::setCenter(Point &center) {
-        assert(&center!=nullptr);
         cntr=&center;
       }
 

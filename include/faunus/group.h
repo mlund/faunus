@@ -120,7 +120,6 @@ namespace Faunus {
        */
       template<class Tspace>
         Point massCenter(const Tspace &spc) const {
-          assert(&spc!=nullptr);
           return Geometry::massCenter(spc.geo, spc.p, *this);
         }
 

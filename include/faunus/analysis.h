@@ -1083,7 +1083,6 @@ namespace Faunus {
           template<class Tpvec, class Tgeo>
             void sample(const Tpvec &p, Tgeo &geo) {
               assert(lB>0);
-              assert(&geo!=nullptr);
               if (!g.empty())
                 if (!p.empty())
                   if (run()) {

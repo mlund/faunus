@@ -57,11 +57,8 @@ namespace Faunus {
      * \param _ions Salt, counterions etc that mediates the two bodies
      */
     void TwobodyForce::setTwobodies(Group &g1, Group &g2, Group &_ions) {
-      assert(&g1!=nullptr);
       assert(!g1.name.empty() && "Group 1 (body 1) should have a name.");
-      assert(&g2!=nullptr);
       assert(!g2.name.empty() && "Group 2 (body 2) have a name.");
-      assert(&_ions!=nullptr);
       assert(!_ions.name.empty() && "Group 3 (ions) should have a name.");
       igroup1=&g1;
       igroup2=&g2;

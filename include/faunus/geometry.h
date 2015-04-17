@@ -473,7 +473,6 @@ namespace Faunus {
          * @param angle Radians to rotate
          */
         inline void setAxis(Geometrybase &g, const Point &beg, const Point &end, double angle) {
-          assert(&g!=nullptr && "Invalid geometry");
           geoPtr=&g;
           origin=beg;
           angle_=angle;

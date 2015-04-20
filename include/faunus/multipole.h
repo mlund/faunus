@@ -1238,8 +1238,10 @@ namespace Faunus {
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
             double r1 = r.norm();
-            if (r1 < rc1)
-              return (DipoleDipole::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
+            if (r1 < rc1) {
+              //return (DipoleDipole::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
+	      return (DipoleDipole::operator()(a,b,r)*qPochhammerSymbol(r1*rc1i,3));
+	    }
             return 0;
           }
 

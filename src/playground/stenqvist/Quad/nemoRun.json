@@ -10,8 +10,8 @@
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "epsr":1, "cutoff":4.3, "cutoff_rf":31.9165, "epsilon_rf":130.0 },
-       "ewald"   : { "precision":0.01, "epsr_surf":1e11, "cutoff":19.0, "alpha":0.168421052631579, "maxK":11 },
+       "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoff_rf":31.9165, "epsilon_rf":130.0 },
+       "ewald"   : { "precision":0.01, "epsr_surf":1e11, "cutoff":4.4695, "alpha":0.168421052631579, "maxK":11 },
     }
   },
 
@@ -25,7 +25,7 @@
     "cuboid"       : { "len" : 63.833 },
     "mcloop"       : { "macro":10, "micro":10 },
     "atomlist"     : "nemo.json",
-    "coulomb" : { "epsr":1, "cutoff":4.3, "cutoffdip":4.3 },
+    "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoffdip":4.4695 },
     "moleculelist" : "nemo.json"
   }
 }

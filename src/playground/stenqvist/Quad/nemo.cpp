@@ -8,7 +8,7 @@ using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid,DipoleParticle> Tspace; 
-typedef DipoleDipole TpairDD;
+typedef DipoleDipoleQ TpairDD;
 typedef LennardJonesLB TpairLJ;
 typedef CombinedPairPotential<TpairLJ,TpairDD> Tpair;
 

@@ -4,8 +4,8 @@ echo '{
 
   "energy" : {
     "nonbonded" : {
-      "coulomb" : { "epsr" : 1.0, "cutoff":9, "cutoffdip":4.3 },
-      "ewald"   : { "precision":0.01, "epsr_surf":1e11, "cutoff":9, "alpha":0.2 },
+      "coulomb" : { "epsr" : 1.0, "cutoff":4.4695, "cutoffdip":4.4695 },
+      "ewald"   : { "precision":0.01, "epsr_surf":1e11, "cutoff":4.4695, "alpha":0.2 },
       "cutoff_g2g" : 10.
     }
   },
@@ -33,7 +33,7 @@ echo '{
   },
   
   "system" : {
-    "coulomb" : { "epsr":1, "cutoff":14., "cutoffdip":4.3 },
+    "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoffdip":4.4695 },
     "temperature"  : 300.0,
     "cuboid"   : { "len" : 27. },
     "mcloop"   : { "macro":10, "micro":100 },
@@ -63,7 +63,7 @@ echo '{
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "epsr":1, "cutoff":4.3, "cutoffdip":4.3 }
+       "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoffdip":4.4695 }
     }
   },
 
@@ -77,7 +77,7 @@ echo '{
     "cuboid"       : { "len" : 8.939 },
     "mcloop"       : { "macro":10, "micro":10000 },
     "atomlist"     : "nemo.json",
-    "coulomb" : { "epsr":1, "cutoff":4.3, "cutoffdip":4.3 },
+    "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoffdip":4.4695 },
     "moleculelist" : "nemo.json"
   }
 }' > nemo.json
@@ -94,8 +94,8 @@ echo '{
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "epsr":1, "cutoff":4.3, "cutoff_rf":31.9165, "epsilon_rf":130.0 },
-       "ewald"   : { "precision":0.01, "epsr_surf":1e11, "cutoff":19.0, "alpha":0.168421052631579, "maxK":11 },
+       "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoff_rf":31.9165, "epsilon_rf":130.0 },
+       "ewald"   : { "precision":0.01, "epsr_surf":1e11, "cutoff":4.4695, "alpha":0.168421052631579, "maxK":11 },
     }
   },
 
@@ -109,7 +109,7 @@ echo '{
     "cuboid"       : { "len" : 63.833 },
     "mcloop"       : { "macro":10, "micro":10 },
     "atomlist"     : "nemo.json",
-    "coulomb" : { "epsr":1, "cutoff":4.3, "cutoffdip":4.3 },
+    "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoffdip":4.4695 },
     "moleculelist" : "nemo.json"
   }
 }' > nemoRun.json

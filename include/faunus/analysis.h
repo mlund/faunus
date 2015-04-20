@@ -1223,7 +1223,7 @@ namespace Faunus {
         Table2D<double,Average<double> > mucorr, mucorr_dist; 
         Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
         Histogram<double,unsigned int> HQ_xx,HQ_xy,HQ_xz,HQ_yx,HQ_yy,HQ_yz,HQ_zx,HQ_zy,HQ_zz, HQ_xx_box,HQ_xy_box,HQ_xz_box,HQ_yx_box,HQ_yy_box,HQ_yz_box,HQ_zx_box,HQ_zy_box,HQ_zz_box;
-        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t, groupDipole;
+        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t, groupDipole, Z, Z_box;
         Average<double> Q_xx,Q_xy,Q_xz,Q_yx,Q_yy,Q_yz,Q_zx,Q_zy,Q_zz,Q_xx_box,Q_xy_box,Q_xz_box,Q_yx_box,Q_yy_box,Q_yz_box,Q_zx_box,Q_zy_box,Q_zz_box;
         vector<Average<double>> mu_abs;
 
@@ -1270,6 +1270,8 @@ namespace Faunus {
          */
         template<class Tspace>
           void sampleDP(Tspace &spc) {
+	    double charge = 0.0;
+	    double charge_box = 0.0;
             Point origin(0,0,0);
             Point mu(0,0,0);          // In e\AA
             Point mu_box(0,0,0);      // In e\AA
@@ -1283,17 +1285,24 @@ namespace Faunus {
                 mu += i.mu*i.muscalar;
                 quad += i*i.mu.transpose()*i.muscalar;
                 quad += i.theta;
+		charge += i.charge;
               } else {
                 mu_box += i.mu*i.muscalar;
                 quad_box += i*i.mu.transpose()*i.muscalar;
                 quad_box += i.theta;
+		charge_box += i.charge;
               }
               for(int j = 0; j < atomsize-1; j++)
                 if(int(i.id) == j+1)
                   mu_abs[j] += i.muscalar;
             }
+            charge_box += charge;
             mu_box += mu;
             quad_box += quad;
+	    
+	    Z += charge;
+	    Z_box += charge_box;
+	    
             samplePP(spc,origin,mu,mu_box,quad,quad_box);
           }
 
@@ -1306,7 +1315,7 @@ namespace Faunus {
          */
         template<class Tspace>
           void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0), Tensor<double> quad=Tensor<double>(),Tensor<double> quad_box=Tensor<double>()) {
-            updateVolume(spc.geo.getVolume());
+	    updateVolume(spc.geo.getVolume());
             Group all(0,spc.p.size()-1);
             all.setMassCenter(spc);
             mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
@@ -1375,7 +1384,7 @@ namespace Faunus {
             Q_zx_box += quad_box(2,0);
             Q_zy_box += quad_box(2,1);
             Q_zz_box += quad_box(2,2);
-            
+	    
             double mus_group = 0.0;
             for (auto gi : spc.groupList()) {
               Point m = Geometry::dipoleMoment(spc, *gi);

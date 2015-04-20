@@ -10,7 +10,7 @@
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "epsr":1, "cutoff":4.3, "cutoffdip":4.3 }
+       "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoffdip":4.4695 }
     }
   },
 
@@ -24,7 +24,7 @@
     "cuboid"       : { "len" : 8.939 },
     "mcloop"       : { "macro":10, "micro":10000 },
     "atomlist"     : "nemo.json",
-    "coulomb" : { "epsr":1, "cutoff":4.3, "cutoffdip":4.3 },
+    "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoffdip":4.4695 },
     "moleculelist" : "nemo.json"
   }
 }

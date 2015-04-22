@@ -36,7 +36,7 @@ int main() {
 
   EnergyDrift sys;   // class for tracking system energy drifts
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
-
+  
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
   MCLoop loop(mcp);    // class for handling mc loops

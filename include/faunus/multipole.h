@@ -1000,6 +1000,7 @@ namespace Faunus {
         public:
           MultipoleWolf(InputMap &in, const string &dir="") : wolf(in("kappa", 0.0),
               in("cutoff",pc::infty)) {
+	    in.cd ( jsondir+"/coulomb" );
             name="Multipole Wolf";
             _lB = pc::lB(in("epsr",80.0));
           }
@@ -1286,6 +1287,82 @@ namespace Faunus {
           std::ostringstream o;
           o << IonQuad::info(w)
             << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl;
+          return o.str();
+        }
+    };
+    
+class IonIonFanourgakis : public Coulomb {
+  private:
+    string _brief() { return "Coulomb Fanourgakis"; }
+    double rc1, rc1i, rc2, _lB;
+  public:
+    IonIonFanourgakis(InputMap &in, const string &dir="") : Coulomb(in) { 
+      name += " Fanourgakis"; 
+      _lB = Coulomb(in,dir).bjerrumLength();
+      rc1  = in( "cutoff", pc::infty );
+      rc1i = 1.0/rc1;
+      rc2 = rc1*rc1;
+    }
+
+    template<class Tparticle>
+      double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+        double r1 = sqrt(r2);
+        if(r2 < rc2) {
+          double q = r1/rc1;
+          double q5 = pow(q,5);
+          return _lB*(a.charge*b.charge/r1)*(1.0 - 1.75*q + 5.25*q5 - 7.0*q5*q + 2.5*q5*q*q);
+        }
+        return 0.0;
+      }
+
+    template<class Tparticle>
+      double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+        double r2 = r.squaredNorm();
+        return operator()(a,b,r2);
+      }
+
+    string info(char w) {
+      using namespace textio;
+      std::ostringstream o;
+      o << Coulomb::info(w)
+        << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+      return o.str();
+    }
+};
+    
+    class DipoleDipoleFanourgakis : public DipoleDipole {
+      private:
+        string _brief() { return "DipoleDipole Fanourgakis"; }
+        double rc1, rc1i, rc2;
+      public:
+        DipoleDipoleFanourgakis(InputMap &in, const string &dir="") : DipoleDipole(in) { 
+          name += " Fanourgakis"; 
+          rc1  = in( "cutoff", pc::infty );
+          rc1i = 1.0/rc1;
+          rc2 = rc1*rc1;
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r2 = r.squaredNorm();
+            if(r2 < rc2) {
+              double q = sqrt(r2)/rc1;
+              double q2 = q*q;
+              Eigen::Matrix3d T1 = r*r.transpose()/r2;
+              Eigen::Matrix3d T2 = Eigen::Matrix3d::Identity();
+	      Eigen::Matrix3d T = ((42.0 - 105.0*q + 60.0*q2)*q2*T1 + (21.0 - 35.0*q + 15.0*q2)*q2*T2)*rc1i/rc2;
+
+	      double W = a.mu.transpose()*T*b.mu;
+              return (DipoleDipole::operator()(a,b,r) - _lB*W*a.muscalar*b.muscalar);
+            }
+            return 0.0;
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << DipoleDipole::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
           return o.str();
         }
     };

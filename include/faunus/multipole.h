@@ -1046,8 +1046,14 @@ namespace Faunus {
         protected:
           double _lB;
         public:
+<<<<<<< HEAD
           MultipoleWolf(InputMap &in, const string &dir="") : wolf(in(jsondir+"coulomb/kappa", 0.0),
               in(jsondir+"coulomb/cutoff",pc::infty)) {
+=======
+          MultipoleWolf(InputMap &in, const string &dir="") : wolf(in("kappa", 0.0),
+              in("cutoff",pc::infty)) {
+	    in.cd ( jsondir+"/coulomb" );
+>>>>>>> 057aba5b34b16c7190872a3698d49ac8526e3d62
             name="Multipole Wolf";
             _lB = pc::lB(in(jsondir+"coulomb/epsr",80.0));
           }
@@ -1337,47 +1343,46 @@ namespace Faunus {
           return o.str();
         }
     };
+    
+class IonIonFanourgakis : public Coulomb {
+  private:
+    string _brief() { return "Coulomb Fanourgakis"; }
+    double rc1, rc1i, rc2, _lB;
+  public:
+    IonIonFanourgakis(InputMap &in, const string &dir="") : Coulomb(in) { 
+      name += " Fanourgakis"; 
+      _lB = Coulomb(in,dir).bjerrumLength();
+      rc1  = in( "cutoff", pc::infty );
+      rc1i = 1.0/rc1;
+      rc2 = rc1*rc1;
+    }
 
-
-    class IonIonFanourgakis : public Coulomb {
-      private:
-        string _brief() { return "Coulomb Fanourgakis"; }
-        double rc1, rc1i, rc2, _lB;
-      public:
-        IonIonFanourgakis(InputMap &in, const string &dir="") : Coulomb(in) { 
-          name += " Fanourgakis"; 
-          _lB = Coulomb(in,dir).bjerrumLength();
-          rc1  = in( "cutoff", pc::infty );
-          rc1i = 1.0/rc1;
-          rc2 = rc1*rc1;
+    template<class Tparticle>
+      double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+        double r1 = sqrt(r2);
+        if(r2 < rc2) {
+          double q = r1/rc1;
+          double q5 = pow(q,5);
+          return _lB*(a.charge*b.charge/r1)*(1.0 - 1.75*q + 5.25*q5 - 7.0*q5*q + 2.5*q5*q*q);
         }
+        return 0.0;
+      }
 
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
-            double r1 = sqrt(r2);
-            if(r2 < rc2) {
-              double q = r1/rc1;
-              double q5 = pow(q,5);
-              return _lB*(a.charge*b.charge/r1)*(1.0 - 1.75*q + 5.25*q5 - 7.0*q5*q + 2.5*q5*q*q);
-            }
-            return 0.0;
-          }
+    template<class Tparticle>
+      double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+        double r2 = r.squaredNorm();
+        return operator()(a,b,r2);
+      }
 
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            double r2 = r.squaredNorm();
-            return operator()(a,b,r2);
-          }
-
-        string info(char w) {
-          using namespace textio;
-          std::ostringstream o;
-          o << Coulomb::info(w)
-            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
-          return o.str();
-        }
-    };
-
+    string info(char w) {
+      using namespace textio;
+      std::ostringstream o;
+      o << Coulomb::info(w)
+        << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+      return o.str();
+    }
+};
+    
     class DipoleDipoleFanourgakis : public DipoleDipole {
       private:
         string _brief() { return "DipoleDipole Fanourgakis"; }

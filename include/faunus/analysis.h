@@ -1338,7 +1338,15 @@ namespace Faunus {
             mu_box += mu;
             quad_box += quad;
 	    
-            samplePP(spc,origin,mu,mu_box,quad,quad_box);
+            double mus_group = 0.0;
+            for (auto gi : spc.groupList()) {
+	      Point m(0,0,0);
+              for (auto i : *gi)
+                m += spc.p[i].muscalar*spc.p[i].mu;
+              mus_group += m.norm();
+            }
+	    
+            samplePP(spc,origin,mu,mu_box,quad,quad_box,mus_group);
           }
 
         /**
@@ -1349,7 +1357,7 @@ namespace Faunus {
          * @param mu_box Dipoles to add to from entire box (optional)
          */
         template<class Tspace>
-          void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0), Tensor<double> quad=Tensor<double>(),Tensor<double> quad_box=Tensor<double>()) {
+          void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0), Tensor<double> quad=Tensor<double>(),Tensor<double> quad_box=Tensor<double>(), double mus_group = 0.0) {
 	    updateVolume(spc.geo.getVolume());
             
             for(auto &i : spc.p) {
@@ -1387,11 +1395,8 @@ namespace Faunus {
 	      }
 	    }
 	    
-            double mus_group = 0.0;
             for (auto gi : spc.groupList()) {
               Point m = Geometry::dipoleMoment(spc, *gi);
-              for (auto i : *gi)
-                m += spc.p[i].muscalar*spc.p[i].mu;
               mus_group += m.norm();
             }
             groupDipole += (mus_group / double(spc.groupList().size()));

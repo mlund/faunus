@@ -1221,11 +1221,13 @@ namespace Faunus {
         Analysis::RadialDistribution<> rdf;
         Table2D<double,double> kw, mucorr_angle;
         Table2D<double,Average<double> > mucorr, mucorr_dist; 
-        Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
-        Histogram<double,unsigned int> HQ_xx,HQ_xy,HQ_xz,HQ_yx,HQ_yy,HQ_yz,HQ_zx,HQ_zy,HQ_zz, HQ_xx_box,HQ_xy_box,HQ_xz_box,HQ_yx_box,HQ_yy_box,HQ_yz_box,HQ_zx_box,HQ_zy_box,HQ_zz_box;
-        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t, groupDipole, Z, Z_box;
-        Average<double> Q_xx,Q_xy,Q_xz,Q_yx,Q_yy,Q_yz,Q_zx,Q_zy,Q_zz,Q_xx_box,Q_xy_box,Q_xz_box,Q_yx_box,Q_yy_box,Q_yz_box,Q_zx_box,Q_zy_box,Q_zz_box;
-        vector<Average<double>> mu_abs;
+        Histogram<double,unsigned int> HM2,HM2_box;
+        Average<double> M2,M2_box,diel_std, V_t, groupDipole;
+        
+	vector<Table2D<double,Average<double> >> Qofr, Mofr;  // Quadrupole and dipole as a function of distance 
+	vector<Histogram<double,unsigned int>> HQ, HQ_box, HM, HM_box;
+	vector<Average<double>> Q, Q_box, mu_abs, M, M_box;
+	vector<string> postFixMu,postFixQuad;
 
         int sampleKW, atomsize;
         double cutoff2, N;
@@ -1233,11 +1235,7 @@ namespace Faunus {
 
       public:
         template<class Tspace, class Tinputmap>
-          MultipoleAnalysis(const Tspace &spc, Tinputmap &in) : 
-            rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),HM_x(0.1),HM_y(0.1),
-            HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1),
-            HQ_xx(0.1),HQ_xy(0.1),HQ_xz(0.1),HQ_yx(0.1),HQ_yy(0.1),HQ_yz(0.1),HQ_zx(0.1),HQ_zy(0.1),HQ_zz(0.1),
-            HQ_xx_box(0.1),HQ_xy_box(0.1),HQ_xz_box(0.1),HQ_yx_box(0.1),HQ_yy_box(0.1),HQ_yz_box(0.1),HQ_zx_box(0.1),HQ_zy_box(0.1),HQ_zz_box(0.1) {
+          MultipoleAnalysis(const Tspace &spc, Tinputmap &in, double resolution=0.1) {
             sampleKW = 0;
             setCutoff(spc.geo.len_half.x());
             N = spc.p.size();
@@ -1246,6 +1244,51 @@ namespace Faunus {
             updateDielectricConstantRF(in.get("epsilon_rf",80.));
             atomsize = atom.size();
             mu_abs.resize(atomsize-1);
+	    
+	    Qofr.resize(9);
+	    Mofr.resize(3);
+	    HM.resize(3);
+	    HM_box.resize(3);
+	    M.resize(3);
+	    M_box.resize(3);
+	    HQ.resize(9);
+	    HQ_box.resize(9);
+	    Q.resize(9);
+	    Q_box.resize(9);
+	    
+	    rdf.setResolution(resolution);
+	    kw.setResolution(resolution);
+	    mucorr_angle.setResolution(resolution);
+	    mucorr.setResolution(resolution);
+	    mucorr_dist.setResolution(resolution);
+	    HM2.setResolution(resolution);
+	    HM2_box.setResolution(resolution);
+	    for(int i = 0; i < 3; i++) {
+	      Mofr.at(i).setResolution(resolution);
+	      HM.at(i).setResolution(resolution);
+	      HM_box.at(i).setResolution(resolution);
+	    }
+	    for(int i = 0; i < 9; i++) {
+	      Qofr.at(i).setResolution(resolution);
+	      HQ.at(i).setResolution(resolution);
+	      HQ_box.at(i).setResolution(resolution);
+	      Q.at(i).reset();
+	      Q_box.at(i).reset();
+	    }
+	    
+	    postFixMu.push_back("x");
+	    postFixMu.push_back("y");
+	    postFixMu.push_back("z");
+	    postFixQuad.push_back("xx");
+	    postFixQuad.push_back("xy");
+	    postFixQuad.push_back("xz");
+	    postFixQuad.push_back("yx");
+	    postFixQuad.push_back("yy");
+	    postFixQuad.push_back("yz");
+	    postFixQuad.push_back("zx");
+	    postFixQuad.push_back("zy");
+	    postFixQuad.push_back("zz");
+	    
           }
 
         void setCutoff(double cutoff) {
@@ -1270,8 +1313,6 @@ namespace Faunus {
          */
         template<class Tspace>
           void sampleDP(Tspace &spc) {
-	    double charge = 0.0;
-	    double charge_box = 0.0;
             Point origin(0,0,0);
             Point mu(0,0,0);          // In e\AA
             Point mu_box(0,0,0);      // In e\AA
@@ -1285,23 +1326,17 @@ namespace Faunus {
                 mu += i.mu*i.muscalar;
                 quad += i*i.mu.transpose()*i.muscalar;
                 quad += i.theta;
-		charge += i.charge;
               } else {
                 mu_box += i.mu*i.muscalar;
                 quad_box += i*i.mu.transpose()*i.muscalar;
                 quad_box += i.theta;
-		charge_box += i.charge;
               }
               for(int j = 0; j < atomsize-1; j++)
                 if(int(i.id) == j+1)
                   mu_abs[j] += i.muscalar;
             }
-            charge_box += charge;
             mu_box += mu;
             quad_box += quad;
-	    
-	    Z += charge;
-	    Z_box += charge_box;
 	    
             samplePP(spc,origin,mu,mu_box,quad,quad_box);
           }
@@ -1316,30 +1351,24 @@ namespace Faunus {
         template<class Tspace>
           void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0), Tensor<double> quad=Tensor<double>(),Tensor<double> quad_box=Tensor<double>()) {
 	    updateVolume(spc.geo.getVolume());
-            Group all(0,spc.p.size()-1);
-            all.setMassCenter(spc);
-            mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
-            mu_box += Geometry::dipoleMoment(spc,all);
             
             for(auto &i : spc.p) {
               Tensor<double> temp = i*i.transpose();
-              if (spc.geo.sqdist(i,origin)<cutoff2)
+              if (spc.geo.sqdist(i,origin)<cutoff2) {
+		mu += i*i.charge;
                 quad += temp*i.charge;
+	      }
+	      mu_box += i*i.charge;
               quad_box += temp*i.charge;
             }
-
-            HM_x(mu.x())++;
-            HM_y(mu.y())++;
-            HM_z(mu.z())++;
-            HM_x_box(mu_box.x())++;
-            HM_y_box(mu_box.y())++;
-            HM_z_box(mu_box.z())++;
-            M_x += mu.x();
-            M_y += mu.y();
-            M_z += mu.z();
-            M_x_box += mu_box.x();
-            M_y_box += mu_box.y();
-            M_z_box += mu_box.z();
+            
+            for(int cnt = 0; cnt < 3; cnt++) {
+	      HM.at(cnt)(mu[cnt])++;
+	      HM_box.at(cnt)(mu_box[cnt])++;
+	      M.at(cnt) += mu[cnt];
+	      M_box.at(cnt) += mu_box[cnt];
+	    }
+	    
             double sca = mu.dot(mu);
             HM2(sca)++;
             M2 += sca;
@@ -1347,43 +1376,16 @@ namespace Faunus {
             HM2_box(sca)++;
             M2_box += sca;
             diel_std.add(getDielTinfoil());
-            
-            HQ_xx(quad(0,0))++;
-            HQ_xy(quad(0,1))++;
-            HQ_xz(quad(0,2))++;
-            HQ_yx(quad(1,0))++;
-            HQ_yy(quad(1,1))++;
-            HQ_yz(quad(1,2))++;
-            HQ_zx(quad(2,0))++;
-            HQ_zy(quad(2,1))++;
-            HQ_zz(quad(2,2))++;
-            HQ_xx_box(quad_box(0,0))++;
-            HQ_xy_box(quad_box(0,1))++;
-            HQ_xz_box(quad_box(0,2))++;
-            HQ_yx_box(quad_box(1,0))++;
-            HQ_yy_box(quad_box(1,1))++;
-            HQ_yz_box(quad_box(1,2))++;
-            HQ_zx_box(quad_box(2,0))++;
-            HQ_zy_box(quad_box(2,1))++;
-            HQ_zz_box(quad_box(2,2))++;        
-            Q_xx += quad(0,0);
-            Q_xy += quad(0,1);
-            Q_xz += quad(0,2);
-            Q_yx += quad(1,0);
-            Q_yy += quad(1,1);
-            Q_yz += quad(1,2);
-            Q_zx += quad(2,0);
-            Q_zy += quad(2,1);
-            Q_zz += quad(2,2);
-            Q_xx_box += quad_box(0,0);
-            Q_xy_box += quad_box(0,1);
-            Q_xz_box += quad_box(0,2);
-            Q_yx_box += quad_box(1,0);
-            Q_yy_box += quad_box(1,1);
-            Q_yz_box += quad_box(1,2);
-            Q_zx_box += quad_box(2,0);
-            Q_zy_box += quad_box(2,1);
-            Q_zz_box += quad_box(2,2);
+	    
+	    int cnt = 0;
+	    for(int i = 0; i < 3; i++) {
+	      for(int j = 0; j < 3; j++) {
+		HQ.at(cnt)(quad(i,j))++;
+		HQ_box.at(cnt)(quad_box(i,j))++;
+		Q.at(cnt) += quad(i,j);
+		Q_box.at(cnt++) += quad_box(i,j);
+	      }
+	    }
 	    
             double mus_group = 0.0;
             for (auto gi : spc.groupList()) {
@@ -1402,10 +1404,23 @@ namespace Faunus {
          *
          */
         template<class Tspace>
-          void sampleMuCorrelationAndKirkwood(const Tspace &spc) {
+          void sampleMuCorrelationAndKirkwood(const Tspace &spc, Point origin=Point(0,0,0)) {
             double r, sca;
             int N = spc.p.size() - 1;
+	    
             for (int i = 0; i < N; i++) {
+              Point mu = spc.p[i].mu*spc.p[i].muscalar;
+	      Tensor<double> quad = spc.p[i]*spc.p[i].transpose();
+	      quad = quad*spc.p[i].charge;
+              quad += spc.p[i]*spc.p[i].mu.transpose()*spc.p[i].muscalar;
+	      r =  spc.geo.dist(spc.p[i],origin);
+	      for(int cnt = 0; cnt < 3; cnt++)
+		Mofr.at(cnt)(r) += mu[cnt];
+	      int cnt = 0;
+	      for(int m = 0; m < 3; m++)
+		for(int n = 0; n < 3; n++)
+		  Qofr.at(cnt++)(r) += quad(m,n);
+	      
               kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
               for (int j = i+1.; j < N + 1; j++) {
                 r = spc.geo.dist(spc.p[i],spc.p[j]); 
@@ -1488,65 +1503,35 @@ namespace Faunus {
           mucorr_angle.save("mucorr_angle.dat"+ext);
           mucorr_dist.save("mucorr_dist.dat"+ext);
           kw.sumSave("kirkwood.dat"+ext,1.0/double(sampleKW));
-          HM_x.save("hist_dip_x.dat"+ext);
-          HM_y.save("hist_dip_y.dat"+ext);
-          HM_z.save("hist_dip_z.dat"+ext);
-          HM_x_box.save("hist_dip_x_box.dat"+ext);
-          HM_y_box.save("hist_dip_y_box.dat"+ext);
-          HM_z_box.save("hist_dip_z_box.dat"+ext);
-          HQ_xx.save("hist_quad_xx.dat"+ext);
-          HQ_xy.save("hist_quad_xy.dat"+ext);
-          HQ_xz.save("hist_quad_xz.dat"+ext);
-          HQ_yx.save("hist_quad_yx.dat"+ext);
-          HQ_yy.save("hist_quad_yy.dat"+ext);
-          HQ_yz.save("hist_quad_yz.dat"+ext);
-          HQ_zx.save("hist_quad_zx.dat"+ext);
-          HQ_zy.save("hist_quad_zy.dat"+ext);
-          HQ_zz.save("hist_quad_zz.dat"+ext);
-          HQ_xx_box.save("hist_quad_xx_box.dat"+ext);
-          HQ_xy_box.save("hist_quad_xy_box.dat"+ext);
-          HQ_xz_box.save("hist_quad_xz_box.dat"+ext);
-          HQ_yx_box.save("hist_quad_yx_box.dat"+ext);
-          HQ_yy_box.save("hist_quad_yy_box.dat"+ext);
-          HQ_yz_box.save("hist_quad_yz_box.dat"+ext);
-          HQ_zx_box.save("hist_quad_zx_box.dat"+ext);
-          HQ_zy_box.save("hist_quad_zy_box.dat"+ext);
-          HQ_zz_box.save("hist_quad_zz_box.dat"+ext);
-          
           HM2.save("hist_dip2.dat"+ext);
           HM2_box.save("hist_dip2_box.dat"+ext);
+	  
+	  for(int cnt = 0; cnt < 3; cnt++) {
+	    Mofr.at(cnt).sumSaveAvg("muofr_"+postFixMu.at(cnt)+".dat"+ext,1.0/double(sampleKW));
+	    HM.at(cnt).save("hist_dip_"+postFixMu.at(cnt)+".dat"+ext);
+	    HM_box.at(cnt).save("hist_dip_"+postFixMu.at(cnt)+"_box.dat"+ext);
+	  }
+	  for(int cnt = 0; cnt < 9; cnt++) {
+	    Qofr.at(cnt).sumSaveAvg("quadofr_"+postFixQuad.at(cnt)+".dat"+ext,1.0/double(sampleKW));
+	    HQ.at(cnt).save("hist_quad_"+postFixQuad.at(cnt)+".dat"+ext);
+	    HQ_box.at(cnt).save("hist_quad_"+postFixQuad.at(cnt)+"_box.dat"+ext);
+	  }
 
           string filename = "dipoledata.dat"+ext;
           std::ofstream f(filename.c_str());
           f.precision(10);
           if (f) {
-            if (M_x.cnt != 0)      f << "M_x " << M_x.cnt << " " << M_x.avg() << " " << M_x.sqsum << "\n";
-            if (M_y.cnt != 0)      f << "M_y " << M_y.cnt << " " << M_y.avg() << " " << M_y.sqsum << "\n";
-            if (M_z.cnt != 0)      f << "M_z " << M_z.cnt << " " << M_z.avg() << " " << M_z.sqsum << "\n";
-            if (M_x_box.cnt != 0)  f << "M_x_box " << M_x_box.cnt << " " << M_x_box.avg() << " " << M_x_box.sqsum << "\n";
-            if (M_y_box.cnt != 0)  f << "M_y_box " << M_y_box.cnt << " " << M_y_box.avg() << " " << M_y_box.sqsum << "\n";
-            if (M_z_box.cnt != 0)  f << "M_z_box " << M_z_box.cnt << " " << M_z_box.avg() << " " << M_z_box.sqsum << "\n";
-            if (Q_xx.cnt != 0)      f << "Q_xx " << Q_xx.cnt << " " << Q_xx.avg() << " " << Q_xx.sqsum << "\n";
-            if (Q_xy.cnt != 0)      f << "Q_xy " << Q_xy.cnt << " " << Q_xy.avg() << " " << Q_xy.sqsum << "\n";
-            if (Q_xz.cnt != 0)      f << "Q_xz " << Q_xz.cnt << " " << Q_xz.avg() << " " << Q_xz.sqsum << "\n";
-            if (Q_yx.cnt != 0)      f << "Q_yx " << Q_yx.cnt << " " << Q_yx.avg() << " " << Q_yx.sqsum << "\n";
-            if (Q_yy.cnt != 0)      f << "Q_yy " << Q_yy.cnt << " " << Q_yy.avg() << " " << Q_yy.sqsum << "\n";
-            if (Q_yz.cnt != 0)      f << "Q_yz " << Q_yz.cnt << " " << Q_yz.avg() << " " << Q_yz.sqsum << "\n";
-            if (Q_zx.cnt != 0)      f << "Q_zx " << Q_zx.cnt << " " << Q_zx.avg() << " " << Q_zx.sqsum << "\n";
-            if (Q_zy.cnt != 0)      f << "Q_zy " << Q_zy.cnt << " " << Q_zy.avg() << " " << Q_zy.sqsum << "\n";
-            if (Q_zz.cnt != 0)      f << "Q_zz " << Q_zz.cnt << " " << Q_zz.avg() << " " << Q_zz.sqsum << "\n";
-            if (Q_xx_box.cnt != 0)      f << "Q_xx_box " << Q_xx_box.cnt << " " << Q_xx_box.avg() << " " << Q_xx_box.sqsum << "\n";
-            if (Q_xy_box.cnt != 0)      f << "Q_xy_box " << Q_xy_box.cnt << " " << Q_xy_box.avg() << " " << Q_xy_box.sqsum << "\n";
-            if (Q_xz_box.cnt != 0)      f << "Q_xz_box " << Q_xz_box.cnt << " " << Q_xz_box.avg() << " " << Q_xz_box.sqsum << "\n";
-            if (Q_yx_box.cnt != 0)      f << "Q_yx_box " << Q_yx_box.cnt << " " << Q_yx_box.avg() << " " << Q_yx_box.sqsum << "\n";
-            if (Q_yy_box.cnt != 0)      f << "Q_yy_box " << Q_yy_box.cnt << " " << Q_yy_box.avg() << " " << Q_yy_box.sqsum << "\n";
-            if (Q_yz_box.cnt != 0)      f << "Q_yz_box " << Q_yz_box.cnt << " " << Q_yz_box.avg() << " " << Q_yz_box.sqsum << "\n";
-            if (Q_zx_box.cnt != 0)      f << "Q_zx_box " << Q_zx_box.cnt << " " << Q_zx_box.avg() << " " << Q_zx_box.sqsum << "\n";
-            if (Q_zy_box.cnt != 0)      f << "Q_zy_box " << Q_zy_box.cnt << " " << Q_zy_box.avg() << " " << Q_zy_box.sqsum << "\n";
-            if (Q_zz_box.cnt != 0)      f << "Q_zz_box " << Q_zz_box.cnt << " " << Q_zz_box.avg() << " " << Q_zz_box.sqsum << "\n";
+	    for(int cnt = 0; cnt < 3; cnt++) {
+	      if (M.at(cnt).cnt != 0)      f << "M_"+postFixMu.at(cnt)+" " << M.at(cnt).cnt << " " << M.at(cnt).avg() << " " << M.at(cnt).sqsum << "\n";
+	      if (M_box.at(cnt).cnt != 0)      f << "M_"+postFixMu.at(cnt)+"_box " << M_box.at(cnt).cnt << " " << M_box.at(cnt).avg() << " " << M_box.at(cnt).sqsum << "\n";
+	    }
+	    for(int cnt = 0; cnt < 9; cnt++) {
+	      if (Q.at(cnt).cnt != 0)      f << "Q_"+postFixQuad.at(cnt)+" " << Q.at(cnt).cnt << " " << Q.at(cnt).avg() << " " << Q.at(cnt).sqsum << "\n";
+	      if (Q_box.at(cnt).cnt != 0)      f << "Q_"+postFixQuad.at(cnt)+"_box " << Q_box.at(cnt).cnt << " " << Q_box.at(cnt).avg() << " " << Q_box.at(cnt).sqsum << "\n";
+	    }
             if (M2.cnt != 0)       f << "M2 " << M2.cnt << " " << M2.avg() << " " << M2.sqsum << "\n";
             if (M2_box.cnt != 0)   f << "M2_box " << M2_box.cnt << " " << M2_box.avg() << " " << M2_box.sqsum << "\n";
-            if (diel_std.cnt != 0) f << "diel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum;
+            if (diel_std.cnt != 0) f << "diel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum << "\n";
             for(int j = 0; j < atomsize -1 ; j++)
               if (mu_abs[j].cnt != 0)      
                 f << "mu_abs_" << atom[j+1].name << " " << mu_abs[j].cnt << " " << mu_abs[j].avg() << " " << mu_abs[j].sqsum << "\n";
@@ -1558,61 +1543,28 @@ namespace Faunus {
             mucorr_angle.clear();
             mucorr_dist.clear();
             kw.clear();
-            HM_x.clear();
-            HM_y.clear();
-            HM_z.clear();
-            HM_x_box.clear();
-            HM_y_box.clear();
-            HM_z_box.clear();
             HM2.clear();
             HM2_box.clear();
-            M_x.reset();
-            M_y.reset();
-            M_z.reset();
-            M_x_box.reset();
-            M_y_box.reset();
-            M_z_box.reset();
-            HQ_xx.clear();
-            HQ_xy.clear();
-            HQ_xz.clear();
-            HQ_yx.clear();
-            HQ_yy.clear();
-            HQ_yz.clear();
-            HQ_zx.clear();
-            HQ_zy.clear();
-            HQ_zz.clear();
-            HQ_xx_box.clear();
-            HQ_xy_box.clear();
-            HQ_xz_box.clear();
-            HQ_yx_box.clear();
-            HQ_yy_box.clear();
-            HQ_yz_box.clear();
-            HQ_zx_box.clear();
-            HQ_zy_box.clear();
-            HQ_zz_box.clear();
-            Q_xx.reset();
-            Q_xy.reset();
-            Q_xz.reset();
-            Q_yx.reset();
-            Q_yy.reset();
-            Q_yz.reset();
-            Q_zx.reset();
-            Q_zy.reset();
-            Q_zz.reset();
-            Q_xx_box.reset();
-            Q_xy_box.reset();
-            Q_xz_box.reset();
-            Q_yx_box.reset();
-            Q_yy_box.reset();
-            Q_yz_box.reset();
-            Q_zx_box.reset();
-            Q_zy_box.reset();
-            Q_zz_box.reset();
             M2.reset();
             M2_box.reset();
             diel_std.reset();
             for(int j = 0; j < atomsize -1 ; j++)
               mu_abs[j].reset();
+	    
+	    for(int cnt = 0; cnt < 9; cnt++) {
+	      Qofr.at(cnt).clear();
+	      HQ.at(cnt).clear();
+	      HQ_box.at(cnt).clear();
+	      Q.at(cnt).reset();
+	      Q_box.at(cnt).reset();
+	    }
+	    for(int cnt = 0; cnt < 3; cnt++) {
+		Mofr.at(cnt).clear();
+		HM.at(cnt).clear();
+		HM_box.at(cnt).clear();
+		M.at(cnt).reset();
+		M_box.at(cnt).reset();
+	    }
           }
         }
 
@@ -1624,32 +1576,19 @@ namespace Faunus {
           mucorr_angle.load("mucorr_angle.dat"+ext);
           mucorr_dist.load("mucorr_dist.dat"+ext);
           kw.load("kirkwood.dat"+ext);
-          HM_x.load("hist_dip_x.dat"+ext);
-          HM_y.load("hist_dip_y.dat"+ext);
-          HM_z.load("hist_dip_z.dat"+ext);
-          HM_x_box.load("hist_dip_x_box.dat"+ext);
-          HM_y_box.load("hist_dip_y_box.dat"+ext);
-          HM_z_box.load("hist_dip_z_box.dat"+ext);
-          HQ_xx.load("hist_dip_xx.dat"+ext);
-          HQ_xy.load("hist_dip_xy.dat"+ext);
-          HQ_xz.load("hist_dip_xz.dat"+ext);
-          HQ_yx.load("hist_dip_yx.dat"+ext);
-          HQ_yy.load("hist_dip_yy.dat"+ext);
-          HQ_yz.load("hist_dip_yz.dat"+ext);
-          HQ_zx.load("hist_dip_zx.dat"+ext);
-          HQ_zy.load("hist_dip_zy.dat"+ext);
-          HQ_zz.load("hist_dip_zz.dat"+ext);
-          HQ_xx_box.load("hist_dip_xx_box.dat"+ext);
-          HQ_xy_box.load("hist_dip_xy_box.dat"+ext);
-          HQ_xz_box.load("hist_dip_xz_box.dat"+ext);
-          HQ_yx_box.load("hist_dip_yx_box.dat"+ext);
-          HQ_yy_box.load("hist_dip_yy_box.dat"+ext);
-          HQ_yz_box.load("hist_dip_yz_box.dat"+ext);
-          HQ_zx_box.load("hist_dip_zx_box.dat"+ext);
-          HQ_zy_box.load("hist_dip_zy_box.dat"+ext);
-          HQ_zz_box.load("hist_dip_zz_box.dat"+ext);
+	  
           HM2.load("hist_dip2.dat"+ext);
           HM2_box.load("hist_dip2_box.dat"+ext);
+	  for(int cnt = 0; cnt < 3; cnt++) {
+	    Mofr.at(cnt).load("muofr_"+postFixMu.at(cnt)+".dat"+ext);
+	    HM.at(cnt).load("hist_dip_"+postFixMu.at(cnt)+".dat"+ext);
+	    HM_box.at(cnt).load("hist_dip_"+postFixMu.at(cnt)+"_box.dat"+ext);
+	  }
+	  for(int cnt = 0; cnt < 9; cnt++) {
+	    Qofr.at(cnt).load("quadofr_"+postFixQuad.at(cnt)+".dat"+ext);
+	    HQ.at(cnt).load("hist_dip_"+postFixQuad.at(cnt)+".dat"+ext);
+	    HQ_box.at(cnt).load("hist_dip_"+postFixQuad.at(cnt)+"_box.dat"+ext);
+	  }
 
           string filename = "dipoledata.dat"+ext;
           std::ifstream f(filename.c_str());
@@ -1661,127 +1600,8 @@ namespace Faunus {
               double average;
               double sqsum;
               f >> name >> cnt >> average >> sqsum;
-              if(name == "M_x") {
-                M_x.reset();
-                Average<double> M_xt(average,sqsum,cnt);
-                M_x = M_x + M_xt;
-              }
-              if(name == "M_y") {
-                M_y.reset();
-                Average<double>M_yt(average,sqsum,cnt);
-                M_y = M_y + M_yt;
-              }
-              if(name == "M_z") {
-                M_z.reset();
-                Average<double> M_zt(average,sqsum,cnt);
-                M_z = M_z + M_zt;
-              }
-              if(name == "M_x_box") {
-                M_x_box.reset();
-                Average<double> M_x_boxt(average,sqsum,cnt);
-                M_x_box = M_x_box + M_x_boxt;
-              }
-              if(name == "M_y_box") {
-                M_y_box.reset();
-                Average<double> M_y_boxt(average,sqsum,cnt);
-                M_y_box = M_y_box + M_y_boxt;
-              }
-              if(name == "M_z_box") {
-                M_z_box.reset();
-                Average<double> M_z_boxt(average,sqsum,cnt);
-                M_z_box = M_z_box + M_z_boxt;
-              }
-              if(name == "Q_xx") {
-                Q_xx.reset();
-                Average<double> Q_xxt(average,sqsum,cnt);
-                Q_xx = Q_xx + Q_xxt;
-              }
-              if(name == "Q_xy") {
-                Q_xy.reset();
-                Average<double> Q_xyt(average,sqsum,cnt);
-                Q_xy = Q_xy + Q_xyt;
-              }
-              if(name == "Q_xz") {
-                Q_xz.reset();
-                Average<double> Q_xzt(average,sqsum,cnt);
-                Q_xz = Q_xz + Q_xzt;
-              }
-              if(name == "Q_yx") {
-                Q_yx.reset();
-                Average<double> Q_yxt(average,sqsum,cnt);
-                Q_yx = Q_yx + Q_yxt;
-              }
-              if(name == "Q_yy") {
-                Q_yy.reset();
-                Average<double> Q_yyt(average,sqsum,cnt);
-                Q_yy = Q_yy + Q_yyt;
-              }
-              if(name == "Q_yz") {
-                Q_yz.reset();
-                Average<double> Q_yzt(average,sqsum,cnt);
-                Q_yz = Q_yz + Q_yzt;
-              }
-              if(name == "Q_zx") {
-                Q_zx.reset();
-                Average<double> Q_zxt(average,sqsum,cnt);
-                Q_zx = Q_zx + Q_zxt;
-              }
-              if(name == "Q_zy") {
-                Q_zy.reset();
-                Average<double> Q_zyt(average,sqsum,cnt);
-                Q_zy = Q_zy + Q_zyt;
-              }
-              if(name == "Q_zz") {
-                Q_zz.reset();
-                Average<double> Q_zzt(average,sqsum,cnt);
-                Q_zz = Q_zz + Q_zzt;
-              }
-              if(name == "Q_xx_box") {
-                Q_xx_box.reset();
-                Average<double> Q_xxt_box(average,sqsum,cnt);
-                Q_xx_box = Q_xx_box + Q_xxt_box;
-              }
-              if(name == "Q_xy_box") {
-                Q_xy_box.reset();
-                Average<double> Q_xyt_box(average,sqsum,cnt);
-                Q_xy_box = Q_xy_box + Q_xyt_box;
-              }
-              if(name == "Q_xz_box") {
-                Q_xz_box.reset();
-                Average<double> Q_xzt_box(average,sqsum,cnt);
-                Q_xz_box = Q_xz_box + Q_xzt_box;
-              }
-              if(name == "Q_yx_box") {
-                Q_yx_box.reset();
-                Average<double> Q_yxt_box(average,sqsum,cnt);
-                Q_yx_box = Q_yx_box + Q_yxt_box;
-              }
-              if(name == "Q_yy_box") {
-                Q_yy_box.reset();
-                Average<double> Q_yyt_box(average,sqsum,cnt);
-                Q_yy_box = Q_yy_box + Q_yyt_box;
-              }
-              if(name == "Q_yz_box") {
-                Q_yz_box.reset();
-                Average<double> Q_yzt_box(average,sqsum,cnt);
-                Q_yz_box = Q_yz_box + Q_yzt_box;
-              }
-              if(name == "Q_zx_box") {
-                Q_zx_box.reset();
-                Average<double> Q_zxt_box(average,sqsum,cnt);
-                Q_zx_box = Q_zx_box + Q_zxt_box;
-              }
-              if(name == "Q_zy_box") {
-                Q_zy_box.reset();
-                Average<double> Q_zyt_box(average,sqsum,cnt);
-                Q_zy_box = Q_zy_box + Q_zyt_box;
-              }
-              if(name == "Q_zz_box") {
-                Q_zz_box.reset();
-                Average<double> Q_zzt_box(average,sqsum,cnt);
-                Q_zz_box = Q_zz_box + Q_zzt_box;
-              }
-              if(name == "M2") {
+
+	      if(name == "M2") {
                 M2.reset();
                 Average<double> M2t(average,sqsum,cnt);
                 M2 = M2 + M2t;
@@ -1802,6 +1622,34 @@ namespace Faunus {
                 mu_abs[cnt_mu_abs] = mu_abs[cnt_mu_abs] + mu_abst;
                 cnt_mu_abs++;
               }
+	      for(int cnt = 0; cnt < 3; cnt++) {
+		if(name == "M_"+postFixMu.at(cnt)) {
+		  M.at(cnt).reset();
+		  Average<double> M_t(average,sqsum,cnt);
+		  M.at(cnt) = M.at(cnt) + M_t;
+		  break;
+		}
+		if(name == "M_"+postFixMu.at(cnt)+"_box") {
+		  M_box.at(cnt).reset();
+		  Average<double> M_t(average,sqsum,cnt);
+		  M_box.at(cnt) = M_box.at(cnt) + M_t;
+		  break;
+		}
+	      }
+              for(int cnt = 0; cnt < 9; cnt++) {
+		if(name == "Q_"+postFixQuad.at(cnt)) {
+		  Q.at(cnt).reset();
+		  Average<double> Q_t(average,sqsum,cnt);
+		  Q.at(cnt) = Q.at(cnt) + Q_t;
+		  break;
+		}
+		if(name == "Q_"+postFixQuad.at(cnt)+"_box") {
+		  Q_box.at(cnt).reset();
+		  Average<double> Q_t(average,sqsum,cnt);
+		  Q_box.at(cnt) = Q_box.at(cnt) + Q_t;
+		  break;
+		}
+	      }
             }
           }
         }
@@ -1817,19 +1665,19 @@ namespace Faunus {
             << " eA"+squared+", "+sigma+"=" << M2_box.stdev()
             << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg())
             << percent << "\n"
-            << indent(SUB) << bracket("M") << setw(25) << "( " << M_x_box.avg()
-            << " , " << M_y_box.avg() << " , " << M_z_box.avg()
+            << indent(SUB) << bracket("M") << setw(25) << "( " << M_box.at(0).avg()
+            << " , " << M_box.at(1).avg() << " , " << M_box.at(2).avg()
             << " ) eA\n"
-            << indent(SUBSUB) << sigma << setw(25) << "( " << M_x_box.stdev()
-            << " , " << M_y_box.stdev() << " , " << M_z_box.stdev()
+            << indent(SUBSUB) << sigma << setw(25) << "( " << M_box.at(0).stdev()
+            << " , " << M_box.at(1).stdev() << " , " << M_box.at(2).stdev()
             << " )\n"
-            << indent(SUB) << bracket("Q") << setw(25) << "( " << Q_xx_box.avg() << " " << Q_xy_box.avg() << " " << Q_xz_box.avg() << " )\n "
-            << indent(SUBSUB) << setw(25) << "( " << Q_yx_box.avg() << " " << Q_yy_box.avg() << " " << Q_yz_box.avg() << " )\n "
-            << indent(SUBSUB) << setw(25) << "( " << Q_zx_box.avg() << " " << Q_zy_box.avg() << " " << Q_zz_box.avg()
+            << indent(SUB) << bracket("Q") << setw(25) << "( " << Q_box.at(0).avg() << " " << Q_box.at(1).avg() << " " << Q_box.at(2) << " )\n "
+            << indent(SUBSUB) << setw(25) << "( " << Q_box.at(3).avg() << " " << Q_box.at(4).avg() << " " << Q_box.at(5).avg() << " )\n "
+            << indent(SUBSUB) << setw(25) << "( " << Q_box.at(6).avg() << " " << Q_box.at(7).avg() << " " << Q_box.at(8).avg()
             << " ) eA"+squared+"\n"
-            << indent(SUBSUB) << sigma << setw(25) << "( " << Q_xx_box.stdev() << " " << Q_xy_box.stdev() << " " << Q_xz_box.stdev() << " )\n"
-            << indent(SUBSUB) << setw(26) << "( " << Q_yx_box.stdev() << " " << Q_yy_box.stdev() << " " << Q_yz_box.stdev() << " )\n" 
-            << indent(SUBSUB) << setw(26) << "( " << Q_zx_box.stdev() << " " << Q_zy_box.stdev() << " " << Q_zz_box.stdev()
+            << indent(SUBSUB) << sigma << setw(25) << "( " << Q_box.at(0).stdev() << " " << Q_box.at(1).stdev() << " " << Q_box.at(2).stdev() << " )\n"
+            << indent(SUBSUB) << setw(26) << "( " << Q_box.at(3).stdev() << " " << Q_box.at(4).stdev() << " " << Q_box.at(5).stdev() << " )\n" 
+            << indent(SUBSUB) << setw(26) << "( " << Q_box.at(6).stdev() << " " << Q_box.at(7).stdev() << " " << Q_box.at(8).stdev()
             << " )\n";
             for(int j = 0; j < atomsize - 1; j++) {
               o << indent(SUB) << bracket("|"+mu+"|") << "(" << atom[j+1].name << ")" << setw(20) << mu_abs[j].avg() << " eÅ, "+sigma+"=" << mu_abs[j].stdev() << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs[j].stdev()/mu_abs[j].avg()) << percent << endl;

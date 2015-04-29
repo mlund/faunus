@@ -780,7 +780,7 @@ namespace Faunus {
           }
           return E;
         }
-        
+
   };
 
   namespace Potential {
@@ -947,6 +947,7 @@ namespace Faunus {
       private:
         string _brief() { return "Dipole-dipole (RF)"; }
         double rc2,eps,eps_rf,eps_r;
+	bool diel_inf, diel_same, diel_RF, diel_MI;
       public:
         DipoleDipoleRF(InputMap &in, const string &dir="") : DipoleDipole(in) {
           name+=" Reaction Field";
@@ -956,6 +957,10 @@ namespace Faunus {
           eps_rf = in("epsilon_rf",80.0);
           _lB = pc::lB( eps_r );
           updateDiel(eps_rf);
+	  diel_inf = false;
+	  diel_same = false;
+	  diel_RF = false;
+	  diel_MI = false;
         }
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
@@ -973,8 +978,51 @@ namespace Faunus {
           }
 
         void updateDiel(double er) {
-          eps = _lB*(2*(er-eps_r)/(2*er+eps_r))/pow(rc2,1.5)/eps_r;
+	  if(er < 1e10) {
+	    eps = _lB*(2*(er-eps_r)/(2*er+eps_r))/pow(rc2,1.5)/eps_r;
+	    diel_inf = false;
+	  } else {
+	    eps = _lB/pow(rc2,1.5)/eps_r;
+	    diel_inf = true;
+	    diel_same = false;
+	    diel_RF = false;
+	    diel_MI = false;
+	  }
         }  
+        
+    /**
+     * @brief Returns the dielectric constant.
+     * @param V Volume of the geometry
+     * @param M2 Average of squared dipole moment
+     * 
+     * @f[
+     * \frac{4\pi}{3}\frac{\langle M^2\rangle}{3Vk_BT} = \frac{\varepsilon_r -1}{\varepsilon_r + 2}\left[1 - \frac{\varepsilon_r-1}{\varepsilon_r + 2}\frac{2(\varepsilon_{RF}-1)}{2\varepsilon_{RF} + 1} \right]^{-1}
+     * @f]
+     * 
+     * where \f$ k_BT \f$ is the thermal energy, \f$ \varepsilon_{RF} \f$ is the dielctric constant of the surroundings and \f$ \varepsilon_r \f$ is the dielectric constant of the medium. 
+     * Implementations is done through DOI: 10.1080/00268978300102721.
+     * 
+     */
+        double dielectricConstant(double V, double M2) {
+	  double constant = 4*pc::pi*pc::e*pc::e*1e-20/(3.0*3.0*V*1e-30*pc::kT()*4*pc::pi*pc::e0);
+	  
+	  if(diel_inf)
+	    return (1.0 + 3.0*constant);
+	  
+	  if(diel_same) {
+	    return (2.25*constant + 0.25 + 0.75*sqrt(9.0*constant*constant + 2.0*constant + 1.0));
+	    //return (2.25*constant + 0.25 - 0.75*sqrt(9.0*constant*constant + 2.0*constant + 1.0));
+	  }
+	  
+	  if(diel_RF)
+	    return ((3.0*eps_rf*constant + eps_rf + constant + 1.0)/(eps_rf - 2.0*constant + 1.0));
+	  
+	  if(diel_MI)
+	    return (2*constant + 1.0)/( 1.0 - constant );
+	  
+	  return 0.0;
+	  
+	}
 
         string info(char w) {
           using namespace textio;
@@ -987,7 +1035,7 @@ namespace Faunus {
     };
 
     template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
-      class MultipoleWolf : public PairPotentialBase {
+      class MultipoleWolf : public Coulomb {
         private:
           WolfBase wolf;
           string _brief() {
@@ -998,10 +1046,10 @@ namespace Faunus {
         protected:
           double _lB;
         public:
-          MultipoleWolf(InputMap &in, const string &dir="") : wolf(in("kappa", 0.0),
-              in("cutoff",pc::infty)) {
+          MultipoleWolf(InputMap &in, const string &dir="") : wolf(in(jsondir+"coulomb/kappa", 0.0),
+              in(jsondir+"coulomb/cutoff",pc::infty)) {
             name="Multipole Wolf";
-            _lB = pc::lB(in("epsr",80.0));
+            _lB = pc::lB(in(jsondir+"coulomb/epsr",80.0));
           }
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
@@ -1124,16 +1172,16 @@ namespace Faunus {
           }
     };
 
-      inline double qPochhammerSymbol(double q, int k=1, int P=300) {
-        //int P = 300;  // Should give an error of about 10^-17 for k < 4
-        double value = 1.0;
-        double temp = pow(q,k);
-        for(int i = 0; i < P; i++) {
-          value *= (1.0 - temp);
-          temp *= q;
-        }
-        return value;
+    inline double qPochhammerSymbol(double q, int k=1, int P=300) {
+      //int P = 300;  // Should give an error of about 10^-17 for k < 4
+      double value = 1.0;
+      double temp = pow(q,k);
+      for(int i = 0; i < P; i++) {
+        value *= (1.0 - temp);
+        temp *= q;
       }
+      return value;
+    }
 
     class IonIonQ : public Coulomb {
       private:
@@ -1174,7 +1222,7 @@ namespace Faunus {
           std::ostringstream o;
           o << Coulomb::info(w)
             << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
-            o << qk.info() << endl;
+          o << qk.info() << endl;
           // FIX INFO ABOUT TABULATION AND SPLINES
           return o.str();
         }
@@ -1239,9 +1287,9 @@ namespace Faunus {
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
             double r1 = r.norm();
             if (r1 < rc1) {
-              //return (DipoleDipole::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
-	      return (DipoleDipole::operator()(a,b,r)*qPochhammerSymbol(r1*rc1i,3));
-	    }
+              return (DipoleDipole::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
+              //return (DipoleDipole::operator()(a,b,r)*qPochhammerSymbol(r1*rc1i,3));
+            }
             return 0;
           }
 
@@ -1286,6 +1334,83 @@ namespace Faunus {
           std::ostringstream o;
           o << IonQuad::info(w)
             << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl;
+          return o.str();
+        }
+    };
+
+
+    class IonIonFanourgakis : public Coulomb {
+      private:
+        string _brief() { return "Coulomb Fanourgakis"; }
+        double rc1, rc1i, rc2, _lB;
+      public:
+        IonIonFanourgakis(InputMap &in, const string &dir="") : Coulomb(in) { 
+          name += " Fanourgakis"; 
+          _lB = Coulomb(in,dir).bjerrumLength();
+          rc1  = in( "cutoff", pc::infty );
+          rc1i = 1.0/rc1;
+          rc2 = rc1*rc1;
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+            double r1 = sqrt(r2);
+            if(r2 < rc2) {
+              double q = r1/rc1;
+              double q5 = pow(q,5);
+              return _lB*(a.charge*b.charge/r1)*(1.0 - 1.75*q + 5.25*q5 - 7.0*q5*q + 2.5*q5*q*q);
+            }
+            return 0.0;
+          }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r2 = r.squaredNorm();
+            return operator()(a,b,r2);
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << Coulomb::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+          return o.str();
+        }
+    };
+
+    class DipoleDipoleFanourgakis : public DipoleDipole {
+      private:
+        string _brief() { return "DipoleDipole Fanourgakis"; }
+        double rc1, rc1i, rc2;
+      public:
+        DipoleDipoleFanourgakis(InputMap &in, const string &dir="") : DipoleDipole(in) { 
+          name += " Fanourgakis"; 
+          rc1  = in( "cutoff", pc::infty );
+          rc1i = 1.0/rc1;
+          rc2 = rc1*rc1;
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r2 = r.squaredNorm();
+            if(r2 < rc2) {
+              double q = sqrt(r2)/rc1;
+              double q2 = q*q;
+              Eigen::Matrix3d T1 = r*r.transpose()/r2;
+              Eigen::Matrix3d T2 = Eigen::Matrix3d::Identity();
+	      Eigen::Matrix3d T = ((42.0 - 105.0*q + 60.0*q2)*q2*T1 + (21.0 - 35.0*q + 15.0*q2)*q2*T2)*rc1i/rc2;
+
+	      double W = a.mu.transpose()*T*b.mu;
+              return (DipoleDipole::operator()(a,b,r) - _lB*W*a.muscalar*b.muscalar);
+            }
+            return 0.0;
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << DipoleDipole::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
           return o.str();
         }
     };

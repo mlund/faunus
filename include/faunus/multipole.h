@@ -1046,14 +1046,9 @@ namespace Faunus {
         protected:
           double _lB;
         public:
-<<<<<<< HEAD
-          MultipoleWolf(InputMap &in, const string &dir="") : wolf(in(jsondir+"coulomb/kappa", 0.0),
-              in(jsondir+"coulomb/cutoff",pc::infty)) {
-=======
           MultipoleWolf(InputMap &in, const string &dir="") : wolf(in("kappa", 0.0),
               in("cutoff",pc::infty)) {
 	    in.cd ( jsondir+"/coulomb" );
->>>>>>> 057aba5b34b16c7190872a3698d49ac8526e3d62
             name="Multipole Wolf";
             _lB = pc::lB(in(jsondir+"coulomb/epsr",80.0));
           }

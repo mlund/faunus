@@ -139,7 +139,7 @@ namespace Faunus {
       std::ostringstream o;
       o << std::string(71,'.') << endl
         << "  Welcome to FAUNUS - A Framework for Molecule Simulation.\n"
-        << "  Copyright (C) 2002-2014 Mikael Lund\n"
+        << "  Copyright (C) 2002-2015 Mikael Lund\n"
         << "\n"
         << "  This program is free software; you can redistribute it and/or modify\n"
         << "  it under the terms of the GNU General Public License as published by\n"
@@ -166,8 +166,8 @@ namespace Faunus {
         << "\n"
         << "  Library build details:\n"
         << "    Compiled on " << __DATE__ << " " << __TIME__
-#ifdef __VERSION__
-        << "\n    " << __VERSION__
+#ifdef GIT_COMMIT_HASH
+        << "\n    Git commit " << GIT_COMMIT_HASH
 #endif
         << "\n" << string(71,'*') << endl;
       return o.str();

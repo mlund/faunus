@@ -46,6 +46,22 @@ mark_as_advanced( EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH
                   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_SYSROOT GCCXML DART_TESTING_TIMEOUT)
 
 # -------------------------------
+#   Get git commit hash
+# -------------------------------
+find_package(Git)
+if (GIT_FOUND)
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} log -1 --format="%h\ \(%ci\)"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if (GIT_COMMIT_HASH)
+    add_definitions("-DGIT_COMMIT_HASH=${GIT_COMMIT_HASH}")
+  endif()
+endif()
+
+# -------------------------------
 #   Check C/C++ code generation
 # -------------------------------
 CHECK_CXX_SOURCE_COMPILES("int main() { unsigned long long int i; }" unsigned_long_long_int)

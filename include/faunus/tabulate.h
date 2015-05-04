@@ -228,8 +228,8 @@ namespace Faunus {
         public:
           Andrea() : base() {
             mngrid = 1200;
-            ndr = 100;      // Number of times dr if decreased
-            drfrac = 0.9;   // Rate of reduction of interval
+            ndr = 100;
+            drfrac = 0.9;
           }
 
           /**

@@ -1289,7 +1289,7 @@ namespace Faunus {
             double r1 = r.norm();
             if (r1 < rc1) {
               return (DipoleDipole::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
-              //return (DipoleDipole::operator()(a,b,r)*qPochhammerSymbol(r1*rc1i,3));
+	       //return (DipoleDipole::operator()(a,b,r)*qPochhammerSymbol(r1*rc1i,3));
             }
             return 0;
           }

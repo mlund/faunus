@@ -34,11 +34,15 @@ namespace Faunus {
       std::ostringstream o;
       o << header("Analysis: "+name);
       if (!cite.empty())
-        o << pad(SUB,w,"Reference:") << cite << endl;
-      o << pad(SUB,w,"Runfraction") << runfraction*100 << percent << endl;
-      if (cnt>0)
-        o << pad(SUB,w,"Number of sample events") << cnt << endl
-          << _info();
+        o << pad(SUB,w,"Reference:") << cite << "\n";
+      o << pad(SUB,w,"Runfraction") << runfraction*100 << percent << "\n";
+      if (cnt>0) {
+        o << pad(SUB,w,"Number of sample events") << cnt << "\n";
+        double time = timer.result();
+        if (time>1e-3)
+          o << pad(SUB,w,"Relative time") << time << "\n";
+      }
+      o << _info();
       return o.str();
     }
 

@@ -156,6 +156,7 @@ namespace Faunus {
       class DebyeFormula {
         private:
           T qmin,qmax,dq,rc;
+          TimeRelativeOfTotal<std::chrono::microseconds> timer;
         protected:
           Tformfactor F; // scattering from a single particle
           Tgeometry geo; // geometry to use for distance calculations
@@ -184,8 +185,10 @@ namespace Faunus {
            */
           template<class Tpvec>
             void sample(const Tpvec &p, T V=-1) {
+              timer.start();
               assert(qmin>0 && qmax>0 && dq>0 && "q range invalid.");
               sample(p,qmin,qmax,dq,V);
+              timer.stop();
             }
 
           /**
@@ -268,9 +271,11 @@ namespace Faunus {
           void save(const string &filename) {
             if (!I.empty()) {
               std::ofstream f(filename.c_str());
-              if (f)
+              if (f) {
+                f << "# relative time = " << timer.result() << "\n";
                 for (auto &i : I)
                   f << i.first << " " << i.second << "\n";
+              }
             }
           }
       };

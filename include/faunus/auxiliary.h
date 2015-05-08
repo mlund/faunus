@@ -7,6 +7,7 @@
 #include <utility>
 #include <regex>
 #include <cstdint>
+#include <chrono>
 
 #ifdef FAU_HASHTABLE
 #include <unordered_map>
@@ -1101,6 +1102,37 @@ namespace Faunus {
           return func.ptr;
         } 
   };
+
+  /**
+   * @brief Timer for measuring relative time consumption
+   *
+   * Time t=0 is set upon construction whereafter combined `start()`/
+   * `stop()` calls can be made multiple times. The result is
+   * the percentage of total time, consumed in between start/stop calls.
+   */
+  template<typename Tunit = std::chrono::microseconds>
+    class TimeRelativeOfTotal {
+      private:
+        Tunit delta;
+        std::chrono::steady_clock::time_point t0, tx;
+      public:
+        TimeRelativeOfTotal() : delta(0) {
+          t0 = std::chrono::steady_clock::now();
+        }
+
+        void start() { tx = std::chrono::steady_clock::now(); }
+
+        void stop() {
+          delta += std::chrono::duration_cast<Tunit>
+            ( std::chrono::steady_clock::now() - tx) ;
+        }
+
+        double result() {
+          auto now = std::chrono::steady_clock::now();
+          auto total = std::chrono::duration_cast<Tunit>( now - t0 );
+          return delta.count() / double( total.count() );
+        } 
+    };
 
 }//namespace
 #endif

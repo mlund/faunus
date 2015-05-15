@@ -3,8 +3,12 @@
 #include <faunus/common.h>
 #include <faunus/auxiliary.h>
 #include <faunus/picojson.h>
+#include <faunus/json.hpp>
 
 namespace Faunus {
+
+  typedef nlohmann::json Tmjson;
+
   /**
    * @brief Functions for handling JSON input files (www.json.org)
    *
@@ -136,6 +140,13 @@ namespace Faunus {
     }
 
   }//namespace
+
+  template<class T> T operator | (Tmjson &j, const T &fallback) {
+    if ( j.is_null() )
+      j = fallback;
+    return j;
+  }
+
 }//namespace
 #endif
 

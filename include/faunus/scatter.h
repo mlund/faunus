@@ -203,28 +203,36 @@ namespace Faunus {
             void sample(const Tpvec &p, T qmin, T qmax, T dq, T V=-1) {
               if (qmin<1e-6)
                 qmin=dq;              // ensure that q>0
-              std::map<T,T> _I,_ff;       // temporary I(q) table
+
+              // Temporary f(q) functions - initialized to
+              // enable O(N) complexity iteration in inner loop.
+              std::map<T,T> _I, _ff;
+              for (T q=qmin; q<=qmax; q+=dq)
+                _I[q] = _ff[q] = 0;
+
               int N=(int)p.size();
               for (int i=0; i<N-1; ++i) {
                 for (int j=i+1; j<N; ++j) {
                   T r = geo.sqdist(p[i],p[j]);
                   if (r<rc*rc) {
                     r=sqrt(r);
-                    for (T q=qmin; q<=qmax; q+=dq)
-                      _I[q] += F(q,p[i])*F(q,p[j])*sin(q*r)/(q*r); // slow: map lookup
+                    for (auto &m : _I) { // O(N) complexity
+                      T q = m.first;
+                      m.second += F(q,p[i]) * F(q,p[j]) * sin(q*r) / (q*r);
+                    }
                   }
                 }
               }
               for (int i=0; i<N; i++)
                 for (T q=qmin; q<=qmax; q+=dq)
-                  _ff[q] += pow(F(q,p[i]),2);
+                  _ff[q] += pow( F(q,p[i]), 2 );
 
               for (auto &i : _I) {
                 T q=i.first, Icorr=0;
                 if (rc<1e9 && V>0)
                   Icorr = 4*pc::pi * N / (V*pow(q,3)) *
                     ( q*rc*cos(q*rc) - sin(q*rc) );
-                I[q]+=(2*i.second+_ff[q])/N + Icorr; // add to average I(q)
+                I[q] += ( 2*i.second + _ff[q] ) / N + Icorr; // add to average I(q)
               }
             }
           

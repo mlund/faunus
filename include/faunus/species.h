@@ -4,6 +4,7 @@
 #ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/json.h>
+#include <faunus/json.hpp>
 #include <faunus/physconst.h>
 #include <faunus/textio.h>
 #include <faunus/point.h>
@@ -256,39 +257,48 @@ namespace Faunus {
 
       /** @brief Read data from a picojson object */
       inline void readJSON(const Tjson &atom) FOVERRIDE {
+
+        // transition to "Modern JSON = Tmjson" class.
+        Tmjson _js = Tmjson::parse(  atom.second.serialize() );
+
         name = atom.first;
-        activity = json::value<double>(atom.second, "activity", 0);
+
+        activity = _js["activity"] | 0.0;
         chemPot = log( activity * 1.0_molar );
         alpha << json::value<std::string>(atom.second, "alpha", "");
         alpha /= pc::lB(1.0);
         theta << json::value<std::string>(atom.second, "theta", "");
         theta *= 1.0_Debye;
-        dp = json::value<double>(atom.second, "dp", 0);
-        dprot = json::value<double>(atom.second, "dprot", 0) * 1._deg; // deg->rads
-        eps = json::value<double>(atom.second, "eps", 0) * 1._kT;
-        hydrophobic = json::value<bool>(atom.second, "hydrophobic", false);
-        mu << json::value<std::string>(atom.second, "mu", "0 0 0");
+        dp    = _js["dp"] | 0.0;
+        dprot = ( _js["dprot"] | 0.0 ) * 1._deg; // deg->rads
+        eps   = ( _js["eps"] | 0.0 ) * 1._kT;
+        hydrophobic = _js["hydrophobic"] | false;
+        //mu << json::value<std::string>(atom.second, "mu", "0 0 0");
+        mu <<  string( _js["mu"] | std::string("0 0 0") );
         muscalar = mu.len()* 1.0_Debye;
         if (mu.len()>1e-6)
           mu = mu/mu.len();
-        mw = json::value<double>(atom.second, "mw", 1.);
-        Ninit = json::value<double>(atom.second, "Ninit", 0);
-        charge = json::value<double>(atom.second, "q", 0);
-        radius = json::value<double>(atom.second, "r", 0) * 1.0_angstrom;
-        sigma = 2*radius;
-        sigma = json::value<double>(atom.second, "sigma", sigma) * 1.0_angstrom;
-        radius = sigma/2;
-        tfe = json::value<double>(atom.second, "tfe", 0);
-        half_len = 0.5 * json::value<double>(atom.second, "len", 0);
-        patchtype = json::value<double>(atom.second, "patchtype", 0);
-        pswitch = json::value<double>(atom.second, "patchswitch", 0);
-        pdis = json::value<double>(atom.second, "patchdistance", 0);
-        pangl = json::value<double>(atom.second, "patchangle", 0) * 1._deg;
-        panglsw = json::value<double>(atom.second, "patchangleswitch", 0) * 1._deg;
-        chiral_angle = json::value<double>(atom.second, "patchchiralangle", 0) * 1._deg;
-        betaC = json::value<double>(atom.second, "betaC", pc::infty);
-        betaD = json::value<double>(atom.second, "betaD", pc::infty);
-        betaQ = json::value<double>(atom.second, "betaQ", pc::infty);
+
+        mw     = _js["mw"] | 1.0;
+        Ninit  = _js["Ninit"] | 0.0;
+        charge = _js["q"] | 0.0;
+        radius = ( _js["r"] | 0.0 ) * 1.0_angstrom;
+        sigma  = ( _js["sigma"] | 2*radius ) * 1.0_angstrom;
+        radius = 0.5 * sigma;
+        tfe    = _js["tfe"] | 0.0;
+
+        // spherocylindrical properties
+        half_len  = 0.5 * ( _js["len"] | 0.0 );
+        patchtype = _js["patchtype"] | 0.0;
+        pswitch   = _js["patchswitch"] | 0.0;
+        pdis      = _js["patchdistance"] | 0.0;
+        pangl     = ( _js["patchangle"] | 0.0 ) * 1._deg;
+        panglsw   = ( _js["patchangleswitch"] | 0.0 ) * 1._deg;
+        chiral_angle = ( _js["patchchiralangle"] | 0.0 ) * 1._deg;
+
+        betaC = _js["betaC"] | pc::infty;
+        betaD = _js["betaD"] | pc::infty;
+        betaQ = _js["betaQ"] | pc::infty;
       }
   };
 

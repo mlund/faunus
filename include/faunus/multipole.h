@@ -334,6 +334,7 @@ namespace Faunus {
     private:
     double rc1, rc1i, rc1i_d, rc2i, kappa, kappa2, constant;
     double dT0c, T1c_rc1, dT1c_rc1, T2c1, T2c2_rc2, dT2c1, dT2c2_rc2;
+    bool Fennel;
     wdata data;
 
     public:
@@ -341,7 +342,9 @@ namespace Faunus {
       data.r2i = 1/r.squaredNorm();
       double r1i = sqrt(data.r2i);
       data.r1i_d = erfc_x(kappa/r1i)*r1i;
-      double der = (1/r1i) - rc1;
+      double der = 0.0;
+      if(Fennel)
+      	der = (1/r1i) - rc1;
       double expK = constant*exp(-kappa2/data.r2i);
       data.der_dT0c = der*dT0c;
       data.T1 = (expK + data.r1i_d)*data.r2i;
@@ -356,14 +359,29 @@ namespace Faunus {
 
     /**
      * @brief Constructor
-     * @param alpha Dampening factor (inverse angstrom)
-     * @param rcut Cutoff distance (angstrom)
      */
-    WolfBase(double alpha, double rcut) {
+    WolfBase(bool Fennel_in) {
+      Fennel = Fennel_in;
+      update();
+    }
+    
+    void updateAlpha(double alpha) {
       kappa = alpha;
+      update();
+    }
+    
+    void updateCutoff(double rcut) {
+      rc1 = rcut;
+      update();
+    }
+
+    bool getFennel() {
+      return Fennel;
+    }
+    
+    void update() {
       kappa2 = kappa*kappa;
       constant = 2*kappa/sqrt(pc::pi);
-      rc1 = rcut;
       double rc2 = rc1*rc1;
       rc2i = 1/rc2;
       rc1i = 1/rc1;
@@ -399,7 +417,9 @@ namespace Faunus {
           if (r2i < rc2i)
             return 0;
           double r1i = sqrt(r2i);
-          double der = (1/r1i) - rc1;
+          double der = 0.0;
+          if(Fennel)
+            der = (1/r1i) - rc1;
           double r1i_d = erfc_x(kappa/r1i)*r1i;
           return (qA*qB*(r1i_d - rc1i_d - der*dT0c));
         }
@@ -423,7 +443,9 @@ namespace Faunus {
             return 0;
           double r1i = sqrt(r2i);
           double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
-          double der = (1/r1i) - rc1;
+          double der = 0.0;
+	  if(Fennel)
+	    der = (1/r1i) - rc1;
           double W1 = QBxMuA*muA.dot(r)*(T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i);
           double W2 = QAxMuB*muB.dot(-r)*(T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i);
           return (W1 + W2);
@@ -452,7 +474,9 @@ namespace Faunus {
           double expK = constant*exp(-kappa2/r2i);
           double T2_1 = -(r1i_d + expK)*r2i;
           double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
-          double der = (1/r1i) - rc1;
+          double der = 0.0;
+          if(Fennel)
+	    der = (1/r1i) - rc1;
           double t3 = muA.dot(muB)*(T2_1 - T2c1 - der*dT2c1);
           double t5 = muA.dot(r)*muB.dot(r)*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i);
           return -(t5 + t3)*muAxmuB;
@@ -482,7 +506,9 @@ namespace Faunus {
           double expK = constant*exp(-kappa2/r2i);
           double T2_1 = -(r1i_d + expK)*r2i;
           double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
-          double der = (1/r1i) - rc1;
+          double der = 0.0;
+          if(Fennel)
+            der = (1/r1i) - rc1;
           double WAB = r.transpose()*quadB*r;
           WAB = WAB*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i) + quadB.trace()*(T2_1 - T2c1 - der*dT2c1);
           double WBA = r.transpose()*quadA*r;
@@ -510,7 +536,9 @@ namespace Faunus {
             return Point(0,0,0);
           double r1i = sqrt(r2i);
           double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
-          double der = (1/r1i) - rc1;
+          double der = 0.0;
+	  if(Fennel)  
+	    der = (1/r1i) - rc1;
           return (T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i)*r*p.charge;
         }
         return (data.T1 - data.T1c_r1i - data.der_dT1c_r1i)*r*p.charge;
@@ -533,7 +561,9 @@ namespace Faunus {
           double expK = constant*exp(-kappa2/r2i);
           double T2_1 = -(r1i_d + expK)*r2i;
           double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
-          double der = (1/r1i) - rc1;
+          double der = 0.0;
+          if(Fennel)
+	    der = (1/r1i) - rc1;
           Point t3 = p.mu*(T2_1 - T2c1 - der*dT2c1);
           Point t5 = r*p.mu.dot(r)*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i);
           return (t5 + t3)*p.muscalar;
@@ -873,8 +903,9 @@ namespace Faunus {
       public:
         DipoleDipole(InputMap &in, const string &dir="") {
           name="Dipole-dipole";
+	  in.cd ( "system" );
+	  pc::setT(in("temperature",298.15 ));
           in.cd ( jsondir+"/coulomb" );
-          pc::setT(in("temperature",298.15 ));
           _lB = pc::lB( in("epsr",80. ) );
         }
         template<class Tparticle>
@@ -892,7 +923,7 @@ namespace Faunus {
           }
 
         /**
-         * @brief Interaction of dipole `p` with field `E`, see 'Intermolecular and SUrface Forces' by J. Israelachvili, p. 97 eq. 5.15
+         * @brief Interaction of dipole `p` with field `E`, see 'Intermolecular and Surface Forces' by J. Israelachvili, p. 97 eq. 5.15
          * @todo Needs to be tested!
          */
         template<class Tparticle>
@@ -1034,23 +1065,28 @@ namespace Faunus {
         }
     };
 
-    template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
+    template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false,bool Fennel=true>
       class MultipoleWolf : public Coulomb {
         private:
           WolfBase wolf;
           string _brief() {
             std::ostringstream o;
-            o << "Multipole Wolf, lB=" << _lB << textio::_angstrom;
+            o << "Multipole Wolf 0, lB=" << _lB << textio::_angstrom;
             return o.str();          
           }
         protected:
           double _lB;
         public:
-          MultipoleWolf(InputMap &in, const string &dir="") : wolf(in("kappa", 0.0),
-              in("cutoff",pc::infty)) {
+          MultipoleWolf(InputMap &in, const string &dir="") : Coulomb(in), wolf(Fennel) {
 	    in.cd ( jsondir+"/coulomb" );
-            name="Multipole Wolf";
-            _lB = pc::lB(in(jsondir+"coulomb/epsr",80.0));
+            if(wolf.getFennel()) {
+              name="Multipole Wolf-Fennel";
+            } else {
+              name="Multipole Wolf";
+            }
+            _lB = pc::lB(in("epsr",80.0));
+	    wolf.updateAlpha(in("kappa", 0.0));
+	    wolf.updateCutoff(in("cutoff",pc::infty));
           }
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
@@ -1280,7 +1316,7 @@ namespace Faunus {
 
           std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,3); };  // Sets r^k-dependence, Ion-Ion -> k = 1, Ion-Dipole -> k = 2, etc. etc. 
           qk.setRange(0,1);
-          qk.setTolerance(in.get<double>("tab_utol",1e-5),in.get<double>("tab_ftol",1e-5)); // Tolerance in energy and force
+          qk.setTolerance(in.get<double>("tab_utol",1e-9),in.get<double>("tab_ftol",1e-2)); // Tolerance in energy and force
           tabel = qk.generate( Qk );
         }
 

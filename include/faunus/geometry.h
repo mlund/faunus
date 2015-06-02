@@ -415,6 +415,27 @@ namespace Faunus {
         }
         return mu;
       }
+      
+    /**
+     * @brief Electric quadrupole moment
+     * @param s Space
+     * @param g Group or other contained with atom index
+     * @param cutoff Spherical cutoff (default: 1e9 angstrom)
+     * @param mu Initial quadrupole moment (default: [0,0,0])
+     */
+    template<class Tspace, class Tgroup, class T=double>
+      Tensor<T> dipoleQuadrupole(const Tspace &s, const Tgroup &g, double cutoff=1e9,Tensor<double> quad=Tensor<T>()) {
+        assert(g.size()<=(int)s.p.size());
+        for (auto i : g) {
+          Point t=s.p[i] - g.cm;
+          s.geo.boundary(t);
+          if(t.squaredNorm() < cutoff*cutoff)  {
+	    Tensor<T> temp = t*t.transpose();
+            quad += temp*s.p[i].charge;
+	  }
+        }
+        return quad;
+      }
 
     /** @brief Translate a particle vector by a vector */
     template<class Tgeo, class Tpvec>

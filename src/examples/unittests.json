@@ -19,7 +19,7 @@
 
   "energy" : { 
     "nonbonded" : {
-      "ewald"   : { "eps_surf":1.0, "cutoff":5, "alpha":0.894427190999916, "maxK":11 },
+      "ewald"   : { "eps_surf":1.0, "cutoff":5, "alpha":0.894427190999916, "cutoffK_x_ion":11, "cutoffK_y_ion":11, "cutoffK_z_ion":11, "cutoffK_x_dip":11, "cutoffK_y_dip":11, "cutoffK_z_dip":11, "spherical_sum":true },
       "coulomb" : { "epsr":1.0 }
     }
   },

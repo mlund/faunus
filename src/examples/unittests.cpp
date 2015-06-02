@@ -102,7 +102,7 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
   spc.insert( m->id, m->getRandomConformation() );
 
   
-  for(int i = 0; i < spc.p.size(); i++) {
+  for(unsigned int i = 0; i < spc.p.size(); i++) {
       spc.p[i] = Point(i,0,0);
       spc.p[i].alpha.setZero();
       spc.p[i].charge = 0.0;
@@ -139,7 +139,7 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
   spc.p[2] = Point(0,0,1);
   spc.p[3] = Point(1,0,1);
   
-  for(int i = 0; i < spc.p.size(); i++) {
+  for(unsigned int i = 0; i < spc.p.size(); i++) {
       spc.p[i].charge = 0.0;
       spc.p[i].muscalar = 0.0;
   }
@@ -151,6 +151,8 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
   spc.trial = spc.p;
   CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-1.0000311/scale));  // Ion-Ion interaction energy in order to get right energy at 298 K
   
+  //cout << pot.info() << endl;
+  
   spc.p[0].charge = 0.0;
   spc.p[1].charge = 0.0;
   spc.p[2].muscalar = 1.0; // Scale with 'scale' in order to get right energy at 298 K
@@ -160,6 +162,8 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
   spc.trial = spc.p;
   
   CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-2.0003749/scale));  // Dipole-Dipole interaction energy
+  
+  //cout << pot.info() << endl;
 }
 
 TEST_CASE("Groups", "Check group range and size properties")

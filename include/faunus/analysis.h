@@ -1360,15 +1360,10 @@ namespace Faunus {
           void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0), Tensor<double> quad=Tensor<double>(),Tensor<double> quad_box=Tensor<double>(), double mus_group = 0.0) {
 	    updateVolume(spc.geo.getVolume());
             
-            for(auto &i : spc.p) {
-              Tensor<double> temp = i*i.transpose();
-              if (spc.geo.sqdist(i,origin)<cutoff2) {
-		mu += i*i.charge;
-                quad += temp*i.charge;
-	      }
-	      mu_box += i*i.charge;
-              quad_box += temp*i.charge;
-            }
+	    for (auto gi : spc.groupList()) {
+	      mu += dipoleMoment(spc, *gi);
+	      quad += dipoleQuadrupole(spc, *gi);
+	    }
             
             for(int cnt = 0; cnt < 3; cnt++) {
 	      HM.at(cnt)(mu[cnt])++;

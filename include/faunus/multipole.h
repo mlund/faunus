@@ -968,7 +968,56 @@ namespace Faunus {
 
         string info(char w) { return _brief(); }
     };
+    
+    
+    /**
+     * @brief Ion-ion interaction w. spherical cutoff and reaction field
+     *
+     * More info...
+     * @warning Untested!
+     */
+    class IonIonRF : public Coulomb {
+      private:
+        string _brief() { return "Ion-ion (RF)"; }
+        double rc1,rc2,rc3,eps_rf,eps_r,krf,crf;
+      public:
+        IonIonRF(InputMap &in, const string &dir="") : Coulomb(in) {
+          name+=" Reaction Field";
+          in.cd ( jsondir+"/coulomb" );
+          rc2 = pow(in("cutoff_rf",pc::infty), 2);
+	  rc1 = sqrt(rc2);
+	  rc3 = rc2*rc1;
+          eps_r = in("epsr",1.0 );
+          eps_rf = in("epsilon_rf",80.0);
+          lB = pc::lB( eps_r );
+          updateDiel(eps_rf);
+        }
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+	    double r2 = r.squaredNorm();
+            if (r2 < rc2)
+              return Coulomb::operator()(a,b,r) + (krf*r2 - crf)*a.charge*b.charge;
+            return 0;
+          }
 
+        void updateDiel(double er) {
+	  eps_rf = er;
+	  krf = lB*(eps_rf - eps_r)/(2.0*eps_rf + eps_r)/rc3;
+	  crf = lB*3.0*eps_rf/(2.0*eps_rf + eps_r)/rc1;
+        }  
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << Coulomb::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl
+            << pad(SUB,w,"epsilon_rf") << eps_rf << endl;
+          return o.str();
+        }
+    };
+
+    
+    
     /**
      * @brief Dipole-dipole interaction w. spherical cutoff and reaction field
      *

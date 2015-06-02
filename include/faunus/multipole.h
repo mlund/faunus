@@ -344,7 +344,7 @@ namespace Faunus {
       data.r1i_d = erfc_x(kappa/r1i)*r1i;
       double der = 0.0;
       if(Fennel)
-      	der = (1/r1i) - rc1;
+        der = (1/r1i) - rc1;
       double expK = constant*exp(-kappa2/data.r2i);
       data.der_dT0c = der*dT0c;
       data.T1 = (expK + data.r1i_d)*data.r2i;
@@ -364,12 +364,12 @@ namespace Faunus {
       Fennel = Fennel_in;
       update();
     }
-    
+
     void updateAlpha(double alpha) {
       kappa = alpha;
       update();
     }
-    
+
     void updateCutoff(double rcut) {
       rc1 = rcut;
       update();
@@ -378,7 +378,7 @@ namespace Faunus {
     bool getFennel() {
       return Fennel;
     }
-    
+
     void update() {
       kappa2 = kappa*kappa;
       constant = 2*kappa/sqrt(pc::pi);
@@ -444,8 +444,8 @@ namespace Faunus {
           double r1i = sqrt(r2i);
           double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
           double der = 0.0;
-	  if(Fennel)
-	    der = (1/r1i) - rc1;
+          if(Fennel)
+            der = (1/r1i) - rc1;
           double W1 = QBxMuA*muA.dot(r)*(T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i);
           double W2 = QAxMuB*muB.dot(-r)*(T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i);
           return (W1 + W2);
@@ -476,7 +476,7 @@ namespace Faunus {
           double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
           double der = 0.0;
           if(Fennel)
-	    der = (1/r1i) - rc1;
+            der = (1/r1i) - rc1;
           double t3 = muA.dot(muB)*(T2_1 - T2c1 - der*dT2c1);
           double t5 = muA.dot(r)*muB.dot(r)*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i);
           return -(t5 + t3)*muAxmuB;
@@ -537,8 +537,8 @@ namespace Faunus {
           double r1i = sqrt(r2i);
           double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
           double der = 0.0;
-	  if(Fennel)  
-	    der = (1/r1i) - rc1;
+          if(Fennel)  
+            der = (1/r1i) - rc1;
           return (T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i)*r*p.charge;
         }
         return (data.T1 - data.T1c_r1i - data.der_dT1c_r1i)*r*p.charge;
@@ -563,7 +563,7 @@ namespace Faunus {
           double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
           double der = 0.0;
           if(Fennel)
-	    der = (1/r1i) - rc1;
+            der = (1/r1i) - rc1;
           Point t3 = p.mu*(T2_1 - T2c1 - der*dT2c1);
           Point t5 = r*p.mu.dot(r)*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i);
           return (t5 + t3)*p.muscalar;
@@ -903,8 +903,8 @@ namespace Faunus {
       public:
         DipoleDipole(InputMap &in, const string &dir="") {
           name="Dipole-dipole";
-	  in.cd ( "system" );
-	  pc::setT(in("temperature",298.15 ));
+          in.cd ( "system" );
+          pc::setT(in("temperature",298.15 ));
           in.cd ( jsondir+"/coulomb" );
           _lB = pc::lB( in("epsr",80. ) );
         }
@@ -968,79 +968,174 @@ namespace Faunus {
 
         string info(char w) { return _brief(); }
     };
-    
-    
+
+
     /**
-     * @brief Ion-ion interaction w. spherical cutoff and reaction field
+     * @brief Ion-ion interaction with spherical cutoff and reaction field (RF), see e.g. DOI: 10.1016/0022-2836(92)90874-J.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Half the minimum box-length)
+     * `epsr`            |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `eps_rf`          |  Dielectric constant of the surroundings.                (Default: \f$ \varepsilon_{RF} = 80 \f$))
      *
-     * More info...
+     * @note No input of `eps_rf` gives insulating boundaries with water as the initial guess for the surroundings. For \f$ \varepsilon_{RF} > 10^{10} \f$ the boundaries are conducting.
+     * 
      * @warning Untested!
      */
     class IonIonRF : public Coulomb {
       private:
         string _brief() { return "Ion-ion (RF)"; }
         double rc1,rc2,rc3,eps_rf,eps_r,krf,crf;
+        bool diel_inf, diel_same, diel_RF, diel_MI;
       public:
         IonIonRF(InputMap &in, const string &dir="") : Coulomb(in) {
           name+=" Reaction Field";
           in.cd ( jsondir+"/coulomb" );
-          rc2 = pow(in("cutoff_rf",pc::infty), 2);
-	  rc1 = sqrt(rc2);
-	  rc3 = rc2*rc1;
+          rc2 = pow(in("cutoff",pc::infty), 2);
+          rc1 = sqrt(rc2);
+          rc3 = rc2*rc1;
           eps_r = in("epsr",1.0 );
-          eps_rf = in("epsilon_rf",80.0);
+          diel_inf = false;
+          diel_same = false;
+          diel_RF = false;
+          diel_MI = false;
+
+          if(in("eps_rf",-1.0) < 0) { // If there is no input then surrounding is the same as the sample
+            diel_same = true;
+            eps_rf = 80.0;   // Initial guess is water
+          } else if(in("eps_rf",-1.0) > 1e10) { // Conducting boundary conditions
+            diel_inf = true;
+            eps_rf = pc::infty;
+          } else if( abs(in("eps_rf",-1.0) - eps_r) < 1e-6) { // Vacuum boundary conditions
+            diel_MI = true;
+            eps_rf = eps_r;
+          } else {
+            diel_RF = true;
+            eps_rf = in("eps_rf",-1.0);
+          }
+
           lB = pc::lB( eps_r );
           updateDiel(eps_rf);
         }
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
-	    double r2 = r.squaredNorm();
+            double r2 = r.squaredNorm();
             if (r2 < rc2)
               return Coulomb::operator()(a,b,r) + (krf*r2 - crf)*a.charge*b.charge;
             return 0;
           }
 
+        /**
+         * @note If ´crf´ not set to zero (see the end of the function) then the potential is shifted to be zero at the cut-off (i.e. not original RF)
+         */
         void updateDiel(double er) {
-	  eps_rf = er;
-	  krf = lB*(eps_rf - eps_r)/(2.0*eps_rf + eps_r)/rc3;
-	  crf = lB*3.0*eps_rf/(2.0*eps_rf + eps_r)/rc1;
+          if(diel_inf) {
+            krf = lB*0.5/rc3;
+            crf = lB*1.5/rc1;
+          } else if(diel_MI) {
+            krf = 0.0;
+            crf = lB/rc1;
+          } else {
+            eps_rf = er;
+            krf = lB*(eps_rf - eps_r)/(2.0*eps_rf + eps_r)/rc3;
+            crf = lB*3.0*eps_rf/(2.0*eps_rf + eps_r)/rc1;
+          }
+          crf = 0.0;
         }  
+
+        /**
+         * @brief Returns the dielectric constant.
+         * @param V Volume of the geometry
+         * @param M2 Average of squared dipole moment
+         * 
+         * @f[
+         * \frac{4\pi}{3}\frac{\langle M^2\rangle}{3Vk_BT} = \frac{\varepsilon_r -1}{\varepsilon_r + 2}\left[1 - \frac{\varepsilon_r-1}{\varepsilon_r + 2}\frac{2(\varepsilon_{RF}-1)}{2\varepsilon_{RF} + 1} \right]^{-1}
+         * @f]
+         * 
+         * where \f$ k_BT \f$ is the thermal energy, \f$ \varepsilon_{RF} \f$ is the dielctric constant of the surroundings and \f$ \varepsilon_r \f$ is the dielectric constant of the medium. 
+         * Implementations is done through DOI: 10.1080/00268978300102721.
+         * 
+         */
+        double dielectricConstant(double V, double M2) {
+          double constant = 4*pc::pi*pc::e*pc::e*1e-20/(3.0*3.0*V*1e-30*pc::kT()*4*pc::pi*pc::e0);
+          if(diel_inf)
+            return (1.0 + 3.0*constant);
+          if(diel_same) {
+            return (2.25*constant + 0.25 + 0.75*sqrt(9.0*constant*constant + 2.0*constant + 1.0));
+            //return (2.25*constant + 0.25 - 0.75*sqrt(9.0*constant*constant + 2.0*constant + 1.0));
+          }
+          if(diel_RF)
+            return ((3.0*eps_rf*constant + eps_rf + constant + 1.0)/(eps_rf - 2.0*constant + 1.0));
+          if(diel_MI)
+            return (2*constant + 1.0)/( 1.0 - constant );
+          return 0.0;
+        }
 
         string info(char w) {
           using namespace textio;
           std::ostringstream o;
           o << Coulomb::info(w)
-            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl
-            << pad(SUB,w,"epsilon_rf") << eps_rf << endl;
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+          if(diel_inf)
+            o << pad(SUB,w,"epsilon_rf") << infty << endl;
+          if(diel_same)
+            o << pad(SUB,w,"epsilon_rf") << epsilon_m+subr << " ( = " << eps_r << " )" << endl;
+          if(diel_RF)
+            o << pad(SUB,w,"epsilon_rf") << eps_rf << endl;
+          if(diel_MI)
+            o << pad(SUB,w,"epsilon_rf") << "1" << endl;
           return o.str();
         }
     };
 
-    
-    
+
+
     /**
-     * @brief Dipole-dipole interaction w. spherical cutoff and reaction field
+     * @brief Dipole-dipole interaction with spherical cutoff and reaction field (RF), see e.g. DOI: 10.1080/00268977300102101.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Half the minimum box-length)
+     * `epsr`            |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `eps_rf`          |  Dielectric constant of the surroundings.                (Default: \f$ \varepsilon_{RF} = 80 \f$))
      *
-     * More info...
+     * @note No input of `eps_rf` gives insulating boundaries with water as the initial guess for the surroundings. For \f$ \varepsilon_{RF} > 10^{10} \f$ the boundaries are conducting.
      */
     class DipoleDipoleRF : public DipoleDipole {
       private:
         string _brief() { return "Dipole-dipole (RF)"; }
-        double rc2,eps,eps_rf,eps_r;
-	bool diel_inf, diel_same, diel_RF, diel_MI;
+        double rc2,rc3,eps,eps_rf,eps_r;
+        bool diel_inf, diel_same, diel_RF, diel_MI;
       public:
         DipoleDipoleRF(InputMap &in, const string &dir="") : DipoleDipole(in) {
           name+=" Reaction Field";
           in.cd ( jsondir+"/coulomb" );
-          rc2 = pow(in("cutoff_rf",pc::infty), 2);
+          rc2 = pow(in("cutoff",pc::infty), 2);
+          rc3 = rc2*sqrt(rc2);
           eps_r = in("epsr",1.0 );
-          eps_rf = in("epsilon_rf",80.0);
+          diel_inf = false;
+          diel_same = false;
+          diel_RF = false;
+          diel_MI = false;
+
+          if(in("eps_rf",-1.0) < 0) { // If there is no input then surrounding is the same as the sample
+            diel_same = true;
+            eps_rf = 80.0;   // Initial guess is water
+          } else if(in("eps_rf",-1.0) > 1e10) { // Conducting boundary conditions
+            diel_inf = true;
+            eps_rf = pc::infty;
+          } else if( abs(in("eps_rf",-1.0) - eps_r) < 1e-6) { // Vacuum boundary conditions
+            diel_MI = true;
+            eps_rf = eps_r;
+          } else {
+            diel_RF = true;
+            eps_rf = in("eps_rf",-1.0);
+          }
+
           _lB = pc::lB( eps_r );
           updateDiel(eps_rf);
-	  diel_inf = false;
-	  diel_same = false;
-	  diel_RF = false;
-	  diel_MI = false;
+
         }
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
@@ -1058,58 +1153,57 @@ namespace Faunus {
           }
 
         void updateDiel(double er) {
-	  if(er < 1e10) {
-	    eps = _lB*(2*(er-eps_r)/(2*er+eps_r))/pow(rc2,1.5)/eps_r;
-	    diel_inf = false;
-	  } else {
-	    eps = _lB/pow(rc2,1.5)/eps_r;
-	    diel_inf = true;
-	    diel_same = false;
-	    diel_RF = false;
-	    diel_MI = false;
-	  }
-        }  
-        
-    /**
-     * @brief Returns the dielectric constant.
-     * @param V Volume of the geometry
-     * @param M2 Average of squared dipole moment
-     * 
-     * @f[
-     * \frac{4\pi}{3}\frac{\langle M^2\rangle}{3Vk_BT} = \frac{\varepsilon_r -1}{\varepsilon_r + 2}\left[1 - \frac{\varepsilon_r-1}{\varepsilon_r + 2}\frac{2(\varepsilon_{RF}-1)}{2\varepsilon_{RF} + 1} \right]^{-1}
-     * @f]
-     * 
-     * where \f$ k_BT \f$ is the thermal energy, \f$ \varepsilon_{RF} \f$ is the dielctric constant of the surroundings and \f$ \varepsilon_r \f$ is the dielectric constant of the medium. 
-     * Implementations is done through DOI: 10.1080/00268978300102721.
-     * 
-     */
+          if(diel_inf) {
+            eps = _lB/rc3/eps_r;
+          } else if(diel_MI) {
+            eps = 0;
+          } else {
+            eps_rf = er;
+            eps = _lB*(2*(er-eps_r)/(2*er+eps_r))/rc3/eps_r;
+          }
+        }
+
+        /**
+         * @brief Returns the dielectric constant.
+         * @param V Volume of the geometry
+         * @param M2 Average of squared dipole moment
+         * 
+         * @f[
+         * \frac{4\pi}{3}\frac{\langle M^2\rangle}{3Vk_BT} = \frac{\varepsilon_r -1}{\varepsilon_r + 2}\left[1 - \frac{\varepsilon_r-1}{\varepsilon_r + 2}\frac{2(\varepsilon_{RF}-1)}{2\varepsilon_{RF} + 1} \right]^{-1}
+         * @f]
+         * 
+         * where \f$ k_BT \f$ is the thermal energy, \f$ \varepsilon_{RF} \f$ is the dielctric constant of the surroundings and \f$ \varepsilon_r \f$ is the dielectric constant of the medium. 
+         * Implementations is done through DOI: 10.1080/00268978300102721.
+         * 
+         */
         double dielectricConstant(double V, double M2) {
-	  double constant = 4*pc::pi*pc::e*pc::e*1e-20/(3.0*3.0*V*1e-30*pc::kT()*4*pc::pi*pc::e0);
-	  
-	  if(diel_inf)
-	    return (1.0 + 3.0*constant);
-	  
-	  if(diel_same) {
-	    return (2.25*constant + 0.25 + 0.75*sqrt(9.0*constant*constant + 2.0*constant + 1.0));
-	    //return (2.25*constant + 0.25 - 0.75*sqrt(9.0*constant*constant + 2.0*constant + 1.0));
-	  }
-	  
-	  if(diel_RF)
-	    return ((3.0*eps_rf*constant + eps_rf + constant + 1.0)/(eps_rf - 2.0*constant + 1.0));
-	  
-	  if(diel_MI)
-	    return (2*constant + 1.0)/( 1.0 - constant );
-	  
-	  return 0.0;
-	  
-	}
+          double constant = 4*pc::pi*pc::e*pc::e*1e-20/(3.0*3.0*V*1e-30*pc::kT()*4*pc::pi*pc::e0);
+          if(diel_inf)
+            return (1.0 + 3.0*constant);
+          if(diel_same) {
+            return (2.25*constant + 0.25 + 0.75*sqrt(9.0*constant*constant + 2.0*constant + 1.0));
+            //return (2.25*constant + 0.25 - 0.75*sqrt(9.0*constant*constant + 2.0*constant + 1.0));
+          }
+          if(diel_RF)
+            return ((3.0*eps_rf*constant + eps_rf + constant + 1.0)/(eps_rf - 2.0*constant + 1.0));
+          if(diel_MI)
+            return (2*constant + 1.0)/( 1.0 - constant );
+          return 0.0;
+        }
 
         string info(char w) {
           using namespace textio;
           std::ostringstream o;
           o << DipoleDipole::info(w)
-            << pad(SUB,w,"Cutoff") << sqrt(rc2) << " "+angstrom << endl
-            << pad(SUB,w,"epsilon_rf") << eps_rf << endl;
+            << pad(SUB,w,"Cutoff") << sqrt(rc2) << " "+angstrom << endl;
+          if(diel_inf)
+            o << pad(SUB,w,"epsilon_rf") << infty << endl;
+          if(diel_same)
+            o << pad(SUB,w,"epsilon_rf") << epsilon_m+subr << " ( = " << eps_r << " )" << endl;
+          if(diel_RF)
+            o << pad(SUB,w,"epsilon_rf") << eps_rf << endl;
+          if(diel_MI)
+            o << pad(SUB,w,"epsilon_rf") << "1" << endl;
           return o.str();
         }
     };
@@ -1127,15 +1221,15 @@ namespace Faunus {
           double _lB;
         public:
           MultipoleWolf(InputMap &in, const string &dir="") : Coulomb(in), wolf(Fennel) {
-	    in.cd ( jsondir+"/coulomb" );
+            in.cd ( jsondir+"/coulomb" );
             if(wolf.getFennel()) {
               name="Multipole Wolf-Fennel";
             } else {
               name="Multipole Wolf";
             }
             _lB = pc::lB(in("epsr",80.0));
-	    wolf.updateAlpha(in("kappa", 0.0));
-	    wolf.updateCutoff(in("cutoff",pc::infty));
+            wolf.updateAlpha(in("kappa", 0.0));
+            wolf.updateCutoff(in("cutoff",pc::infty));
           }
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
@@ -1374,7 +1468,7 @@ namespace Faunus {
             double r1 = r.norm();
             if (r1 < rc1) {
               return (DipoleDipole::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
-	       //return (DipoleDipole::operator()(a,b,r)*qPochhammerSymbol(r1*rc1i,3));
+              //return (DipoleDipole::operator()(a,b,r)*qPochhammerSymbol(r1*rc1i,3));
             }
             return 0;
           }
@@ -1423,46 +1517,46 @@ namespace Faunus {
           return o.str();
         }
     };
-    
-class IonIonFanourgakis : public Coulomb {
-  private:
-    string _brief() { return "Coulomb Fanourgakis"; }
-    double rc1, rc1i, rc2, _lB;
-  public:
-    IonIonFanourgakis(InputMap &in, const string &dir="") : Coulomb(in) { 
-      name += " Fanourgakis"; 
-      _lB = Coulomb(in,dir).bjerrumLength();
-      rc1  = in( "cutoff", pc::infty );
-      rc1i = 1.0/rc1;
-      rc2 = rc1*rc1;
-    }
 
-    template<class Tparticle>
-      double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
-        double r1 = sqrt(r2);
-        if(r2 < rc2) {
-          double q = r1/rc1;
-          double q5 = pow(q,5);
-          return _lB*(a.charge*b.charge/r1)*(1.0 - 1.75*q + 5.25*q5 - 7.0*q5*q + 2.5*q5*q*q);
+    class IonIonFanourgakis : public Coulomb {
+      private:
+        string _brief() { return "Coulomb Fanourgakis"; }
+        double rc1, rc1i, rc2, _lB;
+      public:
+        IonIonFanourgakis(InputMap &in, const string &dir="") : Coulomb(in) { 
+          name += " Fanourgakis"; 
+          _lB = Coulomb(in,dir).bjerrumLength();
+          rc1  = in( "cutoff", pc::infty );
+          rc1i = 1.0/rc1;
+          rc2 = rc1*rc1;
         }
-        return 0.0;
-      }
 
-    template<class Tparticle>
-      double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-        double r2 = r.squaredNorm();
-        return operator()(a,b,r2);
-      }
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+            double r1 = sqrt(r2);
+            if(r2 < rc2) {
+              double q = r1/rc1;
+              double q5 = pow(q,5);
+              return _lB*(a.charge*b.charge/r1)*(1.0 - 1.75*q + 5.25*q5 - 7.0*q5*q + 2.5*q5*q*q);
+            }
+            return 0.0;
+          }
 
-    string info(char w) {
-      using namespace textio;
-      std::ostringstream o;
-      o << Coulomb::info(w)
-        << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
-      return o.str();
-    }
-};
-    
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r2 = r.squaredNorm();
+            return operator()(a,b,r2);
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << Coulomb::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+          return o.str();
+        }
+    };
+
     class DipoleDipoleFanourgakis : public DipoleDipole {
       private:
         string _brief() { return "DipoleDipole Fanourgakis"; }
@@ -1483,9 +1577,9 @@ class IonIonFanourgakis : public Coulomb {
               double q2 = q*q;
               Eigen::Matrix3d T1 = r*r.transpose()/r2;
               Eigen::Matrix3d T2 = Eigen::Matrix3d::Identity();
-	      Eigen::Matrix3d T = ((42.0 - 105.0*q + 60.0*q2)*q2*T1 + (21.0 - 35.0*q + 15.0*q2)*q2*T2)*rc1i/rc2;
+              Eigen::Matrix3d T = ((42.0 - 105.0*q + 60.0*q2)*q2*T1 + (21.0 - 35.0*q + 15.0*q2)*q2*T2)*rc1i/rc2;
 
-	      double W = a.mu.transpose()*T*b.mu;
+              double W = a.mu.transpose()*T*b.mu;
               return (DipoleDipole::operator()(a,b,r) - _lB*W*a.muscalar*b.muscalar);
             }
             return 0.0;

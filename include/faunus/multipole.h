@@ -993,7 +993,7 @@ namespace Faunus {
           updateDiel(eps_rf);
         }
         template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
 	    double r2 = r.squaredNorm();
             if (r2 < rc2)
               return Coulomb::operator()(a,b,r) + (krf*r2 - crf)*a.charge*b.charge;

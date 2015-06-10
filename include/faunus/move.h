@@ -238,6 +238,8 @@ namespace Faunus {
           double energyChange();           //!< Energy (wrapper)
           bool metropolis(const double&) const;//!< Metropolis criteria
 
+          TimeRelativeOfTotal<std::chrono::microseconds> timer;
+
         protected:
           virtual string _info()=0;        //!< info for derived moves
           void trialMove();                //!< Do a trial move (wrapper)
@@ -413,6 +415,7 @@ namespace Faunus {
      */
     template<class Tspace>
       double Movebase<Tspace>::move(int n) {
+        timer.start();
         double utot=0;
 
         if ( ! mollist.empty() ) {
@@ -437,6 +440,7 @@ namespace Faunus {
           }
         }
         assert(spc->p == spc->trial && "Trial particle vector out of sync!");
+        timer.stop();
         return utot;
       }
 
@@ -541,6 +545,7 @@ namespace Faunus {
           o << pad(SUB,w,"More information:") << cite << endl;
         if (cnt>0)
           o << pad(SUB,w,"Number of trials") << cnt << endl
+            << pad(SUB,w,"Relative time consumption") << timer.result() << endl
             << pad(SUB,w,"Acceptance") << getAcceptance()*100 << percent << endl
             << pad(SUB,w,"Runfraction") << runfraction*100 << percent << endl
             << pad(SUB,w,"Total energy change") << dusum << kT << endl;
@@ -3351,6 +3356,7 @@ namespace Faunus {
           string _info() {
             using namespace textio;
             std::ostringstream o;
+            base::w += 5;
 
             o << pad( SUB,base::w,"Accepted insertions" ) << Ninserted << "\n"
               << pad( SUB,base::w,"Accepted deletions" ) << Ndeleted << "\n"

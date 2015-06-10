@@ -40,6 +40,7 @@ namespace Faunus {
         virtual string _info()=0; //!< info all classes must provide
         virtual void _test(UnitTest&);
       protected:
+        TimeRelativeOfTotal<std::chrono::microseconds> timer;
         char w;               //!< width of info
         unsigned long int cnt;//!< number of samples - increased for every run()==true.
         string name;          //!< descriptive name
@@ -577,6 +578,9 @@ namespace Faunus {
           void sample(const Tgroup &pol, const Tspace &spc) {
             if (!run() || pol.front()==pol.back())
               return;
+
+            timer.start();
+
             Point r2 = vectorgyrationRadiusSquared(pol,spc);
             double rg2 = r2.x()+r2.y()+r2.z(); 
             double re2 = spc.geo.sqdist( spc.p[pol.front()], spc.p[pol.back()] );
@@ -591,6 +595,8 @@ namespace Faunus {
             Rs2[pol.name]  += rs*rs;
             //Point re = vectorEnd2end(pol,spc);
             //Re2[pol.name] += pow(re.len(), 2);
+            //
+            timer.stop();
           }
     };
 
@@ -665,7 +671,7 @@ namespace Faunus {
           void sample(const std::vector<Tgroup> &gvec, const Tspace &spc) {
             if (run())
               for (auto &g : gvec)
-                sample(g, spc);
+                sample(*g, spc);
           }
 
         std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.

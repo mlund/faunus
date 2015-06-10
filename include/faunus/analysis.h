@@ -320,6 +320,13 @@ namespace Faunus {
             }
       };
 
+    /**
+     * @brief Distribution along a line
+     *
+     * This is merely a histogram where the volume element of each
+     * bin is set to unity. This differs from i.e. the radial distribution
+     * where spherical volume elements are used.
+     */
     template<typename Tx=double, typename Ty=unsigned long>
       class LineDistribution : public RadialDistribution<Tx,Ty> {
         private:

@@ -855,18 +855,7 @@ namespace Faunus {
      * @brief Combined rotation and rotation of groups
      *
      * This will translate and rotate groups and collect averages based on group name.
-     *
-     * Example:
-     *
-     * ~~~
-     * ...
-     * Group g;
-     * g.name="mygroup";
-     * Move::TranslateRotate tr(in, pot, spc);
-     * tr.directions[g.name].z()=0; // move only on xy plane - do this only once and before calling setGroup()
-     * tr.setGroup(g);              // specify which group to move
-     * tr.move();                   // do the move
-     * ~~~
+     * See constructor for usage.
      */
     template<class Tspace>
       class TranslateRotate : public Movebase<Tspace> {

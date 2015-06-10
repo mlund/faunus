@@ -592,7 +592,7 @@ namespace Faunus {
           return true;
         }
       }
-      std::cerr << "FAILED!" << endl;
+      std::cerr << "State file not found." << endl;
       return false;
     }
 

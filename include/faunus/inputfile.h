@@ -32,6 +32,7 @@ namespace Faunus {
       bool isjson;
       json::Tval js;
       json::Tval jsdir;
+      Tmjson mjs; // modern json object (will latert replace "js")
 
     public:
       InputMap();
@@ -40,6 +41,10 @@ namespace Faunus {
       bool include(string);  //!< Include keyword/value file.
       bool save(string);     //!< Save map to disk
       string info();         //!< Information string about read files and keywords
+
+      Tmjson& getJSON() { return mjs; } //!< Return modern json object
+
+      const Tmjson& getJSON() const { return mjs; } //!< Return modern json object
 
       /**
        * @brief CD (change dir) like functionality
@@ -148,9 +153,25 @@ namespace Faunus {
       isjson = true;
 
     if ( isjson ) {
+      // load into picojson object (to be removed)
       jsdir = js = json::open( filename );
       assert( js != json::Tval() && "Error loading json file" );
+
+      // also load modern json object (to be the default)
+      std::ifstream f( filename.c_str() );
+      if (f) {
+        try {
+          mjs << f;
+        } 
+        catch (...) {
+          std::cerr << "Error loading json file '" << filename
+            << "'. Carefully check the syntax." << endl;
+          std::exit(1);
+        }
+      }
     }
+
+    // load modern json object
 
     if ( !isjson ) {
       std::ifstream f( filename.c_str() );

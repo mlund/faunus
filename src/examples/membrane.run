@@ -10,8 +10,8 @@ cp -f $source_tests_dir/membrane.state state 2> /dev/null
 function mkinput() {
 echo '{
   "atomlist" : {
-    "HD" : { "r":5.0, "dp":4.0 },  // head group
-    "TL" : { "r":5.0, "dp":2.0 }   // tail group
+    "HD" : { "r":5.0, "dp":4.0 },
+    "TL" : { "r":5.0, "dp":2.0 }
   },
 
   "moleculelist" : {
@@ -20,7 +20,7 @@ echo '{
 
   "energy" : {
     "nonbonded" : {
-      "cutoff_g2g" : 40.,
+      "cutoff_g2g" : 40,
       "coulomb" : { "epsr" : 80.0, "ionicstrength":0.05 }
     }
   },

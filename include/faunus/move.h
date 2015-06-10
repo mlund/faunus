@@ -269,6 +269,14 @@ namespace Faunus {
             MolListData() : prob(1.0), perAtom(false), perMol(false),
             repeat(1), Nattempts(0), Naccepted(0), dir(1,1,1), dp1(0), dp2(0) {}
 
+            MolListData( Tmjson &j ) {
+              *this = MolListData();
+              prob = j["prob"] | 1.0;
+              perMol = j["permol"] | false;
+              perAtom = j["peratom"] | false;
+              dir <<  string( j["dir"] | std::string("1 1 1") );
+            }
+
             MolListData(const json::Tval &i) {
               *this = MolListData();
               prob = json::value<double>(i, "prob", 1);
@@ -278,6 +286,22 @@ namespace Faunus {
             }
           };
           std::map<int,MolListData> mollist;    //!< Move acts on these molecule id's
+
+
+          /**
+           * @brief Iterate over json object where each key is a molecule
+           *        name and the value is read as `MolListData`.
+           */
+          void fillMolList( Tmjson &j ) {
+            for (auto it=j.begin(); it!=j.end(); ++it) {  // iterate over molecules
+              auto mol = spc->molList().find( it.key() ); // is molecule defined?
+              if ( mol == spc->molList().end() ) {
+                std::cerr << "Error: molecule '" << it.key() << "' not defined.\n";
+                exit(1); 
+              } else
+                addMol( mol->id, MolListData( it.value() ) );
+            }
+          }
 
         public:
           Movebase(Energy::Energybase<Tspace>&, Tspace&, string="");//!< Constructor
@@ -595,7 +619,7 @@ namespace Faunus {
     /**
      * @brief Constructor
      *
-     * By default the InputMap is read from section `moves/atomtranslate`
+     * By default input is read from section `moves/atomtranslate`
      * with each element being the molecule name with the following
      * properties:
      *
@@ -626,15 +650,8 @@ namespace Faunus {
         genericdp = 0;
         this->w=30; //width of output
 
-        in.cd ( base::jsondir );
-        auto m = in.getMap();
-        for ( auto &i : in.getMap() ) { // loop over molecules
-          auto it = spc->molList().find( i.first ); // is molecule defined?
-          if ( it != spc->molList().end() )
-            this->addMol( it->id, typename Movebase<Tspace>::MolListData(i.second) );
-          else
-            throw std::runtime_error( "Error: Molecule '" + i.first + "' not defined." );
-        }
+        auto js = in.getJSON()["moves"]["atomtranslate"];
+        base::fillMolList(js);
       }
 
     /**
@@ -927,21 +944,16 @@ namespace Faunus {
         igroup=nullptr;
         groupWiseEnergy=false;
 
-        in.cd ( base::jsondir );
-        for (auto &i : in.getMap() ) { // loop over molecules
-          auto it = spc->molList().find( i.first );
-          if ( it == spc->molList().end() ) {
-            std::cerr << "Error: molecule '" << i.first << "' not defined." << endl;
-            exit(1);
-          } else {
-            typename Movebase<Tspace>::MolListData d(i.second);
-            d.dp1 = json::value<double>(i.second, "dp", 0); // trans. dp.
-            d.dp2 = json::value<double>(i.second, "dprot", 0); // rot. dp.
-            if (d.dp2>4*pc::pi) // no need to rotate more than
-              d.dp2=4*pc::pi;   // +/- 2 pi.
-            this->addMol( it->id, d );
-          }
-        }
+        auto m = in.getJSON()["moves"]["moltransrot"];
+        base::fillMolList(m);           // find molecules to be moved
+
+        for (auto &i : this->mollist) { // loop over molecules to be moved
+          string molname = spc->molList()[ i.first ].name;
+          i.second.dp1 = m[molname]["dp"] | 0.0;
+          i.second.dp2 = m[molname]["dprot"] | 0.0;
+          if (i.second.dp2>4*pc::pi)    // no need to rotate more than
+            i.second.dp2=4*pc::pi;      // +/- 2 pi.
+         }
       }
 
     template<class Tspace>
@@ -1667,19 +1679,14 @@ namespace Faunus {
         base::jsondir += "/"+subdir;
         w=30;
         gPtr=nullptr;
-        in.cd ( base::jsondir );
-        for (auto &i : in.getMap() ) { // loop over molecules
-          auto it = spc->molList().find( i.first );
-          if ( it == spc->molList().end() ) {
-            std::cerr << "Error: molecule '" << i.first << "' not defined." << endl;
-            exit(1);
-          } else {
-            typename Movebase<Tspace>::MolListData d(i.second);
-            d.dp1 = json::value<double>(i.second, "dp", 0); // trans. dp.
-            _minlen[ it->id ] = json::value<double>(i.second, "minlen", 1);
-            _maxlen[ it->id ] = json::value<double>(i.second, "maxlen", 4);
-            this->addMol( it->id, d );
-          }
+
+        auto js = in.getJSON()["moves"][subdir];
+        base::fillMolList( js );
+        for (auto &i : this->mollist) {
+          string name = spc->molList()[ i.first ].name;
+          i.second.dp1 = js[name]["dp"] | 0.0;
+          _minlen[ i.first ] = js[name]["minlen"] | 1.0;
+          _maxlen[ i.first ] = js[name]["maxlen"] | 4.0;
         }
       }
 

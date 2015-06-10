@@ -6,7 +6,7 @@ cp -f $source_tests_dir/water2.state state 2> /dev/null
 
 echo '{
   "system" : {
-    "cuboid"   : { "len" : 27. },
+    "cuboid"   : { "len" : 27.0 },
     "mcloop"   : { "macro":10, "micro":400 },
     "unittest" : { "testfile":"water2.test", "stable":false },
     "atomlist"              : "water2.json",
@@ -18,7 +18,7 @@ echo '{
     "nonbonded" : {
       "coulomb" : { "epsr" : 1.0, "cutoff":9 },
       "ewald"   : { "precision":0.01, "epsr_surf":1e11, "cutoff":9, "alpha":0.2 },
-      "cutoff_g2g" : 10.
+      "cutoff_g2g" : 10
     }
   },
 

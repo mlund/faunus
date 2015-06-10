@@ -84,9 +84,9 @@ namespace Faunus {
 
     void Sphere::randompos(Point &a) {
       do {
-        a.x() = (slp()-0.5)*diameter;
-        a.y() = (slp()-0.5)*diameter;
-        a.z() = (slp()-0.5)*diameter;
+        a.x() = (slump()-0.5)*diameter;
+        a.y() = (slump()-0.5)*diameter;
+        a.z() = (slump()-0.5)*diameter;
       } while ( a.squaredNorm()>r2 );
     }
 
@@ -135,9 +135,9 @@ namespace Faunus {
     }
 
     void Cuboid::randompos(Point &m) {
-      m.x() = slp.half()*len.x();
-      m.y() = slp.half()*len.y();
-      m.z() = slp.half()*len.z();
+      m.x() = slump.half()*len.x();
+      m.y() = slump.half()*len.y();
+      m.z() = slump.half()*len.z();
     }
 
     void Cuboid::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {
@@ -201,10 +201,10 @@ namespace Faunus {
 
     void Cylinder::randompos(Point &m) {
       double l=r2+1;
-      m.z() = slp.half()*_len;
+      m.z() = slump.half()*_len;
       while (l>r2) {
-        m.x() = slp.half()*diameter;
-        m.y() = slp.half()*diameter;
+        m.x() = slump.half()*diameter;
+        m.y() = slump.half()*diameter;
         l=m.x()*m.x()+m.y()*m.y();
       }
     }

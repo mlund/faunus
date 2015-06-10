@@ -20,7 +20,7 @@ echo '{
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "epsr":1, "cutoff":14., "cutoffdip":4.3 }
+       "coulomb" : { "epsr":1, "cutoff":14, "cutoffdip":4.3 }
     }
   },
 
@@ -30,12 +30,12 @@ echo '{
   },
 
   "system" : {
-    "temperature"  : 300.,
+    "temperature"  : 300,
     "cuboid"       : { "len" : 8.939 },
     "mcloop"       : { "macro":10, "micro":1000 },
     "unittest"     : { "testfile":"stockmayer.test", "stable":false },
     "atomlist"     : "stockmayer.json",
-    "coulomb" : { "epsr":1, "cutoff":14., "cutoffdip":4.3 },
+    "coulomb" : { "epsr":1, "cutoff":14, "cutoffdip":4.3 },
     "moleculelist" : "stockmayer.json"
   }
 }' > stockmayer.json

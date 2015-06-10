@@ -45,7 +45,6 @@ namespace Faunus {
         virtual void _setVolume(double)=0;
         virtual double _getVolume() const=0;
       protected:
-        RandomTwister<> slp;
         string name;                                        //!< Name of the geometry
         string jsondir;                                     //!< Default input section
         inline int anint(double x) const {

@@ -19,7 +19,7 @@ echo '{
   },
 
   "energy" : {
-    "nonbonded" : { "coulomb" : { "epsr":1, "cutoff":14. } }
+    "nonbonded" : { "coulomb" : { "epsr":1, "cutoff":14 } }
   },
 
   "moves" : {
@@ -30,8 +30,8 @@ echo '{
   },
 
   "system" : {
-    "temperature"  : 1100.,
-    "cuboid"       : { "len" : 80. },
+    "temperature"  : 1100,
+    "cuboid"       : { "len" : 80 },
     "mcloop"       : { "macro":5, "micro":40 },
     "unittest"     : { "testfile":"bulk.test", "stable":false },
     "atomlist"     : "bulk.json",

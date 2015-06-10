@@ -19,7 +19,7 @@ echo '{
     "polymer" : {
       "structure":"polymers.aam", "Ninit":8,
       "bonds" : {
-        "0 1" : { "type":"harmonic", "k":0.0557, "req":0.0 }, // kT/AA^2, AA
+        "0 1" : { "type":"harmonic", "k":0.0557, "req":0.0 },
         "1 2" : { "type":"harmonic", "k":0.0557, "req":0.0 },
         "2 3" : { "type":"harmonic", "k":0.0557, "req":0.0 }
       }
@@ -48,8 +48,8 @@ echo '{
   },
 
   "system" : {
-    "cuboid"       : { "len" : 200. },
-    "sphere"       : { "radius" : 100. },
+    "cuboid"       : { "len" : 200 },
+    "sphere"       : { "radius" : 100 },
     "mcloop"       : { "macro":10, "micro":20000 },
     "unittest"     : { "testfile":"polymers.test", "stable":false },
     "atomlist"     : "polymers.json",

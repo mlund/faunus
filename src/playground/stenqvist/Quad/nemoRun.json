@@ -1,0 +1,31 @@
+{
+  "atomlist" : {
+    "dip" : { "sigma":1.0, "eps":0.17211, "mu":"0 0 0.415", "dp":0.3, "dprot":180,
+              "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0" }
+  },
+
+  "moleculelist" : {
+    "sol" : { "atoms":"dip", "Ninit":10000, "atomic":true }
+  },
+
+  "energy" : {
+    "nonbonded" : {
+       "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoff_rf":31.9165, "epsilon_rf":130.0 },
+       "ewald"   : { "precision":0.01, "epsr_surf":1e11, "cutoff":4.4695, "alpha":0.168421052631579, "maxK":11 },
+    }
+  },
+
+  "moves" : {
+    "atomtranslate" : { "sol" : { "peratom":true } },
+    "atomrotate" : { "sol" : { "peratom":true } }
+  },
+
+  "system" : {
+    "temperature"  : 300.,
+    "cuboid"       : { "len" : 63.833 },
+    "mcloop"       : { "macro":10, "micro":10 },
+    "atomlist"     : "nemo.json",
+    "coulomb" : { "epsr":1, "cutoff":4.4695, "cutoffdip":4.4695 },
+    "moleculelist" : "nemo.json"
+  }
+}

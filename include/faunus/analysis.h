@@ -1228,14 +1228,18 @@ namespace Faunus {
      * @param spc The space
      * @param filename Extention of filename from previous saved run (optional)
      */
-    class DipoleAnalysis {
+    class MultipoleAnalysis {
       private:
         Analysis::RadialDistribution<> rdf;
         Table2D<double,double> kw, mucorr_angle;
         Table2D<double,Average<double> > mucorr, mucorr_dist; 
-        Histogram<double,unsigned int> HM_x,HM_y,HM_z,HM_x_box,HM_y_box,HM_z_box,HM2,HM2_box;
-        Average<double> M_x,M_y,M_z,M_x_box,M_y_box,M_z_box,M2,M2_box,diel_std, V_t, groupDipole;
-        vector<Average<double>> mu_abs;
+        Histogram<double,unsigned int> HM2,HM2_box;
+        Average<double> M2,M2_box,diel_std, V_t, groupDipole;
+        
+	vector<Table2D<double,Average<double> >> Qofr, Mofr;  // Quadrupole and dipole as a function of distance 
+	vector<Histogram<double,unsigned int>> HQ, HQ_box, HM, HM_box;
+	vector<Average<double>> Q, Q_box, mu_abs, M, M_box;
+	vector<string> postFixMu,postFixQuad;
 
         int sampleKW, atomsize;
         double cutoff2, N;
@@ -1243,17 +1247,60 @@ namespace Faunus {
 
       public:
         template<class Tspace, class Tinputmap>
-          DipoleAnalysis(const Tspace &spc, Tinputmap &in) : 
-            rdf(0.1),kw(0.1),mucorr_angle(0.1),mucorr(0.1),mucorr_dist(0.1),HM_x(0.1),HM_y(0.1),
-            HM_z(0.1),HM_x_box(0.1),HM_y_box(0.1),HM_z_box(0.1),HM2(0.1),HM2_box(0.1) {
+          MultipoleAnalysis(const Tspace &spc, Tinputmap &in, double resolution=0.1) {
             sampleKW = 0;
             setCutoff(spc.geo.len_half.x());
             N = spc.p.size();
             const_Diel = pc::e*pc::e*1e10/(3*pc::kT()*pc::e0);
-            updateConstants(spc.geo.getVolume());
+            updateVolume(spc.geo.getVolume());
             updateDielectricConstantRF(in.get("epsilon_rf",80.));
             atomsize = atom.size();
             mu_abs.resize(atomsize-1);
+	    
+	    Qofr.resize(9);
+	    Mofr.resize(3);
+	    HM.resize(3);
+	    HM_box.resize(3);
+	    M.resize(3);
+	    M_box.resize(3);
+	    HQ.resize(9);
+	    HQ_box.resize(9);
+	    Q.resize(9);
+	    Q_box.resize(9);
+	    
+	    rdf.setResolution(resolution);
+	    kw.setResolution(resolution);
+	    mucorr_angle.setResolution(resolution);
+	    mucorr.setResolution(resolution);
+	    mucorr_dist.setResolution(resolution);
+	    HM2.setResolution(resolution);
+	    HM2_box.setResolution(resolution);
+	    for(int i = 0; i < 3; i++) {
+	      Mofr.at(i).setResolution(resolution);
+	      HM.at(i).setResolution(resolution);
+	      HM_box.at(i).setResolution(resolution);
+	    }
+	    for(int i = 0; i < 9; i++) {
+	      Qofr.at(i).setResolution(resolution);
+	      HQ.at(i).setResolution(resolution);
+	      HQ_box.at(i).setResolution(resolution);
+	      Q.at(i).reset();
+	      Q_box.at(i).reset();
+	    }
+	    
+	    postFixMu.push_back("x");
+	    postFixMu.push_back("y");
+	    postFixMu.push_back("z");
+	    postFixQuad.push_back("xx");
+	    postFixQuad.push_back("xy");
+	    postFixQuad.push_back("xz");
+	    postFixQuad.push_back("yx");
+	    postFixQuad.push_back("yy");
+	    postFixQuad.push_back("yz");
+	    postFixQuad.push_back("zx");
+	    postFixQuad.push_back("zy");
+	    postFixQuad.push_back("zz");
+	    
           }
 
         void setCutoff(double cutoff) {
@@ -1265,7 +1312,7 @@ namespace Faunus {
           constEpsRF = 2*(epsRF - 1)/(2*epsRF + 1);
         }
 
-        void updateConstants(double volume) {
+        void updateVolume(double volume) {
           V_t += volume;
           const_DielTinfoil = const_Diel/V_t.avg();
           const_DielCM = const_DielTinfoil/3;
@@ -1279,21 +1326,39 @@ namespace Faunus {
         template<class Tspace>
           void sampleDP(Tspace &spc) {
             Point origin(0,0,0);
-            Point mu(0,0,0);        // In e\AA
-            Point mu_box(0,0,0);    // In e\AA
+            Point mu(0,0,0);          // In e\AA
+            Point mu_box(0,0,0);      // In e\AA
+            Tensor<double> quad;      // In e\AA^2
+            Tensor<double> quad_box;  // In e\AA^2
+            quad.setZero();
+            quad_box.setZero();
 
             for (auto &i : spc.p) {
               if (spc.geo.sqdist(i,origin)<cutoff2) {
                 mu += i.mu*i.muscalar;
+                quad += i*i.mu.transpose()*i.muscalar;
+                quad += i.theta;
               } else {
                 mu_box += i.mu*i.muscalar;
+                quad_box += i*i.mu.transpose()*i.muscalar;
+                quad_box += i.theta;
               }
               for(int j = 0; j < atomsize-1; j++)
                 if(int(i.id) == j+1)
                   mu_abs[j] += i.muscalar;
             }
             mu_box += mu;
-            samplePP(spc,mu,mu_box);
+            quad_box += quad;
+	    
+            double mus_group = 0.0;
+            for (auto gi : spc.groupList()) {
+	      Point m(0,0,0);
+              for (auto i : *gi)
+                m += spc.p[i].muscalar*spc.p[i].mu;
+              mus_group += m.norm();
+            }
+	    
+            samplePP(spc,origin,mu,mu_box,quad,quad_box,mus_group);
           }
 
         /**
@@ -1304,25 +1369,21 @@ namespace Faunus {
          * @param mu_box Dipoles to add to from entire box (optional)
          */
         template<class Tspace>
-          void samplePP(Tspace &spc, Point mu=Point(0,0,0), Point mu_box=Point(0,0,0)) {
-            updateConstants(spc.geo.getVolume());
-            Group all(0,spc.p.size()-1);
-            all.setMassCenter(spc);
-            mu += Geometry::dipoleMoment(spc,all,sqrt(cutoff2));
-            mu_box += Geometry::dipoleMoment(spc,all);
-
-            HM_x(mu.x())++;
-            HM_y(mu.y())++;
-            HM_z(mu.z())++;
-            HM_x_box(mu_box.x())++;
-            HM_y_box(mu_box.y())++;
-            HM_z_box(mu_box.z())++;
-            M_x += mu.x();
-            M_y += mu.y();
-            M_z += mu.z();
-            M_x_box += mu_box.x();
-            M_y_box += mu_box.y();
-            M_z_box += mu_box.z();
+          void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0), Tensor<double> quad=Tensor<double>(),Tensor<double> quad_box=Tensor<double>(), double mus_group = 0.0) {
+	    updateVolume(spc.geo.getVolume());
+            
+	    for (auto gi : spc.groupList()) {
+	      mu += dipoleMoment(spc, *gi);
+	      quad += dipoleQuadrupole(spc, *gi);
+	    }
+            
+            for(int cnt = 0; cnt < 3; cnt++) {
+	      HM.at(cnt)(mu[cnt])++;
+	      HM_box.at(cnt)(mu_box[cnt])++;
+	      M.at(cnt) += mu[cnt];
+	      M_box.at(cnt) += mu_box[cnt];
+	    }
+	    
             double sca = mu.dot(mu);
             HM2(sca)++;
             M2 += sca;
@@ -1330,12 +1391,19 @@ namespace Faunus {
             HM2_box(sca)++;
             M2_box += sca;
             diel_std.add(getDielTinfoil());
-            
-            double mus_group = 0.0;
+	    
+	    int cnt = 0;
+	    for(int i = 0; i < 3; i++) {
+	      for(int j = 0; j < 3; j++) {
+		HQ.at(cnt)(quad(i,j))++;
+		HQ_box.at(cnt)(quad_box(i,j))++;
+		Q.at(cnt) += quad(i,j);
+		Q_box.at(cnt++) += quad_box(i,j);
+	      }
+	    }
+	    
             for (auto gi : spc.groupList()) {
               Point m = Geometry::dipoleMoment(spc, *gi);
-              for (auto i : *gi)
-                m += spc.p[i].muscalar*spc.p[i].mu;
               mus_group += m.norm();
             }
             groupDipole += (mus_group / double(spc.groupList().size()));
@@ -1348,10 +1416,23 @@ namespace Faunus {
          *
          */
         template<class Tspace>
-          void sampleMuCorrelationAndKirkwood(const Tspace &spc) {
+          void sampleMuCorrelationAndKirkwood(const Tspace &spc, Point origin=Point(0,0,0)) {
             double r, sca;
             int N = spc.p.size() - 1;
+	    
             for (int i = 0; i < N; i++) {
+              Point mu = spc.p[i].mu*spc.p[i].muscalar;
+	      Tensor<double> quad = spc.p[i]*spc.p[i].transpose();
+	      quad = quad*spc.p[i].charge;
+              quad += spc.p[i]*spc.p[i].mu.transpose()*spc.p[i].muscalar;
+	      r =  spc.geo.dist(spc.p[i],origin);
+	      for(int cnt = 0; cnt < 3; cnt++)
+		Mofr.at(cnt)(r) += mu[cnt];
+	      int cnt = 0;
+	      for(int m = 0; m < 3; m++)
+		for(int n = 0; n < 3; n++)
+		  Qofr.at(cnt++)(r) += quad(m,n);
+	      
               kw(0) += spc.p[i].mu.dot(spc.p[i].mu)*spc.p[i].muscalar*spc.p[i].muscalar;
               for (int j = i+1.; j < N + 1; j++) {
                 r = spc.geo.dist(spc.p[i],spc.p[j]); 
@@ -1430,33 +1511,40 @@ namespace Faunus {
          * 
          */
         void save(string ext="", bool reset=false) {
-          rdf.save("gofr.dat"+ext);
+          rdf.normSave("gofr.dat"+ext);  //  save("gofr.dat"+ext);
           mucorr.save("mucorr.dat"+ext);
           mucorr_angle.save("mucorr_angle.dat"+ext);
           mucorr_dist.save("mucorr_dist.dat"+ext);
           kw.sumSave("kirkwood.dat"+ext,1.0/double(sampleKW));
-          HM_x.save("hist_dip_x.dat"+ext);
-          HM_y.save("hist_dip_y.dat"+ext);
-          HM_z.save("hist_dip_z.dat"+ext);
-          HM_x_box.save("hist_dip_x_box.dat"+ext);
-          HM_y_box.save("hist_dip_y_box.dat"+ext);
-          HM_z_box.save("hist_dip_z_box.dat"+ext);
           HM2.save("hist_dip2.dat"+ext);
           HM2_box.save("hist_dip2_box.dat"+ext);
+	  
+	  for(int cnt = 0; cnt < 3; cnt++) {
+	    Mofr.at(cnt).sumSaveAvg("muofr_"+postFixMu.at(cnt)+".dat"+ext,1.0/double(sampleKW));
+	    HM.at(cnt).save("hist_dip_"+postFixMu.at(cnt)+".dat"+ext);
+	    HM_box.at(cnt).save("hist_dip_"+postFixMu.at(cnt)+"_box.dat"+ext);
+	  }
+	  for(int cnt = 0; cnt < 9; cnt++) {
+	    Qofr.at(cnt).sumSaveAvg("quadofr_"+postFixQuad.at(cnt)+".dat"+ext,1.0/double(sampleKW));
+	    HQ.at(cnt).save("hist_quad_"+postFixQuad.at(cnt)+".dat"+ext);
+	    HQ_box.at(cnt).save("hist_quad_"+postFixQuad.at(cnt)+"_box.dat"+ext);
+	  }
 
           string filename = "dipoledata.dat"+ext;
           std::ofstream f(filename.c_str());
           f.precision(10);
           if (f) {
-            if (M_x.cnt != 0)      f << "M_x " << M_x.cnt << " " << M_x.avg() << " " << M_x.sqsum << "\n";
-            if (M_y.cnt != 0)      f << "M_y " << M_y.cnt << " " << M_y.avg() << " " << M_y.sqsum << "\n";
-            if (M_z.cnt != 0)      f << "M_z " << M_z.cnt << " " << M_z.avg() << " " << M_z.sqsum << "\n";
-            if (M_x_box.cnt != 0)  f << "M_x_box " << M_x_box.cnt << " " << M_x_box.avg() << " " << M_x_box.sqsum << "\n";
-            if (M_y_box.cnt != 0)  f << "M_y_box " << M_y_box.cnt << " " << M_y_box.avg() << " " << M_y_box.sqsum << "\n";
-            if (M_z_box.cnt != 0)  f << "M_z_box " << M_z_box.cnt << " " << M_z_box.avg() << " " << M_z_box.sqsum << "\n";
+	    for(int cnt = 0; cnt < 3; cnt++) {
+	      if (M.at(cnt).cnt != 0)      f << "M_"+postFixMu.at(cnt)+" " << M.at(cnt).cnt << " " << M.at(cnt).avg() << " " << M.at(cnt).sqsum << "\n";
+	      if (M_box.at(cnt).cnt != 0)      f << "M_"+postFixMu.at(cnt)+"_box " << M_box.at(cnt).cnt << " " << M_box.at(cnt).avg() << " " << M_box.at(cnt).sqsum << "\n";
+	    }
+	    for(int cnt = 0; cnt < 9; cnt++) {
+	      if (Q.at(cnt).cnt != 0)      f << "Q_"+postFixQuad.at(cnt)+" " << Q.at(cnt).cnt << " " << Q.at(cnt).avg() << " " << Q.at(cnt).sqsum << "\n";
+	      if (Q_box.at(cnt).cnt != 0)      f << "Q_"+postFixQuad.at(cnt)+"_box " << Q_box.at(cnt).cnt << " " << Q_box.at(cnt).avg() << " " << Q_box.at(cnt).sqsum << "\n";
+	    }
             if (M2.cnt != 0)       f << "M2 " << M2.cnt << " " << M2.avg() << " " << M2.sqsum << "\n";
             if (M2_box.cnt != 0)   f << "M2_box " << M2_box.cnt << " " << M2_box.avg() << " " << M2_box.sqsum << "\n";
-            if (diel_std.cnt != 0) f << "diel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum;
+            if (diel_std.cnt != 0) f << "diel_std " << diel_std.cnt << " " << diel_std.avg() << " " << diel_std.sqsum << "\n";
             for(int j = 0; j < atomsize -1 ; j++)
               if (mu_abs[j].cnt != 0)      
                 f << "mu_abs_" << atom[j+1].name << " " << mu_abs[j].cnt << " " << mu_abs[j].avg() << " " << mu_abs[j].sqsum << "\n";
@@ -1468,25 +1556,28 @@ namespace Faunus {
             mucorr_angle.clear();
             mucorr_dist.clear();
             kw.clear();
-            HM_x.clear();
-            HM_y.clear();
-            HM_z.clear();
-            HM_x_box.clear();
-            HM_y_box.clear();
-            HM_z_box.clear();
             HM2.clear();
             HM2_box.clear();
-            M_x.reset();
-            M_y.reset();
-            M_z.reset();
-            M_x_box.reset();
-            M_y_box.reset();
-            M_z_box.reset();
             M2.reset();
             M2_box.reset();
             diel_std.reset();
             for(int j = 0; j < atomsize -1 ; j++)
               mu_abs[j].reset();
+	    
+	    for(int cnt = 0; cnt < 9; cnt++) {
+	      Qofr.at(cnt).clear();
+	      HQ.at(cnt).clear();
+	      HQ_box.at(cnt).clear();
+	      Q.at(cnt).reset();
+	      Q_box.at(cnt).reset();
+	    }
+	    for(int cnt = 0; cnt < 3; cnt++) {
+		Mofr.at(cnt).clear();
+		HM.at(cnt).clear();
+		HM_box.at(cnt).clear();
+		M.at(cnt).reset();
+		M_box.at(cnt).reset();
+	    }
           }
         }
 
@@ -1498,14 +1589,19 @@ namespace Faunus {
           mucorr_angle.load("mucorr_angle.dat"+ext);
           mucorr_dist.load("mucorr_dist.dat"+ext);
           kw.load("kirkwood.dat"+ext);
-          HM_x.load("hist_dip_x.dat"+ext);
-          HM_y.load("hist_dip_y.dat"+ext);
-          HM_z.load("hist_dip_z.dat"+ext);
-          HM_x_box.load("hist_dip_x_box.dat"+ext);
-          HM_y_box.load("hist_dip_y_box.dat"+ext);
-          HM_z_box.load("hist_dip_z_box.dat"+ext);
+	  
           HM2.load("hist_dip2.dat"+ext);
           HM2_box.load("hist_dip2_box.dat"+ext);
+	  for(int cnt = 0; cnt < 3; cnt++) {
+	    Mofr.at(cnt).load("muofr_"+postFixMu.at(cnt)+".dat"+ext);
+	    HM.at(cnt).load("hist_dip_"+postFixMu.at(cnt)+".dat"+ext);
+	    HM_box.at(cnt).load("hist_dip_"+postFixMu.at(cnt)+"_box.dat"+ext);
+	  }
+	  for(int cnt = 0; cnt < 9; cnt++) {
+	    Qofr.at(cnt).load("quadofr_"+postFixQuad.at(cnt)+".dat"+ext);
+	    HQ.at(cnt).load("hist_dip_"+postFixQuad.at(cnt)+".dat"+ext);
+	    HQ_box.at(cnt).load("hist_dip_"+postFixQuad.at(cnt)+"_box.dat"+ext);
+	  }
 
           string filename = "dipoledata.dat"+ext;
           std::ifstream f(filename.c_str());
@@ -1517,37 +1613,8 @@ namespace Faunus {
               double average;
               double sqsum;
               f >> name >> cnt >> average >> sqsum;
-              if(name == "M_x") {
-                M_x.reset();
-                Average<double> M_xt(average,sqsum,cnt);
-                M_x = M_x + M_xt;
-              }
-              if(name == "M_y") {
-                M_y.reset();
-                Average<double>M_yt(average,sqsum,cnt);
-                M_y = M_y + M_yt;
-              }
-              if(name == "M_z") {
-                M_z.reset();
-                Average<double> M_zt(average,sqsum,cnt);
-                M_z = M_z + M_zt;
-              }
-              if(name == "M_x_box") {
-                M_x_box.reset();
-                Average<double> M_x_boxt(average,sqsum,cnt);
-                M_x_box = M_x_box + M_x_boxt;
-              }
-              if(name == "M_y_box") {
-                M_y_box.reset();
-                Average<double> M_y_boxt(average,sqsum,cnt);
-                M_y_box = M_y_box + M_y_boxt;
-              }
-              if(name == "M_z_box") {
-                M_z_box.reset();
-                Average<double> M_z_boxt(average,sqsum,cnt);
-                M_z_box = M_z_box + M_z_boxt;
-              }
-              if(name == "M2") {
+
+	      if(name == "M2") {
                 M2.reset();
                 Average<double> M2t(average,sqsum,cnt);
                 M2 = M2 + M2t;
@@ -1568,6 +1635,34 @@ namespace Faunus {
                 mu_abs[cnt_mu_abs] = mu_abs[cnt_mu_abs] + mu_abst;
                 cnt_mu_abs++;
               }
+	      for(int cnt = 0; cnt < 3; cnt++) {
+		if(name == "M_"+postFixMu.at(cnt)) {
+		  M.at(cnt).reset();
+		  Average<double> M_t(average,sqsum,cnt);
+		  M.at(cnt) = M.at(cnt) + M_t;
+		  break;
+		}
+		if(name == "M_"+postFixMu.at(cnt)+"_box") {
+		  M_box.at(cnt).reset();
+		  Average<double> M_t(average,sqsum,cnt);
+		  M_box.at(cnt) = M_box.at(cnt) + M_t;
+		  break;
+		}
+	      }
+              for(int cnt = 0; cnt < 9; cnt++) {
+		if(name == "Q_"+postFixQuad.at(cnt)) {
+		  Q.at(cnt).reset();
+		  Average<double> Q_t(average,sqsum,cnt);
+		  Q.at(cnt) = Q.at(cnt) + Q_t;
+		  break;
+		}
+		if(name == "Q_"+postFixQuad.at(cnt)+"_box") {
+		  Q_box.at(cnt).reset();
+		  Average<double> Q_t(average,sqsum,cnt);
+		  Q_box.at(cnt) = Q_box.at(cnt) + Q_t;
+		  break;
+		}
+	      }
             }
           }
         }
@@ -1575,7 +1670,7 @@ namespace Faunus {
         inline string info() {
           using namespace Faunus::textio;
           std::ostringstream o;
-          o << header("Dipole analysis");
+          o << header("Multipole analysis");
           o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil()
             << ", "+sigma+"=" << diel_std.stdev() << ", "+sigma+"/"+epsilon_m+subr+"="
             << (100*diel_std.stdev()/getDielTinfoil()) << percent << endl
@@ -1583,11 +1678,19 @@ namespace Faunus {
             << " eA"+squared+", "+sigma+"=" << M2_box.stdev()
             << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg())
             << percent << "\n"
-            << indent(SUB) << bracket("M") << setw(25) << "( " << M_x_box.avg()
-            << " , " << M_y_box.avg() << " , " << M_z_box.avg()
+            << indent(SUB) << bracket("M") << setw(25) << "( " << M_box.at(0).avg()
+            << " , " << M_box.at(1).avg() << " , " << M_box.at(2).avg()
             << " ) eA\n"
-            << indent(SUBSUB) << sigma << setw(25) << "( " << M_x_box.stdev()
-            << " , " << M_y_box.stdev() << " , " << M_z_box.stdev()
+            << indent(SUBSUB) << sigma << setw(25) << "( " << M_box.at(0).stdev()
+            << " , " << M_box.at(1).stdev() << " , " << M_box.at(2).stdev()
+            << " )\n"
+            << indent(SUB) << bracket("Q") << setw(25) << "( " << Q_box.at(0).avg() << " " << Q_box.at(1).avg() << " " << Q_box.at(2) << " )\n "
+            << indent(SUBSUB) << setw(25) << "( " << Q_box.at(3).avg() << " " << Q_box.at(4).avg() << " " << Q_box.at(5).avg() << " )\n "
+            << indent(SUBSUB) << setw(25) << "( " << Q_box.at(6).avg() << " " << Q_box.at(7).avg() << " " << Q_box.at(8).avg()
+            << " ) eA"+squared+"\n"
+            << indent(SUBSUB) << sigma << setw(25) << "( " << Q_box.at(0).stdev() << " " << Q_box.at(1).stdev() << " " << Q_box.at(2).stdev() << " )\n"
+            << indent(SUBSUB) << setw(26) << "( " << Q_box.at(3).stdev() << " " << Q_box.at(4).stdev() << " " << Q_box.at(5).stdev() << " )\n" 
+            << indent(SUBSUB) << setw(26) << "( " << Q_box.at(6).stdev() << " " << Q_box.at(7).stdev() << " " << Q_box.at(8).stdev()
             << " )\n";
             for(int j = 0; j < atomsize - 1; j++) {
               o << indent(SUB) << bracket("|"+mu+"|") << "(" << atom[j+1].name << ")" << setw(20) << mu_abs[j].avg() << " eÅ, "+sigma+"=" << mu_abs[j].stdev() << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs[j].stdev()/mu_abs[j].avg()) << percent << endl;

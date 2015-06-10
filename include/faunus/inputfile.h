@@ -177,7 +177,7 @@ namespace Faunus {
 
     if ( atom.empty() )
       std::cerr << "Warning: AtomMap is empty." << endl; 
-
+    
     return true;
   }
 

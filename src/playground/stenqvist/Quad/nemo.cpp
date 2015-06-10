@@ -1,18 +1,41 @@
+#define DIPOLEPARTICLE
 #include <faunus/faunus.h>
 #include <faunus/multipole.h>
-
-using namespace Faunus;
+#include <functional>
+#include <iostream>
+using namespace Faunus;                     
 using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid,DipoleParticle> Tspace; 
-typedef CombinedPairPotential<LennardJonesLB,DipoleDipole> Tpair;
+typedef DipoleDipoleQ TpairDD;
+typedef LennardJonesLB TpairLJ;
+typedef CombinedPairPotential<TpairLJ,TpairDD> Tpair;
+
+template<class Tpairpot, class Tid>
+bool savePotential(Tpairpot pot, Tid ida, Tid idb, string file) {
+  std::ofstream f(file.c_str());
+  if (f) {
+    DipoleParticle a,b;
+    a=atom[ida];
+    b=atom[idb];
+    a.mu = Point(1,0,0);
+    b.mu = Point(1,0,0);
+    for (double r=0.5; r<=4.5; r+=0.05) {
+      f << std::left << std::setw(10) << r << " "
+        << pot(a,b,Point(r,0,0)) << endl;
+    }
+    return true;
+  }
+  return false;
+}
 
 int main() {
-  InputMap in("stockmayer.json");                // open parameter file for user input
+  InputMap in("nemo.json");                // open parameter file for user input
   Tspace spc(in);                                // sim.space, particles etc.
 
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
+  //savePotential(pot, "sol", "sol","potential.dat");
 
 #ifdef __POLARIZE
   Move::Propagator<Tspace,true> mv(in,pot,spc);
@@ -43,34 +66,13 @@ int main() {
     cout << loop.timing() << std::flush;
   }
 
-  UnitTest test(in);
-  mv.test(test);
-  sys.test(test);
-  sdp.saveDipoleWRL("stockmayer.wrl", spc, Group(0, spc.p.size()-1) );
+  sdp.saveDipoleWRL("nemo.wrl", spc, Group(0, spc.p.size()-1) );
   FormatPQR().save("confout.pqr", spc.p);
   dian.save();
   spc.save("state");
 
   std::cout << spc.info() + pot.info() + mv.info()
-    + sys.info() + test.info() + dian.info(); // final info
+    + sys.info() + dian.info(); // final info
 
-  return test.numFailed();
+  return 0;
 }
-/**  @page example_stockmayer Example: Stockmayer potential
-
-  This will simulate a Stockmayer potential in a cubic box.
-
-  Run this example from the `examples` directory:
-
-  ~~~~~~~~~~~~~~~~~~~
-  $ make
-  $ cd src/examples
-  $ ./stockmayer.run
-  ~~~~~~~~~~~~~~~~~~~
-
-  stockmayer.cpp
-  ==============
-
-  @includelineno examples/stockmayer.cpp
-
-*/

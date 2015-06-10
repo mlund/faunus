@@ -3,14 +3,14 @@
     "Na" : { "q": 0.0, "r":0.0, "dp":40.0, "activity":0.01 },
     "Cl" : { "q": 0.0, "r":0.0, "dp":40.0, "activity":0.01 },
     "MM" : { "q": 0.0, "r":2.0, "dp":10.0 },
-    "sol1" : {"q":1, "dp":0, "dprot":0, "alpha":"0 0 0 0 0 0"},
-    "sol2" : {"q":0, "dp":0, "dprot":0, "alpha":"2.6 0 0 2.6 0 2.6"}
+    "sol" : {"q":0.0, "mu":"0 0 0", "sigma":0.0, "dp":0.0, "dprot":0.0}
   },
 
   "moleculelist": {
     "salt": { "atoms": "Na Cl", "atomic":true },
-    "multipoles" : { "atoms" : "sol1 sol2", "atomic":true },
-    "square"  : { "activity": 0.01, "atoms": "MM MM MM MM", "structure":"unittests.aam" }
+    "multipoles" : { "atoms" : "sol", "Ninit":2, "atomic":true },
+    "square"  : { "activity": 0.01, "atoms": "MM MM MM MM", "structure":"unittests.aam" },
+    "ewa" : { "atoms":"sol", "Ninit":4, "atomic":true }
   },
 
   "moleculecombinations" : {
@@ -19,6 +19,7 @@
 
   "energy" : { 
     "nonbonded" : {
+      "ewald"   : { "eps_surf":1.0, "cutoff":5, "alpha":0.894427190999916, "cutoffK_x_ion":11, "cutoffK_y_ion":11, "cutoffK_z_ion":11, "cutoffK_x_dip":11, "cutoffK_y_dip":11, "cutoffK_z_dip":11, "spherical_sum":true },
       "coulomb" : { "epsr":1.0 }
     }
   },
@@ -28,9 +29,9 @@
       "multipoles" : { "peratom":false }
     }
   },
-
+  
   "system" : {
-    "temperature" : 298,
+    "temperature" : 298,  
     "coulomb" : { "epsr": 1.0 },
     "cuboid" : { "len": 10.0 },
     "moleculelist" : "unittests.json",

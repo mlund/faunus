@@ -295,7 +295,7 @@ namespace Faunus {
                 T u0upp = f(zupp);
                 T u1upp = base::f1(f,zupp);
                 T u2upp = base::f2(f,zupp);
-
+		
                 ubuft = SetUBuffer(rlow,zlow,rupp,zupp,u0low,u1low,u2low,u0upp,u1upp,u2upp);
                 std::vector<bool> vb = CheckUBuffer(ubuft,rlow,rupp,f);
                 repul = vb[1];
@@ -305,7 +305,13 @@ namespace Faunus {
                 }
                 dr*=drfrac;
               }
-              assert(j<ndr && "Try to increase utol/ftol");
+              
+              //assert(j<ndr && "Try to increase utol/ftol"); 
+	      if(j >= ndr) {
+		std::cerr << " Maximum number of iterations ("<<ndr<<") in function generate. Try to increase utol/ftol" << endl;
+		exit(1);
+	      }
+	      
               assert(ubuft.size()==7 && "Wrong size of ubuft, minvalue + 6 coefficients");
               td.r2.push_back(zlow);
               for (size_t k = 1; k<ubuft.size(); k++)

@@ -1,7 +1,9 @@
 #undef NDEBUG
 #define CATCH_CONFIG_MAIN  // This tell CATCH to provide a main() - only do this in one cpp file
+#define DIPOLEPARTICLE
 #include <catch/catch.hpp>
 #include <faunus/faunus.h>
+#include <faunus/ewald.h>
 
 using namespace Faunus;
 
@@ -99,13 +101,69 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
   auto m = spc.molList().find( "multipoles" );
   spc.insert( m->id, m->getRandomConformation() );
 
+  
+  for(unsigned int i = 0; i < spc.p.size(); i++) {
+      spc.p[i] = Point(i,0,0);
+      spc.p[i].alpha.setZero();
+      spc.p[i].charge = 0.0;
+      spc.p[i].muscalar = 0.0;
+  }
+  
   spc.p[0] = Point(0,0,0);
   spc.p[1] = Point(0,0,4);
+  
+  spc.p[0].charge = 1.0;
+  spc.p[1].alpha.setIdentity(3,3);
+  spc.p[1].alpha *= 2.6;
+  spc.p[1].alpha /= pc::lB(1.0);
+  
   spc.trial = spc.p;
 
-  CHECK( spc.p.size() == 2 );
-  CHECK( mv.move(1) == Approx(-5.69786) ); // check energy change
-  CHECK( spc.p[1].muscalar == Approx(0.162582) ); // check induced moment
+  CHECK( mv.move(1) == Approx(-5.6949953125) ); // check energy change  (-5.69786)
+  CHECK( spc.p[1].muscalar == Approx(0.1625) ); // check induced moment (0.162582)
+}
+
+TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction") 
+{
+  // TEST SHOULD BE OPTIMIZED !  ( PROBLEMS WITH INFTY ENERGY WITH TWO PARTICLES )
+  // Check against values from article: http://dx.doi.org/10.1063/1.481216
+
+  InputMap in("unittests.json");    
+  auto pot = Energy::NonbondedEwald<Space<Geometry::Cuboid,DipoleParticle>,Potential::HardSphere,true,false,true>(in);
+  Space<Geometry::Cuboid,DipoleParticle> spc(in);         
+  Group sol;
+  sol.addParticles(spc, in);    
+  
+  spc.p[0] = Point(0,0,0);
+  spc.p[1] = Point(1,0,0);
+  spc.p[2] = Point(0,0,1);
+  spc.p[3] = Point(1,0,1);
+  
+  for(unsigned int i = 0; i < spc.p.size(); i++) {
+      spc.p[i].charge = 0.0;
+      spc.p[i].muscalar = 0.0;
+  }
+  
+  double scale = 0.001783368591767;
+  
+  spc.p[0].charge = 1.0; // Scale with 'scale' in order to get right energy at 298 K
+  spc.p[1].charge = -1.0;
+  spc.trial = spc.p;
+  CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-1.0000311/scale));  // Ion-Ion interaction energy in order to get right energy at 298 K
+  
+  //cout << pot.info() << endl;
+  
+  spc.p[0].charge = 0.0;
+  spc.p[1].charge = 0.0;
+  spc.p[2].muscalar = 1.0; // Scale with 'scale' in order to get right energy at 298 K
+  spc.p[3].muscalar = 1.0;
+  spc.p[2].mu = Point(1,0,0);
+  spc.p[3].mu = Point(1,0,0);
+  spc.trial = spc.p;
+  
+  CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-2.0003749/scale));  // Dipole-Dipole interaction energy
+  
+  //cout << pot.info() << endl;
 }
 
 TEST_CASE("Groups", "Check group range and size properties")

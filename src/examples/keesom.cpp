@@ -8,6 +8,7 @@ double keesom(double mu, double r) {
 }
 
 int main() {
+  InputMap in("keesom.json"); 
   DipoleParticle a;            // create a dipole particle
   a.clear();                   // ...and make sure it is empty 
   a.mu = {1,0,0};              // initial dipole direction (unit vector)
@@ -15,7 +16,7 @@ int main() {
   auto b=a;                    // duplicate particle...
   b.x() = 0.9_angstrom;        // ...and separate by 0.9 angstrom
 
-  Potential::DipoleDipole u(298.15_K, 80.); // pair potential
+  Potential::DipoleDipole u(in); // pair potential
   RandomTwister<> ran;         // random number generator
 
   while (b.x() < 0.4_nm) {     // loop over separations

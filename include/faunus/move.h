@@ -598,8 +598,15 @@ namespace Faunus {
           Average<unsigned long long int> gsize; //!< Average size of igroup;
 
         public:
-          AtomicTranslation(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="", string="/atomtranslate");
+
+          AtomicTranslation(InputMap&, Energy::Energybase<Tspace>&, Tspace&,
+              string="", string="/atomtranslate");
+
+          AtomicTranslation(Energy::Energybase<Tspace>&, Tspace&,
+              Tmjson &, string="atomtranslate");
+
           void setGenericDisplacement(double); //!< Set single displacement for all atoms
+
           Point dir;             //!< Translation directions (default: x=y=z=1)
       };
 
@@ -624,6 +631,8 @@ namespace Faunus {
      *     }
      *
      * Atomic displacement parameters are read from `Faunus::AtomData`.
+     *
+     * @todo InputMap based constructors are to be deleted
      */
     template<class Tspace>
       AtomicTranslation<Tspace>::AtomicTranslation(InputMap &in,Energy::Energybase<Tspace> &e,
@@ -639,6 +648,23 @@ namespace Faunus {
 
         auto js = in.getJSON()["moves"]["atomtranslate"];
         base::fillMolList( js );
+      }
+
+    template<class Tspace>
+      AtomicTranslation<Tspace>::AtomicTranslation(
+          Energy::Energybase<Tspace> &e,
+          Tspace &s,
+          Tmjson &j,
+          string sec) : Movebase<Tspace>( e, s, j[sec] ) {
+
+        base::title="Single Particle Translation";
+        iparticle=-1;
+        igroup=nullptr;
+        dir={1,1,1};
+        genericdp = 0;
+        this->w=30; //width of output
+
+        base::fillMolList( base::json() );
       }
 
     /**
@@ -797,12 +823,23 @@ namespace Faunus {
           Geometry::QuaternionRotate rot;
           string _info();
           void _trialMove();
+
         public:
+
           AtomicRotation(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="");
+
+          AtomicRotation(Energy::Energybase<Tspace>&, Tspace&,
+              Tmjson&, string="atomrotate");
       };
 
     template<class Tspace>
       AtomicRotation<Tspace>::AtomicRotation(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string dir) : base(in,e,s,dir,"/atomrotate") {
+        base::title="Single Particle Rotation";
+      }
+
+    template<class Tspace>
+      AtomicRotation<Tspace>::AtomicRotation(Energy::Energybase<Tspace> &e,
+          Tspace &s, Tmjson &j, string sec) : base(e, s, j[sec] ) {
         base::title="Single Particle Rotation";
       }
 
@@ -893,7 +930,11 @@ namespace Faunus {
           Point dir;         //!< Translation directions (default: x=y=z=1). This will be set by setGroup()
 
         public:
+
           TranslateRotate(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="");
+          TranslateRotate(Energy::Energybase<Tspace>&, Tspace&, Tmjson&,
+              string="moltransrot");
+
           void setGroup(Group&); //!< Select Group to move
           bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
           std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
@@ -933,6 +974,31 @@ namespace Faunus {
 
         auto m = in.getJSON()["moves"]["moltransrot"];
         base::fillMolList(m);           // find molecules to be moved
+
+        for (auto &i : this->mollist) { // loop over molecules to be moved
+          string molname = spc->molList()[ i.first ].name;
+          i.second.dp1 = m[molname]["dp"] | 0.0;
+          i.second.dp2 = m[molname]["dprot"] | 0.0;
+          if (i.second.dp2>4*pc::pi)    // no need to rotate more than
+            i.second.dp2=4*pc::pi;      // +/- 2 pi.
+         }
+      }
+
+    template<class Tspace>
+      TranslateRotate<Tspace>::TranslateRotate(
+          Energy::Energybase<Tspace> &e,
+          Tspace &s,
+          Tmjson &j,
+          string sec ) : base(e, s, j[sec] ) {
+
+        base::title="Group Rotation/Translation";
+        base::w=30;
+        igroup=nullptr;
+        groupWiseEnergy=false;
+
+
+        auto m = base::json();
+        base::fillMolList( m );// find molecules to be moved
 
         for (auto &i : this->mollist) { // loop over molecules to be moved
           string molname = spc->molList()[ i.first ].name;

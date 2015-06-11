@@ -56,16 +56,18 @@ namespace Faunus {
 
       Type type;  //!< Bond type (default: HARMONIC)
 
-      inline BondData( int i, int j, double k, double req, Type type=Type::HARMONIC ) : k(k), req(req), type(type) {
+      inline BondData( int i, int j, double k, double req, Type type=Type::HARMONIC )
+        : k(k), req(req), type(type)
+      {
         index = {i,j};
       }
 
-      inline BondData( const Tjson &d ) {
-        index = textio::words2vec<int>( d.first );
+      inline BondData( Tmjson::iterator &it ) {
+        index = textio::words2vec<int>( it.key() );
         assert( index.size() == 2);
-        k =   json::value<double>( d.second, "k", 0 );
-        req = json::value<double>( d.second, "req", 0 );
-        string t = json::value<string>( d.second, "type", "harmonic" );
+        k        = it.value()["k"]    | 0.0;
+        req      = it.value()["req"]  | 0.0;
+        string t = it.value()["type"] | string("harmonic");
         if ( t == "harmonic" )
           type = Type::HARMONIC;
       }
@@ -103,11 +105,11 @@ namespace Faunus {
 
       inline DihedralData() { index={-1,-1,-1,-1}; };
 
-      inline DihedralData( const Tjson &d ) {
-        index = textio::words2vec<int>( d.first );
+      inline DihedralData( Tmjson::iterator &it ) {
+        index = textio::words2vec<int>( it.key() );
         assert( index.size() == 4);
-        k1 =   json::value<double>( d.second, "k1", 0 );
-        k2 = json::value<double>( d.second, "k2", 0 );
+        k1 = it.value()["k1"] | 0.0;
+        k2 = it.value()["k2"] | 0.0;
       }
 
       /** @brief Write to stream */

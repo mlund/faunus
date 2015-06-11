@@ -71,17 +71,21 @@ namespace Faunus {
     class PairPotentialBase {
       private:
         virtual string _brief();
-        //void initCutoff(size_t, float);       //!< Initialize all cut-off distances to single value
-        //void setCutoff(size_t, size_t, float);//!< Specialized cut-off for a pair
+        Tmjson* _js;        //!< JSON object with user input
       public:
         typedef PairMatrix<double> Tcutoff;
         Tcutoff rcut2;                        //!< Squared cut-off distance (angstrom^2)
         PairPotentialBase(std::string="");
+
+        inline PairPotentialBase( Tmjson &j ) { json() = j; }
         virtual ~PairPotentialBase();
         string jsondir;    //!< Prefix used for user input specific to the potential
         string name;       //!< Name of potential
         string brief();    //!< Brief, one-lined information string
         virtual void setTemperature(double); //!< Set temperature [K]
+
+        inline Tmjson& json() { return *_js; } //!< JSON object w. user input
+        inline const Tmjson& json() const { return *_js; } //!< JSON object w. user input
 
         /**
          * @brief Particle-particle force in units of `kT/AA`
@@ -351,7 +355,6 @@ namespace Faunus {
       public:
         HardSphere();
 
-        /** @brief Compatibility constructor - no data is read from the InputMap. */
         template<typename T>
           HardSphere(const T&, const string &dir="") { name="Hardsphere"; }
 
@@ -415,6 +418,14 @@ namespace Faunus {
             eps *= 1.0_kJmol;
         }
 
+        LennardJones( Tmjson &j ) : PairPotentialBase( j["ljsimple"] ){
+          name="Lennard-Jones";
+          eps = 4.0 * ( json()["eps"] | 0.0 );
+          string unit = json()["unit"] | string("kT");
+          if ( unit=="kJ/mol" )
+            eps *= 1.0_kJmol;
+        }
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
             double x(r6(a.radius+b.radius,r2));
@@ -459,6 +470,12 @@ namespace Faunus {
         private:
           double rc2; // squared cut-off distance
         public:
+          CutShift( Tmjson &j ) : Tpairpot(j) {
+            rc2 = pow( ( Tpairpot::json()["cutoff"] | pc::infty ), 2 );
+            Tpairpot::name+=" (rcut="
+              + std::to_string( sqrt(rc2) ) + textio::_angstrom + ")";
+          }
+
           CutShift(InputMap &in, const string &dir="") : Tpairpot(in,dir) {
             rc2 = pow( in.get( "cutoff", pc::infty ), 2 );
             Tpairpot::name+=" (rcut="
@@ -861,6 +878,7 @@ namespace Faunus {
 
       public:
 
+      Coulomb(Tmjson&);              //!< Construct from json entry
       Coulomb(InputMap&, const string &dir=""); //!< Construction from InputMap
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
@@ -918,10 +936,16 @@ namespace Faunus {
      * are used in addition to `coulomb_cut` to specifify the cut-off.
      */
     class CoulombWolf : public Coulomb {
+
       private:
+
         double Rc2, Rcinv;
+
       public:
-        CoulombWolf(InputMap&, const string &dir=""); //!< Construction from InputMap
+
+        CoulombWolf( Tmjson& );
+
+        CoulombWolf( InputMap&, const string &dir=""); //!< Constructor
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -1077,6 +1101,18 @@ namespace Faunus {
         Average<double> k2_count_avg;
 
       public:
+
+        DebyeHuckel( Tmjson &j ) : Coulomb(j) {
+          const double zero=1e-10;
+          name="Debye-Huckel";
+          c = 8*lB*pc::pi*pc::Nav/1e27;
+          double I = json()["ionicstrength"] | 0.0;   // [mol/l]
+          z_count  = json()["countervalency"] | 0.0;  // [e]
+          k2_count = 0;
+          k = sqrt( I*c );
+          if ( k < zero )
+            k = 1 / ( json()["debyelength"] | 1.0/zero ); // [A]
+        }
 
         DebyeHuckel(InputMap &in, const string &dir="") : Coulomb(in, dir) {
           const double zero=1e-10;
@@ -1508,6 +1544,12 @@ namespace Faunus {
             name=first.name+"+"+second.name;
             setCutoff();
           }
+
+          CombinedPairPotential(Tmjson &j) :
+            PairPotentialBase(), first(j), second(j) {
+              name=first.name+"+"+second.name;
+              setCutoff();
+            }
 
           CombinedPairPotential(InputMap &in, const string &dir="") :
             PairPotentialBase(dir), first(in,dir), second(in,dir) {

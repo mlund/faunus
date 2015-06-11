@@ -199,7 +199,10 @@ namespace Faunus {
          * no container overlap using the `RandomInserter` class. This behavior can
          * be changed by specifying another inserter using `setInserter()`.
          */
-        Tpvec getRandomConformation( Geometry::Geometrybase &geo, const Tpvec &otherparticles=Tpvec() ) {
+        Tpvec getRandomConformation(
+            Geometry::Geometrybase &geo,
+            const Tpvec &otherparticles=Tpvec() )
+        {
           return inserterFunctor( geo, otherparticles, *this );
         }
 
@@ -208,7 +211,8 @@ namespace Faunus {
          * @param vec Vector of particles
          * @param weight Relative weight of conformation (default: 1)
          */
-        void pushConformation(const Tpvec& vec, double weight=1) {
+        void pushConformation(const Tpvec& vec, double weight=1)
+        {
           if ( !conformations.empty() ) {     // resize weights
             auto w = confDist.probabilities();// (defaults to 1) 
             w.push_back(weight);
@@ -231,26 +235,29 @@ namespace Faunus {
 
           name = molecule.first;
 
-          activity = json::value<double>(molecule.second, "activity", 0);
-          chemPot = log( activity * 1.0_molar );
+          // transition to "Modern JSON = Tmjson" class.
+          Tmjson _js = Tmjson::parse( molecule.second.serialize() );
 
-          _isAtomic = json::value<bool>(molecule.second, "atomic", false);
-          Ninit = json::value<double>(molecule.second, "Ninit", 0 );
-          capacitance = json::value<double>(molecule.second, "Cavg", 0 );
-          meancharge  = json::value<double>(molecule.second, "Zavg", 0 );
+          _isAtomic   = _js["atomic"] | false;
+          Ninit       = _js["Ninit"] | 0;
+          capacitance = _js["Cavg"] | 0.0;
+          meancharge  = _js["Zavg"] | 0.0;
+          activity    = _js["activity"] | 0.0;
+          chemPot     = log( activity * 1.0_molar );
 
           // create bond list
-          for (auto &i : json::object("bonds", molecule.second) ) {
-            bonds.push_back( Bonded::BondData(i) );
-          }
+          auto b = _js["bonds"];
+          for ( auto it=b.begin(); it!=b.end(); ++it )
+            bonds.push_back( Bonded::BondData( it ) );
 
           // create dihedral list
-          for (auto &i : json::object("dihedrals", molecule.second) )
-            dihedrals.push_back( Bonded::DihedralData(i) );
+          b = _js["dihedrals"];
+          for ( auto it=b.begin(); it!=b.end(); ++it )
+            dihedrals.push_back( Bonded::DihedralData( it ) );
 
           // read conformation from disk
           {
-            string structure = json::value<string>( molecule.second, "structure", "" );
+            string structure = _js["structure"] | string();
             if ( !structure.empty() ) {
               Tpvec v;
               if ( FormatAAM::load( structure, v ) ) {
@@ -266,7 +273,7 @@ namespace Faunus {
           }
 
           // construct flexible peptide from fasta sequence
-          string fasta = json::value<string>( molecule.second, "fasta", "" );
+          string fasta = _js["fasta"] | string();
           if ( !fasta.empty() ) {
             assert( atoms.empty() );
             atoms = FastaToAtoms( fasta ); // -> atomid
@@ -290,11 +297,12 @@ namespace Faunus {
             pushConformation( v );
             bonds.reserve( v.size()-1 );
             for ( size_t i=0; i<v.size()-1; i++ )
-              bonds.push_back( Bonded::BondData( i, i+1, k, req, Bonded::BondData::Type::HARMONIC ) ); 
+              bonds.push_back(
+                  Bonded::BondData( i, i+1, k, req, Bonded::BondData::Type::HARMONIC ) );
           }
- 
+
           // read tracjectory w. conformations from disk
-          string traj = json::value<string>( molecule.second, "traj", "" );
+          string traj = _js["traj"] | string();
           if ( !traj.empty() ) {
             conformations.clear();
             FormatPQR::load( traj, conformations );
@@ -310,7 +318,7 @@ namespace Faunus {
               confDist = std::discrete_distribution<>(w.begin(), w.end());
 
               // look for weight file
-              string weightfile = json::value<string>( molecule.second, "trajweight", "" );
+              string weightfile = _js["trajweight"] | string();
               if (!weightfile.empty()) {
                 std::ifstream f(weightfile.c_str());
                 if (f) {
@@ -332,7 +340,7 @@ namespace Faunus {
 
           // add atoms to atom list
           if ( atoms.empty() ) {
-            string atomlist = json::value<string>(molecule.second, "atoms", "");
+            string atomlist = _js["atoms"] | string();
             for ( auto &a : textio::words2vec<string>(atomlist) )
               if ( atom[a].id > 0 )
                 atoms.push_back( atom[a].id );

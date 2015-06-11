@@ -57,7 +57,7 @@ namespace Faunus {
     class Tracker {
       private:
         std::map<Tid, std::vector<T> > map;
-        std::map<Tid, Average<double> > Navg;
+        std::map<Tid, Average<double> > Navg; // average vector length
 
       public:
         /** @brief Number of elements of type id */

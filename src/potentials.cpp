@@ -313,6 +313,13 @@ namespace Faunus {
       lB=pc::lB( epsilon_r );
     }
 
+    Coulomb::Coulomb(Tmjson &j) : PairPotentialBase( j["coulomb"] ) {
+      name      = "Coulomb";
+      epsilon_r = json()["epsr"] | 80.0;
+      depsdt    = ( json()["depsdt"] | -0.368 ) * pc::T() / epsilon_r;
+      lB        = pc::lB( epsilon_r );
+    }
+
     string Coulomb::_brief() {
       std::ostringstream o;
       o << name << ": lB=" << lB << " eps_r=" << epsilon_r << " T=" << pc::T();
@@ -343,6 +350,13 @@ namespace Faunus {
       Rcinv=1/Rc;
       Rc2=Rc*Rc;
       name+="Wolf/Yonezawa";
+    }
+
+    CoulombWolf::CoulombWolf( Tmjson &j ) : Coulomb( j ) {
+      double Rc = json()["cutoff"] | 10.0;
+      Rcinv = 1/Rc;
+      Rc2 = Rc*Rc;
+      name += "Wolf/Yonezawa";
     }
 
     string CoulombWolf::info(char w) {

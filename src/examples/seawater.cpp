@@ -8,7 +8,7 @@ int main() {
   Energy::Nonbonded<Tspace,Tpair> pot(in);// Hamiltonian, non-bonded only
   Tspace spc(in);                         // Simulation space, particles etc.
 
-  Move::AtomicTranslation<Tspace> mv(in,pot,spc);// particle move class
+  Move::Propagator<Tspace> mv(in,pot,spc);// particle move class
 
   Analysis::WidomScaled<Tspace>
     widom( pot.pairpot.first.bjerrumLength(), 10 );

@@ -32,7 +32,7 @@ int main() {
 
   spc.load("state");                      // load old configuration if any
 
-  Move::AtomicTranslation<Tspace> mv(in,pot,spc);// particle move class
+  Move::Propagator<Tspace> mv(in,pot,spc);// particle move class
 
   for (int i=0; i<1e3; i++)
     mv.move();

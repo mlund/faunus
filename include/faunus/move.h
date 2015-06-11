@@ -192,6 +192,13 @@ namespace Faunus {
                 max_iter = in.get<int>("max_iterations", 40, "Max. iterations");
               }
 
+          template<class Tspace>
+            PolarizeMove(Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) :
+              Tmove(e,s,j) {
+                threshold = Tmove::json()["pol_threshold"] | 0.001;
+                max_iter  = Tmove::json()["max_iterations"] | 40;
+              }
+
           PolarizeMove(const Tmove &m) : max_iter(40), threshold(0.001), Tmove(m) {};
 
           double move(int n) FOVERRIDE {
@@ -297,6 +304,7 @@ namespace Faunus {
           }
 
         public:
+          Movebase(Energy::Energybase<Tspace>&, Tspace&, Tmjson&);  //!< Constructor
           Movebase(Energy::Energybase<Tspace>&, Tspace&, string="");//!< Constructor
           virtual ~Movebase();
           double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
@@ -327,6 +335,22 @@ namespace Faunus {
         jsondir = dir;
         if (jsondir.empty())
           jsondir = "moves";
+        e.setSpace(s);
+        pot=&e;
+        spc=&s;
+        cnt=cnt_accepted=0;
+        dusum=0;
+        w=22;
+        runfraction=1;
+        useAlternateReturnEnergy=false; //this has no influence on metropolis sampling!
+#ifdef ENABLE_MPI
+        mpiPtr=nullptr;
+#endif
+      }
+
+    template<class Tspace>
+      Movebase<Tspace>::Movebase(Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) {
+        json() = j;
         e.setSpace(s);
         pot=&e;
         spc=&s;
@@ -599,11 +623,8 @@ namespace Faunus {
 
         public:
 
-          AtomicTranslation(InputMap&, Energy::Energybase<Tspace>&, Tspace&,
-              string="", string="/atomtranslate");
-
           AtomicTranslation(Energy::Energybase<Tspace>&, Tspace&,
-              Tmjson &, string="atomtranslate");
+              Tmjson&, string="atomtranslate");
 
           void setGenericDisplacement(double); //!< Set single displacement for all atoms
 
@@ -613,7 +634,7 @@ namespace Faunus {
     /**
      * @brief Constructor
      *
-     * By default input is read from section `moves/atomtranslate`
+     * By default input is read from json section `atomtranslate`
      * with each element being the molecule name with the following
      * properties:
      *
@@ -631,25 +652,7 @@ namespace Faunus {
      *     }
      *
      * Atomic displacement parameters are read from `Faunus::AtomData`.
-     *
-     * @todo InputMap based constructors are to be deleted
      */
-    template<class Tspace>
-      AtomicTranslation<Tspace>::AtomicTranslation(InputMap &in,Energy::Energybase<Tspace> &e,
-          Tspace &s, string dir, string subdir) : Movebase<Tspace>(e,s,dir) {
-
-        base::title="Single Particle Translation";
-        base::jsondir += subdir;
-        iparticle=-1;
-        igroup=nullptr;
-        dir={1,1,1};
-        genericdp = 0;
-        this->w=30; //width of output
-
-        auto js = in.getJSON()["moves"]["atomtranslate"];
-        base::fillMolList( js );
-      }
-
     template<class Tspace>
       AtomicTranslation<Tspace>::AtomicTranslation(
           Energy::Energybase<Tspace> &e,
@@ -658,6 +661,7 @@ namespace Faunus {
           string sec) : Movebase<Tspace>( e, s, j[sec] ) {
 
         base::title="Single Particle Translation";
+        base::jsondir="moves/"+sec; // temp. fix to be removed
         iparticle=-1;
         igroup=nullptr;
         dir={1,1,1};
@@ -825,21 +829,16 @@ namespace Faunus {
           void _trialMove();
 
         public:
-
-          AtomicRotation(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="");
-
           AtomicRotation(Energy::Energybase<Tspace>&, Tspace&,
               Tmjson&, string="atomrotate");
       };
 
     template<class Tspace>
-      AtomicRotation<Tspace>::AtomicRotation(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string dir) : base(in,e,s,dir,"/atomrotate") {
-        base::title="Single Particle Rotation";
-      }
-
-    template<class Tspace>
-      AtomicRotation<Tspace>::AtomicRotation(Energy::Energybase<Tspace> &e,
-          Tspace &s, Tmjson &j, string sec) : base(e, s, j[sec] ) {
+      AtomicRotation<Tspace>::AtomicRotation(
+          Energy::Energybase<Tspace> &e,
+          Tspace &s,
+          Tmjson &j,
+          string sec) : base(e, s, j, sec) {
         base::title="Single Particle Rotation";
       }
 
@@ -931,7 +930,6 @@ namespace Faunus {
 
         public:
 
-          TranslateRotate(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="");
           TranslateRotate(Energy::Energybase<Tspace>&, Tspace&, Tmjson&,
               string="moltransrot");
 
@@ -943,7 +941,7 @@ namespace Faunus {
     /**
      * @brief Constructor
      *
-     * The JSON entry is read from section `moves/moltransrot`
+     * The default JSON entry is read from section `moltransrot`
      * with each element being the molecule name with the following
      * values:
      *
@@ -963,27 +961,12 @@ namespace Faunus {
      *     } 
      *
      * Atomic displacement parameters are read from `AtomData`.
+     *
+     * @param e Energy function
+     * @param s Space
+     * @param j JSON object - typically `moves`.
+     * @param sec JSON section -- default `moltransrot`.
      */
-    template<class Tspace>
-      TranslateRotate<Tspace>::TranslateRotate(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string dir) : base(e,s,dir) {
-        base::title="Group Rotation/Translation";
-        base::jsondir += "/moltransrot";
-        base::w=30;
-        igroup=nullptr;
-        groupWiseEnergy=false;
-
-        auto m = in.getJSON()["moves"]["moltransrot"];
-        base::fillMolList(m);           // find molecules to be moved
-
-        for (auto &i : this->mollist) { // loop over molecules to be moved
-          string molname = spc->molList()[ i.first ].name;
-          i.second.dp1 = m[molname]["dp"] | 0.0;
-          i.second.dp2 = m[molname]["dprot"] | 0.0;
-          if (i.second.dp2>4*pc::pi)    // no need to rotate more than
-            i.second.dp2=4*pc::pi;      // +/- 2 pi.
-         }
-      }
-
     template<class Tspace>
       TranslateRotate<Tspace>::TranslateRotate(
           Energy::Energybase<Tspace> &e,
@@ -995,7 +978,7 @@ namespace Faunus {
         base::w=30;
         igroup=nullptr;
         groupWiseEnergy=false;
-
+        base::jsondir = "moves/"+sec; // temp. fix to be removed (for _test())
 
         auto m = base::json();
         base::fillMolList( m );// find molecules to be moved
@@ -3812,15 +3795,17 @@ namespace Faunus {
             {
               this->title = "P R O P A G A T O R S";
               in.cd ( this->jsondir );
+              auto j = in.getJSON()["moves"];
+
               for ( auto &i : in.getMap() ) {
                 if (i.first=="atomtranslate")
-                  mPtr.push_back( toPtr( AtomicTranslation<Tspace>(in,e,s) ) );
+                  mPtr.push_back( toPtr( AtomicTranslation<Tspace>(e,s,j) ) );
                 if (i.first=="atomrotate")
-                  mPtr.push_back( toPtr( AtomicRotation<Tspace>(in,e,s) ) );
+                  mPtr.push_back( toPtr( AtomicRotation<Tspace>(e,s,j) ) );
                 if (i.first=="atomgc")
                   mPtr.push_back( toPtr( GrandCanonicalSalt<Tspace>(in,e,s) ) );
                 if (i.first=="moltransrot")
-                  mPtr.push_back( toPtr( TranslateRotate<Tspace>(in,e,s) ) );
+                  mPtr.push_back( toPtr( TranslateRotate<Tspace>(e,s,j) ) );
                 if (i.first=="isobaric")
                   mPtr.push_back( toPtr( Isobaric<Tspace>(in,e,s) ) );
                 if (i.first=="gc")

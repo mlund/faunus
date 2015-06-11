@@ -17,10 +17,10 @@ namespace Faunus {
    */
   class JSONSupport {
     private:
-      Tmjson* _js;
+      Tmjson _js;
     public:
-      inline Tmjson& json() { return *_js; } //!< JSON object w. user input
-      inline const Tmjson& json() const { return *_js; } //!< JSON object w. user input
+      inline Tmjson& json() { return _js; } //!< JSON object w. user input
+      inline const Tmjson& json() const { return _js; } //!< JSON object w. user input
   };
 
   /**

@@ -39,7 +39,7 @@ namespace Faunus {
      *       To get optimum performance in inner loops use a derived class directly and do
      *       static, compile-time polymorphism (templates).
      */
-    class Geometrybase {
+    class Geometrybase : public JSONSupport {
       private:
         virtual string _info(char)=0;
         virtual void _setVolume(double)=0;
@@ -108,6 +108,11 @@ namespace Faunus {
               in.get("radius", -1.0, "Spherical container radius (A)") );
         }
 
+        inline Sphere( Tmjson &j ) : Geometrybase("Sphere") {
+          json() = j[ textio::lowercase(name) ];
+          setRadius( j["radius"] | -1.0 );
+        }
+
         void randompos(Point &);
         void boundary(Point &p) const {};
         bool collision(const Point&, double, collisiontype=BOUNDARY) const;
@@ -161,6 +166,18 @@ namespace Faunus {
           double cubelen = in.get( "len", -1.0 );
           if ( cubelen < 1e-9 )
             len << in.get<string>( "xyzlen", "0 0 0" );
+          else
+            len.x() = len.y() = len.z() = cubelen;
+          setlen(len);
+        }
+
+        inline Cuboid( Tmjson &j ) : Geometrybase("Cuboid") {
+          json() = j[ textio::lowercase(name) ];
+          string scaledirstr = json()["scaledir"] | string("XYZ");
+          scaledir = ( scaledirstr=="XY" ) ? XY : XYZ;
+          double cubelen = json()["len"] | -1.0;
+          if ( cubelen < 1e-9 )
+            len << (json()["xyzlen"] | string("0 0 0"));
           else
             len.x() = len.y() = len.z() = cubelen;
           setlen(len);
@@ -232,6 +249,8 @@ namespace Faunus {
           name="Cuboid XY-periodicity";
         }
 
+        Cuboidslit(Tmjson &j) : Cuboid(j) { name += " (XY-periodicity)"; }
+
         inline double sqdist(const Point &a, const Point &b) const {
           double dx=std::abs(a.x()-b.x());
           double dy=std::abs(a.y()-b.y());
@@ -284,8 +303,9 @@ namespace Faunus {
         double _halflen; //!< Cylinder half length
       public:
         Point len;                     //!< Dummy
+        Cylinder(Tmjson&);             //!< Constructor
         Cylinder(double, double);      //!< Construct from length and radius
-        Cylinder(InputMap&, const string& dir=""); //!< Construct from inputmap
+        Cylinder(InputMap&, const string& dir=""); //!< Constructor 
         void setlen(const Point&);     //!< Set length via vector (dummy function)
         void randompos(Point &);
         void boundary(Point &) const;
@@ -302,7 +322,10 @@ namespace Faunus {
      * @brief Cylinder with periodic boundaries in the z direction
      */
     class PeriodicCylinder : public Cylinder {
+
       public:
+
+        PeriodicCylinder(Tmjson&);
         PeriodicCylinder(double, double);
         PeriodicCylinder(InputMap&, const string& dir="");
 

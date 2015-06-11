@@ -169,6 +169,11 @@ namespace Faunus {
       init( in.get("length", 0.0), in.get("radius", 0.0) );
     }
 
+    Cylinder::Cylinder( Tmjson &j) : Geometrybase( "Cylinder" ) {
+      json() = j[ textio::lowercase(name) ];
+      init( json()["length"] | 0.0, json()["radius"] | 0.0);
+    }
+
     void Cylinder::init(double length, double radius) {
       name="Cylinder (hard ends)";
       assert(length>0 && radius>0 && "Cylinder length and radius must be bigger than zero.");
@@ -230,6 +235,10 @@ namespace Faunus {
 
     PeriodicCylinder::PeriodicCylinder(InputMap &in, const string &dir)
       : Cylinder(in,dir) { name="Cylindrical (periodic ends)"; }
+
+    PeriodicCylinder::PeriodicCylinder( Tmjson &j ) : Cylinder(j) {
+      name = "Periodic " + name;
+    }
 
     void PeriodicCylinder::boundary(Point &a) const {
       if (std::abs(a.z())>_halflen)

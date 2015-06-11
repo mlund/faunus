@@ -273,7 +273,10 @@ namespace Faunus {
               Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
             }
 
-          Nonbonded( const json::Tval &js) : geo(js), pairpot(js) {
+          Nonbonded( Tmjson &j ) : geo(j), pairpot( j["energy"]["nonbonded"] ) {
+            static_assert(
+                std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
+                "Tpairpot must be a pair potential" );
             Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
           }
 

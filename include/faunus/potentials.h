@@ -68,10 +68,9 @@ namespace Faunus {
      *     pot(a,b,16.); // -> energy in kT
      * 
      */
-    class PairPotentialBase {
+    class PairPotentialBase : public JSONSupport {
       private:
         virtual string _brief();
-        Tmjson* _js;        //!< JSON object with user input
       public:
         typedef PairMatrix<double> Tcutoff;
         Tcutoff rcut2;                        //!< Squared cut-off distance (angstrom^2)
@@ -83,9 +82,6 @@ namespace Faunus {
         string name;       //!< Name of potential
         string brief();    //!< Brief, one-lined information string
         virtual void setTemperature(double); //!< Set temperature [K]
-
-        inline Tmjson& json() { return *_js; } //!< JSON object w. user input
-        inline const Tmjson& json() const { return *_js; } //!< JSON object w. user input
 
         /**
          * @brief Particle-particle force in units of `kT/AA`

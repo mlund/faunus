@@ -10,6 +10,20 @@ namespace Faunus {
   typedef nlohmann::json Tmjson;
 
   /**
+   * @brief Base class for supporting JSON user input 
+   *
+   * This class is typically used as a base class for other
+   * class that needs to support JSON user input.
+   */
+  class JSONSupport {
+    private:
+      Tmjson* _js;
+    public:
+      inline Tmjson& json() { return *_js; } //!< JSON object w. user input
+      inline const Tmjson& json() const { return *_js; } //!< JSON object w. user input
+  };
+
+  /**
    * @brief Functions for handling JSON input files (www.json.org)
    *
    *

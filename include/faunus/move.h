@@ -222,7 +222,7 @@ namespace Faunus {
      * @date Lund, 2007-2011
      */
     template<class Tspace=Space<class Tgeometry,class Tparticle> >
-      class Movebase {
+      class Movebase : public JSONSupport {
         private:
           unsigned long int cnt_accepted;  //!< number of accepted moves
           double dusum;                    //!< Sum of all energy changes
@@ -274,17 +274,10 @@ namespace Faunus {
               prob = j["prob"] | 1.0;
               perMol = j["permol"] | false;
               perAtom = j["peratom"] | false;
-              dir <<  string( j["dir"] | std::string("1 1 1") );
-            }
-
-            MolListData(const json::Tval &i) {
-              *this = MolListData();
-              prob = json::value<double>(i, "prob", 1);
-              dir << json::value<string>(i, "dir", "1 1 1");
-              perMol = json::value<bool>(i, "permol", false);
-              perAtom = json::value<bool>(i, "peratom", false);
+              dir << ( j["dir"] | std::string("1 1 1") );
             }
           };
+
           std::map<int,MolListData> mollist;    //!< Move acts on these molecule id's
 
 
@@ -317,7 +310,6 @@ namespace Faunus {
           Group* randomMol();
           int randomMolId();                 //!< Random mol id from mollist
           int currentMolId;                  //!< Current molid to act upon
-          virtual void readJSON(const json::Tobj&);//!< Setup via json object
 
 #ifdef ENABLE_MPI
           Faunus::MPI::MPIController* mpiPtr;
@@ -386,11 +378,6 @@ namespace Faunus {
             gPtr = *slump.element( g.begin(), g.end() );
         }
         return gPtr;
-      }
-
-    template<class Tspace>
-      void Movebase<Tspace>::readJSON(const json::Tobj &val) {
-        assert(!"not implemented");
       }
 
     template<class Tspace>
@@ -651,7 +638,7 @@ namespace Faunus {
         this->w=30; //width of output
 
         auto js = in.getJSON()["moves"]["atomtranslate"];
-        base::fillMolList(js);
+        base::fillMolList( js );
       }
 
     /**

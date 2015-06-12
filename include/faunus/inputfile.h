@@ -169,9 +169,12 @@ namespace Faunus {
           std::exit(1);
         }
       }
-    }
 
-    // load modern json object
+      auto j = getJSON();
+      atom.include( j );
+      if ( atom.empty() )
+        std::cerr << "Warning: AtomMap is empty." << endl; 
+    }
 
     if ( !isjson ) {
       std::ifstream f( filename.c_str() );
@@ -190,14 +193,6 @@ namespace Faunus {
         }
       } else return false;
     }
-
-    cd("system");
-    string atomfile = get<string>("atomlist", "");
-    if ( !atomfile.empty() )
-      atom.includefile(atomfile);
-
-    if ( atom.empty() )
-      std::cerr << "Warning: AtomMap is empty." << endl; 
 
     return true;
   }

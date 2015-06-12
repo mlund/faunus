@@ -22,10 +22,8 @@ namespace Faunus {
   class PropertyBase {
     public:
       typedef unsigned char Tid;
-      typedef picojson::object::value_type Tjson;
       std::string name;  //!< Unique, user-defined name
       Tid id;            //!< Unique id (automatically set by `PropertyVector`)
-      virtual void readJSON(const Tjson&)=0; //!< Process single json entry
       virtual ~PropertyBase() {};
       PropertyBase() : name("UNK") {}
   };
@@ -64,7 +62,6 @@ namespace Faunus {
   template<class Tproperty, class base=std::vector<Tproperty> >
   class PropertyVector : private base {
   protected:
-    string jsonfile;    // keep name of json file
     string jsonsection; // section to look for elements
     string name;        // name of properties
   public:
@@ -96,17 +93,19 @@ namespace Faunus {
     
     /** @brief Find element by name */
     const_iterator find(const string &name) const {
-      return std::find_if( begin(), end(), [&name](const value_type &i){return i.name==name;} );
+      return std::find_if( begin(), end(), [&name](const value_type &i)
+          { return i.name==name; } );
     }
 
     /** @brief Find element by name */
     iterator find(const string &name) {
-      return std::find_if( begin(), end(), [&name](const value_type &i){return i.name==name;} );
+      return std::find_if( begin(), end(), [&name](const value_type &i)
+          { return i.name==name; } );
     }
 
     /** @brief Access element by string */
     const_reference operator[](const std::string &name) const { return *find(name); }
-  
+
     /** @brief Access element */
     const_reference operator[](size_type i) const {
       assert( i==base::operator[](i).id && "Property out of sync");
@@ -116,7 +115,7 @@ namespace Faunus {
       return base::at(i);
 #endif
     }
-    
+
     /** @brief Access element */
     reference operator[](size_type i) {
       assert( i==base::operator[](i).id && "Property out of sync");
@@ -127,23 +126,14 @@ namespace Faunus {
       return base::at(i);
 #endif
     }    
-   
-    /**
-     * @brief Read properties from JSON file
-     * @param file Filename
-     */
-    bool includefile(const string& file) {
-      assert( !jsonsection.empty() && "json section empty" );
-      jsonfile=file;
-      if (file.empty())
-        return false;
-      return includejson( json::open(jsonfile) );
-    }
 
-    bool includejson( const json::Tval &js ) {
-      this->reserve( json::object(jsonsection, js).size() );
-      for (auto &a : json::object(jsonsection, js) )
-        push_back( value_type(a) );
+    /** Load data from json object */
+    virtual bool include( Tmjson &j ) {
+      assert( !jsonsection.empty() );
+      auto m = j[ jsonsection ];
+      base::reserve( m.size() );
+      for ( auto it=m.begin(); it!=m.end(); ++it )
+        push_back( value_type(it) );
       return ( empty() ? false : true );
     }
 
@@ -158,8 +148,6 @@ namespace Faunus {
       std::ostringstream o;
       o << header(name)
         << pad(SUB,w,"Number of entries:") << size() << endl;
-      if (!jsonfile.empty())
-        o << pad(SUB,w,"Input JSON file:") << jsonfile << endl;
       o << indent(SUB) << "Element info:";
       for (auto &i : *this) {
         if (i.id%10==0)
@@ -218,7 +206,6 @@ namespace Faunus {
 
   class AtomData : public PropertyBase {
     public:
-      using PropertyBase::Tjson;
       double sigma,            //!< LJ diameter [angstrom]
              eps,              //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
              radius,           //!< Radius [angstrom]
@@ -253,47 +240,42 @@ namespace Faunus {
       bool operator==(const AtomData &d) const { return (*this==d); }
 
       /** @brief Constructor - by default data is initialized; mass set to unity */
-      inline AtomData(const Tjson &atom=Tjson()) { readJSON(atom); }
+      inline AtomData( Tmjson::iterator &atom ) {
 
-      /** @brief Read data from a picojson object */
-      inline void readJSON(const Tjson &atom) FOVERRIDE {
+        auto _js = atom.value();
+        if ( ! atom.key().empty() )
+          name = atom.key();
 
-        // transition to "Modern JSON = Tmjson" class.
-        Tmjson _js = Tmjson::parse(  atom.second.serialize() );
-
-        name = atom.first;
-
-        activity = _js["activity"] | 0.0;
-        chemPot = log( activity * 1.0_molar );
-        alpha << json::value<std::string>(atom.second, "alpha", "");
-        alpha /= pc::lB(1.0);
-        theta << json::value<std::string>(atom.second, "theta", "");
-        theta *= 1.0_Debye;
-        dp    = _js["dp"] | 0.0;
-        dprot = ( _js["dprot"] | 0.0 ) * 1._deg; // deg->rads
-        eps   = ( _js["eps"] | 0.0 ) * 1._kT;
-        hydrophobic = _js["hydrophobic"] | false;
-        //mu << json::value<std::string>(atom.second, "mu", "0 0 0");
-        mu <<  string( _js["mu"] | std::string("0 0 0") );
-        muscalar = mu.len()* 1.0_Debye;
-        if (mu.len()>1e-6)
+        activity     =  _js["activity"] | 0.0;
+        chemPot      =  log( activity * 1.0_molar );
+        alpha        << (_js["alpha"] | string());
+        alpha        /= pc::lB(1.0);
+        theta        << (_js["theta"] | string());
+        theta        *= 1.0_Debye;
+        dp           =  _js["dp"] | 0.0;
+        dprot        =  ( _js["dprot"] | 0.0 ) * 1._deg; // deg->rads
+        eps          =  ( _js["eps"] | 0.0 ) * 1._kT;
+        hydrophobic  =  _js["hydrophobic"] | false;
+        mu           << ( _js["mu"] | string("0 0 0") );
+        muscalar     =  mu.len()* 1.0_Debye;
+        if ( mu.len() > 1e-6 )
           mu = mu/mu.len();
 
-        mw     = _js["mw"] | 1.0;
-        Ninit  = _js["Ninit"] | 0.0;
-        charge = _js["q"] | 0.0;
-        radius = ( _js["r"] | 0.0 ) * 1.0_angstrom;
-        sigma  = ( _js["sigma"] | 2*radius ) * 1.0_angstrom;
-        radius = 0.5 * sigma;
-        tfe    = _js["tfe"] | 0.0;
+        mw           = _js["mw"] | 1.0;
+        Ninit        = _js["Ninit"] | 0.0;
+        charge       = _js["q"] | 0.0;
+        radius       = ( _js["r"] | 0.0 ) * 1.0_angstrom;
+        sigma        = ( _js["sigma"] | 2*radius ) * 1.0_angstrom;
+        radius       = 0.5 * sigma;
+        tfe          = _js["tfe"] | 0.0;
 
         // spherocylindrical properties
-        half_len  = 0.5 * ( _js["len"] | 0.0 );
-        patchtype = _js["patchtype"] | 0.0;
-        pswitch   = _js["patchswitch"] | 0.0;
-        pdis      = _js["patchdistance"] | 0.0;
-        pangl     = ( _js["patchangle"] | 0.0 ) * 1._deg;
-        panglsw   = ( _js["patchangleswitch"] | 0.0 ) * 1._deg;
+        half_len     = 0.5 * ( _js["len"] | 0.0 );
+        patchtype    = _js["patchtype"] | 0.0;
+        pswitch      = _js["patchswitch"] | 0.0;
+        pdis         = _js["patchdistance"] | 0.0;
+        pangl        = ( _js["patchangle"] | 0.0 ) * 1._deg;
+        panglsw      = ( _js["patchangleswitch"] | 0.0 ) * 1._deg;
         chiral_angle = ( _js["patchchiralangle"] | 0.0 ) * 1._deg;
 
         betaC = _js["betaC"] | pc::infty;
@@ -354,21 +336,15 @@ namespace Faunus {
       AtomMap() {
         base::name = "Atom Properties";
         base::jsonsection = "atomlist";
-        push_back( base::value_type() ); // add default property
+
+        // to be removed! This is here only to be compatible with test
+        // data that expects an initial dummy atom with id 0.
+        Tmjson j;
+        j["unk"] = { {"dummy", 0} };
+        auto it = j.begin();
+        push_back( it ); // add default property
       }
 
-      bool includefile(InputMap&);      /// Read JSON file given through `InputMap`
-      bool includefile(const string &); /// Read JSON file directly
-
-      /**
-       * @brief Copy properties into particle vector.
-       * @details Positions are left untouched!
-       */
-      template<typename Tpvec>
-        void reset_properties(Tpvec &pvec) const {
-          for (auto &i : pvec)
-            i = base::at( i.id );
-        }
   };
 
   extern AtomMap atom; //!< Global instance of AtomMap - can be accessed from anywhere

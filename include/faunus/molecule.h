@@ -54,22 +54,22 @@ namespace Faunus {
             }
           } else { // insert molecule
             Point a, b;
-            geo.randompos(a);                  // random point in container
-            a = a.cwiseProduct(dir);           // apply user defined directions (default: 1,1,1)
-            Geometry::cm2origo(geo, v);        // translate to origo - obey boundary conditions
+            geo.randompos(a);              // random point in container
+            a = a.cwiseProduct(dir);       // apply user defined directions (default: 1,1,1)
+            Geometry::cm2origo(geo, v);    // translate to origo - obey boundary conditions
             Geometry::QuaternionRotate rot;
-            b.ranunit(slump);                  // random unit vector
+            b.ranunit(slump);              // random unit vector
             rot.setAxis(geo, {0,0,0}, b, slump() * 2 * pc::pi); // random rot around random vector
-            for (auto &i : v) {                // apply rotation to all points
-              i = rot(i) + a + offset;         // ...and translate
-              geo.boundary(i);                 // ...and obey boundaries
+            for (auto &i : v) {            // apply rotation to all points
+              i = rot(i) + a + offset;     // ...and translate
+              geo.boundary(i);             // ...and obey boundaries
             }
           }
 
           assert( !v.empty() );
 
           _overlap=false;
-          if ( checkOverlap )                  // check for container overlap
+          if ( checkOverlap )              // check for container overlap
             for ( auto &i : v )
               if ( geo.collision(i, i.radius) ) {
                 _overlap = true;
@@ -92,7 +92,10 @@ namespace Faunus {
    * [Details: J. Am. Chem. Soc. 2010, 132:17337](http://dx.doi.org/10.1021/ja106480a)
    */
   template<class Tpvec, class TMoleculeData>
-    double WeightByCharge(Geometry::Geometrybase &geo, const Tpvec &p, const Group &g, const TMoleculeData &m) {
+    double WeightByCharge (
+        Geometry::Geometrybase &geo, const Tpvec &p,
+        const Group &g, const TMoleculeData &m )
+    {
       double dz = netCharge( p, g ) - m.meancharge; 
       if (m.capacitance > 1e-9)
         return exp( -0.5 * dz*dz / m.capacitance ); 
@@ -115,7 +118,7 @@ namespace Faunus {
    * :------------ | :------ | : ------------------------------------------------
    * `activity`    | float   | Chemical activity for grand canonical MC [mol/l]
    * `atoms`       | string  | List of atoms in molecule (use `AtomData` names)
-   * `atomic`      | bool    | `true` if molecule is to be considered as a collection of free atomic species (default: false)
+   * `atomic`      | bool    | `true` if molecule a free atomic species (default: false)
    * `bonds`       | string  | List of harmonic bonds - index 0 corresponds to first atom in structure
    * `dihedrals`   | string  | List of dihedrals (under construction!)
    * `fasta`       | string  | Construct bonded chain from fasta sequence (hardcoded k and req)
@@ -152,18 +155,19 @@ namespace Faunus {
         double meancharge;                          //!< Mean charge
 
       private:
-        using PropertyBase::Tjson;
         bool _isAtomic;
 
       public:
         TinserterFunc inserterFunctor;              //!< Function for insertion into space
 
         /** @brief Constructor - by default data is initialized; mass set to unity */
-        inline MoleculeData( const Tjson &molecule=Tjson()) : Ninit(0), _isAtomic(false) {
+        inline MoleculeData( Tmjson::iterator &molecule )
+          : Ninit(0), _isAtomic(false)
+        {
           readJSON(molecule);
-          auto ins = RandomInserter<MoleculeData<Tpvec>>();
-          ins.dir    << json::value<string>( molecule.second, "insdir", "1 1 1" );
-          ins.offset << json::value<string>( molecule.second, "insoffset", "0 0 0" );
+          auto ins = RandomInserter< MoleculeData<Tpvec> >();
+          ins.dir    << ( molecule.value()["insdir"] | string("1 1 1") );
+          ins.offset << ( molecule.value()["insoffset"] | string("0 0 0") );
           setInserter( ins );
         }
 
@@ -230,13 +234,11 @@ namespace Faunus {
 
         bool operator==(const MoleculeData &d) const { return (*this==d); }
 
-        /** @brief Read data from a picojson object */
-        void readJSON(const Tjson &molecule) FOVERRIDE {
+        /** Read data from json object **/
+        void readJSON(Tmjson::iterator &molecule) {
 
-          name = molecule.first;
-
-          // transition to "Modern JSON = Tmjson" class.
-          Tmjson _js = Tmjson::parse( molecule.second.serialize() );
+          name = molecule.key();
+          auto _js = molecule.value();
 
           _isAtomic   = _js["atomic"] | false;
           Ninit       = _js["Ninit"] | 0;
@@ -427,24 +429,15 @@ namespace Faunus {
    * Note that faunus currently has a global instance of `MoleculeMap`,
    * simply named `molecule`. This can be accessed from anywhere.
    *
-   * @todo More documentation
+   * @todo More documentation. Rename entry for filename to "moleculefile"
    */
   template<class Tpvec, class base=PropertyVector<MoleculeData<Tpvec>>>
     class MoleculeMap : public base {
       public:
-        using typename base::value_type;
 
         MoleculeMap() {
           base::jsonsection = "moleculelist";
           base::name = "Molecule Properties";
-        }
-
-        /** @brief Read JSON file given through `InputMap` */
-        bool includefile(InputMap &in) {
-          in.cd ("system");
-          string file = in( "moleculelist", string("") );
-          assert( !file.empty() && "Empty json file for molecules");
-          return base::includefile(file);
         }
 
         /** @brief Information string */
@@ -495,20 +488,14 @@ namespace Faunus {
    */
   template<class Tpvec>
     class MoleculeCombination : public PropertyBase {
-
-      private:
-
-        inline void readJSON(const Tjson &comb) FOVERRIDE {
-          molComb.clear();
-          name = comb.first;
-          probability = json::value<double>( comb.second, "prob", 1.0 );
-          string mollist = json::value<string>( comb.second, "molecules", "" );
-          molName = textio::words2vec<string>(mollist);
-        }
-
       public:
 
-        MoleculeCombination(const Tjson &comb=Tjson()) { readJSON(comb); }
+        MoleculeCombination( Tmjson::iterator &comb ) {
+          name = comb.key();
+          probability = comb.value()["prob"] | 1.0;
+          string mollist = comb.value()["molecules"] | string();
+          molName = textio::words2vec<string>(mollist);
+        }
 
         vector<PropertyBase::Tid> molComb;/// vector of molecule index in combination
 
@@ -533,12 +520,12 @@ namespace Faunus {
         MoleculeMap<Tpvec> *molmap; // typically points to `Space::molecule`
 
         void update() { // convert name (string) -> id (int) using MoleculeMap
-          for (auto &i : *this) {
+          for ( auto &i : *this ) {
             assert( !i.molName.empty() && "Molecule combination cannot be empty");
-            for (auto &name : i.molName) {
-              auto it = molmap->find(name);
+            for ( auto &name : i.molName ) {
+              auto it = molmap->find( name );
               if ( it!=molmap->end() )
-                i.molComb.push_back(it->id);
+                i.molComb.push_back( it->id );
             }
             assert( i.molName.size() == i.molComb.size() );
             assert( !i.molName.empty() );
@@ -547,22 +534,16 @@ namespace Faunus {
 
       public:
 
-        bool includefile(InputMap &in) {
-          bool rc = base::includefile( in(base::jsonsection, string("") ) );
-          update();
-          return rc;
-        }
-
-        bool includefile(const string& file) {
-          bool rc = base::includefile(file);
-          update();
-          return rc;
-        }
-
-        MoleculeCombinationMap(MoleculeMap<Tpvec> &moleculemap) : molmap(&moleculemap) {
+        MoleculeCombinationMap( MoleculeMap<Tpvec> &moleculemap ) : molmap(&moleculemap) {
           assert( molmap != nullptr);
           base::name = "Molecule Combinations";
           base::jsonsection = "moleculecombinations";
+        }
+
+        bool include( Tmjson &j ) FOVERRIDE {
+          bool r = base::include( j );
+          update();
+          return r;
         }
 
         string info() {
@@ -571,8 +552,6 @@ namespace Faunus {
           std::ostringstream o;
           o << header(base::name)
             << pad(SUB,w,"Number of entries:") << base::size() << endl;
-          if (!base::jsonfile.empty())
-            o << pad(SUB,w,"Input JSON file:") << base::jsonfile << endl;
           o << indent(SUB) << "Element info:\n";
           for (auto &i : *this) {
             o << std::left << setw(w) << "    "+i.name+":";

@@ -3482,9 +3482,7 @@ namespace Faunus {
             base::jsondir += "/gc";
             in.cd ( base::jsondir );
             base::runfraction = in( "prob", 1.0 );
-            string combfile = in.get<string>( "molcombfile", "");
-            assert( !combfile.empty() );
-            comb.includefile(combfile); // load combinations
+            comb.include( in.getJSON() ); // load combinations
           }
       };
 

@@ -5,7 +5,7 @@ typedef Space<Geometry::Sphere> Tspace;
 
 int main() {
   cout << textio::splash();            // faunus splash info!
-  ::atom.includefile("titrate.json");  // load atom properties
+  //::atom.includefile("titrate.json");  // load atom properties
   InputMap mcp("titrate.input");
   EnergyDrift sys;                     // track system energy drift
   UnitTest test(mcp);

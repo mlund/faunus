@@ -189,7 +189,8 @@ namespace Faunus {
         Space(InputMap &in) : geo(in) {
           in.cd ("system");
           pc::setT( in("temperature", 298.15 ) );
-          molecule.includefile(in);
+          auto j = in.getJSON();
+          molecule.include( j );
           for (auto mol : molecule)
             while (mol.Ninit-- > 0)
               insert( mol.id, mol.getRandomConformation(geo, p) );

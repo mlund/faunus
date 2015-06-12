@@ -31,7 +31,7 @@ TEST_CASE("Spline table", "...")
   a.charge=1;
   b.charge=-1;
   a.radius=b.radius=2;
-  InputMap mcp;
+  InputMap mcp("unittests.json");
   Potential::Coulomb pot_org(mcp);
   Potential::PotentialTabulate<Potential::Coulomb> pot_tab(mcp);
 

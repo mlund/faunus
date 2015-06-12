@@ -18,9 +18,13 @@ namespace Faunus {
   class JSONSupport {
     private:
       Tmjson _js;
+
     public:
-      inline Tmjson& json() { return _js; } //!< JSON object w. user input
-      inline const Tmjson& json() const { return _js; } //!< JSON object w. user input
+      /** @brief Read/write json object with user input */
+      inline Tmjson& json() { return _js; }
+
+      /** @brief Read-only json object with user input */
+      inline const Tmjson& json() const { return _js; }
   };
 
   /**
@@ -30,6 +34,8 @@ namespace Faunus {
    * @details
    * The functions in this namespace are wrappers for the
    * [PicoJSON library](http://github.com/kazuho/picojson/):
+   *
+   * @note To be deleted -- use `Tmjson` object instead.
    *
    * Example code:
    * @code
@@ -154,6 +160,12 @@ namespace Faunus {
     }
 
   }//namespace
+
+  template<class T> T operator | (const Tmjson &j, const T &fallback) {
+    if ( j.is_null() )
+      return fallback;
+    return j;
+  }
 
   template<class T> T operator | (Tmjson &j, const T &fallback) {
     if ( j.is_null() )

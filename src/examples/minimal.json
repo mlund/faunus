@@ -1,7 +1,7 @@
 {
   "atomlist" : {
-    "A" : { "eps": 0.15, "sigma":4.0, "dp":40. }, // sodium ion
-    "B" : { "eps": 0.20, "sigma":10.0, "dp":10. }  // chloride ion
+    "A" : { "eps": 0.15, "sigma":4.0, "dp":40 },
+    "B" : { "eps": 0.20, "sigma":10.0, "dp":10 }
   },
   "moleculelist" : { 
     "salt" : { "atoms":"A B", "atomic":true, "Ninit":50 }
@@ -16,7 +16,7 @@
   },
   "system" : {
     "temperature" : 298.15,
-    "cuboid" : { "len":50. },
+    "cuboid" : { "len":50 },
     "atomlist"     : "minimal.json",
     "moleculelist" : "minimal.json"
   }

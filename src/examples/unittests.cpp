@@ -94,8 +94,7 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
   InputMap in("unittests.json");
   Tspace spc(in);
   Energy::NonbondedVector<Tspace,Tpair> pot(in);
-  auto js = in.getJSON()["moves"];
-  Move::PolarizeMove<Move::AtomicTranslation<Tspace> > mv(pot,spc,js);
+  Move::PolarizeMove<Move::AtomicTranslation<Tspace> > mv(pot,spc,in);
 
   auto m = spc.molList().find( "multipoles" );
   spc.insert( m->id, m->getRandomConformation() );

@@ -142,7 +142,7 @@ namespace Faunus {
       public:
 
         /**
-         * The InputMap is scanned for the following parameters in section `system/cuboid`:
+         * The json object is scanned for the following parameters in section `system/cuboid`:
          *
          * Key           | Description
          * :------------ | :-------------------------------------------------------
@@ -150,28 +150,14 @@ namespace Faunus {
          * `xyzlen`      | Vector of sidelengths (specifies as string, i.e. "10 20 5"
          * `scaledir`    | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
          */
-        inline Cuboid(InputMap &in, const string &dir="") : Geometrybase("Cuboid", dir) {
-          in.cd( jsondir + "/cuboid" );
-
-          string scaledirstr = in.get<string>("scaledir","XYZ");
+        inline Cuboid( Tmjson &j, const string sec="cuboid" ) : Geometrybase("Cuboid") {
+          auto m = j["system"][sec];
+          assert( ! m.empty() && "Cuboid json section is empty" );
+          scaledirstr = m["scaledir"] | string("XYZ");
           scaledir = ( scaledirstr=="XY" ) ? XY : XYZ;
-
-          double cubelen = in.get( "len", -1.0 );
+          double cubelen = m["len"] | -1.0;
           if ( cubelen < 1e-9 )
-            len << in.get<string>( "xyzlen", "0 0 0" );
-          else
-            len.x() = len.y() = len.z() = cubelen;
-          setlen(len);
-        }
-
-        inline Cuboid( Tmjson &j ) : Geometrybase("Cuboid") {
-          json() = j[ textio::lowercase(name) ];
-          assert( ! json().empty() && "Cuboid json section is empty" );
-          string scaledirstr = json()["scaledir"] | string("XYZ");
-          scaledir = ( scaledirstr=="XY" ) ? XY : XYZ;
-          double cubelen = json()["len"] | -1.0;
-          if ( cubelen < 1e-9 )
-            len << (json()["xyzlen"] | string("0 0 0"));
+            len << ( m["xyzlen"] | string("0 0 0"));
           else
             len.x() = len.y() = len.z() = cubelen;
           setlen(len);
@@ -239,7 +225,7 @@ namespace Faunus {
      */
     class Cuboidslit : public Cuboid {
       public:
-        Cuboidslit(InputMap &in, const string &dir="") : Cuboid(in,dir) {
+        Cuboidslit(InputMap &in, const string &sec="cuboid") : Cuboid(in,sec) {
           name="Cuboid XY-periodicity";
         }
 

@@ -34,8 +34,8 @@ int main() {
   pot.Tscale = in["system"]["Tscale"] | 1.0;    //temperature from input (default: 1)
 
   Analysis::LineDistribution<> dst(.05);        //distribution func.
-  Move::ParallelTempering<Tspace> pt(pot,spc,in["moves"],mpi);//temper move
-  Move::AtomicTranslation<Tspace> trans(pot,spc,in["moves"]); //translational move
+  Move::ParallelTempering<Tspace> pt(pot,spc,in,mpi);//temper move
+  Move::AtomicTranslation<Tspace> trans(pot,spc,in); //translational move
 
   EnergyDrift sys;                              // class for tracking system energy drifts
   sys.init(Energy::systemEnergy(spc,pot,spc.p));// store initial total system energy

@@ -53,9 +53,7 @@ echo '{
   "system" : {
     "temperature"  : 298.15,
     "cuboid"       : { "len" : 100 },
-    "mcloop"       : { "macro":20, "micro":2000 },
-    "atomlist"     : "cigars2fibrils.json",
-    "moleculelist" : "cigars2fibrils.json"
+    "mcloop"       : { "macro":20, "micro":2000 }
   }
 
 }' > cigars2fibrils.json

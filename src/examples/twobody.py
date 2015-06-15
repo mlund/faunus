@@ -88,9 +88,7 @@ def mkinput():
       "system" : {
           "temperature" : 298.15,
           "cylinder" : { "length" : 200, "radius" : 40 },
-          "mcloop"   : { "macro" : 10, "micro" : micro },
-          "atomlist" : "twobody.json",
-          "moleculelist" : "twobody.json"
+          "mcloop"   : { "macro" : 10, "micro" : micro }
           }
       }
   print >> open('twobody.json', 'w+'), json.dumps(d, indent=4)

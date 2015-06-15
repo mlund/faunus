@@ -24,7 +24,7 @@ namespace Faunus {
    *     InputMap in("myinput.in");
    *     double T = in.get<double>("temperature", 298.15);
    */
-  class InputMap {
+  class InputMap : public Tmjson {
     private:
       std::map<string,string> map, keyinfo;
       vector<string> usedkeys;
@@ -32,7 +32,7 @@ namespace Faunus {
       bool isjson;
       json::Tval js;
       json::Tval jsdir;
-      Tmjson mjs; // modern json object (will latert replace "js")
+      //Tmjson mjs; // modern json object (will latert replace "js")
 
     public:
       InputMap();
@@ -42,9 +42,9 @@ namespace Faunus {
       bool save(string);     //!< Save map to disk
       string info();         //!< Information string about read files and keywords
 
-      Tmjson& getJSON() { return mjs; } //!< Return modern json object
+      Tmjson& getJSON() { return *this; } //!< Return modern json object
 
-      const Tmjson& getJSON() const { return mjs; } //!< Return modern json object
+      const Tmjson& getJSON() const { return *this; } //!< Return modern json object
 
       /**
        * @brief CD (change dir) like functionality
@@ -68,6 +68,8 @@ namespace Faunus {
        *     }
        *   }
        * ~~~~
+       *
+       * @todo To be removed
        */
       inline void cd( std::string dir="" ) {
         if ( isjson ) { 
@@ -161,7 +163,7 @@ namespace Faunus {
       std::ifstream f( filename.c_str() );
       if (f) {
         try {
-          mjs << f;
+          *this << f;
         } 
         catch (...) {
           std::cerr << "Error loading json file '" << filename
@@ -254,7 +256,7 @@ namespace Faunus {
       bool stable; //!< True if passed value is OK to be saved to disk
     public:
       UnitTest(string, bool=true);  //!< Constructor
-      UnitTest(InputMap&);          //!< Constructor using InputMap
+      UnitTest(Tmjson&);            //!< Constructor using InputMap
       bool operator()(const string&, double, double=0.1); //!< Check or set value
       string info(); //!< Info on passed and failed tests
       int numFailed() const; //!< Number of failed tests - i.e. zero if flawless
@@ -266,11 +268,11 @@ namespace Faunus {
     file=testfile;
   }
 
-  inline UnitTest::UnitTest(InputMap &in) {
+  inline UnitTest::UnitTest(Tmjson &j) {
     cnt=0;
-    in.cd ("system/unittest");
-    file = in.get<string>( "testfile","" );
-    stable = in.get<bool>( "stable", true );
+    auto _j = j["system"]["unittest"];
+    file    = _j["testfile"] | string();
+    stable  = _j["stable"] | true;
     include( file );
   }
 
@@ -315,6 +317,7 @@ namespace Faunus {
     }
     return o.str();
   }
+
 }//namespace
 #endif
 

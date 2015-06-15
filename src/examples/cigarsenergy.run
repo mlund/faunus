@@ -24,9 +24,7 @@ echo '{ "atomlist" :
   "system" : {
     "temperature"  : 298.0,
     "cuboid"       : { "len" : 2000 },
-    "unittest"     : { "testfile":"cigarsenergy.test", "stable":false },
-    "atomlist"     : "cigarsenergy.json",
-    "moleculelist" : "cigarsenergy.json"
+    "unittest"     : { "testfile":"cigarsenergy.test", "stable":false }
   }
 }' > cigarsenergy.json
 

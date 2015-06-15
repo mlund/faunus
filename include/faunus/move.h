@@ -287,7 +287,6 @@ namespace Faunus {
 
           std::map<int,MolListData> mollist;    //!< Move acts on these molecule id's
 
-
           /**
            * @brief Iterate over json object where each key is a molecule
            *        name and the value is read as `MolListData`.
@@ -2750,32 +2749,37 @@ namespace Faunus {
           Tenergyfunc usys; //!< Defaults to Energy::systemEnergy but can be replaced!
 
         public:
-          ParallelTempering(InputMap&, Energy::Energybase<Tspace>&, Tspace&, Faunus::MPI::MPIController &mpi, string="");
+          ParallelTempering(
+              Energy::Energybase<Tspace>&, Tspace&, Tmjson&, MPI::MPIController&, string="temper");
+
           virtual ~ParallelTempering();
-          void setCurrentEnergy(double); //!< Set energy of configuration before move (for increased speed)
+
+          void setCurrentEnergy(double); //!< Set energy before move (for increased speed)
+
           void setEnergyFunction( Tenergyfunc );
       };
 
     template<class Tspace>
       ParallelTempering<Tspace>::ParallelTempering(
-          InputMap &in,
           Energy::Energybase<Tspace> &e,
           Tspace &s,
-          Faunus::MPI::MPIController &mpi,
-          string dir) : base(e,s,dir) {
+          Tmjson &j,
+          MPI::MPIController &mpi,
+          string sec) : base( e, s, j[sec] ) {
 
-        this->title = "Parallel Tempering";
-        this->jsondir += "/temper";
-        this->mpiPtr = &mpi;
+        this->title   = "Parallel Tempering";
+        this->jsondir = "moves/"+sec; // to be changed - compatibility w. tests
+        this->mpiPtr  = &mpi;
         partner=-1;
-        this->useAlternateReturnEnergy=true; //we don't want to return dU from partner replica (=drift)
-        in.cd ( this->jsondir );
-        this->runfraction = in( "prob",1.0 );
+        this->useAlternateReturnEnergy=true; //dont return dU from partner replica (=drift)
+        this->runfraction = j[sec]["prob"] | 1.0;
         pt.recvExtra.resize(1);
         pt.sendExtra.resize(1);
-        pt.setFormat( in.get<string>("format", "XYZQI") );
+        pt.setFormat( j[sec]["format"] | string("XYZQI") );
+
         setEnergyFunction(
             Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,Tpvec> );
+
         this->haveCurrentEnergy=false;
         assert( this->mpiPtr != nullptr );
       }

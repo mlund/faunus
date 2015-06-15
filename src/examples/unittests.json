@@ -32,8 +32,6 @@
   "system" : {
     "temperature" : 298,
     "coulomb" : { "epsr": 1.0 },
-    "cuboid" : { "len": 10.0 },
-    "moleculelist" : "unittests.json",
-    "atomlist" : "unittests.json"
+    "cuboid" : { "len": 10.0 }
   }
 }

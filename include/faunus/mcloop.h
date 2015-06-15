@@ -100,21 +100,21 @@ namespace Faunus {
    * Markov chain loop. After each macro step an
    * estimated time of the simulation will be evaluated.
    *
-   * The constructor will search the passed `InputMap` object for the
-   * keywords:
+   * The constructor will look in the json section `mcloop`
+   * for the keywords:
    * 
-   * Key               | Description
-   * :---------------- | :-----------------------------
-   * `loop_macrosteps` | Number of steps in outer loop
-   * `loop_microsteps` | Number of steps in inner loop
+   * Key     | Description
+   * :-------| :----------------------------
+   * `macro` | Number of steps in outer loop
+   * `micro` | Number of steps in inner loop
    */
   class MCLoop : public TimedCounter<int> {
     private:
       typedef TimedCounter<int> base;
     public:
-      inline MCLoop(InputMap &in, string dir="system") {
-        in.cd (dir+"/mcloop");
-        base::set( {in("macro", 10), in("micro", 1000)} );
+      inline MCLoop(Tmjson &j, string sec="system") {
+        auto _j = j[sec]["mcloop"];
+        base::set( { _j["macro"] | 10, _j["micro"] | 1000 } );
       }
 
       inline std::string timing() const {

@@ -187,9 +187,17 @@ namespace Faunus {
          * will insert accordingly.
          */
         Space(InputMap &in) : geo(in) {
-          in.cd ("system");
-          pc::setT( in("temperature", 298.15 ) );
           auto j = in.getJSON();
+          pc::setT( j["system"]["temperature"] | 298.15 );
+          molecule.include( j );
+          for (auto mol : molecule)
+            while (mol.Ninit-- > 0)
+              insert( mol.id, mol.getRandomConformation(geo, p) );
+        }
+
+        Space( Tmjson &j ) : geo( j["system"] ) {
+          pc::setT( j["system"]["temperature"] | 298.15 );
+          atom.include( j );
           molecule.include( j );
           for (auto mol : molecule)
             while (mol.Ninit-- > 0)

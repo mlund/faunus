@@ -1108,7 +1108,7 @@ namespace Faunus {
    *
    * Time t=0 is set upon construction whereafter combined `start()`/
    * `stop()` calls can be made multiple times. The result is
-   * the percentage of total time, consumed in between start/stop calls.
+   * the fraction of total time, consumed in between start/stop calls.
    */
   template<typename Tunit = std::chrono::microseconds>
     class TimeRelativeOfTotal {
@@ -1124,7 +1124,7 @@ namespace Faunus {
 
         void stop() {
           delta += std::chrono::duration_cast<Tunit>
-            ( std::chrono::steady_clock::now() - tx) ;
+            ( std::chrono::steady_clock::now() - tx );
         }
 
         double result() {

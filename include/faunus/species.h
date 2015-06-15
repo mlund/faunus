@@ -297,18 +297,17 @@ namespace Faunus {
    * For example:
    *
    *     {
-   *       // All atoms reside inside the "atomlist" object.
    *       "atomlist" :
    *       {
-   *         "Na" : { "q": 1.0, "r":1.9, "mw":22.99 }, // sodium ion
-   *         "Cl" : { "q":-1.0, "r":1.7, "mw":35.45 }  // chloride ion
+   *         "Na" : { "q": 1.0, "r":1.9, "mw":22.99 },
+   *         "Cl" : { "q":-1.0, "r":1.7, "mw":35.45 }
    *       }
    *     }
    *
    * Code example:
    *
    *     AtomMap a;
-   *     a.includefile("atoms.json");   // load parameters
+   *     a.include("atoms.json");   // load parameters
    *
    *     double s=a["Na"].sigma;        // get LJ sigma for sodium
    *

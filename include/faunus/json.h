@@ -9,6 +9,34 @@ namespace Faunus {
 
   typedef nlohmann::json Tmjson;
 
+  template<class T> T operator | (const Tmjson &j, const T &fallback) {
+    if ( j.is_null() )
+      return fallback;
+    return j;
+  }
+
+  template<class T> T operator | (Tmjson &j, const T &fallback) {
+    if ( j.is_null() )
+      j = fallback;
+    return j;
+  }
+
+  inline Tmjson openjson(const string &file) {
+    Tmjson js;
+    std::ifstream f(file.c_str());
+    if (f) {
+      try {
+        js << f;
+      } 
+      catch (...) {
+        std::cerr << "Error loading json file '" << file
+          << "'. Carefully check the syntax." << endl;
+        std::exit(1);
+      }
+    }
+    return js;
+  }
+
   /**
    * @brief Base class for supporting JSON user input 
    *
@@ -160,18 +188,6 @@ namespace Faunus {
     }
 
   }//namespace
-
-  template<class T> T operator | (const Tmjson &j, const T &fallback) {
-    if ( j.is_null() )
-      return fallback;
-    return j;
-  }
-
-  template<class T> T operator | (Tmjson &j, const T &fallback) {
-    if ( j.is_null() )
-      j = fallback;
-    return j;
-  }
 
 }//namespace
 #endif

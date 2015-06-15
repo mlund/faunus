@@ -15,10 +15,7 @@ echo '{
   "system" : {
     "cuboid"   : { "len" : 19.0288 },
     "mcloop"   : { "macro":10, "micro":50000 },
-    "unittest" : { "testfile":"gcmol.test", "stable":false },
-    "atomlist"              : "gcmol.json",
-    "moleculelist"          : "gcmol.json",
-    "moleculecombinations"  : "gcmol.json"
+    "unittest" : { "testfile":"gcmol.test", "stable":false }
   },
 
   "energy" : {

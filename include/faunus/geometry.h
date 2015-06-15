@@ -102,15 +102,8 @@ namespace Faunus {
          * :-------- | :-----------------------
          * radius`   | Sphere radius [angstrom]
          */
-        inline Sphere(InputMap &in, const string &dir="") : Geometrybase("Sphere", dir) {
-          in.cd( jsondir + "/sphere" );
-          setRadius(
-              in.get("radius", -1.0, "Spherical container radius (A)") );
-        }
-
         inline Sphere( Tmjson &j ) : Geometrybase("Sphere") {
-          json() = j[ textio::lowercase(name) ];
-          setRadius( j["radius"] | -1.0 );
+          setRadius( j["system"][ textio::lowercase(name) ] ["radius"] | -1.0 );
         }
 
         void randompos(Point &);
@@ -173,6 +166,7 @@ namespace Faunus {
 
         inline Cuboid( Tmjson &j ) : Geometrybase("Cuboid") {
           json() = j[ textio::lowercase(name) ];
+          assert( ! json().empty() && "Cuboid json section is empty" );
           string scaledirstr = json()["scaledir"] | string("XYZ");
           scaledir = ( scaledirstr=="XY" ) ? XY : XYZ;
           double cubelen = json()["len"] | -1.0;

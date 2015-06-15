@@ -34,9 +34,7 @@ echo '{
     "Tscale"       : '$Tscale',
     "cuboid"       : { "len" : 4. },
     "mcloop"       : { "macro":50, "micro":250000 },
-    "unittest"     : { "testfile":"penalty.test", "stable":false },
-    "atomlist"     : "mpi'$proc'.penalty.json",
-    "moleculelist" : "mpi'$proc'.penalty.json"
+    "unittest"     : { "testfile":"penalty.test", "stable":false }
   }
 }' > mpi$proc.penalty.json
 

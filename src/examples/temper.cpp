@@ -26,42 +26,42 @@ struct myenergy : public Energy::Energybase<Tspace> {  //custom energy class
 
 int main() {
   Faunus::MPI::MPIController mpi;               //init MPI
-  InputMap mcp(textio::prefix+"temper.json");   //read input file
+
+  InputMap in( textio::prefix+"temper.json" );   // read input file
+  Tspace spc( in );                             //create simulation space
+
   myenergy<Tspace> pot;                         //our custom potential!
-  mcp.cd ("system");
-  pot.Tscale = mcp.get("Tscale",1.0);           //temperature from input
-  Tspace spc(mcp);                              //create simulation space
+  pot.Tscale = in["system"]["Tscale"] | 1.0;    //temperature from input (default: 1)
 
   Analysis::LineDistribution<> dst(.05);        //distribution func.
-  Move::ParallelTempering<Tspace> pt(mcp,pot,spc,mpi);//temper move
-  Move::AtomicTranslation<Tspace> trans(mcp,pot,spc); //translational move
+  Move::ParallelTempering<Tspace> pt(pot,spc,in["moves"],mpi);//temper move
+  Move::AtomicTranslation<Tspace> trans(pot,spc,in["moves"]); //translational move
 
   EnergyDrift sys;                              // class for tracking system energy drifts
-  cout << "hej2" << endl;
   sys.init(Energy::systemEnergy(spc,pot,spc.p));// store initial total system energy
-  cout << "hej3" << endl;
 
   mpi.cout << spc.info();                       //print initial info
                                                
-  MCLoop loop(mcp);                             //handle mc loops
+  MCLoop loop( in );                            //handle mc loops
   while ( loop[0] ) {                           //start markov chain
     while ( loop[1] ) {                        
-      sys+=trans.move();                        //translate particle
-      dst(spc.p[0].x())++;                      //update histogram
+      sys += trans.move();                      //translate particle
+      dst( spc.p[0].x() )++;                    //update histogram
     }                                          
-    sys+=pt.move();                             //do temper move
+    sys += pt.move();
     mpi.cout << loop.timing();                  //print progress
   }                                            
 
-  UnitTest test( mcp );                         //unit testing
+  UnitTest test( in );                          //unit testing
   trans.test( test );                          
   sys.test( test );
   pt.test( test );                             
 
-  sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // calc. energy drift
-  dst.save(textio::prefix+"dist");              //save histogram
-  mpi.cout << trans.info() << pt.info()         //print final info
-    << sys.info() << test.info();
+  sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // calc. energy drift
+
+  dst.save( textio::prefix+"dist" );            //save histogram
+
+  mpi.cout << trans.info() << pt.info() << sys.info() << test.info();
 
   return test.numFailed();
 }

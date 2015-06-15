@@ -34,11 +34,9 @@ echo '{
 
   "system" : {
     "Tscale"       : '$Tscale',
-    "cuboid"       : { "len" : 4. },
+    "cuboid"       : { "len" : 4.0 },
     "mcloop"       : { "macro":2000, "micro":10000 },
-    "unittest"     : { "testfile":"mpi'$proc'.temper.test", "stable":false },
-    "atomlist"     : "mpi'$proc'.temper.json",
-    "moleculelist" : "mpi'$proc'.temper.json"
+    "unittest"     : { "testfile":"mpi'$proc'.temper.test", "stable":false }
   }
 }' > mpi$proc.temper.json
 done

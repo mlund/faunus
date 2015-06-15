@@ -399,8 +399,6 @@ namespace Faunus {
    * vector of `MoleculeData`. The file format is JSON (<http://www.json.org>)
    * and all molecule properties must be inclosed in an object with
    * the keyword `moleculelist`.
-   * While not strictly JSON compliant, comments beginning
-   * with `//` are allowed.
    *
    * For example:
    *

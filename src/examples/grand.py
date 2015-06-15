@@ -3,34 +3,35 @@ from subprocess import call
 from shutil import copyfile
 
 def mkinput():
-  js = {}
+  d = {
+      "moleculelist": {
+        "salt": { "Ninit": 20, "atomic": True, "atoms": "Na Cl" }
+        }, 
 
-  # direct addition
-  js['atomlist'] = {} 
-  js['atomlist']['Na'] = { 'q': 1.0, 'r':2.0, 'dp':50, 'activity':0.05 }
-  js['atomlist']['Cl'] = { 'q':-1.0, 'r':2.0, 'dp':50, 'activity':0.05 }
+      "energy": {
+        "nonbonded": { "coulomb": { "epsr": 80 } }
+        }, 
 
-  js['moleculelist'] = {} 
-  js['moleculelist']['salt'] = { 'atoms':'Na Cl', 'atomic':True, 'Ninit':20 }
+      "moves": {
+        "atomtranslate": { "salt": { "permol": True, "prob": 0.01 } }, 
+        "atomgc": { "molecule": "salt" }
+        }, 
 
-  js['energy'] = {} 
-  js['energy']['nonbonded'] = { 'coulomb' : { 'epsr':80 }  }
+      "system": {
+        "mcloop"      : { "macro": 10, "micro": 100000 }, 
+        "sphere"      : { "radius": 80 }, 
+        "unittest"    : { "testfile": "grand.test", "stable": False }, 
+        "coulomb"     : { "epsr": 80 },
+        "temperature" : 298.15
+        }, 
 
-  js['moves'] = {}
-  js['moves']['atomgc']        = { 'molecule':'salt' }
-  js['moves']['atomtranslate'] = { 'salt' : { 'prob':0.01, 'permol':True } }
+      "atomlist": {
+        "Na": { "q":  1.0, "r": 2.0, "dp": 50, "activity": 0.05 }, 
+        "Cl": { "q": -1.0, "r": 2.0, "dp": 50, "activity": 0.05 }
+        }
+      }
 
-  # adding via reference
-  sec = js['system'] = {}
-  sec['temperature']  = 298.15
-  sec['sphere']       = { 'radius':80 }
-  sec['mcloop']       = { 'macro':10, 'micro':100000 }
-  sec['coulomb']      = { 'epsr':80 }
-  sec['unittest']     = { 'testfile':'grand.test', 'stable':False }
-  sec['atomlist']     = 'grand.json'
-  sec['moleculelist'] = 'grand.json'
-
-  print >> open('grand.json', 'w+'), json.dumps(js, indent=4)
+  print >> open('grand.json', 'w+'), json.dumps(d, indent=4)
 
 exe='./grand'
 if ( os.access( exe, os.X_OK )):

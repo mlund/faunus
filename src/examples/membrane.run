@@ -41,8 +41,6 @@ echo '{
                        "xyzlen" : "'`python -c "print $box, $box, $box*2"`'" },
     "mcloop"       : { "macro":10, "micro":1000 },
     "unittest"     : { "testfile":"membrane.test", "stable":false },
-    "atomlist"     : "membrane.json",
-    "moleculelist" : "membrane.json",
     "lipid_epsilon": "epsilon",
     "lipid_sigma"  : "sigma"
   }

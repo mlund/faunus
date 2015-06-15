@@ -8,10 +8,7 @@ echo '{
   "system" : {
     "cuboid"   : { "len" : 27.0 },
     "mcloop"   : { "macro":10, "micro":400 },
-    "unittest" : { "testfile":"water2.test", "stable":false },
-    "atomlist"              : "water2.json",
-    "moleculelist"          : "water2.json",
-    "moleculecombinations"  : "water2.json"
+    "unittest" : { "testfile":"water2.test", "stable":false }
   },
 
   "energy" : {

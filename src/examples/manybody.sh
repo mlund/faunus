@@ -90,9 +90,7 @@ echo '{
     "temperature" : 298.15,
     "cuboid"   : { "len" : '$boxlen' },
     "mcloop"   : { "macro":10, "micro":'$micro' },
-    "unittest" : { "testfile":"manybody.test", "stable":false },
-    "atomlist" : "manybody.json",
-    "moleculelist" : "manybody.json"
+    "unittest" : { "testfile":"manybody.test", "stable":false }
   }
 }
 ' > manybody.json

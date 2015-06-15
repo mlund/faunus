@@ -31,9 +31,7 @@ echo '{
     "temperature"  : 300,
     "cuboid"       : { "len" : 100 },
     "mcloop"       : { "macro":10, "micro":1000 },
-    "unittest"     : { "testfile":"seawater.test", "stable":false },
-    "atomlist"     : "seawater.json",
-    "moleculelist" : "seawater.json"
+    "unittest"     : { "testfile":"seawater.test", "stable":false }
   }
 }' > seawater.json
 

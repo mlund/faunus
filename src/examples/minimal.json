@@ -16,8 +16,6 @@
   },
   "system" : {
     "temperature" : 298.15,
-    "cuboid" : { "len":50 },
-    "atomlist"     : "minimal.json",
-    "moleculelist" : "minimal.json"
+    "cuboid" : { "len":50 }
   }
 }

@@ -68,6 +68,7 @@ namespace Faunus {
             void set_mu_AX(double);      //!< Set chemical potential of species AX - mu_A then follows.
 
             void set_mu_A(double);       //!< Set chemical potential of species A  - mu_AX then follows.
+            bool bound(const Tid&);      //!< Returns true if state is bound for given process
         };
 
         std::map<int, Average<double> > q;       //!< Map of average charges per site
@@ -96,6 +97,8 @@ namespace Faunus {
 
         template<class Tpvec>
           double avgcharge(const Tpvec&, int&);    //!< Print average charges of process i
+
+        int number_of_sites() const { return sites.size(); }
     };
 
     /*!
@@ -125,6 +128,10 @@ namespace Faunus {
       if (id==id_AX || id==id_A)
         return true;
       return false;
+    }
+
+    bool EquilibriumController::processdata::bound( const Tid &id ) {
+      return ( id == id_AX ) ? true : false;
     }
 
     /*!

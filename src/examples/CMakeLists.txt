@@ -26,6 +26,10 @@ fau_example(example_grand "./" grand.cpp)
 set_target_properties(example_grand PROPERTIES OUTPUT_NAME "grand")
 add_test( example_grand python ${CMAKE_CURRENT_SOURCE_DIR}/grand.py )
 
+fau_example(example_gctit "./" gctit.cpp)
+set_target_properties(example_gctit PROPERTIES OUTPUT_NAME "gctit")
+#add_test( example_gctit python ${CMAKE_CURRENT_SOURCE_DIR}/gctit.py )
+
 fau_example(example_stockmayer "./" stockmayer.cpp)
 fau_example(example_stockmayer_polarizable "./" stockmayer.cpp)
 set_target_properties(example_stockmayer PROPERTIES OUTPUT_NAME "stockmayer" EXCLUDE_FROM_ALL FALSE)

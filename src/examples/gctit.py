@@ -37,13 +37,20 @@ def mkinput():
         "temperature": 298.15,
         "coulomb": { "epsr": 80 },
         "cuboid": { "len": 202.5 },
-        "unittest": { "testfile": "gctit.test", "stable": false },
+        "unittest": { "testfile": "gctit.test", "stable": False },
         "mcloop": { "macro": 10, "micro": micro },
         "sphere": { "radius": 100 }
         },
 
+      "moves": {
+          "gctit"         : { "molecule": "salt", "prob": 0.01 },
+          "atomtranslate" : { "salt": { "prob": 0.1, "dp": 100 } },
+          "moltransrot"   : { "protein":
+            { "permol": True, "dp": 60, "prob": 1, "dir": "0 0 1", "dprot": 0 } }
+          },
+
       "moleculelist": {
-        "protein": { "Ninit": 2, "structure": "gctit_mol.aam" },
+        "protein": { "Ninit": 2, "structure": "gctit_mol.aam", "insdir": "0 0 1" },
         "salt": { "Ninit": 50, "atomic": True, "atoms": "La Cl Cl Cl" }
         },
 
@@ -76,37 +83,32 @@ def mkinput():
         "M-09": { "q": -9, "r": 5 },
         "M+-0": { "q": 0, "r": 5 },
         "M-10": { "q": -10, "r": 5 }
-        },
-
-      "processfile": "gctit.json",
-
-      "moves": {
-          "gctit"         : { "molecule": "salt", "prob": 0.01 },
-          "atomtranslate" : { "salt": { "prob": 0.1, "dp": 100 } },
-          "moltransrot"   : { "protein":
-            { "permol": True, "dp": 60, "prob": 1, "dir": "0 0 1", "dprot": 0 } }
-          }
+        }
       }
 
   print >> open('gctit.json', 'w+'), json.dumps(j, indent=4)
 
-exe='./gctit'
-
-activity_range = [ 0.011]
-pH_range       = [0.0]
+exe            = './gctit'
+runeq          = True
+runprod        = False
 
 if ( os.access( exe, os.X_OK )):
-  #  copyfile( 'gctit.state', 'state' )
-  for activity in activity_range:
-    for pH in pH_range:
-      #      if ( os.path.isfile('state')):
-#        os.remove('state')
-      micro = 10000
-      mkinput()
-      rc = call( [exe] ) 
-      sys.exit( rc )
-      micro = 10000000
-      mkinput()
-      rc = call( [exe] ) 
-  sys.exit( rc )
+  for activity in [ 0.011 ]: # mol/l
+    for pH in [ 7.0 ]:
+
+      if (runeq==True):
+        try:
+          os.remove('state')
+        except OSError:
+          pass
+        micro = 10000
+        mkinput()
+        rc = call( [exe] ) 
+
+      if (runprod==True):
+        micro = 10000000
+        mkinput()
+        rc = call( [exe] ) 
+
+sys.exit( rc )
 

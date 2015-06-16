@@ -24,18 +24,6 @@ int main() {
   widom1.add(spc.p);
   widom2.add(spc.p);
   Analysis::LineDistribution<> rdf_ab(0.5);      // 0.1 angstrom resolution
-  Analysis::VirialPressure virial;
-
-  // Move two first macro molecules to (0,0,+/-25AA)
-  vector<Group> g;
-  Group g1("protein", 0, 0);
-  Group g2("protein", 1, 1);
-  g1.setMassCenter(spc), g2.setMassCenter(spc);
-  g.push_back(g1), g.push_back(g2);
-  Point p(0.0,0.0,25.0);
-  g[0].translate(spc,-g[0].cm+p);
-  g[1].translate(spc,-g[1].cm-p);
-  spc.p=spc.trial;
 
   Move::Propagator<Tspace> mv(mcp,pot,spc);
 
@@ -44,16 +32,20 @@ int main() {
 
   cout << atom.info() + spc.info() + pot.info() + "\n";
 
+  auto g = spc.findMolecules( "protein" );
+
   MCLoop loop(mcp);                             // class for handling mc loops
   while ( loop[0] ) {
     while ( loop[1] ) {
       sys+=mv.move();                           // move!
       widom1.sample(spc,pot,1);
       widom2.sample(spc.p,spc.geo);
-      if (slump() < 0.10) {
-        rdf_ab.sampleMoleculeGroup(spc,g,"protein");
-  //      virial.sample(spc,pot);
-      }
+
+      if (slump() < 0.10)
+        for (size_t i=0; i<g.size()-1; i++)
+          for (size_t j=i+1; j<g.size(); j++)
+            rdf_ab( spc.geo.dist( g[i]->cm, g[j]->cm ) )++; 
+
     }                                           // end of micro loop
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // calc. energy drift
     cout << loop.timing();
@@ -61,12 +53,9 @@ int main() {
   }                                             // end of macro loop
 
   UnitTest test(mcp);                           // class for unit testing
-  //mv.test(test);
-  //sys.test(test);
-  //widom1.test(test);
 
   cout << loop.info() + sys.info() + mv.info() + test.info()
-    + widom1.info() + widom2.info() + virial.info();
+    + widom1.info() + widom2.info();
 
   FormatPQR::save("confout.pqr", spc.p);        // PQR snapshot for VMD etc.
   spc.save("state");                            // final simulation state
@@ -75,7 +64,7 @@ int main() {
 }
 
 /**
-  @page example_grand Example: Grand Canonical Salt
+  @page example_grand Example: Grand Canonical Salt with proton titration
 
   This is an example of a grand canonical salt solution (NmuT)
   with the following MC moves:
@@ -91,7 +80,7 @@ int main() {
   Run this example from the terminal:
 
       $ cd src/examples
-      $ python grand.py
+      $ python gctit.py
   
   Input
   =====

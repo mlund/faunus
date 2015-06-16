@@ -26,7 +26,7 @@ int main() {
 
   spc.load("state");
 
-  Move::SwapMove<Tspace> tit(mcp,pot,spc);
+  Move::SwapMove<Tspace> tit(pot,spc,mcp);
   Analysis::ChargeMultipole mp;
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );

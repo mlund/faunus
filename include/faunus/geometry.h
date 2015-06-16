@@ -285,7 +285,6 @@ namespace Faunus {
         Point len;                     //!< Dummy
         Cylinder(Tmjson&);             //!< Constructor
         Cylinder(double, double);      //!< Construct from length and radius
-        Cylinder(InputMap&, const string& dir=""); //!< Constructor 
         void setlen(const Point&);     //!< Set length via vector (dummy function)
         void randompos(Point &);
         void boundary(Point &) const;
@@ -307,7 +306,6 @@ namespace Faunus {
 
         PeriodicCylinder(Tmjson&);
         PeriodicCylinder(double, double);
-        PeriodicCylinder(InputMap&, const string& dir="");
 
         void boundary(Point&) const;
 

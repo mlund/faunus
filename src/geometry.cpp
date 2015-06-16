@@ -157,21 +157,18 @@ namespace Faunus {
     }
 
     /**
-     * The InputMap is scanned for the following parameters in section `system/cylinder`:
+     * The json object is scanned for the following parameters in section `system/cylinder`:
      *
      * Key      | Description
      * :------- | :-------------------------
      * `length` | Cylinder length [angstrom]
      * `radius` | Cylinder radius [angstrom] 
      */
-    Cylinder::Cylinder(InputMap &in, const string &dir) : Geometrybase( "Cylinder", dir ) {
-      in.cd( jsondir + "/cylinder" );
-      init( in.get("length", 0.0), in.get("radius", 0.0) );
-    }
-
-    Cylinder::Cylinder( Tmjson &j) : Geometrybase( "Cylinder" ) {
-      json() = j[ textio::lowercase(name) ];
-      init( json()["length"] | 0.0, json()["radius"] | 0.0);
+    Cylinder::Cylinder( Tmjson &j ) : Geometrybase( "Cylinder" ) {
+      auto m = j["system"]["cylinder"];
+      init(
+          m["length"] | 0.0,
+          m["radius"] | 0.0  );
     }
 
     void Cylinder::init(double length, double radius) {
@@ -229,12 +226,10 @@ namespace Faunus {
       return o.str();
     }
 
-    PeriodicCylinder::PeriodicCylinder(double length, double radius) : Cylinder(length,radius) {
+    PeriodicCylinder::PeriodicCylinder(
+        double length, double radius) : Cylinder(length,radius) {
       name="Cylindrical (periodic ends)";
     }
-
-    PeriodicCylinder::PeriodicCylinder(InputMap &in, const string &dir)
-      : Cylinder(in,dir) { name="Cylindrical (periodic ends)"; }
 
     PeriodicCylinder::PeriodicCylinder( Tmjson &j ) : Cylinder(j) {
       name = "Periodic " + name;

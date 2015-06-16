@@ -42,7 +42,6 @@ namespace Faunus {
     class EquilibriumController {
       private:
         typedef int Tid;                 //!< Particle type id
-        bool includeJSON(const string&); //!< Read equilibrium processes
       public:
         class processdata {
           public:
@@ -74,9 +73,7 @@ namespace Faunus {
         std::map<int, Average<double> > q;       //!< Map of average charges per site
         std::vector<processdata> process;        //!< Vector of processes.
 
-        EquilibriumController( InputMap& );
-
-        bool include(string);                      //!< Read equilibrium processes
+        EquilibriumController( Tmjson& );
 
         template<class Tpvec>
           void findSites(const Tpvec&);            //!< Locate all titratable sites
@@ -101,9 +98,9 @@ namespace Faunus {
         int number_of_sites() const { return sites.size(); }
     };
 
-    /*!
-     * \param pX  Negative logarithm of the X activity (titrant)
-     * \param pKd Negative logarithm of dissociation constant.
+    /**
+     * @param pX  Negative logarithm of the X activity (titrant)
+     * @param pKd Negative logarithm of dissociation constant.
      */
     void EquilibriumController::processdata::set(double pX, double pKd) {
       ddG = -log(pow(10., -pKd));
@@ -175,26 +172,15 @@ namespace Faunus {
      * sure that `AtomMap` has been loaded with all atomic properties
      * as these will be used to reset the charge, radii, weight etc.
      * on all particles in the system.
-     *
-     * The `InputMap` is searched for:
-     *
-     * - `processfile` Name of process file. 
-     *
-     * Note that the current (cd'ed) section will be scanned.
      */
-    EquilibriumController::EquilibriumController(InputMap &in) {
-      include( in( "processfile", string() ) );
-    }
-
-    bool EquilibriumController::includeJSON(const string &file) {
-      process.clear();
-      auto j=json::open(file);
-      for (auto &p : json::object("processes", j)) {
-        cout << "Reading process " << p.first << " ... ";
-        string bound = json::value<string>(p.second, "bound", string());
-        string free  = json::value<string>(p.second, "free", string());
-        double pKd   = json::value<double>(p.second, "pKd", 0);
-        double pX    = json::value<double>(p.second, "pX", 0);
+    EquilibriumController::EquilibriumController( Tmjson &j ) {
+      auto m = j["processes"];
+      for ( auto p = m.begin(); p != m.end(); ++p ) {
+        cout << "# Reading process " << p.key() << " ... ";
+        string bound = p.value()["bound"] | string();
+        string free  = p.value()["free"] | string();
+        double pKd   = p.value()["pKd"] | 0.0;
+        double pX    = p.value()["pX"] | 0.0;
         processdata d;
         d.id_AX=atom[bound].id;
         d.id_A=atom[free].id;
@@ -206,30 +192,21 @@ namespace Faunus {
         else
           cout << "ignored.\n";
       }
-      return (process.empty() ? false : true);
-    }
 
-    bool EquilibriumController::include(string file) {
-      if (file.substr(file.find_last_of(".") + 1) == "json") {
-        includeJSON(file);
-        // update reference states
-        Tid i_AX,i_A, j_AX, j_A;
-        if (!process.empty())
-          for (size_t i=0; i<process.size()-1; i++) {
-            for (size_t j=i+1; j<process.size(); j++) {
-              i_AX = process[i].id_AX;
-              i_A  = process[i].id_A;
-              j_AX = process[j].id_AX;
-              j_A  = process[j].id_A;
-              if ( j_A  == i_A  ) process[j].set_mu_A ( process[i].mu_A  );
-              if ( j_A  == i_AX ) process[j].set_mu_A ( process[i].mu_AX );
-              if ( j_AX == i_A  ) process[j].set_mu_AX( process[i].mu_A  );
-              if ( j_AX == i_AX ) process[j].set_mu_AX( process[i].mu_AX );
-            }
+      // update reference states
+      if ( ! process.empty() )
+        for (size_t i=0; i<process.size()-1; i++) {
+          for (size_t j=i+1; j<process.size(); j++) {
+            Tid i_AX = process[i].id_AX;
+            Tid i_A  = process[i].id_A;
+            Tid j_AX = process[j].id_AX;
+            Tid j_A  = process[j].id_A;
+            if ( j_A  == i_A  ) process[j].set_mu_A ( process[i].mu_A  );
+            if ( j_A  == i_AX ) process[j].set_mu_A ( process[i].mu_AX );
+            if ( j_AX == i_A  ) process[j].set_mu_AX( process[i].mu_A  );
+            if ( j_AX == i_AX ) process[j].set_mu_AX( process[i].mu_AX );
           }
-        return true;
-      }
-      return false;
+        }
     }
 
     /*!
@@ -370,7 +347,7 @@ namespace Faunus {
         public:
           EquilibriumController eq;
 
-          EquilibriumEnergy(InputMap &in) : eq(in) {
+          EquilibriumEnergy( Tmjson &j ) : eq( j ) {
             this->name="Equilibrium State Energy";
           }
 

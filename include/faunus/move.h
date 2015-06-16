@@ -2742,8 +2742,8 @@ namespace Faunus {
                 for Grand Canonical Titration moves." << endl;
               exit(1);
             }
-            eqpot->eq.include( j["processfile"] | string() );
-            findSites(spc->p);
+            eqpot->eq = Energy::EquilibriumController( j );
+            findSites( spc->p );
             cnt_tit = cnt_salt = cnt_tit_acc = cnt_salt_acc = 0;
 
             /* Sync particle charges with `AtomMap` */
@@ -3794,7 +3794,7 @@ namespace Faunus {
 
           public:
             template<class Tenergy>
-              SwapMove(InputMap&, Tenergy&, Tspace&, string="moves"); //!< Constructor
+              SwapMove(Tenergy&, Tspace&, Tmjson&, string="titrate"); //!< Constructor
 
             template<class Tpvec>
               int findSites(const Tpvec&); //!< Search for titratable sites (old ones are discarded)
@@ -3817,27 +3817,24 @@ namespace Faunus {
 
       template<class Tspace>
         template<class Tenergy> SwapMove<Tspace>::SwapMove(
-            InputMap &in, Tenergy &e, Tspace &spc, string dir) : base(e,spc,dir) {
+            Tenergy &e, Tspace &spc, Tmjson &j, string sec) : base(e,spc) {
 
           this->title="Site Titration - Swap Move";
-          in.cd ( this->jsondir + "/titrate" );
-          this->runfraction = in( "prob", 1.0 );
+          this->runfraction = j["moves"][sec]["prob"] | 1.0;
+          ipart=-1;
 
           auto t = e.tuple();
           auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
           if ( ptr != nullptr )
             eqpot = *ptr; 
           else {
-            std::cerr << "Error: Equilibrium energy required in Hamiltonian for titration swap moves." << endl;
+            std::cerr << "Error: Equilibrium energy required in\
+              Hamiltonian for titration swap moves." << endl;
             exit(1);
           }
 
-          ipart=-1;
-
-          string processfile = in( "processfile", string() );
-          assert( !processfile.empty() );
-          eqpot->eq.include( processfile );
-          findSites(spc.p);
+          eqpot->eq = Energy::EquilibriumController( j );
+          findSites( spc.p );
 
           /* Sync particle charges with `AtomMap` */
           for (auto i : eqpot->eq.sites)
@@ -4076,7 +4073,7 @@ namespace Faunus {
                 if (i.key()=="gc")
                   mPtr.push_back( toPtr( GreenGC<Tspace>(e,s,in) ) );
                 if (i.key()=="titrate")
-                  mPtr.push_back( toPtr( SwapMove<Tspace>(in,e,s) ) );
+                  mPtr.push_back( toPtr( SwapMove<Tspace>(e,s,in) ) );
                 if (i.key()=="crankshaft")
                   mPtr.push_back( toPtr( CrankShaft<Tspace>(e,s,in) ) );
                 if (i.key()=="pivot")

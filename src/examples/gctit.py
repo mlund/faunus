@@ -94,7 +94,7 @@ runprod        = False
 
 if ( os.access( exe, os.X_OK )):
   for activity in [ 0.011 ]: # mol/l
-    for pH in [ 7.0 ]:
+    for pH in [ 0.0 ]:
 
       if (runeq==True):
         try:
@@ -106,7 +106,7 @@ if ( os.access( exe, os.X_OK )):
         rc = call( [exe] ) 
 
       if (runprod==True):
-        micro = 10000000
+        micro = 100000
         mkinput()
         rc = call( [exe] ) 
 

@@ -299,7 +299,7 @@ namespace Faunus {
     }
 
     /**
-     * The following input keywords are searched searched:
+     * The following keywords are searched searched in section `coulomb`:
      * - `temperature` [Kelvin, default = 298.15]
      * - `epsilon_r` - relative dielectric constant. Default is 80.
      * - `depsdt` - temperature dependence of dielectric constant,

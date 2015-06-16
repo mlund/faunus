@@ -12,7 +12,6 @@ int main() {
   Energy::Nonbonded<Tspace,CoulombHS>(mcp)      // hamiltonian
   + Energy::EquilibriumEnergy<Tspace>(mcp);
 
-
   pot.setSpace(spc);                            // share space w. hamiltonian
 
   spc.load("state",Tspace::RESIZE);             // load old config. from disk (if any)

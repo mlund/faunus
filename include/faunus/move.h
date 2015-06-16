@@ -2749,6 +2749,32 @@ namespace Faunus {
             /* Sync particle charges with `AtomMap` */
             for (auto i : eqpot->eq.sites)
               spc->trial[i].charge = spc->p[i].charge = atom[ spc->p[i].id ].charge;
+
+            // neutralise system, if needed, using GC ions
+            double Z = netCharge( s.p, Group(0,s.p.size()-1) );
+            double z = 0;
+            Tid id;
+            int maxtry=1000;
+            if ( fabs(Z) > 1e-9) {
+              do {
+                id = base::tracker.randomAtomType();
+                z = atom[id].charge;
+                assert( --maxtry>0 );
+              } while (
+                  ( (z<0 && Z>0) || (Z<0 && z>0) )
+                  && ( fabs( fmod(Z,z) ) < 1e-9 ) );
+
+              int n = round(-Z/z); 
+              assert( n>0 && fabs(n*z+Z) < 1e-9 );
+
+              typename Tspace::ParticleType a;
+              a = atom[id];
+              for (int i=0; i<n; i++) {
+                s.geo.randompos(a);
+                base::tracker.insert(a, base::saltPtr->back());
+              }
+              assert( fabs( netCharge( s.p, Group(0,s.p.size()-1)) )<1e-9) ;
+            }
           }
 
       template<class Tspace> 

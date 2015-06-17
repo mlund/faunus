@@ -11,6 +11,9 @@ def mkinput():
         "nonbonded" : {
           "ljsimple" : { "eps":0.05  },
           "coulomb" : { "epsr" : 78.7, "ionicstrength" : Cs }
+          },
+        "cmconstrain" : {
+          "protein protein" : { "mindist": 0, "maxdist": 60 }
           }
         },
 
@@ -99,7 +102,7 @@ exe="./twobody"
 
 runeq=True
 runprod=True
-copydata=True
+copydata=False
 
 for Cs in [0.05]:  # ionic strength (mol/l)
   for pH in np.arange( 4.0, 4.1, 0.5 ):
@@ -111,7 +114,10 @@ for Cs in [0.05]:  # ionic strength (mol/l)
     # Equilibration
     if (runeq==True):
       print "Equilibration run...(state file deleted)"
-      os.remove('state')
+      try:
+        os.remove('state')
+      except: pass
+
       micro=1000
       mkinput()
       print >> open(prefix+'.eq', 'w+'), check_output( [exe] )

@@ -12,7 +12,8 @@ int main(int argc, char** argv) {
 
   Tspace spc(mcp);
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
-    + Energy::EquilibriumEnergy<Tspace>(mcp);
+    + Energy::EquilibriumEnergy<Tspace>(mcp)
+    + Energy::MassCenterConstrain<Tspace>(mcp, spc);
 
   Analysis::LineDistribution<> rdf(0.5);
   Analysis::ChargeMultipole mpol;

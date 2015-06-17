@@ -20,6 +20,7 @@
 #define FAUNUS_H
 
 #ifndef SWIG
+#include <faunus/json.hpp> // lohmann modern json
 #include <faunus/common.h>
 #include <faunus/textio.h>
 #include <faunus/point.h>

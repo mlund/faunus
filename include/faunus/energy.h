@@ -273,7 +273,10 @@ namespace Faunus {
               Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
             }
 
-          Nonbonded( Tmjson &j ) : geo(j), pairpot( j["energy"]["nonbonded"] ) {
+          Nonbonded(
+              Tmjson &j,
+              const string &sec="nonbonded" ) : geo(j), pairpot( j["energy"][sec] ) {
+
             static_assert(
                 std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
                 "Tpairpot must be a pair potential" );
@@ -1108,10 +1111,9 @@ namespace Faunus {
            */
           void setPressure( double pressure ) { P = pressure; }
 
-          ExternalPressure(InputMap &in) {
+          ExternalPressure( Tmjson &j, string sec="isobaric" ) {
             this->name="External Pressure";
-            in.cd ( "moves/isobaric" );
-            P = in( "pressure", 0.0 ) * 1.0_mM;
+            P = ( j["moves"][sec]["pressure"] | 0.0 ) * 1.0_mM;
             if (P < 0)
               throw std::runtime_error( "Negative pressure forbidden." );
           }
@@ -1345,8 +1347,8 @@ namespace Faunus {
      * tension, @f$\gamma@f$, is not comparable to a true, macroscopic
      * tension.
      *
-     * Upon construction the following keywords are read from `InputMap` in
-     * sectio `energy/hydrophobicsasa`:
+     * Upon construction the following keywords are read from
+     * section `energy/hydrophobicsasa`:
      *
      *  Keyword      | Comment
      *  :----------- | :--------------------------------------------------------
@@ -1450,16 +1452,18 @@ namespace Faunus {
 
         public:
 
-          HydrophobicSASA(InputMap &in, const string dir="") : base(dir) {
+          HydrophobicSASA( Tmjson &j, const string sec="hydrophobicsasa" ) : base(sec) {
             base::name = "Hydrophobic SASA";
-            in.cd ( base::jsondir + "/hydrophobicsasa" );
-            tension = tension_dyne * 1e-23 / (pc::kB * pc::T());  // dyne/cm converted to kT/A^2, 1dyne/cm = 0.001 J/m^2
-            threshold = in.get( "threshold", 3.0 );
-            tension_dyne = in.get( "tension", 0.0 );
-            file = in.get( "sasafile", string() );
-            duplicate = in.get( "duplicate", 0 );
-            sample_uofr = in.get( "uofr", false );
-            dr = in.get<double>( "dr", 0.5 );
+            auto m       = j["energy"][sec];
+            threshold    = m["threshold"] | 3.0;
+            tension_dyne = m["tension"] | 0.0;
+            duplicate    = m["duplicate"] | 0.0;
+            sample_uofr  = m["uofr"] | false;
+            dr           = m["dr"] | 0.5;
+            file         = m["sasafile"] | string();
+
+            // dyne/cm converted to kT/A^2; 1 dyne/cm = 0.001 J/m^2
+            tension = tension_dyne * 1e-23 / (pc::kB * pc::T());
             loadSASA(file, duplicate);
           }
 

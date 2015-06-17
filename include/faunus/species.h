@@ -141,6 +141,8 @@ namespace Faunus {
       static_assert(std::is_base_of<PropertyBase, Tproperty>::value,
           "Elements must be derived from `PropertyBase`");
     }
+    
+    virtual ~PropertyVector() {};
 
     string info() {
       using namespace textio;

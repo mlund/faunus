@@ -414,11 +414,14 @@ namespace Faunus {
             eps *= 1.0_kJmol;
         }
 
-        LennardJones( Tmjson &j ) : PairPotentialBase( j["ljsimple"] ){
-          name="Lennard-Jones";
-          eps = 4.0 * ( json()["eps"] | 0.0 );
-          string unit = json()["unit"] | string("kT");
-          if ( unit=="kJ/mol" )
+        LennardJones(
+            Tmjson &j,
+            const string &sec="ljsimple" ) : PairPotentialBase( j[sec] ) {
+
+          name        ="Lennard-Jones";
+          eps         = 4.0 * ( j[sec]["eps"] | 0.0 );
+          string unit = j[sec]["unit"] | string("kT");
+          if ( unit == "kJ/mol" )
             eps *= 1.0_kJmol;
         }
 
@@ -808,7 +811,12 @@ namespace Faunus {
      */
     class LennardJonesR12 : public LennardJones {
       public:
-        LennardJonesR12(InputMap&, const string &dir="");
+        LennardJonesR12( InputMap&, const string &dir="");
+
+        LennardJonesR12( Tmjson &j, const string &sec="ljr12") {//: LennardJones(j,sec) {
+          name+="R12";
+        }
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=r6(a.radius+b.radius,r2);

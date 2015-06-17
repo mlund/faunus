@@ -820,13 +820,18 @@ namespace Faunus {
     template<class Tspace>
       class Bonded : public Energybase<Tspace>,
       protected pair_list<std::function<
-                     double(const typename Tspace::ParticleType&,const typename Tspace::ParticleType&,double)> >
+                     double(const typename Tspace::ParticleType&,
+                         const typename Tspace::ParticleType&,double)> >
     {
       private:
         typedef typename Energybase<Tspace>::Tparticle Tparticle;
         typedef typename Energybase<Tspace>::Tpvec Tpvec;
-        typedef pair_list<std::function<double(const Tparticle&,const Tparticle&,double)> > Tbase;
-        typedef std::function<Point(const Tparticle&,const Tparticle&,double,const Point&)> Tforce;
+
+        typedef pair_list<std::function<
+          double(const Tparticle&,const Tparticle&,double)> > Tbase;
+
+        typedef std::function<
+          Point(const Tparticle&,const Tparticle&,double,const Point&)> Tforce;
 
         using Energybase<Tspace>::spc;
         std::map<typename Tbase::Tpair, Tforce> force_list;
@@ -846,7 +851,8 @@ namespace Faunus {
           struct ForceFunctionObject {
             Tpairpot pot;
             ForceFunctionObject(const Tpairpot &p) : pot(p) {}
-            Point operator()(const Tparticle &a, const Tparticle &b, double r2, const Point &r) {
+            Point operator()(const Tparticle &a, const Tparticle &b,
+                double r2, const Point &r) {
               return pot.force(a,b,r2,r);
             }
           };
@@ -1010,6 +1016,7 @@ namespace Faunus {
               }
         }
 
+        /** @brief Get list of bonds */
         auto getBondList() -> decltype(this->list) { return Tbase::getBondList(); }
 
     };

@@ -3845,8 +3845,9 @@ namespace Faunus {
         template<class Tenergy> SwapMove<Tspace>::SwapMove(
             Tenergy &e, Tspace &spc, Tmjson &j, string sec) : base(e,spc) {
 
-          this->title="Site Titration - Swap Move";
-          this->runfraction = j["moves"][sec]["prob"] | 1.0;
+          base::title="Site Titration - Swap Move";
+          base::runfraction = j["moves"][sec]["prob"] | 1.0;
+          base::w = 30;
           ipart=-1;
 
           auto t = e.tuple();

@@ -9,18 +9,6 @@ namespace Faunus {
 
   typedef nlohmann::json Tmjson;
 
-  template<class T> T operator | (const Tmjson &j, const T &fallback) {
-    if ( j.is_null() )
-      return fallback;
-    return j;
-  }
-
-  template<class T> T operator | (Tmjson &j, const T &fallback) {
-    if ( j.is_null() )
-      j = fallback;
-    return j;
-  }
-
   inline Tmjson openjson(const string &file) {
     Tmjson js;
     std::ifstream f(file.c_str());
@@ -85,6 +73,7 @@ namespace Faunus {
      }
    } 
    \endcode
+   @todo To be removed!
    */
   namespace json {
 

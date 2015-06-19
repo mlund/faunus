@@ -2237,13 +2237,13 @@ namespace Faunus {
         public:
           Hamiltonian() { Tbase::name="Hamiltonian"; }
 
-          Hamiltonian( const json::Tval &js ) {
+          Hamiltonian( Tmjson &j ) {
             Tbase::name = "Hamiltonian";
-            json::Tobj m = json::object("energy", js);
-            for ( auto &i : m ) {
-              if (i.first=="nonbonded") {
+            auto m = j["energy"];
+            for ( auto i=m.begin(); i!=m.end() ; ++i ) {
+              if (i.key()=="nonbonded") {
                 // todo: check for "type" in nonbonded, i.e. "lj", "coulomblj" etc.
-                push_back( Energy::Nonbonded<Tspace, Potential::LennardJonesLB>(js) ); 
+                push_back( Energy::Nonbonded<Tspace, Potential::LennardJonesLB>( j ) ); 
               }
             }
           }

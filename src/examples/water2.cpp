@@ -15,6 +15,7 @@ int main() {
 
   cout << textio::splash();      // show faunus banner and credits
   InputMap mcp("water2.json");   // read input file
+  Tspace spc(mcp);
 
   // Energy functions and space
 #ifdef EWALD
@@ -25,7 +26,6 @@ int main() {
     + Energy::ExternalPressure<Tspace>(mcp);
 #endif
 
-  Tspace spc(mcp);
   spc.load("state"); // load old config. from disk (if any)
   auto waters = spc.findMolecules("water");
 

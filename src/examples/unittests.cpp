@@ -33,6 +33,7 @@ TEST_CASE("Spline table", "...")
   a.radius=b.radius=2;
   InputMap mcp("unittests.json");
   auto js = mcp["energy"]["nonbonded"];
+  atom.include(mcp);
   Potential::Coulomb pot_org( js );
   Potential::PotentialTabulate<Potential::Coulomb> pot_tab( js );
 

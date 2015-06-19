@@ -14,11 +14,15 @@ namespace Faunus {
   namespace Potential {
 
     PairPotentialBase::PairPotentialBase() {
+      if ( atom.empty() )
+        std::cerr << "Warning: no atoms defined when initializing pair potential.\n";
       rcut2.resize(atom.size());
     }
 
     PairPotentialBase::PairPotentialBase( const std::string &sec ) : jsonsec(sec) {
       assert( ! jsonsec.empty() );
+      if ( atom.empty() )
+        std::cerr << "Warning: no atoms defined when initializing pair potential.\n";
       rcut2.resize(atom.size());
     }
 
@@ -169,7 +173,7 @@ namespace Faunus {
       return o.str();
     }
 
-    LennardJonesTrunkShift::LennardJonesTrunkShift(InputMap &in, const string &dir) : LennardJones(in,dir) {
+    LennardJonesTrunkShift::LennardJonesTrunkShift(Tmjson &j, const string &sec) : LennardJones( j,sec) {
       name+=" Truncated and shifted to sigma";
     }
 
@@ -199,9 +203,9 @@ namespace Faunus {
     }
 
     /**
-     * In addition to the keywords from `Potential::SquareWell` the InputMap is
+     * In addition to the keywords from `Potential::SquareWell` the json object is
      * searched for:
-     * - `prefix_threshold_lower`
+     * - `threshold_lower`
      */
     SquareWellShifted::SquareWellShifted(Tmjson &j, const string &sec): SquareWell( j, sec ) {
       name+=" Shifted";
@@ -332,7 +336,7 @@ namespace Faunus {
      * @f]
      * where \f$ \alpha=T \partial \epsilon_r/\epsilon_r\partial T\f$
      * is determined experimentally for pure water. To get the entropy from salt ions
-     * only, set \f$\alpha=0\f$ via the InputMap.
+     * only, set \f$\alpha=0\f$ via the following keywords:
      *
      * @param  betaw    Inter particle free energy, \f$\beta w\f$, in units of kT.
      * @param  r        Inter particle distance

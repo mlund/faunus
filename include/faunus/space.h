@@ -181,21 +181,12 @@ namespace Faunus {
         /**
          * @brief Constructor
          *
-         * This will pass the `InputMap` object to `MoleculeMap`
+         * This will pass the json object to `MoleculeMap`
          * in order to load all molecule types. The molecule map
          * is searched for molecules with non-zero `Ninit` and
          * will insert accordingly.
          */
-        Space(InputMap &in) : geo(in) {
-          auto j = in.getJSON();
-          pc::setT( j["system"]["temperature"] | 298.15 );
-          molecule.include( j );
-          for (auto mol : molecule)
-            while (mol.Ninit-- > 0)
-              insert( mol.id, mol.getRandomConformation(geo, p) );
-        }
-
-        Space( Tmjson &j ) : geo( j["system"] ) {
+        Space( Tmjson &j ) : geo( j ) {
           pc::setT( j["system"]["temperature"] | 298.15 );
           atom.include( j );
           molecule.include( j );

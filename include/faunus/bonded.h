@@ -12,8 +12,6 @@ namespace Faunus {
    */
   namespace Bonded {
 
-    typedef picojson::object::value_type Tjson;
-
     /**
      * @brief Base class for two- and manybody potentials
      */

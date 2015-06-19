@@ -158,8 +158,8 @@ namespace Faunus {
      * \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
      * (kT/angstrom^2) and req is the equilibrium distance (angstrom).
      *
-     * Upon construction from InputMap, the following keywords are searched
-     * for in section `harmonic` (default root dir is `system`):
+     * Upon construction the following keywords are searched
+     * for in section `harmonic`:
      *
      * Keyword   | Description
      * :-------- | :-----------------------------------------------
@@ -208,7 +208,7 @@ namespace Faunus {
      * for \f$r_c\leq r \leq r_c+w_c\f$. For \f$r<r_c\f$, \f$\beta u=-\epsilon\f$,
      * while zero for \f$r>r_c+w_c\f$.
      *
-     * The InputMap parameters, searched for in `cosattract` are:
+     * Keywords in json section `cosattract` are:
      *
      * Key     | Description
      * :-------| :---------------------------
@@ -222,7 +222,8 @@ namespace Faunus {
         double eps, wc, rc, rc2, c, rcwc2;
         string _brief();
       public:
-        CosAttract(Tmjson&, const string &sec="cosattract"); // Constructor from InputMap
+
+        CosAttract(Tmjson&, const string &sec="cosattract");
 
         /**
          * @todo
@@ -277,8 +278,7 @@ namespace Faunus {
      * @f[
      *     \beta u(r) = -\frac{k r_0^2}{2}\ln \left [ 1-(r/r_0)^2 \right ]
      * @f]
-     * for \f$r<r_0\f$, otherwise infinity. The input parameters read by InputMap
-     * from section `fene` are as follows:
+     * for \f$r<r_0\f$, otherwise infinity. Parameters are read from section `fene`:
      *
      * - `stiffness` Bond stiffness, `k` [kT]
      * - `maxsep` Maximum separation, `r_0` [angstrom]
@@ -406,10 +406,6 @@ namespace Faunus {
       public:
         LennardJones() : eps(0) { name="Lennard-Jones"; }
 
-        /**
-         * @param in InputMap is scanned for the `lj_eps` and should be in units of kT
-         * @param dir Prefix for InputMap - default is `ls_`
-         */
         LennardJones(
             Tmjson &j,
             const string &sec="ljsimple" ) : PairPotentialBase( sec ) {
@@ -444,7 +440,7 @@ namespace Faunus {
     /**
      * @brief Cuts a pair-potential and shift to zero at cutoff
      *
-     * This will cut any pair potential at `prefix_cutoff` and shift to
+     * This will cut any pair potential at `cutoff` and shift to
      * zero at that distance. Slow but general.
      *
      * Example:
@@ -454,9 +450,9 @@ namespace Faunus {
      * typedef CutShift<LennardJones> Tpairpot;
      * ~~~~
      *
-     * Upon construction with an `InputMap`, the `lj_cutoff`
-     * keyword will be used to set the cut-off.
-     *
+     * Upon construction the json section is read from
+     * `Tpairpot::jsonsec` and the `cutoff` keyword
+     * is used to set the cut-off.
      *
      * @todo Implement continuous force calculation
      */
@@ -492,16 +488,13 @@ namespace Faunus {
      * template parameter must be a class for the epsilon and sigma mixing rules.
      * The atomic values for sigma and epsilon are taken from `AtomMap` via the
      * global instance `atom`.
-     * In your InputMap configuration file you would typically set the atom list
-     * file using the keyword `atomlist`.
      * Note that sigma for each atom is set to two times the radius found in
      * `AtomMap`. Epsilon is stored internally in units of `4kT`.
      *
      * For example:
      * 
-     *     InputMap mcp( "config.json" );
-     *     LennardJonesMixed<LorentzBerthelot> lj(mcp);
-     *
+     *     Tmjson j = openjson( "config.json" );
+     *     LennardJonesMixed<LorentzBerthelot> lj( j );
      */
     template<class Tmixingrule = LorentzBerthelot>
       class LennardJonesMixed : public PairPotentialBase {
@@ -837,7 +830,7 @@ namespace Faunus {
      */
     class LennardJonesTrunkShift : public LennardJones {
       public:
-        LennardJonesTrunkShift(InputMap&, const string &dir="");
+        LennardJonesTrunkShift( Tmjson&, const string &sec="");
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -869,9 +862,7 @@ namespace Faunus {
      * where \f$\lambda_B\f$ is the Bjerrum length and \c z are the valencies.
      *
      * Upon construction, the following parameters are read from the
-     * `InputMap` in section `coulomb`. Note that the default root section
-     * in the json file is `system` but may be changed by instantiating
-     * classes.
+     * json section `coulomb`.
      *
      * Keyword        |  Description
      * :------------- | :---------------------
@@ -944,8 +935,8 @@ namespace Faunus {
      * formulation. This potential is expected to work reasonably well
      * for dense liquids, see [here](http://dx.doi.org/10/j97).
      *
-     * Upon construction using an `InputMap` the keywords from `Potential::Coulomb`
-     * are used in addition to `coulomb_cut` to specifify the cut-off.
+     * Upon construction the keywords from `Potential::Coulomb`
+     * are used in addition to `cutoff` to specifify the cut-off.
      */
     class CoulombWolf : public Coulomb {
 
@@ -998,7 +989,7 @@ namespace Faunus {
      * For non-polar particles in a polar medium, this is a negative number.
      * For more information, see Israelachvili, Chapter 5.
      *
-     * The InputMap is scanned for
+     * The json object is scanned for
      *
      * - The parameters from `Potential::Coulomb`
      * - `excess_polarization` for the delta value
@@ -1008,7 +999,7 @@ namespace Faunus {
       private:
         double c;
       public:
-        ChargeNonpolar(Tmjson&, const string &sec="coulomb"); //!< Construction from InputMap
+        ChargeNonpolar(Tmjson&, const string &sec="coulomb");
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -1385,7 +1376,7 @@ namespace Faunus {
      * The interaction strength, @f$\epsilon@f$ is set by the
      * quadratic mean of individual values from `AtomData`.
      * By default @f$\alpha=90@f$ and may be changed via
-     * the `cardinaux_alpha` keyword in the `InputMap`.
+     * the `cardinaux/alpha` in the json object.
      * More info at
      * [http://dx.doi.org/doi:10.1209/0295-5075/77/48004]
      *

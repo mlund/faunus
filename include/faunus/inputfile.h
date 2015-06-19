@@ -23,6 +23,8 @@ namespace Faunus {
    *
    *     InputMap in("myinput.in");
    *     double T = in.get<double>("temperature", 298.15);
+   *
+   * @todo To be deleted -- replaced by Tmjson.
    */
   class InputMap : public Tmjson {
     private:
@@ -30,9 +32,6 @@ namespace Faunus {
       vector<string> usedkeys;
       vector<string> incfiles;
       bool isjson;
-      json::Tval js;
-      json::Tval jsdir;
-      //Tmjson mjs; // modern json object (will latert replace "js")
 
     public:
       InputMap();
@@ -41,53 +40,6 @@ namespace Faunus {
       bool include(string);  //!< Include keyword/value file.
       bool save(string);     //!< Save map to disk
       string info();         //!< Information string about read files and keywords
-
-      Tmjson& getJSON() { return *this; } //!< Return modern json object
-
-      const Tmjson& getJSON() const { return *this; } //!< Return modern json object
-
-      /**
-       * @brief CD (change dir) like functionality
-       * 
-       * Example:
-       *
-       * ~~~~
-       *   InputMap in( "input.json" );
-       *   in.cd( "system" );
-       *   double T = in.get( "temperature", 298.15 );
-       *   in.cd(); // back to upper level (root)
-       * ~~~~
-       *
-       * where the json file may look like this,
-       *
-       * ~~~~
-       *   {
-       *     "system" : {
-       *        "temperature":341.,
-       *        "other subsection" : { ... }
-       *     }
-       *   }
-       * ~~~~
-       *
-       * @todo To be removed
-       */
-      inline void cd( std::string dir="" ) {
-        if ( isjson ) { 
-          if ( dir.empty() )
-            jsdir = js;
-          else {
-            std::replace( dir.begin(), dir.end(), '/', ' ');
-            jsdir = json::cd( js, textio::words2vec<std::string>( dir ) ); 
-          }
-        }
-      } 
-
-      inline json::Tobj getMap() {
-        if (isjson)
-          if (jsdir.is<json::Tobj>())
-            return jsdir.get<json::Tobj>();
-        return json::Tobj();
-      }
 
       //!< Add a keyword and an associated value
       template<typename T>
@@ -102,11 +54,8 @@ namespace Faunus {
       //!< Get value associated with keyword
       template<typename T>
         T get(const string &key, T fallback=T(), string infostring=string()) {
-          if (isjson) {
-            typedef typename std::conditional< std::is_same<int, T>::value,
-                    double,T>::type Tjson;
-            return json::value<Tjson>( jsdir, key, fallback );
-          }
+          if (isjson)
+            return (*this)[key] | fallback;
 
           if ( !infostring.empty() )
             keyinfo[key] = infostring;               // save information string (if any)
@@ -115,18 +64,6 @@ namespace Faunus {
             i >> fallback;
           }
           return fallback;
-        }
-
-      //!< Set value associated with keyword
-      template<typename T>
-        void set(const string &key, T value, string infostring=string()) {
-          if ( map.find(key) != map.end() ) {
-            std::ostringstream o;
-            o << value;
-            map[key] = o.str();
-          } else {
-            add(key,value,infostring);
-          }
         }
 
       //!< Get value associated with keyword
@@ -140,7 +77,6 @@ namespace Faunus {
 
   inline InputMap::InputMap(string filename) : isjson(false) { include(filename); }
 
-  /** @todo Remove ugly atom loader */
   inline bool InputMap::include(string filename) {
     string line,key,val;
 
@@ -155,12 +91,7 @@ namespace Faunus {
       isjson = true;
 
     if ( isjson ) {
-      // load into picojson object (to be removed)
-      jsdir = js = json::open( filename );
-      assert( js != json::Tval() && "Error loading json file" );
-
-      // also load modern json object (to be the default)
-      std::ifstream f( filename.c_str() );
+      std::ifstream f(filename.c_str());
       if (f) {
         try {
           *this << f;
@@ -171,11 +102,6 @@ namespace Faunus {
           std::exit(1);
         }
       }
-
-      auto j = getJSON();
-      atom.include( j );
-      if ( atom.empty() )
-        std::cerr << "Warning: AtomMap is empty." << endl; 
     }
 
     if ( !isjson ) {
@@ -197,17 +123,6 @@ namespace Faunus {
     }
 
     return true;
-  }
-
-  inline string InputMap::info() {
-    short w=25;
-    using namespace Faunus::textio;
-    std::ostringstream o;
-    o << header("User Input Parameters (InputMap)");
-    o << pad(SUB,w,"Number of parameters") << map.size() << endl;
-    for (auto &m : map)
-      o << std::left << setw(25) << m.first << m.second << endl;
-    return o.str();
   }
 
   inline bool InputMap::save(string file) {
@@ -247,6 +162,7 @@ namespace Faunus {
    * If `stable==false` this will check the given value against the
    * loaded testfile.
    *
+   * @todo Reimplement using Tmjson
    */
   class UnitTest : private InputMap {
     private:

@@ -39,7 +39,7 @@ namespace Faunus {
      *       To get optimum performance in inner loops use a derived class directly and do
      *       static, compile-time polymorphism (templates).
      */
-    class Geometrybase : public JSONSupport {
+    class Geometrybase {
       private:
         virtual string _info(char)=0;
         virtual void _setVolume(double)=0;
@@ -94,9 +94,9 @@ namespace Faunus {
         Sphere(double);                         //!< Construct from radius (angstrom)
 
         /**
-         * @brief Construct from InputMap
+         * @brief Construct from json object.
          *
-         * Keywords in default dir `system/sphere` are scanned for,
+         * Keywords in section `system/sphere` are scanned for,
          *
          * Key       | Description
          * :-------- | :-----------------------
@@ -225,10 +225,6 @@ namespace Faunus {
      */
     class Cuboidslit : public Cuboid {
       public:
-        Cuboidslit(InputMap &in, const string &sec="cuboid") : Cuboid(in,sec) {
-          name="Cuboid XY-periodicity";
-        }
-
         Cuboidslit(Tmjson &j) : Cuboid(j) { name += " (XY-periodicity)"; }
 
         inline double sqdist(const Point &a, const Point &b) const {

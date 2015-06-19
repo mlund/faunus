@@ -163,12 +163,12 @@ namespace Faunus {
         public:
           std::map<T,Average<T> > I; //!< Sampled, average I(q)
 
-          DebyeFormula(InputMap &in) : geo(10) {
-            in.cd ("analysis/scatter");
-            qmin=in.get("qmin",-1.0);
-            qmax=in.get("qmax",-1.0);
-            dq=in.get("dq",-1.0);
-            rc=in.get("cutoff",1.0e9);
+          DebyeFormula(Tmjson &j) : geo(10) {
+            auto m = j["analysis"]["scatter"];
+            dq   = m["dq"]   | -1.0;
+            qmin = m["qmin"] | -1.0;
+            qmax = m["qmax"] | -1.0;
+            rc   = m["cutoff"] |1.0e9;
           }
 
           /**

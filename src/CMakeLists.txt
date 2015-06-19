@@ -132,7 +132,8 @@ if (CPPCHECK_EXE)
   add_custom_target(
     cppcheck
     COMMAND ${CPPCHECK_EXE}
-    -I ${CMAKE_SOURCE_DIR}/include -j2 --quiet --enable=style
+    -I ${CMAKE_SOURCE_DIR}/include -j2 --quiet --enable=warning
+    #--suppress=noExplicitConstructor --suppress=uninitMemberVar
     ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/moves/*.cpp
     COMMENT "Running C++ static analyzer..."
     )

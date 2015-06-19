@@ -21,7 +21,10 @@ echo '{
   "energy" : {
     "nonbonded" : {
       "cutoff_g2g" : 40,
-      "coulomb" : { "epsr" : 80.0, "ionicstrength":0.05 }
+      "coulomb" : { "epsr" : 80.0, "ionicstrength":0.05 },
+      "cosattract" : {
+        "wc":'`python -c "print $sigma*1.6"`',
+        "rc":'`python -c "print $sigma*2**(1/6.)"`', "eps":'$epsilon' }
     }
   },
 
@@ -34,15 +37,12 @@ echo '{
 
   "system" : {
     "temperature"  : 298,
-    "coulomb"      : { "epsr" : 80.0, "ionicstrength":0.05 },
-    "cosattract"   : { "wc":'`python -c "print $sigma*1.6"`',
-                       "rc":'`python -c "print $sigma*2**(1/6.)"`', "eps":'$epsilon'  },
     "cuboid"       : { "scaledir":"xy",
                        "xyzlen" : "'`python -c "print $box, $box, $box*2"`'" },
     "mcloop"       : { "macro":10, "micro":1000 },
     "unittest"     : { "testfile":"membrane.test", "stable":false },
-    "lipid_epsilon": "epsilon",
-    "lipid_sigma"  : "sigma"
+    "lipid_epsilon": '$epsilon',
+    "lipid_sigma"  : '$sigma'
   }
 }' > membrane.json
 

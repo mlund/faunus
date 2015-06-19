@@ -605,7 +605,7 @@ namespace Faunus {
 
         std::map<CigarParticle::Tid, prop> m;
 
-        HardSpheroCylinder(InputMap &in) {
+        HardSpheroCylinder(Tmjson &j) {
           name="HardspheroCylinder";
         }
 
@@ -640,7 +640,7 @@ namespace Faunus {
         public:
           Tcigarsphere pairpot;
 
-          PatchyCigarSphere(InputMap &in) : pairpot(in) {
+          PatchyCigarSphere(Tmjson &j) : pairpot(j) {
           }
 
           double operator() (const CigarParticle &a, const CigarParticle &b, const Point &r_cm) {
@@ -711,7 +711,7 @@ namespace Faunus {
         public:
           Tcigarcigar pairpot;
 
-          PatchyCigarCigar(InputMap &in) : pairpot(in) {
+          PatchyCigarCigar(Tmjson &j) : pairpot(j) {
           }
 
           double operator() (const CigarParticle &a, const CigarParticle &b, const Point &r_cm) {
@@ -834,7 +834,7 @@ namespace Faunus {
           PatchyCigarCigar<Tcigarcigar> pairpot_cc;
           PatchyCigarSphere<Tcigarsphere> pairpot_cs;
 
-          CigarSphereSplit(InputMap &in) : pairpot_ss(in), pairpot_cc(in), pairpot_cs(in){
+          CigarSphereSplit(Tmjson &j) : pairpot_ss(j), pairpot_cc(j), pairpot_cs(j){
             name="CigarSphereSplit";
           }
 

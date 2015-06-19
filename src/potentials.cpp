@@ -13,13 +13,17 @@ namespace Faunus {
 
   namespace Potential {
 
-    PairPotentialBase::PairPotentialBase(std::string section) : jsondir(section) {
-      if ( jsondir.empty() ) 
-        jsondir = "system";
+    PairPotentialBase::PairPotentialBase() {
       rcut2.resize(atom.size());
     }
 
-    PairPotentialBase::~PairPotentialBase() { }
+    PairPotentialBase::PairPotentialBase( const std::string &sec ) : jsonsec(sec) {
+      assert( ! jsonsec.empty() );
+      rcut2.resize(atom.size());
+    }
+
+    PairPotentialBase::~PairPotentialBase() {
+    }
 
     /*
      * @param N Maximum number of atom types
@@ -46,28 +50,12 @@ namespace Faunus {
       return name+": N/A";
     }
 
-    /**
-     * This will reset the temperature to the specified value. By default this function
-     * does nothing, although in Debug mode it will throw an exception if derived classes
-     * do not implement it (and is called).
-     */
-    void PairPotentialBase::setTemperature(double) {
-      assert(!"Not implemented.");
-    }
-
     string PairPotentialBase::brief() {
       assert(!name.empty() && "Potential must have a name.");
       return _brief();
     }
 
     void PairPotentialBase::test(UnitTest&) {}
-
-    Harmonic::Harmonic(InputMap &in, const string &dir) : PairPotentialBase(dir) {
-      name="Harmonic";
-      in.cd ( jsondir+"/harmonic" );
-      k  = in("k", 0.0);
-      req= in("req", 0.0);
-    }
 
     string Harmonic::_brief() {
       using namespace Faunus::textio;
@@ -76,10 +64,9 @@ namespace Faunus {
       return o.str();
     }
 
-    Hertz::Hertz(InputMap &in, const string &dir) : PairPotentialBase(dir) {
+    Hertz::Hertz( Tmjson &j, const string &sec) : PairPotentialBase(sec) {
       name = "Hertz";
-      in.cd ( jsondir+"/hertz" );
-      E = in( "_E", 0.0);
+      E = j[sec]["_E"] = 0.0;
     }
 
     string Hertz::_brief() {
@@ -96,15 +83,14 @@ namespace Faunus {
       return o.str();
     }
 
-    YukawaGel::YukawaGel(InputMap &in, const string &dir) : Coulomb(in, dir) {
+    YukawaGel::YukawaGel(Tmjson &j, const string &sec) : Coulomb(j, sec) {
       name = "YukawaGel";
-      in.cd ( jsondir+"/yukawagel" );
 
-      Z  = in("yukawagel_Z", 0.0);
-      nc = in("yukawagel_nc", 0.0);
-      ns = in("yukawagel_ns", 0.0);
-      v  = in("yukawagel_v", 1.0);
-      d  = in("yukawagel_d", 1.0);
+      Z  = j[sec]["yukawagel_Z"]  | 0.0;
+      nc = j[sec]["yukawagel_nc"] | 0.0;
+      ns = j[sec]["yukawagel_ns"] | 0.0;
+      v  = j[sec]["yukawagel_v"]  | 1.0;
+      d  = j[sec]["yukawagel_d"]  | 1.0;
 
       k = sqrt(4.*pc::pi*(nc+2.*ns)*v*v*bjerrumLength());
       Z2e2overER = Z*Z*bjerrumLength();
@@ -132,12 +118,11 @@ namespace Faunus {
       return o.str();
     }
 
-    CosAttract::CosAttract(InputMap &in, const string &dir) : PairPotentialBase(dir) {
+    CosAttract::CosAttract( Tmjson &j, const string &sec) : PairPotentialBase(sec) {
       name="CosAttract";
-      in.cd ( jsondir+"/cosattract" );
-      eps = in("eps", 0.0);
-      rc  = in("rc",  0.0);
-      wc  = in("wc",  0.0);
+      eps = j[sec]["eps"] | 0.0;
+      rc  = j[sec]["rc" ] | 0.0;
+      wc  = j[sec]["wc" ] | 0.0;
       rc2=rc*rc;
       c=pc::pi/2/wc;
       rcwc2=pow((rc+wc),2);
@@ -184,10 +169,6 @@ namespace Faunus {
       return o.str();
     }
 
-    LennardJonesR12::LennardJonesR12(InputMap &in, const string &dir) : LennardJones(in,dir) {
-      name+="R12";
-    }
-
     LennardJonesTrunkShift::LennardJonesTrunkShift(InputMap &in, const string &dir) : LennardJones(in,dir) {
       name+=" Truncated and shifted to sigma";
     }
@@ -197,11 +178,10 @@ namespace Faunus {
      *        and `prefix_depth` (kT).
      * @param dir Root section for input
      */
-    SquareWell::SquareWell(InputMap &in, const string &dir) : PairPotentialBase(dir) {
+    SquareWell::SquareWell( Tmjson &j, const string &sec) : PairPotentialBase(sec) {
       name="Square Well";
-      in.cd ( jsondir+"/squarewell" );
-      threshold = in( "threshold", 0.0 );
-      depth     = in( "depth", 0.0 );
+      threshold = j[sec]["threshold"] | 0.0;
+      depth     = j[sec]["depth"] | 0.0;
     }
 
     string SquareWell::_brief() {
@@ -223,9 +203,9 @@ namespace Faunus {
      * searched for:
      * - `prefix_threshold_lower`
      */
-    SquareWellShifted::SquareWellShifted(InputMap &in, const string &dir): SquareWell(in,dir) {
+    SquareWellShifted::SquareWellShifted(Tmjson &j, const string &sec): SquareWell( j, sec ) {
       name+=" Shifted";
-      threshold_lower = in( "threshold_lower", 0.0 );
+      threshold_lower = j[sec]["threshold_lower"] | 0.0;
     }
 
     string SquareWellShifted::_brief() {
@@ -242,47 +222,6 @@ namespace Faunus {
         << pad(SUB,w,"Threshold_lower") << threshold_lower << _angstrom
         << " (surface-surface)" << endl;
       return o.str();
-    }
-
-    SquareWellHydrophobic::SquareWellHydrophobic(InputMap &in, const string &dir) : SquareWell(in,dir) {
-      name="Hydrophobic " + name;
-    }
-
-    /**
-     * @param in InputMap is scanned for the keyword `softrep_sigma` which should be in angstrom
-     * @param dir Base input section
-     */
-    SoftRepulsion::SoftRepulsion(InputMap &in, const string &dir) {
-      name="Repulsive r6";
-      in.cd ( jsondir+"/softrep" );
-      sigma6 = pow( in( "sigma", 5.0 ), 6);
-    }
-
-    string SoftRepulsion::_brief() {
-      std::ostringstream o;
-      o << name << ": " << textio::sigma  << pow(sigma6,1/6.) << textio::_angstrom;
-      return o.str();
-    }
-
-    string SoftRepulsion::info(char w) {
-      using namespace Faunus::textio;
-      std::ostringstream o;
-      o << textio::pad(SUB,w+1,textio::sigma) << pow(sigma6,1/6.) << _angstrom << endl;
-      return o.str();
-    }
-
-    R12Repulsion::R12Repulsion() {
-      name="r12-Repulsion";
-    }
-
-    /**
-     * @param in InputMap is scanned for the keyword `lj_eps` and should be in units of kT
-     * @param dir InputMap prefix
-     */
-    R12Repulsion::R12Repulsion(InputMap &in, const string &dir) : PairPotentialBase(dir) {
-      name="r12-Repulsion";
-      in.cd ( jsondir+"/lj" );
-      eps = 4*in( "eps", 0.05 );
     }
 
     string R12Repulsion::_brief() {
@@ -305,18 +244,11 @@ namespace Faunus {
      * - `depsdt` - temperature dependence of dielectric constant,
      *   \f$ \partial\epsilon_r/\partial T\approx-0.368\f$ for water.
      */
-    Coulomb::Coulomb(InputMap &in, const string &dir) : PairPotentialBase(dir) {
-      name="Coulomb";
-      in.cd ( jsondir+"/coulomb" );
-      epsilon_r = in("epsr",80. );
-      depsdt = in("depsdt", -0.368 ) * pc::T() / epsilon_r;
-      lB=pc::lB( epsilon_r );
-    }
-
-    Coulomb::Coulomb(Tmjson &j) : PairPotentialBase( j["coulomb"] ) {
+    Coulomb::Coulomb(Tmjson &j, const string &sec) : PairPotentialBase( sec ) {
+      assert( ! j[sec].is_null() );
       name      = "Coulomb";
-      epsilon_r = json()["epsr"] | 80.0;
-      depsdt    = ( json()["depsdt"] | -0.368 ) * pc::T() / epsilon_r;
+      epsilon_r = j[sec]["epsr"] | 80.0;
+      depsdt    = ( j[sec]["depsdt"] | -0.368 ) * pc::T() / epsilon_r;
       lB        = pc::lB( epsilon_r );
     }
 
@@ -345,15 +277,8 @@ namespace Faunus {
       t("bjerrum", bjerrumLength(), 1e-6);
     }
 
-    CoulombWolf::CoulombWolf(InputMap &in, const string &dir) : Coulomb(in, dir) {
-      double Rc=in( "cutoff", 10. );
-      Rcinv=1/Rc;
-      Rc2=Rc*Rc;
-      name+="Wolf/Yonezawa";
-    }
-
-    CoulombWolf::CoulombWolf( Tmjson &j ) : Coulomb( j ) {
-      double Rc = json()["cutoff"] | 10.0;
+    CoulombWolf::CoulombWolf( Tmjson &j, const string &sec ) : Coulomb( j, sec ) {
+      double Rc = j[sec]["cutoff"] | 10.0;
       Rcinv = 1/Rc;
       Rc2 = Rc*Rc;
       name += "Wolf/Yonezawa";
@@ -368,9 +293,9 @@ namespace Faunus {
       return o.str();
     }
 
-    ChargeNonpolar::ChargeNonpolar(InputMap &in, const string &dir) : Coulomb(in, dir) {
+    ChargeNonpolar::ChargeNonpolar(Tmjson &j, const string &sec) : Coulomb(j, sec) {
       name="Charge-Nonpolar";
-      c = bjerrumLength()/2 * in("excess_polarization", -1.0);
+      c = 0.5 * bjerrumLength() * ( j[sec]["excess_polarization"] | -1.0 );
     }
 
     string ChargeNonpolar::info(char w) {

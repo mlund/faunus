@@ -32,15 +32,16 @@ TEST_CASE("Spline table", "...")
   b.charge=-1;
   a.radius=b.radius=2;
   InputMap mcp("unittests.json");
-  Potential::Coulomb pot_org(mcp);
-  Potential::PotentialTabulate<Potential::Coulomb> pot_tab(mcp);
+  auto js = mcp["energy"]["nonbonded"];
+  Potential::Coulomb pot_org( js );
+  Potential::PotentialTabulate<Potential::Coulomb> pot_tab( js );
 
   double error = fabs( pot_org(a,b,25)-pot_tab(a,b,25) ) ;
   CHECK(error>0);
   CHECK(error<0.01);
 
   // Check if negative potential operator works
-  auto minus = Potential::Coulomb(mcp) - Potential::Coulomb(mcp);
+  auto minus = Potential::Coulomb( js ) - Potential::Coulomb( js );
   CHECK( abs(minus(a,b,7)) < 1e-6 );
 }
 

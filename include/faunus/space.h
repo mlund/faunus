@@ -551,13 +551,14 @@ namespace Faunus {
         fin.open( file.c_str() );
         if (fin) {
           int n;
-          double x, y, z, vol;
           cout << "OK!\n";
           if (std::is_base_of<Geometry::Cuboid,Tgeometry>::value) {
+            double x,y,z;
             fin >> x >> y >> z >> n;
             geo.setlen(Point(x,y,z));
           }
           else {
+            double vol;
             fin >> vol >> n;
             geo.setVolume(vol);
           }

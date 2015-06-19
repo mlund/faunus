@@ -264,18 +264,11 @@ namespace Faunus {
           typename Tspace::GeometryType geo;
           Tpairpot pairpot;
 
-          Nonbonded(InputMap &in, const string &dir="")
-            : Tbase(dir), geo(in), pairpot(in, Tbase::jsondir+"/nonbonded" ) {
-              in.cd ( Tbase::jsondir + "/nonbonded" );
-              static_assert(
-                  std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
-                  "Tpairpot must be a pair potential" );
-              Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
-            }
-
           Nonbonded(
               Tmjson &j,
               const string &sec="nonbonded" ) : geo(j), pairpot( j["energy"][sec] ) {
+
+            assert( ! j["energy"][sec].is_null() );
 
             static_assert(
                 std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
@@ -432,7 +425,7 @@ namespace Faunus {
           Tpairpot pairpot;
 
           NonbondedVector(InputMap &in, const string &dir="energy")
-            : Tbase(dir+"/nonbonded"), geo(in), pairpot(in) {
+            : Tbase(dir+"/nonbonded"), geo(in), pairpot(in["energy"]["nonbonded"]) {
               static_assert(
                   std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
                   "Tpairpot must be a pair potential" );
@@ -682,9 +675,9 @@ namespace Faunus {
         public:
           bool noPairPotentialCutoff; //!< Set if range of pairpot is longer than rcut (default: false)
 
-          NonbondedCutg2g(InputMap &in, string dir="energy") : base(in,dir) {
+          NonbondedCutg2g(Tmjson &j, const string &sec="nonbonded") : base(j,sec) {
             noPairPotentialCutoff=false;
-            rcut2 = pow( in("cutoff_g2g", pc::infty), 2);
+            rcut2 = pow( j["energy"][sec]["cutoff_g2g"] | pc::infty, 2);
             base::name += " (g2g cut=" + std::to_string(sqrt(rcut2))
               + textio::_angstrom + ")";
           }

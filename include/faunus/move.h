@@ -195,8 +195,8 @@ namespace Faunus {
           template<class Tspace>
             PolarizeMove(Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) :
               Tmove(e,s,j) {
-                threshold = Tmove::json()["pol_threshold"] | 0.001;
-                max_iter  = Tmove::json()["max_iterations"] | 40;
+                threshold = j["pol_threshold"] | 0.001;
+                max_iter  = j["max_iterations"] | 40;
               }
 
           PolarizeMove(const Tmove &m) : max_iter(40), threshold(0.001), Tmove(m) {};
@@ -229,7 +229,7 @@ namespace Faunus {
      * @date Lund, 2007-2011
      */
     template<class Tspace=Space<class Tgeometry,class Tparticle> >
-      class Movebase : public JSONSupport {
+      class Movebase {
         private:
           unsigned long int cnt_accepted;  //!< number of accepted moves
           double dusum;                    //!< Sum of all energy changes
@@ -2751,31 +2751,41 @@ namespace Faunus {
               spc->trial[i].charge = spc->p[i].charge = atom[ spc->p[i].id ].charge;
 
             // neutralise system, if needed, using GC ions
-            double Z = netCharge( s.p, Group(0,s.p.size()-1) );
-            double z = 0;
-            Tid id;
-            int maxtry=1000;
-            if ( fabs(Z) > 1e-9) {
-              do {
-                id = base::tracker.randomAtomType();
-                z = atom[id].charge;
-                assert( --maxtry>0 );
-              } while (
-                  ( (z<0 && Z>0) || (Z<0 && z>0) )
-                  && ( fabs( fmod(Z,z) ) < 1e-9 ) );
+            if ( j["moves"][sec]["neutralize"] | true ) {
+              double Z = netCharge( s.p, Group(0,s.p.size()-1) );
+              if ( fabs(Z) > 1e-9 ) {
+                Tid id;
+                double z = 0;
+                int maxtry = 1000;
+                cout << "# Neutralizing system with GC ions. Initial charge = "
+                  << Z << "e." << endl;
+                do {
+                  id = base::tracker.randomAtomType();
+                  z = atom[id].charge;
+                  if ( --maxtry==0 ) {
+                    std::cerr << "Error: Failed to find GC ions capable of "
+                      << "neutralizing system." << endl;
+                    exit(1);
+                  }
+                } while (
+                    ( (z<0 && Z>0) || (Z<0 && z>0) )
+                    && ( fabs( fmod(Z,z) ) < 1e-9 ) );
 
-              int n = round(-Z/z); 
-              assert( n>0 && fabs(n*z+Z) < 1e-9 );
+                int n = round(-Z/z);
+                assert( n>0 && fabs(n*z+Z) < 1e-9 );
 
-              typename Tspace::ParticleType a;
-              a = atom[id];
-              for (int i=0; i<n; i++) {
-                s.geo.randompos(a);
-                base::tracker.insert(a, base::saltPtr->back());
+                typename Tspace::ParticleType a;
+                a = atom[id];
+                for ( int i=0; i<n; i++ ) {
+                  s.geo.randompos(a);
+                  base::tracker.insert( a, base::saltPtr->back() );
+                }
+                Z = netCharge( s.p, Group(0,s.p.size()-1) );
+                cout << "# Final charge = " << Z << "e." << endl;
+                assert( fabs(Z)<1e-9 ) ;
               }
-              assert( fabs( netCharge( s.p, Group(0,s.p.size()-1)) )<1e-9) ;
             }
-          }
+        }
 
       template<class Tspace> 
         void GrandCanonicalTitration<Tspace>::_trialMove()  { 
@@ -4059,17 +4069,17 @@ namespace Faunus {
             typedef std::shared_ptr<base> basePtr;
             std::vector<basePtr> mPtr; 
 
-            string _info() {
+            string _info() override {
               string o;
               for ( auto i : mPtr )
                 o += i->info();
               return o;
             }
 
-            void _acceptMove() { assert(1==2); }
-            void _rejectMove() { assert(1==2); }
-            void _trialMove()  { assert(1==2); }
-            double _energyChange() { assert(1==2); return 0;}
+            void _acceptMove() override { assert(1==2); }
+            void _rejectMove() override { assert(1==2); }
+            void _trialMove()  override { assert(1==2); }
+            double _energyChange() override { assert(1==2); return 0;}
 
             template<typename Tmove>
               basePtr toPtr(Tmove m) {
@@ -4110,7 +4120,7 @@ namespace Faunus {
                 throw std::runtime_error("No moves defined - check JSON file.");
             }
 
-            double move(int n=1) FOVERRIDE {
+            double move(int n=1) override {
               return ( mPtr.empty() ) ?
                 0 : (*slump.element( mPtr.begin(), mPtr.end() ))->move();
             }

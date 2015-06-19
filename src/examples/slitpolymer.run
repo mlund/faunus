@@ -14,7 +14,8 @@ echo '{
   },
 
   "energy" : {
-    "gouychapman" : { "phi0":-2 }
+    "gouychapman" : { "phi0":-2 },
+    "nonbonded" : { "coulomb" : { "epsr" : 78.9, "debyelength":11.6492873993050 } }
   },
 
   "moves" : {
@@ -36,8 +37,7 @@ echo '{
     "temperature"  : 298,
     "cuboid"       : { "xyzlen" : "300 300 154" },
     "mcloop"       : { "macro":10, "micro":1000000 },
-    "unittest"     : { "testfile":"slitpolymer.test", "stable":false },
-    "coulomb"      : { "epsr" : 78.9, "debyelength":11.6492873993050 }
+    "unittest"     : { "testfile":"slitpolymer.test", "stable":false }
   }
 }' > slitpolymer.json
 

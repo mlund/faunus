@@ -221,7 +221,7 @@ namespace Faunus {
                 - pow(x-0.5*this->dx,3) );
           }
 
-          double get(Tx x) {
+          double get(Tx x) override {
             assert( volume(x)>0 );
             assert( this->count()>0 );
 
@@ -331,7 +331,7 @@ namespace Faunus {
     template<typename Tx=double, typename Ty=unsigned long>
       class LineDistribution : public RadialDistribution<Tx,Ty> {
         private:
-          double volume(Tx x) { return 1; }
+          double volume(Tx x) override { return 1.0; }
         public:
           LineDistribution(Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
             this->name="Line Distribution";
@@ -354,14 +354,14 @@ namespace Faunus {
     template<typename Tx=double, typename Ty=int>
       class LineDistributionNorm : public RadialDistribution<Tx,Ty> {
         private:
-          double volume(Tx x) { return 1; }
+          double volume(Tx x) override { return 1.0; }
           int n;
         public:
           LineDistributionNorm(int al_n=1, Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
             this->name="Line Distribution Normalized for n particles";
             n = al_n;
           }
-          double get(Tx x) {
+          double get(Tx x) override {
             assert( volume(x)>0 );
             assert( this->count()>0 );
             return (double)this->operator()(x) * n / (double)this->count();

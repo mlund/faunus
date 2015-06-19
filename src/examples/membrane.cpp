@@ -13,13 +13,13 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &b, Tpotmap &m, Tinput &in
   using namespace Potential;
 
   // non-bonded interactions
-  in.cd ("system");
   auto hid=atom["HD"].id;
   auto tid=atom["TL"].id;
-  double sigma   = in("lipid_sigma", 10);  // angstrom
-  double epsilon = in("lipid_epsilon", 1); // kT
+  double sigma   = in["system"]["lipid_sigma"] | 10.0;  // angstrom
+  double epsilon = in["system"]["lipid_epsilon"] | 1.0; // kT
 
-  WeeksChandlerAndersen WCA(in);
+  auto js = in["energy"]["nonbonded"];
+  WeeksChandlerAndersen WCA(js);
   WCA.customSigma(hid, hid, 0.95*sigma);            
   WCA.customSigma(hid, tid, 0.95*sigma);            
   WCA.customSigma(tid, tid, sigma);                 
@@ -28,9 +28,9 @@ void MakeDesernoMembrane(const Tlipid &lipid, Tbonded &b, Tpotmap &m, Tinput &in
   WCA.customEpsilon(tid, tid, epsilon);   
 
   // Add to main potential
-  m.add(hid, hid, WCA + DebyeHuckel(in) );
-  m.add(tid, tid, WCA + CosAttract(in) );
-  m.add(hid, tid, WCA + ChargeNonpolar(in) );
+  m.add(hid, hid, WCA + DebyeHuckel(js) );
+  m.add(tid, tid, WCA + CosAttract(js) );
+  m.add(hid, tid, WCA + ChargeNonpolar(js) );
 
   // bonded interactions
   double headtail_k=0.5*10*epsilon/(sigma*sigma);

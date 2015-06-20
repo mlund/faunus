@@ -25,7 +25,6 @@ set(hdrs
   ${CMAKE_SOURCE_DIR}/include/faunus/mcloop.h
   ${CMAKE_SOURCE_DIR}/include/faunus/molecule.h
   ${CMAKE_SOURCE_DIR}/include/faunus/physconst.h
-  ${CMAKE_SOURCE_DIR}/include/faunus/picojson.h
   ${CMAKE_SOURCE_DIR}/include/faunus/potentials.h
   ${CMAKE_SOURCE_DIR}/include/faunus/range.h
   ${CMAKE_SOURCE_DIR}/include/faunus/slump.h

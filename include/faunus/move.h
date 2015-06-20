@@ -336,7 +336,7 @@ namespace Faunus {
         spc=&s;
         cnt=cnt_accepted=0;
         dusum=0;
-        w=22;
+        w=30;
         runfraction=1;
         useAlternateReturnEnergy=false; //this has no influence on metropolis sampling!
 #ifdef ENABLE_MPI
@@ -645,7 +645,6 @@ namespace Faunus {
         igroup=nullptr;
         dir={1,1,1};
         genericdp = 0;
-        this->w=30; //width of output
 
         base::fillMolList( j["moves"][sec] );
       }
@@ -2489,7 +2488,6 @@ namespace Faunus {
           Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j,
           string sec) : base(e,s), tracker(s) {
 
-          w=30;
           base::title="Grand Canonical Salt";
           base::useAlternateReturnEnergy=true;
           base::jsondir = "moves/" + sec;
@@ -3494,6 +3492,7 @@ namespace Faunus {
             typedef typename Tspace::ParticleVector Tpvec;
             using base::spc;
             using base::pot;
+            using base::w;
 
             Faunus::Tracker<Group*> molTrack;    // tracker for molecules
             Faunus::Tracker<int> atomTrack;      // tracker for atoms
@@ -3702,14 +3701,12 @@ namespace Faunus {
             string _info() {
               using namespace textio;
               std::ostringstream o;
-              base::w += 5;
 
               o << pad( SUB,base::w,"Accepted insertions" ) << Ninserted << "\n"
                 << pad( SUB,base::w,"Accepted deletions" ) << Ndeleted << "\n"
                 << pad( SUB,base::w,"Flux (Nins/Ndel)" ) << Ninserted / double(Ndeleted) << "\n"
                 << "\n";
 
-              char w=15;
               double V=spc->geo.getVolume();
               o << std::left
                 << setw(w+5) << "  Molecule/Atom"

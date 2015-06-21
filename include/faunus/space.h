@@ -189,6 +189,7 @@ namespace Faunus {
         Space(InputMap &in) : geo(in) {
           auto j = in.getJSON();
           pc::setT( j["system"]["temperature"] | 298.15 );
+          assert(  ! j["moleculelist"].empty()   );
           molecule.include( j );
           for (auto mol : molecule)
             while (mol.Ninit-- > 0)

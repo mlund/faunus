@@ -5,8 +5,8 @@ from shutil import copyfile
 
 pfx = os.path.join( os.path.dirname(__file__), "polymers")
 try:
-  copyfile( pfx+'.test', 'polymers.test' )
   copyfile( pfx+'.state', 'state' )
+  copyfile( pfx+'.test', 'polymers.test' )
 except: pass
 
 d = {
@@ -57,12 +57,19 @@ d = {
       }
     }
 
+# generate json file
 print >> open('polymers.json', 'w+'), json.dumps(d, indent=4)
 
-# molecule with four atoms
-print """4
+# generate molecule file with four atoms
+print >> open('polymers.aam', 'w+'), """4
 MM  0   0.00   0.00   0.00    1.0   1  3.0
 MM  1   7.60   0.00   0.00    1.0   1  3.0
 MM  2   0.00   7.60   0.00    1.0   1  3.0
 MM  3   7.60   7.60   0.00    1.0   1  3.0"""
+
+exe='./polymers'
+rc=1
+if ( os.access( exe, os.X_OK )):
+  rc = call( [exe] )
+sys.exit( rc )
 

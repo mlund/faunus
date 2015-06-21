@@ -178,9 +178,8 @@ namespace Faunus {
     }
 
     /**
-     * @param in is scanned for the keywords `prefix_threshold` (angstrom)
-     *        and `prefix_depth` (kT).
-     * @param dir Root section for input
+     * @param j json obect is scanned for the keys `threshold` (angstrom) and `depth` (kT).
+     * @param sec json section for the above
      */
     SquareWell::SquareWell( Tmjson &j, const string &sec) : PairPotentialBase(sec) {
       name="Square Well";

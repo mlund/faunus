@@ -326,7 +326,7 @@ namespace Faunus {
      * @brief Constructor
      * @param e Energy class
      * @param s Space
-     * @param dir Name of section in input file to search for parameters
+     * @param rootsec Name of section in input file to search for parameters
      */
     template<class Tspace>
       Movebase<Tspace>::Movebase(Energy::Energybase<Tspace> &e, Tspace &s, string rootsec) {

@@ -45,7 +45,7 @@ set_target_properties(example_stripes PROPERTIES OUTPUT_NAME "stripes")
 
 fau_example(example_polymers "./" polymers.cpp)
 set_target_properties(example_polymers PROPERTIES OUTPUT_NAME "polymers")
-add_test( example_polymers ${CMAKE_CURRENT_SOURCE_DIR}/polymers.run )
+add_test( example_polymers python ${CMAKE_CURRENT_SOURCE_DIR}/polymers.py )
 
 fau_example(example_gcmol "./" gcmol.cpp)
 set_target_properties(example_gcmol PROPERTIES OUTPUT_NAME "gcmol")

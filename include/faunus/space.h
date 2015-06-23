@@ -181,12 +181,22 @@ namespace Faunus {
         /**
          * @brief Constructor
          *
-         * This will pass the json object to `MoleculeMap`
+         * This will pass the `InputMap` object to `MoleculeMap`
          * in order to load all molecule types. The molecule map
          * is searched for molecules with non-zero `Ninit` and
          * will insert accordingly.
          */
-        Space( Tmjson &j ) : geo( j ) {
+        Space(InputMap &in) : geo(in) {
+          auto j = in.getJSON();
+          pc::setT( j["system"]["temperature"] | 298.15 );
+          assert(  ! j["moleculelist"].empty()   );
+          molecule.include( j );
+          for (auto mol : molecule)
+            while (mol.Ninit-- > 0)
+              insert( mol.id, mol.getRandomConformation(geo, p) );
+        }
+
+        Space( Tmjson &j ) : geo( j["system"] ) {
           pc::setT( j["system"]["temperature"] | 298.15 );
           atom.include( j );
           molecule.include( j );
@@ -542,14 +552,13 @@ namespace Faunus {
         fin.open( file.c_str() );
         if (fin) {
           int n;
+          double x, y, z, vol;
           cout << "OK!\n";
           if (std::is_base_of<Geometry::Cuboid,Tgeometry>::value) {
-            double x,y,z;
             fin >> x >> y >> z >> n;
             geo.setlen(Point(x,y,z));
           }
           else {
-            double vol;
             fin >> vol >> n;
             geo.setVolume(vol);
           }

@@ -129,6 +129,12 @@ namespace Faunus {
           virtual double external(const Tpvec&)                // External energy - pressure, for example.
           { return 0; }
 
+          virtual double penalty(const Tpvec&)          // Penalty function
+          { return 0; }
+
+          virtual double penalty_update(bool)               // Penalty function
+          { return 0; }
+
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
           { }
 
@@ -207,6 +213,12 @@ namespace Faunus {
 
           double external(const Tpvec&p) FOVERRIDE
           { return first.external(p)+second.external(p); }
+
+          double penalty(const Tpvec&p) FOVERRIDE
+          { return first.penalty(p)+second.penalty(p); }
+
+          double penalty_update(bool b) FOVERRIDE
+          { return first.penalty_update(b)+second.penalty_update(b); }
 
           double v2v(const Tpvec&p1, const Tpvec&p2) FOVERRIDE
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }
@@ -2256,7 +2268,7 @@ namespace Faunus {
     template<class Tspace, class Tenergy, class Tpvec>
       double systemEnergy(Tspace &spc, Tenergy &pot, const Tpvec &p) {
         pot.setSpace(spc); // ensure pot geometry is in sync with spc
-        double u = pot.external(p);
+        double u = pot.external(p) + pot.penalty(p);
         for (auto g : spc.groupList())
           u += pot.g_external(p, *g) + pot.g_internal(p, *g);
         for (int i=0; i<(int)spc.groupList().size()-1; i++)

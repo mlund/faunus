@@ -129,6 +129,12 @@ namespace Faunus {
           virtual double external(const Tpvec&)                // External energy - pressure, for example.
           { return 0; }
 
+          virtual double penalty(const Tpvec&)          // Penalty function
+          { return 0; }
+
+          virtual double penalty_update(bool)               // Penalty function
+          { return 0; }
+
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
           { }
 
@@ -207,6 +213,12 @@ namespace Faunus {
 
           double external(const Tpvec&p) FOVERRIDE
           { return first.external(p)+second.external(p); }
+
+          double penalty(const Tpvec&p) FOVERRIDE
+          { return first.penalty(p)+second.penalty(p); }
+
+          double penalty_update(bool b) FOVERRIDE
+          { return first.penalty_update(b)+second.penalty_update(b); }
 
           double v2v(const Tpvec&p1, const Tpvec&p2) FOVERRIDE
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }
@@ -1513,17 +1525,14 @@ namespace Faunus {
     template<typename Tcoord=double>
       class PenaltyFunction1D : public Table2D<Tcoord,double> {
         private:
-          int _cnt;
-          int _Nupdate;
-          double _du;
-          double _du_sum;
-          int _size; // maximum number of keys in the map
-          float _lo1, _hi1;
+          int _cnt, _size, _tunnel;
+          double _f, _scale, _du, _lo, _hi, _bw;
           typedef Faunus::MPI::FloatTransmitter::floatp floatp;
           typedef Table2D<Tcoord,double> Tbase;
-          typedef Table2D<Tcoord,double> Thist;
+          typedef Table2D<long int,int> Taccu;
           typedef std::pair<Tcoord,Tcoord> Tpair;
-          Thist hist;
+          std::pair<Tcoord,int> extreme;
+          Taccu accuracy;
           Faunus::MPI::MPIController *mpiPtr; 
           Faunus::MPI::FloatTransmitter ft;
         public:
@@ -1540,21 +1549,28 @@ namespace Faunus {
            * @param lo2 Lower limit of 2nd reaction coordinate (default -20)
            * @param hi2 Lower limit of 2nd reaction coordinate (default 20)
            */
-          PenaltyFunction1D(Faunus::MPI::MPIController &mpi, int Nupdate, size_t size, Tcoord res1, Tcoord res2,
-              float lo1, float hi1, float lo2, float hi2)
-            : Tbase(res1, Tbase::XYDATA), hist(res1, Thist::XYDATA), mpiPtr(&mpi) {
-              Tbase::name = "penalty1D";
-              _size = size*2;
-              _cnt = 0;
-              _du = 0;
-              _Nupdate = Nupdate;
-              _du_sum = 0;
-              _lo1 = lo1;
-              _hi1 = hi1;
+          PenaltyFunction1D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
+            : Tbase(bw1,Tbase::XYDATA), accuracy(1, Taccu::XYDATA), mpiPtr(&mpi) {
+              Tbase::name = "penalty";
+              auto m  = j["energy"][Tbase::name];    
+              _size = (m["size"] | 2000)*2;
+              _tunnel = m["tunnel"] | 5;
+              _f = m["f0"] | 0.5;
+              _scale = m["scale"] | 0.5;
+              _bw = bw1;
+              _lo = m["lo1"] | -20.0;
+              _hi = m["hi1"] | 20.0;
+              _cnt = 0.0;
+              _du = 0.0;
+              extreme.first = _hi+1;
+              extreme.second = -1;
             }
           /** @brief Check if coordinate is within user-defined range */
           bool isInrange(Tcoord &coord) {
-            return (coord>=_lo1 && coord<=_hi1);
+            return (coord>=_lo && coord<=_hi);
+          }
+          void round(Tcoord &x) { 
+            x = (x>=0) ? int( x/_bw+0.5 )*_bw : int( x/_bw-0.5 )*_bw; 
           }
           /**
            * @brief Merge histograms obtained from parallel processes with different seeds
@@ -1564,12 +1580,14 @@ namespace Faunus {
            */
           void exchange() {
             if (!mpiPtr->isMaster()) {
-              std::vector<floatp> sendBuf = hist.hist2buf(_size);
+              std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
               std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
-              hist.buf2hist(recvBuf);
+              Tbase::clear();
+              for (int i=0; i<int(recvBuf.size())-1; i+=2)
+                if (recvBuf[i+1]!=0) Tbase::operator()(recvBuf.at(i))=recvBuf.at(i+1);
             }
             if (mpiPtr->isMaster()) {
-              std::vector<floatp> sendBuf = hist.hist2buf(_size);
+              std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
               std::vector<floatp> recvBuf(_size);
               for (int i=0; i<mpiPtr->nproc(); ++i) {
                 if (i==mpiPtr->rankMaster()) continue;
@@ -1577,144 +1595,109 @@ namespace Faunus {
                 ft.waitrecv();
                 sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
               }
-              hist.buf2hist(sendBuf);
-              sendBuf = hist.hist2buf(_size);
-              for (int i=1; i<mpiPtr->nproc(); ++i) {
+              Tbase::buf2hist(sendBuf);
+              sendBuf = Tbase::hist2buf(_size);
+              for (int i=0; i<mpiPtr->nproc(); ++i) {
+                if (i==mpiPtr->rankMaster()) continue;
                 ft.sendf(*mpiPtr, sendBuf, i);
                 ft.waitsend();
               }
-              hist.buf2hist(sendBuf);
             }
           }
           /** @brief Update histogram of single processes and penalty function 
            * 
-           *  @details Penalty function is updated using histogram obtained
-           *  by merging contributions from all processes.
+           *  @details Penalty function is updated by merging 
+           *  contributions from all processes.
            */
-          double update(Tcoord &coord) {
-            _cnt++;
-            hist(coord)++; // increment internal histogram
-            _du = 0;
-            if ((_cnt%_Nupdate)==0) { // if Nupdate'th time
-              exchange();
-              for (auto &m : hist.getMap()) { // update penalty function
-                Tbase::operator()(m.first) += std::log(m.second);
-                double log2 = std::log(2); // half bin width compensation
-                if (m.first==_lo1 || m.first==_hi1) 
-                  Tbase::operator()(m.first) += log2;
-              }
-              double min = Tbase::min()->second;
-              for (auto &m : Tbase::getMap()) {
-                Tbase::operator()(m.first) -= min;
-              }
-              assert(hist(coord)!=0 && "hist_size (>= max # of points in histogram) is set too small.");
-              _du = std::log(hist(coord)) - min; // prevents energy drift
-              _du_sum += _du;
-              hist.clear();
+          double update(Tcoord coord) {
+            round(coord);
+            ++_cnt;
+            Tbase::operator()(coord) += _f; 
+            _du = _f;
+            if (coord==_lo || coord==_hi) {
+              Tbase::operator()(coord) += _f;
+              _du += _f;
+              if (extreme.first!=coord) ++extreme.second;
+              extreme.first=coord;
             }
-            return _du;
-          }
-          /**
-           * @brief Update histogram of single processes using waste-recycling method.
-           *
-           * @details If energy change > 0, histogram receives contributions from both
-           * accepted and rejected configurations.
-           * Penalty function is updated using histogram obtained
-           * by merging contributions from all processes.
-           *
-           * [More info](http://dx.doi.org/10.1007/3-540-35273-2_4)
-           */
-          double update(Tpair &coord, double &weight, bool &rejection) {
-            _cnt++;
-            if (weight < 1) {
-              hist(coord.first) += (1-weight);
-              hist(coord.second) += weight;
-            }
-            else hist(coord.second)++;
-            _du = 0;
-            if ((_cnt%_Nupdate)==0) { // if Nupdate'th time
-              exchange();
-              for (auto &m : hist.getMap()) { // update penalty function
-                Tbase::operator()(m.first) += std::log(m.second);
-                double log2 = std::log(2); // half bin width compensation
-                if (m.first==_lo1 || m.first==_hi1) 
-                  Tbase::operator()(m.first) += log2;
+            if (_cnt%10000==0) {
+              if (reduceDouble(*mpiPtr,extreme.second) > _tunnel) {
+                //if (extreme.second > _tunnel) {
+                _du = Tbase::operator()(coord) - _du;
+                exchange();
+                _du = Tbase::operator()(coord) - _du;
+                accuracy(_cnt) = _tunnel;
+                if (mpiPtr->rank()==mpiPtr->nproc()-1) {
+                  string name = std::to_string(_tunnel);
+                  accuracy.save(name+".accuracy");
+                  Tbase::save(name+".penalty");
+                  cout << "f = " << _f << ", tunnelings > " 
+                    << _tunnel/double(mpiPtr->nproc()) << endl;
+                }
+                extreme.second = -1;
+                extreme.first = _hi+1;
+                _f = _scale*_f;
+                ++_tunnel;
               }
-              double min = Tbase::min()->second;
-              for (auto &m : Tbase::getMap()) {
-                Tbase::operator()(m.first) -= min;
               }
-              if (!rejection) _du = std::log(hist.find(coord.second)) - min;
-              else if (hist.find(coord.second)!=0) _du = std::log(hist.find(coord.first)) - min;
-              assert(hist(coord.second)!=0 && "hist_size (>= max # of points in histogram) is set too small.");
-              _du_sum += _du;
-              hist.clear();
+              return _du;
             }
-            return _du;
-          }
-          /** @brief Save table to disk */
-          void save(const string &filename) {
-            Tbase::save(filename+"penalty");
-            hist.save(filename+"histo");
-          }
-          /** 
-           * @brief Translate penalty by a reference value and save it to disk. 
-           *
-           * @details The reference value is obtained by averaging over a region of the
-           * reaction coordinate space.
-           */
-          void save_final(const string &filename, 
-              Tcoord a, Tcoord b, Tcoord c, Tcoord d) {
-            double ref_value = - Tbase::ave(a,b);
-            Tbase::save(filename+"penalty_fin",1.,ref_value);
-          }
-
-          /** @brief Load table to disk */
-          void load(const string &filename) {
-            Tbase::load(filename+"penalty");
-            hist.load(filename+"histo");
-          }
-          void test(UnitTest &t) {
-            if (_cnt/_Nupdate>=1) {
-              auto it_max = Tbase::max();
-              auto it_min = Tbase::min();
-              t("penalty2D_range",it_max->second-it_min->second,0.1);
+            /** @brief Save table to disk */
+            void save(const string &filename) {
+              Tbase::save(filename+"penalty");
+              accuracy.save(filename+"accuracy");
             }
-          }
-          string info() {
-            using namespace Faunus::textio;
-            std::ostringstream o;
-            o << header("1D penalty function");
-            if (_cnt/_Nupdate>=1) {
+            /** 
+             * @brief Translate penalty by a reference value and save it to disk. 
+             *
+             * @details The reference value is obtained by averaging over a region of the
+             * reaction coordinate space.
+             */
+            void save_final(const string &filename, 
+                Tcoord a, Tcoord b, Tcoord c, Tcoord d) {
+              double ref_value = - Tbase::ave(a,b);
+              Tbase::save(filename+"penalty_fin",1.,ref_value);
+            }
+            /** @brief Load table to disk */
+            void load(const string &filename) {
+              Tbase::load(filename+"penalty");
+              accuracy.load(filename+"accuracy");
+            }
+            void test(UnitTest &t) {
+              if (!accuracy.getMap().empty()) {
+                auto it_max = Tbase::max();
+                auto it_min = Tbase::min();
+                t("penalty1D_range",it_max->second-it_min->second,0.1);
+              }
+            }
+            string info() {
+              using namespace Faunus::textio;
+              std::ostringstream o;
+              o << header("1D penalty function");
               char w=25;
               auto it_max = Tbase::max();
               auto it_min = Tbase::min();
-              o << textio::pad(SUB,w, "Number of updates") << _cnt/_Nupdate << endl
-                << textio::pad(SUB,w, "Point of lowest penalty") << it_min->first 
-                << " " << angstrom << endl
-                << textio::pad(SUB,w, "Point of highest penalty") << it_max->first
-                << " " << angstrom << endl
-                << textio::pad(SUB,w, "Penalty range") << it_max->second-it_min->second << kT << endl
-                << textio::pad(SUB,w, "Drift compensation") << _du_sum << kT << endl;
+              o << pad(SUB,w, "Tunnelings") << _tunnel << endl
+                << pad(SUB,w, "Final f") << _f << endl
+                << pad(SUB,w, "x-minimum") << it_min->first << endl 
+                << pad(SUB,w, "x-maximum") << it_max->first << endl 
+                << pad(SUB,w, "y-maximum") << it_max->second << endl; 
+              return o.str();
             }
-            return o.str();
-          }
-      };
+          };
 
     template<typename Tcoord=double>
       class PenaltyFunction2D : public Table3D<Tcoord,double> {
         private:
-          int _cnt;
-          int _Nupdate;
-          double _du;
-          double _du_sum;
-          int _size; // maximum number of keys in the map
-          float _lo1, _hi1, _lo2, _hi2;
+          int _cnt, _size, _tunnel;
+          double _f, _scale, _du;
+          double _bw1, _bw2, _lo1, _hi1, _lo2, _hi2;
           typedef Faunus::MPI::FloatTransmitter::floatp floatp;
           typedef Table3D<Tcoord,double> Tbase;
-          typedef Table3D<Tcoord,double> Thist;
+          typedef Table2D<long int,double> Taccu;
           typedef std::pair<Tcoord,Tcoord> Tpair;
-          Thist hist;
+          std::tuple<Tcoord,int,Tcoord,int> extreme;
+          Taccu accuracy;
           Faunus::MPI::MPIController *mpiPtr; 
           Faunus::MPI::FloatTransmitter ft;
         public:
@@ -1731,24 +1714,36 @@ namespace Faunus {
            * @param lo2 Lower limit of 2nd reaction coordinate (default -20)
            * @param hi2 Lower limit of 2nd reaction coordinate (default 20)
            */
-          PenaltyFunction2D(Faunus::MPI::MPIController &mpi, int Nupdate, size_t size, Tcoord res1, Tcoord res2,
-              float lo1, float hi1, float lo2, float hi2)
-            : Tbase(res1, res2, Tbase::XYDATA), hist(res1, res2, Thist::XYDATA), mpiPtr(&mpi) {
-              Tbase::name = "penalty2D";
-              _size = size*3;
-              _cnt = 0;
-              _du = 0;
-              _Nupdate = Nupdate;
-              _du_sum = 0;
-              _lo1 = lo1;
-              _hi1 = hi1;
-              _lo2 = lo2;
-              _hi2 = hi2;
+          PenaltyFunction2D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
+            : Tbase(bw1, bw2, Tbase::XYDATA), accuracy(1, Taccu::XYDATA), mpiPtr(&mpi) {
+              Tbase::name = "penalty";
+              auto m  = j["energy"][Tbase::name];    
+              _size = (m["size"] | 2000)*3;
+              _tunnel = m["tunnel"] | 5;
+              _f = m["f0"] | 0.5;
+              _scale = m["scale"] | 0.5;
+              _bw1 = bw1;
+              _bw2 = bw2;
+              _lo1 = m["lo1"] | -20.0;
+              _lo2 = m["lo2"] | -20.0;
+              _hi1 = m["hi1"] | 20.0;
+              _hi2 = m["hi2"] | 20.0;
+              _cnt = 0.0;
+              _du = 0.0;
+              PenaltyFunction2D::Tbase(_bw1, _bw2, Tbase::XYDATA);
+              std::get<0>(extreme) = _hi1+1;
+              std::get<1>(extreme) = -1;
+              std::get<2>(extreme) = _hi2+1;
+              std::get<3>(extreme) = -1;
             }
           /** @brief Check if coordinates are within user-defined ranges */
           bool isInrange(Tpair &coord) {
             return (coord.first>=_lo1 && coord.first<=_hi1 && coord.second>=_lo2 && coord.second<=_hi2);
           }
+          void round(Tpair &x) { 
+            x.first = (x.first>=0) ? int( x.first/_bw1+0.5 )*_bw1 : int( x.first/_bw1-0.5 )*_bw1; 
+            x.second = (x.second>=0) ? int( x.second/_bw2+0.5 )*_bw2 : int( x.second/_bw2-0.5 )*_bw2;
+          }
           /**
            * @brief Merge histograms obtained from parallel processes with different seeds
            *
@@ -1757,12 +1752,14 @@ namespace Faunus {
            */
           void exchange() {
             if (!mpiPtr->isMaster()) {
-              std::vector<floatp> sendBuf = hist.hist2buf(_size);
+              std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
               std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
-              hist.buf2hist(recvBuf);
+              Tbase::clear();
+              for (int i=0; i<int(recvBuf.size())-2; i+=3)
+                if (recvBuf[i+2]!=0) Tbase::operator()(recvBuf.at(i),recvBuf.at(i+1))=recvBuf.at(i+2);
             }
             if (mpiPtr->isMaster()) {
-              std::vector<floatp> sendBuf = hist.hist2buf(_size);
+              std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
               std::vector<floatp> recvBuf(_size);
               for (int i=0; i<mpiPtr->nproc(); ++i) {
                 if (i==mpiPtr->rankMaster()) continue;
@@ -1770,13 +1767,13 @@ namespace Faunus {
                 ft.waitrecv();
                 sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
               }
-              hist.buf2hist(sendBuf);
-              sendBuf = hist.hist2buf(_size);
-              for (int i=1; i<mpiPtr->nproc(); ++i) {
+              Tbase::buf2hist(sendBuf);
+              sendBuf = Tbase::hist2buf(_size);
+              for (int i=0; i<mpiPtr->nproc(); ++i) {
+                if (i==mpiPtr->rankMaster()) continue;
                 ft.sendf(*mpiPtr, sendBuf, i);
                 ft.waitsend();
               }
-              hist.buf2hist(sendBuf);
             }
           }
           /** @brief Update histogram of single processes and penalty function
@@ -1784,84 +1781,51 @@ namespace Faunus {
            *  @details Penalty function is updated using histogram obtained 
            *  by merging contributions from all processes.                               
            */ 
-          double update(Tpair &coord) {
-            _cnt++;
-            hist(coord.first, coord.second)++; // increment internal histogram
-            _du = 0;
-            if ((_cnt%_Nupdate)==0) { // if Nupdate'th time
-              exchange();
-              for (auto &m : hist.getMap()) { // update penalty function
-                Tbase::operator()(m.first.first, m.first.second) += std::log(m.second);
-                double log2 = std::log(2); // half bin width compensation
-                if (m.first.first==_lo1 || m.first.first==_hi1) {
-                  Tbase::operator()(m.first.first, m.first.second) += log2;
-                  if (m.first.second==_lo2 || m.first.second==_hi2)
-                    Tbase::operator()(m.first.first, m.first.second) += log2;
+          double update(Tpair coord) {
+            round(coord);
+            ++_cnt;
+            Tbase::operator()(coord.first,coord.second) += _f; 
+            _du = _f;
+            if (coord.first==_lo1 || coord.first==_hi1) {
+              Tbase::operator()(coord.first,coord.second) += _f;
+              _du += _f;
+              if (std::get<0>(extreme)!=coord.first) ++std::get<1>(extreme);
+              std::get<0>(extreme)=coord.first;
+            }
+            if (coord.second==_lo2 || coord.second==_hi2) {
+              Tbase::operator()(coord.first,coord.second) += _f;
+              _du += _f;
+              if (std::get<2>(extreme)!=coord.second) ++std::get<3>(extreme);
+              std::get<2>(extreme)=coord.second;
+            }
+            if (_cnt%10000==0) {
+              if (reduceDouble(*mpiPtr,std::get<1>(extreme)) > _tunnel
+                  && reduceDouble(*mpiPtr,std::get<3>(extreme)) > _tunnel) {
+                _du = Tbase::operator()(coord.first,coord.second) - _du;
+                exchange();
+                _du = Tbase::operator()(coord.first,coord.second) - _du; // prevents energy drift
+                accuracy(_cnt) = _tunnel;
+                if (mpiPtr->rank()==mpiPtr->nproc()-1) {
+                  string name = std::to_string(_tunnel);
+                  accuracy.save(name+".accuracy");
+                  Tbase::save(name+".penalty");
+                  cout << "f = " << _f << ", tunnelings > " 
+                    << _tunnel/double(mpiPtr->nproc()) << endl;
                 }
-                else if (m.first.second==_lo2 || m.first.second==_hi2)
-                  Tbase::operator()(m.first.first, m.first.second) += log2;
+                std::get<0>(extreme) = _hi1+1;
+                std::get<1>(extreme) = -1;
+                std::get<2>(extreme) = _hi2+1;
+                std::get<3>(extreme) = -1;
+                _f = _scale*_f;
+                ++_tunnel;
               }
-              double min = Tbase::min()->second;
-              for (auto &m : Tbase::getMap()) {
-                Tbase::operator()(m.first.first, m.first.second) -= min;
-              }
-              assert(hist(coord.first, coord.second)!=0 && "hist_size (>= max # of points in histogram) is set too small.");
-              if (hist(coord.first, coord.second)==0) cout << mpiPtr->rank() << " hist(coord1, coord2)=0\n";
-              _du = std::log(hist(coord.first, coord.second)) - min; // prevents energy drift
-              _du_sum += _du;
-              hist.clear();
             }
             return _du;
           }
-          /**
-           * @brief Update histogram of single processes using waste-recycling method.
-           *
-           * @details If energy change > 0, histogram receives contributions from both
-           * accepted and rejected configurations.
-           * Penalty function is updated using histogram obtained
-           * by merging contributions from all processes.
-           *
-           * [More info](http://dx.doi.org/10.1007/3-540-35273-2_4)
-           */
-          double update(std::pair<Tpair,Tpair> &coord, double &weight, bool &rejection) {
-            _cnt++;
-            if (weight < 1) {
-              hist(coord.first.first, coord.first.second) += (1-weight);
-              hist(coord.second.first, coord.second.second) += weight;
-            }
-            else hist(coord.second.first, coord.second.second)++;
-            _du = 0;
-            if ((_cnt%_Nupdate)==0) { // if Nupdate'th time
-              exchange();
-              for (auto &m : hist.getMap()) { // update penalty function
-                Tbase::operator()(m.first.first, m.first.second) += std::log(m.second);
-                double log2 = std::log(2); // half bin width compensation
-                if (m.first.first==_lo1 || m.first.first==_hi1) {
-                  Tbase::operator()(m.first.first, m.first.second) += log2;
-                  if (m.first.second==_lo2 || m.first.second==_hi2)
-                    Tbase::operator()(m.first.first, m.first.second) += log2;
-                }
-                else if (m.first.second==_lo2 || m.first.second==_hi2)
-                  Tbase::operator()(m.first.first, m.first.second) += log2;
-              }
-              double min = Tbase::min()->second;
-              for (auto &m : Tbase::getMap()) {
-                Tbase::operator()(m.first.first, m.first.second) -= min;
-              }
-              if (!rejection) _du = std::log(hist.find(coord.second)) - min;
-              else if (hist.find(coord.second)!=0) _du = std::log(hist.find(coord.first)) - min;
-              assert(hist(coord.second.first, coord.second.second)!=0 
-                  && "hist_size (>= max # of points in histogram) is set too small.");
-              _du_sum += _du;
-              hist.clear();
-            }
-            return _du;
-          }
-
           /** @brief Save table to disk */
           void save(const string &filename) {
             Tbase::save(filename+"penalty");
-            hist.save(filename+"histo");
+            accuracy.save(filename+"accuracy");
           }
           /** 
            * @brief Translate penalty by a reference value and save it to disk. 
@@ -1877,10 +1841,10 @@ namespace Faunus {
           /** @brief Load table to disk */
           void load(const string &filename) {
             Tbase::load(filename+"penalty");
-            hist.load(filename+"histo");
+            accuracy.load(filename+".accuracy");
           }
           void test(UnitTest &t) {
-            if (_cnt/_Nupdate>=1) {
+            if (!accuracy.getMap().empty()) {
               auto it_max = Tbase::max();
               auto it_min = Tbase::min();
               t("penalty2D_range",it_max->second-it_min->second,0.1);
@@ -1890,196 +1854,84 @@ namespace Faunus {
             using namespace Faunus::textio;
             std::ostringstream o;
             o << header("2D penalty function");
-            if (_cnt/_Nupdate>=1) {
-              char w=25;
-              auto it_max = Tbase::max();
-              auto it_min = Tbase::min();
-              o << textio::pad(SUB,w, "Number of updates") << _cnt/_Nupdate << endl
-                << textio::pad(SUB,w, "Point of lowest penalty") << "(" << it_min->first.first 
-                << ", " << it_min->first.second << ") " << angstrom << endl
-                << textio::pad(SUB,w, "Point of highest penalty") << "(" << it_max->first.first 
-                << ", " << it_max->first.second << ") " << angstrom << endl
-                << textio::pad(SUB,w, "Penalty range") << it_max->second-it_min->second << kT << endl
-                << textio::pad(SUB,w, "Drift compensation") << _du_sum << kT << endl;
-            }
+            char w=25;
+            auto it_max = Tbase::max();
+            auto it_min = Tbase::min();
+            o << textio::pad(SUB,w, "Tunnelings") << _tunnel << endl
+              << textio::pad(SUB,w, "Final f") << _f << endl
+              << textio::pad(SUB,w, "(x,y)-minimum") << "(" << it_min->first.first 
+              << ", " << it_min->first.second << ") " << endl
+              << textio::pad(SUB,w, "(x,y)-maximum") << "(" << it_max->first.first 
+              << ", " << it_max->first.second << ") " << endl
+              << textio::pad(SUB,w, "z-maximum") << it_max->second << endl;
             return o.str();
           }
       };
-
-    /**
-      @brief General class for penalty functions along a coordinate
-      @date Malmo, 2011
-
-      This class stores a penalty function, f(x), along a given coordinate, x,
-      of type `Tcoordinate` which could be a distance, angle, volume etc.
-      Initially f(x) is zero for all x.
-      Each time the system visits x the update(x) function should be called
-      so as to add the penalty energy, du. In the energy evaluation, the
-      coordinate x should be associated with the extra energy f(x).
-
-      This will eventually ensure uniform sampling. Example:
-
-      ~~~
-      PenaltyFunction<double> f(0.1,1000,6.0); // 0.1 kT penalty
-      Point masscenter;           // some 3D coordinate...
-      ...
-      f.update(masscenter.z);     // update penalty energy for z component
-      double u = f(masscenter.z); // get accumulated penalty at coordinate (kT)
-      f.save("penalty.dat");      // save to disk
-      ~~~
-
-      In the above example, the penalty energy will be scaled by 0.5 if the
-      sampling along the coordinate is less than 6 kT between the least and
-      most likely position.
-      This threshold check is carried out every 1000th call to `update()`.
-      Note also that when the penalty energy is scaled, so is the threshold
-      (also by a factor of 0.5).
-      */
-    template<typename Tcoord=float>
-      class PenaltyFunction : public Table2D<Tcoord,double> {
-        private:
-          unsigned long long _cnt;
-          int _Ncheck;
-          double _kTthreshold;
-          typedef Table2D<Tcoord,double> Tbase;
-          typedef Table2D<Tcoord,unsigned long long int> Thist;
-          Thist hist;
-          Tcoord _du; //!< penalty energy
-          std::string _log;
-        public:
-          /**
-           * @brief Constructor
-           * @param penalty Penalty energy for each update (kT)
-           * @param Ncheck Check histogram every Nscale'th step
-           *        (put large number for no scaling, default)
-           * @param kTthreshold Half penalty energy once this
-           *        threshold in distribution has been reached
-           * @param res Resolution of the penalty function (default 0.1)
-           */
-          PenaltyFunction(double penalty, int Ncheck=1e9, double kTthreshold=5, Tcoord res=0.1)
-            : Tbase(res, Tbase::XYDATA), hist(res, Thist::HISTOGRAM) {
-              Tbase::name="penalty";
-              _cnt=0;
-              _Ncheck=Ncheck;
-              _kTthreshold=kTthreshold;
-              _du=penalty;
-              assert(Ncheck>0);
-              _log="#   initial penalty energy = "+std::to_string(_du)+"\n";
-            }
-          /** @brief Update penalty for coordinate */
-          double update(Tcoord coordinate) {
-            _cnt++;
-            Tbase::operator()(coordinate)+=_du;  // penalize coordinate
-            hist(coordinate)++;                  // increment internal histogram
-            if ((_cnt%_Ncheck)==0) {             // if Ncheck'th time
-              double deltakT=log( hist(hist.maxy()) / double(hist(hist.miny())) );
-              assert(deltakT>0);
-              std::ostringstream o;
-              o << "#   n=" << _cnt << " dkT=" << deltakT;
-              if (deltakT<_kTthreshold) {   // if histogram diff. is smaller than threshold
-                _kTthreshold*=0.5;          // ...downscale threshold
-                scale(0.5);                 // ...and penalty energy
-                o << " update: du=" << _du << " threshold=" << _kTthreshold;
-              }
-              _log += o.str() + "\n";       // save info to log
-            }
-            return _du;
-          }
-          /*! \brief Manually scale penalty energy */
-          void scale(double s) { _du*=s; }
-
-          /*! \brief Save table to disk */
-          void save(const string &filename) {
-            Tbase::save(filename);
-            hist.save(filename+".dist");
-          }
-
-          string info() {
-            return "# Penalty function log:\n" + _log;
-          }
-      };
-
     /**
      * @brief General energy class for handling penalty function (PF) methods.
      *
-     * User-defined reaction coordinate(s) are provided by an external function, f.
+     * @details User-defined reaction coordinate(s) are provided by an external function, f.
      * f is a member of a class given as a template argument.
-     * The return type of f can be either a double (1D penalty) or a pair of
-     * doubles (2D penalty).
+     * The return type of f can be either a double or a pair of doubles.
      * The dimensionality of the penalty function is inferred from the return value of f.
-     * The InputMap class is scanned for the following keys in section `energy/penaltyfunction`:
+     * The InputMap class is scanned for the following keys:
      *
-     * Keyword       | Description
-     * :------------ | :------------------------------------
-     * `update`      | number of moves between updates of PF
-     * `size`        | total number of points in the PF
-     * `bw1`         | bin width of 1st coordinate
-     * `bw2`         | bin width of 2nd coordinate
-     * `lo1`         | lower limit of 1st coordinate
-     * `hi1`         | upper limit of 1st coordinate
-     * `lo2`         | lower limit of 2nd coordinate
-     * `hi2`         | upper limit of 2nd coordinate
+     * Key              | Description
+     * :--------------- | :-----------------------------
+     * `size`   | total number of points in the PF
+     * `tunnel` | number of tunnelings between lo and hi
+     * `f0`     | modification factor
+     * `scale`  | scaling factor to update f0
+     * `bw1`    | bin width of 1st coordinate
+     * `bw2`    | bin width of 2nd coordinate
+     * `lo1`    | lower limit of 1st coordinate
+     * `hi1`    | upper limit of 1st coordinate
+     * `lo2`    | lower limit of 2nd coordinate
+     * `hi2`    | upper limit of 2nd coordinate
      */
-    template<class Tspace, class Tfunction>
-       class PenaltyEnergy : public Energybase<Tspace> {
-         private:
-           string _info() { return "Energy from Penalty Function\n"; }
-           Tspace* spcPtr;
-           string pfx = "penalty";
-           Tfunction f;
-           typedef typename Tspace::ParticleVector Tpvec;
-           typedef decltype(f(spcPtr->p)) Treturn; // type of coordinate
-           typedef Energybase<Tspace> Tbase;
-           typedef typename Energy::PenaltyFunction1D<double> Tone;
-           typedef typename Energy::PenaltyFunction2D<double> Ttwo;
-           typedef typename std::conditional<std::is_same<double,Treturn>::value,Tone,Ttwo>::type Tpf;
-           Tpf pf;
-         public:
-           std::pair<Treturn,Treturn> coordpair; // current and trial coordinates
-           PenaltyEnergy(Faunus::MPI::MPIController &mpi, InputMap &in) :
-             pf(mpi,in.get<int>(pfx+"_update",1e5),
-                 in.get<size_t>(pfx+"_size",2000),
-                 in.get<float>(pfx+"_bw1",0.1),
-                 in.get<float>(pfx+"_bw2",0.1),
-                 in.get<float>(pfx+"_lo1",-20),
-                 in.get<float>(pfx+"_hi1",20),
-                 in.get<float>(pfx+"_lo2",-20),
-                 in.get<float>(pfx+"_hi2",20)
-               ) {}
-           string info() { return pf.info(); }
-
-           void test(UnitTest &t) { pf.test(t); }
-
-           void load(const string &filename) { pf.load(filename); }
-
-           void save(const string &filename) { pf.save(filename); }
-
-           void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
-             pf.save_final(filename, a, b, c, d); 
-           }
-
-           double update(Treturn &c) {
-             return pf.update(c);
-           }
-
-           double update(std::pair<Treturn,Treturn> &c, double &w, bool &r) {
-             return pf.update(c, w, r);
-           }
-
-           std::map<Treturn,double> getMap() { return pf.getMap(); }
-
-           double find(Treturn c) { return pf.find(c); }
-
-           double external(const Tpvec &p) FOVERRIDE {
-             Treturn coor = f(p);
-             double du;
-             if (!Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
-             else coordpair.second=coor; // current coordinate is stored
-             if (!pf.isInrange(coor)) du = std::numeric_limits<double>::max();
-             else du = pf.find(coor);
-             return du;
-           }
-       };
+   template<class Tspace, class Tfunction>
+      class PenaltyEnergy : public Energybase<Tspace> {
+        private:
+          string _info() { return "Energy from Penalty Function\n"; }
+          Tspace* spcPtr;
+          Tfunction f;
+          typedef decltype(f(spcPtr->p)) Treturn; // type of coordinate
+          typedef Energybase<Tspace> Tbase;
+          typedef typename Tspace::p_vec Tpvec;
+          typedef typename Energy::PenaltyFunction1D<double> Tone;
+          typedef typename Energy::PenaltyFunction2D<double> Ttwo;
+          typedef typename std::conditional<std::is_same<double,Treturn>::value,Tone,Ttwo>::type Tpf;
+          Tpf pf;
+        public:
+          std::pair<Treturn,Treturn> coordpair; // current and trial coordinates
+          PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec="penalty")
+            : pf(mpi, j, j["energy"][sec]["bw1"], (j["energy"][sec]["bw2"] | 0) ) {}
+          string info() { return pf.info(); }
+          auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
+          }
+          void test(UnitTest &t) { pf.test(t); }
+          void load(const string &filename) { pf.load(filename); }
+          void save(const string &filename) { pf.save(filename); }
+          void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
+            pf.save_final(filename, a, b, c, d); 
+          }
+          double penalty_update(bool outcome) {
+            if (!outcome) coordpair.first = coordpair.second; // if rejected use current
+            return pf.update(coordpair.first);
+          }
+          std::map<Treturn,double> getMap() { return pf.getMap(); }
+          double find(Treturn c) { return pf.find(c); }
+          double penalty(const Tpvec &p) {
+            double du;
+            Treturn coor = f(p);
+            if (Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
+            else coordpair.second=coor; // current coordinate is stored
+            if (!pf.isInrange(coor)) du = 1e20;
+            else du = pf.find(coor);
+            return du;
+          }
+     };
 #endif
 
     /**
@@ -2416,7 +2268,7 @@ namespace Faunus {
     template<class Tspace, class Tenergy, class Tpvec>
       double systemEnergy(Tspace &spc, Tenergy &pot, const Tpvec &p) {
         pot.setSpace(spc); // ensure pot geometry is in sync with spc
-        double u = pot.external(p);
+        double u = pot.external(p) + pot.penalty(p);
         for (auto g : spc.groupList())
           u += pot.g_external(p, *g) + pot.g_internal(p, *g);
         for (int i=0; i<(int)spc.groupList().size()-1; i++)

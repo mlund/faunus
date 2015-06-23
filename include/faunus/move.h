@@ -307,7 +307,6 @@ namespace Faunus {
           virtual ~Movebase();
           double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
           virtual double move(int=1);                //!< Attempt `n` moves and return energy change (kT)
-          std::pair<double,double> recycle();
           string info();                     //!< Returns information string
           void test(UnitTest&);              //!< Perform unit test
           double getAcceptance();            //!< Get acceptance [0:1]
@@ -355,7 +354,7 @@ namespace Faunus {
     template<class Tspace>
       int Movebase<Tspace>::randomMolId() {
         if ( !mollist.empty() ) {
-          auto it = slump.element( mollist.begin(), mollist.end() );
+          auto it = propagation_slump.element( mollist.begin(), mollist.end() );
           if (it != mollist.end() ) {
             it->second.repeat = 1;
             if ( it->second.perMol )
@@ -376,10 +375,10 @@ namespace Faunus {
       Group* Movebase<Tspace>::randomMol() {
         Group* gPtr=nullptr;
         if ( !mollist.empty() ) {
-          auto it = slump.element( mollist.begin(), mollist.end() );
+          auto it = propagation_slump.element( mollist.begin(), mollist.end() );
           auto g = spc->findMolecules( it->first ); // vector of group pointers
           if ( !g.empty() )
-            gPtr = *slump.element( g.begin(), g.end() );
+            gPtr = *propagation_slump.element( g.begin(), g.end() );
         }
         return gPtr;
       }
@@ -443,12 +442,16 @@ namespace Faunus {
           while ( n-->0 ) {
             trialMove();
             double du = energyChange();
-            if ( !metropolis(du) )
+            bool outcome = metropolis(du);
+            if ( !outcome ) {
               rejectMove();
+              utot += pot->penalty_update(outcome);
+            }
             else {
               acceptMove();
               if ( useAlternateReturnEnergy )
                 du = alternateReturnEnergy;
+              utot += pot->penalty_update(outcome);
               dusum += du;
               utot += du;
             }
@@ -457,38 +460,6 @@ namespace Faunus {
         assert(spc->p == spc->trial && "Trial particle vector out of sync!");
         timer.stop();
         return utot;
-      }
-
-    /**
-     * This function performs trial move and accept/reject using 
-     * the Metropolis criteria
-     * It differs from move in that:
-     * 1. it returns a pair of energy change values;
-     * 2. it performs one move at a time.
-     * The second member of the pair stores the energy change, du.
-     * The first is zero in case of rejection and otherwise equal to du.
-     * The information on the energy change in case of rejection is useful in Waste-Recycling MC.
-     * 
-     * [More info](http://dx.doi.org/10.1007/3-540-35273-2_4)
-     */
-    template<class Tspace>
-      std::pair<double,double> Movebase<Tspace>::recycle() {
-        double du_accepted=0, du=0;
-        if (run()) {
-          trialMove();
-          du=energyChange();
-          if ( !metropolis(du) )
-            rejectMove();
-          else {
-            acceptMove();
-            if (useAlternateReturnEnergy)
-              du=alternateReturnEnergy;
-            dusum+=du;
-            du_accepted+=du;
-          }
-        }
-        assert(spc->p == spc->trial && "Trial particle vector out of sync!");
-        return std::make_pair(du_accepted,du);
       }
 
     /**
@@ -510,7 +481,7 @@ namespace Faunus {
 
     template<class Tspace>
       bool Movebase<Tspace>::run() const {
-        if (slump() < runfraction)
+        if (propagation_slump() < runfraction)
           return true;
         return false;
       }
@@ -742,9 +713,9 @@ namespace Faunus {
             return pc::infty;
           return
             (base::pot->i_total(spc->trial, iparticle)
-             + base::pot->external(spc->trial))
+             + base::pot->external(spc->trial) + base::pot->penalty(spc->trial))
             - (base::pot->i_total(spc->p, iparticle)
-                + base::pot->external(spc->p));
+                + base::pot->external(spc->p) + base::pot->penalty(spc->p));
         }
         return 0;
       }
@@ -802,9 +773,14 @@ namespace Faunus {
           using base::w;
           using base::gsize;
           using base::genericdp;
+          using base::accmap;
+          using base::sqrmap;
           Geometry::QuaternionRotate rot;
           string _info();
           void _trialMove();
+          void _acceptMove();
+          void _rejectMove();
+          double dprot;      //!< Temporary storage for current angle
 
         public:
           AtomicRotation(Energy::Energybase<Tspace>&, Tspace&,
@@ -819,7 +795,6 @@ namespace Faunus {
           string sec) : base(e, s, j, sec) {
         base::title="Single Particle Rotation";
       }
-
     template<class Tspace>
       void AtomicRotation<Tspace>::_trialMove() {
         if ( ! this->mollist.empty() ) {
@@ -832,7 +807,7 @@ namespace Faunus {
 
         if (iparticle>-1) {
           assert( iparticle<(int)spc->p.size() && "Trial particle out of range");
-          double dprot = atom[spc->p[iparticle].id ].dprot;
+          dprot = atom[spc->p[iparticle].id ].dprot;
           if (dprot<1e-6)
             dprot = base::genericdp;
 
@@ -841,6 +816,20 @@ namespace Faunus {
           rot.setAxis(spc->geo, Point(0,0,0), u, dprot* slump.half() );
           spc->trial[iparticle].rotate(rot);
         }
+      }
+
+    template<class Tspace>
+      void AtomicRotation<Tspace>::_acceptMove() {
+        sqrmap[ spc->p[iparticle].id ] += pow(dprot*180/pc::pi, 2);
+        accmap[ spc->p[iparticle].id ] += 1;
+        spc->p[iparticle] = spc->trial[iparticle];
+      }
+
+    template<class Tspace>
+      void AtomicRotation<Tspace>::_rejectMove() {
+        spc->trial[iparticle] = spc->p[iparticle];
+        sqrmap[ spc->p[iparticle].id ] += 0;
+        accmap[ spc->p[iparticle].id ] += 0;
       }
 
     template<class Tspace>
@@ -859,16 +848,16 @@ namespace Faunus {
             << indent(SUBSUB) << std::left << string(7,' ')
             << setw(l-6) << "dp"
             << setw(l+1) << "Acc. "+percent
-            << setw(l+7) << bracket("r"+squared)+"/"+angstrom+squared
-            << rootof+bracket("r"+squared)+"/"+angstrom << endl;
-          for (auto m : base::sqrmap) {
-            typename Tspace::ParticleType::Tid id=m.first;
+            << setw(l+7) << bracket("d"+theta+squared)+"/"+degrees
+            << rootof+bracket("d"+theta+squared)+"/"+degrees << endl;
+          for (auto m : sqrmap) {
+            auto id=m.first;
             o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
-              << setw(l-6) << ( (atom[id].dprot<1e-6) ? genericdp : atom[id].dp);
+              << setw(l-6) << ( (atom[id].dprot<1e-6) ? genericdp : atom[id].dprot*180/pc::pi);
             o.precision(3);
-            o << setw(l) << base::accmap[id].avg()*100
-              << setw(l) << base::sqrmap[id].avg()
-              << setw(l) << sqrt(base::sqrmap[id].avg()) << endl;
+            o << setw(l) << accmap[id].avg()*100
+              << setw(l) << sqrmap[id].avg()
+              << setw(l) << sqrt(sqrmap[id].avg()) << endl;
           }
         }
         return o.str();
@@ -1041,12 +1030,12 @@ namespace Faunus {
           if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
-        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
+        double unew = pot->external(spc->trial) + pot->penalty(spc->trial) + pot->g_external(spc->trial, *igroup);
         if (unew==pc::infty)
           return pc::infty;       // early rejection
-        double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
+        double uold = pot->external(spc->p) + pot->penalty(spc->p) + pot->g_external(spc->p, *igroup);
 
-#ifdef ENABLE_MPI
+/*#ifdef ENABLE_MPI
         if (base::mpiPtr!=nullptr) {
           double du=0;
           auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
@@ -1057,7 +1046,7 @@ namespace Faunus {
           }
           return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
         }
-#endif
+#endif*/
 
         for (auto g : spc->groupList()) {
           if (g!=igroup) {
@@ -1763,7 +1752,8 @@ namespace Faunus {
         for (auto g : spc->groupList())
           if (g!=gPtr)
             du+=pot->g2g(spc->trial, *g, *gPtr) - pot->g2g(spc->p, *g, *gPtr);
-        du+=pot->external(spc->trial) - pot->external(spc->p);
+        du+=pot->external(spc->trial) + pot->penalty(spc->trial) 
+          - pot->external(spc->p) - pot->penalty(spc->p);
         //for (auto i : index)
         //  du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
         return du;
@@ -2199,7 +2189,7 @@ namespace Faunus {
           if (g->numMolecules()>1)
             u+=pot->g_internal(p, *g);
         }
-        return u + pot->external(p);
+        return u + pot->external(p) + pot->penalty(p);
       }
 
     /**
@@ -2253,16 +2243,17 @@ namespace Faunus {
            void _trialMove();
            string _info();
          public:
-           Isochoric(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="nvt");
+           template<typename Tenergy>
+             Isochoric(Tenergy&, Tspace&, Tmjson&, string="isochoric");
        };
 
     template<class Tspace>
-      Isochoric<Tspace>::Isochoric(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(in,e,s,pfx) {
+      template<class Tenergy> Isochoric<Tspace>::Isochoric(Tenergy &e, Tspace &s, Tmjson &j, string sec) : base(e,s,j,"isochoric") {
         this->title="Isochoric Side Lengths Fluctuations";
         this->w=30;
-        dp=in.get<double>(pfx+"_dz", 0.,
-            "z-displacement parameter");
-        this->runfraction = in.get<double>(pfx+"_runfraction",1.0);
+        auto m = j["moves"][sec];
+        dp = m["dp"] | 0.0;
+        base::runfraction = m["prob"] | 1.0;
         if (dp<1e-6)
           base::runfraction=0;
       }
@@ -2294,13 +2285,13 @@ namespace Faunus {
         oldlen = spc->geo.len;
         newlen = oldlen;
         oldval = spc->geo.len.z();
-        newval = oldval+ slump.half()*dp;
+        newval = std::exp( std::log(oldval) + slump.half()*dp );
+        //newval = oldval+ slump.half()*dp;
         Point s;
         s.z() = newval / oldval;
         s.x() = s.y() = 1 / std::sqrt(s.z());
         newlen.scale(spc->geo,s);
         for (auto g : spc->groupList()) {
-          g->setMassCenter(*spc);
           g->scale(*spc,s); // scale trial coordinates to new coordinates
         }
       }
@@ -4104,6 +4095,8 @@ namespace Faunus {
                   mPtr.push_back( toPtr( TranslateRotate<Tspace>(e,s,in) ) );
                 if (i.key()=="isobaric")
                   mPtr.push_back( toPtr( Isobaric<Tspace>(e,s,in) ) );
+                if (i.key()=="isochoric")
+                  mPtr.push_back( toPtr( Isochoric<Tspace>(e,s,in) ) );
                 if (i.key()=="gc")
                   mPtr.push_back( toPtr( GreenGC<Tspace>(e,s,in) ) );
                 if (i.key()=="titrate")
@@ -4119,7 +4112,7 @@ namespace Faunus {
 
             double move(int n=1) override {
               return ( mPtr.empty() ) ?
-                0 : (*slump.element( mPtr.begin(), mPtr.end() ))->move();
+                0 : (*propagation_slump.element( mPtr.begin(), mPtr.end() ))->move();
             }
 
             void test(UnitTest &t) { for (auto i : mPtr) i->test(t); }

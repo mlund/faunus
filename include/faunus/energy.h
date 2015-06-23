@@ -264,18 +264,11 @@ namespace Faunus {
           typename Tspace::GeometryType geo;
           Tpairpot pairpot;
 
-          Nonbonded(InputMap &in, const string &dir="")
-            : Tbase(dir), geo(in), pairpot(in, Tbase::jsondir+"/nonbonded" ) {
-              in.cd ( Tbase::jsondir + "/nonbonded" );
-              static_assert(
-                  std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
-                  "Tpairpot must be a pair potential" );
-              Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
-            }
-
           Nonbonded(
               Tmjson &j,
               const string &sec="nonbonded" ) : geo(j), pairpot( j["energy"][sec] ) {
+
+            assert( ! j["energy"][sec].is_null() );
 
             static_assert(
                 std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
@@ -432,7 +425,7 @@ namespace Faunus {
           Tpairpot pairpot;
 
           NonbondedVector(InputMap &in, const string &dir="energy")
-            : Tbase(dir+"/nonbonded"), geo(in), pairpot(in) {
+            : Tbase(dir+"/nonbonded"), geo(in), pairpot(in["energy"]["nonbonded"]) {
               static_assert(
                   std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
                   "Tpairpot must be a pair potential" );
@@ -682,9 +675,9 @@ namespace Faunus {
         public:
           bool noPairPotentialCutoff; //!< Set if range of pairpot is longer than rcut (default: false)
 
-          NonbondedCutg2g(InputMap &in, string dir="energy") : base(in,dir) {
+          NonbondedCutg2g(Tmjson &j, const string &sec="nonbonded") : base(j,sec) {
             noPairPotentialCutoff=false;
-            rcut2 = pow( in("cutoff_g2g", pc::infty), 2);
+            rcut2 = pow( j["energy"][sec]["cutoff_g2g"] | pc::infty, 2);
             base::name += " (g2g cut=" + std::to_string(sqrt(rcut2))
               + textio::_angstrom + ")";
           }
@@ -1252,23 +1245,18 @@ namespace Faunus {
      * separation are outside the defined range.
      * An arbitrary number of group pairs can be added with the `addPair()` command,
      * although one would rarely want to have more than one.
-     * In the following example, the distance between `mygroup1` and `mygroup2`
-     * are constrained to the range `[10:50]` angstrom:
+     * The input is read from json section `energy/cmconstrain` where the key
+     * represents pairs of molecule names.
      *
-     * @code
-     * InputMap mcp;
-     * Energy::MassCenterConstrain<Tspace> pot(mcp);
-     * pot.addPair( mygroup1, mygroup2, 10, 50); 
-     * @endcode
-     *
-     * The `addPair` function can be called without distance interval in
-     * which case the default window is used. This is read during from
-     * the `InputMap` using the keywords,
-     *
-     * Keyword           | Description
-     * :---------------- | :----------------------------------------
-     * `cmconstrain_min` | Minimum mass center separation (angstrom)
-     * `cmconstrain_max` | Maximum mass center separation (angstrom)
+     * ~~~~
+     * { 
+     *   "energy" {
+     *     "cmconstrain" : { 
+     *        "mymol1 mymol2" : { "mindist": 0, "maxdist": 60.0 }
+     *     }
+     *   }
+     * }
+     * ~~~~
      *
      * @date Lund, 2012
      * @todo Prettify output
@@ -1290,20 +1278,30 @@ namespace Faunus {
             double mindist, maxdist;
           };
 
-          data defaultWindow;
-
           std::map<opair<Faunus::Group*>, data> gmap;
 
         public:
 
-          MassCenterConstrain(InputMap &in) {
+          MassCenterConstrain(Tmjson &j, Tspace &s) {
+            this->setSpace(s);
             this->name="Group Mass Center Distance Constraints";
-            defaultWindow.mindist = in("cmconstrain_min", 0.0);
-            defaultWindow.maxdist = in("cmconstrain_max", 1.0e20);
+            auto m = j["energy"]["cmconstrain"];
+            for ( auto i = m.begin(); i != m.end(); ++i) {
+              auto molname = textio::words2vec<string>( i.key() ); 
+              assert( molname.size()==2 && "Specify two molecules." );
+              double mindist = i.value()["mindist"] | 0.0;
+              double maxdist = i.value()["maxdist"] | 1.0e9;
+              auto v1 = this->spc->findMolecules( molname[0] );
+              auto v2 = this->spc->findMolecules( molname[1] );
+              for (auto i : v1)
+                for (auto j : v2)
+                  if (i!=j)
+                    addPair( *i, *j, mindist, maxdist ); 
+            }
+          }
 
-            assert(defaultWindow.mindist<defaultWindow.maxdist);
-            assert(defaultWindow.mindist>0);
-            assert(defaultWindow.maxdist>0);
+          auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
           }
 
           /** @brief Add constraint between two groups */
@@ -1311,11 +1309,6 @@ namespace Faunus {
             data d = {mindist, maxdist};
             opair<Group*> p(&a, &b);
             gmap[p] = d;
-          }
-
-          /** @brief Add constraint between two groups - distances read from user input */
-          void addPair(Group &a, Group &b) {
-            addPair(a,b,defaultWindow.mindist,defaultWindow.maxdist);
           }
 
           /** @brief Constrain treated as external potential */
@@ -2244,13 +2237,13 @@ namespace Faunus {
         public:
           Hamiltonian() { Tbase::name="Hamiltonian"; }
 
-          Hamiltonian( const json::Tval &js ) {
+          Hamiltonian( Tmjson &j ) {
             Tbase::name = "Hamiltonian";
-            json::Tobj m = json::object("energy", js);
-            for ( auto &i : m ) {
-              if (i.first=="nonbonded") {
+            auto m = j["energy"];
+            for ( auto i=m.begin(); i!=m.end() ; ++i ) {
+              if (i.key()=="nonbonded") {
                 // todo: check for "type" in nonbonded, i.e. "lj", "coulomblj" etc.
-                push_back( Energy::Nonbonded<Tspace, Potential::LennardJonesLB>(js) ); 
+                push_back( Energy::Nonbonded<Tspace, Potential::LennardJonesLB>( j ) ); 
               }
             }
           }

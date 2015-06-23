@@ -75,11 +75,11 @@ int main(int argc, char** argv) {
  * The python script `twobody.py` generates the simulation input files
  * and all changes to the simulation setup should be done from inside
  * the script.
- * This example was prepared using commit `ca1a923` which can be checked out
- * and run with the following,
+ * This example can run with the following (the first, optional
+ * command checks out a specific commit with which this tutorial was created),
  *
  * ~~~~~~~~~~~~~~~~~~~
- * $ git checkout ca1a923
+ * $ (git checkout 10e9a0b)
  * $ make example_twobody
  * $ cd src/examples
  * $ python twobody.py

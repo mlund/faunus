@@ -195,8 +195,8 @@ namespace Faunus {
           template<class Tspace>
             PolarizeMove(Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) :
               Tmove(e,s,j) {
-                threshold = Tmove::json()["pol_threshold"] | 0.001;
-                max_iter  = Tmove::json()["max_iterations"] | 40;
+                threshold = j["pol_threshold"] | 0.001;
+                max_iter  = j["max_iterations"] | 40;
               }
 
           PolarizeMove(const Tmove &m) : max_iter(40), threshold(0.001), Tmove(m) {};
@@ -229,7 +229,7 @@ namespace Faunus {
      * @date Lund, 2007-2011
      */
     template<class Tspace=Space<class Tgeometry,class Tparticle> >
-      class Movebase : public JSONSupport {
+      class Movebase {
         private:
           unsigned long int cnt_accepted;  //!< number of accepted moves
           double dusum;                    //!< Sum of all energy changes
@@ -307,6 +307,7 @@ namespace Faunus {
           virtual ~Movebase();
           double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
           virtual double move(int=1);                //!< Attempt `n` moves and return energy change (kT)
+          std::pair<double,double> recycle();
           string info();                     //!< Returns information string
           void test(UnitTest&);              //!< Perform unit test
           double getAcceptance();            //!< Get acceptance [0:1]
@@ -325,7 +326,7 @@ namespace Faunus {
      * @brief Constructor
      * @param e Energy class
      * @param s Space
-     * @param dir Name of section in input file to search for parameters
+     * @param rootsec Name of section in input file to search for parameters
      */
     template<class Tspace>
       Movebase<Tspace>::Movebase(Energy::Energybase<Tspace> &e, Tspace &s, string rootsec) {
@@ -335,7 +336,7 @@ namespace Faunus {
         spc=&s;
         cnt=cnt_accepted=0;
         dusum=0;
-        w=22;
+        w=30;
         runfraction=1;
         useAlternateReturnEnergy=false; //this has no influence on metropolis sampling!
 #ifdef ENABLE_MPI
@@ -354,7 +355,7 @@ namespace Faunus {
     template<class Tspace>
       int Movebase<Tspace>::randomMolId() {
         if ( !mollist.empty() ) {
-          auto it = propagation_slump.element( mollist.begin(), mollist.end() );
+          auto it = slump.element( mollist.begin(), mollist.end() );
           if (it != mollist.end() ) {
             it->second.repeat = 1;
             if ( it->second.perMol )
@@ -442,16 +443,12 @@ namespace Faunus {
           while ( n-->0 ) {
             trialMove();
             double du = energyChange();
-            bool outcome = metropolis(du);
-            if ( !outcome ) {
+            if ( !metropolis(du) )
               rejectMove();
-              utot += pot->penalty_update(outcome);
-            }
             else {
               acceptMove();
               if ( useAlternateReturnEnergy )
                 du = alternateReturnEnergy;
-              utot += pot->penalty_update(outcome);
               dusum += du;
               utot += du;
             }
@@ -460,6 +457,38 @@ namespace Faunus {
         assert(spc->p == spc->trial && "Trial particle vector out of sync!");
         timer.stop();
         return utot;
+      }
+
+    /**
+     * This function performs trial move and accept/reject using 
+     * the Metropolis criteria
+     * It differs from move in that:
+     * 1. it returns a pair of energy change values;
+     * 2. it performs one move at a time.
+     * The second member of the pair stores the energy change, du.
+     * The first is zero in case of rejection and otherwise equal to du.
+     * The information on the energy change in case of rejection is useful in Waste-Recycling MC.
+     * 
+     * [More info](http://dx.doi.org/10.1007/3-540-35273-2_4)
+     */
+    template<class Tspace>
+      std::pair<double,double> Movebase<Tspace>::recycle() {
+        double du_accepted=0, du=0;
+        if (run()) {
+          trialMove();
+          du=energyChange();
+          if ( !metropolis(du) )
+            rejectMove();
+          else {
+            acceptMove();
+            if (useAlternateReturnEnergy)
+              du=alternateReturnEnergy;
+            dusum+=du;
+            du_accepted+=du;
+          }
+        }
+        assert(spc->p == spc->trial && "Trial particle vector out of sync!");
+        return std::make_pair(du_accepted,du);
       }
 
     /**
@@ -481,7 +510,7 @@ namespace Faunus {
 
     template<class Tspace>
       bool Movebase<Tspace>::run() const {
-        if ( propagation_slump() < runfraction )
+        if (slump() < runfraction)
           return true;
         return false;
       }
@@ -615,8 +644,7 @@ namespace Faunus {
         iparticle=-1;
         igroup=nullptr;
         dir={1,1,1};
-        genericdp = 5;
-        this->w=30; //width of output
+        genericdp = 0;
 
         base::fillMolList( j["moves"][sec] );
       }
@@ -714,9 +742,9 @@ namespace Faunus {
             return pc::infty;
           return
             (base::pot->i_total(spc->trial, iparticle)
-             + base::pot->external(spc->trial) + base::pot->penalty(spc->trial))
+             + base::pot->external(spc->trial))
             - (base::pot->i_total(spc->p, iparticle)
-                + base::pot->external(spc->p) + base::pot->penalty(spc->p));
+                + base::pot->external(spc->p));
         }
         return 0;
       }
@@ -774,14 +802,9 @@ namespace Faunus {
           using base::w;
           using base::gsize;
           using base::genericdp;
-          using base::accmap;
-          using base::sqrmap;
           Geometry::QuaternionRotate rot;
           string _info();
           void _trialMove();
-          void _acceptMove();
-          void _rejectMove();
-          double dprot;      //!< Temporary storage for current angle
 
         public:
           AtomicRotation(Energy::Energybase<Tspace>&, Tspace&,
@@ -796,6 +819,7 @@ namespace Faunus {
           string sec) : base(e, s, j, sec) {
         base::title="Single Particle Rotation";
       }
+
     template<class Tspace>
       void AtomicRotation<Tspace>::_trialMove() {
         if ( ! this->mollist.empty() ) {
@@ -808,7 +832,7 @@ namespace Faunus {
 
         if (iparticle>-1) {
           assert( iparticle<(int)spc->p.size() && "Trial particle out of range");
-          dprot = atom[spc->p[iparticle].id ].dprot;
+          double dprot = atom[spc->p[iparticle].id ].dprot;
           if (dprot<1e-6)
             dprot = base::genericdp;
 
@@ -817,20 +841,6 @@ namespace Faunus {
           rot.setAxis(spc->geo, Point(0,0,0), u, dprot* slump.half() );
           spc->trial[iparticle].rotate(rot);
         }
-      }
-
-    template<class Tspace>
-      void AtomicRotation<Tspace>::_acceptMove() {
-        sqrmap[ spc->p[iparticle].id ] += pow(dprot*180/pc::pi, 2);
-        accmap[ spc->p[iparticle].id ] += 1;
-        spc->p[iparticle] = spc->trial[iparticle];
-      }
-
-    template<class Tspace>
-      void AtomicRotation<Tspace>::_rejectMove() {
-        spc->trial[iparticle] = spc->p[iparticle];
-        sqrmap[ spc->p[iparticle].id ] += 0;
-        accmap[ spc->p[iparticle].id ] += 0;
       }
 
     template<class Tspace>
@@ -849,16 +859,16 @@ namespace Faunus {
             << indent(SUBSUB) << std::left << string(7,' ')
             << setw(l-6) << "dp"
             << setw(l+1) << "Acc. "+percent
-            << setw(l+7) << bracket("d"+theta+squared)+"/"+degrees
-            << rootof+bracket("d"+theta+squared)+"/"+degrees << endl;
-          for (auto m : sqrmap) {
-            auto id=m.first;
+            << setw(l+7) << bracket("r"+squared)+"/"+angstrom+squared
+            << rootof+bracket("r"+squared)+"/"+angstrom << endl;
+          for (auto m : base::sqrmap) {
+            typename Tspace::ParticleType::Tid id=m.first;
             o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
-              << setw(l-6) << ( (atom[id].dprot<1e-6) ? genericdp : atom[id].dprot*180/pc::pi);
+              << setw(l-6) << ( (atom[id].dprot<1e-6) ? genericdp : atom[id].dp);
             o.precision(3);
-            o << setw(l) << accmap[id].avg()*100
-              << setw(l) << sqrmap[id].avg()
-              << setw(l) << sqrt(sqrmap[id].avg()) << endl;
+            o << setw(l) << base::accmap[id].avg()*100
+              << setw(l) << base::sqrmap[id].avg()
+              << setw(l) << sqrt(base::sqrmap[id].avg()) << endl;
           }
         }
         return o.str();
@@ -955,7 +965,7 @@ namespace Faunus {
           i.second.dp2 = m[molname]["dprot"] | 0.0;
           if (i.second.dp2>4*pc::pi)    // no need to rotate more than
             i.second.dp2=4*pc::pi;      // +/- 2 pi.
-        }
+         }
       }
 
     template<class Tspace>
@@ -1031,24 +1041,23 @@ namespace Faunus {
           if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
-        double unew = pot->external(spc->trial) + pot->penalty(spc->trial) + pot->g_external(spc->trial, *igroup);
+        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if (unew==pc::infty)
           return pc::infty;       // early rejection
-        double uold = pot->external(spc->p) + pot->penalty(spc->p) + pot->g_external(spc->p, *igroup);
+        double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
-
-        /*#ifdef ENABLE_MPI
-          if (base::mpiPtr!=nullptr) {
+#ifdef ENABLE_MPI
+        if (base::mpiPtr!=nullptr) {
           double du=0;
           auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
           for (auto i=s.first; i<=s.second; ++i) {
-          auto gi=spc->groupList()[i];
-          if (gi!=igroup)
-          du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
+            auto gi=spc->groupList()[i];
+            if (gi!=igroup)
+              du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
           }
           return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
-          }
-#endif*/
+        }
+#endif
 
         for (auto g : spc->groupList()) {
           if (g!=igroup) {
@@ -1754,8 +1763,7 @@ namespace Faunus {
         for (auto g : spc->groupList())
           if (g!=gPtr)
             du+=pot->g2g(spc->trial, *g, *gPtr) - pot->g2g(spc->p, *g, *gPtr);
-        du+=pot->external(spc->trial) + pot->penalty(spc->trial) 
-          - pot->external(spc->p) - pot->penalty(spc->p);
+        du+=pot->external(spc->trial) - pot->external(spc->p);
         //for (auto i : index)
         //  du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
         return du;
@@ -1911,7 +1919,7 @@ namespace Faunus {
         for (auto &i : this->mollist) { // loop over molecules to be moved
           string molname = spc->molList()[ i.first ].name;
           i.second.dp1 = m[molname]["bondlength"] | -1.0;
-        }
+         }
       }
 
     template<class Tspace>
@@ -2191,7 +2199,7 @@ namespace Faunus {
           if (g->numMolecules()>1)
             u+=pot->g_internal(p, *g);
         }
-        return u + pot->external(p) + pot->penalty(p);
+        return u + pot->external(p);
       }
 
     /**
@@ -2245,17 +2253,16 @@ namespace Faunus {
            void _trialMove();
            string _info();
          public:
-           template<typename Tenergy>
-             Isochoric(Tenergy&, Tspace&, Tmjson&, string="isochoric");
+           Isochoric(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="nvt");
        };
 
     template<class Tspace>
-      template<class Tenergy> Isochoric<Tspace>::Isochoric(Tenergy &e, Tspace &s, Tmjson &j, string sec) : base(e,s,j,"isochoric") {
+      Isochoric<Tspace>::Isochoric(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(in,e,s,pfx) {
         this->title="Isochoric Side Lengths Fluctuations";
         this->w=30;
-        auto m = j["moves"][sec];
-        dp = m["dp"] | 0.0;
-        base::runfraction = m["prob"] | 1.0;
+        dp=in.get<double>(pfx+"_dz", 0.,
+            "z-displacement parameter");
+        this->runfraction = in.get<double>(pfx+"_runfraction",1.0);
         if (dp<1e-6)
           base::runfraction=0;
       }
@@ -2287,13 +2294,13 @@ namespace Faunus {
         oldlen = spc->geo.len;
         newlen = oldlen;
         oldval = spc->geo.len.z();
-        newval = std::exp( std::log(oldval) + slump.half()*dp );
-        //newval = oldval+ slump.half()*dp;
+        newval = oldval+ slump.half()*dp;
         Point s;
         s.z() = newval / oldval;
         s.x() = s.y() = 1 / std::sqrt(s.z());
         newlen.scale(spc->geo,s);
         for (auto g : spc->groupList()) {
+          g->setMassCenter(*spc);
           g->scale(*spc,s); // scale trial coordinates to new coordinates
         }
       }
@@ -2481,26 +2488,25 @@ namespace Faunus {
           Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j,
           string sec) : base(e,s), tracker(s) {
 
-        w=30;
-        base::title="Grand Canonical Salt";
-        base::useAlternateReturnEnergy=true;
-        base::jsondir = "moves/" + sec;
+          base::title="Grand Canonical Salt";
+          base::useAlternateReturnEnergy=true;
+          base::jsondir = "moves/" + sec;
 
-        string saltname = j["moves"][sec]["molecule"] | string();
-        auto v = spc->findMolecules( saltname );
-        if ( v.empty() ) { // insert if no atomic species found
-          auto it = spc->molList().find( saltname ); 
-          if ( it != spc->molList().end() )
-            saltPtr = spc->insert( it->id, it->getRandomConformation(spc->geo, spc->p) );
-        } else {
-          if ( v.size() != 1 )
-            throw std::runtime_error( "Number of atomic GC groups must be exactly ONE." );
-          if ( v.front()->isMolecular() )
-            throw std::runtime_error( "Atomic GC group must be atomic.");
-          saltPtr=v.front();
+          string saltname = j["moves"][sec]["molecule"] | string();
+          auto v = spc->findMolecules( saltname );
+          if ( v.empty() ) { // insert if no atomic species found
+            auto it = spc->molList().find( saltname ); 
+            if ( it != spc->molList().end() )
+              saltPtr = spc->insert( it->id, it->getRandomConformation(spc->geo, spc->p) );
+          } else {
+            if ( v.size() != 1 )
+              throw std::runtime_error( "Number of atomic GC groups must be exactly ONE." );
+            if ( v.front()->isMolecular() )
+              throw std::runtime_error( "Atomic GC group must be atomic.");
+            saltPtr=v.front();
+          }
+          add(*saltPtr);
         }
-        add(*saltPtr);
-      }
 
     template<class Tspace>
       void GrandCanonicalSalt<Tspace>::add( Group &g ) {
@@ -2685,7 +2691,7 @@ namespace Faunus {
 
           unsigned long int cnt_tit, cnt_salt, cnt_tit_acc, cnt_salt_acc;
           Tid pid;     // particle id's of current salt pair (a=cation, b=anion)
-          int  N, isite=-1;                    // switch with a built in message
+	  int  N, isite=-1;                    // switch with a built in message
           int k;
           bool protonation;          // if yes, the process shuld lead to protonation
           bool gcyes;
@@ -2714,1418 +2720,1426 @@ namespace Faunus {
             }  
       };
 
-    template<class Tspace>
-      template<class Tenergy>
+      template<class Tspace>
+        template<class Tenergy>
 
-      GrandCanonicalTitration<Tspace>::GrandCanonicalTitration(
-          Tenergy &e,
-          Tspace &s,
-          Tmjson &j,
-          string sec) : base(e,s,j,sec) {
+        GrandCanonicalTitration<Tspace>::GrandCanonicalTitration(
+            Tenergy &e,
+            Tspace &s,
+            Tmjson &j,
+            string sec) : base(e,s,j,sec) {
 
-        base::title += " Titration";
-        base::useAlternateReturnEnergy=true;
-        auto t = e.tuple();
-        auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
-        if ( ptr != nullptr )
-          eqpot = *ptr;
-        else {
-          std::cerr << "Error: Equilibrium energy required in Hamiltonian\
-            for Grand Canonical Titration moves." << endl;
-          exit(1);
-        }
-        eqpot->eq = Energy::EquilibriumController( j );
-        findSites( spc->p );
-        cnt_tit = cnt_salt = cnt_tit_acc = cnt_salt_acc = 0;
-
-        /* Sync particle charges with `AtomMap` */
-        for (auto i : eqpot->eq.sites)
-          spc->trial[i].charge = spc->p[i].charge = atom[ spc->p[i].id ].charge;
-
-        // neutralise system, if needed, using GC ions
-        double Z = netCharge( s.p, Group(0,s.p.size()-1) );
-        double z = 0;
-        Tid id;
-        int maxtry=1000;
-        if ( fabs(Z) > 1e-9) {
-          do {
-            id = base::tracker.randomAtomType();
-            z = atom[id].charge;
-            assert( --maxtry>0 );
-          } while (
-              ( (z<0 && Z>0) || (Z<0 && z>0) )
-              && ( fabs( fmod(Z,z) ) < 1e-9 ) );
-
-          int n = round(-Z/z); 
-          assert( n>0 && fabs(n*z+Z) < 1e-9 );
-
-          typename Tspace::ParticleType a;
-          a = atom[id];
-          for (int i=0; i<n; i++) {
-            s.geo.randompos(a);
-            base::tracker.insert(a, base::saltPtr->back());
-          }
-          assert( fabs( netCharge( s.p, Group(0,s.p.size()-1)) )<1e-9) ;
-        }
-      }
-
-    template<class Tspace> 
-      void GrandCanonicalTitration<Tspace>::_trialMove()  { 
-        gcyes=false;
-        int switcher = slump.range(0,1);
-        if (eqpot->eq.number_of_sites()==0){ // If no sites associated with processess
-          gcyes=true, switcher=0;            // fall back to plain gc
-        } 
-        switch ( switcher ) {
-          case 0:   // Go for the inheritance
-            cnt_salt++;
-            gcyes=true;
-            base::_trialMove(); 
-            break; 
-          case 1:   // Brand new deal
-            cnt_tit++;
-            base::trial_insert.clear(); // First some cleaning in the attic
-            base::trial_delete.clear();
-            do {              // Pick a monovalent ion
-              pid = base::tracker.randomAtomType();
-            } while (atom[pid].charge*atom[pid].charge != 1);
-            if (!eqpot->eq.sites.empty()) {
-              int i = slump.range( 0, eqpot->eq.sites.size()-1); // pick random site (local in *eq)
-              isite = eqpot->eq.sites.at(i); // and corresponding particle (index in spc->p)
-              do {
-                k = slump.range( 0, eqpot->eq.process.size()-1 );// pick random process..
-              } while (!eqpot->eq.process[k].one_of_us( this->spc->p[isite].id )); //that match particle isite
-
-              eqpot->eq.process[k].swap( this->spc->trial[isite] ); // change state and get intrinsic energy change
+            base::title += " Titration";
+            base::useAlternateReturnEnergy=true;
+            auto t = e.tuple();
+            auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
+            if ( ptr != nullptr )
+              eqpot = *ptr;
+            else {
+              std::cerr << "Error: Equilibrium energy required in Hamiltonian\
+                for Grand Canonical Titration moves." << endl;
+              exit(1);
             }
-            if ( !eqpot->eq.process[k].bound(this->spc->trial[isite].id) ) {// have action lead to deprotonation?
-              protonation = false;
-            } else {
-              protonation = true;
-            }
-            N = -1;
-            // The following section is hardcoded for monovalent salt
-            if (base::map[pid].p.charge>0) {  // Determine weather cat-/anion
-              N = 0;            // N==0 cation, N==1 anion
-            } else if ( base::map[pid].p.charge<0 ) {      
-              N = 1;
-            } else {  
-              std::cerr << " Error, something fails !"<<std::endl, exit(0);
-            }
-            int iIon=-1;
-            if ( protonation == true ) {
-              if ( N == 0) { // Protonation and deletion of cation
-                iIon=base::tracker[pid].random();
-                assert( pid==spc->p[iIon].id && "id mismatch");
-                base::trial_delete.push_back(iIon);
-              } else if ( N == 1 ) { // protonation and addition of anion
-                base::trial_insert.push_back( base::map[pid].p );
-                base::spc->geo.randompos(base::trial_insert[0]);
-                assert( pid==base::trial_insert[0].id );
-              } else {
-                std::cerr << " Process error !"<< std::endl; exit(1);
-              }
-            } else {
-              if ( N == 0) { // Deprotonation and addition of cation
-                base::trial_insert.push_back( base::map[pid].p );
-                base::spc->geo.randompos(base::trial_insert[0]);
-                assert( pid==base::trial_insert[0].id );
-              } else if ( N == 1 ) { // Deprotonation and deletion of anion
-                iIon=base::tracker[pid].random();
-                assert( pid==spc->p[iIon].id && "id mismatch");
-                base::trial_delete.push_back(iIon);
-              } else {
-                std::cerr << " Process error !"<< std::endl; exit(1);
+            eqpot->eq = Energy::EquilibriumController( j );
+            findSites( spc->p );
+            cnt_tit = cnt_salt = cnt_tit_acc = cnt_salt_acc = 0;
+
+            /* Sync particle charges with `AtomMap` */
+            for (auto i : eqpot->eq.sites)
+              spc->trial[i].charge = spc->p[i].charge = atom[ spc->p[i].id ].charge;
+
+            // neutralise system, if needed, using GC ions
+            if ( j["moves"][sec]["neutralize"] | true ) {
+              double Z = netCharge( s.p, Group(0,s.p.size()-1) );
+              if ( fabs(Z) > 1e-9 ) {
+                Tid id;
+                double z = 0;
+                int maxtry = 1000;
+                cout << "# Neutralizing system with GC ions. Initial charge = "
+                  << Z << "e." << endl;
+                do {
+                  id = base::tracker.randomAtomType();
+                  z = atom[id].charge;
+                  if ( --maxtry==0 ) {
+                    std::cerr << "Error: Failed to find GC ions capable of "
+                      << "neutralizing system." << endl;
+                    exit(1);
+                  }
+                } while (
+                    ( (z<0 && Z>0) || (Z<0 && z>0) )
+                    && ( fabs( fmod(Z,z) ) < 1e-9 ) );
+
+                int n = round(-Z/z);
+                assert( n>0 && fabs(n*z+Z) < 1e-9 );
+
+                typename Tspace::ParticleType a;
+                a = atom[id];
+                for ( int i=0; i<n; i++ ) {
+                  s.geo.randompos(a);
+                  base::tracker.insert( a, base::saltPtr->back() );
+                }
+                Z = netCharge( s.p, Group(0,s.p.size()-1) );
+                cout << "# Final charge = " << Z << "e." << endl;
+                assert( fabs(Z)<1e-9 ) ;
               }
             }
-            break;
         }
-      };
 
-    template<class Tspace>
-      double GrandCanonicalTitration<Tspace>::_energyChange() {
-        if (gcyes == true) // Go about the old habbit
-          return base::_energyChange();
-        double idfactor=1;
-        double uold=0, unew=0, V=spc->geo.getVolume();
-        double potold=0, potnew=0; // energy change due to interactions
-        double site_old=0, salt_old=0;
-        double site_new=0, salt_new=0;
-        potnew = pot->i_internal(spc->trial, isite);  // Intrinsic energies for new
-        potold = pot->i_internal(spc->p, isite);      // and old state
-        if (protonation == true && N==1) { // Protonate and ins. anion
-          idfactor *= (base::tracker[pid].index.size()+1)/V;
-          unew = log(idfactor) - base::map[pid].chempot;
-          salt_new += pot->all2p(spc->trial, base::trial_insert[0]);
+      template<class Tspace> 
+        void GrandCanonicalTitration<Tspace>::_trialMove()  { 
+          gcyes=false;
+          int switcher = slump.range(0,1);
+          if (eqpot->eq.number_of_sites()==0){ // If no sites associated with processess
+            gcyes=true, switcher=0;            // fall back to plain gc
+          } 
+          switch ( switcher ) {
+            case 0:   // Go for the inheritance
+              cnt_salt++;
+              gcyes=true;
+              base::_trialMove(); 
+              break; 
+            case 1:   // Brand new deal
+              cnt_tit++;
+              base::trial_insert.clear(); // First some cleaning in the attic
+              base::trial_delete.clear();
+              do {              // Pick a monovalent ion
+                pid = base::tracker.randomAtomType();
+              } while (atom[pid].charge*atom[pid].charge != 1);
+              if (!eqpot->eq.sites.empty()) {
+                int i = slump.range( 0, eqpot->eq.sites.size()-1); // pick random site (local in *eq)
+                isite = eqpot->eq.sites.at(i); // and corresponding particle (index in spc->p)
+                do {
+                  k = slump.range( 0, eqpot->eq.process.size()-1 );// pick random process..
+                } while (!eqpot->eq.process[k].one_of_us( this->spc->p[isite].id )); //that match particle isite
 
-          site_new+=pot->i2all(spc->trial, isite);
-
-          site_old+=pot->i2all(spc->p, isite);
-        }
-        if (protonation == true && N==0) { // Protonate and del. cat
-          idfactor *= V/base::tracker[pid].index.size();
-          unew = log(idfactor) + base::map[pid].chempot;
-
-          salt_old+=pot->i2all(spc->p, base::trial_delete[0]);
-
-          site_new+=pot->i2all(spc->trial, isite);
-          site_new-=pot->i2i(spc->trial, base::trial_delete[0], isite);
-
-          site_old+=pot->i2all(spc->p, isite);
-          site_old-=pot->i2i(spc->p, base::trial_delete[0], isite); //Subtracted from previuous double count
-        }
-        if (protonation == false && N==0) { // Deprotonate and ins.
-          idfactor *= (base::tracker[pid].index.size()+1)/V;   // cation
-          unew = log(idfactor) - base::map[pid].chempot;
-          salt_new += pot->all2p(spc->trial, base::trial_insert[0]);
-          site_new+=pot->i2all(spc->trial, isite);
-
-          site_old+=pot->i2all(spc->p, isite);
-        }
-        if (protonation == false && N==1) { // Deprotonate and del.
-          idfactor *= V/base::tracker[pid].index.size();       // anion
-          unew = log(idfactor) + base::map[pid].chempot;
-
-          salt_old+=pot->i2all(spc->p, base::trial_delete[0]);
-
-          site_new+=pot->i2all(spc->trial, isite);
-          site_new-=pot->i2i(spc->trial, base::trial_delete[0], isite);
-
-          site_old+=pot->i2all(spc->p, isite);
-          site_old-=pot->i2i(spc->p, base::trial_delete[0], isite);
-        }
-        unew+=potnew+salt_new+site_new;
-        uold+=potold+salt_old+site_old;
-        potnew+=salt_new+site_new;
-        potold+=salt_old+site_old;
-        base::alternateReturnEnergy=potnew-potold; // track only pot. energy
-        return unew-uold;
-      };
-
-    template<class Tspace>
-      void GrandCanonicalTitration<Tspace>::_acceptMove() { 
-        if (gcyes==true) {
-          base::_acceptMove();
-          cnt_salt_acc++;
-        } else{
-          assert( spc->p[isite].id != spc->trial[isite].id );
-          spc->p[isite] = spc->trial[isite];
-          if ( !base::trial_insert.empty() ) {
-            for (auto &p : base::trial_insert)
-              base::tracker.insert(p, base::saltPtr->back());
-          } else if ( !base::trial_delete.empty() ) {
-            std::sort(base::trial_delete.rbegin(), base::trial_delete.rend()); //reverse sort
-            for (auto i : base::trial_delete)
-              base::tracker.erase(i);
+                eqpot->eq.process[k].swap( this->spc->trial[isite] ); // change state and get intrinsic energy change
+              }
+              if ( !eqpot->eq.process[k].bound(this->spc->trial[isite].id) ) {// have action lead to deprotonation?
+                protonation = false;
+              } else {
+                protonation = true;
+              }
+              N = -1;
+              // The following section is hardcoded for monovalent salt
+              if (base::map[pid].p.charge>0) {  // Determine weather cat-/anion
+                N = 0;            // N==0 cation, N==1 anion
+              } else if ( base::map[pid].p.charge<0 ) {      
+                N = 1;
+              } else {  
+                std::cerr << " Error, something fails !"<<std::endl, exit(0);
+              }
+              int iIon=-1;
+              if ( protonation == true ) {
+                if ( N == 0) { // Protonation and deletion of cation
+                  iIon=base::tracker[pid].random();
+                  assert( pid==spc->p[iIon].id && "id mismatch");
+                  base::trial_delete.push_back(iIon);
+                } else if ( N == 1 ) { // protonation and addition of anion
+                  base::trial_insert.push_back( base::map[pid].p );
+                  base::spc->geo.randompos(base::trial_insert[0]);
+                  assert( pid==base::trial_insert[0].id );
+                } else {
+                  std::cerr << " Process error !"<< std::endl; exit(1);
+                }
+              } else {
+                if ( N == 0) { // Deprotonation and addition of cation
+                  base::trial_insert.push_back( base::map[pid].p );
+                  base::spc->geo.randompos(base::trial_insert[0]);
+                  assert( pid==base::trial_insert[0].id );
+                } else if ( N == 1 ) { // Deprotonation and deletion of anion
+                  iIon=base::tracker[pid].random();
+                  assert( pid==spc->p[iIon].id && "id mismatch");
+                  base::trial_delete.push_back(iIon);
+                } else {
+                  std::cerr << " Process error !"<< std::endl; exit(1);
+                }
+              }
+              break;
           }
-          double V = spc->geo.getVolume();
-          base::map[pid].rho += base::tracker[pid].index.size() / V;
-          accmap[isite] += 1;
-          updateMolCharge( isite );
-          cnt_tit_acc++;
+        };
+
+      template<class Tspace>
+        double GrandCanonicalTitration<Tspace>::_energyChange() {
+          if (gcyes == true) // Go about the old habbit
+            return base::_energyChange();
+          double idfactor=1;
+          double uold=0, unew=0, V=spc->geo.getVolume();
+          double potold=0, potnew=0; // energy change due to interactions
+          double site_old=0, salt_old=0;
+          double site_new=0, salt_new=0;
+          potnew = pot->i_internal(spc->trial, isite);  // Intrinsic energies for new
+          potold = pot->i_internal(spc->p, isite);      // and old state
+          if (protonation == true && N==1) { // Protonate and ins. anion
+            idfactor *= (base::tracker[pid].index.size()+1)/V;
+            unew = log(idfactor) - base::map[pid].chempot;
+            salt_new += pot->all2p(spc->trial, base::trial_insert[0]);
+
+            site_new+=pot->i2all(spc->trial, isite);
+
+            site_old+=pot->i2all(spc->p, isite);
+          }
+          if (protonation == true && N==0) { // Protonate and del. cat
+            idfactor *= V/base::tracker[pid].index.size();
+            unew = log(idfactor) + base::map[pid].chempot;
+
+            salt_old+=pot->i2all(spc->p, base::trial_delete[0]);
+
+            site_new+=pot->i2all(spc->trial, isite);
+            site_new-=pot->i2i(spc->trial, base::trial_delete[0], isite);
+
+            site_old+=pot->i2all(spc->p, isite);
+            site_old-=pot->i2i(spc->p, base::trial_delete[0], isite); //Subtracted from previuous double count
+          }
+          if (protonation == false && N==0) { // Deprotonate and ins.
+            idfactor *= (base::tracker[pid].index.size()+1)/V;   // cation
+            unew = log(idfactor) - base::map[pid].chempot;
+            salt_new += pot->all2p(spc->trial, base::trial_insert[0]);
+            site_new+=pot->i2all(spc->trial, isite);
+
+            site_old+=pot->i2all(spc->p, isite);
+          }
+          if (protonation == false && N==1) { // Deprotonate and del.
+            idfactor *= V/base::tracker[pid].index.size();       // anion
+            unew = log(idfactor) + base::map[pid].chempot;
+
+            salt_old+=pot->i2all(spc->p, base::trial_delete[0]);
+
+            site_new+=pot->i2all(spc->trial, isite);
+            site_new-=pot->i2i(spc->trial, base::trial_delete[0], isite);
+
+            site_old+=pot->i2all(spc->p, isite);
+            site_old-=pot->i2i(spc->p, base::trial_delete[0], isite);
+          }
+          unew+=potnew+salt_new+site_new;
+          uold+=potold+salt_old+site_old;
+          potnew+=salt_new+site_new;
+          potold+=salt_old+site_old;
+          base::alternateReturnEnergy=potnew-potold; // track only pot. energy
+          return unew-uold;
+        };
+
+      template<class Tspace>
+        void GrandCanonicalTitration<Tspace>::_acceptMove() { 
+          if (gcyes==true) {
+            base::_acceptMove();
+            cnt_salt_acc++;
+          } else{
+            assert( spc->p[isite].id != spc->trial[isite].id );
+            spc->p[isite] = spc->trial[isite];
+            if ( !base::trial_insert.empty() ) {
+              for (auto &p : base::trial_insert)
+                base::tracker.insert(p, base::saltPtr->back());
+            } else if ( !base::trial_delete.empty() ) {
+              std::sort(base::trial_delete.rbegin(), base::trial_delete.rend()); //reverse sort
+              for (auto i : base::trial_delete)
+                base::tracker.erase(i);
+            }
+            double V = spc->geo.getVolume();
+            base::map[pid].rho += base::tracker[pid].index.size() / V;
+            accmap[isite] += 1;
+            updateMolCharge( isite );
+            cnt_tit_acc++;
+          } 
+        };
+
+      template<class Tspace>
+        void GrandCanonicalTitration<Tspace>::_rejectMove() { 
+          if(gcyes==true) {
+            base::_rejectMove();
+          } else {
+            assert( spc->p[isite].id != spc->trial[isite].id );
+            spc->trial[isite] = spc->p[isite];
+            accmap[isite] += 0;
+            updateMolCharge( isite );
+            double V = spc->geo.getVolume();
+            base::map[pid].rho += base::tracker[pid].index.size() / V;
+          }
+        };
+
+      template<class Tspace>
+        string GrandCanonicalTitration<Tspace>::_info() {
+          char s=10;
+          using namespace textio;
+          std::ostringstream o;
+          o << pad(SUB,w,"Number of GC species") << endl << endl;
+          o << setw(4) << "" << std::left
+            << setw(s) << "Ion" << setw(s) << "activity"
+            << setw(s+4) << bracket("c/M") << setw(s+6) << bracket( gamma+pm )
+            << setw(s+4) << bracket("N") << "\n";
+          for (auto &m : base::map) {
+            Tid id=m.first;
+            o.precision(5);
+            o << setw(4) << "" << setw(s) << atom[id].name
+              << setw(s) << atom[id].activity << setw(s) << m.second.rho.avg()/pc::Nav/1e-27
+              << setw(s) << atom[id].activity / (m.second.rho.avg()/pc::Nav/1e-27)
+              << setw(s) << m.second.rho.avg()*spc->geo.getVolume()
+              << "\n";
+          }
+          for (auto &m : molCharge) {
+            int molid = m.first;
+            o << "\n" << indent(SUB) << "Molecule: " << spc->molList()[ molid ].name << "\n\n"
+              << std::left << "    " << setw(8) << "index" << setw(12) << "name"
+              << setw(12) << "Z" << "\n";
+            for (auto &i : m.second)
+              o << "    " << setw(8) << i.first
+                << setw(12) << atom[ spc->molList()[molid].atoms[i.first] ].name
+                << setw(12) << i.second << "\n"; 
+          }
+          return o.str();
         } 
-      };
-
-    template<class Tspace>
-      void GrandCanonicalTitration<Tspace>::_rejectMove() { 
-        if(gcyes==true) {
-          base::_rejectMove();
-        } else {
-          assert( spc->p[isite].id != spc->trial[isite].id );
-          spc->trial[isite] = spc->p[isite];
-          accmap[isite] += 0;
-          updateMolCharge( isite );
-          double V = spc->geo.getVolume();
-          base::map[pid].rho += base::tracker[pid].index.size() / V;
-        }
-      };
-
-    template<class Tspace>
-      string GrandCanonicalTitration<Tspace>::_info() {
-        char s=10;
-        using namespace textio;
-        std::ostringstream o;
-        o << pad(SUB,w,"Number of GC species") << endl << endl;
-        o << setw(4) << "" << std::left
-          << setw(s) << "Ion" << setw(s) << "activity"
-          << setw(s+4) << bracket("c/M") << setw(s+6) << bracket( gamma+pm )
-          << setw(s+4) << bracket("N") << "\n";
-        for (auto &m : base::map) {
-          Tid id=m.first;
-          o.precision(5);
-          o << setw(4) << "" << setw(s) << atom[id].name
-            << setw(s) << atom[id].activity << setw(s) << m.second.rho.avg()/pc::Nav/1e-27
-            << setw(s) << atom[id].activity / (m.second.rho.avg()/pc::Nav/1e-27)
-            << setw(s) << m.second.rho.avg()*spc->geo.getVolume()
-            << "\n";
-        }
-        for (auto &m : molCharge) {
-          int molid = m.first;
-          o << "\n" << indent(SUB) << "Molecule: " << spc->molList()[ molid ].name << "\n\n"
-            << std::left << "    " << setw(8) << "index" << setw(12) << "name"
-            << setw(12) << "Z" << "\n";
-          for (auto &i : m.second)
-            o << "    " << setw(8) << i.first
-              << setw(12) << atom[ spc->molList()[molid].atoms[i.first] ].name
-              << setw(12) << i.second << "\n"; 
-        }
-        return o.str();
-      } 
 
 #ifdef ENABLE_MPI
-    /**
-     * @brief Class for parallel tempering (aka replica exchange) using MPI
-     *
-     * This will perform replica exchange moves by the following steps:
-     *
-     * -# Randomly find an exchange partner with rank above/under current rank
-     * -# Exchange full particle configuration with partner
-     * -# Calculate energy change using Energy::systemEnergy. Note that this
-     *    energy function can be replaced by setting the `ParallelTempering::usys`
-     *    variable to another function with the same signature (functor wrapper).
-     * -# Send/receive energy change to/from partner
-     * -# Accept or reject based on *total* energy change
-     *
-     * Although not completely correct, the recommended way of performing a temper move
-     * is to do `N` Monte Carlo passes with regular moves and then do a tempering move.
-     * This is because the MPI nodes must be in sync and if you have a system where
-     * the random number generator calls are influenced by the Hamiltonian we could 
-     * end up in a deadlock.
-     *
-     * @date Lund 2012
-     */
-    template<class Tspace>
-      class ParallelTempering : public Movebase<Tspace> {
-        private:
-          typedef typename Tspace::ParticleVector Tpvec;
-          typedef Movebase<Tspace> base;
-          using base::pot;
-          using base::spc;
-          using base::w;
-          using base::runfraction;
-          using base::mpiPtr;
-          enum extradata {VOLUME=0};    //!< Structure of extra data to send
-          typedef std::map<string, Average<double> > map_type;
-          map_type accmap;              //!< Acceptance map
-          int partner;                  //!< Exchange replica (partner)
-          virtual void findPartner();   //!< Find replica to exchange with
-          bool goodPartner();           //!< Is partned valid?
-          double exchangeEnergy(double);//!< Exchange energy with partner
-          string id();                  //!< Unique string to identify set of partners
+      /**
+       * @brief Class for parallel tempering (aka replica exchange) using MPI
+       *
+       * This will perform replica exchange moves by the following steps:
+       *
+       * -# Randomly find an exchange partner with rank above/under current rank
+       * -# Exchange full particle configuration with partner
+       * -# Calculate energy change using Energy::systemEnergy. Note that this
+       *    energy function can be replaced by setting the `ParallelTempering::usys`
+       *    variable to another function with the same signature (functor wrapper).
+       * -# Send/receive energy change to/from partner
+       * -# Accept or reject based on *total* energy change
+       *
+       * Although not completely correct, the recommended way of performing a temper move
+       * is to do `N` Monte Carlo passes with regular moves and then do a tempering move.
+       * This is because the MPI nodes must be in sync and if you have a system where
+       * the random number generator calls are influenced by the Hamiltonian we could 
+       * end up in a deadlock.
+       *
+       * @date Lund 2012
+       */
+      template<class Tspace>
+        class ParallelTempering : public Movebase<Tspace> {
+          private:
+            typedef typename Tspace::ParticleVector Tpvec;
+            typedef Movebase<Tspace> base;
+            using base::pot;
+            using base::spc;
+            using base::w;
+            using base::runfraction;
+            using base::mpiPtr;
+            enum extradata {VOLUME=0};    //!< Structure of extra data to send
+            typedef std::map<string, Average<double> > map_type;
+            map_type accmap;              //!< Acceptance map
+            int partner;                  //!< Exchange replica (partner)
+            virtual void findPartner();   //!< Find replica to exchange with
+            bool goodPartner();           //!< Is partned valid?
+            double exchangeEnergy(double);//!< Exchange energy with partner
+            string id();                  //!< Unique string to identify set of partners
 
-          double currentEnergy;         //!< Energy of configuration before move (uold)
-          bool haveCurrentEnergy;       //!< True if currentEnergy has been set
+            double currentEnergy;         //!< Energy of configuration before move (uold)
+            bool haveCurrentEnergy;       //!< True if currentEnergy has been set
 
-          string _info();
-          void _trialMove();
-          void _acceptMove();
-          void _rejectMove();
-          double _energyChange();
-          std::ofstream temperPath;
+            string _info();
+            void _trialMove();
+            void _acceptMove();
+            void _rejectMove();
+            double _energyChange();
+            std::ofstream temperPath;
 
-          Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
-          Faunus::MPI::ParticleTransmitter<Tpvec> pt;//!< Class for transmitting particles over MPI
+            Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
+            Faunus::MPI::ParticleTransmitter<Tpvec> pt;//!< Class for transmitting particles over MPI
 
-          typedef std::function<double(Tspace&, Energy::Energybase<Tspace>&, const Tpvec&)> Tenergyfunc;
-          Tenergyfunc usys; //!< Defaults to Energy::systemEnergy but can be replaced!
+            typedef std::function<double(Tspace&, Energy::Energybase<Tspace>&, const Tpvec&)> Tenergyfunc;
+            Tenergyfunc usys; //!< Defaults to Energy::systemEnergy but can be replaced!
 
-        public:
-          ParallelTempering(
-              Energy::Energybase<Tspace>&, Tspace&, Tmjson&, MPI::MPIController&, string="temper");
+          public:
+            ParallelTempering(
+                Energy::Energybase<Tspace>&, Tspace&, Tmjson&, MPI::MPIController&, string="temper");
 
-          virtual ~ParallelTempering();
+            virtual ~ParallelTempering();
 
-          void setCurrentEnergy(double); //!< Set energy before move (for increased speed)
+            void setCurrentEnergy(double); //!< Set energy before move (for increased speed)
 
-          void setEnergyFunction( Tenergyfunc );
-      };
+            void setEnergyFunction( Tenergyfunc );
+        };
 
-    template<class Tspace>
-      ParallelTempering<Tspace>::ParallelTempering(
-          Energy::Energybase<Tspace> &e,
-          Tspace &s,
-          Tmjson &j,
-          MPI::MPIController &mpi,
-          string sec) : base( e, s ) {
+      template<class Tspace>
+        ParallelTempering<Tspace>::ParallelTempering(
+            Energy::Energybase<Tspace> &e,
+            Tspace &s,
+            Tmjson &j,
+            MPI::MPIController &mpi,
+            string sec) : base( e, s ) {
 
-        this->title   = "Parallel Tempering";
-        this->jsondir = "moves/"+sec; // to be changed - compatibility w. tests
-        this->mpiPtr  = &mpi;
-        partner=-1;
-        this->useAlternateReturnEnergy=true; //dont return dU from partner replica (=drift)
-        this->runfraction = j["moves"][sec]["prob"] | 1.0;
-        pt.recvExtra.resize(1);
-        pt.sendExtra.resize(1);
-        pt.setFormat( j["moves"][sec]["format"] | string("XYZQI") );
+          this->title   = "Parallel Tempering";
+          this->jsondir = "moves/"+sec; // to be changed - compatibility w. tests
+          this->mpiPtr  = &mpi;
+          partner=-1;
+          this->useAlternateReturnEnergy=true; //dont return dU from partner replica (=drift)
+          this->runfraction = j["moves"][sec]["prob"] | 1.0;
+          pt.recvExtra.resize(1);
+          pt.sendExtra.resize(1);
+          pt.setFormat( j["moves"][sec]["format"] | string("XYZQI") );
 
-        setEnergyFunction(
-            Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,Tpvec> );
+          setEnergyFunction(
+              Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,Tpvec> );
 
-        this->haveCurrentEnergy=false;
-        assert( this->mpiPtr != nullptr );
-      }
-
-    template<class Tspace>
-      ParallelTempering<Tspace>::~ParallelTempering() {}
-
-    template<class Tspace>
-      void ParallelTempering<Tspace>::setEnergyFunction( Tenergyfunc f ) {
-        usys = f;
-      }
-
-    template<class Tspace>
-      void ParallelTempering<Tspace>::findPartner() {
-        int dr=0;
-        partner = mpiPtr->rank();
-        if (mpiPtr->random()>0.5)
-          dr++;
-        else
-          dr--;
-        if (mpiPtr->rank() % 2 == 0)
-          partner+=dr;
-        else
-          partner-=dr;
-      }
-
-    template<class Tspace>
-      bool ParallelTempering<Tspace>::goodPartner() {
-        assert(partner!=mpiPtr->rank() && "Selfpartner! This is not supposed to happen.");
-        if (partner>=0)
-          if ( partner<mpiPtr->nproc() )
-            if ( partner!=mpiPtr->rank() )
-              return true;
-        return false;
-      }
-
-    template<class Tspace>
-      string ParallelTempering<Tspace>::_info() {
-        using namespace textio;
-        std::ostringstream o;
-        o << pad(SUB,w,"Process rank") << mpiPtr->rank() << endl
-          << pad(SUB,w,"Number of replicas") << mpiPtr->nproc() << endl
-          << pad(SUB,w,"Data size format") << short(pt.getFormat()) << endl
-          << indent(SUB) << "Acceptance:"
-          << endl;
-        if (this->cnt>0) {
-          o.precision(3);
-          for (auto &m : accmap)
-            o << indent(SUBSUB) << std::left << setw(12)
-              << m.first << setw(8) << m.second.cnt << m.second.avg()*100
-              << percent << endl;
+          this->haveCurrentEnergy=false;
+          assert( this->mpiPtr != nullptr );
         }
-        return o.str();
-      }
 
-    template<class Tspace>
-      void ParallelTempering<Tspace>::_trialMove() {
-        findPartner();
-        if (goodPartner()) {
+      template<class Tspace>
+        ParallelTempering<Tspace>::~ParallelTempering() {}
 
-          pt.sendExtra[VOLUME]=spc->geo.getVolume();  // copy current volume for sending
-
-          pt.recv(*mpiPtr, partner, spc->trial); // receive particles
-          pt.send(*mpiPtr, spc->p, partner);     // send everything
-          pt.waitrecv();
-          pt.waitsend();
-
-          // update group trial mass-centers. Needed if energy calc. uses
-          // cm_trial for cut-offs, for example
-          for (auto g : spc->groupList())
-            g->cm_trial = Geometry::massCenter(spc->geo, spc->trial, *g);
-
-          // debug assertions
-          assert(pt.recvExtra[VOLUME]>1e-6 && "Invalid partner volume received.");
-          assert(spc->p.size() == spc->trial.size() && "Particle vectors messed up by MPI");
-
-          // release assertions
-          if (pt.recvExtra[VOLUME]<1e-6 || spc->p.size() != spc->trial.size())
-            MPI_Abort(mpiPtr->comm, 1);
+      template<class Tspace>
+        void ParallelTempering<Tspace>::setEnergyFunction( Tenergyfunc f ) {
+          usys = f;
         }
-      }
 
-    /**
-     * If the system energy is already known it may be specified with this
-     * function to speed up the calculation. If not set, it will be calculated.
-     */
-    template<class Tspace>
-      void ParallelTempering<Tspace>::setCurrentEnergy(double uold) {
-        currentEnergy=uold;
-        haveCurrentEnergy=true;
-      }
-
-    template<class Tspace>
-      double ParallelTempering<Tspace>::_energyChange() {
-        this->alternateReturnEnergy=0;
-        if ( !goodPartner() )
-          return pc::infty;
-        double uold, du_partner;
-
-        if (haveCurrentEnergy)   // do we already know the energy?
-          uold = currentEnergy;
-        else
-          uold = usys(*spc,*pot,spc->p);
-
-        spc->geo.setVolume( pt.recvExtra[VOLUME] ); // set new volume
-        pot->setSpace(*spc);
-
-        double unew = usys(*spc,*pot,spc->trial);
-
-        du_partner = exchangeEnergy(unew-uold); // Exchange dU with partner (MPI)
-
-        haveCurrentEnergy=false;                // Make sure user call setCurrentEnergy() before next move
-        this->alternateReturnEnergy=unew-uold;        // Avoid energy drift (no effect on sampling!)
-        return (unew-uold)+du_partner;          // final Metropolis trial energy
-      }
-
-    /**
-     * This will exchange energies with replica partner
-     * @todo Use FloatTransmitter::swapf() instead.
-     *       Use C++11 initializer list for vectors, i.e. vector<floatp> v={mydu};
-     */
-    template<class Tspace>
-      double ParallelTempering<Tspace>::exchangeEnergy(double mydu) {
-        vector<MPI::FloatTransmitter::floatp> duSelf(1), duPartner;
-        duSelf[0]=mydu;
-        duPartner = ft.swapf(*mpiPtr, duSelf, partner);
-        return duPartner.at(0);               // return partner energy change
-      }
-
-    template<class Tspace>
-      string ParallelTempering<Tspace>::id() {
-        std::ostringstream o;
-        if (mpiPtr->rank() < partner)
-          o << mpiPtr->rank() << " <-> " << partner;
-        else
-          o << partner << " <-> " << mpiPtr->rank();
-        return o.str();
-      }
-
-    template<class Tspace>
-      void ParallelTempering<Tspace>::_acceptMove(){
-        if ( goodPartner() ) {
-          //temperPath << cnt << " " << partner << endl;
-          accmap[ id() ] += 1;
-          for (size_t i=0; i<spc->p.size(); i++)
-            spc->p[i] = spc->trial[i];  // copy new configuration
-          for (auto g : spc->groupList())
-            g->cm = g->cm_trial;
+      template<class Tspace>
+        void ParallelTempering<Tspace>::findPartner() {
+          int dr=0;
+          partner = mpiPtr->rank();
+          if (mpiPtr->random()>0.5)
+            dr++;
+          else
+            dr--;
+          if (mpiPtr->rank() % 2 == 0)
+            partner+=dr;
+          else
+            partner-=dr;
         }
-      }
 
-    template<class Tspace>
-      void ParallelTempering<Tspace>::_rejectMove() {
-        if ( goodPartner() ) {
-          spc->geo.setVolume( pt.sendExtra[VOLUME] ); // restore old volume
+      template<class Tspace>
+        bool ParallelTempering<Tspace>::goodPartner() {
+          assert(partner!=mpiPtr->rank() && "Selfpartner! This is not supposed to happen.");
+          if (partner>=0)
+            if ( partner<mpiPtr->nproc() )
+              if ( partner!=mpiPtr->rank() )
+                return true;
+          return false;
+        }
+
+      template<class Tspace>
+        string ParallelTempering<Tspace>::_info() {
+          using namespace textio;
+          std::ostringstream o;
+          o << pad(SUB,w,"Process rank") << mpiPtr->rank() << endl
+            << pad(SUB,w,"Number of replicas") << mpiPtr->nproc() << endl
+            << pad(SUB,w,"Data size format") << short(pt.getFormat()) << endl
+            << indent(SUB) << "Acceptance:"
+            << endl;
+          if (this->cnt>0) {
+            o.precision(3);
+            for (auto &m : accmap)
+              o << indent(SUBSUB) << std::left << setw(12)
+                << m.first << setw(8) << m.second.cnt << m.second.avg()*100
+                << percent << endl;
+          }
+          return o.str();
+        }
+
+      template<class Tspace>
+        void ParallelTempering<Tspace>::_trialMove() {
+          findPartner();
+          if (goodPartner()) {
+
+            pt.sendExtra[VOLUME]=spc->geo.getVolume();  // copy current volume for sending
+
+            pt.recv(*mpiPtr, partner, spc->trial); // receive particles
+            pt.send(*mpiPtr, spc->p, partner);     // send everything
+            pt.waitrecv();
+            pt.waitsend();
+
+            // update group trial mass-centers. Needed if energy calc. uses
+            // cm_trial for cut-offs, for example
+            for (auto g : spc->groupList())
+              g->cm_trial = Geometry::massCenter(spc->geo, spc->trial, *g);
+
+            // debug assertions
+            assert(pt.recvExtra[VOLUME]>1e-6 && "Invalid partner volume received.");
+            assert(spc->p.size() == spc->trial.size() && "Particle vectors messed up by MPI");
+
+            // release assertions
+            if (pt.recvExtra[VOLUME]<1e-6 || spc->p.size() != spc->trial.size())
+              MPI_Abort(mpiPtr->comm, 1);
+          }
+        }
+
+      /**
+       * If the system energy is already known it may be specified with this
+       * function to speed up the calculation. If not set, it will be calculated.
+       */
+      template<class Tspace>
+        void ParallelTempering<Tspace>::setCurrentEnergy(double uold) {
+          currentEnergy=uold;
+          haveCurrentEnergy=true;
+        }
+
+      template<class Tspace>
+        double ParallelTempering<Tspace>::_energyChange() {
+          this->alternateReturnEnergy=0;
+          if ( !goodPartner() )
+            return pc::infty;
+          double uold, du_partner;
+
+          if (haveCurrentEnergy)   // do we already know the energy?
+            uold = currentEnergy;
+          else
+            uold = usys(*spc,*pot,spc->p);
+
+          spc->geo.setVolume( pt.recvExtra[VOLUME] ); // set new volume
           pot->setSpace(*spc);
-          accmap[ id() ] += 0;
-          for (size_t i=0; i<spc->p.size(); i++)
-            spc->trial[i] = spc->p[i];   // restore old configuration
-          for (auto g : spc->groupList())
-            g->cm_trial = g->cm;
+
+          double unew = usys(*spc,*pot,spc->trial);
+
+          du_partner = exchangeEnergy(unew-uold); // Exchange dU with partner (MPI)
+
+          haveCurrentEnergy=false;                // Make sure user call setCurrentEnergy() before next move
+          this->alternateReturnEnergy=unew-uold;        // Avoid energy drift (no effect on sampling!)
+          return (unew-uold)+du_partner;          // final Metropolis trial energy
         }
-      }
+
+      /**
+       * This will exchange energies with replica partner
+       * @todo Use FloatTransmitter::swapf() instead.
+       *       Use C++11 initializer list for vectors, i.e. vector<floatp> v={mydu};
+       */
+      template<class Tspace>
+        double ParallelTempering<Tspace>::exchangeEnergy(double mydu) {
+          vector<MPI::FloatTransmitter::floatp> duSelf(1), duPartner;
+          duSelf[0]=mydu;
+          duPartner = ft.swapf(*mpiPtr, duSelf, partner);
+          return duPartner.at(0);               // return partner energy change
+        }
+
+      template<class Tspace>
+        string ParallelTempering<Tspace>::id() {
+          std::ostringstream o;
+          if (mpiPtr->rank() < partner)
+            o << mpiPtr->rank() << " <-> " << partner;
+          else
+            o << partner << " <-> " << mpiPtr->rank();
+          return o.str();
+        }
+
+      template<class Tspace>
+        void ParallelTempering<Tspace>::_acceptMove(){
+          if ( goodPartner() ) {
+            //temperPath << cnt << " " << partner << endl;
+            accmap[ id() ] += 1;
+            for (size_t i=0; i<spc->p.size(); i++)
+              spc->p[i] = spc->trial[i];  // copy new configuration
+            for (auto g : spc->groupList())
+              g->cm = g->cm_trial;
+          }
+        }
+
+      template<class Tspace>
+        void ParallelTempering<Tspace>::_rejectMove() {
+          if ( goodPartner() ) {
+            spc->geo.setVolume( pt.sendExtra[VOLUME] ); // restore old volume
+            pot->setSpace(*spc);
+            accmap[ id() ] += 0;
+            for (size_t i=0; i<spc->p.size(); i++)
+              spc->trial[i] = spc->p[i];   // restore old configuration
+            for (auto g : spc->groupList())
+              g->cm_trial = g->cm;
+          }
+        }
 #endif
 
-    /**
-     * @brief Swap atom charges
-     *
-     * This move selects two particle index from a user-defined list and swaps
-     * their charges.
-     *
-     * @date Lund, 2013
-     */
-    template<class Tspace>
-      class SwapCharge : public Movebase<Tspace> {
-        private:
-          typedef Movebase<Tspace> base;
-          typedef std::map<short, Average<double> > map_type;
-          string _info();
-        protected:
-          void _acceptMove();
-          void _rejectMove();
-          double _energyChange();
-          void _trialMove();
-          using base::spc;
-          using base::pot;
-          map_type accmap; //!< Single particle acceptance map        
-          int ip, jp;
+      /**
+       * @brief Swap atom charges
+       *
+       * This move selects two particle index from a user-defined list and swaps
+       * their charges.
+       *
+       * @date Lund, 2013
+       */
+      template<class Tspace>
+        class SwapCharge : public Movebase<Tspace> {
+          private:
+            typedef Movebase<Tspace> base;
+            typedef std::map<short, Average<double> > map_type;
+            string _info();
+          protected:
+            void _acceptMove();
+            void _rejectMove();
+            double _energyChange();
+            void _trialMove();
+            using base::spc;
+            using base::pot;
+            map_type accmap; //!< Single particle acceptance map        
+            int ip, jp;
 
-          //int iparticle;   //!< Select single particle to move (-1 if none, default)
+            //int iparticle;   //!< Select single particle to move (-1 if none, default)
 
-        public:
-          SwapCharge(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="swapcharge");
-          std::set<int> swappableParticles;  //!< Particle index that can be swapped
-      };  
+          public:
+            SwapCharge(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="swapcharge");
+            std::set<int> swappableParticles;  //!< Particle index that can be swapped
+        };  
 
-    template<class Tspace>
-      SwapCharge<Tspace>::SwapCharge(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
-        base::title="Swap head groups of different charges";
-      }
-
-    template<class Tspace>
-      void SwapCharge<Tspace>::_trialMove() {
-        assert(!swappableParticles.empty());
-        auto vi=swappableParticles.begin();
-        auto vj=swappableParticles.begin();
-        //std::advance(vi, slump.rand() % swappableParticles.size());
-        //std::advance(vj, slump.rand() % swappableParticles.size());
-        //ip=*(vi);
-        //jp=*(vj);
-        ip=*( slump.element(swappableParticles.begin(), swappableParticles.end() ) );
-        jp=*( slump.element(swappableParticles.begin(), swappableParticles.end() ) );
-        if ( spc->trial[ip].charge != spc->trial[jp].charge ) {
-          std::swap( spc->trial[ip].charge, spc->trial[jp].charge );
+      template<class Tspace>
+        SwapCharge<Tspace>::SwapCharge(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
+          base::title="Swap head groups of different charges";
         }
-      }
-    template<class Tspace>
-      double SwapCharge<Tspace>::_energyChange() {
-        return base::pot->i_total(spc->trial, jp) + base::pot->i_total(spc->trial, ip) 
-          - base::pot->i_total(spc->p, jp) - base::pot->i_total(spc->p, ip);
-      }
-    template<class Tspace>
-      void SwapCharge<Tspace>::_acceptMove() {
-        accmap[ spc->p[ip].id ] += 1;
-        spc->p[ip].charge = spc->trial[ip].charge;
-        spc->p[jp].charge = spc->trial[jp].charge;
-      }
 
-    template<class Tspace>
-      void SwapCharge<Tspace>::_rejectMove() {
-        accmap[ spc->p[ip].id ] += 0;
-        spc->trial[ip].charge = spc->p[ip].charge;
-        spc->trial[jp].charge = spc->p[jp].charge;
-      }
-    template<class Tspace>
-      string SwapCharge<Tspace>::_info() {
-        using namespace textio;
-        std::ostringstream o;
-        o << pad(SUB,base::w,"Average moves/particle")
-          << base::cnt / swappableParticles.size() << endl;
-        if (base::cnt>0) {
-          char l=12;
-          o << endl
-            << indent(SUB) << "Individual particle movement:" << endl << endl
-            << indent(SUBSUB) << std::left << string(7,' ')
-            << setw(l+1) << "Acc. "+percent;
-          for (auto m : accmap) {
-            auto id=m.first;
-            o << indent(SUBSUB) << std::left << setw(7) << atom[id].name;
-            o.precision(3);
-            o << setw(l) << accmap[id].avg()*100;
+      template<class Tspace>
+        void SwapCharge<Tspace>::_trialMove() {
+          assert(!swappableParticles.empty());
+          auto vi=swappableParticles.begin();
+          auto vj=swappableParticles.begin();
+          //std::advance(vi, slump.rand() % swappableParticles.size());
+          //std::advance(vj, slump.rand() % swappableParticles.size());
+          //ip=*(vi);
+          //jp=*(vj);
+          ip=*( slump.element(swappableParticles.begin(), swappableParticles.end() ) );
+          jp=*( slump.element(swappableParticles.begin(), swappableParticles.end() ) );
+          if ( spc->trial[ip].charge != spc->trial[jp].charge ) {
+            std::swap( spc->trial[ip].charge, spc->trial[jp].charge );
           }
         }
-        return o.str();
-      }
-
-    /**
-     * @brief Flip-flop move of lipids in planar and cylindrical geometry
-     *
-     * Key                    | Description
-     * :--------------------- | :-----------------------------
-     * `flipflop_geometry`    | Geometry of the bilayer [planar(default) or cylindrical]
-     * `flipflop_runfraction` | Runfraction [default=1]
-     *
-     */
-    template<class Tspace>
-      class FlipFlop : public Movebase<Tspace> {
-        private:
-          typedef Movebase<Tspace> base;
-        protected:
-          using base::spc;
-          using base::pot;
-          using base::w;
-          using base::cnt;
-          using base::jsondir;
-          void _trialMove();
-          void _acceptMove();
-          void _rejectMove();
-          double _energyChange();
-          string _info();
-          typedef std::map<string, Average<double> > map_type;
-          map_type accmap;   //!< Group particle acceptance map
-          Group* igroup;
-          Point* cntr;
-          string geometry;
-        public:
-          FlipFlop(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="flipflop"); // if cylindrical geometry, string=cylinder
-          void setGroup(Group&); //!< Select Group to move
-          void setCenter(Point&); //!< Select Center of Mass of the bilayer
-      };
-
-    template<class Tspace>
-      FlipFlop<Tspace>::FlipFlop(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
-        base::title="Group Flip-Flop Move";
-        base::w=30;
-        igroup=nullptr;
-        cntr=nullptr;
-        geometry = in( "geometry", string("planar") );
-        this->runfraction=in( "prob", 1.0 );
-      }
-
-    template<class Tspace>
-      void FlipFlop<Tspace>::setGroup(Group &g) {
-        assert(g.isMolecular());
-        igroup=&g;
-      }
-
-    template<class Tspace>
-      void FlipFlop<Tspace>::setCenter(Point &center) {
-        cntr=&center;
-      }
-
-    template<class Tspace>
-      void FlipFlop<Tspace>::_trialMove() {
-        assert(igroup!=nullptr);
-        assert(cntr!=nullptr);
-        Point startpoint=spc->p[igroup->back()];
-        Point endpoint=*cntr;
-        startpoint.z()=cntr->z();
-        if (geometry.compare("cylindrical") == 0) { // MC move in case of cylindrical geometry
-          startpoint=spc->p[igroup->back()];
-          Point head=spc->p[igroup->front()];
-          cntr->z()=head.z()=startpoint.z();
-          Point dir = spc->geo.vdist(*cntr, startpoint)
-            / sqrt(spc->geo.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
-          if (spc->geo.sqdist(*cntr, startpoint) > spc->geo.sqdist(*cntr, head))
-            startpoint.translate(spc->geo,-dir); // set startpoint for rotation
-          else startpoint.translate(spc->geo, dir);
-          double x1=cntr->x();
-          double y1=cntr->y();
-          double x2=startpoint.x();
-          double y2=startpoint.y();
-          endpoint.x()=x2+1; // rot endpoint of axis ⊥ to line connecting cm of cylinder with 2nd TL
-          endpoint.y()=-(x2-x1)/(y2-y1)+y2;
-          endpoint.z()=startpoint.z();
+      template<class Tspace>
+        double SwapCharge<Tspace>::_energyChange() {
+          return base::pot->i_total(spc->trial, jp) + base::pot->i_total(spc->trial, ip) 
+            - base::pot->i_total(spc->p, jp) - base::pot->i_total(spc->p, ip);
         }
-        double angle=pc::pi; // MC move in case of planar geometry
-        Geometry::QuaternionRotate vrot;
-        vrot.setAxis(spc->geo, startpoint, endpoint, angle); //rot around startpoint->endpoint vec
-        for (auto i : *igroup)
-          spc->trial[i] = vrot(spc->trial[i]);
-        igroup->cm_trial = vrot(igroup->cm_trial);
-      }
-
-    template<class Tspace>
-      void FlipFlop<Tspace>::_acceptMove() {
-        accmap[ igroup->name ] += 1;
-        igroup->accept(*spc);
-      }
-
-    template<class Tspace>
-      void FlipFlop<Tspace>::_rejectMove() {
-        accmap[ igroup->name ] += 0;
-        igroup->undo(*spc);
-      }
-
-    template<class Tspace>
-      double FlipFlop<Tspace>::_energyChange() {
-
-        for (auto i : *igroup)
-          if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
-            return pc::infty;
-
-        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
-        if (unew==pc::infty)
-          return pc::infty;       // early rejection
-        double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
-
-        for (auto g : spc->groupList()) {
-          if (g!=igroup) {
-            unew += pot->g2g(spc->trial, *g, *igroup);
-            if (unew==pc::infty)
-              return pc::infty;   // early rejection
-            uold += pot->g2g(spc->p, *g, *igroup);
-          }
+      template<class Tspace>
+        void SwapCharge<Tspace>::_acceptMove() {
+          accmap[ spc->p[ip].id ] += 1;
+          spc->p[ip].charge = spc->trial[ip].charge;
+          spc->p[jp].charge = spc->trial[jp].charge;
         }
-        return unew-uold;
-      }
 
-    template<class Tspace>
-      string FlipFlop<Tspace>::_info() {
-        using namespace textio;
-        std::ostringstream o;
-        if (cnt>0) {
-          char l=12;
-          o << indent(SUB) << "Move Statistics:" << endl
-            << indent(SUBSUB) << std::left << setw(20) << "Group name" //<< string(20,' ')
-            << setw(l+1) << "Acc. "+percent << endl;
-          for (auto m : accmap) {
-            string id=m.first;
-            o << indent(SUBSUB) << std::left << setw(20) << id;
-            o.precision(3);
-            o << setw(l) << accmap[id].avg()*100 << endl;
-          }
+      template<class Tspace>
+        void SwapCharge<Tspace>::_rejectMove() {
+          accmap[ spc->p[ip].id ] += 0;
+          spc->trial[ip].charge = spc->p[ip].charge;
+          spc->trial[jp].charge = spc->p[jp].charge;
         }
-        return o.str();
-      }
-
-    /**
-     * @brief Grand Canonical Monte Carlo Move
-     *
-     * This is a general class for GCMC that can handle both
-     * atomic and molecular species at constant chemical potential.
-     *
-     * @todo Currently tested only with rigid, molecular species.
-     * @date Brno/Lund 2014
-     * @author Lukas Sukenik and Mikael Lund
-     */
-    template<class Tspace, class base=Movebase<Tspace> >
-      class GreenGC : public base {
-        private:
-
-          typedef typename Tspace::ParticleVector Tpvec;
-          using base::spc;
-          using base::pot;
-
-          Faunus::Tracker<Group*> molTrack;    // tracker for molecules
-          Faunus::Tracker<int> atomTrack;      // tracker for atoms
-          vector<Group*> molDel;               // groups to delete
-          vector<int> atomDel;                 // atom index to delete
-          MoleculeCombinationMap<Tpvec> comb;  // map of combinations to insert
-          std::map<int,int> molcnt, atomcnt;   // id's and number of inserted/deleted mols and atoms
-          std::multimap<int, Tpvec> pmap;      // coordinates of mols and atoms to be inserted
-          unsigned int Ndeleted, Ninserted;    // Number of accepted deletions and insertions
-          bool insertBool;                     // current status - either insert or delete
-          typename MoleculeCombinationMap<Tpvec>::iterator it; // current combination
-
-          /** @brief Perform an insertion or deletion trial move */
-          void _trialMove() {
-
-            // pick random combination and count mols and atoms
-            base::alternateReturnEnergy=0;
-            molcnt.clear();
-            atomcnt.clear();
-            it = comb.random();                 // random combination
-            for ( auto id : it->molComb ) {     // loop over molecules in combination
-              if ( spc->molecule[id].isAtomic() )
-                for ( auto i : spc->molecule[id].atoms )
-                  atomcnt[i]++;                 // count number of atoms per type
-              else
-                molcnt[id]++;                   // count number of molecules per type
+      template<class Tspace>
+        string SwapCharge<Tspace>::_info() {
+          using namespace textio;
+          std::ostringstream o;
+          o << pad(SUB,base::w,"Average moves/particle")
+            << base::cnt / swappableParticles.size() << endl;
+          if (base::cnt>0) {
+            char l=12;
+            o << endl
+              << indent(SUB) << "Individual particle movement:" << endl << endl
+              << indent(SUBSUB) << std::left << string(7,' ')
+              << setw(l+1) << "Acc. "+percent;
+            for (auto m : accmap) {
+              auto id=m.first;
+              o << indent(SUBSUB) << std::left << setw(7) << atom[id].name;
+              o.precision(3);
+              o << setw(l) << accmap[id].avg()*100;
             }
+          }
+          return o.str();
+        }
 
-            insertBool = slump.range(0,1) == 1;
+      /**
+       * @brief Flip-flop move of lipids in planar and cylindrical geometry
+       *
+       * Key                    | Description
+       * :--------------------- | :-----------------------------
+       * `flipflop_geometry`    | Geometry of the bilayer [planar(default) or cylindrical]
+       * `flipflop_runfraction` | Runfraction [default=1]
+       *
+       */
+      template<class Tspace>
+        class FlipFlop : public Movebase<Tspace> {
+          private:
+            typedef Movebase<Tspace> base;
+          protected:
+            using base::spc;
+            using base::pot;
+            using base::w;
+            using base::cnt;
+            using base::jsondir;
+            void _trialMove();
+            void _acceptMove();
+            void _rejectMove();
+            double _energyChange();
+            string _info();
+            typedef std::map<string, Average<double> > map_type;
+            map_type accmap;   //!< Group particle acceptance map
+            Group* igroup;
+            Point* cntr;
+            string geometry;
+          public:
+            FlipFlop(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="flipflop"); // if cylindrical geometry, string=cylinder
+            void setGroup(Group&); //!< Select Group to move
+            void setCenter(Point&); //!< Select Center of Mass of the bilayer
+        };
 
-            // try delete move
-            if (!insertBool) {
-              molDel.clear();
-              atomDel.clear();
+      template<class Tspace>
+        FlipFlop<Tspace>::FlipFlop(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
+          base::title="Group Flip-Flop Move";
+          base::w=30;
+          igroup=nullptr;
+          cntr=nullptr;
+          geometry = in( "geometry", string("planar") );
+          this->runfraction=in( "prob", 1.0 );
+        }
 
-              // find atom index and group pointers
-              bool empty = false;           // true if too few atoms/mols are present
-              for ( auto &a : atomcnt )     // (first=type, second=count)
-                if ( !atomTrack.find( a.first, a.second, atomDel ) )
-                  empty = true;
-              for ( auto &m : molcnt )
-                if ( !spc->molecule[m.first].isAtomic() )
-                  if ( !molTrack.find( m.first, m.second, molDel ) )
-                    empty = true;
-              if (empty) {        // nothing left to delete
+      template<class Tspace>
+        void FlipFlop<Tspace>::setGroup(Group &g) {
+          assert(g.isMolecular());
+          igroup=&g;
+        }
+
+      template<class Tspace>
+        void FlipFlop<Tspace>::setCenter(Point &center) {
+          cntr=&center;
+        }
+
+      template<class Tspace>
+        void FlipFlop<Tspace>::_trialMove() {
+          assert(igroup!=nullptr);
+          assert(cntr!=nullptr);
+          Point startpoint=spc->p[igroup->back()];
+          Point endpoint=*cntr;
+          startpoint.z()=cntr->z();
+          if (geometry.compare("cylindrical") == 0) { // MC move in case of cylindrical geometry
+            startpoint=spc->p[igroup->back()];
+            Point head=spc->p[igroup->front()];
+            cntr->z()=head.z()=startpoint.z();
+            Point dir = spc->geo.vdist(*cntr, startpoint)
+              / sqrt(spc->geo.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
+            if (spc->geo.sqdist(*cntr, startpoint) > spc->geo.sqdist(*cntr, head))
+              startpoint.translate(spc->geo,-dir); // set startpoint for rotation
+            else startpoint.translate(spc->geo, dir);
+            double x1=cntr->x();
+            double y1=cntr->y();
+            double x2=startpoint.x();
+            double y2=startpoint.y();
+            endpoint.x()=x2+1; // rot endpoint of axis ⊥ to line connecting cm of cylinder with 2nd TL
+            endpoint.y()=-(x2-x1)/(y2-y1)+y2;
+            endpoint.z()=startpoint.z();
+          }
+          double angle=pc::pi; // MC move in case of planar geometry
+          Geometry::QuaternionRotate vrot;
+          vrot.setAxis(spc->geo, startpoint, endpoint, angle); //rot around startpoint->endpoint vec
+          for (auto i : *igroup)
+            spc->trial[i] = vrot(spc->trial[i]);
+          igroup->cm_trial = vrot(igroup->cm_trial);
+        }
+
+      template<class Tspace>
+        void FlipFlop<Tspace>::_acceptMove() {
+          accmap[ igroup->name ] += 1;
+          igroup->accept(*spc);
+        }
+
+      template<class Tspace>
+        void FlipFlop<Tspace>::_rejectMove() {
+          accmap[ igroup->name ] += 0;
+          igroup->undo(*spc);
+        }
+
+      template<class Tspace>
+        double FlipFlop<Tspace>::_energyChange() {
+
+          for (auto i : *igroup)
+            if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
+              return pc::infty;
+
+          double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
+          if (unew==pc::infty)
+            return pc::infty;       // early rejection
+          double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
+
+          for (auto g : spc->groupList()) {
+            if (g!=igroup) {
+              unew += pot->g2g(spc->trial, *g, *igroup);
+              if (unew==pc::infty)
+                return pc::infty;   // early rejection
+              uold += pot->g2g(spc->p, *g, *igroup);
+            }
+          }
+          return unew-uold;
+        }
+
+      template<class Tspace>
+        string FlipFlop<Tspace>::_info() {
+          using namespace textio;
+          std::ostringstream o;
+          if (cnt>0) {
+            char l=12;
+            o << indent(SUB) << "Move Statistics:" << endl
+              << indent(SUBSUB) << std::left << setw(20) << "Group name" //<< string(20,' ')
+              << setw(l+1) << "Acc. "+percent << endl;
+            for (auto m : accmap) {
+              string id=m.first;
+              o << indent(SUBSUB) << std::left << setw(20) << id;
+              o.precision(3);
+              o << setw(l) << accmap[id].avg()*100 << endl;
+            }
+          }
+          return o.str();
+        }
+
+      /**
+       * @brief Grand Canonical Monte Carlo Move
+       *
+       * This is a general class for GCMC that can handle both
+       * atomic and molecular species at constant chemical potential.
+       *
+       * @todo Currently tested only with rigid, molecular species.
+       * @date Brno/Lund 2014
+       * @author Lukas Sukenik and Mikael Lund
+       */
+      template<class Tspace, class base=Movebase<Tspace> >
+        class GreenGC : public base {
+          private:
+
+            typedef typename Tspace::ParticleVector Tpvec;
+            using base::spc;
+            using base::pot;
+            using base::w;
+
+            Faunus::Tracker<Group*> molTrack;    // tracker for molecules
+            Faunus::Tracker<int> atomTrack;      // tracker for atoms
+            vector<Group*> molDel;               // groups to delete
+            vector<int> atomDel;                 // atom index to delete
+            MoleculeCombinationMap<Tpvec> comb;  // map of combinations to insert
+            std::map<int,int> molcnt, atomcnt;   // id's and number of inserted/deleted mols and atoms
+            std::multimap<int, Tpvec> pmap;      // coordinates of mols and atoms to be inserted
+            unsigned int Ndeleted, Ninserted;    // Number of accepted deletions and insertions
+            bool insertBool;                     // current status - either insert or delete
+            typename MoleculeCombinationMap<Tpvec>::iterator it; // current combination
+
+            /** @brief Perform an insertion or deletion trial move */
+            void _trialMove() {
+
+              // pick random combination and count mols and atoms
+              base::alternateReturnEnergy=0;
+              molcnt.clear();
+              atomcnt.clear();
+              it = comb.random();                 // random combination
+              for ( auto id : it->molComb ) {     // loop over molecules in combination
+                if ( spc->molecule[id].isAtomic() )
+                  for ( auto i : spc->molecule[id].atoms )
+                    atomcnt[i]++;                 // count number of atoms per type
+                else
+                  molcnt[id]++;                   // count number of molecules per type
+              }
+
+              insertBool = slump.range(0,1) == 1;
+
+              // try delete move
+              if (!insertBool) {
                 molDel.clear();
                 atomDel.clear();
+
+                // find atom index and group pointers
+                bool empty = false;           // true if too few atoms/mols are present
+                for ( auto &a : atomcnt )     // (first=type, second=count)
+                  if ( !atomTrack.find( a.first, a.second, atomDel ) )
+                    empty = true;
+                for ( auto &m : molcnt )
+                  if ( !spc->molecule[m.first].isAtomic() )
+                    if ( !molTrack.find( m.first, m.second, molDel ) )
+                      empty = true;
+                if (empty) {        // nothing left to delete
+                  molDel.clear();
+                  atomDel.clear();
+                  pmap.clear();
+                } else assert( !molDel.empty() || !atomDel.empty() );
+              }
+
+              // try insert move (nothing is actually inserter - just a proposed configuration)
+              if (insertBool) {
                 pmap.clear();
-              } else assert( !molDel.empty() || !atomDel.empty() );
-            }
-
-            // try insert move (nothing is actually inserter - just a proposed configuration)
-            if (insertBool) {
-              pmap.clear();
-              for ( auto molid : it->molComb ) // loop over molecules in combination
-                pmap.insert(
-                    { molid, spc->molecule[molid].getRandomConformation( base::spc->geo, base::spc->p ) } );
-              assert( !pmap.empty() );
-            }
-          }
-
-          // contribution from external chemical potential
-          double externalEnergy() {
-            double u    = 0;
-            double V    = spc->geo.getVolume();
-            int    bit  = ( insertBool ) ?  1 : 0;
-            double sign = ( insertBool ) ?  1 : -1;
-
-            for ( auto i : molcnt )                  // loop over molecule types
-              if (!spc->molecule[i.first].isAtomic())
-                for (int n=0; n<i.second; n++)       // loop over n number of molecules
-                  u += log(( molTrack.size(i.first) + bit ) / V) - spc->molecule[i.first].chemPot;
-
-            for ( auto i : atomcnt )                 // loop over atom types
-              for (int n=0; n<i.second; n++)         // loop over n number of atoms
-                u += log(( atomTrack.size(i.first) + bit ) / V) - atom[i.first].chemPot;
-
-            return sign * u;
-          }
-
-          double _energyChange() {
-
-            double u=0;         // change in potential energy (kT)
-            double uinternal=0; // change in internal, molecular energy (kT)
-
-            // energy if insertion move
-            if ( insertBool ) {
-              for ( auto &p : pmap ) {                         // loop over molecules
-                Group g( 0, p.second.size()-1 );               // (first=id, second=pvec)
-                g.molId = p.first;
-                g.setMolSize( p.second.size() );
-
-                u += pot->g_external( p.second, g );           // ...atoms/mols with external pot
-
-                if ( spc->molecule[g.molId].isAtomic() ) {
-                  u += pot->g_internal( p.second, g );         // ...between inserted atoms
-                  for ( auto &pi : p.second )                  // ...atoms with all particles
-                    u += pot->all2p( spc->p, pi );
-                }
-                else {
-                  for ( auto g2 : spc->groupList() )           // ...molecules with all groups
-                    u += pot->g1g2(p.second, g, spc->p, *g2);
-                  uinternal += pot->g_internal( p.second, g ); // ...internal mol energy (dummy)
-                }
+                for ( auto molid : it->molComb ) // loop over molecules in combination
+                  pmap.insert(
+                      { molid, spc->molecule[molid].getRandomConformation( base::spc->geo, base::spc->p ) } );
+                assert( !pmap.empty() );
               }
-
-              for ( auto i=pmap.begin(); i!=pmap.end(); ++i )  //...between inserted molecules
-                for ( auto j=i; ++j!=pmap.end(); ) {
-                  Group gi( 0, i->second.size()-1 );
-                  Group gj( 0, i->second.size()-1 );
-                  gi.molId = i->first;
-                  gj.molId = j->first;
-                  u += pot->g1g2( i->second, gi, j->second, gj);
-                }
-
-              assert( !pmap.empty() );
-              base::alternateReturnEnergy = u + uinternal;
-              return u + externalEnergy();
             }
 
-            // energy if deletion move
-            else {
-              if ( ! molDel.empty() || ! atomDel.empty() ) {
-                for ( auto i : molDel ) {                     // loop over molecules/atoms
-                  u += pot->g_external( spc->p, *i );         // molecule w. external pot.
+            // contribution from external chemical potential
+            double externalEnergy() {
+              double u    = 0;
+              double V    = spc->geo.getVolume();
+              int    bit  = ( insertBool ) ?  1 : 0;
+              double sign = ( insertBool ) ?  1 : -1;
 
-                  if ( ! spc->molecule[i->molId].isAtomic() ) {
-                    for ( auto j : spc->groupList() )         // molecule w. all groups
-                      if ( find(molDel.begin(), molDel.end(), j) == molDel.end() ) // slow!
-                        u += pot->g2g( spc->p, *i, *j );
-                    uinternal += pot->g_internal( spc->p, *i);// internal mol energy (dummy)
+              for ( auto i : molcnt )                  // loop over molecule types
+                if (!spc->molecule[i.first].isAtomic())
+                  for (int n=0; n<i.second; n++)       // loop over n number of molecules
+                    u += log(( molTrack.size(i.first) + bit ) / V) - spc->molecule[i.first].chemPot;
+
+              for ( auto i : atomcnt )                 // loop over atom types
+                for (int n=0; n<i.second; n++)         // loop over n number of atoms
+                  u += log(( atomTrack.size(i.first) + bit ) / V) - atom[i.first].chemPot;
+
+              return sign * u;
+            }
+
+            double _energyChange() {
+
+              double u=0;         // change in potential energy (kT)
+              double uinternal=0; // change in internal, molecular energy (kT)
+
+              // energy if insertion move
+              if ( insertBool ) {
+                for ( auto &p : pmap ) {                         // loop over molecules
+                  Group g( 0, p.second.size()-1 );               // (first=id, second=pvec)
+                  g.molId = p.first;
+                  g.setMolSize( p.second.size() );
+
+                  u += pot->g_external( p.second, g );           // ...atoms/mols with external pot
+
+                  if ( spc->molecule[g.molId].isAtomic() ) {
+                    u += pot->g_internal( p.second, g );         // ...between inserted atoms
+                    for ( auto &pi : p.second )                  // ...atoms with all particles
+                      u += pot->all2p( spc->p, pi );
+                  }
+                  else {
+                    for ( auto g2 : spc->groupList() )           // ...molecules with all groups
+                      u += pot->g1g2(p.second, g, spc->p, *g2);
+                    uinternal += pot->g_internal( p.second, g ); // ...internal mol energy (dummy)
                   }
                 }
 
-                // energy between deleted molecules
-                for ( auto i=molDel.begin(); i!=molDel.end(); ++i )
-                  for ( auto j=i; ++j!=molDel.end(); )
-                    u += pot->g2g( spc->p, **i, **j );
+                for ( auto i=pmap.begin(); i!=pmap.end(); ++i )  //...between inserted molecules
+                  for ( auto j=i; ++j!=pmap.end(); ) {
+                    Group gi( 0, i->second.size()-1 );
+                    Group gj( 0, i->second.size()-1 );
+                    gi.molId = i->first;
+                    gj.molId = j->first;
+                    u += pot->g1g2( i->second, gi, j->second, gj);
+                  }
 
-                for ( auto i : atomDel )                        // atoms w. all particles
-                  u += pot->i_total( spc->p, i );
-
-                for ( int i=0; i<(int)atomDel.size()-1; i++ )   // subtract double counted 
-                  for ( int j=i+1; j<(int)atomDel.size(); j++ ) // internal energy (atoms)
-                    u -= pot->i2i(spc->p, i, j);
-
-                base::alternateReturnEnergy = -u - uinternal;
-                return -u + externalEnergy(); // ...add activity terms
+                assert( !pmap.empty() );
+                base::alternateReturnEnergy = u + uinternal;
+                return u + externalEnergy();
               }
+
+              // energy if deletion move
+              else {
+                if ( ! molDel.empty() || ! atomDel.empty() ) {
+                  for ( auto i : molDel ) {                     // loop over molecules/atoms
+                    u += pot->g_external( spc->p, *i );         // molecule w. external pot.
+
+                    if ( ! spc->molecule[i->molId].isAtomic() ) {
+                      for ( auto j : spc->groupList() )         // molecule w. all groups
+                        if ( find(molDel.begin(), molDel.end(), j) == molDel.end() ) // slow!
+                          u += pot->g2g( spc->p, *i, *j );
+                      uinternal += pot->g_internal( spc->p, *i);// internal mol energy (dummy)
+                    }
+                  }
+
+                  // energy between deleted molecules
+                  for ( auto i=molDel.begin(); i!=molDel.end(); ++i )
+                    for ( auto j=i; ++j!=molDel.end(); )
+                      u += pot->g2g( spc->p, **i, **j );
+
+                  for ( auto i : atomDel )                        // atoms w. all particles
+                    u += pot->i_total( spc->p, i );
+
+                  for ( int i=0; i<(int)atomDel.size()-1; i++ )   // subtract double counted 
+                    for ( int j=i+1; j<(int)atomDel.size(); j++ ) // internal energy (atoms)
+                      u -= pot->i2i(spc->p, i, j);
+
+                  base::alternateReturnEnergy = -u - uinternal;
+                  return -u + externalEnergy(); // ...add activity terms
+                }
+              }
+
+              // if we reach here, we're out of particles -> reject
+
+              assert(!insertBool);
+              assert(fabs(u)<1e-10);
+              base::alternateReturnEnergy = 0;
+              return pc::infty;
             }
 
-            // if we reach here, we're out of particles -> reject
+            void _acceptMove() {
 
-            assert(!insertBool);
-            assert(fabs(u)<1e-10);
-            base::alternateReturnEnergy = 0;
-            return pc::infty;
-          }
-
-          void _acceptMove() {
-
-            // accept a deletion move
-            if ( !insertBool ) {
-              Ndeleted++;
-              for ( auto m : molDel ) { // loop over Group pointers
-                molTrack.erase(m->molId, m);
-                base::spc->eraseGroup( spc->findIndex(m) );
-              }
-              for ( auto i : atomDel ) {// loop over particle index
-                assert(1==2 && "Under construction");
-                base::spc->erase(i);
-              }
-
-              atomTrack.update( spc->p );
-              return;
-            }
-
-            // accept an insertion move
-            if ( insertBool ) {
-              Ninserted++;
-              for ( auto &p : pmap ) { // loop over sets of new coordinates
-                auto molid = p.first;
-                if ( spc->molecule[molid].isAtomic() ) {
+              // accept a deletion move
+              if ( !insertBool ) {
+                Ndeleted++;
+                for ( auto m : molDel ) { // loop over Group pointers
+                  molTrack.erase(m->molId, m);
+                  base::spc->eraseGroup( spc->findIndex(m) );
+                }
+                for ( auto i : atomDel ) {// loop over particle index
                   assert(1==2 && "Under construction");
-                  spc->insert( molid, p.second );
-                  atomTrack.update( spc->p );
+                  base::spc->erase(i);
                 }
-                else {
-                  assert( !p.second.empty() );
-                  auto g = spc->insert( molid, p.second ); // auto gen. group
-                  molTrack.insert( molid, g );
-                  assert( molTrack.size(molid) > 0 );
-                }
+
+                atomTrack.update( spc->p );
+                return;
               }
-            }
-            molTrack.updateAvg();   // update average number of molecules
-            atomTrack.updateAvg();  // ...and atoms
-            pot->setSpace( *spc );
-          }
 
-          void _rejectMove() {
-            molTrack.updateAvg();   // update average number of molecules
-            atomTrack.updateAvg();  // ...and atoms
-          }
-
-          string _info() {
-            using namespace textio;
-            std::ostringstream o;
-            base::w += 5;
-
-            o << pad( SUB,base::w,"Accepted insertions" ) << Ninserted << "\n"
-              << pad( SUB,base::w,"Accepted deletions" ) << Ndeleted << "\n"
-              << pad( SUB,base::w,"Flux (Nins/Ndel)" ) << Ninserted / double(Ndeleted) << "\n"
-              << "\n";
-
-            char w=15;
-            double V=spc->geo.getVolume();
-            o << std::left
-              << setw(w+5) << "  Molecule/Atom"
-              << setw(w) << "a (mol/l)"
-              << setw(w) << "c (mol/l)"
-              << setw(w) << textio::gamma+"=a/c" << "\n"
-              << "  " << string(4*w,'-') << "\n";
-
-            for (auto &m : spc->molecule) {
-              if ( m.activity > 1e-10 )
-                if ( molTrack.getAvg(m.id).cnt>0 )
-                  o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
-                    << setw(w) << molTrack.getAvg(m.id)/V/1.0_molar
-                    << setw(w) << m.activity / (molTrack.getAvg(m.id)/V/1.0_molar) << "\n";
-            }
-
-            o << "\n";
-
-            for (auto &m : atom) {
-              if ( m.activity > 1e-6 )
-                if ( atomTrack.getAvg(m.id).cnt>0 )
-                  o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
-                    << setw(w) << atomTrack.getAvg(m.id)/V/1.0_molar
-                    << setw(w) << m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar) << "\n";
-            }
-
-            return o.str() + spc->molecule.info() + comb.info();
-          }
-
-          void _test( UnitTest &t ) {
-            double V=spc->geo.getVolume();
-            t( this->jsondir + "_flux", Ninserted / double(Ndeleted) );
-            for (auto &m : spc->molecule)
-              if ( m.activity > 1e-6 )
-                if ( molTrack.getAvg(m.id).cnt>0 )
-                  if ( !m.name.empty() )
-                    t( this->jsondir + "_mol_" + m.name + "_gamma", m.activity / (molTrack.getAvg(m.id)/V/1.0_molar));
-            for (auto &m : atom)
-              if ( m.activity > 1e-6 )
-                if ( !m.name.empty() )
-                  if ( atomTrack.getAvg(m.id).cnt>0 )
-                    t( this->jsondir + "_atom_" + m.name + "_gamma", m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar));
-          }
-
-          void init() { // call this upon construction
-            Ninserted = 0;
-            Ndeleted  = 0;
-            base::title = "Grand Canonical";
-            base::useAlternateReturnEnergy = true;
-
-            // update tracker with GC molecules and atoms
-            for ( auto g : spc->groupList() )
-              if ( spc->molecule[g->molId].isAtomic() ) {
-                for ( auto i : *g )
-                  if ( atom[ spc->p[i].id ].activity > 1e-9 ) 
-                    atomTrack.insert( spc->p[i].id, i );
-              }
-              else
-                if ( spc->molecule[g->molId].activity > 1e-9 )
-                  molTrack.insert( g->molId, g );
-          }
-
-        public:
-
-          /** @brief Constructor -- load combinations, initialize trackers */
-          GreenGC(
-              Energy::Energybase<Tspace> &e,
-              Tspace &s,
-              Tmjson &j,
-              const string &sec="gc") : base( e, s ), comb( s.molecule ) {
-
-            init();
-            base::jsondir = "moves/" + sec;
-            base::runfraction = j["moves"][sec]["prob"] | 1.0;
-            comb.include( j ); // load combinations
-          }
-      };
-
-    /**
-     * @brief Move for swapping species types - i.e. implicit titration
-     *
-     * Upon construction this class will add an instance of
-     * Energy::EquilibriumEnergy to the Hamiltonian. For details
-     * about the titration procedure see `Energy::EquilibriumController`.
-     *
-     * Upon construction the following are read from input section
-     * `moves/titrate`:
-     *
-     *  Keyword       |  Description
-     * :------------- |  :---------------------------------
-     * `processfile`  |  json file name with processes
-     * `prob`         |  probability of running (default: 1)
-     */
-    template<class Tspace>
-      class SwapMove : public Movebase<Tspace> {
-        private:
-          typedef Movebase<Tspace> base;
-          std::map<int, Average<double> > accmap; //!< Site acceptance map
-          string _info();
-          void _trialMove();
-          void _acceptMove();
-          void _rejectMove();
-
-          std::map<int, std::map<int, Average<double> >> molCharge;
-
-          void updateMolCharge( int pindex ) {
-            auto g = spc->findGroup( pindex );
-            molCharge[ g->molId ][ pindex - g->front() ] += spc->p[pindex].charge; 
-          }
-
-        protected:
-          using base::spc;
-          using base::pot;
-
-          double _energyChange();
-          int ipart;                              //!< Particle to be swapped
-          Energy::EquilibriumEnergy<Tspace>* eqpot;
-
-        public:
-          template<class Tenergy>
-            SwapMove(Tenergy&, Tspace&, Tmjson&, string="titrate"); //!< Constructor
-
-          template<class Tpvec>
-            int findSites(const Tpvec&); //!< Search for titratable sites (old ones are discarded)
-
-          double move(int n=1) override {
-            double du=0;
-            if (this->run()) {
-              eqpot->findSites( this->spc->p );
-              size_t i = eqpot->eq.sites.size();
-              while (i-->0)
-                du += base::move();
-              eqpot->eq.sampleCharge(spc->p);
-            }
-            return du;
-          }
-
-          template<class Tpvec>
-            void applycharges(Tpvec &);
-      };
-
-    template<class Tspace>
-      template<class Tenergy> SwapMove<Tspace>::SwapMove(
-          Tenergy &e, Tspace &spc, Tmjson &j, string sec) : base(e,spc) {
-
-        this->title="Site Titration - Swap Move";
-        this->runfraction = j["moves"][sec]["prob"] | 1.0;
-        ipart=-1;
-
-        auto t = e.tuple();
-        auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
-        if ( ptr != nullptr )
-          eqpot = *ptr; 
-        else {
-          std::cerr << "Error: Equilibrium energy required in\
-            Hamiltonian for titration swap moves." << endl;
-          exit(1);
-        }
-
-        eqpot->eq = Energy::EquilibriumController( j );
-        findSites( spc.p );
-
-        /* Sync particle charges with `AtomMap` */
-        for (auto i : eqpot->eq.sites)
-          spc.trial[i].charge = spc.p[i].charge = atom[ spc.p[i].id ].charge;
-      }
-
-    /**
-     * @brief Search for titratable sites and store internally
-     *
-     * Use this to re-scan for titratable sites. Called by default
-     * in the constructor
-     */
-    template<class Tspace>
-      template<class Tpvec>
-      int SwapMove<Tspace>::findSites(const Tpvec &p) {
-        accmap.clear();
-        return eqpot->findSites(p);
-      }
-
-    template<class Tspace>
-      void SwapMove<Tspace>::_trialMove() {
-        if (!eqpot->eq.sites.empty()) {
-          int i = slump.range( 0, eqpot->eq.sites.size()-1); // pick random site
-          ipart = eqpot->eq.sites.at(i);                      // and corresponding particle
-          int k;
-          do {
-            k = slump.range( 0, eqpot->eq.process.size()-1 );// pick random process..
-          } while (!eqpot->eq.process[k].one_of_us( this->spc->p[ipart].id )); //that match particle j
-
-          eqpot->eq.process[k].swap( this->spc->trial[ipart] ); // change state and get intrinsic energy change
-        }
-      }
-
-    template<class Tspace>
-      double SwapMove<Tspace>::_energyChange() {
-        assert( spc->geo.collision( spc->p[ipart], spc->p[ipart].radius )==false
-            && "Accepted particle collides with container");
-
-        if (spc->geo.collision(spc->trial[ipart], spc->trial[ipart].radius))  // trial<->container collision?
-          return pc::infty;
-        double uold = pot->external(spc->p) + pot->i_total(spc->p,ipart);
-        double unew = pot->external(spc->trial) + pot->i_total(spc->trial,ipart);
-#ifdef ENABLE_MPI
-        if ( base::mpiPtr != nullptr ) {
-          double sum=0;
-          auto r = Faunus::MPI::splitEven(*base::mpiPtr, (int)spc->p.size());
-          for (int i=r.first; i<=r.second; ++i)
-            if (i!=ipart)
-              sum+=pot->i2i(spc->trial,i,ipart) - pot->i2i(spc->p,i,ipart);
-
-          sum = Faunus::MPI::reduceDouble(*base::mpiPtr, sum);
-
-          return sum + pot->i_external(spc->trial, ipart) - pot->i_external(spc->p, ipart)
-            + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
-        }
-#endif
-
-        return unew - uold;
-      }
-
-    template<class Tspace>
-      void SwapMove<Tspace>::_acceptMove() {
-        accmap[ipart] += 1;
-        spc->p[ipart] = spc->trial[ipart];
-        updateMolCharge( ipart );
-      }
-
-    template<class Tspace>
-      void SwapMove<Tspace>::_rejectMove() {
-        accmap[ipart] += 0;
-        spc->trial[ipart] = spc->p[ipart];
-        updateMolCharge( ipart );
-      }
-
-    template<class Tspace>
-      template<class Tpvec>
-      void SwapMove<Tspace>::applycharges(Tpvec &p){
-        eqpot->eq.applycharges(p);
-      }
-
-    template<class Tspace>
-      string SwapMove<Tspace>::_info() {
-        using namespace textio;
-        std::ostringstream o;
-        for (auto &m : molCharge) {
-          int molid = m.first;
-          o << "\n" << indent(SUB) << "Molecule: " << spc->molList()[ molid ].name << "\n\n"
-            << std::left << "    " << setw(8) << "index" << setw(12) << "name"
-            << setw(12) << "Z" << "\n";
-          for (auto &i : m.second)
-            o << "    " << setw(8) << i.first
-              << setw(12) << atom[ spc->molList()[molid].atoms[i.first] ].name
-              << setw(12) << i.second << "\n"; 
-        }
-        return o.str();
-      }
-
-    /**
-     * @brief As SwapMove but Minimizes Short Ranged interactions
-     *        within a molecule upon swapping
-     *
-     * Before calculating dU of an attempted swap move, radii on
-     * particles within the SAME group are set to minus radius of
-     * the swapped particle and hydrophobicity is set to false.
-     * This to minimize large interactions in molecules with overlapping
-     * particles - i.e LJ will be zero. It can also be used to avoid
-     * internal hydrophobic interactions in rigid groups upon swapping
-     * between hydrophobic and non-hydrophobic species.
-     */
-    template<class Tspace>
-      class SwapMoveMSR : public SwapMove<Tspace> {
-        private:
-          using SwapMove<Tspace>::spc;
-          using SwapMove<Tspace>::pot;
-          std::map<int, double> radiusbak;    // backup for radii
-          std::map<int, bool> hydrophobicbak; // backup for hydrophobic state
-
-          void modify() {
-            radiusbak.clear();
-            hydrophobicbak.clear();
-            for (auto g : spc->groupList() )   // loop over all groups
-              if (g->find(this->ipart)) {  //   is ipart part of a group?
-                for (auto i : *g)    //     if so, loop over that group
-                  if (i!=this->ipart) {    //       and ignore ipart
-                    assert( abs(spc->p[i].radius-spc->trial[i].radius)<1e-9);
-                    assert( spc->p[i].hydrophobic==spc->trial[i].hydrophobic);
-
-                    //radiusbak[i]         = spc->p[i].radius;
-                    //spc->p[i].radius     = -spc->p[ipart].radius;
-                    //spc->trial[i].radius = -spc->p[ipart].radius;
-
-                    hydrophobicbak[i]         = spc->p[i].hydrophobic;
-                    spc->p[i].hydrophobic     = false;
-                    spc->trial[i].hydrophobic = false;
+              // accept an insertion move
+              if ( insertBool ) {
+                Ninserted++;
+                for ( auto &p : pmap ) { // loop over sets of new coordinates
+                  auto molid = p.first;
+                  if ( spc->molecule[molid].isAtomic() ) {
+                    assert(1==2 && "Under construction");
+                    spc->insert( molid, p.second );
+                    atomTrack.update( spc->p );
                   }
-                return; // a particle can be part of a single group, only
+                  else {
+                    assert( !p.second.empty() );
+                    auto g = spc->insert( molid, p.second ); // auto gen. group
+                    molTrack.insert( molid, g );
+                    assert( molTrack.size(molid) > 0 );
+                  }
+                }
               }
-          }
-
-          void restore() {
-            for (auto &m : radiusbak) {
-              spc->p[m.first].radius = m.second;
-              spc->trial[m.first].radius = m.second;
-            }
-            for (auto &m : hydrophobicbak) {
-              spc->p[m.first].hydrophobic = m.second;
-              spc->trial[m.first].hydrophobic = m.second;
-            }
-          }
-
-          double _energyChange() {
-            double du_orig = SwapMove<Tspace>::_energyChange();
-            modify();
-            double du = SwapMove<Tspace>::_energyChange();
-            restore();
-            this->alternateReturnEnergy=du_orig;
-            return du;
-          }
-
-        public:
-          SwapMoveMSR(
-              InputMap &in, Energy::Energybase<Tspace> &ham, Tspace &spc,
-              string pfx="swapmv_") : SwapMove<Tspace>(in,ham,spc,pfx)
-          {
-            this->title+=" (min. shortrange)";
-            this->useAlternateReturnEnergy=true;
-          }
-      };
-
-
-    /**
-     * @brief Multiple moves controlled via JSON input
-     *
-     * This is a move class that randomly picks between a number of
-     * moves as defined in a JSON file in the section `moves`.
-     * The available moves are shown
-     * in the table below; each can occur only once and are picked
-     * with uniform weight.
-     *
-     * Keyword         | Move class                | Description
-     * :-------------- | :------------------------ | :----------------
-     * `atomtranslate` | `Move::AtomicTranslation` | Translate atoms
-     * `atomrotate`    | `Move::AtomicRotation`    | Rotate atoms
-     * `atomgc`        | `Move::GrandCanonicalSalt`| GC salt move (muVT ensemble)
-     * `crankshaft`    | `Move::CrankShaft`        | Crank shaft polymer move
-     * `gc`            | `Move::GreenGC`           | Grand canonical move (muVT ensemble)
-     * `isobaric`      | `Move::Isobaric`          | Volume move (NPT ensemple)
-     * `moltransrot`   | `Move::TranslateRotate`   | Translate/rotate molecules
-     * `pivot`         | `Move::Pivot`             | Pivot polymer move
-     * `titrate`       | `Move::SwapMove`          | Particle swap move
-     */
-    template<typename Tspace, bool polarise=false, typename base=Movebase<Tspace>>
-      class Propagator : public base {
-        private:
-          typedef std::shared_ptr<base> basePtr;
-          std::vector<basePtr> mPtr; 
-
-          string _info() {
-            string o;
-            for ( auto i : mPtr )
-              o += i->info();
-            return o;
-          }
-
-          void _acceptMove() { assert(1==2); }
-          void _rejectMove() { assert(1==2); }
-          void _trialMove()  { assert(1==2); }
-          double _energyChange() { assert(1==2); return 0;}
-
-          template<typename Tmove>
-            basePtr toPtr(Tmove m) {
-              typedef typename std::conditional<polarise, PolarizeMove<Tmove>, Tmove>::type T;
-              return basePtr( new T(m) );
+              molTrack.updateAvg();   // update average number of molecules
+              atomTrack.updateAvg();  // ...and atoms
+              pot->setSpace( *spc );
             }
 
-        public:
-          template<typename Tenergy>
-            Propagator( InputMap &in, Tenergy &e, Tspace &s ) : base( e, s )
-          {
-            this->title = "P R O P A G A T O R S";
-
-            auto m = in["moves"];
-            for ( auto i=m.begin(); i!=m.end(); ++i) {
-              if (i.key()=="atomtranslate")
-                mPtr.push_back( toPtr( AtomicTranslation<Tspace>(e,s,in) ) );
-              if (i.key()=="atomrotate")
-                mPtr.push_back( toPtr( AtomicRotation<Tspace>(e,s,in) ) );
-              if (i.key()=="atomgc")
-                mPtr.push_back( toPtr( GrandCanonicalSalt<Tspace>(e,s,in) ) );
-              if (i.key()=="gctit")
-                mPtr.push_back( toPtr( GrandCanonicalTitration<Tspace>(e,s,in) ) );
-              if (i.key()=="moltransrot")
-                mPtr.push_back( toPtr( TranslateRotate<Tspace>(e,s,in) ) );
-              if (i.key()=="isobaric")
-                mPtr.push_back( toPtr( Isobaric<Tspace>(e,s,in) ) );
-              if (i.key()=="isochoric")
-                mPtr.push_back( toPtr( Isochoric<Tspace>(e,s,in) ) );
-              if (i.key()=="gc")
-                mPtr.push_back( toPtr( GreenGC<Tspace>(e,s,in) ) );
-              if (i.key()=="titrate")
-                mPtr.push_back( toPtr( SwapMove<Tspace>(e,s,in) ) );
-              if (i.key()=="crankshaft")
-                mPtr.push_back( toPtr( CrankShaft<Tspace>(e,s,in) ) );
-              if (i.key()=="pivot")
-                mPtr.push_back( toPtr( Pivot<Tspace>(e,s,in) ) );
+            void _rejectMove() {
+              molTrack.updateAvg();   // update average number of molecules
+              atomTrack.updateAvg();  // ...and atoms
             }
-            if ( mPtr.empty() )
-              throw std::runtime_error("No moves defined - check JSON file.");
+
+            string _info() {
+              using namespace textio;
+              std::ostringstream o;
+
+              o << pad( SUB,base::w,"Accepted insertions" ) << Ninserted << "\n"
+                << pad( SUB,base::w,"Accepted deletions" ) << Ndeleted << "\n"
+                << pad( SUB,base::w,"Flux (Nins/Ndel)" ) << Ninserted / double(Ndeleted) << "\n"
+                << "\n";
+
+              double V=spc->geo.getVolume();
+              o << std::left
+                << setw(w+5) << "  Molecule/Atom"
+                << setw(w) << "a (mol/l)"
+                << setw(w) << "c (mol/l)"
+                << setw(w) << textio::gamma+"=a/c" << "\n"
+                << "  " << string(4*w,'-') << "\n";
+
+              for (auto &m : spc->molecule) {
+                if ( m.activity > 1e-10 )
+                  if ( molTrack.getAvg(m.id).cnt>0 )
+                    o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
+                      << setw(w) << molTrack.getAvg(m.id)/V/1.0_molar
+                      << setw(w) << m.activity / (molTrack.getAvg(m.id)/V/1.0_molar) << "\n";
+              }
+
+              o << "\n";
+
+              for (auto &m : atom) {
+                if ( m.activity > 1e-6 )
+                  if ( atomTrack.getAvg(m.id).cnt>0 )
+                    o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
+                      << setw(w) << atomTrack.getAvg(m.id)/V/1.0_molar
+                      << setw(w) << m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar) << "\n";
+              }
+
+              return o.str() + spc->molecule.info() + comb.info();
+            }
+
+            void _test( UnitTest &t ) {
+              double V=spc->geo.getVolume();
+              t( this->jsondir + "_flux", Ninserted / double(Ndeleted) );
+              for (auto &m : spc->molecule)
+                if ( m.activity > 1e-6 )
+                  if ( molTrack.getAvg(m.id).cnt>0 )
+                    if ( !m.name.empty() )
+                      t( this->jsondir + "_mol_" + m.name + "_gamma", m.activity / (molTrack.getAvg(m.id)/V/1.0_molar));
+              for (auto &m : atom)
+                if ( m.activity > 1e-6 )
+                  if ( !m.name.empty() )
+                    if ( atomTrack.getAvg(m.id).cnt>0 )
+                      t( this->jsondir + "_atom_" + m.name + "_gamma", m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar));
+            }
+
+            void init() { // call this upon construction
+              Ninserted = 0;
+              Ndeleted  = 0;
+              base::title = "Grand Canonical";
+              base::useAlternateReturnEnergy = true;
+
+              // update tracker with GC molecules and atoms
+              for ( auto g : spc->groupList() )
+                if ( spc->molecule[g->molId].isAtomic() ) {
+                  for ( auto i : *g )
+                    if ( atom[ spc->p[i].id ].activity > 1e-9 ) 
+                      atomTrack.insert( spc->p[i].id, i );
+                }
+                else
+                  if ( spc->molecule[g->molId].activity > 1e-9 )
+                    molTrack.insert( g->molId, g );
+            }
+
+          public:
+
+            /** @brief Constructor -- load combinations, initialize trackers */
+            GreenGC(
+                Energy::Energybase<Tspace> &e,
+                Tspace &s,
+                Tmjson &j,
+                const string &sec="gc") : base( e, s ), comb( s.molecule ) {
+
+              init();
+              base::jsondir = "moves/" + sec;
+              base::runfraction = j["moves"][sec]["prob"] | 1.0;
+              comb.include( j ); // load combinations
+            }
+        };
+
+      /**
+       * @brief Move for swapping species types - i.e. implicit titration
+       *
+       * Upon construction this class will add an instance of
+       * Energy::EquilibriumEnergy to the Hamiltonian. For details
+       * about the titration procedure see `Energy::EquilibriumController`.
+       *
+       * Upon construction the following are read from input section
+       * `moves/titrate`:
+       *
+       *  Keyword       |  Description
+       * :------------- |  :---------------------------------
+       * `processfile`  |  json file name with processes
+       * `prob`         |  probability of running (default: 1)
+       */
+      template<class Tspace>
+        class SwapMove : public Movebase<Tspace> {
+          private:
+            typedef Movebase<Tspace> base;
+            std::map<int, Average<double> > accmap; //!< Site acceptance map
+            string _info();
+            void _trialMove();
+            void _acceptMove();
+            void _rejectMove();
+
+            std::map<int, std::map<int, Average<double> >> molCharge;
+
+            void updateMolCharge( int pindex ) {
+              auto g = spc->findGroup( pindex );
+              molCharge[ g->molId ][ pindex - g->front() ] += spc->p[pindex].charge; 
+            }
+
+          protected:
+            using base::spc;
+            using base::pot;
+
+            double _energyChange();
+            int ipart;                              //!< Particle to be swapped
+            Energy::EquilibriumEnergy<Tspace>* eqpot;
+
+          public:
+            template<class Tenergy>
+              SwapMove(Tenergy&, Tspace&, Tmjson&, string="titrate"); //!< Constructor
+
+            template<class Tpvec>
+              int findSites(const Tpvec&); //!< Search for titratable sites (old ones are discarded)
+
+            double move(int n=1) override {
+              double du=0;
+              if (this->run()) {
+                eqpot->findSites( this->spc->p );
+                size_t i = eqpot->eq.sites.size();
+                while (i-->0)
+                  du += base::move();
+                eqpot->eq.sampleCharge(spc->p);
+              }
+              return du;
+            }
+
+            template<class Tpvec>
+              void applycharges(Tpvec &);
+        };
+
+      template<class Tspace>
+        template<class Tenergy> SwapMove<Tspace>::SwapMove(
+            Tenergy &e, Tspace &spc, Tmjson &j, string sec) : base(e,spc) {
+
+          base::title="Site Titration - Swap Move";
+          base::runfraction = j["moves"][sec]["prob"] | 1.0;
+          base::w = 30;
+          ipart=-1;
+
+          auto t = e.tuple();
+          auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
+          if ( ptr != nullptr )
+            eqpot = *ptr; 
+          else {
+            std::cerr << "Error: Equilibrium energy required in\
+              Hamiltonian for titration swap moves." << endl;
+            exit(1);
           }
 
-          double move(int n=1) FOVERRIDE {
-            return ( mPtr.empty() ) ?
-              0 : (*propagation_slump.element( mPtr.begin(), mPtr.end() ))->move();
+          eqpot->eq = Energy::EquilibriumController( j );
+          findSites( spc.p );
+
+          /* Sync particle charges with `AtomMap` */
+          for (auto i : eqpot->eq.sites)
+            spc.trial[i].charge = spc.p[i].charge = atom[ spc.p[i].id ].charge;
+        }
+
+      /**
+       * @brief Search for titratable sites and store internally
+       *
+       * Use this to re-scan for titratable sites. Called by default
+       * in the constructor
+       */
+      template<class Tspace>
+        template<class Tpvec>
+        int SwapMove<Tspace>::findSites(const Tpvec &p) {
+          accmap.clear();
+          return eqpot->findSites(p);
+        }
+
+      template<class Tspace>
+        void SwapMove<Tspace>::_trialMove() {
+          if (!eqpot->eq.sites.empty()) {
+            int i = slump.range( 0, eqpot->eq.sites.size()-1); // pick random site
+            ipart = eqpot->eq.sites.at(i);                      // and corresponding particle
+            int k;
+            do {
+              k = slump.range( 0, eqpot->eq.process.size()-1 );// pick random process..
+            } while (!eqpot->eq.process[k].one_of_us( this->spc->p[ipart].id )); //that match particle j
+
+            eqpot->eq.process[k].swap( this->spc->trial[ipart] ); // change state and get intrinsic energy change
           }
+        }
 
-          void test(UnitTest &t) { for (auto i : mPtr) i->test(t); }
+      template<class Tspace>
+        double SwapMove<Tspace>::_energyChange() {
+          assert( spc->geo.collision( spc->p[ipart], spc->p[ipart].radius )==false
+              && "Accepted particle collides with container");
 
+          if (spc->geo.collision(spc->trial[ipart], spc->trial[ipart].radius))  // trial<->container collision?
+            return pc::infty;
+          double uold = pot->external(spc->p) + pot->i_total(spc->p,ipart);
+          double unew = pot->external(spc->trial) + pot->i_total(spc->trial,ipart);
 #ifdef ENABLE_MPI
-          void setMPI( Faunus::MPI::MPIController* mpi ) {
-            base::mpiPtr = mpi;
-            for ( auto i : mPtr )
-              i->mpiPtr = mpi;
+          if ( base::mpiPtr != nullptr ) {
+            double sum=0;
+            auto r = Faunus::MPI::splitEven(*base::mpiPtr, (int)spc->p.size());
+            for (int i=r.first; i<=r.second; ++i)
+              if (i!=ipart)
+                sum+=pot->i2i(spc->trial,i,ipart) - pot->i2i(spc->p,i,ipart);
+
+            sum = Faunus::MPI::reduceDouble(*base::mpiPtr, sum);
+
+            return sum + pot->i_external(spc->trial, ipart) - pot->i_external(spc->p, ipart)
+              + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
           }
 #endif
 
-      };
+          return unew - uold;
+        }
 
-    /** @brief Atomic translation with dipolar polarizability */
-    //typedef PolarizeMove<AtomicTranslation> AtomicTranslationPol;
+      template<class Tspace>
+        void SwapMove<Tspace>::_acceptMove() {
+          accmap[ipart] += 1;
+          spc->p[ipart] = spc->trial[ipart];
+          updateMolCharge( ipart );
+        }
 
-    /** @brief Atomic rotation with dipolar polarizability */
-    //typedef PolarizeMove<AtomicRotation> AtomicRotationPol;
+      template<class Tspace>
+        void SwapMove<Tspace>::_rejectMove() {
+          accmap[ipart] += 0;
+          spc->trial[ipart] = spc->p[ipart];
+          updateMolCharge( ipart );
+        }
 
+      template<class Tspace>
+        template<class Tpvec>
+        void SwapMove<Tspace>::applycharges(Tpvec &p){
+          eqpot->eq.applycharges(p);
+        }
+
+      template<class Tspace>
+        string SwapMove<Tspace>::_info() {
+          using namespace textio;
+          std::ostringstream o;
+          for (auto &m : molCharge) {
+            int molid = m.first;
+            o << "\n" << indent(SUB) << "Molecule: " << spc->molList()[ molid ].name << "\n\n"
+              << std::left << "    " << setw(8) << "index" << setw(12) << "name"
+              << setw(12) << "Z" << "\n";
+            for (auto &i : m.second)
+              o << "    " << setw(8) << i.first
+                << setw(12) << atom[ spc->molList()[molid].atoms[i.first] ].name
+                << setw(12) << i.second << "\n"; 
+          }
+          return o.str();
+        }
+
+      /**
+       * @brief As SwapMove but Minimizes Short Ranged interactions
+       *        within a molecule upon swapping
+       *
+       * Before calculating dU of an attempted swap move, radii on
+       * particles within the SAME group are set to minus radius of
+       * the swapped particle and hydrophobicity is set to false.
+       * This to minimize large interactions in molecules with overlapping
+       * particles - i.e LJ will be zero. It can also be used to avoid
+       * internal hydrophobic interactions in rigid groups upon swapping
+       * between hydrophobic and non-hydrophobic species.
+       */
+      template<class Tspace>
+        class SwapMoveMSR : public SwapMove<Tspace> {
+          private:
+            using SwapMove<Tspace>::spc;
+            using SwapMove<Tspace>::pot;
+            std::map<int, double> radiusbak;    // backup for radii
+            std::map<int, bool> hydrophobicbak; // backup for hydrophobic state
+
+            void modify() {
+              radiusbak.clear();
+              hydrophobicbak.clear();
+              for (auto g : spc->groupList() )   // loop over all groups
+                if (g->find(this->ipart)) {  //   is ipart part of a group?
+                  for (auto i : *g)    //     if so, loop over that group
+                    if (i!=this->ipart) {    //       and ignore ipart
+                      assert( abs(spc->p[i].radius-spc->trial[i].radius)<1e-9);
+                      assert( spc->p[i].hydrophobic==spc->trial[i].hydrophobic);
+
+                      //radiusbak[i]         = spc->p[i].radius;
+                      //spc->p[i].radius     = -spc->p[ipart].radius;
+                      //spc->trial[i].radius = -spc->p[ipart].radius;
+
+                      hydrophobicbak[i]         = spc->p[i].hydrophobic;
+                      spc->p[i].hydrophobic     = false;
+                      spc->trial[i].hydrophobic = false;
+                    }
+                  return; // a particle can be part of a single group, only
+                }
+            }
+
+            void restore() {
+              for (auto &m : radiusbak) {
+                spc->p[m.first].radius = m.second;
+                spc->trial[m.first].radius = m.second;
+              }
+              for (auto &m : hydrophobicbak) {
+                spc->p[m.first].hydrophobic = m.second;
+                spc->trial[m.first].hydrophobic = m.second;
+              }
+            }
+
+            double _energyChange() {
+              double du_orig = SwapMove<Tspace>::_energyChange();
+              modify();
+              double du = SwapMove<Tspace>::_energyChange();
+              restore();
+              this->alternateReturnEnergy=du_orig;
+              return du;
+            }
+
+          public:
+            SwapMoveMSR(
+                InputMap &in, Energy::Energybase<Tspace> &ham, Tspace &spc,
+                string pfx="swapmv_") : SwapMove<Tspace>(in,ham,spc,pfx)
+            {
+              this->title+=" (min. shortrange)";
+              this->useAlternateReturnEnergy=true;
+            }
+        };
+
+
+      /**
+       * @brief Multiple moves controlled via JSON input
+       *
+       * This is a move class that randomly picks between a number of
+       * moves as defined in a JSON file in the section `moves`.
+       * The available moves are shown
+       * in the table below; each can occur only once and are picked
+       * with uniform weight.
+       *
+       * Keyword         | Move class                | Description
+       * :-------------- | :------------------------ | :----------------
+       * `atomtranslate` | `Move::AtomicTranslation` | Translate atoms
+       * `atomrotate`    | `Move::AtomicRotation`    | Rotate atoms
+       * `atomgc`        | `Move::GrandCanonicalSalt`| GC salt move (muVT ensemble)
+       * `crankshaft`    | `Move::CrankShaft`        | Crank shaft polymer move
+       * `gc`            | `Move::GreenGC`           | Grand canonical move (muVT ensemble)
+       * `isobaric`      | `Move::Isobaric`          | Volume move (NPT ensemple)
+       * `moltransrot`   | `Move::TranslateRotate`   | Translate/rotate molecules
+       * `pivot`         | `Move::Pivot`             | Pivot polymer move
+       * `titrate`       | `Move::SwapMove`          | Particle swap move
+       */
+      template<typename Tspace, bool polarise=false, typename base=Movebase<Tspace>>
+        class Propagator : public base {
+          private:
+            typedef std::shared_ptr<base> basePtr;
+            std::vector<basePtr> mPtr; 
+
+            string _info() override {
+              string o;
+              for ( auto i : mPtr )
+                o += i->info();
+              return o;
+            }
+
+            void _acceptMove() override { assert(1==2); }
+            void _rejectMove() override { assert(1==2); }
+            void _trialMove()  override { assert(1==2); }
+            double _energyChange() override { assert(1==2); return 0;}
+
+            template<typename Tmove>
+              basePtr toPtr(Tmove m) {
+                typedef typename std::conditional<polarise, PolarizeMove<Tmove>, Tmove>::type T;
+                return basePtr( new T(m) );
+              }
+
+          public:
+            template<typename Tenergy>
+              Propagator( InputMap &in, Tenergy &e, Tspace &s ) : base( e, s )
+            {
+              this->title = "P R O P A G A T O R S";
+
+              auto m = in["moves"];
+              for ( auto i=m.begin(); i!=m.end(); ++i) {
+                if (i.key()=="atomtranslate")
+                  mPtr.push_back( toPtr( AtomicTranslation<Tspace>(e,s,in) ) );
+                if (i.key()=="atomrotate")
+                  mPtr.push_back( toPtr( AtomicRotation<Tspace>(e,s,in) ) );
+                if (i.key()=="atomgc")
+                  mPtr.push_back( toPtr( GrandCanonicalSalt<Tspace>(e,s,in) ) );
+                if (i.key()=="gctit")
+                  mPtr.push_back( toPtr( GrandCanonicalTitration<Tspace>(e,s,in) ) );
+                if (i.key()=="moltransrot")
+                  mPtr.push_back( toPtr( TranslateRotate<Tspace>(e,s,in) ) );
+                if (i.key()=="isobaric")
+                  mPtr.push_back( toPtr( Isobaric<Tspace>(e,s,in) ) );
+                if (i.key()=="gc")
+                  mPtr.push_back( toPtr( GreenGC<Tspace>(e,s,in) ) );
+                if (i.key()=="titrate")
+                  mPtr.push_back( toPtr( SwapMove<Tspace>(e,s,in) ) );
+                if (i.key()=="crankshaft")
+                  mPtr.push_back( toPtr( CrankShaft<Tspace>(e,s,in) ) );
+                if (i.key()=="pivot")
+                  mPtr.push_back( toPtr( Pivot<Tspace>(e,s,in) ) );
+              }
+              if ( mPtr.empty() )
+                throw std::runtime_error("No moves defined - check JSON file.");
+            }
+
+            double move(int n=1) override {
+              return ( mPtr.empty() ) ?
+                0 : (*slump.element( mPtr.begin(), mPtr.end() ))->move();
+            }
+
+            void test(UnitTest &t) { for (auto i : mPtr) i->test(t); }
+
+#ifdef ENABLE_MPI
+            void setMPI( Faunus::MPI::MPIController* mpi ) {
+              base::mpiPtr = mpi;
+              for ( auto i : mPtr )
+                i->mpiPtr = mpi;
+            }
+#endif
+
+        };
+
+      /** @brief Atomic translation with dipolar polarizability */
+      //typedef PolarizeMove<AtomicTranslation> AtomicTranslationPol;
+
+      /** @brief Atomic rotation with dipolar polarizability */
+      //typedef PolarizeMove<AtomicRotation> AtomicRotationPol;
+
+      }//namespace
   }//namespace
-}//namespace
 #endif

@@ -660,7 +660,7 @@ namespace Faunus {
           geo.boundary(t);
           S += t * t.transpose();
         }
-        return S*(1/g.size());
+        return S*(1./g.size());
       }
 
     /* 
@@ -689,7 +689,7 @@ namespace Faunus {
         for (auto k : dir) {
           double q = 2*pc::pi / geo.len[k];
           for (auto i : g) {
-            theta[k] += p[i][k] * q;
+            theta[k] = p[i][k] * q;
             zeta[k] += std::sin( theta[k] );
             xhi[k] += std::cos( theta[k] );
           }

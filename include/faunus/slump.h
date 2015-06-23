@@ -21,6 +21,7 @@ namespace Faunus {
 
       private:
         std::uniform_real_distribution<T> dist;
+        long long int discard;
 
       public:
         Tengine eng; //!< Random number engine
@@ -45,8 +46,12 @@ namespace Faunus {
           }
         }
 
+        /** DOI: 10.1103/PhysRevE.75.066701 */
+        void setDiscard(long long int z) { discard=z; } 
+
         /** @brief Random number in uniform range [0,1) */
         T operator()() {
+          if (discard>0) eng.discard(discard);
           T x;
 #pragma omp critical
           x=dist(eng);
@@ -70,6 +75,7 @@ namespace Faunus {
     };
 
   extern RandomTwister<> slump;
+  extern RandomTwister<> propagation_slump; // in parallelized algorithms, multiple random walkers perform the same sequence of moves
 
 } // namespace
 

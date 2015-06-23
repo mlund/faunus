@@ -8,6 +8,7 @@
 #include <regex>
 #include <cstdint>
 #include <chrono>
+#include <unordered_map>
 
 #ifdef FAU_HASHTABLE
 #include <unordered_map>
@@ -678,7 +679,7 @@ namespace Faunus {
             sendBuf.push_back(m.first);
             sendBuf.push_back(double(m.second));
           }
-          sendBuf.resize(size,0);
+          sendBuf.resize(size,0.);
           return sendBuf;
         }
 
@@ -688,9 +689,21 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          for (int i=0; i<(int)v.size(); i+=2) {
-            if (int(v[i+1])>1e-20) this->operator()(v[i])+=int(v[i+1]);
+          std::unordered_map<double,vector<double>> all;
+          for (int i=0; i<int(v.size())-1; i+=2) {
+            if (v[i+1]!=0) all[v.at(i)].push_back(v.at(i+1));
           }
+          double min=std::numeric_limits<double>::max();
+          for (auto &m : all) {
+            double ave = 0;
+            for (auto value : m.second)
+              ave += value;
+            ave /= (double)m.second.size();
+            this->operator()(m.first) = ave;
+            if (ave<min) min=ave;
+          }
+          for (auto &m : map)
+            m.second -= min;
         }
 
         /**
@@ -1007,7 +1020,7 @@ namespace Faunus {
             sendBuf.push_back(m.first.second);
             sendBuf.push_back(double(m.second));
           }
-          sendBuf.resize(size,0);
+          sendBuf.resize(size,0.);
           return sendBuf;
         }
 
@@ -1017,9 +1030,21 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          for (size_t i=0; i<v.size(); i+=3) {
-            if (v[i+2]>1e-20) this->operator()(v[i],v[i+1])+=int(v[i+2]);
+          std::map<std::pair<double,double>,vector<double>> all;
+          for (int i=0; i<int(v.size())-2; i+=3) {
+            if (v[i+2]!=0) all[std::make_pair(v.at(i),v.at(i+1))].push_back(v.at(i+2));
           }
+          double min=std::numeric_limits<double>::max();
+          for (auto &m : all) {
+            double ave = 0;
+            for (auto value : m.second)
+              ave += value;
+            ave /= (double)m.second.size();
+            this->operator()(m.first.first,m.first.second) = ave;
+            if (ave<min) min=ave;
+          }
+          for (auto &m : map)
+            m.second -= min;
         }
 
         /**

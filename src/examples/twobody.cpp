@@ -60,28 +60,38 @@ int main(int argc, char** argv) {
  * using particle swap moves.
  *
  * During simulation we simply sample the probability of observing
- * the two bodies at a specific separation (using `Analysis::LineDistribution`).
+ * the two bodies at a specific separation
+ * (using `Faunus::Analysis::LineDistribution`).
  * As the proteins are confined onto a line, each volume element along
  * `r` is constant and there's thus no need to normalize with a spherical
  * shell as done for freely moving particles.
+ * The minimum and maximum allowed distance between the two bodies can
+ * specified via the `Faunus::Energy::MassCenterConstrain` term in the
+ * Hamiltonian.
  *
  * ![Two rigid molecules kept on a line inside a periodic cylinder](twobody.png)
  *
  * Run this example from the `examples` directory:
+ * The python script `twobody.py` generates the simulation input files
+ * and all changes to the simulation setup should be done from inside
+ * the script.
+ * This example was prepared using commit `ca1a923` which can be checked out
+ * and run with the following,
  *
  * ~~~~~~~~~~~~~~~~~~~
+ * $ git checkout ca1a923
  * $ make example_twobody
  * $ cd src/examples
  * $ python twobody.py
  * ~~~~~~~~~~~~~~~~~~~
  *
- * For calculating the virial coefficient, @f$B_2@f$, the sampled radial distribution
- * function, g(r), needs to be integrated according to,
+ * For calculating the virial coefficient, @f$B_2@f$, the angularly averaged
+ * radial distribution function, g(r), must be integrated according to,
  *
  * @f[ B_2 = -2\pi \int_0^{\infty} [ g(r) -1 ] r^2 dr @f]
  *
  * where it should be noted that noise at large separations is strongly
- * amplified. To fix this, the tail of the g(r) can be replaced by
+ * amplified. To fix this, the tail of the g(r) can be fitted to
  * a Yukawa potential of the form (see [doi:10/xqw](http://dx.doi.org/10/xqw)),
  *
  * @f[ w(r)/k_BT = -\ln g(r) = \lambda_B s^2 z_iz_j / r \exp{(-\kappa r )}  @f]
@@ -100,6 +110,12 @@ int main(int argc, char** argv) {
  * The output could look like below, and it is important to ensure
  * that the fitted parameters (Debye length or effective radius or both)
  * are in the vicinity of the simulated system.
+ * Note that in the
+ * limit @f$ a\kappa \rightarrow 0 @f$, i.e. when the Debye length
+ * is much bigger then the particle size, @f$ s \rightarrow 1 @f$
+ * and fitting via the effective radius, @f$ a @f$, is unfeasible
+ * and should be disabled in the script.
+ * 
  * ~~~~
  * Excecuting python script to analyse the virial coeffient...
  * Loaded g(r) file      =  rdf.dat
@@ -109,7 +125,6 @@ int main(int argc, char** argv) {
  * Fit range [rmin,rmax] =  40.0 90.0 A
  * Fitted Debye length   =  12.1634707424 A
  * Fitted ionic strength =  62.4643374077 mM
- * Fitted shift          =  8.31069879399 kT
  * Fitted radius         =  14.4531689553 A
  * Virial coefficient (cubic angstrom):
  * Hard sphere  [    0:   19] =  14365.4560073
@@ -127,5 +142,9 @@ int main(int argc, char** argv) {
  *
  * twobody.cpp
  * ===========
+ * This is the underlying C++ program where one should note that the
+ * pair potential is hard coded but can naturally be customised to
+ * any potential from namespace `Faunus::Potential`.
+ *
  * @includelineno examples/twobody.cpp
  */

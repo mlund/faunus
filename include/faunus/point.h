@@ -48,21 +48,19 @@ namespace Faunus {
      * about *Sphere Point Picking* can be found at
      * [MathWorld](http://mathworld.wolfram.com/SpherePointPicking.html).
      *
-     * @param ran Randomnumber function object. Must return a uniform
-     *            distribution in the range `[0:1[`. This will typically be
-     *            a class derived from `RandomBase`.
+     * @param ran Function that takes no arguments and returns a random
+     *            float uniformly distributed in the range `[0:1[`.
      */
-    template<typename Trandombase>
-      PointBase& ranunit(Trandombase &ran) {
+    template<class Trandombase>
+      PointBase& ranunit( Trandombase &ran ) {
         Tcoord r2;
         do {
-          x()=2*( ran()-0.5 );
-          y()=2*( ran()-0.5 );
-          z()=2*( ran()-0.5 );
+          for (size_t i=0; i<3; ++i)
+            this->operator[](i) = 2*ran()-1;
           r2 = squaredNorm();
         } while (r2>1);
         *this = *this/std::sqrt(r2);
-        assert( std::abs( norm()-1 ) < 1e-7 ); // is it really a unit vector?
+        assert( norm()-1 < 1e-7 ); // is it really a unit vector?
         return *this;
       }
 

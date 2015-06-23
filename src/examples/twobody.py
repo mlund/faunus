@@ -13,7 +13,7 @@ def mkinput():
           "coulomb" : { "epsr" : 78.7, "ionicstrength" : Cs }
           },
         "cmconstrain" : {
-          "protein protein" : { "mindist": 0, "maxdist": 60 }
+          "protein protein" : { "mindist": 0, "maxdist": 100 }
           }
         },
 
@@ -90,7 +90,7 @@ def mkinput():
 
       "system" : {
           "temperature" : 298.15,
-          "cylinder" : { "length" : 200, "radius" : 40 },
+          "cylinder" : { "length" : 250, "radius" : 40 },
           "mcloop"   : { "macro" : 10, "micro" : micro }
           }
       }

@@ -60,10 +60,6 @@ int main() {
  * =====
  * All listed files including the above C++ and python programs can be found in `src/examples/`
  *
- * gcmol.input
- * -----------
- * @include gcmol.input
- *
  * gcmol.json
  * ----------
  * State atom types

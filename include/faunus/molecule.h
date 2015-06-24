@@ -507,9 +507,7 @@ namespace Faunus {
    * @brief Vector of molecular combinations
    *
    * When examining a JSON file, individual entries must be placed
-   * in a section called `moleculecombinations`. When loading
-   * from `InputMap` the keyword for the json file is
-   * also `moleculecombinations`.
+   * in a section called `moleculecombinations`.
    */
   template<class Tpvec, class base=PropertyVector< MoleculeCombination<Tpvec> >>
     class MoleculeCombinationMap : public base {

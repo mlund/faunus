@@ -1132,15 +1132,16 @@ namespace Faunus {
           std::map<Tpair, typename Ttabulator::data > m;
 
         public:
-          PotentialTabulate(InputMap &in) : Tpairpot(in) {
+          PotentialTabulate( Tmjson &j ) : Tpairpot( j ) {
+            string sec = Tpairpot::jsonsec;
             tab.setRange(
-                in.get<double>("tab_rmin", 1.0),
-                in.get<double>("tab_rmax", 100.0));
+                j[sec]["tab_rmin"] | 1.0,
+                j[sec]["tab_rmax"] | 100.0 );
             tab.setTolerance(
-                in.get<double>("tab_utol", 0.01), 
-                in.get<double>("tab_ftol", -1), 
-                in.get<double>("tab_umaxtol", -1), 
-                in.get<double>("tab_fmaxtol", -1));
+                j[sec]["tab_utol"] | 0.01, 
+                j[sec]["tab_ftol"] | -1.0, 
+                j[sec]["tab_umaxtol"] | -1.0, 
+                j[sec]["tab_fmaxtol"] | -1.0 );
           }
 
           template<class Tparticle>

@@ -89,12 +89,15 @@ int main() {
  * ~~~~~~~~~~~~~~~~~~~
  * $ make
  * $ cd src/examples
- * $ ./polymers.run
+ * $ python ./polymers.py
  * ~~~~~~~~~~~~~~~~~~~
  *
- * polymers.cpp
- * ============
+ * polymers.py
+ * ===========
+ * This is a python run-script that generates all required
+ * input as well as run the main program. This is also used
+ * for running the unittest when running `make test`. 
  *
- * @includelineno examples/polymers.cpp
+ * @include polymers.py
  */
 

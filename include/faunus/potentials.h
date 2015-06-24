@@ -68,20 +68,22 @@ namespace Faunus {
      *     pot(a,b,16.); // -> energy in kT
      * 
      */
-    class PairPotentialBase : public JSONSupport {
+    class PairPotentialBase {
       private:
         virtual string _brief();
+      protected:
+        string jsonsec;    //!< JSON section where input is stored
       public:
         typedef PairMatrix<double> Tcutoff;
         Tcutoff rcut2;                        //!< Squared cut-off distance (angstrom^2)
-        PairPotentialBase(std::string="");
 
-        inline PairPotentialBase( Tmjson &j ) { json() = j; }
+        PairPotentialBase( );
+
+        PairPotentialBase( const string &sec );
+
         virtual ~PairPotentialBase();
-        string jsondir;    //!< Prefix used for user input specific to the potential
         string name;       //!< Name of potential
         string brief();    //!< Brief, one-lined information string
-        virtual void setTemperature(double); //!< Set temperature [K]
 
         /**
          * @brief Particle-particle force in units of `kT/AA`
@@ -156,8 +158,8 @@ namespace Faunus {
      * \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
      * (kT/angstrom^2) and req is the equilibrium distance (angstrom).
      *
-     * Upon construction from InputMap, the following keywords are searched
-     * for in section `harmonic` (default root dir is `system`):
+     * Upon construction the following keywords are searched
+     * for in section `harmonic`:
      *
      * Keyword   | Description
      * :-------- | :-----------------------------------------------
@@ -177,7 +179,11 @@ namespace Faunus {
 
         inline Harmonic( double k=0, double req=0 ) : k(k), req(req) { name = "Harmonic"; };
 
-        Harmonic( InputMap&, const string &dir="" );
+        inline Harmonic( Tmjson &j, const string &sec="harmonic") : PairPotentialBase(sec) {
+          name="Harmonic";
+          k   = j[sec]["k"]   | 0.0;
+          req = j[sec]["req"] | 0.0;
+        }
 
         template<class Tparticle>
           double operator()( const Tparticle &a, const Tparticle &b, double r2 ) {
@@ -202,7 +208,7 @@ namespace Faunus {
      * for \f$r_c\leq r \leq r_c+w_c\f$. For \f$r<r_c\f$, \f$\beta u=-\epsilon\f$,
      * while zero for \f$r>r_c+w_c\f$.
      *
-     * The InputMap parameters, searched for in `cosattract` are:
+     * Keywords in json section `cosattract` are:
      *
      * Key     | Description
      * :-------| :---------------------------
@@ -216,7 +222,8 @@ namespace Faunus {
         double eps, wc, rc, rc2, c, rcwc2;
         string _brief();
       public:
-        CosAttract(InputMap&, const string &dir=""); // Constructor from InputMap
+
+        CosAttract(Tmjson&, const string &sec="cosattract");
 
         /**
          * @todo
@@ -271,8 +278,7 @@ namespace Faunus {
      * @f[
      *     \beta u(r) = -\frac{k r_0^2}{2}\ln \left [ 1-(r/r_0)^2 \right ]
      * @f]
-     * for \f$r<r_0\f$, otherwise infinity. The input parameters read by InputMap
-     * from section `fene` are as follows:
+     * for \f$r<r_0\f$, otherwise infinity. Parameters are read from section `fene`:
      *
      * - `stiffness` Bond stiffness, `k` [kT]
      * - `maxsep` Maximum separation, `r_0` [angstrom]
@@ -297,11 +303,10 @@ namespace Faunus {
           r02inv=1/r02;
         }
 
-        FENE( InputMap &in, const string &dir="" ) : PairPotentialBase(dir) {
+        FENE( Tmjson &j, const string &sec="fene" ) : PairPotentialBase( sec ) {
           name="FENE";
-          in.cd ( jsondir+"/fene" );
-          k  = in( "stiffness", 0.0);
-          r02 = pow( in( "maxsep", 0.0), 2);
+          k  = j[sec]["stiffness"] | 0.0;
+          r02 = pow( j[sec]["maxsep"] | 0.0, 2);
           r02inv = 1/r02;
         }
 
@@ -324,7 +329,7 @@ namespace Faunus {
         double E;
         string _brief();
       public:
-        Hertz(InputMap&, const string &dir="");
+        Hertz(Tmjson&, const string &sec="hertz");
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
@@ -352,7 +357,7 @@ namespace Faunus {
         HardSphere();
 
         template<typename T>
-          HardSphere(const T&, const string &dir="") { name="Hardsphere"; }
+          HardSphere(const T&, const string &sec="") { name="Hardsphere"; }
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -401,24 +406,14 @@ namespace Faunus {
       public:
         LennardJones() : eps(0) { name="Lennard-Jones"; }
 
-        /**
-         * @param in InputMap is scanned for the `lj_eps` and should be in units of kT
-         * @param dir Prefix for InputMap - default is `ls_`
-         */
-        LennardJones(InputMap &in, const string &dir="") : PairPotentialBase(dir) {
-          name="Lennard-Jones";
-          in.cd ( jsondir+"/ljsimple" );
-          eps = 4*in("eps", 0.);
-          string unit = in.get<string>("unit", "kT");
-          if ( unit=="kJ/mol" )
-            eps *= 1.0_kJmol;
-        }
+        LennardJones(
+            Tmjson &j,
+            const string &sec="ljsimple" ) : PairPotentialBase( sec ) {
 
-        LennardJones( Tmjson &j ) : PairPotentialBase( j["ljsimple"] ){
-          name="Lennard-Jones";
-          eps = 4.0 * ( json()["eps"] | 0.0 );
-          string unit = json()["unit"] | string("kT");
-          if ( unit=="kJ/mol" )
+          name        ="Lennard-Jones";
+          eps         = 4.0 * ( j[sec]["eps"] | 0.0 );
+          string unit = j[sec]["unit"] | string("kT");
+          if ( unit == "kJ/mol" )
             eps *= 1.0_kJmol;
         }
 
@@ -445,7 +440,7 @@ namespace Faunus {
     /**
      * @brief Cuts a pair-potential and shift to zero at cutoff
      *
-     * This will cut any pair potential at `prefix_cutoff` and shift to
+     * This will cut any pair potential at `cutoff` and shift to
      * zero at that distance. Slow but general.
      *
      * Example:
@@ -455,9 +450,9 @@ namespace Faunus {
      * typedef CutShift<LennardJones> Tpairpot;
      * ~~~~
      *
-     * Upon construction with an `InputMap`, the `lj_cutoff`
-     * keyword will be used to set the cut-off.
-     *
+     * Upon construction the json section is read from
+     * `Tpairpot::jsonsec` and the `cutoff` keyword
+     * is used to set the cut-off.
      *
      * @todo Implement continuous force calculation
      */
@@ -467,16 +462,11 @@ namespace Faunus {
           double rc2; // squared cut-off distance
         public:
           CutShift( Tmjson &j ) : Tpairpot(j) {
-            rc2 = pow( ( Tpairpot::json()["cutoff"] | pc::infty ), 2 );
+            rc2 = pow( ( j[Tpairpot::jsonsec]["cutoff"] | pc::infty ), 2 );
             Tpairpot::name+=" (rcut="
               + std::to_string( sqrt(rc2) ) + textio::_angstrom + ")";
           }
 
-          CutShift(InputMap &in, const string &dir="") : Tpairpot(in,dir) {
-            rc2 = pow( in.get( "cutoff", pc::infty ), 2 );
-            Tpairpot::name+=" (rcut="
-              + std::to_string( sqrt(rc2) ) + textio::_angstrom + ")";
-          }
           template<class Tparticle>
             double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
               return (r2>rc2) ? 0 : Tpairpot::operator()(a,b,r2) - Tpairpot::operator()(a,b,rc2);
@@ -498,16 +488,13 @@ namespace Faunus {
      * template parameter must be a class for the epsilon and sigma mixing rules.
      * The atomic values for sigma and epsilon are taken from `AtomMap` via the
      * global instance `atom`.
-     * In your InputMap configuration file you would typically set the atom list
-     * file using the keyword `atomlist`.
      * Note that sigma for each atom is set to two times the radius found in
      * `AtomMap`. Epsilon is stored internally in units of `4kT`.
      *
      * For example:
      * 
-     *     InputMap mcp( "config.json" );
-     *     LennardJonesMixed<LorentzBerthelot> lj(mcp);
-     *
+     *     Tmjson j = openjson( "config.json" );
+     *     LennardJonesMixed<LorentzBerthelot> lj( j );
      */
     template<class Tmixingrule = LorentzBerthelot>
       class LennardJonesMixed : public PairPotentialBase {
@@ -531,7 +518,7 @@ namespace Faunus {
 
         public:
           template<typename T>
-            LennardJonesMixed(const T&, const string &dir="") {
+            LennardJonesMixed(const T&, const string &sec="") {
               name="Lennard-Jones";
               init();
             }
@@ -689,7 +676,7 @@ namespace Faunus {
       public:
         double threshold;                           //!< Threshold between particle *surface* [A]
         double depth;                               //!< Energy depth [kT] (positive number)
-        SquareWell(InputMap&, const string &dir=""); //!< Constructor
+        SquareWell(Tmjson&, const string &sec="squarewell"); //!< Constructor
 
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -710,7 +697,7 @@ namespace Faunus {
         string _brief();
       public:
         double threshold_lower;
-        SquareWellShifted(InputMap&, const string &dir=""); //!< Constructor
+        SquareWellShifted( Tmjson&, const string &sec="squarewell"); //!< Constructor
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -743,7 +730,9 @@ namespace Faunus {
      */
     class SquareWellHydrophobic : public SquareWell {
       public:
-        SquareWellHydrophobic(InputMap&, const string &dir=""); //!< Constructor
+        SquareWellHydrophobic(Tmjson &j, const string &sec="squarewell") : SquareWell(j,sec) {
+          name="Hydrophobic " + name;
+        }
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -760,10 +749,24 @@ namespace Faunus {
      */
     class SoftRepulsion : public PairPotentialBase {
       private:
-        string _brief();
+        string _brief() {
+          std::ostringstream o;
+          o << name << ": " << textio::sigma  << pow(sigma6,1/6.) << textio::_angstrom;
+          return o.str();
+        }
         double sigma6;
       public:
-        SoftRepulsion(InputMap&, const string &dir="");
+        SoftRepulsion(Tmjson &j, const string &sec="softrep") : PairPotentialBase(sec) {
+          name="Repulsive r6";
+          sigma6 = pow( j[sec]["sigma"] | 5.0, 6);
+        }
+
+        string info(char w) {
+          using namespace Faunus::textio;
+          std::ostringstream o;
+          o << textio::pad(SUB,w+1,textio::sigma) << pow(sigma6,1/6.) << _angstrom << endl;
+          return o.str();
+        }
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -774,7 +777,6 @@ namespace Faunus {
             d=d*d; //d^2
             return sigma6 / (d*d*d); // s^6/d^6
           }
-        string info(char);
     };
 
     /*!
@@ -791,8 +793,11 @@ namespace Faunus {
       protected:
         double eps;
       public:
-        R12Repulsion(); // __attribute__ ((deprecated));
-        R12Repulsion(InputMap&, const string &dir=""); // __attribute__ ((deprecated));
+        R12Repulsion(Tmjson &j, const string &sec="lj") : PairPotentialBase(sec) {
+          name="r12-Repulsion";
+          eps = 4*(j[sec]["eps"] | 0.05);
+        }
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=(a.radius+b.radius);
@@ -800,6 +805,7 @@ namespace Faunus {
             x=x*x*x; // r6
             return eps*x*x;
           }
+
         string info(char);
     };
 
@@ -808,7 +814,10 @@ namespace Faunus {
      */
     class LennardJonesR12 : public LennardJones {
       public:
-        LennardJonesR12(InputMap&, const string &dir="");
+        LennardJonesR12( Tmjson &j, const string &sec="ljr12") {//: LennardJones(j,sec) {
+          name+="R12";
+        }
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=r6(a.radius+b.radius,r2);
@@ -821,7 +830,7 @@ namespace Faunus {
      */
     class LennardJonesTrunkShift : public LennardJones {
       public:
-        LennardJonesTrunkShift(InputMap&, const string &dir="");
+        LennardJonesTrunkShift( Tmjson&, const string &sec="");
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -853,9 +862,7 @@ namespace Faunus {
      * where \f$\lambda_B\f$ is the Bjerrum length and \c z are the valencies.
      *
      * Upon construction, the following parameters are read from the
-     * `InputMap` in section `coulomb`. Note that the default root section
-     * in the json file is `system` but may be changed by instantiating
-     * classes.
+     * json section `coulomb`.
      *
      * Keyword        |  Description
      * :------------- | :---------------------
@@ -874,8 +881,8 @@ namespace Faunus {
 
       public:
 
-      Coulomb(Tmjson&);              //!< Construct from json entry
-      Coulomb(InputMap&, const string &dir=""); //!< Construction from InputMap
+      Coulomb(Tmjson&, const string &sec="coulomb"); //!< Construct from json entry
+
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
       template<class Tparticle>
@@ -928,8 +935,8 @@ namespace Faunus {
      * formulation. This potential is expected to work reasonably well
      * for dense liquids, see [here](http://dx.doi.org/10/j97).
      *
-     * Upon construction using an `InputMap` the keywords from `Potential::Coulomb`
-     * are used in addition to `coulomb_cut` to specifify the cut-off.
+     * Upon construction the keywords from `Potential::Coulomb`
+     * are used in addition to `cutoff` to specifify the cut-off.
      */
     class CoulombWolf : public Coulomb {
 
@@ -939,9 +946,7 @@ namespace Faunus {
 
       public:
 
-        CoulombWolf( Tmjson& );
-
-        CoulombWolf( InputMap&, const string &dir=""); //!< Constructor
+        CoulombWolf( Tmjson&, const string &dir="coulomb" );
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -984,7 +989,7 @@ namespace Faunus {
      * For non-polar particles in a polar medium, this is a negative number.
      * For more information, see Israelachvili, Chapter 5.
      *
-     * The InputMap is scanned for
+     * The json object is scanned for
      *
      * - The parameters from `Potential::Coulomb`
      * - `excess_polarization` for the delta value
@@ -994,7 +999,7 @@ namespace Faunus {
       private:
         double c;
       public:
-        ChargeNonpolar(InputMap&, const string &dir=""); //!< Construction from InputMap
+        ChargeNonpolar(Tmjson&, const string &sec="coulomb");
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -1028,7 +1033,7 @@ namespace Faunus {
 
       public:
 
-        YukawaGel(InputMap&, const string &dir);
+        YukawaGel(Tmjson&, const string &sec="yukawagel");
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
@@ -1098,28 +1103,16 @@ namespace Faunus {
 
       public:
 
-        DebyeHuckel( Tmjson &j ) : Coulomb(j) {
+        DebyeHuckel( Tmjson &j, const string &sec="coulomb" ) : Coulomb( j, sec ) {
           const double zero=1e-10;
           name="Debye-Huckel";
           c = 8*lB*pc::pi*pc::Nav/1e27;
-          double I = json()["ionicstrength"] | 0.0;   // [mol/l]
-          z_count  = json()["countervalency"] | 0.0;  // [e]
+          double I = j[sec]["ionicstrength"] | 0.0;   // [mol/l]
+          z_count  = j[sec]["countervalency"] | 0.0;  // [e]
           k2_count = 0;
           k = sqrt( I*c );
           if ( k < zero )
-            k = 1 / ( json()["debyelength"] | 1.0/zero ); // [A]
-        }
-
-        DebyeHuckel(InputMap &in, const string &dir="") : Coulomb(in, dir) {
-          const double zero=1e-10;
-          name="Debye-Huckel";
-          c = 8*lB*pc::pi*pc::Nav/1e27;
-          double I=in( "ionicstrength", 0.0 );  // [mol/l]
-          z_count = in( "countervalency", 0.0 );  // [e]
-          k2_count=0;
-          k=sqrt( I*c );
-          if (k<zero)
-            k = 1/in( "debyelength", 1.0/zero ); // [A]
+            k = 1 / ( j[sec]["debyelength"] | 1.0/zero ); // [A]
         }
 
         template<class Tparticle>
@@ -1323,7 +1316,7 @@ namespace Faunus {
      * where @f$r_c@f$ is a spherical cut-off beyond which the
      * energy is zero.
      * See more in for example <http://dx.doi.org/10/fm7qm5>.
-     * The cut-off distance is read from the InputMap (section `coulomb`) with the following
+     * The cut-off distance is read from json section `coulomb`) with the following
      * keyword:
      * - `cutoff` Spherical cut-off in angstroms (default: infinity)
      */
@@ -1332,9 +1325,9 @@ namespace Faunus {
         double rc2,rc; // (squared) cutoff distance
         double u_rc,dudrc;
       public:
-        DebyeHuckelShift(InputMap &in, const string &dir="") : DebyeHuckel(in,dir) {
-          rc = in( "cutoff", sqrt( std::numeric_limits<double>::max() ) );
-          rc2=rc*rc;
+        DebyeHuckelShift(Tmjson &j, const string &sec="coulomb") : DebyeHuckel(j,sec) {
+          rc = j[sec]["cutoff"] | sqrt( std::numeric_limits<double>::max() );
+          rc2 = rc*rc;
 #ifdef FAU_APPROXMATH
           u_rc = exp_cawley(-k*rc)/rc; // use approx. func even here!
 #else
@@ -1383,7 +1376,7 @@ namespace Faunus {
      * The interaction strength, @f$\epsilon@f$ is set by the
      * quadratic mean of individual values from `AtomData`.
      * By default @f$\alpha=90@f$ and may be changed via
-     * the `cardinaux_alpha` keyword in the `InputMap`.
+     * the `cardinaux/alpha` in the json object.
      * More info at
      * [http://dx.doi.org/doi:10.1209/0295-5075/77/48004]
      *
@@ -1396,16 +1389,18 @@ namespace Faunus {
         }
         int alpha,alphahalf;
         PairMatrix<double> eps; // 4*beta*epsilon for all pairs
+
       public:
-        Cardinaux(InputMap &in, const string &dir="") {
+
+        Cardinaux( Tmjson &j, const string &sec="cardinaux") : PairPotentialBase( sec ) {
           name="Cardinaux";
-          in.cd ( jsondir+"/cardinaux" );
-          alpha=in.get<int>("alpha", 90);
+          alpha = j[sec]["alpha"] | 90;
           alphahalf=0.5*alpha;
           for (auto &i : atom)
             for (auto &j : atom)
               eps.set(i.id, j.id, sqrt( i.eps*j.eps )*4.0_kJmol );
         }
+
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
             double s=a.radius+b.radius;
@@ -1466,7 +1461,7 @@ namespace Faunus {
             };
 
         public:
-          PotentialMap(InputMap &in, const string &dir="") : Tdefault(in, dir) {
+          PotentialMap(Tmjson &j) : Tdefault(j) {
             Tdefault::name += " (default)";
           } 
 
@@ -1543,12 +1538,6 @@ namespace Faunus {
 
           CombinedPairPotential(Tmjson &j) :
             PairPotentialBase(), first(j), second(j) {
-              name=first.name+"+"+second.name;
-              setCutoff();
-            }
-
-          CombinedPairPotential(InputMap &in, const string &dir="") :
-            PairPotentialBase(dir), first(in,dir), second(in,dir) {
               name=first.name+"+"+second.name;
               setCutoff();
             }

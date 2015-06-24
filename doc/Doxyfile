@@ -756,7 +756,6 @@ WARN_LOGFILE           =
 
 INPUT                  = doc \
                          src \
-                         src/tools \
                          src/examples/minimal.cpp \
                          src/examples/keesom.cpp \
                          src/examples/bulk.cpp \
@@ -844,8 +843,7 @@ EXCLUDE_SYMBOLS        =
 # that contain example code fragments that are included (see the \include
 # command).
 
-EXAMPLE_PATH           = src/tools \
-                         doc \
+EXAMPLE_PATH           = doc \
                          src/examples \
                          ./
 

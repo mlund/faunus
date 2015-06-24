@@ -72,8 +72,8 @@ namespace Faunus {
      *
      * This is an external potential due to a charged Gouy-Chapman surface
      *
-     * During construction, the `InputMap` is searched for the following keywords
-     * in section `energy/gouychapman`:
+     * During construction, the passed json object is searched for the following
+     * keywords in section `energy/gouychapman`:
      *
      * Keyword           | Description
      * ----------------- | ------------------------------------------------
@@ -82,13 +82,13 @@ namespace Faunus {
      * `rho`             | Surface charge density [1/A^2] (if qarea not defined)
      * `offset`          | Shift GC surface [A] (default: 0)
      *
-     * The ionic strength is read by `Potential::DebyeHuckel` from the `system`
+     * The ionic strength is read by `Potential::DebyeHuckel` from the `energy/nonbonded`
      * section.
      *
      * Code example:
      * 
      *     typedef Potential::GouyChapman<> Txp;
-     *     InputMap in("input.json");
+     *     Tmjson in("input.json");
      *     Cuboidslit geo(in);
      *     Energy::ExternalPotential<Txp> pot(in);
      *     pot.expot.setSurfPositionZ( &geo.len_half.z() );
@@ -110,7 +110,7 @@ namespace Faunus {
           T offset;      //!< Distance offset for hiding GC surface behind the box surface
           std::string _info();
         public:
-          GouyChapman(InputMap&, string dir=""); //!< Constructor
+          GouyChapman(Tmjson&, const string &sec="gouychapman"); //!< Constructor
           void setSurfPositionZ(T*);       //!< Set surface position on z-axis
           T surfDist(const Point&);        //!< Point<->GC surface distance
           template<typename Tparticle>
@@ -130,24 +130,23 @@ namespace Faunus {
      * bulk salt concentration.
      */
     template<class T, bool linearize>
-      GouyChapman<T,linearize>::GouyChapman(InputMap &in, string dir) : base(dir), dh(in) {
+      GouyChapman<T,linearize>::GouyChapman(Tmjson &j, const string &sec) : base(sec), dh( j["energy"]["nonbonded"] ) {
+        auto js = j["energy"][sec];
         name = "Gouy-Chapman";
-        jsondir += "/gouychapman";
-        in.cd ( jsondir );
         c0 = dh.ionicStrength() * 1.0_molar; // assuming 1:1 salt, so c0=I
         lB = dh.bjerrumLength();
         k  = 1/dh.debyeLength();
-        phi0 = in( "phi0", 0.0 ); // Unitless potential = beta*e*phi0
+        phi0 = js["phi0"] | 0.0; // Unitless potential = beta*e*phi0
         if ( std::abs(phi0) > 1e-6 )
           rho = sqrt(2*c0/(pc::pi*lB))*sinh(.5*phi0); //Evans&Wennerstrom,Colloidal Domain p 138-140
         else {
-          rho = 1/in( "qarea", 0.0 );
+          rho = 1 / (js["qarea"] | 0.0);
           if (rho>1e9)
-            rho = in( "rho", 0.0 );
+            rho = js["rho"] | 0.0;
           phi0 = 2.*asinh(rho * sqrt(0.5*lB*pc::pi/c0 ));//[Evans..]
         }
         gamma0 = tanh(phi0/4); // assuming z=1  [Evans..]
-        offset = in( "offset", 0.0 );
+        offset = js["offset"] | 0.0;
       }
 
     /**

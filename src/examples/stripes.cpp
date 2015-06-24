@@ -8,12 +8,11 @@ namespace Faunus {
     // let's make a new pair potential
     struct CoreShell : public PairPotentialBase {
       double a1,a2,eps;
-      inline CoreShell(InputMap& in, string dir="") : PairPotentialBase(dir) {
+      inline CoreShell(Tmjson &j, const string &sec="coreshell") : PairPotentialBase(sec) {
         name = "Core-shell potential";
-        in.cd ( jsondir + "/coreshell" );
-        a1 = pow( in("core_radius",1.0), 2);
-        a2 = pow( in("shell_radius",2.5), 2);
-        eps = in("epsilon", 0.2);
+        a1 = pow( j[sec]["core_radius"]  | 1.0, 2 );
+        a2 = pow( j[sec]["shell_radius"] | 2.5, 2 );
+        eps = j[sec]["epsilon"] | 0.2;
       }
       template<class Tparticle>
         double operator() (const Tparticle &a, const Tparticle &b, double r2) {

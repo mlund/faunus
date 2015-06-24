@@ -25,7 +25,6 @@ set(hdrs
   ${CMAKE_SOURCE_DIR}/include/faunus/mcloop.h
   ${CMAKE_SOURCE_DIR}/include/faunus/molecule.h
   ${CMAKE_SOURCE_DIR}/include/faunus/physconst.h
-  ${CMAKE_SOURCE_DIR}/include/faunus/picojson.h
   ${CMAKE_SOURCE_DIR}/include/faunus/potentials.h
   ${CMAKE_SOURCE_DIR}/include/faunus/range.h
   ${CMAKE_SOURCE_DIR}/include/faunus/slump.h
@@ -132,7 +131,8 @@ if (CPPCHECK_EXE)
   add_custom_target(
     cppcheck
     COMMAND ${CPPCHECK_EXE}
-    -I ${CMAKE_SOURCE_DIR}/include -j2 --quiet --enable=style
+    -I ${CMAKE_SOURCE_DIR}/include -j2 --quiet --enable=warning
+    #--suppress=noExplicitConstructor --suppress=uninitMemberVar
     ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/moves/*.cpp
     COMMENT "Running C++ static analyzer..."
     )

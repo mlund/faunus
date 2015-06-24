@@ -84,6 +84,13 @@ template <
 class basic_json
 {
   public:
+    template<class T>
+      T operator | ( const T &v ) const {
+        if (is_null())
+          return v;
+        return *this;
+      }
+
     /////////////////////
     // container types //
     /////////////////////

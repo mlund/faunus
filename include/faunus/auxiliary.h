@@ -485,6 +485,18 @@ namespace Faunus {
           setResolution(resolution);
         }
 
+        /** @brief Convert to map */
+        std::map<string,vector<double>> to_map() {
+          std::map<string,vector<double>> m;
+          m["x"].reserve( map.size() );
+          m["y"].reserve( map.size() );
+          for (auto &i : map) {
+            m["x"].push_back( i.first );
+            m["y"].push_back( get( i.first ) );
+          }
+          return m;
+        }
+
         void clear() { map.clear(); }
 
         void setResolution(Tx resolution) {
@@ -740,7 +752,7 @@ namespace Faunus {
    */
   template<class Tx, class Ty, class Tmap>
     Table2D<Tx,Ty> operator-(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
-      assert(a.tabletype=b.tabletype && "Table a and b needs to be of same type");
+      assert(a.tabletype==b.tabletype && "Table a and b needs to be of same type");
       Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
       Tmap a_map = a.getMap();
       Tmap b_map = b.getMap();
@@ -773,7 +785,7 @@ namespace Faunus {
    */
   template<class Tx, class Ty, class Tmap>
     Table2D<Tx,Ty> operator+(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
-      assert(a.tabletype=b.tabletype && "Table a and b needs to be of same type");
+      assert(a.tabletype==b.tabletype && "Table a and b needs to be of same type");
       Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
       Tmap a_map = a.getMap();
       Tmap b_map = b.getMap();

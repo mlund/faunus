@@ -14,7 +14,7 @@ cp -f $source_tests_dir/gcmol.state state 2> /dev/null
 echo '{
   "system" : {
     "cuboid"   : { "len" : 19.0288 },
-    "mcloop"   : { "macro":10, "micro":50000 },
+    "mcloop"   : { "macro":10, "micro":100000 },
     "unittest" : { "testfile":"gcmol.test", "stable":false }
   },
 
@@ -40,7 +40,7 @@ echo '{
   "moves" : {
      "gc" : { "molcombfile":"gcmol.json" },
      "moltransrot" : {
-        "water" : { "dp":0.5, "dprot":0.5, "prob":0.005, "permol":true } 
+        "water" : { "dp":0.5, "dprot":0.5, "prob":0.001, "permol":true } 
      } 
   }
 

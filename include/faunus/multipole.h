@@ -4,7 +4,6 @@
 #include <faunus/common.h>
 #include <faunus/auxiliary.h>
 #include <faunus/species.h>
-#include <faunus/picojson.h>
 
 namespace Faunus {
   namespace json {
@@ -35,6 +34,7 @@ namespace Faunus {
       typedef opair<int> Tpair;
       std::map<Tpair,Tvec> map;
       string atom1, atom2;
+      /*
       auto j=json::open(file);
       for (auto &a : json::object(section, j)) {
         std::istringstream is(a.first);
@@ -47,7 +47,7 @@ namespace Faunus {
         for (int i=0; i<size; i++)
           is2 >> v[i];
         map[pair] = v;
-      }
+      }*/
       return map;
     }
   }//namespace
@@ -839,9 +839,9 @@ namespace Faunus {
             protected:
               double _lB;
             public:
-              IonDipole(InputMap &in, const string &dir="") {
+              IonDipole(Tmjson &j, const string &sec="coulomb") : PairPotentialBase(sec) {
                 name="Ion-dipole";
-                _lB = Coulomb(in,dir).bjerrumLength();
+                _lB = Coulomb(j,sec).bjerrumLength();
               }
 
               /**
@@ -878,9 +878,9 @@ namespace Faunus {
                 _lB = pc::lB(epsilon_r);
               }
               
-              DipoleDipole(InputMap &in, const string &dir="") {
+              DipoleDipole(Tmjson &j, const string &sec="coulomb") : PairPotentialBase(sec) {
                 name="Dipole-dipole";
-                _lB = Coulomb(in,dir).bjerrumLength();
+                _lB = Coulomb(j,sec).bjerrumLength();
               }
               template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {

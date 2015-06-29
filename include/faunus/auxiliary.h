@@ -689,19 +689,12 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          std::unordered_map<double,vector<double>> all;
-          for (int i=0; i<int(v.size())-1; i+=2) {
-            if (v[i+1]!=0) all[v.at(i)].push_back(v.at(i+1));
-          }
+          for (int i=0; i<int(v.size()); i+=2) 
+            this->operator()(v.at(i)) += v.at(i+1);
           double min=std::numeric_limits<double>::max();
-          for (auto &m : all) {
-            double ave = 0;
-            for (auto value : m.second)
-              ave += value;
-            ave /= (double)m.second.size();
-            this->operator()(m.first) = ave;
-            if (ave<min) min=ave;
-          }
+          for (auto &m : map) 
+            if (m.second<min) min=m.second;
+          cout << min << endl;
           for (auto &m : map)
             m.second -= min;
         }
@@ -1030,19 +1023,11 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          std::map<std::pair<double,double>,vector<double>> all;
-          for (int i=0; i<int(v.size())-2; i+=3) {
-            if (v[i+2]!=0) all[std::make_pair(v.at(i),v.at(i+1))].push_back(v.at(i+2));
-          }
+          for (int i=0; i<int(v.size()); i+=3)
+            this->operator()(v.at(i),v.at(i+1)) += v.at(i+2);
           double min=std::numeric_limits<double>::max();
-          for (auto &m : all) {
-            double ave = 0;
-            for (auto value : m.second)
-              ave += value;
-            ave /= (double)m.second.size();
-            this->operator()(m.first.first,m.first.second) = ave;
-            if (ave<min) min=ave;
-          }
+          for (auto &m : map) 
+            if (m.second<min) min=m.second;
           for (auto &m : map)
             m.second -= min;
         }

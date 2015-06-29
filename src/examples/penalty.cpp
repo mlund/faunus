@@ -13,8 +13,10 @@ struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
       if (p[i].x() >=-0.25 && p[i].x() <= 0.75) return 3*s;
       if (p[i].x() >= 0.75 && p[i].x() <= 1.75) return 4*s;
       if (p[i].x() >= 1.75 && p[i].x() <= 2.00) return 5*s;
-      return pc::infty;
-
+      return 1e10;
+    }
+    auto tuple() -> decltype(std::make_tuple(this)) {
+      return std::make_tuple(this);
     }
     double g_external(const Tpvec &p, Group &g) FOVERRIDE { //pot. on group
       double u=0;
@@ -35,49 +37,61 @@ struct coordinates { //function that defines the reaction coordinates
 Group* coordinates::pg;
 
 int main() {
-  Faunus::MPI::MPIController mpi;                     // init MPI
-  InputMap mcp(textio::prefix+"penalty.input");       // read input file
+  // In MPI version:
+  // Faunus::MPI::MPIController mpi; // init MPI
+
+  InputMap mcp("penalty.json"); // read input file
+  MCLoop loop(mcp); // class for handling mc loops
 
   auto pot
     = myenergy()                                      // our custom potential!
-    + Energy::PenaltyEnergy<Tspace,coordinates>(mpi, mcp);
-  auto penalty = &pot.second;                         // penalty function
+    + Energy::PenaltyEnergy<Tspace,coordinates>(mcp);
+
+  // In MPI version:
+  // + Energy::PenaltyEnergy<Tspace,coordinates>(mpi, mcp);
+
+  auto penalty = std::get<1>( pot.tuple() );
 
   Tspace spc(mcp);                                    // create simulation space
-  Move::AtomicTranslation<Tspace> trans(mcp,pot,spc); // translational move
+  auto myparticle = spc.findMolecules("myparticle");
+  Group mygroup(myparticle.front()->front(), myparticle.back()->back());
+  mygroup.setMolSize(1);
   coordinates::pg = &mygroup;                         // set penalized group
-
   EnergyDrift sys;                                    // class for tracking system energy drifts
+  
+  // In MPI version:
+  // slump.setDiscard(mpi.rank()+1);
+  penalty->load("pf_");
+
+  // Markov moves
+  Move::Propagator<Tspace> mv(mcp, pot, spc);
+
+  Table3D<double,double> histo(0.1, 0.1, Table3D<double,double>::HISTOGRAM);
+
   sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // store total energy
 
-  slump.seed();
-  int sweeps = 0;
-
-  MCLoop loop(mcp);                                   // handle mc loops
-  while ( loop[0] ) {                                 // start markov chain
+  while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      sys(trans.recycle());                           // translate particle
-      ++sweeps;
-      //increment the histogram and/or update the penalty function using waste recycling
-      sys += penalty->update(penalty->coordpair,sys.weight,sys.rejection); 
+      sys+=mv.move();  // translate particle
+      ++histo(spc.p[mygroup.front()].x(),spc.p[mygroup.front()].y());
     }
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
-
-    // save to disk
-    if (sweeps == 2.5e5)
-      penalty->save(textio::prefix+"init_"); // initial histogram obtained without penalty
-    else
-      penalty->save(textio::prefix);
   }
+  auto it_min = histo.min();
+  histo.save("histo"+std::to_string(histo.getMap().size()),1./it_min->second);
+  penalty->save("pf_");
+
+  cout << loop.info() + mv.info() + penalty->info() + sys.info();
+
   // perform unit 
+  if (penalty->penalty_update(true)) {
   UnitTest test(mcp);
-  trans.test(test);
+  mv.test(test);
   sys.test(test);
   penalty->test(test);
-
-  mpi.cout << trans.info() + loop.info() + penalty->info() + sys.info() + test.info();
-
+  cout << test.info();
   return test.numFailed();
+  }
 }
 /**
   @page example_penalty Example: Penalty Function
@@ -115,22 +129,18 @@ int main() {
   MPI using a master-slave scheme. Each system has its own rank and random seed.
   Samplings of the configurational space from all processes are merged by 
   periodically summing up the two-dimensional distribution functions.
-  The input files, `mpi$rank.penalty.input`, for this example look like this:
+  The parameters to be set in the input file are following:
 
   ~~~
-  loop_macrosteps         100       # 2 * number of updates of penalty function
-  loop_microsteps         250000    # number of moves between printing histograms
-  penalty_update          500000    # number of moves between updates
-  penalty_size            20000     # must be >= max number of points in the histogram (i.e. 41x41=1681)
-  penalty_bw1             0.1       # bin width of 1st coordinate
-  penalty_bw2             0.1       # bin width of 2nd coordinate
-  penalty_lo1             -2.0      # lower limit of 1st coordinate
-  penalty_hi1             2.0       # upper limit of 1st coordinate
-  penalty_lo2             -2.0      # lower limit of 2nd coordinate
-  penalty_hi2             2.0       # upper limit of 2nd coordinate
-  cuboid_len              4         # box side length Angstrom
-  mv_particle_genericdp   0.5       # translational displacement [Angstrom]
-  seed_value              $seed     # random seed
+  f0              1.0       # initial increment to the penalty function
+  scale           0.8       # factor by which f0 is scaled
+  update          1e5       # number of MC sweeps before scaling f0
+  bw1             0.1       # bin width of 1st coordinate
+  bw2             0.1       # bin width of 2nd coordinate
+  lo1             -2.0      # lower limit of 1st coordinate
+  hi1             2.0       # upper limit of 1st coordinate
+  lo2             -2.0      # lower limit of 2nd coordinate
+  hi2             2.0       # upper limit of 2nd coordinate
   ~~~
 
   penalty.cpp

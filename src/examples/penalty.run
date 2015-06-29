@@ -9,53 +9,40 @@ mpicommand=$1
 source_tests_dir="`dirname $0`"
 cp -f $source_tests_dir/penalty.test . 2> /dev/null
 
-# Make input files for each MPI process with different random seed
-for rank in {0..3}
-do
-if [ "$rank" == "0" ]; then seed=-13; fi 
-if [ "$rank" == "1" ]; then seed=-17; fi 
-if [ "$rank" == "2" ]; then seed=-19; fi 
-if [ "$rank" == "3" ]; then seed=-23; fi 
-
+function mkinput() {
 echo '{
-  "atomlist" : { "A" : { "dp":0.5 } },
+  "atomlist" : { "A" : { "r":0, "dp":0.5 } },
 
-  "moleculelist" : {
-    "myparticles" : { "atoms":"A", "atomic":true, "Ninit":1 }
-  },
+  "moleculelist" : { "myparticle" : { "atoms":"A", "atomic":true, "Ninit":1 } },
 
-  "moves" : {
-    "atomtranslate" : {
-      "myparticles" : { }
-    }
-  },
+  "energy" : { "penalty" : { "f0":'$f', "scale":0.2, "update":1e4, "bw1":0.1, "bw2":0.1, "lo1":-2, "hi1":2, "lo2":-2, "hi2":2 } },
+  
+  "moves" : { "atomtranslate" : { "myparticle" : { "peratom":true, "prob":1 } } },
 
   "system" : {
-    "Tscale"       : '$Tscale',
-    "cuboid"       : { "len" : 4. },
-    "mcloop"       : { "macro":50, "micro":250000 },
-    "unittest"     : { "testfile":"penalty.test", "stable":false }
+    "cuboid"   : { "len":4 },
+    "mcloop"   : { "macro":10, "micro":'$micro' },
+    "unittest" : { "testfile":"penalty.test", "stable":false }
   }
-}' > mpi$proc.penalty.json
-
-echo "
-penalty_update          500000    # number of moves between updates
-penalty_size            2000      # must be >= max number of points in the histogram (i.e. 41x41=1681)
-penalty_bw1             0.1       # bin width of 1st coordinate
-penalty_bw2             0.1       # bin width of 2nd coordinate
-penalty_lo1             -2.0      # lower limit of 1st coordinate
-penalty_hi1             2.0       # upper limit of 1st coordinate
-penalty_lo2             -2.0      # lower limit of 2nd coordinate
-penalty_hi2             2.0       # upper limit of 2nd coordinate
-" > mpi$rank.penalty.input
-done
-
+}' > penalty.json
+}
 exe=./penalty
-# Run simulation
-if [ -x $exe ]; then
+# Run simulations
+  f=0
+  micro=50000
+  rm pf_penalty
+  mkinput
+  #$exe
+  $mpicommand -n 1 $exe
+  f=1
+  micro=10000
+  rm pf_penalty
+  mkinput
+  #$exe
   $mpicommand -n 4 $exe
-  rc=$?
-  #rm mpi*
-  exit $rc
-fi
+  f=0
+  micro=50000
+  mkinput
+  #$exe
+  $mpicommand -n 1 $exe
 exit 1

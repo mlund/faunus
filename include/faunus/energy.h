@@ -1535,15 +1535,15 @@ namespace Faunus {
 #endif
       public:
         /**
-         *          * @brief Constructor (RC=reaction coordinate)
-         *                   *
-         *                            * @param f0 Initial increment to the penalty function (default 0.5)
-         *                                     * @param scale Factor by which f0 is scaled (default 0.8)
-         *                                              * @param updates Number of MC sweeps before scaling f0 (default 1e5)
-         *                                                       * @param bw1 Bin width of RC (default 0.1)
-         *                                                                * @param lo1 Lower limit of RC (default -2)
-         *                                                                         * @param hi1 Lower limit of RC (default 2)
-         *                                                                                  */
+         ** @brief Constructor (RC=reaction coordinate)
+         **
+         ** @param f0 Initial increment to the penalty function (default 0.5)
+         ** @param scale Factor by which f0 is scaled (default 0.8)
+         ** @param updates Number of MC sweeps before scaling f0 (default 1e5)
+         ** @param bw1 Bin width of RC (default 0.1)
+         ** @param lo1 Lower limit of RC (default -2)
+         ** @param hi1 Lower limit of RC (default 2)
+         **/
         PenaltyFunction1D(Tmjson &j, double bw1, double bw2)
           : Tbase(bw1,Tbase::XYDATA) {
             Tbase::name = "penalty";
@@ -1582,11 +1582,11 @@ namespace Faunus {
         }
 #ifdef ENABLE_MPI
         /**
-         *          * @brief Merge histograms obtained from parallel processes with different seeds
-         *                   *
-         *                            * @details Slave processes send histograms to the master. The master computes the 
-         *                                     * sum over all histograms and sends it back to the slaves.
-         *                                              */
+         ** @brief Merge histograms obtained from parallel processes with different seeds
+         **
+         ** @details Slave processes send histograms to the master. The master computes the 
+         ** sum over all histograms and sends it back to the slaves.
+         **/
         void exchange() {
           if (!mpiPtr->isMaster()) {
             std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
@@ -1615,7 +1615,7 @@ namespace Faunus {
         }
 #endif
         /** @brief Update histogram of single processes and penalty function 
-         *         */
+         **/
         double update(double coord) {
           round(coord);
           ++_cnt;
@@ -1644,11 +1644,11 @@ namespace Faunus {
           Tbase::save(filename+"penalty",1.,-it_min->second);
         }
         /** 
-         *          * @brief Translate penalty by a reference value and save it to disk. 
-         *                   *
-         *                            * @details The reference value is obtained by averaging over a region of the
-         *                                     * reaction coordinate space.
-         *                                              */
+         ** @brief Translate penalty by a reference value and save it to disk. 
+         **
+         ** @details The reference value is obtained by averaging over a region of the
+         ** reaction coordinate space.
+         **/
         void save_final(const string &filename, 
             double a, double b, double c, double d) {
           double ref_value = - Tbase::ave(a,b);
@@ -1696,18 +1696,18 @@ namespace Faunus {
 #endif
       public:
         /**
-         *          * @brief Constructor (RC=reaction coordinate)
-         *                   *
-         *                            * @param f0 Initial increment to the penalty function (default 0.5)
-         *                                     * @param scale Factor by which f0 is scaled (default 0.8)
-         *                                              * @param update Number of MC sweeps before scaling f0 (default 4)
-         *                                                       * @param bw1 Bin width of 1st RC (default 0.1)
-         *                                                                * @param bw2 Bin width of 2nd RC (default 0.1)
-         *                                                                         * @param lo1 Lower limit of 1st RC (default -2)
-         *                                                                                  * @param hi1 Lower limit of 1st RC (default 2)
-         *                                                                                           * @param lo2 Lower limit of 2nd RC (default -2)
-         *                                                                                                    * @param hi2 Lower limit of 2nd RC (default 2)
-         *                                                                                                             */
+         ** @brief Constructor (RC=reaction coordinate)
+         **
+         ** @param f0 Initial increment to the penalty function (default 0.5)
+         ** @param scale Factor by which f0 is scaled (default 0.8)
+         ** @param update Number of MC sweeps before scaling f0 (default 4)
+         ** @param bw1 Bin width of 1st RC (default 0.1)
+         ** @param bw2 Bin width of 2nd RC (default 0.1)
+         ** @param lo1 Lower limit of 1st RC (default -2)
+         ** @param hi1 Lower limit of 1st RC (default 2)
+         ** @param lo2 Lower limit of 2nd RC (default -2)
+         ** @param hi2 Lower limit of 2nd RC (default 2)
+         **/
         PenaltyFunction2D(Tmjson &j, double bw1, double bw2)
           : Tbase(bw1, bw2, Tbase::XYDATA) {
             Tbase::name = "penalty";
@@ -1753,11 +1753,11 @@ namespace Faunus {
         }
 #ifdef ENABLE_MPI
         /**
-         *          * @brief Merge histograms obtained from parallel processes with different seeds
-         *                   *
-         *                            * @details Slave processes send histograms to the master. The master computes the 
-         *                                     * sum over all histograms and sends it back to the slaves.
-         *                                              */
+         ** @brief Merge histograms obtained from parallel processes with different seeds
+         **
+         ** @details Slave processes send histograms to the master. The master computes the 
+         ** sum over all histograms and sends it back to the slaves.
+         **/
         void exchange() {
           if (!mpiPtr->isMaster()) {
             std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
@@ -1786,7 +1786,7 @@ namespace Faunus {
         }         
 #endif
         /** @brief Update histogram of single processes and penalty function
-         *         */ 
+         **/ 
         double update(Tpair coord) {
           round(coord);
           ++_cnt;
@@ -1819,11 +1819,11 @@ namespace Faunus {
           Tbase::save(filename+"penalty",1.,-it_min->second);
         }
         /** 
-         *          * @brief Translate penalty by a reference value and save it to disk. 
-         *                   *
-         *                            * @details The reference value is obtained by averaging over a region of the
-         *                                     * reaction coordinate space.
-         *                                              */
+         ** @brief Translate penalty by a reference value and save it to disk. 
+         **
+         ** @details The reference value is obtained by averaging over a region of the
+         ** reaction coordinate space.
+         **/
         void save_final(const string &filename,
             double a, double b, double c, double d) {
           double ref_value = - Tbase::ave(a,b,c,d);
@@ -1859,74 +1859,75 @@ namespace Faunus {
         }
     };
     /**
-     *      * @brief General energy class for handling penalty function (PF) methods.
-     *           *
-     *                * @details User-defined reaction coordinate(s) are provided by an external function, f.
-     *                     * f is a member of a class given as a template argument.
-     *                          * The return type of f can be either a double or a pair of doubles.
-     *                               * The dimensionality of the penalty function is inferred from the return value of f.
-     *                                    * The InputMap class is scanned for the following keys:
-     *                                         *
-     *                                              * Key              | Description
-     *                                                   * :--------------- | :-----------------------------
-     *                                                        * `size`   | total number of points in the PF
-     *                                                             * `update` | number of MC sweeps before scaling f0
-     *                                                                  * `f0`     | modification factor
-     *                                                                       * `scale`  | scaling factor to update f0
-     *                                                                            * `bw1`    | bin width of 1st coordinate
-     *                                                                                 * `bw2`    | bin width of 2nd coordinate
-     *                                                                                      * `lo1`    | lower limit of 1st coordinate
-     *                                                                                           * `hi1`    | upper limit of 1st coordinate
-     *                                                                                                * `lo2`    | lower limit of 2nd coordinate
-     *                                                                                                     * `hi2`    | upper limit of 2nd coordinate
-     *                                                                                                          */
-    template<class Tspace, class Tfunction>
-                                           class PenaltyEnergy : public Energybase<Tspace> {
-                                             private:
-                                               string _info() { return "Energy from Penalty Function\n"; }
-                                               Tspace* spcPtr;
-                                               Tfunction f;
-                                               typedef decltype(f(spcPtr->p)) Treturn; // type of coordinate
-                                               typedef Energybase<Tspace> Tbase;
-                                               typedef typename Tspace::p_vec Tpvec;
-                                               typedef typename Energy::PenaltyFunction1D Tone;
-                                               typedef typename Energy::PenaltyFunction2D Ttwo;
-                                               typedef typename std::conditional<std::is_same<double,Treturn>::value,Tone,Ttwo>::type Tpf;
-                                             public:
-                                               Tpf pf;
-                                               std::pair<Treturn,Treturn> coordpair; // current and trial coordinates
-                                               PenaltyEnergy(Tmjson &j, const string &sec="penalty")
-                                                 : pf(j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
+     ** @brief General energy class for handling penalty function (PF) methods.
+     **
+     ** @details User-defined reaction coordinate(s) are provided by an external function, f.
+     ** f is a member of a class given as a template argument.
+     ** The return type of f can be either a double or a pair of doubles.
+     ** The dimensionality of the penalty function is inferred from the return value of f.
+     ** The InputMap class is scanned for the following keys:
+     **
+     ** Key              | Description
+     ** :--------------- | :-----------------------------
+     ** `size`   | total number of points in the PF
+     ** `update` | number of MC sweeps before scaling f0
+     ** `f0`     | modification factor
+     ** `scale`  | scaling factor to update f0
+     ** `bw1`    | bin width of 1st coordinate
+     ** `bw2`    | bin width of 2nd coordinate
+     ** `lo1`    | lower limit of 1st coordinate
+     ** `hi1`    | upper limit of 1st coordinate
+     ** `lo2`    | lower limit of 2nd coordinate
+     ** `hi2`    | upper limit of 2nd coordinate
+     **/
+  template<class Tspace, class Tfunction>
+    class PenaltyEnergy : public Energybase<Tspace> {
+      private:
+        string _info() { return "Energy from Penalty Function\n"; }
+        Tspace* spcPtr;
+        Tfunction f;
+        typedef decltype(f(spcPtr->p)) Treturn; // type of coordinate
+        typedef Energybase<Tspace> Tbase;
+        typedef typename Tspace::p_vec Tpvec;
+        typedef typename Energy::PenaltyFunction1D Tone;
+        typedef typename Energy::PenaltyFunction2D Ttwo;
+        typedef typename std::conditional<std::is_same<double,Treturn>::value,Tone,Ttwo>::type Tpf;
+      public:
+        Tpf pf;
+        std::pair<Treturn,Treturn> coordpair; // current and trial coordinates
+        PenaltyEnergy(Tmjson &j, const string &sec="penalty")
+          : pf(j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
 #ifdef ENABLE_MPI
-                                               PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec="penalty")
-                                                 : pf(mpi, j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
+        PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec="penalty")
+          : pf(mpi, j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
 #endif
-                                               string info() { return pf.info(); }
-                                               auto tuple() -> decltype(std::make_tuple(this)) {
-                                                 return std::make_tuple(this);
-                                               }
-                                               void test(UnitTest &t) { pf.test(t); }
-                                               void load(const string &filename="") { pf.load(filename); }
-                                               void save(const string &filename="") { pf.save(filename); }
-                                               void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
-                                                 pf.save_final(filename, a, b, c, d); 
-                                               }
-                                               double penalty_update(bool outcome) {
-                                                 if (!outcome) coordpair.first = coordpair.second; // if rejected use current
-                                                 return pf.update(coordpair.first);
-                                               }
-                                               std::map<Treturn,double> getMap() { return pf.getMap(); }
-                                               double find(Treturn c) { return pf.find(c); }
-                                               double penalty(const Tpvec &p) {
-                                                 double du;
-                                                 Treturn coor = f(p);
-                                                 if (Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
-                                                 else coordpair.second=coor; // current coordinate is stored
-                                                 if (!pf.isInrange(coor)) du = 1e20;
-                                                 else du = pf.find(coor);
-                                                 return du;
-                                               }
-                                           };
+        string info() { return pf.info(); }
+        auto tuple() -> decltype(std::make_tuple(this)) {
+          return std::make_tuple(this);
+        }
+        void test(UnitTest &t) { pf.test(t); }
+        void load(const string &filename="") { pf.load(filename); }
+        void save(const string &filename="") { pf.save(filename); }
+        void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
+          pf.save_final(filename, a, b, c, d); 
+        }
+        double penalty_update(bool outcome) {
+          if (!outcome) coordpair.first = coordpair.second; // if rejected use current
+          return pf.update(coordpair.first);
+        }
+        std::map<Treturn,double> getMap() { return pf.getMap(); }
+        double find(Treturn c) { return pf.find(c); }
+        double penalty(const Tpvec &p) {
+          double du;
+          Treturn coor = f(p);
+          if (Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
+          else coordpair.second=coor; // current coordinate is stored
+          if (!pf.isInrange(coor)) du = 1e20;
+          else du = pf.find(coor);
+          return du;
+        }
+    };
+
     /**
      * @brief Energy class for manybody interactions such as dihedrals and angular potentials
      *

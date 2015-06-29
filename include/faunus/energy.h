@@ -12,7 +12,6 @@
 #include <faunus/auxiliary.h>
 #include <faunus/bonded.h>
 #endif
-
 #ifdef ENABLE_MPI
 #include <faunus/mpi.h>
 #endif
@@ -1522,761 +1521,760 @@ namespace Faunus {
           }
       };
 
-      class PenaltyFunction1D : public Table2D<double,double> {
-        private:
-          int _cnt, _update, _size;
-          double _f, _scale, _du, _lo, _hi, _bw;
-          std::pair<double,int> extreme;
-          typedef std::pair<double,double> Tpair;
-          typedef Table2D<double,double> Tbase;
+    class PenaltyFunction1D : public Table2D<double,double> {
+      private:
+        int _cnt, _update, _size;
+        double _f, _scale, _du, _lo, _hi, _bw;
+        std::pair<double,int> extreme;
+        typedef std::pair<double,double> Tpair;
+        typedef Table2D<double,double> Tbase;
 #ifdef ENABLE_MPI
-          typedef Faunus::MPI::FloatTransmitter::floatp floatp;
-          Faunus::MPI::MPIController *mpiPtr; 
-          Faunus::MPI::FloatTransmitter ft;
+        typedef Faunus::MPI::FloatTransmitter::floatp floatp;
+        Faunus::MPI::MPIController *mpiPtr; 
+        Faunus::MPI::FloatTransmitter ft;
 #endif
-        public:
-          /**
-           * @brief Constructor (RC=reaction coordinate)
-           *
-           * @param f0 Initial increment to the penalty function (default 0.5)
-           * @param scale Factor by which f0 is scaled (default 0.8)
-           * @param updates Number of MC sweeps before scaling f0 (default 1e5)
-           * @param bw1 Bin width of RC (default 0.1)
-           * @param lo1 Lower limit of RC (default -2)
-           * @param hi1 Lower limit of RC (default 2)
-           */
-          PenaltyFunction1D(Tmjson &j, double bw1, double bw2)
-            : Tbase(bw1,Tbase::XYDATA) {
-              Tbase::name = "penalty";
-              auto m  = j["energy"][Tbase::name];    
-              _f = m["f0"] | 0.5;
-              _scale = m["scale"] | 0.8;
-              _update = m["update"] | 1e5;
-              _bw = bw1;
-              _lo = m["lo1"] | -2.0;
-              _hi = m["hi1"] | 2.0;
-              _cnt = 0.0;
-              _du = 0.0;
-            }
-#ifdef ENABLE_MPI
-          PenaltyFunction1D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
-            : Tbase(bw1,Tbase::XYDATA), mpiPtr(&mpi) {
-              Tbase::name = "penalty";
-              auto m  = j["energy"][Tbase::name];    
-              _f = m["f0"] | 0.5;
-              _scale = m["scale"] | 0.8;
-              _update = m["update"] | 1e5;
-              _bw = bw1;
-              _lo = m["lo1"] | -2.0;
-              _hi = m["hi1"] | 2.0;
-              _size = 2*(_hi-_lo)/_bw+2.;
-              _cnt = 0.0;
-              _du = 0.0;
-            }
-#endif
-          /** @brief Check if coordinate is within user-defined range */
-          bool isInrange(double &coord) {
-            return (coord>=_lo && coord<=_hi);
-          }
-          void round(double &x) { 
-            x = (x>=0) ? int( x/_bw+0.5 )*_bw : int( x/_bw-0.5 )*_bw; 
+      public:
+        /**
+         *          * @brief Constructor (RC=reaction coordinate)
+         *                   *
+         *                            * @param f0 Initial increment to the penalty function (default 0.5)
+         *                                     * @param scale Factor by which f0 is scaled (default 0.8)
+         *                                              * @param updates Number of MC sweeps before scaling f0 (default 1e5)
+         *                                                       * @param bw1 Bin width of RC (default 0.1)
+         *                                                                * @param lo1 Lower limit of RC (default -2)
+         *                                                                         * @param hi1 Lower limit of RC (default 2)
+         *                                                                                  */
+        PenaltyFunction1D(Tmjson &j, double bw1, double bw2)
+          : Tbase(bw1,Tbase::XYDATA) {
+            Tbase::name = "penalty";
+            auto m  = j["energy"][Tbase::name];    
+            _f = m["f0"] | 0.5;
+            _scale = m["scale"] | 0.8;
+            _update = m["update"] | 1e5;
+            _bw = bw1;
+            _lo = m["lo1"] | -2.0;
+            _hi = m["hi1"] | 2.0;
+            _cnt = 0.0;
+            _du = 0.0;
           }
 #ifdef ENABLE_MPI
-          /**
-           * @brief Merge histograms obtained from parallel processes with different seeds
-           *
-           * @details Slave processes send histograms to the master. The master computes the 
-           * sum over all histograms and sends it back to the slaves.
-           */
-          void exchange() {
-            if (!mpiPtr->isMaster()) {
-              std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
-              std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
-              Tbase::clear();
-              for (int i=0; i<int(recvBuf.size()); i+=2)
-                if (recvBuf[i+1]!=0) Tbase::operator()(recvBuf.at(i))=recvBuf.at(i+1);
-            }
-            if (mpiPtr->isMaster()) {
-              std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
-              std::vector<floatp> recvBuf(_size);
-              for (int i=0; i<mpiPtr->nproc(); ++i) {
-                if (i==mpiPtr->rankMaster()) continue;
-                ft.recvf(*mpiPtr, i, recvBuf);
-                ft.waitrecv();
-                sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
-              }
-              Tbase::buf2hist(sendBuf);
-              sendBuf = Tbase::hist2buf(_size);
-              for (int i=0; i<mpiPtr->nproc(); ++i) {
-                if (i==mpiPtr->rankMaster()) continue;
-                ft.sendf(*mpiPtr, sendBuf, i);
-                ft.waitsend();
-              }
-            }
+        PenaltyFunction1D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
+          : Tbase(bw1,Tbase::XYDATA), mpiPtr(&mpi) {
+            Tbase::name = "penalty";
+            auto m  = j["energy"][Tbase::name];    
+            _f = m["f0"] | 0.5;
+            _scale = m["scale"] | 0.8;
+            _update = m["update"] | 1e5;
+            _bw = bw1;
+            _lo = m["lo1"] | -2.0;
+            _hi = m["hi1"] | 2.0;
+            _size = 2*(_hi-_lo)/_bw+2.;
+            _cnt = 0.0;
+            _du = 0.0;
           }
 #endif
-          /** @brief Update histogram of single processes and penalty function 
-           */
-          double update(double coord) {
-            round(coord);
-            ++_cnt;
-            Tbase::operator()(coord) += _f; 
-            _du = _f;
-            if (coord==_lo || coord==_hi) {
-              Tbase::operator()(coord) += _f;
-              _du += _f;
+        /** @brief Check if coordinate is within user-defined range */
+        bool isInrange(double &coord) {
+          return (coord>=_lo && coord<=_hi);
+        }
+        void round(double &x) { 
+          x = (x>=0) ? int( x/_bw+0.5 )*_bw : int( x/_bw-0.5 )*_bw; 
+        }
+#ifdef ENABLE_MPI
+        /**
+         *          * @brief Merge histograms obtained from parallel processes with different seeds
+         *                   *
+         *                            * @details Slave processes send histograms to the master. The master computes the 
+         *                                     * sum over all histograms and sends it back to the slaves.
+         *                                              */
+        void exchange() {
+          if (!mpiPtr->isMaster()) {
+            std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
+            std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
+            Tbase::clear();
+            for (int i=0; i<int(recvBuf.size()); i+=2)
+              if (recvBuf[i+1]!=0) Tbase::operator()(recvBuf.at(i))=recvBuf.at(i+1);
+          }
+          if (mpiPtr->isMaster()) {
+            std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
+            std::vector<floatp> recvBuf(_size);
+            for (int i=0; i<mpiPtr->nproc(); ++i) {
+              if (i==mpiPtr->rankMaster()) continue;
+              ft.recvf(*mpiPtr, i, recvBuf);
+              ft.waitrecv();
+              sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
             }
-            if (_cnt>_update && _cnt%_update==0) {
+            Tbase::buf2hist(sendBuf);
+            sendBuf = Tbase::hist2buf(_size);
+            for (int i=0; i<mpiPtr->nproc(); ++i) {
+              if (i==mpiPtr->rankMaster()) continue;
+              ft.sendf(*mpiPtr, sendBuf, i);
+              ft.waitsend();
+            }
+          }
+        }
+#endif
+        /** @brief Update histogram of single processes and penalty function 
+         *         */
+        double update(double coord) {
+          round(coord);
+          ++_cnt;
+          Tbase::operator()(coord) += _f; 
+          _du = _f;
+          if (coord==_lo || coord==_hi) {
+            Tbase::operator()(coord) += _f;
+            _du += _f;
+          }
+          if (_cnt>_update && _cnt%_update==0) {
 #ifdef ENABLE_MPI               
-              if ( mpiPtr->nproc() > 1 ) {
-                _du = Tbase::operator()(coord) - _du;
-                exchange();
-                _du = Tbase::operator()(coord) - _du;
-              }
+            if ( mpiPtr->nproc() > 1 ) {
+              _du = Tbase::operator()(coord) - _du;
+              exchange();
+              _du = Tbase::operator()(coord) - _du;
+            }
 #endif                
-              _f = _scale * _f;
-              _update = _update / _scale;
-            }
-            return _du;
+            _f = _scale * _f;
+            _update = _update / _scale;
           }
-          /** @brief Save table to disk */
-          void save(const string &filename) {
+          return _du;
+        }
+        /** @brief Save table to disk */
+        void save(const string &filename) {
+          auto it_min = Tbase::min();
+          Tbase::save(filename+"penalty",1.,-it_min->second);
+        }
+        /** 
+         *          * @brief Translate penalty by a reference value and save it to disk. 
+         *                   *
+         *                            * @details The reference value is obtained by averaging over a region of the
+         *                                     * reaction coordinate space.
+         *                                              */
+        void save_final(const string &filename, 
+            double a, double b, double c, double d) {
+          double ref_value = - Tbase::ave(a,b);
+          Tbase::save(filename+"penalty_fin",1.,ref_value);
+        }
+        /** @brief Load table to disk */
+        void load(const string &filename) {
+          Tbase::load(filename+"penalty");
+        }
+        void test(UnitTest &t) {
+          if (!Tbase::getMap().empty()) {
+            auto it_max = Tbase::max();
             auto it_min = Tbase::min();
-            Tbase::save(filename+"penalty",1.,-it_min->second);
+            t("penalty1D_range",it_max->second-it_min->second,0.1);
           }
-          /** 
-           * @brief Translate penalty by a reference value and save it to disk. 
-           *
-           * @details The reference value is obtained by averaging over a region of the
-           * reaction coordinate space.
-           */
-          void save_final(const string &filename, 
-              double a, double b, double c, double d) {
-            double ref_value = - Tbase::ave(a,b);
-            Tbase::save(filename+"penalty_fin",1.,ref_value);
+        }
+        string info() {
+          using namespace Faunus::textio;
+          std::ostringstream o;
+          if (_f!=0) {
+            o << header("1D penalty function");
+            char w=25;
+            auto it_max = Tbase::max();
+            auto it_min = Tbase::min();
+            o << pad(SUB,w, "Final f") << _f << endl
+              << pad(SUB,w, "x-minimum") << it_min->first << endl 
+              << pad(SUB,w, "x-maximum") << it_max->first << endl 
+              << pad(SUB,w, "y-maximum") << it_max->second << endl; 
           }
-          /** @brief Load table to disk */
-          void load(const string &filename) {
-            Tbase::load(filename+"penalty");
-          }
-          void test(UnitTest &t) {
-            if (!Tbase::getMap().empty()) {
-              auto it_max = Tbase::max();
-              auto it_min = Tbase::min();
-              t("penalty1D_range",it_max->second-it_min->second,0.1);
-            }
-          }
-          string info() {
-            using namespace Faunus::textio;
-            std::ostringstream o;
-            if (_f!=0) {
-              o << header("1D penalty function");
-              char w=25;
-              auto it_max = Tbase::max();
-              auto it_min = Tbase::min();
-              o << pad(SUB,w, "Final f") << _f << endl
-                << pad(SUB,w, "x-minimum") << it_min->first << endl 
-                << pad(SUB,w, "x-maximum") << it_max->first << endl 
-                << pad(SUB,w, "y-maximum") << it_max->second << endl; 
-            }
-            return o.str();
-          }
-      };
+          return o.str();
+        }
+    };
 
-      class PenaltyFunction2D : public Table3D<double,double> {
-        private:
-          int _cnt, _update, _size;
-          double _f, _scale, _du;
-          double _bw1, _bw2, _lo1, _hi1, _lo2, _hi2;
-          typedef std::pair<double,double> Tpair;
-          typedef Table3D<double,double> Tbase;
+    class PenaltyFunction2D : public Table3D<double,double> {
+      private:
+        int _cnt, _update, _size;
+        double _f, _scale, _du;
+        double _bw1, _bw2, _lo1, _hi1, _lo2, _hi2;
+        typedef std::pair<double,double> Tpair;
+        typedef Table3D<double,double> Tbase;
 #ifdef ENABLE_MPI
-          typedef Faunus::MPI::FloatTransmitter::floatp floatp;
-          Faunus::MPI::MPIController *mpiPtr; 
-          Faunus::MPI::FloatTransmitter ft;
+        typedef Faunus::MPI::FloatTransmitter::floatp floatp;
+        Faunus::MPI::MPIController *mpiPtr; 
+        Faunus::MPI::FloatTransmitter ft;
 #endif
-        public:
-          /**
-           * @brief Constructor (RC=reaction coordinate)
-           *
-           * @param f0 Initial increment to the penalty function (default 0.5)
-           * @param scale Factor by which f0 is scaled (default 0.8)
-           * @param update Number of MC sweeps before scaling f0 (default 4)
-           * @param bw1 Bin width of 1st RC (default 0.1)
-           * @param bw2 Bin width of 2nd RC (default 0.1)
-           * @param lo1 Lower limit of 1st RC (default -2)
-           * @param hi1 Lower limit of 1st RC (default 2)
-           * @param lo2 Lower limit of 2nd RC (default -2)
-           * @param hi2 Lower limit of 2nd RC (default 2)
-           */
-          PenaltyFunction2D(Tmjson &j, double bw1, double bw2)
-            : Tbase(bw1, bw2, Tbase::XYDATA) {
-              Tbase::name = "penalty";
-              auto m  = j["energy"][Tbase::name];    
-              _f = m["f0"] | 0.5;
-              _scale = m["scale"] | 0.8;
-              _update = m["update"] | 1e5;
-              _bw1 = bw1;
-              _bw2 = bw2;
-              _lo1 = m["lo1"] | -2.0;
-              _hi1 = m["hi1"] | 2.0;
-              _lo2 = m["lo2"] | -2.0;
-              _hi2 = m["hi2"] | 2.0;
-              _cnt = 0.0;
-              _du = 0.0;
-            }
-#ifdef ENABLE_MPI
-          PenaltyFunction2D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
-            : Tbase(bw1, bw2, Tbase::XYDATA), mpiPtr(&mpi) {
-              Tbase::name = "penalty";
-              auto m  = j["energy"][Tbase::name];    
-              _f = m["f0"] | 0.5;
-              _scale = m["scale"] | 0.8;
-              _update = m["update"] | 1e5;
-              _bw1 = bw1;
-              _bw2 = bw2;
-              _lo1 = m["lo1"] | -2.0;
-              _hi1 = m["hi1"] | 2.0;
-              _lo2 = m["lo2"] | -2.0;
-              _hi2 = m["hi2"] | 2.0;
-              _size = 3.*((_hi1-_lo1)/_bw1+1)*((_hi2-_lo2)/_bw2+1);
-              _cnt = 0.0;
-              _du = 0.0;
-            }
-#endif
-          /** @brief Check if coordinates are within user-defined ranges */
-          bool isInrange(Tpair &coord) {
-            return (coord.first>=_lo1 && coord.first<=_hi1 && coord.second>=_lo2 && coord.second<=_hi2);
-          }
-          void round(Tpair &x) { 
-            x.first = (x.first>=0) ? int( x.first/_bw1+0.5 )*_bw1 : int( x.first/_bw1-0.5 )*_bw1; 
-            x.second = (x.second>=0) ? int( x.second/_bw2+0.5 )*_bw2 : int( x.second/_bw2-0.5 )*_bw2;
+      public:
+        /**
+         *          * @brief Constructor (RC=reaction coordinate)
+         *                   *
+         *                            * @param f0 Initial increment to the penalty function (default 0.5)
+         *                                     * @param scale Factor by which f0 is scaled (default 0.8)
+         *                                              * @param update Number of MC sweeps before scaling f0 (default 4)
+         *                                                       * @param bw1 Bin width of 1st RC (default 0.1)
+         *                                                                * @param bw2 Bin width of 2nd RC (default 0.1)
+         *                                                                         * @param lo1 Lower limit of 1st RC (default -2)
+         *                                                                                  * @param hi1 Lower limit of 1st RC (default 2)
+         *                                                                                           * @param lo2 Lower limit of 2nd RC (default -2)
+         *                                                                                                    * @param hi2 Lower limit of 2nd RC (default 2)
+         *                                                                                                             */
+        PenaltyFunction2D(Tmjson &j, double bw1, double bw2)
+          : Tbase(bw1, bw2, Tbase::XYDATA) {
+            Tbase::name = "penalty";
+            auto m  = j["energy"][Tbase::name];    
+            _f = m["f0"] | 0.5;
+            _scale = m["scale"] | 0.8;
+            _update = m["update"] | 1e5;
+            _bw1 = bw1;
+            _bw2 = bw2;
+            _lo1 = m["lo1"] | -2.0;
+            _hi1 = m["hi1"] | 2.0;
+            _lo2 = m["lo2"] | -2.0;
+            _hi2 = m["hi2"] | 2.0;
+            _cnt = 0.0;
+            _du = 0.0;
           }
 #ifdef ENABLE_MPI
-          /**
-           * @brief Merge histograms obtained from parallel processes with different seeds
-           *
-           * @details Slave processes send histograms to the master. The master computes the 
-           * sum over all histograms and sends it back to the slaves.
-           */
-          void exchange() {
-            if (!mpiPtr->isMaster()) {
-              std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
-              std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
-              Tbase::clear();
-              for (int i=0; i<int(recvBuf.size()); i+=3)
-                if (recvBuf[i+2]!=0) Tbase::operator()(recvBuf.at(i),recvBuf.at(i+1))=recvBuf.at(i+2);
-            }
-            if (mpiPtr->isMaster()) {
-              std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
-              std::vector<floatp> recvBuf(_size);
-              for (int i=0; i<mpiPtr->nproc(); ++i) {
-                if (i==mpiPtr->rankMaster()) continue;
-                ft.recvf(*mpiPtr, i, recvBuf);
-                ft.waitrecv();
-                sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
-              }
-              Tbase::buf2hist(sendBuf);
-              sendBuf = Tbase::hist2buf(_size);
-              for (int i=0; i<mpiPtr->nproc(); ++i) {
-                if (i==mpiPtr->rankMaster()) continue;
-                ft.sendf(*mpiPtr, sendBuf, i);
-                ft.waitsend();
-              }
-            }
-          }         
+        PenaltyFunction2D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
+          : Tbase(bw1, bw2, Tbase::XYDATA), mpiPtr(&mpi) {
+            Tbase::name = "penalty";
+            auto m  = j["energy"][Tbase::name];    
+            _f = m["f0"] | 0.5;
+            _scale = m["scale"] | 0.8;
+            _update = m["update"] | 1e5;
+            _bw1 = bw1;
+            _bw2 = bw2;
+            _lo1 = m["lo1"] | -2.0;
+            _hi1 = m["hi1"] | 2.0;
+            _lo2 = m["lo2"] | -2.0;
+            _hi2 = m["hi2"] | 2.0;
+            _size = 3.*((_hi1-_lo1)/_bw1+1)*((_hi2-_lo2)/_bw2+1);
+            _cnt = 0.0;
+            _du = 0.0;
+          }
 #endif
-          /** @brief Update histogram of single processes and penalty function
-          */ 
-          double update(Tpair coord) {
-            round(coord);
-            ++_cnt;
-            Tbase::operator()(coord.first,coord.second) += _f; 
-            _du = _f;
-            if (coord.first==_lo1 || coord.first==_hi1) {
-              Tbase::operator()(coord.first,coord.second) += _f;
-              _du += _f;
+        /** @brief Check if coordinates are within user-defined ranges */
+        bool isInrange(Tpair &coord) {
+          return (coord.first>=_lo1 && coord.first<=_hi1 && coord.second>=_lo2 && coord.second<=_hi2);
+        }
+        void round(Tpair &x) { 
+          x.first = (x.first>=0) ? int( x.first/_bw1+0.5 )*_bw1 : int( x.first/_bw1-0.5 )*_bw1; 
+          x.second = (x.second>=0) ? int( x.second/_bw2+0.5 )*_bw2 : int( x.second/_bw2-0.5 )*_bw2;
+        }
+#ifdef ENABLE_MPI
+        /**
+         *          * @brief Merge histograms obtained from parallel processes with different seeds
+         *                   *
+         *                            * @details Slave processes send histograms to the master. The master computes the 
+         *                                     * sum over all histograms and sends it back to the slaves.
+         *                                              */
+        void exchange() {
+          if (!mpiPtr->isMaster()) {
+            std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
+            std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
+            Tbase::clear();
+            for (int i=0; i<int(recvBuf.size()); i+=3)
+              if (recvBuf[i+2]!=0) Tbase::operator()(recvBuf.at(i),recvBuf.at(i+1))=recvBuf.at(i+2);
+          }
+          if (mpiPtr->isMaster()) {
+            std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
+            std::vector<floatp> recvBuf(_size);
+            for (int i=0; i<mpiPtr->nproc(); ++i) {
+              if (i==mpiPtr->rankMaster()) continue;
+              ft.recvf(*mpiPtr, i, recvBuf);
+              ft.waitrecv();
+              sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
             }
-            if (coord.second==_lo2 || coord.second==_hi2) {
-              Tbase::operator()(coord.first,coord.second) += _f;
-              _du += _f;
+            Tbase::buf2hist(sendBuf);
+            sendBuf = Tbase::hist2buf(_size);
+            for (int i=0; i<mpiPtr->nproc(); ++i) {
+              if (i==mpiPtr->rankMaster()) continue;
+              ft.sendf(*mpiPtr, sendBuf, i);
+              ft.waitsend();
             }
-            if (_cnt>_update && _cnt%_update==0) {
+          }
+        }         
+#endif
+        /** @brief Update histogram of single processes and penalty function
+         *         */ 
+        double update(Tpair coord) {
+          round(coord);
+          ++_cnt;
+          Tbase::operator()(coord.first,coord.second) += _f; 
+          _du = _f;
+          if (coord.first==_lo1 || coord.first==_hi1) {
+            Tbase::operator()(coord.first,coord.second) += _f;
+            _du += _f;
+          }
+          if (coord.second==_lo2 || coord.second==_hi2) {
+            Tbase::operator()(coord.first,coord.second) += _f;
+            _du += _f;
+          }
+          if (_cnt>_update && _cnt%_update==0) {
 #ifdef ENABLE_MPI               
-              if ( mpiPtr->nproc() > 1 ) {
+            if ( mpiPtr->nproc() > 1 ) {
               _du = Tbase::operator()(coord.first,coord.second) - _du;
               exchange();
               _du = Tbase::operator()(coord.first,coord.second) - _du;
-              }
+            }
 #endif
-              _f = _scale*_f;
-              _update = _update/_scale;
-            }
-            return _du;
+            _f = _scale*_f;
+            _update = _update/_scale;
           }
-          /** @brief Save table to disk */
-          void save(const string &filename) {
+          return _du;
+        }
+        /** @brief Save table to disk */
+        void save(const string &filename) {
+          auto it_min = Tbase::min();
+          Tbase::save(filename+"penalty",1.,-it_min->second);
+        }
+        /** 
+         *          * @brief Translate penalty by a reference value and save it to disk. 
+         *                   *
+         *                            * @details The reference value is obtained by averaging over a region of the
+         *                                     * reaction coordinate space.
+         *                                              */
+        void save_final(const string &filename,
+            double a, double b, double c, double d) {
+          double ref_value = - Tbase::ave(a,b,c,d);
+          Tbase::save(filename+"penalty_fin",1.,ref_value);
+        }
+        /** @brief Load table to disk */
+        void load(const string &filename) {
+          Tbase::load(filename+"penalty");
+        }
+        void test(UnitTest &t) {
+          if (!Tbase::getMap().empty()) {
+            auto it_max = Tbase::max();
             auto it_min = Tbase::min();
-            Tbase::save(filename+"penalty",1.,-it_min->second);
+            t("penalty2D_range",it_max->second-it_min->second,0.1);
           }
-          /** 
-           * @brief Translate penalty by a reference value and save it to disk. 
-           *
-           * @details The reference value is obtained by averaging over a region of the
-           * reaction coordinate space.
+        }
+        string info() {
+          using namespace Faunus::textio;
+          std::ostringstream o;
+          if (_f!=0) {
+            o << header("2D penalty function");
+            char w=25;
+            auto it_max = Tbase::max();
+            auto it_min = Tbase::min();
+            o << textio::pad(SUB,w, "Final f") << _f << endl
+              << textio::pad(SUB,w, "(x,y)-minimum") << "(" << it_min->first.first 
+              << ", " << it_min->first.second << ") " << endl
+              << textio::pad(SUB,w, "(x,y)-maximum") << "(" << it_max->first.first 
+              << ", " << it_max->first.second << ") " << endl
+              << textio::pad(SUB,w, "z-maximum") << it_max->second << endl;
+          }
+          return o.str();
+        }
+    };
+    /**
+     *      * @brief General energy class for handling penalty function (PF) methods.
+     *           *
+     *                * @details User-defined reaction coordinate(s) are provided by an external function, f.
+     *                     * f is a member of a class given as a template argument.
+     *                          * The return type of f can be either a double or a pair of doubles.
+     *                               * The dimensionality of the penalty function is inferred from the return value of f.
+     *                                    * The InputMap class is scanned for the following keys:
+     *                                         *
+     *                                              * Key              | Description
+     *                                                   * :--------------- | :-----------------------------
+     *                                                        * `size`   | total number of points in the PF
+     *                                                             * `update` | number of MC sweeps before scaling f0
+     *                                                                  * `f0`     | modification factor
+     *                                                                       * `scale`  | scaling factor to update f0
+     *                                                                            * `bw1`    | bin width of 1st coordinate
+     *                                                                                 * `bw2`    | bin width of 2nd coordinate
+     *                                                                                      * `lo1`    | lower limit of 1st coordinate
+     *                                                                                           * `hi1`    | upper limit of 1st coordinate
+     *                                                                                                * `lo2`    | lower limit of 2nd coordinate
+     *                                                                                                     * `hi2`    | upper limit of 2nd coordinate
+     *                                                                                                          */
+    template<class Tspace, class Tfunction>
+                                           class PenaltyEnergy : public Energybase<Tspace> {
+                                             private:
+                                               string _info() { return "Energy from Penalty Function\n"; }
+                                               Tspace* spcPtr;
+                                               Tfunction f;
+                                               typedef decltype(f(spcPtr->p)) Treturn; // type of coordinate
+                                               typedef Energybase<Tspace> Tbase;
+                                               typedef typename Tspace::p_vec Tpvec;
+                                               typedef typename Energy::PenaltyFunction1D Tone;
+                                               typedef typename Energy::PenaltyFunction2D Ttwo;
+                                               typedef typename std::conditional<std::is_same<double,Treturn>::value,Tone,Ttwo>::type Tpf;
+                                             public:
+                                               Tpf pf;
+                                               std::pair<Treturn,Treturn> coordpair; // current and trial coordinates
+                                               PenaltyEnergy(Tmjson &j, const string &sec="penalty")
+                                                 : pf(j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
+#ifdef ENABLE_MPI
+                                               PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec="penalty")
+                                                 : pf(mpi, j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
+#endif
+                                               string info() { return pf.info(); }
+                                               auto tuple() -> decltype(std::make_tuple(this)) {
+                                                 return std::make_tuple(this);
+                                               }
+                                               void test(UnitTest &t) { pf.test(t); }
+                                               void load(const string &filename="") { pf.load(filename); }
+                                               void save(const string &filename="") { pf.save(filename); }
+                                               void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
+                                                 pf.save_final(filename, a, b, c, d); 
+                                               }
+                                               double penalty_update(bool outcome) {
+                                                 if (!outcome) coordpair.first = coordpair.second; // if rejected use current
+                                                 return pf.update(coordpair.first);
+                                               }
+                                               std::map<Treturn,double> getMap() { return pf.getMap(); }
+                                               double find(Treturn c) { return pf.find(c); }
+                                               double penalty(const Tpvec &p) {
+                                                 double du;
+                                                 Treturn coor = f(p);
+                                                 if (Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
+                                                 else coordpair.second=coor; // current coordinate is stored
+                                                 if (!pf.isInrange(coor)) du = 1e20;
+                                                 else du = pf.find(coor);
+                                                 return du;
+                                               }
+                                           };
+    /**
+     * @brief Energy class for manybody interactions such as dihedrals and angular potentials
+     *
+     * This is a general class for interactions that can involve
+     * any number of atoms.
+     *
+     * In the following example we add an angular potential between
+     * particle index 3,4,5:
+     *
+     * ~~~~
+     * Manybody<Tspace> pot;
+     * pot.add( Potential::Angular( {3,4,5}, 70., 0.5 ) );
+     * ~~~~
+     *
+     * @todo Currently implemented as `external()` which means
+     * that all added potentials are evaluated for each move
+     * eventhough only a subset of atoms are touched. Implement
+     * dictionary to speed up.
+     */
+    template<class Tspace>
+      class Manybody : public Energybase<Tspace> {
+        protected:
+          string _infosum;
+          string _info() FOVERRIDE {
+            return _infosum;
+          }
+          typedef Energybase<Tspace> Tbase;
+          typedef typename Tbase::Tpvec Tpvec;
+
+          typedef std::function<double(typename Tbase::Tgeometry&, const Tpvec&)> EnergyFunct;
+          vector<EnergyFunct> list;
+          std::set<int> allindex; // index of all particles involved
+
+        public:
+          Manybody(Tspace &spc) {
+            Tbase::name="Manybody potential";
+            Tbase::setSpace(spc);
+          }
+
+          /**
+           * @brief Add a manybody potential
            */
-          void save_final(const string &filename,
-              double a, double b, double c, double d) {
-            double ref_value = - Tbase::ave(a,b,c,d);
-            Tbase::save(filename+"penalty_fin",1.,ref_value);
-          }
-          /** @brief Load table to disk */
-          void load(const string &filename) {
-            Tbase::load(filename+"penalty");
-          }
-          void test(UnitTest &t) {
-            if (!Tbase::getMap().empty()) {
-              auto it_max = Tbase::max();
-              auto it_min = Tbase::min();
-              t("penalty2D_range",it_max->second-it_min->second,0.1);
+          template<class Tmanybodypot>
+            void add(const Tmanybodypot &f) {
+              list.push_back(f);
+              _infosum += "  " + f.brief() + "\n";
+              for (auto i : f.getIndex())
+                allindex.insert(i);
             }
-          }
-          string info() {
-            using namespace Faunus::textio;
-            std::ostringstream o;
-            if (_f!=0) {
-              o << header("2D penalty function");
-              char w=25;
-              auto it_max = Tbase::max();
-              auto it_min = Tbase::min();
-              o << textio::pad(SUB,w, "Final f") << _f << endl
-                << textio::pad(SUB,w, "(x,y)-minimum") << "(" << it_min->first.first 
-                << ", " << it_min->first.second << ") " << endl
-                << textio::pad(SUB,w, "(x,y)-maximum") << "(" << it_max->first.first 
-                << ", " << it_max->first.second << ") " << endl
-                << textio::pad(SUB,w, "z-maximum") << it_max->second << endl;
-            }
-            return o.str();
+
+          double external(const Tpvec &p) FOVERRIDE {
+            double u=0;
+            for (auto &f : list)
+              u += f(Tbase::spc->geo, p);
+            return u;
           }
       };
-      /**
-       * @brief General energy class for handling penalty function (PF) methods.
-       *
-       * @details User-defined reaction coordinate(s) are provided by an external function, f.
-       * f is a member of a class given as a template argument.
-       * The return type of f can be either a double or a pair of doubles.
-       * The dimensionality of the penalty function is inferred from the return value of f.
-       * The InputMap class is scanned for the following keys:
-       *
-       * Key              | Description
-       * :--------------- | :-----------------------------
-       * `size`   | total number of points in the PF
-       * `update` | number of MC sweeps before scaling f0
-       * `f0`     | modification factor
-       * `scale`  | scaling factor to update f0
-       * `bw1`    | bin width of 1st coordinate
-       * `bw2`    | bin width of 2nd coordinate
-       * `lo1`    | lower limit of 1st coordinate
-       * `hi1`    | upper limit of 1st coordinate
-       * `lo2`    | lower limit of 2nd coordinate
-       * `hi2`    | upper limit of 2nd coordinate
-       */
-      template<class Tspace, class Tfunction>
-         class PenaltyEnergy : public Energybase<Tspace> {
-           private:
-             string _info() { return "Energy from Penalty Function\n"; }
-             Tspace* spcPtr;
-             Tfunction f;
-             typedef decltype(f(spcPtr->p)) Treturn; // type of coordinate
-             typedef Energybase<Tspace> Tbase;
-             typedef typename Tspace::p_vec Tpvec;
-             typedef typename Energy::PenaltyFunction1D Tone;
-             typedef typename Energy::PenaltyFunction2D Ttwo;
-             typedef typename std::conditional<std::is_same<double,Treturn>::value,Tone,Ttwo>::type Tpf;
-           public:
-             Tpf pf;
-             std::pair<Treturn,Treturn> coordpair; // current and trial coordinates
-             PenaltyEnergy(Tmjson &j, const string &sec="penalty")
-               : pf(j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
-#ifdef ENABLE_MPI
-             PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec="penalty")
-               : pf(mpi, j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
-#endif
-             string info() { return pf.info(); }
-             auto tuple() -> decltype(std::make_tuple(this)) {
-               return std::make_tuple(this);
-             }
-             void test(UnitTest &t) { pf.test(t); }
-             void load(const string &filename="") { pf.load(filename); }
-             void save(const string &filename="") { pf.save(filename); }
-             void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
-               pf.save_final(filename, a, b, c, d); 
-             }
-             double penalty_update(bool outcome) {
-               if (!outcome) coordpair.first = coordpair.second; // if rejected use current
-               return pf.update(coordpair.first);
-             }
-             std::map<Treturn,double> getMap() { return pf.getMap(); }
-             double find(Treturn c) { return pf.find(c); }
-             double penalty(const Tpvec &p) {
-               double du;
-               Treturn coor = f(p);
-               if (Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
-               else coordpair.second=coor; // current coordinate is stored
-               if (!pf.isInrange(coor)) du = 1e20;
-               else du = pf.find(coor);
-               return du;
-             }
-         };
-
-      /**
-       * @brief Energy class for manybody interactions such as dihedrals and angular potentials
-       *
-       * This is a general class for interactions that can involve
-       * any number of atoms.
-       *
-       * In the following example we add an angular potential between
-       * particle index 3,4,5:
-       *
-       * ~~~~
-       * Manybody<Tspace> pot;
-       * pot.add( Potential::Angular( {3,4,5}, 70., 0.5 ) );
-       * ~~~~
-       *
-       * @todo Currently implemented as `external()` which means
-       * that all added potentials are evaluated for each move
-       * eventhough only a subset of atoms are touched. Implement
-       * dictionary to speed up.
-       */
-      template<class Tspace>
-        class Manybody : public Energybase<Tspace> {
-          protected:
-            string _infosum;
-            string _info() FOVERRIDE {
-              return _infosum;
-            }
-            typedef Energybase<Tspace> Tbase;
-            typedef typename Tbase::Tpvec Tpvec;
-
-            typedef std::function<double(typename Tbase::Tgeometry&, const Tpvec&)> EnergyFunct;
-            vector<EnergyFunct> list;
-            std::set<int> allindex; // index of all particles involved
-
-          public:
-            Manybody(Tspace &spc) {
-              Tbase::name="Manybody potential";
-              Tbase::setSpace(spc);
-            }
-
-            /**
-             * @brief Add a manybody potential
-             */
-            template<class Tmanybodypot>
-              void add(const Tmanybodypot &f) {
-                list.push_back(f);
-                _infosum += "  " + f.brief() + "\n";
-                for (auto i : f.getIndex())
-                  allindex.insert(i);
-              }
-
-            double external(const Tpvec &p) FOVERRIDE {
-              double u=0;
-              for (auto &f : list)
-                u += f(Tbase::spc->geo, p);
-              return u;
-            }
-        };
 
 
 #ifdef FAU_POWERSASA
-      /**
-       * @brief SASA energy from transfer free energies
-       *
-       * Detailed description here...
-       */
-      template<class Tspace>
-        class SASAEnergy : public Energybase<Tspace> {
-          private:
-            vector<double> tfe; // transfer free energies (1/angstrom^2)
-            vector<double> sasa; // transfer free energies (1/angstrom^2)
-            vector<Point> sasaCoords;
-            vector<double> sasaWeights;
-            double probe; // sasa probe radius (angstrom)
-            double conc;  // co-solute concentration (mol/l)
-            Average<double> avgArea; // average surface area
+    /**
+     * @brief SASA energy from transfer free energies
+     *
+     * Detailed description here...
+     */
+    template<class Tspace>
+      class SASAEnergy : public Energybase<Tspace> {
+        private:
+          vector<double> tfe; // transfer free energies (1/angstrom^2)
+          vector<double> sasa; // transfer free energies (1/angstrom^2)
+          vector<Point> sasaCoords;
+          vector<double> sasaWeights;
+          double probe; // sasa probe radius (angstrom)
+          double conc;  // co-solute concentration (mol/l)
+          Average<double> avgArea; // average surface area
 
-            typedef typename Energybase<Tspace>::Tpvec Tpvec;
+          typedef typename Energybase<Tspace>::Tpvec Tpvec;
 
-            string _info() {
-              char w=20;
-              std::ostringstream o;
-              o << textio::pad(textio::SUB,w,"Probe radius")
-                << probe << textio::_angstrom << "\n"
-                << textio::pad(textio::SUB,w,"Co-solute conc.")
-                << conc << " mol/l\n"
-                << textio::pad(textio::SUB,w,"Average area")
-                << avgArea.avg() << textio::_angstrom+textio::squared << "\n";
-              return o.str();
+          string _info() {
+            char w=20;
+            std::ostringstream o;
+            o << textio::pad(textio::SUB,w,"Probe radius")
+              << probe << textio::_angstrom << "\n"
+              << textio::pad(textio::SUB,w,"Co-solute conc.")
+              << conc << " mol/l\n"
+              << textio::pad(textio::SUB,w,"Average area")
+              << avgArea.avg() << textio::_angstrom+textio::squared << "\n";
+            return o.str();
+          }
+
+          template<class Tpvec>
+            void updateSASA(const Tpvec &p) {
+              size_t n=p.size(); // number of particles
+              sasa.resize(n);
+              sasaCoords.resize(n);
+              sasaWeights.resize(n);
+
+              for (size_t i=0; i<n; ++i) {
+                sasaCoords[i]  = p[i];
+                sasaWeights[i] = p[i].radius + probe;
+              }
+
+              // generate powersasa object and calc. sasa for all particles
+              POWERSASA::PowerSasa<double,Point> ps(sasaCoords, sasaWeights, 1, 1, 1, 1);
+              ps.calc_sasa_all();
+              for (size_t i=0; i<n; ++i)
+                sasa[i] = ps.getSasa()[i];
             }
 
-            template<class Tpvec>
-              void updateSASA(const Tpvec &p) {
-                size_t n=p.size(); // number of particles
-                sasa.resize(n);
-                sasaCoords.resize(n);
-                sasaWeights.resize(n);
+        public:
+          SASAEnergy(InputMap &in) {
+            this->name="SASA Energy";
+            probe=in.get<double>("sasa_probe", 1.4, "SASA probe radius (angstrom)");
+            conc=in.get<double>("sasa_conc", 0, "Co-solute concentration (mol/l)");
+          }
 
-                for (size_t i=0; i<n; ++i) {
-                  sasaCoords[i]  = p[i];
-                  sasaWeights[i] = p[i].radius + probe;
-                }
-
-                // generate powersasa object and calc. sasa for all particles
-                POWERSASA::PowerSasa<double,Point> ps(sasaCoords, sasaWeights, 1, 1, 1, 1);
-                ps.calc_sasa_all();
-                for (size_t i=0; i<n; ++i)
-                  sasa[i] = ps.getSasa()[i];
-              }
-
-          public:
-            SASAEnergy(InputMap &in) {
-              this->name="SASA Energy";
-              probe=in.get<double>("sasa_probe", 1.4, "SASA probe radius (angstrom)");
-              conc=in.get<double>("sasa_conc", 0, "Co-solute concentration (mol/l)");
+          /**
+           * @brief The SASA calculation is implemented
+           * as an external potential, only
+           */
+          double external(const Tpvec &p) FOVERRIDE {
+            // if first run, resize and fill tfe vector
+            if (tfe.size()!=p.size()) {
+              tfe.resize(p.size());
+              for (size_t i=0; i<p.size(); ++i)
+                tfe[i] = atom[ p[i].id ].tfe / (pc::kT() * pc::Nav); // -> kT
             }
 
-            /**
-             * @brief The SASA calculation is implemented
-             * as an external potential, only
-             */
-            double external(const Tpvec &p) FOVERRIDE {
-              // if first run, resize and fill tfe vector
-              if (tfe.size()!=p.size()) {
-                tfe.resize(p.size());
-                for (size_t i=0; i<p.size(); ++i)
-                  tfe[i] = atom[ p[i].id ].tfe / (pc::kT() * pc::Nav); // -> kT
-              }
-
-              // calc. sasa and energy
-              updateSASA(p);
-              assert(sasa.size() == p.size());
-              double u=0, A=0;
-              for (size_t i=0; i<sasa.size(); ++i) {
-                u += sasa[i] * tfe[i]; // a^2 * kT/a^2/M -> kT/M
-                if (!this->isTrial(p))
-                  A+=sasa[i];
-              }
+            // calc. sasa and energy
+            updateSASA(p);
+            assert(sasa.size() == p.size());
+            double u=0, A=0;
+            for (size_t i=0; i<sasa.size(); ++i) {
+              u += sasa[i] * tfe[i]; // a^2 * kT/a^2/M -> kT/M
               if (!this->isTrial(p))
-                avgArea+=A; // sample average area for accepted confs. only
-              return u * conc; // -> kT
+                A+=sasa[i];
             }
-        };
+            if (!this->isTrial(p))
+              avgArea+=A; // sample average area for accepted confs. only
+            return u * conc; // -> kT
+          }
+      };
 #endif
 
-      template<class Tspace, class Tbase=Energybase<Tspace>>
-        class Hamiltonian : public Tbase {
-          private:
-            typedef Tbase* baseptr;
-            vector<baseptr> baselist;
-            typedef typename Tspace::ParticleType Tparticle;
-            typedef typename Tspace::ParticleVector Tpvec;
+    template<class Tspace, class Tbase=Energybase<Tspace>>
+      class Hamiltonian : public Tbase {
+        private:
+          typedef Tbase* baseptr;
+          vector<baseptr> baselist;
+          typedef typename Tspace::ParticleType Tparticle;
+          typedef typename Tspace::ParticleVector Tpvec;
 
-          public:
-            Hamiltonian() { Tbase::name="Hamiltonian"; }
+        public:
+          Hamiltonian() { Tbase::name="Hamiltonian"; }
 
-            Hamiltonian( Tmjson &j ) {
-              Tbase::name = "Hamiltonian";
-              auto m = j["energy"];
-              for ( auto i=m.begin(); i!=m.end() ; ++i ) {
-                if (i.key()=="nonbonded") {
-                  // todo: check for "type" in nonbonded, i.e. "lj", "coulomblj" etc.
-                  push_back( Energy::Nonbonded<Tspace, Potential::LennardJonesLB>( j ) ); 
-                }
+          Hamiltonian( Tmjson &j ) {
+            Tbase::name = "Hamiltonian";
+            auto m = j["energy"];
+            for ( auto i=m.begin(); i!=m.end() ; ++i ) {
+              if (i.key()=="nonbonded") {
+                // todo: check for "type" in nonbonded, i.e. "lj", "coulomblj" etc.
+                push_back( Energy::Nonbonded<Tspace, Potential::LennardJonesLB>( j ) ); 
               }
             }
+          }
 
-            /** @brief Add energy term to Hamiltonian. Local copy created. */
-            template<class Tenergychild>
-              Hamiltonian<Tspace>& push_back(const Tenergychild &pot) {
-                baselist.push_back( baseptr( new Tenergychild(pot) ) );
-                return *this;
+          /** @brief Add energy term to Hamiltonian. Local copy created. */
+          template<class Tenergychild>
+            Hamiltonian<Tspace>& push_back(const Tenergychild &pot) {
+              baselist.push_back( baseptr( new Tenergychild(pot) ) );
+              return *this;
+            }
+
+          /** @brief Find pointer to given energy type; `nullptr` if not found. */
+          template<class Tenergy>
+            Tenergy* find() {
+              static_assert( std::is_base_of<Tbase, Tenergy>::value,
+                  "`Tenergy` must be derived from `Energy::Energybase`");
+              for (auto b : baselist) {
+                auto ptr = dynamic_cast< Tenergy* >( b );
+                if ( ptr != nullptr )
+                  return ptr;
               }
-
-            /** @brief Find pointer to given energy type; `nullptr` if not found. */
-            template<class Tenergy>
-              Tenergy* find() {
-                static_assert( std::is_base_of<Tbase, Tenergy>::value,
-                    "`Tenergy` must be derived from `Energy::Energybase`");
-                for (auto b : baselist) {
-                  auto ptr = dynamic_cast< Tenergy* >( b );
-                  if ( ptr != nullptr )
-                    return ptr;
-                }
-                return nullptr;
-              }
-
-            void setSpace(Tspace &s) FOVERRIDE {
-              Tbase::setSpace(s);
-              for (auto b : baselist)
-                b->setSpace(s);
-            } 
-
-            double p2p( const Tparticle &p1, const Tparticle &p2 ) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->p2p( p1, p2 );
-              return u;
+              return nullptr;
             }
 
-            Point f_p2p( const Tparticle &p1, const Tparticle &p2 ) FOVERRIDE {
-              Point p(0,0,0);
-              for (auto b : baselist)
-                p += b->f_p2p( p1, p2 );
-              return p;
+          void setSpace(Tspace &s) FOVERRIDE {
+            Tbase::setSpace(s);
+            for (auto b : baselist)
+              b->setSpace(s);
+          } 
+
+          double p2p( const Tparticle &p1, const Tparticle &p2 ) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->p2p( p1, p2 );
+            return u;
+          }
+
+          Point f_p2p( const Tparticle &p1, const Tparticle &p2 ) FOVERRIDE {
+            Point p(0,0,0);
+            for (auto b : baselist)
+              p += b->f_p2p( p1, p2 );
+            return p;
+          }
+
+          double all2p( const Tpvec &p, const Tparticle &a ) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->all2p( p, a );
+            return u;
+          }
+
+          // single particle interactions
+          double i2i( const Tpvec &p, int i, int j ) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->i2i( p, i, j );
+            return u;
+          }
+
+          double i2g( const Tpvec &p, Group &g, int i ) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->i2g( p, g, i );
+            return u;
+          }
+
+          double i2all(Tpvec &p, int i) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->i2all(p,i);
+            return u;
+          }
+
+          double i_external(const Tpvec &p, int i) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->i_external(p,i);
+            return u;
+          }
+          double i_internal(const Tpvec &p, int i) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->i_internal(p,i);
+            return u;
+          }
+
+          // Group interactions
+          double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->g2g(p,g1,g2);
+            return u;
+          }
+
+          /*!
+           * For early rejection we do a reverse loop over energy
+           * classes to test if the energy is infinity. Reverse
+           * because constraining energy classes are often added
+           * last.
+           */
+          double g_external(const Tpvec &p, Group &g) FOVERRIDE {
+            double u=0;
+            for (auto b=baselist.rbegin(); b!=baselist.rend(); ++b) {
+              u += (*b)->g_external(p,g);
+              if (u>=pc::infty)
+                break;
             }
+            return u;
+          }
 
-            double all2p( const Tpvec &p, const Tparticle &a ) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->all2p( p, a );
-              return u;
-            }
+          double g_internal(const Tpvec &p, Group &g) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->g_internal(p,g);
+            return u;
+          }
 
-            // single particle interactions
-            double i2i( const Tpvec &p, int i, int j ) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->i2i( p, i, j );
-              return u;
-            }
+          double external( const Tpvec &p ) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->external( p );
+            return u;
+          }
 
-            double i2g( const Tpvec &p, Group &g, int i ) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->i2g( p, g, i );
-              return u;
-            }
+          double v2v(const Tpvec &v1, const Tpvec &v2) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->v2v(v1,v2);
+            return u;
+          }
 
-            double i2all(Tpvec &p, int i) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->i2all(p,i);
-              return u;
-            }
+          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) FOVERRIDE {
+            double u=0;
+            for (auto b : baselist)
+              u += b->g1g2( p1, g2, p2, g2 );
+            return u;
+          }
 
-            double i_external(const Tpvec &p, int i) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->i_external(p,i);
-              return u;
-            }
-            double i_internal(const Tpvec &p, int i) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->i_internal(p,i);
-              return u;
-            }
+          string _info() FOVERRIDE {
+            using namespace textio;
+            std::ostringstream o;
+            o << indent(SUB) << "Registered Energy Functions:"<< endl;
+            int i=1;
+            for (auto e : baselist)
+              o << indent(SUBSUB) << std::left << setw(4) << i++ << e->name << endl;
+            for (auto e : baselist)
+              o << e->info();
+            return o.str();
+          }
 
-            // Group interactions
-            double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->g2g(p,g1,g2);
-              return u;
-            }
-
-            /*!
-             * For early rejection we do a reverse loop over energy
-             * classes to test if the energy is infinity. Reverse
-             * because constraining energy classes are often added
-             * last.
-             */
-            double g_external(const Tpvec &p, Group &g) FOVERRIDE {
-              double u=0;
-              for (auto b=baselist.rbegin(); b!=baselist.rend(); ++b) {
-                u += (*b)->g_external(p,g);
-                if (u>=pc::infty)
-                  break;
-              }
-              return u;
-            }
-
-            double g_internal(const Tpvec &p, Group &g) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->g_internal(p,g);
-              return u;
-            }
-
-            double external( const Tpvec &p ) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->external( p );
-              return u;
-            }
-
-            double v2v(const Tpvec &v1, const Tpvec &v2) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->v2v(v1,v2);
-              return u;
-            }
-
-            double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) FOVERRIDE {
-              double u=0;
-              for (auto b : baselist)
-                u += b->g1g2( p1, g2, p2, g2 );
-              return u;
-            }
-
-            string _info() FOVERRIDE {
-              using namespace textio;
-              std::ostringstream o;
-              o << indent(SUB) << "Registered Energy Functions:"<< endl;
-              int i=1;
-              for (auto e : baselist)
-                o << indent(SUBSUB) << std::left << setw(4) << i++ << e->name << endl;
-              for (auto e : baselist)
-                o << e->info();
-              return o.str();
-            }
-
-            void field(const Tpvec &p, Eigen::MatrixXd&E) FOVERRIDE {
-              assert( (int)p.size()==E.size() );
-              for (auto b : baselist)
-                b->field(p,E);
-            }
-        };
+          void field(const Tpvec &p, Eigen::MatrixXd&E) FOVERRIDE {
+            assert( (int)p.size()==E.size() );
+            for (auto b : baselist)
+              b->field(p,E);
+          }
+      };
 
 
-      /**
-       * @brief Calculates the total system energy
-       *
-       * For a given particle vector, space, and energy class we try to
-       * calculate the total energy taking into account inter- and
-       * intra-molecular interactions as well as external potentials.
-       * While this may not work for all systems it may be a useful
-       * first guess.
-       * This is the default energy routine for `Move::ParallelTempering`
-       * and may also be used for checking energy drifts.
-       */
-      template<class Tspace, class Tenergy, class Tpvec>
-        double systemEnergy(Tspace &spc, Tenergy &pot, const Tpvec &p) {
-          pot.setSpace(spc); // ensure pot geometry is in sync with spc
-          double u = pot.external(p) + pot.penalty(p);
-          for (auto g : spc.groupList())
-            u += pot.g_external(p, *g) + pot.g_internal(p, *g);
-          for (int i=0; i<(int)spc.groupList().size()-1; i++)
-            for (int j=i+1; j<(int)spc.groupList().size(); j++)
-              u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
-          return u;
-        }
+    /**
+     * @brief Calculates the total system energy
+     *
+     * For a given particle vector, space, and energy class we try to
+     * calculate the total energy taking into account inter- and
+     * intra-molecular interactions as well as external potentials.
+     * While this may not work for all systems it may be a useful
+     * first guess.
+     * This is the default energy routine for `Move::ParallelTempering`
+     * and may also be used for checking energy drifts.
+     */
+    template<class Tspace, class Tenergy, class Tpvec>
+      double systemEnergy(Tspace &spc, Tenergy &pot, const Tpvec &p) {
+        pot.setSpace(spc); // ensure pot geometry is in sync with spc
+        double u = pot.external(p) + pot.penalty(p);
+        for (auto g : spc.groupList())
+          u += pot.g_external(p, *g) + pot.g_internal(p, *g);
+        for (int i=0; i<(int)spc.groupList().size()-1; i++)
+          for (int j=i+1; j<(int)spc.groupList().size(); j++)
+            u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
+        return u;
+      }
 
-      /* typedefs */
+    /* typedefs */
 
-      // template aliasing requires gcc 4.7+
-      // template<class Tpairpot, class Tgeometry>
-      //   using PairWise = Nonbonded<Tpairpot, Tgeometry>;
+    // template aliasing requires gcc 4.7+
+    // template<class Tpairpot, class Tgeometry>
+    //   using PairWise = Nonbonded<Tpairpot, Tgeometry>;
 
   }//Energy namespace
 }//Faunus namespace

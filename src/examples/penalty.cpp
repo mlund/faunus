@@ -37,7 +37,7 @@ struct coordinates { //function that defines the reaction coordinates
 Group* coordinates::pg;
 
 int main() {
-  // In MPI version:
+  // For the MPI version add the following line:
   // Faunus::MPI::MPIController mpi; // init MPI
 
   InputMap mcp("penalty.json"); // read input file
@@ -45,10 +45,8 @@ int main() {
 
   auto pot
     = myenergy()                                      // our custom potential!
-    + Energy::PenaltyEnergy<Tspace,coordinates>(mcp);
-
-  // In MPI version:
-  // + Energy::PenaltyEnergy<Tspace,coordinates>(mpi, mcp);
+    + Energy::PenaltyEnergy<Tspace,coordinates>(mcp); // To be subsituted with
+  // + Energy::PenaltyEnergy<Tspace,coordinates>(mpi, mcp); // in the MPI version
 
   auto penalty = std::get<1>( pot.tuple() );
 
@@ -59,8 +57,9 @@ int main() {
   coordinates::pg = &mygroup;                         // set penalized group
   EnergyDrift sys;                                    // class for tracking system energy drifts
   
-  // In MPI version:
+  // In MPI version add:
   // slump.setDiscard(mpi.rank()+1);
+
   penalty->load("pf_");
 
   // Markov moves
@@ -109,13 +108,11 @@ int main() {
 
   ![Particle distribution functions and penalty function in an 2D oscillating field](penalty.png)
 
-  To run this example, make sure faunus is compiled with MPI enabled:
-
   ~~~
-  $ cmake . -DENABLE_MPI=on
+  $ cmake . -DENABLE_MPI=OFF
   $ make
   $ cd src/examples
-  $ ./penalty.run mpirun
+  $ python ./penalty.py
   ~~~
 
   A gnuplot script to generate the plots of the probability distributions and 
@@ -125,10 +122,13 @@ int main() {
   $ gnuplot penalty.gnu
   ~~~
 
-  The penalty function routine in Faunus is general and implemented in
+  The penalty function routine in Faunus is also implemented in
   MPI using a master-slave scheme. Each system has its own rank and random seed.
   Samplings of the configurational space from all processes are merged by 
   periodically summing up the two-dimensional distribution functions.
+  The lines of code that need to be modified to run the program in parallel
+  are indicated in penalty.cpp.
+  
   The parameters to be set in the input file are following:
 
   ~~~

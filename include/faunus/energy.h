@@ -1880,53 +1880,53 @@ namespace Faunus {
      ** `lo2`    | lower limit of 2nd coordinate
      ** `hi2`    | upper limit of 2nd coordinate
      **/
-  template<class Tspace, class Tfunction>
-    class PenaltyEnergy : public Energybase<Tspace> {
-      private:
-        string _info() { return "Energy from Penalty Function\n"; }
-        Tspace* spcPtr;
-        Tfunction f;
-        typedef decltype(f(spcPtr->p)) Treturn; // type of coordinate
-        typedef Energybase<Tspace> Tbase;
-        typedef typename Tspace::p_vec Tpvec;
-        typedef typename Energy::PenaltyFunction1D Tone;
-        typedef typename Energy::PenaltyFunction2D Ttwo;
-        typedef typename std::conditional<std::is_same<double,Treturn>::value,Tone,Ttwo>::type Tpf;
-      public:
-        Tpf pf;
-        std::pair<Treturn,Treturn> coordpair; // current and trial coordinates
-        PenaltyEnergy(Tmjson &j, const string &sec="penalty")
-          : pf(j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
+    template<class Tspace, class Tfunction>
+        class PenaltyEnergy : public Energybase<Tspace> {
+          private:
+            string _info() { return "Energy from Penalty Function\n"; }
+            Tspace* spcPtr;
+            Tfunction f;
+            typedef decltype(f(spcPtr->p)) Treturn; // type of coordinate
+            typedef Energybase<Tspace> Tbase;
+            typedef typename Tspace::p_vec Tpvec;
+            typedef typename Energy::PenaltyFunction1D Tone;
+            typedef typename Energy::PenaltyFunction2D Ttwo;
+            typedef typename std::conditional<std::is_same<double,Treturn>::value,Tone,Ttwo>::type Tpf;
+          public:
+            Tpf pf;
+            std::pair<Treturn,Treturn> coordpair; // current and trial coordinates
+            PenaltyEnergy(Tmjson &j, const string &sec="penalty")
+              : pf(j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
 #ifdef ENABLE_MPI
-        PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec="penalty")
-          : pf(mpi, j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
+            PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec="penalty")
+              : pf(mpi, j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
 #endif
-        string info() { return pf.info(); }
-        auto tuple() -> decltype(std::make_tuple(this)) {
-          return std::make_tuple(this);
-        }
-        void test(UnitTest &t) { pf.test(t); }
-        void load(const string &filename="") { pf.load(filename); }
-        void save(const string &filename="") { pf.save(filename); }
-        void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
-          pf.save_final(filename, a, b, c, d); 
-        }
-        double penalty_update(bool outcome) {
-          if (!outcome) coordpair.first = coordpair.second; // if rejected use current
-          return pf.update(coordpair.first);
-        }
-        std::map<Treturn,double> getMap() { return pf.getMap(); }
-        double find(Treturn c) { return pf.find(c); }
-        double penalty(const Tpvec &p) {
-          double du;
-          Treturn coor = f(p);
-          if (Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
-          else coordpair.second=coor; // current coordinate is stored
-          if (!pf.isInrange(coor)) du = 1e20;
-          else du = pf.find(coor);
-          return du;
-        }
-    };
+            string info() { return pf.info(); }
+            auto tuple() -> decltype(std::make_tuple(this)) {
+              return std::make_tuple(this);
+            }
+            void test(UnitTest &t) { pf.test(t); }
+            void load(const string &filename="") { pf.load(filename); }
+            void save(const string &filename="") { pf.save(filename); }
+            void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
+              pf.save_final(filename, a, b, c, d); 
+            }
+            double penalty_update(bool outcome) {
+              if (!outcome) coordpair.first = coordpair.second; // if rejected use current
+              return pf.update(coordpair.first);
+            }
+            std::map<Treturn,double> getMap() { return pf.getMap(); }
+            double find(Treturn c) { return pf.find(c); }
+            double penalty(const Tpvec &p) {
+              double du;
+              Treturn coor = f(p);
+              if (Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
+              else coordpair.second=coor; // current coordinate is stored
+              if (!pf.isInrange(coor)) du = 1e20;
+              else du = pf.find(coor);
+              return du;
+            }
+        };
 
     /**
      * @brief Energy class for manybody interactions such as dihedrals and angular potentials

@@ -132,9 +132,9 @@ int main() {
   The parameters to be set in the input file are following:
 
   ~~~
-  f0              1.0       # initial increment to the penalty function
-  scale           0.8       # factor by which f0 is scaled
-  update          1e5       # number of MC sweeps before scaling f0
+  f0              0.5       # initial increment to the penalty function
+  scale           0.2       # factor by which f0 is scaled
+  update          1e4       # number of MC sweeps before scaling f0
   bw1             0.1       # bin width of 1st coordinate
   bw2             0.1       # bin width of 2nd coordinate
   lo1             -2.0      # lower limit of 1st coordinate

@@ -5,11 +5,7 @@ if(ENABLE_MPI AND MPI_CXX_FOUND)
   add_test( example_temper ${CMAKE_CURRENT_SOURCE_DIR}/temper.run ${MPIEXEC})
   set_tests_properties(example_temper PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/src/examples/")
 
-# fau_example(example_penalty "./" penalty.cpp)
-# set_target_properties(example_penalty PROPERTIES OUTPUT_NAME "penalty")
-# add_test( example_penalty ${CMAKE_CURRENT_SOURCE_DIR}/penalty.run ${MPIEXEC})
-
-  fau_example(example_manybody "./" manybody.cpp)
+    fau_example(example_manybody "./" manybody.cpp)
   set_target_properties(example_manybody PROPERTIES OUTPUT_NAME "manybody")
   #add_test( example_manybody ${CMAKE_CURRENT_SOURCE_DIR}/membrane.run )
 endif()
@@ -21,6 +17,10 @@ set_target_properties(unittests PROPERTIES EXCLUDE_FROM_ALL false)
 
 fau_example(example_minimal "./" minimal.cpp)
 set_target_properties(example_minimal PROPERTIES OUTPUT_NAME "minimal")
+
+fau_example(example_penalty "./" penalty.cpp)
+set_target_properties(example_penalty PROPERTIES OUTPUT_NAME "penalty")
+add_test( example_penalty python ${CMAKE_CURRENT_SOURCE_DIR}/penalty.py)
 
 fau_example(example_grand "./" grand.cpp)
 set_target_properties(example_grand PROPERTIES OUTPUT_NAME "grand")

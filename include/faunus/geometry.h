@@ -424,7 +424,7 @@ namespace Faunus {
      * @param mu Initial quadrupole moment (default: [0,0,0])
      */
     template<class Tspace, class Tgroup, class T=double>
-      Tensor<T> dipoleQuadrupole(const Tspace &s, const Tgroup &g, double cutoff=1e9,Tensor<double> quad=Tensor<T>()) {
+      Tensor<T> quadrupoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9,Tensor<double> quad=Tensor<T>()) {
         assert(g.size()<=(int)s.p.size());
         for (auto i : g) {
           Point t=s.p[i] - g.cm;

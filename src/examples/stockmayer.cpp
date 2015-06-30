@@ -33,6 +33,7 @@ int main() {
   while ( loop[0] ) {                            // Markov chain 
     while ( loop[1] ) {
       sys += mv.move();
+      
       if (slump()>0.5)
         dian.sampleMuCorrelationAndKirkwood(spc);
       if (slump()>0.99)
@@ -50,7 +51,7 @@ int main() {
   FormatPQR().save("confout.pqr", spc.p);
   dian.save();
   spc.save("state");
-
+  
   std::cout << spc.info() + pot.info() + mv.info()
     + sys.info() + test.info() + dian.info(); // final info
 

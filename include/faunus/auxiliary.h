@@ -519,7 +519,7 @@ namespace Faunus {
               f.precision(10);
               if (f) {
                 for (auto &m : map)
-                  f << m.first << " " << (m.second + translate) * scale << "\n";
+		  f << m.first << " " << (get( m.first ) + translate ) * scale << "\n";
               }
             }
 
@@ -528,7 +528,8 @@ namespace Faunus {
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
           }
-
+          
+          
         /** @brief Save normalized table to disk */
         template<class T=double>
           void normSave(string filename) {
@@ -543,7 +544,7 @@ namespace Faunus {
               Ty cnt = count()*dx;
               if (f) {
                 for (auto &m : map)
-                  f << m.first << " " << m.second/cnt << "\n";
+                  f << m.first << " " << get( m.first )/double(cnt) << "\n";
               }
             }
 

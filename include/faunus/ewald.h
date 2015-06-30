@@ -187,6 +187,7 @@ namespace Faunus {
 	      return E * Tbase::bjerrumLength();
 	    }
 #endif
+	  return 0.0;
           }
       };
   }//namespace

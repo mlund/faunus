@@ -1152,6 +1152,9 @@ namespace Faunus {
             return (DipoleDipole::field(p,r) + eps*p.mu*p.muscalar);
           }
 
+          /**
+	   * @warning Should it be /eps_r ?
+	   */
         void updateDiel(double er) {
           if(diel_inf) {
             eps = _lB/rc3/eps_r;

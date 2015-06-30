@@ -271,8 +271,8 @@ namespace Faunus {
                   bulk++;
                 }
               }
-              Npart+=bulk;
-              bulkconc += bulk / spc.geo.getVolume();
+              Npart+=double(bulk);
+              bulkconc += double(bulk) / spc.geo.getVolume();
             }
 
 
@@ -315,8 +315,8 @@ namespace Faunus {
                   }
                 }
               }
-              Npart+=bulk;
-              bulkconc += bulk / spc.geo.getVolume();
+              Npart+=double(bulk);
+              bulkconc += double(bulk) / spc.geo.getVolume();
             }
       };
 
@@ -1361,8 +1361,16 @@ namespace Faunus {
 	    updateVolume(spc.geo.getVolume());
             
 	    for (auto gi : spc.groupList()) {
-	      mu += dipoleMoment(spc, *gi);
-	      quad += dipoleQuadrupole(spc, *gi);
+	      Point mu_t = dipoleMoment(spc, *gi);
+	      Tensor<double> quad_t = quadrupoleMoment(spc, *gi);
+	      Point t = gi->cm;
+	      spc.geo.boundary(t);
+	      if(t.squaredNorm() < cutoff2)  {
+		mu += mu_t;
+		quad += quad_t;
+	      }
+	      mu_box += mu_t;
+	      quad_box += quad_t;
 	    }
             
             for(int cnt = 0; cnt < 3; cnt++) {
@@ -1498,7 +1506,7 @@ namespace Faunus {
          * 
          */
         void save(string ext="", bool reset=false) {
-          rdf.normSave("gofr.dat"+ext);  //  save("gofr.dat"+ext);
+	  rdf.save("gofr.dat"+ext);
           mucorr.save("mucorr.dat"+ext);
           mucorr_angle.save("mucorr_angle.dat"+ext);
           mucorr_dist.save("mucorr_dist.dat"+ext);

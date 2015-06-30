@@ -544,7 +544,7 @@ namespace Faunus {
               Ty cnt = count()*dx;
               if (f) {
                 for (auto &m : map)
-                  f << m.first << " " << get( m.first )/double(cnt) << "\n";
+                  f << m.first << " " << get( m.first )/T(cnt) << "\n";
               }
             }
 

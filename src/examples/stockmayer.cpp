@@ -35,10 +35,10 @@ int main() {
       sys += mv.move();
       
       if (slump()>0.5)
-        dian.sampleMuCorrelationAndKirkwood(spc);
+        dian.sampleMultipole(spc);
       if (slump()>0.99)
         xtc.save(textio::prefix+"out.xtc", spc.p);  
-      dian.sampleDP(spc);
+      dian.sample(spc);
     }    
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing() << std::flush;

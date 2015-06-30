@@ -1306,13 +1306,14 @@ namespace Faunus {
           const_DielCM = const_DielTinfoil/3;
           const_DielRF = const_DielTinfoil/3;
         }
-
+        
+        
         /**
-         * @brief Samples dipole-moment from dipole particles.
+         * @brief Samples dipole- and quadrupole-moments from particles.
          * @param spc The space.
          */
         template<class Tspace>
-          void sampleDP(Tspace &spc) {
+          void sample(Tspace &spc) {
             Point origin(0,0,0);
             Point mu(0,0,0);          // In e\AA
             Point mu_box(0,0,0);      // In e\AA
@@ -1320,7 +1321,10 @@ namespace Faunus {
             Tensor<double> quad_box;  // In e\AA^2
             quad.setZero();
             quad_box.setZero();
-
+	    double mus_group = 0.0;
+	    
+#ifdef DIPOLEPARTICLE  
+	    // Samples entities from dipoles and quadrupoles
             for (auto &i : spc.p) {
               if (spc.geo.sqdist(i,origin)<cutoff2) {
                 mu += i.mu*i.muscalar;
@@ -1338,23 +1342,25 @@ namespace Faunus {
             mu_box += mu;
             quad_box += quad;
 	    
-            double mus_group = 0.0;
             for (auto gi : spc.groupList()) {
 	      Point m(0,0,0);
               for (auto i : *gi)
                 m += spc.p[i].muscalar*spc.p[i].mu;
               mus_group += m.norm();
             }
-	    
-            samplePP(spc,origin,mu,mu_box,quad,quad_box,mus_group);
-          }
+#endif
+	    samplePP(spc,origin,mu,mu_box,quad,quad_box,mus_group); // Samples entities from charges
+	  }
 
         /**
-         * @brief Samples dipole-moment from point particles.
+         * @brief Samples dipole- and quadrupole-moments from point particles.
          * 
          * @param spc The space
-         * @param mu Dipoles to add to from within cutoff (optional)
-         * @param mu_box Dipoles to add to from entire box (optional)
+         * @param mu Dipole to add to from within cutoff (optional)
+         * @param mu_box Dipole to add to from entire box (optional)
+         * @param quad Quadrupole to add to from within cutoff (optional)
+         * @param quad_box Quadrupole to add to from entire box (optional)
+	 * @param mus_group Sum of the group dipole moments due to explicite dipoles (optional)
          */
         template<class Tspace>
           void samplePP(Tspace &spc, Point origin=Point(0,0,0), Point mu=Point(0,0,0), Point mu_box=Point(0,0,0), Tensor<double> quad=Tensor<double>(),Tensor<double> quad_box=Tensor<double>(), double mus_group = 0.0) {
@@ -1406,13 +1412,13 @@ namespace Faunus {
           }
 
         /**
-         * @brief Samples g(r), \f$ <\hat{\mu}(0) \cdot \hat{\mu}(r)> \f$, \f$ <\frac{1}{2} ( 3 \hat{\mu}(0) \cdot \hat{\mu}(r) - 1 )> \f$, Histogram(\f$ \hat{\mu}(0) \cdot \hat{\mu}(r) \f$) and distant-dependent Kirkwood-factor.
+         * @brief Samples g(r), radial dipole moment (\f$ \mu(r) \f$), radial quadrupole moment (\f$ \Theta(r) \f$), \f$ <\hat{\mu}(0) \cdot \hat{\mu}(r)> \f$, \f$ <\frac{1}{2} ( 3 \hat{\mu}(0) \cdot \hat{\mu}(r) - 1 )> \f$, Histogram(\f$ \hat{\mu}(0) \cdot \hat{\mu}(r) \f$) and distant-dependent Kirkwood-factor.
          * 
          * @param spc The space
          *
          */
         template<class Tspace>
-          void sampleMuCorrelationAndKirkwood(const Tspace &spc, Point origin=Point(0,0,0)) {
+          void sampleMultipole(const Tspace &spc, Point origin=Point(0,0,0)) {
             double r, sca;
             int N = spc.p.size() - 1;
 	    

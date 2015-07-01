@@ -999,16 +999,16 @@ namespace Faunus {
       private:
         double c;
       public:
-        ChargeNonpolar(Tmjson&, const string &sec="coulomb");
+        ChargeNonpolar(Tmjson&, const string &sec="coulomb"); //!< Construction from InputMap
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double qq=a.charge * a.charge;
             if (qq>1e-6)
-              return -c * qq / (r2*r2) * (b.radius*b.radius*b.radius);
+              return -c*qq/(r2*r2)*b.alphax;
             qq=b.charge * b.charge;
             if (qq>1e-6)
-              return -c * qq / (r2*r2) * (a.radius*a.radius*a.radius);
+              return -c*qq/(r2*r2)*a.alphax;
             return 0;
           }
 
@@ -1018,11 +1018,28 @@ namespace Faunus {
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
             double qq=a.charge * a.charge;
             if (qq>1e-6)
-              return -4*c * qq / (r2*r2) * (b.radius*b.radius*b.radius) / r2 * p;
+              return -4*c*qq/(r2*r2)*b.alphax/r2*p;
             qq=b.charge * b.charge;
             if (qq>1e-6)
-              return -4*c * qq / (r2*r2) * (a.radius*a.radius*a.radius) / r2 * p;
+              return -4*c*qq/(r2*r2)*a.alphax/r2*p;
             return Point(0,0,0);
+          }
+    };
+
+    class PolarPolar : public Coulomb {
+      public:
+        PolarPolar(Tmjson&, const string &sec="coulomb"); //!< Construction from InputMap
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, double r2) {
+            return -3*a.alphax*b.alphax/(r2*r2*r2);
+          }
+
+        string info(char);
+
+        template<class Tparticle>
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            return -18*a.alphax*b.alphax/(r2*r2*r2*r2)*p;
           }
     };
 

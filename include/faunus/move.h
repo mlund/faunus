@@ -257,7 +257,7 @@ namespace Faunus {
           string jsondir;                  //!< inputmap section
           char w;                          //!< info text width. Adjust this in constructor if needed.
           unsigned long int cnt;           //!< total number of trial moves
-          virtual bool run() const;        //!< Runfraction test
+          virtual bool run();        //!< Runfraction test
 
           bool useAlternateReturnEnergy;   //!< Return a different energy than returned by _energyChange(). [false]
           double alternateReturnEnergy;    //!< Alternative return energy
@@ -301,6 +301,8 @@ namespace Faunus {
                 addMol( mol->id, MolListData( it.value() ) );
             }
           }
+          // in parallelized algorithms, multiple random walkers perform the same sequence of moves
+          RandomTwister<> propagator_slump;
 
         public:
           Movebase(Energy::Energybase<Tspace>&, Tspace&, string="moves");//!< Constructor
@@ -354,7 +356,7 @@ namespace Faunus {
     template<class Tspace>
       int Movebase<Tspace>::randomMolId() {
         if ( !mollist.empty() ) {
-          auto it = propagation_slump.element( mollist.begin(), mollist.end() );
+          auto it = propagator_slump.element( mollist.begin(), mollist.end() );
           if (it != mollist.end() ) {
             it->second.repeat = 1;
             if ( it->second.perMol )
@@ -375,10 +377,10 @@ namespace Faunus {
       Group* Movebase<Tspace>::randomMol() {
         Group* gPtr=nullptr;
         if ( !mollist.empty() ) {
-          auto it = propagation_slump.element( mollist.begin(), mollist.end() );
+          auto it = propagator_slump.element( mollist.begin(), mollist.end() );
           auto g = spc->findMolecules( it->first ); // vector of group pointers
           if ( !g.empty() )
-            gPtr = *propagation_slump.element( g.begin(), g.end() );
+            gPtr = *propagator_slump.element( g.begin(), g.end() );
         }
         return gPtr;
       }
@@ -480,8 +482,8 @@ namespace Faunus {
       }
 
     template<class Tspace>
-      bool Movebase<Tspace>::run() const {
-        if (propagation_slump() < runfraction)
+      bool Movebase<Tspace>::run() {
+        if (propagator_slump() < runfraction)
           return true;
         return false;
       }
@@ -556,7 +558,7 @@ namespace Faunus {
         private:
           typedef Movebase<Tspace> base;
           typedef std::map<short, Average<double> > map_type;
-          bool run() const;                //!< Runfraction test
+          bool run() override; //!< Runfraction test
         protected:
           string _info();
           void _acceptMove() FOVERRIDE;
@@ -630,7 +632,7 @@ namespace Faunus {
       }
 
     template<class Tspace>
-      bool AtomicTranslation<Tspace>::run() const {
+      bool AtomicTranslation<Tspace>::run() {
         if ( igroup != nullptr )
           if ( igroup->empty() )
             return false;
@@ -4112,7 +4114,7 @@ namespace Faunus {
 
             double move(int n=1) override {
               return ( mPtr.empty() ) ?
-                0 : (*propagation_slump.element( mPtr.begin(), mPtr.end() ))->move();
+                0 : (*base::propagator_slump.element( mPtr.begin(), mPtr.end() ))->move();
             }
 
             void test(UnitTest &t) { for (auto i : mPtr) i->test(t); }

@@ -2,6 +2,5 @@
 
 namespace Faunus {
   RandomTwister<> slump;
-  RandomTwister<> propagation_slump;
 }//namespace
 

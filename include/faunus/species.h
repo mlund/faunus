@@ -204,6 +204,7 @@ namespace Faunus {
    * `r`           | Radius = `sigma/2` [angstrom]
    * `sigma`       | `2*r` [angstrom] (overrides radius)
    * `tfe`         | Transfer free energy [J/mol/angstrom^2/M] (default: 0)
+   * `alphax`      | Excess polarizability in units of [angstrom^3]
    */
 
   class AtomData : public PropertyBase {
@@ -230,7 +231,8 @@ namespace Faunus {
              betaC,            //!< Value of the charge distribution (inverse) width [1/angstrom]
              betaD,            //!< Value of the dipole distribution (inverse) width [1/angstrom] 
              betaQ,            //!< Value of the quadrupole distribution (inverse) width [1/angstrom] 
-             tfe;              //!< Transfer free energy (J/mol/angstrom^2/M)
+             tfe,              //!< Transfer free energy (J/mol/angstrom^2/M)
+             alphax;           //!< Excess polarizability [angstrom^3]
       Point mu;                //!< Dipolemoment vector
       int Ninit;               //!<
       short int patchtype;     //!< If patchy particle, which type of patch
@@ -270,6 +272,10 @@ namespace Faunus {
         sigma        = ( _js["sigma"] | 2*radius ) * 1.0_angstrom;
         radius       = 0.5 * sigma;
         tfe          = _js["tfe"] | 0.0;
+        alphax       = (_js["alphax"] | 0.0)*std::pow(radius,3);
+        string unit  = _js["alphax_unit"] | string("unitless");
+          if ( unit == "angstrom^3" )
+            alphax /= std::pow(radius,3);
 
         // spherocylindrical properties
         half_len     = 0.5 * ( _js["len"] | 0.0 );

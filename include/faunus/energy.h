@@ -1529,6 +1529,7 @@ namespace Faunus {
         typedef std::pair<double,double> Tpair;
         typedef Table2D<double,double> Tbase;
 #ifdef ENABLE_MPI
+        TimeRelativeOfTotal<std::chrono::microseconds> timer;
         typedef Faunus::MPI::FloatTransmitter::floatp floatp;
         Faunus::MPI::MPIController *mpiPtr; 
         Faunus::MPI::FloatTransmitter ft;
@@ -1588,6 +1589,7 @@ namespace Faunus {
          ** sum over all histograms and sends it back to the slaves.
          **/
         void exchange() {
+          timer.start();
           if (!mpiPtr->isMaster()) {
             std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
             std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
@@ -1612,6 +1614,7 @@ namespace Faunus {
               ft.waitsend();
             }
           }
+          timer.stop();
         }
 #endif
         /** @brief Update histogram of single processes and penalty function 
@@ -1676,7 +1679,10 @@ namespace Faunus {
             o << pad(SUB,w, "Final f") << _f << endl
               << pad(SUB,w, "x-minimum") << it_min->first << endl 
               << pad(SUB,w, "x-maximum") << it_max->first << endl 
-              << pad(SUB,w, "y-maximum") << it_max->second << endl; 
+              << pad(SUB,w, "y-maximum") << it_max->second << endl;
+#ifdef ENABLE_MPI
+            o << pad(SUB,w,"Relative time consumption of MP") << timer.result() << endl;
+#endif
           }
           return o.str();
         }
@@ -1690,6 +1696,7 @@ namespace Faunus {
         typedef std::pair<double,double> Tpair;
         typedef Table3D<double,double> Tbase;
 #ifdef ENABLE_MPI
+        TimeRelativeOfTotal<std::chrono::microseconds> timer;
         typedef Faunus::MPI::FloatTransmitter::floatp floatp;
         Faunus::MPI::MPIController *mpiPtr; 
         Faunus::MPI::FloatTransmitter ft;
@@ -1759,6 +1766,7 @@ namespace Faunus {
          ** sum over all histograms and sends it back to the slaves.
          **/
         void exchange() {
+          timer.start();
           if (!mpiPtr->isMaster()) {
             std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
             std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
@@ -1783,6 +1791,7 @@ namespace Faunus {
               ft.waitsend();
             }
           }
+          timer.stop();
         }         
 #endif
         /** @brief Update histogram of single processes and penalty function
@@ -1854,6 +1863,9 @@ namespace Faunus {
               << textio::pad(SUB,w, "(x,y)-maximum") << "(" << it_max->first.first 
               << ", " << it_max->first.second << ") " << endl
               << textio::pad(SUB,w, "z-maximum") << it_max->second << endl;
+#ifdef ENABLE_MPI
+            o << pad(SUB,w,"Relative time consumption of MP") << timer.result() << endl;
+#endif
           }
           return o.str();
         }

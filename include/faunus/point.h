@@ -336,11 +336,13 @@ namespace Faunus {
     typedef Point::Tcoord Tradius;
     typedef Point::Tcoord Tcharge;
     typedef Point::Tcoord Tmw;
+    typedef Point::Tcoord Talphax;
     typedef unsigned char Tid;
     typedef bool Thydrophobic;
     Tid id;                                   //!< Particle identifier
     Tcharge charge;                           //!< Charge number
     Tradius radius;                           //!< Radius
+    Talphax alphax;
     Tmw mw;                                   //!< Molecular weight
     Thydrophobic hydrophobic;                 //!< Hydrophobic flag
 
@@ -364,6 +366,7 @@ namespace Faunus {
           id=d.id;
           charge=d.charge;
           radius=d.radius;
+          alphax=d.alphax;
           mw=d.mw;
           hydrophobic=d.hydrophobic;
           return *this;

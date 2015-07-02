@@ -75,7 +75,6 @@ namespace Faunus {
     };
 
   extern RandomTwister<> slump;
-  extern RandomTwister<> propagation_slump; // in parallelized algorithms, multiple random walkers perform the same sequence of moves
 
 } // namespace
 

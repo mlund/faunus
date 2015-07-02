@@ -298,13 +298,23 @@ namespace Faunus {
 
     ChargeNonpolar::ChargeNonpolar(Tmjson &j, const string &sec) : Coulomb(j, sec) {
       name="Charge-Nonpolar";
-      c = 0.5 * bjerrumLength() * ( j[sec]["excess_polarization"] | -1.0 );
+      c = bjerrumLength()/2.;
     }
 
     string ChargeNonpolar::info(char w) {
       std::ostringstream o;
       o << Coulomb::info(w)
         << textio::pad(textio::SUB,w,"Excess polarization") << 2*c*bjerrumLength() << endl;
+      return o.str();
+    }
+
+    PolarPolar::PolarPolar(Tmjson &j, const string &sec) : Coulomb(j, sec) {
+      name="Polar-Polar";
+    }
+
+    string PolarPolar::info(char w) {
+      std::ostringstream o;
+      o << Coulomb::info(w) << endl;
       return o.str();
     }
 

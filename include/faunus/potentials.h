@@ -1611,6 +1611,28 @@ namespace Faunus {
       };
 
     /**
+     * @brief Creates a new pair potential scaled by `s`
+     */
+    template<class T>
+      struct Scale : public T {
+        double s;
+        Scale(const T &pot, double s) : T(pot), s(s) { T::name = std::to_string(s) + "x" + T::name; }
+        template<class Tparticle> // isotropic energy
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            return s*T::operator()(a,b,r2);
+          }
+        template<class Tparticle> // anisotropic energy
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r2) {
+            return s*T::operator()(a,b,r2);
+          }
+        template<class Tparticle> // force
+          Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+            return s*T::force(a,b,r2,p);
+          }
+      };
+
+
+    /**
      * @brief Adds two pair potentials
      *
      * Example:
@@ -1643,6 +1665,13 @@ namespace Faunus {
       class = typename std::enable_if<std::is_base_of<PairPotentialBase,T2>::value>::type>
         CombinedPairPotential<T1,Minus<T2>>& operator-(const T1 &pot1, const T2 &pot2) {
           return *(new CombinedPairPotential<T1,Minus<T2>>(pot1,Minus<T2>(pot2)));
+        }
+
+    /** @brief Scale potential */
+    template<class Tpairpot,
+      class = typename std::enable_if<std::is_base_of<PairPotentialBase,Tpairpot>::value>::type>
+        Scale<Tpairpot>& operator*(double s, const Tpairpot &pot) {
+          return *( new Scale<Tpairpot>(pot,s) );
         }
 
     /**

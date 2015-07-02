@@ -98,6 +98,21 @@ namespace Faunus {
         /** @brief Associate data with a pair */
         void add(T i, T j, Tdata d) {
           list[ Tpair(i,j) ] = d; 
+
+          // remove from `mlist` if already there
+          auto r = mlist.equal_range(i);
+          for (auto it=r.first; it!=r.second; ++it)
+            if ( it->second == j ) {
+              mlist.erase( it );
+              break;
+            }
+          r = mlist.equal_range(j);
+          for (auto it=r.first; it!=r.second; ++it)
+            if ( it->second == i ) {
+              mlist.erase( it );
+              break;
+            }
+
           mlist.insert( std::pair<T,T>(i,j) );
           mlist.insert( std::pair<T,T>(j,i) );
         }

@@ -29,6 +29,26 @@ namespace Faunus {
         /** @brief Constructor -- default deterministic seed */
         RandomTwister() : dist(0,1) {}
 
+        /**
+         * @brief Construct from JSON object
+         *
+         * The following keywords are read from JSON section "random":
+         *
+         *  Key         | Description
+         * :----------  | :------------------------------------------------
+         * `hardware`   | Non-deterministic hardware seed (default: false) 
+         * `mpidiscard` | Shift sequence on each MPI rank (default: false)
+         *
+         * @note `mpidiscard` is under construction.
+         */
+        template<class Tmjson>
+          RandomTwister(Tmjson &j, const std::string &sec="random") : dist(0,1) {
+            if ( ( j[sec]["hardware"] | false ) == true )
+              seed();
+            if ( ( j[sec]["mpidiscard"] | false ) == true )
+              setDiscard( 0 ); // <-- put mpi rank here
+          }
+
         /** @brief Integer in uniform range [min:max] */
         int range(int min, int max) {
           std::uniform_int_distribution<int> d(min,max);
@@ -46,7 +66,7 @@ namespace Faunus {
           }
         }
 
-        /** DOI: 10.1103/PhysRevE.75.066701 */
+        /** @brief Discard numbers -- see doi:10/dkwg2h */
         void setDiscard(long long int z) { discard=z; } 
 
         /** @brief Random number in uniform range [0,1) */

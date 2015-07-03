@@ -1024,6 +1024,12 @@ namespace Faunus {
         /** @brief Get list of bonds */
         auto getBondList() -> decltype(this->list) { return Tbase::getBondList(); }
 
+        /** @brief Reset and clear all bonds */
+        void clear() {
+          _infolist.clear();
+          Tbase::clear();
+        } 
+
     };
 
     /**

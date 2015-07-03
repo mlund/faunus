@@ -1595,7 +1595,7 @@ namespace Faunus {
      */
     template<class T>
       struct Minus : public T {
-        Minus(const T &pot) : T(pot) { T::name = "minus " + T::name; }
+        Minus(const T &pot) : T(pot) { T::name = "- " + T::name; }
         template<class Tparticle> // isotropic energy
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             return -T::operator()(a,b,r2);
@@ -1616,7 +1616,7 @@ namespace Faunus {
     template<class T>
       struct Scale : public T {
         double s;
-        Scale(const T &pot, double s) : T(pot), s(s) { T::name = std::to_string(s) + "x" + T::name; }
+        Scale(const T &pot, double s) : T(pot), s(s) { T::name = std::to_string(s) + " x " + T::name; }
         template<class Tparticle> // isotropic energy
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             return s*T::operator()(a,b,r2);

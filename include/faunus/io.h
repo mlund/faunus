@@ -867,7 +867,7 @@ namespace Faunus {
     };
 
     std::vector<PointParticle::Tid> atomid;
-    atomid.reserve( fasta.size() );
+    atomid.reserve( fasta.size() + 2 ); // later we may insert ctr and ntr, hence +2
 
     for (auto c : fasta) {
       auto it = map.find(c);

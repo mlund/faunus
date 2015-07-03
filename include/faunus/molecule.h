@@ -27,6 +27,7 @@ namespace Faunus {
       Point dir;         //!< Scalars for random mass center position. Default (1,1,1)
       Point offset;      //!< Added to random position. Default (0,0,0)
       bool checkOverlap; //!< Set to true to enable container overlap check
+      bool rotate;       //!< Set to true to randomly rotate molecule when inserted. Default: true
       int maxtrials;     //!< Maximum number of overlap checks if `checkOverlap==true`
 
       RandomInserter() : dir(1,1,1), offset(0,0,0), checkOverlap(true), maxtrials(2e3) { name = "random"; }
@@ -46,8 +47,10 @@ namespace Faunus {
               Geometry::QuaternionRotate rot;
               Point u;
               u.ranunit(slump);
-              rot.setAxis( geo, {0,0,0}, u, 2 * pc::pi * slump() );
-              i.rotate(rot);
+              if (rotate) {
+                rot.setAxis( geo, {0,0,0}, u, 2 * pc::pi * slump() );
+                i.rotate(rot);
+              }
               geo.randompos( i );
               i = i.cwiseProduct(dir) + offset;
               geo.boundary( i );
@@ -61,7 +64,10 @@ namespace Faunus {
             b.ranunit(slump);              // random unit vector
             rot.setAxis(geo, {0,0,0}, b, slump() * 2 * pc::pi); // random rot around random vector
             for (auto &i : v) {            // apply rotation to all points
-              i = rot(i) + a + offset;     // ...and translate
+              if (rotate)
+                i = rot(i) + a + offset;   // ...and translate
+              else
+                i += a + offset;
               geo.boundary(i);             // ...and obey boundaries
             }
           }
@@ -125,6 +131,8 @@ namespace Faunus {
    * `insdir`      | string  | Directions for generation of random position. Default: "1 1 1" = XYZ
    * `insoffset`   | string  | Translate generated random position. Default: "0 0 0" = no translation
    * `Ninit`       | int     | Initial number of molecules
+   * `checkoverlap`| bool    | Check for overlap while inserting. Default: true
+   * `rotate`      | bool    | Randomly rotate molecule or anisotropic atom upon insertion. Default: true
    * `structure`   | string  | Read conformation from AAM file
    * `traj`        | string  | Read conformations from PQR trajectory (`structure` will be ignored)
    * `trajweight`  | string  | One column file w. relative weights for each conformations. Must match `traj` file.
@@ -168,6 +176,8 @@ namespace Faunus {
           auto ins = RandomInserter< MoleculeData<Tpvec> >();
           ins.dir    << ( molecule.value()["insdir"] | string("1 1 1") );
           ins.offset << ( molecule.value()["insoffset"] | string("0 0 0") );
+          ins.checkOverlap = molecule.value()["checkoverlap"] | true;
+          ins.rotate       = molecule.value()["rotate"] | true;
           setInserter( ins );
         }
 

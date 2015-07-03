@@ -1563,7 +1563,7 @@ namespace Faunus {
             _hi = m["hi1"] | 2.0;
             _cnt = 0.0;
             _du = 0.0;
-            _tunnel = 4;
+            _tunnel = 1;
           }
 #ifdef ENABLE_MPI
         PenaltyFunction1D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
@@ -1579,7 +1579,7 @@ namespace Faunus {
             _size = 2*(_hi-_lo)/_bw+2.;
             _cnt = 0.0;
             _du = 0.0;
-            _tunnel = 4;
+            _tunnel = 1;
           }
 #endif
         /** @brief Check if coordinate is within user-defined range */
@@ -1640,9 +1640,10 @@ namespace Faunus {
             histo(coord) += _f;
           }
           if (_cnt>_update && _cnt%_update==0) {
-            bool b = histo(_lo)+histo(_hi) >= _tunnel;
+            double extremes = (histo(_lo)+histo(_hi))/4./_f;
+            bool b = extremes >= _tunnel;
 #ifdef ENABLE_MPI               
-            b = reduceDouble(*mpiPtr,histo(_lo)+histo(_hi)) >= _tunnel;
+            b = reduceDouble(*mpiPtr,extremes) >= _tunnel;
 #endif
             if (b) {
 #ifdef ENABLE_MPI
@@ -1752,7 +1753,7 @@ namespace Faunus {
             _hi2 = m["hi2"] | 2.0;
             _cnt = 0.0;
             _du = 0.0;
-            _tunnel = 8;
+            _tunnel = 1;
           }
 #ifdef ENABLE_MPI
         PenaltyFunction2D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
@@ -1771,7 +1772,7 @@ namespace Faunus {
             _size = 3.*((_hi1-_lo1)/_bw1+1)*((_hi2-_lo2)/_bw2+1);
             _cnt = 0.0;
             _du = 0.0;
-            _tunnel = 8;
+            _tunnel = 1;
           }
 #endif
         /** @brief Check if coordinates are within user-defined ranges */
@@ -1838,6 +1839,7 @@ namespace Faunus {
             histo(coord.first,coord.second) += _f;
           }
           double corners = histo(_lo1,_lo2)+histo(_hi1,_hi2)+histo(_lo1,_hi2)+histo(_hi1,_lo2);  
+          corners /= _f*16.;
           if (_cnt>_update && _cnt%_update==0) {
             bool b = corners >= _tunnel;
 #ifdef ENABLE_MPI

@@ -301,8 +301,12 @@ namespace Faunus {
                 addMol( mol->id, MolListData( it.value() ) );
             }
           }
-          // in parallelized algorithms, multiple random walkers perform the same sequence of moves
-          RandomTwister<> propagator_slump;
+
+          /** @brief Internal, deterministic random number generator, independent of global */
+          static RandomTwister<>& _slump() {
+            static RandomTwister<> r;
+            return r;
+          }
 
         public:
           Movebase(Energy::Energybase<Tspace>&, Tspace&, string="moves");//!< Constructor
@@ -356,7 +360,7 @@ namespace Faunus {
     template<class Tspace>
       int Movebase<Tspace>::randomMolId() {
         if ( !mollist.empty() ) {
-          auto it = propagator_slump.element( mollist.begin(), mollist.end() );
+          auto it = _slump().element( mollist.begin(), mollist.end() );
           if (it != mollist.end() ) {
             it->second.repeat = 1;
             if ( it->second.perMol )
@@ -377,10 +381,10 @@ namespace Faunus {
       Group* Movebase<Tspace>::randomMol() {
         Group* gPtr=nullptr;
         if ( !mollist.empty() ) {
-          auto it = propagator_slump.element( mollist.begin(), mollist.end() );
+          auto it = _slump().element( mollist.begin(), mollist.end() );
           auto g = spc->findMolecules( it->first ); // vector of group pointers
           if ( !g.empty() )
-            gPtr = *propagator_slump.element( g.begin(), g.end() );
+            gPtr = *_slump().element( g.begin(), g.end() );
         }
         return gPtr;
       }
@@ -483,7 +487,7 @@ namespace Faunus {
 
     template<class Tspace>
       bool Movebase<Tspace>::run() {
-        if (propagator_slump() < runfraction)
+        if ( _slump()() < runfraction )
           return true;
         return false;
       }
@@ -4114,7 +4118,7 @@ namespace Faunus {
 
             double move(int n=1) override {
               return ( mPtr.empty() ) ?
-                0 : (*base::propagator_slump.element( mPtr.begin(), mPtr.end() ))->move();
+                0 : (*base::_slump().element( mPtr.begin(), mPtr.end() ))->move();
             }
 
             void test(UnitTest &t) { for (auto i : mPtr) i->test(t); }

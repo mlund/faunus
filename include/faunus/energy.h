@@ -1529,9 +1529,8 @@ namespace Faunus {
 
     class PenaltyFunction1D : public Table2D<double,double> {
       private:
-        int _cnt, _update, _size;
+        int _cnt, _update, _size, _tunnel;
         double _f, _scale, _du, _lo, _hi, _bw;
-        std::pair<double,int> extreme;
         typedef std::pair<double,double> Tpair;
         typedef Table2D<double,double> Tbase;
         Tbase histo;
@@ -1553,7 +1552,7 @@ namespace Faunus {
          ** @param hi1 Lower limit of RC (default 2)
          **/
         PenaltyFunction1D(Tmjson &j, double bw1, double bw2)
-          : Tbase(bw1,Tbase::XYDATA) {
+          : Tbase(bw1,Tbase::XYDATA), histo(bw1,Tbase::XYDATA) {
             Tbase::name = "penalty";
             auto m  = j["energy"][Tbase::name];    
             _f = m["f0"] | 0.5;
@@ -1564,6 +1563,7 @@ namespace Faunus {
             _hi = m["hi1"] | 2.0;
             _cnt = 0.0;
             _du = 0.0;
+            _tunnel = 4;
           }
 #ifdef ENABLE_MPI
         PenaltyFunction1D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
@@ -1579,6 +1579,7 @@ namespace Faunus {
             _size = 2*(_hi-_lo)/_bw+2.;
             _cnt = 0.0;
             _du = 0.0;
+            _tunnel = 4;
           }
 #endif
         /** @brief Check if coordinate is within user-defined range */
@@ -1632,29 +1633,32 @@ namespace Faunus {
           ++_cnt;
           Tbase::operator()(coord) += _f; 
           _du = _f;
-#ifdef ENABLE_MPI
           histo(coord) += _f;
-#endif
           if (coord==_lo || coord==_hi) {
             Tbase::operator()(coord) += _f;
             _du += _f;
-#ifdef ENABLE_MPI
             histo(coord) += _f;
-#endif
           }
           if (_cnt>_update && _cnt%_update==0) {
+            bool b = histo(_lo)+histo(_hi) >= _tunnel;
 #ifdef ENABLE_MPI               
-            if ( mpiPtr->nproc() > 1 ) {
-              _du = Tbase::operator()(coord) - _du;
-              exchange();
-              _du = Tbase::operator()(coord) - _du;
-            }
+            b = reduceDouble(*mpiPtr,histo(_lo)+histo(_hi)) >= _tunnel;
+#endif
+            if (b) {
+#ifdef ENABLE_MPI
+              if ( mpiPtr->nproc() > 1 ) {
+                _du = Tbase::operator()(coord) - _du;
+                exchange();
+                _du = Tbase::operator()(coord) - _du;
+              }
 #endif                
-            auto it_max = Tbase::max();
-            auto it_min = Tbase::min();
-            cout << "Energy barrier: " << it_max->second-it_min->second << endl;
-            _f = _scale * _f;
-            _update = _update / _scale;
+              auto it_max = Tbase::max();
+              auto it_min = Tbase::min();
+              cout << "Energy barrier: " << it_max->second-it_min->second << endl;
+              _f = _scale * _f;
+              _tunnel = ceil(_tunnel / _scale);
+              histo.clear();
+            }
           }
           return _du;
         }
@@ -1707,7 +1711,7 @@ namespace Faunus {
 
     class PenaltyFunction2D : public Table3D<double,double> {
       private:
-        int _cnt, _update, _size;
+        int _cnt, _update, _size, _tunnel;
         double _f, _scale, _du;
         double _bw1, _bw2, _lo1, _hi1, _lo2, _hi2;
         typedef std::pair<double,double> Tpair;
@@ -1734,7 +1738,7 @@ namespace Faunus {
          ** @param hi2 Lower limit of 2nd RC (default 2)
          **/
         PenaltyFunction2D(Tmjson &j, double bw1, double bw2)
-          : Tbase(bw1, bw2, Tbase::XYDATA) {
+          : Tbase(bw1, bw2, Tbase::XYDATA), histo(bw1, bw2, Tbase::XYDATA) {
             Tbase::name = "penalty";
             auto m  = j["energy"][Tbase::name];    
             _f = m["f0"] | 0.5;
@@ -1748,6 +1752,7 @@ namespace Faunus {
             _hi2 = m["hi2"] | 2.0;
             _cnt = 0.0;
             _du = 0.0;
+            _tunnel = 8;
           }
 #ifdef ENABLE_MPI
         PenaltyFunction2D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
@@ -1766,6 +1771,7 @@ namespace Faunus {
             _size = 3.*((_hi1-_lo1)/_bw1+1)*((_hi2-_lo2)/_bw2+1);
             _cnt = 0.0;
             _du = 0.0;
+            _tunnel = 8;
           }
 #endif
         /** @brief Check if coordinates are within user-defined ranges */
@@ -1820,36 +1826,38 @@ namespace Faunus {
           ++_cnt;
           Tbase::operator()(coord.first,coord.second) += _f; 
           _du = _f;
-#ifdef ENABLE_MPI
           histo(coord.first,coord.second) += _f;
-#endif
           if (coord.first==_lo1 || coord.first==_hi1) {
             Tbase::operator()(coord.first,coord.second) += _f;
             _du += _f;
-#ifdef ENABLE_MPI
             histo(coord.first,coord.second) += _f;
-#endif
           }
           if (coord.second==_lo2 || coord.second==_hi2) {
             Tbase::operator()(coord.first,coord.second) += _f;
             _du += _f;
-#ifdef ENABLE_MPI
             histo(coord.first,coord.second) += _f;
-#endif
           }
+          double corners = histo(_lo1,_lo2)+histo(_hi1,_hi2)+histo(_lo1,_hi2)+histo(_hi1,_lo2);  
           if (_cnt>_update && _cnt%_update==0) {
-#ifdef ENABLE_MPI               
-            if ( mpiPtr->nproc() > 1 ) {
-              _du = Tbase::operator()(coord.first,coord.second) - _du;
-              exchange();
-              _du = Tbase::operator()(coord.first,coord.second) - _du;
-            }
+            bool b = corners >= _tunnel;
+#ifdef ENABLE_MPI
+            b = reduceDouble(*mpiPtr,corners) >= _tunnel;
 #endif
-            auto it_max = Tbase::max();
-            auto it_min = Tbase::min();
-            cout << "Energy barrier: " << it_max->second-it_min->second << endl;
-            _f = _scale*_f;
-            _update = _update/_scale;
+            if (b) {
+#ifdef ENABLE_MPI               
+              if ( mpiPtr->nproc() > 1 ) {
+                _du = Tbase::operator()(coord.first,coord.second) - _du;
+                exchange();
+                _du = Tbase::operator()(coord.first,coord.second) - _du;
+              }
+#endif
+              auto it_max = Tbase::max();
+              auto it_min = Tbase::min();
+              cout << "Energy barrier: " << it_max->second-it_min->second << endl;
+              _f = _scale*_f;
+              _tunnel = ceil(_tunnel/_scale);
+              histo.clear();
+            }
           }
           return _du;
         }

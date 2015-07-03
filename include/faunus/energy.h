@@ -1534,6 +1534,7 @@ namespace Faunus {
         std::pair<double,int> extreme;
         typedef std::pair<double,double> Tpair;
         typedef Table2D<double,double> Tbase;
+        Tbase histo;
 #ifdef ENABLE_MPI
         TimeRelativeOfTotal<std::chrono::microseconds> timer;
         typedef Faunus::MPI::FloatTransmitter::floatp floatp;
@@ -1566,7 +1567,7 @@ namespace Faunus {
           }
 #ifdef ENABLE_MPI
         PenaltyFunction1D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
-          : Tbase(bw1,Tbase::XYDATA), mpiPtr(&mpi) {
+          : Tbase(bw1,Tbase::XYDATA), histo(bw1,Tbase::XYDATA), mpiPtr(&mpi) {
             Tbase::name = "penalty";
             auto m  = j["energy"][Tbase::name];    
             _f = m["f0"] | 0.5;
@@ -1597,11 +1598,12 @@ namespace Faunus {
         void exchange() {
           timer.start();
           if (!mpiPtr->isMaster()) {
-            std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
+            std::vector<floatp> sendBuf = histo.hist2buf(_size);
             std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
+            histo.clear();
             Tbase::clear();
             for (int i=0; i<int(recvBuf.size()); i+=2)
-              if (recvBuf[i+1]!=0) Tbase::operator()(recvBuf.at(i))=recvBuf.at(i+1);
+              Tbase::operator()(recvBuf.at(i))=recvBuf.at(i+1);
           }
           if (mpiPtr->isMaster()) {
             std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
@@ -1630,9 +1632,15 @@ namespace Faunus {
           ++_cnt;
           Tbase::operator()(coord) += _f; 
           _du = _f;
+#ifdef ENABLE_MPI
+          histo(coord) += _f;
+#endif
           if (coord==_lo || coord==_hi) {
             Tbase::operator()(coord) += _f;
             _du += _f;
+#ifdef ENABLE_MPI
+            histo(coord) += _f;
+#endif
           }
           if (_cnt>_update && _cnt%_update==0) {
 #ifdef ENABLE_MPI               
@@ -1642,6 +1650,9 @@ namespace Faunus {
               _du = Tbase::operator()(coord) - _du;
             }
 #endif                
+            auto it_max = Tbase::max();
+            auto it_min = Tbase::min();
+            cout << "Energy barrier: " << it_max->second-it_min->second << endl;
             _f = _scale * _f;
             _update = _update / _scale;
           }
@@ -1687,7 +1698,7 @@ namespace Faunus {
               << pad(SUB,w, "x-maximum") << it_max->first << endl 
               << pad(SUB,w, "y-maximum") << it_max->second << endl;
 #ifdef ENABLE_MPI
-            o << pad(SUB,w,"Relative time consumption of MP") << timer.result() << endl;
+            o << pad(SUB,w,"Relative time consumption of MP ") << timer.result() << endl;
 #endif
           }
           return o.str();
@@ -1701,6 +1712,7 @@ namespace Faunus {
         double _bw1, _bw2, _lo1, _hi1, _lo2, _hi2;
         typedef std::pair<double,double> Tpair;
         typedef Table3D<double,double> Tbase;
+        Tbase histo;
 #ifdef ENABLE_MPI
         TimeRelativeOfTotal<std::chrono::microseconds> timer;
         typedef Faunus::MPI::FloatTransmitter::floatp floatp;
@@ -1739,7 +1751,7 @@ namespace Faunus {
           }
 #ifdef ENABLE_MPI
         PenaltyFunction2D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
-          : Tbase(bw1, bw2, Tbase::XYDATA), mpiPtr(&mpi) {
+          : Tbase(bw1, bw2, Tbase::XYDATA), histo(bw1, bw2, Tbase::XYDATA), mpiPtr(&mpi) {
             Tbase::name = "penalty";
             auto m  = j["energy"][Tbase::name];    
             _f = m["f0"] | 0.5;
@@ -1774,11 +1786,12 @@ namespace Faunus {
         void exchange() {
           timer.start();
           if (!mpiPtr->isMaster()) {
-            std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
+            std::vector<floatp> sendBuf = histo.hist2buf(_size);
             std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
+            histo.clear();
             Tbase::clear();
             for (int i=0; i<int(recvBuf.size()); i+=3)
-              if (recvBuf[i+2]!=0) Tbase::operator()(recvBuf.at(i),recvBuf.at(i+1))=recvBuf.at(i+2);
+              Tbase::operator()(recvBuf.at(i),recvBuf.at(i+1))=recvBuf.at(i+2);
           }
           if (mpiPtr->isMaster()) {
             std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
@@ -1807,13 +1820,22 @@ namespace Faunus {
           ++_cnt;
           Tbase::operator()(coord.first,coord.second) += _f; 
           _du = _f;
+#ifdef ENABLE_MPI
+          histo(coord.first,coord.second) += _f;
+#endif
           if (coord.first==_lo1 || coord.first==_hi1) {
             Tbase::operator()(coord.first,coord.second) += _f;
             _du += _f;
+#ifdef ENABLE_MPI
+            histo(coord.first,coord.second) += _f;
+#endif
           }
           if (coord.second==_lo2 || coord.second==_hi2) {
             Tbase::operator()(coord.first,coord.second) += _f;
             _du += _f;
+#ifdef ENABLE_MPI
+            histo(coord.first,coord.second) += _f;
+#endif
           }
           if (_cnt>_update && _cnt%_update==0) {
 #ifdef ENABLE_MPI               
@@ -1823,6 +1845,9 @@ namespace Faunus {
               _du = Tbase::operator()(coord.first,coord.second) - _du;
             }
 #endif
+            auto it_max = Tbase::max();
+            auto it_min = Tbase::min();
+            cout << "Energy barrier: " << it_max->second-it_min->second << endl;
             _f = _scale*_f;
             _update = _update/_scale;
           }
@@ -1870,7 +1895,7 @@ namespace Faunus {
               << ", " << it_max->first.second << ") " << endl
               << textio::pad(SUB,w, "z-maximum") << it_max->second << endl;
 #ifdef ENABLE_MPI
-            o << pad(SUB,w,"Relative time consumption of MP") << timer.result() << endl;
+            o << pad(SUB,w,"Relative time consumption of MP ") << timer.result() << endl;
 #endif
           }
           return o.str();

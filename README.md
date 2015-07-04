@@ -24,7 +24,7 @@ Get the latest revision from GitHub:
 Requirements
 ============
 
-- C/C++11 compiler (clang3+, gcc4.8+, intel13+, ...)
+- C/C++11 compiler (clang3.5+, gcc4.8+, intel14+, ...)
 - CMake 2.8.5+
 
 Optional:
@@ -47,7 +47,7 @@ Build options
 
 Option                             | Description
 :--------------------------------- | :----------------------------------------
-`-DENABLE_BABEL=OFF`               | Use OpenBabel for file I/O
+`-DENABLE_BABEL=OFF`               | Use OpenBabel for file I/O (experimental)
 `-DENABLE_MPI=OFF`                 | Build MPI programs (parallel tempering etc.)
 `-DENABLE_OPENMP=OFF`              | Enable OpenMP support
 `-DENABLE_STATIC=OFF`              | Static linkage of faunus as opposed to default dynamic linkage
@@ -56,7 +56,7 @@ Option                             | Description
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`| Alternatives: `Debug` or `Release` (faster)
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`  | Compiler options for Release mode
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`    | Compiler options for Debug mode
-`-DMYPLAYGROUND="..."`             | Add additional source directory (use absolute path)
+`-DMYPLAYGROUND="absolute path"`   | Add additional source directory
 
 Example: Intel's C++ compiler
 -----------------------------

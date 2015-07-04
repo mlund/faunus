@@ -2140,14 +2140,18 @@ namespace Faunus {
             Tbase::name = "Hamiltonian";
             auto m = j["energy"];
             for ( auto i=m.begin(); i!=m.end() ; ++i ) {
+
               if (i.key()=="nonbonded-dhlj")
                 push_back( Energy::Nonbonded<Tspace, Potential::DebyeHuckelLJ>( j, i.key() ) ); 
+
               if (i.key()=="cmconstrain") {
                 if ( Tbase::spc!=nullptr )
                   push_back( Energy::MassCenterConstrain<Tspace>( j, *Tbase::spc ) ); 
                 else
                   std::cerr << "Warning: call setSpace() on Energy::Hamiltonian.\n";
               }
+
+              if (i.key()=="penalty") { }
             }
           }
 

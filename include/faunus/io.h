@@ -843,82 +843,34 @@ namespace Faunus {
    */
   inline std::vector<PointParticle::Tid> FastaToAtoms(const string &fasta) {
 
-    std::map<char,string> map = {
-      {'A',"ALA"},
-      {'R',"ARG"},
-      {'N',"ASN"},
-      {'D',"ASP"},
-      {'C',"CYS"},
-      {'E',"GLU"},
-      {'Q',"GLN"},
-      {'G',"GLY"},
-      {'H',"HIS"},
-      {'I',"ILE"},
-      {'L',"LEU"},
-      {'K',"LYS"},
-      {'M',"MET"},
-      {'F',"PHE"},
-      {'P',"PRO"},
-      {'S',"SER"},
-      {'T',"THR"},
-      {'W',"TRP"},
-      {'Y',"TYR"},
-      {'V',"VAL"}
-    };
-
     std::vector<PointParticle::Tid> atomid;
     atomid.reserve( fasta.size() + 2 ); // later we may insert ctr and ntr, hence +2
+    std::map<char,string> map = {
+      {'A',"ALA"}, {'R',"ARG"}, {'N',"ASN"}, {'D',"ASP"}, {'C',"CYS"},
+      {'E',"GLU"}, {'Q',"GLN"}, {'G',"GLY"}, {'H',"HIS"}, {'I',"ILE"},
+      {'L',"LEU"}, {'K',"LYS"}, {'M',"MET"}, {'F',"PHE"}, {'P',"PRO"},
+      {'S',"SER"}, {'T',"THR"}, {'W',"TRP"}, {'Y',"TYR"}, {'V',"VAL"}
+    };
 
-    for (auto c : fasta) {
-      auto it = map.find(c);
+    for (auto c : fasta) {   // loop over letters
+      auto it = map.find(c); // is it in map?
       if ( it!=map.end() ) {
-        auto id = atom[ it->second ].id;
-        if (id>0)
+        auto id = atom[ it->second ].id; // is it in atommap?
+        if (id>0)            // id==0 is the fallback value if not found
           atomid.push_back( atom[ it->second ].id );
-        else
-          throw std::runtime_error( "Fasta residue '"+it->second+"' not defined in atom list." );
+        else {
+          std::cerr << "Error: Fasta residue '" + it->second + "' not defined in atom list.\n";
+          exit(1);
+        }
       }
-      else
-        throw std::runtime_error( "Unknown character '"+string(1,c)+"' in fasta sequence." );
+      else {
+        std::cerr << "Error: Invalid fasta character '" + string(1,c) + "'.\n";
+        exit(1);
+      }
     }
     assert( fasta.size() == atomid.size() );
     return atomid;
   }
-
-  /**
-   * @brief Add bonded peptide from fasta sequence
-   * @param spc Space
-   * @param bonded Bonded energy class, i.e. `Energy::Bonded`
-   * @param pairpot Bond potential, i.e. `Potential::Harmonic`
-   * @param fasta Fasta sequence (capital letters, no spacing)
-   * @return Group with peptide -- remember to enroll in space using `Space::enroll`
-   * @note Untested
-   * @todo Split out function `FastaToAtoms()`.
-   */
-  template<class Tspace, class Tbonded, class Tpairpot>
-    Group addFastaSequence(Tspace &spc, Tbonded &bonded, const Tpairpot &pairpot, const string &fasta) {
-
-      typedef typename Tspace::ParticleVector Tpvec;
-      typedef typename Tspace::ParticleVector::value_type Tparticle;
-
-      Group g;
-      auto atomid = FastaToAtoms( fasta );
-
-      if ( !atomid.empty() ) {
-        Tpvec t;
-        t.reserve( atomid.size() );
-        for (auto id : atomid) {
-          t.push_back( Tparticle() );
-          t.back() = atom[id];
-          spc.geo.randompos(t.back()); // random position
-        }
-        g = spc.insert(t);             // add to space
-        g.name = fasta;
-        for (int i=g.front(); i<g.back(); i++)
-          bonded.add(i, i+1, pairpot); // add bonds
-      }
-      return g;
-    }
 
 }//namespace
 #endif

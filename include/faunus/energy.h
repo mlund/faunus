@@ -129,10 +129,7 @@ namespace Faunus {
           virtual double external(const Tpvec&)                // External energy - pressure, for example.
           { return 0; }
 
-          virtual double penalty(const Tpvec&)          // Penalty function
-          { return 0; }
-
-          virtual double penalty_update(bool)               // Penalty function
+          virtual double update(bool)               // Penalty function
           { return 0; }
 
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
@@ -214,11 +211,8 @@ namespace Faunus {
           double external(const Tpvec&p) FOVERRIDE
           { return first.external(p)+second.external(p); }
 
-          double penalty(const Tpvec&p) FOVERRIDE
-          { return first.penalty(p)+second.penalty(p); }
-
-          double penalty_update(bool b) FOVERRIDE
-          { return first.penalty_update(b)+second.penalty_update(b); }
+          double update(bool b) FOVERRIDE
+          { return first.update(b)+second.update(b); }
 
           double v2v(const Tpvec&p1, const Tpvec&p2) FOVERRIDE
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }
@@ -1529,10 +1523,11 @@ namespace Faunus {
 
     class PenaltyFunction1D : public Table2D<double,double> {
       private:
-        int _cnt, _update, _size, _tunnel;
+        int _cnt, _update, _size, _spannings;
         double _f, _scale, _du, _lo, _hi, _bw;
         typedef std::pair<double,double> Tpair;
         typedef Table2D<double,double> Tbase;
+        std::pair<double,int> spannings;
         Tbase histo;
 #ifdef ENABLE_MPI
         TimeRelativeOfTotal<std::chrono::microseconds> timer;
@@ -1563,7 +1558,9 @@ namespace Faunus {
             _hi = m["hi1"] | 2.0;
             _cnt = 0.0;
             _du = 0.0;
-            _tunnel = 1;
+            spannings.first = _hi+1;
+            spannings.second = -1;
+            _spannings = 4;
           }
 #ifdef ENABLE_MPI
         PenaltyFunction1D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
@@ -1579,7 +1576,9 @@ namespace Faunus {
             _size = 2*(_hi-_lo)/_bw+2.;
             _cnt = 0.0;
             _du = 0.0;
-            _tunnel = 1;
+            spannings.first = _hi+1;
+            spannings.second = -1;
+            _spannings = 4;
           }
 #endif
         /** @brief Check if coordinate is within user-defined range */
@@ -1599,9 +1598,8 @@ namespace Faunus {
         void exchange() {
           timer.start();
           if (!mpiPtr->isMaster()) {
-            std::vector<floatp> sendBuf = histo.hist2buf(_size);
+            std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
             std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
-            histo.clear();
             Tbase::clear();
             for (int i=0; i<int(recvBuf.size()); i+=2)
               Tbase::operator()(recvBuf.at(i))=recvBuf.at(i+1);
@@ -1638,14 +1636,16 @@ namespace Faunus {
             Tbase::operator()(coord) += _f;
             _du += _f;
             histo(coord) += _f;
+            if (spannings.first!=coord) ++spannings.second;
+            spannings.first=coord;
           }
           if (_cnt>_update && _cnt%_update==0) {
-            double extremes = (histo(_lo)+histo(_hi))/4./_f;
-            bool b = extremes >= _tunnel;
+            bool b = spannings.second >= _spannings;
 #ifdef ENABLE_MPI               
-            b = reduceDouble(*mpiPtr,extremes) >= _tunnel;
+            b = reduceDouble(*mpiPtr,spannings.second) >= _spannings;
 #endif
             if (b) {
+              histo.save("histo");
 #ifdef ENABLE_MPI
               if ( mpiPtr->nproc() > 1 ) {
                 _du = Tbase::operator()(coord) - _du;
@@ -1655,9 +1655,12 @@ namespace Faunus {
 #endif                
               auto it_max = Tbase::max();
               auto it_min = Tbase::min();
-              cout << "Energy barrier: " << it_max->second-it_min->second << endl;
+              for (auto &m : Tbase::getMap())
+                m.second -= it_min->second;
+              cout << "Energy barrier: " << it_max->second-it_min->second << " spannings " << _spannings << endl;
               _f = _scale * _f;
-              _tunnel = ceil(_tunnel / _scale);
+              _spannings = ceil(_spannings / _scale);
+              cout << "New spannings " << _spannings << endl;
               histo.clear();
             }
           }
@@ -1712,11 +1715,12 @@ namespace Faunus {
 
     class PenaltyFunction2D : public Table3D<double,double> {
       private:
-        int _cnt, _update, _size, _tunnel;
+        int _cnt, _update, _size, _spannings;
         double _f, _scale, _du;
         double _bw1, _bw2, _lo1, _hi1, _lo2, _hi2;
         typedef std::pair<double,double> Tpair;
         typedef Table3D<double,double> Tbase;
+        std::tuple<double,int,double,int> spannings;
         Tbase histo;
 #ifdef ENABLE_MPI
         TimeRelativeOfTotal<std::chrono::microseconds> timer;
@@ -1753,7 +1757,11 @@ namespace Faunus {
             _hi2 = m["hi2"] | 2.0;
             _cnt = 0.0;
             _du = 0.0;
-            _tunnel = 1;
+            _spannings = 16;
+            std::get<0>(spannings) = _hi1+1;
+            std::get<1>(spannings) = -1;
+            std::get<2>(spannings) = _hi2+1;
+            std::get<3>(spannings) = -1;
           }
 #ifdef ENABLE_MPI
         PenaltyFunction2D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
@@ -1772,7 +1780,11 @@ namespace Faunus {
             _size = 3.*((_hi1-_lo1)/_bw1+1)*((_hi2-_lo2)/_bw2+1);
             _cnt = 0.0;
             _du = 0.0;
-            _tunnel = 1;
+            _spannings = 16;
+            std::get<0>(spannings) = _hi1+1;
+            std::get<1>(spannings) = -1;
+            std::get<2>(spannings) = _hi2+1;
+            std::get<3>(spannings) = -1;
           }
 #endif
         /** @brief Check if coordinates are within user-defined ranges */
@@ -1793,9 +1805,8 @@ namespace Faunus {
         void exchange() {
           timer.start();
           if (!mpiPtr->isMaster()) {
-            std::vector<floatp> sendBuf = histo.hist2buf(_size);
+            std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
             std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
-            histo.clear();
             Tbase::clear();
             for (int i=0; i<int(recvBuf.size()); i+=3)
               Tbase::operator()(recvBuf.at(i),recvBuf.at(i+1))=recvBuf.at(i+2);
@@ -1832,18 +1843,22 @@ namespace Faunus {
             Tbase::operator()(coord.first,coord.second) += _f;
             _du += _f;
             histo(coord.first,coord.second) += _f;
+            if (std::get<0>(spannings)!=coord.first) ++std::get<1>(spannings);
+            std::get<0>(spannings)=coord.first;
           }
           if (coord.second==_lo2 || coord.second==_hi2) {
             Tbase::operator()(coord.first,coord.second) += _f;
             _du += _f;
             histo(coord.first,coord.second) += _f;
+            if (std::get<2>(spannings)!=coord.second) ++std::get<3>(spannings);
+            std::get<2>(spannings)=coord.second;
           }
-          double corners = histo(_lo1,_lo2)+histo(_hi1,_hi2)+histo(_lo1,_hi2)+histo(_hi1,_lo2);  
-          corners /= _f*16.;
           if (_cnt>_update && _cnt%_update==0) {
-            bool b = corners >= _tunnel;
+            bool b = std::get<1>(spannings) >= _spannings && 
+              std::get<3>(spannings) >= _spannings;
 #ifdef ENABLE_MPI
-            b = reduceDouble(*mpiPtr,corners) >= _tunnel;
+            b = reduceDouble(*mpiPtr,std::get<1>(spannings)) >= _spannings
+              && reduceDouble(*mpiPtr,std::get<3>(spannings)) >= _spannings;
 #endif
             if (b) {
 #ifdef ENABLE_MPI               
@@ -1855,9 +1870,12 @@ namespace Faunus {
 #endif
               auto it_max = Tbase::max();
               auto it_min = Tbase::min();
+              for (auto &m : Tbase::getMap())
+                m.second -= it_min->second;
               cout << "Energy barrier: " << it_max->second-it_min->second << endl;
               _f = _scale*_f;
-              _tunnel = ceil(_tunnel/_scale);
+              _spannings = ceil(_spannings/_scale);
+              cout << "New spannings " << _spannings << endl;
               histo.clear();
             }
           }
@@ -1964,13 +1982,13 @@ namespace Faunus {
             void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
               pf.save_final(filename, a, b, c, d); 
             }
-            double penalty_update(bool outcome) {
+            double update(bool outcome) {
               if (!outcome) coordpair.first = coordpair.second; // if rejected use current
               return pf.update(coordpair.first);
             }
             std::map<Treturn,double> getMap() { return pf.getMap(); }
             double find(Treturn c) { return pf.find(c); }
-            double penalty(const Tpvec &p) {
+            double external(const Tpvec &p) FOVERRIDE {
               double du;
               Treturn coor = f(p);
               if (Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
@@ -2319,7 +2337,7 @@ namespace Faunus {
     template<class Tspace, class Tenergy, class Tpvec>
       double systemEnergy(Tspace &spc, Tenergy &pot, const Tpvec &p) {
         pot.setSpace(spc); // ensure pot geometry is in sync with spc
-        double u = pot.external(p) + pot.penalty(p);
+        double u = pot.external(p);
         for (auto g : spc.groupList())
           u += pot.g_external(p, *g) + pot.g_internal(p, *g);
         for (int i=0; i<(int)spc.groupList().size()-1; i++)

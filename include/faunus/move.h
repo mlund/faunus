@@ -451,13 +451,13 @@ namespace Faunus {
             bool outcome = metropolis(du);
             if ( !outcome ) {
               rejectMove();
-              utot += pot->penalty_update(outcome);
+              utot += pot->update(outcome);
             }
             else {
               acceptMove();
               if ( useAlternateReturnEnergy )
                 du = alternateReturnEnergy;
-              utot += pot->penalty_update(outcome);
+              utot += pot->update(outcome);
               dusum += du;
               utot += du;
             }
@@ -719,9 +719,9 @@ namespace Faunus {
             return pc::infty;
           return
             (base::pot->i_total(spc->trial, iparticle)
-             + base::pot->external(spc->trial) + base::pot->penalty(spc->trial))
+             + base::pot->external(spc->trial))
             - (base::pot->i_total(spc->p, iparticle)
-                + base::pot->external(spc->p) + base::pot->penalty(spc->p));
+                + base::pot->external(spc->p));
         }
         return 0;
       }
@@ -1036,10 +1036,10 @@ namespace Faunus {
           if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
 
-        double unew = pot->external(spc->trial) + pot->penalty(spc->trial) + pot->g_external(spc->trial, *igroup);
+        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if (unew==pc::infty)
           return pc::infty;       // early rejection
-        double uold = pot->external(spc->p) + pot->penalty(spc->p) + pot->g_external(spc->p, *igroup);
+        double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
 /*#ifdef ENABLE_MPI
         if (base::mpiPtr!=nullptr) {
@@ -1758,8 +1758,7 @@ namespace Faunus {
         for (auto g : spc->groupList())
           if (g!=gPtr)
             du+=pot->g2g(spc->trial, *g, *gPtr) - pot->g2g(spc->p, *g, *gPtr);
-        du+=pot->external(spc->trial) + pot->penalty(spc->trial) 
-          - pot->external(spc->p) - pot->penalty(spc->p);
+        du+=pot->external(spc->trial) - pot->external(spc->p);
         //for (auto i : index)
         //  du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
         return du;
@@ -2195,7 +2194,7 @@ namespace Faunus {
           if (g->numMolecules()>1)
             u+=pot->g_internal(p, *g);
         }
-        return u + pot->external(p) + pot->penalty(p);
+        return u + pot->external(p);
       }
 
     /**

@@ -690,11 +690,10 @@ namespace Faunus {
           this->clear();
           assert(!v.empty());
           for (int i=0; i<int(v.size()); i+=2) 
-            this->operator()(v.at(i)) += v.at(i+1);
+            if (v.at(i+1)!=0) this->operator()(v.at(i)) += v.at(i+1);
           double min=std::numeric_limits<double>::max();
           for (auto &m : map) 
             if (m.second<min) min=m.second;
-          cout << min << endl;
           for (auto &m : map)
             m.second -= min;
         }
@@ -1024,7 +1023,7 @@ namespace Faunus {
           this->clear();
           assert(!v.empty());
           for (int i=0; i<int(v.size()); i+=3)
-            this->operator()(v.at(i),v.at(i+1)) += v.at(i+2);
+            if (v.at(i+2)!=0) this->operator()(v.at(i),v.at(i+1)) += v.at(i+2);
           double min=std::numeric_limits<double>::max();
           for (auto &m : map) 
             if (m.second<min) min=m.second;

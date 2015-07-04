@@ -184,10 +184,10 @@ namespace Faunus {
            * keyword `sofq_cutoff`.
            */
           template<class Tpvec>
-            void sample(const Tpvec &p, T V=-1) {
+            void sample(const Tpvec &p, T f=1, T V=-1) {
               timer.start();
               assert(qmin>0 && qmax>0 && dq>0 && "q range invalid.");
-              sample(p,qmin,qmax,dq,V);
+              sample(p,qmin,qmax,dq,f,V);
               timer.stop();
             }
 
@@ -197,10 +197,11 @@ namespace Faunus {
            * @param qmin Minimum q-value to sample (1/A)
            * @param qmax Maximum q-value to sample (1/A)
            * @param dq q spacing (1/A)
+           * @param f weight of sampled configuration in biased simulations
            * @param V Simulation volume (angstrom^3) used only for cut-off correction
            */
           template<class Tpvec>
-            void sample(const Tpvec &p, T qmin, T qmax, T dq, T V=-1) {
+            void sample(const Tpvec &p, T qmin, T qmax, T dq, T f=1, T V=-1) {
               if (qmin<1e-6)
                 qmin=dq;              // ensure that q>0
 
@@ -232,7 +233,7 @@ namespace Faunus {
                 if (rc<1e9 && V>0)
                   Icorr = 4*pc::pi * N / (V*pow(q,3)) *
                     ( q*rc*cos(q*rc) - sin(q*rc) );
-                I[q] += ( 2*i.second + _ff[q] ) / N + Icorr; // add to average I(q)
+                I[q] += (( 2*i.second + _ff[q] ) / N + Icorr)*f; // add to average I(q)
               }
             }
           

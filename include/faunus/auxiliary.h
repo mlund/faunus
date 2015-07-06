@@ -513,9 +513,9 @@ namespace Faunus {
         }
 
         /** @brief Find key and return corresponding value otherwise zero*/
-        Ty find(Tx &x) {
+        Ty find(std::vector<Tx> &x) {
           Ty value = 0;
-          auto it = map.find( round(x) );
+          auto it = map.find( round(x[0]) );
           if (it!=map.end()) value = it->second;
           return value;
         }
@@ -858,9 +858,9 @@ namespace Faunus {
         }
 
         /** @brief Find key and return corresponding value otherwise zero*/
-        Ty find(std::pair<Tx,Tx> &xp) {
+        Ty find(std::vector<Tx> &x) {
           Ty value = 0;
-          auto it = map.find( std::make_pair(round1(xp.first),round2(xp.second)));
+          auto it = map.find( std::make_pair(round1(x[0]),round2(x[1])));
           if (it!=map.end()) value = it->second;
           return value;
         }

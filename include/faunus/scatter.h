@@ -161,7 +161,8 @@ namespace Faunus {
           Tformfactor F; // scattering from a single particle
           Tgeometry geo; // geometry to use for distance calculations
         public:
-          std::map<T,Average<T> > I; //!< Sampled, average I(q)
+          std::map<T,T> I; //!< Sampled, average I(q)
+          std::map<T,T> S; //!< Weighted number of samplings
 
           DebyeFormula(Tmjson &j) : geo(10) {
             auto m = j["analysis"]["scatter"];
@@ -233,6 +234,7 @@ namespace Faunus {
                 if (rc<1e9 && V>0)
                   Icorr = 4*pc::pi * N / (V*pow(q,3)) *
                     ( q*rc*cos(q*rc) - sin(q*rc) );
+                S[q] += f;
                 I[q] += (( 2*i.second + _ff[q] ) / N + Icorr)*f; // add to average I(q)
               }
             }
@@ -283,7 +285,7 @@ namespace Faunus {
               if (f) {
                 f << "# relative time = " << timer.result() << "\n";
                 for (auto &i : I)
-                  f << i.first << " " << i.second << "\n";
+                  f << i.first << " " << i.second/S[i.first] << "\n";
               }
             }
           }

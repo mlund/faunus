@@ -505,11 +505,22 @@ namespace Faunus {
           map.clear();
         }
 
+        void setResolution(std::vector<Tx> &resolution) {
+          assert( resolution[0]>0 );
+          dx=resolution[0];
+          map.clear();
+        }
+
         virtual ~Table2D() {}
 
         /** @brief Access operator - returns reference to y(x) */
         Ty& operator() (Tx x) {
           return map[ round(x) ];
+        }
+
+        /** @brief Access operator - returns reference to y(x) */
+        Ty& operator() (std::vector<Tx> &x) {
+          return map[ round(x[0]) ];
         }
 
         /** @brief Find key and return corresponding value otherwise zero*/
@@ -850,11 +861,22 @@ namespace Faunus {
           map.clear();
         }
 
+        void setResolution(std::vector<Tx> &resolution) {
+          assert( resolution.at(0)>0 && resolution.at(1)>0 );
+          dx1=resolution[0];
+          dx2=resolution[1];
+          map.clear();
+        }
+
         virtual ~Table3D() {}
 
         /** @brief Access operator - returns reference to y(x) */
         Ty& operator() (Tx x1, Tx x2) {
           return map[ std::make_pair(round1(x1),round2(x2)) ];
+        }
+
+        Ty& operator() (std::vector<Tx> &x) {
+          return map[ std::make_pair(round1(x[0]),round2(x[1])) ];
         }
 
         /** @brief Find key and return corresponding value otherwise zero*/

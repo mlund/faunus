@@ -1,6 +1,7 @@
-# Generated on Jul  6 2015 23:27:17 using 4.8.2
-energyAverage                                27.9235             
-moves/atomtranslate_acceptance               73.1482             
+# Generated on Jul  9 2015 20:44:37 using 4.8.2
+energyAverage                                27.7992             
+moves/atomtranslate_acceptance               72.9833             
 mv_particle_acceptance                       70.3031             
 penalty2D_range                              16.4725             
-relativeEnergyDrift                          2.04455e-12         
+penalty_range                                16.4901             
+relativeEnergyDrift                          7.72444e-12         

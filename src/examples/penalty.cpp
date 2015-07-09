@@ -34,12 +34,10 @@ int main() {
   InputMap mcp("penalty.json"); // read input file
   MCLoop loop(mcp); // class for handling mc loops
   Tspace spc(mcp);
-  cout << "here" << endl;
   auto pot
     = myenergy()                                      // our custom potential!
     + Energy::PenaltyEnergy<Tspace>(mcp,spc); // To be subsituted with
   // + Energy::PenaltyEnergy<Tspace,coordinates>(mpi, mcp); // in the MPI version
-  cout << "there" << endl;
   auto penalty = std::get<1>( pot.tuple() );
 
   auto myparticle = spc.findMolecules("myparticle");

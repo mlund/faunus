@@ -1521,237 +1521,237 @@ namespace Faunus {
           }
       };
 
-  template<class base=Table3D<double,double>> 
-    class PenaltyFunction : base {
-      private:
+    class PenaltyFunctionBase {
+      protected:
+        typedef std::vector<double> Tvec;
         int _cnt, _update, _size, _spannings;
         double _f, _scale, _du;
-        typedef std::vector<double> Tvec;
-        Tvec _bw, _lo, _hi, spannings; 
-        base temp;
-#ifdef ENABLE_MPI
-        TimeRelativeOfTotal<std::chrono::microseconds> timer;
-        typedef Faunus::MPI::FloatTransmitter::floatp floatp;
-        Faunus::MPI::MPIController *mpiPtr; 
-        Faunus::MPI::FloatTransmitter ft;
-#endif
+        Tvec _bw, _lo, _hi, spannings;
       public:
-        /**
-         ** @brief Constructor (RC=reaction coordinate)
-         **
-         ** @param f0 Initial increment to the penalty function (default 0.5)
-         ** @param scale Factor by which f0 is scaled (default 0.8)
-         ** @param update Number of MC sweeps before scaling f0 (default 1e5)
-         ** @param bw1 Bin width of 1st RC (default 0.1)
-         ** @param bw2 Bin width of 2nd RC (default 0.1)
-         ** @param lo1 Lower limit of 1st RC (default -2)
-         ** @param hi1 Lower limit of 1st RC (default 2)
-         ** @param lo2 Lower limit of 2nd RC (default -2)
-         ** @param hi2 Lower limit of 2nd RC (default 2)
-         **/
-        PenaltyFunction(Tmjson &j, const string &sec)
-          : base(base::XYDATA), temp(base::XYDATA) {
-            base::name = "penalty";
-            auto m = j["energy"][base::name][sec];
-            _f = m["f0"] | 0.5;
-            _scale = m["scale"] | 0.8;
-            _update = m["update"] | 1e5;
-            _bw.push_back(m["bw1"] | 0.1);
-            _lo.push_back(m["lo1"] | -2.0);
-            _hi.push_back(m["hi1"] | 2.0);
-            _bw.push_back(m["bw2"] | 0.1);
-            _lo.push_back(m["lo2"] | -2.0);
-            _hi.push_back(m["hi2"] | 2.0);
-            spannings.push_back(_hi[0]+1);
-            spannings.push_back(-1);  
-            spannings.push_back(_hi[1]+1);
-            spannings.push_back(-1);
-            _cnt = 0.0;
-            _du = 0.0;
-            base::setResolution(_bw);
-            temp.setResolution(_bw);
-            _spannings = 6;
-          }
-#ifdef ENABLE_MPI
-        PenaltyFunction(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec)
-          : base(base::XYDATA), temp(base::XYDATA) {
-            base::name = "penalty";
-            auto m = j["energy"][base::name][sec];
-            _f = m["f0"] | 0.5;
-            _scale = m["scale"] | 0.8;
-            _update = m["update"] | 1e5;
-            _bw.push_back(m["bw1"] | 0.1);
-            _lo.push_back(m["lo1"] | -2.0);
-            _hi.push_back(m["hi1"] | 2.0);
-            _bw.push_back(m["bw2"] | 0.1);
-            _lo.push_back(m["lo2"] | -2.0);
-            _hi.push_back(m["hi2"] | 2.0);
-            spannings.push_back(_hi[0]+1);
-            spannings.push_back(-1);  
-            spannings.push_back(_hi[1]+1);
-            spannings.push_back(-1);
-            _cnt = 0.0;
-            _du = 0.0;
-            base::setResolution(_bw);
-            temp.setResolution(_bw);
-            _spannings = 6;
-          }
-#endif
-        /** @brief Check if coordinates are within user-defined ranges */
-        bool isInrange(Tvec &coor) {
-          bool b = true;
-          for (int i=0; i<coor.size(); ++i)
-            b = b && coor[i]>=_lo[i] && coor[i]<=_hi[i];
-          return b;
+        PenaltyFunctionBase(Tmjson &j, const string &sec) {
+          auto m = j["energy"]["penalty"][sec];
+          _f = m["f0"] | 0.5;
+          _scale = m["scale"] | 0.8;
+          _update = m["update"] | 1e5;
+          _bw.push_back(m["bw1"] | 0.1);
+          _lo.push_back(m["lo1"] | -2.0);
+          _hi.push_back(m["hi1"] | 2.0);
+          _bw.push_back(m["bw2"] | 0.1);
+          _lo.push_back(m["lo2"] | -2.0);
+          _hi.push_back(m["hi2"] | 2.0);
+          spannings.push_back(_hi[0]+1);
+          spannings.push_back(-1);  
+          spannings.push_back(_hi[1]+1);
+          spannings.push_back(-1);
+          _cnt = 0.0;
+          _du = 0.0;
+          _spannings = 6;
         }
-        void round(Tvec &coor) { 
-          for (int i=0; i<coor.size(); ++i)
-            coor[i] = (coor[i]>=0) ? int( coor[i]/_bw[i]+0.5 )*_bw[i] : int( coor[i]/_bw[i]-0.5 )*_bw[i]; 
-        }
-#ifdef ENABLE_MPI
-        /**
-         ** @brief Merge histograms obtained from parallel processes with different seeds
-         **
-         ** @details Slave processes send histograms to the master. The master computes the 
-         ** sum over all histograms and sends it back to the slaves.
-         **/
-        void exchange() {
-          timer.start();
-          if (!mpiPtr->isMaster()) {
-            std::vector<floatp> sendBuf = base::hist2buf(_size);
-            std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
-            base::buf2hist(recvBuf);
-          }
-          if (mpiPtr->isMaster()) {
-            std::vector<floatp> sendBuf = base::hist2buf(_size);
-            std::vector<floatp> recvBuf(_size);
-            for (int i=0; i<mpiPtr->nproc(); ++i) {
-              if (i==mpiPtr->rankMaster()) continue;
-              ft.recvf(*mpiPtr, i, recvBuf);
-              ft.waitrecv();
-              sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
-            }
-            base::buf2hist(sendBuf);
-            sendBuf = base::hist2buf(_size);
-            for (int i=0; i<mpiPtr->nproc(); ++i) {
-              if (i==mpiPtr->rankMaster()) continue;
-              ft.sendf(*mpiPtr, sendBuf, i);
-              ft.waitsend();
-            }
-          }
-          timer.stop();
-        }         
-#endif
-        /** @brief Update histogram of single processes and penalty function
-         **/ 
-        double update(Tvec &coor) {
-          round(coor);
-          ++_cnt;
-          base::operator()(coor) += _f; 
-          _du = _f;
-          temp(coor) += 1;
-          for (int i=0; i<coor.size(); ++i) {
-            if (coor[i]==_lo[i] || coor[i]==_hi[i]) {
-              base::operator()(coor) += _f;
-              _du += _f;
-              temp(coor) += 1;
-              if (spannings[i*2]!=coor[i]) ++spannings[i*2+1];
-              spannings[i*2]=coor[i];
-            }
-          }
-          if (_f>0 && _cnt>_update && _cnt%_update==0) {
-            bool b = spannings[1] >= _spannings;
-            if (coor.size()>1) b = b && spannings[3] >= _spannings;
-#ifdef ENABLE_MPI
-            b = reduceDouble(*mpiPtr,spannings[1]) >= _spannings;
-            if (coor.size()>1) b = b && reduceDouble(*mpiPtr,spannings[3]) >= _spannings;
-#endif
-            if (b) {
-#ifdef ENABLE_MPI               
-              if ( mpiPtr->nproc() > 1 ) {
-                  _du = base::operator()(coor) - _du;
-                  exchange();
-                  _du = base::operator()(coor) - _du;
-              }
-#endif
-              auto it_max = base::max();
-              auto it_min = base::min();
-              for (auto &m : base::getMap())
-                m.second -= it_min->second;
-              cout << "Energy barrier: " << it_max->second-it_min->second << endl;
-              _f = _scale*_f;
-              _spannings = ceil(_spannings/_scale);
-              cout << "New spannings " << _spannings << endl;
-              temp.save("histo");
-              temp.clear();
-            }
-          }
-          return _du;
-        }
-        /** @brief Save table to disk */
-        void save(const string &filename) {
-          auto it_min = base::min();
-          base::save(filename+"penalty",1.,-it_min->second);
-        }
-        /** @brief Load table to disk */
-        void load(const string &filename) {
-          base::load(filename+"penalty");
-        }
-        /** @brief Find key and return value */
-        double find(Tvec &coor) {
-          return base::find(coor);
-        }
-        void test(UnitTest &t) {
-          if (!base::getMap().empty()) {
-            auto it_max = base::max();
-            auto it_min = base::min();
-            t("penalty2D_range",it_max->second-it_min->second,0.1);
-          }
-        }
-        string info() {
-          using namespace Faunus::textio;
-          std::ostringstream o;
-          if (_f!=0) {
-            o << header("2D penalty function");
-            char w=25;
-            auto it_max = base::max();
-            auto it_min = base::min();
-            o << textio::pad(SUB,w, "Final f") << _f << endl
-              << textio::pad(SUB,w, "z-range") << it_max->second-it_min->second << endl;
-#ifdef ENABLE_MPI
-            o << pad(SUB,w,"Relative time consumption of MP ") << timer.result() << endl;
-#endif
-          }
-          return o.str();
-        }
+        ~PenaltyFunctionBase() {}
+        virtual bool isInrange(Tvec&)=0;
+        virtual double update(Tvec&)=0;
+        virtual void save(const string&)=0;
+        virtual void load(const string&)=0;
+        virtual double find(Tvec&)=0;
+        virtual void test(UnitTest&)=0;
+        virtual string info()=0;
     };
 
-    template<class Tspace, class Ttable=Table3D<double,double>>
+    template<class Ttable> 
+      class PenaltyFunction : public PenaltyFunctionBase, Ttable {
+        private:
+          Ttable temp;
+#ifdef ENABLE_MPI
+          TimeRelativeOfTotal<std::chrono::microseconds> timer;
+          typedef Faunus::MPI::FloatTransmitter::floatp floatp;
+          Faunus::MPI::MPIController *mpiPtr; 
+          Faunus::MPI::FloatTransmitter ft;
+#endif
+        public:
+          /**
+           ** @brief Constructor (RC=reaction coordinate)
+           **
+           ** @param f0 Initial increment to the penalty function (default 0.5)
+           ** @param scale Factor by which f0 is scaled (default 0.8)
+           ** @param update Number of MC sweeps before scaling f0 (default 1e5)
+           ** @param bw1 Bin width of 1st RC (default 0.1)
+           ** @param bw2 Bin width of 2nd RC (default 0.1)
+           ** @param lo1 Lower limit of 1st RC (default -2)
+           ** @param hi1 Lower limit of 1st RC (default 2)
+           ** @param lo2 Lower limit of 2nd RC (default -2)
+           ** @param hi2 Lower limit of 2nd RC (default 2)
+           **/
+          PenaltyFunction(Tmjson &j, const string &sec)
+            : PenaltyFunctionBase(j,sec), Ttable(Ttable::XYDATA), temp(Ttable::XYDATA) {
+              Ttable::name = "penalty";
+              Ttable::setResolution(_bw);
+              temp.setResolution(_bw);
+            }
+#ifdef ENABLE_MPI
+          PenaltyFunction(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec)
+            : PenaltyFunctionBase(j,sec), Ttable(Ttable::XYDATA), temp(Ttable::XYDATA) {
+              Ttable::name = "penalty";
+              Ttable::setResolution(_bw);
+              temp.setResolution(_bw);
+            }
+#endif
+          /** @brief Check if coordinates are within user-defined ranges */
+          bool isInrange(Tvec &coor) {
+            bool b = true;
+            for (int i=0; i<coor.size(); ++i)
+              b = b && coor[i]>=_lo[i] && coor[i]<=_hi[i];
+            return b;
+          }
+          void round(Tvec &coor) { 
+            for (int i=0; i<coor.size(); ++i)
+              coor[i] = (coor[i]>=0) ? int( coor[i]/_bw[i]+0.5 )*_bw[i] : int( coor[i]/_bw[i]-0.5 )*_bw[i]; 
+          }
+#ifdef ENABLE_MPI
+          /**
+           ** @brief Merge histograms obtained from parallel processes with different seeds
+           **
+           ** @details Slave processes send histograms to the master. The master computes the 
+           ** sum over all histograms and sends it back to the slaves.
+           **/
+          void exchange() {
+            timer.start();
+            if (!mpiPtr->isMaster()) {
+              std::vector<floatp> sendBuf = Ttable::hist2buf(_size);
+              std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
+              Ttable::buf2hist(recvBuf);
+            }
+            if (mpiPtr->isMaster()) {
+              std::vector<floatp> sendBuf = Ttable::hist2buf(_size);
+              std::vector<floatp> recvBuf(_size);
+              for (int i=0; i<mpiPtr->nproc(); ++i) {
+                if (i==mpiPtr->rankMaster()) continue;
+                ft.recvf(*mpiPtr, i, recvBuf);
+                ft.waitrecv();
+                sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
+              }
+              Ttable::buf2hist(sendBuf);
+              sendBuf = Ttable::hist2buf(_size);
+              for (int i=0; i<mpiPtr->nproc(); ++i) {
+                if (i==mpiPtr->rankMaster()) continue;
+                ft.sendf(*mpiPtr, sendBuf, i);
+                ft.waitsend();
+              }
+            }
+            timer.stop();
+          }         
+#endif
+          /** @brief Update histogram of single processes and penalty function
+           **/ 
+          double update(Tvec &coor) {
+            round(coor);
+            ++_cnt;
+            Ttable::operator()(coor) += _f; 
+            _du = _f;
+            temp(coor) += 1;
+            for (int i=0; i<coor.size(); ++i) {
+              if (coor[i]==_lo[i] || coor[i]==_hi[i]) {
+                Ttable::operator()(coor) += _f;
+                _du += _f;
+                temp(coor) += 1;
+                if (spannings[i*2]!=coor[i]) ++spannings[i*2+1];
+                spannings[i*2]=coor[i];
+              }
+            }
+            if (_f>0 && _cnt>_update && _cnt%_update==0) {
+              bool b = spannings[1] >= _spannings;
+              if (coor.size()>1) b = b && spannings[3] >= _spannings;
+#ifdef ENABLE_MPI
+              b = reduceDouble(*mpiPtr,spannings[1]) >= _spannings;
+              if (coor.size()>1) b = b && reduceDouble(*mpiPtr,spannings[3]) >= _spannings;
+#endif
+              if (b) {
+#ifdef ENABLE_MPI               
+                if ( mpiPtr->nproc() > 1 ) {
+                  _du = Ttable::operator()(coor) - _du;
+                  exchange();
+                  _du = Ttable::operator()(coor) - _du;
+                }
+#endif
+                auto it_max = Ttable::max();
+                auto it_min = Ttable::min();
+                for (auto &m : Ttable::getMap())
+                  m.second -= it_min->second;
+                cout << "Energy barrier: " << it_max->second-it_min->second << endl;
+                _f = _scale*_f;
+                _spannings = ceil(_spannings/_scale);
+                cout << "New spannings " << _spannings << endl;
+                temp.save("histo");
+                temp.clear();
+              }
+            }
+            return _du;
+          }
+          /** @brief Save table to disk */
+          void save(const string &filename) {
+            auto it_min = Ttable::min();
+            Ttable::save(filename+"penalty",1.,-it_min->second);
+          }
+          /** @brief Load table to disk */
+          void load(const string &filename) {
+            Ttable::load(filename+"penalty");
+          }
+          /** @brief Find key and return value */
+          double find(Tvec &coor) {
+            return Ttable::find(coor);
+          }
+          void test(UnitTest &t) {
+            if (!Ttable::getMap().empty()) {
+              auto it_max = Ttable::max();
+              auto it_min = Ttable::min();
+              t("penalty_range",it_max->second-it_min->second,0.1);
+            }
+          }
+          string info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            if (_f!=0) {
+              o << header("2D penalty function");
+              char w=25;
+              auto it_max = Ttable::max();
+              auto it_min = Ttable::min();
+              o << textio::pad(SUB,w, "Final f") << _f << endl
+                << textio::pad(SUB,w, "z-range") << it_max->second-it_min->second << endl;
+#ifdef ENABLE_MPI
+              o << pad(SUB,w,"Relative time consumption of MP ") << timer.result() << endl;
+#endif
+            }
+            return o.str();
+          }
+      };
+
+    template<class Tspace>
       class ReactionCoordinateBase {
         private:
           typedef typename Tspace::p_vec Tpvec;
         protected:
           Tspace* spc;
         public:
-          Energy::PenaltyFunction<Ttable> pf;
           typedef vector<double> Tvec;
-          ReactionCoordinateBase(Tmjson &j, Tspace &s, const string &sec) 
-            : pf(j,sec) {
+          ReactionCoordinateBase(Tmjson &j, Tspace &s, const string &sec) {
             spc = &s;
           }
           ~ReactionCoordinateBase() {}
+          virtual std::shared_ptr<PenaltyFunctionBase> getPf()=0;
           virtual Tvec operator()(const Tpvec&)=0;
       };
 
-    template<class Tspace, class Ttable, typename base=ReactionCoordinateBase<Tspace,Ttable>>
+    template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
       class CmCm : public base {
         private:
           Point dir;
           typedef typename Tspace::p_vec Tpvec;
           vector<Group*> mol1, mol2;
+          typedef PenaltyFunction<Table2D<double,double>> Tpf;
         public:
           typedef vector<double> Tvec;
+          std::shared_ptr<PenaltyFunctionBase> pf;
           CmCm(Tmjson &j, Tspace &s, const string &sec="cm-cm") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(j,sec);
             auto m = j["energy"]["penalty"]["cm-cm"];
             string first = m["first"];
             auto m1 = base::spc->molList().find( first ); // is molecule defined?
@@ -1769,6 +1769,9 @@ namespace Faunus {
             mol2 = base::spc->findMolecules(m2->id);
             dir << ( j["dir"] | std::string("0 0 1") );
           } 
+          std::shared_ptr<PenaltyFunctionBase> getPf() { 
+            return pf; 
+          }
           Tvec operator()(const Tpvec &p) {
             Group g1(mol1.front()->front(), mol1.back()->back());
             Group g2(mol2.front()->front(), mol2.back()->back());
@@ -1781,14 +1784,17 @@ namespace Faunus {
           }
       };
 
-    template<class Tspace, class Ttable, typename base=ReactionCoordinateBase<Tspace,Ttable>>
+    template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
       class XYposition : public base {
         private:
           typedef typename Tspace::p_vec Tpvec;
           vector<Group*> mol;
+          typedef PenaltyFunction<Table3D<double,double>> Tpf;
         public:
           typedef vector<double> Tvec;
+          std::shared_ptr<PenaltyFunctionBase> pf;
           XYposition(Tmjson &j, Tspace &s, const string &sec="XY-position") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(j,sec);
             auto m = j["energy"]["penalty"]["XY-position"];
             string molecule = m["molecule"];
             auto m1 = base::spc->molList().find( molecule ); // is molecule defined?
@@ -1798,6 +1804,9 @@ namespace Faunus {
             }
             mol = base::spc->findMolecules(m1->id);
           } 
+          std::shared_ptr<PenaltyFunctionBase> getPf() { 
+            return pf; 
+          }
           Tvec operator()(const Tpvec &p) {
             Group g(mol.front()->front(), mol.back()->back());
             auto cm = Geometry::massCenter(base::spc->geo,p,g);
@@ -1834,44 +1843,40 @@ namespace Faunus {
         class PenaltyEnergy : public base {
           private:
             string _info() { return "Energy from Penalty Function\n"; }
-            typedef std::shared_ptr<ReactionCoordinateBase<Tspace>> Trc;
-            Trc rcPtr;
+            typedef ReactionCoordinateBase<Tspace> Trc;
+            typedef std::shared_ptr<Trc> Tptr;
+            Tptr ptr;
             typedef typename Tspace::p_vec Tpvec;
             typedef vector<double> Tvec;
-            template<typename T>
-              Trc toPtr(T m) {
-                return Trc( new T(m) );
-              }
+            size_t pos;
           public:
             PenaltyEnergy(Tmjson &j, Tspace &s) {
               auto m = j["energy"]["penalty"];
-              if (m.begin().key()=="cm-cm") {
-                rcPtr = toPtr( CmCm<Tspace,Table3D<double,double>>(j,s) );
-              }
-              if (m.begin().key()=="XY-position") {
-                rcPtr = toPtr( XYposition<Tspace,Table3D<double,double>>(j,s) );
-              }
+              if (m.begin().key()=="cm-cm") 
+                ptr = std::make_shared<CmCm<Tspace>>(j,s);
+              if (m.begin().key()=="XY-position") 
+                ptr = std::make_shared<XYposition<Tspace>>(j,s);
             }
             auto tuple() -> decltype(std::make_tuple(this)) {
               return std::make_tuple(this);
             }
-            string info() { return rcPtr->pf.info(); }
-            void test(UnitTest &t) { rcPtr->pf.test(t); }
-            void load(const string &filename="") { rcPtr->pf.load(filename); }
-            void save(const string &filename="") { rcPtr->pf.save(filename); }
+            string info() { return ptr->getPf()->info(); }
+            void test(UnitTest &t) { ptr->getPf()->test(t); }
+            void load(const string &filename="") { ptr->getPf()->load(filename); }
+            void save(const string &filename="") { ptr->getPf()->save(filename); }
             std::pair<Tvec,Tvec> coordpair; // current and trial coordinates
             double update(bool outcome) {
               if (!outcome) coordpair.first = coordpair.second; // if rejected use current
-              return rcPtr->pf.update(coordpair.first);
+              return ptr->getPf()->update(coordpair.first);
             }
-            double find(Tvec coor) { return rcPtr->pf.find(coor); }
+            double find(Tvec coor) { return ptr->getPf()->find(coor); }
             double external(const Tpvec &p) FOVERRIDE {
               double du;
-              Tvec coor = rcPtr->operator()(p);
+              Tvec coor = ptr->operator()(p);
               if (base::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
               else coordpair.second=coor; // current coordinate is stored
-              if (!rcPtr->pf.isInrange(coor)) du = 1e20;
-              else du = rcPtr->pf.find(coor);
+              if (!ptr->getPf()->isInrange(coor)) du = 1e20;
+              else du = ptr->getPf()->find(coor);
               return du;
             }
         };

@@ -37,7 +37,7 @@ int main() {
   auto pot
     = myenergy()                                      // our custom potential!
     + Energy::PenaltyEnergy<Tspace>(mcp,spc); // To be subsituted with
-  // + Energy::PenaltyEnergy<Tspace,coordinates>(mpi, mcp); // in the MPI version
+  // + Energy::PenaltyEnergy<Tspace>(mpi,mcp,spc); // in the MPI version
   auto penalty = std::get<1>( pot.tuple() );
 
   auto myparticle = spc.findMolecules("myparticle");

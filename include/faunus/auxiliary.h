@@ -688,7 +688,7 @@ namespace Faunus {
           assert(!map.empty());
           for (auto &m : map) {
             sendBuf.push_back(m.first);
-            sendBuf.push_back(double(m.second));
+            sendBuf.push_back(m.second);
           }
           sendBuf.resize(size,0.);
           return sendBuf;
@@ -1036,7 +1036,7 @@ namespace Faunus {
           for (auto &m : map) {
             sendBuf.push_back(m.first.first);
             sendBuf.push_back(m.first.second);
-            sendBuf.push_back(double(m.second));
+            sendBuf.push_back(m.second);
           }
           sendBuf.resize(size,0.);
           return sendBuf;

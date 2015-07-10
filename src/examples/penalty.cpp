@@ -27,39 +27,26 @@ struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
     string _info() { return "myenergy"; }       //mandatory info 
 };
 
-struct coordinates { //function that defines the reaction coordinates
-  static Group* pg; // penalized group
-  std::pair<double,double> operator()(const typename Tspace::ParticleVector &p) {
-    return std::make_pair(p[pg->front()].x(),p[pg->front()].y());
-  }
-};
-
-Group* coordinates::pg;
-
 int main() {
   // For the MPI version add the following line:
   // Faunus::MPI::MPIController mpi; // init MPI
 
   InputMap mcp("penalty.json"); // read input file
   MCLoop loop(mcp); // class for handling mc loops
-
+  Tspace spc(mcp);
   auto pot
     = myenergy()                                      // our custom potential!
-    + Energy::PenaltyEnergy<Tspace,coordinates>(mcp); // To be subsituted with
-  // + Energy::PenaltyEnergy<Tspace,coordinates>(mpi, mcp); // in the MPI version
-
+    + Energy::PenaltyEnergy<Tspace>(mcp,spc); // To be subsituted with
+  // + Energy::PenaltyEnergy<Tspace>(mpi,mcp,spc); // in the MPI version
   auto penalty = std::get<1>( pot.tuple() );
 
-  Tspace spc(mcp);                                    // create simulation space
   auto myparticle = spc.findMolecules("myparticle");
   Group mygroup(myparticle.front()->front(), myparticle.back()->back());
   mygroup.setMolSize(1);
-  coordinates::pg = &mygroup;                         // set penalized group
   EnergyDrift sys;                                    // class for tracking system energy drifts
   
   // In MPI version add:
   // slump.setDiscard(mpi.rank()+1);
-
   penalty->load("pf_");
 
   // Markov moves
@@ -83,7 +70,7 @@ int main() {
   cout << loop.info() + mv.info() + penalty->info() + sys.info();
 
   // perform unit 
-  if (penalty->penalty_update(true)) {
+  if (penalty->update(true)) {
   UnitTest test(mcp);
   mv.test(test);
   sys.test(test);

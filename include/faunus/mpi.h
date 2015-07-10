@@ -331,6 +331,38 @@ namespace Faunus {
           std::cerr << "Particle transmitter says: !!!!!!!!!!!" << endl;
       }
 
+    /*
+     * @brief Compute average over tables from parallel processes with different seeds
+     *
+     * @details Slave processes send histograms to the master. The master computes the 
+     * average over all histograms and sends it back to the slaves.
+     */
+    template<class Ttable>
+      void averageTables(MPIController* mpiPtr, FloatTransmitter &ft, Ttable &table, int &size) {
+        if (!mpiPtr->isMaster()) {
+          vector<FloatTransmitter::floatp> sendBuf = table.hist2buf(size);
+          vector<FloatTransmitter::floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
+          table.buf2hist(recvBuf);
+        }
+        if (mpiPtr->isMaster()) {
+          vector<FloatTransmitter::floatp> sendBuf = table.hist2buf(size);
+          vector<FloatTransmitter::floatp> recvBuf(size);
+          for (int i=0; i<mpiPtr->nproc(); ++i) {
+            if (i==mpiPtr->rankMaster()) continue;
+            ft.recvf(*mpiPtr, i, recvBuf);
+            ft.waitrecv();
+            sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
+          }
+          table.buf2hist(sendBuf);
+          sendBuf = table.hist2buf(size);
+          for (int i=0; i<mpiPtr->nproc(); ++i) {
+            if (i==mpiPtr->rankMaster()) continue;
+            ft.sendf(*mpiPtr, sendBuf, i);
+            ft.waitsend();
+          }
+        }
+      }
+
   } //end of mpi namespace
 }//end of faunus namespace
 

@@ -1,6 +1,7 @@
-# Generated on Jun 29 2015 17:30:00 using 4.2.1 Compatible Ubuntu Clang 3.5.0 (tags/RELEASE_350/final)
-energyAverage                                38.2587             
-moves/atomtranslate_acceptance               73.9608             
+# Generated on Jul  9 2015 20:44:37 using 4.8.2
+energyAverage                                27.7992             
+moves/atomtranslate_acceptance               72.9833             
 mv_particle_acceptance                       70.3031             
-penalty2D_range                              16.6065             
-relativeEnergyDrift                          6.88801e-12         
+penalty2D_range                              16.4725             
+penalty_range                                16.4901             
+relativeEnergyDrift                          7.72444e-12         

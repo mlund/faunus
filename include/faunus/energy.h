@@ -11,6 +11,7 @@
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
 #include <faunus/bonded.h>
+#include <Eigen/Eigenvalues>
 #endif
 #ifdef ENABLE_MPI
 #include <faunus/mpi.h>
@@ -129,10 +130,7 @@ namespace Faunus {
           virtual double external(const Tpvec&)                // External energy - pressure, for example.
           { return 0; }
 
-          virtual double penalty(const Tpvec&)          // Penalty function
-          { return 0; }
-
-          virtual double penalty_update(bool)               // Penalty function
+          virtual double update(bool)               // Penalty function
           { return 0; }
 
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
@@ -214,11 +212,8 @@ namespace Faunus {
           double external(const Tpvec&p) FOVERRIDE
           { return first.external(p)+second.external(p); }
 
-          double penalty(const Tpvec&p) FOVERRIDE
-          { return first.penalty(p)+second.penalty(p); }
-
-          double penalty_update(bool b) FOVERRIDE
-          { return first.penalty_update(b)+second.penalty_update(b); }
+          double update(bool b) FOVERRIDE
+          { return first.update(b)+second.update(b); }
 
           double v2v(const Tpvec&p1, const Tpvec&p2) FOVERRIDE
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }
@@ -1527,390 +1522,353 @@ namespace Faunus {
           }
       };
 
-    class PenaltyFunction1D : public Table2D<double,double> {
-      private:
-        int _cnt, _update, _size, _tunnel;
-        double _f, _scale, _du, _lo, _hi, _bw;
-        typedef std::pair<double,double> Tpair;
-        typedef Table2D<double,double> Tbase;
-        Tbase histo;
-#ifdef ENABLE_MPI
-        TimeRelativeOfTotal<std::chrono::microseconds> timer;
-        typedef Faunus::MPI::FloatTransmitter::floatp floatp;
-        Faunus::MPI::MPIController *mpiPtr; 
-        Faunus::MPI::FloatTransmitter ft;
-#endif
+    class PenaltyFunctionBase {
+      protected:
+        typedef std::vector<double> Tvec;
+        int _cnt, _update, _size, _spannings;
+        double _f, _scale, _du;
+        Tvec _bw, _lo, _hi, spannings;
       public:
-        /**
-         ** @brief Constructor (RC=reaction coordinate)
-         **
-         ** @param f0 Initial increment to the penalty function (default 0.5)
-         ** @param scale Factor by which f0 is scaled (default 0.8)
-         ** @param updates Number of MC sweeps before scaling f0 (default 1e5)
-         ** @param bw1 Bin width of RC (default 0.1)
-         ** @param lo1 Lower limit of RC (default -2)
-         ** @param hi1 Lower limit of RC (default 2)
-         **/
-        PenaltyFunction1D(Tmjson &j, double bw1, double bw2)
-          : Tbase(bw1,Tbase::XYDATA), histo(bw1,Tbase::XYDATA) {
-            Tbase::name = "penalty";
-            auto m  = j["energy"][Tbase::name];    
-            _f = m["f0"] | 0.5;
-            _scale = m["scale"] | 0.8;
-            _update = m["update"] | 1e5;
-            _bw = bw1;
-            _lo = m["lo1"] | -2.0;
-            _hi = m["hi1"] | 2.0;
-            _cnt = 0.0;
-            _du = 0.0;
-            _tunnel = 1;
-          }
-#ifdef ENABLE_MPI
-        PenaltyFunction1D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
-          : Tbase(bw1,Tbase::XYDATA), histo(bw1,Tbase::XYDATA), mpiPtr(&mpi) {
-            Tbase::name = "penalty";
-            auto m  = j["energy"][Tbase::name];    
-            _f = m["f0"] | 0.5;
-            _scale = m["scale"] | 0.8;
-            _update = m["update"] | 1e5;
-            _bw = bw1;
-            _lo = m["lo1"] | -2.0;
-            _hi = m["hi1"] | 2.0;
-            _size = 2*(_hi-_lo)/_bw+2.;
-            _cnt = 0.0;
-            _du = 0.0;
-            _tunnel = 1;
-          }
-#endif
-        /** @brief Check if coordinate is within user-defined range */
-        bool isInrange(double &coord) {
-          return (coord>=_lo && coord<=_hi);
+        PenaltyFunctionBase(Tmjson &j, const string &sec) {
+          auto m = j["energy"]["penalty"][sec];
+          _f = m["f0"] | 0.5;
+          _scale = m["scale"] | 0.8;
+          _update = m["update"] | 1e5;
+          _bw.push_back(m["bw1"] | 0.1);
+          _lo.push_back(m["lo1"] | -2.0);
+          _hi.push_back(m["hi1"] | 2.0);
+          _bw.push_back(m["bw2"] | 0.1);
+          _lo.push_back(m["lo2"] | 0.0);
+          _hi.push_back(m["hi2"] | 0.0);
+          spannings.push_back(_hi[0]+1);
+          spannings.push_back(-1);  
+          spannings.push_back(_hi[1]+1);
+          spannings.push_back(-1);
+          _size = 3.*((_hi[0]-_lo[0])/_bw[0]+1.)*((_hi[1]-_lo[1])/_bw[1]+1.);
+          _cnt = 0.0;
+          _du = 0.0;
+          _spannings = 6;
         }
-        void round(double &x) { 
-          x = (x>=0) ? int( x/_bw+0.5 )*_bw : int( x/_bw-0.5 )*_bw; 
-        }
-#ifdef ENABLE_MPI
-        /**
-         ** @brief Merge histograms obtained from parallel processes with different seeds
-         **
-         ** @details Slave processes send histograms to the master. The master computes the 
-         ** sum over all histograms and sends it back to the slaves.
-         **/
-        void exchange() {
-          timer.start();
-          if (!mpiPtr->isMaster()) {
-            std::vector<floatp> sendBuf = histo.hist2buf(_size);
-            std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
-            histo.clear();
-            Tbase::clear();
-            for (int i=0; i<int(recvBuf.size()); i+=2)
-              Tbase::operator()(recvBuf.at(i))=recvBuf.at(i+1);
-          }
-          if (mpiPtr->isMaster()) {
-            std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
-            std::vector<floatp> recvBuf(_size);
-            for (int i=0; i<mpiPtr->nproc(); ++i) {
-              if (i==mpiPtr->rankMaster()) continue;
-              ft.recvf(*mpiPtr, i, recvBuf);
-              ft.waitrecv();
-              sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
-            }
-            Tbase::buf2hist(sendBuf);
-            sendBuf = Tbase::hist2buf(_size);
-            for (int i=0; i<mpiPtr->nproc(); ++i) {
-              if (i==mpiPtr->rankMaster()) continue;
-              ft.sendf(*mpiPtr, sendBuf, i);
-              ft.waitsend();
-            }
-          }
-          timer.stop();
-        }
-#endif
-        /** @brief Update histogram of single processes and penalty function 
-         **/
-        double update(double coord) {
-          round(coord);
-          ++_cnt;
-          Tbase::operator()(coord) += _f; 
-          _du = _f;
-          histo(coord) += _f;
-          if (coord==_lo || coord==_hi) {
-            Tbase::operator()(coord) += _f;
-            _du += _f;
-            histo(coord) += _f;
-          }
-          if (_cnt>_update && _cnt%_update==0) {
-            double extremes = (histo(_lo)+histo(_hi))/4./_f;
-            bool b = extremes >= _tunnel;
-#ifdef ENABLE_MPI               
-            b = reduceDouble(*mpiPtr,extremes) >= _tunnel;
-#endif
-            if (b) {
-#ifdef ENABLE_MPI
-              if ( mpiPtr->nproc() > 1 ) {
-                _du = Tbase::operator()(coord) - _du;
-                exchange();
-                _du = Tbase::operator()(coord) - _du;
-              }
-#endif                
-              auto it_max = Tbase::max();
-              auto it_min = Tbase::min();
-              cout << "Energy barrier: " << it_max->second-it_min->second << endl;
-              _f = _scale * _f;
-              _tunnel = ceil(_tunnel / _scale);
-              histo.clear();
-            }
-          }
-          return _du;
-        }
-        /** @brief Save table to disk */
-        void save(const string &filename) {
-          auto it_min = Tbase::min();
-          Tbase::save(filename+"penalty",1.,-it_min->second);
-        }
-        /** 
-         ** @brief Translate penalty by a reference value and save it to disk. 
-         **
-         ** @details The reference value is obtained by averaging over a region of the
-         ** reaction coordinate space.
-         **/
-        void save_final(const string &filename, 
-            double a, double b, double c, double d) {
-          double ref_value = - Tbase::ave(a,b);
-          Tbase::save(filename+"penalty_fin",1.,ref_value);
-        }
-        /** @brief Load table to disk */
-        void load(const string &filename) {
-          Tbase::load(filename+"penalty");
-        }
-        void test(UnitTest &t) {
-          if (!Tbase::getMap().empty()) {
-            auto it_max = Tbase::max();
-            auto it_min = Tbase::min();
-            t("penalty1D_range",it_max->second-it_min->second,0.1);
-          }
-        }
-        string info() {
-          using namespace Faunus::textio;
-          std::ostringstream o;
-          if (_f!=0) {
-            o << header("1D penalty function");
-            char w=25;
-            auto it_max = Tbase::max();
-            auto it_min = Tbase::min();
-            o << pad(SUB,w, "Final f") << _f << endl
-              << pad(SUB,w, "x-minimum") << it_min->first << endl 
-              << pad(SUB,w, "x-maximum") << it_max->first << endl 
-              << pad(SUB,w, "y-maximum") << it_max->second << endl;
-#ifdef ENABLE_MPI
-            o << pad(SUB,w,"Relative time consumption of MP ") << timer.result() << endl;
-#endif
-          }
-          return o.str();
-        }
+        ~PenaltyFunctionBase() {}
+        virtual bool isInrange(Tvec&)=0;
+        virtual double update(Tvec&)=0;
+        virtual void save(const string&)=0;
+        virtual void load(const string&)=0;
+        virtual double find(Tvec&)=0;
+        virtual void test(UnitTest&)=0;
+        virtual string info()=0;
     };
 
-    class PenaltyFunction2D : public Table3D<double,double> {
-      private:
-        int _cnt, _update, _size, _tunnel;
-        double _f, _scale, _du;
-        double _bw1, _bw2, _lo1, _hi1, _lo2, _hi2;
-        typedef std::pair<double,double> Tpair;
-        typedef Table3D<double,double> Tbase;
-        Tbase histo;
+    template<class Ttable> 
+      class PenaltyFunction : public PenaltyFunctionBase {
+        private:
+          Ttable penalty, histo;
 #ifdef ENABLE_MPI
-        TimeRelativeOfTotal<std::chrono::microseconds> timer;
-        typedef Faunus::MPI::FloatTransmitter::floatp floatp;
-        Faunus::MPI::MPIController *mpiPtr; 
-        Faunus::MPI::FloatTransmitter ft;
+          TimeRelativeOfTotal<std::chrono::microseconds> timer;
+          Faunus::MPI::MPIController *mpiPtr; 
+          Faunus::MPI::FloatTransmitter ft;
 #endif
-      public:
-        /**
-         ** @brief Constructor (RC=reaction coordinate)
-         **
-         ** @param f0 Initial increment to the penalty function (default 0.5)
-         ** @param scale Factor by which f0 is scaled (default 0.8)
-         ** @param update Number of MC sweeps before scaling f0 (default 4)
-         ** @param bw1 Bin width of 1st RC (default 0.1)
-         ** @param bw2 Bin width of 2nd RC (default 0.1)
-         ** @param lo1 Lower limit of 1st RC (default -2)
-         ** @param hi1 Lower limit of 1st RC (default 2)
-         ** @param lo2 Lower limit of 2nd RC (default -2)
-         ** @param hi2 Lower limit of 2nd RC (default 2)
-         **/
-        PenaltyFunction2D(Tmjson &j, double bw1, double bw2)
-          : Tbase(bw1, bw2, Tbase::XYDATA), histo(bw1, bw2, Tbase::XYDATA) {
-            Tbase::name = "penalty";
-            auto m  = j["energy"][Tbase::name];    
-            _f = m["f0"] | 0.5;
-            _scale = m["scale"] | 0.8;
-            _update = m["update"] | 1e5;
-            _bw1 = bw1;
-            _bw2 = bw2;
-            _lo1 = m["lo1"] | -2.0;
-            _hi1 = m["hi1"] | 2.0;
-            _lo2 = m["lo2"] | -2.0;
-            _hi2 = m["hi2"] | 2.0;
-            _cnt = 0.0;
-            _du = 0.0;
-            _tunnel = 1;
-          }
-#ifdef ENABLE_MPI
-        PenaltyFunction2D(Faunus::MPI::MPIController &mpi, Tmjson &j, double bw1, double bw2)
-          : Tbase(bw1, bw2, Tbase::XYDATA), histo(bw1, bw2, Tbase::XYDATA), mpiPtr(&mpi) {
-            Tbase::name = "penalty";
-            auto m  = j["energy"][Tbase::name];    
-            _f = m["f0"] | 0.5;
-            _scale = m["scale"] | 0.8;
-            _update = m["update"] | 1e5;
-            _bw1 = bw1;
-            _bw2 = bw2;
-            _lo1 = m["lo1"] | -2.0;
-            _hi1 = m["hi1"] | 2.0;
-            _lo2 = m["lo2"] | -2.0;
-            _hi2 = m["hi2"] | 2.0;
-            _size = 3.*((_hi1-_lo1)/_bw1+1)*((_hi2-_lo2)/_bw2+1);
-            _cnt = 0.0;
-            _du = 0.0;
-            _tunnel = 1;
-          }
-#endif
-        /** @brief Check if coordinates are within user-defined ranges */
-        bool isInrange(Tpair &coord) {
-          return (coord.first>=_lo1 && coord.first<=_hi1 && coord.second>=_lo2 && coord.second<=_hi2);
-        }
-        void round(Tpair &x) { 
-          x.first = (x.first>=0) ? int( x.first/_bw1+0.5 )*_bw1 : int( x.first/_bw1-0.5 )*_bw1; 
-          x.second = (x.second>=0) ? int( x.second/_bw2+0.5 )*_bw2 : int( x.second/_bw2-0.5 )*_bw2;
-        }
-#ifdef ENABLE_MPI
-        /**
-         ** @brief Merge histograms obtained from parallel processes with different seeds
-         **
-         ** @details Slave processes send histograms to the master. The master computes the 
-         ** sum over all histograms and sends it back to the slaves.
-         **/
-        void exchange() {
-          timer.start();
-          if (!mpiPtr->isMaster()) {
-            std::vector<floatp> sendBuf = histo.hist2buf(_size);
-            std::vector<floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());
-            histo.clear();
-            Tbase::clear();
-            for (int i=0; i<int(recvBuf.size()); i+=3)
-              Tbase::operator()(recvBuf.at(i),recvBuf.at(i+1))=recvBuf.at(i+2);
-          }
-          if (mpiPtr->isMaster()) {
-            std::vector<floatp> sendBuf = Tbase::hist2buf(_size);
-            std::vector<floatp> recvBuf(_size);
-            for (int i=0; i<mpiPtr->nproc(); ++i) {
-              if (i==mpiPtr->rankMaster()) continue;
-              ft.recvf(*mpiPtr, i, recvBuf);
-              ft.waitrecv();
-              sendBuf.insert(sendBuf.end(), recvBuf.begin(), recvBuf.end());
+        public:
+          /**
+           ** @brief Constructor (RC=reaction coordinate)
+           **
+           ** @param f0 Initial increment to the penalty function (default 0.5)
+           ** @param scale Factor by which f0 is scaled (default 0.8)
+           ** @param update Number of MC sweeps before scaling f0 (default 1e5)
+           ** @param bw1 Bin width of 1st RC (default 0.1)
+           ** @param bw2 Bin width of 2nd RC (default 0.1)
+           ** @param lo1 Lower limit of 1st RC (default -2)
+           ** @param hi1 Lower limit of 1st RC (default 2)
+           ** @param lo2 Lower limit of 2nd RC (default -2)
+           ** @param hi2 Lower limit of 2nd RC (default 2)
+           **/
+          PenaltyFunction(Tmjson &j, const string &sec)
+            : PenaltyFunctionBase(j,sec), penalty(Ttable::XYDATA), histo(Ttable::XYDATA) {
+              penalty.setResolution(_bw);
+              histo.setResolution(_bw);
             }
-            Tbase::buf2hist(sendBuf);
-            sendBuf = Tbase::hist2buf(_size);
-            for (int i=0; i<mpiPtr->nproc(); ++i) {
-              if (i==mpiPtr->rankMaster()) continue;
-              ft.sendf(*mpiPtr, sendBuf, i);
-              ft.waitsend();
-            }
-          }
-          timer.stop();
-        }         
-#endif
-        /** @brief Update histogram of single processes and penalty function
-         **/ 
-        double update(Tpair coord) {
-          round(coord);
-          ++_cnt;
-          Tbase::operator()(coord.first,coord.second) += _f; 
-          _du = _f;
-          histo(coord.first,coord.second) += _f;
-          if (coord.first==_lo1 || coord.first==_hi1) {
-            Tbase::operator()(coord.first,coord.second) += _f;
-            _du += _f;
-            histo(coord.first,coord.second) += _f;
-          }
-          if (coord.second==_lo2 || coord.second==_hi2) {
-            Tbase::operator()(coord.first,coord.second) += _f;
-            _du += _f;
-            histo(coord.first,coord.second) += _f;
-          }
-          double corners = histo(_lo1,_lo2)+histo(_hi1,_hi2)+histo(_lo1,_hi2)+histo(_hi1,_lo2);  
-          corners /= _f*16.;
-          if (_cnt>_update && _cnt%_update==0) {
-            bool b = corners >= _tunnel;
 #ifdef ENABLE_MPI
-            b = reduceDouble(*mpiPtr,corners) >= _tunnel;
+          PenaltyFunction(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec)
+            : PenaltyFunctionBase(j,sec), penalty(Ttable::XYDATA), histo(Ttable::XYDATA), mpiPtr(&mpi) {
+              penalty.setResolution(_bw);
+              histo.setResolution(_bw);
+            }
 #endif
-            if (b) {
-#ifdef ENABLE_MPI               
-              if ( mpiPtr->nproc() > 1 ) {
-                _du = Tbase::operator()(coord.first,coord.second) - _du;
-                exchange();
-                _du = Tbase::operator()(coord.first,coord.second) - _du;
+          /** @brief Check if coordinates are within user-defined ranges */
+          bool isInrange(Tvec &coor) {
+            bool b = true;
+            for (int i=0; i<(int)coor.size(); ++i)
+              b = b && coor[i]>=_lo[i] && coor[i]<=_hi[i];
+            return b;
+          }
+          void round(Tvec &coor) { 
+            for (int i=0; i<(int)coor.size(); ++i)
+              coor[i] = (coor[i]>=0) ? int( coor[i]/_bw[i]+0.5 )*_bw[i] : int( coor[i]/_bw[i]-0.5 )*_bw[i]; 
+          }
+          /** @brief Update histogram of single processes and penalty function
+           **/ 
+          double update(Tvec &coor) {
+            round(coor);
+            ++_cnt;
+            penalty(coor) += _f; 
+            _du = _f;
+            histo(coor) += 1;
+            for (int i=0; i<(int)coor.size(); ++i) {
+              if (coor[i]==_lo[i] || coor[i]==_hi[i]) {
+                penalty(coor) += _f;
+                _du += _f;
+                histo(coor) += 1;
+                if (spannings[i*2]!=coor[i]) ++spannings[i*2+1];
+                spannings[i*2]=coor[i];
               }
+            }
+            if (_f>0 && _cnt>_update && _cnt%_update==0) {
+              bool b = spannings[1] >= _spannings;
+              if (coor.size()>1) b = b && spannings[3] >= _spannings;
+#ifdef ENABLE_MPI
+              b = reduceDouble(*mpiPtr,spannings[1]) >= _spannings;
+              if (coor.size()>1) b = b && reduceDouble(*mpiPtr,spannings[3]) >= _spannings;
 #endif
-              auto it_max = Tbase::max();
-              auto it_min = Tbase::min();
-              cout << "Energy barrier: " << it_max->second-it_min->second << endl;
-              _f = _scale*_f;
-              _tunnel = ceil(_tunnel/_scale);
-              histo.clear();
+              if (b) {
+#ifdef ENABLE_MPI               
+                timer.start();
+                if ( mpiPtr->nproc() > 1 ) {
+                  _du = penalty(coor) - _du;
+                  Faunus::MPI::averageTables(mpiPtr, ft, penalty, _size);
+                  _du = penalty(coor) - _du;
+                }
+                timer.stop();
+#endif
+                auto it_max = penalty.max();
+                auto it_min = penalty.min();
+                for (auto &m : penalty.getMap())
+                  m.second -= it_min->second;
+                cout << "Energy barrier: " << it_max->second-it_min->second << endl;
+                _f = _scale*_f;
+                _spannings = ceil(_spannings/_scale);
+                cout << "New spannings " << _spannings << endl;
+                histo.save("histo");
+                histo.clear();
+              }
+            }
+            return _du;
+          }
+          /** @brief Save table to disk */
+          void save(const string &filename) {
+            auto it_min = penalty.min();
+            penalty.save(filename+"penalty",1.,-it_min->second);
+          }
+          /** @brief Load table to disk */
+          void load(const string &filename) {
+            penalty.load(filename+"penalty");
+          }
+          /** @brief Find key and return value */
+          double find(Tvec &coor) {
+            return penalty.find(coor);
+          }
+          void test(UnitTest &t) {
+            if (!penalty.getMap().empty()) {
+              auto it_max = penalty.max();
+              auto it_min = penalty.min();
+              t("penalty_range",it_max->second-it_min->second,0.1);
             }
           }
-          return _du;
-        }
-        /** @brief Save table to disk */
-        void save(const string &filename) {
-          auto it_min = Tbase::min();
-          Tbase::save(filename+"penalty",1.,-it_min->second);
-        }
-        /** 
-         ** @brief Translate penalty by a reference value and save it to disk. 
-         **
-         ** @details The reference value is obtained by averaging over a region of the
-         ** reaction coordinate space.
-         **/
-        void save_final(const string &filename,
-            double a, double b, double c, double d) {
-          double ref_value = - Tbase::ave(a,b,c,d);
-          Tbase::save(filename+"penalty_fin",1.,ref_value);
-        }
-        /** @brief Load table to disk */
-        void load(const string &filename) {
-          Tbase::load(filename+"penalty");
-        }
-        void test(UnitTest &t) {
-          if (!Tbase::getMap().empty()) {
-            auto it_max = Tbase::max();
-            auto it_min = Tbase::min();
-            t("penalty2D_range",it_max->second-it_min->second,0.1);
-          }
-        }
-        string info() {
-          using namespace Faunus::textio;
-          std::ostringstream o;
-          if (_f!=0) {
-            o << header("2D penalty function");
-            char w=25;
-            auto it_max = Tbase::max();
-            auto it_min = Tbase::min();
-            o << textio::pad(SUB,w, "Final f") << _f << endl
-              << textio::pad(SUB,w, "(x,y)-minimum") << "(" << it_min->first.first 
-              << ", " << it_min->first.second << ") " << endl
-              << textio::pad(SUB,w, "(x,y)-maximum") << "(" << it_max->first.first 
-              << ", " << it_max->first.second << ") " << endl
-              << textio::pad(SUB,w, "z-maximum") << it_max->second << endl;
+          string info() {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            if (_f!=0) {
+              o << header("2D penalty function");
+              char w=25;
+              auto it_max = penalty.max();
+              auto it_min = penalty.min();
+              o << textio::pad(SUB,w, "Final f") << _f << endl
+                << textio::pad(SUB,w, "z-range") << it_max->second-it_min->second << endl;
 #ifdef ENABLE_MPI
-            o << pad(SUB,w,"Relative time consumption of MP ") << timer.result() << endl;
+              o << pad(SUB,w,"Relative time consumption of MP ") << timer.result() << endl;
 #endif
+            }
+            return o.str();
           }
-          return o.str();
-        }
-    };
+      };
+
+    template<class Tspace>
+      class ReactionCoordinateBase {
+        protected:
+          Tspace* spc;
+          typedef typename Tspace::p_vec Tpvec;
+        public:
+          typedef vector<double> Tvec;
+          ReactionCoordinateBase(Tmjson &j, Tspace &s, const string &sec) {
+            spc = &s;
+          }
+          ~ReactionCoordinateBase() {}
+          vector<Group*> PenalizedGroup(Tmjson &j, const string &sec, const string &mol) {
+            string molecule = j["energy"]["penalty"][sec][mol];
+            auto m = spc->molList().find( molecule ); // is molecule defined?
+            if ( m == spc->molList().end() ) {
+              std::cerr << "Error: molecule '" << molecule << "' not defined.\n";
+              exit(1); 
+            }
+            return spc->findMolecules(m->id);
+          }
+          virtual std::shared_ptr<PenaltyFunctionBase> getPf()=0;
+          virtual Tvec operator()(const Tpvec&)=0;
+      };
+
+    /* distance between the mass centra of two molecules or groups along line "dir" */
+    template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
+      class CmCm : public base {
+        private:
+          Point dir;
+          vector<Group*> mol1, mol2;
+          typedef PenaltyFunction<Table2D<double,double>> Tpf;
+        public:
+          typedef vector<double> Tvec;
+          std::shared_ptr<PenaltyFunctionBase> pf;
+          CmCm(Tmjson &j, Tspace &s, const string &sec="cm-cm") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(j,sec);
+            mol1 = base::PenalizedGroup(j,sec,"first");
+            mol2 = base::PenalizedGroup(j,sec,"second");
+            dir << ( j["dir"] | std::string("0 0 1") );
+          }
+#ifdef ENABLE_MPI
+          CmCm(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="cm-cm") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(mpi,j,sec);
+            mol1 = base::PenalizedGroup(j,sec,"first");
+            mol2 = base::PenalizedGroup(j,sec,"second");
+            dir << ( j["dir"] | std::string("0 0 1") );
+          } 
+#endif
+          std::shared_ptr<PenaltyFunctionBase> getPf() { return pf; }
+          Tvec operator()(const typename base::Tpvec &p) {
+            Group g1(mol1.front()->front(), mol1.back()->back());
+            Group g2(mol2.front()->front(), mol2.back()->back());
+            auto cm1 = Geometry::massCenter(base::spc->geo,p,g1);
+            auto cm2 = Geometry::massCenter(base::spc->geo,p,g2);
+            double dist = abs(base::spc->geo.vdist(cm1,cm2).dot(dir));
+            Tvec v;
+            v.push_back(dist);
+            return v;
+          }
+      };
+    /* position of a molecule or group in the xy-plane */
+    template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
+      class XYposition : public base {
+        private:
+          vector<Group*> mol;
+          typedef PenaltyFunction<Table3D<double,double>> Tpf;
+        public:
+          typedef vector<double> Tvec;
+          std::shared_ptr<PenaltyFunctionBase> pf;
+          XYposition(Tmjson &j, Tspace &s, const string &sec="xy-position") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(j,sec);
+            mol = base::PenalizedGroup(j,sec,"molecule");
+          } 
+#ifdef ENABLE_MPI
+          XYposition(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="xy-position") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(mpi,j,sec);
+            mol = base::PenalizedGroup(j,sec,"molecule");
+          }
+#endif
+          std::shared_ptr<PenaltyFunctionBase> getPf() { return pf; }
+          Tvec operator()(const typename base::Tpvec &p) {
+            Group g(mol.front()->front(), mol.back()->back());
+            auto cm = Geometry::massCenter(base::spc->geo,p,g);
+            Tvec v;
+            v.push_back(cm.x());
+            v.push_back(cm.y());
+            return v;
+          }
+      };
+    /* radius of gyration of a molecule or group */
+    template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
+      class Rg : public base {
+        private:
+          vector<Group*> mol;
+          typedef PenaltyFunction<Table2D<double,double>> Tpf;
+        public:
+          typedef vector<double> Tvec;
+          std::shared_ptr<PenaltyFunctionBase> pf;
+          Rg(Tmjson &j, Tspace &s, const string &sec="R_g") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(j,sec);
+            mol = base::PenalizedGroup(j,sec,"molecule");
+          } 
+#ifdef ENABLE_MPI
+          Rg(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="R_g") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(mpi,j,sec);
+            mol = base::PenalizedGroup(j,sec,"molecule");
+          }
+#endif
+          std::shared_ptr<PenaltyFunctionBase> getPf() { return pf; }
+          Tvec operator()(const typename base::Tpvec &p) {
+            Group g(mol.front()->front(), mol.back()->back());
+            auto cm = Geometry::massCenter(base::spc->geo,p,g);
+            auto S = Geometry::gyration(base::spc->geo,p,g,cm);
+            Eigen::EigenSolver<Eigen::Matrix3d> es(S);                                                                       
+            double R = 0;                                                                                                    
+            for (int i=0; i<es.eigenvalues().size(); ++i)                                                                  
+              R += es.eigenvalues()[i].real();                                                                               
+            R = sqrt(R);                                                                                                     
+            Tvec v;
+            v.push_back(R);
+            return v;
+          }
+      };
+    /* cm-cm separation between two molecules/groups along line "dir" and 
+     * angle formed by principal axis of first molecule/group with line "dir" 
+     */
+    template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
+      class CmAngle : public base {
+        private:
+          Point dir;
+          vector<Group*> mol1, mol2;
+          typedef PenaltyFunction<Table3D<double,double>> Tpf;
+        public:
+          typedef vector<double> Tvec;
+          std::shared_ptr<PenaltyFunctionBase> pf;
+          CmAngle(Tmjson &j, Tspace &s, const string &sec="cm-angle") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(j,sec);
+            mol1 = base::PenalizedGroup(j,sec,"first");
+            mol2 = base::PenalizedGroup(j,sec,"second");
+            dir << ( j["dir"] | std::string("0 0 1") );
+          }
+#ifdef ENABLE_MPI
+          CmAngle(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="cm-angle") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(mpi,j,sec);
+            mol1 = base::PenalizedGroup(j,sec,"first");
+            mol2 = base::PenalizedGroup(j,sec,"second");
+            dir << ( j["dir"] | std::string("0 0 1") );
+          } 
+#endif
+          std::shared_ptr<PenaltyFunctionBase> getPf() { return pf; }
+          Tvec operator()(const typename base::Tpvec &p) {
+            Group g1(mol1.front()->front(), mol1.back()->back());
+            Group g2(mol2.front()->front(), mol2.back()->back());
+            auto cm1 = Geometry::massCenter(base::spc->geo,p,g1);
+            auto cm2 = Geometry::massCenter(base::spc->geo,p,g2);
+            double dist = abs(base::spc->geo.vdist(cm1,cm2).dot(dir));
+            auto S = Geometry::gyration(base::spc->geo,p,g1,cm1);
+            Eigen::EigenSolver<Eigen::Matrix3d> es(S);
+            double max = std::numeric_limits<double>::min();
+            int index = 0;
+            for (int i=0; i<es.eigenvalues().size(); ++i) {
+              double value = es.eigenvalues()[i].real();
+              if ( value > max ) {
+                max = value;
+                index = i;
+              }
+            }
+            Point eig = es.eigenvectors().col(index).real();
+            double cosine = eig.dot(dir);
+            double angle = acos(cosine) * 180. / pc::pi;
+            //if (angle > 90.) angle = 180. - angle;
+            Tvec v;
+            v.push_back(dist);
+            v.push_back(angle);
+            return v;
+          }
+      };
+
     /**
      ** @brief General energy class for handling penalty function (PF) methods.
      **
@@ -1933,50 +1891,61 @@ namespace Faunus {
      ** `lo2`    | lower limit of 2nd coordinate
      ** `hi2`    | upper limit of 2nd coordinate
      **/
-    template<class Tspace, class Tfunction>
-        class PenaltyEnergy : public Energybase<Tspace> {
+    template<class Tspace, typename base=Energybase<Tspace>>
+        class PenaltyEnergy : public base {
           private:
             string _info() { return "Energy from Penalty Function\n"; }
-            Tspace* spcPtr;
-            Tfunction f;
-            typedef decltype(f(spcPtr->p)) Treturn; // type of coordinate
-            typedef Energybase<Tspace> Tbase;
+            typedef ReactionCoordinateBase<Tspace> Trc;
+            typedef std::shared_ptr<Trc> Tptr;
+            Tptr ptr;
             typedef typename Tspace::p_vec Tpvec;
-            typedef typename Energy::PenaltyFunction1D Tone;
-            typedef typename Energy::PenaltyFunction2D Ttwo;
-            typedef typename std::conditional<std::is_same<double,Treturn>::value,Tone,Ttwo>::type Tpf;
+            typedef vector<double> Tvec;
+            size_t pos;
           public:
-            Tpf pf;
-            std::pair<Treturn,Treturn> coordpair; // current and trial coordinates
-            PenaltyEnergy(Tmjson &j, const string &sec="penalty")
-              : pf(j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
+            PenaltyEnergy(Tmjson &j, Tspace &s) {
+              auto m = j["energy"]["penalty"];
+              if (m.begin().key()=="cm-cm") 
+                ptr = std::make_shared<CmCm<Tspace>>(j,s);
+              if (m.begin().key()=="xy-position") 
+                ptr = std::make_shared<XYposition<Tspace>>(j,s);
+              if (m.begin().key()=="R_g") 
+                ptr = std::make_shared<Rg<Tspace>>(j,s);
+              if (m.begin().key()=="cm-angle") 
+                ptr = std::make_shared<CmAngle<Tspace>>(j,s);
+            }
 #ifdef ENABLE_MPI
-            PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec="penalty")
-              : pf(mpi, j, (j["energy"][sec]["bw1"] | 0.1), (j["energy"][sec]["bw2"] | 0.1) ) {}
+            PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s) {
+              auto m = j["energy"]["penalty"];
+              if (m.begin().key()=="cm-cm") 
+                ptr = std::make_shared<CmCm<Tspace>>(mpi,j,s);
+              if (m.begin().key()=="xy-position") 
+                ptr = std::make_shared<XYposition<Tspace>>(mpi,j,s);
+              if (m.begin().key()=="R_g") 
+                ptr = std::make_shared<Rg<Tspace>>(mpi,j,s);
+              if (m.begin().key()=="cm-angle") 
+                ptr = std::make_shared<CmAngle<Tspace>>(mpi,j,s);
+            }
 #endif
-            string info() { return pf.info(); }
             auto tuple() -> decltype(std::make_tuple(this)) {
               return std::make_tuple(this);
             }
-            void test(UnitTest &t) { pf.test(t); }
-            void load(const string &filename="") { pf.load(filename); }
-            void save(const string &filename="") { pf.save(filename); }
-            void save_final(const string &filename, double a, double b, double c=0, double d=0) { 
-              pf.save_final(filename, a, b, c, d); 
-            }
-            double penalty_update(bool outcome) {
+            string info() { return ptr->getPf()->info(); }
+            void test(UnitTest &t) { ptr->getPf()->test(t); }
+            void load(const string &filename="") { ptr->getPf()->load(filename); }
+            void save(const string &filename="") { ptr->getPf()->save(filename); }
+            std::pair<Tvec,Tvec> coordpair; // current and trial coordinates
+            double update(bool outcome) {
               if (!outcome) coordpair.first = coordpair.second; // if rejected use current
-              return pf.update(coordpair.first);
+              return ptr->getPf()->update(coordpair.first);
             }
-            std::map<Treturn,double> getMap() { return pf.getMap(); }
-            double find(Treturn c) { return pf.find(c); }
-            double penalty(const Tpvec &p) {
+            double find(Tvec coor) { return ptr->getPf()->find(coor); }
+            double external(const Tpvec &p) FOVERRIDE {
               double du;
-              Treturn coor = f(p);
-              if (Tbase::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
+              Tvec coor = ptr->operator()(p);
+              if (base::isTrial(p)) coordpair.first=coor; // trial coordinate is stored
               else coordpair.second=coor; // current coordinate is stored
-              if (!pf.isInrange(coor)) du = 1e20;
-              else du = pf.find(coor);
+              if (!ptr->getPf()->isInrange(coor)) du = 1e20;
+              else du = ptr->getPf()->find(coor);
               return du;
             }
         };
@@ -2323,7 +2292,7 @@ namespace Faunus {
     template<class Tspace, class Tenergy, class Tpvec>
       double systemEnergy(Tspace &spc, Tenergy &pot, const Tpvec &p) {
         pot.setSpace(spc); // ensure pot geometry is in sync with spc
-        double u = pot.external(p) + pot.penalty(p);
+        double u = pot.external(p);
         for (auto g : spc.groupList())
           u += pot.g_external(p, *g) + pot.g_internal(p, *g);
         for (int i=0; i<(int)spc.groupList().size()-1; i++)

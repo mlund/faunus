@@ -9,7 +9,13 @@ def mkinput():
 
   "moleculelist" : { "myparticle" : { "atoms":"A", "atomic":True, "Ninit":1 } },
 
-  "energy" : { "penalty" : { "f0":f0, "scale":0.7, "update":2e4, "bw1":0.1, "bw2":0.1, "lo1":-2, "hi1":2, "lo2":-2, "hi2":2 } },
+  "energy" : { 
+    "penalty" : { 
+      "xy-position": {
+        "molecule":"myparticle", "f0":f0, "scale":0.7, "update":2e4, "bw1":0.1, "bw2":0.1, "lo1":-2, "hi1":2, "lo2":-2, "hi2":2 
+        } 
+    }
+  },
   
   "moves" : { "atomtranslate" : { "myparticle" : { "peratom":True, "prob":1 } } },
 

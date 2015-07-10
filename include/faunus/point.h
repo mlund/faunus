@@ -411,7 +411,7 @@ namespace Faunus {
     /** @brief Zero data */
     void clear() {
       Point::clear();
-      charge=mw=radius=0;
+      charge=mw=radius=alphax=0;
       hydrophobic=false;
       id=0;
     }

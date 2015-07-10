@@ -505,6 +505,12 @@ namespace Faunus {
           map.clear();
         }
 
+        void setResolution(std::vector<Tx> &resolution) {
+          assert( resolution[0]>0 );
+          dx=resolution[0];
+          map.clear();
+        }
+
         virtual ~Table2D() {}
 
         /** @brief Access operator - returns reference to y(x) */
@@ -512,10 +518,15 @@ namespace Faunus {
           return map[ round(x) ];
         }
 
+        /** @brief Access operator - returns reference to y(x) */
+        Ty& operator() (std::vector<Tx> &x) {
+          return map[ round(x[0]) ];
+        }
+
         /** @brief Find key and return corresponding value otherwise zero*/
-        Ty find(Tx &x) {
+        Ty find(std::vector<Tx> &x) {
           Ty value = 0;
-          auto it = map.find( round(x) );
+          auto it = map.find( round(x[0]) );
           if (it!=map.end()) value = it->second;
           return value;
         }
@@ -677,7 +688,7 @@ namespace Faunus {
           assert(!map.empty());
           for (auto &m : map) {
             sendBuf.push_back(m.first);
-            sendBuf.push_back(double(m.second));
+            sendBuf.push_back(m.second);
           }
           sendBuf.resize(size,0.);
           return sendBuf;
@@ -689,13 +700,17 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          for (int i=0; i<int(v.size()); i+=2) 
-            if (v.at(i+1)!=0) this->operator()(v.at(i)) += v.at(i+1);
-          double min=std::numeric_limits<double>::max();
-          for (auto &m : map) 
-            if (m.second<min) min=m.second;
-          for (auto &m : map)
-            m.second -= min;
+          std::unordered_map<double,vector<double>> all;
+          for (int i=0; i<int(v.size())-1; i+=2) {
+            if (v[i+1]!=0) all[v.at(i)].push_back(v.at(i+1));
+          }
+          for (auto &m : all) {
+            double ave = 0;
+            for (auto value : m.second)
+              ave += value;
+            ave /= (double)m.second.size();
+            this->operator()(m.first) = ave;
+          }
         }
 
         /**
@@ -846,6 +861,13 @@ namespace Faunus {
           map.clear();
         }
 
+        void setResolution(std::vector<Tx> &resolution) {
+          assert( resolution.at(0)>0 && resolution.at(1)>0 );
+          dx1=resolution[0];
+          dx2=resolution[1];
+          map.clear();
+        }
+
         virtual ~Table3D() {}
 
         /** @brief Access operator - returns reference to y(x) */
@@ -853,10 +875,14 @@ namespace Faunus {
           return map[ std::make_pair(round1(x1),round2(x2)) ];
         }
 
+        Ty& operator() (std::vector<Tx> &x) {
+          return map[ std::make_pair(round1(x[0]),round2(x[1])) ];
+        }
+
         /** @brief Find key and return corresponding value otherwise zero*/
-        Ty find(std::pair<Tx,Tx> &xp) {
+        Ty find(std::vector<Tx> &x) {
           Ty value = 0;
-          auto it = map.find( std::make_pair(round1(xp.first),round2(xp.second)));
+          auto it = map.find( std::make_pair(round1(x[0]),round2(x[1])));
           if (it!=map.end()) value = it->second;
           return value;
         }
@@ -1010,7 +1036,7 @@ namespace Faunus {
           for (auto &m : map) {
             sendBuf.push_back(m.first.first);
             sendBuf.push_back(m.first.second);
-            sendBuf.push_back(double(m.second));
+            sendBuf.push_back(m.second);
           }
           sendBuf.resize(size,0.);
           return sendBuf;
@@ -1022,13 +1048,17 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          for (int i=0; i<int(v.size()); i+=3)
-            if (v.at(i+2)!=0) this->operator()(v.at(i),v.at(i+1)) += v.at(i+2);
-          double min=std::numeric_limits<double>::max();
-          for (auto &m : map) 
-            if (m.second<min) min=m.second;
-          for (auto &m : map)
-            m.second -= min;
+          std::map<std::pair<double,double>,vector<double>> all;
+          for (int i=0; i<int(v.size())-2; i+=3) {
+            if (v[i+2]!=0) all[std::make_pair(v.at(i),v.at(i+1))].push_back(v.at(i+2));
+          }
+          for (auto &m : all) {
+            double ave = 0;
+            for (auto value : m.second)
+              ave += value;
+            ave /= (double)m.second.size();
+            this->operator()(m.first.first,m.first.second) = ave;
+          }
         }
 
         /**

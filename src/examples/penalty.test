@@ -1,7 +1,7 @@
-# Generated on Jul  9 2015 20:44:37 using 4.8.2
-energyAverage                                27.7992             
-moves/atomtranslate_acceptance               72.9833             
+# Generated on Jul 12 2015 22:03:53 using 4.2.1 Compatible Apple LLVM 6.1.0 (clang-602.0.53)
+energyAverage                                58.0179             
+moves/atomtranslate_acceptance               73.8371             
 mv_particle_acceptance                       70.3031             
 penalty2D_range                              16.4725             
-penalty_range                                16.4901             
-relativeEnergyDrift                          7.72444e-12         
+penalty_range                                16.5695             
+relativeEnergyDrift                          4.7033e-13          

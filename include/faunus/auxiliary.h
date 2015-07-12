@@ -8,7 +8,6 @@
 #include <regex>
 #include <cstdint>
 #include <chrono>
-#include <unordered_map>
 
 #ifdef FAU_HASHTABLE
 #include <unordered_map>
@@ -700,17 +699,8 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          std::unordered_map<double,vector<double>> all;
-          for (int i=0; i<int(v.size())-1; i+=2) {
-            if (v[i+1]!=0) all[v.at(i)].push_back(v.at(i+1));
-          }
-          for (auto &m : all) {
-            double ave = 0;
-            for (auto value : m.second)
-              ave += value;
-            ave /= (double)m.second.size();
-            this->operator()(m.first) = ave;
-          }
+          for (int i=0; i<int(v.size())-1; i+=2)
+            this->operator()(v.at(i)) += v.at(i+1);
         }
 
         /**
@@ -757,14 +747,14 @@ namespace Faunus {
   /**
    * @brief Subtract two tables
    */
-  template<class Tx, class Ty, class Tmap>
+  template<class Tx, class Ty>
     Table2D<Tx,Ty> operator-(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
       assert(a.tabletype==b.tabletype && "Table a and b needs to be of same type");
       Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
-      Tmap a_map = a.getMap();
-      Tmap b_map = b.getMap();
+      auto a_map = a.getMap();
+      auto b_map = b.getMap();
 
-      if (a.tabletype=="HISTOGRAM") {
+      if (a.tabletype==Table2D<Tx,Ty>::HISTOGRAM) {
         if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
         if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
         if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
@@ -778,7 +768,7 @@ namespace Faunus {
         }
       }
 
-      if (a.tabletype=="HISTOGRAM") {
+      if (a.tabletype==Table2D<Tx,Ty>::HISTOGRAM) {
         if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
         if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
         if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
@@ -790,14 +780,14 @@ namespace Faunus {
   /**
    * @brief Addition two tables
    */
-  template<class Tx, class Ty, class Tmap>
+  template<class Tx, class Ty>
     Table2D<Tx,Ty> operator+(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
       assert(a.tabletype==b.tabletype && "Table a and b needs to be of same type");
       Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
-      Tmap a_map = a.getMap();
-      Tmap b_map = b.getMap();
+      auto a_map = a.getMap();
+      auto b_map = b.getMap();
 
-      if (a.tabletype=="HISTOGRAM") {
+      if (a.tabletype==Table2D<Tx,Ty>::HISTOGRAM) {
         if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
         if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
         if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
@@ -811,7 +801,7 @@ namespace Faunus {
         c(m.first) += m.second;
       }
 
-      if (a.tabletype=="HISTOGRAM") {
+      if (a.tabletype==Table2D<Tx,Ty>::HISTOGRAM) {
         if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
         if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
         if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
@@ -986,6 +976,10 @@ namespace Faunus {
           return map;
         }
 
+        std::pair<Tx,Tx> getResolution() {
+          return std::make_pair(dx1,dx2);
+        }
+
         /*! Returns iterator of minumum y */
         typename Tmap::const_iterator min() {
           assert(!map.empty());
@@ -1048,17 +1042,8 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          std::map<std::pair<double,double>,vector<double>> all;
-          for (int i=0; i<int(v.size())-2; i+=3) {
-            if (v[i+2]!=0) all[std::make_pair(v.at(i),v.at(i+1))].push_back(v.at(i+2));
-          }
-          for (auto &m : all) {
-            double ave = 0;
-            for (auto value : m.second)
-              ave += value;
-            ave /= (double)m.second.size();
-            this->operator()(m.first.first,m.first.second) = ave;
-          }
+          for (int i=0; i<int(v.size())-2; i+=3)
+            this->operator()(v.at(i),v.at(i+1)) += v.at(i+2);
         }
 
         /**
@@ -1095,6 +1080,75 @@ namespace Faunus {
           return false;
         }
     };
+
+  /**
+   * @brief Subtract two tables
+   */
+  template<class Tx, class Ty>
+    Table3D<Tx,Ty> operator-(Table3D<Tx,Ty> &a, Table3D<Tx,Ty> &b) {
+      assert(a.tabletype==b.tabletype && "Table a and b needs to be of same type");
+      Table3D<Tx,Ty> c(std::min(a.getResolution().first,b.getResolution().first),
+          std::min(a.getResolution().second,b.getResolution().second),a.tabletype);
+      auto a_map = a.getMap();
+      auto b_map = b.getMap();
+
+      if (a.tabletype==Table3D<Tx,Ty>::HISTOGRAM) {
+        if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+      }
+
+      for (auto &m1 : a_map) {
+        for (auto &m2 : b_map) {
+          c(m1.first.first,m1.first.second) = m1.second-m2.second;
+          break;
+        }
+      }
+
+      if (a.tabletype==Table3D<Tx,Ty>::HISTOGRAM) {
+        if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+      }
+      return c;
+    }
+
+  /**
+   * @brief Addition two tables
+   */
+  template<class Tx, class Ty>
+    Table3D<Tx,Ty> operator+(Table3D<Tx,Ty> &a, Table3D<Tx,Ty> &b) {
+      assert(a.tabletype==b.tabletype && "Table a and b needs to be of same type");
+      Table3D<Tx,Ty> c(std::min(a.getResolution().first,b.getResolution().first),
+          std::min(a.getResolution().second,b.getResolution().second),a.tabletype);
+      auto a_map = a.getMap();
+      auto b_map = b.getMap();
+
+      if (a.tabletype==Table3D<Tx,Ty>::HISTOGRAM) {
+        if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+      }
+
+      for (auto &m : a_map) {
+        c(m.first.first,m.first.second) += m.second;
+      }
+      for (auto &m : b_map) {
+        c(m.first.first,m.first.second) += m.second;
+      }
+
+      if (a.tabletype==Table3D<Tx,Ty>::HISTOGRAM) {
+        if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+      }
+
+      return c;
+    }
 
   template<typename Tx, typename Ty=unsigned long int>
     class Histogram : public Table2D<Tx,Ty> {

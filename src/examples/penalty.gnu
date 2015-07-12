@@ -20,7 +20,7 @@ set origin 0.02,0.26
 unset colorbox
 set cbrange [0:12]
 set title "Initial histogram" font "helvetica, 25" offset 0, -0.7, 0
-splot "histo1380" u 1:2:(log($3)) w p ps 1 pt 5 palette noti
+splot "histo1374" u 1:2:(log($3)) w p ps 1 pt 5 palette noti
 
 set origin 0.47,0.26
 set colorbox

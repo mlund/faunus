@@ -12,7 +12,7 @@ def mkinput():
   "energy" : { 
     "penalty" : { 
       "xy-position": {
-        "molecule":"myparticle", "f0":f0, "scale":0.7, "update":2e4, "bw1":0.1, "bw2":0.1, "lo1":-2, "hi1":2, "lo2":-2, "hi2":2 
+        "molecule":"myparticle", "f0":f0, "scale":0.9, "update":2e4, "bw1":0.1, "bw2":0.1, "lo1":-2, "hi1":2, "lo2":-2, "hi2":2 
         } 
     }
   },
@@ -41,7 +41,6 @@ if ( os.access( exe, os.X_OK )):
   rc = call( [exe] )
   f0=0.5
   micro=100000
-  os.remove('./pf_penalty') 
   mkinput()
   rc = call( [exe] )
   f0=0

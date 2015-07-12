@@ -1525,7 +1525,7 @@ namespace Faunus {
     class PenaltyFunctionBase {
       protected:
         typedef std::vector<double> Tvec;
-        int _cnt, _update, _size, _spannings;
+        int _cnt, _update, _spannings;
         double _f, _scale, _du;
         Tvec _bw, _lo, _hi, spannings;
       public:
@@ -1544,10 +1544,9 @@ namespace Faunus {
           spannings.push_back(-1);  
           spannings.push_back(_hi[1]+1);
           spannings.push_back(-1);
-          _size = 3.*((_hi[0]-_lo[0])/_bw[0]+1.)*((_hi[1]-_lo[1])/_bw[1]+1.);
           _cnt = 0.0;
           _du = 0.0;
-          _spannings = 6;
+          _spannings = 1;
         }
         ~PenaltyFunctionBase() {}
         virtual bool isInrange(Tvec&)=0;
@@ -1564,6 +1563,7 @@ namespace Faunus {
         private:
           Ttable penalty, histo;
 #ifdef ENABLE_MPI
+          int _size;
           TimeRelativeOfTotal<std::chrono::microseconds> timer;
           Faunus::MPI::MPIController *mpiPtr; 
           Faunus::MPI::FloatTransmitter ft;
@@ -1590,6 +1590,10 @@ namespace Faunus {
 #ifdef ENABLE_MPI
           PenaltyFunction(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec)
             : PenaltyFunctionBase(j,sec), penalty(Ttable::XYDATA), histo(Ttable::XYDATA), mpiPtr(&mpi) {
+              if (std::is_same<Ttable,Table2D<double,double>>::value) 
+                _size = 2.*((_hi[0]-_lo[0])/_bw[0]+1.);
+              else if (std::is_same<Ttable,Table3D<double,double>>::value)
+                _size = 3.*((_hi[0]-_lo[0])/_bw[0]+1.)*((_hi[1]-_lo[1])/_bw[1]+1.);
               penalty.setResolution(_bw);
               histo.setResolution(_bw);
             }
@@ -1610,14 +1614,12 @@ namespace Faunus {
           double update(Tvec &coor) {
             round(coor);
             ++_cnt;
-            penalty(coor) += _f; 
             _du = _f;
-            histo(coor) += 1;
+            histo(coor) += _f;
             for (int i=0; i<(int)coor.size(); ++i) {
               if (coor[i]==_lo[i] || coor[i]==_hi[i]) {
-                penalty(coor) += _f;
                 _du += _f;
-                histo(coor) += 1;
+                histo(coor) += _f;
                 if (spannings[i*2]!=coor[i]) ++spannings[i*2+1];
                 spannings[i*2]=coor[i];
               }
@@ -1630,24 +1632,26 @@ namespace Faunus {
               if (coor.size()>1) b = b && reduceDouble(*mpiPtr,spannings[3]) >= _spannings;
 #endif
               if (b) {
+                _du = penalty(coor) + histo(coor) - _du;
 #ifdef ENABLE_MPI               
                 timer.start();
-                if ( mpiPtr->nproc() > 1 ) {
-                  _du = penalty(coor) - _du;
-                  Faunus::MPI::averageTables(mpiPtr, ft, penalty, _size);
-                  _du = penalty(coor) - _du;
-                }
+                if ( mpiPtr->nproc() > 1 ) 
+                  //histo.save("mpi"+std::to_string(mpiPtr->rank())+".histo");
+                  Faunus::MPI::mergeTables(mpiPtr, ft, histo, _size);
                 timer.stop();
 #endif
+                penalty = penalty+histo;
+                _du = penalty(coor) - _du;
                 auto it_max = penalty.max();
                 auto it_min = penalty.min();
                 for (auto &m : penalty.getMap())
                   m.second -= it_min->second;
-                cout << "Energy barrier: " << it_max->second-it_min->second << endl;
+                //cout << "Energy barrier: " << it_max->second-it_min->second << endl;
                 _f = _scale*_f;
                 _spannings = ceil(_spannings/_scale);
-                cout << "New spannings " << _spannings << endl;
-                histo.save("histo");
+                //cout << "New spannings " << _spannings << " " << _cnt << endl;
+                //histo.save("histo");
+                //penalty.save("penalty");
                 histo.clear();
               }
             }
@@ -1655,8 +1659,10 @@ namespace Faunus {
           }
           /** @brief Save table to disk */
           void save(const string &filename) {
-            auto it_min = penalty.min();
-            penalty.save(filename+"penalty",1.,-it_min->second);
+            if (!penalty.getMap().empty()) {
+              auto it_min = penalty.min();
+              penalty.save(filename+"penalty",1.,-it_min->second);
+            }
           }
           /** @brief Load table to disk */
           void load(const string &filename) {
@@ -1664,7 +1670,7 @@ namespace Faunus {
           }
           /** @brief Find key and return value */
           double find(Tvec &coor) {
-            return penalty.find(coor);
+            return penalty.find(coor) + histo.find(coor);
           }
           void test(UnitTest &t) {
             if (!penalty.getMap().empty()) {

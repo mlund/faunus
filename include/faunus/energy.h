@@ -1646,10 +1646,10 @@ namespace Faunus {
                 auto it_min = penalty.min();
                 for (auto &m : penalty.getMap())
                   m.second -= it_min->second;
-                //cout << "Energy barrier: " << it_max->second-it_min->second << endl;
                 _f = _scale*_f;
                 _spannings = ceil(_spannings/_scale);
-                //cout << "New spannings " << _spannings << " " << _cnt << endl;
+                //cout << "New spannings " << _spannings << " " << endl;
+                cout << "Energy barrier: " << it_max->second-it_min->second << endl;
                 //histo.save("histo");
                 //penalty.save("penalty");
                 histo.clear();

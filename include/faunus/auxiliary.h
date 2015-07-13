@@ -689,7 +689,7 @@ namespace Faunus {
             sendBuf.push_back(m.first);
             sendBuf.push_back(m.second);
           }
-          sendBuf.resize(size,0.);
+          sendBuf.resize(size,size);
           return sendBuf;
         }
 
@@ -1035,7 +1035,7 @@ namespace Faunus {
             sendBuf.push_back(m.first.second);
             sendBuf.push_back(m.second);
           }
-          sendBuf.resize(size,0.);
+          sendBuf.resize(size,size);
           return sendBuf;
         }
 

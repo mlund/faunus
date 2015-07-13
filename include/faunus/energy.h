@@ -1864,14 +1864,14 @@ namespace Faunus {
             pf = std::make_shared<Tpf>(j,sec);
             mol1 = base::PenalizedGroup(j,sec,"first");
             mol2 = base::PenalizedGroup(j,sec,"second");
-            dir << ( j["dir"] | std::string("0 0 1") );
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
           }
 #ifdef ENABLE_MPI
           CmAngle(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="cm-angle") : base(j,s,sec) {
             pf = std::make_shared<Tpf>(mpi,j,sec);
             mol1 = base::PenalizedGroup(j,sec,"first");
             mol2 = base::PenalizedGroup(j,sec,"second");
-            dir << ( j["dir"] | std::string("0 0 1") );
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
           } 
 #endif
           std::shared_ptr<PenaltyFunctionBase> getPf() { return pf; }

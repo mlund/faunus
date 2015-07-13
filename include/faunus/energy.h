@@ -1561,7 +1561,7 @@ namespace Faunus {
     template<class Ttable> 
       class PenaltyFunction : public PenaltyFunctionBase {
         private:
-          Ttable penalty, histo;
+          Ttable penalty;
 #ifdef ENABLE_MPI
           int _size;
           TimeRelativeOfTotal<std::chrono::microseconds> timer;
@@ -1583,19 +1583,17 @@ namespace Faunus {
            ** @param hi2 Lower limit of 2nd RC (default 2)
            **/
           PenaltyFunction(Tmjson &j, const string &sec)
-            : PenaltyFunctionBase(j,sec), penalty(Ttable::XYDATA), histo(Ttable::XYDATA) {
+            : PenaltyFunctionBase(j,sec), penalty(Ttable::XYDATA) {
               penalty.setResolution(_bw);
-              histo.setResolution(_bw);
             }
 #ifdef ENABLE_MPI
           PenaltyFunction(Faunus::MPI::MPIController &mpi, Tmjson &j, const string &sec)
-            : PenaltyFunctionBase(j,sec), penalty(Ttable::XYDATA), histo(Ttable::XYDATA), mpiPtr(&mpi) {
+            : PenaltyFunctionBase(j,sec), penalty(Ttable::XYDATA), mpiPtr(&mpi) {
               if (std::is_same<Ttable,Table2D<double,double>>::value) 
                 _size = 2.*((_hi[0]-_lo[0])/_bw[0]+1.);
               else if (std::is_same<Ttable,Table3D<double,double>>::value)
                 _size = 3.*((_hi[0]-_lo[0])/_bw[0]+1.)*((_hi[1]-_lo[1])/_bw[1]+1.);
               penalty.setResolution(_bw);
-              histo.setResolution(_bw);
             }
 #endif
           /** @brief Check if coordinates are within user-defined ranges */
@@ -1615,11 +1613,11 @@ namespace Faunus {
             round(coor);
             ++_cnt;
             _du = _f;
-            histo(coor) += _f;
+            penalty(coor) += _f;
             for (int i=0; i<(int)coor.size(); ++i) {
               if (coor[i]==_lo[i] || coor[i]==_hi[i]) {
                 _du += _f;
-                histo(coor) += _f;
+                penalty(coor) += _f;
                 if (spannings[i*2]!=coor[i]) ++spannings[i*2+1];
                 spannings[i*2]=coor[i];
               }
@@ -1632,15 +1630,13 @@ namespace Faunus {
               if (coor.size()>1) b = b && reduceDouble(*mpiPtr,spannings[3]) >= _spannings;
 #endif
               if (b) {
-                _du = penalty(coor) - _du;
+                _du = penalty(coor) -  _du;
 #ifdef ENABLE_MPI               
                 timer.start();
                 if ( mpiPtr->nproc() > 1 ) 
-                  //histo.save("mpi"+std::to_string(mpiPtr->rank())+".histo");
-                  Faunus::MPI::avgTables(mpiPtr, ft, histo, _size);
+                  Faunus::MPI::avgTables(mpiPtr, ft, penalty, _size);
                 timer.stop();
 #endif
-                penalty = penalty+histo;
                 _du = penalty(coor) - _du;
                 auto it_max = penalty.max();
                 auto it_min = penalty.min();
@@ -1648,11 +1644,7 @@ namespace Faunus {
                   m.second -= it_min->second;
                 _f = _scale*_f;
                 _spannings = ceil(_spannings/_scale);
-                //cout << "New spannings " << _spannings << " " << endl;
                 cout << "Energy barrier: " << it_max->second-it_min->second << endl;
-                histo.save("histo");
-                //penalty.save("penalty");
-                histo.clear();
               }
             }
             return _du;
@@ -1670,7 +1662,7 @@ namespace Faunus {
           }
           /** @brief Find key and return value */
           double find(Tvec &coor) {
-            return penalty.find(coor) + histo.find(coor);
+            return penalty.find(coor);
           }
           void test(UnitTest &t) {
             if (!penalty.getMap().empty()) {
@@ -1735,14 +1727,14 @@ namespace Faunus {
             pf = std::make_shared<Tpf>(j,sec);
             mol1 = base::PenalizedGroup(j,sec,"first");
             mol2 = base::PenalizedGroup(j,sec,"second");
-            dir << ( j["dir"] | std::string("0 0 1") );
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
           }
 #ifdef ENABLE_MPI
           CmCm(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="cm-cm") : base(j,s,sec) {
             pf = std::make_shared<Tpf>(mpi,j,sec);
             mol1 = base::PenalizedGroup(j,sec,"first");
             mol2 = base::PenalizedGroup(j,sec,"second");
-            dir << ( j["dir"] | std::string("0 0 1") );
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
           } 
 #endif
           std::shared_ptr<PenaltyFunctionBase> getPf() { return pf; }
@@ -1759,21 +1751,24 @@ namespace Faunus {
       };
     /* position of a molecule or group in the xy-plane */
     template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
-      class XYposition : public base {
+      class Plane : public base {
         private:
           vector<Group*> mol;
+          Point dir;
           typedef PenaltyFunction<Table3D<double,double>> Tpf;
         public:
           typedef vector<double> Tvec;
           std::shared_ptr<PenaltyFunctionBase> pf;
-          XYposition(Tmjson &j, Tspace &s, const string &sec="xy-position") : base(j,s,sec) {
+          Plane(Tmjson &j, Tspace &s, const string &sec="plane") : base(j,s,sec) {
             pf = std::make_shared<Tpf>(j,sec);
             mol = base::PenalizedGroup(j,sec,"molecule");
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
           } 
 #ifdef ENABLE_MPI
-          XYposition(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="xy-position") : base(j,s,sec) {
+          Plane(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="plane") : base(j,s,sec) {
             pf = std::make_shared<Tpf>(mpi,j,sec);
             mol = base::PenalizedGroup(j,sec,"molecule");
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
           }
 #endif
           std::shared_ptr<PenaltyFunctionBase> getPf() { return pf; }
@@ -1781,12 +1776,45 @@ namespace Faunus {
             Group g(mol.front()->front(), mol.back()->back());
             auto cm = Geometry::massCenter(base::spc->geo,p,g);
             Tvec v;
-            v.push_back(cm.x());
-            v.push_back(cm.y());
+            if (dir.x()==1) v.push_back(cm.x());
+            if (dir.y()==1) v.push_back(cm.y());
+            if (dir.z()==1) v.push_back(cm.z());
             return v;
           }
       };
-    /* radius of gyration of a molecule or group */
+    /* position of a molecule or group in the xy-plane */
+    template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
+      class Line : public base {
+        private:
+          vector<Group*> mol;
+          Point dir;
+          typedef PenaltyFunction<Table2D<double,double>> Tpf;
+        public:
+          typedef vector<double> Tvec;
+          std::shared_ptr<PenaltyFunctionBase> pf;
+          Line(Tmjson &j, Tspace &s, const string &sec="line") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(j,sec);
+            mol = base::PenalizedGroup(j,sec,"molecule");
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
+          } 
+#ifdef ENABLE_MPI
+          Line(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="line") : base(j,s,sec) {
+            pf = std::make_shared<Tpf>(mpi,j,sec);
+            mol = base::PenalizedGroup(j,sec,"molecule");
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
+          }
+#endif
+          std::shared_ptr<PenaltyFunctionBase> getPf() { return pf; }
+          Tvec operator()(const typename base::Tpvec &p) {
+            Group g(mol.front()->front(), mol.back()->back());
+            auto cm = Geometry::massCenter(base::spc->geo,p,g);
+            Tvec v;
+            if (dir.x()==1) v.push_back(cm.x());
+            if (dir.y()==1) v.push_back(cm.y());
+            if (dir.z()==1) v.push_back(cm.z());
+            return v;
+          }
+      };    /* radius of gyration of a molecule or group */
     template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
       class Rg : public base {
         private:
@@ -1912,8 +1940,10 @@ namespace Faunus {
               auto m = j["energy"]["penalty"];
               if (m.begin().key()=="cm-cm") 
                 ptr = std::make_shared<CmCm<Tspace>>(j,s);
-              if (m.begin().key()=="xy-position") 
-                ptr = std::make_shared<XYposition<Tspace>>(j,s);
+              if (m.begin().key()=="plane") 
+                ptr = std::make_shared<Plane<Tspace>>(j,s);
+              if (m.begin().key()=="line") 
+                ptr = std::make_shared<Line<Tspace>>(j,s);
               if (m.begin().key()=="R_g") 
                 ptr = std::make_shared<Rg<Tspace>>(j,s);
               if (m.begin().key()=="cm-angle") 
@@ -1924,8 +1954,10 @@ namespace Faunus {
               auto m = j["energy"]["penalty"];
               if (m.begin().key()=="cm-cm") 
                 ptr = std::make_shared<CmCm<Tspace>>(mpi,j,s);
-              if (m.begin().key()=="xy-position") 
-                ptr = std::make_shared<XYposition<Tspace>>(mpi,j,s);
+              if (m.begin().key()=="plane") 
+                ptr = std::make_shared<Plane<Tspace>>(mpi,j,s);
+              if (m.begin().key()=="line") 
+                ptr = std::make_shared<Line<Tspace>>(j,s);
               if (m.begin().key()=="R_g") 
                 ptr = std::make_shared<Rg<Tspace>>(mpi,j,s);
               if (m.begin().key()=="cm-angle") 

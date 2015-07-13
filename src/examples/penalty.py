@@ -11,8 +11,8 @@ def mkinput():
 
   "energy" : { 
     "penalty" : { 
-      "xy-position": {
-        "molecule":"myparticle", "f0":f0, "scale":0.9, "update":2e4, "bw1":0.1, "bw2":0.1, "lo1":-2, "hi1":2, "lo2":-2, "hi2":2 
+      "plane": {
+          "molecule":"myparticle", "f0":f0, "scale":0.9, "update":2e4, "bw1":0.1, "bw2":0.1, "lo1":-2, "hi1":2, "lo2":-2, "hi2":2, "dir":"1 1 0" 
         } 
     }
   },

@@ -699,8 +699,11 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
+          std::map<double,Average<double>> all;
           for (int i=0; i<int(v.size())-1; i+=2)
-            this->operator()(v.at(i)) += v.at(i+1);
+            all[v.at(i)] += v.at(i+1);
+          for (auto &m : all) 
+            this->operator()(m.first) = m.second.avg();
         }
 
         /**
@@ -1042,8 +1045,11 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
+          std::map<std::pair<double,double>,Average<double>> all;
           for (int i=0; i<int(v.size())-2; i+=3)
-            this->operator()(v.at(i),v.at(i+1)) += v.at(i+2);
+            all[std::make_pair(v.at(i),v.at(i+1))] += v.at(i+2);
+          for (auto &m : all) 
+            this->operator()(m.first.first,m.first.second) = m.second.avg();
         }
 
         /**

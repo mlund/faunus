@@ -338,7 +338,7 @@ namespace Faunus {
      * sum and sends it back to the slaves.
      */
     template<class Ttable>
-      void mergeTables(MPIController* mpiPtr, FloatTransmitter &ft, Ttable &table, int &size) {
+      void avgTables(MPIController* mpiPtr, FloatTransmitter &ft, Ttable &table, int &size) {
         if (!mpiPtr->isMaster()) {
           vector<FloatTransmitter::floatp> sendBuf = table.hist2buf(size);
           vector<FloatTransmitter::floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());

@@ -1632,12 +1632,12 @@ namespace Faunus {
               if (coor.size()>1) b = b && reduceDouble(*mpiPtr,spannings[3]) >= _spannings;
 #endif
               if (b) {
-                _du = penalty(coor) + histo(coor) - _du;
+                _du = penalty(coor) - _du;
 #ifdef ENABLE_MPI               
                 timer.start();
                 if ( mpiPtr->nproc() > 1 ) 
                   //histo.save("mpi"+std::to_string(mpiPtr->rank())+".histo");
-                  Faunus::MPI::mergeTables(mpiPtr, ft, histo, _size);
+                  Faunus::MPI::avgTables(mpiPtr, ft, histo, _size);
                 timer.stop();
 #endif
                 penalty = penalty+histo;
@@ -1650,7 +1650,7 @@ namespace Faunus {
                 _spannings = ceil(_spannings/_scale);
                 //cout << "New spannings " << _spannings << " " << endl;
                 cout << "Energy barrier: " << it_max->second-it_min->second << endl;
-                //histo.save("histo");
+                histo.save("histo");
                 //penalty.save("penalty");
                 histo.clear();
               }

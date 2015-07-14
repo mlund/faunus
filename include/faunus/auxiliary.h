@@ -614,17 +614,17 @@ namespace Faunus {
         /*! Returns average */
         Tx mean() {
           assert(!map.empty());
-          Tx ave = 0;
-          for (auto &m : map) ave += m.first*m.second;
-          return ave/count();
+          Tx avg = 0;
+          for (auto &m : map) avg += m.first*m.second;
+          return avg/count();
         }
 
         /*! Returns standard deviation */
         Tx std() {
           assert(!map.empty());
           Tx std2 = 0;
-          Tx ave = mean();
-          for (auto &m : map) std2 += m.second*(m.first - ave)*(m.first - ave);
+          Tx avg = mean();
+          for (auto &m : map) std2 += m.second*(m.first - avg)*(m.first - avg);
           return sqrt(std2/count());
         }
 
@@ -666,17 +666,17 @@ namespace Faunus {
         }
 
         /*! Returns average in interval */
-        Ty ave(Tx limit1, Tx limit2) {
-          Ty ave = 0;
+        Ty avg(std::vector<Tx> &limits) {
+          Ty avg = 0;
           int cnt = 0;
           assert(!map.empty());
           for (auto &m : map) {
-            if (m.first>=limit1 && m.first<=limit2) {
-              ave+=m.second;
+            if (m.first>=limits[0] && m.first<=limits[1]) {
+              avg+=m.second;
               ++cnt;  
             }
           }
-          return ave/cnt;
+          return avg/cnt;
         }
 
         /**
@@ -1010,18 +1010,18 @@ namespace Faunus {
         }
 
         /*! Returns average in interval */
-        Ty ave(Tx limit1_x1, Tx limit2_x1, Tx limit1_x2, Tx limit2_x2) {
-          Ty ave = 0;
+        Ty avg(std::vector<Tx> &limits) {
+          Ty avg = 0;
           int cnt = 0;
           assert(!map.empty());
           for (auto &m : map) {
-            if (m.first.first>=limit1_x1 && m.first.first<=limit2_x1
-                && m.first.second>=limit1_x2 && m.first.second<=limit2_x2) {
-              ave+=m.second;
+            if (m.first.first>=limits[0] && m.first.first<=limits[1]
+                && m.first.second>=limits[2] && m.first.second<=limits[3]) {
+              avg+=m.second;
               ++cnt;  
             }
           }
-          return ave/cnt;
+          return avg/cnt;
         }
 
         /**

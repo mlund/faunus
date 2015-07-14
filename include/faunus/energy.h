@@ -1650,10 +1650,10 @@ namespace Faunus {
             return _du;
           }
           /** @brief Save table to disk */
-          void save(const string &filename) {
+          void save(const string &filename, Tvec &limits) {
             if (!penalty.getMap().empty()) {
-              auto it_min = penalty.min();
-              penalty.save(filename+"penalty",1.,-it_min->second);
+              double avg = -penalty.avg(limits);
+              penalty.save(filename+"penalty",1.,avg);
             }
           }
           /** @brief Load table to disk */
@@ -1675,7 +1675,7 @@ namespace Faunus {
             using namespace Faunus::textio;
             std::ostringstream o;
             if (_f!=0) {
-              o << header("2D penalty function");
+              o << header("Penalty Function");
               char w=25;
               auto it_max = penalty.max();
               auto it_min = penalty.min();
@@ -1970,7 +1970,9 @@ namespace Faunus {
             string info() { return ptr->getPf()->info(); }
             void test(UnitTest &t) { ptr->getPf()->test(t); }
             void load(const string &filename="") { ptr->getPf()->load(filename); }
-            void save(const string &filename="") { ptr->getPf()->save(filename); }
+            void save(const string &filename="", Tvec &limits={0,0,0,0}) { 
+              ptr->getPf()->save(filename,limits); 
+            }
             std::pair<Tvec,Tvec> coordpair; // current and trial coordinates
             double update(bool outcome) {
               if (!outcome) coordpair.first = coordpair.second; // if rejected use current

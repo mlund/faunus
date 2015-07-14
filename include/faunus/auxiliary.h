@@ -676,7 +676,8 @@ namespace Faunus {
               ++cnt;  
             }
           }
-          return avg/cnt;
+          if (cnt>0) avg/=cnt;
+          return avg;
         }
 
         /**
@@ -689,7 +690,7 @@ namespace Faunus {
             sendBuf.push_back(m.first);
             sendBuf.push_back(m.second);
           }
-          sendBuf.resize(size,size);
+          sendBuf.resize(size,-1);
           return sendBuf;
         }
 
@@ -701,7 +702,7 @@ namespace Faunus {
           assert(!v.empty());
           std::map<double,Average<double>> all;
           for (int i=0; i<int(v.size())-1; i+=2)
-            all[v.at(i)] += v.at(i+1);
+            if (v.at(i+1)!=-1) all[v.at(i)] += v.at(i+1);
           for (auto &m : all) 
             this->operator()(m.first) = m.second.avg();
         }
@@ -1021,7 +1022,8 @@ namespace Faunus {
               ++cnt;  
             }
           }
-          return avg/cnt;
+          if (cnt>0) avg/=cnt;
+          return avg;
         }
 
         /**
@@ -1035,7 +1037,7 @@ namespace Faunus {
             sendBuf.push_back(m.first.second);
             sendBuf.push_back(m.second);
           }
-          sendBuf.resize(size,size);
+          sendBuf.resize(size,-1);
           return sendBuf;
         }
 
@@ -1047,7 +1049,7 @@ namespace Faunus {
           assert(!v.empty());
           std::map<std::pair<double,double>,Average<double>> all;
           for (int i=0; i<int(v.size())-2; i+=3)
-            all[std::make_pair(v.at(i),v.at(i+1))] += v.at(i+2);
+            if (v.at(i+2)!=-1) all[std::make_pair(v.at(i),v.at(i+1))] += v.at(i+2);
           for (auto &m : all) 
             this->operator()(m.first.first,m.first.second) = m.second.avg();
         }

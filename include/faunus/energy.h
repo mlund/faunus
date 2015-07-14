@@ -1653,6 +1653,7 @@ namespace Faunus {
           void save(const string &filename, const Tvec &limits) {
             if (!penalty.getMap().empty()) {
               double avg = -penalty.avg(limits);
+              cout << avg << endl;
               penalty.save(filename+"penalty",1.,avg);
             }
           }

@@ -666,7 +666,7 @@ namespace Faunus {
         }
 
         /*! Returns average in interval */
-        Ty avg(std::vector<Tx> &limits) {
+        Ty avg(const std::vector<Tx> &limits) {
           Ty avg = 0;
           int cnt = 0;
           assert(!map.empty());
@@ -1010,7 +1010,7 @@ namespace Faunus {
         }
 
         /*! Returns average in interval */
-        Ty avg(std::vector<Tx> &limits) {
+        Ty avg(const std::vector<Tx> &limits) {
           Ty avg = 0;
           int cnt = 0;
           assert(!map.empty());

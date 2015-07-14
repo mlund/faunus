@@ -1551,7 +1551,7 @@ namespace Faunus {
         ~PenaltyFunctionBase() {}
         virtual bool isInrange(Tvec&)=0;
         virtual double update(Tvec&)=0;
-        virtual void save(const string&)=0;
+        virtual void save(const string&, const Tvec&)=0;
         virtual void load(const string&)=0;
         virtual double find(Tvec&)=0;
         virtual void test(UnitTest&)=0;
@@ -1650,7 +1650,7 @@ namespace Faunus {
             return _du;
           }
           /** @brief Save table to disk */
-          void save(const string &filename, Tvec &limits) {
+          void save(const string &filename, const Tvec &limits) {
             if (!penalty.getMap().empty()) {
               double avg = -penalty.avg(limits);
               penalty.save(filename+"penalty",1.,avg);
@@ -1970,7 +1970,7 @@ namespace Faunus {
             string info() { return ptr->getPf()->info(); }
             void test(UnitTest &t) { ptr->getPf()->test(t); }
             void load(const string &filename="") { ptr->getPf()->load(filename); }
-            void save(const string &filename="", Tvec &limits={0,0,0,0}) { 
+            void save(const string &filename="", const Tvec &limits={0,0,0,0}) { 
               ptr->getPf()->save(filename,limits); 
             }
             std::pair<Tvec,Tvec> coordpair; // current and trial coordinates

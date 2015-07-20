@@ -446,6 +446,135 @@ namespace Faunus {
         }
     };
 
+  template<typename Tcoeff=double, typename base=Eigen::Matrix<Tcoeff,Eigen::Dynamic,Eigen::Dynamic>>
+    class Table : public base {
+      private: 
+        typedef std::vector<double> Tvec;
+        Tvec _bw, _lo, _hi;
+        int _rows, _cols;
+      public:
+        Table(const Tvec &bw={1,1}, const Tvec &lo={0,0}, const Tvec &hi={2,2}) {
+          _bw = bw;
+          _lo = lo;
+          _hi = hi;
+          _rows = (_hi[0]-_lo[0])/_bw[0]+1.;
+          _cols = (_hi[1]-_lo[1])/_bw[1]+1.;
+          base::resize(_rows,_cols);
+          base::setZero();
+        }
+        void reInitializer(Tvec &bw, Tvec &lo, Tvec &hi) {
+          _bw = bw;
+          _lo = lo;
+          _hi = hi;
+          _rows = (_hi[0]-_lo[0])/_bw[0]+1.;
+          _cols = (_hi[1]-_lo[1])/_bw[1]+1.;
+          base::resize(_rows,_cols);
+          base::setZero();
+        }
+        void clear() { base::setZero(); }
+        void round(Tvec &v) {
+          for (Tvec::size_type i=0; i!=v.size(); ++i) 
+            v[i] = (v[i]>=0) ? int( v[i]/_bw[i]+0.5 )*_bw[i] : int( v[i]/_bw[i]-0.5 )*_bw[i];
+        }
+        void to_index(Tvec &v) {
+          for (Tvec::size_type i=0; i!=v.size(); ++i) {
+            v[i] = (v[i]>=0) ? int( v[i]/_bw[i]+0.5 ) : int( v[i]/_bw[i]-0.5 );
+            v[i] = v[i] - _lo[i]/_bw[i];
+          }
+        }
+        Tcoeff& operator()(const Tvec &v) { 
+          if (v.size()==1)
+            return base::operator()(v[0]);
+          else
+            return base::operator()(v[0],v[1]);
+        } 
+        bool isInRange(Tvec &v) {
+          bool b = true;
+          for (Tvec::size_type i=0; i!=v.size(); ++i)
+            b = b && v[i]>=_lo[i] && v[i]<=_hi[i];
+          return b;
+        }
+        Tvec hist2buf(int &size) {
+          Tvec sendBuf;
+          for (size_t i = 0; i < _cols; ++i)
+            for (size_t j = 0; j < _rows; ++j)
+              sendBuf.push_back(base::operator()(j,i));
+          return sendBuf;
+        }
+        void buf2hist(Tvec &v) {
+          assert(!v.empty());
+          base::setZero();
+          int p = v.size()/this->size(), n=0;
+          double nproc = p;
+          while (p-->0) {
+            for (size_t i = 0; i < _cols; ++i) 
+              for (size_t j = 0; j < _rows; ++j) {
+                base::operator()(j,i) += v.at(n)/nproc;
+                ++n;
+              }
+          }
+        }
+        Tcoeff avg(const Tvec &v) {
+          Tvec w1={_lo[0],_lo[0]}, w2={_lo[1],_lo[1]};
+          if (v.size()%2==0) {
+            w1[0] = (v[0] - _lo[0])/_bw[0]; 
+            w1[1] = (v[1] - _lo[0])/_bw[0];
+            w2[0] = 0;
+            w2[1] = 0;
+          }
+          if (v.size()==4) {
+            w2[0] = (v[2] - _lo[1])/_bw[1]; 
+            w2[1] = (v[3] - _lo[1])/_bw[1];
+          }
+          return this->block(w1[0],w2[0],w1[1]-w1[0]+1,w2[1]-w2[0]+1);
+        }
+        void translate(Tcoeff s) {
+          *this+=base::Constant(_rows,_cols,s);
+        }
+        void save(const string &filename, Tcoeff scale=1, Tcoeff translate=0) {
+          Eigen::VectorXd v1(_cols+1), v2(_rows+1);
+          v1(0) = v2(0) = base::size();
+          for (int i=1; i!=_cols+1; ++i) {
+            v1(i) = (i-1)*_bw[1] + _lo[1];
+          }
+          for (int i=1; i!=_rows+1; ++i)
+            v2(i) = (i-1)*_bw[0] + _lo[0];
+          base m(_rows+1,_cols+1);
+          m.leftCols(1) = v2;
+          m.topRows(1) = v1.transpose();
+          m.bottomRightCorner(_rows,_cols) = *this;
+          if (scale!=1) 
+            m.bottomRightCorner(_rows,_cols)*=scale;
+          if (translate!=0) 
+            m.bottomRightCorner(_rows,_cols)+=base::Constant(_rows,_cols,translate);
+          std::ofstream f(filename.c_str());
+          f.precision(10);
+          if (f) f << m;
+        }
+        void load(const string &filename) {
+          std::ifstream f(filename.c_str());
+          if (f) {
+            base m(_rows+1,_cols+1);
+            std::string line;
+            Tcoeff d;
+            std::vector<Tcoeff> v;
+            while (getline(f, line))
+            {
+              std::stringstream f_line(line);
+              while (!f_line.eof())
+              {
+                f_line >> d;
+                v.push_back(d);
+              }
+            }
+            f.close();
+            for (int i=0; i<_cols+1; i++)
+              for (int j=0; j<_rows+1; j++)
+                m(j,i) = v[i*(_rows+1) + j];
+            this->swap(m.bottomRightCorner(_rows,_cols));
+          }
+        }
+    };
   /**
    * @brief General class for handling 2D tables - xy data, for example.
    * @date Lund 2011

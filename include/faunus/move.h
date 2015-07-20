@@ -257,7 +257,7 @@ namespace Faunus {
           string jsondir;                  //!< inputmap section
           char w;                          //!< info text width. Adjust this in constructor if needed.
           unsigned long int cnt;           //!< total number of trial moves
-          virtual bool run();        //!< Runfraction test
+          virtual bool run();              //!< Runfraction test
 
           bool useAlternateReturnEnergy;   //!< Return a different energy than returned by _energyChange(). [false]
           double alternateReturnEnergy;    //!< Alternative return energy
@@ -445,23 +445,22 @@ namespace Faunus {
         }
 
         if ( run() ) {
+          bool acceptance = true;
           while ( n-->0 ) {
             trialMove();
             double du = energyChange();
-            bool outcome = metropolis(du);
-            if ( !outcome ) {
+            acceptance = metropolis(du);
+            if ( !acceptance )
               rejectMove();
-              utot += pot->update(outcome);
-            }
             else {
               acceptMove();
               if ( useAlternateReturnEnergy )
                 du = alternateReturnEnergy;
-              utot += pot->update(outcome);
               dusum += du;
               utot += du;
             }
           }
+          utot += pot->update(acceptance);
         }
         assert(spc->p == spc->trial && "Trial particle vector out of sync!");
         timer.stop();
@@ -4116,7 +4115,7 @@ namespace Faunus {
             }
 
             double move(int n=1) override {
-              return ( mPtr.empty() ) ?
+               return ( mPtr.empty() ) ?
                 0 : (*base::_slump().element( mPtr.begin(), mPtr.end() ))->move();
             }
 

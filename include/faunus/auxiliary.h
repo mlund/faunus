@@ -481,12 +481,10 @@ namespace Faunus {
             v[i] = (v[i]>=0) ? int( v[i]/_bw[i]+0.5 ) : int( v[i]/_bw[i]-0.5 );
             v[i] = v[i] - _lo[i]/_bw[i];
           }
+          v.resize(2,0);
         }
         Tcoeff& operator()(const Tvec &v) { 
-          if (v.size()==1)
-            return base::operator()(v[0],0);
-          else
-            return base::operator()(v[0],v[1]);
+          return base::operator()(v[0],v[1]);
         } 
         bool isInRange(const Tvec &v) {
           bool b = true;

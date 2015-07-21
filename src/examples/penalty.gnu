@@ -32,23 +32,23 @@ splot "histo1681" u 1:2:(log($3)) w p ps 1 pt 5 palette noti
 
 set origin 0.47,-0.24
 set colorbox
-set cbrange [0:18]
+set cbrange [0:17]
 set cblabel "free energy"
 set title "Penalty Function" font "helvetica, 25" offset 0, -0.7, 0
-splot "pf_penalty" nonuniform matrix u 1:2:3 w p ps 1 pt 5 palette noti
+splot "pf_penalty" nonuniform matrix u 2:1:3 w p ps 1 pt 5 palette noti
 
 set origin -0.0045,0.0015
 set size 0.512,0.512
-set yrange [0:18]
+set yrange [0:17]
 unset colorbox
 set ytics 4 nomirror 
 set xtics offset 0,0.15
-set xlabel "x" offset 0,0.7
-set label "penalty at y=1.7" at -1.8,14.3
-set label "log(histogram) at y=1.7" at -1.8,2.9
+set xlabel "y" offset 0,0.7
+set label "penalty at x=1.6" at -1.8,15.5
+set label "log(histogram) at x=1.6" at -1.8,2.9
 set ylabel "free energy" offset 2,0 
 set title "Final 1D profiles" font "helvetica, 25" offset 0, -0.7, 0
-plot "histo1681" u 1:($2==1.7 ? log($3) : 1/0):(0.1):2 w circles lc palette fs transparent solid 0.80 border noti,\
+plot "histo1681" u 1:($2==1.6 ? log($3) : 1/0):(0.1):2 w circles lc palette fs transparent solid 0.80 border noti,\
 "row_penalty" u 1:2:(0.1):2 w circles lc palette fs transparent solid 0.80 border noti
 
 unset multiplot

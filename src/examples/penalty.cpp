@@ -44,11 +44,9 @@ int main() {
   Group mygroup(myparticle.front()->front(), myparticle.back()->back());
   mygroup.setMolSize(1);
   EnergyDrift sys;                                    // class for tracking system energy drifts
-  
   // In MPI version add:
   // slump.setDiscard(mpi.rank()+1);
   penalty->load("pf_");
-
   // Markov moves
   Move::Propagator<Tspace> mv(mcp, pot, spc);
 
@@ -65,19 +63,20 @@ int main() {
   }
   auto it_min = histo.min();
   histo.save("histo"+std::to_string(histo.getMap().size()),1./it_min->second);
-  penalty->save("pf_");
+  penalty->save("pf_",{-2,-2,1.3,1.3});
+  penalty->saveRow("row_",{-2,-2,1.3,1.3},{1.7});
 
   cout << loop.info() + mv.info() + penalty->info() + sys.info();
 
   // perform unit 
-  if (penalty->update(true)) {
+  /*if (penalty->update(true)) {
   UnitTest test(mcp);
   mv.test(test);
   sys.test(test);
   penalty->test(test);
   cout << test.info();
   return test.numFailed();
-  }
+  }*/
 }
 /**
   @page example_penalty Example: Penalty Function

@@ -12,7 +12,7 @@ def mkinput():
   "energy" : { 
     "penalty" : { 
       "plane": {
-          "molecule":"myparticle", "f0":f0, "scale":0.9, "update":2e4, "bw1":0.1, "bw2":0.1, "lo1":-2, "hi1":2, "lo2":-2, "hi2":2, "dir":"1 1 0" 
+          "molecule":"myparticle", "f0":f0, "scale":0.5, "update":1e4, "bw1":0.1, "bw2":0.1, "lo1":-2, "hi1":2, "lo2":-2, "hi2":2, "dir":"1 1 0" 
         } 
     }
   },
@@ -39,7 +39,7 @@ if ( os.access( exe, os.X_OK )):
   micro=50000
   mkinput()
   rc = call( [exe] )
-  f0=0.5
+  f0=0.1
   micro=100000
   mkinput()
   rc = call( [exe] )

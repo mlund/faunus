@@ -484,11 +484,11 @@ namespace Faunus {
         }
         Tcoeff& operator()(const Tvec &v) { 
           if (v.size()==1)
-            return base::operator()(v[0]);
+            return base::operator()(v[0],0);
           else
             return base::operator()(v[0],v[1]);
         } 
-        bool isInRange(Tvec &v) {
+        bool isInRange(const Tvec &v) {
           bool b = true;
           for (Tvec::size_type i=0; i!=v.size(); ++i)
             b = b && v[i]>=_lo[i] && v[i]<=_hi[i];
@@ -514,19 +514,22 @@ namespace Faunus {
               }
           }
         }
-        Tcoeff avg(const Tvec &v) {
-          Tvec w1={_lo[0],_lo[0]}, w2={_lo[1],_lo[1]};
+        base getBlock(const Tvec &v) { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
+          Tvec w={0,0,0,_cols-1.};
+          w[0] = w[1] = (v[0] - _lo[0])/_bw[0];
           if (v.size()%2==0) {
-            w1[0] = (v[0] - _lo[0])/_bw[0]; 
-            w1[1] = (v[1] - _lo[0])/_bw[0];
-            w2[0] = 0;
-            w2[1] = 0;
+            w={0,0,0,0};
+            w[0] = (v[0] - _lo[0])/_bw[0]; 
+            w[1] = (v[1] - _lo[0])/_bw[0];
           }
           if (v.size()==4) {
-            w2[0] = (v[2] - _lo[1])/_bw[1]; 
-            w2[1] = (v[3] - _lo[1])/_bw[1];
+            w[2] = (v[2] - _lo[1])/_bw[1]; 
+            w[3] = (v[3] - _lo[1])/_bw[1];
           }
-          return this->block(w1[0],w2[0],w1[1]-w1[0]+1,w2[1]-w2[0]+1);
+          return this->block(w[0],w[2],w[1]-w[0]+1,w[3]-w[2]+1); // xmin,ymin,rows,cols
+        }
+        Tcoeff avg(const Tvec &v) {
+          return this->getBlock(v).mean();
         }
         void translate(Tcoeff s) {
           *this+=base::Constant(_rows,_cols,s);
@@ -550,6 +553,26 @@ namespace Faunus {
           std::ofstream f(filename.c_str());
           f.precision(10);
           if (f) f << m;
+        }
+        void saveRow(const string &filename, const Tvec &v, Tcoeff scale=1, Tcoeff translate=0) {
+          if (this->isInRange(v)) {
+          auto b = this->getBlock(v);
+          size_t size = b.size();
+          cout << size << " SIZE" << endl;
+          Eigen::VectorXd w(size);
+          for (int i=0; i!=size; ++i)
+            w(i) = i*_bw[1] + _lo[1];
+          base m(size,2);
+          m.leftCols(1) = w;
+          m.bottomRightCorner(size,1) = b.transpose();
+          if (scale!=1) 
+            m.bottomRightCorner(size,1)*=scale;
+          if (translate!=0) 
+            m.bottomRightCorner(size,1)+=base::Constant(size,1,translate);
+          std::ofstream f(filename.c_str());
+          f.precision(10);
+          if (f) f << m;
+          }
         }
         void load(const string &filename) {
           std::ifstream f(filename.c_str());

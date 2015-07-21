@@ -1526,7 +1526,6 @@ namespace Faunus {
       class ReactionCoordinateBase {
         private:
           Table<int> histo;  
-          Table<double> penalty;
 #ifdef ENABLE_MPI
           TimeRelativeOfTotal<std::chrono::microseconds> timer;
           Faunus::MPI::MPIController *mpiPtr; 
@@ -1541,6 +1540,7 @@ namespace Faunus {
           Tvec _bw, _lo, _hi, _size;
           //typedef typename Tspace::GeometryType Tgeo;
         public:
+          Table<double> penalty;
           std::pair<Tvec,Tvec> vpair;
           ReactionCoordinateBase(Tmjson &j, Tspace &s, const string &sec) {
             spc = &s;
@@ -1595,12 +1595,15 @@ namespace Faunus {
           double update(bool acceptance) {
             Tvec v;
             if (acceptance) v = vpair.first;
-            else v = vpair.second;
+            else {
+              v = vpair.second;
+              vpair.first = vpair.second;
+            }
             ++_cnt;
             _du = _f;
             penalty(v)+=_f;
             histo(v)+=1;
-            for (int i=0; i!=v.size(); ++i) {
+            for (Tvec::size_type i=0; i!=v.size(); ++i) {
               if (v[i]==0 || v[i]==_size[i]-1) {
                 _du += _f;
                 penalty(v)+=_f;
@@ -1638,6 +1641,11 @@ namespace Faunus {
             double avg = penalty.avg(limits);
             penalty.save(filename+"penalty",1.,-avg);
           }
+          /** @brief Save one row of the matrix */
+          void saveRow(const string &filename, const Tvec &limits, const Tvec &row) {
+            double avg = penalty.avg(limits);
+            penalty.saveRow(filename+"penalty",row,1.,-avg);
+          }
           /** @brief Load table to disk */
           void load(const string &filename) {
             penalty.load(filename+"penalty");
@@ -1663,8 +1671,8 @@ namespace Faunus {
           }
           double getU(Tvec& v, bool trial) {
             if (!penalty.isInRange(v)) {
-              penalty.to_index(v);
-              vpair.first = v;
+              //penalty.to_index(v);
+              //vpair.first = v;
               return 1e20;
             }
             else {
@@ -1909,11 +1917,15 @@ namespace Faunus {
             string info() { return ptr->info(); }
             void test(UnitTest &t) { ptr->test(t); }
             void load(const string &filename="") { ptr->load(filename); }
+            double currentPenalty() { return ptr->penalty(ptr->vpair.first); }
+            void saveRow(const string &filename="", const Tvec &limits={0}, const Tvec &row={0}) { 
+              ptr->saveRow(filename, limits, row); 
+            }
             void save(const string &filename="", const Tvec &limits={0}) { 
               ptr->save(filename,limits); 
             }
-            double update(bool outcome) {
-              return ptr->update(outcome);
+            double update(bool acceptance) {
+              return ptr->update(acceptance);
             }
             double external(const Tpvec &p) FOVERRIDE {
               return ptr->operator()(p,base::isTrial(p));

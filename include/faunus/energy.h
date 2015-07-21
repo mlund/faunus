@@ -1619,7 +1619,6 @@ namespace Faunus {
                 _du = penalty(v) - _du;
 #ifdef ENABLE_MPI               
                 timer.start();
-                cout << penalty.mean() << endl;
                 int size = penalty.size();
                 Faunus::MPI::avgTables<Table<double>>(mpiPtr, ft, penalty, size);
                 timer.stop();
@@ -1637,14 +1636,14 @@ namespace Faunus {
             return _du;
           }
           /** @brief Save table to disk */
-          void save(const string &filename, const Tvec &limits) {
-            double avg = penalty.avg(limits);
-            penalty.save(filename+"penalty",1.,-avg);
+          void save(const string &filename, double s, const Tvec &limits) {
+            double avg = -s*penalty.avg(limits);
+            penalty.save(filename+"penalty",s,avg);
           }
           /** @brief Save one row of the matrix */
-          void saveRow(const string &filename, const Tvec &limits, const Tvec &row) {
-            double avg = penalty.avg(limits);
-            penalty.saveRow(filename+"penalty",row,1.,-avg);
+          void saveRow(const string &filename, const Tvec &row, double s, const Tvec &limits) {
+            double avg = -s*penalty.avg(limits);
+            penalty.saveRow(filename+"penalty",row,s,avg);
           }
           /** @brief Load table to disk */
           void load(const string &filename) {
@@ -1918,11 +1917,11 @@ namespace Faunus {
             void test(UnitTest &t) { ptr->test(t); }
             void load(const string &filename="") { ptr->load(filename); }
             double currentPenalty() { return ptr->penalty(ptr->vpair.first); }
-            void saveRow(const string &filename="", const Tvec &limits={0}, const Tvec &row={0}) { 
-              ptr->saveRow(filename, limits, row); 
+            void saveRow(const string &filename="",const Tvec &row={0},double s=1,const Tvec &limits={0}) { 
+              ptr->saveRow(filename,row,s,limits); 
             }
-            void save(const string &filename="", const Tvec &limits={0}) { 
-              ptr->save(filename,limits); 
+            void save(const string &filename="",double s=1,const Tvec &limits={0}) { 
+              ptr->save(filename,s,limits); 
             }
             double update(bool acceptance) {
               return ptr->update(acceptance);

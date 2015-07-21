@@ -551,6 +551,7 @@ namespace Faunus {
           if (translate!=0) 
             m.bottomRightCorner(_rows,_cols)+=base::Constant(_rows,_cols,translate);
           std::ofstream f(filename.c_str());
+          if (_cols==1) f << "#";
           f.precision(10);
           if (f) f << m;
         }
@@ -558,7 +559,6 @@ namespace Faunus {
           if (this->isInRange(v)) {
           auto b = this->getBlock(v);
           size_t size = b.size();
-          cout << size << " SIZE" << endl;
           Eigen::VectorXd w(size);
           for (int i=0; i!=size; ++i)
             w(i) = i*_bw[1] + _lo[1];
@@ -577,24 +577,17 @@ namespace Faunus {
         void load(const string &filename) {
           std::ifstream f(filename.c_str());
           if (f) {
-            base m(_rows+1,_cols+1);
+            int i=0;
             std::string line;
-            Tcoeff d;
-            std::vector<Tcoeff> v;
-            while (getline(f, line))
-            {
-              std::stringstream f_line(line);
-              while (!f_line.eof())
-              {
-                f_line >> d;
-                v.push_back(d);
-              }
+            getline(f, line);
+            while (getline(f, line)) {
+              int j=-1;
+              std::istringstream iss(line);
+              Tcoeff a, b;
+              iss >> a;
+              while (iss >> b) base::operator()(i,++j)=b;
+              ++i;
             }
-            f.close();
-            for (int i=0; i<_cols+1; i++)
-              for (int j=0; j<_rows+1; j++)
-                m(j,i) = v[i*(_rows+1) + j];
-            this->swap(m.bottomRightCorner(_rows,_cols));
           }
         }
     };

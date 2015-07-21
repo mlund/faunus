@@ -63,8 +63,8 @@ int main() {
   }
   auto it_min = histo.min();
   histo.save("histo"+std::to_string(histo.getMap().size()),1./it_min->second);
-  penalty->save("pf_",{-2,-2,1.3,1.3});
-  penalty->saveRow("row_",{-2,-2,1.3,1.3},{1.7});
+  penalty->save("pf_",1,{-2,-2,1.3,1.3});
+  penalty->saveRow("row_",{1.7},1,{-2,-2,1.3,1.3});
 
   cout << loop.info() + mv.info() + penalty->info() + sys.info();
 

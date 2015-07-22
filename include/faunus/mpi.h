@@ -335,7 +335,8 @@ namespace Faunus {
      * @brief Sum tables computed by parallel processes
      *
      * @details Slave processes send histograms to the master. The master computes the 
-     * sum and sends it back to the slaves.
+     * average and sends it back to the slaves. Ttable can be Table, Table2D or Table3D in auxiliary.h.
+     *
      */
     template<class Ttable>
       void avgTables(MPIController* mpiPtr, FloatTransmitter &ft, Ttable &table, int &size) {

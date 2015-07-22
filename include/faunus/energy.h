@@ -1724,12 +1724,12 @@ namespace Faunus {
         public:
           typedef vector<double> Tvec;
           Plane(Tmjson &j, Tspace &s, const string &sec="plane") : base(j,s,sec) {
-            mol = base::PenalizedGroup(j,sec,"molecule");
+            mol = base::PenalizedGroup(j,sec,"first");
             dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
           } 
 #ifdef ENABLE_MPI
           Plane(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="plane") : base(mpi,j,s,sec) {
-            mol = base::PenalizedGroup(j,sec,"molecule");
+            mol = base::PenalizedGroup(j,sec,"first");
             dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
           }
 #endif
@@ -1752,12 +1752,12 @@ namespace Faunus {
         public:
           typedef vector<double> Tvec;
           Line(Tmjson &j, Tspace &s, const string &sec="line") : base(j,s,sec) {
-            mol = base::PenalizedGroup(j,sec,"molecule");
+            mol = base::PenalizedGroup(j,sec,"first");
             dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
           } 
 #ifdef ENABLE_MPI
           Line(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="line") : base(mpi,j,s,sec) {
-            mol = base::PenalizedGroup(j,sec,"molecule");
+            mol = base::PenalizedGroup(j,sec,"first");
             dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
           }
 #endif
@@ -1779,11 +1779,11 @@ namespace Faunus {
         public:
           typedef vector<double> Tvec;
           Rg(Tmjson &j, Tspace &s, const string &sec="R_g") : base(j,s,sec) {
-            mol = base::PenalizedGroup(j,sec,"molecule");
+            mol = base::PenalizedGroup(j,sec,"first");
           } 
 #ifdef ENABLE_MPI
           Rg(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="R_g") : base(mpi,j,s,sec) {
-            mol = base::PenalizedGroup(j,sec,"molecule");
+            mol = base::PenalizedGroup(j,sec,"first");
           }
 #endif
           double operator()(const typename base::Tpvec &p, bool trial) {
@@ -1853,15 +1853,13 @@ namespace Faunus {
     /**
      ** @brief General energy class for handling penalty function (PF) methods.
      **
-     ** @details User-defined reaction coordinate(s) are provided by an external function, f.
-     ** f is a member of a class given as a template argument.
-     ** The return type of f can be either a double or a pair of doubles.
-     ** The dimensionality of the penalty function is inferred from the return value of f.
+     ** @details The reaction coordinate(s) is specified in the input file.
      ** The InputMap class is scanned for the following keys:
      **
      ** Key              | Description
      ** :--------------- | :-----------------------------
-     ** `size`   | total number of points in the PF
+     ** `first`  | 1st penalized molecule or group 
+     ** `second` | 2nd penalized molecule or group
      ** `update` | number of MC sweeps before scaling f0
      ** `f0`     | modification factor
      ** `scale`  | scaling factor to update f0
@@ -1871,6 +1869,7 @@ namespace Faunus {
      ** `hi1`    | upper limit of 1st coordinate
      ** `lo2`    | lower limit of 2nd coordinate
      ** `hi2`    | upper limit of 2nd coordinate
+     ** `dir`    | direction of the reaction coordinate
      **/
     template<class Tspace, typename base=Energybase<Tspace>>
         class PenaltyEnergy : public base {
@@ -1917,7 +1916,8 @@ namespace Faunus {
             void test(UnitTest &t) { ptr->test(t); }
             void load(const string &filename="") { ptr->load(filename); }
             double currentPenalty() { return ptr->penalty(ptr->vpair.first); }
-            void saveRow(const string &filename="",const Tvec &row={0},double s=1,const Tvec &limits={0}) { 
+            void saveRow(const string &filename="",const Tvec &row={0,0,0},
+                double s=1,const Tvec &limits={0,0,0}) { 
               ptr->saveRow(filename,row,s,limits); 
             }
             void save(const string &filename="",double s=1,const Tvec &limits={0}) { 

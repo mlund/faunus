@@ -513,16 +513,25 @@ namespace Faunus {
           }
         }
         base getBlock(const Tvec &v) { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
-          Tvec w={0,0,0,_cols-1.};
-          w[0] = w[1] = (v[0] - _lo[0])/_bw[0];
-          if (v.size()%2==0) {
-            w={0,0,0,0};
-            w[0] = (v[0] - _lo[0])/_bw[0]; 
-            w[1] = (v[1] - _lo[0])/_bw[0];
-          }
-          if (v.size()==4) {
-            w[2] = (v[2] - _lo[1])/_bw[1]; 
-            w[3] = (v[3] - _lo[1])/_bw[1];
+          Tvec w={0,0,0,0};
+          switch (v.size()) {
+            case(1):
+              w[0] = w[1] = (v[0] - _lo[0])/_bw[0];
+              w[3] = _cols-1;
+              break;
+            case(2):
+              w[0] = (v[0] - _lo[0])/_bw[0];
+              w[1] = (v[1] - _lo[0])/_bw[0];
+              break;
+            case(3):
+              w[0] = w[1] = _rows-1;
+              w[2] = w[3] = _cols-1;
+              break;
+            case(4):
+              w[0] = (v[0] - _lo[0])/_bw[0];
+              w[1] = (v[1] - _lo[0])/_bw[0];
+              w[2] = (v[2] - _lo[1])/_bw[1]; 
+              w[3] = (v[3] - _lo[1])/_bw[1];
           }
           return this->block(w[0],w[2],w[1]-w[0]+1,w[3]-w[2]+1); // xmin,ymin,rows,cols
         }

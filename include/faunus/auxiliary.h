@@ -483,7 +483,7 @@ namespace Faunus {
           }
           v.resize(2,0);
         }
-        Tcoeff& operator()(const Tvec &v) { 
+        Tcoeff& operator[](const Tvec &v) { 
           return base::operator()(v[0],v[1]);
         } 
         bool isInRange(const Tvec &v) {

@@ -394,7 +394,7 @@ namespace Faunus {
             int b=g.back(), f=g.front();
             if (!g.empty())
               for (int i=f; i<b; ++i)
-                for (int j=i+1; j<=b; ++j)
+                for (int j=i+1; j<=b; ++j) 
                   u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
             return u;
           }
@@ -1601,13 +1601,13 @@ namespace Faunus {
             }
             ++_cnt;
             _du = _f;
-            penalty(v)+=_f;
-            histo(v)+=1;
+            penalty[v]+=_f;
+            histo[v]+=1;
             for (Tvec::size_type i=0; i!=v.size(); ++i) {
               if (v[i]==0 || v[i]==_size[i]-1) {
                 _du += _f;
-                penalty(v)+=_f;
-                histo(v)+=1;
+                penalty[v]+=_f;
+                histo[v]+=1;
               }
             }
             if (_cnt%_update==0) {
@@ -1616,7 +1616,7 @@ namespace Faunus {
               b = reduceDouble(*mpiPtr,histo.minCoeff())*mpiPtr->nproc() >= _samplings;
 #endif
               if (b) {
-                _du = penalty(v) - _du;
+                _du = penalty[v] - _du;
 #ifdef ENABLE_MPI               
                 timer.start();
                 int size = penalty.size();
@@ -1626,7 +1626,7 @@ namespace Faunus {
                 double max = penalty.maxCoeff();
                 double min = penalty.minCoeff();
                 penalty.translate(-min);
-                _du = penalty(v) - _du;
+                _du = penalty[v] - _du;
                 _f = _scale*_f;
                 _samplings = ceil(_samplings/_scale);
                 cout << "Energy barrier: " << max - min << endl;
@@ -1678,7 +1678,7 @@ namespace Faunus {
               penalty.to_index(v);
               if (trial) vpair.first = v;           
               else vpair.second = v;
-              return penalty(v);
+              return penalty[v];
             }
           }
           virtual double operator()(const Tpvec&, bool)=0;//const Tgeo&)=0;
@@ -1715,20 +1715,20 @@ namespace Faunus {
             return base::getU(v,trial);
           }
       };
-    /* position of a molecule or group in the xy-plane */
+    /* position of a molecule or group */
     template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
-      class Plane : public base {
+      class XYZ : public base {
         private:
           vector<Group*> mol;
           Point dir;
         public:
           typedef vector<double> Tvec;
-          Plane(Tmjson &j, Tspace &s, const string &sec="plane") : base(j,s,sec) {
+          XYZ(Tmjson &j, Tspace &s, const string &sec="xyz") : base(j,s,sec) {
             mol = base::PenalizedGroup(j,sec,"first");
             dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
           } 
 #ifdef ENABLE_MPI
-          Plane(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="plane") : base(mpi,j,s,sec) {
+          XYZ(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="xyz") : base(mpi,j,s,sec) {
             mol = base::PenalizedGroup(j,sec,"first");
             dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
           }
@@ -1739,38 +1739,10 @@ namespace Faunus {
             Tvec v;
             if (dir.x()==1) v.push_back(cm.x());
             if (dir.y()==1) v.push_back(cm.y());
-            else v.push_back(cm.z());
+            if (dir.z()==1) v.push_back(cm.z());
             return base::getU(v,trial);
           }
       };
-    /* position of a molecule or group in the xy-plane */
-    template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
-      class Line : public base {
-        private:
-          vector<Group*> mol;
-          Point dir;
-        public:
-          typedef vector<double> Tvec;
-          Line(Tmjson &j, Tspace &s, const string &sec="line") : base(j,s,sec) {
-            mol = base::PenalizedGroup(j,sec,"first");
-            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
-          } 
-#ifdef ENABLE_MPI
-          Line(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="line") : base(mpi,j,s,sec) {
-            mol = base::PenalizedGroup(j,sec,"first");
-            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
-          }
-#endif
-          double operator()(const typename base::Tpvec &p, bool trial) {
-            Group g(mol.front()->front(), mol.back()->back());
-            auto cm = Geometry::massCenter(base::spc->geo,p,g);
-            Tvec v;
-            if (dir.x()==1) v.push_back(cm.x());
-            else if (dir.y()==1) v.push_back(cm.y());
-            else v.push_back(cm.z());
-            return base::getU(v,trial);
-          }
-      };    
     /* radius of gyration of a molecule or group */
     template<class Tspace, typename base=ReactionCoordinateBase<Tspace>>
       class Rg : public base {
@@ -1885,10 +1857,8 @@ namespace Faunus {
               auto m = j["energy"]["penalty"];
               if (m.begin().key()=="cm-cm") 
                 ptr = std::make_shared<CmCm<Tspace>>(j,s);
-              if (m.begin().key()=="plane") 
-                ptr = std::make_shared<Plane<Tspace>>(j,s);
-              if (m.begin().key()=="line") 
-                ptr = std::make_shared<Line<Tspace>>(j,s);
+              if (m.begin().key()=="xyz") 
+                ptr = std::make_shared<XYZ<Tspace>>(j,s);
               if (m.begin().key()=="R_g") 
                 ptr = std::make_shared<Rg<Tspace>>(j,s);
               if (m.begin().key()=="cm-angle") 
@@ -1899,10 +1869,8 @@ namespace Faunus {
               auto m = j["energy"]["penalty"];
               if (m.begin().key()=="cm-cm") 
                 ptr = std::make_shared<CmCm<Tspace>>(mpi,j,s);
-              if (m.begin().key()=="plane") 
-                ptr = std::make_shared<Plane<Tspace>>(mpi,j,s);
-              if (m.begin().key()=="line") 
-                ptr = std::make_shared<Line<Tspace>>(mpi,j,s);
+              if (m.begin().key()=="xyz") 
+                ptr = std::make_shared<XYZ<Tspace>>(mpi,j,s);
               if (m.begin().key()=="R_g") 
                 ptr = std::make_shared<Rg<Tspace>>(mpi,j,s);
               if (m.begin().key()=="cm-angle") 
@@ -1915,7 +1883,7 @@ namespace Faunus {
             string info() { return ptr->info(); }
             void test(UnitTest &t) { ptr->test(t); }
             void load(const string &filename="") { ptr->load(filename); }
-            double currentPenalty() { return ptr->penalty(ptr->vpair.first); }
+            double currentPenalty() { return ptr->penalty[ptr->vpair.first]; }
             void saveRow(const string &filename="",const Tvec &row={0,0,0},
                 double s=1,const Tvec &limits={0,0,0}) { 
               ptr->saveRow(filename,row,s,limits); 

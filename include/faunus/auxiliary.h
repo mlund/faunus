@@ -565,7 +565,7 @@ namespace Faunus {
         void saveRow(const string &filename, const Tvec &v, Tcoeff scale=1, Tcoeff translate=0) {
           if (this->isInRange(v)) {
           auto b = this->getBlock(v);
-          size_t size = b.size();
+          int size = b.size();
           Eigen::VectorXd w(size);
           for (int i=0; i!=size; ++i)
             w(i) = i*_bw[1] + _lo[1];

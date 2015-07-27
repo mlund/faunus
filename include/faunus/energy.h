@@ -409,6 +409,118 @@ namespace Faunus {
       };
 
     /**
+     * @brief Energy class for non-bonded interactions that excludes bonded pairs.
+     *
+     * `Tpairpot` is expected to be a pair potential with the following
+     * properties:
+     * 
+     * - `Tpairpot(const InputMap&)`
+     * - `double Tpairpot::operator()(const particle&, const particle&, double sqdist))`
+     *
+     * For a list of implemented potentials, see the `Faunus::Potential`
+     * namespace.
+     */
+    template<class Tspace, class Tpairpot, typename base=Nonbonded<Tspace, Tpairpot>>
+      class NonbondedExcl : public base {
+        protected:
+          Table<bool> excl;
+          using typename base::Tpvec;
+          using typename base::Tparticle;
+
+        public:
+          Tspace* spc;
+          using base::geo;
+          using base::pairpot;
+
+          NonbondedExcl(
+              Tmjson &j, Tspace* s, Table<bool> &t,
+              const string &sec="nonbonded" ) : base(j,sec) {
+            spc=s;
+            assert( ! j["energy"][sec].is_null() );
+            
+            static_assert(
+                std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
+                "Tpairpot must be a pair potential" );
+            Energybase<Tspace>::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+            excl=t;
+          }
+
+          //!< Particle-particle energy (kT)
+          inline double p2p(const Tparticle &a, const Tparticle &b) {
+            int i = spc->findIndex(a);
+            int j = spc->findIndex(b);
+            if (excl(i,j))
+              return pairpot( a,b,geo.sqdist(a,b));
+            else return 0;
+          }
+
+          //!< Particle-particle force (kT/Angstrom)
+          inline Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
+            int i = spc->findIndex(a);
+            int j = spc->findIndex(b);
+            if (excl(i,j)) {
+              auto r=geo.vdist(a,b);
+              return pairpot.force(a,b,r.squaredNorm(),r);
+            }
+            else return Point(0,0,0);
+          }
+
+          double all2p(const Tpvec &p, const Tparticle &a) {
+            double u=0;
+            for (auto &b : p) {
+              int i = spc->findIndex(a);
+              int j = spc->findIndex(b);
+              if (excl(i,j)) u+=pairpot(a,b,geo.sqdist(a,b));
+            }
+            return u;
+          }
+
+          double i2i(const Tpvec &p, int i, int j) {
+            if (excl(i,j))
+              return pairpot( p[i], p[j], geo.sqdist( p[i], p[j]) );
+            else return 0;
+          }
+
+          double i2g(const Tpvec &p, Group &g, int j) FOVERRIDE {
+            double u=0;
+            if ( !g.empty() ) {
+              int len=g.back()+1;
+              if ( g.find(j) ) {   //j is inside g - avoid self interaction
+                for (int i=g.front(); i<j; i++)
+                  if (excl(i,j)) u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                for (int i=j+1; i<len; i++)
+                  if (excl(i,j)) u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+              } else              //simple - j not in g
+                for (int i=g.front(); i<len; i++)
+                  if (excl(i,j)) u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]));
+            }
+            return u;  
+          }
+
+          double i2all(Tpvec &p, int i) FOVERRIDE {
+            assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
+            double u=0;
+            int n=(int)p.size();
+            for (int j=0; j!=i; ++j)
+              if (excl(i,j)) u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) );
+            for (int j=i+1; j<n; ++j)
+              if (excl(i,j)) u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) );
+            return u;
+          }
+
+          double g_internal(const Tpvec &p, Group &g) FOVERRIDE {
+            assert( g.size() <= (int)p.size() );
+            double u=0;
+            int b=g.back(), f=g.front();
+            if (!g.empty())
+              for (int i=f; i<b; ++i)
+                for (int j=i+1; j<=b; ++j) 
+                  if (excl(i,j)) u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+            return u;
+          }
+      };
+
+    /**
      * @brief Energy class for non-bonded interactions.
      *
      * `Tpairpot` is expected to be a pair potential with the following properties:

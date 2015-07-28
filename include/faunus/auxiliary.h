@@ -584,16 +584,24 @@ namespace Faunus {
         void load(const string &filename) {
           std::ifstream f(filename.c_str());
           if (f) {
-            int i=0;
+            int i=0, j=-1;
             std::string line;
             getline(f, line);
             while (getline(f, line)) {
-              int j=-1;
+              if ( i>_rows-1 || j>_cols-1 ) {
+                std::cerr << "Error: input file '"+filename+"' is larger than expected\n";
+                exit(1);
+              }
+              j=-1;
               std::istringstream iss(line);
               Tcoeff a, b;
               iss >> a;
               while (iss >> b) base::operator()(i,++j)=b;
               ++i;
+            }
+            if ( i!=_rows || j!=_cols-1 ) {
+              std::cerr << "Error: input file '"+filename+"' is smaller than expected\n";
+              exit(1);
             }
           }
         }

@@ -423,7 +423,7 @@ namespace Faunus {
     template<class Tspace, class Tpairpot, typename base=Nonbonded<Tspace, Tpairpot>>
       class NonbondedExcl : public base {
         protected:
-          Table<bool> excl;
+          Table<int> excl;
           using typename base::Tpvec;
           using typename base::Tparticle;
 
@@ -433,52 +433,27 @@ namespace Faunus {
           using base::pairpot;
 
           NonbondedExcl(
-              Tmjson &j, Tspace* s, Table<bool> &t,
+              Tmjson &j, Table<int> &t,
               const string &sec="nonbonded" ) : base(j,sec) {
-            spc=s;
             assert( ! j["energy"][sec].is_null() );
-            
+
             static_assert(
                 std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
                 "Tpairpot must be a pair potential" );
             Energybase<Tspace>::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
             excl=t;
-          }
-
-          //!< Particle-particle energy (kT)
-          inline double p2p(const Tparticle &a, const Tparticle &b) {
-            int i = spc->findIndex(a);
-            int j = spc->findIndex(b);
-            if (excl(i,j))
-              return pairpot( a,b,geo.sqdist(a,b));
-            else return 0;
-          }
-
-          //!< Particle-particle force (kT/Angstrom)
-          inline Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
-            int i = spc->findIndex(a);
-            int j = spc->findIndex(b);
-            if (excl(i,j)) {
-              auto r=geo.vdist(a,b);
-              return pairpot.force(a,b,r.squaredNorm(),r);
+            for (int i = 0; i < excl.cols(); ++i) {
+              for (int j = 0; j < excl.rows(); ++j) {
+                if ( excl(i,j)!=excl(j,i) ) {
+                  std::cerr << "Error: matrix has to be symmetric\n";
+                  exit(1);
+                }
+              }
             }
-            else return Point(0,0,0);
-          }
-
-          double all2p(const Tpvec &p, const Tparticle &a) {
-            double u=0;
-            for (auto &b : p) {
-              int i = spc->findIndex(a);
-              int j = spc->findIndex(b);
-              if (excl(i,j)) u+=pairpot(a,b,geo.sqdist(a,b));
-            }
-            return u;
           }
 
           double i2i(const Tpvec &p, int i, int j) {
-            if (excl(i,j))
-              return pairpot( p[i], p[j], geo.sqdist( p[i], p[j]) );
-            else return 0;
+            return pairpot( p[i], p[j], geo.sqdist( p[i], p[j]) )*excl(i,j);
           }
 
           double i2g(const Tpvec &p, Group &g, int j) FOVERRIDE {
@@ -487,12 +462,12 @@ namespace Faunus {
               int len=g.back()+1;
               if ( g.find(j) ) {   //j is inside g - avoid self interaction
                 for (int i=g.front(); i<j; i++)
-                  if (excl(i,j)) u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                  u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]))*excl(i,j);
                 for (int i=j+1; i<len; i++)
-                  if (excl(i,j)) u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                  u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]))*excl(i,j);
               } else              //simple - j not in g
                 for (int i=g.front(); i<len; i++)
-                  if (excl(i,j)) u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]));
+                  u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]))*excl(i,j);
             }
             return u;  
           }
@@ -502,9 +477,9 @@ namespace Faunus {
             double u=0;
             int n=(int)p.size();
             for (int j=0; j!=i; ++j)
-              if (excl(i,j)) u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) );
+              u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) )*excl(i,j);
             for (int j=i+1; j<n; ++j)
-              if (excl(i,j)) u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) );
+              u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) )*excl(i,j);
             return u;
           }
 
@@ -515,7 +490,7 @@ namespace Faunus {
             if (!g.empty())
               for (int i=f; i<b; ++i)
                 for (int j=i+1; j<=b; ++j) 
-                  if (excl(i,j)) u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                  u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]))*excl(i,j);
             return u;
           }
       };

@@ -228,7 +228,7 @@ namespace Faunus {
       // Write box dimensions (standard PDB format)
       template<class Tvec>
         static string writeCryst1(const Tvec &len, Tvec angle=Tvec(90,90,90)) {
-          char buf[100];
+          char buf[500];
           sprintf(buf, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n", 
               len.x(),len.y(),len.z(),angle.x(),angle.y(),angle.z());
           return string(buf);
@@ -311,12 +311,12 @@ namespace Faunus {
        * @param file Filename
        * @param p Particle vector
        * @param len Unit cell dimensions (optional)
-       * @param n Number of atoms in each residue (default: 1e20)
+       * @param n Number of atoms in each residue (default: 1e9)
        */
       template<class Tpvec, class Tvec=Point>
         static bool save(const string &file, const Tpvec &p, Tvec len=Point(0,0,0), unsigned int n=1e9) {
           unsigned int nres=1, natom=1;
-          char buf[100];
+          char buf[500];
           std::ostringstream o;
           if (len.norm()>1e-6)
             o << writeCryst1(len);

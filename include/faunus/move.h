@@ -902,9 +902,7 @@ namespace Faunus {
 
         public:
 
-          TranslateRotate(Energy::Energybase<Tspace>&, Tspace&, Tmjson&,
-              string="moltransrot");
-
+          TranslateRotate(Energy::Energybase<Tspace>&, Tspace&, Tmjson&, string="moltransrot");
           void setGroup(Group&); //!< Select Group to move
           bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
           std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
@@ -1255,19 +1253,20 @@ namespace Faunus {
      * function. Whether particles are considered part of the cluster is
      * determined by the private virtual function `ClusterProbability()`.
      * By default this is a simple step function with P=1 when an atomic particle
-     * in the group set by `setMobile()` is within a certain threshold to a
-     * particle in the main group; P=0 otherwise.
+     * is within a certain threshold to a particle in the main group; P=0 otherwise.
      *
      * The implemented cluster algorithm is general - see Frenkel&Smith,
      * 2nd ed, p405 - and derived classes can re-implement `ClusterProbability()`
      * for arbitrary probability functions.
      *
-     * Upon construction, the `InputMap` is scanned for the
-     * following keywords in the section `moves/moltransrot`,
+     * In additon to the molecular keywords in 
+     * `Moves::TranslateRotate`, the JSON input is searched
+     * the following in `moves/moltransrotcluster`,
      *
      * Keyword         | Description
      * :---------------| :----------------
      * `clusterradius` | Surface threshold from mobile ion to particle in group (angstrom)
+     * `clustergroup`  | Group containing atomic particles to be moved with the main molecule
      *
      * @todo Energy evaluation puts all moved particles in an index vector used
      * to sum the interaction energy with static particles. This could be optimized
@@ -1299,18 +1298,40 @@ namespace Faunus {
           virtual double ClusterProbability(Tpvec&,int); //!< Probability that particle index belongs to cluster
         public:
           using base::spc;
-          TranslateRotateCluster(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="");
+          TranslateRotateCluster(Energy::Energybase<Tspace>&, Tspace&, Tmjson &j, string="moltransrotcluster");
           virtual ~TranslateRotateCluster();
           void setMobile(Group&);  //!< Pool of atomic species to move with the main group
           double threshold;        //!< Distance between particles to define a cluster
       };
 
     template<class Tspace>
-      TranslateRotateCluster<Tspace>::TranslateRotateCluster(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(in,e,s,pfx) {
+      TranslateRotateCluster<Tspace>::TranslateRotateCluster(
+          Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j, string sec) : base(e,s,j,sec) {
         base::title="Cluster "+base::title;
         base::cite="doi:10/cj9gnn";
-        threshold = in.get( "clusterradius", 0.0 );
         gmobile=nullptr;
+
+        auto m = j["moves"][sec];
+        base::fillMolList( m );// find molecules to be moved
+
+        if ( this->mollist.size()!=1 ) {
+          std::cerr << "Error: only one group allowed for cluster moves." << endl;
+          exit(1);
+        } else {
+          for (auto &i : this->mollist) {
+            string molname = spc->molList()[ i.first ].name;
+            string mobname  = m[molname]["clustergroup"] | string();
+            threshold       = m[molname]["threshold"] | 0.0;
+
+            auto mob = spc->findMolecules( mobname ); // mobile atoms to include in move
+            if ( mob.size()==1 )
+              setMobile( *mob.front() );
+            else {
+              std::cerr << "Error: atomic group in clustermove ill defined." << endl;
+              exit(1);
+            }
+          }
+        }
       }
 
     template<class Tspace>
@@ -1337,18 +1358,33 @@ namespace Faunus {
 
     template<class Tspace>
       void TranslateRotateCluster<Tspace>::_trialMove() {
+
+        // if `mollist` has data, favor this over `setGroup()`
+        // Note that `currentMolId` is set by Movebase::move()
+        if ( ! this->mollist.empty() ) {
+          auto gvec = spc->findMolecules( this->currentMolId );
+          assert( !gvec.empty() );
+          igroup = *slump.element( gvec.begin(), gvec.end() );
+          assert( ! igroup->empty() );
+          auto it = this->mollist.find( this->currentMolId );
+          if ( it != this->mollist.end() ) {
+            dp_trans = it->second.dp1;
+            dp_rot = it->second.dp2;
+            dir = it->second.dir;
+          }
+        }
+
         assert(gmobile!=nullptr && "Cluster group not defined");
         assert(igroup!=nullptr && "Group to move not defined");
-        Point p;
 
         // find clustered particles
         cindex.clear();
-        for (auto i : *gmobile)
-          if (ClusterProbability(spc->p, i) > slump() )
+        for ( auto i : *gmobile )
+          if ( ClusterProbability(spc->p, i) > slump() )
             cindex.push_back(i); // generate cluster list
-        avgsize += cindex.size();
 
         // rotation
+        Point p;
         if (dp_rot>1e-6) {
           base::angle=dp_rot* slump.half();
           p.ranunit(slump);
@@ -1375,6 +1411,7 @@ namespace Faunus {
         base::_acceptMove();
         for (auto i : cindex)
           spc->p[i] = spc->trial[i];
+        avgsize += cindex.size();
       }
 
     template<class Tspace>
@@ -4097,6 +4134,8 @@ namespace Faunus {
                   mPtr.push_back( toPtr( GrandCanonicalTitration<Tspace>(e,s,in) ) );
                 if (i.key()=="moltransrot")
                   mPtr.push_back( toPtr( TranslateRotate<Tspace>(e,s,in) ) );
+                if (i.key()=="moltransrotcluster")
+                  mPtr.push_back( toPtr( TranslateRotateCluster<Tspace>(e,s,in) ) );
                 if (i.key()=="isobaric")
                   mPtr.push_back( toPtr( Isobaric<Tspace>(e,s,in) ) );
                 if (i.key()=="isochoric")

@@ -138,8 +138,7 @@ namespace Faunus {
        */
       template<class Tspace>
         void translate(Tspace &spc, const Point &p) {
-          assert( spc.geo.sqdist(cm,massCenter(spc))<1e-6
-              && "Mass center out of sync.");
+          assert( spc.geo.sqdist(cm,massCenter(spc))<1e-6 && "Mass center out of sync." );
           cm_trial.translate(spc.geo, p);
           for (auto i : *this)
             spc.trial[i].translate(spc.geo, p);

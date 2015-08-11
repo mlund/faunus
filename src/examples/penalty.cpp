@@ -35,8 +35,8 @@ int main() {
   MCLoop loop(mcp); // class for handling mc loops
   Tspace spc(mcp);
   auto pot
-    = myenergy()                                      // our custom potential!
-    + Energy::PenaltyEnergy<Tspace>(mcp,spc); // To be subsituted with
+    = myenergy()                                      // our custom potential
+    + Energy::PenaltyEnergy<Tspace>(mcp,spc); // to be subsituted with
   // + Energy::PenaltyEnergy<Tspace>(mpi,mcp,spc); // in the MPI version
   auto penalty = std::get<1>( pot.tuple() );
 
@@ -44,11 +44,9 @@ int main() {
   Group mygroup(myparticle.front()->front(), myparticle.back()->back());
   mygroup.setMolSize(1);
   EnergyDrift sys;                                    // class for tracking system energy drifts
-  
   // In MPI version add:
   // slump.setDiscard(mpi.rank()+1);
   penalty->load("pf_");
-
   // Markov moves
   Move::Propagator<Tspace> mv(mcp, pot, spc);
 
@@ -65,12 +63,13 @@ int main() {
   }
   auto it_min = histo.min();
   histo.save("histo"+std::to_string(histo.getMap().size()),1./it_min->second);
-  penalty->save("pf_");
+  penalty->save("pf_",1,{1.3,1.3,-2,-2});
+  penalty->saveRow("row_",{1.6},1,{1.3,1.3,-2,-2});
 
   cout << loop.info() + mv.info() + penalty->info() + sys.info();
 
   // perform unit 
-  if (penalty->update(true)) {
+  if (penalty->update(true)!=0) { // this ensures that the test is run only in the 2nd simulation
   UnitTest test(mcp);
   mv.test(test);
   sys.test(test);
@@ -88,7 +87,7 @@ int main() {
   p.391 - Case Study 21, _Parallel Tempering of a Single Particle_.
 
   We simulate a single particle in an oscillating potential and use the 
-  penalty function method to overcome energy barriers. 
+  penalty function method to overcome the energy barriers. 
   Below is the two-dimensional distribution functions sampled with and without
   the penalty function method, demonstrating how the penalty function 
   (at the bottom right) yields flat distribution functions in rough energy landscapes.
@@ -112,11 +111,11 @@ int main() {
   The penalty function routine in Faunus is also implemented in
   MPI using a master-slave scheme. Each system has its own rank and random seed.
   Samplings of the configurational space from all processes are merged by 
-  periodically summing up the two-dimensional distribution functions.
+  periodically averaging over the two-dimensional distribution functions.
   The lines of code that need to be modified to run the program in parallel
-  are indicated in penalty.cpp.
+  are indicated in the comments in penalty.cpp.
   
-  The parameters to be set in the input file are following:
+  The parameters to be set in the input file are the following:
 
   ~~~
   f0              0.5       # initial increment to the penalty function

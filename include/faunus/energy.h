@@ -1609,6 +1609,37 @@ namespace Faunus {
           }
       };
 
+    /**
+     * @brief Base for calculating reaction coordinates
+     *
+     * This is a common interface for calculating reaction
+     * coordinates used in i.e. penalty functions. The main
+     * responsibility is to merely return the coordinate, given
+     * a certain system configuration. The coordinate may be
+     * many-dimensional and is returned in the form of an array.
+     *
+     * @todo Simplify by moving out save/load functions, penalty
+     * function data member as well as MPI calls. This class
+     * should only return the coordinate and keep info about
+     * minimum and maximim allowed values. Loading, saving,
+     * updating, energy calc. should be done by the energy
+     * class. Suggested public, virtual functions:
+     *
+     * string name();             // arbitrary name. "CM-CM", "xyz" etc.
+     * Tvec& max();               // upper limits
+     * Tvec& min();               // lower limits
+     * unsigned int dim();        // dimension, i.e. size of Tvec (1,2,..)
+     * bool inrange( Tvec& );     // return true if inside min/max
+     * unsigned int updateRate(); // how often to update
+     * double scale();
+     * template<...>
+     *   Tvec operator( Space&, Tparticlevector& ); // calc. coordinate
+     *
+     * We could make a CombinedPenaltyFunction that can mergy
+     * i.e. two 1D functions into one 2D function
+     *
+     * auto combined = cmcm(...) + gyration(...)
+     */
     template<class Tspace>
       class ReactionCoordinateBase {
         private:

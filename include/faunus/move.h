@@ -2746,10 +2746,13 @@ namespace Faunus {
               return eqpot->findSites(p);
             }
 
+          /** @brief Copy average charges into particle vector */
           template<class Tpvec>
-            void applycharges( const Tpvec &p ) {
-              eqpot->eq.applycharges(p);
-            }  
+            void applyCharges( Tpvec &p ) {
+              for (auto &g : spc->groupList() ) // loop over all groups
+                for ( auto &i : molCharge[ g->molId ]) // loop over particles
+                  p[ g->front() + i.first ].charge = i.second;
+            }
       };
 
       template<class Tspace>
@@ -3831,6 +3834,7 @@ namespace Faunus {
        * :------------- |  :---------------------------------
        * `processfile`  |  json file name with processes
        * `prob`         |  probability of running (default: 1)
+       * `savecharge`   |  save average charge upon destruction (default: false)
        */
       template<class Tspace>
         class SwapMove : public Movebase<Tspace> {
@@ -3841,6 +3845,8 @@ namespace Faunus {
             void _trialMove();
             void _acceptMove();
             void _rejectMove();
+
+            bool saveChargeBool;
 
             std::map<int, std::map<int, Average<double> >> molCharge;
 
@@ -3861,6 +3867,16 @@ namespace Faunus {
             template<class Tenergy>
               SwapMove(Tenergy&, Tspace&, Tmjson&, string="titrate"); //!< Constructor
 
+            ~SwapMove() {
+              if ( saveChargeBool )
+                if ( this->runfraction>1e-3 ) {
+                  applyCharges( spc->p );
+                  FormatAAM::save( "avgcharge.aam", spc->p ); 
+                  FormatPQR::save( "avgcharge.pqr", spc->p ); 
+                  spc->p = spc->trial;
+                }
+            }
+
             template<class Tpvec>
               int findSites(const Tpvec&); //!< Search for titratable sites (old ones are discarded)
 
@@ -3876,8 +3892,13 @@ namespace Faunus {
               return du;
             }
 
-            template<class Tpvec>
-              void applycharges(Tpvec &);
+          /** @brief Copy average charges into particle vector */
+          template<class Tpvec>
+            void applyCharges( Tpvec &p ) {
+              for (auto &g : spc->groupList() ) // loop over all groups
+                for ( auto &i : molCharge[ g->molId ]) // loop over particles
+                  p[ g->front() + i.first ].charge = i.second;
+            }
         };
 
       template<class Tspace>
@@ -3888,6 +3909,8 @@ namespace Faunus {
           base::runfraction = j["moves"][sec]["prob"] | 1.0;
           base::w = 30;
           ipart=-1;
+
+          saveChargeBool = j["moves"][sec]["savecharge"] | false;
 
           auto t = e.tuple();
           auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
@@ -3900,7 +3923,9 @@ namespace Faunus {
           }
 
           eqpot->eq = Energy::EquilibriumController( j );
-          findSites( spc.p );
+
+          if ( base::runfraction > 1e-4 )
+            findSites( spc.p );
 
           /* Sync particle charges with `AtomMap` */
           for (auto i : eqpot->eq.sites)
@@ -3973,12 +3998,6 @@ namespace Faunus {
           accmap[ipart] += 0;
           spc->trial[ipart] = spc->p[ipart];
           updateMolCharge( ipart );
-        }
-
-      template<class Tspace>
-        template<class Tpvec>
-        void SwapMove<Tspace>::applycharges(Tpvec &p){
-          eqpot->eq.applycharges(p);
         }
 
       template<class Tspace>

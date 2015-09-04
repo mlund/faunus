@@ -276,12 +276,18 @@ namespace Faunus {
         }
 
         /** @brief Returns vector of molecules with matching molid */
-        inline std::vector<Group*> findMolecules( int molId ) const {
+        inline std::vector<Group*> findMolecules( int molId, bool sort=false ) const {
           std::vector<Group*> v;
           v.reserve( g.size() );
           for ( auto i : g )
             if (i->molId == molId)
               v.push_back( i );
+
+          // now lets make sure the molecules are sorted according
+          // to their position in the particle vector:
+          if (sort)
+            std::sort( v.begin(), v.end(), 
+                [](Group* a, Group* b) { return a->front() < b->front(); }); 
           return v;
         }
 
@@ -310,10 +316,10 @@ namespace Faunus {
          * }
          * ~~~~
          */
-        inline std::vector<Group*> findMolecules( const std::string &name ) const {
+        inline std::vector<Group*> findMolecules( const std::string &name, bool sort=false ) const {
           auto it = molecule.find(name);
           if ( it != molecule.end() )
-            return findMolecules( it->id );
+            return findMolecules( it->id, sort );
           else return std::vector<Group*>();
         }
 

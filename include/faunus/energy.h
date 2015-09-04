@@ -1621,7 +1621,7 @@ namespace Faunus {
      * `min`    | minumum coordinate values (array)
      * `max`    | maximum coordinate values (array)
      * `scale`  | penalty scaling (array)
-     * `nstep`  | update frequency (steps)
+     * `nstep`  | update frequency for penalty updates, sampling etc. (steps)
      *
      * @note Under construction
      */
@@ -1699,6 +1699,51 @@ namespace Faunus {
       {
         return CombinedReactionCoordinate<Tspace>( c1, c2 );
       }
+
+    /*
+     * Keyword    | Description
+     * :--------- | :--------------
+     * `first`    | name of first molecule
+     * `second`   | name of second molecule
+     * `index`    | molecule index to select in case of multiple molecules (default "0 0").
+     * `dir`      | which dimensions to use when calc. mass center
+     *
+     * Example:
+     *
+     *     "cmcm" : {
+     *        "first":"water", "second":"sodium", "index":"0 0", "dir":"1 1 1",
+     *        "min":{0}, "max":{50.}
+     *     }
+     */
+    template<class Tspace, class base=ReactionCoordinateBaseCandidate<Tspace>>
+      class RCcmcm : public base {
+        private:
+          Point dir;
+          Group *g1, *g2;
+          typedef typename base::Tvec Tvec;
+        public:
+          RCcmcm( Tspace &s, Tmjson &j, string sec="cmcm" ) : base( j[sec] ) {
+            dir << ( j[sec]["dir"] | string("1 1 1") );
+            auto i = textio::words2vec<int>( j[sec]["index"] | string("0 0") );
+            assert( i.size()==2 );
+            assert( dir.size()==3 );
+
+            string name1 = j[sec]["first"];
+            string name2 = j[sec]["second"];
+            g1 = s.findMolecules( name1, true ).at( i[0] ); 
+            g2 = s.findMolecules( name2, true ).at( i[1] ); 
+
+            assert( !g1->empty() );
+            assert( !g2->empty() );
+          }
+
+          Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p ) override {
+            Point cm1 = massCenter(s.geo, p, *g1);
+            Point cm2 = massCenter(s.geo, p, *g2);
+            Point r = s.geo.vdist( cm1, cm2 );
+            return { r.cwiseProduct(dir).norm() };
+          }
+      };
 
     /**
      * @brief Base for calculating reaction coordinates

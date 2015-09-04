@@ -1609,6 +1609,97 @@ namespace Faunus {
           }
       };
 
+    /* 
+     * @brief Base class for reaction coordinates
+     *
+     * Derived classes must implement the function operator.
+     *
+     * Basic JSON keywords:
+     *
+     * Keyword  | Description
+     * :------- | :----------------
+     * `min`    | minumum coordinate values (array)
+     * `max`    | maximum coordinate values (array)
+     * `scale`  | penalty scaling (array)
+     * `nstep`  | update frequency (steps)
+     *
+     * @note Under construction
+     */
+    template<class Tspace>
+      class ReactionCoordinateBaseCandidate {
+        public:
+          typedef std::vector<double> Tvec;
+        protected:
+          Tvec _min, _max, _scale;
+          unsigned int _nstep;     // update frequency [steps]
+        public:
+          ReactionCoordinateBaseCandidate( Tmjson &j ) {
+            _min = j["min"].get<Tvec>();
+            _max = j["max"].get<Tvec>();
+            _scale = j["scale"].get<Tvec>();
+            _nstep = j["nstep"] | 1000;
+            assert( _min.size() >= 1);
+            assert( _min.size() == _max.size());
+            assert( _min.size() == _scale.size());
+          }
+
+          ReactionCoordinateBaseCandidate() {}
+
+          /** @brief Calculates reaction coordinate */
+          virtual Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p )=0;
+
+          size_t dim() const { return _min.size(); }   //!< dimension of coordinate
+          const Tvec& min() const { return _min; }     //!< min value(s) for penalty coordinates
+          const Tvec& max() const { return _max; }     //!< max value(s) for penalty coordinates
+          unsigned int nstep() const { return _nstep;} //!< update frequency (steps)
+          const Tvec& scale() const { return _scale; } //!< max value(s) for penalty coordinates
+
+          /** @brief Determines if coordinate is within min:max */
+          bool inrange( const Tvec &coord ) const {
+            for (size_t i=0; i<coord.size(); ++i)
+              if ( coord[i]<min()[i] || coord[i]>max()[i] )
+                return false;
+            return true;
+          }
+      };
+
+    /* @brief Helper class for combining two reaction coordinates */
+    template<class Tspace, class base=ReactionCoordinateBaseCandidate<Tspace> >
+      class CombinedReactionCoordinate : public base {
+        private:
+          vector<base> c;
+          typedef typename base::Tvec Tvec;
+        public:
+          CombinedReactionCoordinate(const base &c1, const base &c2) {
+            c.push_back(c1);
+            c.push_back(c2);
+            base::_nstep = std::min( c[0].nstep(), c[1].nstep() );
+            for (auto &i : c ) {
+              base::_min.insert( base::_min.end(), i.min().begin(), i.min().end() );
+              base::_max.insert( base::_max.end(), i.max().begin(), i.max().end() );
+              base::_scale.insert( base::_scale.end(), i.scale().begin(), i.scale().end() );
+            }
+            assert( base::dim() == c[0].dim() + c[1].dim() );
+          }
+
+          Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p ) override {
+            Tvec r;
+            for (auto &i : c)
+              r.insert( r.end(), i(s,p).begin(), i(s,p).end() );
+            assert( base::dim() == r.size() );
+            return r;
+          }
+      };
+
+    /* @brief Operator for combining two reaction coordinates */
+    template<class Tspace>
+      CombinedReactionCoordinate<Tspace> operator+(
+          const ReactionCoordinateBaseCandidate<Tspace> &c1,
+          const ReactionCoordinateBaseCandidate<Tspace> &c2 )
+      {
+        return CombinedReactionCoordinate<Tspace>( c1, c2 );
+      }
+
     /**
      * @brief Base for calculating reaction coordinates
      *

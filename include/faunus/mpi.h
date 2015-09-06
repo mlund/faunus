@@ -332,13 +332,14 @@ namespace Faunus {
       }
 
     /*
-     * @brief Compute average over tables from parallel processes with different seeds
+     * @brief Sum tables computed by parallel processes
      *
      * @details Slave processes send histograms to the master. The master computes the 
-     * average over all histograms and sends it back to the slaves.
+     * average and sends it back to the slaves. Ttable can be Table, Table2D or Table3D in auxiliary.h.
+     *
      */
     template<class Ttable>
-      void averageTables(MPIController* mpiPtr, FloatTransmitter &ft, Ttable &table, int &size) {
+      void avgTables(MPIController* mpiPtr, FloatTransmitter &ft, Ttable &table, int &size) {
         if (!mpiPtr->isMaster()) {
           vector<FloatTransmitter::floatp> sendBuf = table.hist2buf(size);
           vector<FloatTransmitter::floatp> recvBuf = ft.swapf(*mpiPtr, sendBuf, mpiPtr->rankMaster());

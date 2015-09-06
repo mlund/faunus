@@ -653,17 +653,18 @@ namespace Faunus {
         ChargeMultipole();
 
         /** @brief Sample properties of Group (identified by group name) */
-        template<class Tgroup, class Tspace>
-          void sample(const Tgroup &g, const Tspace &spc) {
+        template<class Tspace>
+          void sample(Group &g, const Tspace &spc) {
             assert(!g.name.empty() && "All Groups should have a name!");
-            if (run()) {
-              double z=charge(g, spc.p);
-              Z[g.name]+=z;
-              Z2[g.name]+=pow(z,2);
-              double dip=dipole(g,spc);
-              mu[g.name]+=dip;
-              mu2[g.name]+=pow(dip,2);
-            }
+            if ( run() )
+              if ( spc.molecule[g.molId].isMolecular() ) {
+                double z=charge(g, spc.p);
+                Z[g.name]+=z;
+                Z2[g.name]+=pow(z,2);
+                double dip=dipole(g,spc);
+                mu[g.name]+=dip;
+                mu2[g.name]+=pow(dip,2);
+              }
           }
 
         /* @brief Sample properties of Group (identified by group name) */

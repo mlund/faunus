@@ -5,7 +5,10 @@ typedef Potential::LennardJonesLB Tpair;  // and pair potential
 
 int main() {
   InputMap in("minimal.json");            // open parameter file for user input
+
+
   Tspace spc(in);                         // Simulation space, particles etc.
+  Energy::RCcmcm<Tspace> rc(spc, in);
   Energy::Nonbonded<Tspace,Tpair> pot(in);// Hamiltonian, non-bonded only
   Move::Propagator<Tspace> mv(in,pot,spc);// Monte Carlo move class
   for (int i=0; i<1e4; i++)

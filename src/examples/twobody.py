@@ -78,13 +78,15 @@ def mkinput():
           },
 
       "moleculelist": {
-          "protein":  { "structure":"manybody.bpti", "Ninit":2, "insdir":"0 0 1" }
+          "protein":  { "structure":"manybody.bpti", "Ninit":2, "insdir":"0 0 1" },
+          "salt": {"atoms":"Na Cl", "Ninit":10, "atomic":True }
           },
 
       "moves" : {
           "titrate" : { "prob":0.2, "processfile":"twobody.json" },
-          "moltransrot" : {
-            "protein" : { "dp":10, "dprot":3, "prob":1.0, "permol":True, "dir":"0 0 1" } 
+          "moltransrotcluster" : {
+            "protein" : { "dp":10, "dprot":3, "prob":1.0, "permol":True, "dir":"0 0 1",
+              "threshold":10, "clustergroup": "salt"} 
             } 
           },
 
@@ -101,7 +103,7 @@ def mkinput():
 exe="./twobody"
 
 runeq=True
-runprod=True
+runprod=False
 copydata=False
 
 for Cs in [0.05]:  # ionic strength (mol/l)

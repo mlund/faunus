@@ -8,7 +8,6 @@
 #include <regex>
 #include <cstdint>
 #include <chrono>
-#include <unordered_map>
 
 #ifdef FAU_HASHTABLE
 #include <unordered_map>
@@ -447,6 +446,166 @@ namespace Faunus {
         }
     };
 
+  template<typename Tcoeff=double, typename base=Eigen::Matrix<Tcoeff,Eigen::Dynamic,Eigen::Dynamic>>
+    class Table : public base {
+      private: 
+        typedef std::vector<double> Tvec;
+        Tvec _bw, _lo, _hi;
+        int _rows, _cols;
+      public:
+        Table(const Tvec &bw={1,1}, const Tvec &lo={0,0}, const Tvec &hi={2,2}) {
+          _bw = bw;
+          _lo = lo;
+          _hi = hi;
+          _rows = (_hi[0]-_lo[0])/_bw[0]+1.;
+          _cols = (_hi[1]-_lo[1])/_bw[1]+1.;
+          base::resize(_rows,_cols);
+          base::setZero();
+        }
+        void reInitializer(Tvec &bw, Tvec &lo, Tvec &hi) {
+          _bw = bw;
+          _lo = lo;
+          _hi = hi;
+          _rows = (_hi[0]-_lo[0])/_bw[0]+1.;
+          _cols = (_hi[1]-_lo[1])/_bw[1]+1.;
+          base::resize(_rows,_cols);
+          base::setZero();
+        }
+        void clear() { base::setZero(); }
+        void round(Tvec &v) {
+          for (Tvec::size_type i=0; i!=v.size(); ++i) 
+            v[i] = (v[i]>=0) ? int( v[i]/_bw[i]+0.5 )*_bw[i] : int( v[i]/_bw[i]-0.5 )*_bw[i];
+        }
+        void to_index(Tvec &v) {
+          for (Tvec::size_type i=0; i!=v.size(); ++i) {
+            v[i] = (v[i]>=0) ? int( v[i]/_bw[i]+0.5 ) : int( v[i]/_bw[i]-0.5 );
+            v[i] = v[i] - _lo[i]/_bw[i];
+          }
+          v.resize(2,0);
+        }
+        Tcoeff& operator[](const Tvec &v) { 
+          return base::operator()(v[0],v[1]);
+        } 
+        bool isInRange(const Tvec &v) {
+          bool b = true;
+          for (Tvec::size_type i=0; i!=v.size(); ++i)
+            b = b && v[i]>=_lo[i] && v[i]<=_hi[i];
+          return b;
+        }
+        Tvec hist2buf(int &size) {
+          Tvec sendBuf;
+          for (size_t i = 0; i < _cols; ++i)
+            for (size_t j = 0; j < _rows; ++j)
+              sendBuf.push_back(base::operator()(j,i));
+          return sendBuf;
+        }
+        void buf2hist(Tvec &v) {
+          assert(!v.empty());
+          base::setZero();
+          int p = v.size()/this->size(), n=0;
+          double nproc = p;
+          while (p-->0) {
+            for (size_t i = 0; i < _cols; ++i) 
+              for (size_t j = 0; j < _rows; ++j) {
+                base::operator()(j,i) += v.at(n)/nproc;
+                ++n;
+              }
+          }
+        }
+        base getBlock(const Tvec &v) { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
+          Tvec w={0,0,0,0};
+          switch (v.size()) {
+            case(1):
+              w[0] = w[1] = (v[0] - _lo[0])/_bw[0];
+              w[3] = _cols-1;
+              break;
+            case(2):
+              w[0] = (v[0] - _lo[0])/_bw[0];
+              w[1] = (v[1] - _lo[0])/_bw[0];
+              break;
+            case(3):
+              w[0] = w[1] = _rows-1;
+              w[2] = w[3] = _cols-1;
+              break;
+            case(4):
+              w[0] = (v[0] - _lo[0])/_bw[0];
+              w[1] = (v[1] - _lo[0])/_bw[0];
+              w[2] = (v[2] - _lo[1])/_bw[1]; 
+              w[3] = (v[3] - _lo[1])/_bw[1];
+          }
+          return this->block(w[0],w[2],w[1]-w[0]+1,w[3]-w[2]+1); // xmin,ymin,rows,cols
+        }
+        Tcoeff avg(const Tvec &v) {
+          return this->getBlock(v).mean();
+        }
+        void translate(Tcoeff s) {
+          *this+=base::Constant(_rows,_cols,s);
+        }
+        void save(const string &filename, Tcoeff scale=1, Tcoeff translate=0) {
+          Eigen::VectorXd v1(_cols+1), v2(_rows+1);
+          v1(0) = v2(0) = base::size();
+          for (int i=1; i!=_cols+1; ++i) {
+            v1(i) = (i-1)*_bw[1] + _lo[1];
+          }
+          for (int i=1; i!=_rows+1; ++i)
+            v2(i) = (i-1)*_bw[0] + _lo[0];
+          base m(_rows+1,_cols+1);
+          m.leftCols(1) = v2;
+          m.topRows(1) = v1.transpose();
+          m.bottomRightCorner(_rows,_cols) = *this;
+          if (scale!=1) 
+            m.bottomRightCorner(_rows,_cols)*=scale;
+          if (translate!=0) 
+            m.bottomRightCorner(_rows,_cols)+=base::Constant(_rows,_cols,translate);
+          std::ofstream f(filename.c_str());
+          if (_cols==1) f << "#";
+          f.precision(10);
+          if (f) f << m;
+        }
+        void saveRow(const string &filename, const Tvec &v, Tcoeff scale=1, Tcoeff translate=0) {
+          if (this->isInRange(v)) {
+          auto b = this->getBlock(v);
+          int size = b.size();
+          Eigen::VectorXd w(size);
+          for (int i=0; i!=size; ++i)
+            w(i) = i*_bw[1] + _lo[1];
+          base m(size,2);
+          m.leftCols(1) = w;
+          m.bottomRightCorner(size,1) = b.transpose();
+          if (scale!=1) 
+            m.bottomRightCorner(size,1)*=scale;
+          if (translate!=0) 
+            m.bottomRightCorner(size,1)+=base::Constant(size,1,translate);
+          std::ofstream f(filename.c_str());
+          f.precision(10);
+          if (f) f << m;
+          }
+        }
+        void load(const string &filename) {
+          std::ifstream f(filename.c_str());
+          if (f) {
+            int i=0, j=-1;
+            std::string line;
+            getline(f, line);
+            while (getline(f, line)) {
+              if ( i>_rows-1 || j>_cols-1 ) {
+                std::cerr << "Error: input file '"+filename+"' is larger than expected\n";
+                exit(1);
+              }
+              j=-1;
+              std::istringstream iss(line);
+              Tcoeff a, b;
+              iss >> a;
+              while (iss >> b) base::operator()(i,++j)=b;
+              ++i;
+            }
+            if ( i!=_rows || j!=_cols-1 ) {
+              std::cerr << "Error: input file '"+filename+"' is smaller than expected\n";
+              exit(1);
+            }
+          }
+        }
+    };
   /**
    * @brief General class for handling 2D tables - xy data, for example.
    * @date Lund 2011
@@ -615,17 +774,17 @@ namespace Faunus {
         /*! Returns average */
         Tx mean() {
           assert(!map.empty());
-          Tx ave = 0;
-          for (auto &m : map) ave += m.first*m.second;
-          return ave/count();
+          Tx avg = 0;
+          for (auto &m : map) avg += m.first*m.second;
+          return avg/count();
         }
 
         /*! Returns standard deviation */
         Tx std() {
           assert(!map.empty());
           Tx std2 = 0;
-          Tx ave = mean();
-          for (auto &m : map) std2 += m.second*(m.first - ave)*(m.first - ave);
+          Tx avg = mean();
+          for (auto &m : map) std2 += m.second*(m.first - avg)*(m.first - avg);
           return sqrt(std2/count());
         }
 
@@ -667,17 +826,18 @@ namespace Faunus {
         }
 
         /*! Returns average in interval */
-        Ty ave(Tx limit1, Tx limit2) {
-          Ty ave = 0;
+        Ty avg(const std::vector<Tx> &limits) {
+          Ty avg = 0;
           int cnt = 0;
           assert(!map.empty());
           for (auto &m : map) {
-            if (m.first>=limit1 && m.first<=limit2) {
-              ave+=m.second;
+            if (m.first>=limits[0] && m.first<=limits[1]) {
+              avg+=m.second;
               ++cnt;  
             }
           }
-          return ave/cnt;
+          if (cnt>0) avg/=cnt;
+          return avg;
         }
 
         /**
@@ -690,7 +850,7 @@ namespace Faunus {
             sendBuf.push_back(m.first);
             sendBuf.push_back(m.second);
           }
-          sendBuf.resize(size,0.);
+          sendBuf.resize(size,-1);
           return sendBuf;
         }
 
@@ -700,17 +860,11 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          std::unordered_map<double,vector<double>> all;
-          for (int i=0; i<int(v.size())-1; i+=2) {
-            if (v[i+1]!=0) all[v.at(i)].push_back(v.at(i+1));
-          }
-          for (auto &m : all) {
-            double ave = 0;
-            for (auto value : m.second)
-              ave += value;
-            ave /= (double)m.second.size();
-            this->operator()(m.first) = ave;
-          }
+          std::map<double,Average<double>> all;
+          for (int i=0; i<int(v.size())-1; i+=2)
+            if (v.at(i+1)!=-1) all[v.at(i)] += v.at(i+1);
+          for (auto &m : all) 
+            this->operator()(m.first) = m.second.avg();
         }
 
         /**
@@ -757,14 +911,14 @@ namespace Faunus {
   /**
    * @brief Subtract two tables
    */
-  template<class Tx, class Ty, class Tmap>
+  template<class Tx, class Ty>
     Table2D<Tx,Ty> operator-(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
       assert(a.tabletype==b.tabletype && "Table a and b needs to be of same type");
       Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
-      Tmap a_map = a.getMap();
-      Tmap b_map = b.getMap();
+      auto a_map = a.getMap();
+      auto b_map = b.getMap();
 
-      if (a.tabletype=="HISTOGRAM") {
+      if (a.tabletype==Table2D<Tx,Ty>::HISTOGRAM) {
         if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
         if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
         if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
@@ -778,7 +932,7 @@ namespace Faunus {
         }
       }
 
-      if (a.tabletype=="HISTOGRAM") {
+      if (a.tabletype==Table2D<Tx,Ty>::HISTOGRAM) {
         if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
         if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
         if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
@@ -790,14 +944,14 @@ namespace Faunus {
   /**
    * @brief Addition two tables
    */
-  template<class Tx, class Ty, class Tmap>
+  template<class Tx, class Ty>
     Table2D<Tx,Ty> operator+(Table2D<Tx,Ty> &a, Table2D<Tx,Ty> &b) {
       assert(a.tabletype==b.tabletype && "Table a and b needs to be of same type");
       Table2D<Tx,Ty> c(std::min(a.getResolution(),b.getResolution()),a.tabletype);
-      Tmap a_map = a.getMap();
-      Tmap b_map = b.getMap();
+      auto a_map = a.getMap();
+      auto b_map = b.getMap();
 
-      if (a.tabletype=="HISTOGRAM") {
+      if (a.tabletype==Table2D<Tx,Ty>::HISTOGRAM) {
         if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
         if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
         if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
@@ -811,7 +965,7 @@ namespace Faunus {
         c(m.first) += m.second;
       }
 
-      if (a.tabletype=="HISTOGRAM") {
+      if (a.tabletype==Table2D<Tx,Ty>::HISTOGRAM) {
         if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
         if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
         if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
@@ -986,6 +1140,10 @@ namespace Faunus {
           return map;
         }
 
+        std::pair<Tx,Tx> getResolution() {
+          return std::make_pair(dx1,dx2);
+        }
+
         /*! Returns iterator of minumum y */
         typename Tmap::const_iterator min() {
           assert(!map.empty());
@@ -1013,18 +1171,19 @@ namespace Faunus {
         }
 
         /*! Returns average in interval */
-        Ty ave(Tx limit1_x1, Tx limit2_x1, Tx limit1_x2, Tx limit2_x2) {
-          Ty ave = 0;
+        Ty avg(const std::vector<Tx> &limits) {
+          Ty avg = 0;
           int cnt = 0;
           assert(!map.empty());
           for (auto &m : map) {
-            if (m.first.first>=limit1_x1 && m.first.first<=limit2_x1
-                && m.first.second>=limit1_x2 && m.first.second<=limit2_x2) {
-              ave+=m.second;
+            if (m.first.first>=limits[0] && m.first.first<=limits[1]
+                && m.first.second>=limits[2] && m.first.second<=limits[3]) {
+              avg+=m.second;
               ++cnt;  
             }
           }
-          return ave/cnt;
+          if (cnt>0) avg/=cnt;
+          return avg;
         }
 
         /**
@@ -1038,7 +1197,7 @@ namespace Faunus {
             sendBuf.push_back(m.first.second);
             sendBuf.push_back(m.second);
           }
-          sendBuf.resize(size,0.);
+          sendBuf.resize(size,-1);
           return sendBuf;
         }
 
@@ -1048,17 +1207,11 @@ namespace Faunus {
         void buf2hist(vector<double> &v) {
           this->clear();
           assert(!v.empty());
-          std::map<std::pair<double,double>,vector<double>> all;
-          for (int i=0; i<int(v.size())-2; i+=3) {
-            if (v[i+2]!=0) all[std::make_pair(v.at(i),v.at(i+1))].push_back(v.at(i+2));
-          }
-          for (auto &m : all) {
-            double ave = 0;
-            for (auto value : m.second)
-              ave += value;
-            ave /= (double)m.second.size();
-            this->operator()(m.first.first,m.first.second) = ave;
-          }
+          std::map<std::pair<double,double>,Average<double>> all;
+          for (int i=0; i<int(v.size())-2; i+=3)
+            if (v.at(i+2)!=-1) all[std::make_pair(v.at(i),v.at(i+1))] += v.at(i+2);
+          for (auto &m : all) 
+            this->operator()(m.first.first,m.first.second) = m.second.avg();
         }
 
         /**
@@ -1095,6 +1248,75 @@ namespace Faunus {
           return false;
         }
     };
+
+  /**
+   * @brief Subtract two tables
+   */
+  template<class Tx, class Ty>
+    Table3D<Tx,Ty> operator-(Table3D<Tx,Ty> &a, Table3D<Tx,Ty> &b) {
+      assert(a.tabletype==b.tabletype && "Table a and b needs to be of same type");
+      Table3D<Tx,Ty> c(std::min(a.getResolution().first,b.getResolution().first),
+          std::min(a.getResolution().second,b.getResolution().second),a.tabletype);
+      auto a_map = a.getMap();
+      auto b_map = b.getMap();
+
+      if (a.tabletype==Table3D<Tx,Ty>::HISTOGRAM) {
+        if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+      }
+
+      for (auto &m1 : a_map) {
+        for (auto &m2 : b_map) {
+          c(m1.first.first,m1.first.second) = m1.second-m2.second;
+          break;
+        }
+      }
+
+      if (a.tabletype==Table3D<Tx,Ty>::HISTOGRAM) {
+        if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+      }
+      return c;
+    }
+
+  /**
+   * @brief Addition two tables
+   */
+  template<class Tx, class Ty>
+    Table3D<Tx,Ty> operator+(Table3D<Tx,Ty> &a, Table3D<Tx,Ty> &b) {
+      assert(a.tabletype==b.tabletype && "Table a and b needs to be of same type");
+      Table3D<Tx,Ty> c(std::min(a.getResolution().first,b.getResolution().first),
+          std::min(a.getResolution().second,b.getResolution().second),a.tabletype);
+      auto a_map = a.getMap();
+      auto b_map = b.getMap();
+
+      if (a.tabletype==Table3D<Tx,Ty>::HISTOGRAM) {
+        if (!a_map.empty()) a_map.begin()->second*=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second*=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second*=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second*=2; // -//-
+      }
+
+      for (auto &m : a_map) {
+        c(m.first.first,m.first.second) += m.second;
+      }
+      for (auto &m : b_map) {
+        c(m.first.first,m.first.second) += m.second;
+      }
+
+      if (a.tabletype==Table3D<Tx,Ty>::HISTOGRAM) {
+        if (!a_map.empty()) a_map.begin()->second/=2;   // compensate for half bin width
+        if (a_map.size()>1) (--a_map.end())->second/=2; // -//-
+        if (!b_map.empty()) b_map.begin()->second/=2;   // compensate for half bin width
+        if (b_map.size()>1) (--b_map.end())->second/=2; // -//-
+      }
+
+      return c;
+    }
 
   template<typename Tx, typename Ty=unsigned long int>
     class Histogram : public Table2D<Tx,Ty> {

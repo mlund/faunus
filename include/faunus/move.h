@@ -3519,8 +3519,11 @@ namespace Faunus {
        * This is a general class for GCMC that can handle both
        * atomic and molecular species at constant chemical potential.
        *
-       * @todo Currently tested only with rigid, molecular species.
-       * @date Brno/Lund 2014
+       * @todo Currently tested only with rigid, molecular species. Move
+       *       external energy calculation into Hamiltonian. Move particle
+       *       density analysis to Faunus::Analysis.
+       *
+       * @date Brno/Lund 2014-2015
        * @author Lukas Sukenik and Mikael Lund
        */
       template<class Tspace, class base=Movebase<Tspace> >
@@ -3532,8 +3535,6 @@ namespace Faunus {
             using base::pot;
             using base::w;
 
-            Faunus::Tracker<Group*> molTrack;    // tracker for molecules
-            Faunus::Tracker<int> atomTrack;      // tracker for atoms
             vector<Group*> molDel;               // groups to delete
             vector<int> atomDel;                 // atom index to delete
             MoleculeCombinationMap<Tpvec> comb;  // map of combinations to insert
@@ -3544,7 +3545,7 @@ namespace Faunus {
             typename MoleculeCombinationMap<Tpvec>::iterator it; // current combination
 
             /** @brief Perform an insertion or deletion trial move */
-            void _trialMove() {
+            void _trialMove() override {
 
               // pick random combination and count mols and atoms
               base::alternateReturnEnergy=0;
@@ -3569,11 +3570,11 @@ namespace Faunus {
                 // find atom index and group pointers
                 bool empty = false;           // true if too few atoms/mols are present
                 for ( auto &a : atomcnt )     // (first=type, second=count)
-                  if ( !atomTrack.find( a.first, a.second, atomDel ) )
+                  if ( !spc->atomTrack.find( a.first, a.second, atomDel ) )
                     empty = true;
                 for ( auto &m : molcnt )
                   if ( !spc->molecule[m.first].isAtomic() )
-                    if ( !molTrack.find( m.first, m.second, molDel ) )
+                    if ( !spc->molTrack.find( m.first, m.second, molDel ) )
                       empty = true;
                 if (empty) {        // nothing left to delete
                   molDel.clear();
@@ -3582,7 +3583,7 @@ namespace Faunus {
                 } else assert( !molDel.empty() || !atomDel.empty() );
               }
 
-              // try insert move (nothing is actually inserter - just a proposed configuration)
+              // try insert move (nothing is actually inserted - just a proposed configuration)
               if (insertBool) {
                 pmap.clear();
                 for ( auto molid : it->molComb ) // loop over molecules in combination
@@ -3593,6 +3594,7 @@ namespace Faunus {
             }
 
             // contribution from external chemical potential
+            // TODO: move into Hamiltonian
             double externalEnergy() {
               double u    = 0;
               double V    = spc->geo.getVolume();
@@ -3602,16 +3604,16 @@ namespace Faunus {
               for ( auto i : molcnt )                  // loop over molecule types
                 if (!spc->molecule[i.first].isAtomic())
                   for (int n=0; n<i.second; n++)       // loop over n number of molecules
-                    u += log(( molTrack.size(i.first) + bit ) / V) - spc->molecule[i.first].chemPot;
+                    u += log(( spc->molTrack.size(i.first) + bit ) / V) - spc->molecule[i.first].chemPot;
 
               for ( auto i : atomcnt )                 // loop over atom types
                 for (int n=0; n<i.second; n++)         // loop over n number of atoms
-                  u += log(( atomTrack.size(i.first) + bit ) / V) - atom[i.first].chemPot;
+                  u += log(( spc->atomTrack.size(i.first) + bit ) / V) - atom[i.first].chemPot;
 
               return sign * u;
             }
 
-            double _energyChange() {
+            double _energyChange() override {
 
               double u=0;         // change in potential energy (kT)
               double uinternal=0; // change in internal, molecular energy (kT)
@@ -3690,22 +3692,18 @@ namespace Faunus {
               return pc::infty;
             }
 
-            void _acceptMove() {
+            void _acceptMove() override {
 
               // accept a deletion move
               if ( !insertBool ) {
                 Ndeleted++;
-                for ( auto m : molDel ) { // loop over Group pointers
-                  molTrack.erase(m->molId, m);
+                for ( auto m : molDel ) // loop over Group pointers
                   base::spc->eraseGroup( spc->findIndex(m) );
-                }
+
                 for ( auto i : atomDel ) {// loop over particle index
                   assert(1==2 && "Under construction");
                   base::spc->erase(i);
                 }
-
-                atomTrack.update( spc->p );
-                return;
               }
 
               // accept an insertion move
@@ -3716,27 +3714,25 @@ namespace Faunus {
                   if ( spc->molecule[molid].isAtomic() ) {
                     assert(1==2 && "Under construction");
                     spc->insert( molid, p.second );
-                    atomTrack.update( spc->p );
                   }
                   else {
                     assert( !p.second.empty() );
                     auto g = spc->insert( molid, p.second ); // auto gen. group
-                    molTrack.insert( molid, g );
-                    assert( molTrack.size(molid) > 0 );
+                    assert( spc->molTrack.size(molid) > 0 );
                   }
                 }
               }
-              molTrack.updateAvg();   // update average number of molecules
-              atomTrack.updateAvg();  // ...and atoms
+              spc->molTrack.updateAvg();   // update average number of molecules
+              spc->atomTrack.updateAvg();  // ...and atoms
               pot->setSpace( *spc );
             }
 
-            void _rejectMove() {
-              molTrack.updateAvg();   // update average number of molecules
-              atomTrack.updateAvg();  // ...and atoms
+            void _rejectMove() override {
+              spc->molTrack.updateAvg();   // update average number of molecules
+              spc->atomTrack.updateAvg();  // ...and atoms
             }
 
-            string _info() {
+            string _info() override {
               using namespace textio;
               std::ostringstream o;
 
@@ -3755,20 +3751,20 @@ namespace Faunus {
 
               for (auto &m : spc->molecule) {
                 if ( m.activity > 1e-10 )
-                  if ( molTrack.getAvg(m.id).cnt>0 )
+                  if ( spc->molTrack.getAvg(m.id).cnt>0 )
                     o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
-                      << setw(w) << molTrack.getAvg(m.id)/V/1.0_molar
-                      << setw(w) << m.activity / (molTrack.getAvg(m.id)/V/1.0_molar) << "\n";
+                      << setw(w) << spc->molTrack.getAvg(m.id)/V/1.0_molar
+                      << setw(w) << m.activity / (spc->molTrack.getAvg(m.id)/V/1.0_molar) << "\n";
               }
 
               o << "\n";
 
               for (auto &m : atom) {
                 if ( m.activity > 1e-6 )
-                  if ( atomTrack.getAvg(m.id).cnt>0 )
+                  if ( spc->atomTrack.getAvg(m.id).cnt>0 )
                     o << setw(w+5) << ("  "+m.name) << setw(w) << m.activity
-                      << setw(w) << atomTrack.getAvg(m.id)/V/1.0_molar
-                      << setw(w) << m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar) << "\n";
+                      << setw(w) << spc->atomTrack.getAvg(m.id)/V/1.0_molar
+                      << setw(w) << m.activity / (spc->atomTrack.getAvg(m.id)/V/1.0_molar) << "\n";
               }
 
               return o.str() + spc->molecule.info() + comb.info();
@@ -3779,14 +3775,14 @@ namespace Faunus {
               t( this->jsondir + "_flux", Ninserted / double(Ndeleted) );
               for (auto &m : spc->molecule)
                 if ( m.activity > 1e-6 )
-                  if ( molTrack.getAvg(m.id).cnt>0 )
+                  if ( spc->molTrack.getAvg(m.id).cnt>0 )
                     if ( !m.name.empty() )
-                      t( this->jsondir + "_mol_" + m.name + "_gamma", m.activity / (molTrack.getAvg(m.id)/V/1.0_molar));
+                      t( this->jsondir + "_mol_" + m.name + "_gamma", m.activity / (spc->molTrack.getAvg(m.id)/V/1.0_molar));
               for (auto &m : atom)
                 if ( m.activity > 1e-6 )
                   if ( !m.name.empty() )
-                    if ( atomTrack.getAvg(m.id).cnt>0 )
-                      t( this->jsondir + "_atom_" + m.name + "_gamma", m.activity / (atomTrack.getAvg(m.id)/V/1.0_molar));
+                    if ( spc->atomTrack.getAvg(m.id).cnt>0 )
+                      t( this->jsondir + "_atom_" + m.name + "_gamma", m.activity / (spc->atomTrack.getAvg(m.id)/V/1.0_molar));
             }
 
             void init() { // call this upon construction
@@ -3794,17 +3790,6 @@ namespace Faunus {
               Ndeleted  = 0;
               base::title = "Grand Canonical";
               base::useAlternateReturnEnergy = true;
-
-              // update tracker with GC molecules and atoms
-              for ( auto g : spc->groupList() )
-                if ( spc->molecule[g->molId].isAtomic() ) {
-                  for ( auto i : *g )
-                    if ( atom[ spc->p[i].id ].activity > 1e-9 ) 
-                      atomTrack.insert( spc->p[i].id, i );
-                }
-                else
-                  if ( spc->molecule[g->molId].activity > 1e-9 )
-                    molTrack.insert( g->molId, g );
             }
 
           public:
@@ -3994,6 +3979,9 @@ namespace Faunus {
           accmap[ipart] += 1;
           spc->p[ipart] = spc->trial[ipart];
           updateMolCharge( ipart );
+          // atom type changed -- update atom tracker
+          spc->atomTrack.erase(ipart);
+          spc->atomTrack.insert(spc->p[ipart].id, ipart);
         }
 
       template<class Tspace>

@@ -154,6 +154,20 @@ namespace Faunus {
           }
           return false;
         }
+
+        /**
+         * @brief Erase data using search (slower than using id)
+         */
+        bool erase(Tid id) {
+          for (auto &m : _map) {
+            auto it = std::find(m.second.begin(), m.second.end(), id);
+            if (it!=m.second.end()) {
+              m.second.erase(it);
+              return true;
+            }
+          }
+          return false;
+        }
     };
 
   /**
@@ -174,9 +188,6 @@ namespace Faunus {
         bool checkSanity();                    //!< Check group length and vector sync
         std::vector<Group*> g;                 //!< Pointers to ALL groups in the system
 
-        Tracker<size_t> atomTrack;
-        Tracker<Group*> molTrack;
-
       public:
         typedef std::vector<Tparticle, Eigen::aligned_allocator<Tparticle> > p_vec;
         typedef p_vec ParticleVector;          //!< Particle vector type
@@ -190,6 +201,9 @@ namespace Faunus {
         ParticleVector p;                      //!< Main particle vector
         ParticleVector trial;                  //!< Trial particle vector.
         MoleculeMap<ParticleVector> molecule;  //!< Map of molecules
+
+        Tracker<int> atomTrack;                //!< Track atom index based on atom type
+        Tracker<Group*> molTrack;              //!< Track groups pointers based on molecule type
 
         /**
          * @brief Constructor

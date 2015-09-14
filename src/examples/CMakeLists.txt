@@ -37,8 +37,8 @@ set_target_properties(example_stockmayer_polarizable PROPERTIES OUTPUT_NAME "sto
 set_target_properties(example_stockmayer_polarizable PROPERTIES COMPILE_DEFINITIONS "POLARIZE;DIPOLEPARTICLE")
 add_test( example_stockmayer ${CMAKE_CURRENT_SOURCE_DIR}/stockmayer.run )
 
-fau_example(example_titrate "./" titrate.cpp)
-set_target_properties(example_titrate PROPERTIES OUTPUT_NAME "titrate")
+#fau_example(example_titrate "./" titrate.cpp)
+#set_target_properties(example_titrate PROPERTIES OUTPUT_NAME "titrate")
 
 fau_example(example_stripes "./" stripes.cpp)
 set_target_properties(example_stripes PROPERTIES OUTPUT_NAME "stripes")

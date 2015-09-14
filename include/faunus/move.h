@@ -2663,6 +2663,8 @@ namespace Faunus {
         double V = spc->geo.getVolume();
         map[ida].rho += tracker[ida].index.size() / V;
         map[idb].rho += tracker[idb].index.size() / V;
+
+        spc->initTracker();
       }
 
     template<class Tspace>
@@ -2974,6 +2976,7 @@ namespace Faunus {
             accmap[isite] += 1;
             updateMolCharge( isite );
             cnt_tit_acc++;
+            spc->initTracker(); // only needed sine space is not used to insert/delete
           } 
         };
 

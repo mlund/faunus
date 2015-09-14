@@ -56,13 +56,13 @@ namespace Faunus {
   template<class T, class Tid=int>
     class Tracker {
       private:
-        std::map<Tid, std::vector<T> > map;
-        std::map<Tid, Average<double> > Navg; // average vector length
+        std::map<Tid, std::vector<T> > _map;
+        std::map<Tid, Average<double> > Navg; // average vector length. TO BE REMOVED
       public:
         /** @brief Number of elements of type id */
         size_t size(Tid id) const {
-          auto i=map.find(id);
-          if (i!=map.end())
+          auto i=_map.find(id);
+          if (i!=_map.end())
             return i->second.size();
           return 0;
         }
@@ -70,30 +70,33 @@ namespace Faunus {
         /** @brief Sum of all elements **/
         size_t size() const {
           size_t sum=0;
-          for (auto &m : map)
+          for (auto &m : _map)
             sum+=m.second.size();
           return sum;
         }
 
-        /** @brief Clear map -- preserve averages */
-        void clear() { map.clear(); }
+        const std::vector<T>& operator[](Tid i) const { return _map.at(i); };
+        std::vector<T>& operator[](Tid i) { return _map[i]; };
 
-        /** @brief Update average number of particles */
+        /** @brief Clear map -- preserve averages */
+        void clear() { _map.clear(); }
+
+        /** @brief Update average number of particles. TO BE REMOVED. */
         void updateAvg() {
-          for (auto &m : map)
+          for (auto &m : _map)
             Navg[m.first] += m.second.size();
         }
 
         /** @brief Get average number of particles */
         Average<double> getAvg(Tid id) { return Navg[id]; }
 
-        /** @brief Update atom tracker  */
+        /** @brief Update atom tracker. TO BE REMOVED. */
         template<class Tpvec>
           void update(const Tpvec &p) {
-            map.clear();
+            _map.clear();
             for (size_t i=0; i<p.size(); i++)
               if ( atom[ p[i].id ].activity > 1e-6 )
-                map[ p[i].id ].push_back( i );
+                _map[ p[i].id ].push_back( i );
           }
 
         /**
@@ -105,8 +108,8 @@ namespace Faunus {
          */
         bool find(Tid id, size_t N, std::vector<T> &dst) {
           size_t Ninit=dst.size();
-          auto i=map.find(id);
-          if (i!=map.end()) // id found
+          auto i=_map.find(id);
+          if (i!=_map.end()) // id found
             if (i->second.size()>=N) {  // enough elements?
               do {
                 auto j= slump.element(i->second.begin(), i->second.end());
@@ -124,14 +127,14 @@ namespace Faunus {
          * @param data Data to track
          */
         void insert(Tid id, T data) {
-          auto i = map.find(id);
-          if (i!=map.end()) {
+          auto i = _map.find(id);
+          if (i!=_map.end()) {
             auto pos=std::find(i->second.begin(), i->second.end(), data);
             if (pos==i->second.end())
               i->second.push_back(data);
           }
           else
-            map[id].push_back(data);
+            _map[id].push_back(data);
         }
 
         /**
@@ -140,8 +143,8 @@ namespace Faunus {
          * @param data Data to erase
          */
         bool erase(Tid id, T data) {
-          auto i = map.find(id);
-          if (i!=map.end()) {
+          auto i = _map.find(id);
+          if (i!=_map.end()) {
             auto pos=std::find(i->second.begin(), i->second.end(), data);
             if (pos!=i->second.end()) {
               std::swap( *pos, i->second.back() );
@@ -222,17 +225,26 @@ namespace Faunus {
          * @param enlarge - sets whether to enlarge group of MolID, or to add new isMolecular()==true group
          */
         //Group* insert(const p_vec&, PropertyBase::Tid, bool enlarge=true);
-
-        Group insert(const p_vec&, int=-1);
+        //Group insert(const p_vec&, int=-1);
         bool insert(const Tparticle&, int=-1); //!< Insert particle at pos n (old n will be pushed forward).
-        bool insert(string, int, keys=OVERLAP_CHECK); 
+        //bool insert(string, int, keys=OVERLAP_CHECK);
         bool erase(int);             //!< Remove n'th particle and downshift/remove groups
-        bool eraseGroup(Group& group); ///< find and remove group in g and its particles from p and trial
+        //bool eraseGroup(Group& group); ///< find and remove group in g and its particles from p and trial
         bool eraseGroup(int);        //!< Remove n'th group as well as its particles
-        int enroll(Group&);          //!< Store group pointer
+        //int enroll(Group&);          //!< Store group pointer
         void reserve(int);           //!< Reserve space for particles for better memory efficiency
-
         string info();               //!< Information string
+
+        /** @brief Reset and refill atom- and molecular trackers*/
+        inline void initTracker() {
+          atomTrack.clear();
+          molTrack.clear();
+          for (auto g : groupList()) {
+            molTrack.insert(g->molId, g);
+            for (auto i : *g)
+              atomTrack.insert(p[i].id, i);
+          }
+        }
 
         /**
          * @brief Find which group given particle index belongs to.
@@ -286,7 +298,13 @@ namespace Faunus {
         }
 
         /** @brief Returns vector of molecules with matching molid */
-        inline std::vector<Group*> findMolecules( int molId, bool sort=false ) const {
+        inline std::vector<Group*> findMolecules( int molId, bool sort=false ) {
+          auto v = molTrack[molId];
+          if (sort)
+            std::sort( v.begin(), v.end(),
+                       [](Group* a, Group* b) { return a->front() < b->front(); });
+          return v;
+/*
           std::vector<Group*> v;
           v.reserve( g.size() );
           for ( auto i : g )
@@ -298,16 +316,17 @@ namespace Faunus {
           if (sort)
             std::sort( v.begin(), v.end(), 
                 [](Group* a, Group* b) { return a->front() < b->front(); }); 
-          return v;
+          return v;*/
         }
 
         /** @brief Count number of molecules with matching molid */
         inline int numMolecules( int molId ) const {
-          int cnt=0;
-          for (auto i : g)
-            if (i->molId == molId)
-              cnt++;
-          return cnt;
+          return molTrack.size(molId);
+          //int cnt=0;
+          //for (auto i : g)
+          //  if (i->molId == molId)
+          //    cnt++;
+          //return cnt;
         }
  
         /**
@@ -326,7 +345,7 @@ namespace Faunus {
          * }
          * ~~~~
          */
-        inline std::vector<Group*> findMolecules( const std::string &name, bool sort=false ) const {
+        inline std::vector<Group*> findMolecules( const std::string &name, bool sort=false ) {
           auto it = molecule.find(name);
           if ( it != molecule.end() )
             return findMolecules( it->id, sort );
@@ -370,7 +389,6 @@ namespace Faunus {
         }
       }
 
-    /*
       if (atomTrack.size() != p.size())
         rc=false;
 
@@ -379,7 +397,7 @@ namespace Faunus {
 
       if ( rc==false )
         throw std::runtime_error("Space sanity check failed.");
-    */
+
       return rc;
     }
 
@@ -388,7 +406,7 @@ namespace Faunus {
    *
    * @param pin Particle vector to insert
    * @param i Insert position (PRESENTLY IGNORED). Default = -1 which means end of current vector
-   */
+   *
   template<class Tgeometry, class Tparticle>
     Group Space<Tgeometry,Tparticle>::insert(const p_vec &pin, int i) {
       assert(1==2 && "Function obsolete");
@@ -409,7 +427,7 @@ namespace Faunus {
         g.setMolSize( pin.size() );
       }
       return g;
-    }
+    }*/
 
   /**
    * @param a Particle to insert
@@ -418,6 +436,8 @@ namespace Faunus {
    *
    * This will insert a particle in both `p` and `trial` vectors and
    * expand or push forward groups.
+   *
+   * @todo REMOVE, still used by `Move::AtomTracker`.
    */
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::insert(const Tparticle &a, int i) {
@@ -442,7 +462,7 @@ namespace Faunus {
    * @param atomname Name if atom to insert
    * @param n Number of atoms to insert
    * @param key Specify `NOOVERLAPCHECK` if overlap is allowed [default: `OVERLAPCHECK`]
-   */
+   *
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::insert(string atomname, int n, keys key) {
       Tparticle a;
@@ -455,7 +475,7 @@ namespace Faunus {
         }
       }
       return true;
-    }
+    }*/
 
   /** @brief Erase i'th particle */
   template<class Tgeometry, class Tparticle>
@@ -529,8 +549,15 @@ namespace Faunus {
         for (auto l : groupList()) { // loop over groups (pointers)
           cnt+=l->size(); // count particles in each group
           if (l->front()>end) {
+            // erase index from atom tracker
+            for (auto i : *l)
+              atomTrack.erase(p[i].id, i);
+            // move index down
             l->setfront( l->front()-n );
             l->setback( l->back()-n );
+            // add updated index to atom tracker
+            for (auto i : *l)
+              atomTrack.insert(p[i].id, i);
           }
         }
         assert(cnt==p.size() && "Particle mismatch while erasing a group!");
@@ -629,14 +656,8 @@ namespace Faunus {
             cout << indent(SUB) << "Restoring random number generator state." << endl;
             fin >> slump.eng;
           }
-          // update trackers
-          atomTrack.clear();
-          molTrack.clear();
-          for (auto g : groupList()) {  // loop over groups
-            molTrack.insert( g->molId, g );
-            for ( auto i : *g )         // loop over particle index
-              atomTrack.insert( p[i].id, i );
-          }
+
+          initTracker(); // update trackers
 
           return true;
         }
@@ -672,7 +693,6 @@ namespace Faunus {
    * @param newgroup Group to enroll (pointer is saved)
    * @returns Position of the newgroup in the group list.
    * @todo Remove and let space handle all groups internally
-   */
   template<class Tgeometry, class Tparticle>
     int Space<Tgeometry,Tparticle>::enroll(Group &newgroup) {
       assert(1==2 && "Obsolete function");
@@ -683,7 +703,7 @@ namespace Faunus {
       g.push_back(&newgroup);
       trial=p;
       return g.size()-1; //return position of added group
-    }
+    }*/
 
   template<class Tgeometry, class Tparticle>
     string Space<Tgeometry,Tparticle>::info() {
@@ -719,8 +739,15 @@ namespace Faunus {
 
   /**
    * This will insert a particle vector into the end of current space.
-   * If `isAtomic()==true` for the molecule, the inserter will, if present,
-   * insert at the end of the last group with matching molid.
+   * If `MoleculeData::molId` refers to an atomic molecule (`isAtomic()==true`)
+   * the inserter will, if present, insert at the end of the last group with matching molid.
+   * For molecular groups, a new group is generated and added to `groupList()` and
+   * the particles are added to the end of the `p` and `trial`.
+   *
+   * During addition, the atom- and molecule trackers are being updated.
+   *
+   * @param molId Molecule ID as defined by the `MoleculeMap`
+   * @param pin Particle vector to insert
    */
   template<class Tgeometry, class Tparticle>
     Group* Space<Tgeometry,Tparticle>::insert(PropertyBase::Tid molId, const p_vec &pin) {
@@ -750,9 +777,9 @@ namespace Faunus {
                   atomTrack.erase(p[ndx].id, ndx);
                 // shift upwards
                 i->shift(pin.size());
-                // add index to atom tracker
+                // add updated index to atom tracker
                 for (auto ndx : *i)
-                  atomTrack.erase(p[ndx].id, ndx);
+                  atomTrack.insert(p[ndx].id, ndx);
               }
             }
             // add to atom tracker
@@ -793,10 +820,10 @@ namespace Faunus {
       return nullptr;
     }
 
-  /**
+  /*
    * This will remove the specified group
    * from the space. Later groups will be shuffled down.
-   */
+   *
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::eraseGroup(Group& group) {
       int n = group.size(); // number of particles in group
@@ -829,7 +856,7 @@ namespace Faunus {
             l->setback( l->back()-n );
             // add again w. updated index
             for (auto _i : *l)
-              atomTrack.erase( p[_i].id, _i);
+              atomTrack.insert( p[_i].id, _i);
           }
         }
 
@@ -844,7 +871,7 @@ namespace Faunus {
 
           // add again w. updated index
           for (auto _i : *l)
-            atomTrack.erase( p[_i].id, _i);
+            atomTrack.insert( p[_i].id, _i);
         }
 
         i++;
@@ -863,7 +890,7 @@ namespace Faunus {
       assert(cnt==p.size() && "Particle mismatch while erasing a group!");
 #endif
       return true;
-    }
+    }*/
 
 } //namespace
 #endif

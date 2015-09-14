@@ -17,7 +17,7 @@ int main() {
   spc.load("state",Tspace::RESIZE);             // load old config. from disk (if any)
 
   // Two different Widom analysis methods
-  double lB = Coulomb(mcp).bjerrumLength();     // get bjerrum length
+  double lB = 7.1;
   Analysis::Widom<PointParticle> widom1;        // widom analysis (I)
   Analysis::WidomScaled<Tspace> widom2(lB,1);   // ...and (II)
   widom1.add(spc.p);

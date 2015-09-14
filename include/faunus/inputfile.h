@@ -234,6 +234,19 @@ namespace Faunus {
     return o.str();
   }
 
+  // sketch for new unittest...
+
+  /*
+  class tester {
+    private:
+      Tmjson js;
+      bool stable;
+    public:
+      bool test( Tmjson &j, double value );
+  };
+
+  test( {"atomtrans" : {"avgvol" : 0.555 }} );
+  */
 }//namespace
 #endif
 

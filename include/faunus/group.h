@@ -21,6 +21,7 @@ namespace Faunus {
     private:
       int molsize; // Number of atoms per molecule
     public:
+      typedef PropertyBase::Tid Tid;
 
       /**
        * @brief Constructor
@@ -44,7 +45,7 @@ namespace Faunus {
       string name;                            //!< Information time (and short) name
       Point cm_trial;                         //!< mass center vector for trial position
       Point cm;                               //!< mass center vector
-      PropertyBase::Tid molId;                ///< \brief starts at 0, cooperation with MoleculeMap
+      Tid molId;                              //!< molecule id
 
       inline int getMolSize() {return molsize;}
 

@@ -5,7 +5,6 @@
 #include <faunus/common.h>
 #include <faunus/slump.h>
 #include <faunus/point.h>
-
 #include <faunus/inputfile.h>
 #include <faunus/species.h>
 #include <faunus/physconst.h>
@@ -234,18 +233,9 @@ namespace Faunus {
         /** @brief insert p_vec of MolID to end of p and trial */
         Group* insert(PropertyBase::Tid, const p_vec&); // inserts to trial and p
 
-        /*
-         * @brief insert p_vec of MolID
-         * @param enlarge - sets whether to enlarge group of MolID, or to add new isMolecular()==true group
-         */
-        //Group* insert(const p_vec&, PropertyBase::Tid, bool enlarge=true);
-        //Group insert(const p_vec&, int=-1);
         bool insert(const Tparticle&, int=-1); //!< Insert particle at pos n (old n will be pushed forward).
-        //bool insert(string, int, keys=OVERLAP_CHECK);
         bool erase(int);             //!< Remove n'th particle and downshift/remove groups
-        //bool eraseGroup(Group& group); ///< find and remove group in g and its particles from p and trial
         bool eraseGroup(int);        //!< Remove n'th group as well as its particles
-        //int enroll(Group&);          //!< Store group pointer
         void reserve(int);           //!< Reserve space for particles for better memory efficiency
         string info();               //!< Information string
 
@@ -318,30 +308,10 @@ namespace Faunus {
             std::sort( v.begin(), v.end(),
                        [](Group* a, Group* b) { return a->front() < b->front(); });
           return v;
-/*
-          std::vector<Group*> v;
-          v.reserve( g.size() );
-          for ( auto i : g )
-            if (i->molId == molId)
-              v.push_back( i );
-
-          // now lets make sure the molecules are sorted according
-          // to their position in the particle vector:
-          if (sort)
-            std::sort( v.begin(), v.end(), 
-                [](Group* a, Group* b) { return a->front() < b->front(); }); 
-          return v;*/
         }
 
         /** @brief Count number of molecules with matching molid */
-        inline int numMolecules( int molId ) const {
-          return molTrack.size(molId);
-          //int cnt=0;
-          //for (auto i : g)
-          //  if (i->molId == molId)
-          //    cnt++;
-          //return cnt;
-        }
+        inline int numMolecules( int molId ) const { return molTrack.size(molId); }
  
         /**
          * @brief Returns vector of molecules with matching name
@@ -416,34 +386,6 @@ namespace Faunus {
     }
 
   /**
-   * This will insert a particle vector into the end current space (p and trial).
-   *
-   * @param pin Particle vector to insert
-   * @param i Insert position (PRESENTLY IGNORED). Default = -1 which means end of current vector
-   *
-  template<class Tgeometry, class Tparticle>
-    Group Space<Tgeometry,Tparticle>::insert(const p_vec &pin, int i) {
-      assert(1==2 && "Function obsolete");
-      assert(i==-1 && "Vector insertion at random position unimplemented.");
-      Group g;
-      if ( !pin.empty() ) {
-        g.setrange( p.size(), -1);
-        assert(g.size()==0 && "Group range broken!");
-
-        for (size_t i=0; i<pin.size(); i++)
-          atomTrack.insert(pin[i].id, p.size()+i);
-
-        p.insert( p.end(), pin.begin(), pin.end() );
-        trial.insert( trial.end(), pin.begin(), pin.end() );
-
-        g.resize( pin.size() );
-        g.setMassCenter( *this );
-        g.setMolSize( pin.size() );
-      }
-      return g;
-    }*/
-
-  /**
    * @param a Particle to insert
    * @param i Insert position in particle vector. Old i will be pushed forward.
    *          Default is -1 = end of vector.
@@ -472,30 +414,10 @@ namespace Faunus {
       return true;
     }
 
-  /**
-   * @param atomname Name if atom to insert
-   * @param n Number of atoms to insert
-   * @param key Specify `NOOVERLAPCHECK` if overlap is allowed [default: `OVERLAPCHECK`]
-   *
-  template<class Tgeometry, class Tparticle>
-    bool Space<Tgeometry,Tparticle>::insert(string atomname, int n, keys key) {
-      Tparticle a;
-      a=atom[atomname];
-      while (n>0) {
-        geo.randompos(a);
-        if ( !Geometry::overlap(geo,p,a) || key==NOOVERLAP_CHECK) {
-          insert(a,-1);
-          n--;
-        }
-      }
-      return true;
-    }*/
-
   /** @brief Erase i'th particle */
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::erase(int i) {
       assert( i < (int)p.size() );
-      assert( checkSanity() && "erase(int) fails at sanity check.");
 
       if (i<(int)p.size()) {
         atomTrack.erase( p[i].id, i );
@@ -517,7 +439,6 @@ namespace Faunus {
           g.erase( g.begin()+findIndex(is_empty) );
           delete(is_empty);
         }
-        assert( checkSanity() );
         return true;
       }
       return false;
@@ -539,7 +460,6 @@ namespace Faunus {
 
       if ( !groupList().empty() ) {
 
-        assert( checkSanity() );
         assert( !g.empty() );
         assert( i < (int)g.size() );
 
@@ -696,29 +616,6 @@ namespace Faunus {
       trial.reserve(MaxNumberOfParticles);
     }
 
-  /**
-   * This will register a new group in the Space. If already found,
-   * nothing is added. In addition, the following is performed each
-   * time a new group is enrolled:
-   *
-   * - The group mass center is re-calculated and set.
-   * - Trial vector is synched with the main (`p`) particle vector.
-   *
-   * @param newgroup Group to enroll (pointer is saved)
-   * @returns Position of the newgroup in the group list.
-   * @todo Remove and let space handle all groups internally
-  template<class Tgeometry, class Tparticle>
-    int Space<Tgeometry,Tparticle>::enroll(Group &newgroup) {
-      assert(1==2 && "Obsolete function");
-      for (size_t i=0; i<g.size(); ++i)
-        if (g[i]==&newgroup)
-          return i;
-      newgroup.setMassCenter(*this);
-      g.push_back(&newgroup);
-      trial=p;
-      return g.size()-1; //return position of added group
-    }*/
-
   template<class Tgeometry, class Tparticle>
     string Space<Tgeometry,Tparticle>::info() {
       using namespace textio;
@@ -765,7 +662,6 @@ namespace Faunus {
    */
   template<class Tgeometry, class Tparticle>
     Group* Space<Tgeometry,Tparticle>::insert(PropertyBase::Tid molId, const p_vec &pin) {
-      assert( checkSanity() && "insert(id,pvec) fails at sanity check.");
       if ( !pin.empty() ) {
         // insert atomic groups into existing group, if present
         if (molecule[molId].isAtomic() && !g.empty()) {
@@ -833,78 +729,6 @@ namespace Faunus {
       }
       return nullptr;
     }
-
-  /*
-   * This will remove the specified group
-   * from the space. Later groups will be shuffled down.
-   *
-  template<class Tgeometry, class Tparticle>
-    bool Space<Tgeometry,Tparticle>::eraseGroup(Group& group) {
-      int n = group.size(); // number of particles in group
-      int beg = group.front(); // first particle
-      int end = group.back();  // last particle
-      bool del = false;
-      int i=0;
-      auto it = g.begin();
-
-      // remove from trackers
-      molTrack.erase(group.molId, &group);
-      for (auto i : group)
-        atomTrack.erase( p[i].id, i);
-
-      // group isnt in group list
-      p.erase( p.begin()+beg, p.begin()+end+1); // remove particles -> doest remove partice pointed by last (+1)
-      trial.erase( trial.begin()+beg, trial.begin()+end+1 );
-
-      for (auto* l : g) {
-        // group overlaps with l -> all 4 possibilities condensed (== ==, < >=, <= >, < >)
-        if( (l->front() == beg && l->back() == end) ) {
-          it += i;
-          del = true;
-        } else {
-          if (l->front() <= beg && l->back() >= end) {
-            // remove index from atom tracker
-            for (auto _i : *l)
-              atomTrack.erase( p[_i].id, _i);
-            // subtract from end
-            l->setback( l->back()-n );
-            // add again w. updated index
-            for (auto _i : *l)
-              atomTrack.insert( p[_i].id, _i);
-          }
-        }
-
-        // later groups
-        if (l->front() > end) {
-          // remove index from atom tracker
-          for (auto _i : *l)
-            atomTrack.erase( p[_i].id, _i);
-
-          l->setfront( l->front()-n );
-          l->setback( l->back()-n );
-
-          // add again w. updated index
-          for (auto _i : *l)
-            atomTrack.insert( p[_i].id, _i);
-        }
-
-        i++;
-      }
-
-      if(del) {
-        assert((*it)->front() == group.front() && (*it)->back() == group.back());
-        delete *it;
-        g.erase( it );// remove group pointer
-      }
-
-#ifndef NDEBUG
-      size_t cnt=0;
-      for (auto* l : g)
-        cnt+=l->size(); // count particles in each group
-      assert(cnt==p.size() && "Particle mismatch while erasing a group!");
-#endif
-      return true;
-    }*/
 
 } //namespace
 #endif

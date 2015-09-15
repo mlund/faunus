@@ -4,6 +4,7 @@
 #ifndef SWIG
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <vector>
 #endif
 
 namespace Faunus {
@@ -109,6 +110,16 @@ namespace Faunus {
     template<typename Trotator>
       void rotate(const Trotator &rot) {
       }
+
+    /** @brief Fill from std vector */
+    template<class T>
+      PointBase& operator<<(const std::vector<T> &v) {
+        // see http://stackoverflow.com/questions/26094379/typecasting-eigenvectorxd-to-stdvector
+        assert(v.size()==3);
+        for (size_t i=0; i<3; ++i)
+          (*this)[i] = v.at(i);
+        return *this;
+    }
 
   };
 

@@ -1525,13 +1525,13 @@ namespace Faunus {
      * drift. It is recommended that this is enabled only for long production runs after
      * having properly checked that no drifts occur with `skipEnergyUpdate=false`.
      *
-     * Upon construction the following keywords are read from `InputMap`,
+     * Upon construction the following keywords are read json section `moves/ctransnr`:
      *
-     * Keyword                | Description
-     * :--------------------  | :-------------------------------
-     * `ctransnr_dp`          | Displacement parameter
-     * `ctransnr_skipenergy`  | Skip energy update, see above (default: false)
-     * `ctransnr_runfraction` | Runfraction (default: 1.0)
+     * Keyword     | Description
+     * :-----------| :---------------------------------------------
+     * `dp`        | Displacement parameter (default: 0)
+     * `skipenergy`| Skip energy update, see above (default: false)
+     * `prob`      | Runfraction (default: 1.0)
      *
      * @note Requirements for usage:
      * - Compatible only with purely molecular systems
@@ -1552,28 +1552,30 @@ namespace Faunus {
           using base::pot;
           using base::jsondir;
           vector<int> moved, remaining;
-          void _trialMove();
-          void _acceptMove();
-          void _rejectMove();
-          double _energyChange();
+          void _trialMove() override;
+          void _acceptMove() override {}
+          void _rejectMove() override {}
+          double _energyChange() override { return 0; }
           string _info();
           Average<double> movefrac; //!< Fraction of particles moved
           double dp;                //!< Displacement parameter [aa]
           vector<Group*> g;         //!< Group of molecules to move. Currently this needs to be ALL groups in the system!!
         public:
-          ClusterTranslateNR(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="ctransnr");
+          ClusterTranslateNR(Energy::Energybase<Tspace>&, Tspace&, Tmjson&, string="ctransnr");
           bool skipEnergyUpdate;    //!< True if energy updates should be skipped (faster evaluation!)
       };
 
     /** @brief Constructor */
     template<class Tspace>
-      ClusterTranslateNR<Tspace>::ClusterTranslateNR(InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
-        base::title="Rejection Free Cluster Translation";
-        base::cite="doi:10/fthw8k";
+      ClusterTranslateNR<Tspace>::ClusterTranslateNR(Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j, string pfx) : base(e,s,pfx) {
+        auto _j = j["moves"][pfx];
+        base::title       = "Rejection Free Cluster Translation";
+        base::cite        = "doi:10/fthw8k";
+        base::jsondir     = "moves/"+pfx; // just for unittesting (to be changed)
         base::useAlternateReturnEnergy=true;
-        base::runfraction=in.get<double>("_runfraction", 1.0);
-        skipEnergyUpdate=in.get<bool>("_skipenergy", false);
-        dp=in.get<double>("_dp", 0);
+        base::runfraction = _j["prob"] | 1.0;
+        skipEnergyUpdate  = _j["skipenergy"] | false;
+        dp                = _j["dp"] | 0.0;
         if (dp<1e-6)
           base::runfraction=0;
         g=spc->groupList(); // currently ALL groups in the system will be moved!
@@ -1648,15 +1650,6 @@ namespace Faunus {
         assert( moved.size() >= 1);
         assert( spc->groupList().size() == moved.size()+remaining.size() );
       }
-
-    template<class Tspace>
-      double ClusterTranslateNR<Tspace>::_energyChange() { return 0; }
-
-    template<class Tspace>
-      void ClusterTranslateNR<Tspace>::_acceptMove() {}
-
-    template<class Tspace>
-      void ClusterTranslateNR<Tspace>::_rejectMove() {}
 
     /**
      * @brief Crank shaft move of linear polymers
@@ -4096,6 +4089,7 @@ namespace Faunus {
        * `atomrotate`    | `Move::AtomicRotation`    | Rotate atoms
        * `atomgc`        | `Move::GrandCanonicalSalt`| GC salt move (muVT ensemble)
        * `crankshaft`    | `Move::CrankShaft`        | Crank shaft polymer move
+       * `ctransnr`      | `Move::ClusterTranslateNR`| Rejection free cluster translate
        * `gc`            | `Move::GreenGC`           | Grand canonical move (muVT ensemble)
        * `isobaric`      | `Move::Isobaric`          | Volume move (NPT ensemple)
        * `moltransrot`   | `Move::TranslateRotate`   | Translate/rotate molecules
@@ -4158,6 +4152,8 @@ namespace Faunus {
                   mPtr.push_back( toPtr( CrankShaft<Tspace>(e,s,in) ) );
                 if (i.key()=="pivot")
                   mPtr.push_back( toPtr( Pivot<Tspace>(e,s,in) ) );
+                if (i.key()=="ctransnr")
+                  mPtr.push_back( toPtr( ClusterTranslateNR<Tspace>(e,s,in) ) );
               }
               if ( mPtr.empty() )
                 throw std::runtime_error("No moves defined - check JSON file.");

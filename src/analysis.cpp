@@ -10,16 +10,34 @@ namespace Faunus {
 
   namespace Analysis {
     AnalysisBase::AnalysisBase() : w(30), cnt(0), runfraction(1.0) {
+      stepcnt = 0;
+    }
+
+    AnalysisBase::AnalysisBase(Tmjson &j) : w(30), cnt(0), runfraction(1.0) {
+      steps = j["steps"] | 1;
+      stepcnt = 0;
     }
 
     AnalysisBase::~AnalysisBase() {}
 
-
+    /** @todo Remove this function -- let sample() handle it instead */
     bool AnalysisBase::run() {
       if (slump() > runfraction)
         return false;
       cnt++;
       return true;
+    }
+
+    void AnalysisBase::_sample() { /* make pure virtual! */ }
+
+    void AnalysisBase::sample() {
+      if (steps > stepcnt) {
+        timer.start();
+        _sample();
+        timer.stop();
+        stepcnt++;
+        cnt++;
+      } else stepcnt=0;
     }
 
     void AnalysisBase::_test(UnitTest &t) {}
@@ -35,7 +53,11 @@ namespace Faunus {
       o << header("Analysis: "+name);
       if (!cite.empty())
         o << pad(SUB,w,"Reference:") << cite << "\n";
-      o << pad(SUB,w,"Runfraction") << runfraction*100 << percent << "\n";
+
+      o << pad(SUB,w,"Sample interval") << steps << "\n";
+      if (steps>1)
+        o << pad(SUB,w,"Runfraction") << runfraction*100 << percent << "\n";
+
       if (cnt>0) {
         o << pad(SUB,w,"Number of sample events") << cnt << "\n";
         double time = timer.result();
@@ -201,5 +223,27 @@ namespace Faunus {
       t("bilayer_area", A.avg() );
     }
 
+    CombinedAnalysis::CombinedAnalysis(AnalysisBase* a, AnalysisBase* b) {
+      v.reserve(2);
+      v.push_back(a);
+      v.push_back(b);
+    }
+
+    void CombinedAnalysis::sample() { for (auto i : v) i->sample(); }
+
+    string CombinedAnalysis::info() {
+      std::ostringstream o;
+      for (auto i : v)
+        o << i->info();
+      return o.str();
+    }
+
+    string CombinedAnalysis::_info() {return string();}
+
+    void CombinedAnalysis::_sample() {}
+
+    CombinedAnalysis& operator+(AnalysisBase &a, AnalysisBase &b) {
+      return *(new CombinedAnalysis(&a,&b));
+    }
   }//namespace
 }//namespace

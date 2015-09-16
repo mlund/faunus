@@ -91,7 +91,7 @@ int main() {
   // Markov moves and analysis
   Move::Propagator<Tspace> mv(mcp, pot, spc);
   Analysis::BilayerStructure lipidstruct;
-  Analysis::VirialPressure virial;
+  Analysis::VirialPressure<Tspace> virial(mcp, pot, spc);
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
@@ -107,7 +107,7 @@ int main() {
         xtc.save("traj.xtc", spc.p);
       }
       if ( ran > 0.90 ) {
-        virial.sample(spc, pot);
+        virial.sample();
         lipidstruct.sample(spc.geo, spc.p, allLipids);
       }
 

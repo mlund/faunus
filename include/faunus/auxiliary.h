@@ -494,8 +494,8 @@ namespace Faunus {
         }
         Tvec hist2buf(int &size) {
           Tvec sendBuf;
-          for (size_t i = 0; i < _cols; ++i)
-            for (size_t j = 0; j < _rows; ++j)
+          for (int i = 0; i < _cols; ++i)
+            for (int j = 0; j < _rows; ++j)
               sendBuf.push_back(base::operator()(j,i));
           return sendBuf;
         }
@@ -505,8 +505,8 @@ namespace Faunus {
           int p = v.size()/this->size(), n=0;
           double nproc = p;
           while (p-->0) {
-            for (size_t i = 0; i < _cols; ++i) 
-              for (size_t j = 0; j < _rows; ++j) {
+            for (int i = 0; i < _cols; ++i)
+              for (int j = 0; j < _rows; ++j) {
                 base::operator()(j,i) += v.at(n)/nproc;
                 ++n;
               }

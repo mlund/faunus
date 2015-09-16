@@ -30,7 +30,7 @@ int main() {
   // Markov moves and analysis
   Move::Propagator<Tspace> mv(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf_ab(0.1);      // 0.1 angstrom resolution
-  Analysis::VirialPressure virial;
+  Analysis::VirialPressure<Tspace> virial(mcp,pot,spc);
   Average<double> pm;
 
   spc.load("state");                               // load old config. from disk (if any)
@@ -49,7 +49,7 @@ int main() {
 
       if (slump() < 0.05) {
         //rdf_ab.sample(spc,salt,atom["Na"].id,atom["Cl"].id);
-        virial.sample(spc,pot);
+        virial.sample();
       }
     } // end of micro loop
 

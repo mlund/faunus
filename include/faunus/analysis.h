@@ -28,17 +28,25 @@ namespace Faunus {
      *
      * - a descriptive name
      * - `_info()`
+     * - `_sample()`
      *
-     * It is strongly recommended that derived classes implement:
+     * It is strongly recommended that derived classes also implement:
      *
-     * - a sample(...) function that uses `run()` to check if the
-     *   analysis should be run or not.
      * - the `cite` string to provide external information
+     * - `_test()` for unit testing
+     *
+     * The `sample()` wrapper function takes care of timing the analysis
+     * as well as sample the number of sample points at a given interval
+     * specified with the JSON keyword `steps`.
+     *
+     * @todo Make `_sample()` pure virtual
      */
     class AnalysisBase {
       private:
         virtual string _info()=0; //!< info all classes must provide
         virtual void _test(UnitTest&);
+        int stepcnt;          //!< counter between sampling points
+        int steps;            //!< Sample interval (do not modify)
       protected:
         TimeRelativeOfTotal<std::chrono::microseconds> timer;
         char w;               //!< width of info
@@ -46,13 +54,30 @@ namespace Faunus {
         string name;          //!< descriptive name
         string cite;          //!< reference, url, doi etc. describing the analysis
         bool run();           //!< true if we should run, false of not (based on runfraction)
+        virtual void _sample();
       public:
         AnalysisBase();
+        AnalysisBase(Tmjson&);
         virtual ~AnalysisBase();
         string info();       //!< Print info and results
         double runfraction;  //!< Chance that analysis should be run (default 1.0 = 100%)
         void test(UnitTest&);//!< Perform unit test
+        void sample();       //!< Sample event.
     };
+
+    /** @brief Helper class to add two Analysis classes */
+    class CombinedAnalysis : private AnalysisBase {
+    private:
+        vector<AnalysisBase*> v;
+        string _info();
+        void _sample();
+    public:
+        CombinedAnalysis(AnalysisBase* a, AnalysisBase* b);
+        void sample();
+        string info();
+    };
+
+    CombinedAnalysis& operator+(AnalysisBase &a, AnalysisBase &b);
 
     /**
      * @brief Pressure analysis using the virial theorem
@@ -67,6 +92,15 @@ namespace Faunus {
      * and the excess pressure scalar is the trace of @f$\mathcal{P}@f$.
      * The trivial kinetic contribution is currently not included.
      *
+     * Upon construction the JSON section analysis/virial is searched
+     * for the following keywords:
+     *
+     * Keyword   |  Description
+     * :-------- | :-------------------------------------------
+     * steps     | Sample every steps time `sample()` is called
+     * dim       | Dimensions (default: 3)
+     * area      | Area if dim=2 (default: 0)
+     *
      * References:
      *
      * - <http://dx.doi.org/10/ffwrhd>
@@ -75,17 +109,25 @@ namespace Faunus {
      * @todo At the moment this analysis is limited to "soft" systems only,
      * i.e. for non-rigid systems with continuous potentials.
      */
+    template<typename Tspace>
     class VirialPressure : public AnalysisBase {
       private:
+
+        Tspace* spc;
+        Energy::Energybase<Tspace>* pot;
+        int dim;             // dimensions (default: 3)
+        double area;         // area if dim=2 (default: 0)
 
         typedef Eigen::Matrix3d Ttensor;
         Ttensor T;           // excess pressure tensor
         Average<double> Pid; // ideal pressure
 
-        inline string _info() {
+        /** @brief Ignore internal pressure in molecular groups (default: false) */
+        bool noMolecularPressure;
+
+        inline string _info() override {
           using namespace Faunus::textio;
           std::ostringstream o;
-
           if (cnt>0) {
             vector<double> P(3);
             vector<string> id = {"Ideal", "Excess", "Total"};
@@ -114,7 +156,7 @@ namespace Faunus {
           return o.str();
         }
 
-        void _test(UnitTest &test) {
+        inline void _test(UnitTest &test) override {
           test("virial_pressure_mM", (T/cnt).trace()*1e30/pc::Nav );
         }
 
@@ -145,51 +187,49 @@ namespace Faunus {
             return t;
           }
 
-      public:
+        inline void _sample() override {
+          Ttensor t;
+          t.setZero();
 
-        VirialPressure() {
-          name="Virial Pressure";
-          noMolecularPressure=false;
-          T.setZero();
+          int N=spc->p.size();
+          double V=spc->geo.getVolume();
+          if (dim==2) {
+            assert(area>0 && "Area must be specified for 2D sampling");
+            V=area;
+          }
+
+          // loop over groups internally
+          for (auto g : spc->groupList()) {
+            if (noMolecularPressure)
+            if (g->isMolecular()) {
+              N=N-g->size()+1;
+              continue;
+            }
+            t+=g_internal(spc->p, spc->geo, *pot, *g);
+          }
+
+          // loop group-to-group
+          auto beg=spc->groupList().begin();
+          auto end=spc->groupList().end();
+          for (auto gi=beg; gi!=end; ++gi)
+            for (auto gj=gi; ++gj!=end;)
+              t+=g2g(spc->p, spc->geo, *pot, *(*gi), *(*gj));
+
+          // add to grand avarage
+          T += t/(dim*V);
+          Pid += N/V;
         }
 
-        /*! @brief Ignore internal pressure in molecular groups (default: false) */
-        bool noMolecularPressure;
-
-        template<class Tspace, class Tpotential>
-          void sample(Tspace &spc, Tpotential &pot, int d=3, double area=0) {
-            cnt++;
-            Ttensor t;
-            t.setZero();
-
-            int N=spc.p.size();
-            double V=spc.geo.getVolume();
-            if (d==2) {
-              assert(area>0 && "Area must be specified for 2D sampling");
-              V=area;
-            }
-
-            // loop over groups internally
-            for (auto g : spc.groupList()) {
-              if (noMolecularPressure)
-                if (g->isMolecular()) {
-                  N=N-g->size()+1;
-                  continue;
-                }
-              t+=g_internal(spc.p, spc.geo, pot, *g);
-            }
-
-            // loop group-to-group
-            auto beg=spc.groupList().begin();
-            auto end=spc.groupList().end();
-            for (auto gi=beg; gi!=end; ++gi)
-              for (auto gj=gi; ++gj!=end;)
-                t+=g2g(spc.p, spc.geo, pot, *(*gi), *(*gj));
-
-            // add to grand avarage
-            T += t/(d*V);
-            Pid += N/V;
-          }
+      public:
+        VirialPressure( Tmjson &j, Energy::Energybase<Tspace> &pot, Tspace &spc, string pfx="virial" )
+          : spc(&spc), pot(&pot), AnalysisBase( j["analysis"][pfx] ) {
+          auto _j = j["analysis"][pfx];
+          dim = _j["dim"] | 3;
+          area = _j["area"] | 0.0;
+          noMolecularPressure = _j["noMolecularPressure"] | false;
+          name="Virial Pressure";
+          T.setZero();
+        }
     };
 
     /*!
@@ -521,10 +561,9 @@ namespace Faunus {
           }
     };
 
-
-    /*!
-     * \brief Analysis of polymer shape - radius of gyration, shape factor etc.
-     * \date November, 2011
+    /**
+     * @brief Analysis of polymer shape - radius of gyration, shape factor etc.
+     * @date November, 2011
      *
      * This will analyse polymer Groups and calculate Rg, Re and the shape factor. If
      * sample() is called with different groups these will be distinguished by their

@@ -37,7 +37,8 @@ namespace Faunus {
      *
      * The `sample()` wrapper function takes care of timing the analysis
      * as well as sample the number of sample points at a given interval
-     * specified with the JSON keyword `steps`.
+     * specified with the JSON keyword `steps`. For some examples, see
+     * i.e. `VirialPressure` or `PolymerShape`.
      *
      * @todo Make `_sample()` pure virtual
      */
@@ -634,6 +635,8 @@ namespace Faunus {
         }
 
         void _sample() override {
+          if (molid.empty()) // don't increase global counter if
+            cnt=0;           // there are no molecules
           for (auto id : molid)
             for (auto pol : spc->findMolecules(id)) {
               Point r2 = vectorgyrationRadiusSquared(*pol, *spc);
@@ -1920,12 +1923,15 @@ namespace Faunus {
      * @brief Class for accumulating analysis classes
      *
      * Upon construction the JSON section `analysis` is searched
-     * for the following keywords,
+     * for the following keywords to activate various analysis
+     * functions:
      *
-     * Keyword    |  Description
-     * 
+     * Keyword        |  Description
+     * :------------- |  :----------------------------
+     * `polymershape` |  `Analysis::PolymerShape`
+     * `virial`       |  `Analysis::VirialPressure`
      *
-     * */
+     */
     class CombinedAnalysis : private AnalysisBase {
     private:
         vector<AnalysisBase *> v;

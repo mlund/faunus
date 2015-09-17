@@ -43,9 +43,7 @@ namespace Faunus {
 
     void AnalysisBase::_test(UnitTest &t) {}
 
-    void AnalysisBase::test(UnitTest &t) {
-      _test(t);
-    }
+    void AnalysisBase::test(UnitTest &t) { _test(t); }
 
     string AnalysisBase::info() {
       assert(!name.empty() && "Please name analysis.");

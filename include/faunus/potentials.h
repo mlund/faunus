@@ -110,7 +110,7 @@ namespace Faunus {
          * The base-class version does nothing.
          */
         template<class Tspace>
-          void setSpace(Tspace&) {} 
+          void setSpace(Tspace&) {}
 
         virtual void test(UnitTest&);                    //!< Perform unit test
 
@@ -145,7 +145,7 @@ namespace Faunus {
           f.precision(12);
           for (double r=min; r<=5*min; r+=0.01)
             f << std::left << std::setw(12) << r << " "
-              << pot(a,b,r*r) << " " << pot.force(a,b,r*r,Point(r,0,0)).x() << endl; 
+              << pot(a,b,r*r) << " " << pot.force(a,b,r*r,Point(r,0,0)).x() << endl;
           return true;
         }
         return false;
@@ -177,13 +177,8 @@ namespace Faunus {
         double k;   //!< Force constant (kT/A^2) - Remember to divide by two!
         double req; //!< Equilibrium distance (angstrom)
 
-        inline Harmonic( double k=0, double req=0 ) : k(k), req(req) { name = "Harmonic"; };
-
-        inline Harmonic( Tmjson &j, const string &sec="harmonic") : PairPotentialBase(sec) {
-          name="Harmonic";
-          k   = j[sec]["k"]   | 0.0;
-          req = j[sec]["req"] | 0.0;
-        }
+        Harmonic( double k=0, double req=0 );
+        Harmonic( Tmjson &j, const string &sec="harmonic");
 
         template<class Tparticle>
           double operator()( const Tparticle &a, const Tparticle &b, double r2 ) {
@@ -289,19 +284,10 @@ namespace Faunus {
       private:
         double k, r02, r02inv;
 
-        string _brief() {
-          using namespace Faunus::textio;
-          std::ostringstream o;
-          o << name+": k=" << k << kT+"/"+angstrom+squared+" r0=" << sqrt(r02) << _angstrom; 
-          return o.str();
-        }
+        string _brief();
 
       public:
-        FENE(double k_kT, double rmax_A) : k(k_kT) {
-          name="FENE";
-          r02=rmax_A*rmax_A;
-          r02inv=1/r02;
-        }
+        FENE(double k_kT, double rmax_A);
 
         FENE( Tmjson &j, const string &sec="fene" ) : PairPotentialBase( sec ) {
           name="FENE";
@@ -318,7 +304,7 @@ namespace Faunus {
         template<class Tparticle>
           Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
             return (r2>r02) ? -pc::infty*p : -k * r02 / (r02-r2) * p;
-          }        
+          }
     };
 
     /**
@@ -346,7 +332,7 @@ namespace Faunus {
             return operator()(a,b, r2.squaredNorm());
           }
 
-        string info(char); 
+        string info(char);
     };
 
     /**
@@ -404,18 +390,11 @@ namespace Faunus {
         }
         double eps;
       public:
-        LennardJones() : eps(0) { name="Lennard-Jones"; }
+        LennardJones();
 
         LennardJones(
-            Tmjson &j,
-            const string &sec="ljsimple" ) : PairPotentialBase( sec ) {
-
-          name        ="Lennard-Jones";
-          eps         = 4.0 * ( j[sec]["eps"] | 0.0 );
-          string unit = j[sec]["unit"] | string("kT");
-          if ( unit == "kJ/mol" )
-            eps *= 1.0_kJmol;
-        }
+                    Tmjson &j,
+                    const string &sec="ljsimple" );
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -540,7 +519,7 @@ namespace Faunus {
 
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-              return operator()(a,b,r.squaredNorm()); 
+              return operator()(a,b,r.squaredNorm());
             }
 
           /**
@@ -730,9 +709,7 @@ namespace Faunus {
      */
     class SquareWellHydrophobic : public SquareWell {
       public:
-        SquareWellHydrophobic(Tmjson &j, const string &sec="squarewell") : SquareWell(j,sec) {
-          name="Hydrophobic " + name;
-        }
+        SquareWellHydrophobic(Tmjson &j, const string &sec="squarewell");
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -749,24 +726,12 @@ namespace Faunus {
      */
     class SoftRepulsion : public PairPotentialBase {
       private:
-        string _brief() {
-          std::ostringstream o;
-          o << name << ": " << textio::sigma  << pow(sigma6,1/6.) << textio::_angstrom;
-          return o.str();
-        }
+        string _brief();
         double sigma6;
       public:
-        SoftRepulsion(Tmjson &j, const string &sec="softrep") : PairPotentialBase(sec) {
-          name="Repulsive r6";
-          sigma6 = pow( j[sec]["sigma"] | 5.0, 6);
-        }
+        SoftRepulsion(Tmjson &j, const string &sec);
 
-        string info(char w) {
-          using namespace Faunus::textio;
-          std::ostringstream o;
-          o << textio::pad(SUB,w+1,textio::sigma) << pow(sigma6,1/6.) << _angstrom << endl;
-          return o.str();
-        }
+        string info(char w);
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -793,10 +758,7 @@ namespace Faunus {
       protected:
         double eps;
       public:
-        R12Repulsion(Tmjson &j, const string &sec="lj") : PairPotentialBase(sec) {
-          name="r12-Repulsion";
-          eps = 4*(j[sec]["eps"] | 0.05);
-        }
+        R12Repulsion(Tmjson &j, const string &sec="lj");
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -908,7 +870,7 @@ namespace Faunus {
 #endif
         }
 
-      /** @brief Electric field at `r` due to charge `p` 
+      /** @brief Electric field at `r` due to charge `p`
        * Gets returned in [e/Å] (\f$\beta eE \f$)
        */
       template<class Tparticle>
@@ -1094,7 +1056,7 @@ namespace Faunus {
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
             return operator()(a,b,r.squaredNorm());
           }
-        string info(char); 
+        string info(char);
     };
 
     /**
@@ -1120,17 +1082,7 @@ namespace Faunus {
 
       public:
 
-        DebyeHuckel( Tmjson &j, const string &sec="coulomb" ) : Coulomb( j, sec ) {
-          const double zero=1e-10;
-          name="Debye-Huckel";
-          c = 8*lB*pc::pi*pc::Nav/1e27;
-          double I = j[sec]["ionicstrength"] | 0.0;   // [mol/l]
-          z_count  = j[sec]["countervalency"] | 0.0;  // [e]
-          k2_count = 0;
-          k = sqrt( I*c );
-          if ( k < zero )
-            k = 1 / ( j[sec]["debyelength"] | 1.0/zero ); // [A]
-        }
+        DebyeHuckel( Tmjson &j, const string &sec="coulomb" );
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
@@ -1147,7 +1099,7 @@ namespace Faunus {
         double ionicStrength() const;                 //!< Returns the ionic strength (mol/l)
         double debyeLength() const;                   //!< Returns the Debye screening length (angstrom)
         double excessChemPot(double, double=0) const; //!< Single ion excess chemical potential (kT)
-        double activityCoeff(double, double=0) const; //!< Single ion activity coefficient (molar scale) 
+        double activityCoeff(double, double=0) const; //!< Single ion activity coefficient (molar scale)
         string info(char);
 
         template<class Tparticle>
@@ -1164,7 +1116,7 @@ namespace Faunus {
         /**
          * @brief Scaled charge according to
          * @f$ z^{\prime} = z \sinh(\kappa a) / \kappa a @f$
-         */ 
+         */
         template<class Tparticle>
           double scaledCharge(const Tparticle &p) const {
             double ka=p.radius/debyeLength();
@@ -1181,10 +1133,10 @@ namespace Faunus {
               double V=s.geo.getVolume();
               double k2=k*k - k2_count; // salt contribution
               k2_count = 4*pc::pi*lB*N/V*std::pow(z_count,2); // counter ion contrib
-              k=sqrt( k2+k2_count );    // total 
+              k=sqrt( k2+k2_count );    // total
               k2_count_avg+=k2_count;   // sample average
             }
-          } 
+          }
     };
     /**
      * @brief Debye-Huckel potential
@@ -1204,11 +1156,11 @@ namespace Faunus {
             double contact=a.radius+b.radius;
 #ifdef FAU_APPROXMATH
             double rinv = invsqrtQuake(r2);
-            return (rinv>1/contact) ? pc::infty : 
+            return (rinv>1/contact) ? pc::infty :
               lB * a.charge * b.charge * rinv / (1 + k*contact) * exp_cawley(-k/rinv+k*contact);
 #else
             double r=sqrt(r2);
-            return (r<contact) ? pc::infty : 
+            return (r<contact) ? pc::infty :
               lB * a.charge * b.charge / r / (1 + k*contact) * exp(-k*(r-contact));
 #endif
           }
@@ -1235,16 +1187,9 @@ namespace Faunus {
       private:
         double lB_org; // original Bjerrum length without prefactor
 
-        // Eq. 37 prefactor
-        void setBjerrum(double a_m, double a_n) {
-          double ka_m=k*a_m, ka_n=k*a_n;
-          lB=lB_org * exp(ka_m+ka_n) / ( (1+ka_m)*(1+ka_n) );
-        }
+        void setBjerrum(double a_m, double a_n);
 
-        // Eq. A7, first term
-        double fmn(double m, double n) {
-          return k*(m*m + n*n + k*(m+n)*m*n) / ( (1+k*m)*(1+k*n) );
-        }
+        double fmn(double m, double n);
 
         // Eq. 11
         template<class Tpvec>
@@ -1272,10 +1217,7 @@ namespace Faunus {
           }
 
       public:
-        DebyeHuckelDenton(InputMap &in, const string &dir="") : DebyeHuckel(in,dir) {
-          name+="-Denton";
-          lB_org=lB;
-        }
+        DebyeHuckelDenton(InputMap &in, const string &dir="");
 
         // Effective macroion-macroion interaction (Eq. 37)
         template<class Tparticle>
@@ -1290,10 +1232,7 @@ namespace Faunus {
             return DebyeHuckel::force(m,n,r2,p);
           }
 
-        string info(char w) {
-          lB=lB_org;
-          return DebyeHuckel::info(w);
-        }
+        string info(char w);
 
         template<class Tpvec>
           string info(Tpvec &p, double V) {
@@ -1342,19 +1281,7 @@ namespace Faunus {
         double rc2,rc; // (squared) cutoff distance
         double u_rc,dudrc;
       public:
-        DebyeHuckelShift(Tmjson &j, const string &sec="coulomb") : DebyeHuckel(j,sec) {
-          rc = j[sec]["cutoff"] | sqrt( std::numeric_limits<double>::max() );
-          rc2 = rc*rc;
-#ifdef FAU_APPROXMATH
-          u_rc = exp_cawley(-k*rc)/rc; // use approx. func even here!
-#else
-          u_rc = exp(-k*rc)/rc;
-#endif
-          dudrc = -k*u_rc - u_rc/rc; // 1st derivative of u(r) at r_c
-          std::ostringstream o;
-          o << " (shifted, rcut=" << rc << textio::_angstrom << ")";
-          name+=o.str();
-        }
+        DebyeHuckelShift(Tmjson &j, const string &sec="coulomb");
 
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -1401,22 +1328,13 @@ namespace Faunus {
      */
     class Cardinaux : public Potential::PairPotentialBase {
       private:
-        string _brief() {
-          return name+": a=" + std::to_string(alpha);
-        }
+        string _brief();
         int alpha,alphahalf;
         PairMatrix<double> eps; // 4*beta*epsilon for all pairs
 
       public:
 
-        Cardinaux( Tmjson &j, const string &sec="cardinaux") : PairPotentialBase( sec ) {
-          name="Cardinaux";
-          alpha = j[sec]["alpha"] | 90;
-          alphahalf=0.5*alpha;
-          for (auto &i : atom)
-            for (auto &j : atom)
-              eps.set(i.id, j.id, sqrt( i.eps*j.eps )*4.0_kJmol );
-        }
+        Cardinaux( Tmjson &j, const string &sec="cardinaux");
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -1480,7 +1398,7 @@ namespace Faunus {
         public:
           PotentialMap(Tmjson &j) : Tdefault(j) {
             Tdefault::name += " (default)";
-          } 
+          }
 
           /**
            * @warning Templating `Tpairpot` may cause code-bloat if used on
@@ -1578,7 +1496,7 @@ namespace Faunus {
             void setSpace(Tspace &s) {
               first.setSpace(s);
               second.setSpace(s);
-            } 
+            }
 
           string info(char w=20) {
             return first.info(w) + second.info(w);

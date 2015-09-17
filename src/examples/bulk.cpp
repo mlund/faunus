@@ -30,7 +30,7 @@ int main() {
   // Markov moves and analysis
   Move::Propagator<Tspace> mv(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf_ab(0.1);      // 0.1 angstrom resolution
-  Analysis::VirialPressure<Tspace> virial(mcp,pot,spc);
+  Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
   Average<double> pm;
 
   spc.load("state");                               // load old config. from disk (if any)
@@ -46,11 +46,7 @@ int main() {
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
       sys += mv.move();
-
-      if (slump() < 0.05) {
-        //rdf_ab.sample(spc,salt,atom["Na"].id,atom["Cl"].id);
-        virial.sample();
-      }
+      analyzer.sample();
     } // end of micro loop
 
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
@@ -69,7 +65,7 @@ int main() {
   sys.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + mv.info() + virial.info() + test.info();
+  cout << loop.info() + sys.info() + mv.info() + analyzer.info() + test.info();
 
   return test.numFailed();
 }
@@ -90,7 +86,7 @@ int main() {
   - salt translation
   - isotropic volume move (NPT ensemble)
 
-  Information about the input file can be found in `src/examples/bulk.run`.
+  Information about the input file can be found in `src/examples/bulk.py`.
 
   ![Na-Cl distribution function with various electrostatic potentials.](wolf.png)
 

@@ -31,13 +31,14 @@ namespace Faunus {
     void AnalysisBase::_sample() { /* make pure virtual! */ }
 
     void AnalysisBase::sample() {
-      if (steps > stepcnt) {
+      stepcnt++;
+      if (stepcnt == steps) {
+        cnt++;
+        stepcnt=0;
         timer.start();
         _sample();
         timer.stop();
-        stepcnt++;
-        cnt++;
-      } else stepcnt=0;
+      }
     }
 
     void AnalysisBase::_test(UnitTest &t) {}
@@ -156,42 +157,6 @@ namespace Faunus {
       return o.str();
     }
 
-    PolymerShape::PolymerShape() {
-      name="Polymer Shape";
-    }
-
-    string PolymerShape::_info() {
-      char w=10;
-      using namespace textio;
-      std::ostringstream o;
-      o << endl << indent(SUBSUB) << std::left << setw(w) << "Group"
-        << setw(w+5) << bracket("Rg"+squared)
-        << setw(w+12) << bracket("Rg"+squared)+"-"+bracket("Rg")+squared
-        << setw(w+5) << rootof+bracket("Rg"+squared)
-        << setw(w+7) << rootof+bracket("Rgx"+squared)
-        << setw(w+7) << rootof+bracket("Rgy"+squared)
-        << setw(w+7) << rootof+bracket("Rgz"+squared)
-        << setw(w+7) << rootof+bracket("Re"+squared)
-        << bracket("Re"+squared)+"/"+bracket("Rg"+squared) << endl; 
-      for (auto &m : Rg2)
-        o << indent(SUBSUB) << std::left << setw(w) << m.first
-          << std::setprecision(4)
-          << setw(w) << m.second.avg()
-          << setw(w+2) << m.second.avg() - pow( Rg[m.first].avg(),2 )
-          << setw(w-2) << sqrt( m.second.avg() )
-          << setw(w) << sqrt(Rg2x[m.first].avg())
-          << setw(w) << sqrt(Rg2y[m.first].avg())
-          << setw(w) << sqrt(Rg2z[m.first].avg())
-          << setw(w) << sqrt(Re2[m.first].avg())
-          << Re2[m.first].avg() / Rg2[m.first].avg() << endl; 
-      return o.str();
-    }
-
-    void PolymerShape::_test(UnitTest &t) {
-      for (auto &m : Rg2)
-        t("PolymerShape_Rg"+m.first, Rg[m.first].avg() );
-    }
-
     ChargeMultipole::ChargeMultipole(){
       name="Multipole";
     }
@@ -245,5 +210,10 @@ namespace Faunus {
     CombinedAnalysis& operator+(AnalysisBase &a, AnalysisBase &b) {
       return *(new CombinedAnalysis(&a,&b));
     }
+
+    void CombinedAnalysis::test(UnitTest &test) {
+      for (auto i : v) i->test(test);
+    }
+
   }//namespace
 }//namespace

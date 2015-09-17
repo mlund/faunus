@@ -65,16 +65,16 @@ namespace Faunus {
 
           string name;  //!< Short informative name
 
-          inline virtual ~Energybase() {}
+           virtual ~Energybase() {}
 
-          inline Energybase(const string &dir="") : jsondir(dir), w(25), spc(nullptr) {
-            if ( jsondir.empty() )
-              jsondir = "energy";
-          }
+           Energybase(const string &dir="") : jsondir(dir), w(25), spc(nullptr) {
+             if ( jsondir.empty() )
+               jsondir = "energy";
+           }
 
-          inline virtual void setSpace(Tspace &s) { spc=&s; } 
+           virtual void setSpace(Tspace &s) { spc=&s; }
 
-          inline virtual Tspace& getSpace() {
+           virtual Tspace& getSpace() {
             assert(spc!=nullptr);
             return *spc;
           }

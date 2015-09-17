@@ -13,6 +13,10 @@ echo '{
     "polymer" : { "structure":"slitpolymer.aam", "Ninit":1 }
   },
 
+  "analysis" : {
+    "polymershape" : { "steps":10, "mollist":[ "polymer" ] }
+  },
+
   "energy" : {
     "gouychapman" : { "phi0":-2 },
     "nonbonded" : { "coulomb" : { "epsr" : 78.9, "debyelength":11.6492873993050 } }

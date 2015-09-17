@@ -65,20 +65,6 @@ namespace Faunus {
         void sample();       //!< Sample event.
     };
 
-    /** @brief Helper class to add two Analysis classes */
-    class CombinedAnalysis : private AnalysisBase {
-    private:
-        vector<AnalysisBase*> v;
-        string _info();
-        void _sample();
-    public:
-        CombinedAnalysis(AnalysisBase* a, AnalysisBase* b);
-        void sample();
-        string info();
-    };
-
-    CombinedAnalysis& operator+(AnalysisBase &a, AnalysisBase &b);
-
     /**
      * @brief Pressure analysis using the virial theorem
      *
@@ -221,7 +207,8 @@ namespace Faunus {
         }
 
       public:
-        VirialPressure( Tmjson &j, Energy::Energybase<Tspace> &pot, Tspace &spc, string pfx="virial" )
+        template<class Tpotential>
+        VirialPressure( Tmjson &j, Tpotential &pot, Tspace &spc, string pfx="virial" )
           : spc(&spc), pot(&pot), AnalysisBase( j["analysis"][pfx] ) {
           auto _j = j["analysis"][pfx];
           dim = _j["dim"] | 3;
@@ -565,78 +552,124 @@ namespace Faunus {
      * @brief Analysis of polymer shape - radius of gyration, shape factor etc.
      * @date November, 2011
      *
-     * This will analyse polymer Groups and calculate Rg, Re and the shape factor. If
+     * This will analyse polymer groups and calculate Rg, Re and the shape factor. If
      * sample() is called with different groups these will be distinguished by their
      * *name* and sampled individually.
+     * Upon construction the following JSON keywords are read from section
+     * analysis/polymershape:
+     *
+     * Keyword   | Description
+     * :-------- | :------------------
+     * `steps`   | Interval with which to sample (default: 1)
+     * `mollist` | List of molecule name to sample
      */
+    template<class Tspace>
     class PolymerShape : public AnalysisBase {
       private:
         std::map< string, Average<double> > Rg2, Rg, Re2, Rs, Rs2, Rg2x, Rg2y, Rg2z;
-        void _test(UnitTest&);
-        string _info();
-        template<class Tgroup, class Tspace>
-          double gyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) {
-            assert( spc.geo.dist(pol.cm, pol.massCenter(spc))<1e-9
-                && "Mass center must be in sync.");
-            Point rg2=vectorgyrationRadiusSquared(pol,spc);
-            return rg2.x()+rg2.y()+rg2.z();
-          }
+        Tspace* spc;
 
-        template<class Tgroup, class Tspace>
-          Point vectorEnd2end(const Tgroup &pol, const Tspace &spc) {
-            return spc.geo.vdist( spc.p[pol.front()], spc.p[pol.back()] );
+        vector<int> molid; // molecule id's to analyse
+
+        string _info() override {
+          char w=10;
+          using namespace textio;
+          std::ostringstream o;
+          if (!Rg2.empty()) {
+            o << endl << indent(SUBSUB) << std::left << setw(w) << "Group"
+            << setw(w + 5) << bracket("Rg" + squared)
+            << setw(w + 12) << bracket("Rg" + squared) + "-" + bracket("Rg") + squared
+            << setw(w + 5) << rootof + bracket("Rg" + squared)
+            << setw(w + 7) << rootof + bracket("Rgx" + squared)
+            << setw(w + 7) << rootof + bracket("Rgy" + squared)
+            << setw(w + 7) << rootof + bracket("Rgz" + squared)
+            << setw(w + 7) << rootof + bracket("Re" + squared)
+            << bracket("Re" + squared) + "/" + bracket("Rg" + squared) << endl;
+            for (auto &m : Rg2)
+              o << indent(SUBSUB) << std::left << setw(w) << m.first
+              << std::setprecision(4)
+              << setw(w) << m.second.avg()
+              << setw(w + 2) << m.second.avg() - pow(Rg[m.first].avg(), 2)
+              << setw(w - 2) << sqrt(m.second.avg())
+              << setw(w) << sqrt(Rg2x[m.first].avg())
+              << setw(w) << sqrt(Rg2y[m.first].avg())
+              << setw(w) << sqrt(Rg2z[m.first].avg())
+              << setw(w) << sqrt(Re2[m.first].avg())
+              << Re2[m.first].avg() / Rg2[m.first].avg() << endl;
           }
+          return o.str();
+        }
+
+        void _test(UnitTest &t) override {
+          for (auto &m : Rg2)
+            t("PolymerShape_Rg"+m.first, Rg[m.first].avg() );
+        }
+
+        Point vectorgyrationRadiusSquared(const Group &pol, const Tspace &spc) const {
+          assert(spc.geo.dist(pol.cm, pol.massCenter(spc)) < 1e-9
+                 && "Mass center must be in sync.");
+          double sum = 0;
+          Point t, r2(0, 0, 0);
+          for (auto i : pol) {
+            t = spc.p[i] - pol.cm;                     // vector to center of mass
+            spc.geo.boundary(t);                     // periodic boundary (if any)
+            r2.x() += spc.p[i].mw * t.x() * t.x();
+            r2.y() += spc.p[i].mw * t.y() * t.y();
+            r2.z() += spc.p[i].mw * t.z() * t.z();
+            sum += spc.p[i].mw;                      // total mass
+          }
+          assert(sum > 0 && "Zero molecular weight not allowed.");
+          return r2 * (1. / sum);
+        }
+
+        double gyrationRadiusSquared(const Group &pol, const Tspace &spc) {
+          assert(spc.geo.dist(pol.cm, pol.massCenter(spc)) < 1e-9
+                 && "Mass center must be in sync.");
+          Point rg2 = vectorgyrationRadiusSquared(pol, spc);
+          return rg2.x() + rg2.y() + rg2.z();
+        }
+
+        Point vectorEnd2end(const Group &pol, const Tspace &spc) {
+          return spc.geo.vdist(spc.p[pol.front()], spc.p[pol.back()]);
+        }
+
+        void _sample() override {
+          for (auto id : molid)
+            for (auto pol : spc->findMolecules(id)) {
+              Point r2 = vectorgyrationRadiusSquared(*pol, *spc);
+              double rg2 = r2.x() + r2.y() + r2.z();
+              double re2 = spc->geo.sqdist(spc->p[pol->front()], spc->p[pol->back()]);
+              Rg2[pol->name]  += rg2;
+              Rg2x[pol->name] += r2.x();
+              Rg2y[pol->name] += r2.y();
+              Rg2z[pol->name] += r2.z();
+              Rg[pol->name]   += r2.norm();
+              Re2[pol->name]  += re2; //end-2-end squared
+              double rs = Re2[pol->name].avg() / Rg2[pol->name].avg(); // fluctuations in shape factor
+              Rs[pol->name]   += rs;
+              Rs2[pol->name]  += rs * rs;
+              //Point re = vectorEnd2end(pol,spc);
+              //Re2[pol.name] += pow(re.len(), 2);
+            }
+        }
 
       public:
-        PolymerShape();
 
-        /** 
-         * @note This functions is now public and const.
-         * I don't see the point of making it static, yet. - Joao Henriques.
-         */
-        template<class Tgroup, class Tspace>
-          Point vectorgyrationRadiusSquared(const Tgroup &pol, const Tspace &spc) const {
-            assert( spc.geo.dist(pol.cm, pol.massCenter(spc))<1e-9
-                && "Mass center must be in sync.");
-            double sum=0;
-            Point t, r2(0,0,0);
-            for (auto i : pol) {
-              t = spc.p[i]-pol.cm;                     // vector to center of mass
-              spc.geo.boundary(t);                     // periodic boundary (if any)
-              r2.x() += spc.p[i].mw * t.x() * t.x();
-              r2.y() += spc.p[i].mw * t.y() * t.y();
-              r2.z() += spc.p[i].mw * t.z() * t.z();
-              sum += spc.p[i].mw;                      // total mass
-            }
-            assert(sum>0 && "Zero molecular weight not allowed.");
-            return r2*(1./sum);
+        PolymerShape() { name="Polymer Shape"; }
+
+        PolymerShape(Tmjson &j, Tspace &spc, string pfx="polymershape")
+          : AnalysisBase(j["analysis"][pfx]), spc(&spc) {
+          name="Polymer Shape";
+          auto m = j["analysis"][pfx]["mollist"];
+          for (auto &i : m) {   // loop over molecule names
+            string molname = i.get<string>();
+            auto it = spc.molList().find(molname);
+            if (it != spc.molList().end())
+              molid.push_back(it->id);
+            else
+              std::cerr << "# PolymerShape warning: molecule not found!" << endl;
           }
-
-        /** @brief Sample properties of Group (identified by group name) */
-        template<class Tgroup, class Tspace>
-          void sample(const Tgroup &pol, const Tspace &spc) {
-            if (!run() || pol.front()==pol.back())
-              return;
-
-            timer.start();
-
-            Point r2 = vectorgyrationRadiusSquared(pol,spc);
-            double rg2 = r2.x()+r2.y()+r2.z(); 
-            double re2 = spc.geo.sqdist( spc.p[pol.front()], spc.p[pol.back()] );
-            Rg2[pol.name]  += rg2;
-            Rg2x[pol.name] += r2.x();
-            Rg2y[pol.name] += r2.y();
-            Rg2z[pol.name] += r2.z();
-            Rg[pol.name]   += sqrt(r2.x()+r2.y()+r2.z());
-            Re2[pol.name]  += re2; //end-2-end squared
-            double rs = Re2[pol.name].avg()/Rg2[pol.name].avg(); // fluctuations in shape factor
-            Rs[pol.name]   += rs;
-            Rs2[pol.name]  += rs*rs;
-            //Point re = vectorEnd2end(pol,spc);
-            //Re2[pol.name] += pow(re.len(), 2);
-            //
-            timer.stop();
-          }
+        }
     };
 
     /**
@@ -1882,6 +1915,56 @@ namespace Faunus {
             return o.str();
           }
       };
+
+    /**
+     * @brief Class for accumulating analysis classes
+     *
+     * Upon construction the JSON section `analysis` is searched
+     * for the following keywords,
+     *
+     * Keyword    |  Description
+     * 
+     *
+     * */
+    class CombinedAnalysis : private AnalysisBase {
+    private:
+        vector<AnalysisBase *> v;
+        string _info();
+        void _sample();
+    public:
+        CombinedAnalysis(AnalysisBase *a, AnalysisBase *b);
+
+        template<class Tspace, class Tpotential>
+        CombinedAnalysis(Tmjson &j, Tpotential &pot, Tspace &spc) {
+          auto m = j["analysis"];
+          for (auto i = m.begin(); i != m.end(); ++i) {
+            if (i.key() == "virial")
+              v.push_back(new VirialPressure<Tspace>(j, pot, spc));
+            if (i.key() == "polymershape")
+              v.push_back(new PolymerShape<Tspace>(j, spc));
+          }
+        }
+
+        /** @brief Find pointer to given analysis type; `nullptr` if not found. */
+        template<class Tanalysis>
+        Tanalysis* get() {
+          static_assert( std::is_base_of<AnalysisBase, Tanalysis>::value,
+                         "`Tanalysis` must be derived from `Analysis::Analysisbase`");
+          for (auto b : v) {
+            auto ptr = dynamic_cast<Tanalysis*>( b );
+            if ( ptr != nullptr )
+              return ptr;
+          }
+          return nullptr;
+        }
+
+        void sample();
+        void test(UnitTest&);
+        string info();
+    };
+
+    CombinedAnalysis& operator+(AnalysisBase &a, AnalysisBase &b);
+
   }//namespace
 }//namespace
 #endif

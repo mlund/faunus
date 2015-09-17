@@ -16,7 +16,7 @@ int main() {
   pot.expot.setSurfPositionZ( &spc.geo.len_half.z() ); // Pass position of GC surface
 
   Move::Propagator<Tspace> mv(mcp,pot,spc);           // assembly of all MC moves
-  Analysis::PolymerShape shape;                       // sample polymer shape
+  Analysis::CombinedAnalysis analyzer(mcp,pot,spc);   // sample polymer shape etc.
   Analysis::LineDistribution<> surfmapall;            // monomer-surface histogram
 
   spc.load("state");                                  // Load start configuration, if any
@@ -30,9 +30,9 @@ int main() {
   while ( loop[0] ) {
     while ( loop[1] ) {
       sys += mv.move();
+      analyzer.sample();
 
       if (slump() < 0.05) {
-        shape.sample(*pol.front(),spc);   // sample polymer shape - gyration radius etc.
         for ( auto i : *pol.front() )
           surfmapall( pot.expot.surfDist( spc.p[i] ) )++;  // sample monomer distribution
       }
@@ -51,10 +51,10 @@ int main() {
   // Perform unit tests (only for faunus integrity)
   sys.test(test);
   mv.test(test);
-  shape.test(test);
+  analyzer.test(test);
 
   cout << loop.info() + sys.info() + mv.info() 
-    + shape.info() + spc.info() + test.info();
+    + analyzer.info() + spc.info() + test.info();
 
   return test.numFailed();
 }

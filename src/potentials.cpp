@@ -391,6 +391,124 @@ namespace Faunus {
       return o.str();
     }
 
+    Harmonic::Harmonic( double k, double req ) : k(k), req(req) { name = "Harmonic"; }
+
+    FENE::FENE(double k_kT, double rmax_A) : k(k_kT) {
+      name="FENE";
+      r02=rmax_A*rmax_A;
+      r02inv=1/r02;
+    }
+
+    LennardJones::LennardJones(
+      Tmjson &j,
+      const string &sec) : PairPotentialBase( sec ) {
+
+      name        ="Lennard-Jones";
+      eps         = 4.0 * ( j[sec]["eps"] | 0.0 );
+      string unit = j[sec]["unit"] | string("kT");
+      if ( unit == "kJ/mol" )
+        eps *= 1.0_kJmol;
+    }
+
+    LennardJones::LennardJones() : eps(0) { name="Lennard-Jones"; }
+
+    SquareWellHydrophobic::SquareWellHydrophobic(Tmjson &j, const string &sec) : SquareWell(j,sec) {
+      name="Hydrophobic " + name;
+    }
+
+    string SoftRepulsion::_brief() {
+      std::ostringstream o;
+      o << name << ": " << textio::sigma  << pow(sigma6,1/6.) << textio::_angstrom;
+      return o.str();
+    }
+
+    SoftRepulsion::SoftRepulsion(Tmjson &j, const string &sec) : PairPotentialBase(sec) {
+      name="Repulsive r6";
+      sigma6 = pow( j[sec]["sigma"] | 5.0, 6);
+    }
+
+    Harmonic::Harmonic( Tmjson &j, const string &sec) : PairPotentialBase(sec) {
+      name="Harmonic";
+      k   = j[sec]["k"]   | 0.0;
+      req = j[sec]["req"] | 0.0;
+    }
+
+    string FENE::_brief() {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << name+": k=" << k << kT+"/"+angstrom+squared+" r0=" << sqrt(r02) << _angstrom;
+      return o.str();
+    }
+
+    Cardinaux::Cardinaux( Tmjson &j, const string &sec) : PairPotentialBase( sec ) {
+      name="Cardinaux";
+      alpha = j[sec]["alpha"] | 90;
+      alphahalf=0.5*alpha;
+      for (auto &i : atom)
+        for (auto &j : atom)
+          eps.set(i.id, j.id, sqrt( i.eps*j.eps )*4.0_kJmol );
+    }
+
+    string Cardinaux::_brief() {
+      return name+": a=" + std::to_string(alpha);
+    }
+
+    DebyeHuckelShift::DebyeHuckelShift(Tmjson &j, const string &sec) : DebyeHuckel(j,sec) {
+      rc = j[sec]["cutoff"] | sqrt( std::numeric_limits<double>::max() );
+      rc2 = rc*rc;
+#ifdef FAU_APPROXMATH
+      u_rc = exp_cawley(-k*rc)/rc; // use approx. func even here!
+#else
+      u_rc = exp(-k*rc)/rc;
+#endif
+      dudrc = -k*u_rc - u_rc/rc; // 1st derivative of u(r) at r_c
+      std::ostringstream o;
+      o << " (shifted, rcut=" << rc << textio::_angstrom << ")";
+      name+=o.str();
+    }
+
+    string DebyeHuckelDenton::info(char w) {
+      lB=lB_org;
+      return DebyeHuckel::info(w);
+    }
+
+    DebyeHuckelDenton::DebyeHuckelDenton(InputMap &in, const string &dir) : DebyeHuckel(in,dir) {
+      name+="-Denton";
+      lB_org=lB;
+    }
+
+    void DebyeHuckelDenton::setBjerrum(double a_m, double a_n) {
+      double ka_m=k*a_m, ka_n=k*a_n;
+      lB=lB_org * exp(ka_m+ka_n) / ( (1+ka_m)*(1+ka_n) );
+    }
+
+    double DebyeHuckelDenton::fmn(double m, double n) {
+      return k*(m*m + n*n + k*(m+n)*m*n) / ( (1+k*m)*(1+k*n) );
+    }
+
+    DebyeHuckel::DebyeHuckel( Tmjson &j, const string &sec ) : Coulomb( j, sec ) {
+      const double zero=1e-10;
+      name="Debye-Huckel";
+      c = 8*lB*pc::pi*pc::Nav/1e27;
+      double I = j[sec]["ionicstrength"] | 0.0;   // [mol/l]
+      z_count  = j[sec]["countervalency"] | 0.0;  // [e]
+      k2_count = 0;
+      k = sqrt( I*c );
+      if ( k < zero )
+        k = 1 / ( j[sec]["debyelength"] | 1.0/zero ); // [A]
+    }
+
+    R12Repulsion::R12Repulsion(Tmjson &j, const string &sec) : PairPotentialBase(sec) {
+      name="r12-Repulsion";
+      eps = 4*(j[sec]["eps"] | 0.05);
+    }
+
+    string SoftRepulsion::info(char w) {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << textio::pad(SUB,w+1,textio::sigma) << pow(sigma6,1/6.) << _angstrom << endl;
+      return o.str();
+    }
   } //Potential namespace
 
 } //Faunus namespace

@@ -25,8 +25,7 @@ int main() {
     + Energy::ExternalPressure<Tspace>(mcp) + Energy::Bonded<Tspace>();
 
   Move::Propagator<Tspace> mv( mcp, pot, spc );
-
-  Analysis::PolymerShape shape;
+  Analysis::CombinedAnalysis analyze(mcp, pot, spc);
   Analysis::RadialDistribution<> rdf(0.2);
 
   spc.load("state");                                // load old config. from disk (if any)
@@ -40,8 +39,7 @@ int main() {
     while ( loop[1] ) {
       sys += mv.move();
 
-      for (auto i : pol)                              // sample gyration radii etc. 
-        shape.sample(*i,spc);
+      analyze.sample();
 
       for (auto i = pol.begin(); i != pol.end(); ++i )// sample cm-cm g(r)
         for (auto j = i; ++j != pol.end(); )
@@ -64,7 +62,7 @@ int main() {
   sys.test(test);
 
   // print information
-  cout << loop.info() << mv.info() << shape.info()
+  cout << loop.info() << mv.info() << analyze.info()
     << sys.info() << test.info();
 
   return test.numFailed();

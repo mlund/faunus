@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import numpy as np
 import json, sys, os
 from subprocess import call, check_output
@@ -47,6 +48,10 @@ d = {
         "polymer" : { "dp":6.3, "minlen":1, "maxlen":1000, "permol":True }
         },
       "isobaric" : { "dp":2, "pressure":113.2, "prob":0.1 }
+      },
+
+    "analysis" : {
+      "polymershape" : { "steps":10, "mollist":[ "polymer" ] }
       },
 
     "system" : {

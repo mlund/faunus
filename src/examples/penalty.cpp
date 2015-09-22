@@ -6,7 +6,7 @@ typedef Space<Geometry::Cuboid> Tspace;
 struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
   public:
     typedef typename Tspace::ParticleVector Tpvec;
-    double i_external(const Tpvec &p, int i) FOVERRIDE { //pot. on particle
+    double i_external(const Tpvec &p, int i) override { //pot. on particle
       double s= 1 + std::sin(2*pc::pi*p[i].x()) + std::cos(2*pc::pi*p[i].y());
       if (p[i].x() >=-2.00 && p[i].x() <=-1.25) return 1*s;
       if (p[i].x() >=-1.25 && p[i].x() <=-0.25) return 2*s;
@@ -18,13 +18,13 @@ struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
     auto tuple() -> decltype(std::make_tuple(this)) {
       return std::make_tuple(this);
     }
-    double g_external(const Tpvec &p, Group &g) FOVERRIDE { //pot. on group
+    double g_external(const Tpvec &p, Group &g) override { //pot. on group
       double u=0;
       for (auto i : g)
         u+=i_external(p, i);
       return u; // in kT
     }
-    string _info() { return "myenergy"; }       //mandatory info 
+    string _info() override { return "myenergy"; }       //mandatory info 
 };
 
 int main() {

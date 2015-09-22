@@ -51,7 +51,7 @@ d = {
       },
 
     "analysis" : {
-      "polymershape" : { "steps":10, "mollist":[ "polymer" ] }
+      "polymershape" : { "nstep":10, "mollist":[ "polymer" ] }
       },
 
     "system" : {

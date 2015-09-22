@@ -84,9 +84,9 @@ namespace Faunus {
     class Sphere : public Geometrybase {
       private:
         double r,r2,diameter;
-        void _setVolume(double);
-        double _getVolume() const;
-        string _info(char);
+        void _setVolume(double) override;
+        double _getVolume() const override;
+        string _info(char) override;
       public:
         Point len;
         void setlen(const Point&);              //!< Reset radius (angstrom)
@@ -106,17 +106,17 @@ namespace Faunus {
           setRadius( j["system"][ textio::lowercase(name) ] ["radius"] | -1.0 );
         }
 
-        void randompos(Point &);
-        void boundary(Point &p) const {};
-        bool collision(const Point&, double, collisiontype=BOUNDARY) const;
+        void randompos(Point &) override;
+        void boundary(Point &p) const override {};
+        bool collision(const Point&, double, collisiontype=BOUNDARY) const override;
 
-        inline double sqdist(const Point &a, const Point &b) const {
+        inline double sqdist(const Point &a, const Point &b) const override {
           return (a-b).squaredNorm();
         }
 
-        inline Point vdist(const Point &a, const Point &b) { return a-b; }
+        inline Point vdist(const Point &a, const Point &b) override { return a-b; }
 
-        void scale(Point&, Point &, const double, const double) const; //!< Linear scaling along radius (NPT ensemble)
+        void scale(Point&, Point &, const double, const double) const override; //!< Linear scaling along radius (NPT ensemble)
 
     };
 
@@ -130,9 +130,9 @@ namespace Faunus {
      */
     class Cuboid : public Geometrybase {
       private:
-        string _info(char);                      //!< Return info string
-        void _setVolume(double);
-        double _getVolume() const;
+        string _info(char) override;             //!< Return info string
+        void _setVolume(double) override;
+        double _getVolume() const override;
         enum scaletype {XYZ,XY};
         scaletype scaledir;                      //!< Scale directions for pressure scaling
         string scaledirstr;
@@ -166,10 +166,10 @@ namespace Faunus {
         void setlen(const Point&);               //!< Reset Cuboid sidelengths
         Point len;                               //!< Sidelengths
         Point len_half;                          //!< Half sidelength
-        Point randompos();           
-        void randompos(Point&);      
+        Point randompos();
+        void randompos(Point&) override;
 
-        inline bool collision(const Point &a, double radius, collisiontype type=BOUNDARY) const {
+        inline bool collision(const Point &a, double radius, collisiontype type=BOUNDARY) const override {
           if (std::abs(a.x())>len_half.x()) return true;
           if (std::abs(a.y())>len_half.y()) return true;
           if (std::abs(a.z())>len_half.z()) return true;
@@ -180,7 +180,7 @@ namespace Faunus {
          * For reviews of minimum image algorithms,
          * see doi:10/ck2nrd and doi:10/kvs
          */
-        double sqdist(const Point &a, const Point &b) const {
+        double sqdist(const Point &a, const Point &b) const override {
           Point d = (a-b).cwiseAbs();
           for (int i=0; i<3; ++i)
             if (d[i]>len_half[i]) d[i]-=2*len_half[i];
@@ -192,7 +192,7 @@ namespace Faunus {
           // return (d-k.cast<double>().cwiseProduct(len)).squaredNorm();
         }
 
-        inline Point vdist(const Point &a, const Point &b) {
+        inline Point vdist(const Point &a, const Point &b) override {
           Point r=a-b;
           if (r.x()>len_half.x())
             r.x()-=len.x();
@@ -209,13 +209,13 @@ namespace Faunus {
           return r;
         }
 
-        inline void boundary(Point &a) const {
+        inline void boundary(Point &a) const override {
           if (std::abs(a.x())>len_half.x()) a.x()-=len.x()*anint(a.x()*len_inv.x());
           if (std::abs(a.y())>len_half.y()) a.y()-=len.y()*anint(a.y()*len_inv.y());
           if (std::abs(a.z())>len_half.z()) a.z()-=len.z()*anint(a.z()*len_inv.z());
         }
 
-        void scale(Point&, Point&, const double, const double) const;
+        void scale(Point&, Point&, const double, const double) const override;
     };
 
     /**
@@ -227,7 +227,7 @@ namespace Faunus {
       public:
         Cuboidslit(Tmjson &j) : Cuboid(j) { name += " (XY-periodicity)"; }
 
-        inline double sqdist(const Point &a, const Point &b) const {
+        inline double sqdist(const Point &a, const Point &b) const override {
           double dx=std::abs(a.x()-b.x());
           double dy=std::abs(a.y()-b.y());
           double dz=a.z()-b.z();
@@ -236,7 +236,7 @@ namespace Faunus {
           return dx*dx + dy*dy + dz*dz;
         }   
 
-        inline Point vdist(const Point &a, const Point &b) {
+        inline Point vdist(const Point &a, const Point &b) override {
           Point r(a-b);
           if (r.x()>len_half.x())
             r.x()-=len.x();
@@ -249,7 +249,7 @@ namespace Faunus {
           return r;
         }
 
-        inline void boundary(Point &a) const {
+        inline void boundary(Point &a) const override {
           if (std::abs(a.x())>len_half.x()) a.x()-=len.x()*anint(a.x()*len_inv.x());
           if (std::abs(a.y())>len_half.y()) a.y()-=len.y()*anint(a.y()*len_inv.y());
         }
@@ -267,9 +267,9 @@ namespace Faunus {
      */
     class Cylinder : public Geometrybase {
       private:
-        string _info(char); //!< Cylinder info
-        void _setVolume(double);
-        double _getVolume() const;
+        string _info(char) override; //!< Cylinder info
+        void _setVolume(double) override;
+        double _getVolume() const override;
         void init(double,double);
         double r2;    //!< Cylinder radius squared
         double r;     //!< Cylinder radius
@@ -282,13 +282,13 @@ namespace Faunus {
         Cylinder(Tmjson&);             //!< Constructor
         Cylinder(double, double);      //!< Construct from length and radius
         void setlen(const Point&);     //!< Set length via vector (dummy function)
-        void randompos(Point &);
-        void boundary(Point &) const;
-        bool collision(const Point&, double, collisiontype=BOUNDARY) const;
-        inline double sqdist(const Point &a, const Point &b) const {
+        void randompos(Point &) override;
+        void boundary(Point &) const override;
+        bool collision(const Point&, double, collisiontype=BOUNDARY) const override;
+        inline double sqdist(const Point &a, const Point &b) const override {
           return (a-b).squaredNorm();
         }
-        inline Point vdist(const Point &a, const Point &b) FOVERRIDE {
+        inline Point vdist(const Point &a, const Point &b) override {
           return a-b;
         }
     };
@@ -303,9 +303,9 @@ namespace Faunus {
         PeriodicCylinder(Tmjson&);
         PeriodicCylinder(double, double);
 
-        void boundary(Point&) const;
+        void boundary(Point&) const override;
 
-        inline double sqdist(const Point &a, const Point &b) const {
+        inline double sqdist(const Point &a, const Point &b) const override {
           double dx=a.x()-b.x();
           double dy=a.y()-b.y();
           double dz=std::abs(a.z()-b.z());
@@ -314,7 +314,7 @@ namespace Faunus {
           return dx*dx + dy*dy + dz*dz;
         }
 
-        inline Point vdist(const Point &a, const Point &b) FOVERRIDE {
+        inline Point vdist(const Point &a, const Point &b) override {
           Point r=a-b;
           if (r.z()>_halflen)
             r.z()-=_len;

@@ -25,7 +25,7 @@ d = {
       },
 
     "analysis" : {
-      "virial" : { "steps":10 }
+      "virial" : { "nstep":10 }
       },
 
     "moves" : {

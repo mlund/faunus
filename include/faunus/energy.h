@@ -150,7 +150,7 @@ namespace Faunus {
     template<class T1, class T2>
       class CombinedEnergy : public Energybase<typename T1::SpaceType> {
         private:
-          string _info() { return first.info()+second.info(); }
+          string _info() override { return first.info()+second.info(); }
           typedef Energybase<typename T1::SpaceType> Tbase;
           typedef typename Tbase::Tparticle Tparticle;
           typedef typename Tbase::Tpvec Tpvec;
@@ -165,60 +165,60 @@ namespace Faunus {
 
           CombinedEnergy(const T1 &a, const T2 &b) : first(a), second(b) {}
 
-          string info() { return _info(); }
+          string info() override { return _info(); }
 
-          void setSpace(typename T1::SpaceType &s) FOVERRIDE {
+          void setSpace(typename T1::SpaceType &s) override {
             first.setSpace(s);
             second.setSpace(s);
             Tbase::setSpace(s);
           } 
 
-          double p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE
+          double p2p(const Tparticle &a, const Tparticle &b) override
           { return first.p2p(a,b)+second.p2p(a,b); }
 
-          Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE
+          Point f_p2p(const Tparticle &a, const Tparticle &b) override
           { return first.f_p2p(a,b)+second.f_p2p(a,b); }
 
-          double all2p(const Tpvec &p, const Tparticle &a) FOVERRIDE
+          double all2p(const Tpvec &p, const Tparticle &a) override
           { return first.all2p(p,a)+second.all2p(p,a); }
 
-          double i2i(const Tpvec &p, int i, int j) FOVERRIDE
+          double i2i(const Tpvec &p, int i, int j) override
           { return first.i2i(p,i,j)+second.i2i(p,i,j); }
 
-          double i2g(const Tpvec &p, Group &g, int i) FOVERRIDE
+          double i2g(const Tpvec &p, Group &g, int i) override
           { return first.i2g(p,g,i)+second.i2g(p,g,i); }
 
-          double i2all(Tpvec &p , int i) FOVERRIDE
+          double i2all(Tpvec &p , int i) override
           { return first.i2all(p,i)+second.i2all(p,i); }
 
-          double i_external(const Tpvec&p, int i) FOVERRIDE
+          double i_external(const Tpvec&p, int i) override
           { return first.i_external(p,i)+second.i_external(p,i); }
 
-          double i_internal(const Tpvec&p, int i) FOVERRIDE
+          double i_internal(const Tpvec&p, int i) override
           { return first.i_internal(p,i)+second.i_internal(p,i); }
 
-          double g2g(const Tpvec&p, Group&g1, Group&g2) FOVERRIDE
+          double g2g(const Tpvec&p, Group&g1, Group&g2) override
           { return first.g2g(p,g1,g2)+second.g2g(p,g1,g2); }
 
-          double g1g2(const Tpvec&p1, Group&g1, const Tpvec&p2, Group&g2) FOVERRIDE
+          double g1g2(const Tpvec&p1, Group&g1, const Tpvec&p2, Group&g2) override
           { return first.g1g2(p1,g1,p2,g2)+second.g1g2(p1,g1,p2,g2); }
 
-          double g_external(const Tpvec&p, Group&g) FOVERRIDE
+          double g_external(const Tpvec&p, Group&g) override
           { return first.g_external(p,g)+second.g_external(p,g); }
 
-          double g_internal(const Tpvec&p, Group&g) FOVERRIDE
+          double g_internal(const Tpvec&p, Group&g) override
           { return first.g_internal(p,g)+second.g_internal(p,g); }
 
-          double external(const Tpvec&p) FOVERRIDE
+          double external(const Tpvec&p) override
           { return first.external(p)+second.external(p); }
 
-          double update(bool b) FOVERRIDE
+          double update(bool b) override
           { return first.update(b)+second.update(b); }
 
-          double v2v(const Tpvec&p1, const Tpvec&p2) FOVERRIDE
+          double v2v(const Tpvec&p1, const Tpvec&p2) override
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }
 
-          void field(const Tpvec&p, Eigen::MatrixXd&E) FOVERRIDE
+          void field(const Tpvec&p, Eigen::MatrixXd&E) override
           { first.field(p,E); second.field(p,E); }
       };
 
@@ -262,7 +262,7 @@ namespace Faunus {
     template<class Tspace, class Tpairpot>
       class Nonbonded : public Energybase<Tspace> {
         protected:
-          string _info() { return pairpot.info(25); }
+          string _info() override { return pairpot.info(25); }
           typedef Energybase<Tspace> Tbase;
           typedef typename Tbase::Tparticle Tparticle;
           typedef typename Tbase::Tpvec Tpvec;
@@ -287,35 +287,35 @@ namespace Faunus {
             return std::make_tuple(this);
           }
 
-          void setSpace(Tspace &s) FOVERRIDE {
+          void setSpace(Tspace &s) override {
             geo=s.geo;
             Tbase::setSpace(s);
             pairpot.setSpace(s);
           } 
 
           //!< Particle-particle energy (kT)
-          inline double p2p(const Tparticle &a, const Tparticle &b) {
+          inline double p2p(const Tparticle &a, const Tparticle &b) override {
             return pairpot( a,b,geo.sqdist(a,b));
           }
 
           //!< Particle-particle force (kT/Angstrom)
-          inline Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
+          inline Point f_p2p(const Tparticle &a, const Tparticle &b) override {
             auto r=geo.vdist(a,b);
             return pairpot.force(a,b,r.squaredNorm(),r);
           }
 
-          double all2p(const Tpvec &p, const Tparticle &a) {
+          double all2p(const Tpvec &p, const Tparticle &a) override {
             double u=0;
             for (auto &b : p)
               u+=pairpot(a,b,geo.sqdist(a,b));
             return u;
           }
 
-          double i2i(const Tpvec &p, int i, int j) {
+          double i2i(const Tpvec &p, int i, int j) override {
             return pairpot( p[i], p[j], geo.sqdist( p[i], p[j]) );
           }
 
-          double i2g(const Tpvec &p, Group &g, int j) FOVERRIDE {
+          double i2g(const Tpvec &p, Group &g, int j) override {
             double u=0;
             if ( !g.empty() ) {
               int len=g.back()+1;
@@ -331,7 +331,7 @@ namespace Faunus {
             return u;  
           }
 
-          double i2all(Tpvec &p, int i) FOVERRIDE {
+          double i2all(Tpvec &p, int i) override {
             assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
             double u=0;
             int n=(int)p.size();
@@ -342,7 +342,7 @@ namespace Faunus {
             return u;
           }
 
-          double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+          double g2g(const Tpvec &p, Group &g1, Group &g2) override {
             double u=0;
             if (!g1.empty())
               if (!g2.empty()) {
@@ -380,7 +380,7 @@ namespace Faunus {
             return u;
           }
 
-          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) FOVERRIDE {
+          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) override {
             double u=0;
             for (auto i : g1)
               for (auto j : g2)
@@ -388,7 +388,7 @@ namespace Faunus {
             return u;
           }
 
-          double g_internal(const Tpvec &p, Group &g) FOVERRIDE {
+          double g_internal(const Tpvec &p, Group &g) override {
             assert( g.size() <= (int)p.size() );
             double u=0;
             int b=g.back(), f=g.front();
@@ -399,7 +399,7 @@ namespace Faunus {
             return u;
           }
 
-          double v2v(const Tpvec &p1, const Tpvec &p2) {
+          double v2v(const Tpvec &p1, const Tpvec &p2) override {
             double u=0;
             for (auto &i : p1)
               for (auto &j : p2)
@@ -456,7 +456,7 @@ namespace Faunus {
             return pairpot( p[i], p[j], geo.sqdist( p[i], p[j]) )*excl(i,j);
           }
 
-          double i2g(const Tpvec &p, Group &g, int j) FOVERRIDE {
+          double i2g(const Tpvec &p, Group &g, int j) override {
             double u=0;
             if ( !g.empty() ) {
               int len=g.back()+1;
@@ -472,7 +472,7 @@ namespace Faunus {
             return u;  
           }
 
-          double i2all(Tpvec &p, int i) FOVERRIDE {
+          double i2all(Tpvec &p, int i) override {
             assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
             double u=0;
             int n=(int)p.size();
@@ -483,7 +483,7 @@ namespace Faunus {
             return u;
           }
 
-          double g_internal(const Tpvec &p, Group &g) FOVERRIDE {
+          double g_internal(const Tpvec &p, Group &g) override {
             assert( g.size() <= (int)p.size() );
             double u=0;
             int b=g.back(), f=g.front();
@@ -508,7 +508,7 @@ namespace Faunus {
     template<class Tspace, class Tpairpot>
       class NonbondedVector : public Energybase<Tspace> {
         protected:
-          string _info() { return pairpot.info(25); }
+          string _info() override { return pairpot.info(25); }
           typedef Energybase<Tspace> Tbase;
           typedef typename Tbase::Tparticle Tparticle;
           typedef typename Tbase::Tpvec Tpvec;
@@ -527,7 +527,7 @@ namespace Faunus {
               groupBasedField = in.get<bool>("pol_g2g",false,"Field will exclude own group");
             }
 
-          void setSpace(Tspace &s) FOVERRIDE {
+          void setSpace(Tspace &s) override {
             geo=s.geo;
             Tbase::setSpace(s);
           } 
@@ -537,27 +537,27 @@ namespace Faunus {
           }
 
           //!< Particle-particle energy (kT)
-          inline double p2p(const Tparticle &a, const Tparticle &b) {
+          inline double p2p(const Tparticle &a, const Tparticle &b) override {
             return pairpot( a,b,geo.vdist(a,b));
           }
 
           //!< Particle-particle force (kT/Angstrom)
-          inline Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
+          inline Point f_p2p(const Tparticle &a, const Tparticle &b) override {
             return pairpot.force( a,b,geo.sqdist(a,b),geo.vdist(a,b));
           }
 
-          double all2p(const Tpvec &p, const Tparticle &a) {
+          double all2p(const Tpvec &p, const Tparticle &a) override {
             double u=0;
             for (auto &b : p)
               u+=pairpot(a,b,geo.vdist(a,b));
             return u;
           }
 
-          double i2i(const Tpvec &p, int i, int j) {
+          double i2i(const Tpvec &p, int i, int j) override {
             return pairpot( p[i], p[j], geo.vdist( p[i], p[j]) );
           }
 
-          double i2g(const Tpvec &p, Group &g, int j) {
+          double i2g(const Tpvec &p, Group &g, int j) override {
             double u=0;
             if ( !g.empty() ) {
               int len=g.back()+1;
@@ -574,7 +574,7 @@ namespace Faunus {
           }
 
 
-          double i2all(Tpvec &p, int i) {
+          double i2all(Tpvec &p, int i) override {
             assert(i>=0 && i<int(p.size()) && "index i outside particle vector");
             std::swap(p[0],p[i]);
             double u=0;
@@ -585,7 +585,7 @@ namespace Faunus {
             return u;
           }
 
-          double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+          double g2g(const Tpvec &p, Group &g1, Group &g2) override {
             double u=0;
             if (!g1.empty())
               if (!g2.empty()) {
@@ -623,7 +623,7 @@ namespace Faunus {
             return u;
           }
 
-          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) FOVERRIDE {
+          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) override {
             double u=0;
             for (auto i : g1)
               for (auto j : g2)
@@ -631,7 +631,7 @@ namespace Faunus {
             return u;
           }
 
-          double g_internal(const Tpvec &p, Group &g) { 
+          double g_internal(const Tpvec &p, Group &g) override {
             double u=0;
             const int b=g.back(), f=g.front();
             if (!g.empty())
@@ -641,7 +641,7 @@ namespace Faunus {
             return u;
           }
 
-          double v2v(const Tpvec &p1, const Tpvec &p2) {
+          double v2v(const Tpvec &p1, const Tpvec &p2) override {
             double u=0;
             for (auto &i : p1)
               for (auto &j : p2)
@@ -656,7 +656,7 @@ namespace Faunus {
            * @param p Particle vector
            * @param E Holds field on each particle. Must have N columns.
            */
-          void field(const Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
+          void field(const Tpvec &p, Eigen::MatrixXd &E) override {
             assert((int)p.size()==E.cols());
 
             // Include field only from external molecules
@@ -693,7 +693,7 @@ namespace Faunus {
             base::name+=" (early reject)";
           }
 
-          double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+          double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) override {
             double u=0;
             for (auto i : g1)
               for (auto j : g2) {
@@ -705,7 +705,7 @@ namespace Faunus {
             return u;
           }
 
-          double g_internal(const typename base::Tpvec &p, Group &g) FOVERRIDE { 
+          double g_internal(const typename base::Tpvec &p, Group &g) override { 
             double u=0;
             int b=g.back(), f=g.front();
             if (!g.empty())
@@ -776,15 +776,15 @@ namespace Faunus {
               + textio::_angstrom + ")";
           }
 
-          double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+          double g2g(const Tpvec &p, Group &g1, Group &g2) override {
             return cut(p,g1,g2) ? 0 : base::g2g(p,g1,g2);
           }
 
-          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) FOVERRIDE {
+          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) override {
             return cut(p1,g1,p2,g2) ? 0 : base::g1g2(p1,g1,p2,g2);
           }
 
-          double i2g(const Tpvec &p, Group &g, int i) FOVERRIDE {
+          double i2g(const Tpvec &p, Group &g, int i) override {
             auto gi=base::spc->findGroup(i);
             return cut(p,g,*gi) ? 0 : base::i2g(p,g,i);
           }
@@ -795,7 +795,7 @@ namespace Faunus {
            * may have moved. To activate this behavior set
            * `noPairPotentialCutoff=true`.
            */
-          double i2all(typename base::Tpvec &p, int i) FOVERRIDE {
+          double i2all(typename base::Tpvec &p, int i) override {
             if (noPairPotentialCutoff) {
               auto gi=base::spc->findGroup(i);
               assert(gi!=nullptr);
@@ -817,7 +817,7 @@ namespace Faunus {
           }
 
           // unfinished
-          void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
+          void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) override {
             assert((int)p.size()==E.cols());
             assert(!"Validate this!");
 
@@ -853,7 +853,7 @@ namespace Faunus {
           double qscale,Q,R; // charge scaling
           Tmppot dh;
           typedef NonbondedCutg2g<Tspace,Tpairpot> base;
-          string _info() {
+          string _info() override {
             using namespace Faunus::textio;
             std::ostringstream o;
             o << pad(SUB,30,"Monopole radius") << R << _angstrom << endl
@@ -869,7 +869,7 @@ namespace Faunus {
             qscale = std::sinh(k*R)/(k*R);
             Q = qscale * in.get<double>("monopole_charge", 0, "g2g cutoff monopole charge number (e)");
           }
-          double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+          double g2g(const typename base::Tpvec &p, Group &g1, Group &g2) override {
             if (g1.isMolecular())
               if (g2.isMolecular()) {
                 Point a = base::getMassCenter(p,g1);
@@ -924,7 +924,7 @@ namespace Faunus {
         std::map<typename Tbase::Tpair, Tforce> force_list;
 
         string _infolist;
-        string _info() {
+        string _info() override {
           using namespace Faunus::textio;
           std::ostringstream o;
           o << pad(SUB,30,"Look for group-group bonds:")
@@ -957,7 +957,7 @@ namespace Faunus {
             IO::writeFile("bondlist.tcl", VMDBonds( Tbase::list ) );
         }
 
-        void setSpace(Tspace &s) FOVERRIDE {
+        void setSpace(Tspace &s) override {
           Energybase<Tspace>::setSpace(s);
           if ( Tbase::mlist.empty() )
             add( spc->groupList() ); // search for bonds
@@ -971,7 +971,7 @@ namespace Faunus {
          * @brief Bond energy i with j
          * @todo Optimize by using iterator directly as returned by find.
          */
-        double i2i(const Tpvec &p, int i, int j) FOVERRIDE {
+        double i2i(const Tpvec &p, int i, int j) override {
           assert(i!=j);
           auto f=this->list.find( opair<int>(i,j) );
           if (f!=this->list.end())
@@ -983,7 +983,7 @@ namespace Faunus {
          * @note This will work only for particles contained inside
          * Space main particle vector.
          */
-        Point f_p2p(const Tparticle &a, const Tparticle &b) FOVERRIDE {
+        Point f_p2p(const Tparticle &a, const Tparticle &b) override {
           int i=spc->findIndex(a);
           int j=spc->findIndex(b);
           assert(i>=0 && j>=0);
@@ -997,7 +997,7 @@ namespace Faunus {
         }
 
         //!< All bonds w. i'th particle 
-        double i2all(Tpvec &p, int i) FOVERRIDE {
+        double i2all(Tpvec &p, int i) override {
           assert( i>=0 && i<(int)p.size() ); //debug
           double u=0;
           auto eqr=this->mlist.equal_range(i);
@@ -1029,7 +1029,7 @@ namespace Faunus {
          * @warning Untested!
          * @todo Possible optimization: swap groups so that `g1<g2`;
          */
-        double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+        double g2g(const Tpvec &p, Group &g1, Group &g2) override {
           double u=0;
           if (CrossGroupBonds)
             for (auto i : g1) {
@@ -1052,7 +1052,7 @@ namespace Faunus {
          * outside the group are skipped and should be accounted for
          * by the g2g() energy function.
          */
-        double g_internal(const Tpvec &p, Group &g) FOVERRIDE {
+        double g_internal(const Tpvec &p, Group &g) override {
           double u=0;
           if ( this->list.size() > pow(g.size(),2) ) {
             // small group compared to bond list
@@ -1127,7 +1127,7 @@ namespace Faunus {
       class EnergyRest : public Energybase<Tspace> {
         private:
           double usum;
-          string _info(){ return ""; }
+          string _info() override { return ""; }
         public:
           EnergyRest() {
             usum=0;
@@ -1138,7 +1138,7 @@ namespace Faunus {
           void add(double du) { usum+=du; }
 
           //!< Dumme rest treated as external potential to whole system
-          double external(const typename Energybase<Tspace>::Tpvec &p) FOVERRIDE {
+          double external(const typename Energybase<Tspace>::Tpvec &p) override {
             return usum;
           }
       };
@@ -1172,7 +1172,7 @@ namespace Faunus {
           typedef typename Energybase<Tspace>::Tpvec Tpvec;
           double P; //!< Pressure, p/kT
 
-          string _info() {
+          string _info() override {
             size_t N, Natom=0, Nmol=0;
             for (auto g : this->getSpace().groupList()) {
               if (ignore.count(g)==0) {
@@ -1221,13 +1221,13 @@ namespace Faunus {
           auto tuple() -> decltype(std::make_tuple(this)) { return std::make_tuple(this); }
 
           /** @brief External energy working on system. pV/kT-lnV */
-          double external(const Tpvec&p) FOVERRIDE {
+          double external(const Tpvec&p) override {
             double V=this->getSpace().geo.getVolume();
             assert(V>1e-9 && "Volume must be non-zero!");
             return P*V - log(V); 
           }
 
-          double g_external(const Tpvec &p, Group &g) FOVERRIDE {
+          double g_external(const Tpvec &p, Group &g) override {
             // should this group be ignored?
             if ( ignore.count(&g)!=0 )
               return 0;
@@ -1246,19 +1246,19 @@ namespace Faunus {
       class ExternalPotential : public Energybase<Tspace> {
         private:
           typedef Energybase<Tspace> base;
-          string _info() { return expot.info(); }
+          string _info() override { return expot.info(); }
         public:
           Texpot expot;
           ExternalPotential(InputMap &in) : expot(in) {
             base::name="External Potential ("+expot.name+")";
           }
-          double p_external(const typename base::Tparticle &p) FOVERRIDE {
+          double p_external(const typename base::Tparticle &p) override {
             return expot(p); 
           }
-          double i_external(const typename base::Tpvec &p, int i) FOVERRIDE {
+          double i_external(const typename base::Tpvec &p, int i) override {
             return p_external( p[i] );
           }
-          double g_external(const typename base::Tpvec &p, Group &g) FOVERRIDE {
+          double g_external(const typename base::Tpvec &p, Group &g) override {
             double u=0;
             for (auto i : g)
               u+=p_external(p[i]);
@@ -1266,7 +1266,7 @@ namespace Faunus {
           }
 
           /** @brief Field on all particles due to external potential */
-          void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) FOVERRIDE {
+          void field(const typename base::Tpvec &p, Eigen::MatrixXd &E) override {
             assert((int)p.size()==E.cols());
             for (size_t i=0; i<p.size(); i++)
               E.col(i) += expot.field(p[i]);
@@ -1302,7 +1302,7 @@ namespace Faunus {
         private:
           typedef Energybase<Tspace> base;
           typedef typename Tspace::p_vec Tpvec;
-          string _info() {
+          string _info() override {
             std::ostringstream o;
             o << pad(textio::SUB,25,"Bin limits (z-axis)")
               << "[" << min << ":" << max << "]" << textio::_angstrom << endl;
@@ -1364,7 +1364,7 @@ namespace Faunus {
     template<typename Tspace>
       class MassCenterConstrain : public Energybase<Tspace> {
         private:
-          string _info() {
+          string _info() override {
             using namespace Faunus::textio;
             std::ostringstream o;
             o << indent(SUB) << "The following groups have mass center constraints:\n";
@@ -1412,7 +1412,7 @@ namespace Faunus {
           }
 
           /** @brief Constrain treated as external potential */
-          double g_external(const typename Tspace::ParticleVector &p, Group &g1) FOVERRIDE {
+          double g_external(const typename Tspace::ParticleVector &p, Group &g1) override {
             for (auto m : gmap)              // scan through pair map
               if (m.first.find(&g1)) {       // and look for group g1
                 Group *g2ptr;                // pointer to constrained partner
@@ -1511,7 +1511,7 @@ namespace Faunus {
             return 0;
           }
 
-          string _info() {
+          string _info() override {
             char w=25;
             using namespace textio;
             std::ostringstream o;
@@ -1572,7 +1572,7 @@ namespace Faunus {
           auto tuple() -> decltype(std::make_tuple(this)) { return std::make_tuple(this); }
 
           /** @brief Group-to-group energy */
-          double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+          double g2g(const Tpvec &p, Group &g1, Group &g2) override {
             if (fabs(tension)<1e-6)
               return 0;
             double dsasa=0;
@@ -2100,7 +2100,7 @@ namespace Faunus {
     template<class Tspace, typename base=Energybase<Tspace>>
         class PenaltyEnergy : public base {
           private:
-            string _info() { return "Energy from Penalty Function\n"; }
+            string _info() override { return "Energy from Penalty Function\n"; }
             typedef ReactionCoordinateBase<Tspace> Trc;
             typedef std::shared_ptr<Trc> Tptr;
             Tptr ptr;
@@ -2134,7 +2134,7 @@ namespace Faunus {
             auto tuple() -> decltype(std::make_tuple(this)) {
               return std::make_tuple(this);
             }
-            string info() { return ptr->info(); }
+            string info() override { return ptr->info(); }
             void test(UnitTest &t) { ptr->test(t); }
             void load(const string &filename="") { ptr->load(filename); }
             double currentPenalty() { return ptr->penalty[ptr->vpair.first]; }
@@ -2145,10 +2145,10 @@ namespace Faunus {
             void save(const string &filename="",double s=1,const Tvec &limits={0}) { 
               ptr->save(filename,s,limits); 
             }
-            double update(bool acceptance) {
+            double update(bool acceptance) override {
               return ptr->update(acceptance);
             }
-            double external(const Tpvec &p) FOVERRIDE {
+            double external(const Tpvec &p) override {
               return ptr->operator()(p,base::isTrial(p));
             }
         };
@@ -2176,7 +2176,7 @@ namespace Faunus {
       class Manybody : public Energybase<Tspace> {
         protected:
           string _infosum;
-          string _info() FOVERRIDE {
+          string _info() override {
             return _infosum;
           }
           typedef Energybase<Tspace> Tbase;
@@ -2203,7 +2203,7 @@ namespace Faunus {
                 allindex.insert(i);
             }
 
-          double external(const Tpvec &p) FOVERRIDE {
+          double external(const Tpvec &p) override {
             double u=0;
             for (auto &f : list)
               u += f(Tbase::spc->geo, p);
@@ -2231,7 +2231,7 @@ namespace Faunus {
 
           typedef typename Energybase<Tspace>::Tpvec Tpvec;
 
-          string _info() {
+          string _info() override {
             char w=20;
             std::ostringstream o;
             o << textio::pad(textio::SUB,w,"Probe radius")
@@ -2273,7 +2273,7 @@ namespace Faunus {
            * @brief The SASA calculation is implemented
            * as an external potential, only
            */
-          double external(const Tpvec &p) FOVERRIDE {
+          double external(const Tpvec &p) override {
             // if first run, resize and fill tfe vector
             if (tfe.size()!=p.size()) {
               tfe.resize(p.size());
@@ -2347,27 +2347,27 @@ namespace Faunus {
               return nullptr;
             }
 
-          void setSpace(Tspace &s) FOVERRIDE {
+          void setSpace(Tspace &s) override {
             Tbase::setSpace(s);
             for (auto b : baselist)
               b->setSpace(s);
           } 
 
-          double p2p( const Tparticle &p1, const Tparticle &p2 ) FOVERRIDE {
+          double p2p( const Tparticle &p1, const Tparticle &p2 ) override {
             double u=0;
             for (auto b : baselist)
               u += b->p2p( p1, p2 );
             return u;
           }
 
-          Point f_p2p( const Tparticle &p1, const Tparticle &p2 ) FOVERRIDE {
+          Point f_p2p( const Tparticle &p1, const Tparticle &p2 ) override {
             Point p(0,0,0);
             for (auto b : baselist)
               p += b->f_p2p( p1, p2 );
             return p;
           }
 
-          double all2p( const Tpvec &p, const Tparticle &a ) FOVERRIDE {
+          double all2p( const Tpvec &p, const Tparticle &a ) override {
             double u=0;
             for (auto b : baselist)
               u += b->all2p( p, a );
@@ -2375,34 +2375,34 @@ namespace Faunus {
           }
 
           // single particle interactions
-          double i2i( const Tpvec &p, int i, int j ) FOVERRIDE {
+          double i2i( const Tpvec &p, int i, int j ) override {
             double u=0;
             for (auto b : baselist)
               u += b->i2i( p, i, j );
             return u;
           }
 
-          double i2g( const Tpvec &p, Group &g, int i ) FOVERRIDE {
+          double i2g( const Tpvec &p, Group &g, int i ) override {
             double u=0;
             for (auto b : baselist)
               u += b->i2g( p, g, i );
             return u;
           }
 
-          double i2all(Tpvec &p, int i) FOVERRIDE {
+          double i2all(Tpvec &p, int i) override {
             double u=0;
             for (auto b : baselist)
               u += b->i2all(p,i);
             return u;
           }
 
-          double i_external(const Tpvec &p, int i) FOVERRIDE {
+          double i_external(const Tpvec &p, int i) override {
             double u=0;
             for (auto b : baselist)
               u += b->i_external(p,i);
             return u;
           }
-          double i_internal(const Tpvec &p, int i) FOVERRIDE {
+          double i_internal(const Tpvec &p, int i) override {
             double u=0;
             for (auto b : baselist)
               u += b->i_internal(p,i);
@@ -2410,7 +2410,7 @@ namespace Faunus {
           }
 
           // Group interactions
-          double g2g(const Tpvec &p, Group &g1, Group &g2) FOVERRIDE {
+          double g2g(const Tpvec &p, Group &g1, Group &g2) override {
             double u=0;
             for (auto b : baselist)
               u += b->g2g(p,g1,g2);
@@ -2423,7 +2423,7 @@ namespace Faunus {
            * because constraining energy classes are often added
            * last.
            */
-          double g_external(const Tpvec &p, Group &g) FOVERRIDE {
+          double g_external(const Tpvec &p, Group &g) override {
             double u=0;
             for (auto b=baselist.rbegin(); b!=baselist.rend(); ++b) {
               u += (*b)->g_external(p,g);
@@ -2433,35 +2433,35 @@ namespace Faunus {
             return u;
           }
 
-          double g_internal(const Tpvec &p, Group &g) FOVERRIDE {
+          double g_internal(const Tpvec &p, Group &g) override {
             double u=0;
             for (auto b : baselist)
               u += b->g_internal(p,g);
             return u;
           }
 
-          double external( const Tpvec &p ) FOVERRIDE {
+          double external( const Tpvec &p ) override {
             double u=0;
             for (auto b : baselist)
               u += b->external( p );
             return u;
           }
 
-          double v2v(const Tpvec &v1, const Tpvec &v2) FOVERRIDE {
+          double v2v(const Tpvec &v1, const Tpvec &v2) override {
             double u=0;
             for (auto b : baselist)
               u += b->v2v(v1,v2);
             return u;
           }
 
-          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) FOVERRIDE {
+          double g1g2(const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2) override {
             double u=0;
             for (auto b : baselist)
               u += b->g1g2( p1, g2, p2, g2 );
             return u;
           }
 
-          string _info() FOVERRIDE {
+          string _info() override {
             using namespace textio;
             std::ostringstream o;
             o << indent(SUB) << "Registered Energy Functions:"<< endl;
@@ -2473,7 +2473,7 @@ namespace Faunus {
             return o.str();
           }
 
-          void field(const Tpvec &p, Eigen::MatrixXd&E) FOVERRIDE {
+          void field(const Tpvec &p, Eigen::MatrixXd&E) override {
             assert( (int)p.size()==E.size() );
             for (auto b : baselist)
               b->field(p,E);

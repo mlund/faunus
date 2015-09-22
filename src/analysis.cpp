@@ -14,7 +14,7 @@ namespace Faunus {
     }
 
     AnalysisBase::AnalysisBase(Tmjson &j) : w(30), cnt(0), runfraction(1.0) {
-      steps = j["steps"] | 1;
+      steps = j["nstep"] | int(1);
       stepcnt = 0;
     }
 

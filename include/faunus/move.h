@@ -135,7 +135,7 @@ namespace Faunus {
               numIter += cnt; // average number of iterations
             }
 
-          void _trialMove() FOVERRIDE {
+          void _trialMove() override {
             Tmove::_trialMove();
 
             Ntrials++;
@@ -153,7 +153,7 @@ namespace Faunus {
             }
           }
 
-          double _energyChange() FOVERRIDE {
+          double _energyChange() override {
             if ( updateDip )
               return Energy::systemEnergy( *spc, *pot, spc->trial )
                 - Energy::systemEnergy( *spc, *pot, spc->p );
@@ -161,19 +161,19 @@ namespace Faunus {
               return Tmove::_energyChange();
           }
 
-          void _rejectMove() FOVERRIDE {
+          void _rejectMove() override {
             Tmove::_rejectMove();
             if (updateDip)
               Tmove::spc->trial = Tmove::spc->p;
           }
 
-          void _acceptMove() FOVERRIDE {
+          void _acceptMove() override {
             Tmove::_acceptMove();
             if (updateDip)
               Tmove::spc->p = Tmove::spc->trial;
           }
 
-          string _info() FOVERRIDE {
+          string _info() override {
             std::ostringstream o;
             using namespace textio;
             o << pad(SUB,Tmove::w,"Polarisation updates") << numIter.cnt << "\n"
@@ -201,7 +201,7 @@ namespace Faunus {
 
           PolarizeMove(const Tmove &m) : max_iter(40), threshold(0.001), Tmove(m) {};
 
-          double move(int n) FOVERRIDE {
+          double move(int n) override {
             Ntrials = 0;
             return Tmove::move(n);
           }
@@ -563,11 +563,11 @@ namespace Faunus {
           typedef std::map<short, Average<double> > map_type;
           bool run() override; //!< Runfraction test
         protected:
-          string _info();
-          void _acceptMove() FOVERRIDE;
-          void _rejectMove() FOVERRIDE;
-          double _energyChange() FOVERRIDE;
-          void _trialMove() FOVERRIDE;
+          string _info() override;
+          void _acceptMove() override;
+          void _rejectMove() override;
+          double _energyChange() override;
+          void _trialMove() override;
           using base::spc;
           map_type accmap; //!< Single particle acceptance map
           map_type sqrmap; //!< Single particle mean square displacement map
@@ -1118,7 +1118,7 @@ namespace Faunus {
           typename base::map_type angle2; //!< Temporary storage for angular movement
           vector<Group*> gVec;   //!< Vector of groups to move
 
-          void _trialMove() FOVERRIDE {
+          void _trialMove() override {
             angle2.clear();
             for (auto g : gVec) {
               if (g->isMolecular()) {
@@ -1139,7 +1139,7 @@ namespace Faunus {
             }
           }
 
-          void _acceptMove() FOVERRIDE {
+          void _acceptMove() override {
             std::map<string,double> r2;
             for (auto g : gVec) {
               r2[g->name] += base::spc->geo.sqdist(g->cm, g->cm_trial);
@@ -1152,7 +1152,7 @@ namespace Faunus {
               base::sqrmap_r[i.first] += i.second;
           }
 
-          void _rejectMove() FOVERRIDE {
+          void _rejectMove() override {
             std::set<string> names; // unique group names
             for (auto g : gVec) {
               names.insert(g->name);
@@ -1172,7 +1172,7 @@ namespace Faunus {
             return o.str();
           }
 
-          double _energyChange() FOVERRIDE {
+          double _energyChange() override {
             int N=(int)base::spc->groupList().size();
             double du=0;
 
@@ -1503,8 +1503,8 @@ namespace Faunus {
             for (auto i : base::spc->groupList())
               i->setMassCenter(*base::spc);
           }
-          string _info() FOVERRIDE { return base::base::_info(); }
-          double ClusterProbability(typename base::Tpvec &p, int i) FOVERRIDE { return 1; }
+          string _info() override { return base::base::_info(); }
+          double ClusterProbability(typename base::Tpvec &p, int i) override { return 1; }
         public:
           TranslateRotateGroupCluster(InputMap &in, Energy::Energybase<Tspace> &e,
               Tspace &s, string pfx="transrot") : base(in,e,s,pfx) {
@@ -1556,7 +1556,7 @@ namespace Faunus {
           void _acceptMove() override {}
           void _rejectMove() override {}
           double _energyChange() override { return 0; }
-          string _info();
+          string _info() override;
           Average<double> movefrac; //!< Fraction of particles moved
           double dp;                //!< Displacement parameter [aa]
           vector<Group*> g;         //!< Group of molecules to move. Currently this needs to be ALL groups in the system!!
@@ -3763,7 +3763,7 @@ namespace Faunus {
               return o.str() + spc->molecule.info() + comb.info();
             }
 
-            void _test( UnitTest &t ) {
+            void _test( UnitTest &t ) override {
               double V=spc->geo.getVolume();
               t( this->jsondir + "_flux", Ninserted / double(Ndeleted) );
               for (auto &m : spc->molecule)
@@ -3822,10 +3822,10 @@ namespace Faunus {
           private:
             typedef Movebase<Tspace> base;
             std::map<int, Average<double> > accmap; //!< Site acceptance map
-            string _info();
-            void _trialMove();
-            void _acceptMove();
-            void _rejectMove();
+            string _info() override;
+            void _trialMove() override;
+            void _acceptMove() override;
+            void _rejectMove() override;
 
             bool saveChargeBool;
 
@@ -3840,7 +3840,7 @@ namespace Faunus {
             using base::spc;
             using base::pot;
 
-            double _energyChange();
+            double _energyChange() override;
             int ipart;                              //!< Particle to be swapped
             Energy::EquilibriumEnergy<Tspace>* eqpot;
 

@@ -339,7 +339,7 @@ namespace Faunus {
       class EquilibriumEnergy : public Energybase<Tspace> {
 
         private:
-          string _info() { return eq.info(); }
+          string _info() override { return eq.info(); }
 
         protected:
           std::map<int, double> energymap;//!< Intrinsic site energy
@@ -364,18 +364,18 @@ namespace Faunus {
               return eq.sites.size();
             }
 
-          double i_internal(const typename Tspace::p_vec &p, int i) FOVERRIDE {
+          double i_internal(const typename Tspace::p_vec &p, int i) override {
             return eq.intrinsicEnergy( p[i].id );
           }
 
-          double g_internal(const typename Tspace::p_vec &p, Group &g) FOVERRIDE {
+          double g_internal(const typename Tspace::p_vec &p, Group &g) override {
             double u=0;
             for (auto i : g)
               u+=i_internal(p, i);
             return u;
           }
 
-          void setSpace(Tspace &s) FOVERRIDE {
+          void setSpace(Tspace &s) override {
             Energybase<Tspace>::setSpace(s);
             findSites( s.p );
           } 

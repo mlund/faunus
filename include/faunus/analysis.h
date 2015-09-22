@@ -37,7 +37,7 @@ namespace Faunus {
      *
      * The `sample()` wrapper function takes care of timing the analysis
      * as well as sample the number of sample points at a given interval
-     * specified with the JSON keyword `steps`. For some examples, see
+     * specified with the JSON keyword `nstep`. For some examples, see
      * i.e. `VirialPressure` or `PolymerShape`.
      *
      * @todo Make `_sample()` pure virtual
@@ -84,7 +84,7 @@ namespace Faunus {
      *
      * Keyword   |  Description
      * :-------- | :-------------------------------------------
-     * steps     | Sample every steps time `sample()` is called
+     * nstep     | Sample every steps time `sample()` is called
      * dim       | Dimensions (default: 3)
      * area      | Area if dim=2 (default: 0)
      *
@@ -561,7 +561,7 @@ namespace Faunus {
      *
      * Keyword   | Description
      * :-------- | :------------------
-     * `steps`   | Interval with which to sample (default: 1)
+     * `nstep`   | Interval with which to sample (default: 1)
      * `mollist` | List of molecule name to sample
      */
     template<class Tspace>
@@ -646,7 +646,7 @@ namespace Faunus {
               Rg2x[pol->name] += r2.x();
               Rg2y[pol->name] += r2.y();
               Rg2z[pol->name] += r2.z();
-              Rg[pol->name]   += r2.norm();
+              Rg[pol->name]   += sqrt(r2.x()+r2.y()+r2.z());
               Re2[pol->name]  += re2; //end-2-end squared
               double rs = Re2[pol->name].avg() / Rg2[pol->name].avg(); // fluctuations in shape factor
               Rs[pol->name]   += rs;
@@ -794,7 +794,7 @@ namespace Faunus {
         private:
           Energy::Nonbonded<Tspace,Tcoulomb> pot; // Coulombic hamiltonian
 
-          string _info() FOVERRIDE {
+          string _info() override {
             return textio::header("Multipole Analysis");
           }
 

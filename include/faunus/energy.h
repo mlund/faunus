@@ -133,6 +133,14 @@ namespace Faunus {
           virtual double update(bool=true)                     // Bool is acceptance/rejection of previous move
           { return 0; }
 
+          /** @brief Update energy function due to Change */
+          virtual double updateChange(const typename Tspace::Change &c)
+          { return 0; }
+
+          /** @brief Energy change due to Change */
+          virtual double energyChange(const typename Tspace::Change &c)
+          { return 0; }
+
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
           { }
 
@@ -151,7 +159,8 @@ namespace Faunus {
       class CombinedEnergy : public Energybase<typename T1::SpaceType> {
         private:
           string _info() override { return first.info()+second.info(); }
-          typedef Energybase<typename T1::SpaceType> Tbase;
+          typedef typename T1::SpaceType Tspace;
+          typedef Energybase<Tspace> Tbase;
           typedef typename Tbase::Tparticle Tparticle;
           typedef typename Tbase::Tpvec Tpvec;
 
@@ -214,6 +223,12 @@ namespace Faunus {
 
           double update(bool b) override
           { return first.update(b)+second.update(b); }
+
+          double updateChange(const typename Tspace::Change &c) override
+          { return first.updateChange(c)+second.updateChange(c); }
+
+          double energyChange(const typename Tspace::Change &c) override
+          { return first.energyChange(c) + second.energyChange(c); }
 
           double v2v(const Tpvec&p1, const Tpvec&p2) override
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }

@@ -204,6 +204,30 @@ namespace Faunus {
         Tracker<int> atomTrack;                //!< Track atom index based on atom type
         Tracker<Group*> molTrack;              //!< Track groups pointers based on molecule type
 
+        /** @brief Struct for specifying changes to be made to Space */
+        struct Change {
+          double dV;                                // volume change
+          std::vector<int> mvGroups, mvParticles;   // index to moved groups or particles
+          std::vector<int> rmGroups, rmParticles;   // index to groups or particles to be removed
+          std::map<int, ParticleVector> inMol;      // id/pvec of inserted molecules
+
+          Change() : dV(0) {}; 
+
+          void clear() {
+            mvGroups.clear();
+            rmGroups.clear();
+            mvParticles.clear();
+            rmParticles.clear();
+            inMol.clear();
+            dV=0;
+          }
+        };
+
+        /** @brief Void carry out change. When completed, p and trial should be in sync */
+        void applyChange( const Change &c ) {
+          assert( !"to be implemented" );
+        }
+
         /**
          * @brief Constructor
          *

@@ -259,7 +259,7 @@ namespace Faunus {
           unsigned long int cnt;           //!< total number of trial moves
           virtual bool run();              //!< Runfraction test
 
-          bool useAlternateReturnEnergy;   //!< Return a different energy than returned by _energyChange(). [false]
+          bool useAlternativeReturnEnergy;   //!< Return a different energy than returned by _energyChange(). [false]
           double alternateReturnEnergy;    //!< Alternative return energy
 
           struct MolListData {
@@ -343,7 +343,7 @@ namespace Faunus {
         dusum=0;
         w=30;
         runfraction=1;
-        useAlternateReturnEnergy=false; //this has no influence on metropolis sampling!
+        useAlternativeReturnEnergy =false; //this has no influence on metropolis sampling!
 #ifdef ENABLE_MPI
         mpiPtr=nullptr;
 #endif
@@ -454,7 +454,7 @@ namespace Faunus {
               rejectMove();
             else {
               acceptMove();
-              if ( useAlternateReturnEnergy )
+              if (useAlternativeReturnEnergy)
                 du = alternateReturnEnergy;
               dusum += du;
               utot += du;
@@ -1572,7 +1572,7 @@ namespace Faunus {
         base::title       = "Rejection Free Cluster Translation";
         base::cite        = "doi:10/fthw8k";
         base::jsondir     = "moves/"+pfx; // just for unittesting (to be changed)
-        base::useAlternateReturnEnergy=true;
+        base::useAlternativeReturnEnergy =true;
         base::runfraction = _j["prob"] | 1.0;
         skipEnergyUpdate  = _j["skipenergy"] | false;
         dp                = _j["dp"] | 0.0;
@@ -2514,7 +2514,7 @@ namespace Faunus {
           string sec) : base(e,s), tracker(s) {
 
           base::title="Grand Canonical Salt";
-          base::useAlternateReturnEnergy=true;
+          base::useAlternativeReturnEnergy =true;
           base::jsondir = "moves/" + sec;
 
           string saltname = j["moves"][sec]["molecule"] | string();
@@ -2760,7 +2760,7 @@ namespace Faunus {
             string sec) : base(e,s,j,sec) {
 
             base::title += " Titration";
-            base::useAlternateReturnEnergy=true;
+            base::useAlternativeReturnEnergy =true;
             auto t = e.tuple();
             auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
             if ( ptr != nullptr )
@@ -3099,7 +3099,7 @@ namespace Faunus {
           this->jsondir = "moves/"+sec; // to be changed - compatibility w. tests
           this->mpiPtr  = &mpi;
           partner=-1;
-          this->useAlternateReturnEnergy=true; //dont return dU from partner replica (=drift)
+          this->useAlternativeReturnEnergy=true; //dont return dU from partner replica (=drift)
           this->runfraction = j["moves"][sec]["prob"] | 1.0;
           pt.recvExtra.resize(1);
           pt.sendExtra.resize(1);
@@ -3782,7 +3782,7 @@ namespace Faunus {
               Ninserted = 0;
               Ndeleted  = 0;
               base::title = "Grand Canonical";
-              base::useAlternateReturnEnergy = true;
+              base::useAlternativeReturnEnergy = true;
             }
 
           public:
@@ -4069,7 +4069,7 @@ namespace Faunus {
                 string pfx="swapmv_") : SwapMove<Tspace>(in,ham,spc,pfx)
             {
               this->title+=" (min. shortrange)";
-              this->useAlternateReturnEnergy=true;
+              this->useAlternativeReturnEnergy =true;
             }
         };
 

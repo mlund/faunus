@@ -139,7 +139,26 @@ namespace Faunus {
 
           /** @brief Energy change due to Change */
           virtual double energyChange(const typename Tspace::Change &c)
-          { return 0; }
+          {
+            // variables and shortcuts
+            double du=0;
+            auto& s = *spc;
+            auto& g = s.groupList();
+
+            // loop over moved groups
+            for (auto i : c.mvGroups) {
+              du += g_external(s.trial, *g[i]) - g_external(s.p, *g[i]);
+              for (int j=0; j<int(g.size()); ++j) 
+                if (i!=j)
+                  du += g2g(s.trial, *g[i], *g[j] ) - g2g(s.p, *g[i], *g[j] );  
+            }
+            // external potential
+            du += external(s.trial) - external(s.p); 
+
+            assert(!"to be completed!");
+
+            return du;
+          }
 
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
           { }

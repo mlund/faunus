@@ -3710,7 +3710,7 @@ namespace Faunus {
                   }
                   else {
                     assert( !p.second.empty() );
-                    auto g = spc->insert( molid, p.second ); // auto gen. group
+                    spc->insert( molid, p.second ); // auto gen. group
                     assert( spc->molTrack.size(molid) > 0 );
                   }
                 }

@@ -493,8 +493,8 @@ namespace Faunus {
 
         // erase from trackers
         molTrack.erase( g[i]->molId, g[i] );
-        for (auto i : *g[i])
-          atomTrack.erase( p[i].id, i);
+        for (auto j : *g[i])
+          atomTrack.erase( p[j].id, j);
 
         // erase data
         delete( g[i] );            // destruct group

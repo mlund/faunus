@@ -71,16 +71,12 @@ CHECK_CXX_SOURCE_COMPILES("int main() { auto i=0; }" auto_type_inference)
 CHECK_CXX_SOURCE_COMPILES("int main() { nullptr; }" nullptr)
 CHECK_CXX_SOURCE_COMPILES("auto f()->decltype(int()) {return 0;} int main() {return f();}" decltype_)
 CHECK_CXX_SOURCE_COMPILES("#include<memory>\nint main() {std::shared_ptr<int> i;}" smart_pointers)
-CHECK_CXX_SOURCE_COMPILES("int main() { struct a { virtual void f() final; }; }" final_keyword)
 
 if(NOT decltype_)
   message(FATAL_ERROR "Required C++11 features unsupported by compiler.")
 endif()
 if(NOT (auto_type_inference AND unsigned_long_long_int AND long_double AND range_based_for_loop AND nullptr AND smart_pointers) )
   message(FATAL_ERROR "Required C++11 features unsupported by compiler.")
-endif()
-if (NOT (final_keyword))
-  add_definitions(-DNO_EXPLICIT_OVERRIDE)
 endif()
 
 # ---------------------------

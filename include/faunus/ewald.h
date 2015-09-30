@@ -322,11 +322,11 @@ namespace Faunus {
             }
           }
 
-          double g_external(const Tpvec &p, Group &g) FOVERRIDE {
+          double g_external(const Tpvec &p, Group &g) override {
             return lB * ( getSelfEnergy(p,g) + getReciEnergy(p,g) );
           }
 
-          double external(const Tpvec &p) FOVERRIDE {
+          double external(const Tpvec &p) override {
             Group g(0, p.size());
             return lB * getSurfEnergy(p,g);
           }
@@ -334,7 +334,7 @@ namespace Faunus {
           /**
            * @brief Set space and update k-vectors and alpha
            */
-          void setSpace(Tspace &s) FOVERRIDE {
+          void setSpace(Tspace &s) override {
             Tbase::setSpace(s);
             V = spc->geo.getVolume();
             L = std::cbrt(V);

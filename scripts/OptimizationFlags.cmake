@@ -3,7 +3,7 @@ unset(CMAKE_CXX_FLAGS)
 
 # GNU
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(CMAKE_CXX_FLAGS "-std=c++11 -funroll-loops -Wall -Wno-unknown-pragmas -Wextra -Wno-unused-parameter")
+  set(CMAKE_CXX_FLAGS "-std=c++11 -funroll-loops -Wall -Wno-unknown-pragmas -Wextra -Wno-unused-parameter -Wno-reorder")
 
 # Intel
 # (list of warning codes: icpc -diag-dump a.cpp)

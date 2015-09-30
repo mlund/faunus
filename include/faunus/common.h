@@ -23,14 +23,6 @@
 #include <iterator>
 #endif
 
-
-// Use explicit virtual override and final keywords (C++11)
-#ifdef NO_EXPLICIT_OVERRIDE
-  #define FOVERRIDE
-#else
-  #define FOVERRIDE override
-#endif
-
 /// @brief Name space for Faunus
 namespace Faunus {
   //Keep this at a minimum, please!

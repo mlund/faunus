@@ -546,7 +546,7 @@ namespace Faunus {
           base::jsonsection = "moleculecombinations";
         }
 
-        bool include( Tmjson &j ) FOVERRIDE {
+        bool include( Tmjson &j ) override {
           bool r = base::include( j );
           update();
           return r;

@@ -258,6 +258,7 @@ namespace Faunus {
           char w;                          //!< info text width. Adjust this in constructor if needed.
           unsigned long int cnt;           //!< total number of trial moves
           virtual bool run();              //!< Runfraction test
+          typename Tspace::Change change;  //!< Object describing changes made to Space
 
           bool useAlternativeReturnEnergy;   //!< Return a different energy than returned by _energyChange(). [false]
           double alternateReturnEnergy;    //!< Alternative return energy
@@ -395,6 +396,7 @@ namespace Faunus {
           for (auto i : spc->groupList())
             i->setMassCenter(*spc);
         cnt++;
+        change.clear();
         _trialMove();
       }
 

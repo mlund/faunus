@@ -137,7 +137,11 @@ namespace Faunus {
           virtual double updateChange(const typename Tspace::Change &c)
           { return 0; }
 
-          /** @brief Energy change due to Change */
+          /**
+           * @brief Energy change due to Change
+           *
+           * @todo Optimize when only subset of group is changes (atom trans. etc.)
+           */
           virtual double energyChange(const typename Tspace::Change &c)
           {
             // variables and shortcuts
@@ -145,13 +149,31 @@ namespace Faunus {
             auto& s = *spc;
             auto& g = s.groupList();
 
-            // loop over moved groups
-            for (auto i : c.mvGroups) {
+            // moved<->rest
+            for (auto m : c.mvGroup) {
+              size_t i = size_t( m.first ); // group index
               du += g_external(s.trial, *g[i]) - g_external(s.p, *g[i]);
-              for (int j=0; j<int(g.size()); ++j) 
+              for (size_t j=0; j<g.size(); j++)
                 if (i!=j)
-                  du += g2g(s.trial, *g[i], *g[j] ) - g2g(s.p, *g[i], *g[j] );  
+                  du += g2g(s.trial, *g[i], *g[j] ) - g2g(s.p, *g[i], *g[j] ); 
             }
+            // moved<->moved
+            for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); ++i) {
+              for (auto j=i; ++j != c.mvGroup.end();/**/) {
+                auto _i = i->first;
+                auto _j = j->first;
+                du += g2g(s.trial, *g[_i], *g[_j] ) - g2g(s.p, *g[_i], *g[_j] );
+              }
+            }
+
+            // removed<->rest
+
+            // removed<->removed
+
+            // inserted<->inserted
+
+            // inserted<->rest
+
             // external potential
             du += external(s.trial) - external(s.p); 
 

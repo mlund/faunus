@@ -204,28 +204,59 @@ namespace Faunus {
         Tracker<int> atomTrack;                //!< Track atom index based on atom type
         Tracker<Group*> molTrack;              //!< Track groups pointers based on molecule type
 
-        /** @brief Struct for specifying changes to be made to Space */
+        /**
+         * @brief Struct for specifying changes to be made to Space
+         *
+         * This object is used to describe how Space is to be modified.
+         * The keys the maps `mvGroup` and `rmGroup` refers to the index
+         * in `Space::groupList()` to be either moved or removed. If the
+         * given index vector is *empty*, it is assumed that all particles
+         * in the groups have been altered.
+         * For `inGroup` the map index refers to the Molecule id to insert.
+         */
         struct Change {
-          double dV;                                // volume change
-          std::vector<int> mvGroups, mvParticles;   // index to moved groups or particles
-          std::vector<int> rmGroups, rmParticles;   // index to groups or particles to be removed
-          std::map<int, ParticleVector> inMol;      // id/pvec of inserted molecules
+          double dV;  // volume change
+          std::map<int,vector<int>> mvGroup; // move groups
+          std::map<int,vector<int>> rmGroup; // remove groups
+          std::map<int,ParticleVector> inGroup; // insert groups
 
           Change() : dV(0) {}; 
 
           void clear() {
-            mvGroups.clear();
-            rmGroups.clear();
-            mvParticles.clear();
-            rmParticles.clear();
-            inMol.clear();
             dV=0;
+            mvGroup.clear();
+            rmGroup.clear();
+            inGroup.clear();
+            assert(empty());
+          }
+
+          /** @brief Check if object is empty - i.e. if a change is defined */
+          bool empty() const {
+            if (mvGroup.empty())
+              if (rmGroup.empty())
+                if (inGroup.empty())
+                  if (std::fabs(dV)<1e-9)
+                    return true;
+            return false;
           }
         };
 
         /** @brief Void carry out change. When completed, p and trial should be in sync */
         void applyChange( const Change &c ) {
-          assert( !"to be implemented" );
+          // loop over moved groups
+          for (auto m : c.mvGroup) {
+            auto& g = groupList()[m.first];
+            if (m.second.empty()) // no index given; assume all have changed
+              for (auto i : g)
+                p[i] = trial[i];
+            else                  // index given; update only those
+              for (auto i : m.second) {
+                assert( g.find(i) );
+                p[i] = trial[i];
+              }
+            g.setMassCenter(*this); // update mass center
+          }
+          assert( !"incomplete" );
         }
 
         /**

@@ -2285,7 +2285,8 @@ namespace Faunus {
           double conc;  // co-solute concentration (mol/l)
           Average<double> avgArea; // average surface area
 
-          typedef typename Energybase<Tspace>::Tpvec Tpvec;
+          typedef Energybase<Tspace> base;
+          typedef typename base::Tpvec Tpvec;
 
           string _info() override {
             char w=20;
@@ -2319,10 +2320,15 @@ namespace Faunus {
             }
 
         public:
-          SASAEnergy(InputMap &in) {
-            this->name="SASA Energy";
-            probe=in.get<double>("sasa_probe", 1.4, "SASA probe radius (angstrom)");
-            conc=in.get<double>("sasa_conc", 0, "Co-solute concentration (mol/l)");
+          SASAEnergy(Tmjson &j, const string &dir="sasaenergy") : base(dir) {
+            base::name = "SASA Energy";
+            auto _j = j["energy"][dir];
+            probe = _j["proberadius"] | 1.4; // angstrom
+            conc = _j["conc"] | 0.0;         // co-solute concentratil (mol/l);
+          }
+
+          auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
           }
 
           /**

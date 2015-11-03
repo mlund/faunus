@@ -137,51 +137,6 @@ namespace Faunus {
           virtual double updateChange(const typename Tspace::Change &c)
           { return 0; }
 
-          /**
-           * @brief Energy change due to Change
-           *
-           * @todo Optimize when only subset of group is changes (atom trans. etc.)
-           */
-          virtual double energyChange(const typename Tspace::Change &c)
-          {
-            // variables and shortcuts
-            double du=0;
-            auto& s = *spc;
-            auto& g = s.groupList();
-
-            // moved<->rest
-            for (auto m : c.mvGroup) {
-              size_t i = size_t( m.first ); // group index
-              du += g_external(s.trial, *g[i]) - g_external(s.p, *g[i]);
-              for (size_t j=0; j<g.size(); j++)
-                if (i!=j)
-                  du += g2g(s.trial, *g[i], *g[j] ) - g2g(s.p, *g[i], *g[j] ); 
-            }
-            // moved<->moved
-            for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); ++i) {
-              for (auto j=i; ++j != c.mvGroup.end();/**/) {
-                auto _i = i->first;
-                auto _j = j->first;
-                du += g2g(s.trial, *g[_i], *g[_j] ) - g2g(s.p, *g[_i], *g[_j] );
-              }
-            }
-
-            // removed<->rest
-
-            // removed<->removed
-
-            // inserted<->inserted
-
-            // inserted<->rest
-
-            // external potential
-            du += external(s.trial) - external(s.p); 
-
-            assert(!"to be completed!");
-
-            return du;
-          }
-
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
           { }
 
@@ -267,9 +222,6 @@ namespace Faunus {
 
           double updateChange(const typename Tspace::Change &c) override
           { return first.updateChange(c)+second.updateChange(c); }
-
-          double energyChange(const typename Tspace::Change &c) override
-          { return first.energyChange(c) + second.energyChange(c); }
 
           double v2v(const Tpvec&p1, const Tpvec&p2) override
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }
@@ -2564,6 +2516,50 @@ namespace Faunus {
           for (int j=i+1; j<(int)spc.groupList().size(); j++)
             u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
         return u;
+      }
+
+    /**
+     * @brief Calculate energy change due to proposed modification defined by `Space::Change`
+     *
+     * @todo Optimize when only subset of group is changes (atom trans. etc.)
+     */
+    template<class Tspace, class Tenergy>
+      double energyChange(Tspace &s, Tenergy &pot, const typename Tspace::Change &c) {
+        // variables and shortcuts
+        double du=0;
+        auto& g = s.groupList();
+
+        // moved<->rest
+        for (auto m : c.mvGroup) {
+          size_t i = size_t( m.first ); // group index
+          du += pot.g_external(s.trial, *g[i]) - pot.g_external(s.p, *g[i]);
+          for (size_t j=0; j<g.size(); j++)
+            if (i!=j)
+              du += pot.g2g(s.trial, *g[i], *g[j] ) - pot.g2g(s.p, *g[i], *g[j] ); 
+        }
+        // moved<->moved
+        for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); ++i) {
+          for (auto j=i; ++j != c.mvGroup.end();/**/) {
+            auto _i = i->first;
+            auto _j = j->first;
+            du += pot.g2g(s.trial, *g[_i], *g[_j] ) - pot.g2g(s.p, *g[_i], *g[_j] );
+          }
+        }
+
+        // removed<->rest
+
+        // removed<->removed
+
+        // inserted<->inserted
+
+        // inserted<->rest
+
+        // external potential
+        du += pot.external(s.trial) - pot.external(s.p); 
+
+        assert(!"to be completed!");
+
+        return du;
       }
 
     /* typedefs */

@@ -526,13 +526,11 @@ namespace Faunus {
           typename Tspace::GeometryType geo;
           Tpairpot pairpot;
 
-          //NonbondedVector(InputMap &in, const string &dir="energy") : Tbase(dir+"/nonbonded"), geo(in), pairpot(in["energy"]["nonbonded"]) {
-          NonbondedVector(Tmjson &j, const string &sec="energy") : Tbase(sec+"/nonbonded"), geo(j), pairpot(j["energy"]["nonbonded"]) {
+          NonbondedVector(Tmjson &j, const string &sec="energy") : Tbase(sec), geo(j), pairpot(j["energy"]["nonbonded"]) {
               static_assert(
                   std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
                   "Tpairpot must be a pair potential" );
               Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
-	      //groupBasedField = in.get<bool>("pol_g2g",false,"Field will exclude own group");
 	      groupBasedField = j[sec]["pol_g2g"] | false; // Field will exclude own group
             }
 

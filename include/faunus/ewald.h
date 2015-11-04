@@ -106,11 +106,11 @@ namespace Faunus {
      * `eps_surf`        |  Dielectric constant of the surroundings                                                                          (Default: \f$ \varepsilon_r = \infty \f$)
      * `spherical_sum`   |  Spherical (or ellipsoid) summation in reciprocal space if set to be true. Cubic summation is applied if false.   (Default: true)
      * `cutoff`          |  Real space cut-off.                                                                                              (Default: Half the minimum box-length)              
-     * `alpha`           |  Damping parameter.                                                                                               (Default: According to DOI: 10.1080/08927029208049126 )  
-     * `cutoffK`         |  Maximum number of vectors in any axis in k-space.                                                                (Default: According to DOI: 10.1080/08927029208049126 )
-     * `cutoffK_x`       |  Maximum number of vectors in x-axis in k-space for ions. Is overridden if 'cutoffK' or 'cutoffK_ion' is set.     (Default: According to DOI: 10.1080/08927029208049126 )
-     * `cutoffK_y`       |  Maximum number of vectors in y-axis in k-space for ions. Is overridden if 'cutoffK' or 'cutoffK_ion' is set.     (Default: According to DOI: 10.1080/08927029208049126 )
-     * `cutoffK_z`       |  Maximum number of vectors in z-axis in k-space for ions. Is overridden if 'cutoffK' or 'cutoffK_ion' is set.     (Default: According to DOI: 10.1080/08927029208049126 )
+     * `alpha`           |  Damping parameter.                                                                                               (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
+     * `cutoffK`         |  Maximum number of vectors in any axis in k-space.                                                                (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
+     * `cutoffK_x`       |  Maximum number of vectors in x-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
+     * `cutoffK_y`       |  Maximum number of vectors in y-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
+     * `cutoffK_z`       |  Maximum number of vectors in z-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
      * 
      * @note Tested and implemented through DOI: 10.1063/1.481216
      * 
@@ -132,19 +132,13 @@ namespace Faunus {
      * E_{Surface} = \frac{2\pi}{(2\varepsilon_{sur} + 1)V}\left[  \left| \sum_{j}q_j{\boldsymbol r}_j   \right|^2 + 2\left(\sum_{j}q_i{\boldsymbol r}_j \right)\cdot\left(\sum_{j}{\boldsymbol \mu}_j \right) + \left|\sum_{j}{\boldsymbol \mu}_j \right|^2   \right]
      * @f]
      * 
-     * @f[
-     * E_{Pol} = ...  
-     * @f]
-     * 
      * where 
      * 
      * @f[
      * {\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right)  \;\;,\;\; {\bf n} \in \mathbb{Z}^3
      * @f]
      * 
-     * @warning Polarization energy is yet to be implemented!
-     * 
-     * @todo documentation; optimization; automatic alpha calc.
+     * @todo Need to implement measurement of the average evaluation time for real part of Ewald, this in order to get optimal parametrization to work properly.
      * 
      */
     template<
@@ -161,17 +155,16 @@ namespace Faunus {
           typedef typename Tbase::Tpvec Tpvec;
 
           Average<double> timeReciprocal;
-
           int kVectorsLength, kVectorsInUse, N, updates, cnt_accepted, kcc_x, kcc_y, kcc_z, update_frequency;
           double kc_x, kc2_x, kc_y, kc2_y, kc_z, kc2_z, alpha, alpha2, V, eps_surf, eps_r, rc, lB, const_inf, check_k2_zero, delta, minL, maxL,Sq2, Smu2; 
-          Point Li, L;                                                                                                     // Inverse box-length-vector, Box-length-vector
+          Point Li, L;                                                                                
           bool user_alpha, user_kc, user_rc, spherical_sum, update_frequency_bool; 
           vector<double> values_alpha, values_rc, values_kcc_x, values_kcc_y, values_kcc_z, values_wavefunctions;
           vector<complex<double>> Q_ion_tot, Q_dip_tot;
 	  typename Tspace::Change change;
 
-          Eigen::MatrixXd kVectors;          // Matrices with k-vectors for ions and dipoles respectively
-          Eigen::VectorXd k2s, Aks;  // Stores values based on k-vectors in order to minimize computational effort.
+          Eigen::MatrixXd kVectors;  // Matrices with k-vectors
+          Eigen::VectorXd k2s, Aks;  // Stores values based on k-vectors in order to minimize computational effort. (See Eq.24 in DOI: 10.1063/1.481216)
 
           /**
            * @brief Returns Ewald self energy for ions and dipoles.
@@ -195,7 +188,8 @@ namespace Faunus {
               Smu2 = Emu;
 
               double selfEnergy = -alpha*( Sq2 + alpha2*(2.0/3.0)*Smu2 ) / sqrt(pc::pi);
-              //selfEnergyAverage += selfEnergy;
+	      //if(N == g.getMolSize())
+		//selfEnergyAverage += selfEnergy;
               return selfEnergy;
             }
 
@@ -218,7 +212,8 @@ namespace Faunus {
 #endif
               }
               double surfaceEnergy = const_inf * (2*pc::pi/(( 2*eps_surf + 1)*V))*( qrs.dot(qrs) + 2*qrs.dot(mus) +  mus.dot(mus) );
-              //surfaceEnergyAverage += surfaceEnergy;
+	      //if(N == g.getMolSize())
+	      //surfaceEnergyAverage += surfaceEnergy;
               return surfaceEnergy;
             }
 
@@ -314,7 +309,8 @@ namespace Faunus {
               }
 
               double reciprocalEnergy = (2*pc::pi/V)*E;
-              //reciprocalEnergyAverage += reciprocalEnergy;
+	      //if(N == g->getMolSize())
+		//reciprocalEnergyAverage += reciprocalEnergy;
               return reciprocalEnergy;
             }
 
@@ -522,17 +518,21 @@ namespace Faunus {
             check_k2_zero = 0.1*(4*pc::pi*pc::pi)/(maxL*maxL);
           }
 
-          string _info() {
+          string _info() override {
             using namespace Faunus::textio;
             char w=25;
             std::ostringstream o;
             o << Tbase::_info();
             o << header("Ewald summation");
-            o << pad(SUB,w, "Reciprocal cut-off") << "(" << kcc_x << "," << kcc_y << "," << kcc_z << ")" << endl;
+            o << pad(SUB,w, "Reciprocal cut-off") << "(" << kc_x << "," << kc_y << "," << kc_z << ")" << endl;
             o << pad(SUB,w, "Wavefunctions") << values_wavefunctions.at(values_wavefunctions.size()-1) << endl;
             o << pad(SUB,w, "alpha") << alpha << endl;
             o << pad(SUB,w, "Real cut-off") << rc << endl;
-            o << pad(SUB,w+1, epsilon_m+"(Surface)") << eps_surf << endl;
+	    if(const_inf < 0.5) {
+	      o << pad(SUB,w+1, epsilon_m+"(Surface)") << infinity << endl;
+	    } else {
+	      o << pad(SUB,w+1, epsilon_m+"(Surface)") << eps_surf << endl;
+	    }
             o << pad(SUB,w, "updates") << updates << endl;
 
 	    /*
@@ -551,10 +551,9 @@ namespace Faunus {
           }
 
         public:
-          //MeanValue<double> selfEnergyAverage, surfaceEnergyAverage, realEnergyAverage, reciprocalEnergyAverage;
+          MeanValue<double> selfEnergyAverage, surfaceEnergyAverage, realEnergyAverage, reciprocalEnergyAverage;
 
-          NonbondedEwald(Tmjson &j, const string &sec="nonbonded") : Tbase(j,sec)  {
-	    // , selfEnergyAverage(10) ,surfaceEnergyAverage(10) , realEnergyAverage(10) , reciprocalEnergyAverage(10)
+          NonbondedEwald(Tmjson &j, const string &sec="nonbonded") : Tbase(j,sec) , selfEnergyAverage(j["energy"]["nonbonded"]["avg_block"] | 100) ,surfaceEnergyAverage(j["energy"]["nonbonded"]["avg_block"] | 100) , realEnergyAverage(j["energy"]["nonbonded"]["avg_block"] | 100) , reciprocalEnergyAverage(j["energy"]["nonbonded"]["avg_block"] | 100)  {
             Tbase::name += " (Ewald)";
             updateBoxDimensions(typename Tspace::GeometryType(j).len);
 	    auto _j = j["energy"]["nonbonded"]["ewald"];
@@ -669,7 +668,7 @@ namespace Faunus {
            * After 'update_frequency' number of updates the entirety of the complex vectors are recalculated in order to avoid numerical errors.
            * @param move_accepted True if a move is accepted, otherwise false
            */
-          virtual double update(bool move_accepted) {
+          double update(bool move_accepted) override {
 	    if(move_accepted) {
 	      cnt_accepted++;
               if(cnt_accepted > update_frequency - 1) {
@@ -732,7 +731,7 @@ namespace Faunus {
 	  }
 	  
           /** @brief Update energy function due to Change */
-          virtual double updateChange(const typename Tspace::Change &c) {
+          double updateChange(const typename Tspace::Change &c) override {
 	    change = c;
 	    return 0.0;
 	  }

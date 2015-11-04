@@ -2,7 +2,7 @@
 #include <faunus/multipole.h>
 #include <faunus/ewald.h>
 
-#define EWALD
+//#define EWALD
 
 using namespace Faunus;
 using namespace Faunus::Move;

@@ -50,6 +50,7 @@ namespace Faunus {
     const string epsilon_m="\u03b5";  //!< Greek epsilon (minuscule)
     const string gamma="\u0263";      //!< Greek gamma
     const string Gamma="\u0393";      //!< Greek capital gamma
+    const string infinity="\u221E";   //!< Infinity
     const string kappa="\u03ba";      //!< Greek kappa
     const string kT=" kT";            //!< kT (energy) with space in front
     const string mu="\u03bc";         //!< Greek mu

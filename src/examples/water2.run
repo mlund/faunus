@@ -7,7 +7,7 @@ cp -f $source_tests_dir/water2.state state 2> /dev/null
 echo '{
   "system" : {
     "cuboid"   : { "len" : 27.0 },
-    "mcloop"   : { "macro":10, "micro":40 },
+    "mcloop"   : { "macro":10, "micro":400 },
     "unittest" : { "testfile":"water2.test", "stable":false }
   },
 

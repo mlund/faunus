@@ -20,7 +20,8 @@ echo '{
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "epsr":1, "cutoff":14, "cutoffdip":4.3 }
+       "coulomb" : { "epsr" : 1.0, "cutoff":14 },
+       "ewald"   : { "epsr" : 1.0, "cutoff":14, "eps_surf":0, "alpha":0.894427190999916, "cutoffK":3, "spherical_sum":true } 
     }
   },
 
@@ -32,7 +33,7 @@ echo '{
   "system" : {
     "temperature"  : 300,
     "cuboid"       : { "len" : 8.939 },
-    "mcloop"       : { "macro":10, "micro":1000 },
+    "mcloop"       : { "macro":10, "micro":100 },
     "unittest"     : { "testfile":"stockmayer.test", "stable":false },
     "coulomb" : { "epsr":1, "cutoff":14, "cutoffdip":4.3 }
   }

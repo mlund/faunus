@@ -209,9 +209,7 @@ namespace Faunus {
          *
          * This object is used to describe how Space is to be modified.
          * The keys the maps `mvGroup` and `rmGroup` refers to the index
-         * in `Space::groupList()` to be either moved or removed. If the
-         * given index vector is *empty*, it is assumed that all particles
-         * in the groups have been altered.
+         * in `Space::groupList()` to be either moved or removed. 
          * For `inGroup` the map index refers to the Molecule id to insert.
          */
         struct Change {

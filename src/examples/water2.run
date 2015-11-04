@@ -7,14 +7,14 @@ cp -f $source_tests_dir/water2.state state 2> /dev/null
 echo '{
   "system" : {
     "cuboid"   : { "len" : 27.0 },
-    "mcloop"   : { "macro":10, "micro":400 },
+    "mcloop"   : { "macro":10, "micro":40 },
     "unittest" : { "testfile":"water2.test", "stable":false }
   },
 
   "energy" : {
     "nonbonded" : {
       "coulomb" : { "epsr" : 1.0, "cutoff":9 },
-      "ewald"   : { "precision":0.01, "epsr_surf":1e11, "cutoff":9, "alpha":0.2 },
+      "ewald"   : { "epsr" : 1.0, "cutoff":9, "eps_surf":0, "alpha":0.894427190999916, "cutoffK":3, "spherical_sum":true }, 
       "cutoff_g2g" : 10
     }
   },

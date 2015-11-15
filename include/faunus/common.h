@@ -51,7 +51,6 @@ namespace Faunus {
 
   class AtomData;
   class Group;
-  class GroupMolecular;
   class InputMap;
   class UnitTest;
 

@@ -36,7 +36,7 @@ option(ENABLE_BABEL    "Try to use OpenBabel for file I/O (experimental)" off)
 option(ENABLE_OPENMP   "Try to use OpenMP parallization" off)
 option(ENABLE_MPI      "Enable MPI code" off)
 option(ENABLE_STATIC   "Use static instead of dynamic linkage of faunus library" off)
-option(ENABLE_PYTHON   "Try to compile python bindings (experimental!)" off)
+option(ENABLE_PYTHON   "Try to compile python bindings (experimental!)" on)
 option(ENABLE_APPROXMATH "Use approximate math (Quake inverse sqrt, fast exponentials etc.)" off)
 option(ENABLE_HASHTABLE "Use hash tables for bond bookkeeping - may be faster for big systems" off)
 option(ENABLE_UNICODE   "Use unicode characters in output" on)
@@ -83,8 +83,8 @@ endif()
 #   Add source directories
 # ---------------------------
 add_subdirectory(src)
-add_subdirectory(xcode)
 add_subdirectory(scripts)
+#add_subdirectory(xcode)
 add_subdirectory(doc EXCLUDE_FROM_ALL)
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")

@@ -10,17 +10,13 @@
 #include <faunus/move.h>
 #include <faunus/energy.h>
 
-int add(int i, int j) {
-  return i + j;
-}
-
 namespace py = pybind11;
 using namespace Faunus;
 
+typedef Space<Geometry::Cuboid> Tspace;
+
 PYBIND11_PLUGIN(pyfaunus) {
   py::module m("pyfaunus", "pybind11 faunus plugin");
-
-  m.def("add", &add, "A function which adds two numbers");
 
   py::class_<Eigen::MatrixXd>(m, "MatrixXd")
     .def("__init__", [](Eigen::MatrixXd &m, py::buffer b) {
@@ -60,16 +56,17 @@ PYBIND11_PLUGIN(pyfaunus) {
     .def(py::init<string>());
 
   py::class_<MCLoop>(m, "MCLoop")
+    .def("info", &MCLoop::info)
     .def(py::init<Tmjson&>());
 
-  typedef Space<Geometry::Cuboid> Tspace;
   py::class_<Tspace>(m, "Space")
-    .def("p", [](Tspace &s) { return s.p; } )
     .def("info", &Tspace::info)
+    .def("p", [](Tspace &s) { return s.p; } )
+    .def("trial", [](Tspace &s) { return s.trial; } )
     .def(py::init<Tmjson&>());
 
-//py::class_<Move::Propagator<Tspace>>(m, "Propagator")
-//    .def("info", &Move::Propagator<Tspace>::info);
+  //py::class_<Move::Propagator<Tspace>>(m, "Propagator")
+  //    .def("info", &Move::Propagator<Tspace>::info);
 
   return m.ptr();
 }

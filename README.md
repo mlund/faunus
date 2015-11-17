@@ -52,7 +52,8 @@ Option                             | Description
 `-DENABLE_OPENMP=OFF`              | Enable OpenMP support
 `-DENABLE_STATIC=OFF`              | Static linkage of faunus as opposed to default dynamic linkage
 `-DENABLE_UNICODE=ON`              | Use Unicode UTF-16 encoding for pretty output
-`-ENABLE_POWERSASA=OFF`            | Enable SASA routines
+`-DENABLE_PYTHON=ON`               | Build python bindings (experimental)
+`-DENABLE_POWERSASA=OFF`           | Enable SASA routines (external download)
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`| Alternatives: `Debug` or `Release` (faster)
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`  | Compiler options for Release mode
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`    | Compiler options for Debug mode

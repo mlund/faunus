@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import json, sys, os
 from subprocess import call
 from shutil import copyfile

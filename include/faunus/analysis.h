@@ -1314,7 +1314,7 @@ namespace Faunus {
 
     vector<Table2D<double,Average<double> >> Qofr, Mofr;  // Quadrupole and dipole as a function of distance 
     vector<Histogram<double,unsigned int>> HQ, HQ_box, HM, HM_box;
-    vector<Average<double>> Q, Q_box, mu_abs, M, M_box, groupDipole;
+    vector<Average<double>> Q, Q_box, mu_abs, M, M_box;
     vector<string> postFixMu,postFixQuad;
 
     int sampleKW, atomsize;
@@ -1323,7 +1323,7 @@ namespace Faunus {
 
    public:
     template<class Tspace, class Tinputmap>
-     MultipoleAnalysis(const Tspace &spc, Tmjson &j, const string &sec="coulomb", double resolution=0.1) {
+     MultipoleAnalysis(const Tspace &spc, Tinputmap &j, const string &sec="coulomb", double resolution=0.1) {
       sampleKW = 0;
       setCutoff(j[sec]["cutoff"] | spc.geo.len_half.x());
       N = spc.p.size();
@@ -1406,8 +1406,9 @@ namespace Faunus {
       quad.setZero();
       quad_box.setZero();
       vector<double> mus_group;
-      mus_group.resize(spc.groupList()->size());
-      mus_group.clear();
+      mus_group.resize(spc.groupList().size());
+      for(unsigned int i = 0; i < mus_group.size(); i++)
+	mus_group.at(i) = 0.0;
 
 #ifdef DIPOLEPARTICLE  
       // Samples entities from dipoles and quadrupoles
@@ -1472,14 +1473,12 @@ namespace Faunus {
        M.at(cnt) += mu[cnt];
        M_box.at(cnt) += mu_box[cnt];
       }
-
       double sca = mu.dot(mu);
       HM2(sca)++;
       M2 += sca;
       sca = mu_box.dot(mu_box);
       HM2_box(sca)++;
       M2_box += sca;
-
       int cnt = 0;
       for(int i = 0; i < 3; i++) {
        for(int j = 0; j < 3; j++) {
@@ -1489,12 +1488,11 @@ namespace Faunus {
         Q_box.at(cnt++) += quad_box(i,j);
        }
       }
-
-      int cnt = 0;
+      cnt = 0;
       for (auto gi : spc.groupList()) {
        Point m = Geometry::dipoleMoment(spc, *gi);
        mus_group.at(cnt) += m.norm();
-       groupDipole.at(cnt) += mus_group.at(cnt++);
+       cnt++;
       }
      }
 
@@ -1757,10 +1755,8 @@ namespace Faunus {
       << indent(SUBSUB) << setw(26) << "( " << Q_box.at(3).stdev() << " " << Q_box.at(4).stdev() << " " << Q_box.at(5).stdev() << " )\n" 
       << indent(SUBSUB) << setw(26) << "( " << Q_box.at(6).stdev() << " " << Q_box.at(7).stdev() << " " << Q_box.at(8).stdev()
       << " )\n";
-     for(int j = 0; j < atomsize - 1; j++) {
+     for(int j = 0; j < atomsize - 1; j++)
       o << indent(SUB) << bracket("|"+mu+"|") << "(" << atom[j+1].name << ")" << setw(20) << mu_abs[j].avg() << " eÅ, "+sigma+"=" << mu_abs[j].stdev() << ", "+sigma+"/"+bracket("|"+mu+"|")+"=" << (100*mu_abs[j].stdev()/mu_abs[j].avg()) << percent << endl;
-     }
-     o << indent(SUBSUB) << bracket("|"+mu+"|") << setw(25) << groupDipole.avg() << " eÅ, "+sigma+"=" << groupDipole.stdev() << endl;
      return o.str();
     }
   };

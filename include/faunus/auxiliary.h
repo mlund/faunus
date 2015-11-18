@@ -762,6 +762,32 @@ namespace Faunus {
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
           }
+          
+        /** @brief Sums up average of all previous elements and saves table to disk */
+        template<class T=double>
+          void sumSaveAvg(string filename, T scale=1) {
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second*=2;   // compensate for half bin width
+              if (map.size()>1) (--map.end())->second*=2; // -//-
+            }
+
+            if (!map.empty()) {
+              std::ofstream f(filename.c_str());
+              f.precision(10);
+              if (f) {
+                Tx sum_t = 0.0;
+                for (auto &m : map) {
+                  sum_t += m.second.avg();
+                  f << m.first << " " << sum_t * scale << "\n";
+                }
+              }
+            }
+
+            if (tabletype==HISTOGRAM) {
+              if (!map.empty()) map.begin()->second/=2;   // restore half bin width
+              if (map.size()>1) (--map.end())->second/=2; // -//-
+            }
+          }
 
         Tmap getMap() {
           return map;

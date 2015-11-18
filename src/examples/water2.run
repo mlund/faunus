@@ -14,7 +14,7 @@ echo '{
   "energy" : {
     "nonbonded" : {
       "coulomb" : { "epsr" : 1.0, "cutoff":9 },
-      "ewald"   : { "epsr" : 1.0, "cutoff":9, "eps_surf":0, "alpha":0.894427190999916, "cutoffK":3, "spherical_sum":true }, 
+      "ewald"   : { "epsr" : 1.0, "cutoff":9, "eps_surf":0, "alpha":0.894427190999916, "cutoffK":1, "spherical_sum":true }, 
       "cutoff_g2g" : 10
     }
   },

@@ -34,7 +34,7 @@ int main() {
   auto pol = spc.findMolecules("polymer");          // all molecules named "polymer" 
 
   cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
-
+  
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
       sys += mv.move();

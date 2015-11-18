@@ -30,7 +30,7 @@ namespace Faunus {
      * @note Optimal parameters for ion-dipole interactions are assumed to be the same as in ion-ion interactions.
      *
      */
-    template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=true> 
+    template<bool useIonIon=true, bool useIonDipole=false, bool useDipoleDipole=false> 
       struct EwaldReal : public Potential::Coulomb {
 
         typedef Potential::Coulomb Tbase;
@@ -84,7 +84,6 @@ namespace Faunus {
               E += -(t5 + t3)*b.muscalar*a.muscalar;
             }
 #endif
-
             return E*Tbase::bjerrumLength();
           }
       };
@@ -144,7 +143,7 @@ namespace Faunus {
     template<
       class Tspace, \
       class Tpairpot, \
-      bool useIonIon=true, bool useIonDipole=true, bool useDipoleDipole=true, \
+      bool useIonIon=true, bool useIonDipole=false, bool useDipoleDipole=false, \
       class Tbase=NonbondedVector<Tspace, \
       CombinedPairPotential<EwaldReal<useIonIon,useIonDipole,useDipoleDipole>, Tpairpot>>>
 
@@ -173,7 +172,7 @@ namespace Faunus {
            * @note Does only add to average value if all atoms are counted
            */
           template<class Tpvec, class Tgroup>
-            double getSelfEnergy(const Tpvec &p, const Tgroup &g) {  // const
+            double getSelfEnergy(const Tpvec &p, const Tgroup &g) { 
               double Eq = 0;
               double Emu = 0;
               for (auto i : g) {
@@ -189,7 +188,7 @@ namespace Faunus {
 
               double selfEnergy = -alpha*( Sq2 + alpha2*(2.0/3.0)*Smu2 ) / sqrt(pc::pi);
 	      //if(N == g.getMolSize())
-		//selfEnergyAverage += selfEnergy;
+	      //	selfEnergyAverage += selfEnergy*lB;
               return selfEnergy;
             }
 
@@ -200,7 +199,7 @@ namespace Faunus {
            * @warning Have trouble with few (2,...) particles!
            */
           template<class Tpvec, class Tgroup>
-            double getSurfaceEnergy(const Tpvec &p, const Tgroup &g) { // const
+            double getSurfaceEnergy(const Tpvec &p, const Tgroup &g) const { 
               Point mus(0,0,0);
               Point qrs(0,0,0);
               for (auto i : g) {  
@@ -213,7 +212,7 @@ namespace Faunus {
               }
               double surfaceEnergy = const_inf * (2*pc::pi/(( 2*eps_surf + 1)*V))*( qrs.dot(qrs) + 2*qrs.dot(mus) +  mus.dot(mus) );
 	      //if(N == g.getMolSize())
-	      //surfaceEnergyAverage += surfaceEnergy;
+	      //	surfaceEnergyAverage += surfaceEnergy*lB;
               return surfaceEnergy;
             }
 
@@ -250,40 +249,7 @@ namespace Faunus {
 #endif
 		  }
                 }
-                
-                // Change k-vectors due to removed particles
-                for (auto m : change.rmGroup) {
-		  auto g = spc->groupList()[m.first];
-		  for (auto i : m.second) {
-		    double dotTrial = kv.dot(p[i]);
-		    double dot = kv.dot(spc->p[i]);
-		    if (useIonIon || useIonDipole)
-		      Q2_ion -= spc->p[i].charge * complex<double>(cos(dot),sin(dot));
-#ifdef DIPOLEPARTICLE
-		    if (useDipoleDipole || useIonDipole)
-		      Q2_dip -= kv.dot(spc->p[i].mu) * spc->p[i].muscalar * complex<double>(-sin(dot),cos(dot));
-#endif
-		  }
-                }
-                
-                // Change k-vectors due to inserted particles
-                for (auto m : change.inGroup) {
-		  auto g = spc->groupList()[m.first];
-		  for (auto &i : m.second) {
-		    double dot = kv.dot(i);
-		    if (useIonIon || useIonDipole)
-		      Q2_ion += i.charge * complex<double>(cos(dot),sin(dot));
-#ifdef DIPOLEPARTICLE
-		    if (useDipoleDipole || useIonDipole)
-		      Q2_dip += kv.dot(i.mu) * i.muscalar * complex<double>(-sin(dot),cos(dot));
-#endif
-		  }
-                }
-                
-                
-                
               }
-              
               
               if(useIonIon)
                 Q2 += std::norm(Q2_ion);  // 'norm' returns squared magnitude
@@ -300,7 +266,7 @@ namespace Faunus {
            * @param g Group to calculate from
            */
           template<class Tpvec, class Tgroup>
-            double getReciprocalEnergy(const Tpvec &p, const Tgroup &g) {
+            double getReciprocalEnergy(const Tpvec &p, const Tgroup &g) const {
               double E = 0.0;
 	      
               for (int k=0; k<kVectorsInUse; k++) {
@@ -309,8 +275,8 @@ namespace Faunus {
               }
 
               double reciprocalEnergy = (2*pc::pi/V)*E;
-	      //if(N == g->getMolSize())
-		//reciprocalEnergyAverage += reciprocalEnergy;
+	      //if(N == g.getMolSize())
+	      //	reciprocalEnergyAverage += reciprocalEnergy*lB;
               return reciprocalEnergy;
             }
 
@@ -524,6 +490,16 @@ namespace Faunus {
             std::ostringstream o;
             o << Tbase::_info();
             o << header("Ewald summation");
+	    string text = "";
+	    if(useIonIon)
+	      text += "Ion-Ion, ";
+	    if(useIonDipole)
+	      text += "Ion-dipole, ";
+	    if(useDipoleDipole)
+	      text += "Dipole-Dipole, ";
+	    if(useIonIon || useIonIon || useIonIon)
+	      text.erase (text.end()-2, text.end());
+	    o << pad(SUB,w, "Interactions") << text << endl;
             o << pad(SUB,w, "Reciprocal cut-off") << "(" << kc_x << "," << kc_y << "," << kc_z << ")" << endl;
             o << pad(SUB,w, "Wavefunctions") << values_wavefunctions.at(values_wavefunctions.size()-1) << endl;
             o << pad(SUB,w, "alpha") << alpha << endl;
@@ -534,19 +510,17 @@ namespace Faunus {
 	      o << pad(SUB,w+1, epsilon_m+"(Surface)") << eps_surf << endl;
 	    }
             o << pad(SUB,w, "updates") << updates << endl;
-
 	    /*
-            o << pad(SUB,w+4, bracket("Energies in kT")) << endl;
-            o << pad(SUB,w+4, bracket("Self energy")) << selfEnergyAverage.mean()*lB << endl;
-            o << pad(SUB,w+1, "    "+sigma) << selfEnergyAverage.std()*lB << endl;
-            o << pad(SUB,w+4, bracket("Surf energy")) << surfaceEnergyAverage.mean()*lB << endl;
-            o << pad(SUB,w+1, "    "+sigma) << surfaceEnergyAverage.std()*lB << endl;
-            o << pad(SUB,w+4, bracket("Real energy")) << realEnergyAverage.mean()*lB << endl;
-            o << pad(SUB,w+1, "    "+sigma) << realEnergyAverage.std()*lB << endl;
-            o << pad(SUB,w+4, bracket("Reci energy")) << reciprocalEnergyAverage.mean()*lB << endl;
-            o << pad(SUB,w+1, "    "+sigma) << reciprocalEnergyAverage.std()*lB << endl;
+            o << pad(SUB,w+4, bracket("Energies / kT")) << endl;
+            o << pad(SUB,w+4, bracket("Self energy")) << selfEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << selfEnergyAverage.std() << endl;
+            o << pad(SUB,w+4, bracket("Surf energy")) << surfaceEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << surfaceEnergyAverage.std() << endl;
+            o << pad(SUB,w+4, bracket("Real energy")) << realEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << realEnergyAverage.std() << endl;
+            o << pad(SUB,w+4, bracket("Reci energy")) << reciprocalEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << reciprocalEnergyAverage.std() << endl;
 	    */
-	    
             return o.str();
           }
 
@@ -612,13 +586,13 @@ namespace Faunus {
 
             // Initiate reciprocal cut-off
             user_kc = false;
-            if ( ( _j["cutoffK"] | -1.0 ) > 0.99 ) {
+            if ( ( _j["cutoffK"] | -1.0 ) > 0.0 ) {
               user_kc = true;
               kc_x = ( _j["cutoffK"] | -1.0 );
               kc_y = kc_x;
               kc_z = kc_x;
             } else {
-              if( ( _j["cutoffK_x"] | -1.0 ) > 0.99 || ( _j["cutoffK_y"] | -1.0 ) > 0.99 || ( _j["cutoffK_z"] | -1.0 ) > 0.99) {
+              if( ( _j["cutoffK_x"] | -1.0 ) > 0.0 || ( _j["cutoffK_y"] | -1.0 ) > 0.0 || ( _j["cutoffK_z"] | -1.0 ) > 0.0) {
                 user_kc = true;
                 kc_x = ( _j["cutoffK_x"] | -1.0 );
                 kc_y = ( _j["cutoffK_y"] | kc_x );
@@ -669,6 +643,7 @@ namespace Faunus {
            * @param move_accepted True if a move is accepted, otherwise false
            */
           double update(bool move_accepted) override {
+	    
 	    if(move_accepted) {
 	      cnt_accepted++;
               if(cnt_accepted > update_frequency - 1) {
@@ -696,44 +671,30 @@ namespace Faunus {
 #endif
                   }
 		}
-                  
-                  // Change k-vectors due to removed particles
-                for (auto m : change.rmGroup) {
-		  auto g = spc->groupList()[m.first];
-		  for (auto i : m.second) {
-                    double dotTrial = kv.dot(spc->trial[i]);
-                    double dot = kv.dot(spc->p[i]);
-                    if(useIonIon || useIonDipole)
-                      Q_ion_tot.at(k) -= spc->p[i].charge * complex<double>(cos(dot),sin(dot));
-#ifdef DIPOLEPARTICLE 
-                    if(useDipoleDipole)
-                      Q_dip_tot.at(k) -= kv.dot(spc->p[i].mu) * spc->p[i].muscalar * complex<double>(-sin(dot),cos(dot));
-#endif
-                  }
-		}
-                  // Change k-vectors due to inserted particles
-                for (auto m : change.inGroup) {
-		  auto g = spc->groupList()[m.first];
-		  for (auto &i : m.second) {
-                    double dot = kv.dot(i);
-                    if(useIonIon || useIonDipole)
-                      Q_ion_tot.at(k) += i.charge * complex<double>(cos(dot),sin(dot));
-#ifdef DIPOLEPARTICLE 
-                    if(useDipoleDipole)
-                      Q_dip_tot.at(k) += kv.dot(i.mu) * i.muscalar * complex<double>(-sin(dot),cos(dot));
-#endif
-                  }
-		}
                 }
 	      }
 	    }
 	    return 0.0; 
 	  }
 	  
-          /** @brief Update energy function due to Change */
+          /** @brief Update energy function due to Change 
+	   *  @note Does not include real-space contribution
+	   *  @warning Not finished!
+	   */
           double updateChange(const typename Tspace::Change &c) override {
 	    change = c;
-	    return 0.0;
+	    double energy = 0.0;
+	    return energy;
+	    
+	    energy += ( external(spc->trial) - external(spc->p) );
+            for (auto m : change.mvGroup) {
+	      auto g = spc->groupList()[m.first];
+	      for (auto i : m.second) {
+		Group gt(i,i);
+		energy += ( g_external(spc->trial,gt) - g_external(spc->p,gt) );
+	      }
+      	    }
+	    return energy;
 	  }
 
           double external(const Tpvec &p) override {
@@ -767,6 +728,7 @@ namespace Faunus {
                 Q_ion_tot.at(k) = Q_temp_ion;
                 Q_dip_tot.at(k) = Q_temp_dip;
             }
+            Group g(0,p.size()-1);
           }
 
           /**

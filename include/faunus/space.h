@@ -214,6 +214,8 @@ namespace Faunus {
          */
         struct Change {
           double dV;  // volume change
+          Point oldlen, newlen;
+	  bool setSpace;
           std::map<int,vector<int>> mvGroup; // move groups
           std::map<int,vector<int>> rmGroup; // remove groups
           std::map<int,ParticleVector> inGroup; // insert groups
@@ -222,6 +224,9 @@ namespace Faunus {
 
           void clear() {
             dV=0;
+	    setSpace = false;
+	    oldlen = Point(0,0,0);
+	    newlen = Point(0,0,0);
             mvGroup.clear();
             rmGroup.clear();
             inGroup.clear();
@@ -234,7 +239,10 @@ namespace Faunus {
               if (rmGroup.empty())
                 if (inGroup.empty())
                   if (std::fabs(dV)<1e-9)
-                    return true;
+		    if(oldlen.squaredNorm() < 1e-9)
+		      if(newlen.squaredNorm() < 1e-9)
+			if(!setSpace)
+			  return true;
             return false;
           }
         };

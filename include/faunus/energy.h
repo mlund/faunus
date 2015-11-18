@@ -65,16 +65,16 @@ namespace Faunus {
 
           string name;  //!< Short informative name
 
-           virtual ~Energybase() {}
+          virtual ~Energybase() {}
 
-           Energybase(const string &dir="") : jsondir(dir), w(25), spc(nullptr) {
-             if ( jsondir.empty() )
-               jsondir = "energy";
-           }
+          Energybase(const string &dir="") : jsondir(dir), w(25), spc(nullptr) {
+            if ( jsondir.empty() )
+              jsondir = "energy";
+          }
 
-           virtual void setSpace(Tspace &s) { spc=&s; }
+          virtual void setSpace(Tspace &s) { spc=&s; }
 
-           virtual Tspace& getSpace() {
+          virtual Tspace& getSpace() {
             assert(spc!=nullptr);
             return *spc;
           }
@@ -527,12 +527,12 @@ namespace Faunus {
           Tpairpot pairpot;
 
           NonbondedVector(Tmjson &j, const string &sec="energy") : Tbase(sec), geo(j), pairpot(j["energy"]["nonbonded"]) {
-              static_assert(
-                  std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
-                  "Tpairpot must be a pair potential" );
-              Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
-	      groupBasedField = j[sec]["pol_g2g"] | false; // Field will exclude own group
-            }
+            static_assert(
+                std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
+                "Tpairpot must be a pair potential" );
+            Tbase::name="Nonbonded N" + textio::squared + " - " + pairpot.name;
+            groupBasedField = j[sec]["pol_g2g"] | false; // Field will exclude own group
+          }
 
           void setSpace(Tspace &s) override {
             geo=s.geo;
@@ -853,7 +853,7 @@ namespace Faunus {
 
     /**
       @brief Treats groups as charged monopoles beyond cut-off
-      */
+     */
     template<class Tspace, class Tpairpot, class Tmppot=Potential::DebyeHuckel>
       class NonbondedCutg2gMonopole : public NonbondedCutg2g<Tspace,Tpairpot> {
         private:
@@ -2524,24 +2524,69 @@ namespace Faunus {
      */
     template<class Tspace, class Tenergy>
       double energyChange(Tspace &s, Tenergy &pot, const typename Tspace::Change &c) {
-        // variables and shortcuts
-        double du=0;
+        double du = 0.0;
         auto& g = s.groupList();
 
-        // moved<->rest
-        for (auto m : c.mvGroup) {
-          size_t i = size_t( m.first ); // group index
-          du += pot.g_external(s.trial, *g[i]) - pot.g_external(s.p, *g[i]);
-          for (size_t j=0; j<g.size(); j++)
-            if (i!=j)
-              du += pot.g2g(s.trial, *g[i], *g[j] ) - pot.g2g(s.p, *g[i], *g[j] ); 
+        // ----- Set new space -----
+        if(c.setSpace) {
+          s.geo.setlen(c.newlen);
+          pot.setSpace(s);
         }
-        // moved<->moved
-        for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); ++i) {
-          for (auto j=i; ++j != c.mvGroup.end();/**/) {
+        du += pot.external(s.trial);
+        for (auto m : c.mvGroup) {
+          size_t i = size_t( m.first );
+          for (size_t j=0; j<g.size(); j++)
+            if ( c.mvGroup.find(j)==c.mvGroup.end() )
+              du += pot.g2g(s.trial, *g[i], *g[j]); // moved group<->static groups
+
+          du += ( pot.g_external(s.trial, *g[i])  );      // moved group <-> external
+          if (g[i]->isAtomic()) {                                             // Check if moved group is atomic 
+            for(auto j : m.second)                                          // For the moved atoms in a group,
+              for(auto k : *g[i])                                           // for every atom in that group,
+                if (std::find (m.second.begin(), m.second.end(), k) == m.second.end() || j > k) // check such that moved atoms does not interact OR moved atoms interact only once
+                  du += pot.i2i(s.trial,j,k);
+          } else {
+            du += ( pot.g_internal(s.trial, *g[i]));
+          }
+        }
+
+        for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); i++) {
+          for (auto j=i; j != c.mvGroup.end(); j++) {
             auto _i = i->first;
             auto _j = j->first;
-            du += pot.g2g(s.trial, *g[_i], *g[_j] ) - pot.g2g(s.p, *g[_i], *g[_j] );
+            du += pot.g2g(s.trial, *g[_i], *g[_j] ); // moved <-> moved
+          }
+        }
+
+        // ----- Set old space -----
+        if(c.setSpace) {
+          s.geo.setlen(c.oldlen);
+          pot.setSpace(s);
+        }
+        du -= pot.external(s.p);
+        for (auto m : c.mvGroup) {
+          size_t i = size_t( m.first );
+          for (size_t j=0; j<g.size(); j++)
+            if ( c.mvGroup.find(j)==c.mvGroup.end() )
+              du -= pot.g2g(s.p, *g[i], *g[j]); // moved group<->static groups
+
+          du -= pot.g_external(s.p, *g[i]); // moved group <-> external
+
+          if (g[i]->isAtomic()) {                               // Check if moved group is atomic 
+            for(auto j : m.second)                            // For the moved atoms in a group,
+              for(auto k : *g[i])                             // for every atom in that group,
+                if (std::find (m.second.begin(), m.second.end(), k) == m.second.end() || j > k) // check such that moved atoms does not interact OR moved atoms interact only once
+                  du -= pot.i2i(s.p,j,k);
+          } else {
+            du -= pot.g_internal(s.p, *g[i]);
+          }
+        }
+
+        for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); i++) {
+          for (auto j=i; j != c.mvGroup.end(); j++) {
+            auto _i = i->first;
+            auto _j = j->first;
+            du -= pot.g2g(s.p, *g[_i], *g[_j] );  // moved<->moved
           }
         }
 
@@ -2549,14 +2594,11 @@ namespace Faunus {
 
         // removed<->removed
 
-        // inserted<->inserted
-
         // inserted<->rest
 
-        // external potential
-        du += pot.external(s.trial) - pot.external(s.p); 
+        // inserted<->inserted
 
-        assert(!"to be completed!");
+        //assert(!"to be completed!");
 
         return du;
       }

@@ -220,10 +220,18 @@ namespace Faunus {
 	  cnt = 0;
 	}
       }
+      
+      void clear() {
+	size_of_block = 1e9;
+	cnt = 0;
+	total_value = 0.0;
+	values.clear();
+	name = "";
+      }
 	
-	T mean() {
+	T avg() {
 	  T meanValue = 0.0;
-	  for(int i = 0; i < values.size(); i++)
+	  for(unsigned int i = 0; i < values.size(); i++)
 	    meanValue += values.at(i);
 	  meanValue /= T(values.size());
 	  return meanValue;
@@ -231,24 +239,25 @@ namespace Faunus {
 	
 	T std() {
 	  T varValue = 0.0;
-	  T meanValue = mean();
-            for(int i = 0; i < values.size(); i++) {
+	  T meanValue = avg();
+            for(unsigned int i = 0; i < values.size(); i++) {
 	      T temp = values.at(i) - meanValue;
               varValue += temp*temp;
 	    }
 	  return sqrt(varValue);
 	}
 	
-	void info() {
+	string info() {
           using namespace Faunus::textio;
           std::ostringstream o;
 	  o << header("Mean Value " + name);
+	  o << indent(SUBSUB) << "Block size " << setw(25) << size_of_block  << "\n";
 	  o << indent(SUBSUB) << "Sampled values " << setw(25) << values.size()  << "\n";
-	  o << indent(SUBSUB) << "Mean value " << setw(25) << mean()  << "\n";
+	  o << indent(SUBSUB) << "Average value " << setw(25) << avg()  << "\n";
 	  o << indent(SUBSUB) << "Standard deviation " << setw(25) << std()  << "\n";
 	  o << indent(SUBSUB) << "Unfinished block count" << setw(25) << cnt  << "\n";
-	  o << indent(SUBSUB) << "Unfinished block mean" << setw(25) << total_value/T(cnt)  << endl;
-          //sreturn o.str();
+	  o << indent(SUBSUB) << "Unfinished block average" << setw(25) << total_value/T(cnt)  << endl;
+          return o.str();
 	}
     };
 

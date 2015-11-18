@@ -1,5 +1,4 @@
 #include <faunus/faunus.h>
-#include <faunus/ewald.h>
 using namespace Faunus;
 using namespace Faunus::Potential;
 

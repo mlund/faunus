@@ -23,10 +23,6 @@
       "ewald"   : { "epsr":1.0, "eps_surf":1.0, "cutoff":5, "alpha":0.894427190999916, "cutoffK":11, "spherical_sum":true }  
     }
   },
-  
-  "nonbonded" : { 
-    "ewald"   : { "epsr":1.0, "eps_surf":0, "cutoff":5, "alpha":0.894427190999916, "cutoffK":11, "spherical_sum":true }  
-  },
 
   "moves" : {
     "atomtranslate" : {

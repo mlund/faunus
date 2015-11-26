@@ -1,13 +1,19 @@
 # DYLD_LIBRARY_PATH="/Users/mikael/miniconda/lib/" python test.py
 
-import pyfaunus as fau
+import pyfaunus as mc
 import numpy as np
 
-mcp = fau.InputMap('minimal.json')
-spc = fau.Space(mcp)
+mcp    = mc.InputMap('../src/examples/minimal.json')
+spc    = mc.Space(mcp)
+geo    = spc.geo
+groups = spc.groupList()
 
-g = spc.groupList()[0]
-cm = fau.massCenter(spc.geo(), spc.p(), g)
-print cm.x, cm.y, cm.z
-a = np.array( cm )
-print a
+print "number of particles            = ", len(spc.p)
+print "number of groups               = ", len(groups)
+print "system volume                  = ", geo.getVolume()
+
+cm = mc.massCenter(spc.geo, spc.p, groups[0])
+print "mass center                    = ", np.array(cm)
+print "distance between two particles = ", geo.dist(spc.p[0], spc.p[1])
+
+print "index in 1st group:\n", groups[0].range()

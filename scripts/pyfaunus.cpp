@@ -92,6 +92,11 @@ PYBIND11_PLUGIN(pyfaunus) {
 
   m.def("massCenter", &Geometry::massCenter<Tgeometry,Tpvec,Group>);
 
+  m.def("dipoleMoment",
+      &Geometry::dipoleMoment<Tspace,Group>,
+      "Calculates the dipole moment of a group");
+      //py::arg("cutoff")=1e9, py::arg("mu") = Point());
+
   // Space
   py::class_<Tspace>(m, "Space")
     .def("info", &Tspace::info)
@@ -103,9 +108,9 @@ PYBIND11_PLUGIN(pyfaunus) {
         g.push_back(*gPtr);
         return g;
         } ) 
-  .def("p", [](Tspace &s) { return s.p; } )
-    .def("trial", [](Tspace &s) { return s.trial; } )
-    .def("geo", [](Tspace &s) { return s.geo; } )
+    .def_readwrite("p", &Tspace::p)
+    .def_readwrite("trial", &Tspace::trial)
+    .def_readwrite("geo", &Tspace::geo)
     .def(py::init<Tmjson&>());
 
   //py::class_<Move::Propagator<Tspace>>(m, "Propagator")

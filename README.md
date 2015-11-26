@@ -70,6 +70,8 @@ Example: Libraries in odd locations
 
     $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include/openbabel-2.0 cmake . -DENABLE_BABEL=on
 
+    $ cmake . -DPYTHON_INCLUDE_DIR=/sw/include/python2.7 -DPYTHON_LIBRARY=/sw/lib/libpython2.7.dylib
+
 Resetting the build system
 --------------------------
 

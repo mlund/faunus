@@ -55,7 +55,7 @@ namespace Faunus {
         double getVolume() const;                           //!< Get volume of container (A^3)
         void setVolume(double);                             //!< Specify new volume (A^3)
         double dist(const Point&,const Point&) const;       //!< Distance between two points (A)
-        string info(char=20);                               //!< Return info string
+        std::string info(char=20);                          //!< Return info string
 
         virtual bool collision(const Point&, double, collisiontype=BOUNDARY) const=0;//!< Check for collision with boundaries, forbidden zones, matter,..
         virtual void randompos(Point &)=0;              //!< Random point within container

@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/numpy.h>
 
 #include <faunus/common.h>
 #include <faunus/point.h>
@@ -13,56 +14,98 @@
 namespace py = pybind11;
 using namespace Faunus;
 
-typedef Space<Geometry::Cuboid> Tspace;
+typedef Geometry::Cuboid Tgeometry;
+typedef Space<Tgeometry> Tspace;
+typedef typename Tspace::ParticleVector Tpvec;
 
 PYBIND11_PLUGIN(pyfaunus) {
   py::module m("pyfaunus", "pybind11 faunus plugin");
 
-  py::class_<Eigen::MatrixXd>(m, "MatrixXd")
-    .def("__init__", [](Eigen::MatrixXd &m, py::buffer b) {
-        /* Request a buffer descriptor from Python */
-        py::buffer_info info = b.request();
+  // Point
+  py::class_<Point> _point(m, "Point");
 
-        /* Some sanity checks ... */
-        if (info.format != py::format_descriptor<double>::value())
-        throw std::runtime_error("Incompatible format: expected a double array!");
+  _point.def(py::init<>());
 
-        if (info.ndim != 2)
-        throw std::runtime_error("Incompatible buffer dimension!");
+  _point.def_property("x", [](Point &b) { return &b.x(); }, [](Point &b, double x) { b.x()=x; });
+  _point.def_property("y", [](Point &b) { return &b.y(); }, [](Point &b, double y) { b.y()=y; });
+  _point.def_property("z", [](Point &b) { return &b.z(); }, [](Point &b, double z) { b.z()=z; });
 
-        if (info.strides[0] == sizeof(double)) {
-        /* Buffer has the right layout -- directly copy. */
-        new (&m) Eigen::MatrixXd(info.shape[0], info.shape[1]);
-        memcpy(m.data(), info.ptr, sizeof(double) * m.size());
-        } else {
-        /* Oops -- the buffer is transposed */
-        new (&m) Eigen::MatrixXd(info.shape[1], info.shape[0]);
-        memcpy(m.data(), info.ptr, sizeof(double) * m.size());
-        m.transposeInPlace();
-        }
-    });
+  _point.def_buffer([](Point &m) -> py::buffer_info {
+      return py::buffer_info(
+          m.data(),                              /* Pointer to buffer */
+          sizeof(double),                         /* Size of one scalar */
+          py::format_descriptor<double>::value(), /* Python struct-style format descriptor */
+          1,                                     /* Number of dimensions */
+          { (unsigned long)(m.rows()), (unsigned long)(m.cols()) },                /* Buffer dimensions */
+          { sizeof(double) * m.cols(),            /* Strides (in bytes) for each index */
+          sizeof(double) }
+          );
+      });
 
-  py::class_<PointParticle>(m, "PointParticle")
-    .def(py::init<>())
-    .def_readwrite("charge", &PointParticle::charge)
-    .def("x", [](PointParticle &b) { return b.x(); })
-    .def("volume", &PointParticle::volume);
+  // PointParticle
+  py::class_<PointParticle> _pointparticle(m, "PointParticle", _point);
+  _pointparticle.def(py::init<>());
+  _pointparticle.def_readwrite("charge", &PointParticle::charge);
+  _pointparticle.def_readwrite("radius", &PointParticle::radius);
+  _pointparticle.def("volume", &PointParticle::volume);
 
+  py::implicitly_convertible<PointParticle, Point>();
+
+  // Tmjson and InputMap
   py::class_<Tmjson> js(m, "Tmjson");
+
   js.def(py::init<>());
 
   py::class_<InputMap>(m, "InputMap", js)
     .def(py::init<>())
     .def(py::init<string>());
 
+  // MCLoop
   py::class_<MCLoop>(m, "MCLoop")
     .def("info", &MCLoop::info)
     .def(py::init<Tmjson&>());
 
+  // Group
+  py::class_<Group>(m, "Group")
+    .def(py::init<int,int>())
+    .def("__len__", [](Group &g) { return g.size(); } )
+    .def("range", [](Group &g) {
+        py::list l;
+        for (auto i : g) l.append( py::cast(i) );
+        return l; } )
+    .def("front", [](Group &g) { return g.front(); } )
+    .def("back", [](Group &g) { return g.back(); } );
+
+  // Geometries
+  py::class_<Geometry::Geometrybase> _Geometrybase(m, "Geometrybase");
+  _Geometrybase.def("info", &Geometry::Geometrybase::info);
+  _Geometrybase.def("getVolume", &Geometry::Geometrybase::getVolume);
+  _Geometrybase.def("setVolume", &Geometry::Geometrybase::setVolume);
+  _Geometrybase.def("dist", &Geometry::Geometrybase::dist);
+  _Geometrybase.def("vdist", &Geometry::Geometrybase::vdist);
+  _Geometrybase.def("sqdist", &Geometry::Geometrybase::sqdist);
+  _Geometrybase.def("boundary", &Geometry::Geometrybase::boundary);
+  _Geometrybase.def("randompos", &Geometry::Geometrybase::randompos);
+  _Geometrybase.def("collision", &Geometry::Geometrybase::collision);
+
+  py::class_<Geometry::Cuboid>(m, "Cuboid", _Geometrybase) .def(py::init<Tmjson&>());
+
+  m.def("massCenter", &Geometry::massCenter<Tgeometry,Tpvec,Group>);
+
+  // Space
   py::class_<Tspace>(m, "Space")
     .def("info", &Tspace::info)
-    .def("p", [](Tspace &s) { return s.p; } )
+    .def("atomList", [](Tspace &s) { return s.atomList(); })
+    .def("groupList", [](Tspace &s) {
+        std::vector<Group> g;
+        g.reserve(s.groupList().size());
+        for (auto gPtr : s.groupList())
+        g.push_back(*gPtr);
+        return g;
+        } ) 
+  .def("p", [](Tspace &s) { return s.p; } )
     .def("trial", [](Tspace &s) { return s.trial; } )
+    .def("geo", [](Tspace &s) { return s.geo; } )
     .def(py::init<Tmjson&>());
 
   //py::class_<Move::Propagator<Tspace>>(m, "Propagator")

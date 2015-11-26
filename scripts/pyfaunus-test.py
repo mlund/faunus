@@ -5,8 +5,9 @@ import numpy as np
 
 mcp = fau.InputMap('minimal.json')
 spc = fau.Space(mcp)
-print spc.info()
 
-for i in spc.p():
-  print i.charge
-
+g = spc.groupList()[0]
+cm = fau.massCenter(spc.geo(), spc.p(), g)
+print cm.x, cm.y, cm.z
+a = np.array( cm )
+print a

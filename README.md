@@ -70,7 +70,15 @@ Example: Libraries in odd locations
 
     $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include/openbabel-2.0 cmake . -DENABLE_BABEL=on
 
+Examples: Python support
+------------------------
+Faunus has preliminary python support -- see this Jupyter [notebook](scripts/pyfaunus-test.ipynb)
+for examples.
+If have several python distributions installed, the build system may be guided to specific
+libraries using i.e.:
+
     $ cmake . -DPYTHON_INCLUDE_DIR=/sw/include/python2.7 -DPYTHON_LIBRARY=/sw/lib/libpython2.7.dylib
+    $ make pyfaunus
 
 Resetting the build system
 --------------------------

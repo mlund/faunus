@@ -47,6 +47,7 @@ PYBIND11_PLUGIN(pyfaunus) {
   _pointparticle.def(py::init<>());
   _pointparticle.def_readwrite("charge", &PointParticle::charge);
   _pointparticle.def_readwrite("radius", &PointParticle::radius);
+  _pointparticle.def_readwrite("mw", &PointParticle::mw);
   _pointparticle.def("volume", &PointParticle::volume);
 
   py::implicitly_convertible<PointParticle, Point>();
@@ -69,6 +70,10 @@ PYBIND11_PLUGIN(pyfaunus) {
   py::class_<Group>(m, "Group")
     .def(py::init<int,int>())
     .def("__len__", [](Group &g) { return g.size(); } )
+    .def_readwrite("name", &Group::name)
+    .def_readwrite("molId", &Group::molId)
+    .def_readwrite("cm", &Group::cm)
+    .def_readwrite("cm_trial", &Group::cm_trial)
     .def("range", [](Group &g) {
         py::list l;
         for (auto i : g) l.append( py::cast(i) );
@@ -91,6 +96,9 @@ PYBIND11_PLUGIN(pyfaunus) {
   py::class_<Geometry::Cuboid>(m, "Cuboid", _Geometrybase) .def(py::init<Tmjson&>());
 
   m.def("massCenter", &Geometry::massCenter<Tgeometry,Tpvec,Group>);
+  m.def("cm2origo",   &Geometry::cm2origo<Tgeometry,Tpvec>);
+  m.def("translate",  &Geometry::translate<Tgeometry,Tpvec>);
+  m.def("calcVolume",  &Geometry::calcVolume<Tpvec>);
 
   m.def("dipoleMoment",
       &Geometry::dipoleMoment<Tspace,Group>,
@@ -100,6 +108,8 @@ PYBIND11_PLUGIN(pyfaunus) {
   // Space
   py::class_<Tspace>(m, "Space")
     .def("info", &Tspace::info)
+    .def("save", &Tspace::save)
+    .def("load", &Tspace::load)
     .def("atomList", [](Tspace &s) { return s.atomList(); })
     .def("groupList", [](Tspace &s) {
         std::vector<Group> g;
@@ -108,7 +118,7 @@ PYBIND11_PLUGIN(pyfaunus) {
         g.push_back(*gPtr);
         return g;
         } ) 
-    .def_readwrite("p", &Tspace::p)
+    .def_readwrite("p", &Tspace::p, py::return_value_policy::reference_internal)
     .def_readwrite("trial", &Tspace::trial)
     .def_readwrite("geo", &Tspace::geo)
     .def(py::init<Tmjson&>());

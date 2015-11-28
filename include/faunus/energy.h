@@ -2516,37 +2516,30 @@ namespace Faunus {
             u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
         return u;
       }
-
-    /**
-     * @brief Calculate energy change due to proposed modification defined by `Space::Change`
-     *
-     * @todo Optimize when only subset of group is changes (atom trans. etc.)
-     */
-    template<class Tspace, class Tenergy>
-      double energyChange(Tspace &s, Tenergy &pot, const typename Tspace::Change &c) {
-        double du = 0.0;
-        auto& g = s.groupList();
-
-        // ----- Set new space -----
-        if(c.setSpace) {
-          s.geo.setlen(c.newlen);
-          pot.setSpace(s);
-        }
-        du += pot.external(s.trial);
+      
+      /**
+       * @todo Fix such that it works to inserte and remove particles
+       */
+    template<class Tspace, class Tenergy, class Tpvec>
+      double energyChangeConfiguration(Tspace &spc, Tenergy &pot, const Tpvec &p, const typename Tspace::Change &c) {
+	double du = 0.0;
+	auto& g = spc.groupList();
+	
+        du += pot.external(p);
         for (auto m : c.mvGroup) {
           size_t i = size_t( m.first );
           for (size_t j=0; j<g.size(); j++)
             if ( c.mvGroup.find(j)==c.mvGroup.end() )
-              du += pot.g2g(s.trial, *g[i], *g[j]); // moved group<->static groups
+              du += pot.g2g(p, *g[i], *g[j]); // moved group<->static groups
 
-          du += ( pot.g_external(s.trial, *g[i])  );      // moved group <-> external
+          du += ( pot.g_external(p, *g[i])  );      // moved group <-> external
           if (g[i]->isAtomic()) {                                             // Check if moved group is atomic 
             for(auto j : m.second)                                          // For the moved atoms in a group,
               for(auto k : *g[i])                                           // for every atom in that group,
                 if (std::find (m.second.begin(), m.second.end(), k) == m.second.end() || j > k) // check such that moved atoms does not interact OR moved atoms interact only once
-                  du += pot.i2i(s.trial,j,k);
+                  du += pot.i2i(p,j,k);
           } else {
-            du += ( pot.g_internal(s.trial, *g[i]));
+            du += ( pot.g_internal(p, *g[i]));
           }
         }
 
@@ -2554,53 +2547,36 @@ namespace Faunus {
           for (auto j=i; j != c.mvGroup.end(); j++) {
             auto _i = i->first;
             auto _j = j->first;
-            du += pot.g2g(s.trial, *g[_i], *g[_j] ); // moved <-> moved
+            du += pot.g2g(p, *g[_i], *g[_j] ); // moved <-> moved
           }
         }
+        return du;
+      }
 
-        // ----- Set old space -----
-        if(c.setSpace) {
-          s.geo.setlen(c.oldlen);
-          pot.setSpace(s);
+    /**
+     * @brief Calculate energy change due to proposed modification defined by `Space::Change`
+     */
+    template<class Tspace, class Tenergy>
+      double energyChange(Tspace &s, Tenergy &pot, const typename Tspace::Change &c) {
+
+        if(c.geometryChange) {
+	  double du = 0.0;
+	  auto newgeo = s.geo;
+	  
+	  pot.setSpace(s);
+	  du += energyChangeConfiguration(s, pot,s.trial,c);
+	  
+	  s.geo = s.geo_old;
+	  pot.setSpace(s);
+	  du -= energyChangeConfiguration(s, pot,s.p,c);
+	  
+	  s.geo = newgeo;
+	  return du;
         }
-        du -= pot.external(s.p);
-        for (auto m : c.mvGroup) {
-          size_t i = size_t( m.first );
-          for (size_t j=0; j<g.size(); j++)
-            if ( c.mvGroup.find(j)==c.mvGroup.end() )
-              du -= pot.g2g(s.p, *g[i], *g[j]); // moved group<->static groups
-
-          du -= pot.g_external(s.p, *g[i]); // moved group <-> external
-
-          if (g[i]->isAtomic()) {                               // Check if moved group is atomic 
-            for(auto j : m.second)                            // For the moved atoms in a group,
-              for(auto k : *g[i])                             // for every atom in that group,
-                if (std::find (m.second.begin(), m.second.end(), k) == m.second.end() || j > k) // check such that moved atoms does not interact OR moved atoms interact only once
-                  du -= pot.i2i(s.p,j,k);
-          } else {
-            du -= pot.g_internal(s.p, *g[i]);
-          }
-        }
-
-        for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); i++) {
-          for (auto j=i; j != c.mvGroup.end(); j++) {
-            auto _i = i->first;
-            auto _j = j->first;
-            du -= pot.g2g(s.p, *g[_i], *g[_j] );  // moved<->moved
-          }
-        }
-
-        // removed<->rest
-
-        // removed<->removed
-
-        // inserted<->rest
-
-        // inserted<->inserted
 
         //assert(!"to be completed!");
 
-        return du;
+        return (energyChangeConfiguration(s, pot,s.trial,c) - energyChangeConfiguration(s, pot,s.p,c));
       }
 
     /* typedefs */

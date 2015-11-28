@@ -150,13 +150,12 @@ namespace Faunus {
    * @f[
    *     |\epsilon(x)| \le 1.5\times 10^{-7}
    * @f]
-   * 
-   * @warning Needs modification if x < 0
    */
   template<typename T>
     T erfc_x(T x) {
       static_assert(std::is_floating_point<T>::value, "type must be floating point" );
-      assert(x>=0 && "x cannot be negative");
+      if(x < 0.0)
+        return (2.0 - erfc_x(-x));
       T t = 1.0/(1.0+0.3275911*x);
       const T a1 = 0.254829592;
       const T a2 = -0.284496736;
@@ -172,6 +171,34 @@ namespace Faunus {
    */
   template<typename T>
     T erf_x(T x) { return (1 - erfc_x(x)); }
+
+  /**
+   * @brief Solves the equation \f$ w\cdot e^{w} = x \f$
+   * @note Implemented through DOI: 10.1145/361952.361970
+   */
+  template<typename T>
+    T LambertW(T x, T error_max=1e-14) {
+      T wn, wp;
+      if(x < 0.7) {
+        wp = (x + (4.0/3.0)*x*x ) / ( 1.0 + (7.0/3.0)*x + (5.0/6.0)*x*x );
+      } else {
+        wp = log(x) - (24.0*(log(x)*log(x) + 2.0*log(x) - 3.0)/(7.0*log(x)*log(x) + 58.0*log(x) + 127.0 ));
+      }
+      wn = wp + 2.0*error_max;
+      T zn, en;
+      int cnt = 0;
+      while( abs(wp - wn) > error_max) {
+        wn = wp;
+        zn = log(x) - log(wn) - wn;
+        en = ( zn / (1.0 + wn) ) * (2.0*(1.0 + wn)*(1.0 + wn + (2.0/3.0)*zn) - zn) / (2.0*(1.0 + wn)*(1.0 + wn + (2.0/3.0)*zn) - 2.0*zn);
+        wp = wn*(1.0 + en);
+        if(cnt++ > 100) {
+          std::cerr << "Error: LambertW iterations exceed maximum count.\n";
+          break;
+        }
+      }
+      return wp;
+    }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
@@ -564,21 +591,21 @@ namespace Faunus {
         }
         void saveRow(const string &filename, const Tvec &v, Tcoeff scale=1, Tcoeff translate=0) {
           if (this->isInRange(v)) {
-          auto b = this->getBlock(v);
-          int size = b.size();
-          Eigen::VectorXd w(size);
-          for (int i=0; i!=size; ++i)
-            w(i) = i*_bw[1] + _lo[1];
-          base m(size,2);
-          m.leftCols(1) = w;
-          m.bottomRightCorner(size,1) = b.transpose();
-          if (scale!=1) 
-            m.bottomRightCorner(size,1)*=scale;
-          if (translate!=0) 
-            m.bottomRightCorner(size,1)+=base::Constant(size,1,translate);
-          std::ofstream f(filename.c_str());
-          f.precision(10);
-          if (f) f << m;
+            auto b = this->getBlock(v);
+            int size = b.size();
+            Eigen::VectorXd w(size);
+            for (int i=0; i!=size; ++i)
+              w(i) = i*_bw[1] + _lo[1];
+            base m(size,2);
+            m.leftCols(1) = w;
+            m.bottomRightCorner(size,1) = b.transpose();
+            if (scale!=1) 
+              m.bottomRightCorner(size,1)*=scale;
+            if (translate!=0) 
+              m.bottomRightCorner(size,1)+=base::Constant(size,1,translate);
+            std::ofstream f(filename.c_str());
+            f.precision(10);
+            if (f) f << m;
           }
         }
         void load(const string &filename) {
@@ -762,7 +789,7 @@ namespace Faunus {
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
           }
-          
+
         /** @brief Sums up average of all previous elements and saves table to disk */
         template<class T=double>
           void sumSaveAvg(string filename, T scale=1) {
@@ -788,6 +815,7 @@ namespace Faunus {
               if (map.size()>1) (--map.end())->second/=2; // -//-
             }
           }
+
 
         Tmap getMap() {
           return map;

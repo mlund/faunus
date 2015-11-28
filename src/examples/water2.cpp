@@ -19,7 +19,7 @@ int main() {
 
   // Energy functions and space
 #ifdef EWALD
-  auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp);
+  auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
 #else
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)

@@ -26,6 +26,7 @@ namespace Faunus {
     const string epsilon_m="eps_m";
     const string gamma="gamma";
     const string Gamma="Gamma";
+    const string infinity="oo";
     const string kappa="k";
     const string kT=" kT";
     const string mu="mu";

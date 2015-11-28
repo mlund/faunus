@@ -1,6 +1,7 @@
 #ifndef FAUNUS_EWALD_H
 #define FAUNUS_EWALD_H
 
+#include <faunus/auxiliary.h>
 #include "faunus/inputfile.h"
 #include <complex>
 
@@ -322,28 +323,6 @@ namespace Faunus {
           }
 
           /**
-           * @brief Solves the equation \f$ w\cdot e^{w} = x \f$
-           * @note Implemented through DOI: 10.1145/361952.361970
-           */
-          double LambertW_solver(double x, double error_max=1e-14) const {
-            double wn, wp;
-            if(x < 0.7) {
-              wp = (x + (4.0/3.0)*x*x ) / ( 1.0 + (7.0/3.0)*x + (5.0/6.0)*x*x );
-            } else {
-              wp = log(x) - (24.0*(log(x)*log(x) + 2.0*log(x) - 3.0)/(7.0*log(x)*log(x) + 58.0*log(x) + 127.0 ));
-            }
-            wn = wp + 2.0*error_max;
-            double zn, en;
-            while( abs(wp - wn) > error_max) {
-              wn = wp;
-              zn = log(x) - log(wn) - wn;
-              en = ( zn / (1.0 + wn) ) * (2.0*(1.0 + wn)*(1.0 + wn + (2.0/3.0)*zn) - zn) / (2.0*(1.0 + wn)*(1.0 + wn + (2.0/3.0)*zn) - 2.0*zn);
-              wp = wn*(1.0 + en);
-            }
-            return wp;
-          }
-
-          /**
            * @brief Calculates ionic damping parameter for the Ewald method.
            * @note According to DOI: 10.1080/08927029208049126  (DOI: 10.1007/b136795)
            * @warning 'tau_R' needs to be calculated
@@ -362,7 +341,7 @@ namespace Faunus {
            * @note According to DOI: 10.1080/08927029208049126  (DOI: 10.1007/b136795)
            */
           void calcRcIon(double alpha_ion_in, double delta_in = 5e-5) {
-            rc = abs(0.5*sqrt(3.0*LambertW_solver( -(4.0/3.0)*pow(-pow(Sq2,4.0)/(alpha_ion_in*alpha_ion_in*pow(minL,6.0)*pow(delta_in,4.0)),1.0/3.0) )));
+            rc = abs(0.5*sqrt(3.0*LambertW( -(4.0/3.0)*pow(-pow(Sq2,4.0)/(alpha_ion_in*alpha_ion_in*pow(minL,6.0)*pow(delta_in,4.0)),1.0/3.0) )));
             values_rc.push_back(rc);
           }
 
@@ -374,9 +353,9 @@ namespace Faunus {
            */
           void calcKcIon(double alpha_ion_in, double delta_in = 5e-5) {
             double temp = (1.0/3.0)*pow(2.0,2.0/3.0)*pow(4.0,1.0/3.0)*pow(pow(Sq2,4.0)/(alpha_ion_in*alpha_ion_in*pow(delta_in,4.0)),1.0/3.0);
-            kc_x = abs(0.5*sqrt(3.0*LambertW_solver( temp*pow(L.x(), -2.0) )));
-            kc_x = abs(0.5*sqrt(3.0*LambertW_solver( temp*pow(L.y(), -2.0) )));
-            kc_x = abs(0.5*sqrt(3.0*LambertW_solver( temp*pow(L.z(), -2.0) )));
+            kc_x = abs(0.5*sqrt(3.0*LambertW( temp*pow(L.x(), -2.0) )));
+            kc_x = abs(0.5*sqrt(3.0*LambertW( temp*pow(L.y(), -2.0) )));
+            kc_x = abs(0.5*sqrt(3.0*LambertW( temp*pow(L.z(), -2.0) )));
             kc2_x = kc_x*kc_x;
             kc2_y = kc_y*kc_y;
             kc2_z = kc_z*kc_z;
@@ -411,7 +390,7 @@ namespace Faunus {
           void calcRcDipole(double alpha_dip_in, double delta_in = 5e-5) {
             double num = 0.5*delta_in*delta_in*N*pow(minL,3.0)/(Smu2*Smu2*pow(alpha_dip_in,4.0));
             double dennum = -pow(delta_in,4.0)*N*N*pow(minL,6.0) /( pow(alpha_dip_in,6.0)*pow(Smu2,4.0) );
-            double denden = LambertW_solver(-3.515625*pow(delta_in,4.0)*N*N*pow(minL,6.0)/(pow(alpha_dip_in,6.0)*pow(Smu2,4.0)));
+            double denden = LambertW(-3.515625*pow(delta_in,4.0)*N*N*pow(minL,6.0)/(pow(alpha_dip_in,6.0)*pow(Smu2,4.0)));
             rc = num/sqrt(dennum/denden);
             values_rc.push_back(rc);
           }
@@ -423,7 +402,7 @@ namespace Faunus {
            * @note According to DOI: 10.1063/1.1398588. Here we assume statistical error in reciprocal space is negligible with regard to the systematic error ( p.6355 )
            */
           void calcKcDipole(double alpha_dip_in, double delta_in = 5e-5) {
-            double temp0 = exp(-0.5*LambertW_solver((-1.125*pow(pc::pi*delta/Smu2,2.0)*N*pow(alpha_dip_in,-6.0))));
+            double temp0 = exp(-0.5*LambertW((-1.125*pow(pc::pi*delta/Smu2,2.0)*N*pow(alpha_dip_in,-6.0))));
             kc2_x = 0.75*delta*L.x()*sqrt(N)*temp0/(alpha_dip_in*alpha_dip_in*Smu2);
             kc2_y = 0.75*delta*L.y()*sqrt(N)*temp0/(alpha_dip_in*alpha_dip_in*Smu2);
             kc2_z = 0.75*delta*L.z()*sqrt(N)*temp0/(alpha_dip_in*alpha_dip_in*Smu2);
@@ -737,8 +716,8 @@ namespace Faunus {
           void setSpace(Tspace &s) override {
             Tbase::setSpace(s);
             N = s.p.size();
-            V = spc->geo.getVolume();
-            updateBoxDimensions(spc->geo.len);
+	    V = spc->geo.getVolume();
+	    updateBoxDimensions(spc->geo.len);
             calcParameters();
             updateAllComplexNumbers(s.p);
             if(!update_frequency_bool)

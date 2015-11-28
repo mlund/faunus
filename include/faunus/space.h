@@ -197,6 +197,7 @@ namespace Faunus {
         enum keys {OVERLAP_CHECK,NOOVERLAP_CHECK,RESIZE,NORESIZE};
 
         Tgeometry geo;                         //!< System geometry
+        Tgeometry geo_old;                     //!< The most recently accepted geometry 
         ParticleVector p;                      //!< Main particle vector
         ParticleVector trial;                  //!< Trial particle vector.
         MoleculeMap<ParticleVector> molecule;  //!< Map of molecules
@@ -214,8 +215,7 @@ namespace Faunus {
          */
         struct Change {
           double dV;  // volume change
-          Point oldlen, newlen;
-	  bool setSpace;
+	  bool geometryChange;
           std::map<int,vector<int>> mvGroup; // move groups
           std::map<int,vector<int>> rmGroup; // remove groups
           std::map<int,ParticleVector> inGroup; // insert groups
@@ -224,9 +224,7 @@ namespace Faunus {
 
           void clear() {
             dV=0;
-	    setSpace = false;
-	    oldlen = Point(0,0,0);
-	    newlen = Point(0,0,0);
+	    geometryChange = false;
             mvGroup.clear();
             rmGroup.clear();
             inGroup.clear();
@@ -239,10 +237,8 @@ namespace Faunus {
               if (rmGroup.empty())
                 if (inGroup.empty())
                   if (std::fabs(dV)<1e-9)
-		    if(oldlen.squaredNorm() < 1e-9)
-		      if(newlen.squaredNorm() < 1e-9)
-			if(!setSpace)
-			  return true;
+		    if(!geometryChange)
+		      return true;
             return false;
           }
         };
@@ -273,7 +269,7 @@ namespace Faunus {
          * is searched for molecules with non-zero `Ninit` and
          * will insert accordingly.
          */
-        Space( Tmjson &j ) : geo( j ) {
+        Space( Tmjson &j ) : geo( j ), geo_old( j ) {
           pc::setT( j["system"]["temperature"] | 298.15 );
           atom.include( j );
           molecule.include( j );
@@ -614,6 +610,7 @@ namespace Faunus {
             fin >> vol >> n;
             geo.setVolume(vol);
           }
+          geo_old = geo;
           if (key==RESIZE && n!=(int)p.size()) {
             cout << indent(SUB) << "Resizing particle vector from "
               << p.size() << " --> " << n << ".\n";

@@ -2,7 +2,6 @@
 #define FAUNUS_MULTIPOLE_H
 
 #include <faunus/common.h>
-#include <faunus/auxiliary.h>
 #include <faunus/species.h>
 
 namespace Faunus {
@@ -53,51 +52,11 @@ namespace Faunus {
   }//namespace
 
   /**
-   * @brief Approximation of erfc-function
-   * @param x Value for which erfc should be calculated 
-   * @details Reference for this approximation is found in Abramowitz and Stegun, 
-   *          Handbook of mathematical functions, eq. 7.1.26
-   *
-   * @f[
-   *     erf(x) = 1 - (a_1t + a_2t^2 + a_3t^3 + a_4t^4 + a_5t^5)e^{-x^2} + \epsilon(x)
-   * @f]
-   * @f[
-   *     t = \frac{1}{1 + px}
-   * @f]
-   * @f[
-   *     |\epsilon(x)| \le 1.5\times 10^{-7}
-   * @f]
-   * 
-   * @warning Needs modification if x < 0
-   */
-  inline double erfc_x(double x) {
-    //
-    // |error| <= 1.5*10^-7
-    double p = 0.3275911;
-    double t = 1.0/(1.0+p*x);
-    double x2 = x*x;
-    double a1 = 0.254829592;
-    double a2 = -0.284496736;
-    double a3 = 1.421413741;
-    double a4 = -1.453152027;
-    double a5 = 1.061405429;
-    double tp = t*(a1+t*(a2+t*(a3+t*(a4+t*a5))));
-    return tp*exp(-x2);
-  }
-
-  /**
-   * @brief See erfc_x-function. 1 - erfc_x
-   * @param x Value for which erf should be calculated 
-   */
-  inline double erf_x(double x) {
-    return (1 - erfc_x(x));
-  }
-
-  /**
-   * @brief Returns NemoType1-interaction (Exponential Repulsion)                         Needs to be checked!
+   * @brief Returns NemoType1-interaction (Exponential Repulsion)
    * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
+   * @warning Has not been tried!
    */
   template<class Tvec>
     double nemo1(Eigen::VectorXd &vec, const Tvec &r, double expmax=80.0) {
@@ -106,19 +65,20 @@ namespace Faunus {
       double r1i = 1/r.norm();
       double r2i = r1i*r1i;
       double r6i = r2i*r2i*r2i;
-      double ss = 1 - pow(2.71828,-std::min(expmax,pow((1/(asw*r1i)),nsw)));
+      double ss = 1 - exp(-std::min(expmax,pow((1/(asw*r1i)),nsw)));
 
-      double uexp  = vec[0]*pow(2.71828,-std::min(expmax,vec[1]/r1i));
+      double uexp  = vec[0]*exp(-std::min(expmax,vec[1]/r1i));
       double ur20  = vec[2]*r6i*r6i*r6i*r2i;
       double udis  = vec[3]*ss*r6i;
       return (uexp  + ur20 + udis);
     }
 
   /**
-   * @brief Returns NemoType2-interaction (r-7 Repulsion)                         Needs to be checked!
+   * @brief Returns NemoType2-interaction (r-7 Repulsion)
    * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
+   * @warning Has not been tried!
    */
   template<class Tvec>
     double nemo2(Eigen::VectorXd &vec, const Tvec &r, double expmax=80.0) {
@@ -127,7 +87,7 @@ namespace Faunus {
       double r1i = 1/r.norm();
       double r2i = r1i*r1i;
       double r6i = r2i*r2i*r2i;
-      double ss = 1 - pow(2.71828,-std::min(expmax,pow((1/(asw*r1i)),nsw)));
+      double ss = 1 - exp(-std::min(expmax,pow((1/(asw*r1i)),nsw)));
 
       double uexp  = vec[0]*r1i*r6i;
       double udis  = vec[3]*ss*r6i;
@@ -135,9 +95,10 @@ namespace Faunus {
     }
 
   /**
-   * @brief Returns NemoType3-interaction (Modified Interactions)                         Needs to be checked!
+   * @brief Returns NemoType3-interaction (Modified Interactions)
    * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} n_{ab}] \f$  
    * @param r Vector between particles
+   * @warning Has not been tried!
    */
   template<class Tvec>
     double nemo3(Eigen::VectorXd &vec, const Tvec &r) {
@@ -147,7 +108,7 @@ namespace Faunus {
 
       double uexp  = vec[3]*pow(r1i,vec[4]);          // vec[4] = nab   <------------------------
       double udis1  = -vec[2]*r6i;
-      double udis2  = vec[0]*pow(2.71828,-vec[1]/r1i);
+      double udis2  = vec[0]*exp(-vec[1]/r1i);
       return (uexp  + udis1 + udis2);
     }
 
@@ -163,19 +124,20 @@ namespace Faunus {
       double r2i = r1i*r1i;
       double r6i = r2i*r2i*r2i;
 
-      double uexp1  = vec[4]*pow(2.71828,-std::min(expmax,vec[5]/r1i));
+      double uexp1  = vec[4]*exp(-std::min(expmax,vec[5]/r1i));
       double uexp2  = 0;
       if(vec[6] != 0) uexp2 = vec[3]*pow(r1i,vec[6]);               // vec[6] = nab   <------------------------
       double udis1  =-vec[2]*r6i;
-      double udis2  = vec[0]*pow(2.71828,-std::min(expmax,vec[1]/r1i));
+      double udis2  = vec[0]*exp(-std::min(expmax,vec[1]/r1i));
       return (uexp1 + uexp2  + udis1 + udis2);
     }
 
   /**
-   * @brief Returns NemoType5-interaction (Full Damping)                         Needs to be checked!
+   * @brief Returns NemoType5-interaction (Full Damping)
    * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
+   * @warning Has not been tried!
    */
   template<class Tvec>
     double nemo5(Eigen::VectorXd &vec, const Tvec &r, double expmax=80.0) {
@@ -190,20 +152,21 @@ namespace Faunus {
       double ud5 = 2*bri*ud4;
       double ud6 = bri*ud5;
 
-      double uexp1  = vec[4]*pow(2.71828,-std::min(expmax,vec[5]/r1i));
+      double uexp1  = vec[4]*exp(-std::min(expmax,vec[5]/r1i));
       double uexp2  = 0;
       if(vec[6] != 0) uexp2 = vec[3]*pow(r1i,vec[6]);       // vec[6] = nab   <------------------------
       double udis1  =-vec[2]*r6i;
       double udd = 1 + ud1 + ud2 + ud3 + ud4 + ud5 + ud6;
-      double udis2  = vec[0]*pow(2.71828,-std::min(expmax,1/bri));
+      double udis2  = vec[0]*exp(-std::min(expmax,1/bri));
       return (uexp1 + uexp2  + udis1 + udd*udis2);
     }
 
   /**
-   * @brief Returns NemoType6-interaction (Full Damping chtr)                         Needs to be checked!
+   * @brief Returns NemoType6-interaction (Full Damping chtr)
    * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
+   * @warning Has not been tried!
    */
   template<class Tvec>
     double nemo6(Eigen::VectorXd &vec, const Tvec &r, double expmax=80.0) {
@@ -218,21 +181,22 @@ namespace Faunus {
       double ud5 = 2*bri*ud4;
       double ud6 = bri*ud5;
 
-      double uexp1  = vec[4]*pow(2.71828,-std::min(expmax,vec[5]/r1i));
+      double uexp1  = vec[4]*exp(-std::min(expmax,vec[5]/r1i));
       double uexp2  = 0;
       if(vec[6] != 0) uexp2 = vec[3]*pow(r1i,vec[6]);                     // vec[6] = nab   <------------------------
       double udis1  =-vec[2]*r6i;
       double udd = 1 + ud1 + ud2 + ud3 + ud4 + ud5 + ud6;
-      double udis2  = vec[0]*pow(2.71828,-std::min(expmax,1/bri));
-      double uchtexp = -vec[8]*pow(2.71828,-std::min(expmax,vec[7]/r1i));  // vec[7] = acht, vec[8] = kcht    <------------------------
+      double udis2  = vec[0]*exp(-std::min(expmax,1/bri));
+      double uchtexp = -vec[8]*exp(-std::min(expmax,vec[7]/r1i));  // vec[7] = acht, vec[8] = kcht    <------------------------
       return (uexp1 + uexp2  + udis1 + udd*udis2 + uchtexp);
     }
 
   /**
-   * @brief Returns NemoType7-interaction (Full Damping chtr gaussian)                         Needs to be checked!
+   * @brief Returns NemoType7-interaction (Full Damping chtr gaussian)
    * @param vec Vector with parameters. Form: \f$ [a_{ab} b_{ab} c_{ab} d_{ab} e_{ab} f_{ab} n_{ab}  a_{cht} k_{cht}] \f$  
    * @param r Vector between particles
    * @param expmax Maximum exponential coefficient (optional)
+   * @warning Has not been tried!
    */
   template<class Tvec>
     double nemo7(Eigen::VectorXd &vec, const Tvec &r, double expmax=80.0) {
@@ -247,11 +211,11 @@ namespace Faunus {
       double ud5 = 2*bri*ud4;
       double ud6 = bri*ud5;
 
-      double uchtexp = -vec[8]*pow(2.71828,-std::min(expmax,vec[7]*(pow((r.norm()-vec[3]),2))));  // vec[7] = acht, vec[8] = kcht    <------------------------
-      double uexp  = vec[4]*pow(2.71828,-std::min(expmax,vec[5]/r1i));
+      double uchtexp = -vec[8]*exp(-std::min(expmax,vec[7]*(pow((r.norm()-vec[3]),2))));  // vec[7] = acht, vec[8] = kcht    <------------------------
+      double uexp  = vec[4]*exp(-std::min(expmax,vec[5]/r1i));
       double udis1  =-vec[2]*r6i;
       double udd = 1 + ud1 + ud2 + ud3 + ud4 + ud5 + ud6;
-      double udis2  = vec[0]*pow(2.71828,-std::min(expmax,1/bri));
+      double udis2  = vec[0]*exp(-std::min(expmax,1/bri));
       return (uexp + udis1 + udd*udis2 + uchtexp);
     }
 
@@ -267,15 +231,13 @@ namespace Faunus {
     double q2mu(double QBxMuA, const Tvec &muA, double QAxMuB, const Tvec &muB, const Tvec &r) {
       double r2i = 1/r.squaredNorm();  // B = sol(dip), A = ch(charge)
       double r1i = sqrt(r2i);
-      double r3i = r1i*r2i;
-      double W1 = QBxMuA*muA.dot(r)*r3i;
-      double W2 = QAxMuB*muB.dot(-r)*r3i;
-      return (W1+W2);
+      double W1 = QBxMuA*muA.dot(r);
+      double W2 = QAxMuB*muB.dot(-r);
+      return (W1+W2)*r1i*r2i;;
     }
 
   /**
    * @brief Returns dipole-dipole interaction
-   *
    * @param muA Unit dipole moment vector of particle A
    * @param muB Unit dipole moment vector of particle B
    * @param muAxmuB Product of dipole scalars
@@ -290,11 +252,7 @@ namespace Faunus {
       double r2i = 1/r.squaredNorm();
       double r1i = sqrt(r2i);
 #endif
-      double r3i = r1i*r2i;
-      //double r5i = r3i*r2i;
-      //Eigen::Matrix3d T = 3*r5i*r*r.transpose() - r3i*Matrix3d::Identity();
-      //double W = -muA.transpose()*T*muB;
-      double W = r3i*(3*muA.dot(r)*muB.dot(r)*r2i - muA.dot(muB));
+      double W = (3*muA.dot(r)*muB.dot(r)*r2i - muA.dot(muB))*r1i*r2i;
       return -W*muAxmuB;
     }
 
@@ -310,13 +268,11 @@ namespace Faunus {
     double q2quad(double qA, const Tmat &quadB,double qB, const Tmat &quadA, const Tvec &r) {
       double r2i = 1/r.squaredNorm();
       double r1i = sqrt(r2i);
-      double r3i = r1i*r2i;
-      double r5i = r3i*r2i;
       double WAB = r.transpose()*quadB*r;
-      WAB = 3*WAB*r5i - quadB.trace()*r3i;
+      WAB = 3.0*WAB*r2i - quadB.trace();
       double WBA = r.transpose()*quadA*r;
-      WBA = 3*WBA*r5i - quadA.trace()*r3i;
-      return (qA*WAB + qB*WBA);
+      WBA = 3.0*WBA*r2i - quadA.trace();
+      return (qA*WAB + qB*WBA)*r1i*r2i;
     }
 
   /**
@@ -1054,11 +1010,11 @@ namespace Faunus {
                 if(useIonQuadrupole == true) U_total += wolf.q2quad<true>(a.charge, b.theta,b.charge, a.theta,r);
                 return _lB*U_total;
               }
-              if(useIonIon == true) U_total += wolf.q2q(a.charge,b.charge,r);
-              if(useIonDipole == true) U_total += wolf.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
-              if(useDipoleDipole == true) U_total += wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
-              if(useIonQuadrupole == true) U_total += wolf.q2quad(a.charge, b.theta,b.charge, a.theta,r);
-              return _lB*U_total;
+              if(useIonIon == true) return _lB*wolf.q2q(a.charge,b.charge,r);
+              if(useIonDipole == true) return _lB*wolf.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
+              if(useDipoleDipole == true) return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
+              if(useIonQuadrupole == true) return _lB*wolf.q2quad(a.charge, b.theta,b.charge, a.theta,r);
+	      return _lB*U_total;
             }
 
           template<bool useIon=true, bool useDipole=true, class Tparticle>
@@ -1089,10 +1045,6 @@ namespace Faunus {
               return (wolf.getIonSelfTerm()*Eq + wolf.getDipoleSelfTerm()*Emu);
             }
 
-          /**
-           * @brief Interaction of dipole `p` with field `E`, see 'Intermolecular and Surface Forces' by J. Israelachvili, p. 97 eq. 5.15
-           * @todo Needs to be tested!
-           */
           template<class Tparticle>
             double fieldEnergy(const Tparticle &p, const Point &E) {
               return 0;
@@ -1104,7 +1056,19 @@ namespace Faunus {
             o << "Shifted potential ";
             if(wolf.getType())
               o << " and force ";
-            o << endl
+            o << endl;
+	    string text = "";
+	    if(useIonIon)
+	      text += "Ion-Ion, ";
+	    if(useIonDipole)
+	      text += "Ion-dipole, ";
+	    if(useDipoleDipole)
+	      text += "Dipole-Dipole, ";
+	    if(useIonQuadrupole)
+	      text += "Ion-Quadrupole, ";
+	    if(useIonIon || useIonIon || useIonIon || useIonQuadrupole)
+	      text.erase (text.end()-2, text.end());
+	    o << pad(SUB,w,"Interactions") << text << endl
               << pad(SUB,w,"Temperature") << pc::T() << " K" << endl
               << pad(SUB,w,"Bjerrum length") << _lB << " "+angstrom << endl
               << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl

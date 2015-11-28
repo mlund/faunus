@@ -2147,6 +2147,7 @@ namespace Faunus {
         oldval = spc->geo.getVolume();
         oldlen = newlen = spc->geo.len;
         newval = std::exp( std::log(oldval) + slump.half()*dp );
+	//newval = oldval*std::exp( slump.half()*dp ); // Is this not more simple?
         Point s = Point(1,1,1);
         double xyz = cbrt(newval/oldval);
         double xy = sqrt(newval/oldval);
@@ -2165,9 +2166,7 @@ namespace Faunus {
           assert( gPtr->back() == base::change.mvGroup[i].back() );
           i++;
         }
-        base::change.oldlen = oldlen;
-        base::change.newlen = newlen;
-        base::change.setSpace = true;
+        base::change.geometryChange = true;
       }
 
     template<class Tspace>
@@ -2175,10 +2174,11 @@ namespace Faunus {
         val += newval;
         msd += pow( oldval-newval, 2 );
         rval += 1./newval;
-        spc->geo.setlen(newlen);
+        spc->geo.setlen(newlen); // Maybe this can be replaced with "spc->geo_old = spc->geo;" ?
         pot->setSpace(*spc);
         for (auto g : spc->groupList() )
           g->accept(*spc);
+	spc->geo_old = spc->geo;
       }
 
     template<class Tspace>
@@ -2186,7 +2186,7 @@ namespace Faunus {
         msd += 0;
         val += oldval;
         rval += 1./oldval;
-        spc->geo.setlen(oldlen);
+        spc->geo = spc->geo_old;
         pot->setSpace(*spc);
         for (auto g : spc->groupList() )
           g->undo(*spc);

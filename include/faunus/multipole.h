@@ -1261,7 +1261,7 @@ namespace Faunus {
 
     /**
      * @brief The potential is constructed such that radial-derivates 1-3 are zero at the cut-off. 
-     * The potential also mimics the interaction-tensor \f$ T_0(r,\alpha) = erfc(\alpha r)/r \f$.
+     * The potential also mimics the interaction-tensor \f$ T_0(r,\alpha) = erfc(\alpha r)/r \f$ with \f$ \alpha = \sqrt{\pi} \f$.
      * @note Implemented through DOI: 10.1021/jp510612w
      */
     class IonIonSP3 : public Coulomb {
@@ -1302,18 +1302,18 @@ namespace Faunus {
           return o.str();
         }
     };
-
+    
     /**
      * @brief The potential is constructed such that radial-derivates 1-3 is zero at the cut-off. 
-     * The potential also mimics the interaction-tensor \f$ T_2(r,\alpha) = \nabla^T\nabla\left( erfc(\alpha r)/r \right) \f$.
-     * @note The potential is a dipolar implemention of DOI: 10.1021/jp510612w
+     * The potential also mimics the interaction-tensor \f$ T_1(r,\alpha) = \nabla^T\nabla\left( erfc(\alpha r)/r \right) \f$ with \f$ \alpha = \sqrt{\pi} \f$.
+     * @note The potential is an extension of DOI: 10.1021/jp510612w
      */
-    class DipoleDipoleSP3 : public DipoleDipole {
+    class IonDipoleSP3 : public IonDipole {
       private:
-        string _brief() { return "DipoleDipole SP3"; }
+        string _brief() { return "IonDipole SP3"; }
         double rc1, rc1i, rc2;
       public:
-        DipoleDipoleSP3(Tmjson &j, const string &sec="coulomb") : DipoleDipole(j,sec) { 
+        IonDipoleSP3(Tmjson &j, const string &sec="coulomb") : IonDipole(j,sec) { 
           name += " SP3"; 
           rc1 = j[sec]["cutoff"] | pc::infty;
           rc1i = 1.0/rc1;
@@ -1326,9 +1326,47 @@ namespace Faunus {
             if(r2 < rc2) {
               double q = sqrt(r2)/rc1;
               double q2 = q*q;
+              return IonDipole::operator()(a,b,r)*(1.0 - (21.0 - 35.0*q + 15.0*q2)*q2*q2*q);
+            }
+            return 0.0;
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << IonDipole::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+          return o.str();
+        }
+    };
+    
+    /**
+     * @brief The potential is constructed such that radial-derivates 1-3 is zero at the cut-off. 
+     * The potential also mimics the interaction-tensor \f$ T_2(r,\alpha) = \nabla^T\nabla\left( erfc(\alpha r)/r \right) \f$ with \f$ \alpha = \sqrt{\pi} \f$.
+     * @note The potential is a dipolar implemention of DOI: 10.1021/jp510612w
+     */
+    class DipoleDipoleSP3 : public DipoleDipole {
+      private:
+        string _brief() { return "DipoleDipole SP3"; }
+        double rc1, rc1i, rc2, rc3;
+      public:
+        DipoleDipoleSP3(Tmjson &j, const string &sec="coulomb") : DipoleDipole(j,sec) { 
+          name += " SP3"; 
+          rc1 = j[sec]["cutoff"] | pc::infty;
+          rc1i = 1.0/rc1;
+          rc2 = rc1*rc1;
+	  rc3 = rc2*rc1;
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r2 = r.squaredNorm();
+            if(r2 < rc2) {
+              double q = sqrt(r2)/rc1;
+              double q2 = q*q;
               Eigen::Matrix3d T1 = r*r.transpose()/r2;
               Eigen::Matrix3d T2 = Eigen::Matrix3d::Identity();
-              Eigen::Matrix3d T = ((42.0 - 105.0*q + 60.0*q2)*q2*T1 + (21.0 - 35.0*q + 15.0*q2)*q2*T2)*rc1i/rc2;
+              Eigen::Matrix3d T = ((42.0 - 105.0*q + 60.0*q2)*q2*T1 + (21.0 - 35.0*q + 15.0*q2)*q2*T2)/rc3;
 
               double W = a.mu.transpose()*T*b.mu;
               return (DipoleDipole::operator()(a,b,r) - _lB*W*a.muscalar*b.muscalar);

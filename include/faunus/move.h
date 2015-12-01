@@ -1761,7 +1761,6 @@ namespace Faunus {
      */
     template<class Tspace>
       double CrankShaft<Tspace>::_energyChange() {
-        double du=0;
         for (auto i : index)
           if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;

@@ -102,7 +102,7 @@ namespace Faunus {
      * 
      *  Keyword          |  Description
      * :--------------   | :---------------
-     * `delta`           |  Accuracy in system for energy (\f$ e^2/\AA \f$), force(\f$ e^2/\AA^2 \f$) and torque(\f$ e^2/\AA \f$).           (Default: 5e-5)
+     * `delta`           |  Accuracy in system for energy (\f$ e^2/\AA \f$).                                                                 (Default: 5e-5)
      * `eps_surf`        |  Dielectric constant of the surroundings                                                                          (Default: \f$ \varepsilon_r = \infty \f$)
      * `spherical_sum`   |  Spherical (or ellipsoid) summation in reciprocal space if set to be true. Cubic summation is applied if false.   (Default: true)
      * `cutoff`          |  Real space cut-off.                                                                                              (Default: Half the minimum box-length)              
@@ -111,6 +111,7 @@ namespace Faunus {
      * `cutoffK_x`       |  Maximum number of vectors in x-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
      * `cutoffK_y`       |  Maximum number of vectors in y-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
      * `cutoffK_z`       |  Maximum number of vectors in z-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
+     * `update_frequency`|  The frequency of how often the total sum of all complex numbers are updated (an optimization optin).             (Default: Number of particles in system)
      * 
      * @note Tested and implemented through DOI: 10.1063/1.481216
      * 

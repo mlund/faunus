@@ -295,7 +295,10 @@ namespace Faunus {
             k2s.setZero();
             Aks.setZero();
 
-            for (int kx = -kcc_x; kx <= kcc_x; kx++) {
+	    double factor = 1.0;
+            for (int kx = 0; kx <= kcc_x; kx++) {
+	      if(kx > 0)
+		factor = 2.0;
               double dkx2 = double(kx*kx);
               for (int ky = -kcc_y; ky <= kcc_y; ky++) {
                 double dky2 = double(ky*ky);
@@ -312,7 +315,7 @@ namespace Faunus {
                   }
                   kVectors.col(kVectorsInUse) = kv; 
                   k2s[kVectorsInUse] = k2;
-                  Aks[kVectorsInUse] = exp(-k2/(4*alpha2))/k2;
+                  Aks[kVectorsInUse] = factor*exp(-k2/(4*alpha2))/k2;
                   kVectorsInUse++;
                 }
               }

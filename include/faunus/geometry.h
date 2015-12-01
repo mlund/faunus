@@ -417,7 +417,7 @@ namespace Faunus {
      * @param s Space
      * @param g Group or other contained with atom index
      * @param cutoff Spherical cutoff (default: 1e9 angstrom)
-     * @param mu Initial quadrupole moment (default: [0,0,0])
+     * @param quad Initial quadrupole moment (default: [0 0 0,0 0 0,0 0 0])
      */
     template<class Tspace, class Tgroup, class T=double>
       Tensor<T> quadrupoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9, Tensor<T> quad=Tensor<T>()) {

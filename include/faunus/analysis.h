@@ -1444,6 +1444,7 @@ namespace Faunus {
      * @brief Samples dipole- and quadrupole-moments from point particles.
      * 
      * @param spc The space
+     * @param origin The origin
      * @param mu Dipole to add to from within cutoff 
      * @param mu_box Dipole to add to from entire box 
      * @param quad Quadrupole to add to from within cutoff 
@@ -1579,6 +1580,7 @@ namespace Faunus {
     /**
      * @brief Saves data to files. 
      * @param ext Extention of filename
+     * @param reset Erases all sampled data after it has been saved (Default: false)
      */
     void save(string ext="", bool reset=false) {
      rdf.save("gofr.dat"+ext);

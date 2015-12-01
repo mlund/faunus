@@ -10,25 +10,25 @@ namespace Faunus {
   namespace Potential {
 
     /**
-     * @brief Pair potential for real-space part of Ewald
+     * @brief Pair potential for real-space part of Ewald.
      * 
      * @f[
-     * E_{Real} = \sum_{i=1}^{N-1}\sum_{j=i+1}^N \left[ \left(\bar{\mu}_i \cdot \bar{\mu}_j\right) B(|\bar{r}_{ij}|) - \left(\bar{\mu}_i \cdot \bar{r}_{ij}\right)\left(\bar{\mu}_j \cdot \bar{r}_{ij}\right)  C(|\bar{r}_{ij}|)  \right]
+     * \boldsymbol{{\rm T}}_0(\boldsymbol{r}) = \frac{{\rm erfc}(\alpha |\boldsymbol{r}|)}{|\boldsymbol{r}|}
      * @f]
-     * 
-     * where
      * 
      * @f[
-     * B(r) = \frac{erfc(\alpha r) }{r^3} + \frac{2\alpha}{\sqrt{\pi}}\frac{e^{-\alpha^2r^2}}{r^2}
+     * \boldsymbol{{\rm T}}_1(\boldsymbol{r}) = \nabla\left(\frac{{\rm erfc}(\alpha |\boldsymbol{r}|)}{|\boldsymbol{r}|}\right)
      * @f]
-     * 
-     * and
      * 
      * @f[
-     * C(r) = 3\frac{erfc(\alpha r) }{r^5} + \frac{2\alpha}{\sqrt{\pi}}\left( 2\alpha^2 + \frac{3}{r^2} \right)\frac{e^{-\alpha^2r^2}}{r^2}
+     * \boldsymbol{{\rm T}}_2(\boldsymbol{r}) = \nabla^2\left(\frac{{\rm erfc}(\alpha |\boldsymbol{r}|)}{|\boldsymbol{r}|}\right)
      * @f]
      * 
-     * @note Optimal parameters for ion-dipole interactions are assumed to be the same as in ion-ion interactions.
+     * @f[
+     * E_{Real} = \sum_{i=1}^{N-1}\sum_{j=i+1}^N \left( q_i\boldsymbol{{\rm T}}_0(\boldsymbol{r}_{ij})q_j   +      q_i\boldsymbol{{\rm T}}_1(\boldsymbol{r}_{ij})\cdot \boldsymbol{\mu}_j  - q_j\boldsymbol{{\rm T}}_1(\boldsymbol{r}_{ij})\cdot \boldsymbol{\mu}_i   -       \boldsymbol{\mu}_i^T\boldsymbol{{\rm T}}_2(\boldsymbol{r}_{ij})\boldsymbol{\mu}_j    \right)
+     * @f]
+     * 
+     * @note Optimal parameters for ion-dipole interactions are assumed to be the same as for ion-ion interactions.
      *
      */
     template<bool useIonIon=true, bool useIonDipole=false, bool useDipoleDipole=false> 
@@ -98,7 +98,7 @@ namespace Faunus {
      * @brief Ewald summation for electrostatic interactions
      * @date Lund 2014
      *
-     * This will take care of long-ranged electrostatic interactions using the Ewald summation scheme[@article http://onlinelibrary.wiley.com/doi/10.1002/andp.19213690304/abstract]. Currently it is possible to include ions and dipoles. 
+     * This will take care of long-ranged electrostatic interactions using the Ewald summation scheme Currently it is possible to include ions and dipoles. 
      * 
      *  Keyword          |  Description
      * :--------------   | :---------------
@@ -114,6 +114,7 @@ namespace Faunus {
      * `update_frequency`|  The frequency of how often the total sum of all complex numbers are updated (an optimization optin).             (Default: Number of particles in system)
      * 
      * @note Tested and implemented through DOI: 10.1063/1.481216
+     * @note If parameters are not set; optimized parameters for ion-ion-interactions will be used for all interactions save the case when only dipoles are present, then optimized parameters for dipole-dipole-interactions will be used. This is done since the wave-functions for ions and dipoles needs to be compatible with each other in order to get ion-dipole interactions.
      * 
      * @f[
      * E_{Total} = E_{Real} + E_{Reciprocal} + E_{Self} + E_{Surface} + E_{Pol}
@@ -198,7 +199,6 @@ namespace Faunus {
            * @brief Returns Ewald surface energy for ions and dipoles.
            * @param p Vector with partciles
            * @param g Group to calculate from
-           * @warning Have trouble with few (2,...) particles!
            */
           template<class Tpvec, class Tgroup>
             double getSurfaceEnergy(const Tpvec &p, const Tgroup &g) const { 
@@ -223,6 +223,7 @@ namespace Faunus {
            * @param p Vector with partciles
            * @param g Group to calculate from
            * @param kv Reciprocal space vector
+	   * @warning Needs to be fixed if inserted/removed particles are present/void!
            */
           template<class Tpvec, class Tgroup>
             double getQ2(const Tpvec &p, const Tgroup &g, const Point &kv, int index) const {
@@ -386,7 +387,7 @@ namespace Faunus {
           }
 
           /**
-           * @brief Calculates dipolar eciprocal space cut-off for the Ewald method.
+           * @brief Calculates dipolar reciprocal space cut-off for the Ewald method.
            * @param alpha_ion_in Damping parameter
            * @param delta_in Accuracy in dipolar systems for energy (\f$ e^2/\AA \f$)
            * @note According to DOI: 10.1063/1.1398588
@@ -424,7 +425,7 @@ namespace Faunus {
 
           /**
            * @brief Calculates optimal parameters for the Ewald method. It will only calculate a value if the user has not defined it in the input.
-           * @param delta_in Accuracy in dipolar systems for energy (\f$ e^2/\AA \f$), force(\f$ e^2/\AA^2 \f$) and torque(\f$ e^2/\AA \f$). Should not be larger than \f$ 5\cdot 10^{-5} \f$.
+           * @param delta_in Accuracy in dipolar systems for energy (\f$ e^2/\AA \f$)). Should not be larger than \f$ 5\cdot 10^{-5} \f$.
            */
           void calcParameters(double delta_in=5e-5) {
             if(!user_alpha) {
@@ -516,7 +517,7 @@ namespace Faunus {
 	    auto _j = j["energy"]["nonbonded"]["ewald"];
 	    
             cnt_accepted = 0;
-            updates = 0;
+            updates = 0;           // will finally have the value of how many time setSpace() has been used
             values_alpha.clear();
             values_rc.clear();
             values_kcc_x.clear();
@@ -526,12 +527,12 @@ namespace Faunus {
             lB = Tbase::pairpot.first.bjerrumLength();
 	    eps_surf = ( _j["eps_surf"] | pc::infty );
             const_inf = 1.0;    
-            if(eps_surf < 1)  
+            if(eps_surf < 1)  // if the value is unphysical (< 1) then we set infinity as the dielectric sonatant of the surronding medium
               const_inf = 0.0; // \varepsilon_{Surface} = \infty
 	    
-	    spherical_sum = _j["spherical_sum"] | true;
+	    spherical_sum = _j["spherical_sum"] | true; // specifies if Spherical or Cubical summation should be used in reciprocal space
 	    delta = ( _j["delta"] | 5e-5 );
-            if( ( _j["update_frequency"] | -1 )  > 0 ) {
+            if( ( _j["update_frequency"] | -1 )  > 0 ) {  // specifies after how many successful moves all complex numbers should the updated
               update_frequency_bool = true;
               update_frequency = _j["update_frequency"] | -1;
             } else {
@@ -540,7 +541,7 @@ namespace Faunus {
 
             // Initiate alpha-values
             user_alpha = false;
-            if ( ( _j["alpha"] | -1.0 ) > 0.0 ) {
+            if ( ( _j["alpha"] | -1.0 ) > 0.0 ) {  // set damping-parameter
               user_alpha = true;
               alpha = ( _j["alpha"] | -1.0 );
               alpha2 = alpha*alpha;
@@ -554,7 +555,7 @@ namespace Faunus {
 
             // Initiate real cut-off
             user_rc = false;
-            if ( ( _j["cutoff"] | -1.0 ) > 0.0 ) {
+            if ( ( _j["cutoff"] | -1.0 ) > 0.0 ) {  // set cutoff
               user_rc = true;
               rc = ( _j["cutoff"] | -1.0 );
               if (rc > minL/2.0)
@@ -569,7 +570,7 @@ namespace Faunus {
 
             // Initiate reciprocal cut-off
             user_kc = false;
-            if ( ( _j["cutoffK"] | -1.0 ) > 0.0 ) {
+            if ( ( _j["cutoffK"] | -1.0 ) > 0.0 ) {  // set reciprocal cutoff
               user_kc = true;
               kc_x = ( _j["cutoffK"] | -1.0 );
               kc_y = kc_x;
@@ -606,7 +607,7 @@ namespace Faunus {
             kcc_y = ceil(kc_y);
             kcc_z = ceil(kc_z);
 	    
-            calcParameters(delta);
+            calcParameters(delta); // updates parameters (if not set by user)
             if(user_kc)
               kVectorChange();
           }
@@ -661,23 +662,10 @@ namespace Faunus {
 	  }
 	  
           /** @brief Update energy function due to Change 
-	   *  @note Does not include real-space contribution
-	   *  @warning Not finished!
 	   */
           double updateChange(const typename Tspace::Change &c) override {
 	    change = c;
-	    double energy = 0.0;
-	    return energy;
-	    
-	    energy += ( external(spc->trial) - external(spc->p) );
-            for (auto m : change.mvGroup) {
-	      auto g = spc->groupList()[m.first];
-	      for (auto i : m.second) {
-		Group gt(i,i);
-		energy += ( g_external(spc->trial,gt) - g_external(spc->p,gt) );
-	      }
-      	    }
-	    return energy;
+	    return 0.0;
 	  }
 
           double external(const Tpvec &p) override {
@@ -691,7 +679,7 @@ namespace Faunus {
           }
 
           /**
-           * @brief Re-calculates the vectors of complex numbers used in getQ2_ion and getQ2_dip.
+           * @brief Re-calculates the vectors of complex numbers used in getQ2
            * @param p Particle vector
            */
           void updateAllComplexNumbers(const Tpvec &p) {
@@ -715,7 +703,7 @@ namespace Faunus {
           }
 
           /**
-           * @brief Set space and update k-vectors and alpha
+           * @brief Set space and updates parameters (if not set by user)
            */
           void setSpace(Tspace &s) override {
             Tbase::setSpace(s);

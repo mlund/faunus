@@ -236,7 +236,6 @@ namespace Faunus {
 		
 		// Change k-vectors due to moved particles
                 for (auto m : change.mvGroup) {
-		  auto g = spc->groupList()[m.first];
 		  for (auto i : m.second) {
 		    double dotTrial = kv.dot(p[i]);
 		    double dot = kv.dot(spc->p[i]);
@@ -636,10 +635,9 @@ namespace Faunus {
 	      } else {
                 for (int k=0; k<kVectorsInUse; k++) {
                   Point kv = kVectors.col(k);
-		  
+		  s
 		  // Change k-vectors due to moved particles
                 for (auto m : change.mvGroup) {
-		  auto g = spc->groupList()[m.first];
 		  for (auto i : m.second) {
                     double dotTrial = kv.dot(spc->trial[i]);
                     double dot = kv.dot(spc->p[i]);

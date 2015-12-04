@@ -524,7 +524,7 @@ namespace Faunus {
             values_kcc_z.clear();
             values_wavefunctions.clear();
             lB = Tbase::pairpot.first.bjerrumLength();
-	    eps_surf = ( _j["eps_surf"] | pc::infty );
+	    eps_surf = ( _j["eps_surf"] | 0.0 );
             const_inf = 1.0;    
             if(eps_surf < 1)  // if the value is unphysical (< 1) then we set infinity as the dielectric sonatant of the surronding medium
               const_inf = 0.0; // \varepsilon_{Surface} = \infty

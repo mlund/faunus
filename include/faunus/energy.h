@@ -2563,14 +2563,16 @@ namespace Faunus {
 	  double du = 0.0;
 	  auto newgeo = s.geo;
 	  
-	  pot.setSpace(s);
-	  du += energyChangeConfiguration(s, pot,s.trial,c);
-	  
 	  s.geo = s.geo_old;
 	  pot.setSpace(s);
-	  du -= energyChangeConfiguration(s, pot,s.p,c);
+	  double oldV = energyChangeConfiguration(s, pot,s.p,c);
+	  du -= oldV;
 	  
 	  s.geo = newgeo;
+	  pot.setSpace(s);
+	  double newV = energyChangeConfiguration(s, pot,s.trial,c);
+	  du += newV;
+	  
 	  return du;
         }
 

@@ -169,7 +169,7 @@ namespace Faunus {
           Eigen::VectorXd k2s, Aks;  // Stores values based on k-vectors in order to minimize computational effort. (See Eq.24 in DOI: 10.1063/1.481216)
 
           /**
-           * @brief Returns Ewald self energy for ions and dipoles.
+           * @brief Returns Ewald self energy (kT) for ions and dipoles.
            * @param p Vector with partciles
            * @param g Group to calculate from
            * @note Does only add to average value if all atoms are counted
@@ -192,11 +192,11 @@ namespace Faunus {
               double selfEnergy = -alpha*( Sq2 + alpha2*(2.0/3.0)*Smu2 ) / sqrt(pc::pi);
 	      //if(N == g.getMolSize())
 	      //	selfEnergyAverage += selfEnergy*lB;
-              return selfEnergy;
+              return selfEnergy*lB;
             }
 
           /**
-           * @brief Returns Ewald surface energy for ions and dipoles.
+           * @brief Returns Ewald surface energy (kT) for ions and dipoles.
            * @param p Vector with partciles
            * @param g Group to calculate from
            */
@@ -215,7 +215,7 @@ namespace Faunus {
               double surfaceEnergy = const_inf * (2*pc::pi/(( 2*eps_surf + 1)*V))*( qrs.dot(qrs) + 2*qrs.dot(mus) +  mus.dot(mus) );
 	      //if(N == g.getMolSize())
 	      //	surfaceEnergyAverage += surfaceEnergy*lB;
-              return surfaceEnergy;
+              return surfaceEnergy*lB;
             }
 
           /**
@@ -263,7 +263,7 @@ namespace Faunus {
             }
 
           /**
-           * @brief Returns reciprocal space energy.
+           * @brief Returns reciprocal space energy (kT).
            * @param p Vector with partciles
            * @param g Group to calculate from
            */
@@ -279,7 +279,7 @@ namespace Faunus {
               double reciprocalEnergy = (2*pc::pi/V)*E;
 	      //if(N == g.getMolSize())
 	      //	reciprocalEnergyAverage += reciprocalEnergy*lB;
-              return reciprocalEnergy;
+              return reciprocalEnergy*lB;
             }
 
           /**
@@ -354,6 +354,7 @@ namespace Faunus {
            * @param alpha_ion_in Damping parameter (\f$ \AA^{-1} \f$)
            * @param delta_in Accuracy in ionic systems for energy (\f$ e^2/\AA \f$)
            * @note According to DOI: 10.1080/08927029208049126  (DOI: 10.1007/b136795)
+	   * @warning Need to call 'kVectorChange' after change of number of k-vectors
            */
           void calcKcIon(double alpha_ion_in, double delta_in = 5e-5) {
             double temp = (1.0/3.0)*pow(2.0,2.0/3.0)*pow(4.0,1.0/3.0)*pow(pow(Sq2,4.0)/(alpha_ion_in*alpha_ion_in*pow(delta_in,4.0)),1.0/3.0);
@@ -369,7 +370,6 @@ namespace Faunus {
             values_kcc_x.push_back(kcc_x);
             values_kcc_y.push_back(kcc_y);
             values_kcc_z.push_back(kcc_z);
-            kVectorChange();
           }
 
 
@@ -404,6 +404,7 @@ namespace Faunus {
            * @param alpha_ion_in Damping parameter
            * @param delta Accuracy in dipolar systems for energy (\f$ e^2/\AA \f$), force(\f$ e^2/\AA^2 \f$) and torque(\f$ e^2/\AA \f$).
            * @note According to DOI: 10.1063/1.1398588. Here we assume statistical error in reciprocal space is negligible with regard to the systematic error ( p.6355 )
+	   * @warning Need to call 'kVectorChange' after change of number of k-vectors
            */
           void calcKcDipole(double alpha_dip_in, double delta_in = 5e-5) {
             double temp0 = exp(-0.5*LambertW((-1.125*pow(pc::pi*delta/Smu2,2.0)*N*pow(alpha_dip_in,-6.0))));
@@ -419,12 +420,12 @@ namespace Faunus {
             values_kcc_x.push_back(kcc_x);
             values_kcc_y.push_back(kcc_y);
             values_kcc_z.push_back(kcc_z);
-            kVectorChange();
           }
 
           /**
            * @brief Calculates optimal parameters for the Ewald method. It will only calculate a value if the user has not defined it in the input.
            * @param delta_in Accuracy in dipolar systems for energy (\f$ e^2/\AA \f$)). Should not be larger than \f$ 5\cdot 10^{-5} \f$.
+	   * @warning Need to call 'kVectorChange' after change of number of k-vectors
            */
           void calcParameters(double delta_in=5e-5) {
             if(!user_alpha) {
@@ -514,7 +515,6 @@ namespace Faunus {
             Tbase::name += " (Ewald)";
             updateBoxDimensions(typename Tspace::GeometryType(j).len);
 	    auto _j = j["energy"]["nonbonded"]["ewald"];
-	    
             cnt_accepted = 0;
             updates = 0;           // will finally have the value of how many time setSpace() has been used
             values_alpha.clear();
@@ -537,19 +537,12 @@ namespace Faunus {
             } else {
               update_frequency_bool = false;
             }
-
             // Initiate alpha-values
             user_alpha = false;
             if ( ( _j["alpha"] | -1.0 ) > 0.0 ) {  // set damping-parameter
               user_alpha = true;
               alpha = ( _j["alpha"] | -1.0 );
               alpha2 = alpha*alpha;
-            } else {
-              if(useIonIon || useIonDipole) {
-                calcAlphaIon();
-              }else {
-                calcAlphaDipole();
-              }
             }
 
             // Initiate real cut-off
@@ -559,14 +552,7 @@ namespace Faunus {
               rc = ( _j["cutoff"] | -1.0 );
               if (rc > minL/2.0)
                 rc = minL/2.0;
-            } else {
-              if(useIonIon || useIonDipole) {
-                calcRcIon(alpha);
-              } else {
-                calcRcDipole(alpha);
-              }
             }
-
             // Initiate reciprocal cut-off
             user_kc = false;
             if ( ( _j["cutoffK"] | -1.0 ) > 0.0 ) {  // set reciprocal cutoff
@@ -607,8 +593,8 @@ namespace Faunus {
             kcc_z = ceil(kc_z);
 	    
             calcParameters(delta); // updates parameters (if not set by user)
-            if(user_kc)
-              kVectorChange();
+            kVectorChange();
+	    change.clear();
           }
 
           double i_external(const Tpvec &p, int i) override {
@@ -617,17 +603,20 @@ namespace Faunus {
           }
 
           double g_external(const Tpvec &p, Group &g) override {
-            return lB * getSelfEnergy(p,g);
+            return getSelfEnergy(p,g);
           }
           
           /**
            * @brief Updates vectors of complex numbers if a move has been accepted. These vectors are implemented in order to increase computational speed. 
-           * After 'update_frequency' number of updates the entirety of the complex vectors are recalculated in order to avoid numerical errors.
+           * After 'update_frequency' number of non-isobaric updates the entirety of the complex vectors are recalculated in order to avoid numerical errors.
            * @param move_accepted True if a move is accepted, otherwise false
            */
           double update(bool move_accepted) override {
 	    
 	    if(move_accepted) {
+	      if(change.geometryChange) // If volume has changed then we should always update k-vectors (which should already have been done through 'setSpace')
+		goto endline;
+	      
 	      cnt_accepted++;
               if(cnt_accepted > update_frequency - 1) {
                 updateAllComplexNumbers(spc->trial);
@@ -635,7 +624,6 @@ namespace Faunus {
 	      } else {
                 for (int k=0; k<kVectorsInUse; k++) {
                   Point kv = kVectors.col(k);
-		  s
 		  // Change k-vectors due to moved particles
                 for (auto m : change.mvGroup) {
 		  for (auto i : m.second) {
@@ -656,6 +644,8 @@ namespace Faunus {
                 }
 	      }
 	    }
+	    endline:
+	    change.clear();
 	    return 0.0; 
 	  }
 	  
@@ -673,7 +663,7 @@ namespace Faunus {
             double reciprocalEnergy = getReciprocalEnergy(p,g);
             final = std::chrono::steady_clock::now();
             timeReciprocal += double(std::chrono::duration_cast<std::chrono::milliseconds >(final-init).count());
-            return lB * ( getSurfaceEnergy(p,g) + reciprocalEnergy   );
+            return ( getSurfaceEnergy(p,g) + reciprocalEnergy   );
           }
 
           /**
@@ -699,7 +689,7 @@ namespace Faunus {
             }
             Group g(0,p.size()-1);
           }
-
+          
           /**
            * @brief Set space and updates parameters (if not set by user)
            */
@@ -708,7 +698,9 @@ namespace Faunus {
             N = s.p.size();
 	    V = spc->geo.getVolume();
 	    updateBoxDimensions(spc->geo.len);
-            calcParameters();
+            calcParameters(delta);
+	    if(change.geometryChange || !user_kc)
+	      kVectorChange();
             updateAllComplexNumbers(s.p);
             if(!update_frequency_bool)
               update_frequency = N;

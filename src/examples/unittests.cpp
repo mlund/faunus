@@ -118,12 +118,10 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
   // Check against values from article: http://dx.doi.org/10.1063/1.481216
   InputMap in("unittests.json");    
   auto pot = Energy::NonbondedEwald<Space<Geometry::Cuboid,DipoleParticle>,Potential::HardSphere,true,false,true>(in);
-
   Space<Geometry::Cuboid,DipoleParticle> spc(in);         
   spc.p.resize(4);
   Group g(0,3);
   spc.groupList().push_back(&g);
-  
   spc.p[0] = Point(0,0,0);
   spc.p[1] = Point(1,0,0);
   spc.p[2] = Point(0,0,1);
@@ -133,41 +131,36 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
       spc.p[i].charge = 0.0;
       spc.p[i].muscalar = 0.0;
   }
-  
-  double scale = 0.001783368591767; // Scale with 'scale' in order to get right energy at 298 K
+  double lB = 560.7378949512486; // Scale with 'lB' in order to get right energy at 298 K 
   
   spc.p[0].charge = 1.0;
   spc.p[1].charge = -1.0;
   spc.trial = spc.p;
   pot.setSpace(spc); // Updates vectors in Ewald
-  
   double ureal = pot.pairpot(spc.p[0],spc.p[1],spc.p[1]-spc.p[0]);
   double usurf_reci = pot.external(spc.p);
   double uself = pot.g_external(spc.p, g);
   
-  CHECK(ureal == Approx(-0.205903210732068/scale));
-  CHECK(usurf_reci == Approx(0.215125076289333/scale));  // reciprocal energy in addition to surface energy
-  CHECK(uself == Approx(-1.009253008808064/scale)); 
-  CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-1.0000311/scale));  // Total ion-Ion interaction energy
-  
+  CHECK(ureal == Approx(-0.205903210732068*lB));
+  CHECK(usurf_reci == Approx(0.215125076289333*lB));  // reciprocal energy in addition to surface energy
+  CHECK(uself == Approx(-1.009253008808064*lB)); 
+  CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-1.0000311*lB));  // Total ion-Ion interaction energy
   spc.p[0].charge = 0.0;
   spc.p[1].charge = 0.0;
-  spc.p[2].muscalar = 1.0; // Scale with 'scale' in order to get right energy at 298 K
+  spc.p[2].muscalar = 1.0;
   spc.p[3].muscalar = 1.0;
   spc.p[2].mu = Point(1,0,0);
   spc.p[3].mu = Point(1,0,0);
   spc.trial = spc.p;
   pot.setSpace(spc); // Updates vectors in Ewald
-  
   ureal = pot.pairpot(spc.p[2],spc.p[3],spc.p[2]-spc.p[3]);
   usurf_reci = pot.external(spc.p);
   uself = pot.g_external(spc.p, g);
   
-  CHECK(ureal == Approx(-2.044358213791836/scale));
-  CHECK(usurf_reci == Approx(0.582251578315622/scale)); // reciprocal energy in addition to surface energy
-  CHECK(uself == Approx(-0.538268271364301/scale));
-  CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-2.0003749/scale));  // Total dipole-dipole interaction energy
-
+  CHECK(ureal == Approx(-2.044358213791836*lB));
+  CHECK(usurf_reci == Approx(0.582251578315622*lB)); // reciprocal energy in addition to surface energy
+  CHECK(uself == Approx(-0.538268271364301*lB));
+  CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-2.0003749*lB));  // Total dipole-dipole interaction energy
 }
 
 

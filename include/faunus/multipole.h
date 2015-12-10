@@ -992,9 +992,8 @@ namespace Faunus {
           MultipoleWolf(Tmjson &j, const string &sec="coulomb") : wolf((j[sec]["kappa"] | 0.0),
               (j[sec]["cutoff"] | pc::infty)) {
             name="Multipole Wolf";
-            pc::setT ( (j[sec]["temperature"] | 298.15) );
+	    _lB = Coulomb(j,sec).bjerrumLength();
             double epsilon_r = (j[sec]["epsilon_r"] | 1.0);
-            _lB = pc::lB(epsilon_r);
             wolf.setType(zeroDerivative);
           }
           template<class Tparticle>

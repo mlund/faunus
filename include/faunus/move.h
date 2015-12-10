@@ -345,6 +345,7 @@ namespace Faunus {
         w=30;
         runfraction=1;
         useAlternativeReturnEnergy =false; //this has no influence on metropolis sampling!
+        change.clear();
 #ifdef ENABLE_MPI
         mpiPtr=nullptr;
 #endif
@@ -396,7 +397,7 @@ namespace Faunus {
           for (auto i : spc->groupList())
             i->setMassCenter(*spc);
         cnt++;
-        change.clear();
+	assert(change.empty() && "Change object is not empty!");
         _trialMove();
       }
 
@@ -405,12 +406,14 @@ namespace Faunus {
         cnt_accepted++;
         _acceptMove();
         pot->update(true);
+	change.clear();
       }
 
     template<class Tspace>
       void Movebase<Tspace>::rejectMove() {
         _rejectMove();
         pot->update(false);
+	change.clear();
       }
 
     /** @return Energy change in units of kT */
@@ -2173,11 +2176,11 @@ namespace Faunus {
         val += newval;
         msd += pow( oldval-newval, 2 );
         rval += 1./newval;
-        spc->geo.setlen(newlen); // Maybe this can be replaced with "spc->geo_old = spc->geo;" ?
-        pot->setSpace(*spc);
+        spc->geo.setlen(newlen);
         for (auto g : spc->groupList() )
           g->accept(*spc);
 	spc->geo_old = spc->geo;
+	pot->setSpace(*spc); 
       }
 
     template<class Tspace>
@@ -2186,9 +2189,9 @@ namespace Faunus {
         val += oldval;
         rval += 1./oldval;
         spc->geo = spc->geo_old;
-        pot->setSpace(*spc);
         for (auto g : spc->groupList() )
           g->undo(*spc);
+	pot->setSpace(*spc);
       }
 
     /**
@@ -2221,7 +2224,6 @@ namespace Faunus {
     template<class Tspace>
       double Isobaric<Tspace>::_energyChange() {
         spc->geo.setlen(newlen);
-        pot->setSpace(*spc); // potential must know about volume, too
 
         // In spherical geometries, molecules may collide with
         // cell boundary upon mass center scaling:

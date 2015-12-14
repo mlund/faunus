@@ -613,7 +613,7 @@ namespace Faunus {
               << p.size() << " --> " << n << ".\n";
             p.resize(n);
           }
-          assert(n==(int)p.size());
+          assert(n==(int)p.size() && "State file has different number of particles. Try using the RESIZE keyword.");
           if (n == (int)p.size() ) {
             for (int i=0; i<n; i++)
               p[i] << fin;

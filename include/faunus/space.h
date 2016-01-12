@@ -401,8 +401,10 @@ namespace Faunus {
       assert(p.size()==trial.size() && "Trial/P vector-size mismatch!");
       assert(p==trial && "Trial/P vector mismatch!");
       bool rc=true;
-      if (p.size()!=trial.size())
+      if (p.size()!=trial.size()) {
+        std::cerr << "Trial/P vector mismatch\n";
         rc=false;
+      }
       else {
         for (size_t i=0; i<p.size(); i++) {
           if ( geo.collision(p[i], p[i].radius) ) {
@@ -426,16 +428,20 @@ namespace Faunus {
             cnt+=gi->size();
 
         if (cnt!=p.size()) {
-          std::cerr << "Sum of enrolled group sizes does not match particle vector";
+          std::cerr << "Sum of enrolled group sizes does not match particle vector\n";
           rc=false;
         }
       }
 
-      if (atomTrack.size() != p.size())
+      if (atomTrack.size() != p.size()) {
+        std::cerr << "Error: Atom tracker doesn't match particle vector\n";
         rc=false;
+      }
 
-      if (molTrack.size() != g.size())
+      if (molTrack.size() != g.size()) {
+        std::cerr << "Error: Molecular tracker doesn't match molecule vector\n";
         rc=false;
+      }
 
       if ( rc==false )
         throw std::runtime_error("Space sanity check failed.");
@@ -515,6 +521,7 @@ namespace Faunus {
 
       assert( !groupList().empty() );
       assert( i>=0 && i<(int)g.size() );
+      assert( atomTrack.size() == p.size() );
 
       if ( !groupList().empty() ) {
 
@@ -538,7 +545,7 @@ namespace Faunus {
 
         // move later groups down to reflect new particle index
         size_t cnt=0;
-        for (auto l : groupList()) { // loop over groups (pointers)
+        for (auto &l : groupList()) { // loop over groups (pointers)
           cnt+=l->size(); // count particles in each group
           if (l->front()>end) {
             // erase index from atom tracker
@@ -552,7 +559,8 @@ namespace Faunus {
               atomTrack.insert(p[i].id, i);
           }
         }
-        assert(cnt==p.size() && "Particle mismatch while erasing a group!");
+        assert( cnt==p.size() && "Particle mismatch while erasing a group!" );
+        assert( atomTrack.size() == p.size() );
         return true;
       }
       return false;
@@ -649,10 +657,12 @@ namespace Faunus {
 
           initTracker(); // update trackers
 
+          checkSanity();
+
           return true;
         }
       }
-
+      
       std::cerr << "State file not found." << endl;
       return false;
     }
@@ -751,6 +761,8 @@ namespace Faunus {
             // add to atom tracker
             for (auto i : *g[imax])
               atomTrack.insert( p[i].id, i );
+
+            assert( atomTrack.size() == p.size() );
 
             return g[imax];
           }

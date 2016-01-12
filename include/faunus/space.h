@@ -299,9 +299,12 @@ namespace Faunus {
           atomTrack.clear();
           molTrack.clear();
           for (auto g : groupList()) {
+            assert( (size_t)g->front()<p.size()
+                && (size_t)g->back()<p.size()
+                && "Group larger than particle vector" );
             molTrack.insert(g->molId, g);
             for (auto i : *g)
-              atomTrack.insert(p[i].id, i);
+              atomTrack.insert(p.at(i).id, i);
           }
         }
 
@@ -613,31 +616,29 @@ namespace Faunus {
               << p.size() << " --> " << n << ".\n";
             p.resize(n);
           }
+
           assert(n==(int)p.size() && "State file has different number of particles. Try using the RESIZE keyword.");
+
           if (n == (int)p.size() ) {
             for (int i=0; i<n; i++)
               p[i] << fin;
             trial=p;
             cout << indent(SUB) << "Read " << n << " particle(s)." << endl;
-            // Read groups
+
+            // destruct all previous groups
+            for (auto i : groupList())
+              delete i;
+            // read groups
             fin >> n;
-            if (g.empty()) {  // group list is empty!
-              g.resize(n);
-              for (auto &i : g)
-                i = new Group();
+            g.resize(n);
+            for (auto &i : groupList()) {
+              i = new Group();
+              *i << fin;
+              i->setMassCenter(*this);
+              if ( i->name.empty() )
+                i->name = molecule[i->molId].name;
             }
-            if (n==(int)g.size()) {
-              for ( auto i : g ) {
-                *i << fin;
-                i->setMassCenter(*this);
-                if ( i->name.empty() )
-                  i->name = molecule[i->molId].name;
-              }
-              cout << indent(SUB) << "Read " << n << " group(s)." << endl;
-            } else {
-              std::cerr << "FAILED! (space groups do not match)." << endl;
-              return false;
-            }
+            cout << indent(SUB) << "Read " << n << " group(s)." << endl;
           }
           string id;
           fin >> id;

@@ -30,7 +30,7 @@ d = {
       },
 
     "moleculelist": {
-      "water": { "activity" : 0.0009386, "structure" : "water.aam"}
+      "water": { "activity" : 0.0009386, "structure" : "water.aam", "Ninit" : 200}
       },
 
     "moleculecombinations" : {

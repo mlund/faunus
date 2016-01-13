@@ -151,6 +151,7 @@ namespace Faunus {
               return true;
             }
           }
+          std::cerr << "Warning: Nothing to erase (data=" << data << ")\n";
           return false;
         }
 
@@ -158,6 +159,7 @@ namespace Faunus {
          * @brief Erase data using search (slower than using id)
          */
         bool erase(Tid id) {
+          assert(2==1 && "Please validate this function");
           for (auto &m : _map) {
             auto it = std::find(m.second.begin(), m.second.end(), id);
             if (it!=m.second.end()) {
@@ -165,8 +167,21 @@ namespace Faunus {
               return true;
             }
           }
+          std::cerr << "Warning: Nothing to erase.\n";
           return false;
         }
+
+        /** @brief Checks if given data point exists */
+        bool exists(Tid id, T data) const {
+          auto i = _map.find(id);
+          if (i!=_map.end()) {
+            auto pos=std::find(i->second.begin(), i->second.end(), data);
+            if (pos!=i->second.end())
+              return true;
+          }
+          return false;
+        }
+
     };
 
   /**
@@ -443,6 +458,15 @@ namespace Faunus {
         rc=false;
       }
 
+      for (size_t i=0; i<p.size(); ++i)
+        if (atomTrack.exists(p[i].id, i)==false)
+          throw std::runtime_error("Error: Atom tracker out of sync.");
+
+      for (auto gi : groupList())
+        for (auto i : *gi)
+          if (atomTrack.exists(p.at(i).id, i)==false)
+            throw std::runtime_error("Error: Atom tracker out of sync.");
+
       if ( rc==false )
         throw std::runtime_error("Space sanity check failed.");
 
@@ -525,41 +549,38 @@ namespace Faunus {
 
       if ( !groupList().empty() ) {
 
-        assert( !g.empty() );
-        assert( i < (int)g.size() );
-
         int n   = g.at(i)->size(); // number of particles in group
         int beg = g[i]->front();   // first particle
         int end = g[i]->back();    // last particle
+
+        assert(n>0 && "Group size is zero");
 
         // erase from trackers
         molTrack.erase( g[i]->molId, g[i] );
         for (auto j : *g[i])
           atomTrack.erase( p[j].id, j);
 
-        // erase data
-        delete( g[i] );            // destruct group
-        g.erase( g.begin()+i );    // remove group pointer
-        p.erase( p.begin()+beg, p.begin()+end+1); // remove particles
+        // erase particle index of later groups from tracker
+        for (auto gi : groupList())
+          if (gi->front() > end)
+            for (auto i : *gi)
+              atomTrack.erase(p[i].id, i);
+
+        // erase group from: memory; grouplist; particle vectors
+        delete( g[i] );
+        g.erase( g.begin()+i );
+        p.erase( p.begin()+beg, p.begin()+end+1);
         trial.erase( trial.begin()+beg, trial.begin()+end+1 );
 
-        // move later groups down to reflect new particle index
-        size_t cnt=0;
-        for (auto &l : groupList()) { // loop over groups (pointers)
-          cnt+=l->size(); // count particles in each group
-          if (l->front()>end) {
-            // erase index from atom tracker
-            for (auto i : *l)
-              atomTrack.erase(p[i].id, i);
-            // move index down
-            l->setfront( l->front()-n );
-            l->setback( l->back()-n );
-            // add updated index to atom tracker
-            for (auto i : *l)
+        // move index of later groups down and add to tracker
+        for (auto gi : groupList())
+          if (gi->front() > end) {
+            gi->setfront( gi->front()-n );
+            gi->setback( gi->back()-n );
+            for (auto i : *gi)
               atomTrack.insert(p[i].id, i);
           }
-        }
-        assert( cnt==p.size() && "Particle mismatch while erasing a group!" );
+
         assert( atomTrack.size() == p.size() );
         return true;
       }
@@ -729,6 +750,9 @@ namespace Faunus {
   template<class Tgeometry, class Tparticle>
     Group* Space<Tgeometry,Tparticle>::insert(PropertyBase::Tid molId, const p_vec &pin) {
       if ( !pin.empty() ) {
+
+        assert( atomTrack.size() == p.size() );
+
         // insert atomic groups into existing group, if present
         if (molecule[molId].isAtomic() && !g.empty()) {
           int max=-1, imax=-1; 

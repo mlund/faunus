@@ -1,6 +1,6 @@
 # Generated on Dec 24 2014 16:08:03 using 4.2.1 Compatible Apple LLVM 6.0 (clang-600.0.56)
 energyAverage                      -63386.5            
-moves/gc_acceptance                0.024
+moves/gc_acceptance                0.0337977
 moves/gc_flux                      0.966667                   
 moves/gc_mol_water_gamma           1.84324e-05         
 relativeEnergyDrift                6.92411e-15         

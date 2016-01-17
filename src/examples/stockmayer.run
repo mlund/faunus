@@ -10,8 +10,7 @@ cp -f $source_tests_dir/stockmayer.state state 2> /dev/null
 
 echo '{
   "atomlist" : {
-    "dip" : { "sigma":1.0, "eps":0.17211, "mu":"0 0 0.415", "dp":0.3, "dprot":180,
-              "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0" }
+    "dip" : { "sigma":1.0, "eps":0.17211, "mu":"0 0 0.415", "dp":0.3, "dprot":180, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0", "q":0.0 }
   },
 
   "moleculelist" : {
@@ -20,7 +19,8 @@ echo '{
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "epsr":1, "cutoff":14, "cutoffdip":4.3 }
+       "coulomb" : { "epsr" : 1.0, "cutoff":14 },
+       "ewald"   : { "epsr" : 1.0, "cutoff":14, "eps_surf":0, "alpha":0.894427190999916, "cutoffK":1, "spherical_sum":true, "update_frequency":1 } 
     }
   },
 

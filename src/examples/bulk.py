@@ -29,7 +29,7 @@ d = {
       },
 
     "moves" : {
-      "isobaric" : { "dp":0, "pressure":11, "prob":0.1 },
+      "isobaric" : { "dp":0.0, "pressure":11, "prob":0.1 },
       "atomtranslate" : { 
         "NaCl" : { "peratom":True }
         }

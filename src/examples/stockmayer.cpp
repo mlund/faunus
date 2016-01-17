@@ -1,18 +1,29 @@
 #include <faunus/faunus.h>
 #include <faunus/multipole.h>
+#include <faunus/ewald.h>
+
+//#define EWALD
 
 using namespace Faunus;
 using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid,DipoleParticle> Tspace; 
+#ifdef EWALD
+typedef LennardJonesLB Tpair;
+#else
 typedef CombinedPairPotential<LennardJonesLB,DipoleDipole> Tpair;
+#endif
 
 int main() {
   InputMap in("stockmayer.json");                // open parameter file for user input
   Tspace spc(in);                                // sim.space, particles etc.
 
-  Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
+#ifdef EWALD
+    Energy::NonbondedEwald<Tspace,Tpair,false,false,true> pot(in); // non-bonded only
+#else
+    Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
+#endif
 
 #ifdef __POLARIZE
   Move::Propagator<Tspace,true> mv(in,pot,spc);
@@ -22,7 +33,7 @@ int main() {
 
   spc.load("state");
 
-  Analysis::DipoleAnalysis dian(spc,in);
+  Analysis::MultipoleAnalysis dian(spc,in);
   DipoleWRL sdp;
   FormatXTC xtc(spc.geo.len.norm());
 
@@ -34,10 +45,10 @@ int main() {
     while ( loop[1] ) {
       sys += mv.move();
       if (slump()>0.5)
-        dian.sampleMuCorrelationAndKirkwood(spc);
+        dian.sampleSpatial(spc);
       if (slump()>0.99)
         xtc.save(textio::prefix+"out.xtc", spc.p);  
-      dian.sampleDP(spc);
+      dian.sample(spc);
     }    
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing() << std::flush;

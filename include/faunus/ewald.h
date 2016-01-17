@@ -1,6 +1,7 @@
 #ifndef FAUNUS_EWALD_H
 #define FAUNUS_EWALD_H
 
+#include <faunus/auxiliary.h>
 #include "faunus/inputfile.h"
 #include <complex>
 
@@ -9,50 +10,82 @@ namespace Faunus {
   namespace Potential {
 
     /**
-     * @brief Pair potential for real-space part of Ewald
+     * @brief Pair potential for real-space part of Ewald.
+     * 
+     * @f[
+     * \boldsymbol{{\rm T}}_0(\boldsymbol{r}) = \frac{{\rm erfc}(\alpha |\boldsymbol{r}|)}{|\boldsymbol{r}|}
+     * @f]
+     * 
+     * @f[
+     * \boldsymbol{{\rm T}}_1(\boldsymbol{r}) = \nabla\left(\frac{{\rm erfc}(\alpha |\boldsymbol{r}|)}{|\boldsymbol{r}|}\right)
+     * @f]
+     * 
+     * @f[
+     * \boldsymbol{{\rm T}}_2(\boldsymbol{r}) = \nabla^2\left(\frac{{\rm erfc}(\alpha |\boldsymbol{r}|)}{|\boldsymbol{r}|}\right)
+     * @f]
+     * 
+     * @f[
+     * E_{Real} = \sum_{i=1}^{N-1}\sum_{j=i+1}^N \left( q_i\boldsymbol{{\rm T}}_0(\boldsymbol{r}_{ij})q_j   +      q_i\boldsymbol{{\rm T}}_1(\boldsymbol{r}_{ij})\cdot \boldsymbol{\mu}_j  - q_j\boldsymbol{{\rm T}}_1(\boldsymbol{r}_{ij})\cdot \boldsymbol{\mu}_i   -       \boldsymbol{\mu}_i^T\boldsymbol{{\rm T}}_2(\boldsymbol{r}_{ij})\boldsymbol{\mu}_j    \right)
+     * @f]
+     * 
+     * @note Optimal parameters for ion-dipole interactions are assumed to be the same as for ion-ion interactions.
      *
-     * Explain, insert LaTeX
      */
     template<bool useIonIon=true, bool useIonDipole=false, bool useDipoleDipole=false> 
       struct EwaldReal : public Potential::Coulomb {
 
         typedef Potential::Coulomb Tbase;
-        double alpha, rc2i;
+        double alpha, alpha2, constant, rc, rc2i;
 
-        EwaldReal(InputMap &in, string pfx="coulomb") : Tbase(in,pfx), alpha(0), rc2i(0) {
+        EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j,sec), alpha(0), rc2i(0) {
           Tbase::name="Ewald Real";
+        }
+
+        void updateAlpha(double alpha_in) {
+          alpha = alpha_in;
+          alpha2 = alpha*alpha;
+          constant = 2*alpha/sqrt(pc::pi);
+        }
+
+        void updateRcut(double rc_in) {
+          rc = rc_in;
+          rc2i = 1.0/(rc*rc);
         }
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+            if(!useIonIon && !useIonDipole && !useDipoleDipole)
+              return 0.0;
+
             double r2i = 1.0/r.squaredNorm();
             if (r2i < rc2i)
-              return 0;
-            double E=0;
+              return 0.0;
+
+            double E = 0.0;
             double r1i = sqrt(r2i);
             double r1i_d = erfc_x(alpha/r1i)*r1i;
 
             if(useIonIon)
-              E = r1i_d*a.charge*b.charge;
+              E += r1i_d*a.charge*b.charge;
+            if(!useIonDipole && !useDipoleDipole)
+              return E*Tbase::bjerrumLength();
+
 #ifdef DIPOLEPARTICLE
-            double T1;
+            double expK = constant*exp(-alpha2/r2i);
+            double T1 = (expK + r1i_d)*r2i;
+
             if(useIonDipole) {
-              expK = constant*exp(-alpha2/r2i);
-              T1 = (expK + r1i_d)*r2i;
               E += a.charge*r.dot(b.mu)*b.muscalar*T1;
               E -= b.charge*r.dot(a.mu)*a.muscalar*T1;
             }
+
             if(useDipoleDipole) {
-              if(!useIonDipole) {
-                expK = constant*exp(-alpha2/r2i);
-                T1 = (expK + r1i_d)*r2i;
-              }
               double t3 = -b.mu.dot(a.mu)*T1;
-              double t5 = b.mu.dot(r)*a.mu.dot(r)*(3.*r1i_d*r2i + (3.*r2i + 2.*alpha2)*expK)*r2i;
+              double t5 = b.mu.dot(r)*a.mu.dot(r)*(3.0*T1 + 2.0*alpha2*expK )*r2i;
               E += -(t5 + t3)*b.muscalar*a.muscalar;
             }
 #endif
-            return Tbase::bjerrumLength() * E; 
+            return E*Tbase::bjerrumLength();
           }
       };
   }//namespace
@@ -65,14 +98,50 @@ namespace Faunus {
      * @brief Ewald summation for electrostatic interactions
      * @date Lund 2014
      *
-     * This will....(description, formulas, refs. etc.)
-     *
+     * This will take care of long-ranged electrostatic interactions using the Ewald summation scheme Currently it is possible to include ions and dipoles. 
+     * 
      *  Keyword          |  Description
      * :--------------   | :---------------
-     * `ewald_precision` |  Precision ...
-     *
-     * @todo arbitrary box dimensions; documentation; optimization; automatic alpha calc.
-     *      prettify _info() output (see other energy classes); seach for "todo" items below
+     * `delta`           |  Accuracy in system for energy (\f$ e^2/\AA \f$).                                                                 (Default: 5e-5)
+     * `eps_surf`        |  Dielectric constant of the surroundings                                                                          (Default: \f$ \varepsilon_r = \infty \f$)
+     * `spherical_sum`   |  Spherical (or ellipsoid) summation in reciprocal space if set to be true. Cubic summation is applied if false.   (Default: true)
+     * `cutoff`          |  Real space cut-off.                                                                                              (Default: Half the minimum box-length)              
+     * `alpha`           |  Damping parameter.                                                                                               (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
+     * `cutoffK`         |  Maximum number of vectors in any axis in k-space.                                                                (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
+     * `cutoffK_x`       |  Maximum number of vectors in x-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
+     * `cutoffK_y`       |  Maximum number of vectors in y-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
+     * `cutoffK_z`       |  Maximum number of vectors in z-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
+     * `update_frequency`|  The frequency of how often the total sum of all complex numbers are updated (an optimization optin).             (Default: Number of particles in system)
+     * 
+     * @note Tested and implemented through DOI: 10.1063/1.481216
+     * @note If parameters are not set; optimized parameters for ion-ion-interactions will be used for all interactions save the case when only dipoles are present, then optimized parameters for dipole-dipole-interactions will be used. This is done since the wave-functions for ions and dipoles needs to be compatible with each other in order to get ion-dipole interactions.
+     * 
+     * @f[
+     * E_{Total} = E_{Real} + E_{Reciprocal} + E_{Self} + E_{Surface} + E_{Pol}
+     * @f]
+     * 
+     * Where the first of these terms comes from 'EwaldReal' while the others are described by
+     * 
+     * @f[
+     * E_{Reciprocal} = \frac{2\pi}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\left|Q^{q\mu}\right|^2 \;\;,\;\; A_k = \frac{e^{-k^2/4\alpha^2}}{k^2} \;\;,\;\; Q^{q\mu} = \sum_{j}\left(q_j + i({\boldsymbol \mu}_j\cdot {\bf k})  \right)e^{i({\bf k}\cdot {\bf r}_j)}
+     * @f]
+     * 
+     * @f[
+     * E_{Self} = -\sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}|{\boldsymbol \mu}_j|^2   \right)
+     * @f]
+     * 
+     * @f[
+     * E_{Surface} = \frac{2\pi}{(2\varepsilon_{sur} + 1)V}\left[  \left| \sum_{j}q_j{\boldsymbol r}_j   \right|^2 + 2\left(\sum_{j}q_i{\boldsymbol r}_j \right)\cdot\left(\sum_{j}{\boldsymbol \mu}_j \right) + \left|\sum_{j}{\boldsymbol \mu}_j \right|^2   \right]
+     * @f]
+     * 
+     * where 
+     * 
+     * @f[
+     * {\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right)  \;\;,\;\; {\bf n} \in \mathbb{Z}^3
+     * @f]
+     * 
+     * @todo Need to implement measurement of the average evaluation time for real part of Ewald, this in order to get optimal parametrization to work properly.
+     * 
      */
     template<
       class Tspace, \
@@ -87,62 +156,55 @@ namespace Faunus {
           typedef typename Tbase::Tparticle Tparticle;
           typedef typename Tbase::Tpvec Tpvec;
 
-          int maxK, maxKz, k2max;
-          double alpha, alpha2, V, eps_surf, eps_r, Rc, Rc2, rc2i,
-                 constant, L, lB, const_inf,
-                 check_k2_zero, ewapre, lamsep, lamell;
+          Average<double> timeReciprocal;
+          int kVectorsLength, kVectorsInUse, N, updates, cnt_accepted, kcc_x, kcc_y, kcc_z, update_frequency;
+          double kc_x, kc2_x, kc_y, kc2_y, kc_z, kc2_z, alpha, alpha2, V, eps_surf, eps_r, rc, lB, const_inf, check_k2_zero, delta, minL, maxL,Sq2, Smu2; 
+          Point Li, L;                                                                                
+          bool user_alpha, user_kc, user_rc, spherical_sum, update_frequency_bool; 
+          vector<double> values_alpha, values_rc, values_kcc_x, values_kcc_y, values_kcc_z, values_wavefunctions;
+          vector<complex<double>> Q_ion_tot, Q_dip_tot;
+	  typename Tspace::Change change;
 
-          bool user_alpha, user_maxK;
+          Eigen::MatrixXd kVectors;  // Matrices with k-vectors
+          Eigen::VectorXd k2s, Aks;  // Stores values based on k-vectors in order to minimize computational effort. (See Eq.24 in DOI: 10.1063/1.481216)
 
-          /// @todo ARE THESE AVERAGES NEEDED ?
-          Average<double> selfEA, surfEA, realEA, reciEA;
-
-          Eigen::MatrixXd kVectors;
-          Eigen::VectorXd k2s, Aks;  // explain...
-
-          /// @todo Why do we not reach inner loop??
-          void updateKVectors() {
-            kVectors.setZero();
-            k2s.setZero();
-            Aks.setZero();
-            int wavefunctions = 0;
-            for (int kx = 0; kx <= maxK; kx++) 
-              for (int ky = -maxK; ky <= maxK; ky++) 
-                for (int kz = -maxKz; kz <= maxKz; kz++) {
-                  Point kv = 2*pc::pi*Point(kx,ky,kz)/L;
-                  double k2 = kv.dot(kv);
-                  if (k2 < check_k2_zero) // Check if k2 != 0
-                    continue;
-                  if(k2 > k2max)
-                    continue;
-                  kVectors.col(wavefunctions) = kv; 
-                  k2s[wavefunctions] = k2;
-                  Aks[wavefunctions] = exp(-k2/(4*alpha2))/k2;
-                  wavefunctions++;
-                  assert("Why do we never reach here!!");
-                }
-            //assert( wavefunction == kVectors.cols());
-            cout << wavefunctions << " " << kVectors.cols() << endl;
-          }
-
+          /**
+           * @brief Returns Ewald self energy (kT) for ions and dipoles.
+           * @param p Vector with partciles
+           * @param g Group to calculate from
+           * @note Does only add to average value if all atoms are counted
+           */
           template<class Tpvec, class Tgroup>
-            double getSelfEnergy(const Tpvec &p, const Tgroup &g) const {
-              double Eq=0, Emu=0;
+            double getSelfEnergy(const Tpvec &p, const Tgroup &g) { 
+              double Eq = 0;
+              double Emu = 0;
               for (auto i : g) {
                 if (useIonIon || useIonDipole)
                   Eq += p[i].charge * p[i].charge;
 #ifdef DIPOLEPARTICLE
                 if (useIonDipole || useDipoleDipole)
-                  Emu += p[i].mu.dot(p[i].mu) * p[i].muscalar * p[i].muscalar;
+                  Emu += p[i].muscalar * p[i].muscalar;
 #endif
               }
-              return -alpha/sqrt(pc::pi) * ( Eq + 2*alpha2/3*Emu );
+              Sq2 = Eq;
+              Smu2 = Emu;
+
+              double selfEnergy = -alpha*( Sq2 + alpha2*(2.0/3.0)*Smu2 ) / sqrt(pc::pi);
+	      //if(N == g.getMolSize())
+	      //	selfEnergyAverage += selfEnergy*lB;
+              return selfEnergy*lB;
             }
 
+          /**
+           * @brief Returns Ewald surface energy (kT) for ions and dipoles.
+           * @param p Vector with partciles
+           * @param g Group to calculate from
+           */
           template<class Tpvec, class Tgroup>
-            double getSurfEnergy(const Tpvec &p, const Tgroup &g) const {
-              Point mus(0,0,0), qrs(0,0,0);
-              for (auto i : g) {
+            double getSurfaceEnergy(const Tpvec &p, const Tgroup &g) const { 
+              Point mus(0,0,0);
+              Point qrs(0,0,0);
+              for (auto i : g) {  
                 if (useIonIon || useIonDipole)
                   qrs = qrs + p[i].charge*p[i];
 #ifdef DIPOLEPARTICLE
@@ -150,212 +212,503 @@ namespace Faunus {
                   mus = mus + p[i].mu*p[i].muscalar;
 #endif
               }
-              return const_inf * 2*pc::pi/(( 2*eps_surf + 1)*V)
-                * ( qrs.dot(qrs) + 2*qrs.dot(mus) +  mus.dot(mus) );
+              double surfaceEnergy = const_inf * (2*pc::pi/(( 2*eps_surf + 1)*V))*( qrs.dot(qrs) + 2*qrs.dot(mus) +  mus.dot(mus) );
+	      //if(N == g.getMolSize())
+	      //	surfaceEnergyAverage += surfaceEnergy*lB;
+              return surfaceEnergy*lB;
             }
 
           /**
-           * @brief ... 
-           * @todo reduce number of calls to cos/sin
+           * @brief Support-function to 'getReciEnergy'
+           * @param p Vector with partciles
+           * @param g Group to calculate from
+           * @param kv Reciprocal space vector
+	   * @warning Needs to be fixed if inserted/removed particles are present/void!
            */
           template<class Tpvec, class Tgroup>
-            double getQ2(const Tpvec &p, const Tgroup &g, const Point &kv) const {
-              complex<double> Q2(0,0);
-              for (auto i : g) {
-                double dot = kv.dot(p[i]),
-                       cosdot=cos(dot), sindot=sin(dot);
-                if (useIonIon || useIonDipole)
-                  Q2 += p[i].charge * complex<double>(cosdot,sindot);
+            double getQ2(const Tpvec &p, const Tgroup &g, const Point &kv, int index) const {
+              double Q2 = 0.0;
+	      
+              complex<double> Q2_ion = Q_ion_tot.at(index);
+              complex<double> Q2_dip = Q_dip_tot.at(index);
+	      
+              if (Tbase::isTrial(p)) {
+		
+		// Change k-vectors due to moved particles
+                for (auto m : change.mvGroup) {
+		  for (auto i : m.second) {
+		    double dotTrial = kv.dot(p[i]);
+		    double dot = kv.dot(spc->p[i]);
+		    if (useIonIon || useIonDipole) {
+		      Q2_ion += p[i].charge * complex<double>(cos(dotTrial),sin(dotTrial));
+		      Q2_ion -= spc->p[i].charge * complex<double>(cos(dot),sin(dot));
+		    }
 #ifdef DIPOLEPARTICLE
-                if (useIonDipole || useDipoleDipole)
-                  Q2 += Q2 + kv.dot(p[i].mu) * p[i].muscalar * complex<double>(-sindot,cosdot);
+		    if (useDipoleDipole || useIonDipole) {
+		      Q2_dip += kv.dot(p[i].mu) * p[i].muscalar * complex<double>(-sin(dotTrial),cos(dotTrial));
+		      Q2_dip -= kv.dot(spc->p[i].mu) * spc->p[i].muscalar * complex<double>(-sin(dot),cos(dot));
+		    }
 #endif
+		  }
+                }
               }
-              double dQ2 = std::abs(Q2);
-              return dQ2*dQ2;
+              
+              if(useIonIon)
+                Q2 += std::norm(Q2_ion);  // 'norm' returns squared magnitude
+              if(useIonDipole)
+                Q2 += 2.0*std::real(Q2_ion*Q2_dip);
+              if(useDipoleDipole)
+                Q2 += std::norm(Q2_dip);  // 'norm' returns squared magnitude
+              return Q2;
             }
 
-          /// @todo floating point comparison `alpha2==0` bad 
+          /**
+           * @brief Returns reciprocal space energy (kT).
+           * @param p Vector with partciles
+           * @param g Group to calculate from
+           */
           template<class Tpvec, class Tgroup>
-            double getReciEnergy(const Tpvec &p, const Tgroup &g) const {
-              double E=0;
-              if (alpha2==0)
-                return E;
-              for (int i=0; i<kVectors.cols(); ++i)
-                E += Aks[i] * getQ2(p,g,kVectors.col(i));
-              return (2*pc::pi/V)*E;
+            double getReciprocalEnergy(const Tpvec &p, const Tgroup &g) const {
+              double E = 0.0;
+	      
+              for (int k=0; k<kVectorsInUse; k++) {
+                double Q2 = getQ2(p,g,kVectors.col(k),k);
+                E += ( Aks[k] * Q2 );
+              }
+
+              double reciprocalEnergy = (2*pc::pi/V)*E;
+	      //if(N == g.getMolSize())
+	      //	reciprocalEnergyAverage += reciprocalEnergy*lB;
+              return reciprocalEnergy*lB;
             }
 
-          /// @todo kVectorsLength = kVectors.cols()
-          void calcMaxK(double alpha2_in, double L_in) {
-            maxK  = std::ceil(1.0 + alpha2_in*Rc*L_in/pc::pi);
-            maxKz = std::ceil(1.0 + alpha2_in*Rc*lamsep/pc::pi);
-            int kVectorsLength = (maxK + 1)*(2*maxK + 1)*(2*maxKz + 1) - 1;
+          /**
+           * @brief Updates all vectors and matrices which depends on the number of k-space vectors.
+           * @note Needs to be called whenever 'kcc_x', 'kcc_y' or 'kcc_z' has been updated
+           */
+          void kVectorChange() {
+            kVectorsLength = (2*kcc_x + 1)*(2*kcc_y + 1)*(2*kcc_z + 1) - 1;
             kVectors.resize(3, kVectorsLength); 
             k2s.resize(kVectorsLength);
             Aks.resize(kVectorsLength);
+            kVectorsInUse = 0;
+            kVectors.setZero();
+            k2s.setZero();
+            Aks.setZero();
+
+	    double factor = 1.0;
+            for (int kx = 0; kx <= kcc_x; kx++) {
+	      if(kx > 0)
+		factor = 2.0;
+              double dkx2 = double(kx*kx);
+              for (int ky = -kcc_y; ky <= kcc_y; ky++) {
+                double dky2 = double(ky*ky);
+                for (int kz = -kcc_z; kz <= kcc_z; kz++) {
+                  double dkz2 = double(kz*kz);
+                  Point kv = 2*pc::pi*Point(kx*Li.x(),ky*Li.y(),kz*Li.z());
+                  double k2 = kv.dot(kv);
+                  if (k2 < check_k2_zero) { // Check if k2 != 0
+                    continue;
+                  }
+                  if(spherical_sum) {
+                    if( (dkx2/kc2_x) + (dky2/kc2_y) + (dkz2/kc2_z) > 1.0)
+                      continue;
+                  }
+                  kVectors.col(kVectorsInUse) = kv; 
+                  k2s[kVectorsInUse] = k2;
+                  Aks[kVectorsInUse] = factor*exp(-k2/(4*alpha2))/k2;
+                  kVectorsInUse++;
+                }
+              }
+            }
+            values_wavefunctions.push_back(double(kVectorsInUse));
+            Q_ion_tot.resize(kVectorsInUse);
+            Q_dip_tot.resize(kVectorsInUse);
           }
 
           /**
-           * @brief ....
-           * @param rcut2 Real space cut-off
-           * @param ....
-           * @todo Use `std::cerr` instead of `cout`
+           * @brief Calculates ionic damping parameter for the Ewald method.
+           * @note According to DOI: 10.1080/08927029208049126  (DOI: 10.1007/b136795)
+           * @warning 'tau_R' needs to be calculated
            */
-          void calcAlpha(double inewaldpression, double rcut2) {
-            double ewaldpres = inewaldpression;
-            int i = 0;
-            double incr = 1e-5;
-            double A = 10.0;
-
-            while( A > (1.+1e-10) || A < (1-1e-10)) {
-              A=sqrt(alpha) * ewaldpres / exp(-alpha * rcut2);
-
-              if(A>1){
-                while(A > 1.){
-                  alpha-= incr;
-                  A = sqrt(alpha) * ewaldpres / exp(-alpha*rcut2);
-                  i++;
-                  if( i > 10000){
-                    cout << "ERROR ewaldpres = " << 1/sqrt(alpha)*exp(-alpha*rcut2) << endl;
-                    exit(1);
-                    return;
-                  };
-                };
-                if( i > 10000){
-                  cout << "ERROR ewaldpres = " << 1/sqrt(alpha)*exp(-alpha*rcut2) << endl;
-                  exit(1);
-                  return;
-                };
-
-                if( A < (1.-1e-10)) {
-                  alpha += 2*incr;
-                  A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
-                  incr = incr*0.1;
-                };  
-              } else {
-                while( A < 1.){
-                  alpha += incr;
-                  A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
-                  if( i > 10000){
-                    cout << "ERROR ewaldpres = " << 1/sqrt(alpha)*exp(-alpha*rcut2) << endl;
-                    exit(1);
-                    return;
-                  };
-                };
-                if( i > 10000){
-                  cout << "ERROR ewaldpres = " << 1/sqrt(alpha)*exp(-alpha*rcut2) << endl;
-                  exit(1);
-                  return;
-                };
-
-                if( A < (1.-1e-10)) {
-                  alpha += 2*incr;
-                  A = sqrt(alpha)*ewaldpres / exp(-alpha*rcut2);
-                  incr = incr*0.1;
-                };
-
-              }; 
-            };
-
-            assert( alpha >= 0 && "Alpha negative!");
-
-            alpha2 = alpha;
-            alpha = sqrt(alpha);
-            constant = 2*alpha/sqrt(pc::pi);
+          void calcAlphaIon() {
+            double tau_R = 1.0; 
+            double tau_F = timeReciprocal.avg();
+            alpha = pow(tau_R*N/tau_F,1.0/6.0)*sqrt(pc::pi)/minL;
+            values_alpha.push_back(alpha);
           }
 
-          /// @todo prettify to match normal faunus output
-          string _info() {
+          /**
+           * @brief Calculates ionic real space cutoff parameter for the Ewald method.
+           * @param alpha_ion_in Damping parameter (\f$ \AA^{-1} \f$)
+           * @param delta_in Accuracy in ionic systems for energy (\f$ e^2/\AA \f$)
+           * @note According to DOI: 10.1080/08927029208049126  (DOI: 10.1007/b136795)
+           */
+          void calcRcIon(double alpha_ion_in, double delta_in = 5e-5) {
+            rc = abs(0.5*sqrt(3.0*LambertW( -(4.0/3.0)*pow(-pow(Sq2,4.0)/(alpha_ion_in*alpha_ion_in*pow(minL,6.0)*pow(delta_in,4.0)),1.0/3.0) )));
+            values_rc.push_back(rc);
+          }
+
+          /**
+           * @brief Calculates ionic reciprocal space cutoff parameter for the Ewald method.
+           * @param alpha_ion_in Damping parameter (\f$ \AA^{-1} \f$)
+           * @param delta_in Accuracy in ionic systems for energy (\f$ e^2/\AA \f$)
+           * @note According to DOI: 10.1080/08927029208049126  (DOI: 10.1007/b136795)
+	   * @warning Need to call 'kVectorChange' after change of number of k-vectors
+           */
+          void calcKcIon(double alpha_ion_in, double delta_in = 5e-5) {
+            double temp = (1.0/3.0)*pow(2.0,2.0/3.0)*pow(4.0,1.0/3.0)*pow(pow(Sq2,4.0)/(alpha_ion_in*alpha_ion_in*pow(delta_in,4.0)),1.0/3.0);
+            kc_x = abs(0.5*sqrt(3.0*LambertW( temp*pow(L.x(), -2.0) )));
+            kc_x = abs(0.5*sqrt(3.0*LambertW( temp*pow(L.y(), -2.0) )));
+            kc_x = abs(0.5*sqrt(3.0*LambertW( temp*pow(L.z(), -2.0) )));
+            kc2_x = kc_x*kc_x;
+            kc2_y = kc_y*kc_y;
+            kc2_z = kc_z*kc_z;
+            kcc_x = ceil(kc_x);
+            kcc_y = ceil(kc_y);
+            kcc_z = ceil(kc_z);
+            values_kcc_x.push_back(kcc_x);
+            values_kcc_y.push_back(kcc_y);
+            values_kcc_z.push_back(kcc_z);
+          }
+
+
+          /**
+           * @brief Calculates dipolar damping parameter for the Ewald method.
+           * @note According to DOI: 10.1063/1.1398588
+           * @warning 'tau_R' needs to be calculated
+           */
+          void calcAlphaDipole() {
+            double tau_R = 1.0; 
+            double tau_F = timeReciprocal.avg();
+            alpha = pow(tau_R*N/tau_F,1.0/6.0)*sqrt(pc::pi)/minL;
+            values_alpha.push_back(alpha);
+          }
+
+          /**
+           * @brief Calculates dipolar reciprocal space cut-off for the Ewald method.
+           * @param alpha_ion_in Damping parameter
+           * @param delta_in Accuracy in dipolar systems for energy (\f$ e^2/\AA \f$)
+           * @note According to DOI: 10.1063/1.1398588
+           */
+          void calcRcDipole(double alpha_dip_in, double delta_in = 5e-5) {
+            double num = 0.5*delta_in*delta_in*N*pow(minL,3.0)/(Smu2*Smu2*pow(alpha_dip_in,4.0));
+            double dennum = -pow(delta_in,4.0)*N*N*pow(minL,6.0) /( pow(alpha_dip_in,6.0)*pow(Smu2,4.0) );
+            double denden = LambertW(-3.515625*pow(delta_in,4.0)*N*N*pow(minL,6.0)/(pow(alpha_dip_in,6.0)*pow(Smu2,4.0)));
+            rc = num/sqrt(dennum/denden);
+            values_rc.push_back(rc);
+          }
+
+          /**
+           * @brief Calculates dipolar reciprocal space cut-off for the Ewald method.
+           * @param alpha_ion_in Damping parameter
+           * @param delta Accuracy in dipolar systems for energy (\f$ e^2/\AA \f$), force(\f$ e^2/\AA^2 \f$) and torque(\f$ e^2/\AA \f$).
+           * @note According to DOI: 10.1063/1.1398588. Here we assume statistical error in reciprocal space is negligible with regard to the systematic error ( p.6355 )
+	   * @warning Need to call 'kVectorChange' after change of number of k-vectors
+           */
+          void calcKcDipole(double alpha_dip_in, double delta_in = 5e-5) {
+            double temp0 = exp(-0.5*LambertW((-1.125*pow(pc::pi*delta/Smu2,2.0)*N*pow(alpha_dip_in,-6.0))));
+            kc2_x = 0.75*delta*L.x()*sqrt(N)*temp0/(alpha_dip_in*alpha_dip_in*Smu2);
+            kc2_y = 0.75*delta*L.y()*sqrt(N)*temp0/(alpha_dip_in*alpha_dip_in*Smu2);
+            kc2_z = 0.75*delta*L.z()*sqrt(N)*temp0/(alpha_dip_in*alpha_dip_in*Smu2);
+            kc2_x = kc_x*kc_x;
+            kc2_y = kc_y*kc_y;
+            kc2_z = kc_z*kc_z;
+            kcc_x = ceil(kc_x);
+            kcc_y = ceil(kc_y);
+            kcc_z = ceil(kc_z);
+            values_kcc_x.push_back(kcc_x);
+            values_kcc_y.push_back(kcc_y);
+            values_kcc_z.push_back(kcc_z);
+          }
+
+          /**
+           * @brief Calculates optimal parameters for the Ewald method. It will only calculate a value if the user has not defined it in the input.
+           * @param delta_in Accuracy in dipolar systems for energy (\f$ e^2/\AA \f$)). Should not be larger than \f$ 5\cdot 10^{-5} \f$.
+	   * @warning Need to call 'kVectorChange' after change of number of k-vectors
+           */
+          void calcParameters(double delta_in=5e-5) {
+            if(!user_alpha) {
+              if(useIonIon || useIonDipole)
+                calcAlphaIon();
+              if(!useIonIon && !useIonDipole && useDipoleDipole)
+                calcAlphaDipole();
+            }
+            if(!user_rc) {
+              if(useIonIon || useIonDipole)
+                calcRcIon(alpha,delta_in);
+              if(!useIonIon && !useIonDipole && useDipoleDipole)
+                calcRcDipole(alpha,delta_in);
+            }
+            if(!user_kc) {
+              if(useIonIon || useIonDipole)
+                calcKcIon(alpha,delta_in);
+              if(!useIonIon && !useIonDipole && useDipoleDipole)
+                calcKcDipole(alpha,delta_in);
+            }
+            Tbase::pairpot.first.updateAlpha(alpha);
+            Tbase::pairpot.first.updateRcut(rc);
+          }
+
+          void updateBoxDimensions(Point L_in) {
+            L = L_in;
+            Li.x() = 1.0/L.x();
+            Li.y() = 1.0/L.y();
+            Li.z() = 1.0/L.z();
+            minL = L.x();
+            if(L.y() < minL)
+              minL = L.y();
+            if(L.z() < minL)
+              minL = L.z();
+            maxL = L.x();
+            if(L.y() > maxL)
+              maxL = L.y();
+            if(L.z() > maxL)
+              maxL = L.z();
+            check_k2_zero = 0.1*(4*pc::pi*pc::pi)/(maxL*maxL);
+          }
+
+          string _info() override {
+            using namespace Faunus::textio;
+            char w=25;
             std::ostringstream o;
-            o << Tbase::_info()
-              << "maxK                    = " << maxK << endl
-              << "wavefunctions           = " << kVectors.cols() << endl
-              << "alpha                   = " << alpha << endl
-              << "R_c                     = " << Rc << endl
-              << "<Self energy>           = " << selfEA.avg() << endl
-              << "<Surf energy>           = " << surfEA.avg() << endl
-              << "<Real energy>           = " << realEA.avg() << endl
-              << "<Reci energy>           = " << reciEA.avg() << endl;
+            o << Tbase::_info();
+            o << header("Ewald summation");
+	    string text = "";
+	    if(useIonIon)
+	      text += "Ion-Ion, ";
+	    if(useIonDipole)
+	      text += "Ion-dipole, ";
+	    if(useDipoleDipole)
+	      text += "Dipole-Dipole, ";
+	    if(useIonIon || useIonIon || useIonIon)
+	      text.erase (text.end()-2, text.end());
+	    o << pad(SUB,w, "Interactions") << text << endl;
+            o << pad(SUB,w, "Reciprocal cut-off") << "(" << kc_x << "," << kc_y << "," << kc_z << ")" << endl;
+            o << pad(SUB,w, "Wavefunctions") << values_wavefunctions.at(values_wavefunctions.size()-1) << endl;
+            o << pad(SUB,w, "alpha") << alpha << endl;
+            o << pad(SUB,w, "Real cut-off") << rc << endl;
+	    if(const_inf < 0.5) {
+	      o << pad(SUB,w+1, epsilon_m+"(Surface)") << infinity << endl;
+	    } else {
+	      o << pad(SUB,w+1, epsilon_m+"(Surface)") << eps_surf << endl;
+	    }
+            o << pad(SUB,w, "updates") << updates << endl;
+	    /*
+            o << pad(SUB,w+4, bracket("Energies / kT")) << endl;
+            o << pad(SUB,w+4, bracket("Self energy")) << selfEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << selfEnergyAverage.std() << endl;
+            o << pad(SUB,w+4, bracket("Surf energy")) << surfaceEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << surfaceEnergyAverage.std() << endl;
+            o << pad(SUB,w+4, bracket("Real energy")) << realEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << realEnergyAverage.std() << endl;
+            o << pad(SUB,w+4, bracket("Reci energy")) << reciprocalEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << reciprocalEnergyAverage.std() << endl;
+	    */
             return o.str();
           }
 
         public:
-          /// @todo see note below in CAPS. Lamell needed??
-          NonbondedEwald(InputMap &in, string pfx="ewald") : Tbase(in) {
+          MeanValue<double> selfEnergyAverage, surfaceEnergyAverage, realEnergyAverage, reciprocalEnergyAverage;
+
+          NonbondedEwald(Tmjson &j, const string &sec="nonbonded") : Tbase(j,sec) , selfEnergyAverage(j["energy"]["nonbonded"]["avg_block"] | 100) ,surfaceEnergyAverage(j["energy"]["nonbonded"]["avg_block"] | 100) , realEnergyAverage(j["energy"]["nonbonded"]["avg_block"] | 100) , reciprocalEnergyAverage(j["energy"]["nonbonded"]["avg_block"] | 100)  {
             Tbase::name += " (Ewald)";
-            ewapre = in.get<double>(pfx+"_precision",0.01);
-
+            updateBoxDimensions(typename Tspace::GeometryType(j).len);
+	    auto _j = j["energy"]["nonbonded"]["ewald"];
+            cnt_accepted = 0;
+            updates = 0;           // will finally have the value of how many time setSpace() has been used
+            values_alpha.clear();
+            values_rc.clear();
+            values_kcc_x.clear();
+            values_kcc_y.clear();
+            values_kcc_z.clear();
+            values_wavefunctions.clear();
             lB = Tbase::pairpot.first.bjerrumLength();
-            L = typename Tspace::GeometryType(in).len.norm(); //in.get<double>("cuboid_len",pc::infty);
-            lamell = in.get<double>(pfx+"_lamell",0.0);
-            lamsep = lamell + L;
-            Rc = in.get<double>(pfx+"_cutoff", L/2);
-            if (Rc>L/2)
-              Rc=L/2.;
-            Rc2 = Rc*Rc;
-            rc2i = 1.0/(Rc*Rc);
-            Tbase::pairpot.first.rc2i=rc2i;
-            eps_surf = in.get<double>(pfx+"_eps_surf",pc::infty);
-            const_inf = 1;
-            if(eps_surf > 1e10)  // \epsilon_{Surface} = \infty
-              const_inf = 0.0;
-
-            alpha = 0.01;
+	    eps_surf = ( _j["eps_surf"] | 0.0 );
+            const_inf = 1.0;    
+            if(eps_surf < 1)  // if the value is unphysical (< 1) then we set infinity as the dielectric sonatant of the surronding medium
+              const_inf = 0.0; // \varepsilon_{Surface} = \infty
+	    
+	    spherical_sum = _j["spherical_sum"] | true; // specifies if Spherical or Cubical summation should be used in reciprocal space
+	    delta = ( _j["delta"] | 5e-5 );
+            if( ( _j["update_frequency"] | -1 )  > 0 ) {  // specifies after how many successful moves all complex numbers should the updated
+              update_frequency_bool = true;
+              update_frequency = _j["update_frequency"] | -1;
+            } else {
+              update_frequency_bool = false;
+            }
+            // Initiate alpha-values
             user_alpha = false;
-            if (in.get<double>(pfx+"_alpha", -1.0  ) != -1.0 ) {
+            if ( ( _j["alpha"] | -1.0 ) > 0.0 ) {  // set damping-parameter
               user_alpha = true;
-              alpha = in.get<double>(pfx+"_alpha", -1.0  );
-              constant = 2*alpha/sqrt(pc::pi);
+              alpha = ( _j["alpha"] | -1.0 );
+              alpha2 = alpha*alpha;
             }
 
-            // THIS SEEMS TO BE THE SAME AS `calcMaxK` ??
-            user_maxK = false;
-            if (in.get<double>(pfx+"_maxK", -1.0  ) != -1.0 ) {
-              user_maxK = true;
-              maxK = in.get<double>(pfx+"_maxK", -1.0  );
-              maxKz = maxK;
-              int kVectorsLength = (maxK + 1)*(2*maxK + 1)*(2*maxKz + 1) - 1;
-              kVectors.resize(3, kVectorsLength); 
-              k2s.resize(kVectorsLength);
-              Aks.resize(kVectorsLength);
+            // Initiate real cut-off
+            user_rc = false;
+            if ( ( _j["cutoff"] | -1.0 ) > 0.0 ) {  // set cutoff
+              user_rc = true;
+              rc = ( _j["cutoff"] | -1.0 );
+              if (rc > minL/2.0)
+                rc = minL/2.0;
             }
+            // Initiate reciprocal cut-off
+            user_kc = false;
+            if ( ( _j["cutoffK"] | -1.0 ) > 0.0 ) {  // set reciprocal cutoff
+              user_kc = true;
+              kc_x = ( _j["cutoffK"] | -1.0 );
+              kc_y = kc_x;
+              kc_z = kc_x;
+            } else {
+              if( ( _j["cutoffK_x"] | -1.0 ) > 0.0 || ( _j["cutoffK_y"] | -1.0 ) > 0.0 || ( _j["cutoffK_z"] | -1.0 ) > 0.0) {
+                user_kc = true;
+                kc_x = ( _j["cutoffK_x"] | -1.0 );
+                kc_y = ( _j["cutoffK_y"] | kc_x );
+                kc_z = ( _j["cutoffK_z"] | kc_y );
+
+                // Assures that kc_x_ion, kc_y_ion and kc_z_ion willhave non-negative values
+                if(kc_x < 0.0) {
+                  if(kc_y < 0.0) {
+                    kc_x = kc_z;
+                    kc_y = kc_z;
+                  } else {
+                    kc_x = kc_y;
+                    if(kc_z < 0.0)
+                      kc_z = kc_y;
+                  }
+                } else {
+                  if(kc_y < 0.0)
+                    kc_y = kc_x;
+                  if(kc_z < 0.0)
+                    kc_z = kc_x;
+                }
+              }
+            }
+            kc2_x = kc_x*kc_x;
+            kc2_y = kc_y*kc_y;
+            kc2_z = kc_z*kc_z;
+            kcc_x = ceil(kc_x);
+            kcc_y = ceil(kc_y);
+            kcc_z = ceil(kc_z);
+	    
+            calcParameters(delta); // updates parameters (if not set by user)
+            kVectorChange();
+	    change.clear();
+          }
+
+          double i_external(const Tpvec &p, int i) override {
+            Group g = Group(i,i);
+            return g_external(p,g);
           }
 
           double g_external(const Tpvec &p, Group &g) override {
-            return lB * ( getSelfEnergy(p,g) + getReciEnergy(p,g) );
+            return getSelfEnergy(p,g);
           }
+          
+          /**
+           * @brief Updates vectors of complex numbers if a move has been accepted. These vectors are implemented in order to increase computational speed. 
+           * After 'update_frequency' number of non-isobaric updates the entirety of the complex vectors are recalculated in order to avoid numerical errors.
+           * @param move_accepted True if a move is accepted, otherwise false
+           */
+          double update(bool move_accepted) override {
+	    
+	    if(move_accepted) {
+	      if(change.geometryChange) // If volume has changed then we should always update k-vectors (which should already have been done through 'setSpace')
+		goto endline;
+	      
+	      cnt_accepted++;
+              if(cnt_accepted > update_frequency - 1) {
+                updateAllComplexNumbers(spc->trial);
+                cnt_accepted = 0;
+	      } else {
+                for (int k=0; k<kVectorsInUse; k++) {
+                  Point kv = kVectors.col(k);
+		  // Change k-vectors due to moved particles
+                for (auto m : change.mvGroup) {
+		  for (auto i : m.second) {
+                    double dotTrial = kv.dot(spc->trial[i]);
+                    double dot = kv.dot(spc->p[i]);
+                    if(useIonIon || useIonDipole) {
+                      Q_ion_tot.at(k) += spc->trial[i].charge * complex<double>(cos(dotTrial),sin(dotTrial));
+                      Q_ion_tot.at(k) -= spc->p[i].charge * complex<double>(cos(dot),sin(dot));
+                    }
+#ifdef DIPOLEPARTICLE 
+                    if(useDipoleDipole) {
+                      Q_dip_tot.at(k) += kv.dot(spc->trial[i].mu) * spc->trial[i].muscalar * complex<double>(-sin(dotTrial),cos(dotTrial));
+                      Q_dip_tot.at(k) -= kv.dot(spc->p[i].mu) * spc->p[i].muscalar * complex<double>(-sin(dot),cos(dot));
+                    }
+#endif
+                  }
+		}
+                }
+	      }
+	    }
+	    endline:
+	    change.clear();
+	    return 0.0; 
+	  }
+	  
+          /** @brief Update energy function due to Change 
+	   */
+          double updateChange(const typename Tspace::Change &c) override {
+	    change = c;
+	    return 0.0;
+	  }
 
           double external(const Tpvec &p) override {
-            Group g(0, p.size());
-            return lB * getSurfEnergy(p,g);
+            Group g(0, p.size()-1);
+            std::chrono::steady_clock::time_point init, final;
+            init = std::chrono::steady_clock::now();
+            double reciprocalEnergy = getReciprocalEnergy(p,g);
+            final = std::chrono::steady_clock::now();
+            timeReciprocal += double(std::chrono::duration_cast<std::chrono::milliseconds >(final-init).count());
+            return ( getSurfaceEnergy(p,g) + reciprocalEnergy   );
           }
 
           /**
-           * @brief Set space and update k-vectors and alpha
+           * @brief Re-calculates the vectors of complex numbers used in getQ2
+           * @param p Particle vector
+           */
+          void updateAllComplexNumbers(const Tpvec &p) {
+              for (int k=0; k<kVectorsInUse; k++) {
+                Point kv = kVectors.col(k);
+                complex<double> Q_temp_ion(0.0,0.0);
+                complex<double> Q_temp_dip(0.0,0.0);
+                for (int i = 0; i < N; i++) {
+                  double dot = kv.dot(p[i]);
+                  if(useIonIon || useIonDipole)
+                    Q_temp_ion += p[i].charge * complex<double>(cos(dot),sin(dot));
+#ifdef DIPOLEPARTICLE 
+                  if(useDipoleDipole)
+                    Q_temp_dip += kv.dot(p[i].mu) * p[i].muscalar * complex<double>(-sin(dot),cos(dot));
+#endif
+                }
+                Q_ion_tot.at(k) = Q_temp_ion;
+                Q_dip_tot.at(k) = Q_temp_dip;
+            }
+            Group g(0,p.size()-1);
+          }
+          
+          /**
+           * @brief Set space and updates parameters (if not set by user)
            */
           void setSpace(Tspace &s) override {
             Tbase::setSpace(s);
-            V = spc->geo.getVolume();
-            L = std::cbrt(V);
-            if (!user_alpha)
-              calcAlpha(ewapre,Rc2);
-            alpha2 = alpha*alpha;
-            if (!user_maxK)
-              calcMaxK(alpha2,L);
-            check_k2_zero = 0.1*L*L/(4*pc::pi*pc::pi);
-
-            k2max = std::ceil(4.0*pow(((pc::pi/L) + alpha2*Rc),2));  // From Martin's program
-            int k2maxtemp = std::ceil(4*pow(((pc::pi/lamsep) + alpha2*Rc),2));
-            if (k2maxtemp > k2max) 
-              k2max = std::ceil(k2maxtemp);
-
-            updateKVectors();
-
-            Tbase::pairpot.first.alpha = alpha;
+            N = s.p.size();
+	    V = spc->geo.getVolume();
+	    updateBoxDimensions(spc->geo.len);
+            calcParameters(delta);
+	    if(change.geometryChange || !user_kc)
+	      kVectorChange();
+            updateAllComplexNumbers(s.p);
+            if(!update_frequency_bool)
+              update_frequency = N;
+            updates++;
           }
       };
 
   }//namespace
 }//namespace
 #endif
+

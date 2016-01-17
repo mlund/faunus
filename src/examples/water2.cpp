@@ -4,6 +4,8 @@
 using namespace Faunus;
 using namespace Faunus::Potential;
 
+#define EWALD
+
 typedef Space<Geometry::Cuboid> Tspace;
 #ifdef EWALD
 typedef LennardJonesLB Tpairpot;

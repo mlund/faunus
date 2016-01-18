@@ -159,7 +159,6 @@ namespace Faunus {
          * @brief Erase data using search (slower than using id)
          */
         bool erase(Tid id) {
-          assert(2==1 && "Please validate this function");
           for (auto &m : _map) {
             auto it = std::find(m.second.begin(), m.second.end(), id);
             if (it!=m.second.end()) {

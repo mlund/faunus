@@ -116,6 +116,8 @@ namespace Faunus {
           o >> name;
           a = atom[name];
           o >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
+          if (a.id==0)
+            std::cerr << "Warning: Atom name " << name << " is not in the atom list.\n";
           return a;
         }
 
@@ -297,6 +299,8 @@ namespace Faunus {
                   a=atom[aname];
                   o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius; 
                   p.push_back(a);
+                  if (a.id==0)
+                    std::cerr << "Warning: Atom name " << aname << " is not in the atom list.\n";
                 } else if ( key=="END" ) {
                   v.push_back( p );
                   p.clear();

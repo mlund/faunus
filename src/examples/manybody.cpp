@@ -80,8 +80,9 @@ int main(int argc, char** argv) {
         if (energyfile)
           energyfile << loop.innerCount() << " " << sys.current()
             << " " << std::cbrt(spc.geo.getVolume()) << "\n";
+
+        mpol.sample(pol,spc);
       }
-      //mpol.sample(pol,spc);
 
       if ( rnd > 0.99 ) {
         xtc.setbox( spc.geo.len );

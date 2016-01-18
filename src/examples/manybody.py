@@ -1,7 +1,14 @@
 #!/usr/bin/env python
+
+#SBATCH -N 1
+#SBATCH --tasks-per-node=2
+#SBATCH -t 00:10:00
+#SBATCH -J test
+#SBATCH --qos=test
+
 import numpy as np
 import json, sys, os
-from subprocess import call, check_output
+from subprocess import call
 from shutil import copyfile
 
 name='manybody'
@@ -117,8 +124,8 @@ dprot = 6     # rotational displacement
 
 # Flow control
 eqrun   = True
-prodrun = True
-copy    = True
+prodrun = False
+copy    = False
 
 # Protein concentration [mol/l]
 for Cp in [0.004]:
@@ -136,7 +143,9 @@ for Cp in [0.004]:
 
     if eqrun==True:
       print('Equilibration run...(state file deleted)')
-      os.remove('state')
+      try:
+        os.remove('state')
+      except: pass
       micro=100
       mkinput()
       call( ['mpiexec', exe] )

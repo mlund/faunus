@@ -255,6 +255,14 @@ namespace Faunus {
         }
     };
 
+    /** @brief Cuboid with no periodic boundaries (hard box) */
+    struct CuboidNoPBC : public Cuboid {
+      inline CuboidNoPBC(Tmjson &j) : Cuboid(j) { name += " (No PBC)"; }
+      inline Point vdist(const Point &a, const Point &b) override { return a-b; }
+      inline double sqdist(const Point &a, const Point &b) const override { return (a-b).squaredNorm(); }
+      inline void boundary(Point &a) const override { }
+    };
+
     /**
      * @brief Cylindrical simulation container
      *

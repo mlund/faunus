@@ -364,7 +364,7 @@ namespace Faunus {
                 // N^2 loop over all particles
                 for (int i=0; i<n-1; i++) {
                   for (int j=i+1; j<n; j++) {
-                    auto r = base::geo.vdist(p[i],p[j]);
+                    auto r = base::geo->vdist(p[i],p[j]);
                     for (T q=qmin; q<=qmax; q+=dq)
                       _I[q] += cos( (q*qdir).dot(r) );
                   }

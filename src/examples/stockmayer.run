@@ -10,33 +10,35 @@ cp -f $source_tests_dir/stockmayer.state state 2> /dev/null
 
 echo '{
   "atomlist" : {
-    "dip" : { "sigma":1.0, "eps":0.17211, "mu":"0 0 0.415", "dp":0.3, "dprot":180, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0", "q":0.0 }
+    "dip" : { "sigma":2.8863, "eps":1.970259482155353, "mu":"0 0 1.652", "dp":0.5, "dprot":114.592, "alpha":"0 0 0 0 0 0", "theta":"0 0 0 0 0 0", "q":0.0 }
   },
 
   "moleculelist" : {
-    "sol" : { "atoms":"dip", "Ninit":100, "atomic":true }
+    "sol" : { "atoms":"dip", "Ninit":1000, "atomic":true }
   },
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "epsr" : 1.0, "cutoff":14 },
-       "ewald"   : { "epsr" : 1.0, "cutoff":14, "eps_surf":0, "alpha":0.894427190999916, "cutoffK":1, "spherical_sum":true, "update_frequency":1 } 
+       "coulomb" : { "epsr" : 1.0, "cutoff":14.4315, "eps_rf":0.0 },
+       "ewald"   : { "epsr" : 1.0, "cutoff":14.4315, "eps_surf":0, "alpha":0.231, "cutoffK":3, "spherical_sum":true, "update_frequency":1, "delta":5e-5 } 
     }
   },
 
   "moves" : {
-    "atomtranslate" : { "sol" : { "peratom":true } },
-    "atomrotate" : { "sol" : { "peratom":true } }
+    "atomtranslate" : { "sol" : { "peratom":true, "prob":1.0 } },
+    "atomrotate" : { "sol" : { "peratom":true, "prob":1.0 } }
   },
 
   "system" : {
-    "temperature"  : 300,
-    "cuboid"       : { "len" : 8.939 },
-    "mcloop"       : { "macro":10, "micro":1000 },
+    "temperature"  : 315.8,
+    "cuboid"       : { "len" : 29.628921983933623 },
+    "mcloop"       : { "macro":10, "micro":50 },
     "unittest"     : { "testfile":"stockmayer.test", "stable":false },
-    "coulomb" : { "epsr":1, "cutoff":14, "cutoffdip":4.3 }
+    "coulomb"      : { "epsr":1, "cutoff":14.4315 }
   }
 }' > stockmayer.json
+
+#rm state
 
 exe=./stockmayer
 if [ -x $exe ]; then

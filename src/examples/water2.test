@@ -3,7 +3,7 @@ energyAverage                      -64953
 moves/isobaric_MSQDisplacement     3.21898             
 moves/isobaric_acceptance          22.996              
 moves/isobaric_averageSideLength   19.0288             
-relativeEnergyDrift                1.67865e-15         
+relativeEnergyDrift                7.73383e-14         
 moves/moltransrot_acceptance       27.7569             
 moves/moltransrot_water_acceptance 27.7569             
 moves/moltransrot_water_dRot       4.05379             

@@ -72,6 +72,7 @@ namespace Faunus {
      */
     template<typename Tgeometry>
       void translate(const Tgeometry &geo, const PointBase &a) {
+	assert(&geo!=nullptr);
         (*this)+=a;
         geo.boundary(*this);
       }

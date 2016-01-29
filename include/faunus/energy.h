@@ -51,11 +51,14 @@ namespace Faunus {
           string jsondir; // inputmap section
           char w; //!< Width of info output
           Tspace* spc;
+	  typename Tspace::GeometryType* geo;
           virtual std::string _info()=0;
 
           /** @brief Determines if given particle vector is the trial vector */
           template<class Tpvec>
             bool isTrial(const Tpvec &p) const { return (&p==&spc->trial); }
+            
+            bool isGeometryTrial(typename Tspace::GeometryType &g) const { return (&g==&spc->geo_trial); }
 
         public:
           typedef Tspace SpaceType;
@@ -64,15 +67,30 @@ namespace Faunus {
           typedef typename Space<Tgeometry, Tparticle>::ParticleVector Tpvec;
 
           string name;  //!< Short informative name
-
+          
           virtual ~Energybase() {}
 
-          Energybase(const string &dir="") : jsondir(dir), w(25), spc(nullptr) {
+          Energybase(const string &dir="") : jsondir(dir), w(25), spc(nullptr), geo() {
             if ( jsondir.empty() )
               jsondir = "energy";
           }
-
-          virtual void setSpace(Tspace &s) { spc=&s; }
+          
+          virtual void setSpace(Tspace &s) {
+	    spc=&s;
+	    setGeometry(s.geo);
+	  }
+	  
+          /**
+	   * 
+	   */
+          virtual void setGeometry(typename Tspace::GeometryType &g) { 
+	    geo=&g; 
+	  }
+	  
+          virtual typename Tspace::GeometryType& getGeometry() {
+	    assert(geo!=nullptr);
+            return *geo;
+          }
 
           virtual Tspace& getSpace() {
             assert(spc!=nullptr);
@@ -134,8 +152,8 @@ namespace Faunus {
           { return 0; }
 
           /** @brief Update energy function due to Change */
-          virtual double updateChange(const typename Tspace::Change &c)
-          { return 0; }
+          virtual void setChange(const typename Tspace::Change &c)
+          { }
 
           virtual void field(const Tpvec&, Eigen::MatrixXd&) //!< Calculate electric field on all particles
           { }
@@ -176,6 +194,12 @@ namespace Faunus {
             first.setSpace(s);
             second.setSpace(s);
             Tbase::setSpace(s);
+          } 
+          
+          void setGeometry(typename T1::SpaceType::GeometryType &g) override {
+            first.setGeometry(g);
+            second.setGeometry(g);
+            Tbase::setGeometry(g);
           } 
 
           double p2p(const Tparticle &a, const Tparticle &b) override
@@ -220,14 +244,15 @@ namespace Faunus {
           double update(bool b) override
           { return first.update(b)+second.update(b); }
 
-          double updateChange(const typename Tspace::Change &c) override
-          { return first.updateChange(c)+second.updateChange(c); }
+          void setChange(const typename Tspace::Change &c) override
+          { first.setChange(c); second.setChange(c); }
 
           double v2v(const Tpvec&p1, const Tpvec&p2) override
           { return first.v2v(p1,p2)+second.v2v(p1,p2); }
 
           void field(const Tpvec&p, Eigen::MatrixXd&E) override
           { first.field(p,E); second.field(p,E); }
+          
       };
 
     /**
@@ -276,12 +301,11 @@ namespace Faunus {
           typedef typename Tbase::Tpvec Tpvec;
 
         public:
-          typename Tspace::GeometryType geo;
           Tpairpot pairpot;
 
           Nonbonded(
               Tmjson &j,
-              const string &sec="nonbonded" ) : geo(j), pairpot( j["energy"][sec] ) {
+              const string &sec="nonbonded" ) : pairpot( j["energy"][sec] ) {
 
             assert( ! j["energy"][sec].is_null() );
 
@@ -296,31 +320,30 @@ namespace Faunus {
           }
 
           void setSpace(Tspace &s) override {
-            geo=s.geo;
             Tbase::setSpace(s);
             pairpot.setSpace(s);
           } 
 
           //!< Particle-particle energy (kT)
           inline double p2p(const Tparticle &a, const Tparticle &b) override {
-            return pairpot( a,b,geo.sqdist(a,b));
+            return pairpot( a,b,Tbase::geo->sqdist(a,b));
           }
 
           //!< Particle-particle force (kT/Angstrom)
           inline Point f_p2p(const Tparticle &a, const Tparticle &b) override {
-            auto r=geo.vdist(a,b);
+            auto r=Tbase::geo->vdist(a,b);
             return pairpot.force(a,b,r.squaredNorm(),r);
           }
 
           double all2p(const Tpvec &p, const Tparticle &a) override {
             double u=0;
             for (auto &b : p)
-              u+=pairpot(a,b,geo.sqdist(a,b));
+              u+=pairpot(a,b,Tbase::geo->sqdist(a,b));
             return u;
           }
 
           double i2i(const Tpvec &p, int i, int j) override {
-            return pairpot( p[i], p[j], geo.sqdist( p[i], p[j]) );
+            return pairpot( p[i], p[j], Tbase::geo->sqdist( p[i], p[j]) );
           }
 
           double i2g(const Tpvec &p, Group &g, int j) override {
@@ -329,12 +352,12 @@ namespace Faunus {
               int len=g.back()+1;
               if ( g.find(j) ) {   //j is inside g - avoid self interaction
                 for (int i=g.front(); i<j; i++)
-                  u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                  u+=pairpot(p[i],p[j],Tbase::geo->sqdist(p[i],p[j]));
                 for (int i=j+1; i<len; i++)
-                  u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                  u+=pairpot(p[i],p[j],Tbase::geo->sqdist(p[i],p[j]));
               } else              //simple - j not in g
                 for (int i=g.front(); i<len; i++)
-                  u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]));
+                  u+=pairpot( p[i], p[j], Tbase::geo->sqdist(p[i],p[j]));
             }
             return u;  
           }
@@ -344,9 +367,9 @@ namespace Faunus {
             double u=0;
             int n=(int)p.size();
             for (int j=0; j!=i; ++j)
-              u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) );
+              u+=pairpot( p[i], p[j], Tbase::geo->sqdist(p[i],p[j]) );
             for (int j=i+1; j<n; ++j)
-              u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) );
+              u+=pairpot( p[i], p[j], Tbase::geo->sqdist(p[i],p[j]) );
             return u;
           }
 
@@ -359,22 +382,26 @@ namespace Faunus {
                   if (g1.find(g2.back())) {  // g2 is a subgroup of g1
                     assert(g1.size()>=g2.size());
                     for (int i=g1.front(); i<g2.front(); i++)
-                      for (auto j : g2)
-                        u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                      for (auto j : g2) {
+                        u+=pairpot(p[i],p[j],Tbase::geo->sqdist(p[i],p[j]));
+		      }
                     for (int i=g2.back()+1; i<=g1.back(); i++)
-                      for (auto j : g2)
-                        u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                      for (auto j : g2) {
+                        u+=pairpot(p[i],p[j],Tbase::geo->sqdist(p[i],p[j]));
+		      }
                     return u;
                   }
                 if (g2.find(g1.front()))
                   if (g2.find(g1.back())) {  // g1 is a subgroup of g2
                     assert(g2.size()>=g1.size());
                     for (int i=g2.front(); i<g1.front(); i++)
-                      for (auto j : g1)
-                        u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                      for (auto j : g1) {
+                        u+=pairpot(p[i],p[j],Tbase::geo->sqdist(p[i],p[j]));
+		      }
                     for (int i=g1.back()+1; i<=g2.back(); i++)
-                      for (auto j : g1)
-                        u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                      for (auto j : g1) {
+                        u+=pairpot(p[i],p[j],Tbase::geo->sqdist(p[i],p[j]));
+		      }
                     return u;
                   }
 
@@ -382,8 +409,9 @@ namespace Faunus {
                 int ilen=g1.back()+1, jlen=g2.back()+1;
 #pragma omp parallel for reduction (+:u)
                 for (int i=g1.front(); i<ilen; ++i)
-                  for (int j=g2.front(); j<jlen; ++j)
-                    u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                  for (int j=g2.front(); j<jlen; ++j) {
+                    u+=pairpot(p[i],p[j],Tbase::geo->sqdist(p[i],p[j]));
+		  }
               }
             return u;
           }
@@ -392,7 +420,7 @@ namespace Faunus {
             double u=0;
             for (auto i : g1)
               for (auto j : g2)
-                u += pairpot( p1[i], p2[j], geo.sqdist( p1[i],p2[j] ) );
+                u += pairpot( p1[i], p2[j], Tbase::geo->sqdist( p1[i],p2[j] ) );
             return u;
           }
 
@@ -403,7 +431,7 @@ namespace Faunus {
             if (!g.empty())
               for (int i=f; i<b; ++i)
                 for (int j=i+1; j<=b; ++j) 
-                  u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]));
+                  u+=pairpot(p[i],p[j],Tbase::geo->sqdist(p[i],p[j]));
             return u;
           }
 
@@ -437,7 +465,6 @@ namespace Faunus {
 
         public:
           Tspace* spc;
-          using base::geo;
           using base::pairpot;
 
           NonbondedExcl(
@@ -461,7 +488,7 @@ namespace Faunus {
           }
 
           double i2i(const Tpvec &p, int i, int j) {
-            return pairpot( p[i], p[j], geo.sqdist( p[i], p[j]) )*excl(i,j);
+            return pairpot( p[i], p[j], base::geo->sqdist( p[i], p[j]) )*excl(i,j);
           }
 
           double i2g(const Tpvec &p, Group &g, int j) override {
@@ -470,12 +497,12 @@ namespace Faunus {
               int len=g.back()+1;
               if ( g.find(j) ) {   //j is inside g - avoid self interaction
                 for (int i=g.front(); i<j; i++)
-                  u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]))*excl(i,j);
+                  u+=pairpot(p[i],p[j],base::geo->sqdist(p[i],p[j]))*excl(i,j);
                 for (int i=j+1; i<len; i++)
-                  u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]))*excl(i,j);
+                  u+=pairpot(p[i],p[j],base::geo->sqdist(p[i],p[j]))*excl(i,j);
               } else              //simple - j not in g
                 for (int i=g.front(); i<len; i++)
-                  u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]))*excl(i,j);
+                  u+=pairpot( p[i], p[j], base::geo->sqdist(p[i],p[j]))*excl(i,j);
             }
             return u;  
           }
@@ -485,9 +512,9 @@ namespace Faunus {
             double u=0;
             int n=(int)p.size();
             for (int j=0; j!=i; ++j)
-              u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) )*excl(i,j);
+              u+=pairpot( p[i], p[j], base::geo->sqdist(p[i],p[j]) )*excl(i,j);
             for (int j=i+1; j<n; ++j)
-              u+=pairpot( p[i], p[j], geo.sqdist(p[i],p[j]) )*excl(i,j);
+              u+=pairpot( p[i], p[j], base::geo->sqdist(p[i],p[j]) )*excl(i,j);
             return u;
           }
 
@@ -498,7 +525,7 @@ namespace Faunus {
             if (!g.empty())
               for (int i=f; i<b; ++i)
                 for (int j=i+1; j<=b; ++j) 
-                  u+=pairpot(p[i],p[j],geo.sqdist(p[i],p[j]))*excl(i,j);
+                  u+=pairpot(p[i],p[j],base::geo->sqdist(p[i],p[j]))*excl(i,j);
             return u;
           }
       };
@@ -523,10 +550,9 @@ namespace Faunus {
           bool groupBasedField;
 
         public:
-          typename Tspace::GeometryType geo;
           Tpairpot pairpot;
 
-          NonbondedVector(Tmjson &j, const string &sec="energy") : Tbase(sec), geo(j), pairpot(j["energy"]["nonbonded"]) {
+          NonbondedVector(Tmjson &j, const string &sec="energy") : Tbase(sec), pairpot(j["energy"]["nonbonded"]) {
             static_assert(
                 std::is_base_of<Potential::PairPotentialBase,Tpairpot>::value,
                 "Tpairpot must be a pair potential" );
@@ -535,7 +561,6 @@ namespace Faunus {
           }
 
           void setSpace(Tspace &s) override {
-            geo=s.geo;
             Tbase::setSpace(s);
           } 
 
@@ -545,23 +570,23 @@ namespace Faunus {
 
           //!< Particle-particle energy (kT)
           inline double p2p(const Tparticle &a, const Tparticle &b) override {
-            return pairpot( a,b,geo.vdist(a,b));
+            return pairpot( a,b,Tbase::geo->vdist(a,b));
           }
 
           //!< Particle-particle force (kT/Angstrom)
           inline Point f_p2p(const Tparticle &a, const Tparticle &b) override {
-            return pairpot.force( a,b,geo.sqdist(a,b),geo.vdist(a,b));
+            return pairpot.force( a,b,Tbase::geo->sqdist(a,b),Tbase::geo->vdist(a,b));
           }
 
           double all2p(const Tpvec &p, const Tparticle &a) override {
             double u=0;
             for (auto &b : p)
-              u+=pairpot(a,b,geo.vdist(a,b));
+              u+=pairpot(a,b,Tbase::geo->vdist(a,b));
             return u;
           }
 
           double i2i(const Tpvec &p, int i, int j) override {
-            return pairpot( p[i], p[j], geo.vdist( p[i], p[j]) );
+            return pairpot( p[i], p[j], Tbase::geo->vdist( p[i], p[j]) );
           }
 
           double i2g(const Tpvec &p, Group &g, int j) override {
@@ -570,12 +595,12 @@ namespace Faunus {
               int len=g.back()+1;
               if ( g.find(j) ) {   //j is inside g - avoid self interaction
                 for (int i=g.front(); i<j; i++)
-                  u+=pairpot(p[i],p[j],geo.vdist(p[i],p[j]));
+                  u+=pairpot(p[i],p[j],Tbase::geo->vdist(p[i],p[j]));
                 for (int i=j+1; i<len; i++)
-                  u+=pairpot(p[i],p[j],geo.vdist(p[i],p[j]));
+                  u+=pairpot(p[i],p[j],Tbase::geo->vdist(p[i],p[j]));
               } else              //simple - j not in g
                 for (int i=g.front(); i<len; i++)
-                  u+=pairpot( p[i], p[j], geo.vdist(p[i],p[j]));
+                  u+=pairpot( p[i], p[j], Tbase::geo->vdist(p[i],p[j]));
             }
             return u;  
           }
@@ -587,7 +612,7 @@ namespace Faunus {
             double u=0;
 #pragma omp parallel for reduction (+:u)
             for (int j=1; j<(int)p.size(); ++j)
-              u+=pairpot( p[0], p[j], geo.vdist(p[0],p[j]) );
+              u+=pairpot( p[0], p[j], Tbase::geo->vdist(p[0],p[j]) );
             std::swap(p[0],p[i]);
             return u;
           }
@@ -602,10 +627,10 @@ namespace Faunus {
                     assert(g1.size()>=g2.size());
                     for (int i=g1.front(); i<g2.front(); i++)
                       for (auto j : g2)
-                        u+=pairpot(p[i],p[j],geo.vdist(p[i],p[j]));
+                        u+=pairpot(p[i],p[j],Tbase::geo->vdist(p[i],p[j]));
                     for (int i=g2.back()+1; i<=g1.back(); i++)
                       for (auto j : g2)
-                        u+=pairpot(p[i],p[j],geo.vdist(p[i],p[j]));
+                        u+=pairpot(p[i],p[j],Tbase::geo->vdist(p[i],p[j]));
                     return u;
                   }
                 if (g2.find(g1.front()))
@@ -613,10 +638,10 @@ namespace Faunus {
                     assert(g2.size()>=g1.size());
                     for (int i=g2.front(); i<g1.front(); i++)
                       for (auto j : g1)
-                        u+=pairpot(p[i],p[j],geo.vdist(p[i],p[j]));
+                        u+=pairpot(p[i],p[j],Tbase::geo->vdist(p[i],p[j]));
                     for (int i=g1.back()+1; i<=g2.back(); i++)
                       for (auto j : g1)
-                        u+=pairpot(p[i],p[j],geo.vdist(p[i],p[j]));
+                        u+=pairpot(p[i],p[j],Tbase::geo->vdist(p[i],p[j]));
                     return u;
                   }
 
@@ -625,7 +650,7 @@ namespace Faunus {
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
                 for (int i=g1.front(); i<ilen; ++i)
                   for (int j=g2.front(); j<jlen; ++j)
-                    u+=pairpot(p[i],p[j],geo.vdist(p[i],p[j]));
+                    u+=pairpot(p[i],p[j],Tbase::geo->vdist(p[i],p[j]));
               }
             return u;
           }
@@ -634,7 +659,7 @@ namespace Faunus {
             double u=0;
             for (auto i : g1)
               for (auto j : g2)
-                u += pairpot( p1[i], p2[j], geo.vdist( p1[i], p2[j] ) );
+                u += pairpot( p1[i], p2[j], Tbase::geo->vdist( p1[i], p2[j] ) );
             return u;
           }
 
@@ -644,7 +669,7 @@ namespace Faunus {
             if (!g.empty())
               for (int i=f; i<b; ++i)
                 for (int j=i+1; j<=b; ++j)
-                  u+=pairpot(p[i],p[j],geo.vdist(p[i],p[j]));
+                  u+=pairpot(p[i],p[j],Tbase::geo->vdist(p[i],p[j]));
             return u;
           }
 
@@ -673,13 +698,13 @@ namespace Faunus {
                   if (gi!=gj) // discard identical groups (addresss comparison)
                     for (auto i : *gi)  // loop over particle index in 1st group
                       for (auto j : *gj) // loop ove
-                        E.col(i) = E.col(i) + pairpot.field(p[j],geo.vdist(p[i],p[j]));
+                        E.col(i) = E.col(i) + pairpot.field(p[j],Tbase::geo->vdist(p[i],p[j]));
             } else {
               size_t i=0;
               for (auto &pi : p) {
                 for (auto &pj : p)
                   if (&pi!=&pj)
-                    E.col(i) = E.col(i) + pairpot.field( pj, geo.vdist( pi, pj ) );
+                    E.col(i) = E.col(i) + pairpot.field( pj, Tbase::geo->vdist( pi, pj ) );
                 i++;
               }
             }
@@ -767,7 +792,7 @@ namespace Faunus {
               if (g2.isMolecular()) {
                 Point a = getMassCenter(p1,g1);
                 Point b = getMassCenter(p2,g2);
-                if (base::geo.sqdist(a,b)>rcut2)
+                if (base::geo->sqdist(a,b)>rcut2)
                   return true;
               }
             return false;
@@ -836,14 +861,14 @@ namespace Faunus {
                   if (!cut(p,*gi,*gj))
                     for (int i : *gi)
                       for (int j : *gj)
-                        E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
+                        E.col(i)+=base::pairpot.field(p[j],base::geo->vdist(p[i],p[j]));
 
             // now loop over all internal particles in groups
             for (auto g : base::spc->groupList())
               for (int i : *g)
                 for (int j : *g)
                   if (i!=j)
-                    E.col(i)+=base::pairpot.field(p[j],base::geo.vdist(p[i],p[j]));
+                    E.col(i)+=base::pairpot.field(p[j],base::geo->vdist(p[i],p[j]));
           }
 
           auto tuple() -> decltype(std::make_tuple(this)) {
@@ -920,6 +945,7 @@ namespace Faunus {
       private:
         typedef typename Energybase<Tspace>::Tparticle Tparticle;
         typedef typename Energybase<Tspace>::Tpvec Tpvec;
+	typedef Energybase<Tspace> base;
 
         typedef pair_list<std::function<
           double(const Tparticle&,const Tparticle&,double)> > Tbase;
@@ -982,7 +1008,7 @@ namespace Faunus {
           assert(i!=j);
           auto f=this->list.find( opair<int>(i,j) );
           if (f!=this->list.end())
-            return f->second( p[i], p[j], spc->geo.sqdist( p[i], p[j] ) );
+            return f->second( p[i], p[j], base::geo->sqdist( p[i], p[j] ) );
           return 0;
         }
 
@@ -997,7 +1023,7 @@ namespace Faunus {
           assert(i<(int)spc->p.size() && j<(int)spc->p.size());
           auto f=force_list.find( opair<int>(i,j) );
           if (f!=this->force_list.end()) {
-            auto r = spc->geo.vdist(a,b);
+            auto r = base::geo->vdist(a,b);
             return f->second(a,b,r.squaredNorm(),r);
           }
           return Point(0,0,0);
@@ -1011,7 +1037,7 @@ namespace Faunus {
           for (auto it=eqr.first; it!=eqr.second; ++it) {
             int j = it->second; // partner index
             u += this->list[opair<int>(i,j)](
-                p[i], p[j], spc->geo.sqdist( p[i], p[j] ) );
+                p[i], p[j], base::geo->sqdist( p[i], p[j] ) );
           }
           return u;
         }
@@ -1022,7 +1048,7 @@ namespace Faunus {
             int i=m.first.first;
             int j=m.first.second;
             assert(i>=0 && i<(int)p.size() && j>=0 && j<(int)p.size()); //debug
-            u += m.second( p[i], p[j], spc->geo.sqdist( p[i], p[j] ) );
+            u += m.second( p[i], p[j], base::geo->sqdist( p[i], p[j] ) );
           }
           return u;
         }
@@ -1045,7 +1071,7 @@ namespace Faunus {
                 int j = it->second; // partner index
                 if (g2.find(j))
                   u+=this->list[opair<int>(i,j)](
-                      p[i], p[j], spc->geo.sqdist( p[i], p[j] ) );
+                      p[i], p[j], base::geo->sqdist( p[i], p[j] ) );
               }
             }
           return u;
@@ -1068,7 +1094,7 @@ namespace Faunus {
               for (auto j=i+1; j<=g.back(); j++) {
                 auto it = this->list.find(opair<int>(i,j));
                 if (it!=end)
-                  u+=it->second( p[i],p[j],spc->geo.sqdist( p[i],p[j] ) );
+                  u+=it->second( p[i],p[j],base::geo->sqdist( p[i],p[j] ) );
               }
           } else {
             // big group compared to bond list
@@ -1076,7 +1102,7 @@ namespace Faunus {
               int i=m.first.first, j=m.first.second;
               if (g.find(i))
                 if (g.find(j))
-                  u += m.second(p[i],p[j],spc->geo.sqdist( p[i],p[j] ));
+                  u += m.second(p[i],p[j],base::geo->sqdist( p[i],p[j] ));
             }
           }
           return u;
@@ -1176,6 +1202,7 @@ namespace Faunus {
     template<class Tspace>
       class ExternalPressure : public Energybase<Tspace> {
         private:
+	  typedef Energybase<Tspace> base;
           typedef typename Energybase<Tspace>::Tpvec Tpvec;
           double P; //!< Pressure, p/kT
 
@@ -1218,7 +1245,7 @@ namespace Faunus {
            */
           void setPressure( double pressure ) { P = pressure; }
 
-          ExternalPressure( Tmjson &j, string sec="isobaric" ) {
+          ExternalPressure( Tmjson &j, string sec="isobaric" )  {
             this->name="External Pressure";
             P = ( j["moves"][sec]["pressure"] | 0.0 ) * 1.0_mM;
             if (P < 0)
@@ -1229,7 +1256,7 @@ namespace Faunus {
 
           /** @brief External energy working on system. pV/kT-lnV */
           double external(const Tpvec&p) override {
-            double V=this->getSpace().geo.getVolume();
+	    double V = base::geo->getVolume();
             assert(V>1e-9 && "Volume must be non-zero!");
             return P*V - log(V); 
           }
@@ -1239,7 +1266,7 @@ namespace Faunus {
             if ( ignore.count(&g)!=0 )
               return 0;
             int N = g.numMolecules();
-            double V = this->getSpace().geo.getVolume();
+	    double V = base::geo->getVolume();
             return - N * log(V);
           }
       };
@@ -1330,8 +1357,8 @@ namespace Faunus {
           double g_external(const Tpvec &p, Group &g) {
             if (&g != gPtr)
               return 0;
-            double boxlenz = base::spc->geo.len.z();
-            double mc = Geometry::massCenter(base::spc->geo, p, g).z() + (boxlenz / 2);
+            double boxlenz = base::geo->len.z();
+            double mc = Geometry::massCenter(base::geo, p, g).z() + (boxlenz / 2);
             if (mc >= min && mc <= max)
               return 0;
             else
@@ -1427,9 +1454,9 @@ namespace Faunus {
                   g2ptr = m.first.second;
                 else
                   g2ptr = m.first.first;
-                Point cma = Geometry::massCenter(this->getSpace().geo, p, g1);
-                Point cmb = Geometry::massCenter(this->getSpace().geo, p, *g2ptr);
-                double r2 = this->getSpace().geo.sqdist(cma,cmb);
+                Point cma = Geometry::massCenter(this->getGeometry(), p, g1);
+                Point cmb = Geometry::massCenter(this->getGeometry(), p, *g2ptr);
+                double r2 = this->getGeometry().sqdist(cma,cmb);
                 double min = m.second.mindist;
                 double max = m.second.maxdist;
                 if (r2<min*min || r2>max*max) 
@@ -1595,7 +1622,7 @@ namespace Faunus {
                           if (sasa[i]>1e-3)
                             if (sasa[j]>1e-3)
                               if (v[i] || v[j]) {
-                                double r2=base::spc->geo.sqdist(p[i],p[j]);
+                                double r2=base::geo->sqdist(p[i],p[j]);
                                 if (r2<pow(threshold+p[i].radius+p[j].radius,2)) {
                                   if (v[i])
                                     dsasa += sasa[i];
@@ -1606,7 +1633,7 @@ namespace Faunus {
                               }
                   // analyze
                   if (sample_uofr && !base::isTrial(p)) {
-                    double r = base::spc->geo.dist(g1.cm,g2.cm);
+                    double r = base::geo->dist(g1.cm,g2.cm);
                     auto k = std::minmax(g1.name,g2.name);
                     uofr[k.first+"-"+k.second][to_bin(r,dr)] += -tension*dsasa;
                   }
@@ -2213,7 +2240,7 @@ namespace Faunus {
           double external(const Tpvec &p) override {
             double u=0;
             for (auto &f : list)
-              u += f(Tbase::spc->geo, p);
+              u += f(Tbase::geo, p);
             return u;
           }
       };
@@ -2518,36 +2545,34 @@ namespace Faunus {
       }
       
       /**
-       * @todo Fix such that it works to inserte and remove particles
+       * @brief Help-funciton to 'energyChange'
+       * @todo Fix such that it works to inserted and removed particles
        */
     template<class Tspace, class Tenergy, class Tpvec>
       double energyChangeConfiguration(Tspace &spc, Tenergy &pot, const Tpvec &p, const typename Tspace::Change &c) {
 	double du = 0.0;
 	auto& g = spc.groupList();
-	
-        du += pot.external(p);
+	du += pot.external(p);
         for (auto m : c.mvGroup) {
           size_t i = size_t( m.first );
           for (size_t j=0; j<g.size(); j++)
             if ( c.mvGroup.find(j)==c.mvGroup.end() )
-              du += pot.g2g(p, *g[i], *g[j]); // moved group<->static groups
-
-          du += ( pot.g_external(p, *g[i])  );      // moved group <-> external
+	      du += pot.g2g(p, *g[i], *g[j]); // moved group<->static groups
+	  du += pot.g_external(p, *g[i]);      // moved group <-> external
           if (g[i]->isAtomic()) {                                             // Check if moved group is atomic 
             for(auto j : m.second)                                          // For the moved atoms in a group,
               for(auto k : *g[i])                                           // for every atom in that group,
                 if (std::find (m.second.begin(), m.second.end(), k) == m.second.end() || j > k) // check such that moved atoms does not interact OR moved atoms interact only once
-                  du += pot.i2i(p,j,k);
+		  du += pot.i2i(p,j,k);
           } else {
-            du += ( pot.g_internal(p, *g[i]));
+	    du += pot.g_internal(p, *g[i]);
           }
         }
-
         for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); i++) {
           for (auto j=i; j != c.mvGroup.end(); j++) {
             auto _i = i->first;
             auto _j = j->first;
-            du += pot.g2g(p, *g[_i], *g[_j] ); // moved <-> moved
+	    du += pot.g2g(p, *g[_i], *g[_j] ); // moved <-> moved
           }
         }
         return du;
@@ -2558,27 +2583,14 @@ namespace Faunus {
      */
     template<class Tspace, class Tenergy>
       double energyChange(Tspace &s, Tenergy &pot, const typename Tspace::Change &c) {
-
-        if(c.geometryChange) {
-	  double du = 0.0;
-	  auto newgeo = s.geo;
-	  
-	  s.geo = s.geo_old;
-	  pot.setSpace(s);
-	  double oldV = energyChangeConfiguration(s, pot,s.p,c);
-	  du -= oldV;
-	  
-	  s.geo = newgeo;
-	  pot.setSpace(s);
-	  double newV = energyChangeConfiguration(s, pot,s.trial,c);
-	  du += newV;
-	  
-	  return du;
-        }
-
-        //assert(!"to be completed!");
-
-        return (energyChangeConfiguration(s, pot,s.trial,c) - energyChangeConfiguration(s, pot,s.p,c));
+	pot.setChange(c);
+	if(c.geometryChange)
+	  pot.setGeometry(s.geo_trial);
+	double duNew = energyChangeConfiguration(s,pot,s.trial,c);
+	if(c.geometryChange)
+	  pot.setGeometry(s.geo);
+	double duOld = energyChangeConfiguration(s,pot,s.p,c);
+	return (duNew - duOld);
       }
 
     /* typedefs */

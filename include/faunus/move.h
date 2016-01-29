@@ -393,11 +393,11 @@ namespace Faunus {
 
     template<class Tspace>
       void Movebase<Tspace>::trialMove() {
+	assert(change.empty() && "Change object is not empty!");
         if (cnt==0)
           for (auto i : spc->groupList())
-            i->setMassCenter(*spc);
+            i->setMassCenters(*spc);
         cnt++;
-	assert(change.empty() && "Change object is not empty!");
         _trialMove();
       }
 
@@ -405,21 +405,16 @@ namespace Faunus {
       void Movebase<Tspace>::acceptMove() {
         cnt_accepted++;
         _acceptMove();
-        pot->update(true);
-	change.clear();
       }
 
     template<class Tspace>
       void Movebase<Tspace>::rejectMove() {
         _rejectMove();
-        pot->update(false);
-	change.clear();
       }
 
     /** @return Energy change in units of kT */
     template<class Tspace>
       double Movebase<Tspace>::energyChange() {
-        pot->updateChange(change);
         double du = _energyChange();
         if (std::isnan(du))
           std::cerr << "Warning: energy change from move returns not-a-number (NaN)" << endl;
@@ -458,6 +453,7 @@ namespace Faunus {
             trialMove();
             double du = energyChange();
             acceptance = metropolis(du);
+	    utot += pot->update(acceptance);
             if ( !acceptance )
               rejectMove();
             else {
@@ -467,9 +463,10 @@ namespace Faunus {
               dusum += du;
               utot += du;
             }
+	    change.clear();
           }
-          //utot += pot->update(acceptance); <========================= DOING WHAT ?
         }
+        change.clear(); // Needed?
         assert(spc->p == spc->trial && "Trial particle vector out of sync!");
         timer.stop();
         return utot;
@@ -673,7 +670,7 @@ namespace Faunus {
           t.x() *= slump()-0.5;
           t.y() *= slump()-0.5;
           t.z() *= slump()-0.5;
-          spc->trial[iparticle].translate(spc->geo, t);
+          spc->trial[iparticle].translate(spc->geo_trial, t);
 
           // make sure trial mass center is updated for molecular groups
           // (certain energy functions may rely on up-to-date mass centra)
@@ -681,7 +678,7 @@ namespace Faunus {
           assert(gi!=nullptr);
           assert((gi->cm - gi->cm_trial).squaredNorm()<1e-6);
           if (gi->isMolecular())
-            gi->cm_trial = Geometry::massCenter(spc->geo,spc->trial,*gi);
+            gi->cm_trial = Geometry::massCenter(spc->geo_trial,spc->trial,*gi);
 
 #ifndef NDEBUG
           // are untouched particles in group synched?
@@ -695,7 +692,7 @@ namespace Faunus {
 
     template<class Tspace>
       void AtomicTranslation<Tspace>::_acceptMove() {
-        double r2=spc->geo.sqdist( spc->p[iparticle], spc->trial[iparticle] );
+        double r2=spc->geo_trial.sqdist( spc->p[iparticle], spc->trial[iparticle] );
         sqrmap[ spc->p[iparticle].id ] += r2;
         accmap[ spc->p[iparticle].id ] += 1;
         spc->p[iparticle] = spc->trial[iparticle];
@@ -720,8 +717,8 @@ namespace Faunus {
       double AtomicTranslation<Tspace>::_energyChange() {
         if (iparticle>-1) {
           assert( spc->geo.collision(spc->p[iparticle], spc->p[iparticle].radius)==false
-              && "An untouched particle collides with simulation container.");
-          if ( spc->geo.collision(
+              && "An untouched particle collides with simulation container."); // Is 'iparticle' an untouched particle?
+          if ( spc->geo_trial.collision(
                 spc->trial[iparticle], spc->trial[iparticle].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
           return Energy::energyChange(*spc, *base::pot, base::change);
@@ -822,7 +819,7 @@ namespace Faunus {
 
           Point u;
           u.ranunit(slump);
-          rot.setAxis(spc->geo, Point(0,0,0), u, dprot* slump.half() );
+          rot.setAxis(spc->geo_trial, Point(0,0,0), u, dprot* slump.half() );
           spc->trial[iparticle].rotate(rot);
         }
         base::change.mvGroup[spc->findIndex(igroup)].push_back(iparticle);
@@ -970,7 +967,7 @@ namespace Faunus {
         assert( this->mollist.empty() && "Use either JSON data or setGroup");
         assert(!g.name.empty() && "Group should have a name.");
         assert(g.isMolecular());
-        assert(spc->geo.sqdist(g.cm,g.cm_trial)<1e-6 && "Trial CM mismatch");
+        assert(pot.geo.sqdist(g.cm,g.cm_trial)<1e-6 && "Trial CM mismatch");
         igroup=&g;
         if ( directions.find(g.name) != directions.end() )
           dir = directions[g.name];
@@ -997,18 +994,21 @@ namespace Faunus {
         }
 
         assert(igroup!=nullptr);
+	igroup->setTrialMassCenter(spc->geo_trial,spc->trial);
         Point p;
         if (dp_rot>1e-6) {
           p.ranunit(slump);             // random unit vector
-          p=igroup->cm+p;                    // set endpoint for rotation
+          p=igroup->cm_trial+p;                    // set endpoint for rotation
           angle=dp_rot* slump.half();
-          igroup->rotate(*spc, p, angle);
+	  //cout << "Rotate!        .-----------------   " << endl;
+          igroup->rotate(spc->geo_trial,spc->trial, p, igroup->cm_trial, angle);
+	  //cout << "RotateOut!        .-----------------   " << endl;
         }
         if (dp_trans>1e-6) {
           p.x()=dir.x() * dp_trans * slump.half();
           p.y()=dir.y() * dp_trans * slump.half();
           p.z()=dir.z() * dp_trans * slump.half();
-          igroup->translate(*spc, p);
+          igroup->translate(spc->geo_trial, spc->trial, p);
         }
 
         int g_index = spc->findIndex(igroup);
@@ -1018,7 +1018,7 @@ namespace Faunus {
 
     template<class Tspace>
       void TranslateRotate<Tspace>::_acceptMove() {
-        double r2 = spc->geo.sqdist( igroup->cm, igroup->cm_trial );
+        double r2 = spc->geo_trial.sqdist( igroup->cm, igroup->cm_trial );
         sqrmap_t[ igroup->name ] += r2;
         sqrmap_r[ igroup->name ] += pow(angle*180/pc::pi, 2);
         accmap[ igroup->name ] += 1;
@@ -1039,9 +1039,8 @@ namespace Faunus {
           return 0;
 
         for (auto i : *igroup)
-          if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
+          if ( spc->geo_trial.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
             return pc::infty;
-
         return Energy::energyChange(*spc, *base::pot, base::change);
       }
 
@@ -1116,7 +1115,7 @@ namespace Faunus {
                 if (base::dp_trans>1e-6) {
                   p.ranunit(slump);
                   p=base::dp_trans*p.cwiseProduct(base::dir);
-                  g->translate(*base::spc, p);
+                  g->translate(base::spc->geo_trial, base::spc->trial, p);
                 }
               }
             }
@@ -1125,7 +1124,7 @@ namespace Faunus {
           void _acceptMove() override {
             std::map<string,double> r2;
             for (auto g : gVec) {
-              r2[g->name] += base::spc->geo.sqdist(g->cm, g->cm_trial);
+              r2[g->name] += base::spc->geo_trial.sqdist(g->cm, g->cm_trial);
               g->accept(*base::spc);
               base::accmap[g->name] += 1;
             }
@@ -1371,9 +1370,9 @@ namespace Faunus {
         if (dp_rot>1e-6) {
           base::angle=dp_rot* slump.half();
           p.ranunit(slump);
-          p=igroup->cm+p; // set endpoint for rotation
-          igroup->rotate(*spc, p, base::angle);
-          vrot.setAxis(spc->geo, igroup->cm, p, base::angle); // rot. around line CM->p
+          p=igroup->cm_trial+p; // set endpoint for rotation
+          igroup->rotate(spc->geo_trial, spc->trial, p, igroup->cm_trial, base::angle);
+          vrot.setAxis(spc->geo_trial, igroup->cm_trial, p, base::angle); // rot. around line CM->p
           for (auto i : cindex)
             spc->trial[i] = vrot(spc->trial[i]); // rotate
         }
@@ -1383,9 +1382,9 @@ namespace Faunus {
           p.x()=dir.x() * dp_trans * slump.half();
           p.y()=dir.y() * dp_trans * slump.half();
           p.z()=dir.z() * dp_trans * slump.half();
-          igroup->translate(*spc, p);
+          igroup->translate(spc->geo_trial,spc->trial, p);
           for (auto i : cindex)
-            spc->trial[i].translate(spc->geo,p);
+            spc->trial[i].translate(spc->geo_trial,p);
         }
       }
 
@@ -1484,7 +1483,7 @@ namespace Faunus {
           void _acceptMove() {
             base::_acceptMove();
             for (auto i : base::spc->groupList())
-              i->setMassCenter(*base::spc);
+              i->setTrialMassCenter(base::spc->geo_trial,base::spc->trial);
           }
           string _info() override { return base::base::_info(); }
           double ClusterProbability(typename base::Tpvec &p, int i) override { return 1; }
@@ -1588,7 +1587,7 @@ namespace Faunus {
         for (size_t i=0; i<g.size(); i++) {
           remaining[i] = i;
           if (base::cnt<=1)
-            g[i]->setMassCenter(*spc);
+            g[i]->setTrialMassCenter(spc->geo_trial,spc->trial);
         }
 
         if (skipEnergyUpdate==false)
@@ -1607,7 +1606,7 @@ namespace Faunus {
         remaining.erase(remaining.begin()+f);    // Pick first index in m to move
 
         for (size_t i=0; i<moved.size(); i++) {
-          g[moved[i]]->translate(*spc, ip);
+          g[moved[i]]->translate(spc->geo_trial,spc->trial, ip);
           for (size_t j=0; j<remaining.size(); j++) {
             double uo=pot->g2g(spc->p,     *g[moved[i]], *g[remaining[j]]);
             double un=pot->g2g(spc->trial, *g[moved[i]], *g[remaining[j]]);
@@ -1733,7 +1732,7 @@ namespace Faunus {
         assert(!index.empty() && "No particles to rotate.");
         for (auto i : index)
           spc->trial[i] = vrot(spc->p[i]); // (boundaries are accounted for)
-        gPtr->cm_trial = Geometry::massCenter(spc->geo, spc->trial, *gPtr);
+        gPtr->cm_trial = Geometry::massCenter(spc->geo_trial, spc->trial, *gPtr);
 
         int g_index = spc->findIndex(gPtr);
         for(auto i : index)
@@ -1744,7 +1743,7 @@ namespace Faunus {
       void CrankShaft<Tspace>::_acceptMove() {
         double msq=0;
         for (auto i : index) {
-          msq+=spc->geo.sqdist( spc->p[i], spc->trial[i] );
+          msq+=spc->geo_trial.sqdist( spc->p[i], spc->trial[i] );
           spc->p[i] = spc->trial[i];
         }
         accmap.accept(gPtr->name, msq ) ;
@@ -1970,18 +1969,18 @@ namespace Faunus {
         // generate new position for end point ("first")
         Point u;
         u.ranunit(slump);                          // generate random unit vector
-        spc->trial[first].translate(spc->geo, u*bond); // trans. 1st w. scaled unit vector
+        spc->trial[first].translate(spc->geo_trial, u*bond); // trans. 1st w. scaled unit vector
         assert( std::abs( spc->geo.dist(spc->p[first],spc->trial[first])-bond ) < 1e-7  );
 
         for (auto i : *gPtr)
-          spc->geo.boundary( spc->trial[i] );  // respect boundary conditions
+          spc->geo_trial.boundary( spc->trial[i] );  // respect boundary conditions
 
-        gPtr->cm_trial = Geometry::massCenter(spc->geo, spc->trial, *gPtr);
+        gPtr->cm_trial = Geometry::massCenter(spc->geo_trial, spc->trial, *gPtr);
       }
 
     template<class Tspace>
       void Reptation<Tspace>::_acceptMove() {
-        accmap.accept(gPtr->name, spc->geo.sqdist(gPtr->cm, gPtr->cm_trial) );
+        accmap.accept(gPtr->name, spc->geo_trial.sqdist(gPtr->cm, gPtr->cm_trial) );
         gPtr->accept(*spc);
       }
 
@@ -2060,8 +2059,6 @@ namespace Faunus {
           double dp; //!< Volume displacement parameter
           double oldval;
           double newval;
-          Point oldlen;
-          Point newlen;
           Average<double> msd;       //!< Mean squared volume displacement
           Average<double> val;          //!< Average volume
           Average<double> rval;         //!< Average 1/volume
@@ -2147,16 +2144,17 @@ namespace Faunus {
         assert(g.size()>0
             && "Space has empty group vector - NPT move not possible.");
         oldval = spc->geo.getVolume();
-        oldlen = newlen = spc->geo.len;
-        newval = std::exp( std::log(oldval) + slump.half()*dp );
+        Point newlen = spc->geo.len;
+	newval = std::exp( std::log(oldval) + slump.half()*dp );
 	//newval = oldval*std::exp( slump.half()*dp ); // Is this not more simple?
         Point s = Point(1,1,1);
         double xyz = cbrt(newval/oldval);
         double xy = sqrt(newval/oldval);
         newlen.scale(spc->geo,s,xyz,xy);
+	spc->geo_trial.setlen(newlen); // Volume is now scaled accordingly
         for (auto g : spc->groupList()) {
-          g->setMassCenter(*spc);
-          g->scale(*spc, s, xyz, xy); // scale trial coordinates to new volume
+	  g->scale(spc->geo_trial,spc->geo,spc->trial,s,xyz,xy);
+	  g->setTrialMassCenter(spc->geo_trial,spc->trial);
         }
 
         int i=0;
@@ -2169,6 +2167,7 @@ namespace Faunus {
           i++;
         }
         base::change.geometryChange = true;
+	base::change.dV = newval - oldval;
       }
 
     template<class Tspace>
@@ -2176,10 +2175,9 @@ namespace Faunus {
         val += newval;
         msd += pow( oldval-newval, 2 );
         rval += 1./newval;
-        spc->geo.setlen(newlen);
         for (auto g : spc->groupList() )
           g->accept(*spc);
-	spc->geo_old = spc->geo;
+	spc->geo = spc->geo_trial;
 	pot->setSpace(*spc); 
       }
 
@@ -2188,7 +2186,7 @@ namespace Faunus {
         msd += 0;
         val += oldval;
         rval += 1./oldval;
-        spc->geo = spc->geo_old;
+        spc->geo_trial = spc->geo;
         for (auto g : spc->groupList() )
           g->undo(*spc);
 	pot->setSpace(*spc);
@@ -2223,13 +2221,11 @@ namespace Faunus {
      */
     template<class Tspace>
       double Isobaric<Tspace>::_energyChange() {
-        spc->geo.setlen(newlen);
-
         // In spherical geometries, molecules may collide with
         // cell boundary upon mass center scaling:
         for (auto g : spc->groupList())
           for (auto i : *g)
-            if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
+            if ( spc->geo_trial.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
               return pc::infty;
         return Energy::energyChange(*spc, *base::pot, base::change);
       }
@@ -2258,8 +2254,6 @@ namespace Faunus {
            using base::dp;
            using base::oldval;
            using base::newval;
-           using base::oldlen;
-           using base::newlen;
            using base::msd;
            using base::val;
            void _trialMove();
@@ -2304,17 +2298,14 @@ namespace Faunus {
       void Isochoric<Tspace>::_trialMove() {
         assert(spc->groupList().size()>0
             && "Space has empty group vector - Isochoric scaling move not possible.");
-        oldlen = spc->geo.len;
-        newlen = oldlen;
         oldval = spc->geo.len.z();
         newval = std::exp( std::log(oldval) + slump.half()*dp );
         //newval = oldval+ slump.half()*dp;
         Point s;
         s.z() = newval / oldval;
         s.x() = s.y() = 1 / std::sqrt(s.z());
-        newlen.scale(spc->geo,s);
         for (auto g : spc->groupList()) {
-          g->scale(*spc,s); // scale trial coordinates to new coordinates
+          g->scale(spc->geo_trial,spc->geo,spc->trial,s); // scale trial coordinates to new coordinates
         }
       }
 
@@ -3419,11 +3410,11 @@ namespace Faunus {
           startpoint=spc->p[igroup->back()];
           Point head=spc->p[igroup->front()];
           cntr->z()=head.z()=startpoint.z();
-          Point dir = spc->geo.vdist(*cntr, startpoint)
-            / sqrt(spc->geo.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
-          if (spc->geo.sqdist(*cntr, startpoint) > spc->geo.sqdist(*cntr, head))
-            startpoint.translate(spc->geo,-dir); // set startpoint for rotation
-          else startpoint.translate(spc->geo, dir);
+          Point dir = spc->geo_trial.vdist(*cntr, startpoint)
+            / sqrt(spc->geo_trial.sqdist(*cntr, startpoint)) * 1.1*spc->p[igroup->back()].radius;
+          if (spc->geo_trial.sqdist(*cntr, startpoint) > spc->geo_trial.sqdist(*cntr, head))
+            startpoint.translate(spc->geo_trial,-dir); // set startpoint for rotation
+          else startpoint.translate(spc->geo_trial, dir);
           double x1=cntr->x();
           double y1=cntr->y();
           double x2=startpoint.x();
@@ -3434,7 +3425,7 @@ namespace Faunus {
         }
         double angle=pc::pi; // MC move in case of planar geometry
         Geometry::QuaternionRotate vrot;
-        vrot.setAxis(spc->geo, startpoint, endpoint, angle); //rot around startpoint->endpoint vec
+        vrot.setAxis(spc->geo_trial, startpoint, endpoint, angle); //rot around startpoint->endpoint vec
         for (auto i : *igroup)
           spc->trial[i] = vrot(spc->trial[i]);
         igroup->cm_trial = vrot(igroup->cm_trial);
@@ -3933,7 +3924,7 @@ namespace Faunus {
         assert( spc->geo.collision( spc->p[ipart], spc->p[ipart].radius )==false
             && "Accepted particle collides with container");
 
-        if (spc->geo.collision(spc->trial[ipart], spc->trial[ipart].radius))  // trial<->container collision?
+        if (spc->geo_trial.collision(spc->trial[ipart], spc->trial[ipart].radius))  // trial<->container collision?
           return pc::infty;
         double uold = pot->external(spc->p) + pot->i_total(spc->p,ipart);
         double unew = pot->external(spc->trial) + pot->i_total(spc->trial,ipart);
@@ -4061,6 +4052,129 @@ namespace Faunus {
           }
       };
 
+    /**
+     * @brief Rotate single particles
+     *
+     * This move works in the same way as AtomicTranslation but does
+     * rotations of non-isotropic particles instead of translation. This move
+     * has no effect on isotropic particles such as Faunus::PointParticle.
+     */
+    template<class Tspace>
+      class AtomicTranslation2DHyperSphere : public AtomicTranslation<Tspace> {
+        protected:
+          typedef AtomicTranslation<Tspace> base;
+          using base::spc;
+          using base::iparticle;
+          using base::igroup;
+          using base::w;
+          using base::gsize;
+          using base::genericdp;
+          using base::accmap;
+          using base::sqrmap;
+          Geometry::QuaternionRotate rot;
+          string _info();
+          void _trialMove();
+          void _acceptMove();
+          void _rejectMove();
+          double dprot;      //!< Temporary storage for current angle
+          double radius;
+
+        public:
+          AtomicTranslation2DHyperSphere(Energy::Energybase<Tspace>&, Tspace&,
+              Tmjson&, string="atomtranslate2Dhypersphere");
+      };
+
+    template<class Tspace>
+      AtomicTranslation2DHyperSphere<Tspace>::AtomicTranslation2DHyperSphere(
+          Energy::Energybase<Tspace> &e,
+          Tspace &s,
+          Tmjson &j,
+          string sec) : base(e, s, j, sec) {
+        base::title="Single Particle Rotation";
+	radius = j["system"]["spheresurface"]["radius"] | 0.0;
+	assert(radius > 0 && "Radius has to be larger than zero!");
+      }
+    template<class Tspace>
+      void AtomicTranslation2DHyperSphere<Tspace>::_trialMove() {
+        if ( ! this->mollist.empty() ) {
+          igroup = spc->randomMol( this->currentMolId );
+          if ( igroup != nullptr ) {
+            iparticle = igroup->random();
+            gsize += igroup->size();
+          } else return;
+        } else return;
+
+        if (iparticle>-1) {
+          assert( iparticle<(int)spc->p.size() && "Trial particle out of range");
+          dprot = atom[spc->p[iparticle].id ].dprot;
+          if (dprot<1e-6)
+            dprot = base::genericdp;
+	  
+          Point xyz = spc->trial[iparticle];
+	  Point rtp(radius,0.0,0.0);
+	  rtp.y() = std::acos(xyz.z()/radius);
+	  if(std::fabs(xyz.x()) > 1e-6)
+	    rtp.z() = std::atan(xyz.y()/xyz.x());
+	  
+	  double dTheta = slump()*dprot;
+	  double dPsi = slump()*dprot;
+          Point rtp_trial(radius,0.0,0.0);
+	  rtp_trial.y() = rtp.y() + rtp.x()*dTheta;
+	  rtp_trial.z() = rtp.z() + rtp.x()*std::sin(rtp.y())*dPsi;
+	  Point xyz_trial(0.0,0.0,0.0);
+	  xyz_trial.x() = radius*std::sin(rtp_trial.y())*std::cos(rtp_trial.z());
+	  xyz_trial.y() = radius*std::sin(rtp_trial.y())*std::sin(rtp_trial.z());
+          xyz_trial.z() = radius*std::cos(rtp_trial.y());
+	  spc->trial[iparticle] = xyz_trial;
+        }
+        base::change.mvGroup[spc->findIndex(igroup)].push_back(iparticle);
+      }
+
+    template<class Tspace>
+      void AtomicTranslation2DHyperSphere<Tspace>::_acceptMove() {
+        sqrmap[ spc->p[iparticle].id ] += pow(dprot*180/pc::pi, 2);
+        accmap[ spc->p[iparticle].id ] += 1;
+        spc->p[iparticle] = spc->trial[iparticle];
+      }
+
+    template<class Tspace>
+      void AtomicTranslation2DHyperSphere<Tspace>::_rejectMove() {
+        spc->trial[iparticle] = spc->p[iparticle];
+        sqrmap[ spc->p[iparticle].id ] += 0;
+        accmap[ spc->p[iparticle].id ] += 0;
+      }
+
+    template<class Tspace>
+      string AtomicTranslation2DHyperSphere<Tspace>::_info() {
+        using namespace textio;
+        std::ostringstream o;
+	o << pad(SUB,w,"Radius") << radius << endl;
+        if (gsize.cnt>0)
+          o << pad(SUB,w,"Average moves/particle") << base::cnt / gsize.avg() << endl;
+        if (base::genericdp>1e-6)
+          o << pad(SUB,w,"Generic displacement") << genericdp
+            << _angstrom << endl;
+        if (base::cnt>0) {
+          char l=12;
+          o << endl
+            << indent(SUB) << "Individual particle rotation:" << endl << endl
+            << indent(SUBSUB) << std::left << string(7,' ')
+            << setw(l-6) << "dp"
+            << setw(l+1) << "Acc. "+percent
+            << setw(l+7) << bracket("d"+theta+squared)+"/"+degrees
+            << rootof+bracket("d"+theta+squared)+"/"+degrees << endl;
+          for (auto m : sqrmap) {
+            auto id=m.first;
+            o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
+              << setw(l-6) << ( (atom[id].dprot<1e-6) ? genericdp : atom[id].dprot*180/pc::pi);
+            o.precision(3);
+            o << setw(l) << accmap[id].avg()*100
+              << setw(l) << sqrmap[id].avg()
+              << setw(l) << sqrt(sqrmap[id].avg()) << endl;
+          }
+        }
+        return o.str();
+      } 
 
     /**
      * @brief Multiple moves controlled via JSON input
@@ -4118,6 +4232,8 @@ namespace Faunus {
             for ( auto i=m.begin(); i!=m.end(); ++i) {
               if (i.key()=="atomtranslate")
                 mPtr.push_back( toPtr( AtomicTranslation<Tspace>(e,s,in) ) );
+              if (i.key()=="atomtranslate2Dhypersphere")
+                mPtr.push_back( toPtr( AtomicTranslation2DHyperSphere<Tspace>(e,s,in) ) );
               if (i.key()=="atomrotate")
                 mPtr.push_back( toPtr( AtomicRotation<Tspace>(e,s,in) ) );
               if (i.key()=="atomgc")

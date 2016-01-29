@@ -4,7 +4,7 @@
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-#define EWALD
+//#define EWALD
 
 typedef Space<Geometry::Cuboid> Tspace;
 #ifdef EWALD
@@ -14,10 +14,10 @@ typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
 #endif
 
 int main() {
-
   cout << textio::splash();      // show faunus banner and credits
   InputMap mcp("water2.json");   // read input file
   Tspace spc(mcp);
+  spc.load("state"); // load old config. from disk (if any)
 
   // Energy functions and space
 #ifdef EWALD
@@ -27,8 +27,7 @@ int main() {
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
 #endif
-
-  spc.load("state"); // load old config. from disk (if any)
+  
   auto waters = spc.findMolecules("water");
 
   // Markov moves and analysis
@@ -40,7 +39,7 @@ int main() {
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
-
+  
   MCLoop loop(mcp);    // class for handling mc loops
   while ( loop[0] ) {          // Markov chain 
     while ( loop[1] ) {

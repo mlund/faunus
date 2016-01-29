@@ -119,54 +119,68 @@ namespace Faunus {
        *  @todo    Implement assertion to catch failure when molecule
        *           is bigger than half the box size.
        */
-      template<class Tspace>
-        Point massCenter(const Tspace &spc) const {
-          return Geometry::massCenter(spc.geo, spc.p, *this);
+      template<class Tgeometry, class Tparticles>
+        Point massCenter(const Tgeometry &geo, const Tparticles &p) const {
+          return Geometry::massCenter(geo, p, *this);
         }
-
+        
+      template<class Tgeometry, class Tparticles>
+        Point setTrialMassCenter(const Tgeometry &geo, const Tparticles &p) {
+	    cm_trial = massCenter(geo,p);
+	    return cm_trial;
+        }
+        
+      template<class Tgeometry, class Tparticles>
+        Point setMassCenter(const Tgeometry &geo, const Tparticles &p) {
+	    cm = massCenter(geo,p);
+	    return cm;
+        }
+        
       /** @brief Calculate AND set mass center (cm and cm_trial) */
       template<class Tspace>
-        Point setMassCenter(const Tspace &spc) {
-          cm=massCenter(spc);
-          cm_trial=cm;
-          return cm;
+        void setMassCenters(const Tspace &spc) {
+	  setTrialMassCenter(spc.geo_trial,spc.trial);
+	  setMassCenter(spc.geo,spc.p);
         }
 
       /**
        * @brief Translate along a vector
-       * @param spc Simulation Space
-       * @param p Vector to translate with
+       * @param geo Geometry
+       * @param p Particle vector
+       * @param vec Vector to translate with
+       * @param isTrial Whether 'geo' and 'p' are trial entities
        */
-      template<class Tspace>
-        void translate(Tspace &spc, const Point &p) {
-          assert( spc.geo.sqdist(cm,massCenter(spc))<1e-6 && "Mass center out of sync." );
-          cm_trial.translate(spc.geo, p);
+      template<class Tgeometry, class Tparticles>
+        void translate(const Tgeometry &geo, Tparticles &p, const Point &vec, bool isTrial = true) {
+	  if(isTrial) {
+	    cm_trial.translate(geo, vec);
+	  } else {
+	    cm.translate(geo, vec);
+	  }
           for (auto i : *this)
-            spc.trial[i].translate(spc.geo, p);
+            p[i].translate(geo, vec);
         }
-
+        
       /**
        * @brief Rotate around a vector
        * @param spc Simulation space
        * @param endpoint End point of rotation axis, starting from the mass center
        * @param angle [rad]
        */
-      template<class Tspace>
-        void rotate(Tspace &spc, const Point &endpoint, double angle) {
-          assert( spc.geo.dist(cm,massCenter(spc) )<1e-6 );
+      template<class Tgeometry, class Tparticles>
+        void rotate(Tgeometry &geo, Tparticles &p, const Point &endpoint, Point cm_in, double angle, bool isTrial = true) {
+	  assert( geo.dist(cm_in,massCenter(geo,p) )<1e-9 );
           Geometry::QuaternionRotate vrot1;
-          cm_trial = cm;
-          vrot1.setAxis(spc.geo, cm, endpoint, angle);//rot around CM->point vec
+          vrot1.setAxis(geo, cm_in, endpoint, angle);//rot around CM->point vec
           auto vrot2 = vrot1;
           vrot2.getOrigin() = Point(0,0,0);
           for (auto i : *this) {
-            spc.trial[i] = vrot1(spc.trial[i]); // rotate coordinates
-            spc.trial[i].rotate(vrot2);         // rotate internal coordinates
+            p[i] = vrot1(p[i]); // rotate coordinates
+            p[i].rotate(vrot2);         // rotate internal coordinates
           }
-          assert( spc.geo.dist(cm_trial, massCenter(spc))<1e-9
-              && "Rotation messed up mass center. Is the box too small?");
+	  assert( geo.dist(cm_in, massCenter(geo,p))<1e-9 && "Rotation messed up mass center. Is the box too small?");
         }
-
+        
       /**
        * @brief Get the i'th molecule in the group
        * @warning You must manually update the mass center of the returned group
@@ -201,39 +215,45 @@ namespace Faunus {
         assert( find( sel.back()  ) );
         return sel;
       }
-
-      /** @brief Scaling for isobaric and isochoric moves */ 
-      template<class Tspace>
-        void scale(Tspace &spc, Point &s, double xyz=1, double xy=1) {
+        
+      /** @brief Scaling for isobaric and isochoric moves. Assumes that if 'geo_trial' is used so is the trial particle vector.
+       */ 
+      template<class Tgeometry, class Tparticles>
+        void scale(const Tgeometry &geo, const Tgeometry &geo_old, Tparticles &p, Point &s, double xyz=1, double xy=1, bool isTrial = true) {
           if (empty()) return;
 
           if (isAtomic()) {
-            cm_trial=cm;
-            cm_trial.scale(spc.geo,s,xyz,xy);
-            for (auto i : *this)
-              spc.trial[i].scale(spc.geo,s,xyz,xy);
-            return;
+	    if(isTrial) {
+	      cm_trial=cm;
+	      cm_trial.scale(geo,s,xyz,xy);
+	    } else {
+	      cm.scale(geo,s,xyz,xy);
+	    }
+	    for (auto i : *this)
+	      p[i].scale(geo,s,xyz,xy);
+	    return;
           }
 
           if (isMolecular()) {
-            assert( spc.geo.dist(cm, massCenter(spc))<1e-6);
-            assert( spc.geo.dist(cm, cm_trial)<1e-7);
+	    if(isTrial) {
+	      assert( geo.dist(cm_trial, cm) < 1e-9);
+	    } else {
+	      assert( geo.dist(cm, Geometry::massCenter(geo, p, *this)) < 1e-9);
+	    }
 
-            Point newcm=cm;
-            newcm.scale(spc.geo,s,xyz,xy);
-            translate(spc,-cm);                 // move to origo
+            Point newcm = cm;
+            newcm.scale(geo,s,xyz,xy);                
+	    
+            translate(geo_old,p,-cm,isTrial);                 // move to origo
+	    translate(geo,p,newcm,isTrial);               // move to scaled position
+	    
 
-            Point oldlen=spc.geo.len; // store original volume
-            Point newlen=oldlen;
-            newlen.scale(spc.geo,s,xyz,xy);
-            spc.geo.setlen(newlen);         // apply trial volume
-
-            for (auto i : *this) {
-              spc.trial[i] += newcm;            // move all particles to new cm
-              spc.geo.boundary( spc.trial[i] );  // respect boundary conditions
-            }
-            cm_trial=newcm;
-            spc.geo.setlen(oldlen);         // restore original volume
+            if(isTrial) {
+	      cm_trial=newcm;
+	      assert( geo.dist(cm_trial, Geometry::massCenter(geo, p, *this)) < 1e-9);
+	    } else {
+	      cm = newcm;
+	    }
             return;
           }
 
@@ -241,8 +261,12 @@ namespace Faunus {
             for (int i=0; i!=numMolecules(); ++i) {
               Group sel;
               getMolecule(i,sel);
-              sel.setMassCenter(spc);
-              sel.scale(spc,s,xyz,xy);
+	      if(isTrial) {
+		sel.setTrialMassCenter(geo,p);
+	      } else {
+		sel.setMassCenter(geo,p);
+	      }
+              sel.scale(geo,geo_old,p,s,xyz,xy,isTrial);
             }
             return;
           }

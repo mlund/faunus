@@ -916,7 +916,7 @@ namespace Faunus {
         IonQuad(Tmjson &j, const string &sec="coulomb") {
           name="Ion-Quad";
           pc::setT ( j[sec]["temperature"] | 298.15 );
-          double epsilon_r = j[sec]["epsilon_r"] | 1.0;
+          double epsilon_r = j[sec]["eps_r"] | 1.0;
           _lB=pc::lB( epsilon_r );
         }
         template<class Tparticle>
@@ -940,12 +940,18 @@ namespace Faunus {
       private:
         string _brief() { return "Dipole-dipole (RF)"; }
         double rc2,eps,eps_rf,eps_r;
+	bool eps_RF;
       public:
         DipoleDipoleRF(Tmjson &j, const string &sec="coulomb") : DipoleDipole(j,sec) {
           name+=" Reaction Field";
           rc2 = pow(j[sec]["cutoff"] | pc::infty,2);
-          eps_rf = j[sec]["epsilon_rf"] | 80.0;
-          eps_r = j[sec]["epsilon_r"] | 1.0;
+          eps_r = j[sec]["eps_r"] | 1.0;
+	  eps_rf = j[sec]["eps_rf"] | 80.0;
+	  eps_RF = false;
+	  if(fabs(eps_rf) < 1e-6) {
+	    eps = _lB/pow(rc2,1.5)/eps_r;
+	    eps_RF = true;
+	  }
           updateDiel(eps_rf);
         }
         template<class Tparticle>
@@ -964,15 +970,20 @@ namespace Faunus {
           }
 
         void updateDiel(double er) {
-          eps = _lB*(2*(er-eps_r)/(2*er+eps_r))/pow(rc2,1.5)/eps_r;
+	  if(!eps_RF)
+	    eps = _lB*(2*(er-eps_r)/(2*er+eps_r))/pow(rc2,1.5)/eps_r;
         }  
 
         string info(char w) {
           using namespace textio;
           std::ostringstream o;
           o << DipoleDipole::info(w)
-            << pad(SUB,w,"Cutoff") << sqrt(rc2) << " "+angstrom << endl
-            << pad(SUB,w,"epsilon_rf") << eps_rf << endl;
+            << pad(SUB,w,"Cutoff") << sqrt(rc2) << " "+angstrom << endl;
+            if(eps_RF) {
+	     o << pad(SUB,w, epsilon_m+"RF") << infinity << endl;
+	    } else {
+	     o << pad(SUB,w, epsilon_m+"RF") << eps_rf << endl;
+	    }
           return o.str();
         }
     };
@@ -993,7 +1004,7 @@ namespace Faunus {
               (j[sec]["cutoff"] | pc::infty)) {
             name="Multipole Wolf";
 	    _lB = Coulomb(j,sec).bjerrumLength();
-            double epsilon_r = (j[sec]["epsilon_r"] | 1.0);
+            double epsilon_r = (j[sec]["eps_r"] | 1.0);
             wolf.setType(zeroDerivative);
           }
           template<class Tparticle>

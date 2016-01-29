@@ -73,7 +73,59 @@ namespace Faunus {
           if ( jsondir.empty() )
             jsondir = "system";
         }
+        
+        inline Geometrybase() {}
+        
         virtual ~Geometrybase();
+    };
+    
+    /**
+     * @brief Spherical geometry
+     *
+     * This is a spherical simulation container, surrounded by a hard wall.
+     */
+    class SphereSurface : public Geometrybase {
+      private:
+        double r,r2,diameter;
+        void _setVolume(double) override;
+        double _getVolume() const override;
+        string _info(char) override;
+      public:
+        Point len;
+        void setlen(const Point&);              //!< Reset radius (angstrom)
+        void setRadius(double);                 //!< Set radius (angstrom)
+        SphereSurface(double);                         //!< Construct from radius (angstrom)
+
+        inline SphereSurface() {};
+        
+        /**
+         * @brief Construct from json object.
+         *
+         * Keywords in section `system/spheresurface` are scanned for,
+         *
+         * Key       | Description
+         * :-------- | :-----------------------
+         * radius`   | Sphere radius [angstrom]
+         */
+        inline SphereSurface( Tmjson &j ) : Geometrybase("SphereSurface") {
+          setRadius( j["system"][ textio::lowercase(name) ] ["radius"] | -1.0 );
+        }
+
+        void randompos(Point &) override;
+        void boundary(Point &p) const override {};
+        bool collision(const Point&, double, collisiontype=BOUNDARY) const override;
+
+        inline double sqdist(const Point &a, const Point &b) const override {
+	  return r*std::acos(a.dot(b)/r2);
+        }
+
+        /**
+	 * @warning Not true!
+	 */
+        inline Point vdist(const Point &a, const Point &b) override { return a-b; }
+
+        void scale(Point&, Point &, const double, const double) const override; //!< Linear scaling along radius (NPT ensemble)
+
     };
 
     /**
@@ -93,6 +145,8 @@ namespace Faunus {
         void setRadius(double);                 //!< Set radius (angstrom)
         Sphere(double);                         //!< Construct from radius (angstrom)
 
+        inline Sphere() {};
+        
         /**
          * @brief Construct from json object.
          *
@@ -140,6 +194,8 @@ namespace Faunus {
         Point len_inv;                           //!< Inverse sidelengths
 
       public:
+	
+	inline Cuboid() {};
 
         /**
          * The json object is scanned for the following parameters in section `system/cuboid`:
@@ -226,6 +282,8 @@ namespace Faunus {
     class Cuboidslit : public Cuboid {
       public:
         Cuboidslit(Tmjson &j) : Cuboid(j) { name += " (XY-periodicity)"; }
+        
+        inline Cuboidslit() {}
 
         inline double sqdist(const Point &a, const Point &b) const override {
           double dx=std::abs(a.x()-b.x());
@@ -291,6 +349,7 @@ namespace Faunus {
         inline Point vdist(const Point &a, const Point &b) override {
           return a-b;
         }
+        inline Cylinder() {};
     };
 
     /**
@@ -302,6 +361,7 @@ namespace Faunus {
 
         PeriodicCylinder(Tmjson&);
         PeriodicCylinder(double, double);
+	inline PeriodicCylinder() {};
 
         void boundary(Point&) const override;
 

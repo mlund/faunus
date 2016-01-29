@@ -197,7 +197,7 @@ namespace Faunus {
         enum keys {OVERLAP_CHECK,NOOVERLAP_CHECK,RESIZE,NORESIZE};
 
         Tgeometry geo;                         //!< System geometry
-        Tgeometry geo_old;                     //!< The most recently accepted geometry 
+        Tgeometry geo_trial;                   //!< Trial geometry
         ParticleVector p;                      //!< Main particle vector
         ParticleVector trial;                  //!< Trial particle vector.
         MoleculeMap<ParticleVector> molecule;  //!< Map of molecules
@@ -220,7 +220,9 @@ namespace Faunus {
           std::map<int,vector<int>> rmGroup; // remove groups
           std::map<int,ParticleVector> inGroup; // insert groups
 
-          Change() : dV(0) {}; 
+          Change() : dV(0) {
+	    clear();
+	  }; 
 
           void clear() {
             dV=0;
@@ -256,7 +258,11 @@ namespace Faunus {
                 assert( g.find(i) );
                 p[i] = trial[i];
               }
-            g.setMassCenter(*this); // update mass center
+            if(c.geometryChange) {
+	      g.setMassCenter(p,geo_trial); // update mass center
+	    } else {
+	      g.setMassCenter(p,geo); // update mass center
+	    }
           }
           assert( !"incomplete" );
         }
@@ -269,7 +275,7 @@ namespace Faunus {
          * is searched for molecules with non-zero `Ninit` and
          * will insert accordingly.
          */
-        Space( Tmjson &j ) : geo( j ), geo_old( j ) {
+        Space( Tmjson &j ) : geo( j ), geo_trial( j ) {
           pc::setT( j["system"]["temperature"] | 298.15 );
           atom.include( j );
           molecule.include( j );
@@ -610,7 +616,7 @@ namespace Faunus {
             fin >> vol >> n;
             geo.setVolume(vol);
           }
-          geo_old = geo;
+          geo_trial = geo;
           if (key==RESIZE && n!=(int)p.size()) {
             cout << indent(SUB) << "Resizing particle vector from "
               << p.size() << " --> " << n << ".\n";
@@ -632,7 +638,7 @@ namespace Faunus {
             if (n==(int)g.size()) {
               for ( auto i : g ) {
                 *i << fin;
-                i->setMassCenter(*this);
+                i->setMassCenters(*this);
                 if ( i->name.empty() )
                   i->name = molecule[i->molId].name;
               }
@@ -781,7 +787,7 @@ namespace Faunus {
         else
           x->setMolSize( pin.size() );
 
-        x->setMassCenter( *this );
+        x->setMassCenters( *this );
 
         return x;
       }

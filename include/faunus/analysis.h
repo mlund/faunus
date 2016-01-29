@@ -607,7 +607,7 @@ namespace Faunus {
      }
 
      Point vectorgyrationRadiusSquared(const Group &pol, const Tspace &spc) const {
-      assert(spc.geo.dist(pol.cm, pol.massCenter(spc)) < 1e-9
+      assert(spc.geo.dist(pol.cm, pol.massCenter(spc.geo,spc.p)) < 1e-9
         && "Mass center must be in sync.");
       double sum = 0;
       Point t, r2(0, 0, 0);
@@ -703,7 +703,7 @@ namespace Faunus {
 
     template<class Tgroup, class Tspace>
      double dipole(const Tgroup &g, const Tspace &spc) {
-      assert( spc.geo.dist(g.cm, g.massCenter(spc))<1e-9
+      assert( spc.geo.dist(g.cm, g.massCenter(spc.geo,spc.p))<1e-9
         && "Mass center must be in sync.");
       Point t, mu(0,0,0);
       for (auto i : g)
@@ -1403,12 +1403,10 @@ namespace Faunus {
       Point mu_box(0,0,0);      // In e\AA
       Tensor<double> quad;      // In e\AA^2
       Tensor<double> quad_box;  // In e\AA^2
-      quad.setZero();
-      quad_box.setZero();
-      vector<double> mus_group;
+      vector<Point> mus_group; // In e\AA, scalar dipole moment of every group
       mus_group.resize(spc.groupList().size());
       for(unsigned int i = 0; i < mus_group.size(); i++)
-	mus_group.at(i) = 0.0;
+	mus_group.at(i) = Point(0,0,0);
 
 #ifdef DIPOLEPARTICLE  
       // Samples entities from dipoles and quadrupoles
@@ -1431,10 +1429,10 @@ namespace Faunus {
 
       int cnt = 0;
       for (auto gi : spc.groupList()) {
-       Point m(0,0,0);
+       Point m = Geometry::dipoleMoment(spc, *gi);
        for (auto i : *gi)
         m += spc.p[i].muscalar*spc.p[i].mu;
-       mus_group.at(cnt++) = m.norm();
+       mus_group.at(cnt++) = m;
       }
 #endif
       samplePP(spc,origin,mu,mu_box,quad,quad_box,mus_group); // Samples entities from charges
@@ -1452,7 +1450,7 @@ namespace Faunus {
      * @param mus_group Sum of the group dipole moments due to explicite dipoles 
      */
     template<class Tspace>
-     void samplePP(Tspace &spc, Point origin, Point mu, Point mu_box, Tensor<double> quad,Tensor<double> quad_box, vector<double> mus_group) {
+     void samplePP(Tspace &spc, Point origin, Point mu, Point mu_box, Tensor<double> quad,Tensor<double> quad_box, vector<Point> mus_group) {
       updateVolume(spc.geo.getVolume());
 
       for (auto gi : spc.groupList()) {
@@ -1492,7 +1490,7 @@ namespace Faunus {
       cnt = 0;
       for (auto gi : spc.groupList()) {
        Point m = Geometry::dipoleMoment(spc, *gi);
-       mus_group.at(cnt) += m.norm();
+       mus_group.at(cnt) += m;
        cnt++;
       }
      }

@@ -1,3 +1,4 @@
+#define DIPOLEPARTICLE
 #include <faunus/faunus.h>
 #include <faunus/multipole.h>
 #include <faunus/ewald.h>
@@ -12,7 +13,7 @@ typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
 #ifdef EWALD
 typedef LennardJonesLB Tpair;
 #else
-typedef CombinedPairPotential<LennardJonesLB,DipoleDipole> Tpair;
+typedef CombinedPairPotential<LennardJonesLB,DipoleDipoleRF> Tpair;
 #endif
 
 int main() {

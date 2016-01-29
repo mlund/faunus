@@ -1,6 +1,5 @@
-# Generated on Jul 31 2014 15:10:34 using 4.8.2
-energyAverage                      -1359.55            
-relativeEnergyDrift                4.78909e-15         
-moves/atomtranslate_acceptance     20.2006             
-moves/atomrotate_acceptance        25.528              
-
+# Generated on Jan 29 2016 13:23:28 using 4.2.1 Compatible Ubuntu Clang 3.5.0 (tags/RELEASE_350/final)
+energyAverage                                -8510.42            
+moves/atomrotate_acceptance                  59.0203             
+moves/atomtranslate_acceptance               46.0669             
+relativeEnergyDrift                          6.97665e-14         

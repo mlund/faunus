@@ -83,7 +83,7 @@ int main() {
       spc.p[i].z() -= dz;
       spc.geo.boundary( spc.p[i] );
     }
-    g->setMassCenter( spc );
+    g->setMassCenters( spc );
   }
   spc.trial=spc.p;   // sync. particle trial vector
   spc.load("state"); // load old config. from disk (if any)

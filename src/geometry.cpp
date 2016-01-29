@@ -92,6 +92,58 @@ namespace Faunus {
 
     bool Sphere::collision(const Point &a, double radius, collisiontype type) const {
       return (a.squaredNorm()>r2) ? true:false;
+      //return ( (a.norm() + radius )*(a.norm() + radius ) >r2) ? true:false; // Is not this correct?
+    }
+    
+    SphereSurface::SphereSurface(double radius) : Geometrybase("SphereSurface") { 
+      len = Point(r,diameter,0);
+    }
+
+    void SphereSurface::setRadius(double radius) {
+      assert(radius>0 && "Radius must be larger than zero.");
+      r = radius; 
+      r2 = r*r; 
+      diameter = 2*r; 
+      len = Point(r,diameter,0);
+    }
+
+    double SphereSurface::_getVolume() const {
+      return 4/3.*pc::pi*std::pow(r,3);
+    }
+
+    void SphereSurface::_setVolume(double vol) {
+      setRadius( cbrt( 3*vol/(4*pc::pi) ) );
+    }
+
+    void SphereSurface::setlen(const Point &l) {
+      SphereSurface::setRadius( l.x() );
+      if ( getVolume()<1e-9 )
+        throw std::runtime_error( "Sphere volume is zero." );
+    }
+
+    void SphereSurface::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {
+      assert( getVolume()>0 );
+      double newradius = cbrt( 3*xyz*xyz*xyz*getVolume()/(4*pc::pi) );
+      a = a * (newradius/r);
+    }
+
+    string SphereSurface::_info(char w) {
+      std::ostringstream o;
+      o << pad(SUB,w,"Radius") << r << textio::_angstrom << endl;
+      return o.str();
+    }
+
+    void SphereSurface::randompos(Point &a) {
+      do {
+        a.x() = (slump()-0.5)*diameter;
+        a.y() = (slump()-0.5)*diameter;
+        a.z() = (slump()-0.5)*diameter;
+      } while ( a.squaredNorm()>r2 );
+      a = r*a/sqrt(a.dot(a));
+    }
+
+    bool SphereSurface::collision(const Point &a, double radius, collisiontype type) const {
+      return (std::fabs( a.squaredNorm() - r2 ) > 1e-6) ? true:false;
     }
 
     void Cuboid::setlen(const Point &l) {

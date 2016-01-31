@@ -368,7 +368,7 @@ namespace Faunus {
 	  EwaldParameters<useIonIon,useIonDipole,useDipoleDipole> parameters, parameters_trial;
           Average<double> timeReciprocal;
           int kVectorsInUse, kVectorsInUse_trial, N, updates, cnt_accepted, update_frequency;
-          double V, V_trial, eps_surf, eps_r, lB, const_inf, delta, Sq2, Smu2; 
+          double V, V_trial, eps_surf, eps_r, lB, const_inf, delta, Sq2, Smu2, selfEnergy, selfEnergyTrial, surfaceEnergy, surfaceEnergyTrial, reciprocalEnergy, reciprocalEnergyTrial; 
           bool spherical_sum, update_frequency_bool;
           vector<complex<double>> Q_ion_tot, Q_dip_tot, Q_ion_tot_trial, Q_dip_tot_trial;
           typename Tspace::Change change;
@@ -396,11 +396,7 @@ namespace Faunus {
               }
               Sq2 = Eq;
               Smu2 = Emu;
-
-              double selfEnergy = -parameters_in.alpha*( Sq2 + parameters_in.alpha2*(2.0/3.0)*Smu2 ) / sqrt(pc::pi);
-              //if(N == g.getMolSize())
-              //	selfEnergyAverage += selfEnergy*lB;
-              return selfEnergy*lB;
+              return (-parameters_in.alpha*( Sq2 + parameters_in.alpha2*(2.0/3.0)*Smu2 ) / sqrt(pc::pi))*lB;
             }
 
           /**
@@ -409,7 +405,7 @@ namespace Faunus {
            * @param g Group to calculate from
            */
           template<class Tpvec, class Tgroup>
-            double getSurfaceEnergy(const Tpvec &p, const Tgroup &g, double V_in) const { 
+            double getSurfaceEnergy(const Tpvec &p, const Tgroup &g, double V_in) { 
               Point mus(0,0,0);
               Point qrs(0,0,0);
               for (auto i : g) {  
@@ -420,10 +416,7 @@ namespace Faunus {
                   mus = mus + p[i].mu*p[i].muscalar;
 #endif
               }
-              double surfaceEnergy = const_inf * (2*pc::pi/(( 2*eps_surf + 1)*V_in))*( qrs.dot(qrs) + 2*qrs.dot(mus) +  mus.dot(mus) );
-              //if(N == g.getMolSize())
-              //	surfaceEnergyAverage += surfaceEnergy*lB;
-              return surfaceEnergy*lB;
+              return const_inf * (2*pc::pi/(( 2*eps_surf + 1)*V_in))*( qrs.dot(qrs) + 2*qrs.dot(mus) +  mus.dot(mus) )*lB;
             }
 
           /**
@@ -443,11 +436,7 @@ namespace Faunus {
                 Q2 += std::norm(Q_dip_tot_in.at(k));  // 'norm' returns squared magnitude
               E += ( Aks_in[k] * Q2 );
             }
-	  
-            double reciprocalEnergy = (2*pc::pi/V_in)*E;
-            //if(N == g.getMolSize())
-            //	reciprocalEnergyAverage += reciprocalEnergy*lB;
-            return reciprocalEnergy*lB;
+            return (2*pc::pi/V_in)*E*lB;
           }
 
           /**
@@ -541,17 +530,17 @@ namespace Faunus {
               o << pad(SUB,w+1, epsilon_m+"(Surface)") << eps_surf << endl;
             }
             o << pad(SUB,w, "updates") << updates << endl;
-            /*
-               o << pad(SUB,w+4, bracket("Energies / kT")) << endl;
-               o << pad(SUB,w+4, bracket("Self energy")) << selfEnergyAverage.avg() << endl;
-               o << pad(SUB,w+1, "    "+sigma) << selfEnergyAverage.std() << endl;
-               o << pad(SUB,w+4, bracket("Surf energy")) << surfaceEnergyAverage.avg() << endl;
-               o << pad(SUB,w+1, "    "+sigma) << surfaceEnergyAverage.std() << endl;
-               o << pad(SUB,w+4, bracket("Real energy")) << realEnergyAverage.avg() << endl;
-               o << pad(SUB,w+1, "    "+sigma) << realEnergyAverage.std() << endl;
-               o << pad(SUB,w+4, bracket("Reci energy")) << reciprocalEnergyAverage.avg() << endl;
-               o << pad(SUB,w+1, "    "+sigma) << reciprocalEnergyAverage.std() << endl;
-             */
+	    
+            o << pad(SUB,w+4, bracket("Energies / kT")) << endl;
+            o << pad(SUB,w+4, bracket("Self energy")) << selfEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << selfEnergyAverage.std() << endl;
+            o << pad(SUB,w+4, bracket("Surf energy")) << surfaceEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << surfaceEnergyAverage.std() << endl;
+            o << pad(SUB,w+4, bracket("Real energy")) << realEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << realEnergyAverage.std() << endl;
+            o << pad(SUB,w+4, bracket("Reci energy")) << reciprocalEnergyAverage.avg() << endl;
+            o << pad(SUB,w+1, "    "+sigma) << reciprocalEnergyAverage.std() << endl;
+            
             return o.str();
           }
 
@@ -662,21 +651,28 @@ namespace Faunus {
            * @note Needs to be called before particle-vectors are updated after acception/rejection.
            */
           double update(bool move_accepted) override {
-            if (!move_accepted )
+            if (!move_accepted ) {
+	      selfEnergyAverage += selfEnergy;
+	      surfaceEnergyAverage += surfaceEnergy;
+	      reciprocalEnergyAverage += reciprocalEnergy;
               return 0.0;
+	    }
 
             assert(!change.empty());
 	    
+	    selfEnergyAverage += selfEnergyTrial;
+	    surfaceEnergyAverage += surfaceEnergyTrial;
+	    reciprocalEnergyAverage += reciprocalEnergyTrial;
+	    
 	    double du = 0.0;
-	    /*
+	    
 	    if(++cnt_accepted > update_frequency) {
 	      du -= getReciprocalEnergy(Q_ion_tot_trial,Q_dip_tot_trial,Aks_trial,V_trial);
 	      updateAllComplexNumbers(spc->trial, Q_ion_tot_trial, Q_dip_tot_trial,kVectors_trial,kVectorsInUse_trial);
 	      du += getReciprocalEnergy(Q_ion_tot_trial,Q_dip_tot_trial,Aks_trial,V_trial);
 	      cnt_accepted = 0;
 	    }
-	    */
-
+	    
 	    V = V_trial;
             kVectorsInUse = kVectorsInUse_trial;
             Q_ion_tot.resize(kVectorsInUse);
@@ -730,18 +726,19 @@ namespace Faunus {
             Group g(0, p.size()-1);
             std::chrono::steady_clock::time_point init, final;
             init = std::chrono::steady_clock::now();
-            double reciprocalEnergy = 0.0;
-            double surfacEnergy = 0.0;
+	    double total = 0.0;
             if (Tbase::isTrial(p)) {
-              surfacEnergy = getSurfaceEnergy(p,g,V_trial);
-              reciprocalEnergy = getReciprocalEnergy(Q_ion_tot_trial,Q_dip_tot_trial,Aks_trial,V_trial);
+              surfaceEnergyTrial = getSurfaceEnergy(p,g,V_trial);
+              reciprocalEnergyTrial = getReciprocalEnergy(Q_ion_tot_trial,Q_dip_tot_trial,Aks_trial,V_trial);
+	      total = surfaceEnergyTrial + reciprocalEnergyTrial;
             } else {
-              surfacEnergy = getSurfaceEnergy(p,g,V);
+              surfaceEnergy = getSurfaceEnergy(p,g,V);
               reciprocalEnergy = getReciprocalEnergy(Q_ion_tot,Q_dip_tot,Aks,V);
+	      total = surfaceEnergy + reciprocalEnergy;
             }
             final = std::chrono::steady_clock::now();
             timeReciprocal += double(std::chrono::duration_cast<std::chrono::milliseconds >(final-init).count());
-            return ( surfacEnergy + reciprocalEnergy   );
+            return total;
           }
 
           /**

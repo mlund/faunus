@@ -2,7 +2,9 @@
 #define FAUNUS_MULTIPOLE_H
 
 #include <faunus/common.h>
+#include <faunus/auxiliary.h>
 #include <faunus/species.h>
+#include <faunus/tabulate.h>
 
 namespace Faunus {
   namespace json {
@@ -1389,6 +1391,172 @@ namespace Faunus {
           std::ostringstream o;
           o << DipoleDipole::info(w)
             << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+          return o.str();
+        }
+    };
+
+    inline double qPochhammerSymbol(double q, int k=1, int P=300) {
+      //int P = 300;  // Should give an error of about 10^-17 for k < 4
+      double value = 1.0;
+      double temp = pow(q,k);
+      for(int i = 0; i < P; i++) {
+        value *= (1.0 - temp);
+        temp *= q;
+      }
+      return value;
+    }
+
+    class IonIonQ : public Coulomb {
+      private:
+        string _brief() { return "Coulomb Q"; }
+        double rc1, rc1i, rc2, _lB;
+        Tabulate::Andrea<double> qk;
+        Tabulate::TabulatorBase<double>::data tabel;
+      public:
+        IonIonQ(Tmjson &j, const string &sec="coulomb") : Coulomb(j,sec) { 
+          name += " Q"; 
+          _lB = Coulomb(j,sec).bjerrumLength();
+          rc1 = j[sec]["cutoff"] | pc::infty;
+          rc1i = 1.0/rc1;
+          rc2 = rc1*rc1;
+
+          std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,1); };  // Sets r^k-dependence, Ion-Ion -> k = 1, Ion-Dipole -> k = 2, etc. etc. 
+          qk.setRange(0,1);
+          qk.setTolerance(j[sec]["tab_utol"] | 1e-9,j[sec]["tab_ftol"] | 1e-2); // Tolerance in energy and force
+          tabel = qk.generate( Qk );
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+            double r1 = sqrt(r2);
+            if(r2 < rc2)
+              return _lB*(a.charge*b.charge/r1)*qk.eval(tabel,r1*rc1i);
+            return 0.0;
+          }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r2 = r.squaredNorm();
+            return operator()(a,b,r2);
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << Coulomb::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+          o << qk.info() << endl;
+          // FIX INFO ABOUT TABULATION AND SPLINES
+          return o.str();
+        }
+    };
+    
+    class IonDipoleQ : public IonDipole {
+      private:
+        string _brief() { return "Ion-dipole Q"; }
+        double rc1, rc1i;
+        Tabulate::Andrea<double> qk;
+        Tabulate::TabulatorBase<double>::data tabel;
+      public:
+        IonDipoleQ(Tmjson &j, const string &sec="coulomb") : IonDipole(j,sec) {
+          name += " Q"; 
+          _lB = Coulomb(j,sec).bjerrumLength();
+          rc1 = j[sec]["cutoff"] | pc::infty;
+          rc1i = 1.0/rc1;
+
+          std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,2); };  // Sets r^k-dependence, Ion-Ion -> k = 1, Ion-Dipole -> k = 2, etc. etc. 
+          qk.setRange(0,1);
+          qk.setTolerance(j[sec]["tab_utol"] | 1e-9,j[sec]["tab_ftol"] | 1e-2); // Tolerancekappa = 'Con'; in energy and force
+          tabel = qk.generate( Qk );
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r1 = r.norm();
+            if (r1 < rc1)
+              return (IonDipole::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
+            return 0;
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << IonDipole::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl;
+          return o.str();
+        }
+    };
+
+    class DipoleDipoleQ : public DipoleDipole {
+      private:
+        string _brief() { return "Dipole-dipole Q"; }
+        double rc1, rc1i;
+	Tabulate::Andrea<double> qk;
+	Tabulate::TabulatorBase<double>::data tabel;
+      public:
+        DipoleDipoleQ(Tmjson &j, const string &sec="coulomb") : DipoleDipole(j,sec) {
+          name += " Q"; 
+          _lB = Coulomb(j,sec).bjerrumLength();
+          rc1 = j[sec]["cutoff"] | pc::infty;
+          rc1i = 1.0/rc1;
+
+          std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,3); };  // Sets r^k-dependence, Ion-Ion -> k = 1, Ion-Dipole -> k = 2, etc. etc. 
+          qk.setRange(0,1);
+          qk.setTolerance(j[sec]["tab_utol"] | 1e-9,j[sec]["tab_ftol"] | 1e-2); // Tolerance in energy and force
+          tabel = qk.generate( Qk );
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r1 = r.norm();
+            if (r1 < rc1) {
+              return (DipoleDipole::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
+	       //return (DipoleDipole::operator()(a,b,r)*qPochhammerSymbol(r1*rc1i,3));
+            }
+            return 0.0;
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << DipoleDipole::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl;
+          return o.str();
+        }
+    };
+    
+    class IonQuadQ : public IonQuad {
+      private:
+        string _brief() { return "Ion-quadrupole Q"; }
+        double rc1, rc1i;
+        Tabulate::Andrea<double> qk;
+        Tabulate::TabulatorBase<double>::data tabel;
+      public:
+        IonQuadQ(Tmjson &j, const string &sec="coulomb") : IonQuad(j,sec) {
+          name += " Q"; 
+          _lB = Coulomb(j,sec).bjerrumLength();
+          rc1 = j[sec]["cutoff"] | pc::infty;
+          rc1i = 1.0/rc1;
+
+          std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,3); };  // Sets r^{-k}-dependence, Ion-Ion -> k = 1, Ion-Dipole -> k = 2, etc. etc. 
+          qk.setRange(0,1);
+          qk.setTolerance(j[sec]["tab_utol"] | 1e-9,j[sec]["tab_ftol"] | 1e-2); // Tolerance in energy and force
+          tabel = qk.generate( Qk );
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r1 = r.norm();
+            if (r1 < rc1)
+              return (IonQuad::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
+            return 0;
+          }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << IonQuad::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl;
           return o.str();
         }
     };

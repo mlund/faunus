@@ -847,6 +847,7 @@ namespace Faunus {
         public:
 
           MultipoleDistribution(InputMap &in) : pot(in) {
+            name="Multipole Distribution";
             dr = in.get("multipoledist_dr", 0.1,
                 "Distance resolution of multipole analysis");
           }

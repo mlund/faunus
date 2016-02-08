@@ -272,16 +272,18 @@ namespace Faunus {
             string structure = _js["structure"] | string();
             if ( !structure.empty() ) {
               Tpvec v;
-              if ( FormatAAM::load( structure, v ) ) {
-                if ( !v.empty() ) {
-                  Geometry::cm2origo(
-                      Geometry::Sphere(1e20), v ); // move to origo
-                  pushConformation( v );        // add conformation
-                  for ( auto &p : v )           // add atoms to atomlist
-                    atoms.push_back(p.id);
-                }
+              if (structure.substr(structure.find_last_of(".") + 1) == "aam")
+                FormatAAM::load( structure, v );
+              if (structure.substr(structure.find_last_of(".") + 1) == "pqr")
+                FormatPQR::load( structure, v );
+              if ( !v.empty() ) {
+                Geometry::cm2origo(
+                    Geometry::Sphere(1e20), v ); // move to origo
+                pushConformation( v );        // add conformation
+                for ( auto &p : v )           // add atoms to atomlist
+                  atoms.push_back(p.id);
               }
-              else
+              if (v.empty())
                 throw std::runtime_error("Structure " + structure + " not loaded.");
             }
           }

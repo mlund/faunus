@@ -15,8 +15,9 @@ int main(int argc, char** argv) {
     + Energy::EquilibriumEnergy<Tspace>(mcp)
     + Energy::MassCenterConstrain<Tspace>(mcp, spc);
 
-  Analysis::LineDistribution<> rdf(0.5);
+  Analysis::LineDistribution<> rdf(0.2);
   Analysis::ChargeMultipole mpol;
+  Analysis::MultipoleDistribution<Tspace> mpd(mcp);
   Move::Propagator<Tspace> mv(mcp,pot,spc);
 
   spc.load("state"); // load previous state, if any
@@ -30,6 +31,7 @@ int main(int argc, char** argv) {
     while ( loop[1] ) {
       sys += mv.move();
 
+      mpd.sample( spc, *spc.groupList()[0], *spc.groupList()[1] );
       rdf( spc.geo.dist( spc.groupList()[0]->cm, spc.groupList()[1]->cm ))++;
       for (auto i : spc.groupList())
         mpol.sample(*i, spc);
@@ -42,6 +44,7 @@ int main(int argc, char** argv) {
     rdf.save("rdf.dat");
     FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
     spc.save("state");
+    mpd.save("multipole.dat");
 
   } // end of macro loop
 

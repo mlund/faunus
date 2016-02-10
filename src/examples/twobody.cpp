@@ -18,6 +18,8 @@ int main(int argc, char** argv) {
   Analysis::LineDistribution<> rdf(0.2);
   Analysis::ChargeMultipole mpol;
   Analysis::MultipoleDistribution<Tspace> mpd(mcp);
+  Analysis::CombinedAnalysis analysis(mcp, pot, spc);
+
   Move::Propagator<Tspace> mv(mcp,pot,spc);
 
   spc.load("state"); // load previous state, if any
@@ -30,6 +32,8 @@ int main(int argc, char** argv) {
   while ( loop[0] ) {
     while ( loop[1] ) {
       sys += mv.move();
+
+      analysis.sample();
 
       mpd.sample( spc, *spc.groupList()[0], *spc.groupList()[1] );
       rdf( spc.geo.dist( spc.groupList()[0]->cm, spc.groupList()[1]->cm ))++;

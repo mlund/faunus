@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import numpy as np
 import json, sys, os
 from subprocess import call, check_output
@@ -23,8 +24,8 @@ def mkinput():
         "HPO4" :  { "q":-2, "r":2.0 },
         "PO4"  :  { "q":-3, "r":2.0 },
         "BPTI" :  { "q":7.3, "r":12.29 },
-        "Na"   :  { "q": 1, "r":1.9, "mw":22.99 },
-        "Cl"   :  { "q":-1, "r":1.7, "mw":35.45 },
+        "Na"   :  { "q": 1, "r":1.9, "mw":22.99, "dp":100 },
+        "Cl"   :  { "q":-1, "r":1.7, "mw":35.45, "dp":100 },
         "I"    :  { "q":-1, "r":2.0, "mw":1 },
         "SCN"  :  { "q":-1, "r":2.0, "mw":1 },
         "ASP"  :  { "q":-1, "r":3.6, "mw":110 },
@@ -78,21 +79,27 @@ def mkinput():
           },
 
       "moleculelist": {
-          "protein":  { "structure":"manybody.bpti", "Ninit":2, "insdir":"0 0 1" },
+          "protein":  { "structure":"manybody.aam", "Ninit":2, "insdir":"0 0 1"},
           "salt": {"atoms":"Na Cl", "Ninit":10, "atomic":True }
           },
 
       "moves" : {
           "titrate" : { "prob":0.2, "processfile":"twobody.json" },
+          "atomtranslate" : {
+            "salt" : { "peratom":True }
+            },
           "moltransrotcluster" : {
-            "protein" : { "dp":10, "dprot":3, "prob":1.0, "permol":True, "dir":"0 0 1",
+            "protein" : { "dp":0, "dprot":3, "prob":1.0, "permol":True, "dir":"0 0 1",
               "threshold":10, "clustergroup": "salt"} 
             } 
+          },
+      "analysis" : {
+          "cyldensity" : { "atomtype":"Na", "zmin":-125, "zmax":125  }
           },
 
       "system" : {
           "temperature" : 298.15,
-          "cylinder" : { "length" : 250, "radius" : 40 },
+          "cylinder" : { "length" : 60, "radius" : 20 },
           "mcloop"   : { "macro" : 10, "micro" : micro }
           }
       }
@@ -107,7 +114,7 @@ runprod=False
 copydata=False
 
 for Cs in [0.05]:  # ionic strength (mol/l)
-  for pH in np.arange( 4.0, 4.1, 0.5 ):
+  for pH in [4.0]:
 
     prefix="Cs"+str(Cs)+"-pH"+str(pH)
 

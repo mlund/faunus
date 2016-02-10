@@ -2519,6 +2519,7 @@ namespace Faunus {
           base::useAlternativeReturnEnergy =true;
           base::jsondir = "moves/" + sec;
 
+          base::runfraction = j["moves"][sec]["prob"] | 1.0;
           string saltname = j["moves"][sec]["molecule"] | string();
           auto v = spc->findMolecules( saltname );
           if ( v.empty() ) { // insert if no atomic species found

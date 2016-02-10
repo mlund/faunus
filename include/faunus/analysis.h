@@ -1920,6 +1920,68 @@ namespace Faunus {
           }
       };
 
+    template<typename Tspace>
+      class CylindricalDensity : public AnalysisBase {
+        private:
+
+          int id;
+          double zmin, zmax, dz, area;
+          Tspace* spc;
+          Table2D<double, Average<double> > data;
+
+          inline string _info() override {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            if (cnt>0) {
+            }
+            return o.str();
+          }
+
+          inline void _sample() override {
+            for (double z=zmin; z<=zmax; z+=dz) {
+              unsigned int n=0;
+              for (auto &i : spc->p)
+                if (i.id==id)
+                  if (i.z()>=z)
+                    if (i.z()<z+dz)
+                      n++;
+              data(z) += n / (area*dz);
+            }
+          }
+
+        public:
+          CylindricalDensity( Tmjson &j, Tspace &spc, string pfx="cyldensity" )
+            : spc(&spc), data(0.2), AnalysisBase( j["analysis"][pfx] ) {
+              name="Cylindrical Density";
+              auto _j = j["analysis"][pfx];
+              zmin    = _j["zmin"] | 0.0;
+              zmax    = _j["zmax"] | -zmin;
+              dz      = _j["dz"] | 0.2;
+
+              string atomtype = _j["atomtype"] | string();
+              cout << "atomtype = " << atomtype << endl;
+              id      = atom[ atomtype ].id;
+
+              auto ptr = dynamic_cast< Geometry::Cylinder* >( &(spc.geo) );
+              if (ptr!=nullptr)
+                area = std::acos(-1) * pow(ptr->getRadius(), 2);
+              else area=0;
+              cout << "area = " << area << endl;
+            }
+
+          void save(const string &file) {
+            unsigned int n=0;
+            for (auto i : spc->p)
+              if (i.id==id)
+                n++;
+            data.save(file, spc->geo.getVolume()/n );
+          }
+
+          ~CylindricalDensity() {
+            save("cyldensity.dat");
+          }
+      };
+
     /**
      * @brief Class for accumulating analysis classes
      *
@@ -1934,40 +1996,47 @@ namespace Faunus {
      *
      */
     class CombinedAnalysis : private AnalysisBase {
-    private:
+      private:
         vector<AnalysisBase *> v;
         string _info();
         void _sample();
-    public:
+      public:
         CombinedAnalysis(AnalysisBase *a, AnalysisBase *b);
 
         template<class Tspace, class Tpotential>
-        CombinedAnalysis(Tmjson &j, Tpotential &pot, Tspace &spc) {
-          auto m = j["analysis"];
-          for (auto i = m.begin(); i != m.end(); ++i) {
-            if (i.key() == "virial")
-              v.push_back(new VirialPressure<Tspace>(j, pot, spc));
-            if (i.key() == "polymershape")
-              v.push_back(new PolymerShape<Tspace>(j, spc));
+          CombinedAnalysis(Tmjson &j, Tpotential &pot, Tspace &spc) {
+            auto m = j["analysis"];
+            for (auto i = m.begin(); i != m.end(); ++i) {
+              if (i.key() == "virial")
+                v.push_back(new VirialPressure<Tspace>(j, pot, spc));
+              if (i.key() == "polymershape")
+                v.push_back(new PolymerShape<Tspace>(j, spc));
+              if (i.key() == "cyldensity")
+                v.push_back(new CylindricalDensity<Tspace>(j, spc));
+            }
           }
-        }
 
         /** @brief Find pointer to given analysis type; `nullptr` if not found. */
         template<class Tanalysis>
-        Tanalysis* get() {
-          static_assert( std::is_base_of<AnalysisBase, Tanalysis>::value,
-                         "`Tanalysis` must be derived from `Analysis::Analysisbase`");
-          for (auto b : v) {
-            auto ptr = dynamic_cast<Tanalysis*>( b );
-            if ( ptr != nullptr )
-              return ptr;
+          Tanalysis* get() {
+            static_assert( std::is_base_of<AnalysisBase, Tanalysis>::value,
+                "`Tanalysis` must be derived from `Analysis::Analysisbase`");
+            for (auto b : v) {
+              auto ptr = dynamic_cast<Tanalysis*>( b );
+              if ( ptr != nullptr )
+                return ptr;
+            }
+            return nullptr;
           }
-          return nullptr;
-        }
 
         void sample();
         void test(UnitTest&);
         string info();
+
+        ~CombinedAnalysis() {
+          for (auto i : v)
+            delete i;
+        }
     };
 
     CombinedAnalysis& operator+(AnalysisBase &a, AnalysisBase &b);

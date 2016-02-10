@@ -299,6 +299,7 @@ namespace Faunus {
         inline Point vdist(const Point &a, const Point &b) override {
           return a-b;
         }
+        inline double getRadius() const { return r; }
     };
 
     /**

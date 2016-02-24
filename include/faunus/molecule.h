@@ -284,7 +284,7 @@ namespace Faunus {
                   atoms.push_back(p.id);
               }
               if (v.empty())
-                throw std::runtime_error("Structure " + structure + " not loaded.");
+                throw std::runtime_error("Structure " + structure + " not loaded. Filetype must be .aam/.pqr");
             }
           }
 

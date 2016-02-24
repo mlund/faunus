@@ -536,6 +536,22 @@ namespace Faunus {
             s2.set(i,j,sigma*sigma);
           }
 
+          /**
+           * @brief Read custom parameters from json section
+           */
+          void customParameters( Tmjson &j ) {
+            for (auto it=j.begin(); it!=j.end(); ++it) { 
+              auto v = textio::words2vec<string>( it.key() );
+              if (v.size()==2) {
+                auto id1 = atom[ v[0] ].id;
+                auto id2 = atom[ v[1] ].id;
+                customEpsilon( id1, id2, it.value()["eps"] | 0.0 );
+                customSigma( id1, id2, it.value()["sigma"] | 0.0 );
+              } else
+                std::cerr << "Warning: Exactly two atom types must be given for custom LJ param.\n";
+            }
+          }
+
           string info(char w=0) {
             using namespace Faunus::textio;
             std::ostringstream o;

@@ -3009,15 +3009,24 @@ namespace Faunus {
               << setw(s) << m.second.rho.avg()*spc->geo.getVolume()
               << "\n";
           }
-          for (auto &m : molCharge) {
+          for (auto &m : molCharge) { // loop over molecules
+
             int molid = m.first;
-            o << "\n" << indent(SUB) << "Molecule: " << spc->molList()[ molid ].name << "\n\n"
-              << std::left << "    " << setw(8) << "index" << setw(12) << "name"
-              << setw(12) << "Z" << "\n";
-            for (auto &i : m.second)
-              o << "    " << setw(8) << i.first
-                << setw(12) << atom[ spc->molList()[molid].atoms[i.first] ].name
-                << setw(12) << i.second << "\n"; 
+            auto g = spc->randomMol(molid); // random molecule
+
+            if ( g!=nullptr ) {
+
+              o << "\n" << indent(SUB) << "Molecule: " << spc->molList()[ molid ].name << "\n\n"
+                << std::left << "    " << setw(8) << "index" << setw(12) << "name"
+                << setw(12) << "Z" << "\n";
+
+              for (auto &i : m.second) { // loop over atoms in molecule
+                int j = g->front() + i.first; // particle index
+                o << "    " << setw(8) << i.first
+                  << setw(12) << atom[ spc->p[j].id ].name
+                  << setw(12) << i.second << "\n"; 
+              }
+            }
           }
           return o.str();
         } 
@@ -3876,13 +3885,13 @@ namespace Faunus {
               return du;
             }
 
-          /** @brief Copy average charges into particle vector */
-          template<class Tpvec>
-            void applyCharges( Tpvec &p ) {
-              for (auto &g : spc->groupList() ) // loop over all groups
-                for ( auto &i : molCharge[ g->molId ]) // loop over particles
-                  p[ g->front() + i.first ].charge = i.second;
-            }
+            /** @brief Copy average charges into particle vector */
+            template<class Tpvec>
+              void applyCharges( Tpvec &p ) {
+                for (auto &g : spc->groupList() ) // loop over all groups
+                  for ( auto &i : molCharge[ g->molId ]) // loop over particles
+                    p[ g->front() + i.first ].charge = i.second;
+              }
         };
 
       template<class Tspace>
@@ -4163,7 +4172,7 @@ namespace Faunus {
             }
 
             double move(int n=1) override {
-               return ( mPtr.empty() ) ?
+              return ( mPtr.empty() ) ?
                 0 : (*base::_slump().element( mPtr.begin(), mPtr.end() ))->move();
             }
 
@@ -4185,6 +4194,6 @@ namespace Faunus {
       /** @brief Atomic rotation with dipolar polarizability */
       //typedef PolarizeMove<AtomicRotation> AtomicRotationPol;
 
-      }//namespace
   }//namespace
+}//namespace
 #endif

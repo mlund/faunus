@@ -488,10 +488,8 @@ namespace Faunus {
             eps.resize(n);// ...but possible reduced mem. fragmentation
             for (auto &i : atom)
               for (auto &j : atom) {
-                s2.set(i.id, j.id,
-                    pow( mixer.mixSigma( i.sigma, j.sigma), 2));
-                eps.set(i.id, j.id,
-                    4.0_kJmol * mixer.mixEpsilon( i.eps, j.eps ));
+                s2.set(i.id, j.id, pow( mixer.mixSigma( i.sigma, j.sigma), 2));
+                eps.set(i.id, j.id, 4.0*mixer.mixEpsilon( i.eps, j.eps ));
               }
           }
 
@@ -538,6 +536,18 @@ namespace Faunus {
 
           /**
            * @brief Read custom parameters from json section
+           *
+           * This will read a json section with custom epsilon and sigma
+           * values for pairs of atoms, bypassing the mixing rule.
+           * The following format is expected, with units of angstrom and
+           * kJ/mol, respectively:
+           *
+           * ~~~~
+           * {
+           *    "Na F" : { "sigma":2.0, "eps":0.7 },
+           *    "Na Cl" : { "sigma":2.2, "eps":0.5 }
+           * }
+           * ~~~~
            */
           void customParameters( Tmjson &j ) {
             for (auto it=j.begin(); it!=j.end(); ++it) { 
@@ -545,7 +555,7 @@ namespace Faunus {
               if (v.size()==2) {
                 auto id1 = atom[ v[0] ].id;
                 auto id2 = atom[ v[1] ].id;
-                customEpsilon( id1, id2, it.value()["eps"] | 0.0 );
+                customEpsilon( id1, id2, (it.value()["eps"] | 0.0) * 1.0_kJmol );
                 customSigma( id1, id2, it.value()["sigma"] | 0.0 );
               } else
                 std::cerr << "Warning: Exactly two atom types must be given for custom LJ param.\n";

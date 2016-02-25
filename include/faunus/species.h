@@ -258,7 +258,7 @@ namespace Faunus {
         theta        *= 1.0_Debye;
         dp           =  _js["dp"] | 0.0;
         dprot        =  ( _js["dprot"] | 0.0 ) * 1._deg; // deg->rads
-        eps          =  ( _js["eps"] | 0.0 ) * 1._kT;
+        eps          =  ( _js["eps"] | 0.0 ) * 1.0_kJmol;
         hydrophobic  =  _js["hydrophobic"] | false;
         mu           << ( _js["mu"] | string("0 0 0") );
         muscalar     =  mu.len()* 1.0_Debye;

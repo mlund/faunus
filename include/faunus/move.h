@@ -2783,7 +2783,7 @@ namespace Faunus {
 
             // neutralise system, if needed, using GC ions
             if ( j["moves"][sec]["neutralize"] | true ) {
-              double Z = netCharge( s.p, Group(0,s.p.size()-1) );
+              double Z = netCharge( s.p, Group(0,s.p.size()-1) ); // total system charge
               if ( fabs(Z) > 1e-9 ) {
                 Tid id;
                 double z = 0;
@@ -2798,11 +2798,13 @@ namespace Faunus {
                       << "neutralizing system." << endl;
                     exit(1);
                   }
-                } while (
-                    ( (z<0 && Z>0) || (Z<0 && z>0) )
-                    && ( fabs( fmod(Z,z) ) < 1e-9 ) );
+                } while ( Z*z>0 || ( fabs( fmod(Z,z) ) > 1e-9 ) || atom[id].activity==0 );
 
                 int n = round(-Z/z);
+
+                cout << "Type of neutralizing ion to insert = " << atom[id].name << endl;
+                cout << "No. of neutralizing ions to insert = " << n << endl;
+
                 assert( n>0 && fabs(n*z+Z) < 1e-9 );
 
                 typename Tspace::ParticleType a;
@@ -2812,8 +2814,9 @@ namespace Faunus {
                   base::tracker.insert( a, base::saltPtr->back() );
                 }
                 Z = netCharge( s.p, Group(0,s.p.size()-1) );
-                cout << "# Final charge = " << Z << "e." << endl;
+                cout << "Final charge                       = " << Z << "e." << endl;
                 assert( fabs(Z)<1e-9 ) ;
+                s.initTracker();
               }
             }
         }

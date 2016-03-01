@@ -42,6 +42,10 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 add_subdirectory(xdrfile)
 
+if(ENABLE_NOPBC)
+  add_definitions(-DFAU_NOPBC)
+endif()
+
 if(ENABLE_HASHTABLE)
   add_definitions(-DFAU_HASHTABLE)
 endif()

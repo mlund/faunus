@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import numpy as np
 import json, sys, os
 from subprocess import call, check_output
 from shutil import copyfile

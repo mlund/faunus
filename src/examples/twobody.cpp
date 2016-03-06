@@ -3,7 +3,7 @@
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-typedef Space<Geometry::PeriodicCylinder> Tspace;
+typedef Space<Geometry::Cylinder> Tspace;
 typedef DebyeHuckelLJ Tpairpot;
 
 int main(int argc, char** argv) {
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
  * specified via the `Faunus::Energy::MassCenterConstrain` term in the
  * Hamiltonian.
  *
- * ![Two rigid molecules kept on a line inside a periodic cylinder](twobody.png)
+ * ![Two rigid molecules kept on a line inside a cylinder](twobody.png)
  *
  * Run this example from the `examples` directory:
  * The python script `twobody.py` generates the simulation input files

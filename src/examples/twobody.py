@@ -13,7 +13,7 @@ def mkinput():
           "coulomb" : { "epsr" : 78.7, "ionicstrength" : Cs }
           },
         "cmconstrain" : {
-          "protein protein" : { "mindist": 0, "maxdist": 100 }
+          "protein protein" : { "mindist": 0, "maxdist": 1000 }
           }
         },
 
@@ -43,6 +43,7 @@ def mkinput():
         "HTYR" :  { "q":0,  "r":4.1, "mw":154 },
         "LYS"  :  { "q":0,  "r":3.7, "mw":116 },
         "HLYS" :  { "q":1,  "r":3.7, "mw":116 },
+        "CYb"  :  { "q":0,  "r":3.6, "mw":103 },
         "CYS"  :  { "q":-1, "r":3.6, "mw":103 },
         "HCYS" :  { "q":0,  "r":3.6, "mw":103 },
         "ARG"  :  { "q":0,  "r":4.0, "mw":144 },
@@ -78,7 +79,8 @@ def mkinput():
           },
 
       "moleculelist": {
-          "protein":  { "structure":"manybody.aam", "Ninit":2, "insdir":"0 0 1"},
+          "protein1":  { "structure":"manybody.aam", "Ninit":1, "insdir":"0 0 1", "insoffset":"0 0 -20"},
+          "protein2":  { "structure":"manybody.aam", "Ninit":1, "insdir":"0 0 1", "insoffset":"0 0 20"},
           "salt": {"atoms":"Na Cl", "Ninit":10, "atomic":True }
           },
 
@@ -87,9 +89,13 @@ def mkinput():
           "atomtranslate" : {
             "salt" : { "peratom":True }
             },
-          "moltransrotcluster" : {
+          "#moltransrotcluster" : {
             "protein" : { "dp":0, "dprot":3, "prob":1.0, "permol":True, "dir":"0 0 1",
               "threshold":10, "clustergroup": "salt"} 
+            }, 
+          "moltransrot2body" : {
+            "protein1" : { "dp":4, "dprot":3, "prob":1.0 }, 
+            "protein2" : { "dp":8, "dprot":2, "prob":1.0 } 
             } 
           },
       "analysis" : {
@@ -133,7 +139,7 @@ for Cs in [0.05]:  # ionic strength (mol/l)
     # Production run
     if (runprod==True):
       print "Production run..."
-      micro=10000
+      micro=500
       mkinput()
       print >> open(prefix+'.out', 'w+'), check_output( [exe] )
 

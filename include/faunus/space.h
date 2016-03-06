@@ -382,6 +382,14 @@ namespace Faunus {
           return v;
         }
 
+        /** @brief Return first molecule of type `molId`, `nullptr` if not found */
+        inline Group* findFirstMolecule( int molId ) {
+          auto g = findMolecules(molId, true);
+          if (!g.empty())
+            return g[0];
+          return nullptr;
+        }
+
         /** @brief Count number of molecules with matching molid */
         inline int numMolecules( int molId ) const { return molTrack.size(molId); }
  

@@ -37,6 +37,16 @@ namespace Faunus {
       return x;
     }
 
+  /** @brief Erase from container `a` all values found in container `b` */
+  template<typename T>
+    T erase_range(T a, const T &b) {
+      a.erase(
+          std::remove_if( a.begin(), a.end(),
+            [b](typename T::value_type i){ return std::find(b.begin(), b.end(), i)!=b.end(); } ),
+          a.end() );
+      return a;
+    }
+
   /**
    * @brief Ordered pair where `first<=second`
    *

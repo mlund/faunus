@@ -1181,6 +1181,12 @@ namespace Faunus {
           double _energyChange() override {
             double du=0;
 
+            // check for container collision
+            for (auto gi : gVec)
+              for (auto i : *gi)
+                if ( spc->geo.collision( spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY ) )
+                  return pc::infty;
+
             // all groups not in gVec
             auto othergroups = erase_range( spc->groupList(), gVec );
 
@@ -1232,11 +1238,12 @@ namespace Faunus {
           using base::dp_rot;
 
           void _trialMove() override {
+            assert(gVec.size()==2);
+
             // displacement vector between mass centers
             Point R = spc->geo.vdist( gVec[0]->cm, gVec[1]->cm );
             R.normalize();
             R = R * dp_trans * slump.half();
-            //cout << R.transpose() << "\n";
 
             angle2.clear();
             for (size_t i=0; i<2; i++) {

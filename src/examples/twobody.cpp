@@ -53,7 +53,6 @@ int main(int argc, char** argv) {
   } // end of macro loop
 
   cout << loop.info() + sys.info() + mv.info() + mpol.info() << endl;
-
 }
 
 /**

@@ -1617,141 +1617,155 @@ namespace Faunus {
           }
       };
 
-    /* 
-     * @brief Base class for reaction coordinates
-     *
-     * Derived classes must implement the function operator.
-     *
-     * Basic JSON keywords:
-     *
-     * Keyword  | Description
-     * :------- | :----------------
-     * `min`    | minumum coordinate values (array)
-     * `max`    | maximum coordinate values (array)
-     * `scale`  | penalty scaling (array)
-     * `nstep`  | update frequency for penalty updates, sampling etc. (steps)
-     *
-     * @note Under construction
+    /**
+     * @brief Reaction Coordinate classes
      */
-    template<class Tspace>
-      class ReactionCoordinateBaseCandidate {
-        public:
-          typedef std::vector<double> Tvec;
-        protected:
-          Tvec _min, _max, _scale;
-          unsigned int _nstep;     // update frequency [steps]
-        public:
-          ReactionCoordinateBaseCandidate( Tmjson &j ) {
-            _min = j["min"].get<Tvec>();
-            _max = j["max"].get<Tvec>();
-            _scale = j["scale"].get<Tvec>();
-            _nstep = j["nstep"] | 1000;
-            assert( _min.size() >= 1);
-            assert( _min.size() == _max.size());
-            assert( _min.size() == _scale.size());
-          }
+    namespace ReactionCoordinate {
 
-          ReactionCoordinateBaseCandidate() {}
-
-          /** @brief Calculates reaction coordinate */
-          virtual Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p )=0;
-
-          size_t dim() const { return _min.size(); }   //!< dimension of coordinate
-          const Tvec& min() const { return _min; }     //!< min value(s) for penalty coordinates
-          const Tvec& max() const { return _max; }     //!< max value(s) for penalty coordinates
-          unsigned int nstep() const { return _nstep;} //!< update frequency (steps)
-          const Tvec& scale() const { return _scale; } //!< max value(s) for penalty coordinates
-
-          /** @brief Determines if coordinate is within min:max */
-          bool inrange( const Tvec &coord ) const {
-            for (size_t i=0; i<coord.size(); ++i)
-              if ( coord[i]<min()[i] || coord[i]>max()[i] )
-                return false;
-            return true;
-          }
-      };
-
-    /* @brief Helper class for combining two reaction coordinates */
-    template<class Tspace, class base=ReactionCoordinateBaseCandidate<Tspace> >
-      class CombinedReactionCoordinate : public base {
-        private:
-          vector<base> c;
-          typedef typename base::Tvec Tvec;
-        public:
-          CombinedReactionCoordinate(const base &c1, const base &c2) {
-            c.push_back(c1);
-            c.push_back(c2);
-            base::_nstep = std::min( c[0].nstep(), c[1].nstep() );
-            for (auto &i : c ) {
-              base::_min.insert( base::_min.end(), i.min().begin(), i.min().end() );
-              base::_max.insert( base::_max.end(), i.max().begin(), i.max().end() );
-              base::_scale.insert( base::_scale.end(), i.scale().begin(), i.scale().end() );
+      /**
+       * @brief Base class for reaction coordinates
+       *
+       * Derived classes must implement the function operator.
+       *
+       * Basic JSON keywords:
+       *
+       * Keyword  | Description
+       * :------- | :----------------
+       * `min`    | minumum coordinate values (array)
+       * `max`    | maximum coordinate values (array)
+       * `scale`  | penalty scaling (array)
+       * `nstep`  | update frequency for penalty updates, sampling etc. (steps)
+       *
+       * @note Under construction
+       */
+      template<class Tspace>
+        class ReactionCoordinateBase {
+          public:
+            typedef std::vector<double> Tvec;
+          protected:
+            Tvec _min, _max, _scale;
+            unsigned int _nstep;     // update frequency [steps]
+          public:
+            ReactionCoordinateBase( Tmjson &j ) {
+              _min = j["min"].get<Tvec>();
+              _max = j["max"].get<Tvec>();
+              _scale = j["scale"].get<Tvec>();
+              _nstep = j["nstep"] | 1000;
+              assert( _min.size() >= 1);
+              assert( _min.size() == _max.size());
+              assert( _min.size() == _scale.size());
             }
-            assert( base::dim() == c[0].dim() + c[1].dim() );
-          }
 
-          Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p ) override {
-            Tvec r;
-            for (auto &i : c)
-              r.insert( r.end(), i(s,p).begin(), i(s,p).end() );
-            assert( base::dim() == r.size() );
-            return r;
-          }
-      };
+            ReactionCoordinateBase() {}
 
-    /* @brief Operator for combining two reaction coordinates */
-    template<class Tspace>
-      CombinedReactionCoordinate<Tspace> operator+(
-          const ReactionCoordinateBaseCandidate<Tspace> &c1,
-          const ReactionCoordinateBaseCandidate<Tspace> &c2 )
-      {
-        return CombinedReactionCoordinate<Tspace>( c1, c2 );
-      }
+            /** @brief Calculates reaction coordinate */
+            virtual Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p )=0;
 
-    /*
-     * Keyword    | Description
-     * :--------- | :--------------
-     * `first`    | name of first molecule
-     * `second`   | name of second molecule
-     * `index`    | molecule index to select in case of multiple molecules (default "0 0").
-     * `dir`      | which dimensions to use when calc. mass center
-     *
-     * Example:
-     *
-     *     "cmcm" : {
-     *        "first":"water", "second":"sodium", "index":"0 0", "dir":"1 1 1",
-     *        "min":{0}, "max":{50.}
-     *     }
-     */
-    template<class Tspace, class base=ReactionCoordinateBaseCandidate<Tspace>>
-      class RCcmcm : public base {
-        private:
-          Point dir;
-          Group *g1, *g2;
-          typedef typename base::Tvec Tvec;
-        public:
-          RCcmcm( Tspace &s, Tmjson &j, string sec="cmcm" ) : base( j[sec] ) {
-            dir << ( j[sec]["dir"] | string("1 1 1") );
-            auto i = textio::words2vec<int>( j[sec]["index"] | string("0 0") );
-            assert( i.size()==2 );
-            assert( dir.size()==3 );
+            size_t dim() const { return _min.size(); }   //!< dimension of coordinate
+            const Tvec& min() const { return _min; }     //!< min value(s) for penalty coordinates
+            const Tvec& max() const { return _max; }     //!< max value(s) for penalty coordinates
+            unsigned int nstep() const { return _nstep;} //!< update frequency (steps)
+            const Tvec& scale() const { return _scale; } //!< max value(s) for penalty coordinates
 
-            string name1 = j[sec]["first"];
-            string name2 = j[sec]["second"];
-            g1 = s.findMolecules( name1, true ).at( i[0] ); 
-            g2 = s.findMolecules( name2, true ).at( i[1] ); 
+            /** @brief Determines if coordinate is within min:max */
+            bool inrange( const Tvec &coord ) const {
+              for (size_t i=0; i<coord.size(); ++i)
+                if ( coord[i]<min()[i] || coord[i]>max()[i] )
+                  return false;
+              return true;
+            }
+        };
 
-            assert( !g1->empty() );
-            assert( !g2->empty() );
-          }
+      /* @brief Helper class for combining two reaction coordinates */
+      template<class Tspace, class base=ReactionCoordinateBase<Tspace> >
+        class Combined : public base {
+          private:
+            vector<base> c;
+            typedef typename base::Tvec Tvec;
+          public:
+            Combined(const base &c1, const base &c2) {
+              c.push_back(c1);
+              c.push_back(c2);
+              base::_nstep = std::min( c[0].nstep(), c[1].nstep() );
+              for (auto &i : c ) {
+                base::_min.insert( base::_min.end(), i.min().begin(), i.min().end() );
+                base::_max.insert( base::_max.end(), i.max().begin(), i.max().end() );
+                base::_scale.insert( base::_scale.end(), i.scale().begin(), i.scale().end() );
+              }
+              assert( base::dim() == c[0].dim() + c[1].dim() );
+            }
 
-          Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p ) override {
-            Point cm1 = massCenter(s.geo, p, *g1);
-            Point cm2 = massCenter(s.geo, p, *g2);
-            Point r = s.geo.vdist( cm1, cm2 );
-            return { r.cwiseProduct(dir).norm() };
-          }
-      };
+            Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p ) override {
+              Tvec r;
+              for (auto &i : c)
+                r.insert( r.end(), i(s,p).begin(), i(s,p).end() );
+              assert( base::dim() == r.size() );
+              return r;
+            }
+        };
+
+      /* @brief Operator for combining two reaction coordinates */
+      template<class Tspace>
+        Combined<Tspace> operator+(
+            const ReactionCoordinateBase<Tspace> &c1,
+            const ReactionCoordinateBase<Tspace> &c2 )
+        {
+          return Combined<Tspace>( c1, c2 );
+        }
+
+      /**
+       * @brief Reaction coordinate: molecule-molecule mass-center separation
+       *
+       * In addition to the keywords from `ReactionCoordinateBaseCandidate`:
+       *
+       * Keyword    | Description
+       * :--------- | :--------------
+       * `first`    | name of first molecule
+       * `second`   | name of second molecule
+       * `index`    | molecule index to select in case of multiple molecules (default "0 0").
+       * `dir`      | which dimensions to use when calc. mass center
+       *
+       * Example:
+       *
+       *     "cmcm" : {
+       *        "first":"water", "second":"sodium", "index":"0 0", "dir":"1 1 1",
+       *        "min":{0}, "max":{50.}
+       *     }
+       */
+      template<class Tspace, class base=ReactionCoordinateBase<Tspace>>
+        class MassCenterSeparation : public base {
+          private:
+            Point dir;
+            Group *g1, *g2;
+            typedef typename base::Tvec Tvec;
+          public:
+
+            MassCenterSeparation(
+                Tspace &s, Tmjson &j, string sec="cmcm" ) : base( j[sec] ) {
+
+              dir << ( j[sec]["dir"] | string("1 1 1") );
+              auto i = textio::words2vec<int>( j[sec]["index"] | string("0 0") );
+              assert( i.size()==2 );
+              assert( dir.size()==3 );
+
+              string name1 = j[sec]["first"];
+              string name2 = j[sec]["second"];
+              g1 = s.findMolecules( name1, true ).at( i[0] ); 
+              g2 = s.findMolecules( name2, true ).at( i[1] ); 
+
+              assert( !g1->empty() );
+              assert( !g2->empty() );
+            }
+
+            Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p ) override {
+              Point cm1 = massCenter(s.geo, p, *g1);
+              Point cm2 = massCenter(s.geo, p, *g2);
+              Point r = s.geo.vdist( cm1, cm2 );
+              return { r.cwiseProduct(dir).norm() };
+            }
+        };
+
+    }//namespace
 
     /**
      * @brief Base for calculating reaction coordinates

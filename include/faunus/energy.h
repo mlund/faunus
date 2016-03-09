@@ -1347,11 +1347,11 @@ namespace Faunus {
     /**
      * @brief Constrain two group mass centre separations to a distance interval [mindist:maxdist]
      *
-     * This energy class will constrain the mass center separation between selected groups
-     * to a certain interval. This can be useful to sample rare events and the constraint
+     * This energy class will constrain the mass center separation between selected molecule
+     * types to a certain interval. This can be useful to sample rare events and the constraint
      * is implemented as an external group energy that return infinity if the mass center
-     * separation are outside the defined range.
-     * An arbitrary number of group pairs can be added with the `addPair()` command,
+     * separation is outside the defined range.
+     * An arbitrary number of pairs can be added
      * although one would rarely want to have more than one.
      * The input is read from json section `energy/cmconstrain` where the key
      * represents pairs of molecule names.
@@ -1372,13 +1372,17 @@ namespace Faunus {
     template<typename Tspace>
       class MassCenterConstrain : public Energybase<Tspace> {
         private:
+          using Energybase<Tspace>::spc;
+
           string _info() override {
             using namespace Faunus::textio;
             std::ostringstream o;
-            o << indent(SUB) << "The following groups have mass center constraints:\n";
-            for (auto &m : gmap)
-              o << indent(SUBSUB) << m.first.first->name << " " << m.first.second->name
-                << " " << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
+            o << indent(SUB) << "The following molecules have mass center constraints:\n";
+            for (auto &m : molIdMap)
+              o << indent(SUBSUB)
+                << spc->molecule[m.first.first].name << " "
+                << spc->molecule[m.first.second].name << " "
+                << m.second.mindist << "-" << m.second.maxdist << _angstrom << endl;
             return o.str();
           }
 
@@ -1386,7 +1390,7 @@ namespace Faunus {
             double mindist, maxdist;
           };
 
-          std::map<opair<Faunus::Group*>, data> gmap;
+          std::map<opair<int>, data> molIdMap;
 
         public:
 
@@ -1396,15 +1400,17 @@ namespace Faunus {
             auto m = j["energy"]["cmconstrain"];
             for ( auto i = m.begin(); i != m.end(); ++i) {
               auto molname = textio::words2vec<string>( i.key() ); 
-              assert( molname.size()==2 && "Specify two molecules." );
-              double mindist = i.value()["mindist"] | 0.0;
-              double maxdist = i.value()["maxdist"] | 1.0e9;
-              auto v1 = this->spc->findMolecules( molname[0] );
-              auto v2 = this->spc->findMolecules( molname[1] );
-              for (auto i : v1)
-                for (auto j : v2)
-                  if (i!=j)
-                    addPair( *i, *j, mindist, maxdist ); 
+              auto it1 = spc->molecule.find( molname[0]);
+              auto it2 = spc->molecule.find( molname[1]);
+              if ( molname.size()==2 )
+                if ( it1 != spc->molecule.end() )
+                  if ( it2 != spc->molecule.end() ) {
+                    data d = {
+                      i.value()["mindist"] | 0.0,
+                      i.value()["maxdist"] | 1.0e9
+                    };
+                    molIdMap[ opair<int>(it1->id, it2->id) ] = d;
+                  }
             }
           }
 
@@ -1412,29 +1418,29 @@ namespace Faunus {
             return std::make_tuple(this);
           }
 
-          /** @brief Add constraint between two groups */
-          void addPair(Group &a, Group &b, double mindist, double maxdist) {
-            data d = {mindist, maxdist};
-            opair<Group*> p(&a, &b);
-            gmap[p] = d;
-          }
-
           /** @brief Constrain treated as external potential */
           double g_external(const typename Tspace::ParticleVector &p, Group &g1) override {
-            for (auto m : gmap)              // scan through pair map
-              if (m.first.find(&g1)) {       // and look for group g1
-                Group *g2ptr;                // pointer to constrained partner
-                if (&g1 == m.first.first)
-                  g2ptr = m.first.second;
+            for (auto &m : molIdMap)         // scan through pair map
+              if (m.first.find(g1.molId)) {  // and look for molecule id
+                int id1, id2;
+                id1 = g1.molId;
+                if (id1 == m.first.first)
+                  id2 = m.first.second;
                 else
-                  g2ptr = m.first.first;
-                Point cma = Geometry::massCenter(this->getSpace().geo, p, g1);
-                Point cmb = Geometry::massCenter(this->getSpace().geo, p, *g2ptr);
-                double r2 = this->getSpace().geo.sqdist(cma,cmb);
-                double min = m.second.mindist;
-                double max = m.second.maxdist;
-                if (r2<min*min || r2>max*max) 
-                  return pc::infty;
+                  id2 = m.first.first;
+
+                Point cm1 = Geometry::massCenter(spc->geo, p, g1);
+
+                auto g2vec = spc->findMolecules( id2 );
+                for (auto g2 : g2vec)
+                  if (&g1!=g2) {
+                    Point cm2 = Geometry::massCenter(spc->geo, p, *g2);
+                    double r2 = spc->geo.sqdist(cm1,cm2);
+                    double min = m.second.mindist;
+                    double max = m.second.maxdist;
+                    if (r2<min*min || r2>max*max) 
+                      return pc::infty;
+                  }
               }
             return 0;
           }

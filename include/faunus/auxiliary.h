@@ -394,14 +394,26 @@ namespace Faunus {
         typedef std::pair<T,T> Tpair; // xy data stored as pairs
         std::vector<Tpair> t;         // in a vector
       public:
-        InterpolTable(const std::string &filename) {
+        InterpolTable() {}
+        InterpolTable(const std::string &filename) { load(filename); }
+
+        bool load(const std::string &filename) {
           Tpair a;
+          t.clear();
           std::ifstream in(filename);
-          while (in >> a.first >> a.second)
-            t.push_back(a);
-          std::sort(t.begin(), t.end()); // sort
-          t.erase( std::unique( t.begin(), t.end() ), t.end() ); // remove duplicates 
+          if (in) {
+            while (in >> a.first >> a.second)
+              t.push_back(a);
+            std::sort(t.begin(), t.end()); // sort
+            t.erase( std::unique( t.begin(), t.end() ), t.end() ); // remove duplicates 
+            if (!t.empty())
+              return true;
+          }
+          return false;
         }
+
+        T xmin() const { return t.front().first; }
+        T xmax() const { return t.back().first; }
 
         T operator()(T x) const {
           assert(!t.empty() && "Table is empty");
@@ -414,7 +426,7 @@ namespace Faunus {
           --it2;
           return it2->second + (it->second-it2->second)*(x-it2->first)/(it->first-it2->first);
         }
-    }; // end of InterpolTable
+    };
 
   /**
    * @brief Container for data between pairs
@@ -437,7 +449,7 @@ namespace Faunus {
         void resize(size_t n) {
           m.resize(n);
           for (auto &i : m)
-            i.resize(n,0);
+            i.resize(n,T());
         }
         PairMatrix(size_t n=0) {
           resize(n);
@@ -445,7 +457,7 @@ namespace Faunus {
         const T& operator()(size_t i, size_t j) const {
           assert( i<m.size() );
           assert( j<m[i].size() );
-          assert( m[i][j]==m[j][i] );
+          //assert( m[i][j]==m[j][i] );
           return m[i][j]; 
         }
         void set(size_t i, size_t j, T val) {

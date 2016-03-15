@@ -181,7 +181,7 @@ namespace Faunus {
         Harmonic( Tmjson &j, const string &sec="harmonic");
 
         template<class Tparticle>
-          double operator()( const Tparticle &a, const Tparticle &b, double r2 ) {
+          double operator()( const Tparticle &a, const Tparticle &b, double r2 ) const {
             double d=sqrt(r2)-req;
             return k*d*d;
           }
@@ -874,7 +874,7 @@ namespace Faunus {
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
       template<class Tparticle>
-        double operator() (const Tparticle &a, const Tparticle &b, double r2) {
+        double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
 #ifdef FAU_APPROXMATH
           return lB*a.charge*b.charge * invsqrtQuake(r2);
 #else
@@ -1111,7 +1111,7 @@ namespace Faunus {
         DebyeHuckel( Tmjson &j, const string &sec="coulomb" );
 
         template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
 #ifdef FAU_APPROXMATH
             double rinv = invsqrtQuake(r2);
             return lB * a.charge * b.charge * rinv * exp_cawley(-k/rinv);
@@ -1388,6 +1388,53 @@ namespace Faunus {
 
         string info(char w) { return "  "+_brief()+"\n"; }
     };
+
+    /**
+     * @brief Load pair potential from disk.
+     *
+     * Example (not yet implemented):
+     * ~~~~
+     * "PotentialMap" : {
+     *    "Na Na"   : { "harmonic" : { "k":10, "req":0.01  }  },
+     *    "Na Cl"   : { "fromdisk" : { "na-cl.dat" } },
+     *    "default" : { "coulomb" : { "epsr":80.  } }
+     * }
+     * ~~~~
+     */
+    template<class T=double>
+      class FromDisk : public Potential::PairPotentialBase {
+        private:
+          InterpolTable<T> t;
+          string filename;
+
+          string _brief() override {
+            std::ostringstream o;
+            o << "fromdisk: " << filename << " ["
+              << t.xmin() << ":" << t.xmax() << "]";
+            return o.str();
+          }
+
+        public:
+
+          FromDisk( Tmjson &j, const string &sec="fromdisk") {
+            string filename = j[sec] | string();
+            if (!t.load(filename))
+              throw std::runtime_error("Couldn't load tabulated potential.");
+          }
+
+          template<class Tparticle>
+            double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+              double r=sqrt(r2);
+              if (r<t.xmin() || r>t.xmax())
+                throw std::runtime_error("Distance outside tabulated area.");
+              return t(r);
+            }
+
+          template<typename Tparticle>
+            Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+              assert(2==1 && "not implemented");
+            }
+      };
 
     /**
      * @brief Custom potentials between specific particle types

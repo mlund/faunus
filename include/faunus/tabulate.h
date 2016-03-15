@@ -73,6 +73,14 @@ namespace Faunus {
             std::vector<T> r2;  // r2 for intervals
             std::vector<T> c;   // c for coefficents
             T rmin2, rmax2;     // useful to save these with table
+
+            bool empty() const {
+              if (r2.empty())
+                if (c.empty())
+                  return true;
+              return false;
+            }
+
           };
 
           void setTolerance(T _utol, T _ftol=-1, T _umaxtol=-1, T _fmaxtol=-1) {
@@ -1121,8 +1129,6 @@ namespace Faunus {
 
     /**
      * @brief Tabulated potential between all particle types
-     *
-     * If the pair is not recognized, the pair-potential will be tabulated
      */
     template<typename Tpairpot, typename Ttabulator=Tabulate::Andrea<double> >
       class PotentialTabulate : public Tpairpot {
@@ -1157,68 +1163,149 @@ namespace Faunus {
       };
 
     /**
-     * @brief Similar to PotentialTabulate but faster
+     * @brief Construct a distance dependent potential from json entry
+     *
+     * This will scan the given json entry for pair potentials and,
+     * for the given particle ids, return a function of the potential (in kT)
+     * that takes only the squared distance, r2, as input.
+     * This is useful for splining.
+     * If more than one potential are found, these will be added together.
+     */
+    template<typename Tparticle=PointParticle, typename Tfunc=std::function<double(double)> >
+      std::pair<Tfunc,string> mixPairPotential( Tmjson &j, int id1, int id2 ) {
+
+        // auxiliary lambda function to sum two potential functions
+        auto sum = [](const Tfunc &a, const Tfunc &b) {
+          return [=](double r2) { return a(r2) + b(r2); };
+        };
+
+        string brief; // sum of brief() information strings
+
+        // starting potential function, returning zero
+        Tfunc f = [=](double r2) { return 0; };
+
+        // the two interacting particles
+        Tparticle a, b;
+        a = atom[id1];
+        b = atom[id2];
+
+        // search for pair potentials in json entry and
+        // return them as a function of separation, only
+        if ( j.find("coulomb") != j.end() ) {
+          Coulomb pot(j);
+          brief += " + " + pot.brief();
+          f = sum( f, [=](double r2) { return pot(a,b,r2); } ); 
+        }
+        if ( j.find("debyehuckel") != j.end() ) {
+          DebyeHuckel pot(j);
+          brief += " + " + pot.brief();
+          f = sum( f, [=](double r2) { return pot(a,b,r2); } ); 
+        }
+        if ( j.find("harmonic") != j.end() ) {
+          Harmonic pot(j);
+          brief += " + " + pot.brief();
+          f = sum( f, [=](double r2) { return pot(a,b,r2); } ); 
+        }
+        if ( j.find("lennardjones") != j.end() ) {
+          LennardJonesLB pot(j);
+          brief += " + " + pot.brief();
+          f = sum( f, [=](double r2) { return pot(a,b,r2); } ); 
+        }
+        if ( j.find("fromdisk") != j.end() ) {
+          FromDisk<> pot(j);
+          brief += " + " + pot.brief();
+          f = sum( f, [=](double r2) { return pot(a,b,r2); } ); 
+        }
+
+
+        // delete initial " + "
+        if ( !brief.empty() )
+          brief = brief.substr(3);
+
+        return {f, brief};
+      }
+
+    /**
+     * @brief Arbitrary pair potential between atom types using splines
+     *
+     * ~~~~
+     * "potentialmap" : {
+     *     "spline"  : { "rmin":0, "rmax":100, "utol":0.01 },
+     *     "default" : { "coulomb-lennardjones" : { "epsr":0.1 } },
+     *     "Na Cl"   : { "coulomb" : { "epsr":2.0 } }
+     * }
+     * ~~~~
      *
      * All pair-potentials are tabulated in constructor
      */
-    template<typename Tpairpot, typename Ttabulator=Tabulate::Andrea<double>, typename Tparticle=PointParticle>
-      class PotentialTabulateVec : public Tpairpot {
+    template<typename Ttabulator=Tabulate::Andrea<double>, typename Tparticle=PointParticle>
+      class PotentialMapSpline : public PairPotentialBase {
         private:
-          Ttabulator tab;
           typedef opair<int> Tpair;
-          vector<typename Ttabulator::data> vtab;
-          unsigned int atomlistsize;
-          int print;
+          std::map<string, std::set<Tpair> > nfo;
+          typedef typename Ttabulator::data Tdata;
+          PairMatrix<Tdata> m;
+          Ttabulator tab;
+          bool verbose;
+
+          string _brief() override { return string("splined pair-potentials"); }
 
         public:
-          PotentialTabulateVec(InputMap &in) : Tpairpot(in) {
-            tab.setRange(
-                in.get<double>("tab_rmin", 1.0),
-                in.get<double>("tab_rmax", 100.0));
+          PotentialMapSpline(Tmjson &in, const string sec="pairpotential") : PairPotentialBase(sec) {
+
+            auto j = in[sec]["spline"];
+            tab.setRange( j["rmin"] | 1.0, j["rmax"] | 100.0 );
             tab.setTolerance(
-                in.get<double>("tab_utol", 0.01), 
-                in.get<double>("tab_ftol", -1), 
-                in.get<double>("tab_umaxtol", -1), 
-                in.get<double>("tab_fmaxtol", -1));
-            print = in.get<int>("tab_print",0);
+                j["utol"] | 0.01, 
+                j["ftol"] | -1, 
+                j["umaxtol"] | -1, 
+                j["fmaxtol"] |-1 );
 
-            // Filling up matrix of tabulated data
-            atomlistsize = atom.size();
-            for (auto &i : atom) {
-              for (auto &j : atom) {
-                Tparticle a,b;
-                a = i;
-                b = j;
-                std::function<double(double)> func = [=](double r2) {return Tpairpot(*this)(a,b,r2);};
-                typename Ttabulator::data td = tab.generate_full(func);
-                vtab.push_back(td);
-                if (print > 1) {
-                  int n = print;
-                  if (vtab[a.id*atomlistsize+b.id].r2.size() > 2) {
-                    cout << i.name << "<->" << j.name << " r2.size() "
-                      << vtab[a.id*atomlistsize+b.id].r2.size() << endl;
-                    std::ofstream ff1(std::string(i.name+"."+j.name+".real.dat").c_str());
-                    ff1.precision(10);
+            verbose = in[sec]["verbose"] | false;
 
-                    std::ofstream ff2(std::string(i.name+"."+j.name+".tab.dat").c_str());
-                    ff2.precision(10);
-                    double max = vtab[a.id*atomlistsize+b.id].r2.at(vtab[a.id*atomlistsize+b.id].r2.size()-2);
-                    double min = vtab[i.id*atomlistsize+j.id].r2.at(1);
-                    double dr = (max-min)/(double)n;
-                    for (int k=0; k<n; k++) {
-                      double r2 = min+dr*((double)k)+0.0000000000001;
-                      ff1 << sqrt(r2) << " " << Tpairpot(*this)(a,b,r2) << endl;
-                      ff2 << sqrt(r2) << " " << tab.eval(vtab[a.id*atomlistsize+b.id], r2) << endl;
-                    }
-                  }
-                }
+            m.resize( atom.size() );
+
+            // loop over all pairs in json entry
+            for (auto i=in[sec].begin(); i!=in[sec].end(); ++i) {
+              auto v = textio::words2vec<string>( i.key() );
+              if (v.size()==2) {
+                Tpair p(
+                    atom[ v.at(0) ].id,
+                    atom[ v.at(1) ].id );
+                auto d = mixPairPotential( i.value(), p.first, p.second );
+                m.set( p.first, p.second, tab.generate(d.first) );
+                nfo[ d.second ].insert( p );
               }
             }
+
+            // for all non-assigned pairs, fallback to default potential
+            for ( auto &i : atom)
+              for ( auto &j : atom)
+                if (i.id>0 && j.id>0)
+                  if ( m(i.id,j.id).empty() ) {
+                    auto d = mixPairPotential( in[sec]["default"], i.id, j.id );
+                    m.set( i.id, j.id, tab.generate(d.first) );
+                    nfo[ d.second ].insert( Tpair(i.id,j.id) );
+                  }
           }
 
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
-            return tab.eval(vtab[a.id*atomlistsize+b.id], r2);
+            assert( ! m(a.id, b.id).empty() );
+            return tab.eval( m(a.id, b.id), r2 );
           }
+
+          string info(char w=0) override {
+            std::ostringstream o;
+            o << tab.info() << endl;
+            for (auto &i : nfo) {
+              o << i.first << ":\n";
+              for (auto &p : i.second)
+                o << atom[p.first].name + "-" + atom[p.second].name << " ";
+              o << endl << endl;
+            }
+            return o.str();
+          }
+
       };
 
     /**
@@ -1320,93 +1407,6 @@ namespace Faunus {
           }
       };
 
-    /**
-     * @brief Similar to PotentialMapTabulated but faster
-     *
-     * If the pair is not recognized, i.e. not added with the
-     * `add()` function, the pairpotential will use generate_empty().
-     * Recommended for the user to specify all pairs in `add()`
-     */
-    template<typename Tdefault, typename Ttabulator=Tabulate::Andrea<double>, typename Tparticle=PointParticle >
-      class PotentialVecTabulated : public PotentialMap<Tdefault> {
-        private:
-          typedef opair<int> Tpair;
-          typedef PotentialMap<Tdefault> base;
-          Ttabulator tab;
-          vector<typename Ttabulator::data> vtab;
-          unsigned int atomlistsize;
-
-        public:
-          PotentialVecTabulated(InputMap &in) : base(in) {
-            // Filling up matrix of empty tabulated data
-            atomlistsize = atom.size();
-            for (size_t i=0; i<atom.size(); i++)
-              for (size_t j=0; j<atom.size(); j++)
-                vtab.push_back(tab.generate_empty());
-
-            tab.setRange(
-                in.get<double>("tab_rmin", 1.0),
-                in.get<double>("tab_rmax", 100.0));
-            tab.setTolerance(in.get<double>("tab_utol", 0.01), 
-                in.get<double>("tab_ftol", -1), 
-                in.get<double>("tab_umaxtol", -1), 
-                in.get<double>("tab_fmaxtol", -1));
-          }
-
-          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
-            return tab.eval(vtab[a.id*atomlistsize+b.id], r2);
-          }
-
-          template<class Tpairpot>
-            void add(int id1, int id2, Tpairpot pot) {
-              Tparticle a,b;
-              a = atom[id1];
-              b = atom[id2];
-              base::add(a.id,b.id,pot);
-              std::function<double(double)> func = [=](double r2) {return Tpairpot(pot)(a,b,r2);};
-              typename Ttabulator::data tg = tab.generate_full(func);
-              vtab[id1*atomlistsize+id2] = tg;
-              vtab[id2*atomlistsize+id1] = tg;
-            }
-
-          std::string info(char w=20) {
-            std::ostringstream o( base::info(w) );
-            o << tab.info(w) << endl;
-            using namespace Faunus::textio;
-            for (auto &i : atom)
-              for (auto &j : atom)
-                o << pad(SUB,w,"Nbr of elements in table ("+i.name+"<->"+j.name+"): ")
-                  << vtab[i.id*atomlistsize+j.id].r2.size() << endl;
-            o << endl;
-            return o.str();
-          }
-
-          void print_tabulation(int n=1000) {
-            for (auto &i : atom) {
-              for (auto &j : atom) {
-                Tparticle a,b;
-                a = i;
-                b = j;
-                if (vtab[a.id*atomlistsize+b.id].r2.size() > 2) {
-                  auto ab = Tpair(a.id,b.id);
-                  std::ofstream ff1(std::string(i.name+"."+j.name+".real.dat").c_str());
-                  ff1.precision(10);
-                  std::ofstream ff2(std::string(i.name+"."+j.name+".tab.dat").c_str());
-                  ff2.precision(10);
-                  double max = vtab[a.id*atomlistsize+b.id].r2.at(vtab[a.id*atomlistsize+b.id].r2.size()-2);
-                  double min = vtab[i.id*atomlistsize+j.id].r2.at(1);
-                  double dr = (max-min)/(double)n;
-                  for (int k=0; k<n; k++) {
-                    double r2 = min+dr*((double)k)+0.0000000000001;
-                    ff1 << sqrt(r2) << " " << base::m[ab]->operator()(a,b,r2) << std::endl;
-                    ff2 << sqrt(r2) << " " << tab.eval(vtab[a.id*atomlistsize+b.id], r2)
-                      << endl;
-                  }
-                }
-              }
-            }
-          }
-      };
   }//Potential namespace
 #endif  
 }//Faunus namespace

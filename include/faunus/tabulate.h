@@ -1228,11 +1228,19 @@ namespace Faunus {
     /**
      * @brief Arbitrary pair potential between atom types using splines
      *
+     * This will take the given pair-potential(s) and generate
+     * splined versions for all possible atom type combinations.
+     * If more than one potential is given, these will be added
+     * together, then tabulated.
+     *
      * ~~~~
-     * "potentialmap" : {
-     *     "spline"  : { "rmin":0, "rmax":100, "utol":0.01 },
-     *     "default" : { "coulomb-lennardjones" : { "epsr":0.1 } },
-     *     "Na Cl"   : { "coulomb" : { "epsr":2.0 } }
+     * "pairpotentialmap" : {
+     *     "spline"  : { "rmin":1e-6, "rmax":100, "utol":0.01 },
+     *     "default" : {
+     *         "coulomb" : { "epsr":2.0 },
+     *         "lennardjones" : {}
+     *     },
+     *     "Na Cl" : { "coulomb" : { "epsr":2.0 } }
      * }
      * ~~~~
      *
@@ -1247,14 +1255,20 @@ namespace Faunus {
           PairMatrix<Tdata> m;
           Ttabulator tab;
           bool verbose;
+          double rmin, rmax;
 
           string _brief() override { return string("splined pair-potentials"); }
 
         public:
-          PotentialMapSpline(Tmjson &in, const string sec="pairpotential") : PairPotentialBase(sec) {
+          PotentialMapSpline(Tmjson &in, const string sec="pairpotentialmap") : PairPotentialBase(sec) {
+
+            PairPotentialBase::name = "pairpotentialmap";
 
             auto j = in[sec]["spline"];
-            tab.setRange( j["rmin"] | 1.0, j["rmax"] | 100.0 );
+
+            rmin = j["rmin"] | 1.0;
+            rmax = j["rmax"] | 100.0;
+            tab.setRange( rmin, rmax );
             tab.setTolerance(
                 j["utol"] | 0.01, 
                 j["ftol"] | -1, 
@@ -1287,11 +1301,34 @@ namespace Faunus {
                     m.set( i.id, j.id, tab.generate(d.first) );
                     nfo[ d.second ].insert( Tpair(i.id,j.id) );
                   }
+
+            save("pairpotentials.dat", rmin, rmax);
           }
 
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            if (r2<rmin*rmin)
+              return pc::infty;
+            if (r2>rmax*rmax)
+              return 0;
             assert( ! m(a.id, b.id).empty() );
             return tab.eval( m(a.id, b.id), r2 );
+          }
+
+          void save( const string &file, double rmin=1e-3, double rmax=100 ) {
+            std::ofstream f(file.c_str());
+            Tparticle a,b;
+            for (size_t i=0; i<m.size(); i++)
+              for (size_t j=0; j<m.size(); j++)
+                if (j>=i)
+                  if ( ! m(i,j).empty()  ) {
+                    f << "# " << atom[i].name << "-" << atom[j].name << endl;
+                    a = atom[i];
+                    b = atom[j];
+                    for (double r=rmin; r<=rmax; r+=0.1)
+                      f << r << " " << (*this)(a,b,r*r) << endl;
+                    f << endl;
+                  }
+            f.close();
           }
 
           string info(char w=0) override {

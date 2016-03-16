@@ -451,15 +451,17 @@ namespace Faunus {
           for (auto &i : m)
             i.resize(n,T());
         }
-        PairMatrix(size_t n=0) {
-          resize(n);
-        }
+        PairMatrix(size_t n=0) { resize(n); }
+
+        size_t size() const { return m.size(); }
+
         const T& operator()(size_t i, size_t j) const {
           assert( i<m.size() );
           assert( j<m[i].size() );
           //assert( m[i][j]==m[j][i] );
           return m[i][j]; 
         }
+
         void set(size_t i, size_t j, T val) {
           size_t n=std::max(i,j);
           if (n>=m.size())

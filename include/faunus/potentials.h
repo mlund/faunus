@@ -1396,7 +1396,7 @@ namespace Faunus {
      * ~~~~
      * "PotentialMap" : {
      *    "Na Na"   : { "harmonic" : { "k":10, "req":0.01  }  },
-     *    "Na Cl"   : { "fromdisk" : { "na-cl.dat" } },
+     *    "Na Cl"   : { "fromdisk" : "na-cl.dat" },
      *    "default" : { "coulomb" : { "epsr":80.  } }
      * }
      * ~~~~
@@ -1409,7 +1409,7 @@ namespace Faunus {
 
           string _brief() override {
             std::ostringstream o;
-            o << "fromdisk: " << filename << " ["
+            o << PairPotentialBase::name << ": " << filename << " ["
               << t.xmin() << ":" << t.xmax() << "]";
             return o.str();
           }
@@ -1417,6 +1417,7 @@ namespace Faunus {
         public:
 
           FromDisk( Tmjson &j, const string &sec="fromdisk") {
+            PairPotentialBase::name = "fromdisk";
             string filename = j[sec] | string();
             if (!t.load(filename))
               throw std::runtime_error("Couldn't load tabulated potential.");
@@ -1425,8 +1426,10 @@ namespace Faunus {
           template<class Tparticle>
             double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
               double r=sqrt(r2);
-              if (r<t.xmin() || r>t.xmax())
+              if (r<t.xmin() || r>t.xmax()) {
+                std::cerr << r << " " << t.xmin() << " " << t.xmax() << endl;
                 throw std::runtime_error("Distance outside tabulated area.");
+              }
               return t(r);
             }
 

@@ -2789,6 +2789,8 @@ namespace Faunus {
               return eqpot->findSites(p);
             }
 
+          Tmjson infojson();
+
           /** @brief Copy average charges into particle vector */
           template<class Tpvec>
             void applyCharges( Tpvec &p ) {
@@ -3076,7 +3078,29 @@ namespace Faunus {
             }
           }
         }
+        std::ofstream f("gctit-output.json");
+        f << setw(4) << infojson() << "\n";
         return o.str();
+      } 
+
+    /** @brief Create JSON object with info **/
+    template<class Tspace>
+      Tmjson GrandCanonicalTitration<Tspace>::infojson() {
+        Tmjson js;
+        for (auto &m : molCharge) { // loop over molecules
+          int molid = m.first;
+          auto g = spc->randomMol(molid); // random molecule
+          if ( g!=nullptr ) {
+            string molname = spc->molList()[ molid ].name;
+            for (auto &i : m.second) { // loop over particle index (starting from zero)
+              int j = g->front() + i.first; // absolute particle index
+              js[molname]["index"].push_back( i.first  );
+              js[molname]["charge"].push_back( i.second.avg() );
+              js[molname]["resname"].push_back( atom[ spc->p[j].id ].name  );
+            }
+          }
+        }
+        return js;
       } 
 
 #ifdef ENABLE_MPI

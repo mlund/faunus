@@ -247,6 +247,9 @@ namespace Faunus {
 
           TimeRelativeOfTotal<std::chrono::microseconds> timer;
 
+          /** @brief Information as JSON object */
+          virtual Tmjson _json() { return Tmjson(); }
+
         protected:
           virtual string _info()=0;        //!< info for derived moves
           void trialMove();                //!< Do a trial move (wrapper)
@@ -313,15 +316,30 @@ namespace Faunus {
           Movebase(Energy::Energybase<Tspace>&, Tspace&, string="moves");//!< Constructor
           virtual ~Movebase();
           double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
-          virtual double move(int=1);                //!< Attempt `n` moves and return energy change (kT)
+          virtual double move(int=1);        //!< Attempt `n` moves and return energy change (kT)
           string info();                     //!< Returns information string
           void test(UnitTest&);              //!< Perform unit test
-          double getAcceptance();            //!< Get acceptance [0:1]
+          double getAcceptance() const;      //!< Get acceptance [0:1]
 
           void addMol(int, const MolListData&d=MolListData()); //!< Specify molecule id to act upon
           Group* randomMol();
           int randomMolId();                 //!< Random mol id from mollist
           int currentMolId;                  //!< Current molid to act upon
+
+          Tmjson json() {                    //!< Information as JSON object
+            Tmjson j;
+            if (cnt>0) {
+              j[ jsondir ] = {
+                { "title", title }, 
+                { "trials", cnt },
+                { "acceptance", getAcceptance() },
+                { "runfraction", runfraction },
+                { "relative time", timer.result() }
+              };
+              j = merge( j, _json() );
+            }
+            return j;
+          }
 
 #ifdef ENABLE_MPI
           Faunus::MPI::MPIController* mpiPtr;
@@ -506,7 +524,7 @@ namespace Faunus {
       }
 
     template<class Tspace>
-      double Movebase<Tspace>::getAcceptance() {
+      double Movebase<Tspace>::getAcceptance() const {
         if (cnt>0)
           return double(cnt_accepted) / cnt;
         return 0;
@@ -564,6 +582,8 @@ namespace Faunus {
           typedef Movebase<Tspace> base;
           typedef std::map<short, Average<double> > map_type;
           bool run() override; //!< Runfraction test
+          Tmjson _json() override;
+
         protected:
           string _info() override;
           void _acceptMove() override;
@@ -761,6 +781,30 @@ namespace Faunus {
           }
         }
         return o.str();
+      }
+
+    /** @brief Create json object with move details */
+    template<class Tspace>
+      Tmjson AtomicTranslation<Tspace>::_json() {
+        Tmjson js;
+        if (base::cnt>0) { 
+          auto &j = js[ base::jsondir ];
+          j = {
+            { "moves/particle", base::cnt / gsize.avg() },
+            { "dir", 999 },
+            { "genericdp", genericdp }
+          };
+          for (auto m : sqrmap) { // loop over particle id
+            int id = m.first;
+            double dp = ( atom[id].dp<1e-6 ) ? genericdp : atom[id].dp;
+            j[ "atoms" ][ atom[id].name ] = {
+              { "dp", dp },
+              { "acceptance", accmap[id].avg()*100 },
+              { "mean displacement", sqrt(sqrmap[id].avg()) }
+            };
+          }
+        }
+        return js;
       }
 
     /**
@@ -4248,6 +4292,15 @@ namespace Faunus {
           double move(int n=1) override {
             return ( mPtr.empty() ) ?
               0 : (*base::_slump().element( mPtr.begin(), mPtr.end() ))->move();
+          }
+
+          /** @brief Generate JSON object w. move information */
+          Tmjson json() {
+            Tmjson js;
+            auto &j = js["moves"];
+            for ( auto i : mPtr )
+              j = merge(j, i->json());
+            return js;
           }
 
           void test(UnitTest &t) { for (auto i : mPtr) i->test(t); }

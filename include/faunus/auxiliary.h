@@ -1424,7 +1424,7 @@ namespace Faunus {
             ( std::chrono::steady_clock::now() - tx );
         }
 
-        double result() {
+        double result() const {
           auto now = std::chrono::steady_clock::now();
           auto total = std::chrono::duration_cast<Tunit>( now - t0 );
           return delta.count() / double( total.count() );

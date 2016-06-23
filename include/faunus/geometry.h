@@ -96,12 +96,10 @@ namespace Faunus {
         void setRadius(double);                 //!< Set radius (angstrom)
         SphereSurface(double);                         //!< Construct from radius (angstrom)
 
-        inline SphereSurface() {};
-        
         /**
          * @brief Construct from json object.
          *
-         * Keywords in section `system/spheresurface` are scanned for,
+         * Keywords in section `system/sphere` are scanned for,
          *
          * Key       | Description
          * :-------- | :-----------------------
@@ -116,7 +114,8 @@ namespace Faunus {
         bool collision(const Point&, double, collisiontype=BOUNDARY) const override;
 
         inline double sqdist(const Point &a, const Point &b) const override {
-	  return r*std::acos(a.dot(b)/r2);
+	  double r_temp = r*std::acos(a.dot(b)/r2);
+	  return r_temp*r_temp;
         }
 
         /**

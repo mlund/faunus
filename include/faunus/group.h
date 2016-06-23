@@ -225,7 +225,7 @@ namespace Faunus {
           if (isAtomic()) {
 	    if(isTrial) {
 	      cm_trial=cm;
-	      cm_trial.scale(geo,s,xyz,xy);
+	      cm_trial.scale(geo,s,xyz,xy); // 'geo' does only determine what directions is scaled
 	    } else {
 	      cm.scale(geo,s,xyz,xy);
 	    }

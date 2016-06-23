@@ -4126,6 +4126,7 @@ namespace Faunus {
 	  xyz_trial.y() = radius*std::sin(rtp_trial.y())*std::sin(rtp_trial.z());
           xyz_trial.z() = radius*std::cos(rtp_trial.y());
 	  spc->trial[iparticle] = xyz_trial;
+	  assert( fabs((spc->trial[iparticle].norm() - radius)/radius) < 1e-9 && "Trial particle does not lie on the sphere surface!");
         }
         base::change.mvGroup[spc->findIndex(igroup)].push_back(iparticle);
       }

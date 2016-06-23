@@ -4,7 +4,7 @@
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-//#define EWALD
+#define EWALD
 
 typedef Space<Geometry::Cuboid> Tspace;
 #ifdef EWALD
@@ -24,21 +24,35 @@ int main() {
   auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
 #else
-  auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
+  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
 #endif
+    
+  auto pot0 = Energy::NonbondedVector<Tspace,LennardJonesLB>(mcp);
+  auto potE = Energy::ExternalPressure<Tspace>(mcp);
   
   auto waters = spc.findMolecules("water");
 
   // Markov moves and analysis
   Move::Propagator<Tspace> mv( mcp, pot, spc );
-  Analysis::RadialDistribution<> rdf(0.05);
+  Analysis::RadialDistribution<> rdfOO(0.05);
+  Analysis::RadialDistribution<> rdfOH(0.05);
+  Analysis::RadialDistribution<> rdfHH(0.05);
+  Analysis::MultipoleAnalysis dian(spc,mcp);
+  Table2D<double,Average<double> > mucorr;
+  mucorr.setResolution(0.05);
   FormatXTC xtc(1000);
+  vector<double> energy_T;
+  vector<double> energy_LJ;
+  vector<double> energy_E;
 
   EnergyDrift sys;   // class for tracking system energy drifts
+#ifdef EWALD
+  pot.setSpace(spc);
+#endif
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
 
-  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
+  cout << atom.info() + spc.info() + textio::header("MC Simulation Begins!");
   
   MCLoop loop(mcp);    // class for handling mc loops
   while ( loop[0] ) {          // Markov chain 
@@ -48,11 +62,28 @@ int main() {
 
       double rnd = slump();
       if ( rnd>0.9 ) {
-        rdf.sample( spc, atom["OW"].id, atom["OW"].id ); // O-O g(r)
+        rdfOO.sample( spc, atom["OW"].id, atom["OW"].id ); // O-O g(r)
+        rdfOH.sample( spc, atom["OW"].id, atom["HW"].id ); // O-H g(r)
+        rdfHH.sample( spc, atom["HW"].id, atom["HW"].id ); // H-H g(r)
+        dian.sample(spc);
         if ( rnd > 0.99 ) {
           xtc.setbox( spc.geo.len );
           xtc.save( "traj.xtc", spc.p );
         }
+	auto beg=spc.groupList().begin();
+	auto end=spc.groupList().end();
+	for (auto gi=beg; gi!=end; ++gi)
+	for (auto gj=gi; ++gj!=end;) {
+	  Point mu_a = dipoleMoment(spc,*(*gi));
+	  Point mu_b = dipoleMoment(spc,*(*gj));
+	  double sca = mu_a.dot(mu_b);
+	  double r = spc.geo.dist((*gi)->cm,(*gj)->cm); 
+	  mucorr(r) += sca;
+	}
+	
+        energy_T.push_back(Energy::systemEnergy(spc,pot,spc.p));
+	energy_LJ.push_back(Energy::systemEnergy(spc,pot0,spc.p));
+	energy_E.push_back(Energy::systemEnergy(spc,potE,spc.p));
       }
     } // end of micro loop
 
@@ -64,8 +95,18 @@ int main() {
   // save to disk
   FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
   spc.save("state");
-  rdf.save("rdf.dat");
+  rdfOO.save("rdfOO.dat");
+  rdfOH.save("rdfOH.dat");
+  rdfHH.save("rdfHH.dat");
+  mucorr.save("mucorr.dat");
+  dian.save();
   spc.save("state");
+  
+  string file = "energy.dat";
+  std::ofstream f(file.c_str());
+  if (f)
+    for (unsigned int i = 0; i < energy_T.size(); i++)
+      f << std::left << std::setw(10) << energy_T.at(i) << "     " << energy_LJ.at(i) << "      " << energy_E.at(i) << endl;
 
   // perform unit 
   UnitTest test(mcp);
@@ -73,7 +114,7 @@ int main() {
   mv.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + mv.info() + test.info();
+  cout << loop.info() + pot.info() + sys.info() + mv.info() + dian.info() + test.info();
 
   return test.numFailed();
 }

@@ -77,8 +77,13 @@ for examples.
 If have several python distributions installed, the build system may be guided to specific
 libraries using i.e.:
 
-    $ cmake . -DPYTHON_INCLUDE_DIR=/sw/include/python2.7 -DPYTHON_LIBRARY=/sw/lib/libpython2.7.dylib
+    $ cmake . -DPYTHON_INCLUDE_DIR=$HOME/miniconda/include/python2.7 -DPYTHON_LIBRARY=$HOME/minoconda/lib/libpython2.7.dylib
     $ make pyfaunus
+
+On OSX the linked python library can be probed and, if needed, renamed like this:
+
+    $ otool -L pyfaunus.so
+    $ install_name_tool -change libpython2.7.dylib $HOME/miniconda/lib/libpython2.7.dylib pyfaunus.so
 
 Resetting the build system
 --------------------------

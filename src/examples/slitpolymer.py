@@ -38,7 +38,7 @@ d = {
         "polymer" : { "dp":6, "maxlen":6, "permol":True }
         },
       "reptate" : {
-        "polymer" : { "bondlength":4.9, "permol":True }
+        "polymer" : { "bondlength":4.9, "permol":True, "prob":1.0 }
         }
       },
 

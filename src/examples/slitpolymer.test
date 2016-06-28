@@ -6,8 +6,8 @@ energyAverage                           -0.911416
 moves/pivot_Acceptancepolymer           0.915374            
 moves/pivot_acceptance                  91.5374             
 relativeEnergyDrift                     1.78457e-08 
-reptation_Acceptancepolymer             0.90869             
-reptation_acceptance                    90.869              
+moves/reptate_Acceptancepolymer             0.90869             
+moves/reptate_acceptance                    90.869              
 moves/moltransrot_acceptance            56.032              
 moves/moltransrot_polymer_acceptance    56.032              
 moves/moltransrot_polymer_dRot          74.2071             

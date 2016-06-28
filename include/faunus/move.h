@@ -1989,8 +1989,8 @@ namespace Faunus {
      * @brief Reptation move for linear polymers
      *
      * This will perform a reptation move of a linear, non-uniform polymer chain.
-     * During construction, the json object is searched, molecule-wise, for the following keywords
-     * in the section `[moves][reptation]`:
+     * During construction, the input is read from the `moves/reptate` section:
+     * `:
      *
      * Key           | Description
      * :------------ | :---------------------------------------------------------------------------
@@ -2017,7 +2017,7 @@ namespace Faunus {
           using base::spc;
           using base::jsondir;
         public:
-          Reptation(Energy::Energybase<Tspace>&, Tspace&, Tmjson&, string="reptation");
+          Reptation(Energy::Energybase<Tspace>&, Tspace&, Tmjson&, string="reptate");
           void setGroup(Group&); //!< Select Group to move
       };
 
@@ -2025,7 +2025,7 @@ namespace Faunus {
       Reptation<Tspace>::Reptation(Energy::Energybase<Tspace> &e,
           Tspace &s, Tmjson &j, string sec) : base(e,s) {
 
-        base::jsondir = "moves/reptation";
+        base::jsondir = "moves/reptate";
         base::title="Linear Polymer Reptation";
         gPtr=nullptr;
 
@@ -4222,6 +4222,7 @@ namespace Faunus {
      * `isobaric`      | `Move::Isobaric`          | Volume move (NPT ensemple)
      * `moltransrot`   | `Move::TranslateRotate`   | Translate/rotate molecules
      * `pivot`         | `Move::Pivot`             | Pivot polymer move
+     * `reptate`       | `Move::Reptation`         | Reptation polymer move
      * `titrate`       | `Move::SwapMove`          | Particle swap move
      */
     template<typename Tspace, bool polarise=false, typename base=Movebase<Tspace>>
@@ -4282,6 +4283,8 @@ namespace Faunus {
                 mPtr.push_back( toPtr( CrankShaft<Tspace>(e,s,in) ) );
               if (i.key()=="pivot")
                 mPtr.push_back( toPtr( Pivot<Tspace>(e,s,in) ) );
+              if (i.key()=="reptate")
+                mPtr.push_back( toPtr( Reptation<Tspace>(e,s,in) ) );
               if (i.key()=="ctransnr")
                 mPtr.push_back( toPtr( ClusterTranslateNR<Tspace>(e,s,in) ) );
             }

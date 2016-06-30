@@ -1175,7 +1175,7 @@ namespace Faunus {
      */
     class DebyeHuckelSD : public DebyeHuckel {
       public:
-        DebyeHuckelSD(InputMap &in, const string &dir="") : DebyeHuckel(in,dir) {}
+        DebyeHuckelSD(Tmjson &j, const string &sec="coulomb") : DebyeHuckel(j,sec) {}
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {

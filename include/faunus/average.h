@@ -198,7 +198,7 @@ namespace Faunus {
   template<class T=double>
     class MeanValue {
       private:
-        int size_of_block, cnt;
+        int size_of_block, counter;
         T total_value;
         vector<T> values;
         string name;
@@ -207,27 +207,31 @@ namespace Faunus {
         MeanValue (int size_of_block_in, string name_in="") {
           name = name_in;
           size_of_block = size_of_block_in;
-          cnt = 0;
+          counter = 0;
           total_value = 0.0;
         }
 
         void operator+=(T input) {
           total_value += input;
-          cnt++;
-          if(cnt >= size_of_block) {
-            values.push_back( total_value / T(cnt) );
+          counter++;
+          if(counter >= size_of_block) {
+            values.push_back( total_value / T(counter) );
             total_value = 0.0;
-            cnt = 0;
+            counter = 0;
           }
         }
 
         void clear() {
           size_of_block = 1e9;
-          cnt = 0;
+          counter = 0;
           total_value = 0.0;
           values.clear();
           name = "";
         }
+        
+        int cnt() {
+	  return counter;
+	}
 
         T avg() {
           T meanValue = 0.0;
@@ -255,8 +259,8 @@ namespace Faunus {
           o << indent(SUBSUB) << "Sampled values " << setw(25) << values.size()  << "\n";
           o << indent(SUBSUB) << "Average value " << setw(25) << avg()  << "\n";
           o << indent(SUBSUB) << "Standard deviation " << setw(25) << std()  << "\n";
-          o << indent(SUBSUB) << "Unfinished block count" << setw(25) << cnt  << "\n";
-          o << indent(SUBSUB) << "Unfinished block average" << setw(25) << total_value/T(cnt)  << endl;
+          o << indent(SUBSUB) << "Unfinished block count" << setw(25) << counter  << "\n";
+          o << indent(SUBSUB) << "Unfinished block average" << setw(25) << total_value/T(counter)  << endl;
           return o.str();
         }
     };

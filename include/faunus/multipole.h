@@ -1009,6 +1009,12 @@ namespace Faunus {
             double epsilon_r = (j[sec]["eps_r"] | 1.0);
             wolf.setType(zeroDerivative);
           }
+          
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            return operator()(a,b,Point(sqrt(r2),0,0));
+          }
+          
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
               double U_total = 0;
@@ -1017,15 +1023,19 @@ namespace Faunus {
                 if (wolf.getR2i() < wolf.getRc2i())
                   return 0;
                 if(useIonIon == true) U_total += wolf.q2q<true>(a.charge,b.charge,r);
+#ifdef DIPOLEPARTICLE
                 if(useIonDipole == true) U_total += wolf.q2mu<true>(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
                 if(useDipoleDipole == true) U_total += wolf.mu2mu<true>(a.mu,b.mu, a.muscalar*b.muscalar, r);
                 if(useIonQuadrupole == true) U_total += wolf.q2quad<true>(a.charge, b.theta,b.charge, a.theta,r);
+#endif
                 return _lB*U_total;
               }
               if(useIonIon == true) return _lB*wolf.q2q(a.charge,b.charge,r);
+#ifdef DIPOLEPARTICLE
               if(useIonDipole == true) return _lB*wolf.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
               if(useDipoleDipole == true) return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
               if(useIonQuadrupole == true) return _lB*wolf.q2quad(a.charge, b.theta,b.charge, a.theta,r);
+#endif
 	      return _lB*U_total;
             }
 
@@ -1036,11 +1046,15 @@ namespace Faunus {
                 if (wolf.getR2i() < wolf.getRc2i())
                   return Point(0,0,0);
                 Point E = wolf.fieldCharge<true>(p,r);
+#ifdef DIPOLEPARTICLE
                 E += wolf.fieldDipole<true>(p,r);
+#endif
                 return _lB*E;
               }
               if(useIon == true) return _lB*wolf.fieldCharge(p,r);
+#ifdef DIPOLEPARTICLE
               if(useDipole == true) return _lB*wolf.fieldDipole(p,r);
+#endif
               return Point(0,0,0);
             }
 

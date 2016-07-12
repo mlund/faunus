@@ -40,7 +40,7 @@ namespace Faunus {
         EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j,sec), alpha(0), rc2i(0) {
           Tbase::name="Ewald Real";
         }
-
+        
         void updateAlpha(double alpha_in) {
           alpha = alpha_in;
           alpha2 = alpha*alpha;
@@ -53,7 +53,7 @@ namespace Faunus {
         }
 
         template<class Tparticle>
-          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
             if(!useIonIon && !useIonDipole && !useDipoleDipole)
               return 0.0;
 
@@ -250,6 +250,19 @@ namespace Faunus {
             }
             return (2*pc::pi/V_in)*E*lB;
           }
+          
+          /**
+           * @brief Returns real space energy in kT.
+           * @param p Vector with partciles
+           */
+          template<class Tpvec>
+	    double getRealEnergy(const Tpvec &p) const {
+	      double E = 0.0;
+	      for(int i = 0; i < p.size()-1; i++)
+		for(int j = i+1; j < p.size(); j++)
+		  E += Tbase::pairpot.first(p[i],p[j],Tbase::geo->vdist(p[i],p[j]));
+	      return E;
+	    }
 
           /**
            * @brief Updates all vectors and matrices which depends on the number of k-space vectors.
@@ -361,7 +374,18 @@ namespace Faunus {
             if(useIonIon || useIonDipole || useDipoleDipole)
               text.erase (text.end()-2, text.end());
             o << pad(SUB,w, "Interactions") << text << endl;
+	    double charge = 0.0;
+	    for(int i = 0; i < spc->p.size(); i++)
+	      charge += spc->p[i].charge;
+	    if(fabs(charge) > 1e-10 && (useIonIon || useIonDipole) )
+	      o << pad(SUB,w, "    WARNING") << "Total charge is not 0 but " << charge << endl;
+	    
             o << pad(SUB,w, "Reciprocal cut-off") << "(" << parameters.kc << "," << parameters.kc << "," << parameters.kc << ")" << endl;
+	    if(spherical_sum) {
+	      o << pad(SUB,w, "    Spherical") << "True" << endl;
+	    } else {
+	      o << pad(SUB,w, "    Spherical") << "False" << endl;
+	    }
 	    if(parameters.kcc == 0 && parameters.kcc == 0 && parameters.kcc == 0) {
 	      o << pad(SUB,w, "Wavefunctions") << 0 << endl;
 	    } else {
@@ -385,6 +409,8 @@ namespace Faunus {
             o << pad(SUB,w+1, "    "+sigma) << realEnergyAverage.std() << endl;
             o << pad(SUB,w+4, bracket("Reci energy")) << reciprocalEnergyAverage.avg() << endl;
             o << pad(SUB,w+1, "    "+sigma) << reciprocalEnergyAverage.std() << endl;
+	    o << pad(SUB,w+4, bracket("Total energy")) << selfEnergyAverage.avg()+surfaceEnergyAverage.avg()+realEnergyAverage.avg()+reciprocalEnergyAverage.avg() << endl;
+	    o << pad(SUB,w+1, "    "+sigma) << selfEnergyAverage.std()+surfaceEnergyAverage.std()+realEnergyAverage.std()+reciprocalEnergyAverage.std() << endl;
             
             return o.str();
           }
@@ -402,13 +428,14 @@ namespace Faunus {
             const_inf = (eps_surf < 1) ? 0.0 : 1.0; // if the value is unphysical (< 1) then we set infinity as the dielectric sonatant of the surronding medium
             spherical_sum = _j["spherical_sum"] | true; // specifies if Spherical or Cubical summation should be used in reciprocal space
             update_frequency = _j["update_frequency"] | -1;
-
+	    
             parameters.alpha = ( _j["alpha"] | -1.0 );
 	    parameters.alpha2 = parameters.alpha*parameters.alpha;
             parameters.rc = ( _j["cutoff"] | -1.0 );
             parameters.kc = ( _j["cutoffK"] | -1.0 );
             parameters.kc2 = parameters.kc*parameters.kc;
             parameters.kcc = ceil(parameters.kc);
+	    
 	    parameters_trial = parameters;
             Tbase::pairpot.first.updateAlpha(parameters.alpha);
             Tbase::pairpot.first.updateRcut(parameters.rc);
@@ -478,16 +505,15 @@ namespace Faunus {
 	      selfEnergyAverage += getSelfEnergy(spc->p,g,parameters);
 	      surfaceEnergyAverage += surfaceEnergy;
 	      reciprocalEnergyAverage += reciprocalEnergy;
-	      //cout << "ReciR: " << reciprocalEnergy << endl;
+	      realEnergyAverage += getRealEnergy(spc->p);
               return 0.0;
 	    }
-	    
 	    // Move has been accepted
 	    Group g(0, spc->trial.size()-1);
 	    selfEnergyAverage += getSelfEnergy(spc->trial,g,parameters_trial);
 	    surfaceEnergyAverage += surfaceEnergy;
 	    reciprocalEnergyAverage += reciprocalEnergy;
-	    //cout << "ReciA: " << reciprocalEnergy << endl;
+	    realEnergyAverage += getRealEnergy(spc->trial);
 	    
 	    if(++cnt_accepted > update_frequency - 1) {
 	      double duB = getReciprocalEnergy(Q_ion_tot_trial,Q_dip_tot_trial,Aks_trial,V_trial);                        // Calulate with old vectors/matrices
@@ -580,7 +606,7 @@ namespace Faunus {
 	      updateAllComplexNumbers(spc->p,Q_ion_tot,Q_dip_tot,kVectors,kVectorsInUse);
 	    }
 	  }
-
+	  
           /**
            * @brief Set space and updates parameters (if not set by user)
            */

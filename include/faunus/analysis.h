@@ -1304,13 +1304,14 @@ namespace Faunus {
    * @param sec Section to search for inputs (optional)
    * @param resolution Resolution in tables (optional)
    */
+  template<class Tspace=Space<class Tgeometry,class Tparticle> >
   class MultipoleAnalysis {
    private:
     Analysis::RadialDistribution<> rdf;
     Table2D<double,double> kw, mucorr_angle;   // radial kirkwood-factor, a dipole-dipole angle-distribution
     Table2D<double,Average<double> > mucorr, mucorr_dist;    // dipole-dipole correlation, a dipole-dipole angle-distribution
     Histogram<double,unsigned int> HM2,HM2_box;  // histogram of the mean squared dipole moment in a sphere/box
-    Average<double> M2,M2_box;
+    Average<double> M2,M2_box, diel;
 
     vector<Table2D<double,Average<double> >> Qofr, Mofr;  // Quadrupole and dipole as a function of distance 
     vector<Histogram<double,unsigned int>> HQ, HQ_box, HM, HM_box;
@@ -1318,12 +1319,17 @@ namespace Faunus {
     vector<string> postFixMu,postFixQuad;
 
     int sampleKW, atomsize;
-    double cutoff2, N;
+    double cutoff2, N, V;
     double const_Diel, const_DielTinfoil, const_DielCM, const_DielRF, epsRF, constEpsRF;
+    
+   protected:
+     Energy::Energybase<Tspace>* pot; //!< Pointer to energy functions
 
    public:
-    template<class Tspace, class Tinputmap>
-     MultipoleAnalysis(const Tspace &spc, Tinputmap &j, const string &sec="coulomb", double resolution=0.1) {
+    template<class Tenergy, class Tinputmap>
+     MultipoleAnalysis(const Tspace &spc, Tenergy &e, Tinputmap &j, const string &sec="coulomb", double resolution=0.1) {
+      pot=&e;
+       
       sampleKW = 0;
       setCutoff(j[sec]["cutoff"] | spc.geo.len_half.x());
       N = spc.p.size();
@@ -1387,6 +1393,7 @@ namespace Faunus {
     }
 
     void updateVolume(double volume) {
+     V = volume;
      const_DielTinfoil = const_Diel/volume;
      const_DielCM = const_DielTinfoil/3;
      const_DielRF = const_DielTinfoil/3;
@@ -1396,7 +1403,6 @@ namespace Faunus {
      * @brief Samples dipole- and quadrupole-moments from particles.
      * @param spc The space.
      */
-    template<class Tspace>
      void sample(Tspace &spc) {
       Point origin(0,0,0);
       Point mu(0,0,0);          // In e\AA
@@ -1449,7 +1455,6 @@ namespace Faunus {
      * @param quad_box Quadrupole to add to from entire box 
      * @param mus_group Sum of the group dipole moments due to explicite dipoles 
      */
-    template<class Tspace>
      void samplePP(Tspace &spc, Point origin, Point mu, Point mu_box, Tensor<double> quad,Tensor<double> quad_box, vector<Point> mus_group) {
       updateVolume(spc.geo.getVolume());
 
@@ -1478,6 +1483,8 @@ namespace Faunus {
       sca = mu_box.dot(mu_box);
       HM2_box(sca)++;
       M2_box += sca;
+      diel += pot->dielectric_constant(M2_box.avg()/V);
+      
       int cnt = 0;
       for(int i = 0; i < 3; i++) {
        for(int j = 0; j < 3; j++) {
@@ -1501,7 +1508,6 @@ namespace Faunus {
      * @param spc The space
      * @param origin The origin (optional)
      */
-    template<class Tspace>
      void sampleSpatial(const Tspace &spc, Point origin=Point(0,0,0)) {
       double r, sca;
       int N = spc.p.size() - 1;
@@ -1734,9 +1740,9 @@ namespace Faunus {
      using namespace Faunus::textio;
      std::ostringstream o;
      o << header("Multipole analysis");
-     o << indent(SUB) << epsilon_m+subr+"(Tinfoil)" << setw(22) << getDielTinfoil()
-      << ", "+sigma+"=" << M2_box.stdev()*const_DielTinfoil << ", "+sigma+"/"+epsilon_m+subr+"="
-      << (100*M2_box.stdev()*const_DielTinfoil/getDielTinfoil()) << percent << endl
+     o << indent(SUB) << epsilon_m+subr << setw(22) << diel.avg()
+      << ", "+sigma+"=" << diel.stdev() << ", "+sigma+"/"+epsilon_m+subr+"="
+      << (100*diel.stdev()/diel.avg()) << percent << endl
       << indent(SUB) << bracket("M"+squared) << setw(27) << M2_box.avg()
       << " eA"+squared+", "+sigma+"=" << M2_box.stdev()
       << ", "+sigma+"/"+bracket("M"+squared)+"=" << (100*M2_box.stdev()/M2_box.avg())

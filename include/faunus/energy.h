@@ -150,6 +150,9 @@ namespace Faunus {
 
           virtual double update(bool=true)                     // Bool is acceptance/rejection of previous move
           { return 0; }
+          
+          virtual double dielectric_constant(double)           // Input is average of squared dipole moment, divided by volume of that sample
+          { return 0; }
 
           /** @brief Update energy function due to Change */
           virtual void setChange(const typename Tspace::Change &c)
@@ -243,6 +246,9 @@ namespace Faunus {
 
           double update(bool b) override
           { return first.update(b)+second.update(b); }
+          
+          double dielectric_constant(double M2V) override // Assumes only one electrostatic potential is used at any given time
+          { return first.dielectric_constant(M2V)+second.dielectric_constant(M2V); }
 
           void setChange(const typename Tspace::Change &c) override
           { first.setChange(c); second.setChange(c); }
@@ -442,6 +448,13 @@ namespace Faunus {
                 u+=p2p(i,j);
             return u;
           }
+          
+          /**
+	   * @param M2V Average of squared dipole moment, divided by volume of that sample
+	   */
+          virtual double dielectric_constant(double M2V) { 
+	    return pairpot.dielectric_constant(M2V);
+	  }
       };
 
     /**
@@ -709,6 +722,14 @@ namespace Faunus {
               }
             }
           }
+          
+          /**
+	   * @param M2V Average of squared dipole moment, divided by volume of that sample
+	   */
+          virtual double dielectric_constant(double M2V) { 
+	    return pairpot.dielectric_constant(M2V);
+	  }
+          
       };
 
     /**

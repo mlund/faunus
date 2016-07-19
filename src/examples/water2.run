@@ -6,8 +6,9 @@ cp -f $source_tests_dir/water2.state state 2> /dev/null
 
 echo '{
   "system" : {
-    "cuboid"   : { "len" : 32.00 },
-    "mcloop"   : { "macro":10, "micro":1000 },
+    "temperature"  : 298.15,
+    "cuboid"   : { "len" : 32.0 },
+    "mcloop"   : { "macro":10, "micro":100 },
     "unittest" : { "testfile":"water2.test", "stable":false }
   },
 
@@ -15,7 +16,7 @@ echo '{
     "nonbonded" : {
       "coulomb" : { "epsr" : 1.0, "cutoff":15 },
       "ewald"   : { "epsr" : 1.0, "cutoff":15, "eps_surf":0, "alpha":0.27, "cutoffK":5, "spherical_sum":true, "update_frequency":1000 }, 
-      "cutoff_g2g" : 10
+      "cutoff_g2g" : 15
     }
   },
 
@@ -42,7 +43,8 @@ HW    2    1.37    6.26    1.50  0.4238   1.00800 1
 HW    3    2.31    5.89    0.21  0.4238   1.00800 1
 " > water2.aam
 
-#cp water2.state.wolf state
+#rm state
+
 exe=./water2
 if [ -x $exe ]; then
  $exe

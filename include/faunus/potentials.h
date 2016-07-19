@@ -103,6 +103,8 @@ namespace Faunus {
           Point field(const Tparticle &a, const Point &r) const {
             return Point(0,0,0);
           }
+          
+          virtual double dielectric_constant(double) const { return 0.0; }
 
         /**
          * @brief Set space dependent features such as density dependent potentials
@@ -922,6 +924,15 @@ namespace Faunus {
             return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
 #endif
           }
+          
+	 /**
+	  * @param M2V Average of squared dipole moment, divided by volume of that sample
+	  * @brief Returns dielectric constant using Tinfoil conditions.
+	  * \f$ 1 + \frac{<M^2>}{3V\epsilon_0k_BT} \f$
+	  */
+          double dielectric_constant(double M2V) const override { 
+	    return (1.0 + M2V*pc::e*pc::e*1e10/(3*pc::kT()*pc::e0)); 
+	  }
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
@@ -1490,6 +1501,10 @@ namespace Faunus {
           template<typename Tparticle>
             Point field(const Tparticle &a, const Point &r) {
               return first.field(a,r) + second.field(a,r);
+            }
+            
+            double dielectric_constant(double M2V) {
+              return first.dielectric_constant(M2V) + second.dielectric_constant(M2V);
             }
 
           template<class Tspace>

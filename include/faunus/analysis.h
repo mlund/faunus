@@ -1983,6 +1983,80 @@ namespace Faunus {
       };
 
     /**
+     * @brief Calculate excess pressure using virtual volume move
+     *
+     * This will perform a virtual volume move and calculate the
+     * excess pressure according to
+     *
+     * @f[
+     * \frac{p^{ex}}{k_BT} = -\frac{ \ln \langle
+     * e^{-\Delta U / k_BT} \rangle }{ \Delta V }
+     * @f]
+     *
+     * based on Widom's perturbation idea.
+     * For more information, see doi:10.1063/1.472721
+     *
+     * @todo Untested. Are mass centers correctly restored? See group::scale()
+     */
+    template<class Tspace>
+      class VirtualVolumeMove : public AnalysisBase {
+        private:
+          typedef Energy::Energybase<Tspace> Tenergy;
+          Tenergy* pot;
+          Tspace* spc;
+          Point dir;
+          double dV;
+          Average<double> duexp; // < exp(-du/kT) >
+
+          void scale(double Vold, double Vnew) {
+            double xyz = cbrt( Vnew/Vold );
+            double xy  = sqrt( Vnew/Vold );
+            spc->geo.setVolume( Vnew );
+            pot->setSpace(*spc);
+            for (auto g : spc->groupList()) {
+              g->setMassCenter(*spc);
+              g->scale(*spc, dir, xyz, xy); // scale trial coordinates to new volume
+            }
+          }
+
+          void _sample() override {
+            double Vold = spc->geo.getVolume();
+            double Vnew = Vold + dV;
+
+            double uold = Energy::systemEnergy(*spc, *pot, spc->p);
+            scale(Vold, Vnew); // scale up volume
+            double unew = Energy::systemEnergy(*spc, *pot, spc->trial);
+            scale(Vnew, Vold); // scale down volume
+
+            duexp += exp(-(uold-unew));
+
+            assert(
+                fabs(uold-Energy::systemEnergy(*spc, *pot, spc->p)) < 1e-7
+                && "System not properly restored!");
+          }
+
+          string _info() override {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            if (cnt>0) {
+              o << "Excess pressure = " << -log( duexp.avg() ) / dV
+                << kT << "/" << angstrom << cubed << "\n"; 
+            }
+            return o.str();
+          }
+
+        public:
+          VirtualVolumeMove( Tmjson &js, Tenergy &pot, Tspace &spc,
+              string sec="virtualvolume") : spc(&spc), pot(&pot) {
+            auto &j = js[sec];
+            dV = j["dV"] | 0.1;
+            dir = {1,1,1};  // scale directions
+            AnalysisBase::name = "Virtual Volume Move";
+            AnalysisBase::cite = "doi:10.1063/1.472721";
+          }
+      };
+
+    /**
      * @brief Class for accumulating analysis classes
      *
      * Upon construction the JSON section `analysis` is searched
@@ -1993,7 +2067,7 @@ namespace Faunus {
      * :------------- |  :----------------------------
      * `polymershape` |  `Analysis::PolymerShape`
      * `virial`       |  `Analysis::VirialPressure`
-     *
+     * `virtualvolume`|  `Analysis::VirtualVolumeMove`
      */
     class CombinedAnalysis : private AnalysisBase {
       private:
@@ -2009,6 +2083,8 @@ namespace Faunus {
             for (auto i = m.begin(); i != m.end(); ++i) {
               if (i.key() == "virial")
                 v.push_back(new VirialPressure<Tspace>(j, pot, spc));
+              if (i.key() == "virtualvolume")
+                v.push_back(new VirtualVolumeMove<Tspace>(j, pot, spc));
               if (i.key() == "polymershape")
                 v.push_back(new PolymerShape<Tspace>(j, spc));
               if (i.key() == "cyldensity")

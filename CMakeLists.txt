@@ -14,7 +14,7 @@ include(CheckIncludeFileCXX)
 include(CheckCXXSourceCompiles)
 enable_testing()
 
-find_package(Eigen3 3.1.2)
+find_package(Eigen3 3.2.9)
 if (NOT EIGEN3_FOUND)
   message (FATAL_ERROR "Eigen 3.1.2+ is required.")
 endif()

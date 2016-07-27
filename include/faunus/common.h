@@ -2,7 +2,10 @@
 #define FAUNUS_COMMON_H
 
 #ifndef SWIG
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <Eigen/StdVector>
+#pragma GCC diagnostic pop
 #include <string>
 #include <list>
 #include <iostream>

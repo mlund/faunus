@@ -2,8 +2,11 @@
 #define FAUNUS_POINT_H
 
 #ifndef SWIG
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#pragma GCC diagnostic pop
 #include <vector>
 #endif
 

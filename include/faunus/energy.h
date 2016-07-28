@@ -1193,10 +1193,10 @@ namespace Faunus {
             N = Natom + Nmol;
 
             std::ostringstream o;
-            o << textio::pad(textio::SUB,15,"Pressure")
-              << P*1e30/pc::Nav << " mM = "
-              << P*pc::kB*pc::T()*1e30 << " Pa = "
-              << P*pc::kB*pc::T()*1e30/0.980665e5 << " atm\n"
+            o << textio::pad(textio::SUB, 15, "Pressure")
+              << P/1.0_mM << " mM = "
+              << P/1.0_Pa << " Pa = "
+              << P/1.0_atm << " atm\n"
               << textio::pad(textio::SUB,25, "Number of molecules")
               << N << " (" <<Nmol<< " molecular + " <<Natom<< " atomic)\n";
             if (!ignore.empty()) { 

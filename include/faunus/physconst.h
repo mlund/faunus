@@ -151,7 +151,10 @@ namespace Faunus {
 
     /// Volume in litres
     constexpr long double operator "" _liter(long double v)
-    { return v*1e27; }
+    { return v*1e27; } // -> angstrom^3
+
+    constexpr long double operator "" _m3(long double v)
+    { return v*1e30; } // -> angstrom^3
 
     /// Number of molecules in moles
     inline long double operator "" _mol(long double n)
@@ -165,18 +168,17 @@ namespace Faunus {
     inline long double operator "" _mM(long double c)
     { return c * 1.0e-3_mol / 1.0_liter; } // -> particle / angstrom^3
 
-
     /// Pressure in Pascal
     inline long double operator "" _Pa(long double p)
-    { return p / PhysicalConstants<double>::kT() / 1.0_liter; }
+    { return p / PhysicalConstants<double>::kT() / 1.0_m3; } // -> particle / angstrom^3
 
     /// Pressure in atmosphere
     inline long double operator "" _atm(long double p)
-    { return p*101325.0_Pa; }
+    { return p*101325.0_Pa; } // -> particle / angstrom^3
 
     /// Pressure in bar
     inline long double operator "" _bar(long double p)
-    { return p*100000.0_Pa; }
+    { return p*100000.0_Pa; } // -> particle / angstrom^3
 
     /// Angle in radians
     constexpr long double operator"" _rad ( long double a )

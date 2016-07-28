@@ -1436,6 +1436,7 @@ namespace Faunus {
           template<typename Tparticle>
             Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
               assert(2==1 && "not implemented");
+              return Point(0,0,0);
             }
       };
 

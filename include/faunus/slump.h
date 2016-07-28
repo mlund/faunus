@@ -27,7 +27,7 @@ namespace Faunus {
         Tengine eng; //!< Random number engine
 
         /** @brief Constructor -- default deterministic seed */
-        RandomTwister() : dist(0,1) {}
+        RandomTwister() : dist(0,1), discard(0) {}
 
         /**
          * @brief Construct from JSON object

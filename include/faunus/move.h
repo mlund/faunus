@@ -2212,7 +2212,6 @@ namespace Faunus {
       string Isobaric<Tspace>::_info() {
         using namespace textio;
         std::ostringstream o;
-        const double tomM=1e30/pc::Nav;
         int N,Natom=0, Nmol=0;
         for (auto g : spc->groupList())
           if (g->isAtomic())
@@ -2220,13 +2219,11 @@ namespace Faunus {
           else
             Nmol+=g->numMolecules();
         N = Natom + Nmol;
-        double Pascal = P*pc::kB*pc::T()*1e30;
         o << pad(SUB,w, "Displacement parameter") << dp << endl
           << pad(SUB,w, "Number of molecules")
-          << N << " (" <<Nmol<< " molecular + " <<Natom<< " atomic)\n"
+          << N << " (" <<Nmol<< " molecular + " << Natom << " atomic)\n"
           << pad(SUB,w, "Pressure")
-          << P*tomM << " mM = " << Pascal << " Pa = "
-          << Pascal/0.980665e5 << " atm\n"
+          << P/1.0_mM << " mM = " << P/1.0_Pa << " Pa = " << P/1.0_atm << " atm\n"
           << pad(SUB,w, "Temperature") << pc::T() << " K\n";
         if (base::cnt>0) {
           char l=14;
@@ -2244,7 +2241,7 @@ namespace Faunus {
             << setw(l) << val.avg() << _angstrom + cubed
             << setw(l) << std::cbrt(val.avg()) << _angstrom
             << setw(l) << rval.avg() << " 1/" + _angstrom + cubed
-            << setw(l) << N*rval.avg()*tomM << " mM\n";
+            << setw(l) << N*rval.avg()/1.0_mM << " mM\n";
         }
         return o.str();
       }

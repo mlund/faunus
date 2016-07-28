@@ -124,27 +124,23 @@ namespace Faunus {
             P[2] = P[0] + P[1];     // total
 
             char l=15;
-            double kT=pc::kB*pc::T();
             o << "\n  " << std::right
               << setw(l+l) << "kT/"+angstrom+cubed
               << setw(l) << "mM" << setw(l) << "Pa" << setw(l) << "atm" << "\n";
-            for (int i=0; i<3; i++) {
+            for (int i=0; i<3; i++)
               o << std::left << setw(l) << "  "+id[i] << std::right
                 << setw(l) << P[i]
-                << setw(l) << P[i] * 1e30/pc::Nav
-                << setw(l) << P[i] * kT*1e30
-                << setw(l) << P[i] * kT*1e30/0.980665e5
-                << "\n";
-            }
-            o << "\n  Osmotic coefficient = " << 1+P[1]/P[0] << "\n";
-            o << "  Excess pressure tensor (mM):\n\n"
-              << T/cnt*1e30/pc::Nav << endl;
+                << setw(l) << P[i] / 1.0_mM
+                << setw(l) << P[i] / 1.0_Pa
+                << setw(l) << P[i] / 1.0_atm << "\n";
+            o << "\n  Osmotic coefficient = " <<  1 + P[1] / P[0] << "\n"
+              << "  Excess pressure tensor (mM):\n\n" << T / cnt / 1.0_mM << endl;
           }
           return o.str();
         }
 
         inline void _test(UnitTest &test) override {
-          test("virial_pressure_mM", (T/cnt).trace()*1e30/pc::Nav );
+          test("virial_pressure_mM", (T/cnt).trace() / 1.0_mM );
         }
 
         template<class Tpvec, class Tgeo, class Tpot>
@@ -1993,10 +1989,16 @@ namespace Faunus {
      * e^{-\Delta U / k_BT} \rangle }{ \Delta V }
      * @f]
      *
-     * based on Widom's perturbation idea.
-     * For more information, see doi:10.1063/1.472721
+     * based on Widom perturbation. For more information, see doi:10.1063/1.472721
      *
-     * @todo Untested. Are mass centers correctly restored? See group::scale()
+     * Input parameters:
+     *
+     * Keyword   |  Description
+     * :-------- | :-------------------------------------------
+     * `nstep`   | Sample every n'th time `sample()` is called
+     * `dV`      | Volume perturbation (angstrom cubed)
+     *
+     * @todo Untested for molecular systems
      */
     template<class Tspace>
       class VirtualVolumeMove : public AnalysisBase {
@@ -2013,10 +2015,8 @@ namespace Faunus {
             double xy  = sqrt( Vnew/Vold );
             spc->geo.setVolume( Vnew );
             pot->setSpace(*spc);
-            for (auto g : spc->groupList()) {
-              g->setMassCenter(*spc);
+            for (auto g : spc->groupList())
               g->scale(*spc, dir, xyz, xy); // scale trial coordinates to new volume
-            }
           }
 
           void _sample() override {
@@ -2024,11 +2024,15 @@ namespace Faunus {
             double Vnew = Vold + dV;
 
             double uold = Energy::systemEnergy(*spc, *pot, spc->p);
-            scale(Vold, Vnew); // scale up volume
+            scale(Vold, Vnew);
             double unew = Energy::systemEnergy(*spc, *pot, spc->trial);
-            scale(Vnew, Vold); // scale down volume
-
             duexp += exp(-(uold-unew));
+
+            // restore old configuration
+            spc->geo.setVolume( Vold );
+            pot->setSpace(*spc);
+            for (auto g : spc->groupList())
+              g->undo(*spc);
 
             assert(
                 fabs(uold-Energy::systemEnergy(*spc, *pot, spc->p)) < 1e-7
@@ -2036,19 +2040,23 @@ namespace Faunus {
           }
 
           string _info() override {
+            char w = 30;
+            double pex = -log( duexp.avg() ) / dV;
             using namespace Faunus::textio;
             std::ostringstream o;
             if (cnt>0) {
-              o << "Excess pressure = " << -log( duexp.avg() ) / dV
-                << kT << "/" << angstrom << cubed << "\n"; 
+              o << pad(SUB,w, "Volume perturbation (dV)") << dV << _angstrom + cubed + "\n"
+                << pad(SUB,w, "Perturbation directions") << dir.transpose() << "\n"
+                << pad(SUB,w, "Excess pressure") << pex << kT + "/" + angstrom + cubed
+                << " = " << pex / 1.0_mM << " mM = " << pex / 1.0_Pa << " Pa\n";
             }
             return o.str();
           }
 
         public:
           VirtualVolumeMove( Tmjson &js, Tenergy &pot, Tspace &spc,
-              string sec="virtualvolume") : spc(&spc), pot(&pot) {
-            auto &j = js[sec];
+              string sec="virtualvolume") : AnalysisBase(js["analysis"][sec]), spc(&spc), pot(&pot) {
+            auto &j = js["analysis"][sec];
             dV = j["dV"] | 0.1;
             dir = {1,1,1};  // scale directions
             AnalysisBase::name = "Virtual Volume Move";

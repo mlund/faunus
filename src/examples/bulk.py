@@ -24,7 +24,8 @@ d = {
       },
 
     "analysis" : {
-      "virial" : { "nstep":10 }
+      "virial" : { "nstep":5 },
+      "virtualvolume" : { "nstep":5, "dV":0.2 }
       },
 
     "moves" : {

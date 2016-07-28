@@ -63,6 +63,7 @@ int main() {
   UnitTest test(mcp);                    // class for unit testing
   mv.test(test);
   sys.test(test);
+  analyzer.test(test);
 
   // print information
   cout << loop.info() + sys.info() + mv.info() + analyzer.info() + test.info();

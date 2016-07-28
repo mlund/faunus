@@ -1986,19 +1986,29 @@ namespace Faunus {
      *
      * @f[
      * \frac{p^{ex}}{k_BT} = -\frac{ \ln \langle
-     * e^{-\Delta U / k_BT} \rangle }{ \Delta V }
+     * e^{-\Delta U / k_BT} \rangle_{NVT} }{ \Delta V }
      * @f]
      *
-     * based on Widom perturbation. For more information, see doi:10.1063/1.472721
+     * based on Widom perturbation. The energy as evaluated by
+     * calculating all group-to-group interactions (`Energy::g2g`)
+     * and, for atomic groups, the internal energy
+     * (`Energy::g_internal`). For using the full Hamiltonian,
+     * use the keyword `fullenergy` as shown below.
      *
      * Input parameters:
      *
-     * Keyword   |  Description
-     * :-------- | :-------------------------------------------
-     * `nstep`   | Sample every n'th time `sample()` is called
-     * `dV`      | Volume perturbation (angstrom cubed)
+     * Keyword      | Description
+     * :----------  | :-------------------------------------------
+     * `nstep`      | Sample every n'th time `sample()` is called
+     * `dV`         | Volume perturbation (angstrom cubed)
+     * `fullenergy` | Use full Hamiltonian (default: False)
+     *
+     * More information:
+     * - doi:10.1063/1.472721 (basics)
+     * - doi:10.1063/1.4767375 (pressure tensor, surface tension etc.)
      *
      * @todo Untested for molecular systems
+     * @note Be aware that external energies are currently disabled. Issue w. volume?
      */
     template<class Tspace>
       class VirtualVolumeMove : public AnalysisBase {
@@ -2008,35 +2018,53 @@ namespace Faunus {
           Tspace* spc;
           Point dir;
           double dV;
+          bool fullenergy;
           Average<double> duexp; // < exp(-du/kT) >
 
           void scale(double Vold, double Vnew) {
+            for (auto g : spc->groupList())
+              g->setMassCenter(*spc); // make sure CM's are up-to-date
+
             double xyz = cbrt( Vnew/Vold );
             double xy  = sqrt( Vnew/Vold );
-            spc->geo.setVolume( Vnew );
-            pot->setSpace(*spc);
             for (auto g : spc->groupList())
               g->scale(*spc, dir, xyz, xy); // scale trial coordinates to new volume
+
+            spc->geo.setVolume( Vnew );
+            pot->setSpace(*spc);
+          }
+
+          double energy(typename Tspace::ParticleVector &p) {
+            if (fullenergy)
+              return Energy::systemEnergy(*spc, *pot, p);
+
+            double u=0;
+            for (auto g : spc->groupList())
+              if (g->isAtomic())
+                u += pot->g_internal(p, *g);
+            for (size_t i=0; i<spc->groupList().size()-1; i++)
+              for (size_t j=i+1; j<spc->groupList().size(); j++)
+                u += pot->g2g(p, *spc->groupList().at(i), *spc->groupList().at(j));
+            return u;
           }
 
           void _sample() override {
             double Vold = spc->geo.getVolume();
             double Vnew = Vold + dV;
 
-            double uold = Energy::systemEnergy(*spc, *pot, spc->p);
+            double uold = energy(spc->p);
             scale(Vold, Vnew);
-            double unew = Energy::systemEnergy(*spc, *pot, spc->trial);
+            double unew = energy(spc->trial);
             duexp += exp(-(uold-unew));
 
             // restore old configuration
-            spc->geo.setVolume( Vold );
-            pot->setSpace(*spc);
             for (auto g : spc->groupList())
               g->undo(*spc);
+            spc->geo.setVolume( Vold );
+            pot->setSpace(*spc);
 
             assert(
-                fabs(uold-Energy::systemEnergy(*spc, *pot, spc->p)) < 1e-7
-                && "System not properly restored!");
+                fabs(uold-energy(spc->p)) < 1e-7 && "System improperly restored!");
           }
 
           string _info() override {
@@ -2047,10 +2075,16 @@ namespace Faunus {
             if (cnt>0) {
               o << pad(SUB,w, "Volume perturbation (dV)") << dV << _angstrom + cubed + "\n"
                 << pad(SUB,w, "Perturbation directions") << dir.transpose() << "\n"
+                << pad(SUB,w, "Full Hamiltonian") << std::boolalpha << fullenergy << "\n"
                 << pad(SUB,w, "Excess pressure") << pex << kT + "/" + angstrom + cubed
                 << " = " << pex / 1.0_mM << " mM = " << pex / 1.0_Pa << " Pa\n";
             }
             return o.str();
+          }
+
+          void _test(UnitTest &test) override {
+            double pex = -log( duexp.avg() ) / dV;
+            test("virtualvolume_pressure_mM", pex/1.0_mM );
           }
 
         public:
@@ -2059,6 +2093,7 @@ namespace Faunus {
             auto &j = js["analysis"][sec];
             dV = j["dV"] | 0.1;
             dir = {1,1,1};  // scale directions
+            fullenergy = j["fullenergy"] | false;
             AnalysisBase::name = "Virtual Volume Move";
             AnalysisBase::cite = "doi:10.1063/1.472721";
           }

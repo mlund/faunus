@@ -13,9 +13,11 @@ namespace Faunus {
       stepcnt = 0;
     }
 
-    AnalysisBase::AnalysisBase(Tmjson &j) : w(30), cnt(0), runfraction(1.0) {
-      steps = j["nstep"] | int(1);
+    AnalysisBase::AnalysisBase(Tmjson &j, const string &section) : w(30), cnt(0), runfraction(1.0) {
+      assert(!section.empty());
+      steps = j[section]["nstep"] | int(1);
       stepcnt = 0;
+      pfx = section;
     }
 
     AnalysisBase::~AnalysisBase() {}
@@ -27,6 +29,8 @@ namespace Faunus {
       cnt++;
       return true;
     }
+
+    Tmjson AnalysisBase::_json() { return Tmjson(); }
 
     void AnalysisBase::_sample() { /* make pure virtual! */ }
 
@@ -65,6 +69,20 @@ namespace Faunus {
       }
       o << _info();
       return o.str();
+    }
+
+    Tmjson AnalysisBase::json() {
+      Tmjson j;
+      if ( ! pfx.empty() )
+        if (cnt>0) {
+          j[ pfx ] = {
+            { "title", name }, 
+            { "samples", cnt },
+            { "relative time", timer.result() }
+          };
+          j = merge( j, _json() );
+        }
+      return j;
     }
 
     TwobodyForce::TwobodyForce(InputMap &in, Group &g1, Group &g2, Group &_ions) {
@@ -155,32 +173,6 @@ namespace Faunus {
       return o.str();
     }
 
-    ChargeMultipole::ChargeMultipole(){
-      name="Multipole";
-    }
-
-    string ChargeMultipole::_info(){
-      using namespace textio;
-      char k=13;
-      std::ostringstream o;
-      if (!exclusionlist.empty()) {
-        o << pad(SUB,w, "Exclusion list");
-        for (auto i : exclusionlist)
-          o << i << " ";
-      }
-      o << endl << indent(SUB) << std::left << setw(w) << "Macromolecule  "
-        << setw(k+4) << bracket("Z")
-        << setw(k+11) << bracket("Z"+squared)+"-"+bracket("Z")+squared
-        << setw(k+5) << bracket(textio::mu)
-        << setw(k+5) << bracket(textio::mu+squared)+"-"+bracket(textio::mu)+squared << endl;
-      for (auto &m : Z)
-        o << indent(SUB) << std::left << setw(w) << m.first << setw(k) << m.second.avg()
-          << setw(k+1) << Z2[m.first].avg()-pow(m.second.avg(),2)
-          << setw(k) << mu[m.first].avg()
-          << setw(k) << mu2[m.first].avg()-pow(mu[m.first].avg(),2)<< endl;
-      return o.str();
-    }
-
     void BilayerStructure::_test(UnitTest &t) {
       t("bilayer_order", S.avg() );
       t("bilayer_area", A.avg() );
@@ -211,6 +203,13 @@ namespace Faunus {
 
     void CombinedAnalysis::test(UnitTest &test) {
       for (auto i : v) i->test(test);
+    }
+
+    Tmjson CombinedAnalysis::json() {
+      Tmjson js;
+      for (auto i : v)
+        js = merge(js, i->json() );
+      return js;
     }
 
   }//namespace

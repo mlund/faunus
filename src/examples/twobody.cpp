@@ -16,7 +16,6 @@ int main(int argc, char** argv) {
     + Energy::MassCenterConstrain<Tspace>(mcp, spc);
 
   Analysis::LineDistribution<> rdf(0.2);
-  Analysis::ChargeMultipole mpol;
   Analysis::MultipoleDistribution<Tspace> mpd(mcp);
   Analysis::CombinedAnalysis analysis(mcp, pot, spc);
 
@@ -37,8 +36,6 @@ int main(int argc, char** argv) {
 
       mpd.sample( spc, *spc.groupList()[0], *spc.groupList()[1] );
       rdf( spc.geo.dist( spc.groupList()[0]->cm, spc.groupList()[1]->cm ))++;
-      for (auto i : spc.groupList())
-        mpol.sample(*i, spc);
 
     } // end of micro loop
 
@@ -52,7 +49,7 @@ int main(int argc, char** argv) {
 
   } // end of macro loop
 
-  cout << loop.info() + sys.info() + mv.info() + mpol.info() << endl;
+  cout << loop.info() + sys.info() + mv.info() << endl;
 }
 
 /**

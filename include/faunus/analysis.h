@@ -45,25 +45,30 @@ namespace Faunus {
     class AnalysisBase {
       private:
         virtual string _info()=0; //!< info all classes must provide
+        virtual Tmjson _json();   //!< result of analysis as json object
         virtual void _test(UnitTest&);
+
         int stepcnt;          //!< counter between sampling points
         int steps;            //!< Sample interval (do not modify)
+
       protected:
         TimeRelativeOfTotal<std::chrono::microseconds> timer;
         char w;               //!< width of info
         unsigned long int cnt;//!< number of samples - increased for every run()==true.
         string name;          //!< descriptive name
         string cite;          //!< reference, url, doi etc. describing the analysis
+        string pfx;           //!< Prefix/section in JSON file where parameters are stored
         bool run();           //!< true if we should run, false of not (based on runfraction)
         virtual void _sample();
       public:
         AnalysisBase();
-        AnalysisBase(Tmjson&);
+        AnalysisBase(Tmjson&, const string&);
         virtual ~AnalysisBase();
         string info();       //!< Print info and results
         double runfraction;  //!< Chance that analysis should be run (default 1.0 = 100%)
         void test(UnitTest&);//!< Perform unit test
         void sample();       //!< Sample event.
+        Tmjson json();       //!< Get info and results as json object
     };
 
     /**
@@ -206,7 +211,7 @@ namespace Faunus {
       public:
         template<class Tpotential>
         VirialPressure( Tmjson &j, Tpotential &pot, Tspace &spc, string pfx="virial" )
-          : spc(&spc), pot(&pot), AnalysisBase( j["analysis"][pfx] ) {
+          : spc(&spc), pot(&pot), AnalysisBase( j["analysis"], pfx ) {
           auto _j = j["analysis"][pfx];
           dim = _j["dim"] | 3;
           area = _j["area"] | 0.0;
@@ -657,7 +662,7 @@ namespace Faunus {
         PolymerShape() { name="Polymer Shape"; }
 
         PolymerShape(Tmjson &j, Tspace &spc, string pfx="polymershape")
-          : AnalysisBase(j["analysis"][pfx]), spc(&spc) {
+          : AnalysisBase(j["analysis"], pfx), spc(&spc) {
           name="Polymer Shape";
           auto m = j["analysis"][pfx]["mollist"];
           for (auto &i : m) {   // loop over molecule names
@@ -682,72 +687,122 @@ namespace Faunus {
      * groups via their names.
      * The dipole moment is calculated with respect to the mass center.
      *
+     * Parameters are specified in `["analysis"]["chargemultipole"]:
+     *
+     * Key        | Description
+     * :--------- | :--------------------------------
+     * `nstep`    | Sample at every n'th microstep
+     * `mollist`  | Array of molecule names to be analysed
+     *
      * @author Anil Kurut
      * @date Lund 2012
      */
-    class ChargeMultipole : public AnalysisBase {
-      private:
-        std::map< string, Average<double> > Z, Z2, mu, mu2;
+    template<typename Tspace>
+      class ChargeMultipole : public AnalysisBase {
+        private:
+          Tspace* spc;
+          vector<int> molid; // molid to analyse
+          std::map< string, Average<double> > Z, Z2, mu, mu2;
 
-        template<class Tgroup, class Tpvec>
-          double charge(const Tgroup &g, const Tpvec &p, double Z=0) {
+          double charge(const Group &g, double Z=0) {
             for (auto i : g)
-              if (!excluded(p[i]))
-                Z+=p[i].charge;
+              if ( !excluded( spc->p[i] ) )
+                Z+=spc->p[i].charge;
             return Z;
           }
 
-        template<class Tgroup, class Tspace>
-          double dipole(const Tgroup &g, const Tspace &spc) {
-            assert( spc.geo.dist(g.cm, g.massCenter(spc))<1e-9
+          double dipole(const Group &g) {
+            assert( spc->geo.dist(g.cm, g.massCenter(*spc))<1e-9
                 && "Mass center must be in sync.");
             Point t, mu(0,0,0);
             for (auto i : g)
-              if (!excluded(spc.p[i])) {
-                t = spc.p[i]-g.cm;                // vector to center of mass
-                spc.geo.boundary(t);               // periodic boundary (if any)
-                mu+=spc.p[i].charge*t;
+              if (!excluded(spc->p[i])) {
+                t = spc->p[i]-g.cm;                // vector to center of mass
+                spc->geo.boundary(t);               // periodic boundary (if any)
+                mu+=spc->p[i].charge*t;
               }
             return mu.len();
           }
 
-        /** @brief Determines particle should be excluded from analysis */
-        template<class Tparticle>
-          bool excluded(const Tparticle &p){
-            if (exclusionlist.count(atom[p.id].name)==0)
-              return false;
-            return true;
-          }
+          /** @brief Determines particle should be excluded from analysis */
+          template<class Tparticle>
+            bool excluded(const Tparticle &p) {
+              if (exclusionlist.count(atom[p.id].name)==0)
+                return false;
+              return true;
+            }
 
-        string _info();
-      public:
-        ChargeMultipole();
-
-        /** @brief Sample properties of Group (identified by group name) */
-        template<class Tspace>
-          void sample(Group &g, const Tspace &spc) {
+          /** @brief Sample properties of Group (identified by group name) */
+          void __sample(const Group &g) {
             assert(!g.name.empty() && "All Groups should have a name!");
-            if ( run() )
-              if ( spc.molecule[g.molId].isMolecular() ) {
-                double z=charge(g, spc.p);
-                Z[g.name]+=z;
-                Z2[g.name]+=pow(z,2);
-                double dip=dipole(g,spc);
-                mu[g.name]+=dip;
-                mu2[g.name]+=pow(dip,2);
+            if ( spc->molecule[g.molId].isMolecular() ) {
+              double z    = charge(g);
+              double dip  = dipole(g);
+              Z[g.name]  += z;
+              Z2[g.name] += z*z;
+              mu[g.name] += dip;
+              mu2[g.name]+= dip*dip;
+            }
+          }
+
+          /* @brief Sample properties of Group (identified by group name) */
+          void _sample() override {
+            for (auto id : molid) // loop over molecule id's
+              for (auto g : spc->findMolecules(id)) // loop over molecules of that id
+                __sample(*g);
+          }
+
+          string _info() override {
+            using namespace textio;
+            char k=13;
+            std::ostringstream o;
+            if (!exclusionlist.empty()) {
+              o << pad(SUB,w, "Exclusion list");
+              for (auto i : exclusionlist)
+                o << i << " ";
+            }
+            o << endl << indent(SUB) << std::left << setw(w) << "Macromolecule  "
+              << setw(k+4) << bracket("Z")
+              << setw(k+11) << bracket("Z"+squared)+"-"+bracket("Z")+squared
+              << setw(k+5) << bracket(textio::mu)
+              << setw(k+5) << bracket(textio::mu+squared)+"-"+bracket(textio::mu)+squared << endl;
+            for (auto &m : Z)
+              o << indent(SUB) << std::left << setw(w) << m.first << setw(k) << m.second.avg()
+                << setw(k+1) << Z2[m.first].avg()-pow(m.second.avg(),2)
+                << setw(k) << mu[m.first].avg()
+                << setw(k) << mu2[m.first].avg()-pow(mu[m.first].avg(),2)<< endl;
+            return o.str();
+          }
+
+          Tmjson _json() override {
+            Tmjson j;
+            auto &_j = j[pfx]["mollist"];
+            for (auto &m : Z) {
+              _j[m.first]["Z"] = m.second.avg();
+              _j[m.first]["Z2"] = Z2[m.first].avg();
+              _j[m.first]["mu"] = mu[m.first].avg();
+              _j[m.first]["mu2"] = mu2[m.first].avg(); 
+            }
+            return j;
+          }
+
+        public:
+          ChargeMultipole(Tmjson &j, Tspace &spc, string pfx="chargemultipole")
+            : AnalysisBase(j["analysis"], pfx), spc(&spc) {
+              name="Charge Multipole";
+              auto m = j["analysis"][pfx]["mollist"];
+              for (auto &i : m) {   // loop over molecule names
+                string molname = i.get<string>();
+                auto it = spc.molList().find(molname);
+                if (it != spc.molList().end())
+                  molid.push_back(it->id);
+                else
+                  std::cerr << "# Charge multipole  warning: molecule not found!" << endl;
               }
-          }
+            }
 
-        /* @brief Sample properties of Group (identified by group name) */
-        template<typename Tgroup, typename Tspace>
-          void sample(const std::vector<Tgroup> &gvec, const Tspace &spc) {
-            if (run())
-              for (auto &g : gvec)
-                sample(*g, spc);
-          }
-
-        std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
-    };
+          std::set<string> exclusionlist; //!< Atom names listed here will be excluded from the analysis.
+      };
 
     /**
      * @brief Multipolar decomposition between groups as a function of separation
@@ -1947,7 +2002,7 @@ namespace Faunus {
 
         public:
           CylindricalDensity( Tmjson &j, Tspace &spc, string pfx="cyldensity" )
-            : spc(&spc), data(0.2), AnalysisBase( j["analysis"][pfx] ) {
+            : spc(&spc), data(0.2), AnalysisBase( j["analysis"], pfx ) {
               name="Cylindrical Density";
               auto _j = j["analysis"][pfx];
               zmin    = _j["zmin"] | 0.0;
@@ -2089,7 +2144,7 @@ namespace Faunus {
 
         public:
           VirtualVolumeMove( Tmjson &js, Tenergy &pot, Tspace &spc,
-              string sec="virtualvolume") : AnalysisBase(js["analysis"][sec]), spc(&spc), pot(&pot) {
+              string sec="virtualvolume") : AnalysisBase(js["analysis"], sec), spc(&spc), pot(&pot) {
             auto &j = js["analysis"][sec];
             dV = j["dV"] | 0.1;
             dir = {1,1,1};  // scale directions
@@ -2106,17 +2161,18 @@ namespace Faunus {
      * for the following keywords to activate various analysis
      * functions:
      *
-     * Keyword        |  Description
-     * :------------- |  :----------------------------
-     * `polymershape` |  `Analysis::PolymerShape`
-     * `virial`       |  `Analysis::VirialPressure`
-     * `virtualvolume`|  `Analysis::VirtualVolumeMove`
+     * Keyword           |  Description
+     * :---------------- |  :----------------------------
+     * `polymershape`    |  `Analysis::PolymerShape`
+     * `virial`          |  `Analysis::VirialPressure`
+     * `virtualvolume`   |  `Analysis::VirtualVolumeMove`
+     * `chargemultipole` |  `Analysis::ChargeMultipole`
      */
-    class CombinedAnalysis : private AnalysisBase {
+    class CombinedAnalysis : public AnalysisBase {
       private:
         vector<AnalysisBase *> v;
-        string _info();
-        void _sample();
+        string _info() override;
+        void _sample() override;
       public:
         CombinedAnalysis(AnalysisBase *a, AnalysisBase *b);
 
@@ -2132,6 +2188,8 @@ namespace Faunus {
                 v.push_back(new PolymerShape<Tspace>(j, spc));
               if (i.key() == "cyldensity")
                 v.push_back(new CylindricalDensity<Tspace>(j, spc));
+              if (i.key() == "chargemultipole")
+                v.push_back(new ChargeMultipole<Tspace>(j, spc));
             }
           }
 
@@ -2151,8 +2209,14 @@ namespace Faunus {
         void sample();
         void test(UnitTest&);
         string info();
+        Tmjson json();
 
-        ~CombinedAnalysis() {
+        inline ~CombinedAnalysis() {
+          std::ofstream f("analysis_out.json");
+          if (f) {
+            f << std::setw(4) << json() << std::endl;
+            f.close();
+          }
           for (auto i : v)
             delete i;
         }

@@ -2562,11 +2562,12 @@ namespace Faunus {
           using base::pot;
           using base::spc;
           using base::w;
-          string _info();
-          void _trialMove();
-          void _acceptMove();
-          void _rejectMove();
-          double _energyChange();
+          string _info() override;
+          Tmjson _json() override;
+          void _trialMove() override;
+          void _acceptMove() override;
+          void _rejectMove() override;
+          double _energyChange() override;
           void add(Group&);       // scan group for ions with non-zero activities
 
           AtomTracker<Tspace> tracker;
@@ -2584,7 +2585,7 @@ namespace Faunus {
           Group* saltPtr;  // GC ions *must* be in this group
 
           // unit testing
-          void _test(UnitTest &t) {
+          void _test(UnitTest &t) override {
             for (auto &m : map) {
               auto s=base::jsondir+"_"+atom[m.first].name;
               t(s+"_activity", atom[m.first].activity);
@@ -2776,6 +2777,24 @@ namespace Faunus {
             << "\n";
         }
         return o.str();
+      }
+
+    template<class Tspace>
+      Tmjson GrandCanonicalSalt<Tspace>::_json() {
+        Tmjson js;
+        if (base::cnt>0) { 
+          auto &j = js[ base::jsondir ];
+          for (auto &m : map) { // loop over GC species
+            Tid id=m.first;
+            j[ "atoms" ][ atom[id].name ] = {
+              { "activity", atom[id].activity },
+              { "molarity", m.second.rho.avg()/pc::Nav/1e-27 },
+              { "gamma", atom[id].activity / (m.second.rho.avg()/pc::Nav/1e-27) },
+              { "N", m.second.rho.avg()*spc->geo.getVolume() }
+            };
+          }
+        }
+        return js;
       }
 
     /**

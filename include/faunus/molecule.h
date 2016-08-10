@@ -28,9 +28,10 @@ namespace Faunus {
       Point offset;      //!< Added to random position. Default (0,0,0)
       bool checkOverlap; //!< Set to true to enable container overlap check
       bool rotate;       //!< Set to true to randomly rotate molecule when inserted. Default: true
+      bool keeppos;      //!< Set to true to keep original positions (default: false)
       int maxtrials;     //!< Maximum number of overlap checks if `checkOverlap==true`
 
-      RandomInserter() : dir(1,1,1), offset(0,0,0), checkOverlap(true), maxtrials(2e3) { name = "random"; }
+      RandomInserter() : dir(1,1,1), offset(0,0,0), checkOverlap(true), keeppos(false), maxtrials(2e3) { name = "random"; }
 
       Tpvec operator() (Geometry::Geometrybase &geo, const Tpvec &p, TMoleculeData &mol) {
         bool _overlap=true;
@@ -56,19 +57,25 @@ namespace Faunus {
               geo.boundary( i );
             }
           } else { // insert molecule
-            Point a, b;
-            geo.randompos(a);              // random point in container
-            a = a.cwiseProduct(dir);       // apply user defined directions (default: 1,1,1)
-            Geometry::cm2origo(geo, v);    // translate to origo - obey boundary conditions
-            Geometry::QuaternionRotate rot;
-            b.ranunit(slump);              // random unit vector
-            rot.setAxis(geo, {0,0,0}, b, slump() * 2 * pc::pi); // random rot around random vector
-            for (auto &i : v) {            // apply rotation to all points
-              if (rotate)
-                i = rot(i) + a + offset;   // ...and translate
-              else
-                i += a + offset;
-              geo.boundary(i);             // ...and obey boundaries
+            if (keeppos) {                   // keep original positions (no rotation/trans)
+              for (auto &i : v)              // ...but let's make sure it fits
+                if (geo.collision(i,0))
+                  throw std::runtime_error("Error: Inserted molecule does not fit in container");
+            } else {                         // generate a now position/orientation
+              Point a, b;
+              geo.randompos(a);              // random point in container
+              a = a.cwiseProduct(dir);       // apply user defined directions (default: 1,1,1)
+              Geometry::cm2origo(geo, v);    // translate to origo - obey boundary conditions
+              Geometry::QuaternionRotate rot;
+              b.ranunit(slump);              // random unit vector
+              rot.setAxis(geo, {0,0,0}, b, slump() * 2 * pc::pi); // random rot around random vector
+              for (auto &i : v) {            // apply rotation to all points
+                if (rotate)
+                  i = rot(i) + a + offset;   // ...and translate
+                else
+                  i += a + offset;
+                geo.boundary(i);             // ...and obey boundaries
+              }
             }
           }
 
@@ -130,6 +137,7 @@ namespace Faunus {
    * `fasta`       | string  | Construct bonded chain from fasta sequence (hardcoded k and req)
    * `insdir`      | string  | Directions for generation of random position. Default: "1 1 1" = XYZ
    * `insoffset`   | string  | Translate generated random position. Default: "0 0 0" = no translation
+   * `keeppos`     | bool    | Keep original positions (`insdir`, `insoffset` ignored. Default: `false`)
    * `Ninit`       | int     | Initial number of molecules
    * `checkoverlap`| bool    | Check for overlap while inserting. Default: true
    * `rotate`      | bool    | Randomly rotate molecule or anisotropic atom upon insertion. Default: true
@@ -178,6 +186,7 @@ namespace Faunus {
           ins.offset << ( molecule.value()["insoffset"] | string("0 0 0") );
           ins.checkOverlap = molecule.value()["checkoverlap"] | true;
           ins.rotate       = molecule.value()["rotate"] | true;
+          ins.keeppos      = molecule.value()["keeppos"] | false;
           setInserter( ins );
         }
 

@@ -625,20 +625,25 @@ namespace Faunus {
        * Box dimensions for the frame must be manually
        * set by the `ioxtc::setbox()` function before calling this.
        */
-      template<class Tpoint, class Talloc>
-        bool save(const string &file, const std::vector<Tpoint,Talloc> &p) {
-          if (xd==NULL)
-            xd=xdrfile_open(&file[0], "w");
-          if (xd!=NULL) {
-            rvec *x = new rvec [p.size()];
+      template<class Tpoint, class Talloc, class Tgroup=Group>
+        bool save(const string &file, const std::vector<Tpoint,Talloc> &p, Tgroup g = Group() ) {
+          if ( g.empty() )
+            g.resize( p.size() );
+          size_t N = g.size();
+          assert( N > 0 );
+          if ( xd == NULL )
+            xd = xdrfile_open(&file[0], "w");
+          if ( xd != NULL ) {
+            rvec *x = new rvec[N];
             unsigned int i=0;
-            for (auto &pi : p) {
-              x[i][0] = pi.x()*0.1 + xdbox[0][0]*0.5; // AA->nm
-              x[i][1] = pi.y()*0.1 + xdbox[1][1]*0.5; // move inside sim. box
-              x[i][2] = pi.z()*0.1 + xdbox[2][2]*0.5; //
+            for ( auto j : g ) {
+              assert( i>=0 && i<p.size() && "Index out of range" );
+              x[i][0] = p[j].x()*0.1 + xdbox[0][0]*0.5; // AA->nm
+              x[i][1] = p[j].y()*0.1 + xdbox[1][1]*0.5; // move inside sim. box
+              x[i][2] = p[j].z()*0.1 + xdbox[2][2]*0.5; //
               i++;
             }
-            write_xtc(xd,p.size(),step_xtc++,time_xtc++,xdbox,x,prec_xtc);
+            write_xtc( xd, N, step_xtc++, time_xtc++, xdbox, x, prec_xtc );
             delete[] x;
             return true;
           }

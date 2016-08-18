@@ -56,6 +56,26 @@ namespace Faunus {
         assert(front()>=0);
       }
 
+      /* @brief Get begin/end iterators to contained particles in particle vector */
+      template<class Tpvec>
+        std::pair<typename Tpvec::iterator, typename Tpvec::iterator> to_iter(Tpvec &p) {
+          assert( p.size() >= size() );
+          assert( size() == std::distance( begin(), end() ) );
+          auto _beg = p.begin() + front();
+          auto _end = _beg + std::distance( begin(), end() );
+          return {_beg, _end};
+        }
+
+      /* @brief Get begin/end iterators to contained particles in particle vector */
+      template<class Tpvec>
+        std::pair<typename Tpvec::const_iterator, typename Tpvec::const_iterator> to_iter(const Tpvec &p) {
+          assert( p.size() >= size() );
+          assert( size() == std::distance( begin(), end() ) );
+          auto _beg = p.begin() + front();
+          auto _end = _beg + std::distance( begin(), end() );
+          return {_beg, _end};
+        }
+
       /* @brief Greater than operator w. respect to back element */
       bool operator> (Group &other) { return this->back() > other.back(); }
 
@@ -65,6 +85,16 @@ namespace Faunus {
             (this->back() == other.back()) &&
             (this->molId == other.molId) &&
             (this->molsize == other.molsize)  );
+      }
+
+      /** @brief Convert front/back to vector of ints, i.e. `[front, front+1, ... , back]` */
+      vector<int> range() const {
+        std::vector<int> v( size() );
+        if (size()>0) {
+          std::iota( v.begin(), v.end(), front() );
+          assert( v.front()==front() && v.back()==back() );
+        }
+        return v;
       }
 
       /** @brief Information string */

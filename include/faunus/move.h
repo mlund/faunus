@@ -2799,15 +2799,24 @@ namespace Faunus {
 
     /**
      * @brief Grand Canonical Titration derived from Grand Canonical Salt
-     *
      * @date Lund 2015
-     * @warning Untested
      *
-     * TODO: contains lots of redundant code from SwapMove, could inherit from there 
+     * Input parameters:
+     *
+     *  Keyword      | Description
+     *  :----------- | :----------------------
+     *  `neutralize` | Neutralize system w. GC ions. Default: `true`
+     *  `avgfile`    | Save AAM/PQR file w. average charges at end of simulation (TODO)
+     *  `scale2int`  | When saving `avgfile`, scale charges to ensure integer net charge (default: `false`)
+     *
+     * @todo: contains lots of redundant code from SwapMove, could inherit from there 
      * as well
      */
     template<class Tspace>
       class GrandCanonicalTitration : public GrandCanonicalSalt<Tspace> {
+        private:
+          string avgfile; 
+          bool scale2int;   // if true, scale avg. charge to nearest int
         protected:
           typedef GrandCanonicalSalt<Tspace> base;
           typedef typename Tspace::ParticleType Tparticle;
@@ -2842,6 +2851,8 @@ namespace Faunus {
         public:
           template<class Tenergy>
             GrandCanonicalTitration(Tenergy&, Tspace&, Tmjson&, string="gctit");
+
+          ~GrandCanonicalTitration() { /* todo */ }
 
           template<class Tpvec>
             int findSites( Tpvec &p ){
@@ -2887,6 +2898,9 @@ namespace Faunus {
         /* Sync particle charges with `AtomMap` */
         for (auto i : eqpot->eq.sites)
           spc->trial[i].charge = spc->p[i].charge = atom[ spc->p[i].id ].charge;
+
+        avgfile   = j["moves"][sec]["avgfile"] | string();
+        scale2int = j["moves"][sec]["scale2int"] | false;
 
         // neutralise system, if needed, using GC ions
         if ( j["moves"][sec]["neutralize"] | true ) {

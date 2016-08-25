@@ -286,8 +286,9 @@ namespace Faunus {
               if (structure.substr(structure.find_last_of(".") + 1) == "pqr")
                 FormatPQR::load( structure, v );
               if ( !v.empty() ) {
-                Geometry::cm2origo(
-                    Geometry::Sphere(1e20), v ); // move to origo
+                if ( keeppos == false )
+                  Geometry::cm2origo(
+                      Geometry::Sphere(1e20), v ); // move to origo
                 pushConformation( v );        // add conformation
                 for ( auto &p : v )           // add atoms to atomlist
                   atoms.push_back(p.id);

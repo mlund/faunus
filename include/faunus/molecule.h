@@ -263,6 +263,7 @@ namespace Faunus {
           Ninit       = _js["Ninit"] | 0;
           capacitance = _js["Cavg"] | 0.0;
           meancharge  = _js["Zavg"] | 0.0;
+          bool keeppos= _js["keeppos"] | false;
           activity    = _js["activity"] | 0.0;
           chemPot     = log( activity * 1.0_molar );
 

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import json, sys, os
 from subprocess import call
 from shutil import copyfile
@@ -25,7 +26,8 @@ def mkinput():
     "unittest" : { "testfile":"penalty.test", "stable":False }
   }
 }
-  print >> open('penalty.json', 'w+'), json.dumps(j, indent=4)
+  with open('penalty.json', 'w+') as f:
+      f.write(json.dumps(j, indent=4))
 
 exe  = './penalty'
 if os.path.exists('./pf_penalty'):

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import json, sys, os
 from subprocess import call, check_output
 from shutil import copyfile
@@ -46,7 +47,8 @@ d = {
     }
 
 # generate json file
-print >> open('bulk.json', 'w+'), json.dumps(d, indent=4)
+with open('bulk.json', 'w+') as f:
+    f.write(json.dumps(d, indent=4))
 
 exe='./bulk'
 rc=1

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import json, sys, os
 from subprocess import call, check_output
 from shutil import copyfile
@@ -108,8 +109,8 @@ def mkinput():
           "mcloop"   : { "macro" : 10, "micro" : micro }
           }
       }
-  print >> open('twobody.json', 'w+'), json.dumps(d, indent=4)
-
+  with open('twobody.json', 'w+') as f:
+      f.write(json.dumps(d, indent=4))
 
 # Main execution starts here.
 exe="./twobody"

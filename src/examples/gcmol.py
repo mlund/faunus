@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+
+from __future__ import print_function
 import json, sys, os
 from subprocess import call, check_output
 from shutil import copyfile
@@ -46,7 +48,8 @@ d = {
     }
 
 # generate json file
-print >> open(name+'.json', 'w+'), json.dumps(d, indent=4)
+with open(name+'.json', 'w+') as f:
+    f.write(json.dumps(d, indent=4))
 
 #-----------------------------------------------------------
 # Make water molecule...

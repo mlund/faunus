@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+from __future__ import print_function
 import json, sys, os
 from subprocess import call
 from shutil import copyfile
@@ -31,7 +31,8 @@ j = {
       }
     }
 
-print >> open('stripes.json', 'w+'), json.dumps(j, indent=4)
+with open('stripes.json', 'w+') as f:
+    f.write(json.dumps(j, indent=4))
 
 exe='./stripes'
 if ( os.access( exe, os.X_OK )):

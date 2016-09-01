@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import json, sys, os
 from subprocess import call
 from shutil import copyfile
@@ -31,8 +32,8 @@ def mkinput():
         "Cl": { "q": -1.0, "r": 2.0, "dp": 50, "activity": 0.05 }
         }
       }
-
-  print >> open('grand.json', 'w+'), json.dumps(d, indent=4)
+  with open('grand.json', 'w+') as f:
+      f.write(json.dumps(d, indent=4))
 
 exe='./grand'
 if ( os.access( exe, os.X_OK )):

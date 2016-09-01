@@ -6,6 +6,7 @@
 #SBATCH -J test
 #SBATCH --qos=test
 
+from __future__ import print_function
 import numpy as np
 import json, sys, os
 from subprocess import call
@@ -113,7 +114,8 @@ def mkinput():
       "unittest" : { "testfile":"manybody.test", "stable":False }
     }
   }
-  print >> open(name+'.json', 'w+'), json.dumps(d, indent=4)
+  with open(name+'.json', 'w+') as f:
+      f.write(json.dumps(d, indent=4))
 
 Zp    = 7.0   # Protein charge (approximate, for counter ion calc.)
 Rp    = 20.   # Protein max radius used for cutoff determination

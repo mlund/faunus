@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import json, sys, os
 from subprocess import call, check_output
 from shutil import copyfile
@@ -62,14 +63,16 @@ d = {
     }
 
 # generate json file
-print >> open('polymers.json', 'w+'), json.dumps(d, indent=4)
+with open('polymers.json', 'w+') as f:
+    f.write(json.dumps(d, indent=4))
 
 # generate molecule file with four atoms
-print >> open('polymers.aam', 'w+'), """4
+with open('polymers.aam', 'w+') as f:
+    f.write("""4
 MM  0   0.00   0.00   0.00    1.0   1  3.0
 MM  1   7.60   0.00   0.00    1.0   1  3.0
 MM  2   0.00   7.60   0.00    1.0   1  3.0
-MM  3   7.60   7.60   0.00    1.0   1  3.0"""
+MM  3   7.60   7.60   0.00    1.0   1  3.0""")
 
 exe='./polymers'
 rc=1

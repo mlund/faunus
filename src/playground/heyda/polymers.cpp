@@ -69,34 +69,34 @@ int main() {
   return test.numFailed();
 }
 /** 
- * @page example_polymers Example: Polymers
- *
- * This will simulate an arbitrary number of linear polymers in the NPT ensemble
- * with explicit salt particles and implicit solvent (dielectric continuum).
- * We include the following Monte Carlo moves:
- *
- * - salt translation
- * - monomer translation
- * - polymer translation and rotation
- * - polymer crankshaft and pivot rotations
- * - isobaric volume move (NPT ensemble)
- *
- * ![Hardsphere polyelectrolytes with counter ions](polymers.png)
- *
- * Run this example from the `examples` directory:
- *
- * ~~~~~~~~~~~~~~~~~~~
- * $ make
- * $ cd src/examples
- * $ python ./polymers.py
- * ~~~~~~~~~~~~~~~~~~~
- *
- * polymers.py
- * ===========
- * This is a python run-script that generates all required
- * input as well as run the main program. This is also used
- * for running the unittest when running `make test`. 
- *
- * @include polymers.py
+@page example_polymers Example: Polymers
+
+This will simulate an arbitrary number of linear polymers in the NPT ensemble
+with explicit salt particles and implicit solvent (dielectric continuum).
+We include the following Monte Carlo moves:
+
+- salt translation
+- monomer translation
+- polymer translation and rotation
+- polymer crankshaft and pivot rotations
+- isobaric volume move (NPT ensemble)
+
+![Hardsphere polyelectrolytes with counter ions](polymers.png)
+
+Run this example from the `examples` directory:
+
+~~~~~~~~~~~~~~~~~~~
+$ make
+$ cd src/examples
+$ python ./polymers.py
+~~~~~~~~~~~~~~~~~~~
+
+polymers.py
+===========
+This is a python run-script that generates all required
+input as well as run the main program. This is also used
+for running the unittest when running `make test`. 
+
+@include polymers.py
  */
 

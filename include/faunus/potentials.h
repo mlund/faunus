@@ -1009,12 +1009,12 @@ namespace Faunus {
           }
           
 	 /**
-	  * @param M2V Average of squared dipole moment, divided by volume of that sample
+	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
 	  * @brief Returns dielectric constant using Tinfoil conditions.
 	  * \f$ 1 + \frac{<M^2>}{3V\epsilon_0k_BT} \f$
 	  */
           double dielectric_constant(double M2V) const override { 
-	    return (1.0 + M2V*pc::e*pc::e*1e10/(3*pc::kT()*pc::e0)); 
+	    return (1.0 + 3.0*M2V); 
 	  }
 
         template<class Tparticle>

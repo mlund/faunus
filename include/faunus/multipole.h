@@ -952,7 +952,7 @@ namespace Faunus {
 	  eps_RF = false;
 	  if(fabs(eps_rf) < 1e-6) {
 	    eps = _lB/pow(rc2,1.5)/eps_r;
-	    eps_RF = true;
+	    eps_RF = true; // Conducting boundary conditions
 	  }
           updateDiel(eps_rf);
         }
@@ -975,6 +975,18 @@ namespace Faunus {
 	  if(!eps_RF)
 	    eps = _lB*(2*(er-eps_r)/(2*er+eps_r))/pow(rc2,1.5)/eps_r;
         }  
+        
+	 /**
+	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+	  * @brief Returns dielectric constant for the dipolar Wolf method (see DOI:10.1063/1.4923001)
+	  */
+          double dielectric_constant(double M2V) const override { 
+	    if(eps_RF)
+	      return (1.0 + 3.0*M2V);
+	    if(std::fabs(eps_rf - 1.0) < 1e-6) // Assumes vacuum inside the sphere
+	      return (2*M2V + 1.0)/(1.0 - M2V);
+	    return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
+	  }
 
         string info(char w) {
           using namespace textio;
@@ -1057,6 +1069,17 @@ namespace Faunus {
 #endif
               return Point(0,0,0);
             }
+          
+	 /**
+	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+	  * @brief Returns dielectric constant for the dipolar Wolf method (see DOI:10.1063/1.4923001)
+	  */
+          double dielectric_constant(double M2V) const override { 
+	    double kappaCutoff = wolf.getKappa()*wolf.getCutoff();
+	    double kappaCutoff2 = kappaCutoff*kappaCutoff;
+	    double T0 = erf_x(kappaCutoff) - 2*kappaCutoff*exp(-kappaCutoff2)/3.0/sqrt(pc::pi)*(kappaCutoff2*kappaCutoff2 + 2.0*kappaCutoff2 + 3.0);
+	    return (M2V*T0 + 2.0*M2V + 1.0)/(M2V*T0 - M2V + 1.0);
+	  }
 
           template<class Tpvec, class Tgroup>
             double selfEnergy(const Tpvec &p, const Tgroup &g) { 
@@ -1128,91 +1151,6 @@ namespace Faunus {
           using namespace textio;
           std::ostringstream o;
           o << Coulomb::info(w)
-            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-          return o.str();
-        }
-    };
-
-    class IonDipoleWolf : public IonDipole {
-      private:
-        string _brief() { return "Ion-dipole Wolf"; }
-        WolfBase wolf;
-      public:
-        IonDipoleWolf(InputMap &in) : IonDipole(in),
-        wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
-            in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
-          name+=" Wolf";
-        }
-
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return _lB*wolf.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
-          }
-
-        string info(char w) {
-          using namespace textio;
-          std::ostringstream o;
-          o << IonDipole::info(w)
-            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-          return o.str();
-        }
-    };
-
-    class DipoleDipoleWolf : public DipoleDipole {
-      private:
-        string _brief() { return "Dipole-dipole Wolf"; }
-        WolfBase wolf;
-      public:
-        DipoleDipoleWolf(InputMap &in) : DipoleDipole(in),
-        wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
-            in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
-          name+=" Wolf";
-        }
-
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
-          }
-
-        /** @brief Dipole field at `r` due to dipole `p` 
-         */
-        template<class Tparticle>
-          Point field(const Tparticle &p, const Point &r) const {
-            return _lB*wolf.fieldDipole(p,r);
-          }
-
-        string info(char w) {
-          using namespace textio;
-          std::ostringstream o;
-          o << DipoleDipole::info(w)
-            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-          return o.str();
-        }
-    };
-
-    class IonQuadWolf : public IonQuad {
-      private:
-        string _brief() { return "Ion-Quadrupole Wolf"; }
-        WolfBase wolf;
-      public:
-        IonQuadWolf(InputMap &in) : IonQuad(in),
-        wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
-            in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
-          name+=" Wolf";
-        }
-
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return _lB*wolf.q2quad(a.charge, b.theta,b.charge, a.theta,r);
-          }
-
-        string info(char w) {
-          using namespace textio;
-          std::ostringstream o;
-          o << IonQuad::info(w)
             << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
             << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
           return o.str();

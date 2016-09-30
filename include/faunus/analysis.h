@@ -1585,7 +1585,7 @@ namespace Faunus {
       sca = mu_box.dot(mu_box);
       HM2_box(sca)++;
       M2_box += sca;
-      diel += pot->dielectric_constant(M2_box.avg()/V);
+      diel += pot->dielectric_constant(M2_box.avg()*pc::e*pc::e*1e10/(9.0*V*pc::kT()*pc::e0));
       
       int cnt = 0;
       for(int i = 0; i < 3; i++) {

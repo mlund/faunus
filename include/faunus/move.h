@@ -4053,11 +4053,10 @@ namespace Faunus {
       };
 
     /**
-     * @brief Rotate single particles
+     * @brief Translate single particles
      *
      * This move works in the same way as AtomicTranslation but does
-     * rotations of non-isotropic particles instead of translation. This move
-     * has no effect on isotropic particles such as Faunus::PointParticle.
+     * translations on a 2D hypersphere-surface.
      */
     template<class Tspace>
       class AtomicTranslation2DHyperSphere : public AtomicTranslation<Tspace> {
@@ -4076,7 +4075,7 @@ namespace Faunus {
           void _trialMove();
           void _acceptMove();
           void _rejectMove();
-          double dprot;      //!< Temporary storage for current angle
+          double dp;      //!< Temporary storage for current angle
           double radius;
 
         public:
@@ -4090,8 +4089,8 @@ namespace Faunus {
           Tspace &s,
           Tmjson &j,
           string sec) : base(e, s, j, sec) {
-        base::title="Single Particle Rotation";
-	radius = j["system"]["spheresurface"]["radius"] | 0.0;
+        base::title="Single Particle Translation on 2D sphere-surface";
+	radius = j["system"]["spheresurface"]["radius"] | -1.0;
 	assert(radius > 0 && "Radius has to be larger than zero!");
       }
     template<class Tspace>
@@ -4106,26 +4105,24 @@ namespace Faunus {
 
         if (iparticle>-1) {
           assert( iparticle<(int)spc->p.size() && "Trial particle out of range");
-          dprot = atom[spc->p[iparticle].id ].dprot;
-          if (dprot<1e-6)
-            dprot = base::genericdp;
+          dp = atom[spc->p[iparticle].id ].dp;
+          if (dp<1e-6)
+            dp = base::genericdp;
 	  
-          Point xyz = spc->trial[iparticle];
-	  Point rtp(radius,0.0,0.0);
-	  rtp.y() = std::acos(xyz.z()/radius);
-	  if(std::fabs(xyz.x()) > 1e-6)
-	    rtp.z() = std::atan(xyz.y()/xyz.x());
+	  Point rtp = spc->trial[iparticle].xyz2rtp(); // Get the spherical coordinates of the particle
 	  
-	  double dTheta = slump()*dprot;
-	  double dPsi = slump()*dprot;
-          Point rtp_trial(radius,0.0,0.0);
-	  rtp_trial.y() = rtp.y() + rtp.x()*dTheta;
-	  rtp_trial.z() = rtp.z() + rtp.x()*std::sin(rtp.y())*dPsi;
-	  Point xyz_trial(0.0,0.0,0.0);
-	  xyz_trial.x() = radius*std::sin(rtp_trial.y())*std::cos(rtp_trial.z());
-	  xyz_trial.y() = radius*std::sin(rtp_trial.y())*std::sin(rtp_trial.z());
-          xyz_trial.z() = radius*std::cos(rtp_trial.y());
-	  spc->trial[iparticle] = xyz_trial;
+	  Point slump_angles(0,0,0);
+	  slump_angles.ranunit2D(slump);  // Get 2D random unit-vector, Format: (0,slump_theta,slump_phi) where sqrt(slump_theta^2 + slump_phi^2) = 1
+	  slump_angles *= slump()*dp/radius;
+	  
+	  double scalefactor_theta = radius*sin(rtp.z()); // Scale-factor for theta
+	  double scalefactor_phi = radius;                // Scale-factor for phi
+	  
+	  Point theta_dir = Point(-sin(rtp.y()),cos(rtp.y()),0);    // Unit-vector in theta-direction
+	  Point phi_dir = Point(cos(rtp.y())*cos(rtp.z()),sin(rtp.y())*cos(rtp.z()),-sin(rtp.z()));  // Unit-vector in phi-direction
+	  Point xyz = spc->trial[iparticle] + scalefactor_theta*theta_dir*slump_angles.y() + scalefactor_phi*phi_dir*slump_angles.z(); // New position
+	  spc->trial[iparticle] = radius*xyz/xyz.norm(); // Convert to cartesian coordinates
+	  
 	  assert( fabs((spc->trial[iparticle].norm() - radius)/radius) < 1e-9 && "Trial particle does not lie on the sphere surface!");
         }
         base::change.mvGroup[spc->findIndex(igroup)].push_back(iparticle);
@@ -4133,7 +4130,7 @@ namespace Faunus {
 
     template<class Tspace>
       void AtomicTranslation2DHyperSphere<Tspace>::_acceptMove() {
-        sqrmap[ spc->p[iparticle].id ] += pow(dprot*180/pc::pi, 2);
+        sqrmap[ spc->p[iparticle].id ] += pow(dp*180/pc::pi, 2);
         accmap[ spc->p[iparticle].id ] += 1;
         spc->p[iparticle] = spc->trial[iparticle];
       }
@@ -4167,7 +4164,7 @@ namespace Faunus {
           for (auto m : sqrmap) {
             auto id=m.first;
             o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
-              << setw(l-6) << ( (atom[id].dprot<1e-6) ? genericdp : atom[id].dprot*180/pc::pi);
+              << setw(l-6) << ( (atom[id].dp<1e-6) ? genericdp : atom[id].dp);
             o.precision(3);
             o << setw(l) << accmap[id].avg()*100
               << setw(l) << sqrmap[id].avg()

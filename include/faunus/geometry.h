@@ -106,7 +106,7 @@ namespace Faunus {
          * radius`   | Sphere radius [angstrom]
          */
         inline SphereSurface( Tmjson &j ) : Geometrybase("SphereSurface") {
-          setRadius( j["system"][ textio::lowercase(name) ] ["radius"] | -1.0 );
+          setRadius( j["system"][ textio::lowercase(name) ]["radius"] | -1.0 );
         }
 
         void randompos(Point &) override;

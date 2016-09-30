@@ -261,6 +261,7 @@ namespace Faunus {
        / (volume(x) *(double)this->count() * bulkconc.avg());
      }
 
+   protected:
      Average<double> bulkconc; //!< Average bulk concentration
      Average<double> Npart;
     public:
@@ -346,6 +347,107 @@ namespace Faunus {
        }
        Npart+=bulk;
        bulkconc += bulk / spc.geo.getVolume();
+      }
+      
+        /** @brief Save table to disk */
+        template<class T=double>
+          void save(string filename) {
+              if (!Ttable::map.empty()) Ttable::map.begin()->second*=2;   // compensate for half bin width
+              if (Ttable::map.size()>1) (--Ttable::map.end())->second*=2; // -//-
+
+            if (!Ttable::map.empty()) {
+              std::ofstream f(filename.c_str());
+              f.precision(10);
+              if (f) {
+                for (auto &m : Ttable::map)
+                  f << m.first << " " << get(m.first) << "\n";
+              }
+            }
+
+              if (!Ttable::map.empty()) Ttable::map.begin()->second/=2;   // restore half bin width
+              if (Ttable::map.size()>1) (--Ttable::map.end())->second/=2; // -//-
+          }
+      
+   };
+
+  /**
+   * @brief Radial distribution function for a 2D sphere-surface
+   *
+   * The normal 'volume'-scaling is not proportional to the covered area 
+   * and the bulkconcentration is scaled by the total area.
+   */
+  template<typename Tx=double, typename Ty=unsigned long>
+   class RadialDistribution2D : public RadialDistribution<Tx,Ty> {
+    private:
+      typedef RadialDistribution<Tx,Ty> Tbase;
+      Tx R,R2;
+     virtual double volume(Tx x) {
+       return 2.0*pc::pi*R2*( - cos((x+0.5*this->dx)/R) + cos((x-0.5*this->dx)/R));
+     }
+    public:
+     RadialDistribution2D(Tx res=0.2) : RadialDistribution<Tx,Ty>(res) {
+      this->name="Radial Distribution Function 2D";
+      setRadius(0.0);
+     }
+     
+     void setRadius(Tx radius) {
+      R = radius;
+      R2 = R*R;
+     }
+     
+     /*!
+      * \brief Sample radial distibution of two atom types
+      * \param spc Simulation space
+      * \param g Group to search
+      * \param ida Atom id of first particle
+      * \param idb Atom id of second particle
+      */
+     template<class Tspace>
+      void sample(Tspace &spc, Group &g, short ida, short idb) {
+       for (auto i=g.begin(); i!=g.end()-1; i++)
+        for (auto j=i+1; j!=g.end(); j++)
+         if ( (spc.p[*i].id==ida && spc.p[*j].id==idb) || (spc.p[*i].id==idb && spc.p[*j].id==ida) ) {
+          Tx r=spc.geo.dist(spc.p[*i], spc.p[*j]);
+          if (r<=Tbase::maxdist)
+           this->operator() (r)++;
+         }
+       int bulk=0;
+       for (auto i : g){
+        if (spc.p[i].id==ida || spc.p[i].id==idb){
+         bulk++;
+        }
+       }
+       Tbase::Npart+=bulk;
+       Tbase::bulkconc += bulk / (4.0*pc::pi*R2);
+      }
+      
+     template<class Tspace>
+      void sample(Tspace &spc, short ida, short idb) {
+       Group all(0, spc.p.size()-1);
+       assert(all.size()==(int)spc.p.size());
+       return sample(spc,all,ida,idb);
+      }
+
+     // Same as sampeMolecule but different inputs
+     template<class Tspace>
+      void sampleMoleculeGroup(Tspace &spc, vector<Group> &g, string name) {
+       int bulk = 0;
+       for(size_t i = 0; i < g.size()-1; i++) {
+        Group ig = g[i];
+        if(ig.name == name) {
+         bulk++;
+         for(size_t j = i+1; j < g.size(); j++) {
+          Group jg = g[j];
+          if(jg.name == name) {
+           Point icm = ig.massCenter(spc);
+           Point jcm = jg.massCenter(spc);
+           this->operator() (spc.geo.dist(icm,jcm))++;
+          }
+         }
+        }
+       }
+       Tbase::Npart+=bulk;
+       Tbase::bulkconc += bulk / (4.0*pc::pi*R2);
       }
    };
 

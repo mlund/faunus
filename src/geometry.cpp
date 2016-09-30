@@ -103,16 +103,28 @@ namespace Faunus {
       assert(radius>0 && "Radius must be larger than zero.");
       r = radius; 
       r2 = r*r; 
-      diameter = 2*r; 
+      diameter = 2.0*r; 
       len = Point(r,diameter,0);
+    }
+    
+    double SphereSurface::getRadius() {
+      return r;
     }
 
     double SphereSurface::_getVolume() const {
-      return 4/3.*pc::pi*std::pow(r,3);
+      return 4.0/3.0*pc::pi*std::pow(r,3.0);
     }
 
     void SphereSurface::_setVolume(double vol) {
-      setRadius( cbrt( 3*vol/(4*pc::pi) ) );
+      setRadius( cbrt( 3.0*vol/(4.0*pc::pi) ) );
+    }
+    
+    double SphereSurface::_getArea() const {
+      return 4.0*pc::pi*r2;
+    }
+
+    void SphereSurface::_setArea(double area) {
+      setRadius( sqrt(area/4.0/pc::pi) );
     }
 
     void SphereSurface::setlen(const Point &l) {
@@ -139,7 +151,7 @@ namespace Faunus {
         a.y() = (slump()-0.5)*diameter;
         a.z() = (slump()-0.5)*diameter;
       } while ( a.squaredNorm()>r2 );
-      a = r*a/sqrt(a.dot(a));
+      a = r*a/a.norm();
     }
 
     bool SphereSurface::collision(const Point &a, double radius, collisiontype type) const {

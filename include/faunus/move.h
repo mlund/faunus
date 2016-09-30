@@ -4108,17 +4108,15 @@ namespace Faunus {
             dp = base::genericdp;
 	  
 	  Point rtp = spc->trial[iparticle].xyz2rtp(); // Get the spherical coordinates of the particle
-	  
-	  Point slump_angles(0,0,0);
-	  slump_angles.ranunit2D(slump);  // Get 2D random unit-vector, Format: (0,slump_theta,slump_phi) where sqrt(slump_theta^2 + slump_phi^2) = 1
-	  slump_angles *= slump()*dp/radius;
+	  double slump_theta = dp*(slump()-0.5);  // Get random theta-move
+          double slump_phi = dp*(slump()-0.5);   // Get random phi-move
 	  
 	  double scalefactor_theta = radius*sin(rtp.z()); // Scale-factor for theta
 	  double scalefactor_phi = radius;                // Scale-factor for phi
 	  
 	  Point theta_dir = Point(-sin(rtp.y()),cos(rtp.y()),0);    // Unit-vector in theta-direction
 	  Point phi_dir = Point(cos(rtp.y())*cos(rtp.z()),sin(rtp.y())*cos(rtp.z()),-sin(rtp.z()));  // Unit-vector in phi-direction
-	  Point xyz = spc->trial[iparticle] + scalefactor_theta*theta_dir*slump_angles.y() + scalefactor_phi*phi_dir*slump_angles.z(); // New position
+	  Point xyz = spc->trial[iparticle] + scalefactor_theta*theta_dir*slump_theta + scalefactor_phi*phi_dir*slump_phi; // New position
 	  spc->trial[iparticle] = radius*xyz/xyz.norm(); // Convert to cartesian coordinates
 	  
 	  assert( fabs((spc->trial[iparticle].norm() - radius)/radius) < 1e-9 && "Trial particle does not lie on the sphere surface!");

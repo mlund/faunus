@@ -89,11 +89,14 @@ namespace Faunus {
         double r,r2,diameter;
         void _setVolume(double) override;
         double _getVolume() const override;
+        void _setArea(double);
+        double _getArea() const;
         string _info(char) override;
       public:
         Point len;
         void setlen(const Point&);              //!< Reset radius (angstrom)
         void setRadius(double);                 //!< Set radius (angstrom)
+        double getRadius();                     //!< Get radius (angstrom)
         SphereSurface(double);                         //!< Construct from radius (angstrom)
 
         /**

@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# THIS RUN SCRIPT IS USED AS A UNIT TEST SO PLEASE
+# DO NOT UPLOAD ANY MODIFIED VERSIONS TO SVN UNLESS
+# TO UPDATE THE TEST.
+
+source_tests_dir="`dirname $0`"
+cp -f $source_tests_dir/spheresurface.test . 2> /dev/null
+cp -f $source_tests_dir/spheresurface.state state 2> /dev/null
+
+echo '{
+    "atomlist" : {
+      "Pos" : { "q":  1.0, "sigma":1.0, "eps":0.0, "dp":1.0 },
+      "Neg" : { "q": -1.0, "sigma":1.0, "eps":0.0, "dp":1.0 }
+      },
+
+    "moleculelist" : {
+      "Charges" : { "atoms":"Pos Neg", "Ninit":100, "atomic":true }
+      },
+
+    "energy" : {
+      "nonbonded" : { "coulomb" : { "epsr":72.0 } }
+      },
+
+    "moves" : {
+      "atomtranslate2Dhypersphere" : { 
+        "Charges" : { "peratom":true }
+        }
+      },
+
+    "system" : {
+      "temperature"   : 300,
+      "spheresurface" : { "radius" :10 },
+      "mcloop"        : { "macro":10, "micro":100 },
+      "unittest"      : { "testfile":"spheresurface.test", "stable":false },
+      "atomlist"      : "spheresurface.json",
+      "moleculelist"  : "spheresurface.json"
+      }
+    }' > spheresurface.json
+
+exe=./spheresurface
+if [ -x $exe ]; then
+ $exe
+ rc=$?
+ exit $rc
+fi
+exit 1

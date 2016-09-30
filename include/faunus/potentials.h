@@ -556,6 +556,89 @@ namespace Faunus {
             return o.str();
           }
       };
+      
+    /**
+     * @brief Lennard-Jones shifted (potential and) force with arbitrary mixing rule. Shifted according to
+     * 
+     * @f[
+     * U_{SF}(r) = U_{LJ}(r) - U_{LJ}(R_c) - (r - R_c)\left(\left.\frac{dU_{LJ}(r)}{dr}\right|_{r=R_c} \right)
+     * @f]
+     */
+    template<class Tmixingrule = LorentzBerthelot>
+      class LennardJonesMixed_SF : public PairPotentialBase {
+        protected:
+          Tmixingrule mixer; // mixing rule class for sigma and epsilon
+          string _brief() { return name + " w. " + mixer.name; }
+          PairMatrix<double> s2,eps,sp,sf; // matrix of sigma_ij^2 and eps_ij, and shifting potential- and shifting force-terms
+	  double cutoff,cutoff2,cutoff6;
+	  
+          inline void init() {
+            size_t n=atom.size(); // number of atom types
+            s2.resize(n); // not required...
+	    sp.resize(n); // not required...
+	    sf.resize(n); // not required...
+            eps.resize(n);// ...but possible reduced mem. fragmentation
+            for (auto &i : atom)
+              for (auto &j : atom) {
+                s2.set(i.id, j.id,pow( mixer.mixSigma( i.sigma, j.sigma), 2));
+		sp.set(i.id, j.id,  4.0_kJmol * mixer.mixEpsilon( i.eps, j.eps )*( pow( mixer.mixSigma( i.sigma, j.sigma), 12)/cutoff6/cutoff6 - pow( mixer.mixSigma( i.sigma, j.sigma), 6)/cutoff6 ));
+		sf.set(i.id, j.id,  4.0_kJmol * mixer.mixEpsilon( i.eps, j.eps )*( -12.0*pow( mixer.mixSigma( i.sigma, j.sigma), 12)/cutoff6/cutoff6/cutoff + 6.0*pow( mixer.mixSigma( i.sigma, j.sigma), 6)/cutoff6/cutoff ));
+                eps.set(i.id, j.id,4.0_kJmol * mixer.mixEpsilon( i.eps, j.eps ));
+              }
+          }
+
+        public:
+            LennardJonesMixed_SF(Tmjson &j, const string &sec="") {
+              name="Lennard-Jones shifted (potential and) force";
+	      cutoff = j["cutoff"] | 0.0;
+	      cutoff2 = cutoff*cutoff;
+	      cutoff6 = cutoff2*cutoff2*cutoff2;
+              init();
+            }
+
+          template<class Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+	      if(r2 > cutoff)
+		return 0.0;
+              double x=s2(a.id,b.id)/r2; //s2/r2
+              x=x*x*x; // s6/r6
+              return ( eps(a.id,b.id) * (x*x - x) - sp(a.id,b.id) - (sqrt(r2) - cutoff) * sf(a.id,b.id) );
+            }
+
+          template<typename Tparticle>
+            Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+	      if(r2 > cutoff)
+		return Point(0,0,0);
+              double s6=_powi<3>( s2(a.id,b.id) );
+              double r6=r2*r2*r2;
+              double r14=r6*r6*r2;
+              return ( 6.*eps(a.id,b.id) * s6 * (2*s6-r6) / r14 - sf(a.id,b.id) ) * p;
+            }
+
+          template<class Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+              return operator()(a,b,r.squaredNorm());
+            }
+
+          string info(char w=0) {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            o << indent(SUB) << name+" pair parameters:\n\n";
+            o.precision(4);
+            int n=(int)atom.size();
+            for (int i=0; i<n; i++)
+              for (int j=0; j<n; j++)
+                if (i>=j)
+                  if (i!=0 && j!=0) // ignure first "UNK" particle type
+                    o << indent(SUBSUB) << setw(12) << atom[i].name+"<->"+atom[j].name
+                      << indent(SUB) << sigma+" = " << setw(7) << sqrt( s2(i,j) ) << _angstrom
+                      << indent(SUB) << epsilon+" = " << setw(7) << eps(i,j)/4 << kT+" = "
+                      << eps(i,j) / 4.0_kJmol << " kJ/mol"
+		      << indent(SUB) << "Cut-off = " << setw(7) << cutoff << _angstrom
+                      << endl;
+            return o.str();
+          }
+      };
 
     template<class Tmixingrule=LorentzBerthelot>
       class CosAttractMixed : public LennardJonesMixed<Tmixingrule> {
@@ -1611,6 +1694,11 @@ namespace Faunus {
      * @brief Lennard-Jones potential with Lorentz-Berthelot mixing rule
      */
     typedef LennardJonesMixed<LorentzBerthelot> LennardJonesLB;
+    
+    /**
+     * @brief Shifted (potential and) force Lennard-Jones potential with Lorentz-Berthelot mixing rule
+     */
+    typedef LennardJonesMixed_SF<LorentzBerthelot> LennardJonesLB_SF;
 
     /**
      * @brief Combined Coulomb / HardSphere potential

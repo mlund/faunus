@@ -7,26 +7,26 @@ cp -f $source_tests_dir/water2.state state 2> /dev/null
 echo '{
   "system" : {
     "temperature"  : 298.15,
-    "cuboid"   : { "len" : 32.0 },
+    "cuboid"   : { "len" : 18.6 },
     "mcloop"   : { "macro":10, "micro":100 },
     "unittest" : { "testfile":"water2.test", "stable":false }
   },
 
   "energy" : {
     "nonbonded" : {
-      "coulomb" : { "epsr" : 1.0, "cutoff":15 },
-      "ewald"   : { "epsr" : 1.0, "cutoff":15, "eps_surf":0, "alpha":0.27, "cutoffK":5, "spherical_sum":true, "update_frequency":1000 }, 
-      "cutoff_g2g" : 15
+      "coulomb" : { "epsr" : 1.0, "cutoff":9 },
+      "ewald"   : { "epsr" : 1.0, "cutoff":9, "eps_surf":0, "alpha":0.35, "cutoffK":5, "spherical_sum":true, "update_frequency":216 }, 
+      "cutoff_g2g" : 9, "cutoff" : 9
     }
   },
 
   "atomlist" : {
-    "OW" : { "q":-0.8476, "sigma":3.16557, "eps":0.650629 },
-    "HW" : { "q": 0.4238, "sigma":0.0, "eps":0    }
+    "OW" : { "q":-0.8476, "sigma":3.16555789019988, "eps":0.650169580818748 },
+    "HW" : { "q": 0.4238, "sigma":0.00000000000000, "eps":0.000000000000000 }
   },
 
   "moleculelist" : {
-    "water" : { "structure":"water2.aam", "Ninit":1000, "insdir":"1 1 1" }
+    "water" : { "structure":"water2.aam", "Ninit":216, "insdir":"1 1 1" }
   },
 
   "moves" : {
@@ -38,9 +38,9 @@ echo '{
 }' > water2.json
 
 echo "3
-OW    1    2.30    6.28    1.13 -0.8476  15.99940 1.6
-HW    2    1.37    6.26    1.50  0.4238   1.00800 1
-HW    3    2.31    5.89    0.21  0.4238   1.00800 1
+OW    1    0.000000000000000    0.000000000000000    0.00 -0.8476  15.99940 1.58277894509994
+HW    2    1.000000000000000    0.000000000000000    0.00  0.4238   1.00800 0.00000000000000
+HW    3   -0.333333333333333    0.942809041582063    0.00  0.4238   1.00800 0.00000000000000
 " > water2.aam
 
 #rm state

@@ -112,7 +112,6 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
   CHECK( spc.p[1].muscalar == Approx(0.162582) ); // check induced moment
 }
 
-
 TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction") 
 {
   // Check against values from article: http://dx.doi.org/10.1063/1.481216
@@ -122,29 +121,30 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
   spc.p.resize(4);
   Group g(0,3);
   spc.groupList().push_back(&g);
+  
   spc.p[0] = Point(0,0,0);
   spc.p[1] = Point(1,0,0);
   spc.p[2] = Point(0,0,1);
   spc.p[3] = Point(1,0,1);
-  
   for(unsigned int i = 0; i < spc.p.size(); i++) {
       spc.p[i].charge = 0.0;
       spc.p[i].muscalar = 0.0;
   }
-  double lB = 560.7378949512486; // Scale with 'lB' in order to get right energy at 298 K 
-  
   spc.p[0].charge = 1.0;
   spc.p[1].charge = -1.0;
   spc.trial = spc.p;
   pot.setSpace(spc); // Updates vectors in Ewald
+  
   double ureal = pot.pairpot(spc.p[0],spc.p[1],spc.p[1]-spc.p[0]);
   double usurf_reci = pot.external(spc.p);
   double uself = pot.g_external(spc.p, g);
+  double lB = 560.7378949512486; // Scale with 'lB' in order to get right energy at 298 K 
   
   CHECK(ureal == Approx(-0.205903210732068*lB));
   CHECK(usurf_reci == Approx(0.215125076289333*lB));  // reciprocal energy in addition to surface energy
   CHECK(uself == Approx(-1.009253008808064*lB)); 
   CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-1.0000311*lB));  // Total ion-Ion interaction energy
+  
   spc.p[0].charge = 0.0;
   spc.p[1].charge = 0.0;
   spc.p[2].muscalar = 1.0;
@@ -161,6 +161,7 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
   CHECK(usurf_reci == Approx(0.582251578315622*lB)); // reciprocal energy in addition to surface energy
   CHECK(uself == Approx(-0.538268271364301*lB));
   CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-2.0003749*lB));  // Total dipole-dipole interaction energy
+  
 }
 
 

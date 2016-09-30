@@ -8,7 +8,7 @@ using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid> Tspace;
 #ifdef EWALD
-typedef LennardJonesLB Tpairpot;
+typedef LennardJonesLB_SF Tpairpot;
 #else
 typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
 #endif
@@ -43,7 +43,6 @@ int main() {
 #endif
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
-
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
   
   MCLoop loop(mcp);    // class for handling mc loops

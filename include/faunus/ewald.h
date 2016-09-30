@@ -75,7 +75,7 @@ namespace Faunus {
             double r1i_d = erfc_x(alpha/r1i)*r1i;
 
             if(useIonIon)
-              E += r1i_d*a.charge*b.charge;
+              E += r1i_d*a.charge*b.charge;  // return Tbase::bjerrumLength() * a.charge * b.charge * (1.0/r1 - 1.0/rc + (r1 - rc)*rc2i );
             if(!useIonDipole && !useDipoleDipole)
               return E*Tbase::bjerrumLength();
 
@@ -514,7 +514,7 @@ namespace Faunus {
 	      selfEnergyAverage += getSelfEnergy(spc->p,g,parameters);
 	      surfaceEnergyAverage += surfaceEnergy;
 	      reciprocalEnergyAverage += reciprocalEnergy;
-	      realEnergyAverage += getRealEnergy(spc->p);
+	      //realEnergyAverage += getRealEnergy(spc->p); // Takes a lot of time
               return 0.0;
 	    }
 	    // Move has been accepted
@@ -522,7 +522,7 @@ namespace Faunus {
 	    selfEnergyAverage += getSelfEnergy(spc->trial,g,parameters_trial);
 	    surfaceEnergyAverage += surfaceEnergy;
 	    reciprocalEnergyAverage += reciprocalEnergy;
-	    realEnergyAverage += getRealEnergy(spc->trial);
+	    //realEnergyAverage += getRealEnergy(spc->trial); // Takes a lot of time
 	    
 	    if(++cnt_accepted > update_frequency - 1) {
 	      double duB = getReciprocalEnergy(Q_ion_tot_trial,Q_dip_tot_trial,Aks_trial,V_trial);                        // Calulate with old vectors/matrices

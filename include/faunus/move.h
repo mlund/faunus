@@ -1000,9 +1000,7 @@ namespace Faunus {
           p.ranunit(slump);             // random unit vector
           p=igroup->cm_trial+p;                    // set endpoint for rotation
           angle=dp_rot* slump.half();
-	  //cout << "Rotate!        .-----------------   " << endl;
           igroup->rotate(spc->geo_trial,spc->trial, p, igroup->cm_trial, angle);
-	  //cout << "RotateOut!        .-----------------   " << endl;
         }
         if (dp_trans>1e-6) {
           p.x()=dir.x() * dp_trans * slump.half();

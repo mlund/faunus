@@ -34,7 +34,7 @@ int main() {
 
   spc.load("state");
 
-  Analysis::MultipoleAnalysis dian(spc,in);
+  Analysis::MultipoleAnalysis<Tspace> dian(spc,pot,in);
   DipoleWRL sdp;
   FormatXTC xtc(spc.geo.len.norm());
 

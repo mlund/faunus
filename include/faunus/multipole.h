@@ -1755,7 +1755,7 @@ namespace Faunus {
     /**
      * @brief Help-function for DipoleDipoleQ2.
      */
-    inline double Euler_type_function_A(double q, int N=300) {
+    inline double Euler_type_function(double q, int N=300, bool all=true) {
       if(q >= 1.0 - (1.0/2400.0))
         return 0.0;
       if(q <= (1.0/2400.0))
@@ -1765,27 +1765,13 @@ namespace Faunus {
       double value3 = 0.0;
       for(int nt = -N; nt <= N; nt++) {
 	double n = double(nt);
-        value1 += pow(-1.0,n)*pow(q,(3.0*n*n-n)/2.0);
-        value2 += pow(-1.0,n)*(3.0*n*n-n)/(2.0*q)*pow(q,(3.0*n*n-n)/2.0);
+	if(all) {
+	  value1 += pow(-1.0,n)*pow(q,(3.0*n*n-n)/2.0);
+	  value2 += pow(-1.0,n)*(3.0*n*n-n)/(2.0*q)*pow(q,(3.0*n*n-n)/2.0);
+	}
         value3 += pow(-1.0,n)*(3.0*n*n-n)/(2.0*q*q)*(3.0*n*n - n - 2.0)/2.0*pow(q,(3.0*n*n-n)/2.0);
       }
       return (value1 - value2*q + value3*q*q/3.0);
-    }
-
-    /**
-     * @brief Help-function for DipoleDipoleQ2.
-     */
-    inline double Euler_type_function_B(double q, int N=300) {
-      if(q >= 1.0 - (1.0/2400.0))
-        return 0.0;
-      if(q <= (1.0/2400.0))
-        return 0.0;
-      double value = 0.0;
-      for(int nt = -N; nt <= N; nt++) {
-	double n = double(nt);
-        value += pow(-1.0,n)*(3.0*n*n-n)/(2.0*q*q)*(3.0*n*n - n - 2.0)/2.0*pow(q,(3.0*n*n-n)/2.0);
-      }
-      return value*q*q/3.0;
     }
 
     /**
@@ -1821,12 +1807,12 @@ namespace Faunus {
 	  tab_utol = j[sec]["tab_utol"] | 1e-7; // Higher accuracy gives error
 	  tab_ftol = j[sec]["tab_ftol"] | 1e-2;
 
-          std::function<double(double)> Ak = [&](double q) { return Euler_type_function_A(q,N); };
+          std::function<double(double)> Ak = [&](double q) { return Euler_type_function(q,N); };
           ak.setRange(0,1);
           ak.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
           tableA = ak.generate( Ak );
 	  
-          std::function<double(double)> Bk = [&](double q) { return Euler_type_function_B(q,N); };
+          std::function<double(double)> Bk = [&](double q) { return Euler_type_function(q,N,false); };
           bk.setRange(0.0,1.0);
           bk.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
           tableB = bk.generate( Bk );

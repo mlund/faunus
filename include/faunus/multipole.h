@@ -286,7 +286,7 @@ namespace Faunus {
       double r1i_d, r2i, der_dT0c, T1, T1c_r1i, der_dT1c_r1i, T21, T22, T2c2_r2i, der_dT2c1, der_dT2c2_r2i;
     };
     private:
-    double rc1, rc1i, rc1i_d, rc2i, kappa, kappa2, constant, self_term_ion, self_term_dipole;
+    double rc1, rc1i, rc1i_d, rc2i, alpha, alpha2, constant, self_term_ion, self_term_dipole;
     double dT0c, T1c_rc1, dT1c_rc1, T2c1, T2c2_rc2, dT2c1, dT2c2_rc2;
     bool zeroDerivative;
     wdata data;
@@ -295,17 +295,17 @@ namespace Faunus {
     void calcWolfData(const Point &r) {
       data.r2i = 1/r.squaredNorm();
       double r1i = sqrt(data.r2i);
-      data.r1i_d = erfc_x(kappa/r1i)*r1i;
+      data.r1i_d = erfc_x(alpha/r1i)*r1i;
       double der = 0.0;
       if(zeroDerivative)
         der= (1/r1i) - rc1;
-      double expK = constant*exp(-kappa2/data.r2i);
+      double expK = constant*exp(-alpha2/data.r2i);
       data.der_dT0c = der*dT0c;
       data.T1 = (expK + data.r1i_d)*data.r2i;
       data.T1c_r1i = T1c_rc1*r1i;
       data.der_dT1c_r1i = der*dT1c_rc1*r1i;
       data.T21 = -(data.r1i_d + expK)*data.r2i;
-      data.T22 = (3.*data.r1i_d*data.r2i + (3.*data.r2i + 2.*kappa2)*expK)*data.r2i;
+      data.T22 = (3.*data.r1i_d*data.r2i + (3.*data.r2i + 2.*alpha2)*expK)*data.r2i;
       data.T2c2_r2i = T2c2_rc2*data.r2i;
       data.der_dT2c1 = der*dT2c1;
       data.der_dT2c2_r2i = der*dT2c2_rc2*data.r2i;
@@ -316,32 +316,32 @@ namespace Faunus {
      * @param alpha Dampening factor (inverse angstrom)
      * @param rcut Cutoff distance (angstrom)
      */
-    WolfBase(double alpha, double rcut) {
-      kappa = alpha;
-      kappa2 = kappa*kappa;
-      constant = 2*kappa/sqrt(pc::pi);
+    WolfBase(double alpha_in, double rcut) {
+      alpha = alpha_in;
+      alpha2 = alpha*alpha;
+      constant = 2*alpha/sqrt(pc::pi);
       rc1 = rcut;
       double rc2 = rc1*rc1;
       rc2i = 1/rc2;
       rc1i = 1/rc1;
-      double expKc = constant*exp(-kappa2/rc2i);
-      rc1i_d = erfc_x(kappa*rc1)*rc1i;
+      double expKc = constant*exp(-alpha2/rc2i);
+      rc1i_d = erfc_x(alpha*rc1)*rc1i;
 
       T1c_rc1 = (expKc + rc1i_d)*rc2i;
       T2c1 = -(expKc + rc1i_d)*rc2i;
-      T2c2_rc2 = (3.*rc1i_d*rc2i*rc2i + (3.*rc2i + 2.*kappa2)*expKc*rc2i);
+      T2c2_rc2 = (3.*rc1i_d*rc2i*rc2i + (3.*rc2i + 2.*alpha2)*expKc*rc2i);
 
       dT0c = -(expKc + rc1i_d)*rc1i;
-      dT1c_rc1 = (-2*T1c_rc1/rc1) - 2*kappa2*expKc*rc1i;
-      dT2c1 = -(3*T2c1/rc1) + (2*kappa2*exp(-rc2*kappa2)*rc1i*constant);
-      dT2c2_rc2 = (-3*T2c2_rc2/rc1) - (4*kappa2*kappa2*exp(-rc2*kappa2)*rc1i*constant);
+      dT1c_rc1 = (-2*T1c_rc1/rc1) - 2*alpha2*expKc*rc1i;
+      dT2c1 = -(3*T2c1/rc1) + (2*alpha2*exp(-rc2*alpha2)*rc1i*constant);
+      dT2c2_rc2 = (-3*T2c2_rc2/rc1) - (4*alpha2*alpha2*exp(-rc2*alpha2)*rc1i*constant);
 
       T1c_rc1 = T1c_rc1*rc1;
       dT1c_rc1 = dT1c_rc1*rc1;
       T2c2_rc2 = T2c2_rc2*rc2;
       dT2c2_rc2 = dT2c2_rc2*rc2;
-      self_term_ion = kappa/sqrt(pc::pi);
-      self_term_dipole = -0.5*((erfc_x(kappa*rc1)/rc2/rc1) + (2.0*kappa*exp(-kappa2*rc2)/(sqrt(pc::pi)*rc2)) + ((4.0/3.0)*kappa2*kappa/sqrt(pc::pi)));
+      self_term_ion = alpha/sqrt(pc::pi);
+      self_term_dipole = -0.5*((erfc_x(alpha*rc1)/rc2/rc1) + (2.0*alpha*exp(-alpha2*rc2)/(sqrt(pc::pi)*rc2)) + ((4.0/3.0)*alpha2*alpha/sqrt(pc::pi)));
     }
 
     void setType(bool zeroDerivative_in) {
@@ -367,6 +367,29 @@ namespace Faunus {
     double getDipoleSelfTerm() {
       return self_term_dipole;
     }
+    
+    /**
+     * @brief Returns ion-ion interaction.
+     * @param qA Charge of ion A
+     * @param qB Charge of ion B
+     * @param r2 Squared distance between articles
+     */
+    template<bool useWdata=false, class Tvec>
+      double q2q(double qA, double qB, double r2) const {
+        /* Code to use if calcWolfData is not called */
+        if (useWdata==false) {
+          double r2i = 1.0/r2;
+          if (r2i < rc2i)
+            return 0;
+          double r1i = sqrt(r2i);
+          double der = 0.0;
+          if(zeroDerivative)
+            der = (1/r1i) - rc1;
+          double r1i_d = erfc_x(alpha/r1i)*r1i;
+          return (qA*qB*(r1i_d - rc1i_d - der*dT0c));
+        }
+        return (qA*qB*(data.r1i_d - rc1i_d - data.der_dT0c));
+      }
 
     /**
      * @brief Returns ion-ion interaction.
@@ -385,7 +408,7 @@ namespace Faunus {
           double der = 0.0;
           if(zeroDerivative)
             der = (1/r1i) - rc1;
-          double r1i_d = erfc_x(kappa/r1i)*r1i;
+          double r1i_d = erfc_x(alpha/r1i)*r1i;
           return (qA*qB*(r1i_d - rc1i_d - der*dT0c));
         }
         return (qA*qB*(data.r1i_d - rc1i_d - data.der_dT0c));
@@ -407,7 +430,7 @@ namespace Faunus {
           if (r2i < rc2i)
             return 0;
           double r1i = sqrt(r2i);
-          double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
+          double T1 = (constant*exp(-alpha2/r2i) + erfc_x(alpha/r1i)*r1i)*r2i;
           double der = 0.0;
           if(zeroDerivative)
             der = (1/r1i) - rc1;
@@ -435,10 +458,10 @@ namespace Faunus {
           if (r2i < rc2i)
             return 0;
           double r1i = sqrt(r2i);
-          double r1i_d = erfc_x(kappa/r1i)*r1i;
-          double expK = constant*exp(-kappa2/r2i);
+          double r1i_d = erfc_x(alpha/r1i)*r1i;
+          double expK = constant*exp(-alpha2/r2i);
           double T2_1 = -(r1i_d + expK)*r2i;
-          double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
+          double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*alpha2)*expK)*r2i;
           double der = 0.0;
           if(zeroDerivative)
             der = (1/r1i) - rc1;
@@ -467,10 +490,10 @@ namespace Faunus {
           if (r2i < rc2i)
             return 0;
           double r1i = sqrt(r2i);
-          double r1i_d = erfc_x(kappa/r1i)*r1i;
-          double expK = constant*exp(-kappa2/r2i);
+          double r1i_d = erfc_x(alpha/r1i)*r1i;
+          double expK = constant*exp(-alpha2/r2i);
           double T2_1 = -(r1i_d + expK)*r2i;
-          double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
+          double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*alpha2)*expK)*r2i;
           double der = 0.0;
           if(zeroDerivative)
             der = (1/r1i) - rc1;
@@ -500,7 +523,7 @@ namespace Faunus {
           if (r2i < rc2i)
             return Point(0,0,0);
           double r1i = sqrt(r2i);
-          double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
+          double T1 = (constant*exp(-alpha2/r2i) + erfc_x(alpha/r1i)*r1i)*r2i;
           double der = 0.0;
           if(zeroDerivative)
             der = (1/r1i) - rc1;
@@ -522,10 +545,10 @@ namespace Faunus {
           if (r2i < rc2i)
             return Point(0,0,0);
           double r1i = sqrt(r2i);
-          double r1i_d = erfc_x(kappa/r1i)*r1i;
-          double expK = constant*exp(-kappa2/r2i);
+          double r1i_d = erfc_x(alpha/r1i)*r1i;
+          double expK = constant*exp(-alpha2/r2i);
           double T2_1 = -(r1i_d + expK)*r2i;
-          double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
+          double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*alpha2)*expK)*r2i;
           double der = 0.0;
           if(zeroDerivative)
             der = (1/r1i) - rc1;
@@ -540,10 +563,9 @@ namespace Faunus {
 
     double getRc2i() const { return rc2i; }
     double getR2i() const { return data.r2i; }
-    double getKappa() { return kappa; }
+    double getAlpha() { return alpha; }
     double getCutoff() { return rc1; }
   };
-
 
   /**
    * @brief Base class for Gaussian-damped interactions. Implemented according to DOI: 10.1002/jcc.20574
@@ -933,34 +955,142 @@ namespace Faunus {
 
         string info(char w) { return _brief(); }
     };
+    
+    /**
+     * @brief Ion-ion interaction with reaction field. The potential can be shifted such to be zero at the cut-off.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `eps_rf`          |  Dielectric constant of the surroundings.                (Default: \f$ \varepsilon_{RF} = 72 \f$))
+     * 
+     * @note If 'eps_rf' is set to (eps_r,<0,0) then 'vacuum'/insulating/conducting boundary conditions will be used. 
+     * @warning Untested!
+     */
+  template<bool shifted=false>
+    class IonIonRF : public Coulomb {
+      private:
+        string _brief() { return "Coulomb (reaction field)"; }
+        double rc1,rc2,eps_RF,eps_r,krf,crf;
+	bool eps_inf, eps_ins, eps_vac, eps_user; // Surrounding is: Conducting, Insulating, 'Vacuum', Set by user
+      public:
+        IonIonRF(Tmjson &j, const string &sec="coulomb") : Coulomb(j,sec) {
+          name+=" Reaction Field";
+          rc2 = pow(j[sec]["cutoff"] | pc::infty,2);
+          eps_r = j[sec]["eps_r"] | 1.0;
+	  eps_RF = j[sec]["eps_rf"] | 72.0;
+	  eps_inf = false;
+	  eps_ins = false;
+	  eps_user = false;
+	  eps_vac = false;
+	  if(fabs(eps_RF) < 1e-6) {
+	    eps_inf = true; // Conducting boundary conditions
+	  } else if(eps_RF < 0.0) {
+	    eps_ins = true; // Insulating boundary conditions
+	  } else if(fabs(eps_RF-eps_r) < 1e-6) {
+	    eps_vac = true; // 'Vacuum' boundary conditions
+	  } else {
+	    eps_user = true; // Set by user
+	  }
+          lB = pc::lB( eps_r );
+          updateDiel(eps_RF);
+        }
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
+	    double r2 = r.squaredNorm();
+            if (r2 < rc2)
+              return Coulomb::operator()(a,b,r) + (krf*r2 - crf)*a.charge*b.charge;
+            return 0;
+          }
+
+        void updateDiel(double eps_rf_updated) {
+	  if(eps_inf) {
+	    krf = lB*0.5/rc2/r1;
+	    crf = lB*1.5/rc1;
+	  } else if(eps_vac) {
+	    krf = 0.0;
+	    crf = lB/rc1;
+	  } else {
+	    eps_RF = eps_rf_updated;
+	    krf = lB*(eps_RF - eps_r)/(2.0*eps_RF + eps_r)/rc2/r1;
+	    crf = lB*3.0*eps_RF/(2.0*eps_RF + eps_r)/rc1;
+	  }
+	  if(!shifted)
+	    crf = 0.0;
+        }  
+        
+	 /**
+	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+	  * @brief Returns dielectric constant for the reaction field method (see DOI:10.1080/00268978300102721)
+	  */
+          double dielectric_constant(double M2V) const override { 
+	    if(eps_inf)
+	      return (1.0 + 3.0*M2V);
+	    if(eps_ins)
+	      return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
+	    if(eps_vac)
+	      return (2*M2V + 1.0)/(1.0 - M2V);
+	    return (6*M2V*eps_RF + 2*eps_RF + 1.0)/(1.0 + 2*eps_RF - 3*M2V);
+	  }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << Coulomb::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+	  if(eps_inf) {
+	    o << pad(SUB,w, epsilon_m+"RF") << infinity << endl;
+	  } else {
+	     o << pad(SUB,w, epsilon_m+"RF") << eps_RF << endl;
+	  }
+          return o.str();
+        }
+    };
 
     /**
-     * @brief Dipole-dipole interaction w. spherical cutoff and reaction field. Default value for the dielectric constant of
-     * surrounding continuum is 80 (water) while the default value of the cavity is unity (vacuum).
+     * @brief Dipole-dipole interaction with reaction field.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `eps_rf`          |  Dielectric constant of the surroundings.                (Default: \f$ \varepsilon_{RF} = 72 \f$))
+     * 
+     * @note If 'eps_rf' is set to (eps_r,<0,0) then 'vacuum'/insulating/conducting boundary conditions will be used. 
      */
     class DipoleDipoleRF : public DipoleDipole {
       private:
-        string _brief() { return "Dipole-dipole (RF)"; }
-        double rc2,eps,eps_rf,eps_r;
-	bool eps_RF;
+        string _brief() { return "Dipole-dipole (reaction field)"; }
+        double rc2,eps,eps_RF,eps_r;
+	bool eps_inf, eps_ins, eps_vac, eps_user; // Surrounding is: Conducting, Insulating, 'Vacuum', Set by user
       public:
         DipoleDipoleRF(Tmjson &j, const string &sec="coulomb") : DipoleDipole(j,sec) {
           name+=" Reaction Field";
           rc2 = pow(j[sec]["cutoff"] | pc::infty,2);
           eps_r = j[sec]["eps_r"] | 1.0;
-	  eps_rf = j[sec]["eps_rf"] | 80.0;
-	  eps_RF = false;
-	  if(fabs(eps_rf) < 1e-6) {
-	    eps = _lB/pow(rc2,1.5)/eps_r;
-	    eps_RF = true; // Conducting boundary conditions
+	  eps_RF = j[sec]["eps_rf"] | 72.0;
+	  eps_inf = false;
+	  eps_ins = false;
+	  eps_user = false;
+	  eps_vac = false;
+	  if(fabs(eps_RF) < 1e-6) {
+	    eps_inf = true; // Conducting boundary conditions
+	  } else if(eps_RF < 0.0) {
+	    eps_ins = true; // Insulating boundary conditions
+	  } else if(fabs(eps_RF-eps_r) < 1e-6) {
+	    eps_vac = true; // 'Vacuum' boundary conditions
+	  } else {
+	    eps_user = true; // Set by user
 	  }
-          updateDiel(eps_rf);
+          updateDiel(eps_RF);
         }
+        
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
             if (r.squaredNorm() < rc2)
               return (DipoleDipole::operator()(a,b,r) - eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar);
-            return 0;
+            return 0.0;
           }
 
         /** @brief Field at `r` due to dipole `p` 
@@ -971,21 +1101,29 @@ namespace Faunus {
             return (DipoleDipole::field(p,r) + eps*p.mu*p.muscalar);
           }
 
-        void updateDiel(double er) {
-	  if(!eps_RF)
-	    eps = _lB*(2*(er-eps_r)/(2*er+eps_r))/pow(rc2,1.5)/eps_r;
+        void updateDiel(double eps_rf_updated) {
+	  if(eps_inf) {
+	    eps = _lB/pow(rc2,1.5)/eps_r;
+	  } else if(eps_vac) {
+	    eps = 0.0;
+	  } else {
+	    eps_RF = eps_rf_updated;
+	    eps = _lB*(2*(eps_RF-eps_r)/(2*eps_RF+eps_r))/pow(rc2,1.5)/eps_r;
+	  }
         }  
         
 	 /**
 	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
-	  * @brief Returns dielectric constant for the dipolar Wolf method (see DOI:10.1063/1.4923001)
+	  * @brief Returns dielectric constant for the reaction field method (see DOI:10.1080/00268978300102721)
 	  */
           double dielectric_constant(double M2V) const override { 
-	    if(eps_RF)
+	    if(eps_inf)
 	      return (1.0 + 3.0*M2V);
-	    if(std::fabs(eps_rf - 1.0) < 1e-6) // Assumes vacuum inside the sphere
+	    if(eps_ins)
+	      return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
+	    if(eps_vac)
 	      return (2*M2V + 1.0)/(1.0 - M2V);
-	    return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
+	    return (6*M2V*eps_RF + 2*eps_RF + 1.0)/(1.0 + 2*eps_RF - 3*M2V);
 	  }
 
         string info(char w) {
@@ -993,47 +1131,70 @@ namespace Faunus {
           std::ostringstream o;
           o << DipoleDipole::info(w)
             << pad(SUB,w,"Cutoff") << sqrt(rc2) << " "+angstrom << endl;
-            if(eps_RF) {
+            if(eps_inf) {
 	     o << pad(SUB,w, epsilon_m+"RF") << infinity << endl;
 	    } else {
-	     o << pad(SUB,w, epsilon_m+"RF") << eps_rf << endl;
+	     o << pad(SUB,w, epsilon_m+"RF") << eps_RF << endl;
 	    }
           return o.str();
         }
     };
-
+    
+    /**
+     * @brief Class for multipolar interaction using the Wolf formalism, see DOI: 10.1063/1.478738, 10.1063/1.2206581, and 10.1063/1.4923001 for more info, 
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `alpha`           |  Daming of the interactions.                             (Default: \f$ \alpha = 0 \f$))
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `tab_utol`        |  Tolerance of splined energy-error.                      (Default: \f$ 10^{-9}\f$)
+     * `tab_ftol`        |  Tolerance of splined force-error.                       (Default: \f$ 10^{-5}\f$)
+     * 
+     * @note `tab_utol` and `tab_ftol` are only used if only the isotropic Coulomb interactions are calculated.
+     */
     template<bool useIonIon=true, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false, bool zeroDerivative=true>
       class MultipoleWolf : public PairPotentialBase {
         private:
           WolfBase wolf;
-          string _brief() {
-            std::ostringstream o;
-            o << "Multipole Wolf, lB=" << _lB << textio::_angstrom;
-            return o.str();          
-          }
+          string _brief() { return "Multipole Wolf"; }
+          Tabulate::Andrea<double> splitting_function;
+	  Tabulate::TabulatorBase<double>::data tabel;
+	  bool only_coulomb;
         protected:
-          double _lB;
+          double _lB, cutoff2;
         public:
-          MultipoleWolf(Tmjson &j, const string &sec="coulomb") : wolf((j[sec]["kappa"] | 0.0),
+          MultipoleWolf(Tmjson &j, const string &sec="coulomb") : wolf((j[sec]["alpha"] | 0.0),
               (j[sec]["cutoff"] | pc::infty)) {
             name="Multipole Wolf";
 	    _lB = Coulomb(j,sec).bjerrumLength();
-            double epsilon_r = (j[sec]["eps_r"] | 1.0);
             wolf.setType(zeroDerivative);
+	    cutoff2 = wolf.getCutoff()*wolf.getCutoff();
+	    only_coulomb = false;
+	    
+	    if((useIonDipole? 1:0) + (useDipoleDipole? 1:0) + (useIonQuadrupole? 1:0) == 0 && useIonIon) { // If only isotropic (Coulomb) interaction is used then ...
+	      only_coulomb = true;
+	      std::function<double(double)> temp_function = [&](double r2) { return wolf.q2q(1.0,1.0,r2)*sqrt(r2); }; // ... spline the Wolf splitting-function (for speed)
+	      splitting_function.setRange(0,j[sec]["cutoff"] | pc::infty);
+	      splitting_function.setTolerance(j[sec]["tab_utol"] | 1e-9,j[sec]["tab_ftol"] | 1e-5); // Tolerance in energy and force
+	      tabel = splitting_function.generate( temp_function );
+	    }
           }
           
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+	    if(only_coulomb)
+	      return _lB*wolf.q2q(a.charge,b.charge,r2);
             return operator()(a,b,Point(sqrt(r2),0,0));
           }
           
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
               double U_total = 0;
-              if((useIonIon? 1:0) + (useIonDipole? 1:0) + (useDipoleDipole? 1:0) + (useIonQuadrupole? 1:0) > 1) {
-                wolf.calcWolfData(r);
-                if (wolf.getR2i() < wolf.getRc2i())
+              if((useIonIon? 1:0) + (useIonDipole? 1:0) + (useDipoleDipole? 1:0) + (useIonQuadrupole? 1:0) > 1) { // If more than one type of interaction ...
+                if (1.0/r.squaredNorm() < wolf.getRc2i())
                   return 0;
+                wolf.calcWolfData(r); // ... then calculate collective entities only once
                 if(useIonIon == true) U_total += wolf.q2q<true>(a.charge,b.charge,r);
 #ifdef DIPOLEPARTICLE
                 if(useIonDipole == true) U_total += wolf.q2mu<true>(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
@@ -1042,7 +1203,13 @@ namespace Faunus {
 #endif
                 return _lB*U_total;
               }
-              if(useIonIon == true) return _lB*wolf.q2q(a.charge,b.charge,r);
+              // Reaches here only if one type of interaction will be used  
+              if(useIonIon == true) {
+		double r2 = r.squaredNorm();
+		if(r2 < cutoff2)
+		  return _lB*a.charge*b.charge*splitting_function.eval(tabel,r2)/sqrt(r2);
+		return 0.0;
+	      }
 #ifdef DIPOLEPARTICLE
               if(useIonDipole == true) return _lB*wolf.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
               if(useDipoleDipole == true) return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
@@ -1075,28 +1242,30 @@ namespace Faunus {
 	  * @brief Returns dielectric constant for the dipolar Wolf method (see DOI:10.1063/1.4923001)
 	  */
           double dielectric_constant(double M2V) const override { 
-	    double kappaCutoff = wolf.getKappa()*wolf.getCutoff();
-	    double kappaCutoff2 = kappaCutoff*kappaCutoff;
-	    double T0 = erf_x(kappaCutoff) - 2*kappaCutoff*exp(-kappaCutoff2)/3.0/sqrt(pc::pi)*(kappaCutoff2*kappaCutoff2 + 2.0*kappaCutoff2 + 3.0);
+	    double alphaCutoff = wolf.getAlpha()*wolf.getCutoff();
+	    double alphaCutoff2 = alphaCutoff*alphaCutoff;
+	    double T0 = erf_x(alphaCutoff) - 2*alphaCutoff*exp(-alphaCutoff2)/3.0/sqrt(pc::pi)*(alphaCutoff2*alphaCutoff2 + 2.0*alphaCutoff2 + 3.0);
 	    return (M2V*T0 + 2.0*M2V + 1.0)/(M2V*T0 - M2V + 1.0);
 	  }
 
           template<class Tpvec, class Tgroup>
             double selfEnergy(const Tpvec &p, const Tgroup &g) { 
-              double Eq = 0;
-              double Emu = 0;
+              double Eq = 0.0;
+              double Emu = 0.0;
               for (auto i : g) {
                 if (useIonIon || useIonDipole)
                   Eq += p[i].charge * p[i].charge;
+#ifdef DIPOLEPARTICLE
                 if (useIonDipole || useDipoleDipole)
                   Emu += p[i].muscalar * p[i].muscalar;
+#endif
               }
               return (wolf.getIonSelfTerm()*Eq + wolf.getDipoleSelfTerm()*Emu);
             }
 
           template<class Tparticle>
             double fieldEnergy(const Tparticle &p, const Point &E) {
-              return 0;
+              return 0.0;
             }
 
           string info(char w) {
@@ -1121,41 +1290,12 @@ namespace Faunus {
               << pad(SUB,w,"Temperature") << pc::T() << " K" << endl
               << pad(SUB,w,"Bjerrum length") << _lB << " "+angstrom << endl
               << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-              << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
+              << pad(SUB,w,"Alpha") << wolf.getAlpha() << " "+angstrom+"^-1" << endl;
+	    if(only_coulomb)
+	      o << splitting_function.info() << endl;
             return o.str();
           }
       };
-
-    class IonIonWolf : public Coulomb {
-      private:
-        string _brief() { return "Coulomb Wolf"; }
-        WolfBase wolf;
-      public:
-        IonIonWolf(InputMap &in) : Coulomb(in),
-        wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
-            in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) { 
-          name+=" Wolf"; 
-        }
-
-        template<class Tparticle>
-          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-            return lB*wolf.q2q(a.charge,b.charge,r);
-          }
-
-        template<class Tparticle>
-          Point field(const Tparticle &p, const Point &r) const {
-            return lB*wolf.fieldCharge(p,r);
-          }
-
-        string info(char w) {
-          using namespace textio;
-          std::ostringstream o;
-          o << Coulomb::info(w)
-            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-          return o.str();
-        }
-    };
 
     class IonIonGaussianDamping : public Coulomb {
       private:
@@ -1222,16 +1362,24 @@ namespace Faunus {
             return _lB*gdb.q2quad(a.charge, b.theta,b.charge, a.theta,a.id,b.id,r);
           }
     };
-
+    
     /**
-     * @brief The potential is constructed such that radial-derivates 1-3 are zero at the cut-off. 
+     * @brief Coulomb interaction with long-ranged compensation using radial-derivates 1-3 to be zero at the cut-off, see DOI: 10.1021/jp510612w.
      * The potential also mimics the interaction-tensor \f$ T_0(r,\alpha) = erfc(\alpha r)/r \f$ with \f$ \alpha = \sqrt{\pi} \f$.
-     * @note Implemented through DOI: 10.1021/jp510612w
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `tab_utol`        |  Tolerance of splined energy-error.                      (Default: \f$ 10^{-9}\f$)
+     * `tab_ftol`        |  Tolerance of splined force-error.                       (Default: \f$ 10^{-5}\f$)
      */
     class IonIonSP3 : public Coulomb {
       private:
         string _brief() { return "Coulomb SP3"; }
         double rc1, rc1i, rc2, _lB;
+	Tabulate::Andrea<double> splitting_function;
+        Tabulate::TabulatorBase<double>::data tabel;
       public:
         IonIonSP3(Tmjson &j, const string &sec="coulomb") : Coulomb(j,sec) { 
           name += " SP3"; 
@@ -1239,16 +1387,18 @@ namespace Faunus {
           rc1 = j[sec]["cutoff"] | pc::infty;
           rc1i = 1.0/rc1;
           rc2 = rc1*rc1;
+	  
+	  std::function<double(double)> temp_function = [&](double q) { return (1.0 - 1.75*q + 5.25*q*q*q*q*q - 7.0*q*q*q*q*q*q + 2.5*q*q*q*q*q*q*q); };
+          splitting_function.setRange(0,rc1);
+          splitting_function.setTolerance(j[sec]["tab_utol"] | 1e-9,j[sec]["tab_ftol"] | 1e-5); // Tolerance in energy and force
+          tabel = splitting_function.generate( temp_function );
         }
-
+        
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
             double r1 = sqrt(r2);
-            if(r2 < rc2) {
-              double q = r1/rc1;
-              double q5 = pow(q,5);
-              return _lB*(a.charge*b.charge/r1)*(1.0 - 1.75*q + 5.25*q5 - 7.0*q5*q + 2.5*q5*q*q);
-            }
+            if(r2 < rc2)
+              return _lB*(a.charge*b.charge/r1)*splitting_function(tabel,r1*rc1i);
             return 0.0;
           }
 
@@ -1257,20 +1407,34 @@ namespace Faunus {
             double r2 = r.squaredNorm();
             return operator()(a,b,r2);
           }
+          
+	 /**
+	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+	  * @brief Returns dielectric constant for the SP3 method
+	  */
+          double dielectric_constant(double M2V) const override { 
+	    return (1.0 + 3.0*M2V);
+	  }
 
         string info(char w) {
           using namespace textio;
           std::ostringstream o;
           o << Coulomb::info(w)
-            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl
+            << splitting_function.info() << endl;
           return o.str();
         }
     };
     
     /**
-     * @brief The potential is constructed such that radial-derivates 1-3 is zero at the cut-off. 
-     * The potential also mimics the interaction-tensor \f$ T_1(r,\alpha) = \nabla^T\nabla\left( erfc(\alpha r)/r \right) \f$ with \f$ \alpha = \sqrt{\pi} \f$.
-     * @note The potential is an extension of DOI: 10.1021/jp510612w
+     * @brief Ion-dipole interaction with long-ranged compensation using radial-derivates 1-3 to be zero at the cut-off for the original ionic interaction-tensor.
+     * The potential also mimics the interaction-tensor \f$ T_0(r,\alpha) = erfc(\alpha r)/r \f$ with \f$ \alpha = \sqrt{\pi} \f$.
+     * See DOI: 10.1021/jp510612w for more info.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
      */
     class IonDipoleSP3 : public IonDipole {
       private:
@@ -1305,9 +1469,14 @@ namespace Faunus {
     };
     
     /**
-     * @brief The potential is constructed such that radial-derivates 1-3 is zero at the cut-off. 
-     * The potential also mimics the interaction-tensor \f$ T_2(r,\alpha) = \nabla^T\nabla\left( erfc(\alpha r)/r \right) \f$ with \f$ \alpha = \sqrt{\pi} \f$.
-     * @note The potential is a dipolar implemention of DOI: 10.1021/jp510612w
+     * @brief Dipole-dipole interaction with long-ranged compensation using radial-derivates 1-3 to be zero at the cut-off for the original ionic interaction-tensor.
+     * The potential also mimics the interaction-tensor \f$ T_0(r,\alpha) = erfc(\alpha r)/r \f$ with \f$ \alpha = \sqrt{\pi} \f$.
+     * See DOI: 10.1021/jp510612w for more info.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
      */
     class DipoleDipoleSP3 : public DipoleDipole {
       private:
@@ -1337,6 +1506,14 @@ namespace Faunus {
             }
             return 0.0;
           }
+          
+	 /**
+	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+	  * @brief Returns dielectric constant for the SP3 method
+	  */
+          double dielectric_constant(double M2V) const override { 
+	    return (1.0 + 3.0*M2V);
+	  }
 
         string info(char w) {
           using namespace textio;
@@ -1347,6 +1524,9 @@ namespace Faunus {
         }
     };
 
+    /**
+     * @brief Help-function for IonIonQ, IonDipoleQ, DipoleDipoleQ, and IonQuadQ. 
+     */
     inline double qPochhammerSymbol(double q, int k=1, int P=300) {
       //int P = 300;  // Should give an error of about 10^-17 for k < 4
       double value = 1.0;
@@ -1358,6 +1538,17 @@ namespace Faunus {
       return value;
     }
 
+    
+    /**
+     * @brief Coulomb interaction with long-ranged compensation using moment cancellation, see Paper V in ISBN: 978-91-7422-440-5.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `tab_utol`        |  Tolerance of splined energy-error.                      (Default: \f$ 10^{-9}\f$)
+     * `tab_ftol`        |  Tolerance of splined force-error.                       (Default: \f$ 10^{-5}\f$)
+     */
     class IonIonQ : public Coulomb {
       private:
         string _brief() { return "Coulomb Q"; }
@@ -1391,6 +1582,14 @@ namespace Faunus {
             double r2 = r.squaredNorm();
             return operator()(a,b,r2);
           }
+          
+	 /**
+	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+	  * @brief Returns dielectric constant for the ionic \emph{q}-potential
+	  */
+          double dielectric_constant(double M2V) const override { 
+	    return (1.0 + 3.0*M2V);
+	  }
 
         string info(char w) {
           using namespace textio;
@@ -1398,11 +1597,20 @@ namespace Faunus {
           o << Coulomb::info(w)
             << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
           o << qk.info() << endl;
-          // FIX INFO ABOUT TABULATION AND SPLINES
           return o.str();
         }
     };
     
+    /**
+     * @brief Ion-dipole interaction with long-ranged compensation using moment cancellation, see Paper V in ISBN: 978-91-7422-440-5.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `tab_utol`        |  Tolerance of splined energy-error.                      (Default: \f$ 10^{-9}\f$)
+     * `tab_ftol`        |  Tolerance of splined force-error.                       (Default: \f$ 10^{-5}\f$)
+     */
     class IonDipoleQ : public IonDipole {
       private:
         string _brief() { return "Ion-dipole Q"; }
@@ -1427,7 +1635,7 @@ namespace Faunus {
             double r1 = r.norm();
             if (r1 < rc1)
               return (IonDipole::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
-            return 0;
+            return 0.0;
           }
 
         string info(char w) {
@@ -1435,10 +1643,21 @@ namespace Faunus {
           std::ostringstream o;
           o << IonDipole::info(w)
             << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl;
+	  o << qk.info() << endl;
           return o.str();
         }
     };
 
+    /**
+     * @brief Dipole-dipole interaction with long-ranged compensation using moment cancellation, see Paper V in ISBN: 978-91-7422-440-5.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `tab_utol`        |  Tolerance of splined energy-error.                      (Default: \f$ 10^{-9}\f$)
+     * `tab_ftol`        |  Tolerance of splined force-error.                       (Default: \f$ 10^{-5}\f$)
+     */
     class DipoleDipoleQ : public DipoleDipole {
       private:
         string _brief() { return "Dipole-dipole Q"; }
@@ -1467,16 +1686,35 @@ namespace Faunus {
             }
             return 0.0;
           }
+          
+	 /**
+	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+	  * @brief Returns dielectric constant for the dipolar \emph{q}-potential
+	  */
+          double dielectric_constant(double M2V) const override { 
+	    return (2*M2V + 1.0)/(1.0 - M2V);
+	  }
 
         string info(char w) {
           using namespace textio;
           std::ostringstream o;
           o << DipoleDipole::info(w)
             << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl;
+	  o << qk.info() << endl;
           return o.str();
         }
     };
     
+    /**
+     * @brief Ion-quadrupole interaction with long-ranged compensation using moment cancellation, see Paper V in ISBN: 978-91-7422-440-5.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `tab_utol`        |  Tolerance of splined energy-error.                      (Default: \f$ 10^{-9}\f$)
+     * `tab_ftol`        |  Tolerance of splined force-error.                       (Default: \f$ 10^{-5}\f$)
+     */
     class IonQuadQ : public IonQuad {
       private:
         string _brief() { return "Ion-quadrupole Q"; }
@@ -1501,7 +1739,7 @@ namespace Faunus {
             double r1 = r.norm();
             if (r1 < rc1)
               return (IonQuad::operator()(a,b,r))*qk.eval(tabel,r1*rc1i);
-            return 0;
+            return 0.0;
           }
 
         string info(char w) {
@@ -1509,6 +1747,118 @@ namespace Faunus {
           std::ostringstream o;
           o << IonQuad::info(w)
             << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl;
+	  o << qk.info() << endl;
+          return o.str();
+        }
+    };
+    
+    /**
+     * @brief Help-function for DipoleDipoleQ2.
+     */
+    inline double Euler_type_function_A(double q, int N=300) {
+      if(q >= 1.0 - (1.0/2400.0))
+        return 0.0;
+      if(q <= (1.0/2400.0))
+        return 1.0;
+      double value1 = 0.0;
+      double value2 = 0.0;
+      double value3 = 0.0;
+      for(int nt = -N; nt <= N; nt++) {
+	double n = double(nt);
+        value1 += pow(-1.0,n)*pow(q,(3.0*n*n-n)/2.0);
+        value2 += pow(-1.0,n)*(3.0*n*n-n)/(2.0*q)*pow(q,(3.0*n*n-n)/2.0);
+        value3 += pow(-1.0,n)*(3.0*n*n-n)/(2.0*q*q)*(3.0*n*n - n - 2.0)/2.0*pow(q,(3.0*n*n-n)/2.0);
+      }
+      return (value1 - value2*q + value3*q*q/3.0);
+    }
+
+    /**
+     * @brief Help-function for DipoleDipoleQ2.
+     */
+    inline double Euler_type_function_B(double q, int N=300) {
+      if(q >= 1.0 - (1.0/2400.0))
+        return 0.0;
+      if(q <= (1.0/2400.0))
+        return 0.0;
+      double value = 0.0;
+      for(int nt = -N; nt <= N; nt++) {
+	double n = double(nt);
+        value += pow(-1.0,n)*(3.0*n*n-n)/(2.0*q*q)*(3.0*n*n - n - 2.0)/2.0*pow(q,(3.0*n*n-n)/2.0);
+      }
+      return value*q*q/3.0;
+    }
+
+    /**
+     * @brief Dipole-dipole interaction with long-ranged compensation using moment cancellation.
+     * This method is an expansion of the ion-ion interaction-tensor in Paper V in ISBN: 978-91-7422-440-5.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `tab_utol`        |  Tolerance of splined energy-error.                      (Default: \f$ 10^{-7}\f$)
+     * `tab_ftol`        |  Tolerance of splined force-error.                       (Default: \f$ 10^{-5}\f$)
+     * 
+     * @warning Be careful with the splines, they tend to give diverging values for low `tab_utol` and `tab_ftol`!
+     */
+    class DipoleDipoleQ2 : public DipoleDipole {
+      private:
+        string _brief() { return "Dipole-dipole Q2"; }
+        double rc1, rc1i, rc3i, tab_utol, tab_ftol;
+	int N;
+	Tabulate::Andrea<double> ak;
+	Tabulate::Andrea<double> bk;
+	Tabulate::TabulatorBase<double>::data tableA;
+        Tabulate::TabulatorBase<double>::data tableB;
+      public:
+        DipoleDipoleQ2(Tmjson &j, const string &sec="coulomb") : DipoleDipole(j,sec) {
+          name += " Q2"; 
+          _lB = Coulomb(j,sec).bjerrumLength();
+          rc1 = j[sec]["cutoff"] | pc::infty;
+          rc1i = 1.0/rc1;
+	  rc3i = rc1i*rc1i*rc1i;
+	  N = j[sec]["order"] | 300;
+	  tab_utol = j[sec]["tab_utol"] | 1e-7; // Higher accuracy gives error
+	  tab_ftol = j[sec]["tab_ftol"] | 1e-2;
+
+          std::function<double(double)> Ak = [&](double q) { return Euler_type_function_A(q,N); };
+          ak.setRange(0,1);
+          ak.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+          tableA = ak.generate( Ak );
+	  
+          std::function<double(double)> Bk = [&](double q) { return Euler_type_function_B(q,N); };
+          bk.setRange(0.0,1.0);
+          bk.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+          tableB = bk.generate( Bk );
+        }
+        
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r1 = r.norm();
+            if (r1 < rc1) {
+	      double af = ak.eval(tableA,r1*rc1i);
+	      double bf = bk.eval(tableB,r1*rc1i);
+              return _lB*mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r,af,bf);
+            }
+            return 0.0;
+          }
+          
+	 /**
+	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+	  * @brief Returns dielectric constant for the expanded ionic \emph{q}-potential
+	  */
+          double dielectric_constant(double M2V) const override { 
+	    return (1.0 + 3.0*M2V);
+	  }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << DipoleDipole::info(w)
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl
+	    << pad(SUB,w,"Order") << N << endl;
+	  o << ak.info() << endl;
+	  o << bk.info() << endl;
           return o.str();
         }
     };

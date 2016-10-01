@@ -957,7 +957,7 @@ namespace Faunus {
     };
     
     /**
-     * @brief Ion-ion interaction with reaction field. The potential can be shifted such to be zero at the cut-off. See DOI: 10.1063/1.469273 for the expanded
+     * @brief Ion-ion interaction with reaction field. The potential can be shifted such to be zero at the cut-off. See DOI: 10.1063/1.469273 for the generalized
      * approach using ionic strength in the surrounding.
      * 
      *  Keyword          |  Description
@@ -965,6 +965,7 @@ namespace Faunus {
      * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
      * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
      * `eps_rf`          |  Dielectric constant of the surroundings.                (Default: \f$ \varepsilon_{RF} = 72 \f$))
+     * `kappa`           |  Debye screening length.                                 (Default: 0))
      * 
      * @note If 'eps_rf' is set to (eps_r,<0,0) then 'vacuum'/insulating/conducting boundary conditions will be used. 
      * @warning Untested!
@@ -973,7 +974,7 @@ namespace Faunus {
     class IonIonRF : public Coulomb {
       private:
         string _brief() { return "Coulomb (reaction field)"; }
-        double rc1,rc2,eps_RF,eps_r,krf,crf;
+        double rc1,rc2,eps_RF,eps_r,krf,crf,kappa,kappa2;
 	bool eps_inf, eps_ins, eps_vac, eps_user; // Surrounding is: Conducting, Insulating, 'Vacuum', Set by user
       public:
         IonIonRF(Tmjson &j, const string &sec="coulomb") : Coulomb(j,sec) {
@@ -981,6 +982,8 @@ namespace Faunus {
           rc2 = pow(j[sec]["cutoff"] | pc::infty,2);
           eps_r = j[sec]["eps_r"] | 1.0;
 	  eps_RF = j[sec]["eps_rf"] | 72.0;
+	  kappa = j[sec]["kappa"] | 0.0;
+	  kappa2 = kappa*kappa;
 	  eps_inf = false;
 	  eps_ins = false;
 	  eps_user = false;
@@ -1010,12 +1013,12 @@ namespace Faunus {
 	    krf = lB*0.5/rc2/rc1;
 	    crf = lB*1.5/rc1;
 	  } else if(eps_vac) {
-	    krf = 0.0;
-	    crf = lB/rc1;
+	    krf = lB*(  (eps_RF - eps_r)*(1.0 + kappa*rc1) + 0.5*eps_RF*kappa2*rc2 ) / ( (2.0*eps_RF + eps_r)*(1.0 + kappa*rc1) + eps_RF*kappa2*rc2 )/rc2/rc1;
+	    crf = lB*3.0*eps_RF*(1.0 + kappa*rc1 + 0.5*kappa2*rc2)/((2.0*eps_RF + eps_r)*(1.0+kappa*rc1) + eps_RF*kappa2*rc2)/rc1;
 	  } else {
 	    eps_RF = eps_rf_updated;
-	    krf = lB*(eps_RF - eps_r)/(2.0*eps_RF + eps_r)/rc2/rc1;
-	    crf = lB*3.0*eps_RF/(2.0*eps_RF + eps_r)/rc1;
+	    krf = lB*0.5*eps_RF*kappa2*rc2 / ( (2.0*eps_RF + eps_r)*(1.0 + kappa*rc1) + eps_RF*kappa2*rc2 )/rc2/rc1;
+	    crf = lB*3.0*eps_RF*(1.0 + kappa*rc1 + 0.5*kappa2*rc2)/((2.0*eps_RF + eps_r)*(1.0+kappa*rc1) + eps_RF*kappa2*rc2)/rc1;
 	  }
 	  if(!shifted)
 	    crf = 0.0;

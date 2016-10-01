@@ -3,6 +3,7 @@
 
 #include <faunus/auxiliary.h>
 #include "faunus/inputfile.h"
+#include <faunus/tabulate.h>
 #include <complex>
 
 namespace Faunus {
@@ -35,10 +36,20 @@ namespace Faunus {
       struct EwaldReal : public Potential::Coulomb {
 
         typedef Potential::Coulomb Tbase;
-        double alpha, alpha2, constant, rc, rc2i;
+        double alpha, alpha2, constant, rc, rc2i, tab_utol, tab_ftol;
+	bool only_coulomb, splinned;
+	Tabulate::Andrea<double> ek;
+	Tabulate::TabulatorBase<double>::data table;
 
         EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j,sec), alpha(0), rc2i(0) {
           Tbase::name="Ewald Real";
+	  only_coulomb = false;
+	  splinned = false;
+	  if((useIonDipole? 1:0) + (useDipoleDipole? 1:0) == 0 && useIonIon) {
+	    only_coulomb = true;
+	    tab_utol = j[sec]["tab_utol"] | 1e-9;
+	    tab_ftol = j[sec]["tab_ftol"] | 1e-5;
+	  }
         }
         
         void updateAlpha(double alpha_in) {
@@ -50,6 +61,14 @@ namespace Faunus {
         void updateRcut(double rc_in) {
           rc = rc_in;
           rc2i = 1.0/(rc*rc);
+	  
+	  if(only_coulomb) { // If only isotropic interactions ...
+	    std::function<double(double)> Ek = [&](double r1i) { return erfc(1.0/r1i); }; // .. then spline
+	    ek.setRange(0,rc);
+	    ek.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+	    table = ek.generate( Ek );
+	    splinned = true;
+	  }
         }
         
 	 /**
@@ -65,15 +84,17 @@ namespace Faunus {
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
             if(!useIonIon && !useIonDipole && !useDipoleDipole)
               return 0.0;
-
+	    
             double r2i = 1.0/r.squaredNorm();
             if (r2i < rc2i)
               return 0.0;
-
-            double E = 0.0;
+	    
             double r1i = sqrt(r2i);
+	    if(only_coulomb && splinned)
+	      return Tbase::bjerrumLength()*a.charge*b.charge*ek.eval(table,r1i)*r1i;
+	    double E = 0.0;
+	    
             double r1i_d = erfc_x(alpha/r1i)*r1i;
-
             if(useIonIon)
               E += r1i_d*a.charge*b.charge;  // return Tbase::bjerrumLength() * a.charge * b.charge * (1.0/r1 - 1.0/rc + (r1 - rc)*rc2i );
             if(!useIonDipole && !useDipoleDipole)

@@ -563,8 +563,8 @@ namespace Faunus {
 
     double getRc2i() const { return rc2i; }
     double getR2i() const { return data.r2i; }
-    double getAlpha() { return alpha; }
-    double getCutoff() { return rc1; }
+    double getAlpha() const { return alpha; }
+    double getCutoff() const { return rc1; }
   };
 
   /**
@@ -957,7 +957,8 @@ namespace Faunus {
     };
     
     /**
-     * @brief Ion-ion interaction with reaction field. The potential can be shifted such to be zero at the cut-off.
+     * @brief Ion-ion interaction with reaction field. The potential can be shifted such to be zero at the cut-off. See DOI: 10.1063/1.469273 for the expanded
+     * approach using ionic strength in the surrounding.
      * 
      *  Keyword          |  Description
      * :--------------   | :---------------
@@ -1006,14 +1007,14 @@ namespace Faunus {
 
         void updateDiel(double eps_rf_updated) {
 	  if(eps_inf) {
-	    krf = lB*0.5/rc2/r1;
+	    krf = lB*0.5/rc2/rc1;
 	    crf = lB*1.5/rc1;
 	  } else if(eps_vac) {
 	    krf = 0.0;
 	    crf = lB/rc1;
 	  } else {
 	    eps_RF = eps_rf_updated;
-	    krf = lB*(eps_RF - eps_r)/(2.0*eps_RF + eps_r)/rc2/r1;
+	    krf = lB*(eps_RF - eps_r)/(2.0*eps_RF + eps_r)/rc2/rc1;
 	    crf = lB*3.0*eps_RF/(2.0*eps_RF + eps_r)/rc1;
 	  }
 	  if(!shifted)
@@ -1398,7 +1399,7 @@ namespace Faunus {
           double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
             double r1 = sqrt(r2);
             if(r2 < rc2)
-              return _lB*(a.charge*b.charge/r1)*splitting_function(tabel,r1*rc1i);
+              return _lB*(a.charge*b.charge/r1)*splitting_function.eval(tabel,r1*rc1i);
             return 0.0;
           }
 

@@ -24,13 +24,13 @@ int main() {
   cout << spc.info() + loop.info() + pot.info() + mv.info() + widom.info();
 }
 /**
- * @page example_seawater Example: Activity Coefficients in Seawater
- *
- * @includelineno seawater.cpp
- *
- * Run the code directly from the faunus directory:
- *
- *     $ make example_seawater
- *     $ cd src/examples/
- *     $ ./seawater.sh
+@page example_seawater Example: Activity Coefficients in Seawater
+
+@includelineno seawater.cpp
+
+Run the code directly from the faunus directory:
+
+    $ make example_seawater
+    $ cd src/examples/
+    $ ./seawater.sh
  */

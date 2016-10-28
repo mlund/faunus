@@ -24,14 +24,14 @@ Get the latest revision from GitHub:
 Requirements
 ============
 
-- C/C++11 compiler (clang3.5+, gcc4.8+, intel14+, ...)
+- C/C++11 compiler (clang3.5+, gcc4.9+, intel14+, ...)
 - CMake 2.8.5+
 
 Optional:
 
 - Doxygen (for code manual)
-- Xcode (for neat environment on macos x)
 - MPI (for parallelisation)
+- Python (for python module, experimental)
 
 Developed and tested on Linux and MacOS X.
 
@@ -74,7 +74,7 @@ Examples: Python support
 ------------------------
 Faunus has preliminary python support -- see this Jupyter [notebook](scripts/pyfaunus-test.ipynb)
 for examples.
-If have several python distributions installed, the build system may be guided to specific
+If several python distributions are installed, the build system may be guided to specific
 libraries using i.e.:
 
     $ cmake . -DPYTHON_INCLUDE_DIR=$HOME/miniconda/include/python2.7 -DPYTHON_LIBRARY=$HOME/minoconda/lib/libpython2.7.dylib

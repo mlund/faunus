@@ -370,7 +370,7 @@ namespace Faunus {
 		} else if( ( useIonIon || useIonDipole ) && isotropic_pbc ) {
 		  Q_temp_ion += p[i].charge*std::cos(kv.x()*p[i].x())*std::cos(kv.y()*p[i].y())*std::cos(kv.z()*p[i].z()); 
 		}
-//#ifdef DIPOLEPARTICLE 
+#ifdef DIPOLEPARTICLE 
                 if(useDipoleDipole && !isotropic_pbc) {
                   Q_temp_dip += kv.dot(p[i].mu) * p[i].muscalar * complex<double>(-sin(dot),cos(dot));
 		} else if(useDipoleDipole && isotropic_pbc) {
@@ -378,7 +378,7 @@ namespace Faunus {
 		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu.y()*kv.y()*spc->p[i].muscalar;
 		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu.z()*kv.z()*spc->p[i].muscalar;
 		}
-//#endif
+#endif
               }
               Q_ion_tot_in.at(k) = Q_temp_ion;
               Q_dip_tot_in.at(k) = Q_temp_dip;

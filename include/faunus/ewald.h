@@ -219,7 +219,7 @@ namespace Faunus {
 	  EwaldParameters<useIonIon,useIonDipole,useDipoleDipole> parameters, parameters_trial;
           int kVectorsInUse, kVectorsInUse_trial, N, cnt_accepted, update_frequency;
           double V, V_trial, surfaceEnergy, surfaceEnergyTrial, reciprocalEnergy, reciprocalEnergyTrial, eps_surf, const_inf, lB, update_drift; 
-          bool spherical_sumi, isotropic_pbc;
+          bool spherical_sum, isotropic_pbc;
           vector<complex<double>> Q_ion_tot, Q_dip_tot, Q_ion_tot_trial, Q_dip_tot_trial;
           typename Tspace::Change change;
 
@@ -322,15 +322,16 @@ namespace Faunus {
             kVectorsInUse_in = 0;
             kVectors_in.setZero();
             Aks_in.setZero();
+	    int startValue = 1 - int(isotropic_pbc);
 
             double factor = 1.0;
             for (int kx = 0; kx <= parameters_in.kcc; kx++) {
               if(kx > 0)
                 factor = 2.0;
               double dkx2 = double(kx*kx);
-              for (int ky = -parameters_in.kcc; ky <= parameters_in.kcc; ky++) {
+              for (int ky = -parameters_in.kcc*startValue; ky <= parameters_in.kcc; ky++) {
                 double dky2 = double(ky*ky);
-                for (int kz = -parameters_in.kcc; kz <= parameters_in.kcc; kz++) {
+                for (int kz = -parameters_in.kcc*startValue; kz <= parameters_in.kcc; kz++) {
                   double dkz2 = double(kz*kz);
                   Point kv = 2*pc::pi*Point(kx/parameters_in.L.x(),ky/parameters_in.L.y(),kz/parameters_in.L.z());
                   double k2 = kv.dot(kv);
@@ -367,15 +368,17 @@ namespace Faunus {
                 if( ( useIonIon || useIonDipole ) && !isotropic_pbc ) {
                   Q_temp_ion += p[i].charge * complex<double>(cos(dot),sin(dot));
 		} else if( ( useIonIon || useIonDipole ) && isotropic_pbc ) {
-		  Q_temp_ion += p[i].charge*std:cos(kv.x()*p[i].x())*std::cos(kv.y()*p[i].y())*std::cos(kv.z()*p[i].z()); 
+		  Q_temp_ion += p[i].charge*std::cos(kv.x()*p[i].x())*std::cos(kv.y()*p[i].y())*std::cos(kv.z()*p[i].z()); 
 		}
-#ifdef DIPOLEPARTICLE 
+//#ifdef DIPOLEPARTICLE 
                 if(useDipoleDipole && !isotropic_pbc) {
                   Q_temp_dip += kv.dot(p[i].mu) * p[i].muscalar * complex<double>(-sin(dot),cos(dot));
 		} else if(useDipoleDipole && isotropic_pbc) {
-		  
+		  Q_temp_dip += sin(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu.x()*kv.x()*spc->p[i].muscalar;
+		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu.y()*kv.y()*spc->p[i].muscalar;
+		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu.z()*kv.z()*spc->p[i].muscalar;
 		}
-#endif
+//#endif
               }
               Q_ion_tot_in.at(k) = Q_temp_ion;
               Q_dip_tot_in.at(k) = Q_temp_dip;
@@ -418,7 +421,7 @@ namespace Faunus {
               text.erase (text.end()-2, text.end());
             o << pad(SUB,w, "Interactions") << text << endl;
 	    double charge = 0.0;
-	    for(int i = 0; i < spc->p.size(); i++)
+	    for(unsigned int i = 0; i < spc->p.size(); i++)
 	      charge += spc->p[i].charge;
 	    if(fabs(charge) > 1e-10 && (useIonIon || useIonDipole) )
 	      o << pad(SUB,w, "    WARNING") << "Total charge is not 0 but " << charge << endl;
@@ -593,15 +596,29 @@ namespace Faunus {
               for (auto m : change.mvGroup) {
                 for (auto i : m.second) {
                   double dotTrial = kVectors_trial.col(k).dot(spc->trial[i]);
-                  double dot = kVectors_trial.col(k).dot(spc->p[i]);
-                  if (useIonIon || useIonDipole) {
+                  double dot = kVectors.col(k).dot(spc->p[i]);
+                  if ( ( useIonIon || useIonDipole ) && !isotropic_pbc ) {
                     Q2_ion += spc->trial[i].charge * complex<double>(cos(dotTrial),sin(dotTrial));
                     Q2_ion -= spc->p[i].charge * complex<double>(cos(dot),sin(dot));
-                  }
+                  } else if( ( useIonIon || useIonDipole ) && isotropic_pbc ) {
+		    Point kv = kVectors_trial.col(k);
+		    Q2_ion += spc->trial[i].charge*std::cos(kv.x()*spc->trial[i].x())*std::cos(kv.y()*spc->trial[i].y())*std::cos(kv.z()*spc->trial[i].z()); 
+		    kv = kVectors.col(k);
+		    Q2_ion -= spc->p[i].charge*std::cos(kv.x()*spc->p[i].x())*std::cos(kv.y()*spc->p[i].y())*std::cos(kv.z()*spc->p[i].z()); 
+		  }
 #ifdef DIPOLEPARTICLE
-                  if (useDipoleDipole || useIonDipole) {
+                  if ( ( useDipoleDipole || useIonDipole ) && !isotropic_pbc ) {
                     Q2_dip += kVectors_trial.col(k).dot(spc->trial[i].mu) * spc->trial[i].muscalar * complex<double>(-sin(dotTrial),cos(dotTrial));
-                    Q2_dip -= kVectors_trial.col(k).dot(spc->p[i].mu) * spc->p[i].muscalar * complex<double>(-sin(dot),cos(dot));
+                    Q2_dip -= kVectors.col(k).dot(spc->p[i].mu) * spc->p[i].muscalar * complex<double>(-sin(dot),cos(dot));
+                  } else if ( ( useDipoleDipole || useIonDipole ) && isotropic_pbc ) {
+		    Point kv = kVectors_trial.col(k);
+		    Q2_dip += sin(spc->trial[i].x()*kv.x())*cos(spc->trial[i].y()*kv.y())*cos(spc->trial[i].z()*kv.z())*spc->trial[i].mu.x()*kv.x()*spc->trial[i].muscalar;
+		    Q2_dip += cos(spc->trial[i].x()*kv.x())*sin(spc->trial[i].y()*kv.y())*cos(spc->trial[i].z()*kv.z())*spc->trial[i].mu.y()*kv.y()*spc->trial[i].muscalar;
+		    Q2_dip += cos(spc->trial[i].x()*kv.x())*cos(spc->trial[i].y()*kv.y())*sin(spc->trial[i].z()*kv.z())*spc->trial[i].mu.z()*kv.z()*spc->trial[i].muscalar;
+		    kv = kVectors.col(k);
+		    Q2_dip -= sin(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu.x()*kv.x()*spc->p[i].muscalar;
+		    Q2_dip -= cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu.y()*kv.y()*spc->p[i].muscalar;
+		    Q2_dip -= cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu.z()*kv.z()*spc->p[i].muscalar;
                   }
 #endif
                 }

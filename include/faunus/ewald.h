@@ -36,12 +36,12 @@ namespace Faunus {
       struct EwaldReal : public Potential::Coulomb {
 
         typedef Potential::Coulomb Tbase;
-        double alpha, alpha2, constant, rc, rc2i, tab_utol, tab_ftol;
+        double alpha, alpha2, constant, rc, rc2, tab_utol, tab_ftol;
 	bool only_coulomb, splinned;
 	Tabulate::Andrea<double> ek;
 	Tabulate::TabulatorBase<double>::data table;
 
-        EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j,sec), alpha(0), rc2i(0) {
+        EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j,sec), alpha(0), alpha2(0), constant(0), rc(1), rc2(1) {
           Tbase::name="Ewald Real";
 	  only_coulomb = false;
 	  splinned = false;
@@ -56,20 +56,24 @@ namespace Faunus {
           alpha = alpha_in;
           alpha2 = alpha*alpha;
           constant = 2*alpha/sqrt(pc::pi);
+	  //updateSpline();
         }
 
         void updateRcut(double rc_in) {
           rc = rc_in;
-          rc2i = 1.0/(rc*rc);
-	  
+	  rc2 = rc*rc;
+	  //updateSpline();
+        }
+        
+        void updateSpline() {
 	  if(only_coulomb) { // If only isotropic interactions ...
-	    std::function<double(double)> Ek = [&](double r1i) { return erfc(1.0/r1i); }; // .. then spline
+	    std::function<double(double)> Ek = [&](double r1) { return erfc(alpha*r1); }; // .. then spline
 	    ek.setRange(0,rc);
 	    ek.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
 	    table = ek.generate( Ek );
 	    splinned = true;
 	  }
-        }
+	}
         
 	 /**
 	  * @param M2V Input \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
@@ -85,24 +89,24 @@ namespace Faunus {
             if(!useIonIon && !useIonDipole && !useDipoleDipole)
               return 0.0;
 	    
-            double r2i = 1.0/r.squaredNorm();
-            if (r2i < rc2i)
+	    double r2 = r.squaredNorm();
+            if (r2 > rc2)
               return 0.0;
 	    
-            double r1i = sqrt(r2i);
+            double r1 = sqrt(r2);
 	    if(only_coulomb && splinned)
-	      return Tbase::bjerrumLength()*a.charge*b.charge*ek.eval(table,r1i)*r1i;
+	      return Tbase::bjerrumLength()*a.charge*b.charge*ek.eval(table,r1)*r1;
 	    double E = 0.0;
 	    
-            double r1i_d = erfc_x(alpha/r1i)*r1i;
+            double r1i_d = erfc_x(alpha*r1)/r1;
             if(useIonIon)
-              E += r1i_d*a.charge*b.charge;  // return Tbase::bjerrumLength() * a.charge * b.charge * (1.0/r1 - 1.0/rc + (r1 - rc)*rc2i );
+              E += r1i_d*a.charge*b.charge;  // return Tbase::bjerrumLength() * a.charge * b.charge * (1.0/r1 - 1.0/rc + (r1 - rc)/rc2 );
             if(!useIonDipole && !useDipoleDipole)
               return E*Tbase::bjerrumLength();
 
 #ifdef DIPOLEPARTICLE
-            double expK = constant*exp(-alpha2/r2i);
-            double T1 = (expK + r1i_d)*r2i;
+            double expK = constant*exp(-alpha2*r2);
+            double T1 = (expK + r1i_d)/r2;
 
             if(useIonDipole) {
               E += a.charge*r.dot(b.mu)*b.muscalar*T1;
@@ -111,7 +115,7 @@ namespace Faunus {
 
             if(useDipoleDipole) {
               double t3 = -b.mu.dot(a.mu)*T1;
-              double t5 = b.mu.dot(r)*a.mu.dot(r)*(3.0*T1 + 2.0*alpha2*expK )*r2i;
+              double t5 = b.mu.dot(r)*a.mu.dot(r)*(3.0*T1 + 2.0*alpha2*expK )/r2;
               E += -(t5 + t3)*b.muscalar*a.muscalar;
             }
 #endif
@@ -164,6 +168,8 @@ namespace Faunus {
      * `cutoffK_y`       |  Maximum number of vectors in y-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
      * `cutoffK_z`       |  Maximum number of vectors in z-axis in k-space for ions. Is overridden if 'cutoffK' is set.                      (Default: According to DOI: (Ions) 10.1080/08927029208049126 or (Dipoles) 10.1063/1.1398588 )  
      * `update_frequency`|  The frequency of how often the total sum of all complex numbers are updated (an optimization optin).             (Default: Number of particles in system)
+     * `tab_utol`        |  Tolerance of splined energy-error. Only used if isotropic interactions alone are handled.                        (Default: \f$ 10^{-9}\f$)
+     * `tab_ftol`        |  Tolerance of splined force-error. Only used if isotropic interactions alone are handled.                         (Default: \f$ 10^{-5}\f$)
      * 
      * @note Tested and implemented through DOI: 10.1063/1.481216
      * @note If parameters are not set; optimized parameters for ion-ion-interactions will be used for all interactions save the case when only dipoles are present, then optimized parameters for dipole-dipole-interactions will be used. This is done since the wave-functions for ions and dipoles needs to be compatible with each other in order to get ion-dipole interactions.
@@ -193,6 +199,7 @@ namespace Faunus {
      * @f]
      * 
      * @todo Need to implement measurement of the average evaluation time for real part of Ewald, this in order to get optimal parametrization to work properly.
+     * @warning Current version is constucted such that paramaters can not be correctly updated during a run if splines are used (i.e. only isotropic Coulomb is handled).
      * 
      */
     template<
@@ -212,7 +219,7 @@ namespace Faunus {
 	  EwaldParameters<useIonIon,useIonDipole,useDipoleDipole> parameters, parameters_trial;
           int kVectorsInUse, kVectorsInUse_trial, N, cnt_accepted, update_frequency;
           double V, V_trial, surfaceEnergy, surfaceEnergyTrial, reciprocalEnergy, reciprocalEnergyTrial, eps_surf, const_inf, lB, update_drift; 
-          bool spherical_sum;
+          bool spherical_sumi, isotropic_pbc;
           vector<complex<double>> Q_ion_tot, Q_dip_tot, Q_ion_tot_trial, Q_dip_tot_trial;
           typename Tspace::Change change;
 
@@ -357,11 +364,17 @@ namespace Faunus {
               complex<double> Q_temp_dip(0.0,0.0);
               for (size_t i = 0; i < p.size(); i++) {
                 double dot = kv.dot(p[i]);
-                if(useIonIon || useIonDipole)
+                if( ( useIonIon || useIonDipole ) && !isotropic_pbc ) {
                   Q_temp_ion += p[i].charge * complex<double>(cos(dot),sin(dot));
+		} else if( ( useIonIon || useIonDipole ) && isotropic_pbc ) {
+		  Q_temp_ion += p[i].charge*std:cos(kv.x()*p[i].x())*std::cos(kv.y()*p[i].y())*std::cos(kv.z()*p[i].z()); 
+		}
 #ifdef DIPOLEPARTICLE 
-                if(useDipoleDipole)
+                if(useDipoleDipole && !isotropic_pbc) {
                   Q_temp_dip += kv.dot(p[i].mu) * p[i].muscalar * complex<double>(-sin(dot),cos(dot));
+		} else if(useDipoleDipole && isotropic_pbc) {
+		  
+		}
 #endif
               }
               Q_ion_tot_in.at(k) = Q_temp_ion;
@@ -465,10 +478,12 @@ namespace Faunus {
             parameters.kc = ( _j["cutoffK"] | -1.0 );
             parameters.kc2 = parameters.kc*parameters.kc;
             parameters.kcc = ceil(parameters.kc);
+            isotropic_pbc = _j["isotropic_pbc"] | false ;
 	    
 	    parameters_trial = parameters;
             Tbase::pairpot.first.updateAlpha(parameters.alpha);
             Tbase::pairpot.first.updateRcut(parameters.rc);
+	    Tbase::pairpot.first.updateSpline();
 	    kVectorChange(kVectors,Aks,Q_ion_tot,Q_dip_tot,kVectorsInUse,parameters);
           }
           

@@ -1852,6 +1852,72 @@ namespace Faunus {
           return o.str();
         }
     };
+    
+    /**
+     * @brief Real part of Ewald potential.
+     * 
+     *  Keyword          |  Description
+     * :--------------   | :---------------
+     * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
+     * `alpha`           |  Damping parameter.                                      (Default: 0)
+     * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+     * `tab_utol`        |  Tolerance of splined energy-error.                      (Default: \f$ 10^{-9}\f$)
+     * `tab_ftol`        |  Tolerance of splined force-error.                       (Default: \f$ 10^{-5}\f$)
+     */
+    class IonIonEwald : public Coulomb {
+      private:
+        string _brief() { return "Coulomb (Real) Ewald"; }
+        double rc1, rc2, _lB, alpha;
+        Tabulate::Andrea<double> ek;
+        Tabulate::TabulatorBase<double>::data tabel;
+      public:
+        IonIonEwald(Tmjson &j, const string &sec="coulomb") : Coulomb(j,sec) { 
+          name += " (Real) Ewald"; 
+          _lB = Coulomb(j,sec).bjerrumLength();
+          rc1 = j[sec]["cutoff"] | pc::infty;
+	  alpha = j[sec]["alpha"] | 0.0;
+          rc2 = rc1*rc1;
+
+	  std::function<double(double)> Ek = [&](double r1) { return erfc(alpha*r1); }; // .. then spline
+          ek.setRange(0,rc1);
+          ek.setTolerance(j[sec]["tab_utol"] | 1e-9,j[sec]["tab_ftol"] | 1e-5); // Tolerance in energy and force
+          tabel = ek.generate( Ek );
+        }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+            if(r2 < rc2) {
+	      double r1 = sqrt(r2);
+              return _lB*(a.charge*b.charge/r1)*ek.eval(tabel,r1);
+	    }
+            return 0.0;
+          }
+
+        template<class Tparticle>
+          double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+            double r2 = r.squaredNorm();
+            return operator()(a,b,r2);
+          }
+          
+	 /**
+	  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+	  * @brief Returns dielectric constant for the ionic \emph{q}-potential
+	  */
+          double dielectric_constant(double M2V) const override { 
+	    return (1.0 + 3.0*M2V);
+	  }
+
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << Coulomb::info(w)
+	    << pad(SUB,w,"Alpha") << alpha << " "+angstrom << endl
+            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+          o << ek.info() << endl;
+          return o.str();
+        }
+    };
+
   }
 }
 #endif

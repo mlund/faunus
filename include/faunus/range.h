@@ -77,10 +77,14 @@ class ContinuousRange {
     void clear() { *this = ContinuousRange<T>(); } //!< Clear range
 
     /** @brief Resize range, keeping same beginning */
-    void resize(T size)
+    void resize(T newsize)
     {
-      assert(size>=0);
-      end_.i_ = begin_.i_ + size;
+      assert( newsize >= 0 );
+      if ( front()<0 )
+        begin_.i_ = 0;
+      end_.i_ = begin_.i_ + newsize;
+
+      assert( size() == newsize );
     }
 
     T size() const { return end_.i_-begin_.i_; } //!< Size of range

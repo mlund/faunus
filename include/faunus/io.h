@@ -627,8 +627,12 @@ namespace Faunus {
        */
       template<class Tpoint, class Talloc, class Tgroup=Group>
         bool save(const string &file, const std::vector<Tpoint,Talloc> &p, Tgroup g = Group() ) {
-          if ( g.empty() )
+          if ( g.empty() ) {
             g.resize( p.size() );
+            assert( g.front() == 0 );
+            assert( g.back()  == int(p.size()-1) );
+            assert( g.size()  == int(p.size()) );
+          }
           size_t N = g.size();
           assert( N > 0 );
           if ( xd == NULL )
@@ -638,9 +642,10 @@ namespace Faunus {
             unsigned int i=0;
             for ( auto j : g ) {
               assert( i>=0 && i<p.size() && "Index out of range" );
-              x[i][0] = p[j].x()*0.1 + xdbox[0][0]*0.5; // AA->nm
-              x[i][1] = p[j].y()*0.1 + xdbox[1][1]*0.5; // move inside sim. box
-              x[i][2] = p[j].z()*0.1 + xdbox[2][2]*0.5; //
+              assert( i<N );
+              x[i][0] = p.at(j).x()*0.1 + xdbox[0][0]*0.5; // AA->nm
+              x[i][1] = p.at(j).y()*0.1 + xdbox[1][1]*0.5; // move inside sim. box
+              x[i][2] = p.at(j).z()*0.1 + xdbox[2][2]*0.5; //
               i++;
             }
             write_xtc( xd, N, step_xtc++, time_xtc++, xdbox, x, prec_xtc );

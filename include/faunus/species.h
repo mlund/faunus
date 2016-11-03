@@ -250,28 +250,28 @@ namespace Faunus {
         if ( ! atom.key().empty() )
           name = atom.key();
 
-        activity     =  _js["activity"] | 0.0;
+        activity     =  _js.value("activity", 0.0);
         chemPot      =  log( activity * 1.0_molar );
-        alpha        << (_js["alpha"] | string());
+        alpha        << (_js.value("alpha", string()));
         alpha        /= pc::lB(1.0);
-        theta        << (_js["theta"] | string());
+        theta        << (_js.value("theta", string()));
         theta        *= 1.0_Debye;
-        dp           =  _js["dp"] | 0.0;
+        dp           =  _js.value("dp", 0.0);
         dprot        =  ( _js["dprot"] | 0.0 ) * 1._deg; // deg->rads
         eps          =  ( _js["eps"] | 0.0 ) * 1.0_kJmol;
-        hydrophobic  =  _js["hydrophobic"] | false;
-        mu           << ( _js["mu"] | string("0 0 0") );
+        hydrophobic  =  _js.value("hydrophobic", false);
+        mu           << ( _js.value("mu", string("0 0 0") ));
         muscalar     =  mu.len()* 1.0_Debye;
         if ( mu.len() > 1e-6 )
           mu = mu/mu.len();
 
-        mw           = _js["mw"] | 1.0;
-        Ninit        = _js["Ninit"] | 0.0;
-        charge       = _js["q"] | 0.0;
+        mw           = _js.value("mw", 1.0);
+        Ninit        = _js.value("Ninit", 0.0);
+        charge       = _js.value("q", 0.0);
         radius       = ( _js["r"] | 0.0 ) * 1.0_angstrom;
         sigma        = ( _js["sigma"] | 2*radius ) * 1.0_angstrom;
         radius       = 0.5 * sigma;
-        tfe          = _js["tfe"] | 0.0;
+        tfe          = _js.value("tfe", 0.0);
         alphax       = (_js["alphax"] | 0.0)*std::pow(radius,3);
         string unit  = _js["alphax_unit"] | string("unitless");
           if ( unit == "angstrom^3" )
@@ -279,16 +279,16 @@ namespace Faunus {
 
         // spherocylindrical properties
         half_len     = 0.5 * ( _js["len"] | 0.0 );
-        patchtype    = _js["patchtype"] | 0.0;
-        pswitch      = _js["patchswitch"] | 0.0;
-        pdis         = _js["patchdistance"] | 0.0;
+        patchtype    = _js.value("patchtype", 0.0);
+        pswitch      = _js.value("patchswitch", 0.0);
+        pdis         = _js.value("patchdistance", 0.0);
         pangl        = ( _js["patchangle"] | 0.0 ) * 1._deg;
         panglsw      = ( _js["patchangleswitch"] | 0.0 ) * 1._deg;
         chiral_angle = ( _js["patchchiralangle"] | 0.0 ) * 1._deg;
 
-        betaC = _js["betaC"] | pc::infty;
-        betaD = _js["betaD"] | pc::infty;
-        betaQ = _js["betaQ"] | pc::infty;
+        betaC = _js.value("betaC", pc::infty);
+        betaD = _js.value("betaD", pc::infty);
+        betaQ = _js.value("betaQ", pc::infty);
       }
   };
 

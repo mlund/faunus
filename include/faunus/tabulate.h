@@ -1266,14 +1266,14 @@ namespace Faunus {
 
             auto j = in[sec]["spline"];
 
-            rmin = j["rmin"] | 1.0;
-            rmax = j["rmax"] | 100.0;
+            rmin = j.value("rmin", 1.0);
+            rmax = j.value("rmax", 100.0);
             tab.setRange( rmin, rmax );
             tab.setTolerance(
                 j["utol"] | 0.01, 
                 j["ftol"] | -1, 
                 j["umaxtol"] | -1, 
-                j["fmaxtol"] |-1 );
+                j.value("fmaxtol", -1 ));
 
             verbose = in[sec]["verbose"] | false;
 

@@ -429,7 +429,7 @@ namespace Faunus {
 
     Harmonic::Harmonic( Tmjson &j, const string &sec) : PairPotentialBase(sec) {
       name="Harmonic";
-      k   = j[sec]["k"]   | 0.0;
+      k   = j[sec].value("k", 0.0);;
       req = j[sec]["req"] | 0.0;
     }
 

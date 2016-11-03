@@ -195,8 +195,8 @@ namespace Faunus {
           template<class Tspace>
             PolarizeMove(Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) :
               Tmove(e,s,j) {
-                threshold = j["pol_threshold"] | 0.001;
-                max_iter  = j["max_iterations"] | 40;
+                threshold = j.value("pol_threshold", 0.001);
+                max_iter  = j.value("max_iterations", 40);
               }
 
           PolarizeMove(const Tmove &m) : max_iter(40), threshold(0.001), Tmove(m) {};
@@ -282,10 +282,10 @@ namespace Faunus {
 
             MolListData( Tmjson &j ) {
               *this = MolListData();
-              prob = j["prob"] | 1.0;
-              perMol = j["permol"] | false;
-              perAtom = j["peratom"] | false;
-              dir << ( j["dir"] | std::string("1 1 1") );
+              prob = j.value("prob", 1.0);
+              perMol = j.value("permol", false);
+              perAtom = j.value("peratom", false);
+              dir << ( j.value("dir", std::string("1 1 1") ));
             }
           };
 
@@ -1664,9 +1664,9 @@ namespace Faunus {
         base::cite        = "doi:10/fthw8k";
         base::jsondir     = "moves/"+pfx; // just for unittesting (to be changed)
         base::useAlternativeReturnEnergy =true;
-        base::runfraction = _j["prob"] | 1.0;
-        skipEnergyUpdate  = _j["skipenergy"] | false;
-        dp                = _j["dp"] | 0.0;
+        base::runfraction = _j.value("prob", 1.0);
+        skipEnergyUpdate  = _j.value("skipenergy", false);
+        dp                = _j.value("dp", 0.0);
         if (dp<1e-6)
           base::runfraction=0;
         g=spc->groupList(); // currently ALL groups in the system will be moved!

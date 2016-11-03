@@ -779,7 +779,7 @@ namespace Faunus {
 
           NonbondedCutg2g(Tmjson &j, const string &sec="nonbonded") : base(j,sec) {
             noPairPotentialCutoff=false;
-            rcut2 = pow( j["energy"][sec]["cutoff_g2g"] | pc::infty, 2);
+            rcut2 = pow( j["energy"][sec].value("cutoff_g2g", pc::infty), 2);
             base::name += " (g2g cut=" + std::to_string(sqrt(rcut2))
               + textio::_angstrom + ")";
           }
@@ -1221,7 +1221,7 @@ namespace Faunus {
 
           ExternalPressure( Tmjson &j, string sec="isobaric" ) {
             this->name="External Pressure";
-            P = ( j["moves"][sec]["pressure"] | 0.0 ) * 1.0_mM;
+            P = ( j["moves"][sec].value("pressure", 0.0) ) * 1.0_mM;
             if (P < 0)
               throw std::runtime_error( "Negative pressure forbidden." );
           }
@@ -1656,7 +1656,7 @@ namespace Faunus {
               _min = j["min"].get<Tvec>();
               _max = j["max"].get<Tvec>();
               _scale = j["scale"].get<Tvec>();
-              _nstep = j["nstep"] | 1000;
+              _nstep = j.value("nstep", 1000);
               assert( _min.size() >= 1);
               assert( _min.size() == _max.size());
               assert( _min.size() == _scale.size());
@@ -2296,7 +2296,7 @@ namespace Faunus {
             base::name = "SASA Energy";
             auto _j = j["energy"][dir];
             probe = _j["proberadius"] | 1.4; // angstrom
-            conc = _j["conc"] | 0.0;         // co-solute concentratil (mol/l);
+            conc = _j.value("conc", 0.0);         // co-solute concentratil (mol/l));
           }
 
           auto tuple() -> decltype(std::make_tuple(this)) {

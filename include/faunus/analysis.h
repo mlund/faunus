@@ -213,9 +213,9 @@ namespace Faunus {
         VirialPressure( Tmjson &j, Tpotential &pot, Tspace &spc, string pfx="virial" )
           : spc(&spc), pot(&pot), AnalysisBase( j["analysis"], pfx ) {
           auto _j = j["analysis"][pfx];
-          dim = _j["dim"] | 3;
-          area = _j["area"] | 0.0;
-          noMolecularPressure = _j["noMolecularPressure"] | false;
+          dim = _j.value("dim", 3);
+          area = _j.value("area", 0.0);
+          noMolecularPressure = _j.value("noMolecularPressure", false);
           name="Virial Pressure";
           T.setZero();
         }
@@ -2005,11 +2005,11 @@ namespace Faunus {
             : spc(&spc), data(0.2), AnalysisBase( j["analysis"], pfx ) {
               name="Cylindrical Density";
               auto _j = j["analysis"][pfx];
-              zmin    = _j["zmin"] | 0.0;
-              zmax    = _j["zmax"] | -zmin;
-              dz      = _j["dz"] | 0.2;
+              zmin    = _j.value("zmin", 0.0);
+              zmax    = _j.value("zmax", -zmin);
+              dz      = _j.value("dz", 0.2);
 
-              string atomtype = _j["atomtype"] | string();
+              string atomtype = _j.value("atomtype", string());
               cout << "atomtype = " << atomtype << endl;
               id      = atom[ atomtype ].id;
 
@@ -2146,9 +2146,9 @@ namespace Faunus {
           VirtualVolumeMove( Tmjson &js, Tenergy &pot, Tspace &spc,
               string sec="virtualvolume") : AnalysisBase(js["analysis"], sec), spc(&spc), pot(&pot) {
             auto &j = js["analysis"][sec];
-            dV = j["dV"] | 0.1;
+            dV = j.value("dV", 0.1);
             dir = {1,1,1};  // scale directions
-            fullenergy = j["fullenergy"] | false;
+            fullenergy = j.value("fullenergy", false);
             AnalysisBase::name = "Virtual Volume Move";
             AnalysisBase::cite = "doi:10.1063/1.472721";
           }

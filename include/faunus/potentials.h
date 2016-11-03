@@ -1418,7 +1418,7 @@ namespace Faunus {
 
           FromDisk( Tmjson &j, const string &sec="fromdisk") {
             PairPotentialBase::name = "fromdisk";
-            string filename = j[sec] | string();
+            string filename = j.value(sec, string());
             if (!t.load(filename))
               throw std::runtime_error("Couldn't load tabulated potential.");
           }

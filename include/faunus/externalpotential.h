@@ -140,13 +140,13 @@ namespace Faunus {
         if ( std::abs(phi0) > 1e-6 )
           rho = sqrt(2*c0/(pc::pi*lB))*sinh(.5*phi0); //Evans&Wennerstrom,Colloidal Domain p 138-140
         else {
-          rho = 1 / (js["qarea"] | 0.0);
+          rho = 1 / (js.value("qarea", 0.0));
           if (rho>1e9)
-            rho = js["rho"] | 0.0;
+            rho = js.value("rho", 0.0);
           phi0 = 2.*asinh(rho * sqrt(0.5*lB*pc::pi/c0 ));//[Evans..]
         }
         gamma0 = tanh(phi0/4); // assuming z=1  [Evans..]
-        offset = js["offset"] | 0.0;
+        offset = js.value("offset", 0.0);
       }
 
     /**

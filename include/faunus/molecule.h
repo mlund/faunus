@@ -259,12 +259,12 @@ namespace Faunus {
           name = molecule.key();
           auto _js = molecule.value();
 
-          _isAtomic   = _js["atomic"] | false;
-          Ninit       = _js["Ninit"] | 0;
-          capacitance = _js["Cavg"] | 0.0;
-          meancharge  = _js["Zavg"] | 0.0;
-          bool keeppos= _js["keeppos"] | false;
-          activity    = _js["activity"] | 0.0;
+          _isAtomic   = _js.value("atomic", false);
+          Ninit       = _js.value("Ninit", 0);
+          capacitance = _js.value("Cavg", 0.0);
+          meancharge  = _js.value("Zavg", 0.0);
+          bool keeppos= _js.value("keeppos", false);
+          activity    = _js.value("activity", 0.0);
           chemPot     = log( activity * 1.0_molar );
 
           // create bond list
@@ -279,7 +279,7 @@ namespace Faunus {
 
           // read conformation from disk
           {
-            string structure = _js["structure"] | string();
+            string structure = _js.value("structure", string());
             if ( !structure.empty() ) {
               Tpvec v;
               if (structure.substr(structure.find_last_of(".") + 1) == "aam")
@@ -300,7 +300,7 @@ namespace Faunus {
           }
 
           // construct flexible peptide from fasta sequence
-          string fasta = _js["fasta"] | string();
+          string fasta = _js.value("fasta", string());
           if ( !fasta.empty() ) {
             assert( atoms.empty() );
             atoms = FastaToAtoms( fasta ); // -> atomid
@@ -329,7 +329,7 @@ namespace Faunus {
           }
 
           // read tracjectory w. conformations from disk
-          string traj = _js["traj"] | string();
+          string traj = _js.value("traj", string());
           if ( !traj.empty() ) {
             conformations.clear();
             FormatPQR::load( traj, conformations );
@@ -345,7 +345,7 @@ namespace Faunus {
               confDist = std::discrete_distribution<>(w.begin(), w.end());
 
               // look for weight file
-              string weightfile = _js["trajweight"] | string();
+              string weightfile = _js.value("trajweight", string());
               if (!weightfile.empty()) {
                 std::ifstream f(weightfile.c_str());
                 if (f) {
@@ -367,7 +367,7 @@ namespace Faunus {
 
           // add atoms to atom list
           if ( atoms.empty() ) {
-            string atomlist = _js["atoms"] | string();
+            string atomlist = _js.value("atoms", string());
             for ( auto &a : textio::words2vec<string>(atomlist) )
               if ( atom[a].id > 0 )
                 atoms.push_back( atom[a].id );

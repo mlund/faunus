@@ -187,8 +187,8 @@ namespace Faunus {
   inline UnitTest::UnitTest(Tmjson &j) {
     cnt=0;
     auto _j = j["system"]["unittest"];
-    file    = _j["testfile"] | string();
-    stable  = _j["stable"] | true;
+    file = _j.value("testfile", string());
+    stable = _j.value("stable", true);
     include( file );
   }
 

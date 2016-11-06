@@ -360,6 +360,61 @@ namespace Faunus {
 
         string info(char w);
     };
+    
+    /**
+     * @brief Hard sphere cap pair potential
+     */
+    class HardSphereCap : public PairPotentialBase {
+      public:
+        HardSphereCap();
+
+        template<typename T>
+          HardSphereCap(const T&, const string &sec="") { name="HardsphereCap"; }
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+	    doubloe r2 = r.squaredNorm();
+            double m=a.radius+b.radius;
+	    if(r2<m*m) {
+	      double r1 = sqrt(r2);
+	      double angle_A = std::acos(a.cap_center_point.dot(r)/a.cap_center/r1);
+	      double angle_B = std::acos(b.cap_center_point.dot(r)/b.cap_center/r1);
+	      
+	      // If the angle between the x.center-x.cap-vector and the x.center-y.center-vector
+	      // is larger than the x.cap-angle then we consider 'x' to be a normal hard sphere
+	      if( ( angle_A >= a.angle_p ) && ( angle_B >= b.angle_p ) )
+		return pc::infty;                        // Effectively normal hard sphere - hard sphere interaction 
+	      if( angle_A >= a.angle_p ) {
+		// Effectively hard 'a' sphere - cap 'b' sphere interaction 
+		Point cap_to_sphere = r + b.cap_center;  // distance-vector between a.center to b.cap
+		Point r = ( b + b.cap_center ) + cap_to_sphere/cap_to_sphere.norm()*b.cap_radius; // Closesed point from a.center to surface of b.cap
+		if((b - r).norm() <= b.radius) {         // If that point is closer than b.radius then it truly is on the b.cap
+		  Point distance_to_cap = a - r;         // Distance-vector between a.center to the closesed point on 'b'
+		  if(distance_to_cap.norm() < a.radius)  // If that distance is shorter than the radius of 'a' then...
+		    return pc::infty;                    // Return collision
+		  return 0.0;                            // Return no collision
+		} else {
+		  // Closesed point between 'a' and 'b' is on the b.cap-ring
+		  // Check these equations!!!
+		  double theta = pc::pi - acos(r.dot(b.cap_center)/r1/b.cap_radius) - acos((b.cap_radius*b.cap_radius + b.cap_radius*b.cap_radius - b.radius*b.radius)/(2.0*b.cap_radius*b.cap_radius));
+		  double distance = sqrt(b.radius*b.radius + (r - b.cap_center).squaredNorm() - b.cap_radius*b.cap_radius - 2.0*r1*b.cap_radius*cos(theta));
+		  if(distance < a.radius)
+		    return pc::infty;
+		  return 0.0;
+		}
+	      }
+	      if( angle_B >= b.angle_p ) {
+		// Effectively hard 'b' sphere - cap 'a' sphere interaction 
+	      }
+	      // Cap 'a' sphere interaction  - cap 'b' sphere interaction 
+	      
+	      return pc::infty;
+	    }
+            return 0.0;
+          }
+
+        string info(char w);
+    };
 
     /**
      * @brief Lennard-Jones (12-6) pair potential

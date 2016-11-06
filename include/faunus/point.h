@@ -695,6 +695,67 @@ namespace Faunus {
         return o;
       }
   };
+  
+  
+  /**
+   * @brief Cap particle
+   */
+  struct CapParticle : public PointParticle {
+    Point cap_center_point;           //!< Center of cap
+    double cap_radius;                //!< Radius of cap
+    double cap_center;                //!< Distance between pareticle and cap center
+    double angle_p, angle_c;          //!< Angles
+
+    inline CapParticle() : cap_center_point(0,0,0),cap_radius(0),cap_center(0),angle_p(0),angle_c(0) {};
+
+    /** @brief Copy operator for base class */
+    inline CapParticle& operator=(const PointParticle &p) {
+      PointParticle::operator=(p);
+      return *this;
+    }
+
+    /** @brief Copy properties from AtomData object */
+    template<class T,
+      class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type>
+        CapParticle& operator=(const T &d) {
+          PointParticle::operator=(d);
+          cap_radius=d.cap_radius;
+	  cap_center = d.cap_center;
+          cap_center_point = Point(cap_center,0,0);
+	  angle_p = std::acos((d.radius*d.radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*d.radius*cap_center));
+	  angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - d.radius*d.radius)/(2.0*cap_radius*cap_center));
+          return *this;
+        }
+
+    /* read in same order as written! */
+    inline CapParticle& operator<<(std::istream &in) {
+      PointParticle::operator<<(in);
+      cap_center_point.operator<<(in);
+      in >> cap_radius;
+      in >> cap_center;
+      angle_p = std::acos((this->radius*this->radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*this->radius*cap_center));
+      angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - this->radius*this->radius)/(2.0*cap_radius*cap_center));
+      return *this;
+    }
+
+    /* write data members to stream */
+    friend std::ostream &operator<<(std::ostream &o, const CapParticle &p)
+    {
+      o << PointParticle(p) << " " << p.cap_center_point.transpose() << " " << p.cap_radius
+        << " " << cap_center;
+      return o;
+    }
+
+    /**
+     * @brief Internal rotation: dipole and polarizability
+     */
+    template<typename Trotator>
+      void rotate(const Trotator &rot) {
+        assert(rot.getOrigin().squaredNorm()<1e-6);
+        cap_center_point = rot(cap_center_point);
+      }
+  };
+  
 
 }//namespace
 #endif

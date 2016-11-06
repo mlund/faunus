@@ -705,8 +705,9 @@ namespace Faunus {
     double cap_radius;                //!< Radius of cap
     double cap_center;                //!< Distance between pareticle and cap center
     double angle_p, angle_c;          //!< Angles
+    bool is_sphere;
 
-    inline CapParticle() : cap_center_point(0,0,0),cap_radius(0),cap_center(0),angle_p(0),angle_c(0) {};
+    inline CapParticle() : cap_center_point(0,0,0),cap_radius(0),cap_center(0),angle_p(0),angle_c(0),is_sphere(false) {};
 
     /** @brief Copy operator for base class */
     inline CapParticle& operator=(const PointParticle &p) {
@@ -723,7 +724,9 @@ namespace Faunus {
 	  cap_center = d.cap_center;
           cap_center_point = Point(cap_center,0,0);
 	  angle_p = std::acos((d.radius*d.radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*d.radius*cap_center));
-	  angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - d.radius*d.radius)/(2.0*cap_radius*cap_center));
+	  angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - d.radius*d.radius)/(2.0*cap_center*cap_radius));
+	  if(fabs(cap_radius) < 1e-6)
+	    is_sphere = true;
           return *this;
         }
 
@@ -732,9 +735,11 @@ namespace Faunus {
       PointParticle::operator<<(in);
       cap_center_point.operator<<(in);
       in >> cap_radius;
+      if(fabs(cap_radius) < 1e-6)
+	is_sphere = true;
       in >> cap_center;
       angle_p = std::acos((this->radius*this->radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*this->radius*cap_center));
-      angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - this->radius*this->radius)/(2.0*cap_radius*cap_center));
+      angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - this->radius*this->radius)/(2.0*cap_center*cap_radius));
       return *this;
     }
 
@@ -742,7 +747,7 @@ namespace Faunus {
     friend std::ostream &operator<<(std::ostream &o, const CapParticle &p)
     {
       o << PointParticle(p) << " " << p.cap_center_point.transpose() << " " << p.cap_radius
-        << " " << cap_center;
+        << " " << p.cap_center;
       return o;
     }
 

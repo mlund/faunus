@@ -365,55 +365,82 @@ namespace Faunus {
      * @brief Hard sphere cap pair potential
      */
     class HardSphereCap : public PairPotentialBase {
+      private:
+        string _brief() {
+          std::ostringstream o;
+          o << "Hard sphere cap";
+          return o.str();          
+        }
       public:
-        HardSphereCap();
-
-        template<typename T>
-          HardSphereCap(const T&, const string &sec="") { name="HardsphereCap"; }
+	template<typename T>
+        HardSphereCap(const T&, const string &sec="") : PairPotentialBase(sec) { name="HardsphereCap"; }
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
-	    doubloe r2 = r.squaredNorm();
+	    double r2 = r.squaredNorm();
             double m=a.radius+b.radius;
 	    if(r2<m*m) {
+	      // Hard sphere overlap
+	      Point acb = ( a + a.cap_center_point ) - b; // Vector from origin of a.cap to center of 'b'
+	      Point bca = ( b + b.cap_center_point ) - a; // Vector from origin of b.cap to center of 'a'
+	      double acbn = acb.norm();                   // Distance from center of a.cap to center of 'b'
+	      double bcan = bca.norm();                   // Distance from center of b.cap to center of 'a'
+	      bool acap_overlap_b = acbn < ( a.cap_radius + b.radius ); // Does the a.cap-sphere overlap 'b'?
+	      bool bcap_overlap_a = bcan < ( b.cap_radius + a.radius ); // Does the b.cap-sphere overlap 'a'?
+	      if( !acap_overlap_b && !bcap_overlap_a )    // If no cap-to-sphere overlaps then...
+		return pc::infty;                         // Caps are irrelevant so effectively normal hard sphere
+		
 	      double r1 = sqrt(r2);
-	      double angle_A = std::acos(a.cap_center_point.dot(r)/a.cap_center/r1);
-	      double angle_B = std::acos(b.cap_center_point.dot(r)/b.cap_center/r1);
-	      
-	      // If the angle between the x.center-x.cap-vector and the x.center-y.center-vector
-	      // is larger than the x.cap-angle then we consider 'x' to be a normal hard sphere
-	      if( ( angle_A >= a.angle_p ) && ( angle_B >= b.angle_p ) )
-		return pc::infty;                        // Effectively normal hard sphere - hard sphere interaction 
-	      if( angle_A >= a.angle_p ) {
-		// Effectively hard 'a' sphere - cap 'b' sphere interaction 
-		Point cap_to_sphere = r + b.cap_center;  // distance-vector between a.center to b.cap
-		Point r = ( b + b.cap_center ) + cap_to_sphere/cap_to_sphere.norm()*b.cap_radius; // Closesed point from a.center to surface of b.cap
-		if((b - r).norm() <= b.radius) {         // If that point is closer than b.radius then it truly is on the b.cap
-		  Point distance_to_cap = a - r;         // Distance-vector between a.center to the closesed point on 'b'
-		  if(distance_to_cap.norm() < a.radius)  // If that distance is shorter than the radius of 'a' then...
-		    return pc::infty;                    // Return collision
-		  return 0.0;                            // Return no collision
+	      if( bcap_overlap_a ) {                      // If b.cap overlap 'a' then...
+		if(acos(b.cap_center_point.dot(r)/r1/b.cap_radius) > b.angle_p)
+		  return pc::infty;                       // The b.cap-sphere does not cover at least some overlap between a.center- and b.center-spherees
+		
+		Point r = ( b + b.cap_center_point ) + bca/bcan*b.cap_radius; // Closesed point from a.center to surface of b.cap
+		if((b - r).norm() <= b.radius) {          // If that point is closer than b.radius then it truly is on the b.cap
+		  Point a_to_closest_b = a - r;           // Distance-vector between a.center to the closesed point on 'b'
+		  if(a_to_closest_b.norm() < a.radius)    // If that distance is shorter than the radius of 'a' then...
+		    return pc::infty;                     // Return collision
+		  return 0.0;                             // Return no collision
 		} else {
 		  // Closesed point between 'a' and 'b' is on the b.cap-ring
-		  // Check these equations!!!
-		  double theta = pc::pi - acos(r.dot(b.cap_center)/r1/b.cap_radius) - acos((b.cap_radius*b.cap_radius + b.cap_radius*b.cap_radius - b.radius*b.radius)/(2.0*b.cap_radius*b.cap_radius));
-		  double distance = sqrt(b.radius*b.radius + (r - b.cap_center).squaredNorm() - b.cap_radius*b.cap_radius - 2.0*r1*b.cap_radius*cos(theta));
+		  double theta = pc::pi - acos(r.dot(b.cap_center_point)/r1/b.cap_radius) - b.angle_c;
+		  double distance = sqrt(b.radius*b.radius + (r + b.cap_center_point).squaredNorm() - b.cap_center*b.cap_center - 2.0*r1*b.cap_radius*cos(theta));
 		  if(distance < a.radius)
 		    return pc::infty;
 		  return 0.0;
 		}
 	      }
-	      if( angle_B >= b.angle_p ) {
-		// Effectively hard 'b' sphere - cap 'a' sphere interaction 
+	      
+	      if( acap_overlap_b ) {                      // If a.cap overlap 'b' then...
+		if(acos(a.cap_center_point.dot(r)/r1/a.cap_radius) > a.angle_p)
+		  return pc::infty;                       // The a.cap-sphere does not cover at least some overlap between b.center- and a.center-spherees
+		
+		Point r = ( a + a.cap_center_point ) + acb/acbn*a.cap_radius; // Closesed point from b.center to surface of a.cap
+		if((a - r).norm() <= a.radius) {          // If that point is closer than a.radius then it truly is on the a.cap
+		  Point b_to_closest_a = b - r;           // Distance-vector between b.center to the closesed point on 'a'
+		  if(b_to_closest_a.norm() < b.radius)    // If that distance is shorter than the radius of 'b' then...
+		    return pc::infty;                     // Return collision
+		  return 0.0;                             // Return no collision
+		} else {
+		  // Closesed point between 'a' and 'b' is on the a.cap-ring
+		  double theta = pc::pi - acos(r.dot(a.cap_center_point)/r1/a.cap_radius) - a.angle_c;
+		  double distance = sqrt(a.radius*a.radius + (r + a.cap_center_point).squaredNorm() - a.cap_center*a.cap_center - 2.0*r1*a.cap_radius*cos(theta));
+		  if(distance < b.radius)
+		    return pc::infty;
+		  return 0.0;
+		}
 	      }
+	      
 	      // Cap 'a' sphere interaction  - cap 'b' sphere interaction 
 	      
 	      return pc::infty;
+	      
+	      
 	    }
+	    
+	    
             return 0.0;
           }
-
-        string info(char w);
     };
 
     /**

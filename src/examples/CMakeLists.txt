@@ -22,6 +22,10 @@ fau_example(example_penalty "./" penalty.cpp)
 set_target_properties(example_penalty PROPERTIES OUTPUT_NAME "penalty")
 add_test( example_penalty python ${CMAKE_CURRENT_SOURCE_DIR}/penalty.py)
 
+fau_example(example_capparticles "./" capparticles.cpp)
+set_target_properties(example_capparticles PROPERTIES OUTPUT_NAME "capparticles")
+add_test( example_capparticles ${CMAKE_CURRENT_SOURCE_DIR}/capparticles.run )
+
 fau_example(example_grand "./" grand.cpp)
 set_target_properties(example_grand PROPERTIES OUTPUT_NAME "grand")
 add_test( example_grand python ${CMAKE_CURRENT_SOURCE_DIR}/grand.py )

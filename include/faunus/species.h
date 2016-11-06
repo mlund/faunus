@@ -232,6 +232,8 @@ namespace Faunus {
              betaD,            //!< Value of the dipole distribution (inverse) width [1/angstrom] 
              betaQ,            //!< Value of the quadrupole distribution (inverse) width [1/angstrom] 
              tfe,              //!< Transfer free energy (J/mol/angstrom^2/M)
+             cap_radius,       //!< Radius of cap
+	     cap_center,       //!< Distance to cap center from particle center
              alphax;           //!< Excess polarizability [angstrom^3]
       Point mu;                //!< Dipolemoment vector
       int Ninit;               //!<

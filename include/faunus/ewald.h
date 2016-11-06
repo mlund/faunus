@@ -37,19 +37,14 @@ namespace Faunus {
 
         typedef Potential::Coulomb Tbase;
         double alpha, alpha2, constant, rc, rc2, tab_utol, tab_ftol;
-	bool only_coulomb, splinned;
-	Tabulate::Andrea<double> ek;
-	Tabulate::TabulatorBase<double>::data table;
+	bool only_coulomb, only_dipoledipole;
+	Tabulate::Andrea<double> erfc_tabulator, T1_tabulator, T2_tabulator;
+	Tabulate::TabulatorBase<double>::data table_erfc, table_T1, table_T2;
 
         EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j,sec), alpha(0), alpha2(0), constant(0), rc(1), rc2(1) {
           Tbase::name="Ewald Real";
-	  only_coulomb = false;
-	  splinned = false;
-	  if((useIonDipole? 1:0) + (useDipoleDipole? 1:0) == 0 && useIonIon) {
-	    only_coulomb = true;
-	    tab_utol = j[sec]["tab_utol"] | 1e-9;
-	    tab_ftol = j[sec]["tab_ftol"] | 1e-5;
-	  }
+	  tab_utol = j[sec]["tab_utol"] | 1e-9;
+	  tab_ftol = j[sec]["tab_ftol"] | 1e-5;
         }
         
         void updateAlpha(double alpha_in) {
@@ -66,13 +61,20 @@ namespace Faunus {
         }
         
         void updateSpline() {
-	  if(only_coulomb) { // If only isotropic interactions ...
-	    std::function<double(double)> Ek = [&](double r1) { return erfc(alpha*r1); }; // .. then spline
-	    ek.setRange(0,rc);
-	    ek.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
-	    table = ek.generate( Ek );
-	    splinned = true;
-	  }
+	  std::function<double(double)> erfc_temp = [&](double r1) { return erfc(alpha*r1); }; // .. then spline
+	  erfc_tabulator.setRange(0,rc);
+	  erfc_tabulator.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+	  table_erfc = erfc_tabulator.generate( erfc_temp );
+	  
+	  std::function<double(double)> T1_temp = [&](double r1) { return (r1*2.0*alpha/sqrt(pc::pi)*exp(-alpha2*r1*r1) + erfc(alpha*r1)); }; // .. then spline
+	  T1_tabulator.setRange(0,rc);
+	  T1_tabulator.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+	  table_T1 = T1_tabulator.generate( T1_temp );
+	    
+	  std::function<double(double)> T2_temp = [&](double r1) { return 3.0*(T1_temp(r1) + 4.0*alpha2*alpha/3.0/sqrt(pc::pi)*r1*r1*r1*exp(-alpha2*r1*r1) ); }; // .. then spline
+	  T2_tabulator.setRange(0,rc);
+	  T2_tabulator.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+	  table_T2 = T2_tabulator.generate( T2_temp );
 	}
         
 	 /**
@@ -94,20 +96,14 @@ namespace Faunus {
               return 0.0;
 	    
             double r1 = sqrt(r2);
-	    if(only_coulomb && splinned)
-	      return Tbase::bjerrumLength()*a.charge*b.charge*ek.eval(table,r1)*r1;
 	    double E = 0.0;
-	    
-            double r1i_d = erfc_x(alpha*r1)/r1;
             if(useIonIon)
-              E += r1i_d*a.charge*b.charge;  // return Tbase::bjerrumLength() * a.charge * b.charge * (1.0/r1 - 1.0/rc + (r1 - rc)/rc2 );
+              E += a.charge*b.charge*erfc_tabulator.eval(table_erfc,r1)*r1;  // return Tbase::bjerrumLength() * a.charge * b.charge * (1.0/r1 - 1.0/rc + (r1 - rc)/rc2 );
             if(!useIonDipole && !useDipoleDipole)
               return E*Tbase::bjerrumLength();
-
-#ifdef DIPOLEPARTICLE
-            double expK = constant*exp(-alpha2*r2);
-            double T1 = (expK + r1i_d)/r2;
-
+	    
+//#ifdef DIPOLEPARTICLE
+	    double T1 = T1_tabulator.eval(table_T1,r1)/r1/r2;
             if(useIonDipole) {
               E += a.charge*r.dot(b.mu)*b.muscalar*T1;
               E -= b.charge*r.dot(a.mu)*a.muscalar*T1;
@@ -115,10 +111,10 @@ namespace Faunus {
 
             if(useDipoleDipole) {
               double t3 = -b.mu.dot(a.mu)*T1;
-              double t5 = b.mu.dot(r)*a.mu.dot(r)*(3.0*T1 + 2.0*alpha2*expK )/r2;
+              double t5 = b.mu.dot(r)*a.mu.dot(r)*T2_tabulator.eval(table_T2,r1)/r2/r2/r1;
               E += -(t5 + t3)*b.muscalar*a.muscalar;
             }
-#endif
+//#endif
             return E*Tbase::bjerrumLength();
           }
       };
@@ -216,7 +212,7 @@ namespace Faunus {
           typedef typename Tbase::Tpvec Tpvec;
 	  typedef typename Tbase::Tgeometry Tgeometry;
 
-	  EwaldParameters<useIonIon,useIonDipole,useDipoleDipole> parameters, parameters_trial;
+	  EwaldParameters<useIonIon,useIonDipole,useDipoleDipole> parameters;
           int kVectorsInUse, kVectorsInUse_trial, N, cnt_accepted, update_frequency;
           double V, V_trial, surfaceEnergy, surfaceEnergyTrial, reciprocalEnergy, reciprocalEnergyTrial, eps_surf, const_inf, lB, update_drift; 
           bool spherical_sum, isotropic_pbc;
@@ -483,7 +479,6 @@ namespace Faunus {
             parameters.kcc = ceil(parameters.kc);
             isotropic_pbc = _j["isotropic_pbc"] | false ;
 	    
-	    parameters_trial = parameters;
             Tbase::pairpot.first.updateAlpha(parameters.alpha);
             Tbase::pairpot.first.updateRcut(parameters.rc);
 	    Tbase::pairpot.first.updateSpline();
@@ -498,9 +493,6 @@ namespace Faunus {
 	    kVectorsInUse_trial = kVectorsInUse;
 	    surfaceEnergyTrial = surfaceEnergy;
 	    reciprocalEnergyTrial = reciprocalEnergy;
-	    parameters_trial = parameters;
-            Tbase::pairpot.first.updateAlpha(parameters.alpha);
-            Tbase::pairpot.first.updateRcut(parameters.rc);
             Q_ion_tot_trial.resize(kVectorsInUse);
             Q_dip_tot_trial.resize(kVectorsInUse);
             kVectors_trial.resize(3, kVectorsInUse); 
@@ -521,9 +513,6 @@ namespace Faunus {
 	    kVectorsInUse = kVectorsInUse_trial;
 	    surfaceEnergy = surfaceEnergyTrial;
 	    reciprocalEnergy = reciprocalEnergyTrial;
-	    parameters = parameters_trial;
-            Tbase::pairpot.first.updateAlpha(parameters.alpha);
-            Tbase::pairpot.first.updateRcut(parameters.rc);
             Q_ion_tot.resize(kVectorsInUse);
             Q_dip_tot.resize(kVectorsInUse);
             kVectors.resize(3, kVectorsInUse);
@@ -558,7 +547,7 @@ namespace Faunus {
 	    }
 	    // Move has been accepted
 	    Group g(0, spc->trial.size()-1);
-	    selfEnergyAverage += getSelfEnergy(spc->trial,g,parameters_trial);
+	    selfEnergyAverage += getSelfEnergy(spc->trial,g,parameters);
 	    surfaceEnergyAverage += surfaceEnergy;
 	    reciprocalEnergyAverage += reciprocalEnergy;
 	    //realEnergyAverage += getRealEnergy(spc->trial); // Takes a lot of time
@@ -585,7 +574,7 @@ namespace Faunus {
             if(c.geometryChange) {
               updateAllComplexNumbers(spc->trial, Q_ion_tot_trial, Q_dip_tot_trial,kVectors_trial,kVectorsInUse_trial);
               V_trial = V + c.dV;
-	      parameters_trial.update(spc->geo_trial.len);
+	      parameters.update(spc->geo_trial.len);
               return;
             }
 
@@ -634,8 +623,6 @@ namespace Faunus {
           }
 
           double g_external(const Tpvec &p, Group &g) override {
-	    if (Tbase::isTrial(p))
-	      return getSelfEnergy(p,g,parameters_trial);
 	    return getSelfEnergy(p,g,parameters);
           }
 
@@ -656,14 +643,13 @@ namespace Faunus {
     
           void setGeometry(typename Tspace::GeometryType &g) override {
             Tbase::setGeometry(g);
+	    parameters.update(g.len);
 	    if(Tbase::isGeometryTrial(g)) {
 	      V_trial = g.getVolume();
-	      parameters_trial.update(g.len);
-	      kVectorChange(kVectors_trial,Aks_trial,Q_ion_tot_trial,Q_dip_tot_trial,kVectorsInUse_trial,parameters_trial);
+	      kVectorChange(kVectors_trial,Aks_trial,Q_ion_tot_trial,Q_dip_tot_trial,kVectorsInUse_trial,parameters);
 	      updateAllComplexNumbers(spc->trial,Q_ion_tot_trial,Q_dip_tot_trial,kVectors_trial,kVectorsInUse_trial);
 	    } else {
 	      V = g.getVolume();
-	      parameters.update(g.len);
 	      kVectorChange(kVectors,Aks,Q_ion_tot,Q_dip_tot,kVectorsInUse,parameters);
 	      updateAllComplexNumbers(spc->p,Q_ion_tot,Q_dip_tot,kVectors,kVectorsInUse);
 	    }

@@ -1,10 +1,10 @@
 # Generated on Dec 24 2014 16:08:03 using 4.2.1 Compatible Apple LLVM 6.0 (clang-600.0.56)
 energyAverage                      -63386.5            
-moves/gc_acceptance                0.0337977
-moves/gc_flux                      0.966667                   
-moves/gc_mol_water_gamma           1.84324e-05         
+GrandCanonical_acceptance                0.0273981
+GrandCanonical_flux                      0.966667                   
+GrandCanonical_mol_water_gamma           1.84324e-05         
 relativeEnergyDrift                6.92411e-15         
-moves/moltransrot_acceptance       28.051              
-moves/moltransrot_water_acceptance 28.051              
-moves/moltransrot_water_dRot       4.08619             
-moves/moltransrot_water_dTrans     0.119376            
+GroupRotation/Translation_acceptance       28.051              
+GroupRotation/Translation_water_acceptance 28.051              
+GroupRotation/Translation_water_dRot       4.08619             
+GroupRotation/Translation_water_dTrans     0.119376            

@@ -8,44 +8,43 @@ from shutil import copyfile
 name='gcmol'
 pfx = os.path.join( os.path.dirname(__file__), name)
 try:
-  copyfile( pfx+'.state', 'state' )
-  copyfile( pfx+'.test', name+'.test' )
+    copyfile( pfx+'.state', 'state' )
+    copyfile( pfx+'.test', name+'.test' )
 except: pass
 
 d = {
-    "system" : {
-      "cuboid"   : { "len" : 19.0288 },
-      "mcloop"   : { "macro":10, "micro":100000 },
-      "unittest" : { "testfile":"gcmol.test", "stable":False }
-      },
+        "system" : {
+            "cuboid"   : { "len" : 19.0288 },
+            "mcloop"   : { "macro":10, "micro":100000 },
+            "unittest" : { "testfile":"gcmol.test", "stable":False }
+            },
 
-    "energy" : {
-      "nonbonded" : {
-        "coulomb"  : { "epsr":1.0, "cutoff":9.0 }
-        } 
-      },
+        "energy" : {
+            "nonbonded" : {
+                "coulomb"  : { "epsr":1.0, "cutoff":9.0 }
+                } 
+            },
 
-    "atomlist" : {
-      "OW" : { "q":-0.8476, "sigma":3.2, "eps":0.65 },
-      "HW" : { "q": 0.4238, "sigma":0.0, "eps":0    }
-      },
+        "atomlist" : {
+            "OW" : { "q":-0.8476, "sigma":3.2, "eps":0.65 },
+            "HW" : { "q": 0.4238, "sigma":0.0, "eps":0    }
+            },
 
-    "moleculelist": {
-      "water": { "activity" : 0.0009386, "structure" : "water.aam", "Ninit" : 200}
-      },
+        "moleculelist": {
+            "water": { "activity" : 0.0009386, "structure" : "water.aam", "Ninit" : 200}
+            },
 
-    "moleculecombinations" : {
-      "water" : { "molecules" : "water" }
-      },
-
-    "moves" : {
-      "gc" : { "molcombfile":"gcmol.json" },
-      "moltransrot" : {
-        "water" : { "dp":0.5, "dprot":0.5, "prob":0.001, "permol":True } 
-        } 
-      }
-
-    }
+        "moves" : {
+            "gc" : {
+                "moleculecombinations" : {
+                    "water" : { "molecules" : "water" }
+                    },
+                },
+            "moltransrot" : {
+                "water" : { "dp":0.5, "dprot":0.5, "prob":0.001, "permol":True } 
+                } 
+            }
+        }
 
 # generate json file
 with open(name+'.json', 'w+') as f:
@@ -65,6 +64,6 @@ f.close()
 exe='./'+name
 rc=1
 if ( os.access( exe, os.X_OK )):
-  rc = call( [exe] )
+    rc = call( [exe] )
 sys.exit( rc )
 

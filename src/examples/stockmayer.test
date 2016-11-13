@@ -1,6 +1,6 @@
 # Generated on Jul 31 2014 15:10:34 using 4.8.2
 energyAverage                      -1359.55            
 relativeEnergyDrift                4.78909e-15         
-moves/atomtranslate_acceptance     20.2006             
-moves/atomrotate_acceptance        25.528              
+SingleParticleTranslation_acceptance     20.2006             
+SingleParticleRotation_acceptance        25.528              
 

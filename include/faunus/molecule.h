@@ -533,6 +533,8 @@ namespace Faunus {
    *
    * When examining a JSON file, individual entries must be placed
    * in a section called `moleculecombinations`.
+   *
+   * @todo Add warning if `moleculecombinations` is not found
    */
   template<class Tpvec, class base=PropertyVector< MoleculeCombination<Tpvec> >>
     class MoleculeCombinationMap : public base {

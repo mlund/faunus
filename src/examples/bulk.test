@@ -2,7 +2,7 @@
 bjerrum                            151.909             
 energyAverage                      -91222              
 relativeEnergyDrift                4.25649e-13         
-moves/atomtranslate_acceptance     28.5327
+SingleParticleTranslation_acceptance     28.5327
 virial_pressure_mM                 -11801.2
 virtualvolume_pressure_mM          -11801.4
 

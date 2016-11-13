@@ -1,14 +1,14 @@
 # Generated on Feb 24 2013 20:44:58 using 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.24)
 PolymerShape_Rgpolymer                  6.08575             
-moves/crankshaft_Acceptancepolymer      0.941386            
-moves/crankshaft_acceptance             94.1386             
+CrankShaft_Acceptancepolymer      0.941386            
+CrankShaft_acceptance             94.1386             
 energyAverage                           -0.911416           
-moves/pivot_Acceptancepolymer           0.915374            
-moves/pivot_acceptance                  91.5374             
+PolymerPivotMove_Acceptancepolymer           0.915374            
+PolymerPivotMove_acceptance                  91.5374             
 relativeEnergyDrift                     1.78457e-08 
-moves/reptate_Acceptancepolymer             0.90869             
-moves/reptate_acceptance                    90.869              
-moves/moltransrot_acceptance            56.032              
-moves/moltransrot_polymer_acceptance    56.032              
-moves/moltransrot_polymer_dRot          74.2071             
-moves/moltransrot_polymer_dTrans        36.389              
+LinearPolymerReptation_Acceptancepolymer             0.90869             
+LinearPolymerReptation_acceptance                    90.869              
+GroupRotation/Translation_acceptance            56.032              
+GroupRotation/Translation_polymer_acceptance    56.032              
+GroupRotation/Translation_polymer_dRot          74.2071             
+GroupRotation/Translation_polymer_dTrans        36.389              

@@ -1,15 +1,15 @@
 # Generated on Aug  3 2012 18:35:20 using 4.2.1 Compatible Apple Clang 4.0 ((tags/Apple/clang-421.0.57)) (SVN revision: 809)
 energyAverage                      -425.514            
-moves/atomtranslate_acceptance     18.4683             
-moves/isobaric_MSQDisplacement     32.8056             
-moves/isobaric_acceptance          15.8253             
-moves/isobaric_averageSideLength   79.7627             
+SingleParticleTranslation_acceptance     18.4683             
+IsobaricVolumeFluctuations_MSQDisplacement     32.8056             
+IsobaricVolumeFluctuations_acceptance          15.8253             
+IsobaricVolumeFluctuations_averageSideLength   79.7627             
 relativeEnergyDrift                1.00912e-12         
-moves/moltransrot_polymer_acceptance 14.1504             
-moves/moltransrot_polymer_dRot       37.3486             
-moves/moltransrot_polymer_dTrans     8.09601             
-moves/moltransrot_acceptance       14.1504             
-moves/crankshaft_Acceptancepolymer 0.692359 
-moves/crankshaft_acceptance        69.2359  
-moves/pivot_Acceptancepolymer      0.735959 
-moves/pivot_acceptance             73.5959  
+GroupRotation/Translation_polymer_acceptance 14.1504             
+GroupRotation/Translation_polymer_dRot       37.3486             
+GroupRotation/Translation_polymer_dTrans     8.09601             
+GroupRotation/Translation_acceptance       14.1504             
+CrankShaft_Acceptancepolymer 0.692359 
+CrankShaft_acceptance        69.2359  
+PolymerPivotMove_Acceptancepolymer      0.735959 
+PolymerPivotMove_acceptance             73.5959  

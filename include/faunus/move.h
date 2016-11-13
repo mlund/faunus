@@ -257,7 +257,6 @@ namespace Faunus {
           Tspace* spc;                     //!< Pointer to Space
           string title;                    //!< Title of move (mandatory!)
           string cite;                     //!< Reference, url, DOI etc.
-          string jsondir;                  //!< inputmap section
           char w;                          //!< info text width. Adjust this in constructor if needed.
           unsigned long int cnt;           //!< total number of trial moves
           virtual bool run();              //!< Runfraction test
@@ -313,7 +312,7 @@ namespace Faunus {
           }
 
         public:
-          Movebase(Energy::Energybase<Tspace>&, Tspace&, string="moves");//!< Constructor
+          Movebase( Energy::Energybase<Tspace>&, Tspace& );//!< Constructor
           virtual ~Movebase();
           double runfraction;                //!< Fraction of times calling move() should result in an actual move. 0=never, 1=always.
           virtual double move(int=1);        //!< Attempt `n` moves and return energy change (kT)
@@ -329,8 +328,7 @@ namespace Faunus {
           Tmjson json() {                    //!< Information as JSON object
             Tmjson j;
             if (cnt>0) {
-              j[ jsondir ] = {
-                { "title", title }, 
+              j[ title ] = {
                 { "trials", cnt },
                 { "acceptance", getAcceptance() },
                 { "runfraction", runfraction },
@@ -353,8 +351,7 @@ namespace Faunus {
      * @param rootsec Name of section in input file to search for parameters
      */
     template<class Tspace>
-      Movebase<Tspace>::Movebase(Energy::Energybase<Tspace> &e, Tspace &s, string rootsec) {
-        jsondir = rootsec;
+      Movebase<Tspace>::Movebase( Energy::Energybase<Tspace> &e, Tspace &s ) {
         e.setSpace(s);
         pot=&e;
         spc=&s;
@@ -515,7 +512,7 @@ namespace Faunus {
       void Movebase<Tspace>::test(UnitTest &t) {
         if (runfraction<1e-6 || cnt==0)
           return;
-        t(jsondir+"_acceptance", double(cnt_accepted)/cnt*100 );
+        t( textio::trim(title)+"_acceptance", double(cnt_accepted)/cnt*100 );
         _test(t);
       }
 
@@ -601,7 +598,7 @@ namespace Faunus {
 
         public:
 
-          AtomicTranslation(Energy::Energybase<Tspace>&, Tspace&, Tmjson&, string="atomtranslate");
+          AtomicTranslation(Energy::Energybase<Tspace>&, Tspace&, Tmjson&);
 
           void setGenericDisplacement(double); //!< Set single displacement for all atoms
 
@@ -611,9 +608,8 @@ namespace Faunus {
     /**
      * @brief Constructor
      *
-     * By default input is read from json section `atomtranslate`
-     * with each element being the molecule name with the following
-     * properties:
+     * The json entry is read on a per-molecule basis, each with
+     * the following keywords,
      *
      * Value                | Description
      * :------------------- | :-------------------------------------------------------------
@@ -624,7 +620,7 @@ namespace Faunus {
      *
      * Example:
      *
-     *     atomictranslation {
+     *     {
      *       "salt" : { "dir":"1 1 0", "peratom":true }
      *     }
      *
@@ -632,19 +628,14 @@ namespace Faunus {
      */
     template<class Tspace>
       AtomicTranslation<Tspace>::AtomicTranslation(
-          Energy::Energybase<Tspace> &e,
-          Tspace &s,
-          Tmjson &j,
-          string sec) : Movebase<Tspace>( e, s ) {
+          Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) : Movebase<Tspace>( e, s ) {
 
         base::title="Single Particle Translation";
-        base::jsondir="moves/"+sec; // temp. fix to be removed
         iparticle=-1;
         igroup=nullptr;
         dir={1,1,1};
         genericdp = 0;
-
-        base::fillMolList( j["moves"][sec] );
+        base::fillMolList( j );
       }
 
     /**
@@ -788,7 +779,7 @@ namespace Faunus {
       Tmjson AtomicTranslation<Tspace>::_json() {
         Tmjson js;
         if (base::cnt>0) { 
-          auto &j = js[ base::jsondir ];
+          auto &j = js[ base::title ];
           j = {
             { "moves/particle", base::cnt / gsize.avg() },
             { "dir", 999 },
@@ -834,18 +825,15 @@ namespace Faunus {
           double dprot;      //!< Temporary storage for current angle
 
         public:
-          AtomicRotation(Energy::Energybase<Tspace>&, Tspace&,
-              Tmjson&, string="atomrotate");
+          AtomicRotation(Energy::Energybase<Tspace>&, Tspace&, Tmjson&);
       };
 
     template<class Tspace>
       AtomicRotation<Tspace>::AtomicRotation(
-          Energy::Energybase<Tspace> &e,
-          Tspace &s,
-          Tmjson &j,
-          string sec) : base(e, s, j, sec) {
+          Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) : base(e, s, j) {
         base::title="Single Particle Rotation";
       }
+
     template<class Tspace>
       void AtomicRotation<Tspace>::_trialMove() {
         if ( ! this->mollist.empty() ) {
@@ -929,7 +917,6 @@ namespace Faunus {
           using base::pot;
           using base::w;
           using base::cnt;
-          using base::jsondir;
           void _test(UnitTest&);
           void _trialMove();
           void _acceptMove();
@@ -948,8 +935,8 @@ namespace Faunus {
 
         public:
 
-          TranslateRotate(Energy::Energybase<Tspace>&, Tspace&, Tmjson&, string="moltransrot");
-          void setGroup(Group&); //!< Select Group to move
+          TranslateRotate( Energy::Energybase<Tspace>&, Tspace&, Tmjson& );
+          void setGroup( Group& ); //!< Select Group to move
           bool groupWiseEnergy;  //!< Attempt to evaluate energy over groups from vector in Space (default=false)
           std::map<string,Point> directions; //!< Specify special group translation directions (default: x=y=z=1)
       };
@@ -981,33 +968,30 @@ namespace Faunus {
      * @param e Energy function
      * @param s Space
      * @param j JSON object - typically `moves`.
-     * @param sec JSON section -- default `moltransrot`.
      */
     template<class Tspace>
       TranslateRotate<Tspace>::TranslateRotate(
           Energy::Energybase<Tspace> &e,
-          Tspace &s, Tmjson &j, string sec ) : base( e, s ) {
+          Tspace &s, Tmjson &j ) : base( e, s ) {
 
         base::title="Group Rotation/Translation";
         base::w=30;
         igroup=nullptr;
         groupWiseEnergy=false;
-        base::jsondir = "moves/"+sec; // temp. fix to be removed (for _test())
 
-        auto m = j["moves"][sec];
-        base::fillMolList( m );// find molecules to be moved
+        base::fillMolList( j );// find molecules to be moved
 
         for (auto &i : this->mollist) { // loop over molecules to be moved
           string molname = spc->molList()[ i.first ].name;
-          i.second.dp1 = m[molname]["dp"] | 0.0;
-          i.second.dp2 = m[molname]["dprot"] | 0.0;
+          i.second.dp1 = j[molname]["dp"] | 0.0;
+          i.second.dp2 = j[molname]["dprot"] | 0.0;
           if (i.second.dp2>4*pc::pi)    // no need to rotate more than
             i.second.dp2=4*pc::pi;      // +/- 2 pi.
         }
       }
 
     template<class Tspace>
-      void TranslateRotate<Tspace>::setGroup(Group &g) {
+      void TranslateRotate<Tspace>::setGroup( Group &g ) {
         assert( this->mollist.empty() && "Use either JSON data or setGroup");
         assert(!g.name.empty() && "Group should have a name.");
         assert(g.isMolecular());
@@ -1141,12 +1125,13 @@ namespace Faunus {
 
     template<class Tspace>
       void TranslateRotate<Tspace>::_test(UnitTest &t) {
+        string sec = textio::trim( base::title ) + "_";
         for (auto m : accmap) {
           string id=m.first,
-                 idtrim="_"+textio::trim(id)+"_";
-          t(jsondir+idtrim+"acceptance", accmap[id].avg()*100);
-          t(jsondir+idtrim+"dRot", sqrt(sqrmap_r[id].avg()));
-          t(jsondir+idtrim+"dTrans", sqrt(sqrmap_t[id].avg()));
+                 idtrim=textio::trim(id)+"_";
+          t(sec+idtrim+"acceptance", accmap[id].avg()*100);
+          t(sec+idtrim+"dRot", sqrt(sqrmap_r[id].avg()));
+          t(sec+idtrim+"dTrans", sqrt(sqrmap_t[id].avg()));
         }
       }
 
@@ -1256,10 +1241,9 @@ namespace Faunus {
           }
 
         public:
-          TranslateRotateNbody(Energy::Energybase<Tspace> &e,
-              Tspace &s, Tmjson &in, string pfx="transrot") : base(e,s,in,pfx) {
+          TranslateRotateNbody( Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) : base( e, s, j ) {
             base::title+=" (N-body)";
-            setGroup(s.groupList());
+            setGroup( s.groupList() );
           }
       };
 
@@ -1313,8 +1297,7 @@ namespace Faunus {
           }
 
         public:
-          TranslateRotateTwobody(Energy::Energybase<Tspace> &e,
-              Tspace &s, Tmjson &j, string sec="moltransrot2body") : base(e,s,j,sec) {
+          TranslateRotateTwobody(Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) : base(e,s,j) {
             this->title+=" (2-body, symmetric)";
             assert( this->mollist.size()==2 && "Specify exactly two molecules");
 
@@ -1389,7 +1372,7 @@ namespace Faunus {
           virtual double ClusterProbability(Tpvec&,int); //!< Probability that particle index belongs to cluster
         public:
           using base::spc;
-          TranslateRotateCluster(Energy::Energybase<Tspace>&, Tspace&, Tmjson &j, string="moltransrotcluster");
+          TranslateRotateCluster(Energy::Energybase<Tspace>&, Tspace&, Tmjson &j);
           virtual ~TranslateRotateCluster();
           void setMobile(Group&);  //!< Pool of atomic species to move with the main group
           double threshold;        //!< Distance between particles to define a cluster
@@ -1397,12 +1380,12 @@ namespace Faunus {
 
     template<class Tspace>
       TranslateRotateCluster<Tspace>::TranslateRotateCluster(
-          Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j, string sec) : base(e,s,j,sec) {
+          Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) : base(e,s,j) {
         base::title="Cluster "+base::title;
         base::cite="doi:10/cj9gnn";
         gmobile=nullptr;
 
-        auto m = j["moves"][sec];
+        auto m = j;
         base::fillMolList( m );// find molecules to be moved
 
         if ( this->mollist.size()!=1 ) {
@@ -1597,8 +1580,8 @@ namespace Faunus {
           string _info() override { return base::base::_info(); }
           double ClusterProbability(typename base::Tpvec &p, int i) override { return 1; }
         public:
-          TranslateRotateGroupCluster(InputMap &in, Energy::Energybase<Tspace> &e,
-              Tspace &s, string pfx="transrot") : base(in,e,s,pfx) {
+          TranslateRotateGroupCluster(Tmjson &j, Energy::Energybase<Tspace> &e,
+              Tspace &s) : base(j,e,s) {
             base::title = "Translate-Rotate w. extra group";
           }
       };
@@ -1641,7 +1624,6 @@ namespace Faunus {
           using base::w;
           using base::spc;
           using base::pot;
-          using base::jsondir;
           vector<int> moved, remaining;
           void _trialMove() override;
           void _acceptMove() override {}
@@ -1652,17 +1634,16 @@ namespace Faunus {
           double dp;                //!< Displacement parameter [aa]
           vector<Group*> g;         //!< Group of molecules to move. Currently this needs to be ALL groups in the system!!
         public:
-          ClusterTranslateNR(Energy::Energybase<Tspace>&, Tspace&, Tmjson&, string="ctransnr");
+          ClusterTranslateNR(Energy::Energybase<Tspace>&, Tspace&, Tmjson&);
           bool skipEnergyUpdate;    //!< True if energy updates should be skipped (faster evaluation!)
       };
 
     /** @brief Constructor */
     template<class Tspace>
-      ClusterTranslateNR<Tspace>::ClusterTranslateNR(Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j, string pfx) : base(e,s,pfx) {
-        auto _j = j["moves"][pfx];
+      ClusterTranslateNR<Tspace>::ClusterTranslateNR(Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) : base(e,s) {
+        auto _j = j;
         base::title       = "Rejection Free Cluster Translation";
         base::cite        = "doi:10/fthw8k";
-        base::jsondir     = "moves/"+pfx; // just for unittesting (to be changed)
         base::useAlternativeReturnEnergy =true;
         base::runfraction = _j["prob"] | 1.0;
         skipEnergyUpdate  = _j["skipenergy"] | false;
@@ -1773,7 +1754,6 @@ namespace Faunus {
           using base::spc;
           using base::pot;
           using base::w;
-          using base::jsondir;
           Group* gPtr;       //!< Pointer to group where move is to be performed. Set by setGroup().
           double dp;         //!< Rotational displacement parameter
           double angle;      //!< Current rotation angle
@@ -1782,8 +1762,7 @@ namespace Faunus {
           Geometry::QuaternionRotate vrot;
           AcceptanceMap<string> accmap;
         public:
-          CrankShaft(Energy::Energybase<Tspace>&,
-              Tspace&, Tmjson&, string="crankshaft");
+          CrankShaft(Energy::Energybase<Tspace>&, Tspace&, Tmjson&);
           virtual ~CrankShaft();
           void setGroup(Group&); //!< Select Group to of the polymer to move
           int minlen;            //!< Minimum number of particles to rotate (default = 1)
@@ -1791,7 +1770,7 @@ namespace Faunus {
       };
 
     /**
-     * The section `moves/crankshaft` is searched for:
+     * The json entry is searched for:
      *
      * Key      | Description
      * -------- | -------------------------------------------
@@ -1801,13 +1780,12 @@ namespace Faunus {
      */
     template<class Tspace>
       CrankShaft<Tspace>::CrankShaft(Energy::Energybase<Tspace> &e,
-          Tspace &s, Tmjson &j, string sec) : base(e,s) {
+          Tspace &s, Tmjson &j) : base(e,s) {
         base::title = "CrankShaft";
-        base::jsondir = "moves/"+sec;
         w=30;
         gPtr=nullptr;
 
-        auto m = j["moves"][sec];
+        auto m = j;
         base::fillMolList( m );
         for (auto &i : this->mollist) {
           string name = spc->molList()[ i.first ].name;
@@ -1928,7 +1906,7 @@ namespace Faunus {
 
     template<class Tspace>
       void CrankShaft<Tspace>::_test(UnitTest &t) {
-        accmap._test(t, jsondir);
+        accmap._test( t, textio::trim( base::title ) );
       }
 
     /**
@@ -1952,12 +1930,11 @@ namespace Faunus {
           using base::spc;
           bool findParticles();
         public:
-          Pivot(Energy::Energybase<Tspace>&, Tspace&, Tmjson&, string="pivot");
+          Pivot(Energy::Energybase<Tspace>&, Tspace&, Tmjson&);
       };
 
     template<class Tspace>
-      Pivot<Tspace>::Pivot( Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j, string sec)
-      : base( e, s, j, sec ) {
+      Pivot<Tspace>::Pivot( Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) : base(e,s,j) {
         base::title="Polymer Pivot Move";
         base::minlen=1; // minimum bond length to rotate around
       }
@@ -2015,21 +1992,19 @@ namespace Faunus {
         protected:
           using base::pot;
           using base::spc;
-          using base::jsondir;
         public:
-          Reptation(Energy::Energybase<Tspace>&, Tspace&, Tmjson&, string="reptate");
+          Reptation(Energy::Energybase<Tspace>&, Tspace&, Tmjson&);
           void setGroup(Group&); //!< Select Group to move
       };
 
     template<class Tspace>
       Reptation<Tspace>::Reptation(Energy::Energybase<Tspace> &e,
-          Tspace &s, Tmjson &j, string sec) : base(e,s) {
+          Tspace &s, Tmjson &j) : base(e,s) {
 
-        base::jsondir = "moves/reptate";
         base::title="Linear Polymer Reptation";
         gPtr=nullptr;
 
-        auto m = j["moves"][sec];
+        auto m = j;
         base::fillMolList( m );         // find molecules to be moved
         for (auto &i : this->mollist) { // loop over molecules to be moved
           string molname = spc->molList()[ i.first ].name;
@@ -2039,7 +2014,7 @@ namespace Faunus {
 
     template<class Tspace>
       void Reptation<Tspace>::_test(UnitTest &t) {
-        accmap._test(t, jsondir);
+        accmap._test(t, textio::trim(base::title));
       }
 
     template<class Tspace>
@@ -2181,20 +2156,18 @@ namespace Faunus {
           Average<double> rval;         //!< Average 1/volume
         public:
           template<typename Tenergy>
-            Isobaric(Tenergy&, Tspace&, Tmjson&, string="isobaric");
+            Isobaric(Tenergy&, Tspace&, Tmjson&);
       };
 
     template<class Tspace>
       template<class Tenergy> Isobaric<Tspace>::Isobaric(
-          Tenergy &e, Tspace &s, Tmjson &j, string sec) : base(e,s) {
+          Tenergy &e, Tspace &s, Tmjson &j) : base(e,s) {
 
         this->title="Isobaric Volume Fluctuations";
-        this->jsondir = "moves/isobaric";
         this->w=30;
-        auto m = j["moves"][sec];
-        dp = m["dp"] | 0.0;
-        P  = ( m["pressure"] | 0.0 ) * 1.0_mM;
-        base::runfraction = m["prob"] | 1.0;
+        dp = j["dp"] | 0.0;
+        P  = ( j["pressure"] | 0.0 ) * 1.0_mM;
+        base::runfraction = j["prob"] | 1.0;
         if (dp<1e-6)
           base::runfraction=0;
 
@@ -2248,8 +2221,9 @@ namespace Faunus {
 
     template<class Tspace>
       void Isobaric<Tspace>::_test(UnitTest &t) {
-        t(this->jsondir+"_averageSideLength", std::cbrt(val.avg()) );
-        t(this->jsondir+"_MSQDisplacement", pow(msd.avg(), 1/6.) );
+        string sec = textio::trim( base::title );
+        t(sec+"_averageSideLength", std::cbrt(val.avg()) );
+        t(sec+"_MSQDisplacement", pow(msd.avg(), 1/6.) );
       }
 
     template<class Tspace>
@@ -2366,16 +2340,15 @@ namespace Faunus {
            string _info();
          public:
            template<typename Tenergy>
-             Isochoric(Tenergy&, Tspace&, Tmjson&, string="isochoric");
+             Isochoric(Tenergy&, Tspace&, Tmjson&);
        };
 
     template<class Tspace>
-      template<class Tenergy> Isochoric<Tspace>::Isochoric(Tenergy &e, Tspace &s, Tmjson &j, string sec) : base(e,s,j,"isochoric") {
+      template<class Tenergy>  Isochoric<Tspace>::Isochoric(Tenergy &e, Tspace &s, Tmjson &j) : base(e,s,j) {
         this->title="Isochoric Side Lengths Fluctuations";
         this->w=30;
-        auto m = j["moves"][sec];
-        dp = m["dp"] | 0.0;
-        base::runfraction = m["prob"] | 1.0;
+        dp = j["dp"] | 0.0;
+        base::runfraction = j["prob"] | 1.0;
         if (dp<1e-6)
           base::runfraction=0;
       }
@@ -2421,6 +2394,7 @@ namespace Faunus {
     /**
      * @brief Auxillary class for tracking atomic species
      * @date Malmo 2011
+     * @todo Should be replaced by tracker in `Space`
      *
      * This class keeps track of individual particle positions based on particle type (id).
      * It contains functions to insert and erase particles while automatically moving particles
@@ -2586,28 +2560,27 @@ namespace Faunus {
 
           // unit testing
           void _test(UnitTest &t) override {
+            string sec = textio::trim(base::title);
             for (auto &m : map) {
-              auto s=base::jsondir+"_"+atom[m.first].name;
+              auto s=sec+"_"+atom[m.first].name;
               t(s+"_activity", atom[m.first].activity);
               t(s+"_conc", m.second.rho.avg()/pc::Nav/1e-27);
             }
           }
 
         public:
-          GrandCanonicalSalt(Energy::Energybase<Tspace>&, Tspace&, Tmjson&, string="atomgc");
+          GrandCanonicalSalt(Energy::Energybase<Tspace>&, Tspace&, Tmjson&);
       };
 
     template<class Tspace>
       GrandCanonicalSalt<Tspace>::GrandCanonicalSalt(
-          Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j,
-          string sec) : base(e,s), tracker(s) {
+          Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) : base(e,s), tracker(s) {
 
         base::title="Grand Canonical Salt";
-        base::useAlternativeReturnEnergy =true;
-        base::jsondir = "moves/" + sec;
+        base::useAlternativeReturnEnergy=true;
+        base::runfraction = j["prob"] | 1.0;
+        string saltname = j["molecule"] | string();
 
-        base::runfraction = j["moves"][sec]["prob"] | 1.0;
-        string saltname = j["moves"][sec]["molecule"] | string();
         auto v = spc->findMolecules( saltname );
         if ( v.empty() ) { // insert if no atomic species found
           auto it = spc->molList().find( saltname ); 
@@ -2783,7 +2756,7 @@ namespace Faunus {
       Tmjson GrandCanonicalSalt<Tspace>::_json() {
         Tmjson js;
         if (base::cnt>0) { 
-          auto &j = js[ base::jsondir ];
+          auto &j = js[ base::title ];
           for (auto &m : map) { // loop over GC species
             Tid id=m.first;
             j[ "atoms" ][ atom[id].name ] = {
@@ -2850,7 +2823,7 @@ namespace Faunus {
 
         public:
           template<class Tenergy>
-            GrandCanonicalTitration(Tenergy&, Tspace&, Tmjson&, string="gctit");
+            GrandCanonicalTitration(Tenergy&, Tspace&, Tmjson&);
 
           ~GrandCanonicalTitration() { /* todo */ }
 
@@ -2877,8 +2850,7 @@ namespace Faunus {
       GrandCanonicalTitration<Tspace>::GrandCanonicalTitration(
           Tenergy &e,
           Tspace &s,
-          Tmjson &j,
-          string sec) : base(e,s,j,sec) {
+          Tmjson &j) : base(e,s,j) {
 
         base::title += " Titration";
         base::useAlternativeReturnEnergy =true;
@@ -2899,11 +2871,11 @@ namespace Faunus {
         for (auto i : eqpot->eq.sites)
           spc->trial[i].charge = spc->p[i].charge = atom[ spc->p[i].id ].charge;
 
-        avgfile   = j["moves"][sec]["avgfile"] | string();
-        scale2int = j["moves"][sec]["scale2int"] | false;
+        avgfile   = j["avgfile"] | string();
+        scale2int = j["scale2int"] | false;
 
         // neutralise system, if needed, using GC ions
-        if ( j["moves"][sec]["neutralize"] | true ) {
+        if ( j["neutralize"] | true ) {
           double Z = netCharge( s.p, Group(0,s.p.size()-1) ); // total system charge
           if ( fabs(Z) > 1e-9 ) {
             Tid id;
@@ -3236,7 +3208,7 @@ namespace Faunus {
 
         public:
           ParallelTempering(
-              Energy::Energybase<Tspace>&, Tspace&, Tmjson&, MPI::MPIController&, string="temper");
+              Energy::Energybase<Tspace>&, Tspace&, Tmjson&, MPI::MPIController&);
 
           virtual ~ParallelTempering();
 
@@ -3250,18 +3222,16 @@ namespace Faunus {
           Energy::Energybase<Tspace> &e,
           Tspace &s,
           Tmjson &j,
-          MPI::MPIController &mpi,
-          string sec) : base( e, s ) {
+          MPI::MPIController &mpi ) : base( e, s ) {
 
         this->title   = "Parallel Tempering";
-        this->jsondir = "moves/"+sec; // to be changed - compatibility w. tests
         this->mpiPtr  = &mpi;
         partner=-1;
         this->useAlternativeReturnEnergy=true; //dont return dU from partner replica (=drift)
-        this->runfraction = j["moves"][sec]["prob"] | 1.0;
+        this->runfraction = j["prob"] | 1.0;
         pt.recvExtra.resize(1);
         pt.sendExtra.resize(1);
-        pt.setFormat( j["moves"][sec]["format"] | string("XYZQI") );
+        pt.setFormat( j["format"] | string("XYZQI") );
 
         setEnergyFunction(
             Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,Tpvec> );
@@ -3458,12 +3428,12 @@ namespace Faunus {
           //int iparticle;   //!< Select single particle to move (-1 if none, default)
 
         public:
-          SwapCharge(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="swapcharge");
+          SwapCharge(InputMap&, Energy::Energybase<Tspace>&, Tspace&);
           std::set<int> swappableParticles;  //!< Particle index that can be swapped
       };  
 
     template<class Tspace>
-      SwapCharge<Tspace>::SwapCharge(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
+      SwapCharge<Tspace>::SwapCharge(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s) : base(e,s) {
         base::title="Swap head groups of different charges";
       }
 
@@ -3540,7 +3510,6 @@ namespace Faunus {
           using base::pot;
           using base::w;
           using base::cnt;
-          using base::jsondir;
           void _trialMove();
           void _acceptMove();
           void _rejectMove();
@@ -3552,19 +3521,19 @@ namespace Faunus {
           Point* cntr;
           string geometry;
         public:
-          FlipFlop(InputMap&, Energy::Energybase<Tspace>&, Tspace&, string="flipflop"); // if cylindrical geometry, string=cylinder
+          FlipFlop(Tmjson&, Energy::Energybase<Tspace>&, Tspace&); // if cylindrical geometry, string=cylinder
           void setGroup(Group&); //!< Select Group to move
           void setCenter(Point&); //!< Select Center of Mass of the bilayer
       };
 
     template<class Tspace>
-      FlipFlop<Tspace>::FlipFlop(InputMap &in,Energy::Energybase<Tspace> &e, Tspace &s, string pfx) : base(e,s,pfx) {
+      FlipFlop<Tspace>::FlipFlop(Tmjson &j, Energy::Energybase<Tspace> &e, Tspace &s) : base(e,s) {
         base::title="Group Flip-Flop Move";
         base::w=30;
         igroup=nullptr;
         cntr=nullptr;
-        geometry = in( "geometry", string("planar") );
-        this->runfraction=in( "prob", 1.0 );
+        geometry=j["geometry"] | string("planar");
+        this->runfraction=j["prob"] | 1.0;
       }
 
     template<class Tspace>
@@ -3922,18 +3891,19 @@ namespace Faunus {
           }
 
           void _test( UnitTest &t ) override {
+            string jsondir = textio::trim( base::title );
             double V=spc->geo.getVolume();
-            t( this->jsondir + "_flux", Ninserted / double(Ndeleted) );
+            t( jsondir + "_flux", Ninserted / double(Ndeleted) );
             for (auto &m : spc->molecule)
               if ( m.activity > 1e-6 )
                 if ( spc->molTrack.getAvg(m.id).cnt>0 )
                   if ( !m.name.empty() )
-                    t( this->jsondir + "_mol_" + m.name + "_gamma", m.activity / (spc->molTrack.getAvg(m.id)/V/1.0_molar));
+                    t( jsondir + "_mol_" + m.name + "_gamma", m.activity / (spc->molTrack.getAvg(m.id)/V/1.0_molar));
             for (auto &m : atom)
               if ( m.activity > 1e-6 )
                 if ( !m.name.empty() )
                   if ( spc->atomTrack.getAvg(m.id).cnt>0 )
-                    t( this->jsondir + "_atom_" + m.name + "_gamma", m.activity / (spc->atomTrack.getAvg(m.id)/V/1.0_molar));
+                    t( jsondir + "_atom_" + m.name + "_gamma", m.activity / (spc->atomTrack.getAvg(m.id)/V/1.0_molar));
           }
 
           void init() { // call this upon construction
@@ -3947,14 +3917,9 @@ namespace Faunus {
 
           /** @brief Constructor -- load combinations, initialize trackers */
           GreenGC(
-              Energy::Energybase<Tspace> &e,
-              Tspace &s,
-              Tmjson &j,
-              const string &sec="gc") : base( e, s ), comb( s.molecule ) {
-
+              Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) : base(e,s), comb( s.molecule ) {
             init();
-            base::jsondir = "moves/" + sec;
-            base::runfraction = j["moves"][sec]["prob"] | 1.0;
+            base::runfraction = j["prob"] | 1.0;
             comb.include( j ); // load combinations
           }
       };
@@ -4004,7 +3969,7 @@ namespace Faunus {
 
         public:
           template<class Tenergy>
-            SwapMove(Tenergy&, Tspace&, Tmjson&, string="titrate"); //!< Constructor
+            SwapMove(Tenergy&, Tspace&, Tmjson&); //!< Constructor
 
           ~SwapMove() {
             if ( saveChargeBool )
@@ -4042,14 +4007,14 @@ namespace Faunus {
 
     template<class Tspace>
       template<class Tenergy> SwapMove<Tspace>::SwapMove(
-          Tenergy &e, Tspace &spc, Tmjson &j, string sec) : base(e,spc) {
+          Tenergy &e, Tspace &spc, Tmjson &j) : base(e,spc) {
 
         base::title="Site Titration - Swap Move";
-        base::runfraction = j["moves"][sec]["prob"] | 1.0;
+        base::runfraction = j["prob"] | 1.0;
         base::w = 30;
         ipart=-1;
 
-        saveChargeBool = j["moves"][sec]["savecharge"] | false;
+        saveChargeBool = j["savecharge"] | false;
 
         auto t = e.tuple();
         auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
@@ -4223,8 +4188,7 @@ namespace Faunus {
 
         public:
           SwapMoveMSR(
-              InputMap &in, Energy::Energybase<Tspace> &ham, Tspace &spc,
-              string pfx="swapmv_") : SwapMove<Tspace>(in,ham,spc,pfx)
+              InputMap &in, Energy::Energybase<Tspace> &ham, Tspace &spc) : SwapMove<Tspace>(in,ham,spc)
           {
             this->title+=" (min. shortrange)";
             this->useAlternativeReturnEnergy =true;
@@ -4288,35 +4252,35 @@ namespace Faunus {
             auto m = in["moves"];
             for ( auto i=m.begin(); i!=m.end(); ++i) {
               if (i.key()=="atomtranslate")
-                mPtr.push_back( toPtr( AtomicTranslation<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( AtomicTranslation<Tspace>(e,s,i.value()) ) );
               if (i.key()=="atomrotate")
-                mPtr.push_back( toPtr( AtomicRotation<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( AtomicRotation<Tspace>(e,s,i.value())) );
               if (i.key()=="atomgc")
-                mPtr.push_back( toPtr( GrandCanonicalSalt<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( GrandCanonicalSalt<Tspace>(e,s,i.value())) );
               if (i.key()=="gctit")
-                mPtr.push_back( toPtr( GrandCanonicalTitration<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( GrandCanonicalTitration<Tspace>(e,s,i.value())) );
               if (i.key()=="moltransrot")
-                mPtr.push_back( toPtr( TranslateRotate<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( TranslateRotate<Tspace>(e,s,i.value()) ) );
               if (i.key()=="moltransrot2body")
-                mPtr.push_back( toPtr( TranslateRotateTwobody<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( TranslateRotateTwobody<Tspace>(e,s,i.value()) ) );
               if (i.key()=="moltransrotcluster")
-                mPtr.push_back( toPtr( TranslateRotateCluster<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( TranslateRotateCluster<Tspace>(e,s,i.value()) ) );
               if (i.key()=="isobaric")
-                mPtr.push_back( toPtr( Isobaric<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( Isobaric<Tspace>(e,s,i.value()) ) );
               if (i.key()=="isochoric")
-                mPtr.push_back( toPtr( Isochoric<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( Isochoric<Tspace>(e,s,i.value()) ) );
               if (i.key()=="gc")
-                mPtr.push_back( toPtr( GreenGC<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( GreenGC<Tspace>(e,s,i.value()) ) );
               if (i.key()=="titrate")
-                mPtr.push_back( toPtr( SwapMove<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( SwapMove<Tspace>(e,s,i.value()) ) );
               if (i.key()=="crankshaft")
-                mPtr.push_back( toPtr( CrankShaft<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( CrankShaft<Tspace>(e,s,i.value()) ) );
               if (i.key()=="pivot")
-                mPtr.push_back( toPtr( Pivot<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( Pivot<Tspace>(e,s,i.value()) ) );
               if (i.key()=="reptate")
-                mPtr.push_back( toPtr( Reptation<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( Reptation<Tspace>(e,s,i.value()) ) );
               if (i.key()=="ctransnr")
-                mPtr.push_back( toPtr( ClusterTranslateNR<Tspace>(e,s,in) ) );
+                mPtr.push_back( toPtr( ClusterTranslateNR<Tspace>(e,s,i.value()) ) );
             }
             if ( mPtr.empty() )
               throw std::runtime_error("No moves defined - check JSON file.");

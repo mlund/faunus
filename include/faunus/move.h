@@ -1135,6 +1135,64 @@ namespace Faunus {
         }
       }
 
+
+      /**
+       * @brief Move that will swap conformation of a molecule
+       *
+       * This will swap between different molecular conformations
+       * as defined in `MoleculeData`. If defined, the weight
+       * distribution is respected, otherwise all conformations
+       * have equal intrinsic weight. Upon insertion, the new conformation
+       * is randomly oriented and placed on top of the mass-center of
+       * an exising molecule.
+       *
+       * The JSON input is identical to `Move::TranslateRotate` except that
+       * displacement parameters are ignored.
+       *
+       * @todo Add feature to align molecule on top of an exiting one
+       * @todo Expand `_info()` to show number of conformations
+       * @warning Weighted distributions untested and not verified for correctness
+       * @date Malmo, November 2016
+       */
+      template<class Tspace, class base=TranslateRotate<Tspace> >
+      class ConformationSwap : public base {
+
+      private:
+
+          using base::spc;
+          using base::igroup; // group pointer to molecule being moved
+
+          typedef MoleculeData<typename Tspace::ParticleVector> Tmoldata;
+          RandomInserter<Tmoldata> inserter;
+
+          string _info() override { return string(); }
+
+          void _trialMove() override {
+
+            auto gvec = spc->findMolecules( base::currentMolId );
+            assert( !gvec.empty() );
+            igroup = *slump.element( gvec.begin(), gvec.end() );
+
+            if ( ! igroup->empty() ) {
+              auto pnew = inserter( spc->geo, spc->p, spc->molecule[igroup->molId] ); // get conformation
+              Geometry::translate( spc->geo, pnew, igroup->cm_trial ); // place on top of existing molecule
+              std::copy( pnew.begin(), pnew.end(), spc->trial.begin() + igroup->front() ); // override w. new conformation
+
+              assert( pnew.size() == size_t(igroup->size()) );
+              assert( spc->p.size() == spc->trial.size() );
+            }
+            assert(igroup != nullptr); // make sure we really found a group
+          }
+
+      public:
+
+          ConformationSwap(Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j) : base(e, s, j) {
+            base::title = "Conformation Swap";
+            inserter.checkOverlap = false; // will be done by _energyChange()
+            inserter.dir = {0,0,0}; // initial placement at origo
+          }
+      };
+
     /**
      * @brief Translates/rotates many groups simultaneously
      *
@@ -4205,19 +4263,20 @@ namespace Faunus {
      * in the table below; each can occur only once and are picked
      * with uniform weight.
      *
-     * Keyword         | Move class                | Description
-     * :-------------- | :------------------------ | :----------------
-     * `atomtranslate` | `Move::AtomicTranslation` | Translate atoms
-     * `atomrotate`    | `Move::AtomicRotation`    | Rotate atoms
-     * `atomgc`        | `Move::GrandCanonicalSalt`| GC salt move (muVT ensemble)
-     * `crankshaft`    | `Move::CrankShaft`        | Crank shaft polymer move
-     * `ctransnr`      | `Move::ClusterTranslateNR`| Rejection free cluster translate
-     * `gc`            | `Move::GreenGC`           | Grand canonical move (muVT ensemble)
-     * `isobaric`      | `Move::Isobaric`          | Volume move (NPT ensemple)
-     * `moltransrot`   | `Move::TranslateRotate`   | Translate/rotate molecules
-     * `pivot`         | `Move::Pivot`             | Pivot polymer move
-     * `reptate`       | `Move::Reptation`         | Reptation polymer move
-     * `titrate`       | `Move::SwapMove`          | Particle swap move
+     * Keyword           | Move class                | Description
+     * :---------------- | :------------------------ | :----------------
+     * `atomtranslate`   | `Move::AtomicTranslation` | Translate atoms
+     * `atomrotate`      | `Move::AtomicRotation`    | Rotate atoms
+     * `atomgc`          | `Move::GrandCanonicalSalt`| GC salt move (muVT ensemble)
+     * `crankshaft`      | `Move::CrankShaft`        | Crank shaft polymer move
+     * `ctransnr`        | `Move::ClusterTranslateNR`| Rejection free cluster translate
+     * `gc`              | `Move::GreenGC`           | Grand canonical move (muVT ensemble)
+     * `isobaric`        | `Move::Isobaric`          | Volume move (NPT ensemple)
+     * `moltransrot`     | `Move::TranslateRotate`   | Translate/rotate molecules
+     * `pivot`           | `Move::Pivot`             | Pivot polymer move
+     * `reptate`         | `Move::Reptation`         | Reptation polymer move
+     * `titrate`         | `Move::SwapMove`          | Particle swap move
+     * `conformationswap`| `Move::ConformationSwap`  | Swap between molecular conformations
      */
     template<typename Tspace, bool polarise=false, typename base=Movebase<Tspace>>
       class Propagator : public base {
@@ -4262,6 +4321,8 @@ namespace Faunus {
                 mPtr.push_back( toPtr( GrandCanonicalTitration<Tspace>(e,s,val)) );
               if (i.key()=="moltransrot")
                 mPtr.push_back( toPtr( TranslateRotate<Tspace>(e,s,val) ) );
+              if (i.key()=="conformationswap")
+                mPtr.push_back( toPtr( ConformationSwap<Tspace>(e,s,val) ) );
               if (i.key()=="moltransrot2body")
                 mPtr.push_back( toPtr( TranslateRotateTwobody<Tspace>(e,s,val) ) );
               if (i.key()=="moltransrotcluster")

@@ -42,7 +42,6 @@ echo '{
 
 exe=./stockmayer
 if [ -x $exe ]; then
- rm -f gofr.dat mucorr*.dat
  $exe
  rc=$?
  exit $rc

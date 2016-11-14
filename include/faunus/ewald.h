@@ -102,7 +102,7 @@ namespace Faunus {
             if(!useIonDipole && !useDipoleDipole)
               return E*Tbase::bjerrumLength();
 	    
-//#ifdef DIPOLEPARTICLE
+#ifdef DIPOLEPARTICLE
 	    double T1 = T1_tabulator.eval(table_T1,r1)/r1/r2;
             if(useIonDipole) {
               E += a.charge*r.dot(b.mu)*b.muscalar*T1;
@@ -114,7 +114,7 @@ namespace Faunus {
               double t5 = b.mu.dot(r)*a.mu.dot(r)*T2_tabulator.eval(table_T2,r1)/r2/r2/r1;
               E += -(t5 + t3)*b.muscalar*a.muscalar;
             }
-//#endif
+#endif
             return E*Tbase::bjerrumLength();
           }
       };

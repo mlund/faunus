@@ -317,27 +317,20 @@ namespace Faunus {
         static bool save(const string &file, const Tpvec &p, Tvec len=Point(0,0,0), unsigned int n=1e9) {
           unsigned int nres=1, natom=1;
           char buf[500];
-	  cout << "HERE S" << endl;
           std::ostringstream o;
           if (len.norm()>1e-6)
             o << writeCryst1(len);
-	  cout << "HERE S2" << endl;
           for (auto &p_i : p) {
-	    cout << "HERE Sfirst " << atom[p_i.id].name << ", " << p.size() << endl;
             string name=atom[p_i.id].name;
-	    cout << "HERE Spre" << endl;
             sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
                 natom++, name.c_str(), name.c_str(), nres,
                 (p_i+len/2).x(), (p_i+len/2).y(), (p_i+len/2).z(), p_i.charge, p_i.radius); // move particles inside the sim. box
-	    cout << "HERE Ssr" << endl;
             o << buf;
             if ( atom[p_i.id].name=="CTR" )
               nres++;
             else if (natom % n == 0)
               nres++;
-	    cout << "HERE Sa" << endl;
           }
-          cout << "HERE Se" << endl;
           o << "END\n";
           return IO::writeFile(file, o.str());
         }

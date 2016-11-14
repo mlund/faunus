@@ -266,6 +266,8 @@ namespace Faunus {
         muscalar     =  mu.len()* 1.0_Debye;
         if ( mu.len() > 1e-6 )
           mu = mu/mu.len();
+        cap_radius   =  ( _js["cap_radius"] | 0.0 );
+        cap_center   =  ( _js["cap_center"] | 0.0 );
 
         mw           = _js["mw"] | 1.0;
         Ninit        = _js["Ninit"] | 0.0;

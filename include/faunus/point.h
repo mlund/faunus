@@ -5,6 +5,8 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <vector>
+
+#include <faunus/common.h>
 #endif
 
 namespace Faunus {
@@ -696,7 +698,6 @@ namespace Faunus {
       }
   };
   
-  
   /**
    * @brief Cap particle
    */
@@ -707,9 +708,20 @@ namespace Faunus {
     double angle_p, angle_c;          //!< Angles
     bool is_sphere;
 
-    inline CapParticle() : cap_center_point(0,0,0),cap_radius(0),cap_center(0),angle_p(0),angle_c(0),is_sphere(false) {};
+    inline CapParticle() : cap_center_point(0,0,0),cap_radius(0),cap_center(0),angle_p(0),angle_c(0),is_sphere(true) {};
 
-    /** @brief Copy operator for base class */
+    /** @brief Copy constructor for Eigen derivatives */
+    template<typename OtherDerived>
+      CapParticle(const Eigen::MatrixBase<OtherDerived>& other) : PointParticle(other) {}
+
+    /** @brief Generic copy operator for Eigen derivatives */
+    template<typename OtherDerived>
+      CapParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+        PointParticle::operator=(other);
+        return *this;
+      }
+
+    /** @brief Copy operator for base class (i.e no casting to Eigen derivatives) */
     inline CapParticle& operator=(const PointParticle &p) {
       PointParticle::operator=(p);
       return *this;
@@ -720,13 +732,15 @@ namespace Faunus {
       class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type>
         CapParticle& operator=(const T &d) {
           PointParticle::operator=(d);
-          cap_radius=d.cap_radius;
-	  cap_center = d.cap_center;
+          cap_center=d.cap_center;
           cap_center_point = Point(cap_center,0,0);
-	  angle_p = std::acos((d.radius*d.radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*d.radius*cap_center));
-	  angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - d.radius*d.radius)/(2.0*cap_center*cap_radius));
-	  if(fabs(cap_radius) < 1e-6)
-	    is_sphere = true;
+	  cap_radius=d.cap_radius;
+	  if(cap_radius > 1e-6)
+	    is_sphere = false;
+	  if( ( cap_radius > 1e-6 ) && ( cap_center > 1e-6) && ( this->radius > 1e-6 ) ) {
+	    angle_p = std::acos((this->radius*this->radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*this->radius*cap_center));
+	    angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - this->radius*this->radius)/(2.0*cap_center*cap_radius));
+	  }
           return *this;
         }
 
@@ -735,24 +749,25 @@ namespace Faunus {
       PointParticle::operator<<(in);
       cap_center_point.operator<<(in);
       in >> cap_radius;
-      if(fabs(cap_radius) < 1e-6)
-	is_sphere = true;
+      if(cap_radius > 1e-6)
+	is_sphere = false;
       in >> cap_center;
-      angle_p = std::acos((this->radius*this->radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*this->radius*cap_center));
-      angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - this->radius*this->radius)/(2.0*cap_center*cap_radius));
+      if( ( cap_radius > 1e-6 ) && (cap_center > 1e-6) && ( this->radius > 1e-6 ) ) {
+	angle_p = std::acos((this->radius*this->radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*this->radius*cap_center));
+	angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - this->radius*this->radius)/(2.0*cap_center*cap_radius));
+      }
       return *this;
     }
 
     /* write data members to stream */
     friend std::ostream &operator<<(std::ostream &o, const CapParticle &p)
     {
-      o << PointParticle(p) << " " << p.cap_center_point.transpose() << " " << p.cap_radius
-        << " " << p.cap_center;
+      o << PointParticle(p) << " " << p.cap_center_point.transpose() << " " << p.cap_radius << " " << p.cap_center;
       return o;
     }
 
     /**
-     * @brief Internal rotation: dipole and polarizability
+     * @brief Internal rotation: center-to-cap-vector
      */
     template<typename Trotator>
       void rotate(const Trotator &rot) {
@@ -761,6 +776,5 @@ namespace Faunus {
       }
   };
   
-
 }//namespace
 #endif

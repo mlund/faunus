@@ -371,39 +371,99 @@ namespace Faunus {
           o << "Hard sphere cap";
           return o.str();          
         }
+       
+       //r=a-b;
+       /**
+	* @brief Checks is a particle with a cap collides with a true sphere.
+	* @param capsphere The cap-particle
+	* @param sphere The sphere particle
+	* @param r The distance-vector ( capsphere.xyz - sphere.xyz )
+	* @param r1 The length of parameter 'r'
+	* @note Important that the 'r'-parameter is in the correct direction!
+	*/
+      template<class Tparticle>
+	bool checkIfCapsphereAndSphereOverlap(const Tparticle &capsphere, const Tparticle &sphere, const Point &r, double r1) const {
+	  if(std::acos(capsphere.cap_center_point.dot(-r)/r1/capsphere.cap_center) > capsphere.angle_p)
+	    return pc::infty;                       // The capsphere.cap-sphere does not cover at least some overlap between sphere.center- and capsphere.center-spherees
+	  //cout << "Position of capsphere.cap: " << (capsphere + capsphere.cap_center_point).transpose() << endl;
+	  //cout << "Vector from capsphere.cap center to closeset to sphere point: " << acb.transpose()/acbn*capsphere.cap_radius << endl;
+	  
+	  Point cts = - ( r + capsphere.cap_center_point ); // Vector from origin of capsphere.cap to center of 'sphere'
+	  double ctsn = cts.norm();                         // Distance from center of capsphere.cap to center of 'sphere'
+	  
+	  Point rc = ( capsphere + capsphere.cap_center_point ) + cts/ctsn*capsphere.cap_radius; // Closesed point from sphere.center to surface of capsphere.cap
+	  //cout << "Closesed point on cap (not truly): " << rc.transpose() << endl;
+	  //cout << "Vector: " << (capsphere - rc).norm() << ", radius: " << capsphere.radius << endl;
+	  if((capsphere - rc).norm() <= capsphere.radius) {          // If that point is closer than capsphere.radius then it truly is on the capsphere.cap
+	    Point closeset_distance_from_sphereCenter_to_capSurface = sphere - rc;           // Distance-vector between sphere.center to the closesed point on capsphere
+	  //cout << "Closesed point on cap (truly): " << closeset_from_sphereCenter_to_capSurface.transpose() << endl;
+	    if(closeset_distance_from_sphereCenter_to_capSurface.norm() < sphere.radius)    // If that distance is shorter than the radius of sphere then...
+	      return pc::infty;                     // Return collision
+	  //cout << "No collision! " << endl;
+	    return 0.0;                             // Return no collision
+	  } else {
+	  // Remember: This is only working if the quadrilateral is convex, i.e. if(std::acos(capsphere.cap_center_point.dot(-r)/r1/capsphere.cap_center) > capsphere.angle_p)
+	  //cout << "Not truly on the cap! Closeset is the ring! " << endl;
+	  // Closesed point between capsphere and sphere is on the capsphere.cap-ring
+	    double theta = pc::pi - acos(-r.dot(capsphere.cap_center_point)/r1/capsphere.cap_radius) - capsphere.angle_c;
+	    double distance = sqrt(capsphere.radius*capsphere.radius + (r + capsphere.cap_center_point).squaredNorm() - capsphere.cap_center*capsphere.cap_center - 2.0*r1*capsphere.cap_radius*cos(theta));
+	    if(distance < sphere.radius)
+	      return pc::infty;
+	  //cout << "No collision with ring! " << endl;
+	    return 0.0;
+	  }
+	return false;
+      }
+        
+        
       public:
+	int cnt_all;
+	int cnt_cap_sphere;
 	template<typename T>
-        HardSphereCap(const T&, const string &sec="") : PairPotentialBase(sec) { name="HardsphereCap"; }
+        HardSphereCap(const T&, const string &sec="") : PairPotentialBase(sec),cnt_all(0),cnt_cap_sphere(0) { name="HardsphereCap"; }
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
 	    double r2 = r.squaredNorm();
             double m=a.radius+b.radius;
+	    //cout << "Info a: " << a.x() << " " << a.y() << " " << a.z() << ", " << a.cap_center_point.transpose() << ", " << a.cap_radius << ", " << a.radius << endl;
+	    //cout << "Info b: " << b.x() << " " << b.y() << " " << b.z() << ", " << b.cap_center_point.transpose() << ", " << b.cap_radius << ", " << b.radius << endl;
+	    //cout << "Distance r: " << sqrt(r2) << endl;
 	    if(r2<m*m) {
+	      cnt_all++;
+	      //cout << "Hard sphere collision! " << endl;
+	      if(a.is_sphere && b.is_sphere)
+		return pc::infty;
+	      cnt_cap_sphere++;
+	      //return pc::infty;
+	      //if(!a.is_sphere && !b.is_sphere)
+	      //  return pc::infty;
+	      
 	      // Hard sphere overlap
-	      Point acb = ( a + a.cap_center_point ) - b; // Vector from origin of a.cap to center of 'b'
-	      Point bca = ( b + b.cap_center_point ) - a; // Vector from origin of b.cap to center of 'a'
+	      Point acb = b - ( a + a.cap_center_point ); // Vector from origin of a.cap to center of 'b'
+	      Point bca = a - ( b + b.cap_center_point ); // Vector from origin of b.cap to center of 'a'
 	      double acbn = acb.norm();                   // Distance from center of a.cap to center of 'b'
 	      double bcan = bca.norm();                   // Distance from center of b.cap to center of 'a'
 	      bool acap_overlap_b = acbn < ( a.cap_radius + b.radius ); // Does the a.cap-sphere overlap 'b'?
 	      bool bcap_overlap_a = bcan < ( b.cap_radius + a.radius ); // Does the b.cap-sphere overlap 'a'?
+	      //cout << "Vectors: bca: " << bca.transpose() << ", acb: " << acb.transpose() << endl;
+	      //cout << "a.cap overlap b: " << acap_overlap_b << ", b.cap overlap a: " << bcap_overlap_a << endl;
 	      if( !acap_overlap_b && !bcap_overlap_a )    // If no cap-to-sphere overlaps then...
 		return pc::infty;                         // Caps are irrelevant so effectively normal hard sphere
-		
+	      //cout << "Passed double check! " << endl;
 	      double r1 = sqrt(r2);
 	      if( bcap_overlap_a ) {                      // If b.cap overlap 'a' then...
-		if(acos(b.cap_center_point.dot(r)/r1/b.cap_radius) > b.angle_p)
+		if(acos(b.cap_center_point.dot(-r)/r1/b.cap_center) > b.angle_p)
 		  return pc::infty;                       // The b.cap-sphere does not cover at least some overlap between a.center- and b.center-spherees
-		
-		Point r = ( b + b.cap_center_point ) + bca/bcan*b.cap_radius; // Closesed point from a.center to surface of b.cap
-		if((b - r).norm() <= b.radius) {          // If that point is closer than b.radius then it truly is on the b.cap
-		  Point a_to_closest_b = a - r;           // Distance-vector between a.center to the closesed point on 'b'
+		Point rc = ( b + b.cap_center_point ) + bca/bcan*b.cap_radius; // Closesed point from a.center to surface of b.cap
+		if((b - rc).norm() <= b.radius) {          // If that point is closer than b.radius then it truly is on the b.cap
+		  Point a_to_closest_b = a - rc;           // Distance-vector between a.center to the closesed point on 'b'
 		  if(a_to_closest_b.norm() < a.radius)    // If that distance is shorter than the radius of 'a' then...
 		    return pc::infty;                     // Return collision
 		  return 0.0;                             // Return no collision
 		} else {
 		  // Closesed point between 'a' and 'b' is on the b.cap-ring
-		  double theta = pc::pi - acos(r.dot(b.cap_center_point)/r1/b.cap_radius) - b.angle_c;
+		  double theta = pc::pi - acos(-r.dot(b.cap_center_point)/r1/b.cap_radius) - b.angle_c;
 		  double distance = sqrt(b.radius*b.radius + (r + b.cap_center_point).squaredNorm() - b.cap_center*b.cap_center - 2.0*r1*b.cap_radius*cos(theta));
 		  if(distance < a.radius)
 		    return pc::infty;
@@ -411,27 +471,39 @@ namespace Faunus {
 		}
 	      }
 	      
+	      //cout << "Passed first single check! " << endl;
 	      if( acap_overlap_b ) {                      // If a.cap overlap 'b' then...
-		if(acos(a.cap_center_point.dot(r)/r1/a.cap_radius) > a.angle_p)
+		//cout << "a.cap overlap b" << endl;
+		//cout << "a.cap-vector: " << a.cap_center_point.transpose() << ", " << -r.transpose() << endl;
+		//cout << "angle between cap-vector and r-vector: " << std::acos(a.cap_center_point.dot(-r)/r1/a.cap_center) << ", internal 'o' cap-angle: " << a.angle_p << endl;
+		if(std::acos(a.cap_center_point.dot(-r)/r1/a.cap_center) > a.angle_p)
 		  return pc::infty;                       // The a.cap-sphere does not cover at least some overlap between b.center- and a.center-spherees
-		
-		Point r = ( a + a.cap_center_point ) + acb/acbn*a.cap_radius; // Closesed point from b.center to surface of a.cap
-		if((a - r).norm() <= a.radius) {          // If that point is closer than a.radius then it truly is on the a.cap
-		  Point b_to_closest_a = b - r;           // Distance-vector between b.center to the closesed point on 'a'
+		//cout << "Position of a.cap: " << (a + a.cap_center_point).transpose() << endl;
+		//cout << "Vector from a.cap center to closeset to 'b' point: " << acb.transpose()/acbn*a.cap_radius << endl;
+		Point rc = ( a + a.cap_center_point ) + acb/acbn*a.cap_radius; // Closesed point from b.center to surface of a.cap
+		//cout << "Closesed point on cap (not truly): " << rc.transpose() << endl;
+		//cout << "Vector: " << (a - rc).norm() << ", radius: " << a.radius << endl;
+		if((a - rc).norm() <= a.radius) {          // If that point is closer than a.radius then it truly is on the a.cap
+		  Point b_to_closest_a = b - rc;           // Distance-vector between b.center to the closesed point on 'a'
+		  //cout << "Closesed point on cap (truly): " << b_to_closest_a.transpose() << endl;
 		  if(b_to_closest_a.norm() < b.radius)    // If that distance is shorter than the radius of 'b' then...
 		    return pc::infty;                     // Return collision
+		  //cout << "No collision! " << endl;
 		  return 0.0;                             // Return no collision
 		} else {
+		  // Remember: This is only working if the quadrilateral is convex, i.e. if(std::acos(a.cap_center_point.dot(-r)/r1/a.cap_center) > a.angle_p)
+		  //cout << "Not truly on the cap! Closeset is the ring! " << endl;
 		  // Closesed point between 'a' and 'b' is on the a.cap-ring
-		  double theta = pc::pi - acos(r.dot(a.cap_center_point)/r1/a.cap_radius) - a.angle_c;
+		  double theta = pc::pi - acos(-r.dot(a.cap_center_point)/r1/a.cap_radius) - a.angle_c;
 		  double distance = sqrt(a.radius*a.radius + (r + a.cap_center_point).squaredNorm() - a.cap_center*a.cap_center - 2.0*r1*a.cap_radius*cos(theta));
 		  if(distance < b.radius)
 		    return pc::infty;
+		  //cout << "No collision with ring! " << endl;
 		  return 0.0;
 		}
 	      }
 	      
-	      // Cap 'a' sphere interaction  - cap 'b' sphere interaction 
+	      // Cap 'a' sphere interaction  - cap 'b' sphere interaction  
 	      
 	      return pc::infty;
 	      
@@ -441,6 +513,16 @@ namespace Faunus {
 	    
             return 0.0;
           }
+          
+          
+          
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          o << pad(SUB,w,"cnt_all") << cnt_all << endl
+            << pad(SUB,w,"cnt_cap_sphere") << cnt_cap_sphere << endl;
+          return o.str();
+        }
     };
 
     /**

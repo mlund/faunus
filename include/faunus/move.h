@@ -4251,39 +4251,46 @@ namespace Faunus {
 
             auto m = in["moves"];
             for ( auto i=m.begin(); i!=m.end(); ++i) {
+              auto& val = i.value();
               if (i.key()=="atomtranslate")
-                mPtr.push_back( toPtr( AtomicTranslation<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( AtomicTranslation<Tspace>(e,s,val) ) );
               if (i.key()=="atomrotate")
-                mPtr.push_back( toPtr( AtomicRotation<Tspace>(e,s,i.value())) );
+                mPtr.push_back( toPtr( AtomicRotation<Tspace>(e,s,val)) );
               if (i.key()=="atomgc")
-                mPtr.push_back( toPtr( GrandCanonicalSalt<Tspace>(e,s,i.value())) );
+                mPtr.push_back( toPtr( GrandCanonicalSalt<Tspace>(e,s,val)) );
               if (i.key()=="gctit")
-                mPtr.push_back( toPtr( GrandCanonicalTitration<Tspace>(e,s,i.value())) );
+                mPtr.push_back( toPtr( GrandCanonicalTitration<Tspace>(e,s,val)) );
               if (i.key()=="moltransrot")
-                mPtr.push_back( toPtr( TranslateRotate<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( TranslateRotate<Tspace>(e,s,val) ) );
               if (i.key()=="moltransrot2body")
-                mPtr.push_back( toPtr( TranslateRotateTwobody<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( TranslateRotateTwobody<Tspace>(e,s,val) ) );
               if (i.key()=="moltransrotcluster")
-                mPtr.push_back( toPtr( TranslateRotateCluster<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( TranslateRotateCluster<Tspace>(e,s,val) ) );
               if (i.key()=="isobaric")
-                mPtr.push_back( toPtr( Isobaric<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( Isobaric<Tspace>(e,s,val) ) );
               if (i.key()=="isochoric")
-                mPtr.push_back( toPtr( Isochoric<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( Isochoric<Tspace>(e,s,val) ) );
               if (i.key()=="gc")
-                mPtr.push_back( toPtr( GreenGC<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( GreenGC<Tspace>(e,s,val) ) );
               if (i.key()=="titrate")
-                mPtr.push_back( toPtr( SwapMove<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( SwapMove<Tspace>(e,s,val) ) );
               if (i.key()=="crankshaft")
-                mPtr.push_back( toPtr( CrankShaft<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( CrankShaft<Tspace>(e,s,val) ) );
               if (i.key()=="pivot")
-                mPtr.push_back( toPtr( Pivot<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( Pivot<Tspace>(e,s,val) ) );
               if (i.key()=="reptate")
-                mPtr.push_back( toPtr( Reptation<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( Reptation<Tspace>(e,s,val) ) );
               if (i.key()=="ctransnr")
-                mPtr.push_back( toPtr( ClusterTranslateNR<Tspace>(e,s,i.value()) ) );
+                mPtr.push_back( toPtr( ClusterTranslateNR<Tspace>(e,s,val) ) );
             }
             if ( mPtr.empty() )
               throw std::runtime_error("No moves defined - check JSON file.");
+          }
+
+          /** @brief Append move to list */
+          basePtr append( base &m ) {
+            mPtr.push_back( basePtr(m)  );
+            return mPtr.back();
           }
 
           double move(int n=1) override {

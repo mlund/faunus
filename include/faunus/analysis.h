@@ -2160,16 +2160,17 @@ namespace Faunus {
           CombinedAnalysis(Tmjson &j, Tpotential &pot, Tspace &spc) {
             auto m = j["analysis"];
             for (auto i = m.begin(); i != m.end(); ++i) {
+              auto& val = i.value();
               if (i.key() == "virial")
-                v.push_back(new VirialPressure<Tspace>(j, pot, spc));
+                v.push_back(new VirialPressure<Tspace>(val, pot, spc));
               if (i.key() == "virtualvolume")
-                v.push_back(new VirtualVolumeMove<Tspace>(j, pot, spc));
+                v.push_back(new VirtualVolumeMove<Tspace>(val, pot, spc));
               if (i.key() == "polymershape")
-                v.push_back(new PolymerShape<Tspace>(j, spc));
+                v.push_back(new PolymerShape<Tspace>(val, spc));
               if (i.key() == "cyldensity")
-                v.push_back(new CylindricalDensity<Tspace>(j, spc));
+                v.push_back(new CylindricalDensity<Tspace>(val, spc));
               if (i.key() == "chargemultipole")
-                v.push_back(new ChargeMultipole<Tspace>(j, spc));
+                v.push_back(new ChargeMultipole<Tspace>(val, spc));
             }
           }
 

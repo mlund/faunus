@@ -47,9 +47,12 @@ fau_example(example_polymers "./" polymers.cpp)
 set_target_properties(example_polymers PROPERTIES OUTPUT_NAME "polymers")
 add_test( example_polymers python ${CMAKE_CURRENT_SOURCE_DIR}/polymers.py )
 
+# gcmol
 fau_example(example_gcmol "./" gcmol.cpp)
 set_target_properties(example_gcmol PROPERTIES OUTPUT_NAME "gcmol")
 add_test( example_gcmol python ${CMAKE_CURRENT_SOURCE_DIR}/gcmol.py )
+add_custom_command(TARGET example_gcmol PRE_LINK COMMAND python gcmol.py --norun
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 fau_example(example_slitpolymer "./" slitpolymer.cpp)
 set_target_properties(example_slitpolymer PROPERTIES OUTPUT_NAME "slitpolymer")
@@ -81,9 +84,12 @@ fau_example(example_bulk_dh "./" bulk.cpp)
 set_target_properties(example_bulk_dh PROPERTIES OUTPUT_NAME "bulk_dh" EXCLUDE_FROM_ALL TRUE)
 set_target_properties(example_bulk_dh PROPERTIES COMPILE_DEFINITIONS "DEBYEHUCKEL")
 
+# water2
 fau_example(example_water2 "./" water2.cpp)
 set_target_properties(example_water2 PROPERTIES OUTPUT_NAME "water2")
 add_test( example_water2 ${CMAKE_CURRENT_SOURCE_DIR}/water2.run )
+add_custom_command(TARGET example_water2 PRE_LINK COMMAND python water2.py --norun
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 fau_example(example_water2_ewald "./" water2.cpp)
 set_target_properties(example_water2_ewald PROPERTIES

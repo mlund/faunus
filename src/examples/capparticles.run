@@ -10,34 +10,34 @@ cp -f $source_tests_dir/capparticles.state state 2> /dev/null
 
 echo '{
   "atomlist" : {
-    "Cap"    : { "sigma":10.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":0.0, "cap_radius":5.0, "cap_center":5.0 },
-    "Sphere" : { "sigma":10.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":0.0, "cap_radius":0.0, "cap_center":0.0 }
-  },
-  
-  "xyz" : {
-    "a_cap_x":5.0, "a_cap_y":0.0, "a_cap_z":0.0, "a_cap_radius":5.0, "b_x":5.0, "b_y":5.0, "b_z":0.0
+    "Cap" : { "sigma":10.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":1.0, "cap_radius":5.0, "cap_center":5.0, "charge_position": -2.5 },
+    "Sph" : { "sigma":10.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":-0.1, "cap_radius":0.0, "cap_center":0.0, "charge_position": 0.0 }
   },
 
   "moleculelist" : {
-    "solA" : { "atoms":"Cap", "Ninit":4, "atomic":true },
-    "solB" : { "atoms":"Sphere", "Ninit":4, "atomic":true }
+    "solA" : { "atoms":"Cap", "Ninit":25, "atomic":true },
+    "solB" : { "atoms":"Sph", "Ninit":25, "atomic":true }
   },
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "epsr" : 1.0, "cutoff":15.0, "eps_rf":80.0 }
+       "coulomb" : { "eps_r" : 80.0, "cutoff":15.0, "eps_rf":80.0 }
     }
   },
 
   "moves" : {
-    "atomtranslate" : { "solA" : { "peratom":true, "prob":1.0 }, "solB" : { "peratom":true, "prob":1.0 } },
-    "atomrotate"    : { "solA" : { "peratom":true, "prob":1.0 } }
+    "atomtranslate" : { 
+			"solA" : { "peratom":true, "prob":1.0, "dir":"1 1 1" },
+			"solB" : { "peratom":true, "prob":1.0, "dir":"1 1 1" }
+			},
+    "atomrotate"    : { "solA" : { "peratom":true, "prob":1.0 } },
+    "isobaric"      : { "dp":0.1, "pressure":500.0, "prop":1.0 }
   },
 
   "system" : {
     "temperature"  : 298.15,
-    "cuboid"       : { "len" : 30.0 },
-    "mcloop"       : { "macro":10, "micro":100 },
+    "cuboid"       : { "len" : 100 },
+    "mcloop"       : { "macro":10, "micro":1000 },
     "unittest"     : { "testfile":"capparticles.test", "stable":true },
     "coulomb"      : { "epsr":1, "cutoff":15.0 }
   }

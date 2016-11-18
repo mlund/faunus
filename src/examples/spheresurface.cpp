@@ -44,6 +44,7 @@ int main() {
   FormatPQR::save("confout.pqr", spc.p); // final PQR snapshot for VMD etc.
   rdf.save("rdf.dat");                   // g(r) - not normalized!
   spc.save("state");                     // final simulation state
+  FormatXYZ::save("spheresurface.xyz",spc.p);
 
   // perform unit tests (irrelevant for the simulation)
   UnitTest test(mcp);                    // class for unit testing

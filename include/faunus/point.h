@@ -702,13 +702,14 @@ namespace Faunus {
    * @brief Cap particle
    */
   struct CapParticle : public PointParticle {
-    Point cap_center_point;           //!< Center of cap
-    double cap_radius;                //!< Radius of cap
-    double cap_center;                //!< Distance between pareticle and cap center
-    double angle_p, angle_c;          //!< Angles
+    Point cap_center_point;               //!< Center of cap
+    Point charge_position;                //!< Position of charge
+    double cap_radius;                    //!< Radius of cap
+    double cap_center;                    //!< Distance between pareticle and cap center
+    double angle_p, angle_c;              //!< Angles
     bool is_sphere;
 
-    inline CapParticle() : cap_center_point(0,0,0),cap_radius(0),cap_center(0),angle_p(0),angle_c(0),is_sphere(true) {};
+    inline CapParticle() : cap_center_point(0,0,0),charge_position(0,0,0),cap_radius(0),cap_center(0),angle_p(0),angle_c(0),is_sphere(true) {};
 
     /** @brief Copy constructor for Eigen derivatives */
     template<typename OtherDerived>
@@ -734,6 +735,7 @@ namespace Faunus {
           PointParticle::operator=(d);
           cap_center=d.cap_center;
           cap_center_point = Point(cap_center,0,0);
+	  charge_position = Point(d.charge_position,0,0);
 	  cap_radius=d.cap_radius;
 	  if(cap_radius > 1e-6)
 	    is_sphere = false;
@@ -748,6 +750,7 @@ namespace Faunus {
     inline CapParticle& operator<<(std::istream &in) {
       PointParticle::operator<<(in);
       cap_center_point.operator<<(in);
+      charge_position.operator<<(in);
       in >> cap_radius;
       if(cap_radius > 1e-6)
 	is_sphere = false;
@@ -762,7 +765,7 @@ namespace Faunus {
     /* write data members to stream */
     friend std::ostream &operator<<(std::ostream &o, const CapParticle &p)
     {
-      o << PointParticle(p) << " " << p.cap_center_point.transpose() << " " << p.cap_radius << " " << p.cap_center;
+      o << PointParticle(p) << " " << p.cap_center_point.transpose() << " " << p.charge_position.transpose() << " " << p.cap_radius << " " << p.cap_center;
       return o;
     }
 
@@ -773,6 +776,7 @@ namespace Faunus {
       void rotate(const Trotator &rot) {
         assert(rot.getOrigin().squaredNorm()<1e-6);
         cap_center_point = rot(cap_center_point);
+	charge_position = rot(charge_position);
       }
   };
   

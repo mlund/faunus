@@ -10,8 +10,8 @@ cp -f $source_tests_dir/spheresurface.state state 2> /dev/null
 
 echo '{
     "atomlist" : {
-      "Pos" : { "q":  1.0, "sigma":1.0, "eps":0.0, "dp":1.0 },
-      "Neg" : { "q": -1.0, "sigma":1.0, "eps":0.0, "dp":1.0 }
+      "Pos" : { "q":  1.0, "sigma":0.1, "eps":0.0, "dp":0.1 },
+      "Neg" : { "q": -1.0, "sigma":0.1, "eps":0.0, "dp":0.1 }
       },
 
     "moleculelist" : {
@@ -30,7 +30,7 @@ echo '{
 
     "system" : {
       "temperature"   : 300,
-      "spheresurface" : { "radius" :10 },
+      "spheresurface" : { "radius" :1 },
       "mcloop"        : { "macro":10, "micro":100 },
       "unittest"      : { "testfile":"spheresurface.test", "stable":false },
       "atomlist"      : "spheresurface.json",

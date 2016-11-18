@@ -2114,6 +2114,79 @@ namespace Faunus {
       return o.str();
      }
    };
+   
+  class CapAnalysis {
+   private:
+    Table2D<double,Average<double> > back_back_avg, back_front_avg,front_front_avg, all_avg;
+    RadialDistribution<> back_back_dou, back_front_dou,front_front_dou, all_dou;
+   protected:
+
+   public:
+     CapAnalysis(double resolution=0.1) {
+       all_avg.setResolution(resolution);
+       all_dou.setResolution(resolution);
+       back_back_avg.setResolution(resolution);
+       back_front_avg.setResolution(resolution);
+       front_front_avg.setResolution(resolution);
+       back_back_dou.setResolution(resolution);
+       back_front_dou.setResolution(resolution);
+       front_front_dou.setResolution(resolution);
+     }
+     
+     template<class Tspace>
+      void sample(Tspace &spc) {
+	for(unsigned int i = 0; i < spc.p.size()-1; i++) {
+	  for(unsigned int j = i+1; j < spc.p.size(); j++) {
+	    Point r = spc.geo.vdist(spc.p[i],spc.p[j]); // p[i] - p[j]
+	    double r1 = r.norm();
+	    bool a_cap_in_play = false;
+	    bool b_cap_in_play = false;
+	    
+	    if(!spc.p[i].is_sphere) {
+	      double dacb = spc.p[i].cap_radius + spc.p[j].radius;
+	      if((r + spc.p[i].cap_center_point).squaredNorm() < dacb*dacb)
+		a_cap_in_play = true;
+	      }
+	    if(!spc.p[j].is_sphere) {
+	      double dabc = spc.p[i].radius + spc.p[j].cap_radius;
+	      if((r - spc.p[j].cap_center_point).squaredNorm() < dabc*dabc)
+		b_cap_in_play = true;
+	      }
+	    
+	    if(a_cap_in_play && b_cap_in_play) {
+	      front_front_avg(r1) += spc.p[i].cap_center_point.dot(spc.p[j].cap_center_point)/spc.p[i].cap_center/spc.p[j].cap_center;
+	      front_front_dou(r1)++;
+	    }
+	    
+	    if( (a_cap_in_play && !b_cap_in_play) || (!a_cap_in_play && b_cap_in_play) ) {
+	      back_front_avg(r1) += spc.p[i].cap_center_point.dot(spc.p[j].cap_center_point)/spc.p[i].cap_center/spc.p[j].cap_center;
+	      back_front_dou(r1)++;
+	    }
+	    
+	    if(!a_cap_in_play && !b_cap_in_play) {
+	      back_back_avg(r1) += spc.p[i].cap_center_point.dot(spc.p[j].cap_center_point)/spc.p[i].cap_center/spc.p[j].cap_center;
+	      back_back_dou(r1)++;
+	    }
+	    
+	    all_avg(r1) += spc.p[i].cap_center_point.dot(spc.p[j].cap_center_point)/spc.p[i].cap_center/spc.p[j].cap_center;
+	    all_dou(r1)++;
+	    
+	  }
+	}
+      }
+      
+    void save(string ext="") {
+     all_avg.save("all_avg.dat"+ext);
+     all_dou.save("all_dou.dat"+ext);
+     back_back_avg.save("back_back_avg.dat"+ext);
+     back_back_dou.save("back_back_dou.dat"+ext);
+     back_front_avg.save("back_front_avg.dat"+ext);
+     back_front_dou.save("back_front_dou.dat"+ext);
+     front_front_avg.save("front_front_avg.dat"+ext);
+     front_front_dou.save("front_front_dou.dat"+ext);
+    }
+    
+  };
 
   /**
    * @brief Class for accumulating analysis classes

@@ -3,8 +3,8 @@ using namespace Faunus;
 using namespace Faunus::Potential;
 
 //typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
-typedef HardSphereCap Tpairpot; // pair potential
-//typedef HardSphere Tpairpot; // pair potential
+//typedef HardSphereCap Tpairpot; // pair potential
+typedef CombinedPairPotential<HardSphereCap,CoulombCap> Tpairpot; // pair potential
 
 typedef Geometry::Cuboid Tgeometry;   // geometry: cube w. periodic boundaries
 typedef Space<Tgeometry,CapParticle> Tspace;
@@ -19,36 +19,71 @@ int main() {
   // Construct Hamiltonian and Space
   Tspace spc(mcp);
 
-  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp);
+  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp) + Energy::ExternalPressure<Tspace>(mcp);;
 
   // Markov moves and analysis
   Move::Propagator<Tspace> mv(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf(0.1);      // 0.1 angstrom resolution
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
-
+  Analysis::CapAnalysis capa;
+  FormatXTC xtc(1000);
+  
   /*
-  spc.p[0] = Point(0,0,0);
-  spc.p[0].cap_center_point = Point(mcp["xyz"]["a_cap_x"],mcp["xyz"]["a_cap_y"],mcp["xyz"]["a_cap_z"]);
-  spc.p[0].cap_radius = mcp["xyz"]["a_cap_radius"];
-  spc.p[1] = Point(mcp["xyz"]["b_x"],mcp["xyz"]["b_y"],mcp["xyz"]["b_z"]);
-  spc.p[1].cap_center_point = Point(0,0,0);
-  spc.p[1].cap_radius = 0.0;
+  spc.p[0] = Point(-5.00001,0,0);
+  spc.p[0].cap_center_point = Point(spc.p[0].radius,0,0);
+  spc.p[1] = Point(14.9999,0,0);
+  spc.p[1].cap_center_point = Point(-spc.p[0].radius,0,0);
+  spc.p[2] = Point(0.0,0,0);
   spc.trial = spc.p;
   */
   
+  
+  
+
+  /*
+  spc.p[0] = Point(0,0,0);
+  spc.p[0].cap_center_point = Point(spc.p[0].radius,0,0);
+  spc.p[0].cap_center = spc.p[0].radius;
+  spc.p[0].cap_radius = spc.p[0].radius;
+  spc.p[0].is_sphere = false;
+  spc.p[1] = Point(15,0,0);
+  spc.p[1].cap_center_point = Point(0,0,0);
+  spc.p[1].cap_center = 0.0;
+  spc.p[1].cap_radius = 0.0;
+  spc.p[1].is_sphere = true;
+  spc.trial = spc.p;
+  
+  
+  spc.p[1] = Point(5.00001,0,0);
+  spc.trial = spc.p;
   for(unsigned int i = 0; i < spc.p.size(); i++)
-    cout << "particle " << i << ": " << spc.p[i].is_sphere << endl;
-  //return 0;
+    cout << "Particle " << i << ": " << atom[spc.p[i].id].name << ", " << spc.p[i].transpose() << endl;
+  cout << "Energy: " << Energy::systemEnergy(spc,pot,spc.p) << endl;
+  
+  spc.p[1] = Point(4.99999,0,0);
+  spc.trial = spc.p;
+  for(unsigned int i = 0; i < spc.p.size(); i++)
+    cout << "Particle " << i << ": " << atom[spc.p[i].id].name << ", " << spc.p[i].transpose() << endl;
+  cout << "Energy: " << Energy::systemEnergy(spc,pot,spc.p) << endl;
+  
+  return 0;
+  */
+  
   
   spc.load("state");                               // load old config. from disk (if any)
+  
+  
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store initial total system energy
-
+  
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
-
+  
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
       sys += mv.move();
       analyzer.sample();
+      capa.sample(spc);
+      xtc.setbox( spc.geo.len );
+      xtc.save("traj.xtc", spc.p);
     } // end of micro loop
 
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
@@ -57,9 +92,10 @@ int main() {
   } // end of macro loop
 
   // save to disk
-  FormatPQR::save("confout.pqr", spc.p); // final PQR snapshot for VMD etc.
+  FormatPQR::save("confout.pqr", spc.p, spc.geo.len); // final PQR snapshot for VMD etc.
   rdf.save("rdf.dat");                // g(r) - not normalized!
   spc.save("state");                     // final simulation state
+  capa.save();
 
   // perform unit tests (irrelevant for the simulation)
   UnitTest test(mcp);                    // class for unit testing
@@ -68,7 +104,6 @@ int main() {
 
   // print information
   cout << loop.info() + sys.info() + mv.info() + analyzer.info() + test.info() + pot.info();
-  //cout << sys.info();
 
   return test.numFailed();
 }

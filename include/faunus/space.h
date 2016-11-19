@@ -195,8 +195,6 @@ namespace Faunus {
    */
   template<typename Tgeometry, typename Tparticle=PointParticle>
     class Space {
-      protected:
-        std::ifstream fin;
       private:
         bool checkSanity();                    //!< Check group length and vector sync
         std::vector<Group*> g;                 //!< Pointers to ALL groups in the system
@@ -296,8 +294,8 @@ namespace Faunus {
 
         MoleculeMap<ParticleVector>& molList() { return molecule; } //!< Vector of molecules
 
-        bool save(string);                  //!< Save container state to disk
-        bool load(string, keys=NORESIZE);   //!< Load container state from disk
+        bool save(const string&);                   //!< Save container state to disk
+        bool load(const string&, keys= NORESIZE);   //!< Load container state from disk
 
         /** @brief insert p_vec of MolID to end of p and trial */
         Group* insert(PropertyBase::Tid, const p_vec&); // inserts to trial and p
@@ -488,7 +486,7 @@ namespace Faunus {
    * This will insert a particle in both `p` and `trial` vectors and
    * expand or push forward groups.
    *
-   * @todo REMOVE, still used by `Move::AtomTracker`.
+   * @todo To be remove - do not use. Only current use is in `Move::AtomTracker::insert`.
    */
   template<class Tgeometry, class Tparticle>
     bool Space<Tgeometry,Tparticle>::insert(const Tparticle &a, int i) {
@@ -595,24 +593,24 @@ namespace Faunus {
     }
 
   template<class Tgeometry, class Tparticle>
-    bool Space<Tgeometry,Tparticle>::save(string file) {
+    bool Space<Tgeometry,Tparticle>::save(const string &file) {
       using std::numeric_limits;
       if (checkSanity()) {
         cout << "  Writing space state file '" << file << "'. ";
-        std::ofstream fout( file.c_str() );
-        if (fout) {
-          fout.precision( numeric_limits<double>::digits10 + 1 );
+        std::ofstream f( file.c_str() );
+        if (f) {
+          f.precision( numeric_limits<double>::digits10 + 1 );
           if (std::is_base_of<Geometry::Cuboid,Tgeometry>::value) 
-            fout << geo.len.transpose() << "\n";
-          else fout << geo.getVolume() << "\n";
-          fout << p.size() << "\n";
+            f << geo.len.transpose() << "\n";
+          else f << geo.getVolume() << "\n";
+          f << p.size() << "\n";
           for (auto p_i : p)
-            fout << p_i << "\n";
-          fout << g.size() << "\n";
+            f << p_i << "\n";
+          f << g.size() << "\n";
           for (auto g_i : g)
-            fout << *g_i << "\n";
-          fout << "randomstate\n";
-          fout << slump.eng;
+            f << *g_i << "\n";
+          f << "randomstate\n";
+          f << slump.eng;
           cout << "OK!\n";
           return true;
         }
@@ -628,26 +626,25 @@ namespace Faunus {
    *        (for Grand Canonical MC)
    */
   template<class Tgeometry, class Tparticle>
-    bool Space<Tgeometry,Tparticle>::load(string file, keys key) {
+    bool Space<Tgeometry,Tparticle>::load(const string &file, keys key) {
       using namespace textio;
       cout << "Reading space state file '" << file << "'. ";
-      if (checkSanity()) {
-        fin.close();
-        fin.open( file.c_str() );
-        if (fin) {
+      if ( checkSanity() ) {
+        std::ifstream f( file.c_str() );
+        if (f) {
           int n;
           cout << "OK!\n";
           if (std::is_base_of<Geometry::Cuboid,Tgeometry>::value) {
             double x,y,z;
-            fin >> x >> y >> z >> n;
+            f >> x >> y >> z >> n;
             geo.setlen(Point(x,y,z));
           }
           else {
             double vol;
-            fin >> vol >> n;
+            f >> vol >> n;
             geo.setVolume(vol);
           }
-          if (key==RESIZE && n!=(int)p.size()) {
+          if ( key==RESIZE && n!=(int)p.size() ) {
             cout << indent(SUB) << "Resizing particle vector from "
               << p.size() << " --> " << n << ".\n";
             p.resize(n);
@@ -657,7 +654,7 @@ namespace Faunus {
 
           if (n == (int)p.size() ) {
             for (int i=0; i<n; i++)
-              p[i] << fin;
+              p[i] << f;
             trial=p;
             cout << indent(SUB) << "Read " << n << " particle(s)." << endl;
 
@@ -665,11 +662,11 @@ namespace Faunus {
             for (auto i : groupList())
               delete i;
             // read groups
-            fin >> n;
+            f >> n;
             g.resize(n);
             for (auto &i : groupList()) {
               i = new Group();
-              *i << fin;
+              *i << f;
               i->setMassCenter(*this);
               if ( i->name.empty() )
                 i->name = molecule[i->molId].name;
@@ -677,10 +674,10 @@ namespace Faunus {
             cout << indent(SUB) << "Read " << n << " group(s)." << endl;
           }
           string id;
-          fin >> id;
+          f >> id;
           if ( id=="randomstate" ) {
             cout << indent(SUB) << "Restoring random number generator state." << endl;
-            fin >> slump.eng;
+            f >> slump.eng;
           }
 
           initTracker(); // update trackers

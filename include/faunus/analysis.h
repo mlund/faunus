@@ -24,7 +24,7 @@ namespace Faunus {
      * @brief Base class for analysis routines.
      *
      * This is the base class for analysis routines.
-     * Derived class must implement:
+     * Derived class *must* implement:
      *
      * - a descriptive name
      * - `_info()`
@@ -57,15 +57,12 @@ namespace Faunus {
         unsigned long int cnt;//!< number of samples - increased for every run()==true.
         string name;          //!< descriptive name
         string cite;          //!< reference, url, doi etc. describing the analysis
-        string pfx;           //!< Prefix/section in JSON file where parameters are stored
-        bool run();           //!< true if we should run, false of not (based on runfraction)
         virtual void _sample();
       public:
         AnalysisBase();
-        AnalysisBase(Tmjson&, const string&);
+        AnalysisBase(Tmjson&);
         virtual ~AnalysisBase();
         string info();       //!< Print info and results
-        double runfraction;  //!< Chance that analysis should be run (default 1.0 = 100%)
         void test(UnitTest&);//!< Perform unit test
         void sample();       //!< Sample event.
         Tmjson json();       //!< Get info and results as json object
@@ -84,7 +81,7 @@ namespace Faunus {
      * and the excess pressure scalar is the trace of @f$\mathcal{P}@f$.
      * The trivial kinetic contribution is currently not included.
      *
-     * Upon construction the JSON section analysis/virial is searched
+     * Upon construction the JSON entry is searched
      * for the following keywords:
      *
      * Keyword   |  Description
@@ -210,12 +207,10 @@ namespace Faunus {
 
       public:
         template<class Tpotential>
-        VirialPressure( Tmjson &j, Tpotential &pot, Tspace &spc, string pfx="virial" )
-          : spc(&spc), pot(&pot), AnalysisBase( j["analysis"], pfx ) {
-          auto _j = j["analysis"][pfx];
-          dim = _j["dim"] | 3;
-          area = _j["area"] | 0.0;
-          noMolecularPressure = _j["noMolecularPressure"] | false;
+        VirialPressure( Tmjson &j, Tpotential &pot, Tspace &spc ) : spc(&spc), pot(&pot), AnalysisBase( j ) {
+          dim = j["dim"] | 3;
+          area = j["area"] | 0.0;
+          noMolecularPressure = j["noMolecularPressure"] | false;
           name="Virial Pressure";
           T.setZero();
         }
@@ -457,7 +452,6 @@ namespace Faunus {
         /** @brief Calculate the direct force between the two bodies */
         template<class Tpvec, class Tenergy>
           void calc(Tpvec &p, Tenergy &pot) {
-            if (run()) {
               // Force between the two bodies
               for (auto i : *igroup1) {
                 for (auto j : *igroup2) {
@@ -480,7 +474,6 @@ namespace Faunus {
                   f_ip += f;
                 }
               }
-            }
           }
     };
 
@@ -509,7 +502,6 @@ namespace Faunus {
         /** @brief Calculate the direct force between the two bodies */
         template<class Tpvec, class Tenergy>
           void calc(Tpvec &p, Tenergy &pot) {
-            if (run()) {
               // Force between the two bodies
               for (auto i : *igroup1) {
                 for (auto j : *igroup2) {
@@ -546,7 +538,6 @@ namespace Faunus {
                   }
                 }
               }
-            }
           }
     };
 
@@ -661,10 +652,9 @@ namespace Faunus {
 
         PolymerShape() { name="Polymer Shape"; }
 
-        PolymerShape(Tmjson &j, Tspace &spc, string pfx="polymershape")
-          : AnalysisBase(j["analysis"], pfx), spc(&spc) {
+        PolymerShape(Tmjson &j, Tspace &spc)  : AnalysisBase(j), spc(&spc) {
           name="Polymer Shape";
-          auto m = j["analysis"][pfx]["mollist"];
+          auto m = j["mollist"];
           for (auto &i : m) {   // loop over molecule names
             string molname = i.get<string>();
             auto it = spc.molList().find(molname);
@@ -776,7 +766,7 @@ namespace Faunus {
 
           Tmjson _json() override {
             Tmjson j;
-            auto &_j = j[pfx]["mollist"];
+            auto &_j = j[name]["mollist"];
             for (auto &m : Z) {
               _j[m.first]["Z"] = m.second.avg();
               _j[m.first]["Z2"] = Z2[m.first].avg();
@@ -787,10 +777,9 @@ namespace Faunus {
           }
 
         public:
-          ChargeMultipole(Tmjson &j, Tspace &spc, string pfx="chargemultipole")
-            : AnalysisBase(j["analysis"], pfx), spc(&spc) {
+          ChargeMultipole(Tmjson &j, Tspace &spc)  : AnalysisBase(j), spc(&spc) {
               name="Charge Multipole";
-              auto m = j["analysis"][pfx]["mollist"];
+              auto m = j["mollist"];
               for (auto &i : m) {   // loop over molecule names
                 string molname = i.get<string>();
                 auto it = spc.molList().find(molname);
@@ -913,7 +902,6 @@ namespace Faunus {
            */
           template<class Tmultipole=DipoleParticle>
             void sample(Tspace &spc, Group &g1, Group &g2) {
-              if (run()) {
                 // multipoles and cm-cm distance
                 auto a = toMultipole(spc,g1);
                 auto b = toMultipole(spc,g2);
@@ -945,7 +933,6 @@ namespace Faunus {
                   it->second.dd  += d.dd;
                   it->second.tot += d.tot;
                 }
-              }
             }
 
           /** @brief Save multipole distribution to disk */
@@ -1035,7 +1022,6 @@ namespace Faunus {
             void sample(Tspace &spc, Tenergy &pot, int ghostin) {
               int n=g.size();
               if (n>0)
-                if (run()) {
                   while (ghostin-->0) {
                     double du=0;
                     for (auto &i : g)
@@ -1047,7 +1033,6 @@ namespace Faunus {
                         du+=pot.p2p(g[i], g[j]);// energy between ghost particles
                     expsum += exp(-du);
                   }
-                }
             }
       };
 
@@ -1073,6 +1058,7 @@ namespace Faunus {
      *       fortran program by Bolhuis/Jonsson/Akesson at Lund University.
      * @author Martin Trulsson and Mikael Lund
      * @date Lund / Prague 2007-2008.
+     * @todo Rewrite to use _sample()
      */
     template<class Tspace>
       class WidomScaled : public AnalysisBase {
@@ -1225,52 +1211,52 @@ namespace Faunus {
             void sample(const Tpvec &p, Tgeo &geo) {
               assert(lB>0);
               if (!g.empty())
-                if (!p.empty())
-                  if (run()) {
+                if (!p.empty()) {
                     Tparticle ghost;
-                    double u,cu;
-                    for (int i=0; i<ghostin; i++) {
-                      geo.randompos(ghost);
-                      int goverlap=0;
-                      for (size_t k=0; k<g.size(); k++) {
-                        ghost.radius = g[k].radius;
-                        irej[k]=0;
-                        int j=0;
-                        while (!overlap(ghost,p[j],geo) && j<(int)p.size())
-                          j++;
-                        if (j!=(int)p.size()) {
-                          ihc[k]++;
-                          irej[k]=1;
-                          goverlap++;
-                        }
-                      }
-
-                      if ( goverlap != (int)g.size() ) {
-                        cu=0;
-                        u=0;  //elelectric potential (Coulomb only!)
-                        for (auto &i : p) {
-                          double invdi=1/geo.dist(ghost,i);
-                          cu+=invdi;
-                          u+=invdi*i.charge;
-                        } 
-                        cu=cu*lB;
-                        u=u*lB;
-                        double ew,ewla,ewd;
-                        for (size_t k=0; k < g.size(); k++) {
-                          if (irej[k]==0) {
-                            expuw[k]+=exp(-u*g[k].charge);
-                            for (int cint=0; cint<11; cint++) {
-                              ew=g[k].charge*(u-double(cint)*0.1*g[k].charge*cu/double(p.size()));
-                              ewla = ew*double(cint)*0.1;
-                              ewd=exp(-ewla);
-                              ewden[k][cint]+=ewd;
-                              ewnom[k][cint]+=ew*ewd;
+                    double u, cu;
+                    for (int i = 0; i < ghostin; i++) {
+                        geo.randompos(ghost);
+                        int goverlap = 0;
+                        for (size_t k = 0; k < g.size(); k++) {
+                            ghost.radius = g[k].radius;
+                            irej[k] = 0;
+                            int j = 0;
+                            while (!overlap(ghost, p[j], geo) && j < (int) p.size())
+                                j++;
+                            if (j != (int) p.size()) {
+                                ihc[k]++;
+                                irej[k] = 1;
+                                goverlap++;
                             }
-                          }
                         }
-                      }
+
+                        if (goverlap != (int) g.size()) {
+                            cu = 0;
+                            u = 0;  //elelectric potential (Coulomb only!)
+                            for (auto &i : p) {
+                                double invdi = 1 / geo.dist(ghost, i);
+                                cu += invdi;
+                                u += invdi * i.charge;
+                            }
+                            cu = cu * lB;
+                            u = u * lB;
+                            double ew, ewla, ewd;
+                            for (size_t k = 0; k < g.size(); k++) {
+                                if (irej[k] == 0) {
+                                    expuw[k] += exp(-u * g[k].charge);
+                                    for (int cint = 0; cint < 11; cint++) {
+                                        ew = g[k].charge *
+                                             (u - double(cint) * 0.1 * g[k].charge * cu / double(p.size()));
+                                        ewla = ew * double(cint) * 0.1;
+                                        ewd = exp(-ewla);
+                                        ewden[k][cint] += ewd;
+                                        ewnom[k][cint] += ew * ewd;
+                                    }
+                                }
+                            }
+                        }
                     }
-                  } 
+                }
             }
 
       }; // end of WidomScaled
@@ -1307,11 +1293,9 @@ namespace Faunus {
 
         template<class Tcuboid, class Tpvec, class Tgroup>
           void sample(Tcuboid &geo, Tpvec &p, Tgroup &lipids) {
-            if (run()) {
               cnt++;
               S+=orderParameter(geo,p,lipids);
               A+=areaPerLipid(geo,p,lipids);
-            }
           }
 
         /**
@@ -2001,15 +1985,13 @@ namespace Faunus {
           }
 
         public:
-          CylindricalDensity( Tmjson &j, Tspace &spc, string pfx="cyldensity" )
-            : spc(&spc), data(0.2), AnalysisBase( j["analysis"], pfx ) {
+          CylindricalDensity( Tmjson &j, Tspace &spc ) : spc(&spc), data(0.2), AnalysisBase(j) {
               name="Cylindrical Density";
-              auto _j = j["analysis"][pfx];
-              zmin    = _j["zmin"] | 0.0;
-              zmax    = _j["zmax"] | -zmin;
-              dz      = _j["dz"] | 0.2;
+              zmin    = j["zmin"] | 0.0;
+              zmax    = j["zmax"] | -zmin;
+              dz      = j["dz"]   | 0.2;
 
-              string atomtype = _j["atomtype"] | string();
+              string atomtype = j["atomtype"] | string();
               cout << "atomtype = " << atomtype << endl;
               id      = atom[ atomtype ].id;
 
@@ -2050,7 +2032,7 @@ namespace Faunus {
      * (`Energy::g_internal`). For using the full Hamiltonian,
      * use the keyword `fullenergy` as shown below.
      *
-     * Input parameters:
+     * JSON input:
      *
      * Keyword      | Description
      * :----------  | :-------------------------------------------
@@ -2143,14 +2125,12 @@ namespace Faunus {
           }
 
         public:
-          VirtualVolumeMove( Tmjson &js, Tenergy &pot, Tspace &spc,
-              string sec="virtualvolume") : AnalysisBase(js["analysis"], sec), spc(&spc), pot(&pot) {
-            auto &j = js["analysis"][sec];
+          VirtualVolumeMove( Tmjson &j, Tenergy &pot, Tspace &spc ) : AnalysisBase(j), spc(&spc), pot(&pot) {
             dV = j["dV"] | 0.1;
             dir = {1,1,1};  // scale directions
             fullenergy = j["fullenergy"] | false;
-            AnalysisBase::name = "Virtual Volume Move";
-            AnalysisBase::cite = "doi:10.1063/1.472721";
+            name = "Virtual Volume Move";
+            cite = "doi:10.1063/1.472721";
           }
       };
 

@@ -201,13 +201,22 @@ namespace Faunus {
          */
         void setInserter( const TinserterFunc &ifunc ) { inserterFunctor = ifunc; };
 
-        /** @brief Get a random conformation */
-        Tpvec getRandomConformation() {
+        /**
+         * @brief Get a random conformation
+         *
+         * This will return the raw coordinates of a random conformation
+         * as loaded from a directory file. The propability of a certain
+         * conformation is dictated by the weight which, by default,
+         * is set to unity. Specify a custom distribution using the
+         * `weight` keyword.
+         */
+        Tpvec getRandomConformation()
+        {
           if ( conformations.empty() )
             throw std::runtime_error("No configurations for molecule '" + name +
                 "'. Perhaps you forgot to specity the 'atomic' keyword?");
 
-          assert( size_t(confDist.max()) == conformations.size()-1 );
+          assert( size_t( confDist.max()) == conformations.size()-1 );
           assert( atoms.size() == conformations.front().size() );
 
           return conformations[ confDist(slump.eng) ];

@@ -9,26 +9,16 @@
 namespace Faunus {
 
   namespace Analysis {
-    AnalysisBase::AnalysisBase() : w(30), cnt(0), runfraction(1.0) {
+    AnalysisBase::AnalysisBase() : w(30), cnt(0) {
       stepcnt = 0;
     }
 
-    AnalysisBase::AnalysisBase(Tmjson &j, const string &section) : w(30), cnt(0), runfraction(1.0) {
-      assert(!section.empty());
-      steps = j[section]["nstep"] | int(1);
+    AnalysisBase::AnalysisBase(Tmjson &j) : w(30), cnt(0) {
+      steps = j["nstep"] | int(1);
       stepcnt = 0;
-      pfx = section;
     }
 
     AnalysisBase::~AnalysisBase() {}
-
-    /** @todo Remove this function -- let sample() handle it instead */
-    bool AnalysisBase::run() {
-      if (slump() > runfraction)
-        return false;
-      cnt++;
-      return true;
-    }
 
     Tmjson AnalysisBase::_json() { return Tmjson(); }
 
@@ -58,8 +48,6 @@ namespace Faunus {
         o << pad(SUB,w,"Reference:") << cite << "\n";
 
       o << pad(SUB,w,"Sample interval") << steps << "\n";
-      if (steps>1)
-        o << pad(SUB,w,"Runfraction") << runfraction*100 << percent << "\n";
 
       if (cnt>0) {
         o << pad(SUB,w,"Number of sample events") << cnt << "\n";
@@ -73,10 +61,9 @@ namespace Faunus {
 
     Tmjson AnalysisBase::json() {
       Tmjson j;
-      if ( ! pfx.empty() )
-        if (cnt>0) {
-          j[ pfx ] = {
-            { "title", name }, 
+      if ( ! name.empty() )
+        if ( cnt>0 ) {
+          j[ name ] = {
             { "samples", cnt },
             { "relative time", timer.result() }
           };
@@ -87,7 +74,6 @@ namespace Faunus {
 
     TwobodyForce::TwobodyForce(InputMap &in, Group &g1, Group &g2, Group &_ions) {
       name="Twobody mean force calculation";
-      runfraction = in.get<double>("pforce", 1.0);
       igroup1=nullptr;
       igroup2=nullptr;
       setTwobodies(g1, g2, _ions);

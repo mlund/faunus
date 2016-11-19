@@ -87,7 +87,7 @@ set_target_properties(example_bulk_dh PROPERTIES COMPILE_DEFINITIONS "DEBYEHUCKE
 # water2
 fau_example(example_water2 "./" water2.cpp)
 set_target_properties(example_water2 PROPERTIES OUTPUT_NAME "water2")
-add_test( example_water2 ${CMAKE_CURRENT_SOURCE_DIR}/water2.run )
+add_test( example_water2 python ${CMAKE_CURRENT_SOURCE_DIR}/water2.py )
 add_custom_command(TARGET example_water2 PRE_LINK COMMAND python water2.py --norun
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 

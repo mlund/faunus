@@ -12,6 +12,13 @@ namespace Faunus {
 
     using namespace Faunus::textio;
 
+    Geometrybase::Geometrybase() {}
+
+    Geometrybase::Geometrybase( const string &name, string dir ) : name(name), jsondir(dir) {
+      if ( jsondir.empty() )
+        jsondir = "system";
+    }
+ 
     Geometrybase::~Geometrybase() {}
 
     double Geometrybase::dist(const Point &p1, const Point &p2) const {
@@ -20,6 +27,11 @@ namespace Faunus {
 
     void Geometrybase::scale(Point &a, Point &s, const double xyz, const double xy) const {
       assert(!"Scaling function unimplemented for this geometry");
+    }
+
+    Cuboid Geometrybase::inscribe() const {
+      assert(!"Inscribe function not implemented for this geometry");
+      return Cuboid();
     }
 
     string Geometrybase::info(char w) {
@@ -93,6 +105,18 @@ namespace Faunus {
     bool Sphere::collision(const Point &a, double radius, collisiontype type) const {
       return (a.squaredNorm()>r2) ? true:false;
     }
+
+    Cuboid Sphere::inscribe() const  {
+      Cuboid c;
+      c.setlen( {diameter, diameter, diameter} );
+      return c;
+    }
+
+    Cuboid Cuboid::inscribe() const {
+      return *this;
+    }
+
+    Cuboid::Cuboid() {}
 
     void Cuboid::setlen(const Point &l) {
       if ( l.x()<1e-9 || l.y()<1e-9 || l.z()<1e-9 )
@@ -224,6 +248,12 @@ namespace Faunus {
       o << pad(SUB,w, "Length") << _halflen*2 << textio::_angstrom << endl
         << pad(SUB,w, "Radius") << sqrt(r2) << textio::_angstrom << endl;
       return o.str();
+    }
+
+    Cuboid Cylinder::inscribe() const {
+      Cuboid c;
+      c.setlen( {diameter, diameter, _len} );
+      return c;
     }
 
     PeriodicCylinder::PeriodicCylinder(

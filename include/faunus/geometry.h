@@ -25,6 +25,8 @@ namespace Faunus {
    */
   namespace Geometry {
 
+    class Cuboid;
+
     /**
      * @brief Polymorphic class for simulation geometries
      *
@@ -64,15 +66,17 @@ namespace Faunus {
         virtual double sqdist(const Point &a, const Point &b) const=0; //!< Squared distance between two points
         virtual Point vdist(const Point&, const Point&)=0;  //!< Distance in vector form
 
+        virtual Cuboid inscribe() const; //!< Inscribe geometry in a cuboid
+
+        Geometrybase();
+
         /**
          * @brief Constructor
          * @param name Name of geometry
          * @param dir Name of input section to look for parameters. If empty (default), fallback to default "system".
          */
-        inline Geometrybase( const string &name, const string &dir="") : name(name), jsondir(dir) {
-          if ( jsondir.empty() )
-            jsondir = "system";
-        }
+        Geometrybase(const string&, string="");
+
         virtual ~Geometrybase();
     };
 
@@ -118,6 +122,8 @@ namespace Faunus {
 
         void scale(Point&, Point &, const double, const double) const override; //!< Linear scaling along radius (NPT ensemble)
 
+        Cuboid inscribe() const override;
+
     };
 
     /** @brief Cuboid geometry with periodic boundaries
@@ -140,6 +146,8 @@ namespace Faunus {
         Point len_inv;                           //!< Inverse sidelengths
 
       public:
+
+        Cuboid();
 
         /**
          * The json object is scanned for the following parameters in section `system/cuboid`:
@@ -216,6 +224,8 @@ namespace Faunus {
         }
 
         void scale(Point&, Point&, const double, const double) const override;
+
+        Cuboid inscribe() const override;
     };
 
     /**
@@ -300,6 +310,8 @@ namespace Faunus {
           return a-b;
         }
         inline double getRadius() const { return r; }
+
+        Cuboid inscribe() const override;
     };
 
     /**

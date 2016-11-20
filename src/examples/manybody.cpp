@@ -19,7 +19,6 @@ int main(int argc, char** argv) {
   Faunus::MPI::MPIController mpi;
 
   InputMap mcp("manybody.json");
-  FormatXTC xtc(1000);                 // XTC gromacs trajectory format
   EnergyDrift sys;                     // class for tracking system energy drifts
 
   Tspace spc(mcp);
@@ -84,10 +83,6 @@ int main(int argc, char** argv) {
         mpol.sample(pol,spc);
       }
 
-      if ( rnd > 0.99 ) {
-        xtc.setbox( spc.geo.len );
-        xtc.save("traj.xtc", spc.p);
-      }
     } // end of micro loop
 
     sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // detect energy drift

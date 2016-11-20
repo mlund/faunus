@@ -51,7 +51,8 @@ d = {
       },
 
     "analysis" : {
-      "polymershape" : { "nstep":10, "mollist":[ "polymer" ] }
+      "polymershape" : { "nstep":10, "mollist":[ "polymer" ] },
+      "xtctraj" : { "nstep": 10, "file":"polymers.xtc" }
       },
 
     "system" : {

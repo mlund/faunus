@@ -55,7 +55,6 @@ int main() {
   cout << textio::splash();      // show faunus banner and credits
   InputMap mcp("membrane.json"); //read input file
 
-  FormatXTC xtc(1000);
   EnergyDrift sys;               // class for tracking system energy drifts
 
   // Energy functions and space
@@ -102,10 +101,6 @@ int main() {
     while ( loop[1] ) {
       sys += mv.move();
       double ran = slump();
-      if ( ran > 0.99 ) {
-        xtc.setbox( spc.geo.len );
-        xtc.save("traj.xtc", spc.p);
-      }
       if ( ran > 0.90 ) {
         virial.sample();
         lipidstruct.sample(spc.geo, spc.p, allLipids);

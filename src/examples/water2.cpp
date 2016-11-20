@@ -31,8 +31,8 @@ int main() {
 
   // Markov moves and analysis
   Move::Propagator<Tspace> mv( mcp, pot, spc );
+  Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf(0.05);
-  FormatXTC xtc(1000);
 
   EnergyDrift sys;   // class for tracking system energy drifts
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
@@ -46,13 +46,9 @@ int main() {
       sys+=mv.move();
 
       double rnd = slump();
-      if ( rnd>0.9 ) {
+      if ( rnd>0.9 )
         rdf.sample( spc, atom["OW"].id, atom["OW"].id ); // O-O g(r)
-        if ( rnd > 0.99 ) {
-          xtc.setbox( spc.geo.len );
-          xtc.save( "traj.xtc", spc.p );
-        }
-      }
+
     } // end of micro loop
 
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?

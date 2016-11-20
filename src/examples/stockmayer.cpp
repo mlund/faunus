@@ -24,7 +24,6 @@ int main() {
 
   Analysis::DipoleAnalysis dian(spc,in);
   DipoleWRL sdp;
-  FormatXTC xtc(spc.geo.len.norm());
 
   EnergyDrift sys;                               // class for tracking system energy drifts
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// initial energy
@@ -35,8 +34,6 @@ int main() {
       sys += mv.move();
       if (slump()>0.5)
         dian.sampleMuCorrelationAndKirkwood(spc);
-      if (slump()>0.99)
-        xtc.save(textio::prefix+"out.xtc", spc.p);  
       dian.sampleDP(spc);
     }    
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current

@@ -2016,6 +2016,41 @@ namespace Faunus {
       };
 
     /**
+     * @brief Write XTC trajectory file
+     *
+     * JSON keywords: `nstep`, `file`
+     */
+    template<class Tspace>
+      class XTCtraj : public AnalysisBase {
+        private:
+
+          FormatXTC xtc;
+          Tspace* spc;
+          string filename;
+
+          void _sample() override {
+            xtc.setbox( spc->geo.inscribe().len );
+            xtc.save( filename, spc->p );
+          }
+
+          string _info() override {
+            using namespace Faunus::textio;
+            std::ostringstream o;
+            if (cnt>0)
+              o << pad( SUB, 30, "Filename" ) << filename+"\n";
+            return o.str();
+          }
+
+        public:
+
+          XTCtraj( Tmjson &j, Tspace &s ) : AnalysisBase(j), xtc(1e6), spc(&s) {
+            name = "XTC trajectory reporter";
+            filename = j["file"] | string("traj.xtc");
+            cite = "http://manual.gromacs.org/online/xtc.html";
+          }
+      };
+ 
+    /**
      * @brief Calculate excess pressure using virtual volume move
      *
      * This will perform a virtual volume move and calculate the
@@ -2147,6 +2182,11 @@ namespace Faunus {
      * `virial`          |  `Analysis::VirialPressure`
      * `virtualvolume`   |  `Analysis::VirtualVolumeMove`
      * `chargemultipole` |  `Analysis::ChargeMultipole`
+     * `xtctraj`         |  `Analysis::XTCtraj`
+     *
+     * All analysis classes take the JSON keyword `nstep` for
+     * specifying how many microloops to count between
+     * each analysis call.
      */
     class CombinedAnalysis : public AnalysisBase {
       private:
@@ -2161,6 +2201,8 @@ namespace Faunus {
             auto m = j["analysis"];
             for (auto i = m.begin(); i != m.end(); ++i) {
               auto& val = i.value();
+              if (i.key() == "xtctraj")
+                v.push_back(new XTCtraj<Tspace>(val, spc));
               if (i.key() == "virial")
                 v.push_back(new VirialPressure<Tspace>(val, pot, spc));
               if (i.key() == "virtualvolume")

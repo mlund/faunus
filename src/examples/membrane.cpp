@@ -55,8 +55,6 @@ int main() {
   cout << textio::splash();      // show faunus banner and credits
   InputMap mcp("membrane.json"); //read input file
 
-  EnergyDrift sys;               // class for tracking system energy drifts
-
   // Energy functions and space
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::Bonded<Tspace>()
@@ -92,14 +90,12 @@ int main() {
   Analysis::BilayerStructure lipidstruct;
   Analysis::VirialPressure<Tspace> virial(mcp, pot, spc);
 
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
-
   cout << atom.info() + spc.info() + pot.info();
 
   MCLoop loop(mcp);                      // class for handling mc loops
   while ( loop[0] ) {                    // Markov chain 
     while ( loop[1] ) {
-      sys += mv.move();
+      mv.move();
       double ran = slump();
       if ( ran > 0.90 ) {
         virial.sample();
@@ -107,8 +103,6 @@ int main() {
       }
 
     } // end of micro loop
-
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
 
     // save to disk
     FormatPQR::save("confout.pqr", spc.p);
@@ -120,11 +114,10 @@ int main() {
   // perform unit tests
   UnitTest test(mcp);
   mv.test(test);
-  sys.test(test);
   lipidstruct.test(test);
 
   cout << loop.info() + mv.info()
-    + lipidstruct.info() + sys.info() + virial.info() + test.info();
+    + lipidstruct.info() + virial.info() + test.info();
 
   return test.numFailed();
 }

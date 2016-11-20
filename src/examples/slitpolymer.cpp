@@ -8,19 +8,18 @@ int main() {
   cout << textio::splash();          // Spam
 
   InputMap mcp("slitpolymer.json");  // Open input parameter file
-  EnergyDrift sys;                   // track system energy drifts
   UnitTest test(mcp);                // unit testing
 
   Tspace spc(mcp);                   // Simulation space (all particles and group info)
   Energy::ExternalPotential<Tspace,Potential::GouyChapman<double,true> > pot(mcp);
   pot.expot.setSurfPositionZ( &spc.geo.len_half.z() ); // Pass position of GC surface
 
+  spc.load("state");                                  // Load start configuration, if any
+
   Move::Propagator<Tspace> mv(mcp,pot,spc);           // assembly of all MC moves
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);   // sample polymer shape etc.
   Analysis::LineDistribution<> surfmapall;            // monomer-surface histogram
 
-  spc.load("state");                                  // Load start configuration, if any
-  sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Store total system energy
 
   cout << spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
@@ -29,7 +28,7 @@ int main() {
   MCLoop loop(mcp);    // handle mc loops
   while ( loop[0] ) {
     while ( loop[1] ) {
-      sys += mv.move();
+      mv.move();
       analyzer.sample();
 
       if (slump() < 0.05) {
@@ -39,7 +38,6 @@ int main() {
 
     } // end of micro loop
 
-    sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // re-calc system energy and detect drift
     cout << loop.timing();                                 // print timing and ETA information
 
   } // end of macro loop
@@ -49,12 +47,10 @@ int main() {
   FormatPQR::save("confout.pqr", spc.p);  // save PQR file
 
   // Perform unit tests (only for faunus integrity)
-  sys.test(test);
   mv.test(test);
   analyzer.test(test);
 
-  cout << loop.info() + sys.info() + mv.info() 
-    + analyzer.info() + spc.info() + test.info();
+  cout << loop.info() + mv.info() + analyzer.info() + spc.info() + test.info();
 
   return test.numFailed();
 }

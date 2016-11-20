@@ -819,23 +819,29 @@ namespace Faunus {
      * A simply way to mimic this is to assign zero mass to all neutral
      * atoms in the molecule.
      *
-     * The constructor takes the following `InputMap` keywords:
+     * The constructor takes the following JSON keywords:
      *
-     * Keyword             | Note
-     * :------------------ | :--------------------------------------------
-     * `multipoledist_dr`  | Distance resolution - default is 0.2 angstrom
+     * Keyword   | Description
+     * :-------- | :---------------------------------------------
+     * `dr`      | Distance resolution in angstrom (default: 0.2)
      *
      * @date Malmo 2014
      * @note Needs testing!
      * @todo Add option to use charge center instead of mass center
+     * @todo _sample() functionality unfinished
      */
     template<class Tspace, class Tcoulomb=Potential::Coulomb>
       class MultipoleDistribution : public AnalysisBase {
         private:
-          Energy::Nonbonded<Tspace,Tcoulomb> pot; // Coulombic hamiltonian
+          string filename;      // output file name
+          int id1, id2;         // pair of molecular id's to analyse
+          double dr;            // distance resolution
+
+          Tcoulomb coulomb;     // coulomb potential
+          Tspace* spc;
 
           string _info() override {
-            return textio::header("Multipole Analysis");
+            return string();
           }
 
           struct data {
@@ -845,7 +851,6 @@ namespace Faunus {
           };
 
           std::map<int,data> m; // slow, but OK for infrequent sampling
-          double dr;            // distance resolution
 
           template<class Tgroup>
             Tensor<double> quadrupoleMoment(const Tspace &s, const Tgroup &g) const {
@@ -879,17 +884,30 @@ namespace Faunus {
               double u=0;
               for (auto i : g1)
                 for (auto j : g2)
-                  u += spc.p[i].charge * spc.p[j].charge /
-                    spc.geo.dist( spc.p[i], spc.p[j] );
-              return u * pot.pairpot.bjerrumLength();
+                  u += coulomb( spc.p[i], spc.p[j] );
+              return u;
             }
+
+          void _sample() override {
+          }
 
         public:
 
-          MultipoleDistribution(InputMap &in) : pot(in) {
+          MultipoleDistribution(Tmjson &j, const Tspace &s) : AnalysisBase(j), coulomb(j) {
             name="Multipole Distribution";
-            dr = in.get("multipoledist_dr", 0.1,
-                "Distance resolution of multipole analysis");
+            dr = j["dr"] | 0.2;
+            filename = j["file"] |  string("multipole.dat");
+            string name1 = j["group1"] | string();
+            string name2 = j["group1"] | string();
+
+            auto f1 = s.molecule.find( name1 );
+            auto f2 = s.molecule.find( name2 );
+
+            assert( f1 != s.molecule.end() );
+            assert( f2 != s.molecule.end() );
+
+            id1 = *f1.id;
+            id2 = *f2.id;
           }
 
           /**
@@ -911,10 +929,10 @@ namespace Faunus {
                 double r3inv = rinv * r2inv;
 
                 // multipolar energy
-                pot.setSpace(spc);
+                coulomb.setSpace(spc);
                 data d;
                 d.cnt++;
-                d.tot = pot.g2g(spc.p, g1, g2); // exact el. energy
+                d.tot = g2g(spc.p, g1, g2); // exact el. energy
                 d.ii = a.charge * b.charge * rinv; // ion-ion, etc.
                 d.id = ( a.charge*b.mu.dot(r) - b.charge*a.mu.dot(r) ) * r3inv;
                 d.dd = mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
@@ -940,7 +958,7 @@ namespace Faunus {
             std::ofstream f(filename.c_str());
             if (f) {
               char w=12;
-              auto lB=pot.pairpot.bjerrumLength();
+              auto lB=coulomb.bjerrumLength();
               f.precision(4);
               f << "# Multipolar energy analysis (kT)\n"
                 << std::left << setw(w) << "# r/AA" << std::right << setw(w) << "exact"

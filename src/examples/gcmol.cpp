@@ -15,27 +15,22 @@ int main() {
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp);
   Move::Propagator<Tspace> mv( mcp, pot, spc );
 
-  EnergyDrift sys;
-  sys.init( Energy::systemEnergy( spc,pot,spc.p ) );
-
   cout << atom.info() << pot.info() << textio::header( "MC Simulation Begins!" );
 
   MCLoop loop( mcp );
   while ( loop[0] ) {
     while ( loop[1] )
-      sys += mv.move();
+      mv.move();
     cout << loop.timing();
   }
 
-  sys.checkDrift( Energy::systemEnergy( spc,pot,spc.p ) );
   spc.save("state");
   FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
 
   UnitTest test( mcp );
-  sys.test( test );
   mv.test( test );
 
-  cout << loop.info() << sys.info() << spc.info() << mv.info() << test.info() << endl;
+  cout << loop.info() << spc.info() << mv.info() << test.info() << endl;
 
   return test.numFailed();
 }

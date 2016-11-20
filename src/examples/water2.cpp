@@ -30,12 +30,9 @@ int main() {
   auto waters = spc.findMolecules("water");
 
   // Markov moves and analysis
-  Move::Propagator<Tspace> mv( mcp, pot, spc );
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf(0.05);
-
-  EnergyDrift sys;   // class for tracking system energy drifts
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
+  Move::Propagator<Tspace> mv( mcp, pot, spc );
 
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
@@ -43,15 +40,13 @@ int main() {
   while ( loop[0] ) {          // Markov chain 
     while ( loop[1] ) {
 
-      sys+=mv.move();
+      mv.move();
 
       double rnd = slump();
       if ( rnd>0.9 )
         rdf.sample( spc, atom["OW"].id, atom["OW"].id ); // O-O g(r)
 
     } // end of micro loop
-
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
 
     cout << loop.timing();
   } // end of macro loop
@@ -64,11 +59,10 @@ int main() {
 
   // perform unit 
   UnitTest test(mcp);
-  sys.test(test);
   mv.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + mv.info() + test.info();
+  cout << loop.info() + mv.info() + test.info();
 
   return test.numFailed();
 }

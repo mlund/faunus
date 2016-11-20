@@ -1,7 +1,9 @@
 #ifndef FAUNUS_MOVE_H
 #define FAUNUS_MOVE_H
 
+
 #ifndef SWIG
+#include <functional>
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/average.h>
@@ -4277,18 +4279,40 @@ namespace Faunus {
      * `reptate`         | `Move::Reptation`         | Reptation polymer move
      * `titrate`         | `Move::SwapMove`          | Particle swap move
      * `conformationswap`| `Move::ConformationSwap`  | Swap between molecular conformations
+     *
+     * Average system energy and drift thereof are automatically tracked and
+     * reported.
      */
     template<typename Tspace, bool polarise=false, typename base=Movebase<Tspace>>
       class Propagator : public base {
         private:
           typedef std::shared_ptr<base> basePtr;
           std::vector<basePtr> mPtr; 
+          Tspace* spc;
+
+          double dusum; // sum of all energy changes by moves
+          double uinit; // initial energy
+          Average<double> uavg; // average system energy
+          std::function<double()> ufunction; // function to calculate system energy
 
           string _info() override {
-            string o;
-            for ( auto i : mPtr )
-              o += i->info();
-            return o;
+            using namespace textio;
+
+            double ucurr = ufunction(); // current system energy
+
+            std::ostringstream o;
+            if ( uavg.cnt > 0 ) {
+              o << pad(SUB, base::w, "Average energy") << uavg.avg() << "\n"
+                << pad(SUB, base::w, "Initial energy") << uinit << kT << "\n"
+                << pad(SUB, base::w, "Current energy") << ucurr << kT << "\n"
+                << pad(SUB, base::w, "Changed") << dusum << kT << "\n"
+                << pad(SUB, base::w, "Absolute drift") << ucurr-(uinit+dusum) << kT << "\n"
+                << pad(SUB, base::w, "Relative drift") << (ucurr-(uinit+dusum))/uinit*100 << percent << "\n";
+
+              for ( auto i : mPtr )
+                o << i->info();
+            }
+            return o.str();
           }
 
           void _acceptMove() override { assert(1==2); }
@@ -4304,7 +4328,7 @@ namespace Faunus {
 
         public:
           template<typename Tenergy>
-            Propagator( InputMap &in, Tenergy &e, Tspace &s ) : base( e, s )
+            Propagator( InputMap &in, Tenergy &e, Tspace &s ) : base( e, s ), dusum(0)
           {
             this->title = "P R O P A G A T O R S";
 
@@ -4346,6 +4370,12 @@ namespace Faunus {
             }
             if ( mPtr.empty() )
               throw std::runtime_error("No moves defined - check JSON file.");
+
+            // Bind function to calculate initial system energy
+            using std::ref;
+            ufunction = std::bind(
+                Energy::systemEnergy<Tspace,Tenergy,typename Tspace::ParticleVector>,
+                ref(s), ref(e), ref(s.p) );
           }
 
           /** @brief Append move to list */
@@ -4355,8 +4385,17 @@ namespace Faunus {
           }
 
           double move(int n=1) override {
-            return ( mPtr.empty() ) ?
-              0 : (*base::_slump().element( mPtr.begin(), mPtr.end() ))->move();
+            double du = 0;
+            if ( mPtr.empty() )
+              return du;
+
+            if (uavg.cnt==0)
+              uinit = ufunction(); // calculate initial energy, prior to any moves
+
+            du = (*base::_slump().element( mPtr.begin(), mPtr.end() ))->move();
+            dusum += du;
+            uavg += uinit+dusum; // sample average system energy
+            return du;  // return energy change
           }
 
           /** @brief Generate JSON object w. move information */
@@ -4368,7 +4407,15 @@ namespace Faunus {
             return js;
           }
 
-          void test(UnitTest &t) { for (auto i : mPtr) i->test(t); }
+          void test(UnitTest &t) {
+            for (auto i : mPtr)
+              i->test(t);
+
+            double ucurr = ufunction();
+            double drift = ucurr-(uinit+dusum);
+            t("energyAverage", uavg.avg() );
+            t("relativeEnergyDrift", std::abs(drift/ucurr), 10.0 ); // allow 200% deviation    
+          }
 
 #ifdef ENABLE_MPI
           void setMPI( Faunus::MPI::MPIController* mpi ) {

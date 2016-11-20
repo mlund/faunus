@@ -15,7 +15,6 @@ int main() {
   
   InputMap mcp("polymers.json");      // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
-  EnergyDrift sys;                    // class for tracking system energy drifts
   UnitTest test(mcp);                 // class for unit testing
 
   Tspace spc(mcp);                    // instantiate space and load molecules/atoms
@@ -24,12 +23,11 @@ int main() {
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp) + Energy::Bonded<Tspace>();
 
+  spc.load("state");                                // load old config. from disk (if any)
+
   Move::Propagator<Tspace> mv( mcp, pot, spc );
   Analysis::CombinedAnalysis analyze(mcp, pot, spc);
   Analysis::RadialDistribution<> rdf(0.2);
-
-  spc.load("state");                                // load old config. from disk (if any)
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store initial total system energy
 
   auto pol = spc.findMolecules("polymer");          // all molecules named "polymer" 
 
@@ -37,8 +35,7 @@ int main() {
 
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      sys += mv.move();
-
+      mv.move();
       analyze.sample();
 
       for (auto i = pol.begin(); i != pol.end(); ++i )// sample cm-cm g(r)
@@ -47,7 +44,6 @@ int main() {
 
     } // end of micro loop
 
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
 
   } // end of macro loop
@@ -57,13 +53,10 @@ int main() {
   spc.save("state");
   FormatPQR::save("confout.pqr", spc.p);
 
-  // unit tests
   mv.test(test);
-  sys.test(test);
 
   // print information
-  cout << loop.info() << mv.info() << analyze.info()
-    << sys.info() << test.info();
+  cout << loop.info() << mv.info() << analyze.info() << test.info();
 
   return test.numFailed();
 }

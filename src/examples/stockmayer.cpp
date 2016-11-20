@@ -14,13 +14,13 @@ int main() {
 
   Energy::NonbondedVector<Tspace,Tpair> pot(in); // non-bonded only
 
+  spc.load("state");
+
 #ifdef __POLARIZE
   Move::Propagator<Tspace,true> mv(in,pot,spc);
 #else
   Move::Propagator<Tspace,false> mv(in,pot,spc);
 #endif
-
-  spc.load("state");
 
   Analysis::DipoleAnalysis dian(spc,in);
   DipoleWRL sdp;

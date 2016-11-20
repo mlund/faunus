@@ -19,7 +19,6 @@ int main() {
 
   InputMap mcp("bulk.json");          // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
-  EnergyDrift sys;                    // class for tracking system energy drifts
 
   // Construct Hamiltonian and Space
   Tspace spc(mcp);
@@ -27,14 +26,13 @@ int main() {
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
 
-  // Markov moves and analysis
-  Move::Propagator<Tspace> mv(mcp,pot,spc);
   Analysis::RadialDistribution<> rdf_ab(0.1);      // 0.1 angstrom resolution
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
   Average<double> pm;
 
   spc.load("state");                               // load old config. from disk (if any)
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store initial total system energy
+
+  Move::Propagator<Tspace> mv(mcp,pot,spc);
 
   cout << atom.info() + spc.info() + pot.info()
     + textio::header("MC Simulation Begins!");
@@ -45,11 +43,10 @@ int main() {
 
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      sys += mv.move();
+      mv.move();
       analyzer.sample();
     } // end of micro loop
 
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
 
   } // end of macro loop
@@ -62,11 +59,10 @@ int main() {
   // perform unit tests (irrelevant for the simulation)
   UnitTest test(mcp);                    // class for unit testing
   mv.test(test);
-  sys.test(test);
   analyzer.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + mv.info() + analyzer.info() + test.info();
+  cout << loop.info() + mv.info() + analyzer.info() + test.info();
 
   return test.numFailed();
 }

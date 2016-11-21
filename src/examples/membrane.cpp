@@ -87,8 +87,9 @@ int main() {
 
   // Markov moves and analysis
   Move::Propagator<Tspace> mv(mcp, pot, spc);
+
   Analysis::BilayerStructure lipidstruct;
-  Analysis::VirialPressure<Tspace> virial(mcp, pot, spc);
+  Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
 
   cout << atom.info() + spc.info() + pot.info();
 
@@ -96,17 +97,13 @@ int main() {
   while ( loop[0] ) {                    // Markov chain 
     while ( loop[1] ) {
       mv.move();
+      analyzer.sample();
       double ran = slump();
       if ( ran > 0.90 ) {
-        virial.sample();
         lipidstruct.sample(spc.geo, spc.p, allLipids);
       }
 
     } // end of micro loop
-
-    // save to disk
-    FormatPQR::save("confout.pqr", spc.p);
-    spc.save("state");
 
     cout << loop.timing();
   } // end of macro loop
@@ -117,7 +114,7 @@ int main() {
   lipidstruct.test(test);
 
   cout << loop.info() + mv.info()
-    + lipidstruct.info() + virial.info() + test.info();
+    + lipidstruct.info() + analyzer.info() +test.info();
 
   return test.numFailed();
 }

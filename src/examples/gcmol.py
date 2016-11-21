@@ -40,6 +40,11 @@ d = {
         'water': {'activity': 0.0009386, 'structure': 'water.aam', 'Ninit': 200}
     },
 
+    'analysis': {
+        'pqr' :       { 'file': 'confout.pqr' },
+        'statefile' : { 'file': 'state' }
+        },
+
     'moves': {
         'gc': {
             'moleculecombinations': {

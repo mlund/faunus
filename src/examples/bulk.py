@@ -27,7 +27,9 @@ d = {
     "analysis" : {
       "virial" : { "nstep":5 },
       "virtualvolume" : { "nstep":5, "dV":0.2 },
-      "xtctraj" : { "nstep":10, "file": "bulk.xtc" }
+      "xtctraj" :   { "file": "bulk.xtc", "nstep":10 },
+      "pqr" :       { "file": "bulk.pqr" },
+      "statefile" : { "file": "state" }
       },
 
     "moves" : {

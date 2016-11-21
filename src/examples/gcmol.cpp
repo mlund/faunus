@@ -24,9 +24,6 @@ int main() {
     cout << loop.timing();
   }
 
-  spc.save("state");
-  FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
-
   UnitTest test( mcp );
   mv.test( test );
 

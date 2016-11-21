@@ -48,10 +48,7 @@ int main() {
 
   } // end of macro loop
 
-  // save to disk
   rdf.save("rdf_p2p.dat");
-  spc.save("state");
-  FormatPQR::save("confout.pqr", spc.p);
 
   mv.test(test);
 

@@ -36,9 +36,6 @@ int main() {
   for (int i=0; i<1e3; i++)
     mv.move();
 
-  spc.save("state");                      // save final state
-  FormatPQR::save("stripes.pqr", spc.p);  // save PQR file for i.e. VMD
-
   cout << spc.info() + pot.info() + mv.info(); // final information
 }
 

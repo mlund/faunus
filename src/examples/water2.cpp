@@ -41,6 +41,7 @@ int main() {
     while ( loop[1] ) {
 
       mv.move();
+      analyzer.sample();
 
       double rnd = slump();
       if ( rnd>0.9 )
@@ -51,18 +52,14 @@ int main() {
     cout << loop.timing();
   } // end of macro loop
 
-  // save to disk
-  FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
-  spc.save("state");
   rdf.save("rdf.dat");
-  spc.save("state");
 
   // perform unit 
   UnitTest test(mcp);
   mv.test(test);
 
   // print information
-  cout << loop.info() + mv.info() + test.info();
+  cout << loop.info() + mv.info() + analyzer.info() + test.info();
 
   return test.numFailed();
 }

@@ -21,7 +21,7 @@ except:
 d = {
     'system': {
         'cuboid': {'len': 27.0},
-        'mcloop': {'macro': 10, 'micro': 400},
+        'mcloop': {'macro': 10, 'micro': 100},
         'unittest': {'testfile': 'water2.test', 'stable': False}
     },
     'energy': {
@@ -43,7 +43,12 @@ d = {
             'water': {'dp': 0.5, 'dprot': 0.5, 'dir': '1 1 1', 'permol': True}
         },
         'isobaric': {'dp': 0.1, 'pressure': 39.3155, 'prop': 1.0}
-    }
+    },
+    'analysis' : {
+        'xtctraj' :   { 'file': 'water2.xtc', 'nstep':20 },
+        'pqr' :       { 'file': 'water2.pqr' },
+        'statefile' : { 'file': 'state' }
+        }
 }
 
 # generate json file

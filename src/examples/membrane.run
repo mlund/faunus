@@ -27,7 +27,12 @@ echo '{
         "rc":'`python -c "print($sigma*2**(1/6.))"`', "eps":'$epsilon' }
     }
   },
-
+    "analysis" : {
+        "virial" :    { "nstep":5 },
+        "xtctraj" :   { "file": "membrane.xtc", "nstep":20 },
+        "pqr" :       { "file": "membrane.pqr" },
+        "statefile" : { "file": "state" }
+        },
   "moves" : {
     "atomtranslate" : { "lipid" : { "prob":0.5 } },
     "pivot"         : { "lipid" : { "permol":true,  "minlen":1, "maxlen":2, "dp":6 } },

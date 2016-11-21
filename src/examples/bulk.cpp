@@ -51,10 +51,7 @@ int main() {
 
   } // end of macro loop
 
-  // save to disk
-  FormatPQR::save("confout.pqr", spc.p); // final PQR snapshot for VMD etc.
   rdf_ab.save("rdf.dat");                // g(r) - not normalized!
-  spc.save("state");                     // final simulation state
 
   // perform unit tests (irrelevant for the simulation)
   UnitTest test(mcp);                    // class for unit testing

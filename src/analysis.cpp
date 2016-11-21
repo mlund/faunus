@@ -14,15 +14,20 @@ namespace Faunus {
     }
 
     AnalysisBase::AnalysisBase(Tmjson &j) : w(30), cnt(0) {
-      steps = j["nstep"] | int(1);
+      steps = j["nstep"] | int(0);
       stepcnt = 0;
     }
 
-    AnalysisBase::~AnalysisBase() {}
+    AnalysisBase::~AnalysisBase() { }
+
+    string AnalysisBase::_info() { return string(); }
 
     Tmjson AnalysisBase::_json() { return Tmjson(); }
 
-    void AnalysisBase::_sample() { /* make pure virtual! */ }
+    void AnalysisBase::_sample() {
+      assert(!"We should never reach here -- implement _sample() function");
+      /* make pure virtual! */
+    }
 
     void AnalysisBase::sample() {
       stepcnt++;
@@ -40,22 +45,23 @@ namespace Faunus {
     void AnalysisBase::test(UnitTest &t) { _test(t); }
 
     string AnalysisBase::info() {
-      assert(!name.empty() && "Please name analysis.");
       using namespace textio;
       std::ostringstream o;
-      o << header("Analysis: "+name);
-      if (!cite.empty())
-        o << pad(SUB,w,"Reference:") << cite << "\n";
+      if ( cnt>0 ) {
+        o << header("Analysis: "+name);
+        if (!cite.empty())
+          o << pad(SUB,w,"Reference:") << cite << "\n";
 
-      o << pad(SUB,w,"Sample interval") << steps << "\n";
+        o << pad(SUB,w,"Sample interval") << steps << "\n";
 
-      if (cnt>0) {
-        o << pad(SUB,w,"Number of sample events") << cnt << "\n";
-        double time = timer.result();
-        if (time>1e-3)
-          o << pad(SUB,w,"Relative time") << time << "\n";
+        if (cnt>0) {
+          o << pad(SUB,w,"Number of sample events") << cnt << "\n";
+          double time = timer.result();
+          if (time>1e-3)
+            o << pad(SUB,w,"Relative time") << time << "\n";
+        }
+        o << _info();
       }
-      o << _info();
       return o.str();
     }
 
@@ -164,12 +170,6 @@ namespace Faunus {
       t("bilayer_area", A.avg() );
     }
 
-    CombinedAnalysis::CombinedAnalysis(AnalysisBase* a, AnalysisBase* b) {
-      v.reserve(2);
-      v.push_back(a);
-      v.push_back(b);
-    }
-
     void CombinedAnalysis::sample() { for (auto i : v) i->sample(); }
 
     string CombinedAnalysis::info() {
@@ -182,10 +182,6 @@ namespace Faunus {
     string CombinedAnalysis::_info() {return string();}
 
     void CombinedAnalysis::_sample() {}
-
-    CombinedAnalysis& operator+(AnalysisBase &a, AnalysisBase &b) {
-      return *(new CombinedAnalysis(&a,&b));
-    }
 
     void CombinedAnalysis::test(UnitTest &test) {
       for (auto i : v) i->test(test);

@@ -12,6 +12,7 @@
 #include <Eigen/Core>
 #include <chrono>
 #include <thread>
+#include <functional>
 
 namespace Faunus {
 
@@ -24,7 +25,7 @@ namespace Faunus {
      * @brief Base class for analysis routines.
      *
      * This is the base class for analysis routines.
-     * Derived class *must* implement:
+     * Derived classes should implement:
      *
      * - a descriptive name
      * - `_info()`
@@ -44,16 +45,16 @@ namespace Faunus {
      */
     class AnalysisBase {
       private:
-        virtual string _info()=0; //!< info all classes must provide
+        virtual string _info();  //!< info all classes must provide
         virtual Tmjson _json();   //!< result of analysis as json object
         virtual void _test(UnitTest&);
 
         int stepcnt;          //!< counter between sampling points
-        int steps;            //!< Sample interval (do not modify)
 
       protected:
         TimeRelativeOfTotal<std::chrono::microseconds> timer;
         char w;               //!< width of info
+        int steps;            //!< Sample interval (do not modify)
         unsigned long int cnt;//!< number of samples - increased for every run()==true.
         string name;          //!< descriptive name
         string cite;          //!< reference, url, doi etc. describing the analysis
@@ -2033,6 +2034,31 @@ namespace Faunus {
           }
       };
 
+    class WriteOnceFileAnalysis : public AnalysisBase {
+      protected:
+        string filename;
+        string _info() override { return string(); }
+
+        std::function<void(string)> f;
+
+        void _sample() override {
+          f( filename );
+        }
+
+      public:
+        WriteOnceFileAnalysis(Tmjson &j, std::function<void(string)> writer) : AnalysisBase(j) {
+          steps = j["nstep"] | int(-1);
+          filename = j["file"] | string();
+          name = filename; // better than nothing...
+          f = writer;
+        }
+
+        ~WriteOnceFileAnalysis() {
+          if (steps == -1)
+            _sample();
+        }
+    };
+
     /**
      * @brief Write XTC trajectory file
      *
@@ -2208,29 +2234,46 @@ namespace Faunus {
      */
     class CombinedAnalysis : public AnalysisBase {
       private:
-        vector<AnalysisBase *> v;
+        typedef std::shared_ptr<AnalysisBase> Tptr;
+        vector<Tptr> v;
         string _info() override;
         void _sample() override;
       public:
-        CombinedAnalysis(AnalysisBase *a, AnalysisBase *b);
 
         template<class Tspace, class Tpotential>
           CombinedAnalysis(Tmjson &j, Tpotential &pot, Tspace &spc) {
+            using std::ref;
+            using std::placeholders::_1;
+
             auto m = j["analysis"];
             for (auto i = m.begin(); i != m.end(); ++i) {
               auto& val = i.value();
               if (i.key() == "xtctraj")
-                v.push_back(new XTCtraj<Tspace>(val, spc));
+                v.push_back( Tptr(new XTCtraj<Tspace>(val, spc)) );
+
+              if (i.key() == "pqr") {
+                auto writer = std::bind(                                                                        
+                    [](string file, Tspace &s) { FormatPQR::save( file, s.p, s.geo.inscribe().len ); },
+                    _1, ref(spc) );
+                v.push_back( Tptr(new WriteOnceFileAnalysis(val, writer)) );
+              }
+
+              if (i.key() == "statefile") {
+                auto writer = std::bind(
+                    [](string file, Tspace &s) { s.save( file ); }, _1, ref(spc) );
+                v.push_back( Tptr(new WriteOnceFileAnalysis(val, writer)) );
+              }
+
               if (i.key() == "virial")
-                v.push_back(new VirialPressure<Tspace>(val, pot, spc));
+                v.push_back( Tptr(new VirialPressure<Tspace>(val, pot, spc)) );
               if (i.key() == "virtualvolume")
-                v.push_back(new VirtualVolumeMove<Tspace>(val, pot, spc));
+                v.push_back( Tptr(new VirtualVolumeMove<Tspace>(val, pot, spc)) );
               if (i.key() == "polymershape")
-                v.push_back(new PolymerShape<Tspace>(val, spc));
+                v.push_back( Tptr(new PolymerShape<Tspace>(val, spc)) );
               if (i.key() == "cyldensity")
-                v.push_back(new CylindricalDensity<Tspace>(val, spc));
+                v.push_back( Tptr(new CylindricalDensity<Tspace>(val, spc)) );
               if (i.key() == "chargemultipole")
-                v.push_back(new ChargeMultipole<Tspace>(val, spc));
+                v.push_back( Tptr(new ChargeMultipole<Tspace>(val, spc)) );
             }
           }
 
@@ -2254,16 +2297,10 @@ namespace Faunus {
 
         inline ~CombinedAnalysis() {
           std::ofstream f("analysis_out.json");
-          if (f) {
+          if (f)
             f << std::setw(4) << json() << std::endl;
-            f.close();
-          }
-          for (auto i : v)
-            delete i;
         }
     };
-
-    CombinedAnalysis& operator+(AnalysisBase &a, AnalysisBase &b);
 
   }//namespace
 }//namespace

@@ -3,14 +3,14 @@ using namespace Faunus;
 using namespace Faunus::Potential;
 
 //typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
-//typedef HardSphereCap Tpairpot; // pair potential
-typedef CombinedPairPotential<HardSphereCap,CoulombCap> Tpairpot; // pair potential
+typedef HardSphereCap Tpairpot; // pair potential
+//typedef CombinedPairPotential<HardSphereCap,CoulombCap> Tpairpot; // pair potential
 
 typedef Geometry::Cuboid Tgeometry;   // geometry: cube w. periodic boundaries
 typedef Space<Tgeometry,CapParticle> Tspace;
 
 int main() {
-  cout << textio::splash();           // show faunus banner and credits
+  //cout << textio::splash();           // show faunus banner and credits
 
   InputMap mcp("capparticles.json");          // open user input file
   MCLoop loop(mcp);                   // class for handling mc loops
@@ -19,7 +19,7 @@ int main() {
   // Construct Hamiltonian and Space
   Tspace spc(mcp);
 
-  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp) + Energy::ExternalPressure<Tspace>(mcp);;
+  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp);// + Energy::ExternalPressure<Tspace>(mcp);;
 
   // Markov moves and analysis
   Move::Propagator<Tspace> mv(mcp,pot,spc);
@@ -27,6 +27,63 @@ int main() {
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
   Analysis::CapAnalysis capa;
   FormatXTC xtc(1000);
+  
+  double scaled_center_point = mcp["xyz"]["scaled_center_point"];
+  double scaled_radius = mcp["xyz"]["scaled_radius"];
+  spc.p[0] = Point(0,0,0);
+  spc.p[0].cap_center_point = Point(spc.p[0].radius*scaled_center_point,0,0);
+  spc.p[0].cap_center = spc.p[0].radius*scaled_center_point;
+  spc.p[0].cap_radius = spc.p[0].radius*scaled_radius;
+  spc.p[0].is_sphere = false;
+  spc.p[0].update();
+  spc.p[1] = Point(0,0,mcp["xyz"]["z"]);
+  spc.p[1].cap_center_point = Point(0,0,0);
+  spc.p[1].cap_center = 0.0;
+  spc.p[1].cap_radius = 0.0;
+  spc.p[1].is_sphere = true;
+  spc.trial = spc.p;
+  double minY = mcp["xyz"]["minY"];
+  double maxY = mcp["xyz"]["maxY"];
+  double minX = mcp["xyz"]["minX"];
+  double maxX = mcp["xyz"]["maxX"];
+  double step = mcp["xyz"]["step"];
+  int cnt;
+  for(double y = minY; y <= maxY; y+=step) {
+    cnt = 0;
+    for(double x = minX; x <= maxX; x+=step) {
+      spc.p[1] = Point(x,y,mcp["xyz"]["z"]);
+      spc.trial = spc.p;
+      double energy = Energy::systemEnergy(spc,pot,spc.p);
+      cnt++;
+      // inf 10 5 2
+      if(energy < 1) {
+	cout << " " << 0; // No interaction!
+      } else if(energy < 3) {
+	cout << " " << 1; // capsphereAndSphereCollide No collisoion!
+      } else if(energy < 6) {
+	cout << " " << 2; // capsphereAndSphereCollide Collisoion!
+      } else if(energy < 11) {
+	cout << " " << 3; // No caps in play and collision
+      } else if(energy < 13) {
+	cout << " " << 4; // Nothing at the moment
+      } else {
+	cout << " " << 5; // Hardsphere-Hardsphere Collision!
+      }
+    }
+    cout << endl;
+  }
+  
+  cout << " " << spc.p[0].x() << " " << spc.p[0].y() << " " << spc.p[0].z() << " " << spc.p[0].cap_center << " " << spc.p[0].cap_radius << " " << spc.p[0].radius;
+  cout << " " << mcp["xyz"]["minX"] << " " << mcp["xyz"]["maxX"] << " " << mcp["xyz"]["minY"] << " " << mcp["xyz"]["maxY"] << " " << mcp["xyz"]["step"] << " " << spc.p[1].radius << " " << spc.p[0].angle_p;
+  for(int i = 0; i < cnt-13; i++) {
+    cout << " " << 0;
+  }
+  
+  return 0;
+  
+  
+  
+  
   
   /*
   spc.p[0] = Point(-5.00001,0,0);

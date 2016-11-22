@@ -382,15 +382,17 @@ namespace Faunus {
 	*/
       template<class Tparticle>
 	bool capsphereAndSphereCollide(const Tparticle &capsphere, const Tparticle &sphere, const Point &r, double r1) const {
+	  if( (acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_center) > capsphere.angle_p) && (r1 > capsphere.radius) ) // If the sphere is outside the prolonged cone formed by the origin of the cap-particle and the cap-'ring' then...
+	    return true;
 	  Point cts =  ( r - capsphere.cap_center_point );    // Vector from origin of capsphere.cap pointing towards the center of 'sphere'
-	  double ctsn = cts.norm();                           // Distance from center of capsphere.cap to center of 'sphere'
-	  Point closest_cap_point = ( capsphere + capsphere.cap_center_point ) + cts/ctsn*capsphere.cap_radius; // Closesed point from sphere.center to surface of capsphere.cap
+	  Point closest_cap_point = ( capsphere + capsphere.cap_center_point ) + cts/cts.norm()*capsphere.cap_radius; // Closesed point from sphere.center to surface of capsphere.cap
 	  
-	  if((capsphere - closest_cap_point).norm() <= capsphere.radius) {   // If that point is closer than capsphere.radius then it truly is on the capsphere.cap
+	  if( ( (capsphere - closest_cap_point).norm() <= capsphere.radius )) {   // If that point is closer than capsphere.radius then it truly is on the capsphere.cap
 	    if((sphere - closest_cap_point).norm() < sphere.radius)          // If the distance between sphere.center to the closesed point on capsphere is shorter than the radius of sphere then...
 	      return true;                                                   // Return collision
 	    return false;                                                    // Return no collision
 	  } else {
+	    // Not working properly
 	    double theta = pc::pi - acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_radius) - capsphere.angle_c;
 	    double closest_cap_distance = sqrt(capsphere.radius*capsphere.radius + (capsphere.cap_center_point - r).squaredNorm() - capsphere.cap_center*capsphere.cap_center - 2.0*r1*capsphere.cap_radius*cos(theta));
 	    if(closest_cap_distance < sphere.radius)
@@ -402,7 +404,9 @@ namespace Faunus {
         
       public:
 	template<typename T>
-        HardSphereCap(const T&, const string &sec="") : PairPotentialBase(sec) { name="HardsphereCap"; }
+        HardSphereCap(const T&, const string &sec="") : PairPotentialBase(sec) { 
+	  name="HardsphereCap"; 
+	}
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
@@ -426,30 +430,28 @@ namespace Faunus {
 		if((r - b.cap_center_point).squaredNorm() < dabc*dabc)
 		  b_cap_in_play = true;
 	      }
-		
-	      /*
-	      cout << "Particle a: " << atom[a.id].name << ", Particle b: " << atom[b.id].name << endl;
-	      cout << "In play: " << a_cap_in_play << ", " << b_cap_in_play << endl;
-	      cout << "Angles: " << std::acos(a.cap_center_point.dot(-r)/r1/a.cap_center) << ", " << std::acos(b.cap_center_point.dot(r)/r1/b.cap_center) << endl;
-	      */
 	      
-	      if(!a_cap_in_play && !b_cap_in_play)
-		return pc::infty;
+	      if(!a_cap_in_play && !b_cap_in_play) {
+		return 10.0;
+		//return pc::infty;
+	      }
 	      
 	      if(a_cap_in_play && !b_cap_in_play) {
 		if(capsphereAndSphereCollide(a, b,-r, r1))
-		  return pc::infty;
-		if(r1 < b.radius)
-		  return pc::infty;
-		return 0.0;
+		  return 5.0;
+		//if(r1 < b.radius)
+		//  return pc::infty;
+		return 2.0;
 	      }
 	      if(!a_cap_in_play && b_cap_in_play) {
 		if(capsphereAndSphereCollide(b, a,r, r1))
-		  return pc::infty;
-		if(r1 < a.radius)
-		  return pc::infty;
-		return 0.0;
+		  return 5.0;
+		//if(r1 < a.radius)
+		//  return pc::infty;
+		return 2.0;
 	      }
+	      
+	      cout << "Noo" << endl;
 	      
 	      Point mid_point = ( b + 0.5*r );
 	      bool overlap = false;

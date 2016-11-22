@@ -761,6 +761,12 @@ namespace Faunus {
       }
       return *this;
     }
+    
+    // remove later when not used!!!
+    void update() {
+      angle_p = std::acos((this->radius*this->radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*this->radius*cap_center));
+      angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - this->radius*this->radius)/(2.0*cap_center*cap_radius));
+    }
 
     /* write data members to stream */
     friend std::ostream &operator<<(std::ostream &o, const CapParticle &p)

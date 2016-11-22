@@ -11,12 +11,16 @@ cp -f $source_tests_dir/capparticles.state state 2> /dev/null
 echo '{
   "atomlist" : {
     "Cap" : { "sigma":10.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":1.0, "cap_radius":5.0, "cap_center":5.0, "charge_position": -2.5 },
-    "Sph" : { "sigma":10.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":-0.1, "cap_radius":0.0, "cap_center":0.0, "charge_position": 0.0 }
+    "Sph" : { "sigma":2.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":-0.1, "cap_radius":0.0, "cap_center":0.0, "charge_position": 0.0 }
+  },
+  
+  "xyz" : {
+    "z":0.0, "minX":-11.0, "maxX":11.0, "minY":-11.0, "maxY":11.0, "step":0.01, "scaled_center_point":1.0, "scaled_radius":1.0, "cone":true
   },
 
   "moleculelist" : {
-    "solA" : { "atoms":"Cap", "Ninit":25, "atomic":true },
-    "solB" : { "atoms":"Sph", "Ninit":25, "atomic":true }
+    "solA" : { "atoms":"Cap", "Ninit":1, "atomic":true },
+    "solB" : { "atoms":"Sph", "Ninit":1, "atomic":true }
   },
 
   "energy" : {
@@ -31,7 +35,7 @@ echo '{
 			"solB" : { "peratom":true, "prob":1.0, "dir":"1 1 1" }
 			},
     "atomrotate"    : { "solA" : { "peratom":true, "prob":1.0 } },
-    "isobaric"      : { "dp":0.1, "pressure":500.0, "prop":1.0 }
+    "_isobaric"      : { "dp":0.1, "pressure":500.0, "prop":1.0 }
   },
 
   "system" : {

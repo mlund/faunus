@@ -2841,6 +2841,7 @@ namespace Faunus {
      *  `neutralize` | Neutralize system w. GC ions. Default: `true`
      *  `avgfile`    | Save AAM/PQR file w. average charges at end of simulation (TODO)
      *  `scale2int`  | When saving `avgfile`, scale charges to ensure integer net charge (default: `false`)
+     *  `processes`  | List of equilibrium processes, see `Energy::EquilibriumController`
      *
      * @todo: contains lots of redundant code from SwapMove, could inherit from there 
      * as well
@@ -2919,12 +2920,15 @@ namespace Faunus {
         if ( ptr != nullptr )
           eqpot = *ptr;
         else {
-          std::cerr << "Error: Equilibrium energy required in Hamiltonian\
-            for Grand Canonical Titration moves." << endl;
-          exit(1);
+          std::runtime_error("Error: `Energy::EquilibriumEnergy` required in Hamiltonian\
+            for Grand Canonical Titration moves.");
         }
         eqpot->eq = Energy::EquilibriumController( j );
         findSites( spc->p );
+
+        if ( eqpot->eq.sites.empty() )
+          std::cerr << "Warning: No processes found for `Move::SwapMove`.\n";
+
         cnt_tit = cnt_salt = cnt_tit_acc = cnt_salt_acc = 0;
 
         /* Sync particle charges with `AtomMap` */
@@ -3988,17 +3992,17 @@ namespace Faunus {
      * @brief Move for swapping species types - i.e. implicit titration
      *
      * Upon construction this class will add an instance of
-     * Energy::EquilibriumEnergy to the Hamiltonian. For details
+     * `Energy::EquilibriumEnergy` to the Hamiltonian. For details
      * about the titration procedure see `Energy::EquilibriumController`.
      *
-     * Upon construction the following are read from input section
-     * `moves/titrate`:
      *
-     *  Keyword       |  Description
-     * :------------- |  :---------------------------------
-     * `processfile`  |  json file name with processes
-     * `prob`         |  probability of running (default: 1)
-     * `savecharge`   |  save average charge upon destruction (default: false)
+     * Input:
+     *
+     *  Keyword        |  Description
+     *  :------------- |  :---------------------------------
+     * `prob`          |  probability of running (default: 1)
+     * `savecharge`    |  save average charge upon destruction (default: false)
+     * `processes`     |  List of equilibrium processes, see `Energy::EquilibriumController`
      */
     template<class Tspace>
       class SwapMove : public Movebase<Tspace> {
@@ -4080,11 +4084,8 @@ namespace Faunus {
         auto ptr = TupleFindType::get< Energy::EquilibriumEnergy<Tspace>* >( t );
         if ( ptr != nullptr )
           eqpot = *ptr; 
-        else {
-          std::cerr << "Error: Equilibrium energy required in\
-            Hamiltonian for titration swap moves." << endl;
-          exit(1);
-        }
+        else
+          std::runtime_error("`EquilibriumEnergy` required in Hamiltonian.");
 
         eqpot->eq = Energy::EquilibriumController( j );
 

@@ -2248,12 +2248,20 @@ namespace Faunus {
             auto m = j["analysis"];
             for (auto i = m.begin(); i != m.end(); ++i) {
               auto& val = i.value();
-              if (i.key() == "xtctraj")
+
+              if (i.key() == "xtcfile")
                 v.push_back( Tptr(new XTCtraj<Tspace>(val, spc)) );
 
-              if (i.key() == "pqr") {
+              if (i.key() == "pqrfile") {
                 auto writer = std::bind(                                                                        
                     [](string file, Tspace &s) { FormatPQR::save( file, s.p, s.geo.inscribe().len ); },
+                    _1, ref(spc) );
+                v.push_back( Tptr(new WriteOnceFileAnalysis(val, writer)) );
+              }
+
+              if (i.key() == "aamfile") {
+                auto writer = std::bind(
+                    [](string file, Tspace &s) { FormatAAM::save( file, s.p ); },
                     _1, ref(spc) );
                 v.push_back( Tptr(new WriteOnceFileAnalysis(val, writer)) );
               }
@@ -2266,12 +2274,16 @@ namespace Faunus {
 
               if (i.key() == "virial")
                 v.push_back( Tptr(new VirialPressure<Tspace>(val, pot, spc)) );
+
               if (i.key() == "virtualvolume")
                 v.push_back( Tptr(new VirtualVolumeMove<Tspace>(val, pot, spc)) );
+
               if (i.key() == "polymershape")
                 v.push_back( Tptr(new PolymerShape<Tspace>(val, spc)) );
+
               if (i.key() == "cyldensity")
                 v.push_back( Tptr(new CylindricalDensity<Tspace>(val, spc)) );
+
               if (i.key() == "chargemultipole")
                 v.push_back( Tptr(new ChargeMultipole<Tspace>(val, spc)) );
             }

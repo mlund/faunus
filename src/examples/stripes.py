@@ -30,7 +30,7 @@ j = {
             "cuboid" : { "len" : L }
             },
         "analysis" : {
-            "pqr" :       { "file": "stripes.pqr" },
+            "pqrfile" :   { "file": "stripes.pqr" },
             "statefile" : { "file": "state" }
             }
         }

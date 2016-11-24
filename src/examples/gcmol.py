@@ -41,7 +41,7 @@ d = {
     },
 
     'analysis': {
-        'pqr' :       { 'file': 'confout.pqr' },
+        'pqrfile' :   { 'file': 'confout.pqr' },
         'statefile' : { 'file': 'state' }
         },
 

@@ -29,8 +29,8 @@ echo '{
   },
     "analysis" : {
         "virial" :    { "nstep":5 },
-        "xtctraj" :   { "file": "membrane.xtc", "nstep":20 },
-        "pqr" :       { "file": "membrane.pqr" },
+        "xtcfile" :   { "file": "membrane.xtc", "nstep":20 },
+        "pqrfile" :   { "file": "membrane.pqr" },
         "statefile" : { "file": "state" }
         },
   "moves" : {

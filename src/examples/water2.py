@@ -45,8 +45,8 @@ d = {
         'isobaric': {'dp': 0.1, 'pressure': 39.3155, 'prop': 1.0}
     },
     'analysis' : {
-        'xtctraj' :   { 'file': 'water2.xtc', 'nstep':20 },
-        'pqr' :       { 'file': 'water2.pqr' },
+        'xtcfile' :   { 'file': 'water2.xtc', 'nstep':20 },
+        'pqrfile' :   { 'file': 'water2.pqr' },
         'statefile' : { 'file': 'state' }
         }
 }

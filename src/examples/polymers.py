@@ -52,8 +52,8 @@ d = {
 
     "analysis" : {
       "polymershape" : { "nstep":10, "mollist":[ "polymer" ] },
-      "xtctraj" :   { "file": "polymers.xtc", "nstep":10 },
-      "pqr" :       { "file": "polymers.pqr" },
+      "xtcfile" :   { "file": "polymers.xtc", "nstep":10 },
+      "pqrfile" :   { "file": "polymers.pqr" },
       "statefile" : { "file": "state" }
       },
 

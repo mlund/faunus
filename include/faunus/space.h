@@ -596,7 +596,7 @@ namespace Faunus {
     bool Space<Tgeometry,Tparticle>::save(const string &file) {
       using std::numeric_limits;
       if (checkSanity()) {
-        cout << "  Writing space state file '" << file << "'. ";
+        cout << "Writing space state file '" << file << "'. ";
         std::ofstream f( file.c_str() );
         if (f) {
           f.precision( numeric_limits<double>::digits10 + 1 );

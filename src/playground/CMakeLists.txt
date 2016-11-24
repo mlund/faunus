@@ -3,6 +3,7 @@ fau_example(boj-grand "./bosse" grand.cpp)
 
 # Bearnix playground
 fau_example(bearnix-cyl "./bearnix" cyl.cpp)
+fau_example(bearnix-pol "./bearnix" polyelectrolytes.cpp)
 
 # Carolina's playground
 fau_example(cc-polymers "./cragnell" polymers.cpp)

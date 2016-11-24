@@ -135,6 +135,10 @@ namespace Faunus {
    * `bonds`       | string  | List of harmonic bonds - index 0 corresponds to first atom in structure
    * `dihedrals`   | string  | List of dihedrals (under construction!)
    * `fasta`       | string  | Construct bonded chain from fasta sequence (hardcoded k and req)
+   * `blockpolymer`| string  | Construct blockpolymer with uniform k and req within each block
+   * `blocksizes`  | string  | Vector of ints to define blockpolymer
+   * `req`         | string  | Vector of floats to define harmonic bonds of blockpolymer
+   * `k`           | string  | Vector of floats to define harmonic bonds of blcokpolymer 
    * `insdir`      | string  | Directions for generation of random position. Default: "1 1 1" = XYZ
    * `insoffset`   | string  | Translate generated random position. Default: "0 0 0" = no translation
    * `keeppos`     | bool    | Keep original positions (`insdir`, `insoffset` ignored. Default: `false`)
@@ -335,6 +339,56 @@ namespace Faunus {
             for ( size_t i=0; i<v.size()-1; i++ )
               bonds.push_back(
                   Bonded::BondData( i, i+1, k, req, Bonded::BondData::Type::HARMONIC ) );
+          }
+
+          // construct flexible polymers from imput without regard to 
+          // overlap, uniform eq.dist. and f.const. are assumed
+          string blockpolymer = _js["blockpolymer"] | string();
+          if ( !blockpolymer.empty() ) {
+            vector<string> al = textio::words2vec<string>(_js["atoms"]      | string());
+            vector<int> bs    = textio::words2vec<int>(   _js["blocksizes"] | string());
+            vector<float> req = textio::words2vec<float>( _js["req"]        | string());
+            vector<float> k   = textio::words2vec<float>( _js["k"]          | string());
+            // require that all blocks have defined parameters
+            //assert( !(al.size()==bs.size()==req.size()==k.size()) ); 
+            int size=0;
+            int cnt=0;
+            for (auto &i : bs)
+              size+=i;
+            std::cout <<size<<std::endl;;
+            Tpvec v;
+            Point u;
+            typename Tpvec::value_type a;
+            v.reserve( size );
+            bonds.reserve( size-1 );
+            for ( unsigned int i=0; i<al.size(); i++ ) { //loop over atom types
+              for (int j=0; j<bs[i]; j++) {  //loop over block size
+                a = atom[al[i]];
+                if ( v.empty() )
+                  a = Point(0,0,0);
+                else {
+                  u.ranunit( slump );   // Position randomly around previus particle.
+                  // Build bond list simultaneously between atom i and i-1, if else
+                  // to apply mixing rules if req and k are not homogenoues.
+                  if (j==0) {
+                    a = v.back() + req[i]*u; 
+                    bonds.push_back(  
+                          Bonded::BondData(cnt-1, cnt, k[i], 
+                                         req[i], Bonded::BondData::Type::HARMONIC ) );
+                  } else {
+                    a = v.back() + (req[i]+req[i-1])/2*u; 
+                    bonds.push_back(  
+                          Bonded::BondData(cnt-1, cnt, sqrt(k[i]*k[i-1]), 
+                                           (req[i]+req[i-1])/2, Bonded::BondData::Type::HARMONIC ) );
+                  }
+                }
+                v.push_back( a );
+                cnt++;
+                std::cout <<cnt<<std::endl;
+                atoms.push_back(a.id);
+              }
+            }
+            pushConformation( v );
           }
 
           // read tracjectory w. conformations from disk

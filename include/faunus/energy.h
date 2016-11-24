@@ -1182,14 +1182,8 @@ namespace Faunus {
 
           string _info() override {
             size_t N, Natom=0, Nmol=0;
-            for (auto g : this->getSpace().groupList()) {
-              if (ignore.count(g)==0) {
-                if (g->isAtomic())
-                  Natom += g->size();
-                else
-                  Nmol+=g->numMolecules();
-              }
-            }
+            Natom = N_atomic();
+            Nmol= N_molecular();
             N = Natom + Nmol;
 
             std::ostringstream o;
@@ -1207,11 +1201,64 @@ namespace Faunus {
                   o << "     " << cnt++ << " " << g->name << "\n";
                 }
             }
+            double partP_diffusible=0;
+            for (auto g : this->getSpace().groupList())
+              if (g->isAtomic()) 
+                partP_diffusible+=atom[this->getSpace().p[g->front()].id].activity*1e3;
+              else 
+                std::cout <<"THIS IS NOT WORKING FOR MOLECULAR, TEMP. CODE!!!!!\n";
+            o << " Net pressure is "<< P*1e30/pc::Nav-partP_diffusible << " mM\n";
             return o.str();
           }
 
         public:
           std::set<Group*> ignore; //!< Ignore groups added here
+          double refP() {
+            double rP=0; // Reference pressure in mM
+            for (auto g : this->getSpace().groupList())
+              if (g->isAtomic())
+                rP+=atom[this->getSpace().p[g->front()].id].activity*1e3;
+              else
+                std::cout <<"THIS IS NOT WORKING FOR MOLECULAR, TEMP. CODE!!!!!\n";
+            return rP;
+          }
+          /**
+           * @brief Return osmotic coefficient, given inv. avg. volume
+           * @param inv. avg. volume in 1/A^3
+           */
+          int N() {
+            int _N=0;
+            for (auto g : this->getSpace().groupList()) {
+              //if (ignore.count(g)==0) {
+                if (g->isAtomic())
+                  _N +=g->size();
+                else
+                  _N +=g->numMolecules();
+              //}
+            }
+            return _N;
+          }
+          int N_atomic() {
+            int _N=0;
+            for (auto g : this->getSpace().groupList()) {
+              //if (ignore.count(g)==0)  
+                if (g->isAtomic())
+                  _N +=g->size();
+            }
+            return _N;
+          }
+          int N_molecular() {
+            int _N=0;
+            for (auto g : this->getSpace().groupList()) {
+              //if (ignore.count(g)==0)  
+                if (!g->isAtomic())
+                  _N +=g->numMolecules();
+            }
+            return _N;
+          }
+          double osmCoeff( double rval) {
+            return P / (N() * rval);
+          }
 
           /**
            * @brief Set pressure
@@ -1237,8 +1284,6 @@ namespace Faunus {
 
           double g_external(const Tpvec &p, Group &g) override {
             // should this group be ignored?
-            if ( ignore.count(&g)!=0 )
-              return 0;
             int N = g.numMolecules();
             double V = this->getSpace().geo.getVolume();
             return - N * log(V);

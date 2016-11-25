@@ -48,4 +48,4 @@ ehthumbs.db
 Thumbs.db
 
 /.idea/
-!/.idea/codeStyleSettings.xml
+#!/.idea/codeStyleSettings.xml

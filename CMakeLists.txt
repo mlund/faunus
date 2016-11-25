@@ -9,7 +9,6 @@ endif()
 #   Locate external packages
 # ----------------------------
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/scripts)
-include(CTest)
 include(CheckIncludeFileCXX)
 include(CheckCXXSourceCompiles)
 enable_testing()

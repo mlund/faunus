@@ -4,6 +4,12 @@ import json, sys, os
 from subprocess import call
 from shutil import copyfile
 
+pfx = os.path.join( os.path.dirname(__file__), "grand")
+try:
+  copyfile( pfx+'.state', 'state' )
+  copyfile( pfx+'.test', 'grand.test' )
+except: pass
+
 def mkinput():
   d = {
       "moleculelist": {
@@ -37,7 +43,6 @@ def mkinput():
 
 exe='./grand'
 if ( os.access( exe, os.X_OK )):
-  copyfile( 'grand.state', 'state' )
   mkinput()
   rc = call( [exe] )
   sys.exit( rc )

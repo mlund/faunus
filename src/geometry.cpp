@@ -7,177 +7,221 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-namespace Faunus {
-  namespace Geometry {
+namespace Faunus
+{
+  namespace Geometry
+  {
 
     using namespace Faunus::textio;
 
     Geometrybase::Geometrybase() {}
 
-    Geometrybase::Geometrybase( const string &name, string dir ) : name(name), jsondir(dir) {
-      if ( jsondir.empty() )
-        jsondir = "system";
+    Geometrybase::Geometrybase( const string &name, string dir ) : name(name), jsondir(dir)
+    {
+        if ( jsondir.empty())
+            jsondir = "system";
     }
- 
+
     Geometrybase::~Geometrybase() {}
 
-    double Geometrybase::dist(const Point &p1, const Point &p2) const {
-      return sqrt(sqdist(p1,p2));
+    double Geometrybase::dist( const Point &p1, const Point &p2 ) const
+    {
+        return sqrt(sqdist(p1, p2));
     }
 
-    void Geometrybase::scale(Point &a, Point &s, const double xyz, const double xy) const {
-      assert(!"Scaling function unimplemented for this geometry");
+    void Geometrybase::scale( Point &a, Point &s, const double xyz, const double xy ) const
+    {
+        assert(!"Scaling function unimplemented for this geometry");
     }
 
-    Cuboid Geometrybase::inscribe() const {
-      assert(!"Inscribe function not implemented for this geometry");
-      return Cuboid();
+    Cuboid Geometrybase::inscribe() const
+    {
+        assert(!"Inscribe function not implemented for this geometry");
+        return Cuboid();
     }
 
-    string Geometrybase::info(char w) {
-      using namespace textio;
-      std::ostringstream o;
-      o << pad(SUB,w, "Boundary") << name << endl
-        << pad(SUB,w, "Volume") << getVolume() << _angstrom << cubed
-        << " = " << getVolume()/1e3 << " nm" << cubed
-        << " = " << getVolume()/1e27 << " liters" << endl
-        << _info(w);
-      return o.str();
+    string Geometrybase::info( char w )
+    {
+        using namespace textio;
+        std::ostringstream o;
+        o << pad(SUB, w, "Boundary") << name << endl
+          << pad(SUB, w, "Volume") << getVolume() << _angstrom << cubed
+          << " = " << getVolume() / 1e3 << " nm" << cubed
+          << " = " << getVolume() / 1e27 << " liters" << endl
+          << _info(w);
+        return o.str();
     }
 
-    void Geometrybase::setVolume(double volume) {
-      assert( volume>0 && "Zero volume not allowed!");
-      _setVolume( volume );
-      assert( std::abs( (volume-getVolume())/volume )<1e-9
-          && "setVolume() and/or getVolume() is broken!" );
+    void Geometrybase::setVolume( double volume )
+    {
+        assert(volume > 0 && "Zero volume not allowed!");
+        _setVolume(volume);
+        assert(std::abs((volume - getVolume()) / volume) < 1e-9
+                   && "setVolume() and/or getVolume() is broken!");
     }
 
-    double Geometrybase::getVolume() const {
-      return _getVolume();
+    double Geometrybase::getVolume() const
+    {
+        return _getVolume();
     }
 
-    Sphere::Sphere(double radius) : Geometrybase("Sphere") { 
-      len = Point(r,diameter,0);
+    Sphere::Sphere( double radius ) : Geometrybase("Sphere")
+    {
+        len = Point(r, diameter, 0);
     }
 
-    void Sphere::setRadius(double radius) {
-      assert(radius>0 && "Radius must be larger than zero.");
-      r = radius; 
-      r2 = r*r; 
-      diameter = 2*r; 
-      len = Point(r,diameter,0);
+    void Sphere::setRadius( double radius )
+    {
+        assert(radius > 0 && "Radius must be larger than zero.");
+        r = radius;
+        r2 = r * r;
+        diameter = 2 * r;
+        len = Point(r, diameter, 0);
     }
 
-    double Sphere::_getVolume() const {
-      return 4/3.*pc::pi*std::pow(r,3);
+    double Sphere::_getVolume() const
+    {
+        return 4 / 3. * pc::pi * std::pow(r, 3);
     }
 
-    void Sphere::_setVolume(double vol) {
-      setRadius( cbrt( 3*vol/(4*pc::pi) ) );
+    void Sphere::_setVolume( double vol )
+    {
+        setRadius(cbrt(3 * vol / (4 * pc::pi)));
     }
 
-    void Sphere::setlen(const Point &l) {
-      Sphere::setRadius( l.x() );
-      if ( getVolume()<1e-9 )
-        throw std::runtime_error( "Sphere volume is zero." );
+    void Sphere::setlen( const Point &l )
+    {
+        Sphere::setRadius(l.x());
+        if ( getVolume() < 1e-9 )
+            throw std::runtime_error("Sphere volume is zero.");
     }
 
-    void Sphere::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {
-      assert( getVolume()>0 );
-      double newradius = cbrt( 3*xyz*xyz*xyz*getVolume()/(4*pc::pi) );
-      a = a * (newradius/r);
+    void Sphere::scale( Point &a, Point &s, const double xyz = 1, const double xy = 1 ) const
+    {
+        assert(getVolume() > 0);
+        double newradius = cbrt(3 * xyz * xyz * xyz * getVolume() / (4 * pc::pi));
+        a = a * (newradius / r);
     }
 
-    string Sphere::_info(char w) {
-      std::ostringstream o;
-      o << pad(SUB,w,"Radius") << r << textio::_angstrom << endl;
-      return o.str();
+    string Sphere::_info( char w )
+    {
+        std::ostringstream o;
+        o << pad(SUB, w, "Radius") << r << textio::_angstrom << endl;
+        return o.str();
     }
 
-    void Sphere::randompos(Point &a) {
-      do {
-        a.x() = (slump()-0.5)*diameter;
-        a.y() = (slump()-0.5)*diameter;
-        a.z() = (slump()-0.5)*diameter;
-      } while ( a.squaredNorm()>r2 );
+    void Sphere::randompos( Point &a )
+    {
+        do
+        {
+            a.x() = (slump() - 0.5) * diameter;
+            a.y() = (slump() - 0.5) * diameter;
+            a.z() = (slump() - 0.5) * diameter;
+        }
+        while ( a.squaredNorm() > r2 );
     }
 
-    bool Sphere::collision(const Point &a, double radius, collisiontype type) const {
-      return (a.squaredNorm()>r2) ? true:false;
+    bool Sphere::collision( const Point &a, double radius, collisiontype type ) const
+    {
+        return (a.squaredNorm() > r2) ? true : false;
     }
 
-    Cuboid Sphere::inscribe() const  {
-      Cuboid c;
-      c.setlen( {diameter, diameter, diameter} );
-      return c;
+    Cuboid Sphere::inscribe() const
+    {
+        Cuboid c;
+        c.setlen({diameter, diameter, diameter});
+        return c;
     }
 
-    Cuboid Cuboid::inscribe() const {
-      return *this;
+    Cuboid Cuboid::inscribe() const
+    {
+        return *this;
     }
 
     Cuboid::Cuboid() {}
 
-    void Cuboid::setlen(const Point &l) {
-      if ( l.x()<1e-9 || l.y()<1e-9 || l.z()<1e-9 )
-        throw std::runtime_error( "Cuboud volume is zero" );
+    void Cuboid::setlen( const Point &l )
+    {
+        if ( l.x() < 1e-9 || l.y() < 1e-9 || l.z() < 1e-9 )
+            throw std::runtime_error("Cuboud volume is zero");
 
-      len = l;                    // Cuboid sidelength
-      len_half=l*0.5;             // half Cuboid sidelength
-      len_inv.x()=1/len.x();      // inverse Cuboid side length
-      len_inv.y()=1/len.y();
-      len_inv.z()=1/len.z();
+        len = l;                    // Cuboid sidelength
+        len_half = l * 0.5;             // half Cuboid sidelength
+        len_inv.x() = 1 / len.x();      // inverse Cuboid side length
+        len_inv.y() = 1 / len.y();
+        len_inv.z() = 1 / len.z();
     }
 
-    void Cuboid::_setVolume(double newV) {
-      double xyz=1.0, xy=1.0;
-      Point s = Point(1,1,1);
-      if (scaledir==XYZ) 
-        xyz = cbrt(newV/getVolume());
-      if (scaledir==XY) 
-        xy = sqrt(newV/getVolume());
-      scale(len,s,xyz,xy);
-      setlen(len);
+    void Cuboid::_setVolume( double newV )
+    {
+        double xyz = 1.0, xy = 1.0;
+        Point s = Point(1, 1, 1);
+        if ( scaledir == XYZ )
+            xyz = cbrt(newV / getVolume());
+        if ( scaledir == XY )
+            xy = sqrt(newV / getVolume());
+        scale(len, s, xyz, xy);
+        setlen(len);
     }
 
-    double Cuboid::_getVolume() const {
-      return len.x()*len.y()*len.z();
+    double Cuboid::_getVolume() const
+    {
+        return len.x() * len.y() * len.z();
     }
 
-    string Cuboid::_info(char w) {
-      std::ostringstream o;
-      o << pad(SUB,w, "Sidelengths")
-        << len.transpose() << " ("+textio::angstrom+")" << endl
-        << pad(SUB,w, "Scale directions") << scaledirstr << endl;
-      return o.str();
+    string Cuboid::_info( char w )
+    {
+        std::ostringstream o;
+        o << pad(SUB, w, "Sidelengths")
+          << len.transpose() << " (" + textio::angstrom + ")" << endl
+          << pad(SUB, w, "Scale directions") << scaledirstr << endl;
+        return o.str();
     }
 
-    Point Cuboid::randompos() {
-      Point m;
-      randompos(m);
-      return m;
+    Point Cuboid::randompos()
+    {
+        Point m;
+        randompos(m);
+        return m;
     }
 
-    void Cuboid::randompos(Point &m) {
-      m.x() = slump.half()*len.x();
-      m.y() = slump.half()*len.y();
-      m.z() = slump.half()*len.z();
+    void Cuboid::randompos( Point &m )
+    {
+        m.x() = slump.half() * len.x();
+        m.y() = slump.half() * len.y();
+        m.z() = slump.half() * len.z();
     }
 
-    void Cuboid::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {
-      assert( getVolume()>0 );
-      if (scaledir==XYZ)
-        a = Point(a.x()*s.x()*xyz,a.y()*s.y()*xyz,a.z()*s.z()*xyz);
-      if (scaledir==XY) 
-        a = Point(a.x()*s.x()*xy,a.y()*s.y()*xy,a.z()*s.z());
+    void Cuboid::scale( Point &a, Point &s, const double xyz = 1, const double xy = 1 ) const
+    {
+        assert(getVolume() > 0);
+        if ( scaledir == XYZ )
+            a = Point(a.x() * s.x() * xyz, a.y() * s.y() * xyz, a.z() * s.z() * xyz);
+        if ( scaledir == XY )
+            a = Point(a.x() * s.x() * xy, a.y() * s.y() * xy, a.z() * s.z());
+    }
+
+    Cuboid::Cuboid( Tmjson &j, const string sec ) : Geometrybase("Cuboid")
+    {
+        auto m = j["system"][sec];
+        assert(!m.empty() && "Cuboid json section is empty");
+        scaledirstr = m["scaledir"] | string("XYZ");
+        scaledir = (scaledirstr == "XY") ? XY : XYZ;
+        double cubelen = m["len"] | -1.0;
+        if ( cubelen < 1e-9 )
+            len << (m["xyzlen"] | string("0 0 0"));
+        else
+            len.x() = len.y() = len.z() = cubelen;
+        setlen(len);
     }
 
     /**
      * @param length Length of the Cylinder (angstrom)
      * @param radius Radius of the Cylinder (angstrom)
      */
-    Cylinder::Cylinder(double length, double radius) : Geometrybase("Cylinder") {
-      init(length, radius);
+    Cylinder::Cylinder( double length, double radius ) : Geometrybase("Cylinder")
+    {
+        init(length, radius);
     }
 
     /**
@@ -188,87 +232,127 @@ namespace Faunus {
      * `length` | Cylinder length [angstrom]
      * `radius` | Cylinder radius [angstrom] 
      */
-    Cylinder::Cylinder( Tmjson &j ) : Geometrybase( "Cylinder" ) {
-      auto m = j["system"]["cylinder"];
-      init(
-          m["length"] | 0.0,
-          m["radius"] | 0.0  );
+    Cylinder::Cylinder( Tmjson &j ) : Geometrybase("Cylinder")
+    {
+        auto m = j["system"]["cylinder"];
+        init(
+            m["length"] | 0.0,
+            m["radius"] | 0.0);
     }
 
-    void Cylinder::init(double length, double radius) {
-      name="Cylinder (hard ends)";
-      assert(length>0 && radius>0 && "Cylinder length and radius must be bigger than zero.");
-      _len=length;
-      setVolume( pc::pi*radius*radius*_len );
+    void Cylinder::init( double length, double radius )
+    {
+        name = "Cylinder (hard ends)";
+        assert(length > 0 && radius > 0 && "Cylinder length and radius must be bigger than zero.");
+        _len = length;
+        setVolume(pc::pi * radius * radius * _len);
     }
 
     /**
      * Dummy function not be used other than for compatibility
      * reasons. Sets length to x component of vector.
      */
-    void Cylinder::setlen(const Point &l) {
-      init( l.x(), r); 
-      if ( getVolume() < 1e-9 )
-        throw std::runtime_error( "Cylinder volume is zero." );
+    void Cylinder::setlen( const Point &l )
+    {
+        init(l.x(), r);
+        if ( getVolume() < 1e-9 )
+            throw std::runtime_error("Cylinder volume is zero.");
     }
 
-    void Cylinder::_setVolume(double newV) {
-      r2=newV/(pc::pi*_len);
-      r=sqrt(r2);
-      diameter=2*r;
-      _halflen=_len/2;
+    void Cylinder::_setVolume( double newV )
+    {
+        r2 = newV / (pc::pi * _len);
+        r = sqrt(r2);
+        diameter = 2 * r;
+        _halflen = _len / 2;
     }
 
-    double Cylinder::_getVolume() const {
-      return r2*pc::pi*_len;
+    double Cylinder::_getVolume() const
+    {
+        return r2 * pc::pi * _len;
     }
 
-    void Cylinder::boundary(Point &p) const {}
+    void Cylinder::boundary( Point &p ) const {}
 
-    void Cylinder::randompos(Point &m) {
-      double l=r2+1;
-      m.z() = slump.half()*_len;
-      while (l>r2) {
-        m.x() = slump.half()*diameter;
-        m.y() = slump.half()*diameter;
-        l=m.x()*m.x()+m.y()*m.y();
-      }
+    void Cylinder::randompos( Point &m )
+    {
+        double l = r2 + 1;
+        m.z() = slump.half() * _len;
+        while ( l > r2 )
+        {
+            m.x() = slump.half() * diameter;
+            m.y() = slump.half() * diameter;
+            l = m.x() * m.x() + m.y() * m.y();
+        }
     }
 
-    bool Cylinder::collision(const Point &a, double radius, collisiontype type) const {
-      assert( (_halflen-_len/2)<1e-9 && "Cylinder length initialization problems" );
-      if ( a.z()<-_halflen ) return true;
-      if ( a.z()>_halflen ) return true;
-      if ( a.x()*a.x()+a.y()*a.y()>r2 ) return true;
-      return false;
+    bool Cylinder::collision( const Point &a, double radius, collisiontype type ) const
+    {
+        assert((_halflen - _len / 2) < 1e-9 && "Cylinder length initialization problems");
+        if ( a.z() < -_halflen )
+            return true;
+        if ( a.z() > _halflen )
+            return true;
+        if ( a.x() * a.x() + a.y() * a.y() > r2 )
+            return true;
+        return false;
     }
 
-    string Cylinder::_info(char w) {
-      std::ostringstream o;
-      o << pad(SUB,w, "Length") << _halflen*2 << textio::_angstrom << endl
-        << pad(SUB,w, "Radius") << sqrt(r2) << textio::_angstrom << endl;
-      return o.str();
+    string Cylinder::_info( char w )
+    {
+        std::ostringstream o;
+        o << pad(SUB, w, "Length") << _halflen * 2 << textio::_angstrom << endl
+          << pad(SUB, w, "Radius") << sqrt(r2) << textio::_angstrom << endl;
+        return o.str();
     }
 
-    Cuboid Cylinder::inscribe() const {
-      Cuboid c;
-      c.setlen( {diameter, diameter, _len} );
-      return c;
+    Cuboid Cylinder::inscribe() const
+    {
+        Cuboid c;
+        c.setlen({diameter, diameter, _len});
+        return c;
     }
 
     PeriodicCylinder::PeriodicCylinder(
-        double length, double radius) : Cylinder(length,radius) {
-      name="Cylindrical (periodic ends)";
+        double length, double radius ) : Cylinder(length, radius)
+    {
+        name = "Cylindrical (periodic ends)";
     }
 
-    PeriodicCylinder::PeriodicCylinder( Tmjson &j ) : Cylinder(j) {
-      name = "Periodic " + name;
+    PeriodicCylinder::PeriodicCylinder( Tmjson &j ) : Cylinder(j)
+    {
+        name = "Periodic " + name;
     }
 
-    void PeriodicCylinder::boundary(Point &a) const {
-      if (std::abs(a.z())>_halflen)
-        a.z()-=_len*anint(a.z()/_len);
+    void PeriodicCylinder::boundary( Point &a ) const
+    {
+        if ( std::abs(a.z()) > _halflen )
+            a.z() -= _len * anint(a.z() / _len);
     }
 
+    void QuaternionRotate::setAxis( Geometrybase &g, const Point &beg, const Point &end, double angle )
+    {
+        geoPtr = &g;
+        origin = beg;
+        angle_ = angle;
+        Point u(end - beg); //Point u(end-beg);
+        assert(u.squaredNorm() > 0 && "Rotation vector has zero length");
+        g.boundary(u);
+        u.normalize(); // make unit vector
+        q = Eigen::AngleAxisd(angle, u);
+
+        rot_mat << 0, -u.z(), u.y(), u.z(), 0, -u.x(), -u.y(), u.x(), 0;
+        rot_mat =
+            Eigen::Matrix3d::Identity() + rot_mat * std::sin(angle) + rot_mat * rot_mat * (1 - std::cos(angle));
+    }
+
+    FindSpace::FindSpace()
+    {
+        dir = Point(1, 1, 1);
+        allowContainerOverlap = false;
+        allowMatterOverlap = false;
+    }
+
+    CuboidNoPBC::CuboidNoPBC( Tmjson &j ) : Cuboid(j) { name += " (No PBC)"; }
   }//namespace geometry
 }//namespace

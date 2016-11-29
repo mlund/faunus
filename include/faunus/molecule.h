@@ -295,6 +295,8 @@ namespace Faunus {
                 FormatAAM::load( structure, v );
               if (structure.substr(structure.find_last_of(".") + 1) == "pqr")
                 FormatPQR::load( structure, v );
+              if (structure.substr(structure.find_last_of(".") + 1) == "xyz")
+                FormatXYZ::load( structure, v );
               if ( !v.empty() ) {
                 if ( keeppos == false )
                   Geometry::cm2origo(

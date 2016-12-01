@@ -2256,7 +2256,7 @@ namespace Faunus {
         name = "Widom Molecule";
         ninsert = j["ninsert"];
         dir << j["dir"];  // magic!
-        string molecule = j["molecule"];
+        molecule = j["molecule"];
         // look up the id of the molecule that we want to insert
         molid = -1;
         for (unsigned long i = 0; i < spc.molecule.size(); ++i) {

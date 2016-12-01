@@ -2226,10 +2226,12 @@ namespace Faunus {
 
     public:
       Average<double> expu;
-
+      Average<double> rho;
+      
       void _sample() override {
         typedef MoleculeData<typename Tspace::ParticleVector> TMoleculeData;
         auto rins = RandomInserter<TMoleculeData>();
+        rho += spc->numMolecules(molid) /  spc->geo.getVolume();
         rins.dir = dir;
         rins.checkOverlap = false;
         for (int i = 0; i < ninsert; ++i) {
@@ -2245,9 +2247,13 @@ namespace Faunus {
         std::ostringstream o;
         char w = 30;
         if (cnt > 0) {
-          o << pad(SUB, w, "Perturbation directions") << dir.transpose() << "\n"
-            << pad(SUB, w, "Inserted molecule") << molecule << "\n"
-            << pad(SUB, w, "Excess chemical potential") << -std::log(expu.avg()) << kT << "\n";
+            double excess = -std::log(expu.avg());
+            double ideal = std::log(WidomMolecule::rho.avg());  // avoid name collision with Faunus::textio::rho
+          o << pad(SUB, w, "Insertion directions") << dir.transpose() << "\n"
+            << pad(SUB, w, "Insertion molecule") << molecule << "\n"
+            << pad(SUB, w, "Particle density") << WidomMolecule::rho.avg() <<  angstrom + superminus + cubed << "\n"
+            << pad(SUB, w, "Excess chemical potential") << excess << kT << "\n";
+          //todo : print rho in mol/L
         }
         return o.str();
       }
@@ -2259,7 +2265,14 @@ namespace Faunus {
         o << dir.transpose();
         _j["dir"] = o.str();
         _j["molecule"] = molecule;
-        _j["excess_potential"] = -std::log(expu.avg());
+        double excess = -std::log(expu.avg());
+        double ideal = std::log(rho.avg()); // todo: think about units -> look in other Widom class
+        _j["mu_excess_potential"] = excess;
+        _j["rho_particle_density"] = rho.avg();
+//        _j["mu_ideal_potential"] = ideal; // todo
+//        _j["mu_total"] = ideal + excess; // todo
+        _j["nr_of_samples"] = expu.cnt;
+
         return j;
       }
 

@@ -73,6 +73,10 @@ namespace Faunus {
             { "samples", cnt },
             { "relative time", timer.result() }
           };
+        if ( !cite.empty())
+        {
+            j[name]["citation"] = cite;
+        }
           j = merge( j, _json() );
         }
       return j;

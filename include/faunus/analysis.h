@@ -2252,6 +2252,17 @@ namespace Faunus {
         return o.str();
       }
 
+      inline Tmjson _json() override {
+        Tmjson j;
+        Tmjson &_j = j[name];
+        std::ostringstream o;
+        o << dir.transpose();
+        _j["dir"] = o.str();
+        _j["molecule"] = molecule;
+        _j["excess_potential"] = -std::log(expu.avg());
+        return j;
+      }
+
       WidomMolecule( Tmjson &j, Tenergy &pot, Tspace &spc ) : spc(&spc), pot(&pot), AnalysisBase( j ) {
         name = "Widom Molecule";
         ninsert = j["ninsert"];

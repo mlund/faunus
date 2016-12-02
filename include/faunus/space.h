@@ -14,6 +14,7 @@
 #include <faunus/textio.h>
 #include <faunus/io.h>
 #include <faunus/molecule.h>
+
 #endif
 
 namespace Faunus
@@ -79,6 +80,7 @@ namespace Faunus
       }
 
       const std::vector<T> &operator[]( Tid i ) const { return _map.at(i); };
+
       std::vector<T> &operator[]( Tid i ) { return _map[i]; };
 
       /** @brief Clear map -- preserve averages */

@@ -4,9 +4,11 @@
 #ifndef SWIG
 #include <cmath>
 #include <climits>
+
 #endif
 
-namespace Faunus {
+namespace Faunus
+{
   /**
    * @brief Physical constants and parameters.
    *
@@ -16,12 +18,13 @@ namespace Faunus {
    * anywhere without construction.
    */
   template<class Td>
-    class PhysicalConstants {
-      private:
-        static Td _T;          //!< Temperature [K]
-      public:
-        PhysicalConstants(Td=298.15);
-        static const Td
+  class PhysicalConstants
+  {
+  private:
+      static Td _T;          //!< Temperature [K]
+  public:
+      PhysicalConstants( Td= 298.15 );
+      static const Td
           pi,                  //!< The number pi
           infty,               //!< Infinity
           e0,                  //!< Permittivity of vacuum [C^2/(J*m)]
@@ -29,11 +32,11 @@ namespace Faunus {
           e,                   //!< Absolute electronic unit charge [C] 
           R,                   //!< Molar gas constant [J/(K*mol)]
           Nav;                 //!< Avogadro's number [1/mol]
-        static Td lB(Td);      //!< Bjerrum length [Aangstrom]
-        static Td T();         //!< Return temperature [K]
-        static Td kT();        //!< Returns k_bT [J]
-        static void setT(Td);  //!< Set temperature [K]
-    };
+      static Td lB( Td );      //!< Bjerrum length [Aangstrom]
+      static Td T();         //!< Return temperature [K]
+      static Td kT();        //!< Returns k_bT [J]
+      static void setT( Td );  //!< Set temperature [K]
+  };
 
 #ifdef __INTEL_COMPILER
   // needed due to constexpr bug in intel13 compiler. Fixed?
@@ -41,46 +44,47 @@ namespace Faunus {
     const Td PhysicalConstants<Td>::infty=-std::log(0.);
 #else
   template<class Td>
-    const Td PhysicalConstants<Td>::infty=std::numeric_limits<Td>::infinity();
+  const Td PhysicalConstants<Td>::infty = std::numeric_limits<Td>::infinity();
 #endif
 
   template<class Td>
-    const Td PhysicalConstants<Td>::pi=std::acos(-1.);
+  const Td PhysicalConstants<Td>::pi = std::acos(-1.);
 
   template<class Td>
-    const Td PhysicalConstants<Td>::e0=8.85419e-12;
+  const Td PhysicalConstants<Td>::e0 = 8.85419e-12;
 
   template<class Td>
-    const Td PhysicalConstants<Td>::e=1.602177e-19;
+  const Td PhysicalConstants<Td>::e = 1.602177e-19;
 
   template<class Td>
-    const Td PhysicalConstants<Td>::kB=1.380658e-23;
+  const Td PhysicalConstants<Td>::kB = 1.380658e-23;
 
   template<class Td>
-    const Td PhysicalConstants<Td>::Nav=6.022137e23;
+  const Td PhysicalConstants<Td>::Nav = 6.022137e23;
 
   template<class Td>
-    const Td PhysicalConstants<Td>::R=kB*Nav;
+  const Td PhysicalConstants<Td>::R = kB * Nav;
 
   template<class Td>
-    Td PhysicalConstants<Td>::_T=298.15;
+  Td PhysicalConstants<Td>::_T = 298.15;
 
   template<class Td>
-    PhysicalConstants<Td>::PhysicalConstants(Td temp) { setT(temp); }
+  PhysicalConstants<Td>::PhysicalConstants( Td temp ) { setT(temp); }
 
   template<class Td>
-    void PhysicalConstants<Td>::setT(Td temp) { _T=temp; }
+  void PhysicalConstants<Td>::setT( Td temp ) { _T = temp; }
 
   template<class Td>
-    Td PhysicalConstants<Td>::T() { return _T; }
+  Td PhysicalConstants<Td>::T() { return _T; }
 
   template<class Td>
-    Td PhysicalConstants<Td>::kT() { return kB*_T; }
+  Td PhysicalConstants<Td>::kT() { return kB * _T; }
 
   template<class Td>
-    Td PhysicalConstants<Td>::lB(Td e_r) {
-      return e*e / (4*pi*e0*e_r*1e-10*kB*_T);
-    }
+  Td PhysicalConstants<Td>::lB( Td e_r )
+  {
+      return e * e / (4 * pi * e0 * e_r * 1e-10 * kB * _T);
+  }
 
   typedef PhysicalConstants<double> pc;      //!< Typedef for PhysicalConstants
 
@@ -112,101 +116,90 @@ namespace Faunus {
    * std::cout << 50.0_K;       // 50
    * ~~~~
    */
-  namespace ChemistryUnits {
+  namespace ChemistryUnits
+  {
     /// Temperature in Kelvin
-    constexpr long double operator "" _K(long double T)
-    { return T; }
+    constexpr long double operator "" _K( long double T ) { return T; }
 
     /// Temperature in Celcius
-    constexpr long double operator "" _C(long double T)
-    { return 273.15+T; }
+    constexpr long double operator "" _C( long double T ) { return 273.15 + T; }
 
     /// Dipole moment in Debye
-    constexpr long double operator "" _Debye(long double mu)
-    { return mu * 0.20819434; }
+    constexpr long double operator "" _Debye( long double mu ) { return mu * 0.20819434; }
 
     /// Dipole moment in electron angstrom
-    constexpr long double operator "" _eA(long double mu)
-    { return mu; }
+    constexpr long double operator "" _eA( long double mu ) { return mu; }
 
     /// Dipole moment in Coulomb meter
-    constexpr long double operator "" _Cm(long double mu)
-    { return mu * 1.0_Debye / 3.33564e-30; }
+    constexpr long double operator "" _Cm( long double mu ) { return mu * 1.0_Debye / 3.33564e-30; }
 
     /// Length in Angstrom
-    constexpr long double operator "" _angstrom(long double l)
-    { return l; }
+    constexpr long double operator "" _angstrom( long double l ) { return l; }
 
     /// Length in meters
-    constexpr long double operator "" _m(long double l)
-    { return l * 1e10; }
+    constexpr long double operator "" _m( long double l ) { return l * 1e10; }
 
     /// Length in Bohr
-    constexpr long double operator "" _bohr(long double l)
-    { return l * 0.52917721092; }
+    constexpr long double operator "" _bohr( long double l ) { return l * 0.52917721092; }
 
     /// Length in nanometers
-    constexpr long double operator "" _nm(long double l)
-    { return l*10; }
+    constexpr long double operator "" _nm( long double l ) { return l * 10; }
 
     /// Volume in litres
-    constexpr long double operator "" _liter(long double v)
-    { return v*1e27; } // -> angstrom^3
+    constexpr long double operator "" _liter( long double v ) { return v * 1e27; } // -> angstrom^3
 
-    constexpr long double operator "" _m3(long double v)
-    { return v*1e30; } // -> angstrom^3
+    constexpr long double operator "" _m3( long double v ) { return v * 1e30; } // -> angstrom^3
 
     /// Number of molecules in moles
-    inline long double operator "" _mol(long double n)
-    { return n*PhysicalConstants<double>::Nav; } // -> particles
+    inline long double operator "" _mol( long double n ) { return n * PhysicalConstants<double>::Nav; } // -> particles
 
     /// Concentration in moles per liter
-    inline long double operator "" _molar(long double c)
-    { return c * 1.0_mol / 1.0_liter; } // -> particle / angstrom^3
+    inline long double operator "" _molar( long double c )
+    {
+        return c * 1.0_mol / 1.0_liter;
+    } // -> particle / angstrom^3
 
     /// Concentration in millimoles per liter
-    inline long double operator "" _mM(long double c)
-    { return c * 1.0e-3_mol / 1.0_liter; } // -> particle / angstrom^3
+    inline long double operator "" _mM( long double c )
+    {
+        return c * 1.0e-3_mol / 1.0_liter;
+    } // -> particle / angstrom^3
 
     /// Pressure in Pascal
-    inline long double operator "" _Pa(long double p)
-    { return p / PhysicalConstants<double>::kT() / 1.0_m3; } // -> particle / angstrom^3
+    inline long double operator "" _Pa( long double p )
+    {
+        return p / PhysicalConstants<double>::kT() / 1.0_m3;
+    } // -> particle / angstrom^3
 
     /// Pressure in atmosphere
-    inline long double operator "" _atm(long double p)
-    { return p*101325.0_Pa; } // -> particle / angstrom^3
+    inline long double operator "" _atm( long double p ) { return p * 101325.0_Pa; } // -> particle / angstrom^3
 
     /// Pressure in bar
-    inline long double operator "" _bar(long double p)
-    { return p*100000.0_Pa; } // -> particle / angstrom^3
+    inline long double operator "" _bar( long double p ) { return p * 100000.0_Pa; } // -> particle / angstrom^3
 
     /// Angle in radians
-    constexpr long double operator"" _rad ( long double a )
-    { return a; }
+    constexpr long double operator "" _rad( long double a ) { return a; }
 
     /// Angle in degrees
-    constexpr long double operator"" _deg ( long double a )
-    { return a*3.14159265358979323846/180; }
+    constexpr long double operator "" _deg( long double a ) { return a * 3.14159265358979323846 / 180; }
 
     /// Energy in kT
-    constexpr long double operator"" _kT (long double u)
-    { return u; }
+    constexpr long double operator "" _kT( long double u ) { return u; }
 
     /// Energy in Joule
-    inline long double operator"" _J (long double u)
-    { return u / PhysicalConstants<double>::kT(); }
+    inline long double operator "" _J( long double u ) { return u / PhysicalConstants<double>::kT(); }
 
     /// Energy in kJ/mol
-    inline long double operator"" _kJmol (long double u)
-    { return u / PhysicalConstants<double>::kT() / PhysicalConstants<double>::Nav * 1e3; }
+    inline long double operator "" _kJmol( long double u )
+    {
+        return u / PhysicalConstants<double>::kT() / PhysicalConstants<double>::Nav * 1e3;
+    }
 
     /// Energy in kcal/mol
-    inline long double operator"" _kcalmol (long double u)
-    { return u * 4.1868_kJmol; }
+    inline long double operator "" _kcalmol( long double u ) { return u * 4.1868_kJmol; }
 
     /// Energy in hartree
-    inline long double operator"" _hartree (long double u)
-    { return u * 4.35974434e-18_J; }
+    inline long double operator "" _hartree( long double u ) { return u * 4.35974434e-18_J; }
 
   }//namespace
 

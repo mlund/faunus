@@ -13,6 +13,8 @@ CTestTestfile.cmake
 *.lo
 *.o
 
+*.dsym
+
 # Compiled Dynamic libraries
 *.so
 *.dylib

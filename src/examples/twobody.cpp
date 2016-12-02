@@ -6,50 +6,48 @@ using namespace Faunus::Potential;
 typedef Space<Geometry::Cylinder> Tspace;
 typedef DebyeHuckelLJ Tpairpot;
 
-int main(int argc, char** argv) {
-  InputMap mcp("twobody.json");
-  EnergyDrift sys;                     // class for tracking system energy drifts
+int main( int argc, char **argv )
+{
+    InputMap mcp("twobody.json");
 
-  Tspace spc(mcp);
-  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
-    + Energy::EquilibriumEnergy<Tspace>(mcp)
-    + Energy::MassCenterConstrain<Tspace>(mcp, spc);
+    Tspace spc(mcp);
+    auto pot = Energy::Nonbonded<Tspace, Tpairpot>(mcp)
+        + Energy::EquilibriumEnergy<Tspace>(mcp)
+        + Energy::MassCenterConstrain<Tspace>(mcp, spc);
 
-  Analysis::LineDistribution<> rdf(0.2);
-  //Analysis::MultipoleDistribution<Tspace> mpd(mcp);
-  Analysis::CombinedAnalysis analysis(mcp, pot, spc);
+    Analysis::LineDistribution<> rdf(0.2);
+    //Analysis::MultipoleDistribution<Tspace> mpd(mcp);
+    Analysis::CombinedAnalysis analysis(mcp, pot, spc);
 
-  Move::Propagator<Tspace> mv(mcp,pot,spc);
+    Move::Propagator<Tspace> mv(mcp, pot, spc);
 
-  spc.load("state"); // load previous state, if any
+    spc.load("state"); // load previous state, if any
 
-  sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // Store total system energy
+    cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
 
-  cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
+    MCLoop loop(mcp);
+    while ( loop[0] )
+    {
+        while ( loop[1] )
+        {
+            mv.move();
 
-  MCLoop loop(mcp);
-  while ( loop[0] ) {
-    while ( loop[1] ) {
-      sys += mv.move();
+            analysis.sample();
 
-      analysis.sample();
+            //mpd.sample( spc, *spc.groupList()[0], *spc.groupList()[1] );
+            rdf(spc.geo.dist(spc.groupList()[0]->cm, spc.groupList()[1]->cm))++;
 
-      //mpd.sample( spc, *spc.groupList()[0], *spc.groupList()[1] );
-      rdf( spc.geo.dist( spc.groupList()[0]->cm, spc.groupList()[1]->cm ))++;
+        } // end of micro loop
 
-    } // end of micro loop
+        cout << loop.timing();
+        rdf.save("rdf.dat");
+        FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
+        spc.save("state");
+        //mpd.save("multipole.dat");
 
-    sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // detect energy drift
+    } // end of macro loop
 
-    cout << loop.timing();
-    rdf.save("rdf.dat");
-    FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
-    spc.save("state");
-    //mpd.save("multipole.dat");
-
-  } // end of macro loop
-
-  cout << loop.info() + sys.info() + mv.info() << endl;
+    cout << loop.info() + mv.info() << endl;
 }
 
 /**

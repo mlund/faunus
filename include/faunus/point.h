@@ -6,8 +6,10 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+
 #pragma GCC diagnostic pop
 #include <vector>
+
 #endif
 
 namespace Faunus
@@ -236,12 +238,19 @@ namespace Faunus
       }
 
       inline const double &z1() const { return x(); }
+
       inline const double &z2() const { return y(); }
+
       inline const double &z3() const { return z(); }
+
       inline const double &z4() const { return w; }
+
       inline double &z1() { return x(); }
+
       inline double &z2() { return y(); }
+
       inline double &z3() { return z(); }
+
       inline double &z4() { return w; }
 
       /** @brief Read from stream */
@@ -407,6 +416,7 @@ namespace Faunus
       }
 
       Tcharge &q() { return charge; }
+
       Tcharge q() const { return charge; }
 
       template<class T,

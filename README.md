@@ -47,7 +47,6 @@ Build options
 
 Option                             | Description
 :--------------------------------- | :----------------------------------------
-`-DENABLE_BABEL=OFF`               | Use OpenBabel for file I/O (experimental)
 `-DENABLE_MPI=OFF`                 | Build MPI programs (parallel tempering etc.)
 `-DENABLE_OPENMP=OFF`              | Enable OpenMP support
 `-DENABLE_STATIC=OFF`              | Static linkage of faunus as opposed to default dynamic linkage
@@ -68,7 +67,7 @@ Example: Intel's C++ compiler
 Example: Libraries in odd locations
 -----------------------------------
 
-    $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include/openbabel-2.0 cmake . -DENABLE_BABEL=on
+    $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include cmake .
 
 Examples: Python support
 ------------------------
@@ -102,7 +101,7 @@ Ondrej Marsalek     Christophe Labbez     Andre Teixeira
   Anil Kurut           Chris Evers         Magnus Ullner      
  Robert Vacha         Axel Thuresson      Bjorn Stenqvist
  Joao Henriques     Alexei Abrikossov      Giulio Tesei
- Lukas Sukenik
+ Lukas Sukenik      Niels Kouwenhoven
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citing Faunus

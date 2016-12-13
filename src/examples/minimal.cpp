@@ -1,16 +1,18 @@
 #include <faunus/faunus.h>
+
 using namespace Faunus;                   // use Faunus namespace
 typedef Space<Geometry::Cuboid> Tspace;   // Type of simulation space
 typedef Potential::LennardJonesLB Tpair;  // and pair potential
 
-int main() {
-  InputMap in("minimal.json");            // open parameter file for user input
-  Tspace spc(in);                         // Simulation space, particles etc.
-  Energy::Nonbonded<Tspace,Tpair> pot(in);// Hamiltonian, non-bonded only
-  Move::Propagator<Tspace> mv(in,pot,spc);// Monte Carlo move class
-  for (int i=0; i<1e4; i++)
-    mv.move();                            // move salt randomly N times
-  cout << spc.info() + pot.info() + mv.info(); // final information
+int main()
+{
+    InputMap in("minimal.json");            // open parameter file for user input
+    Tspace spc(in);                         // Simulation space, particles etc.
+    Energy::Nonbonded<Tspace, Tpair> pot(in);// Hamiltonian, non-bonded only
+    Move::Propagator<Tspace> mv(in, pot, spc);// Monte Carlo move class
+    for ( int i = 0; i < 1e4; i++ )
+        mv.move();                            // move salt randomly N times
+    cout << spc.info() + pot.info() + mv.info(); // final information
 }
 /**
   @page example_minimal Example: Hello Monte Carlo!
@@ -22,7 +24,7 @@ int main() {
   - Canonical ensemble (NVT)
   - Parameters and atom properties are read from disk
  
-  This amounts to 14 lines of C++ code as illustated in the minimal.cpp
+  This amounts to 14 lines of C++ code as illustrated in the minimal.cpp
   program:
  
   @includelineno minimal.cpp

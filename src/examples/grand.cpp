@@ -1,55 +1,54 @@
 #include <faunus/faunus.h>
 #include <faunus/ewald.h>
+
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-typedef Space<Geometry::Sphere,PointParticle> Tspace;
+typedef Space<Geometry::Sphere, PointParticle> Tspace;
 
-int main() {
-  InputMap mcp("grand.json");                   // open user input file
-  Tspace spc(mcp);                              // simulation space
-  Energy::Nonbonded<Tspace,CoulombHS> pot(mcp); // hamiltonian
-  pot.setSpace(spc);                            // share space w. hamiltonian
+int main()
+{
+    InputMap mcp("grand.json");                   // open user input file
+    Tspace spc(mcp);                              // simulation space
+    Energy::Nonbonded<Tspace, CoulombHS> pot(mcp); // hamiltonian
+    pot.setSpace(spc);                            // share space w. hamiltonian
 
-  spc.load("state",Tspace::RESIZE);             // load old config. from disk (if any)
+    spc.load("state", Tspace::RESIZE);             // load old config. from disk (if any)
 
-  // Two different Widom analysis methods
-  double lB = pot.pairpot.first.bjerrumLength();// get bjerrum length
-  Analysis::Widom<PointParticle> widom1;        // widom analysis (I)
-  Analysis::WidomScaled<Tspace> widom2(lB,1);   // ...and (II)
-  widom1.add(spc.p);
-  widom2.add(spc.p);
+    // Two different Widom analysis methods
+    double lB = pot.pairpot.first.bjerrumLength();// get bjerrum length
+    Analysis::Widom<PointParticle> widom1;        // widom analysis (I)
+    Analysis::WidomScaled<Tspace> widom2(lB, 1);   // ...and (II)
+    widom1.add(spc.p);
+    widom2.add(spc.p);
 
-  Move::Propagator<Tspace> mv(mcp,pot,spc);
+    Move::Propagator<Tspace> mv(mcp, pot, spc);
 
-  EnergyDrift sys;                              // class for tracking system energy drifts
-  sys.init(Energy::systemEnergy(spc,pot,spc.p));// store initial total system energy
+    cout << atom.info() + spc.info() + pot.info() + "\n";
 
-  cout << atom.info() + spc.info() + pot.info() + "\n";
+    MCLoop loop(mcp);                             // class for handling mc loops
+    while ( loop[0] )
+    {
+        while ( loop[1] )
+        {
+            mv.move();                           // move!
+            widom1.sample(spc, pot, 1);
+            widom2.sample(spc.p, spc.geo);
+        }                                           // end of micro loop
+        cout << loop.timing();
+    }                                             // end of macro loop
 
-  MCLoop loop(mcp);                             // class for handling mc loops
-  while ( loop[0] ) {
-    while ( loop[1] ) {
-      sys+=mv.move();                           // move!
-      widom1.sample(spc,pot,1);
-      widom2.sample(spc.p,spc.geo);
-    }                                           // end of micro loop
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // calc. energy drift
-    cout << loop.timing();
-  }                                             // end of macro loop
+    FormatPQR::save("confout.pqr", spc.p);        // PQR snapshot for VMD etc.
+    spc.save("state");                            // final simulation state
 
-  FormatPQR::save("confout.pqr", spc.p);        // PQR snapshot for VMD etc.
-  spc.save("state");                            // final simulation state
+    UnitTest test(mcp);                           // class for unit testing
+    mv.test(test);
+    widom1.test(test);
 
-  UnitTest test(mcp);                           // class for unit testing
-  mv.test(test);
-  sys.test(test);
-  widom1.test(test);
+    cout << loop.info() + mv.info() + test.info()
+        + widom1.info() + widom2.info();
 
-  cout << loop.info() + sys.info() + mv.info() + test.info()
-    + widom1.info() + widom2.info();
-
-  return test.numFailed();
+    return test.numFailed();
 }
 
 /**

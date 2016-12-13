@@ -1,82 +1,95 @@
 #include <faunus/faunus.h>
+
 using namespace Faunus;
 
 typedef Space<Geometry::Cuboid> Tspace;
 
-struct myenergy : public Energy::Energybase<Tspace> { //custom energy class
-  public:
+struct myenergy : public Energy::Energybase<Tspace>
+{ //custom energy class
+public:
     typedef typename Tspace::ParticleVector Tpvec;
-    double i_external(const Tpvec &p, int i) override { //pot. on particle
-      double s= 1 + std::sin(2*pc::pi*p[i].x()) + std::cos(2*pc::pi*p[i].y());
-      if (p[i].x() >=-2.00 && p[i].x() <=-1.25) return 1*s;
-      if (p[i].x() >=-1.25 && p[i].x() <=-0.25) return 2*s;
-      if (p[i].x() >=-0.25 && p[i].x() <= 0.75) return 3*s;
-      if (p[i].x() >= 0.75 && p[i].x() <= 1.75) return 4*s;
-      if (p[i].x() >= 1.75 && p[i].x() <= 2.00) return 5*s;
-      return 1e10;
+
+    double i_external( const Tpvec &p, int i ) override
+    { //pot. on particle
+        double s = 1 + std::sin(2 * pc::pi * p[i].x()) + std::cos(2 * pc::pi * p[i].y());
+        if ( p[i].x() >= -2.00 && p[i].x() <= -1.25 )
+            return 1 * s;
+        if ( p[i].x() >= -1.25 && p[i].x() <= -0.25 )
+            return 2 * s;
+        if ( p[i].x() >= -0.25 && p[i].x() <= 0.75 )
+            return 3 * s;
+        if ( p[i].x() >= 0.75 && p[i].x() <= 1.75 )
+            return 4 * s;
+        if ( p[i].x() >= 1.75 && p[i].x() <= 2.00 )
+            return 5 * s;
+        return 1e10;
     }
-    auto tuple() -> decltype(std::make_tuple(this)) {
-      return std::make_tuple(this);
+
+    auto tuple() -> decltype(std::make_tuple(this))
+    {
+        return std::make_tuple(this);
     }
-    double g_external(const Tpvec &p, Group &g) override { //pot. on group
-      double u=0;
-      for (auto i : g)
-        u+=i_external(p, i);
-      return u; // in kT
+
+    double g_external( const Tpvec &p, Group &g ) override
+    { //pot. on group
+        double u = 0;
+        for ( auto i : g )
+            u += i_external(p, i);
+        return u; // in kT
     }
-    string _info() override { return "myenergy"; }       //mandatory info 
+
+    string _info() override { return "myenergy"; }       //mandatory info
 };
 
-int main() {
-  // For the MPI version add the following line:
-  // Faunus::MPI::MPIController mpi; // init MPI
+int main()
+{
+    // For the MPI version add the following line:
+    // Faunus::MPI::MPIController mpi; // init MPI
 
-  InputMap mcp("penalty.json"); // read input file
-  MCLoop loop(mcp); // class for handling mc loops
-  Tspace spc(mcp);
-  auto pot
-    = myenergy()                                      // our custom potential
-    + Energy::PenaltyEnergy<Tspace>(mcp,spc); // to be subsituted with
-  // + Energy::PenaltyEnergy<Tspace>(mpi,mcp,spc); // in the MPI version
-  auto penalty = std::get<1>( pot.tuple() );
+    InputMap mcp("penalty.json"); // read input file
+    MCLoop loop(mcp); // class for handling mc loops
+    Tspace spc(mcp);
+    auto pot
+        = myenergy()                                      // our custom potential
+            + Energy::PenaltyEnergy<Tspace>(mcp, spc); // to be subsituted with
+    // + Energy::PenaltyEnergy<Tspace>(mpi,mcp,spc); // in the MPI version
+    auto penalty = std::get<1>(pot.tuple());
 
-  auto myparticle = spc.findMolecules("myparticle");
-  Group mygroup(myparticle.front()->front(), myparticle.back()->back());
-  mygroup.setMolSize(1);
-  EnergyDrift sys;                                    // class for tracking system energy drifts
-  // In MPI version add:
-  // slump.setDiscard(mpi.rank()+1);
-  penalty->load("pf_");
-  // Markov moves
-  Move::Propagator<Tspace> mv(mcp, pot, spc);
+    auto myparticle = spc.findMolecules("myparticle");
+    Group mygroup(myparticle.front()->front(), myparticle.back()->back());
+    mygroup.setMolSize(1);
+    // In MPI version add:
+    // slump.setDiscard(mpi.rank()+1);
+    penalty->load("pf_");
+    // Markov moves
+    Move::Propagator<Tspace> mv(mcp, pot, spc);
 
-  Table3D<double,double> histo(0.1, 0.1, Table3D<double,double>::HISTOGRAM);
+    Table3D<double, double> histo(0.1, 0.1, Table3D<double, double>::HISTOGRAM);
 
-  sys.init( Energy::systemEnergy(spc,pot,spc.p) );    // store total energy
-
-  while ( loop[0] ) {  // Markov chain 
-    while ( loop[1] ) {
-      sys+=mv.move();  // translate particle
-      ++histo(spc.p[mygroup.front()].x(),spc.p[mygroup.front()].y());
+    while ( loop[0] )
+    {  // Markov chain
+        while ( loop[1] )
+        {
+            mv.move();  // translate particle
+            ++histo(spc.p[mygroup.front()].x(), spc.p[mygroup.front()].y());
+        }
     }
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
-  }
-  auto it_min = histo.min();
-  histo.save("histo"+std::to_string(histo.getMap().size()),1./it_min->second);
-  penalty->save("pf_",1,{1.3,1.3,-2,-2});
-  penalty->saveRow("row_",{1.6},1,{1.3,1.3,-2,-2});
+    auto it_min = histo.min();
+    histo.save("histo" + std::to_string(histo.getMap().size()), 1. / it_min->second);
+    penalty->save("pf_", 1, {1.3, 1.3, -2, -2});
+    penalty->saveRow("row_", {1.6}, 1, {1.3, 1.3, -2, -2});
 
-  cout << loop.info() + mv.info() + penalty->info() + sys.info();
+    cout << loop.info() + mv.info() + penalty->info();
 
-  // perform unit 
-  if (penalty->update(true)!=0) { // this ensures that the test is run only in the 2nd simulation
-  UnitTest test(mcp);
-  mv.test(test);
-  sys.test(test);
-  penalty->test(test);
-  cout << test.info();
-  return test.numFailed();
-  }
+    // perform unit
+    if ( penalty->update(true) != 0 )
+    { // this ensures that the test is run only in the 2nd simulation
+        UnitTest test(mcp);
+        mv.test(test);
+        penalty->test(test);
+        cout << test.info();
+        return test.numFailed();
+    }
 }
 /**
   @page example_penalty Example: Penalty Function

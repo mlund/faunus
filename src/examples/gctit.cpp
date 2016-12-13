@@ -1,65 +1,65 @@
 #include <faunus/faunus.h>
 #include <faunus/ewald.h>
+
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-typedef Space<Geometry::Cuboid,PointParticle> Tspace;
+typedef Space<Geometry::Cuboid, PointParticle> Tspace;
 
-int main() {
-  InputMap mcp("gctit.json");                   // open user input file
-  Tspace spc(mcp);                              // simulation space
-  auto pot =
-  Energy::Nonbonded<Tspace,CoulombHS>(mcp)      // hamiltonian
-  + Energy::EquilibriumEnergy<Tspace>(mcp);
+int main()
+{
+    InputMap mcp("gctit.json");                   // open user input file
+    Tspace spc(mcp);                              // simulation space
+    auto pot =
+        Energy::Nonbonded<Tspace, CoulombHS>(mcp)      // hamiltonian
+            + Energy::EquilibriumEnergy<Tspace>(mcp);
 
-  pot.setSpace(spc);                            // share space w. hamiltonian
+    pot.setSpace(spc);                            // share space w. hamiltonian
 
-  spc.load("state",Tspace::RESIZE);             // load old config. from disk (if any)
+    spc.load("state", Tspace::RESIZE);             // load old config. from disk (if any)
 
-  // Two different Widom analysis methods
-  double lB = 7.1;
-  Analysis::Widom<PointParticle> widom1;        // widom analysis (I)
-  Analysis::WidomScaled<Tspace> widom2(lB,1);   // ...and (II)
-  widom1.add(spc.p);
-  widom2.add(spc.p);
-  Analysis::LineDistribution<> rdf_ab(0.5);      // 0.1 angstrom resolution
+    // Two different Widom analysis methods
+    double lB = 7.1;
+    Analysis::Widom<PointParticle> widom1;        // widom analysis (I)
+    Analysis::WidomScaled<Tspace> widom2(lB, 1);   // ...and (II)
+    widom1.add(spc.p);
+    widom2.add(spc.p);
+    Analysis::LineDistribution<> rdf_ab(0.5);      // 0.1 angstrom resolution
 
-  Move::Propagator<Tspace> mv(mcp,pot,spc);
+    Move::Propagator<Tspace> mv(mcp, pot, spc);
 
-  EnergyDrift sys;                              // class for tracking system energy drifts
-  sys.init(Energy::systemEnergy(spc,pot,spc.p));// store initial total system energy
+    cout << atom.info() + spc.info() + pot.info() + "\n";
 
-  cout << atom.info() + spc.info() + pot.info() + "\n";
+    auto g = spc.findMolecules("protein");
 
-  auto g = spc.findMolecules( "protein" );
+    MCLoop loop(mcp);                             // class for handling mc loops
+    while ( loop[0] )
+    {
+        while ( loop[1] )
+        {
+            mv.move();                           // move!
+            widom1.sample(spc, pot, 1);
+            widom2.sample(spc.p, spc.geo);
 
-  MCLoop loop(mcp);                             // class for handling mc loops
-  while ( loop[0] ) {
-    while ( loop[1] ) {
-      sys+=mv.move();                           // move!
-      widom1.sample(spc,pot,1);
-      widom2.sample(spc.p,spc.geo);
+            if ( slump() < 0.10 )
+                for ( size_t i = 0; i < g.size() - 1; i++ )
+                    for ( size_t j = i + 1; j < g.size(); j++ )
+                        rdf_ab(spc.geo.dist(g[i]->cm, g[j]->cm))++;
 
-      if (slump() < 0.10)
-        for (size_t i=0; i<g.size()-1; i++)
-          for (size_t j=i+1; j<g.size(); j++)
-            rdf_ab( spc.geo.dist( g[i]->cm, g[j]->cm ) )++; 
+        }                                           // end of micro loop
+        cout << loop.timing();
+        rdf_ab.save("rdf.dat");                     // g(r) - not normalized!
+    }                                             // end of macro loop
 
-    }                                           // end of micro loop
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // calc. energy drift
-    cout << loop.timing();
-    rdf_ab.save("rdf.dat");                     // g(r) - not normalized!
-  }                                             // end of macro loop
+    UnitTest test(mcp);                           // class for unit testing
 
-  UnitTest test(mcp);                           // class for unit testing
+    cout << loop.info() + mv.info() + test.info()
+        + widom1.info() + widom2.info();
 
-  cout << loop.info() + sys.info() + mv.info() + test.info()
-    + widom1.info() + widom2.info();
+    FormatPQR::save("confout.pqr", spc.p);        // PQR snapshot for VMD etc.
+    spc.save("state");                            // final simulation state
 
-  FormatPQR::save("confout.pqr", spc.p);        // PQR snapshot for VMD etc.
-  spc.save("state");                            // final simulation state
-
-  return test.numFailed();
+    return test.numFailed();
 }
 
 /**

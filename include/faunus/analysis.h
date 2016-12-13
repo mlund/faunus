@@ -2152,7 +2152,7 @@ namespace Faunus {
 
           double energy(typename Tspace::ParticleVector &p) {
             if (fullenergy)
-              return Energy::systemEnergy(*spc, *pot, p);
+              return Energy::systemEnergy2(*spc, *pot, p);
 
             double u=0;
             for (auto g : spc->groupList())

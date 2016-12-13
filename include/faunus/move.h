@@ -176,8 +176,8 @@ namespace Faunus
         double _energyChange() override
         {
             if ( updateDip )
-                return Energy::systemEnergy(*spc, *pot, spc->trial)
-                    - Energy::systemEnergy(*spc, *pot, spc->p);
+                return Energy::systemEnergy2(*spc, *pot, spc->trial)
+                    - Energy::systemEnergy2(*spc, *pot, spc->p);
             else
                 return Tmove::_energyChange();
         }
@@ -530,6 +530,7 @@ namespace Faunus
                     dusum += du;
                     utot += du;
                 }
+                pot->updateChange(acceptance);
             }
             utot += pot->update(acceptance);
         }
@@ -1104,7 +1105,6 @@ namespace Faunus
     template<class Tspace>
     void TranslateRotate<Tspace>::_trialMove()
     {
-
         // if `mollist` has data, favor this over `setGroup()`
         // Note that `currentMolId` is set by Movebase::move()
         if ( !this->mollist.empty())
@@ -1174,29 +1174,24 @@ namespace Faunus
             return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
-        /*#ifdef ENABLE_MPI
-          if (base::mpiPtr!=nullptr) {
-          double du=0;
-          auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
-          for (auto i=s.first; i<=s.second; ++i) {
-          auto gi=spc->groupList()[i];
-          if (gi!=igroup)
-          du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
-          }
-          return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
-          }
-#endif*/
-
-        for ( auto g : spc->groupList())
-        {
-            if ( g != igroup )
-            {
-                unew += pot->g2g(spc->trial, *g, *igroup);
-                if ( unew == pc::infty )
-                    return pc::infty;   // early rejection
-                uold += pot->g2g(spc->p, *g, *igroup);
+#ifdef ENABLE_MPI
+        if (base::mpiPtr!=nullptr) {
+            double du=0;
+            auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
+            for (auto i=s.first; i<=s.second; ++i) {
+                auto gi=spc->groupList()[i];
+                if (gi!=igroup)
+                    du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
             }
+            return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
         }
+#endif
+
+        unew += pot->g2All(spc->trial, *igroup);
+        if ( unew == pc::infty )
+            return pc::infty;   // early rejection
+        uold += pot->g2All(spc->p, *igroup);
+
         return unew - uold;
     }
 
@@ -2420,7 +2415,6 @@ namespace Faunus
         void _trialMove();
         void _acceptMove();
         void _rejectMove();
-        template<class Tpvec> double _energy( const Tpvec & );
         double _energyChange();
         using base::spc;
         using base::pot;
@@ -2554,39 +2548,14 @@ namespace Faunus
             g->undo(*spc);
     }
 
-    /**
-     * This will calculate the total energy of the configuration
-     * associated with the current Hamiltonian volume
-     */
-    template<class Tspace>
-    template<class Tpvec>
-    double Isobaric<Tspace>::_energy( const Tpvec &p )
-    {
-        double u = 0;
-        if ( dp < 1e-6 )
-            return u;
-        size_t n = spc->groupList().size();  // number of groups
-        for ( size_t i = 0; i < n - 1; ++i )      // group-group
-            for ( size_t j = i + 1; j < n; ++j )
-                u += pot->g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
-
-        for ( auto g : spc->groupList())
-        {
-            u += pot->g_external(p, *g);
-            if ( g->numMolecules() > 1 )
-                u += pot->g_internal(p, *g);
-        }
-        return u + pot->external(p);
-    }
-
-    /**
+    /**pot
      * @todo Early rejection could be implemented
      *       - not relevant for geometries with periodicity, though.
      */
     template<class Tspace>
     double Isobaric<Tspace>::_energyChange()
     {
-        double uold = _energy(spc->p);
+        double uold = ( dp < 1e-6 ) ? 0.0 : pot->systemEnergy(spc->p); // calculates internal energy of all molecules, redundant but neccesary for Emat
         spc->geo.setlen(newlen);
         pot->setSpace(*spc); // potential must know about volume, too
 
@@ -2596,7 +2565,7 @@ namespace Faunus
             for ( auto i : *g )
                 if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
                     return pc::infty;
-        double unew = _energy(spc->trial);
+        double unew = ( dp < 1e-6 ) ? 0.0 : pot->systemEnergy(spc->trial);
         return unew - uold;
     }
 
@@ -3664,7 +3633,7 @@ namespace Faunus
         pt.setFormat( j["format"] | string("XYZQI") );
 
         setEnergyFunction(
-            Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,Tpvec> );
+            Energy::systemEnergy2<Tspace,Energy::Energybase<Tspace>,Tpvec> );
 
         this->haveCurrentEnergy=false;
         assert( this->mpiPtr != nullptr );
@@ -4574,10 +4543,9 @@ namespace Faunus
 
         if ( spc->geo.collision(spc->trial[ipart], spc->trial[ipart].radius))  // trial<->container collision?
             return pc::infty;
-        double uold = pot->external(spc->p) + pot->i_total(spc->p, ipart);
-        double unew = pot->external(spc->trial) + pot->i_total(spc->trial, ipart);
+
 #ifdef ENABLE_MPI
-                                                                                                                                if ( base::mpiPtr != nullptr ) {
+        if ( base::mpiPtr != nullptr ) {
           double sum=0;
           auto r = Faunus::MPI::splitEven(*base::mpiPtr, (int)spc->p.size());
           for (int i=r.first; i<=r.second; ++i)
@@ -4590,6 +4558,8 @@ namespace Faunus
             + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
         }
 #endif
+        double uold = pot->external(spc->p) + pot->i_total(spc->p, ipart);
+        double unew = pot->external(spc->trial) + pot->i_total(spc->trial, ipart);
 
         return unew - uold;
     }
@@ -4841,7 +4811,7 @@ namespace Faunus
             // Bind function to calculate initial system energy
             using std::ref;
             ufunction = std::bind(
-                Energy::systemEnergy<Tspace, Tenergy, typename Tspace::ParticleVector>,
+                Energy::systemEnergy2<Tspace, Tenergy, typename Tspace::ParticleVector>,
                 ref(s), ref(e), ref(s.p));
         }
 
@@ -4860,6 +4830,7 @@ namespace Faunus
 
             if ( uavg.cnt == 0 )
                 uinit = ufunction(); // calculate initial energy, prior to any moves
+
 
             du = (*base::_slump().element(mPtr.begin(), mPtr.end()))->move();
             dusum += du;

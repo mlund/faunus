@@ -19,6 +19,15 @@
 namespace Faunus
 {
 
+    /**
+     * @brief The MoleculeVec class - used to identify a list of molecules
+     */
+    template<class T>
+    class FaunusVector : public std::vector<T> {
+    public:
+        int offsetIndex = -1;
+    };
+
   /**
    * @brief Particle and molecule tracker
    *
@@ -56,9 +65,11 @@ namespace Faunus
   template<class T, class Tid=int>
   class Tracker
   {
-  private:
-      std::map<Tid, std::vector<T> > _map;
+  protected:
+      std::map<Tid, FaunusVector<T> > _map;
       std::map<Tid, Average<double> > Navg; // average vector length. TO BE REMOVED
+
+      typedef Tid myTid;
   public:
       /** @brief Number of elements of type id */
       size_t size( Tid id ) const
@@ -69,6 +80,12 @@ namespace Faunus
           return 0;
       }
 
+      const std::map<Tid, FaunusVector<T> >& getMap() {
+        return _map;
+      }
+
+      virtual void fillIndex() {}
+
       /** @brief Sum of all elements **/
       size_t size() const
       {
@@ -76,6 +93,16 @@ namespace Faunus
           for ( auto &m : _map )
               sum += m.second.size();
           return sum;
+      }
+
+      Group* get(int i)
+      {
+          for ( auto &m : _map ) {
+              if(m.second.size() > i)
+                  return m.second[i];
+              i -= m.second.size();
+          }
+          return nullptr;
       }
 
       const std::vector<T> &operator[]( Tid i ) const { return _map.at(i); };
@@ -203,6 +230,31 @@ namespace Faunus
 
   };
 
+  class TrackerGroup : public Tracker<Group *> {
+  public:
+      using Tracker<Group *>::_map;
+      using Tracker<Group *>::myTid;
+
+      virtual void fillIndex() {
+          std::vector<myTid> array(_map.size());
+          unsigned int i=0;
+          for ( auto &m : _map ) {
+              array[i] = m.first;
+              ++i;
+          }
+          std::sort(array.begin(), array.end());
+          int sum = 0;
+          for(i = 0; i<_map.size(); ++i) {
+            _map[array[i]].offsetIndex = sum;
+            for(unsigned int q=0; q < _map[array[i]].size(); ++q ) {
+                _map[array[i]][q]->molIndex = q+sum;
+                _map[array[i]][q]->Index = q;
+            }
+            sum += _map[array[i]].size();
+          }
+      }
+  };
+
   /**
    * @brief Placeholder for particles and groups
    *
@@ -235,7 +287,7 @@ namespace Faunus
       MoleculeMap<ParticleVector> molecule;  //!< Map of molecules
 
       Tracker<int> atomTrack;                //!< Track atom index based on atom type
-      Tracker<Group *> molTrack;              //!< Track groups pointers based on molecule type
+      TrackerGroup molTrack;              //!< Track groups pointers based on molecule type
 
       /**
        * @brief Struct for specifying changes to be made to Space
@@ -314,6 +366,7 @@ namespace Faunus
           for ( auto mol : molecule )
               while ( mol.Ninit-- > 0 )
                   insert(mol.id, mol.getRandomConformation(geo, p));
+          molTrack.fillIndex();
       }
 
       std::vector<Group *> &groupList() { return g; };   //!< Vector with pointers to all groups
@@ -348,6 +401,8 @@ namespace Faunus
               for ( auto i : *g )
                   atomTrack.insert(p.at(i).id, i);
           }
+
+          molTrack.fillIndex();
       }
 
       /**

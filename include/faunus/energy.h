@@ -24,6 +24,7 @@
 
 namespace Faunus
 {
+
 /**
    * @brief Classes/templates that calculate the energy of particles, groups, system.
    *
@@ -35,6 +36,8 @@ namespace Faunus
    */
   namespace Energy
   {
+
+
 
 /**
      *  @brief Base class for energy evaluation
@@ -139,7 +142,7 @@ namespace Faunus
         { return 0; }
 
         /** @brief Update energy function due to Change */
-        virtual double updateChange( const typename Tspace::Change &c ) { return 0; }
+        virtual double updateChange(bool acc) { return 0; }
 
         virtual void field( const Tpvec &, Eigen::MatrixXd & ) //!< Calculate electric field on all particles
         {}
@@ -151,7 +154,385 @@ namespace Faunus
                 return string();
             return textio::header("Energy: " + name) + _info();
         }
+
+        virtual double systemEnergy( const Tpvec &p )
+        {
+            double u = external(p);
+            for ( auto g : spc->groupList())
+                u += g_external(p, *g) + g_internal(p, *g);
+            for ( unsigned int i = 0; i < spc->groupList().size() - 1; i++ )
+                for ( unsigned int j = i + 1; j < spc->groupList().size(); j++ )
+                    u += g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
+            return u;
+        }
+
+        virtual double g2All(const Tpvec & p, Group &g)
+        {
+            double unew = 0.0;
+            for ( auto o : spc->groupList()) {
+                if ( o != &g ) {
+                    unew += g2g(p, *o, g);
+                    if ( unew == pc::infty )
+                        return pc::infty;   // early rejection
+                }
+            }
+            return unew;
+        }
     };
+
+
+class EnergyMatrix {
+private:
+    std::vector< std::vector<double> > eMatrix;
+    std::vector< std::vector<double> > eMatrix2;
+
+public:
+    std::vector<double> changes;
+
+    bool all = false; // modify entire matrix
+    Group* multi = nullptr; // modify group
+    int single = -1; // modify single particle
+
+    std::vector< std::vector<double> >* energyMatrix;
+    std::vector< std::vector<double> >* energyMatrixTrial;
+
+    bool firstGlobal=true;
+
+    EnergyMatrix() {
+        unsigned int size = 0;
+        energyMatrix = &eMatrix;
+        energyMatrixTrial = &eMatrix2;
+
+        try{
+            changes.reserve(1024 + size);
+            energyMatrix->reserve(1024 + size);
+            energyMatrix->resize( size );
+            for(unsigned int i=0; i < size; i++) {
+                energyMatrix->operator [](i).reserve(1024 + size);
+                energyMatrix->operator [](i).resize( size );
+            }
+
+            energyMatrixTrial->reserve(1024 + size);
+            energyMatrixTrial->resize( size );
+            for(unsigned int i=0; i < size; i++) {
+                energyMatrixTrial->operator [](i).reserve(1024 + size);
+                energyMatrixTrial->operator [](i).resize( size );
+            }
+        } catch(std::bad_alloc& bad) {
+            fprintf(stderr, "\nTOPOLOGY ERROR: Could not allocate memory for Energy matrix");
+            exit(1);
+        }
+    }
+
+    void resizeEMatrix(unsigned int size) {
+        assert(size >= 0);
+
+            energyMatrix->resize(size);
+        for(unsigned int i=0; i < size; i++) {
+            energyMatrix->at(i).resize( size );
+        }
+
+        energyMatrixTrial->resize(size);
+        for(unsigned int i=0; i < size; i++) {
+            energyMatrixTrial->at(i).resize( size );
+        }
+    }
+
+    inline void modify() {
+        if(multi != nullptr) {
+            fixEMatrixChain(multi);
+            multi = nullptr;
+            return;
+        }
+        if(single != -1) {
+            fixEMatrixSingle(single);
+            single = -1;
+            return;
+        }
+        if(all) {
+            std::swap(energyMatrix, energyMatrixTrial);
+            all = false;
+            return;
+        }
+        std::cout << "Error, move not recorded" << std::endl;
+    }
+
+protected:
+    void show() {
+        std::cout << "Energy matrix: " << std::endl;
+        for(unsigned int i=0; i<energyMatrix->size(); ++i) {
+            for(unsigned int j=0; j<energyMatrix->size(); ++j)
+                std::cout << (*energyMatrix)[i][j] << " ";
+            std::cout << std::endl;
+        }
+    }
+
+    void fixEMatrixSingle(int target) {
+        assert(changes.size() == energyMatrix->size());
+        for(unsigned int i=0; i < energyMatrix->size(); i++) {
+            energyMatrix->operator [](target)[i] = changes[i];
+            energyMatrix->operator [](i)[target] = changes[i];
+        }
+    }
+
+    void fixEMatrixChain(Group* g) {
+        std::vector<int > chain = g->range();
+        for(unsigned int i=0; i<chain.size(); i++) { // for all particles in molecule
+            // for cycles => pair potential with all particles except those in molecule
+            for (int j = 0; j < chain[0]; j++) { // pair potential with all particles from 0 to the first one in molecule
+                energyMatrix->operator [](chain[i])[j] = changes[i * energyMatrix->size() + j];
+                energyMatrix->operator [](j)[chain[i]] = changes[i * energyMatrix->size() + j];
+            }
+
+            for (int j = chain[chain.size()-1] + 1; j < (int)energyMatrix->size(); j++) {
+                energyMatrix->operator [](chain[i])[j] = changes[i * energyMatrix->size() + j];
+                energyMatrix->operator [](j)[chain[i]] = changes[i * energyMatrix->size() + j];
+            }
+
+        }
+    }
+};
+
+template<class Tspace, class Base>
+  class EnergyMatrixGroup : public Base, public EnergyMatrix {
+private:
+    typedef Energy::Energybase<Tspace> SuperBase;
+    typedef typename Tspace::ParticleType Tparticle;
+    typedef typename Tspace::GeometryType Tgeometry;
+    typedef typename Space<Tgeometry, Tparticle>::ParticleVector Tpvec;
+
+    using SuperBase::spc;
+    using SuperBase::isTrial;
+
+public:
+    EnergyMatrixGroup(Tmjson &j) : Base(j) {}
+
+    double g2g( const Tpvec &p, Group &g1, Group &g2 )
+    {
+        if(isTrial(p))
+            return Base::g2g(p, g1, g2);
+        else
+            return (*energyMatrix)[g1.molIndex][g2.molIndex];
+    }
+
+    double g1g2( const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2 )
+    {
+        if(isTrial(p1) || isTrial(p2))
+            return Base::g1g2(p1, g1, p2, g2);
+        else
+            return (*energyMatrix)[g1.molIndex][g2.molIndex];
+    }
+
+    virtual double i2all( Tpvec &, int ) {
+        assert(false && "Not a supported move for Group ENergy marix\n");
+        return 0.0;
+    }
+
+    double systemEnergy( const Tpvec &p )
+    {
+        double u = Base::external(p);
+        for ( auto g : spc->groupList())
+            u += Base::g_external(p, *g) + Base::g_internal(p, *g);
+
+        if(firstGlobal) { // calc energy matrix
+            resizeEMatrix(spc->molTrack.size());
+            firstGlobal = false;
+
+            // initialize energy matrix
+            if(!energyMatrix->empty()) {
+                auto map = spc->molTrack.getMap();
+
+                /**
+                * Unefficient way of looping through nontrivial getters
+                */
+                /*for ( int i = 0; i < (int) spc->molTrack.size() - 1; i++ ) {
+                    for ( int j = i + 1; j < (int) spc->molTrack.size(); j++ ) {
+                        (*energyMatrix)[i][j] = Base::g2g(p, *spc->molTrack.get(i), *spc->molTrack.get(j) );
+                        (*energyMatrix)[j][i] = (*energyMatrix)[i][j];
+                        u += (*energyMatrix)[i][j];
+                    }
+                }*/
+                int i=0, j=0;
+                for(auto oit = map.begin(); oit != map.end(); ++oit) {
+                    auto limit = oit->second.end();
+                    for(auto it = oit->second.begin(); it != limit; ++it) { // loop over all molecules of type
+
+                        j=i;
+                        for(auto ojt = oit; ojt != map.end(); ++ojt) {
+                            if(oit == ojt) {
+                                ++j;
+                                limit = (oit->second.end()-1);
+                            }
+                            for(auto jt = ((oit == ojt) ? (it+1) : ojt->second.begin());
+                                jt != ojt->second.end(); ++jt) { // loop over all molecules of type
+                                (*energyMatrix)[i][j] = Base::g2g(p, **it, **jt );
+                                (*energyMatrix)[j][i] = (*energyMatrix)[i][j];
+                                u += (*energyMatrix)[i][j];
+                                ++j;
+                            }
+                        }
+                        ++i;
+                    }
+                }
+            }
+            assert(u == Base::systemEnergy(p));
+            return u;
+        }
+
+        if(isTrial(p)) {
+            all = true;
+            if(!energyMatrix->empty()) {
+                auto map = spc->molTrack.getMap();
+                int i=0, j=0;
+                for(auto oit = map.begin(); oit != map.end(); ++oit) {
+                    auto limit = oit->second.end();
+                    for(auto it = oit->second.begin(); it != limit; ++it) { // loop over all molecules of type
+
+                        j=i;
+                        for(auto ojt = oit; ojt != map.end(); ++ojt) {
+                            if(oit == ojt) {
+                                ++j;
+                                limit = (oit->second.end()-1);
+                            }
+                            for(auto jt = ((oit == ojt) ? (it+1) : ojt->second.begin());
+                                jt != ojt->second.end(); ++jt) { // loop over all molecules of type
+                                (*energyMatrixTrial)[i][j] = Base::g2g(p, **it, **jt );
+                                (*energyMatrixTrial)[j][i] = (*energyMatrixTrial)[i][j];
+                                u += (*energyMatrixTrial)[i][j];
+                                ++j;
+                            }
+                        }
+                        ++i;
+                    }
+                }
+            }
+        } else {
+            assert(energyMatrix->size() == spc->molTrack.size());
+            if(!energyMatrix->empty()) {
+                for ( unsigned int i = 0; i < energyMatrix->size() - 1; i++ ) {
+                    for ( unsigned int j = i + 1; j < energyMatrix->size(); j++ ) {
+                        u += (*energyMatrix)[i][j];
+                    }
+                }
+            }
+        }
+        assert(u == Base::systemEnergy(p));
+        return u;
+    }
+
+    inline double updateChange(bool acc) override {
+        if(acc) {
+            modify();
+        } else {
+            all = false;
+            single = -1;
+            multi = nullptr;
+        }
+        return 0.0;
+    }
+
+    double g2All(const Tpvec &p, Group &g2) {
+        assert(g2.isMolecular());
+
+        double unew = 0.0;
+        unsigned int g2Index = g2.molIndex;
+        assert(g2Index >= 0);
+        if(isTrial(p)) {
+            changes.resize(spc->molTrack.size());
+            single = g2Index;
+
+            unsigned int i=0;
+            for(auto& item : spc->molTrack.getMap()) {
+                for(auto g : item.second) {
+                    if ( g != &g2 ) {
+                        changes[i] = Base::g2g(p, *g, g2);
+                        unew += changes[i];
+
+                        if ( unew == pc::infty )
+                            return pc::infty;   // early rejection
+                    }
+                    ++i;
+                }
+            }
+        } else {
+            for(unsigned int i=0; i < spc->molTrack.size(); ++i) {
+                if ( i != g2Index ) {
+                    unew += (*energyMatrix)[g2Index][i];
+                }
+            }
+        }
+        return unew;
+    }
+};
+
+template<class Tspace, class Base>
+  class EnergyMatrixParticle : public Base, public EnergyMatrix {
+private:
+    typedef Energy::Energybase<Tspace> SuperBase;
+    typedef typename Tspace::ParticleType Tparticle;
+    typedef typename Tspace::GeometryType Tgeometry;
+    typedef typename Space<Tgeometry, Tparticle>::ParticleVector Tpvec;
+
+    using SuperBase::spc;
+    using SuperBase::isTrial;
+
+public:
+    EnergyMatrixParticle(Tmjson &j) : Base(j) {}
+
+    double i2all( Tpvec &p, int i ) override
+    {
+        assert(i >= 0 && i < int(p.size()) && "index i outside particle vector");
+        double u = 0;
+        int n = (int) p.size();
+        if(SuperBase::isTrial(p)) {
+            single = i;
+            changes.resize(p.size());
+
+            for ( int j = 0; j != i; ++j ) {
+                changes[j] = Base::i2i(p,i,j);
+                u += changes[j];
+            }
+            for ( int j = i + 1; j < n; ++j ) {
+                changes[j] = Base::i2i(p,i,j);
+                u += changes[j];
+            }
+        } else {
+            for ( int j = 0; j != i; ++j ) {
+                u += (*energyMatrix)[i][j];
+            }
+            for ( int j = i + 1; j < n; ++j ) {
+                u += (*energyMatrix)[i][j];
+            }
+        }
+        return u;
+    }
+
+    double systemEnergy( const Tpvec &p )
+    {
+        if(firstGlobal) { // calc energy matrix
+            resizeEMatrix(p.size());
+            firstGlobal = false;
+            for ( unsigned int i = 0; i < p.size()-1; i++ )
+                for ( unsigned int j = i + 1; j < p.size(); j++ ) {
+                    (*energyMatrix)[i][j] = Base::i2i(p,i,j);
+                    (*energyMatrix)[j][i] = (*energyMatrix)[i][j];
+                }
+        }
+
+        return Base::systemEnergy(p);
+    }
+
+    inline double updateChange(bool acc) override {
+        if(acc) {
+            modify();
+        } else {
+            all = false;
+            single = -1;
+            multi = nullptr;
+        }
+        return 0.0;
+    }
+};
 
 /**
      * @brief Add two energy classes together
@@ -231,9 +612,9 @@ namespace Faunus
 
         double update( bool b ) override { return first.update(b) + second.update(b); }
 
-        double updateChange( const typename Tspace::Change &c ) override
+        double updateChange(bool acc) override
         {
-            return first.updateChange(c) + second.updateChange(c);
+            return first.updateChange(acc) + second.updateChange(acc);
         }
 
         double v2v( const Tpvec &p1, const Tpvec &p2 ) override { return first.v2v(p1, p2) + second.v2v(p1, p2); }
@@ -242,6 +623,16 @@ namespace Faunus
         {
             first.field(p, E);
             second.field(p, E);
+        }
+
+        double systemEnergy( const Tpvec &p )
+        {
+            return first.systemEnergy(p) + second.systemEnergy(p);
+        }
+
+        double g2All(const Tpvec & p, Group &g)
+        {
+            return first.g2All(p,g) + second.g2All(p,g);
         }
     };
 
@@ -834,7 +1225,8 @@ namespace Faunus
     template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace, Tpairpot> >
     class NonbondedCutg2g : public Tnonbonded
     {
-    private:
+    protected:
+        typedef Energybase<Tspace> SuperBase;
         typedef Tnonbonded base;
         using typename base::Tpvec;
         double rcut2;
@@ -1000,6 +1392,8 @@ namespace Faunus
             return base::base::g2g(p, g1, g2);
         }
     };
+
+
 
 /**
      * @brief Class for handling bond pairs
@@ -2870,7 +3264,17 @@ return u * conc; // -> kT
         for ( int i = 0; i < (int) spc.groupList().size() - 1; i++ )
             for ( int j = i + 1; j < (int) spc.groupList().size(); j++ )
                 u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
+
+        if(u != systemEnergy2(spc, pot, p))
+            std::cout << "systemEnergy != systemEnergy2, " << u << " " << systemEnergy2(spc, pot, p) << endl;
         return u;
+    }
+
+    template<class Tspace, class Tenergy, class Tpvec>
+    double systemEnergy2( Tspace &spc, Tenergy &pot, const Tpvec &p )
+    {
+        pot.setSpace(spc); // ensure pot geometry is in sync with spc
+        return pot.systemEnergy(p);
     }
 
 /**
@@ -2920,6 +3324,154 @@ return u * conc; // -> kT
 
         return du;
     }
+
+    template<class T1, class T2>
+    class EnergyTester : public Energybase<typename T1::SpaceType>
+    {
+    private:
+        string
+        _info() override { return first.info() + second.info(); }
+
+        typedef typename T1::SpaceType Tspace;
+        typedef Energybase<Tspace> Tbase;
+        typedef typename Tbase::Tparticle Tparticle;
+        typedef typename Tbase::Tpvec Tpvec;
+
+    public:
+        T1 first;
+        T2 second;
+
+        bool test(double a, double b) {
+            return fabs(a-b) < 1e-10;
+        }
+
+        auto tuple() -> decltype(std::tuple_cat(first.tuple(), second.tuple()))
+        {
+            return std::tuple_cat(first.tuple(), second.tuple());
+        }
+
+        EnergyTester( const T1 &a, const T2 &b ) : first(a), second(b) {
+            cout << "\n\n ENERGY TESTER RUNNING \n\n" << endl;
+        }
+
+        string info() override { return _info(); }
+
+        void setSpace( typename T1::SpaceType &s ) override
+        {
+            first.setSpace(s);
+            second.setSpace(s);
+            Tbase::setSpace(s);
+        }
+
+        double p2p( const Tparticle &a, const Tparticle &b ) override { return first.p2p(a, b); }
+
+        Point f_p2p( const Tparticle &a, const Tparticle &b ) override
+        {
+            return first.f_p2p(a, b);
+        }
+
+        double all2p( const Tpvec &p, const Tparticle &a ) override { return first.all2p(p, a); }
+
+        double i2i( const Tpvec &p, int i, int j ) override { return first.i2i(p, i, j); }
+
+        double i2g( const Tpvec &p, Group &g, int i ) override { return first.i2g(p, g, i); }
+
+        double i2all( Tpvec &p, int i ) override {
+            double a = first.i2all(p, i);
+            double b = second.i2all(p, i);
+            if(!test(a,b)) {
+                if(Tbase::isTrial(p))
+                    std::cout << "Trial ";
+                else
+                    std::cout << "pvec ";
+                std::cout << "Error i2all " << a << " " << b << endl;
+            }
+            return a;
+        }
+
+        double i_external( const Tpvec &p, int i ) override { return first.i_external(p, i); }
+
+        double i_internal( const Tpvec &p, int i ) override { return first.i_internal(p, i); }
+
+        double g2g( const Tpvec &p, Group &g1, Group &g2 ) override
+        {
+            double a = first.g2g(p, g1, g2);
+            double b = second.g2g(p, g1, g2);
+            if(!test(a,b))
+                std::cout << "Error g2g" << a << " " << b << endl;
+            return a;
+        }
+
+        double g1g2( const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2 ) override
+        {
+            return first.g1g2(p1, g1, p2, g2);
+        }
+
+        double g_external( const Tpvec &p, Group &g ) override
+        {
+            return first.g_external(p, g);
+        }
+
+        double g_internal( const Tpvec &p, Group &g ) override
+        {
+            return first.g_internal(p, g);
+        }
+
+        double external( const Tpvec &p ) override { return first.external(p); }
+
+        double update( bool b ) override { return first.update(b) + second.update(b); }
+
+        double updateChange(bool acc) override
+        {
+            return first.updateChange(acc) + second.updateChange(acc);
+        }
+
+        double v2v( const Tpvec &p1, const Tpvec &p2 ) override { return first.v2v(p1, p2) + second.v2v(p1, p2); }
+
+        void field( const Tpvec &p, Eigen::MatrixXd &E ) override
+        {
+            first.field(p, E);
+            second.field(p, E);
+        }
+
+        double g2All(const Tpvec & p, Group &g)
+        {
+            double a = first.g2All(p, g);
+            double b = second.g2All(p, g);
+            if(!test(a,b)) {
+                if(Tbase::isTrial(p))
+                    std::cout << "Trial ";
+                else
+                    std::cout << "pvec ";
+                std::cout << "Error g2all " << a << " " << b << " " << fabs(a-b)<< endl;
+            }
+            return a;
+        }
+
+        double systemEnergy(const Tpvec & p)
+        {
+            double a = first.systemEnergy(p);
+            double b = second.systemEnergy(p);
+            if(!test(a,b)) {
+                if(Tbase::isTrial(p))
+                    std::cout << "Trial ";
+                else
+                    std::cout << "pvec ";
+                std::cout << "Error system E " << a << " " << b << " " << fabs(a-b) << endl;
+            }
+            return a;
+        }
+    };
+
+        /**
+     * @brief Operator to conveniently compare two energy classes together
+     */
+    template<class T1, class T2,
+        class = typename
+        std::enable_if<std::is_base_of<Energybase<typename T1::SpaceType>, T1>::value>::type,
+        class = typename
+        std::enable_if<std::is_base_of<Energybase<typename T1::SpaceType>, T2>::value>::type >
+    EnergyTester<T1, T2> &operator==( const T1 &u1, const T2 &u2 ) { return *(new EnergyTester<T1, T2>(u1, u2)); }
 
 /* typedefs */
 

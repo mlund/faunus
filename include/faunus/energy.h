@@ -293,6 +293,17 @@ protected:
     }
 };
 
+/**
+ *  \brief Energy matrix speedup for potential calculation
+ *
+ *  the move needs to call either g2All or systemEnergy in order to be valid
+ *
+ *  Tested with Isobaric and TranslateRotate + inheritors
+ *
+ *  With trivial changes to Move classes usable with TranslateRotateNbody, Crankshaft, Reptation, FlipFlop + inheritors
+ *
+ *  Warning untested for more then 1 molecular type species (for loop in system energy may be wrong)
+ */
 template<class Tspace, class Base>
   class EnergyMatrixGroup : public Base, public EnergyMatrix {
 private:
@@ -465,6 +476,17 @@ public:
     }
 };
 
+/**
+ *  \brief Energy matrix speedup for potential calculation
+ *
+ *  the move needs to call either i2All or systemEnergy in order to be valid
+ *
+ *  Tested with AtomicTranslation
+ *
+ *  With trivial changes to Move classes usable with TranslateRotateCluster, Swapcharge, SwapMove
+ *
+ *  With new g2g and g2All function usable with all moves as Group Energy Matrix, however the speedup is very small < 5% for small molecules
+ */
 template<class Tspace, class Base>
   class EnergyMatrixParticle : public Base, public EnergyMatrix {
 private:

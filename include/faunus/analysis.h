@@ -2659,6 +2659,22 @@ namespace Faunus
             }
         }
 
+        /**
+         * @brief Append analysis
+         * @tparam Tanalysis Type of the analysis. Must be derived from AnalysisBase.
+         * @param a Instance of the analysis
+         * @return Smart pointer to added analysis (a new instance will be created and maintained internally)
+         */
+        template<class Tanalysis>
+        Tptr add( const Tanalysis &a )
+        {
+            static_assert(std::is_base_of<AnalysisBase, Tanalysis>::value,
+                          "`Tanalysis` must be derived from `Analysis::Analysisbase`");
+            auto ptr = Tptr(new Tanalysis(a));
+            v.push_back(ptr);
+            return v.back();
+        }
+
         /** @brief Find pointer to given analysis type; `nullptr` if not found. */
         template<class Tanalysis>
         Tanalysis *get()

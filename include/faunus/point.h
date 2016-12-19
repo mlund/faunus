@@ -705,7 +705,7 @@ namespace Faunus {
     Point cap_center_point;               //!< Center of cap
     Point charge_position;                //!< Position of charge
     double cap_radius;                    //!< Radius of cap
-    double cap_center;                    //!< Distance between pareticle and cap center
+    double cap_center;                    //!< Distance between particle and cap center
     double angle_p, angle_c;              //!< Angles
     bool is_sphere;
 

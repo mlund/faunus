@@ -393,8 +393,24 @@ namespace Faunus {
 	    return false;                                                    // Return no collision
 	  } else {
 	    // Not working properly
-	    double theta = pc::pi - acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_radius) - capsphere.angle_c;
-	    double closest_cap_distance = sqrt(capsphere.radius*capsphere.radius + (capsphere.cap_center_point - r).squaredNorm() - capsphere.cap_center*capsphere.cap_center - 2.0*r1*capsphere.cap_radius*cos(theta));
+	    double v = acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_center);
+	    double angle = asin(capsphere.radius*sin(capsphere.angle_c)/sphere.radius) - v;
+	    double closest_cap_distance = sqrt(r1*r1 + sphere.radius*sphere.radius - 2.0*r1*sphere.radius*cos(angle));
+	    
+	    /*
+	    double alpha = acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_center);
+	    double beta = capsphere.angle_c;
+	    double gamma = pc::pi - alpha - beta;
+	    double r1p = sin(beta)*capsphere.cap_center/sin(gamma);
+	    double r1b = r1 - r1p;
+	    double CRp = sin(alpha)*capsphere.cap_center/sin(gamma);
+	    double CRb = capsphere.cap_center - CRp;
+	    double closest_cap_distance = sqrt(CRb*CRb + r1b*r1b + 2.0*CRb*r1b*cos(alpha+beta));
+	    */
+	    
+	    
+	    //double theta = ( pc::pi - acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_radius) - capsphere.angle_c );
+	    //double closest_cap_distance = sqrt(capsphere.radius*capsphere.radius + (capsphere.cap_center_point - r).squaredNorm() - capsphere.cap_center*capsphere.cap_center - 2.0*r1*capsphere.cap_radius*cos(theta));
 	    if(closest_cap_distance < sphere.radius)
 	      return true;
 	    return false;

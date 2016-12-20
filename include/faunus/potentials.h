@@ -495,9 +495,12 @@ namespace Faunus {
 
         public:
           template<typename T>
-            LennardJonesMixed(const T&, const string &sec="") {
+            LennardJonesMixed(T &j, const string &sec="lj") {
               name="Lennard-Jones";
               init();
+              if (j.count(sec)>0)
+                if (j[sec].count("custom")>0)
+                  customParameters( j[sec]["custom"] );
             }
 
           template<class Tparticle>
@@ -549,16 +552,18 @@ namespace Faunus {
            * }
            * ~~~~
            */
-          void customParameters( Tmjson &j ) {
-            for (auto it=j.begin(); it!=j.end(); ++it) { 
-              auto v = textio::words2vec<string>( it.key() );
-              if (v.size()==2) {
-                auto id1 = atom[ v[0] ].id;
-                auto id2 = atom[ v[1] ].id;
-                customEpsilon( id1, id2, (it.value()["eps"] | 0.0) * 1.0_kJmol );
-                customSigma( id1, id2, it.value()["sigma"] | 0.0 );
-              } else
-                std::cerr << "Warning: Exactly two atom types must be given for custom LJ param.\n";
+          void customParameters( Tmjson j ) {
+            if (j.is_object()) {
+              for (auto it=j.begin(); it!=j.end(); ++it) { 
+                auto v = textio::words2vec<string>( it.key() );
+                if (v.size()==2) {
+                  auto id1 = atom[ v[0] ].id;
+                  auto id2 = atom[ v[1] ].id;
+                  customEpsilon( id1, id2, (it.value()["eps"] | 0.0) * 1.0_kJmol );
+                  customSigma( id1, id2, it.value()["sigma"] | 0.0 );
+                } else
+                  std::runtime_error( name+": Exactly two atom types must be given for custom LJ parameters");
+              }
             }
           }
 

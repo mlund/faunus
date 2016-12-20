@@ -2520,7 +2520,6 @@ namespace Faunus
             if ( cnt > 0 )
             {
                 double excess = -std::log(expu.avg());
-                double ideal = std::log(WidomMolecule::rho.avg());  // avoid name collision with Faunus::textio::rho
                 o << pad(SUB, w, "Insertion directions") << dir.transpose() << "\n"
                   << pad(SUB, w, "Insertion molecule") << molecule << "\n"
                   << pad(SUB, w, "Particle density") << WidomMolecule::rho.avg() << angstrom + superminus + cubed
@@ -2588,10 +2587,16 @@ namespace Faunus
      * `virtualvolume`   |  `Analysis::VirtualVolumeMove`
      * `chargemultipole` |  `Analysis::ChargeMultipole`
      * `xtctraj`         |  `Analysis::XTCtraj`
+     * `_jsonfile`       |  ouput json file w. collected results
      *
      * All analysis classes take the JSON keyword `nstep` for
      * specifying how many microloops to count between
      * each analysis call.
+     *
+     * Upon destruction, a json file, "analysis_out.json"
+     * with collected results will be saved. The name
+     * can be customized by adding the "_jsonfile" keyword
+     * to the "analysis" list.
      */
     class CombinedAnalysis : public AnalysisBase
     {
@@ -2600,6 +2605,7 @@ namespace Faunus
         vector <Tptr> v;
         string _info() override;
         void _sample() override;
+        string jsonfile;
     public:
 
         template<class Tspace, class Tpotential>
@@ -2608,10 +2614,16 @@ namespace Faunus
             using std::ref;
             using std::placeholders::_1;
 
+            jsonfile = "analysis_out.json";
+
             auto m = j["analysis"];
             for ( auto i = m.begin(); i != m.end(); ++i )
             {
                 auto &val = i.value();
+
+                if ( i.key() == "_jsonfile" )
+                  if (val.is_string())
+                    jsonfile = val;
 
                 if ( i.key() == "xtcfile" )
                     v.push_back(Tptr(new XTCtraj<Tspace>(val, spc)));
@@ -2697,7 +2709,7 @@ namespace Faunus
 
         inline ~CombinedAnalysis()
         {
-            std::ofstream f("analysis_out.json");
+            std::ofstream f(jsonfile);
             if ( f )
                 f << std::setw(4) << json() << std::endl;
         }

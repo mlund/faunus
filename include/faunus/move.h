@@ -4882,10 +4882,12 @@ namespace Faunus
             for ( auto i : mPtr )
                 i->test(t);
 
-            double ucurr = ufunction();
-            double drift = ucurr - (uinit + dusum);
-            t("energyAverage", uavg.avg());
-            t("relativeEnergyDrift", std::abs(drift / ucurr), 10.0); // allow 200% deviation
+            if (uavg.cnt>0) {
+              double ucurr = ufunction();
+              double drift = ucurr - (uinit + dusum);
+              t("energyAverage", uavg.avg());
+              t("relativeEnergyDrift", std::abs(drift / ucurr), 10.0);
+            }
         }
 
 #ifdef ENABLE_MPI

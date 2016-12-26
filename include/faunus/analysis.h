@@ -944,7 +944,7 @@ namespace Faunus
         double dr;            // distance resolution
 
         Tcoulomb coulomb;     // coulomb potential
-        Tspace *spc;
+        Tspace &spc;
 
         string _info() override
         {
@@ -991,38 +991,15 @@ namespace Faunus
             return m;
         }
 
-        template<class Tgroup>
-        double g2g( const Tspace &spc, const Tgroup &g1, const Tgroup &g2 )
+        double g2g( Tspace &spc, const Group &g1, const Group &g2 )
         {
             double u = 0;
             for ( auto i : g1 )
-                for ( auto j : g2 )
-                    u += coulomb(spc.p[i], spc.p[j]);
+                for ( auto j : g2 ) {
+                    double r2 = spc.geo.sqdist( spc.p[i], spc.p[j] );
+                    u += coulomb(spc.p[i], spc.p[j], r2);
+                }
             return u;
-        }
-
-        void _sample() override
-        {
-        }
-
-    public:
-
-        MultipoleDistribution( Tmjson &j, const Tspace &s ) : AnalysisBase(j), coulomb(j)
-        {
-            name = "Multipole Distribution";
-            dr = j["dr"] | 0.2;
-            filename = j["file"] | string("multipole.dat");
-            string name1 = j["group1"] | string();
-            string name2 = j["group1"] | string();
-
-            auto f1 = s.molecule.find(name1);
-            auto f2 = s.molecule.find(name2);
-
-            assert(f1 != s.molecule.end());
-            assert(f2 != s.molecule.end());
-
-            id1 = *f1.id;
-            id2 = *f2.id;
         }
 
         /**
@@ -1033,7 +1010,6 @@ namespace Faunus
            * @note Group mass-centers (`Group::cm`) must be up-to-date before
            *       calling this function
            */
-        template<class Tmultipole=DipoleParticle>
         void sample( Tspace &spc, Group &g1, Group &g2 )
         {
             // multipoles and cm-cm distance
@@ -1048,7 +1024,7 @@ namespace Faunus
             coulomb.setSpace(spc);
             data d;
             d.cnt++;
-            d.tot = g2g(spc.p, g1, g2); // exact el. energy
+            d.tot = g2g(spc, g1, g2); // exact el. energy
             d.ii = a.charge * b.charge * rinv; // ion-ion, etc.
             d.id = (a.charge * b.mu.dot(r) - b.charge * a.mu.dot(r)) * r3inv;
             d.dd = mu2mu(a.mu, b.mu, a.muscalar * b.muscalar, r);
@@ -1096,6 +1072,73 @@ namespace Faunus
                       << "\n";
             }
         }
+        void _sample() override
+        {
+          auto v1 = spc.findMolecules(id1);
+          auto v2 = spc.findMolecules(id2);
+
+          for (auto gi : v1)
+            for (auto gj : v2)
+              if (gi!=gj)
+                sample( spc, *gi, *gj ); 
+        }
+
+        //@todo Add distributions
+        Tmjson _json() override
+        {
+          return {
+            { name,
+              {
+                { "groups", { spc.molecule[id1].name, spc.molecule[id2].name} },
+                { "file", filename },
+                { "dr", dr }
+              }
+            }
+          };
+        }
+
+    public:
+
+        MultipoleDistribution( Tmjson &j, Tspace &s ) : AnalysisBase(j), coulomb(j), spc(s)
+        {
+            name = "Multipole Distribution";
+            dr = j.value("dr", 0.2);
+            filename = j.value("file", string("multipole.dat"));
+
+            vector<string> names = j["groups"];
+            if (names.size()==2) {
+              auto f1 = s.molecule.find( names[0] );
+              auto f2 = s.molecule.find( names[1] );
+              if (f1 != s.molecule.end())
+                if (f2 != s.molecule.end()) {
+                  id1 = (*f1).id;
+                  id2 = (*f2).id;
+                  return;
+                }
+            }
+            throw std::runtime_error(name + ": specify exactly two existing group names");
+            //string name1 = j.value("group1", string());
+            //string name2 = j.value("group2", string());
+
+            //assert( !name1.empty() );
+            //assert( !name2.empty() );
+
+            //auto f1 = s.molecule.find(name1);
+            //auto f2 = s.molecule.find(name2);
+
+            //assert(f1 != s.molecule.end());
+            //assert(f2 != s.molecule.end());
+
+            //id1 = *f1.id;
+            //id2 = *f2.id;
+        }
+
+        // @todo Use json output instead
+        ~MultipoleDistribution()
+        {
+            save(filename);
+        }
+
     };
 
     /**
@@ -2574,6 +2617,119 @@ namespace Faunus
     };
 
     /**
+     * @brief Mean force between two groups
+     *
+     * This will average the mean force along the mass center
+     * connection line between two groups. Currently, results
+     * are output only via the `json()` function.
+     *
+     * JSON keys | Description
+     * --------- | ---------------
+     *  `groups` | Exactly two group index (array)
+     *  `nsteps` | Sample interval
+     *
+     * To avoid calling virtual functions in the inner loop of
+     * the force calculation, we use `std::bind` to bind
+     * the force method which is created at compile time. Care should
+     * be taken when copying the class as described below.
+     *
+     * @warning When copying this class the bound function `func` will still refer
+     * to the initial class incl. mf1, mf2, pot etc. Fix this by implement copy
+     * operator. Not a problem when handled by `CombinedEnergy` where only a single
+     * copy is made.
+     */
+    template<class Tspace>
+      class MeanForce : public AnalysisBase {
+
+        //typedef Energy::Energybase<Tspace> Tenergy;
+        //Tenergy& pot;
+        Tspace& spc;
+        Average<double> mf1, mf2;
+        size_t g1, g2;
+
+        std::function<void()> func;
+
+        template<class Tenergy>
+          void evalforce(Tenergy &pot) {
+            Point f1 = {0,0,0}; // net force on group 1
+            Point f2 = {0,0,0}; // net force on group 2
+            auto &g = spc.groupList(); // list of groups
+            auto &p = spc.p;           // particle vector
+
+            // force all others, k <-> g1 and g2
+            for (size_t k=0; k!=g.size(); k++)
+              if (k!=g1)
+                if (k!=g2)
+                  for (auto i : *g[k]) {
+                    for (auto j : *g[g1])
+                      f1 += pot.f_p2p( p[i], p[j] );
+                    for (auto j : *g[g2])
+                      f2 += pot.f_p2p( p[i], p[j] );
+                  }
+            // force g1<->g2
+            for (auto i : *g[g2])
+              for (auto j : *g[g1]) {
+                Point f = pot.f_p2p( p[i], p[j] );
+                f1 += f;
+                f2 -= f;
+              }
+
+            // COM-COM unit vector and mean force
+            Point r = spc.geo.vdist( g[g1]->cm, g[g2]->cm );
+            mf1 += f1.dot( r/r.norm() );
+            mf2 += f2.dot( -r/r.norm() );
+            cout << mf1.cnt << " " << mf2.cnt << "\n";
+          }
+
+        string _info() override { return string(); }
+
+        Tmjson _json() override
+        {
+          if ( mf1.cnt>0 && mf2.cnt>0 )
+            return {
+              { name,
+                {
+                  { "groups", {g1, g2} },
+                  { "meanforce", { mf1.avg(), mf2.avg() } },
+                  { "forceunit", "kT/angstrom" }
+                }
+              }
+            };
+          return Tmjson();
+        }
+
+        void _sample() override {
+          func();
+          cout << mf1.cnt << " " << mf2.cnt << "\n";
+        }
+
+        public:
+        template<class Tenergy>
+          MeanForce( Tmjson j, Tenergy &pot, Tspace &spc ) : AnalysisBase(j), spc(spc)
+        {
+          name = "Mean force";
+          g1 = g2 = -1;
+          if (j["groups"].is_array()) {
+            vector<size_t> v = j["groups"];
+            if (v.size()==2) {
+              g1 = v[0];
+              g2 = v[1];
+              if (g1>=0)
+                if (g2>=0)
+                  if (g1!=g2)
+                    if (g1 < spc.groupList().size() )
+                      if (g2 < spc.groupList().size() ) {
+                        func = std::bind( &MeanForce<Tspace>::evalforce<Tenergy>, this, std::ref(pot));
+                        return;
+                      }
+            }
+          }
+          throw std::runtime_error(name + ": group array must contain \
+              exactly two distinct and valid group index");
+        }
+      };
+
+    /**
      * @brief Class for accumulating analysis classes
      *
      * Upon construction the JSON section `analysis` is searched
@@ -2587,6 +2743,7 @@ namespace Faunus
      * `virtualvolume`   |  `Analysis::VirtualVolumeMove`
      * `chargemultipole` |  `Analysis::ChargeMultipole`
      * `xtctraj`         |  `Analysis::XTCtraj`
+     * `meanforce`       |  `Analysis::MeanForce`
      * `_jsonfile`       |  ouput json file w. collected results
      *
      * All analysis classes take the JSON keyword `nstep` for
@@ -2668,6 +2825,12 @@ namespace Faunus
 
                 if ( i.key() == "chargemultipole" )
                     v.push_back(Tptr(new ChargeMultipole<Tspace>(val, spc)));
+
+                if ( i.key() == "multipoledistribution" )
+                    v.push_back(Tptr(new MultipoleDistribution<Tspace>(val, spc)));
+
+                if ( i.key() == "meanforce" )
+                    v.push_back(Tptr(new MeanForce<Tspace>(val, pot, spc)));
             }
         }
 

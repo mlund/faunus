@@ -408,7 +408,7 @@ namespace Faunus
       }
 
       /** @brief Returns vector of molecules with matching molid */
-      inline std::vector<Group *> findMolecules( int molId, bool sort = false )
+      inline std::vector<Group *> findMolecules( int molId, bool sort = false ) const
       {
           auto v = molTrack[molId];
           if ( sort )
@@ -445,7 +445,7 @@ namespace Faunus
        * }
        * ~~~~
        */
-      inline std::vector<Group *> findMolecules( const std::string &name, bool sort = false )
+      inline std::vector<Group *> findMolecules( const std::string &name, bool sort = false ) const
       {
           auto it = molecule.find(name);
           if ( it != molecule.end())

@@ -41,6 +41,7 @@ int main() {
   spc.p[1].cap_center = 0.0;
   spc.p[1].cap_radius = 0.0;
   spc.p[1].is_sphere = true;
+  spc.p[1].update();
   spc.trial = spc.p;
   double minY = mcp["xyz"]["minY"];
   double maxY = mcp["xyz"]["maxY"];
@@ -55,7 +56,11 @@ int main() {
       spc.trial = spc.p;
       double energy = Energy::systemEnergy(spc,pot,spc.p);
       cnt++;
+      
+      cout << " " << energy;
+      
       // inf 10 5 2
+      /*
       if(energy < 1) {
 	cout << " " << 0; // No interaction!
       } else if(energy < 3) {
@@ -69,13 +74,19 @@ int main() {
       } else {
 	cout << " " << 5; // Hardsphere-Hardsphere Collision!
       }
+      */
+      
     }
     cout << endl;
   }
   
-  cout << " " << spc.p[0].x() << " " << spc.p[0].y() << " " << spc.p[0].z() << " " << spc.p[0].cap_center << " " << spc.p[0].cap_radius << " " << spc.p[0].radius;
-  cout << " " << mcp["xyz"]["minX"] << " " << mcp["xyz"]["maxX"] << " " << mcp["xyz"]["minY"] << " " << mcp["xyz"]["maxY"] << " " << mcp["xyz"]["step"] << " " << spc.p[1].radius << " " << spc.p[0].angle_p;
-  for(int i = 0; i < cnt-13; i++) {
+  spc.p[0].update();
+  spc.trial = spc.p;
+  
+  cout << " " << spc.p[0].x() << " " << spc.p[0].y() << " " << spc.p[0].z() << " " << spc.p[0].cap_center << " " << spc.p[0].cap_radius << " " << spc.p[0].radius << " " << spc.p[0].angle_p << " " << spc.p[0].angle_c;
+  cout << " " << spc.p[1].x() << " " << spc.p[1].y() << " " << spc.p[1].z() << " " << spc.p[1].cap_center << " " << spc.p[1].cap_radius << " " << spc.p[1].radius << " " << spc.p[1].angle_p << " " << spc.p[1].angle_c;
+  cout << " " << mcp["xyz"]["minX"] << " " << mcp["xyz"]["maxX"] << " " << mcp["xyz"]["minY"] << " " << mcp["xyz"]["maxY"] << " " << mcp["xyz"]["step"];
+  for(int i = 0; i < cnt-21; i++) {
     cout << " " << 0;
   }
   

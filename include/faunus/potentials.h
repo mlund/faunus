@@ -371,7 +371,7 @@ namespace Faunus {
           o << "Hard sphere cap";
           return o.str();          
         }
-       
+        
        /**
 	* @brief Checks is a particle with a cap collides with a true sphere.
 	* @param capsphere The cap-particle
@@ -384,6 +384,7 @@ namespace Faunus {
 	bool capsphereAndSphereCollide(const Tparticle &capsphere, const Tparticle &sphere, const Point &r, double r1) const {
 	  if( (acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_center) > capsphere.angle_p) && (r1 > capsphere.radius) ) // If the sphere is outside the prolonged cone formed by the origin of the cap-particle and the cap-'ring' then...
 	    return true;
+	  
 	  Point cts =  ( r - capsphere.cap_center_point );    // Vector from origin of capsphere.cap pointing towards the center of 'sphere'
 	  Point closest_cap_point = ( capsphere + capsphere.cap_center_point ) + cts/cts.norm()*capsphere.cap_radius; // Closesed point from sphere.center to surface of capsphere.cap
 	  
@@ -392,25 +393,10 @@ namespace Faunus {
 	      return true;                                                   // Return collision
 	    return false;                                                    // Return no collision
 	  } else {
-	    // Not working properly
-	    double v = acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_center);
-	    double angle = asin(capsphere.radius*sin(capsphere.angle_c)/sphere.radius) - v;
-	    double closest_cap_distance = sqrt(r1*r1 + sphere.radius*sphere.radius - 2.0*r1*sphere.radius*cos(angle));
+	    // Now we are on the cap-surface that is not really a true surface on the particle
 	    
-	    /*
-	    double alpha = acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_center);
-	    double beta = capsphere.angle_c;
-	    double gamma = pc::pi - alpha - beta;
-	    double r1p = sin(beta)*capsphere.cap_center/sin(gamma);
-	    double r1b = r1 - r1p;
-	    double CRp = sin(alpha)*capsphere.cap_center/sin(gamma);
-	    double CRb = capsphere.cap_center - CRp;
-	    double closest_cap_distance = sqrt(CRb*CRb + r1b*r1b + 2.0*CRb*r1b*cos(alpha+beta));
-	    */
-	    
-	    
-	    //double theta = ( pc::pi - acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_radius) - capsphere.angle_c );
-	    //double closest_cap_distance = sqrt(capsphere.radius*capsphere.radius + (capsphere.cap_center_point - r).squaredNorm() - capsphere.cap_center*capsphere.cap_center - 2.0*r1*capsphere.cap_radius*cos(theta));
+	    double theta = capsphere.angle_p - acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_center);
+	    double closest_cap_distance = sqrt(capsphere.radius*capsphere.radius + r1*r1 - 2.0*capsphere.radius*r1*cos(theta));
 	    if(closest_cap_distance < sphere.radius)
 	      return true;
 	    return false;
@@ -429,10 +415,8 @@ namespace Faunus {
 	    double r2 = r.squaredNorm();
             double dab=a.radius+b.radius;
 	    if( r2 < dab*dab ) {
-	      if(a.is_sphere && b.is_sphere)
+	      if(a.is_sphere && b.is_sphere) // If none of the particles are capped spheres
 		return pc::infty;
-	      
-	      double r1 = sqrt(r2);
 	      
 	      bool a_cap_in_play = false;
 	      if(!a.is_sphere) {
@@ -447,42 +431,28 @@ namespace Faunus {
 		  b_cap_in_play = true;
 	      }
 	      
-	      if(!a_cap_in_play && !b_cap_in_play) {
-		return 10.0;
-		//return pc::infty;
-	      }
+	      if(!a_cap_in_play && !b_cap_in_play) // If no caps are in play
+		return pc::infty;
+	      
+	      double r1 = sqrt(r2);
 	      
 	      if(a_cap_in_play && !b_cap_in_play) {
 		if(capsphereAndSphereCollide(a, b,-r, r1))
-		  return 5.0;
-		//if(r1 < b.radius)
-		//  return pc::infty;
-		return 2.0;
+		  return pc::infty;
+		return 0.0;
 	      }
 	      if(!a_cap_in_play && b_cap_in_play) {
 		if(capsphereAndSphereCollide(b, a,r, r1))
-		  return 5.0;
-		//if(r1 < a.radius)
-		//  return pc::infty;
-		return 2.0;
+		  return pc::infty;
+		return 0.0;
 	      }
 	      
-	      cout << "Noo" << endl;
-	      
-	      Point mid_point = ( b + 0.5*r );
-	      bool overlap = false;
-	      if( (r + b + a.cap_center_point - mid_point).squaredNorm() < a.cap_radius*a.cap_radius && (b + b.cap_center_point - mid_point).squaredNorm() < b.cap_radius*b.cap_radius )
-		overlap = true;
-	      
-	      if(!overlap) // If neither cap covers 
-		return pc::infty;
-	      
+	      // Both caps are in play
+	      // Fix later
 	      return 0.0;
 	    }
-            return 0.0; // No overlap whatsoever
+            return 0.0; // No sphere-sphere overlap
           }
-          
-          
           
         string info(char w) {
           using namespace textio;
@@ -490,8 +460,6 @@ namespace Faunus {
           return o.str();
         }
     };
-    
-
     
     /**
      * @brief Lennard-Jones (12-6) pair potential

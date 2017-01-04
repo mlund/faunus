@@ -276,7 +276,7 @@ namespace Faunus {
       WBA = 3.0*WBA*r2i - quadA.trace();
       return (qA*WAB + qB*WBA)*r1i*r2i;
     }
-
+    
   /**
    * @brief Base class for Wolf based interactions. Implemented according to DOI: 10.1063/1.478738 and DOI: 10.1063/1.4923001.
    */

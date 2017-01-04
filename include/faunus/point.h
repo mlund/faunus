@@ -739,9 +739,9 @@ namespace Faunus {
 	  cap_radius=d.cap_radius;
 	  if(cap_radius > 1e-6)
 	    is_sphere = false;
-	  if( ( cap_radius > 1e-6 ) && ( cap_center > 1e-6) && ( this->radius > 1e-6 ) ) {
-	    angle_p = std::acos((this->radius*this->radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*this->radius*cap_center));
-	    angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - this->radius*this->radius)/(2.0*cap_center*cap_radius));
+	  if( ( cap_radius > 1e-6 ) && ( cap_center > 1e-6) && ( radius > 1e-6 ) ) {
+	    angle_p = std::acos((radius*radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*radius*cap_center));
+	    angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - radius*radius)/(2.0*cap_center*cap_radius));
 	  }
           return *this;
         }
@@ -755,17 +755,22 @@ namespace Faunus {
       if(cap_radius > 1e-6)
 	is_sphere = false;
       in >> cap_center;
-      if( ( cap_radius > 1e-6 ) && (cap_center > 1e-6) && ( this->radius > 1e-6 ) ) {
-	angle_p = std::acos((this->radius*this->radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*this->radius*cap_center));
-	angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - this->radius*this->radius)/(2.0*cap_center*cap_radius));
+      if( ( cap_radius > 1e-6 ) && (cap_center > 1e-6) && ( radius > 1e-6 ) ) {
+	angle_p = std::acos((radius*radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*radius*cap_center));
+	angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - radius*radius)/(2.0*cap_center*cap_radius));
       }
       return *this;
     }
     
     // remove later when not used!!!
     void update() {
-      angle_p = std::acos((this->radius*this->radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*this->radius*cap_center));
-      angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - this->radius*this->radius)/(2.0*cap_center*cap_radius));
+      if(!is_sphere) {
+	angle_p = std::acos((radius*radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*radius*cap_center));
+	angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - radius*radius)/(2.0*cap_center*cap_radius));
+      } else {
+	angle_p = 0.0;
+	angle_c = 0.0;
+      }
     }
 
     /* write data members to stream */

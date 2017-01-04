@@ -382,7 +382,8 @@ namespace Faunus {
 	*/
       template<class Tparticle>
 	bool capsphereAndSphereCollide(const Tparticle &capsphere, const Tparticle &sphere, const Point &r, double r1) const {
-	  if( (acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_center) > capsphere.angle_p) && (r1 > capsphere.radius) ) // If the sphere is outside the prolonged cone formed by the origin of the cap-particle and the cap-'ring' then...
+	  double angle = acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_center); // Angle between capsphere-center to sphere-center and capsphere-center to cap-center
+	  if( (angle > capsphere.angle_p) && (r1 > capsphere.radius) ) // If the sphere is outside the prolonged cone formed by the origin of the cap-particle and the cap-'ring' then...
 	    return true;
 	  
 	  Point cts =  ( r - capsphere.cap_center_point );    // Vector from origin of capsphere.cap pointing towards the center of 'sphere'
@@ -394,10 +395,8 @@ namespace Faunus {
 	    return false;                                                    // Return no collision
 	  } else {
 	    // Now we are on the cap-surface that is not really a true surface on the particle
-	    
-	    double theta = capsphere.angle_p - acos(r.dot(capsphere.cap_center_point)/r1/capsphere.cap_center);
-	    double closest_cap_distance = sqrt(capsphere.radius*capsphere.radius + r1*r1 - 2.0*capsphere.radius*r1*cos(theta));
-	    if(closest_cap_distance < sphere.radius)
+	    double closest_cap_distance_squared = capsphere.radius*capsphere.radius + r1*r1 - 2.0*capsphere.radius*r1*cos(capsphere.angle_p - angle); // Closesed distance to the rim of the cap and sphere
+	    if(closest_cap_distance_squared < sphere.radius*sphere.radius)
 	      return true;
 	    return false;
 	  }
@@ -412,36 +411,29 @@ namespace Faunus {
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
-	    double r2 = r.squaredNorm();
-            double dab=a.radius+b.radius;
-	    if( r2 < dab*dab ) {
+	    double r1 = r.norm();
+	    if( r1 < a.radius+b.radius ) {
 	      if(a.is_sphere && b.is_sphere) // If none of the particles are capped spheres
 		return pc::infty;
 	      
 	      bool a_cap_in_play = false;
-	      if(!a.is_sphere) {
-		double dacb = a.cap_radius + b.radius;
-		if((r + a.cap_center_point).squaredNorm() < dacb*dacb)
+	      if(!a.is_sphere)
+		if((r + a.cap_center_point).norm() < a.cap_radius + b.radius)
 		  a_cap_in_play = true;
-	      }
 	      bool b_cap_in_play = false;
-	      if(!b.is_sphere) {
-		double dabc = a.radius + b.cap_radius;
-		if((r - b.cap_center_point).squaredNorm() < dabc*dabc)
+	      if(!b.is_sphere)
+		if((r - b.cap_center_point).norm() < a.radius + b.cap_radius)
 		  b_cap_in_play = true;
-	      }
 	      
 	      if(!a_cap_in_play && !b_cap_in_play) // If no caps are in play
 		return pc::infty;
 	      
-	      double r1 = sqrt(r2);
-	      
-	      if(a_cap_in_play && !b_cap_in_play) {
+	      if(a_cap_in_play && !b_cap_in_play) { // If only cap A is in play
 		if(capsphereAndSphereCollide(a, b,-r, r1))
 		  return pc::infty;
 		return 0.0;
 	      }
-	      if(!a_cap_in_play && b_cap_in_play) {
+	      if(!a_cap_in_play && b_cap_in_play) { // If only cap B is in play
 		if(capsphereAndSphereCollide(b, a,r, r1))
 		  return pc::infty;
 		return 0.0;
@@ -449,6 +441,24 @@ namespace Faunus {
 	      
 	      // Both caps are in play
 	      // Fix later
+	      
+	      Point nA = a.cap_center_point/a.cap_center; // Normalized normal vector of cap A
+	      Point nB = b.cap_center_point/b.cap_center; // Normalized normal vector of cap B
+	      
+	      Point n = nA.cross(nB); // Normalized direction vector of line that intersects the planes of caps A and B
+	      
+	      Point pA = (a + (a.cap_center_point/a.cap_center)*a.cap_radius*cos(a.angle_p)); // A point on the plane of cap A
+	      Point pB = (b + (b.cap_center_point/b.cap_center)*b.cap_radius*cos(b.angle_p)); // A point on the plane of cap B
+	      
+	      double dA = nA.dot(pA); // Constant of plane A
+	      double dB = nB.dot(pB); // Constant of plane B
+	      
+	      Eigen::Matrix3f A;
+	      Eigen::Vector3f b0;
+	      A << nA.x(),nA.y(),nA.z(),  nB.x(),nB.y(),nB.z();
+	      b0 << -dA, -dB;
+	      Eigen::Vector3f x0 = A.colPivHouseholderQr().solve(b0);
+	      
 	      return 0.0;
 	    }
             return 0.0; // No sphere-sphere overlap

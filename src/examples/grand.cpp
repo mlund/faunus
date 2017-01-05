@@ -48,6 +48,9 @@ int main()
     cout << loop.info() + mv.info() + test.info()
         + widom1.info() + widom2.info();
 
+    std::ofstream o("move_out.json");
+    o << std::setw(4) << mv.json() << endl;
+
     return test.numFailed();
 }
 

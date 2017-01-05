@@ -330,10 +330,7 @@ namespace Faunus
             {  // iterate over molecules
                 auto mol = spc->molList().find(it.key()); // is molecule defined?
                 if ( mol == spc->molList().end())
-                {
-                    std::cerr << "Error: molecule '" << it.key() << "' not defined.\n";
-                    exit(1);
-                }
+                    throw std::runtime_error(title+": molecule "+it.key()+" undefined");
                 else
                     addMol(mol->id, MolListData(it.value()));
             }
@@ -1592,10 +1589,7 @@ namespace Faunus
         base::fillMolList(m);// find molecules to be moved
 
         if ( this->mollist.size() != 1 )
-        {
-            std::cerr << "Error: only one group allowed for cluster moves." << endl;
-            exit(1);
-        }
+            throw std::runtime_error(base::title+": only one cluster group allowed");
         else
         {
             for ( auto &i : this->mollist )
@@ -1608,10 +1602,7 @@ namespace Faunus
                 if ( mob.size() == 1 )
                     setMobile(*mob.front());
                 else
-                {
-                    std::cerr << "Error: atomic group in clustermove ill defined." << endl;
-                    exit(1);
-                }
+                    throw std::runtime_error(base::title+": atomic group ill defined");
             }
         }
     }
@@ -2457,10 +2448,7 @@ namespace Faunus
         if ( ptr != nullptr )
             (*ptr)->setPressure(P);
         else
-        {
-            std::cerr << "Error: Volume move requires pressure term in Hamiltonian." << endl;
-            exit(1);
-        }
+            throw std::runtime_error(base::title+": pressure term required in hamiltonian");
     }
 
     template<class Tspace>
@@ -3045,10 +3033,8 @@ namespace Faunus
             uold += potold;
         }
         else
-        {
-            std::cerr << "!! No salt to insert or delete !!" << endl;
-            exit(1);
-        }
+            throw std::runtime_error(base::title+": no to insert or delete");
+
         base::alternateReturnEnergy = potnew - potold; // track only pot. energy
         return unew - uold;
     }
@@ -3258,11 +3244,8 @@ namespace Faunus
                     id = base::tracker.randomAtomType();
                     z = atom[id].charge;
                     if ( --maxtry == 0 )
-                    {
-                        std::cerr << "Error: Failed to find GC ions capable of "
-                                  << "neutralizing system." << endl;
-                        exit(1);
-                    }
+                        throw std::runtime_error(base::title+
+                                ": no GC ions capable of neutralizing system found");
                 }
                 while ( Z * z > 0 || (fabs(fmod(Z, z)) > 1e-9) || atom[id].activity == 0 );
 
@@ -4720,7 +4703,7 @@ namespace Faunus
      * in the table below; each can occur only once and are picked
      * with uniform weight.
      *
-     * Keyword           | Move class                | Description
+     * Keyword           | Class                     | Description
      * :---------------- | :------------------------ | :----------------
      * `atomtranslate`   | `Move::AtomicTranslation` | Translate atoms
      * `atomrotate`      | `Move::AtomicRotation`    | Rotate atoms
@@ -4734,9 +4717,15 @@ namespace Faunus
      * `reptate`         | `Move::Reptation`         | Reptation polymer move
      * `titrate`         | `Move::SwapMove`          | Particle swap move
      * `conformationswap`| `Move::ConformationSwap`  | Swap between molecular conformations
+     * `random`          | `RandomTwister<>`         | Input for random number generator
      *
      * Average system energy and drift thereof are automatically tracked and
      * reported.
+     * You may also control the random number generator,
+     *
+     *     "random" : { "hardware":true }
+     * 
+     * to use a hardware seed instead of the default deterministic sequence.
      */
     template<typename Tspace, bool polarise = false, typename base=Movebase<Tspace>>
     class Propagator : public base
@@ -4802,6 +4791,13 @@ namespace Faunus
             for ( auto i = m.begin(); i != m.end(); ++i )
             {
                 auto &val = i.value();
+
+                if ( i.key() == "random" )
+                    if (val.is_object()) {
+                        cout << "Seeding move random number generator." << endl;
+                        base::_slump() = RandomTwister<>(val);
+                    }
+
                 if ( i.key() == "atomtranslate" )
                     mPtr.push_back(toPtr(AtomicTranslation<Tspace>(e, s, val)));
                 if ( i.key() == "atomrotate" )
@@ -4874,6 +4870,7 @@ namespace Faunus
             auto &j = js["moves"];
             for ( auto i : mPtr )
                 j = merge(j, i->json());
+            j["random"] = base::_slump().json();
             return js;
         }
 

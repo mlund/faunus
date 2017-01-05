@@ -22,7 +22,8 @@ def mkinput():
 
       "moves": {
         "atomtranslate": { "salt": { "permol": True, "prob": 0.01 } }, 
-        "atomgc": { "molecule": "salt" }
+        "atomgc": { "molecule": "salt" },
+        "random": { "hardware": True }
         }, 
 
       "system": {

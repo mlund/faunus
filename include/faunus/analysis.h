@@ -751,7 +751,7 @@ namespace Faunus
                 if ( it != spc.molList().end())
                     molid.push_back(it->id);
                 else
-                    std::cerr << "# PolymerShape warning: molecule not found!" << endl;
+                    throw std::runtime_error(name + ": molecule not found");
             }
         }
     };
@@ -891,7 +891,7 @@ namespace Faunus
                 if ( it != spc.molList().end())
                     molid.push_back(it->id);
                 else
-                    std::cerr << "# Charge multipole  warning: molecule not found!" << endl;
+                    throw std::runtime_error(name+": molecule not found");
             }
         }
 
@@ -2609,9 +2609,7 @@ namespace Faunus
                 }
             }
             if ( molid == -1 )
-            {
-                throw std::runtime_error("molecule " + molecule + " specified in 'widommolecule' does not exist");
-            }
+                throw std::runtime_error(name+": invalid molecule "+molecule);
 
         }
     };
@@ -2743,6 +2741,7 @@ namespace Faunus
      * `virtualvolume`   |  `Analysis::VirtualVolumeMove`
      * `chargemultipole` |  `Analysis::ChargeMultipole`
      * `xtctraj`         |  `Analysis::XTCtraj`
+     * `widommolecule`   |  `AnalysisWidomMolecule`
      * `meanforce`       |  `Analysis::MeanForce`
      * `_jsonfile`       |  ouput json file w. collected results
      *

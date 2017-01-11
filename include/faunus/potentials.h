@@ -646,7 +646,7 @@ namespace Faunus {
         typedef LennardJonesMixed<LorentzBerthelot> Tbase;
 
         template<class T>
-          inline WeeksChandlerAndersen(const T &dummy, const string &dir="")
+          inline WeeksChandlerAndersen(const T &dummy, const string &dir="lj")
           : Tbase( dummy, dir ), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
             name="WeeksChandlerAnderson";
           }

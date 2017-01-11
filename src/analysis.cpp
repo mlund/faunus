@@ -82,6 +82,7 @@ namespace Faunus
             if ( cnt > 0 )
             {
                 j[name] = {
+                    {"nstep", steps},
                     {"samples", cnt},
                     {"relative time", timer.result()}
                 };

@@ -929,6 +929,8 @@ namespace Faunus
      * Keyword   | Description
      * :-------- | :---------------------------------------------
      * `dr`      | Distance resolution in angstrom (default: 0.2)
+     * `groups`  | Exactly two group names (array)
+     * `file`    | Output filename
      *
      * @date Malmo 2014
      * @note Needs testing!
@@ -1104,18 +1106,19 @@ namespace Faunus
             name = "Multipole Distribution";
             dr = j.value("dr", 0.2);
             filename = j.value("file", string("multipole.dat"));
-
-            vector<string> names = j["groups"];
-            if (names.size()==2) {
-              auto f1 = s.molecule.find( names[0] );
-              auto f2 = s.molecule.find( names[1] );
-              if (f1 != s.molecule.end())
-                if (f2 != s.molecule.end()) {
-                  id1 = (*f1).id;
-                  id2 = (*f2).id;
-                  return;
-                }
-            }
+	    if (j.count("groups")==1) {
+		    vector<string> names = j["groups"];
+		    if (names.size()==2) {
+			    auto f1 = s.molecule.find( names[0] );
+			    auto f2 = s.molecule.find( names[1] );
+			    if (f1 != s.molecule.end())
+				    if (f2 != s.molecule.end()) {
+					    id1 = (*f1).id;
+					    id2 = (*f2).id;
+					    return;
+				    }
+		    }
+	    }
             throw std::runtime_error(name + ": specify exactly two existing group names");
             //string name1 = j.value("group1", string());
             //string name2 = j.value("group2", string());

@@ -56,6 +56,11 @@ def mkinput():
         "salt": { "Ninit": 50, "atomic": True, "atoms": "La Cl Cl Cl" }
         },
 
+      "analysis" : {
+        "widom" : { "nstep":20, "ninsert":15, "particles":["La", "Cl", "Cl", "Cl"] },
+        "widomscaled" : { "nstep":20, "ninsert":15, "lB":7.0 }
+        },
+
       "atomlist": {
           "La":   { "q": 3, "r": 2, "dp": 20, "activity": 0.001601 },
           "Cl":   { "q": -1,"r": 2, "dp": 50, "activity": 0.02276 },

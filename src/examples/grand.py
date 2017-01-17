@@ -32,7 +32,14 @@ def mkinput():
         "unittest"    : { "testfile": "grand.test", "stable": False }, 
         "coulomb"     : { "epsr": 80 },
         "temperature" : 298.15
-        }, 
+        },
+
+      "analysis" : {
+        "widom" : { "nstep":20, "ninsert":15, "particles":["Na", "Cl"] },
+        "widomscaled" : { "nstep":20, "ninsert":15, "lB":7.0 },
+        "pqrfile" :   { "file": "grand.pqr" },
+        "statefile" : { "file": "state" }
+        },
 
       "atomlist": {
         "Na": { "q":  1.0, "r": 2.0, "dp": 50, "activity": 0.05 }, 

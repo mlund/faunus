@@ -1140,6 +1140,12 @@ namespace Faunus
      * to insert a collection of particles which, when summed, should
      * have no net charge. This is used to calculate the mean excess
      * chemical potential and activity coefficient.
+     *
+     *  Keyword    | Description
+     *  ---------- | ---------------------------------------
+     *  `ninsert`  | Number of insertions per sampling event (int)
+     *  `nstep`    | Sample every n'th step (int)
+     *  `particles`| Atom names to simultaneously insert (array)
      */
     template<class Tspace>
     class Widom : public AnalysisBase
@@ -1153,7 +1159,7 @@ namespace Faunus
         Average<double> expsum; //!< Average of the excess chemical potential
         int ghostin;            //!< Number of insertions per sample event
 
-        string _info()
+        string _info() override
         {
             using namespace Faunus::textio;
             std::ostringstream o;
@@ -1173,6 +1179,7 @@ namespace Faunus
               { name,
                 {
                   { "number of insertions", expsum.cnt },
+                  { "ninsert", ghostin },
                   { "muexcess", muex() },
                   { "activity coefficient", gamma() }
                 }
@@ -1181,13 +1188,16 @@ namespace Faunus
           return Tmjson();
         }
 
-        void _test( UnitTest &test ) { test("widom_muex", muex()); }
+        void _test( UnitTest &test ) override
+        {
+            test("widom_muex", muex());
+        }
 
         void _sample() override
         {
-            int n = g.size();
+            int n = g.size(), cnt=ghostin;
             if ( n > 0 )
-                while ( ghostin-- > 0 )
+                while ( cnt-- > 0 )
                 {
                     double du = 0;
                     for ( auto &i : g )
@@ -1204,7 +1214,7 @@ namespace Faunus
     protected:
         std::vector<Tparticle> g; //!< Pool of ghost particles to insert (simultaneously)
     public:
-        Widom( Tmjson &j, Energy::Energybase<Tspace> &pot, Tspace &spc ) : spc(&spc), pot(&pot), AnalysisBase(j)
+        Widom( Tmjson &j, Energy::Energybase<Tspace> &pot, Tspace &spc ) : spc(spc), pot(pot), AnalysisBase(j)
         {
             name = "Multi Particle Widom Analysis";
             cite = "doi:10/dkv4s6";
@@ -1213,8 +1223,9 @@ namespace Faunus
 
             if (j.count("particles")>0)
                 if (j["particles"].is_array()) {
-                    for (auto name : j["particles"]) {
-                        Tparticle a = atom[name];
+                    for (auto &name : j["particles"]) {
+                        Tparticle a;
+                        a = atom[ name.get<string>() ];
                         add(a);
                     }
                     return;
@@ -1262,12 +1273,19 @@ namespace Faunus
      * Currently this works **only** for the primitive model of electrolytes, i.e.
      * hard, charged spheres interacting with a Coulomb potential.
      *
+     * JSON input:
+     *
+     *  Keyword    | Description
+     *  ---------- | ---------------------------------------
+     *  `lB`       | Bjerrum length (angstrom)
+     *  `ninsert`  | Number of intertions per sampling event
+     *  `nstep`    | Sample every n'th step
+     *
      * @warning Works only for the primitive model
      * @note This is a conversion of the Widom routine found in the `bulk.f`
      *       fortran program by Bolhuis/Jonsson/Akesson at Lund University.
      * @author Martin Trulsson and Mikael Lund
      * @date Lund / Prague 2007-2008.
-     * @todo Rewrite to use _sample()
      */
     template<class Tspace>
     class WidomScaled : public AnalysisBase
@@ -1375,9 +1393,24 @@ namespace Faunus
             return o.str();
         }
 
+        Tmjson _json() override
+        {
+          if ( cnt * ghostin>0 )
+            return {
+              { name,
+                {
+                  { "number of insertions", cnt*ghostin },
+                  { "ninsert", ghostin },
+                  { "lB", lB }
+                }
+              }
+            };
+          return Tmjson();
+        }
+
+
         void _sample() override
         {
-            assert(lB > 0);
             auto &geo = spc.geo;
             auto &p = spc.p;
             if ( !g.empty())
@@ -1440,12 +1473,14 @@ namespace Faunus
 
     public:
 
-        WidomScaled( Tmjson &j, Tspace &spc ) : spc(&spc), AnalysisBase(j)
+        WidomScaled( Tmjson &j, Tspace &spc ) : spc(spc), AnalysisBase(j)
         {
             lB = j.value("lB", 7.0);
             ghostin = j.value("ninsert", 10);
             name = "Single particle Widom insertion w. charge scaling";
             cite = "doi:10/ft9bv9 + doi:10/dkv4s6";
+
+            add(spc.p);
         }
 
         /**
@@ -2340,6 +2375,12 @@ namespace Faunus
         }
     };
 
+    /**
+     * @brief Analysis to be performed once at the end of the simulation
+     *
+     * This analysis takes a function object `void(string)` that will
+     * be called once at the very end of the simulation.
+     */
     class WriteOnceFileAnalysis : public AnalysisBase
     {
     protected:
@@ -2754,7 +2795,9 @@ namespace Faunus
      * `virtualvolume`   |  `Analysis::VirtualVolumeMove`
      * `chargemultipole` |  `Analysis::ChargeMultipole`
      * `xtctraj`         |  `Analysis::XTCtraj`
-     * `widommolecule`   |  `AnalysisWidomMolecule`
+     * `widom`           |  `Analysis::Widom`  
+     * `widomscaled`     |  `Analysis::WidomScaled`
+     * `widommolecule`   |  `Analysis::WidomMolecule`
      * `meanforce`       |  `Analysis::MeanForce`
      * `_jsonfile`       |  ouput json file w. collected results
      *
@@ -2764,7 +2807,7 @@ namespace Faunus
      *
      * Upon destruction, a json file, "analysis_out.json"
      * with collected results will be saved. The name
-     * can be customized by adding the "_jsonfile" keyword
+     * can be customized by adding the `_jsonfile` keyword
      * to the "analysis" list.
      */
     class CombinedAnalysis : public AnalysisBase
@@ -2831,6 +2874,12 @@ namespace Faunus
 
                 if ( i.key() == "cyldensity" )
                     v.push_back(Tptr(new CylindricalDensity<Tspace>(val, spc)));
+
+                if ( i.key() == "widom" )
+                    v.push_back(Tptr(new Widom<Tspace>(val, pot, spc)));
+
+                if ( i.key() == "widomscaled" )
+                    v.push_back(Tptr(new WidomScaled<Tspace>(val, spc)));
 
                 if ( i.key() == "widommolecule" )
                     v.push_back(Tptr(new WidomMolecule<Tspace>(val, pot, spc)));

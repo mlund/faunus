@@ -27,6 +27,10 @@ echo '{
     }
   },
 
+  "analysis" : {
+    "widomscaled" : {"nstep":20, "ninsert":20, "lB":7}
+  },
+
   "system" : {
     "temperature"  : 300,
     "cuboid"       : { "len" : 100 },

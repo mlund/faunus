@@ -203,16 +203,23 @@ namespace Faunus
 
     Cuboid::Cuboid( Tmjson &j, const string sec ) : Geometrybase("Cuboid")
     {
-        auto m = j["system"][sec];
-        assert(!m.empty() && "Cuboid json section is empty");
-        scaledirstr = m["scaledir"] | string("XYZ");
-        scaledir = (scaledirstr == "XY") ? XY : XYZ;
-        double cubelen = m["len"] | -1.0;
-        if ( cubelen < 1e-9 )
-            len << (m["xyzlen"] | string("0 0 0"));
-        else
-            len.x() = len.y() = len.z() = cubelen;
-        setlen(len);
+        if (j.count("system")>0)
+            if (j["system"].count(sec)>0) {
+                auto _j = j["system"][sec];
+                if (_j.is_object()) {
+                    scaledirstr = _j.value("scaledir", string("XYZ"));
+                    scaledir = (scaledirstr == "XY") ? XY : XYZ;
+                    double cubelen = _j.value("len", -1.0);
+                    if ( cubelen < 1e-9 )
+                        len << (_j.value("xyzlen", string("0 0 0")));
+                    else
+                        len.x() = len.y() = len.z() = cubelen;
+                    setlen(len);
+                    if (getVolume()>0)
+                        return;
+                }
+            }
+        throw std::runtime_error(name + ": invalid json input");
     }
 
     /**

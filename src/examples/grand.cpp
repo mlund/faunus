@@ -16,6 +16,7 @@ int main()
     spc.load("state", Tspace::RESIZE);             // load old config. from disk (if any)
 
     Move::Propagator<Tspace> mv(mcp, pot, spc);
+    Analysis::CombinedAnalysis analysis(mcp, pot, spc);
 
     cout << atom.info() + spc.info() + pot.info() + "\n";
 
@@ -24,18 +25,17 @@ int main()
     {
         while ( loop[1] )
         {
-            mv.move();                           // move!
-        }                                           // end of micro loop
+            mv.move();                            // move!
+            analysis.sample(); 
+        }                                         // end of micro loop
         cout << loop.timing();
     }                                             // end of macro loop
 
-    FormatPQR::save("confout.pqr", spc.p);        // PQR snapshot for VMD etc.
-    spc.save("state");                            // final simulation state
-
     UnitTest test(mcp);                           // class for unit testing
     mv.test(test);
+    analysis.test(test);
 
-    cout << loop.info() + mv.info() + test.info(); 
+    cout << loop.info() + mv.info() + analysis.info() + test.info(); 
 
     std::ofstream o("move_out.json");
     o << std::setw(4) << mv.json() << endl;

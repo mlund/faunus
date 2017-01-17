@@ -264,14 +264,14 @@ namespace Faunus
           if ( !atom.key().empty())
               name = atom.key();
 
-          activity = _js["activity"] | 0.0;
+          activity = _js.value("activity", 0.0);
           chemPot = log(activity * 1.0_molar);
-          alpha << (_js["alpha"] | string());
+          alpha << _js.value("alpha", string());
           alpha /= pc::lB(1.0);
-          theta << (_js["theta"] | string());
+          theta << _js.value("theta", string());
           theta *= 1.0_Debye;
-          dp = _js["dp"] | 0.0;
-          dprot = (_js["dprot"] | 0.0) * 1._deg; // deg->rads
+          dp = _js.value("dp", 0.0);
+          dprot = _js.value("dprot", 0.0) * 1.0_deg; // deg->rads
           eps = (_js["eps"] | 0.0) * 1.0_kJmol;
           hydrophobic = _js["hydrophobic"] | false;
           mu << (_js["mu"] | string("0 0 0"));

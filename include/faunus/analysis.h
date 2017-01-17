@@ -955,7 +955,7 @@ namespace Faunus
 
         struct data
         {
-            double tot, ii, id, iq, dd;
+            double tot, ii, id, iq, dd, mucorr;
             unsigned long int cnt;
 
             data() : cnt(0) {}
@@ -1020,7 +1020,6 @@ namespace Faunus
             auto r = spc.geo.vdist(g1.cm, g2.cm);
             double r2inv = 1 / r.squaredNorm();
             double rinv = sqrt(r2inv);
-            double r3inv = rinv * r2inv;
 
             // multipolar energy
             coulomb.setSpace(spc);
@@ -1028,9 +1027,10 @@ namespace Faunus
             d.cnt++;
             d.tot = g2g(spc, g1, g2); // exact el. energy
             d.ii = a.charge * b.charge * rinv; // ion-ion, etc.
-            d.id = (a.charge * b.mu.dot(r) - b.charge * a.mu.dot(r)) * r3inv;
+            d.id = q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
             d.dd = mu2mu(a.mu, b.mu, a.muscalar * b.muscalar, r);
             d.iq = q2quad(a.charge, b.theta, b.charge, a.theta, r);
+            d.mucorr = a.mu.dot(b.mu);
 
             // add to grand average
             int key = to_bin(1 / rinv, dr);
@@ -1045,6 +1045,7 @@ namespace Faunus
                 it->second.iq += d.iq;
                 it->second.dd += d.dd;
                 it->second.tot += d.tot;
+                it->second.mucorr += d.mucorr;
             }
         }
 
@@ -1060,7 +1061,7 @@ namespace Faunus
                 f << "# Multipolar energy analysis (kT)\n"
                   << std::left << setw(w) << "# r/AA" << std::right << setw(w) << "exact"
                   << setw(w) << "total" << setw(w) << "ionion" << setw(w) << "iondip"
-                  << setw(w) << "dipdip" << setw(w) << "ionquad\n";
+                  << setw(w) << "dipdip" << setw(w) << "ionquad" << setw(w) << "mucorr\n";
                 for ( auto &i : m )
                     f << std::left
                       << setw(w) << i.first * dr                  // r
@@ -1071,6 +1072,7 @@ namespace Faunus
                       << setw(w) << lB * i.second.id / i.second.cnt
                       << setw(w) << lB * i.second.dd / i.second.cnt
                       << setw(w) << lB * i.second.iq / i.second.cnt
+                      << setw(w) << i.second.mucorr / i.second.cnt
                       << "\n";
             }
         }
@@ -1093,7 +1095,8 @@ namespace Faunus
               {
                 { "groups", { spc.molecule[id1].name, spc.molecule[id2].name} },
                 { "file", filename },
-                { "dr", dr }
+                { "dr", dr },
+                { "lB", coulomb.bjerrumLength() }
               }
             }
           };
@@ -1120,20 +1123,6 @@ namespace Faunus
 		    }
 	    }
             throw std::runtime_error(name + ": specify exactly two existing group names");
-            //string name1 = j.value("group1", string());
-            //string name2 = j.value("group2", string());
-
-            //assert( !name1.empty() );
-            //assert( !name2.empty() );
-
-            //auto f1 = s.molecule.find(name1);
-            //auto f2 = s.molecule.find(name2);
-
-            //assert(f1 != s.molecule.end());
-            //assert(f2 != s.molecule.end());
-
-            //id1 = *f1.id;
-            //id2 = *f2.id;
         }
 
         // @todo Use json output instead

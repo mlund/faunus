@@ -280,10 +280,15 @@ namespace Faunus
      */
     Coulomb::Coulomb( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
     {
-        assert(!j[sec].is_null());
         name = "Coulomb";
-        epsilon_r = j[sec]["epsr"] | 80.0;
-        depsdt = (j[sec]["depsdt"] | -0.368) * pc::T() / epsilon_r;
+        Tmjson _j;
+        if (j.count(sec)==0)
+           _j = j;
+        else
+           _j = j[sec];
+
+        epsilon_r = _j.value("epsr", 80.0);
+        depsdt = _j.value("depsdt", -0.368*pc::T()/epsilon_r);
         lB = pc::lB(epsilon_r);
     }
 

@@ -1152,11 +1152,17 @@ namespace Faunus
      * have no net charge. This is used to calculate the mean excess
      * chemical potential and activity coefficient.
      */
-    template<class Tparticle>
+    template<class Tspace>
     class Widom : public AnalysisBase
     {
     private:
+        typedef typename Tspace::ParticleType Tparticle;
+
+        Tspace &spc;
+        Energy::Energybase<Tspace> &pot;
+
         Average<double> expsum; //!< Average of the excess chemical potential
+        int ghostin;            //!< Number of insertions per sample event
 
         string _info()
         {
@@ -1171,22 +1177,66 @@ namespace Faunus
             return o.str() + "\n";
         }
 
+        Tmjson _json() override
+        {
+          if ( expsum.cnt>0 )
+            return {
+              { name,
+                {
+                  { "number of insertions", expsum.cnt },
+                  { "muexcess", muex() },
+                  { "activity coefficient", gamma() }
+                }
+              }
+            };
+          return Tmjson();
+        }
+
         void _test( UnitTest &test ) { test("widom_muex", muex()); }
+
+        void _sample() override
+        {
+            int n = g.size();
+            if ( n > 0 )
+                while ( ghostin-- > 0 )
+                {
+                    double du = 0;
+                    for ( auto &i : g )
+                        spc.geo.randompos(i);     // random ghost positions
+                    for ( auto &i : g )
+                        du += pot.all2p(spc.p, i);  // energy with all particles in space
+                    for ( int i = 0; i < n - 1; i++ )
+                        for ( int j = i + 1; j < n; j++ )
+                            du += pot.p2p(g[i], g[j]);// energy between ghost particles
+                    expsum += exp(-du);
+                }
+        }
 
     protected:
         std::vector<Tparticle> g; //!< Pool of ghost particles to insert (simultaneously)
     public:
-        Widom()
+        Widom( Tmjson &j, Energy::Energybase<Tspace> &pot, Tspace &spc ) : spc(&spc), pot(&pot), AnalysisBase(j)
         {
             name = "Multi Particle Widom Analysis";
             cite = "doi:10/dkv4s6";
+
+            ghostin = j.value("ninsert", 10);
+
+            if (j.count("particles")>0)
+                if (j["particles"].is_array()) {
+                    for (auto name : j["particles"]) {
+                        Tparticle a = atom[name];
+                        add(a);
+                    }
+                    return;
+                }
+            throw std::runtime_error(name + ": invalid json input");
         }
 
-        void add( Tparticle p ) { g.push_back(p); }
+        void add( Tparticle &a ) { g.push_back(a); }
 
         /* @brief Add particle to insert - sum of added particle charges should be zero.*/
-        template<class Tpvec>
-        void add( Tpvec &p )
+        void add( typename Tspace::ParticleVector &p )
         {
             std::map<short, bool> map; // replace w. `std::set`
             for ( auto i : p )
@@ -1204,26 +1254,6 @@ namespace Faunus
 
         /** @brief Sampled mean excess chemical potential */
         double muex() { return -log(expsum.avg()) / g.size(); }
-
-        /** @brief Insert and analyse `n` times */
-        template<class Tspace, class Tenergy>
-        void sample( Tspace &spc, Tenergy &pot, int ghostin )
-        {
-            int n = g.size();
-            if ( n > 0 )
-                while ( ghostin-- > 0 )
-                {
-                    double du = 0;
-                    for ( auto &i : g )
-                        spc.geo.randompos(i);     // random ghost positions
-                    for ( auto &i : g )
-                        du += pot.all2p(spc.p, i);  // energy with all particles in space
-                    for ( int i = 0; i < n - 1; i++ )
-                        for ( int j = i + 1; j < n; j++ )
-                            du += pot.p2p(g[i], g[j]);// energy between ghost particles
-                    expsum += exp(-du);
-                }
-        }
     };
 
     /**
@@ -1259,6 +1289,9 @@ namespace Faunus
         typedef std::vector<double> Tvec;
         typedef typename Tspace::ParticleType Tparticle;
         typename Tspace::ParticleVector g;//!< list of test particles
+
+        Tspace &spc;
+
         Tvec chel;          //!< electrostatic
         Tvec chhc;          //!< hard collision
         Tvec chex;          //!< excess
@@ -1310,7 +1343,7 @@ namespace Faunus
             return (geo.sqdist(a, b) < s * s) ? true : false;
         }
 
-        string _info()
+        string _info() override
         {
             using namespace textio;
             std::ostringstream o;
@@ -1353,65 +1386,11 @@ namespace Faunus
             return o.str();
         }
 
-    public:
-
-        /**
-           * @param bjerrumLength Bjerrum length [angstrom]
-           * @param insertions Number of insertions per call to `insert()`
-           */
-        WidomScaled( double bjerrumLength, int insertions )
-        {
-            assert(insertions >= 0);
-            assert(bjerrumLength > 0);
-            name = "Single particle Widom insertion w. charge scaling";
-            cite = "doi:10/ft9bv9 + doi:10/dkv4s6";
-            lB = bjerrumLength;
-            ghostin = insertions;
-        }
-
-        /**
-           * @brief Add ghost particle
-           *
-           * This will add particle `p` to the list of ghost particles
-           * to insert.
-           */
-        void add( const Tparticle &p )
-        {
-            g.push_back(p);
-            init();
-        }
-
-        /**
-           * @brief Add ghost particles
-           *
-           * This will scan the particle vector for particles and each unique type
-           * will be added to the list a ghost particles to insert.
-           */
-        template<class Tpvec>
-        void add( const Tpvec &p )
-        {
-            std::set<typename Tparticle::Tid> ids;
-            for ( auto &i : p )
-                ids.insert(i.id);
-            for ( auto i : ids )
-            {
-                Tparticle a;
-                a = atom[i];
-                add(a);
-            }
-        }
-
-        /**
-           * @brief Do test insertions and sample excess chemical potential
-           *
-           * @param p List of particles to insert into. This will typically be the main
-           *          particle vector, i.e. `Space::p`.
-           * @param geo Geometry to use for distance calculations and random position generation
-           */
-        template<class Tpvec, class Tgeo>
-        void sample( const Tpvec &p, Tgeo &geo )
+        void _sample() override
         {
             assert(lB > 0);
+            auto &geo = spc.geo;
+            auto &p = spc.p;
             if ( !g.empty())
                 if ( !p.empty())
                 {
@@ -1468,6 +1447,48 @@ namespace Faunus
                         }
                     }
                 }
+        }
+
+    public:
+
+        WidomScaled( Tmjson &j, Tspace &spc ) : spc(&spc), AnalysisBase(j)
+        {
+            lB = j.value("lB", 7.0);
+            ghostin = j.value("ninsert", 10);
+            name = "Single particle Widom insertion w. charge scaling";
+            cite = "doi:10/ft9bv9 + doi:10/dkv4s6";
+        }
+
+        /**
+           * @brief Add ghost particle
+           *
+           * This will add particle `p` to the list of ghost particles
+           * to insert.
+           */
+        void add( const Tparticle &p )
+        {
+            g.push_back(p);
+            init();
+        }
+
+        /**
+           * @brief Add ghost particles
+           *
+           * This will scan the particle vector for particles and each unique type
+           * will be added to the list a ghost particles to insert.
+           */
+        template<class Tpvec>
+        void add( const Tpvec &p )
+        {
+            std::set<typename Tparticle::Tid> ids;
+            for ( auto &i : p )
+                ids.insert(i.id);
+            for ( auto i : ids )
+            {
+                Tparticle a;
+                a = atom[i];
+                add(a);
+            }
         }
 
     }; // end of WidomScaled

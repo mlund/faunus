@@ -680,25 +680,6 @@ namespace Faunus
                 t("PolymerShape_Rg" + m.first, Rg[m.first].avg());
         }
 
-        Point vectorgyrationRadiusSquared( const Group &pol, const Tspace &spc ) const
-        {
-            assert(spc.geo.dist(pol.cm, pol.massCenter(spc)) < 1e-9
-                       && "Mass center must be in sync.");
-            double sum = 0;
-            Point t, r2(0, 0, 0);
-            for ( auto i : pol )
-            {
-                t = spc.p[i] - pol.cm;                     // vector to center of mass
-                spc.geo.boundary(t);                     // periodic boundary (if any)
-                r2.x() += spc.p[i].mw * t.x() * t.x();
-                r2.y() += spc.p[i].mw * t.y() * t.y();
-                r2.z() += spc.p[i].mw * t.z() * t.z();
-                sum += spc.p[i].mw;                      // total mass
-            }
-            assert(sum > 0 && "Zero molecular weight not allowed.");
-            return r2 * (1. / sum);
-        }
-
         double gyrationRadiusSquared( const Group &pol, const Tspace &spc )
         {
             assert(spc.geo.dist(pol.cm, pol.massCenter(spc)) < 1e-9
@@ -743,7 +724,7 @@ namespace Faunus
         PolymerShape( Tmjson &j, Tspace &spc ) : AnalysisBase(j), spc(&spc)
         {
             name = "Polymer Shape";
-            auto m = j["mollist"];
+            auto m = j.at("mollist");
             for ( auto &i : m )
             {   // loop over molecule names
                 string molname = i.get<string>();
@@ -753,6 +734,25 @@ namespace Faunus
                 else
                     throw std::runtime_error(name + ": molecule not found");
             }
+        }
+
+        Point vectorgyrationRadiusSquared( const Group &pol, const Tspace &spc ) const
+        {
+            assert(spc.geo.dist(pol.cm, pol.massCenter(spc)) < 1e-9
+                       && "Mass center must be in sync.");
+            double sum = 0;
+            Point t, r2(0, 0, 0);
+            for ( auto i : pol )
+            {
+                t = spc.p[i] - pol.cm;                     // vector to center of mass
+                spc.geo.boundary(t);                     // periodic boundary (if any)
+                r2.x() += spc.p[i].mw * t.x() * t.x();
+                r2.y() += spc.p[i].mw * t.y() * t.y();
+                r2.z() += spc.p[i].mw * t.z() * t.z();
+                sum += spc.p[i].mw;                      // total mass
+            }
+            assert(sum > 0 && "Zero molecular weight not allowed.");
+            return r2 * (1. / sum);
         }
     };
 
@@ -2913,13 +2913,13 @@ namespace Faunus
 
         /** @brief Find pointer to given analysis type; `nullptr` if not found. */
         template<class Tanalysis>
-        Tanalysis *get()
+        std::shared_ptr<Tanalysis> get()
         {
             static_assert(std::is_base_of<AnalysisBase, Tanalysis>::value,
                           "`Tanalysis` must be derived from `Analysis::Analysisbase`");
             for ( auto b : v )
             {
-                auto ptr = dynamic_cast<Tanalysis *>( b );
+                auto ptr = std::dynamic_pointer_cast<Tanalysis>( b );
                 if ( ptr != nullptr )
                     return ptr;
             }

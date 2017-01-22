@@ -284,32 +284,39 @@ namespace Faunus {
        * @param v Vector of particle vectors
        */
       template<class Tparticle, class Talloc>
-        static void load(const std::string &file, vector< vector<Tparticle,Talloc> > &v) {
-          std::ifstream in( file );
-          if ( in ) {
-            Tparticle a;
-            vector<Tparticle,Talloc> p;
-            int iatom, ires;
-            std::string line,key,aname,rname;
-            while ( std::getline( in, line ) ) {
-              std::stringstream o( line );
-              while ( o >> key )
-                if ( key=="ATOM" || key=="HETATM" ) {
-                  o >> iatom >> aname;
-                  a=atom[aname];
-                  o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius; 
-                  p.push_back(a);
-                  if (a.id==0)
-                    std::cerr << "Warning: Atom name " << aname << " is not in the atom list.\n";
-                } else if ( key=="END" ) {
-                  v.push_back( p );
-                  p.clear();
-                  p.reserve( v.back().size() );
-                }
-            }
-          } else
-            std::cerr << "Warning: PQR trajectory " + file + " could not be opened." << endl;
+      static void load( const std::string &file, vector <vector<Tparticle, Talloc>> &v )
+      {
+        std::ifstream in(file);
+        if ( in )
+        {
+          Tparticle a;
+          vector<Tparticle, Talloc> p;
+          int iatom, ires;
+          std::string line, key, aname, rname;
+          while ( std::getline(in, line))
+          {
+            std::stringstream o(line);
+            while ( o >> key )
+              if ( key == "ATOM" || key == "HETATM" )
+              {
+                o >> iatom >> aname;
+                a = atom[aname];
+                o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius;
+                p.push_back(a);
+                if ( a.id == 0 )
+                  std::cerr << "Warning: Atom name " << aname << " is not in the atom list.\n";
+              }
+              else if ( key == "END" )
+              {
+                v.push_back(p);
+                p.clear();
+                p.reserve(v.back().size());
+              }
+          }
         }
+        else
+          throw std::runtime_error("Error loading PQR trajectory " + file);
+      }
 
       /**
        * @param file Filename

@@ -126,8 +126,9 @@ namespace Faunus
   public:
       inline MCLoop( Tmjson &j, string sec = "system" )
       {
-          auto _j = j[sec]["mcloop"];
-          base::set({_j["macro"] | 10, _j["micro"] | 1000});
+          Tmjson _j = j.at(sec).at("mcloop");
+          base::set( { _j.value("macro", 0), _j.value("micro", 0) } );
+          assert(base::l[0] * base::l[1] >= 0);
       }
 
       inline std::string timing() const

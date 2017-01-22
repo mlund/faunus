@@ -1254,7 +1254,7 @@ namespace Faunus
        * distribution is respected, otherwise all conformations
        * have equal intrinsic weight. Upon insertion, the new conformation
        * is randomly oriented and placed on top of the mass-center of
-       * an exising molecule.
+       * an exising molecule. That is, there is no mass center movement.
        *
        * The JSON input is identical to `Move::TranslateRotate` except that
        * displacement parameters are ignored.
@@ -1276,27 +1276,40 @@ namespace Faunus
         typedef MoleculeData<typename Tspace::ParticleVector> Tmoldata;
         RandomInserter<Tmoldata> inserter;
 
-        string _info() override { return string(); }
-
         void _trialMove() override
         {
-
             auto gvec = spc->findMolecules(base::currentMolId);
             assert(!gvec.empty());
             igroup = *slump.element(gvec.begin(), gvec.end());
+            assert(igroup != nullptr); // make sure we really found a group
 
             if ( !igroup->empty())
             {
+                assert( igroup->cm == igroup->cm_trial);
+                inserter.offset = igroup->cm_trial;
                 auto pnew = inserter(spc->geo, spc->p, spc->molecule[igroup->molId]); // get conformation
-                Geometry::translate(spc->geo, pnew, igroup->cm_trial); // place on top of existing molecule
-                std::copy(pnew.begin(),
-                          pnew.end(),
-                          spc->trial.begin() + igroup->front()); // override w. new conformation
 
-                assert(pnew.size() == size_t(igroup->size()));
-                assert(spc->p.size() == spc->trial.size());
+                if (pnew.size() == size_t(igroup->size()))
+                    std::copy( pnew.begin(), pnew.end(),
+                               spc->trial.begin() + igroup->front()); // override w. new conformation
+                else
+                    throw std::runtime_error(base::title + ": conformation atom count mismatch");
+
+                // this move shouldn't move mass centers, so let's check if this is true:
+                igroup->cm_trial = Geometry::massCenter(spc->geo, spc->trial, *igroup);
+                if ( (igroup->cm_trial - igroup->cm).norm()>1e-6 )
+                    throw std::runtime_error(base::title + ": unexpected mass center movement");
             }
-            assert(igroup != nullptr); // make sure we really found a group
+
+            assert(spc->p.size() == spc->trial.size());
+        }
+
+        double _energyChange() override
+        {
+            double du = base::_energyChange();
+            base::alternateReturnEnergy = du
+                + base::pot->g_internal(spc->trial, *igroup) - base::pot->g_internal(spc->p, *igroup);
+            return du;
         }
 
     public:
@@ -1305,7 +1318,10 @@ namespace Faunus
         {
             base::title = "Conformation Swap";
             inserter.checkOverlap = false; // will be done by _energyChange()
-            inserter.dir = {0, 0, 0}; // initial placement at origo
+            inserter.dir = {0, 0, 0};      // initial placement at origo
+            inserter.rotate = true;        // rotate conformation randomly
+            base::useAlternativeReturnEnergy=true; // yes, we Metropolis doesn't need internal energy change
+            base::dp_trans = 1; // if zero, base::energyChange() returns 0 which we don't want!
         }
     };
 

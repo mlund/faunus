@@ -1,118 +1,101 @@
 #include <faunus/faunus.h>
-#include <faunus/ewald.h>
 
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-#define EWALD
+typedef Space<Geometry::Cuboid,CapParticle> Tspace;
+//typedef DebyeHuckel TpairpotEl;
+typedef Coulomb TpairpotEl;
+typedef CombinedPairPotential<TpairpotEl,HardSphereCap> Tpairpot;
 
-typedef Space<Geometry::Cuboid> Tspace;
-typedef LennardJonesLB_SF TpairpotLJ;
-#ifdef EWALD
-typedef TpairpotLJ Tpairpot;
-typedef IonIonEwald TpairpotEl;
-#else
-typedef CombinedPairPotential<TpairpotEl,TpairpotLJ> Tpairpot;
-typedef IonIonQ TpairpotEl; // IonIonQ IonIonSP3  MultipoleWolf<true,false,false,false,true>
-#endif
+template<class Tspace, class Tanalyze>
+void analyzeDirection(Tspace &spc, Tanalyze &mucorrCC, Tanalyze &mucorrCS) {
+  for(unsigned int i = 0; i < spc.p.size()-1; i++) {
+    for(unsigned int j = i+1; j < spc.p.size(); j++) {
+      if(!spc.p[i].is_sphere && !spc.p[j].is_sphere) {
+	Point dirA = spc.p[i].cap_center_point/spc.p[i].cap_center;
+	Point dirB = spc.p[j].cap_center_point/spc.p[j].cap_center;
+	mucorrCC(spc.geo.dist(spc.p[i],spc.p[j])) += dirA.dot(dirB);
+      }
+      if(spc.p[i].is_sphere && !spc.p[j].is_sphere) {
+	double r = spc.geo.dist(spc.p[i],spc.p[j]);
+	Point dirA = spc.geo.vdist(spc.p[i],spc.p[j])/r;
+	Point dirB = spc.p[j].cap_center_point/spc.p[j].cap_center;
+	mucorrCS(r) += dirA.dot(dirB);
+      }
+      if(!spc.p[i].is_sphere && spc.p[j].is_sphere) {
+	double r = spc.geo.dist(spc.p[i],spc.p[j]);
+	Point dirA = spc.p[i].cap_center_point/spc.p[i].cap_center;
+	Point dirB = -spc.geo.vdist(spc.p[i],spc.p[j])/r;
+	mucorrCS(r) += dirA.dot(dirB);
+      }
+    }
+  }
+}
 
 int main() {
-  InputMap mcp("nemo.json");   
+  InputMap mcp("cap.json");   
   Tspace spc(mcp);
   int seed = mcp["seed"];
   cout << "Seed: " << seed << endl;
   spc.load("state"); 
   slump.seed(seed);
+  double resolution = 0.2;
 
-#ifdef EWALD
-  auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp)
-    + Energy::ExternalPressure<Tspace>(mcp);
-#else
-  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
-    + Energy::ExternalPressure<Tspace>(mcp);
-#endif
-  auto potLJ = Energy::NonbondedVector<Tspace,TpairpotLJ>(mcp);
-  auto potEl = Energy::NonbondedVector<Tspace,TpairpotEl>(mcp);
-  
-  auto waters = spc.findMolecules("water");
+  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp);
+  auto caps = spc.findMolecules("cap");
+  auto spheres = spc.findMolecules("sphere");
   Move::Propagator<Tspace> mv( mcp, pot, spc );
-  vector<double> energy_T;
-  vector<double> energy_LJ;
-  //vector<double> energy_EP;
-  Analysis::RadialDistribution<> rdfOO(0.02);
-  Analysis::RadialDistribution<> rdfOH(0.02);
-  Analysis::RadialDistribution<> rdfHH(0.02);
-  Table2D<double,Average<double> > mucorr;
-  mucorr.setResolution(0.02);
-  Analysis::MultipoleAnalysis<Tspace> dian(spc,pot,mcp);
+  Analysis::RadialDistribution<> rdfCC(resolution);
+  Analysis::RadialDistribution<> rdfCS(resolution);
+  Analysis::RadialDistribution<> rdfSS(resolution);
+  Table2D<double,Average<double> > mucorrCC, mucorrCS;
+  mucorrCC.setResolution(resolution);
+  mucorrCS.setResolution(resolution);
   FormatXTC xtc(1000);
-
   EnergyDrift sys; 
-#ifdef EWALD
-  pot.setSpace(spc);
-#endif
 
   sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); 
   cout << atom.info() + spc.info() + pot.info();
   
-  int cnt = 0;
+  analyzeDirection(spc,mucorrCC,mucorrCS);
+  
   MCLoop loop(mcp);   
   while ( loop[0] ) {        
     while ( loop[1] ) {
-
       sys+=mv.move();
 
       double rnd = slump();
       if ( rnd > 0.8 ) {
-        rdfOO.sample( spc, atom["OW"].id, atom["OW"].id );
-        rdfOH.sample( spc, atom["OW"].id, atom["HW"].id );
-        rdfHH.sample( spc, atom["HW"].id, atom["HW"].id );
+        rdfCC.sample( spc, atom["C"].id, atom["C"].id );
+        rdfCS.sample( spc, atom["C"].id, atom["S"].id );
+        rdfSS.sample( spc, atom["S"].id, atom["S"].id );
 
-        energy_T.push_back(Energy::systemEnergy(spc,pot,spc.p));
-	energy_LJ.push_back(Energy::systemEnergy(spc,potLJ,spc.p));
-	//energy_EP.push_back(Energy::systemEnergy(spc,potEl,spc.p));
-
-	auto beg=spc.groupList().begin();
-	auto end=spc.groupList().end();
-	for (auto gi=beg; gi!=end; ++gi)
-	  for (auto gj=gi; ++gj!=end;) {
-	    Point mu_a = dipoleMoment(spc,*(*gi));
-	    Point mu_b = dipoleMoment(spc,*(*gj));
-	    double sca = mu_a.dot(mu_b);
-	    double r = spc.geo.dist((*gi)->cm,(*gj)->cm); 
-	    mucorr(r) += sca;
-	  }
+	analyzeDirection(spc,mucorrCC,mucorrCS);
 
         if ( rnd > 0.99 ) {
           xtc.setbox( spc.geo.len );
           xtc.save( "traj.xtc", spc.p );
         }
-        dian.sample(spc);
       }
-    } 
-    dian.save(std::to_string(cnt++));
+    }
     sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); 
-
     cout << loop.timing();
   } 
 
   // save to disk
   FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
-  spc.save("state");
-  rdfOO.save("rdfOO.dat");
-  rdfOH.save("rdfOH.dat");
-  rdfHH.save("rdfHH.dat");
-  mucorr.save("mucorr.dat");
-  dian.save();
+
+  if(mcp["saveState"] == 1)
+    spc.save("state");
+  rdfCC.save("rdfCC.dat");
+  rdfCS.save("rdfCS.dat");
+  rdfSS.save("rdfSS.dat");
+  mucorrCC.save("mucorrCC.dat");
+  mucorrCS.save("mucorrCS.dat");
 
   // print information
-  cout << loop.info() + sys.info() + mv.info() + pot.info() + dian.info() + potEl.info();
-
-  string file = "energy.dat";
-  std::ofstream f(file.c_str());
-  if (f)
-    for (unsigned int i = 0; i < energy_T.size(); i++)
-      f << std::left << std::setw(10) << energy_T.at(i)/spc.p.size()*3.0 << "     " << energy_LJ.at(i)/spc.p.size()*3.0  << endl;
+  cout << loop.info() + sys.info() + mv.info() + pot.info();
 
   return 0;
 }

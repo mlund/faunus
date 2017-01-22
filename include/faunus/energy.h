@@ -2586,7 +2586,7 @@ namespace Faunus {
                 if (std::find (m.second.begin(), m.second.end(), k) == m.second.end() || j > k) // check such that moved atoms does not interact OR moved atoms interact only once
 		  du += pot.i2i(p,j,k);
           } else {
-	    du += pot.g_internal(p, *g[i]);
+	    //du += pot.g_internal(p, *g[i]); // <=== FIX
           }
         }
         for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); i++) {

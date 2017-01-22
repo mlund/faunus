@@ -11,11 +11,11 @@ cp -f $source_tests_dir/capparticles.state state 2> /dev/null
 echo '{
   "atomlist" : {
     "Cap" : { "sigma":10.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":1.0, "cap_radius":5.0, "cap_center":5.0, "charge_position": -2.5 },
-    "Sph" : { "sigma":2.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":-0.1, "cap_radius":0.0, "cap_center":0.0, "charge_position": 0.0 }
+    "Sph" : { "sigma":10.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":-0.1, "cap_radius":0.0, "cap_center":0.0, "charge_position": 0.0 }
   },
   
   "xyz" : {
-    "z":0.0, "minX":-11.0, "maxX":11.0, "minY":-11.0, "maxY":11.0, "step":0.01, "scaled_center_point":0.8, "scaled_radius":1.2, "cone":true
+    "z":0.0, "minX":-11.0, "maxX":11.0, "minY":-11.0, "maxY":11.0, "step":0.01, "scaled_center_point":1.0, "scaled_radius":1.0, "cone":true
   },
 
   "moleculelist" : {

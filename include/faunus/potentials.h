@@ -389,8 +389,8 @@ namespace Faunus {
 	  Point cts =  ( r - capsphere.cap_center_point );    // Vector from origin of capsphere.cap pointing towards the center of 'sphere'
 	  Point closest_cap_point = ( capsphere + capsphere.cap_center_point ) + cts/cts.norm()*capsphere.cap_radius; // Closesed point from sphere.center to surface of capsphere.cap
 	  
-	  if( ( (capsphere - closest_cap_point).norm() <= capsphere.radius )) {   // If that point is closer than capsphere.radius then it truly is on the capsphere.cap
-	    if((sphere - closest_cap_point).norm() < sphere.radius)          // If the distance between sphere.center to the closesed point on capsphere is shorter than the radius of sphere then...
+	  if( ( (capsphere - closest_cap_point).norm() <= capsphere.radius ))   // If that point is closer than capsphere.radius then it truly is on the capsphere.cap
+	    if( (-r  + capsphere.cap_center_point + cts/cts.norm()*capsphere.cap_radius ).norm() < sphere.radius) {          // If the distance between sphere.center to the closesed point on capsphere is shorter than the radius of sphere then...
 	      return true;                                                   // Return collision
 	    return false;                                                    // Return no collision
 	  } else {
@@ -439,9 +439,14 @@ namespace Faunus {
 		return 0.0;
 	      }
 	      
+	      //cout << "HSC: distance: " << r1 << ", a.radius +b.radius: " << a.radius+b.radius << endl;
+	      
 	      // Both caps are in play
 	      // Fix later
 	      
+	      return pc::infty;
+	      
+	      /*
 	      Point nA = a.cap_center_point/a.cap_center; // Normalized normal vector of cap A
 	      Point nB = b.cap_center_point/b.cap_center; // Normalized normal vector of cap B
 	      
@@ -458,6 +463,7 @@ namespace Faunus {
 	      A << nA.x(),nA.y(),nA.z(),  nB.x(),nB.y(),nB.z();
 	      b0 << -dA, -dB;
 	      Eigen::Vector3f x0 = A.colPivHouseholderQr().solve(b0);
+	      */
 	      
 	      return 0.0;
 	    }

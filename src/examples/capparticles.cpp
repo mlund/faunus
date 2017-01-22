@@ -82,7 +82,7 @@ int main() {
   
   spc.p[0].update();
   spc.trial = spc.p;
-  
+  //FormatPQR::save("confout.pqr", spc.p, spc.geo.len); // final PQR snapshot for VMD etc.
   cout << " " << spc.p[0].x() << " " << spc.p[0].y() << " " << spc.p[0].z() << " " << spc.p[0].cap_center << " " << spc.p[0].cap_radius << " " << spc.p[0].radius << " " << spc.p[0].angle_p << " " << spc.p[0].angle_c;
   cout << " " << spc.p[1].x() << " " << spc.p[1].y() << " " << spc.p[1].z() << " " << spc.p[1].cap_center << " " << spc.p[1].cap_radius << " " << spc.p[1].radius << " " << spc.p[1].angle_p << " " << spc.p[1].angle_c;
   cout << " " << mcp["xyz"]["minX"] << " " << mcp["xyz"]["maxX"] << " " << mcp["xyz"]["minY"] << " " << mcp["xyz"]["maxY"] << " " << mcp["xyz"]["step"];

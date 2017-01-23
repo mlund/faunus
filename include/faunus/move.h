@@ -619,6 +619,73 @@ namespace Faunus
     }
 
     /**
+     * @brief Generate new configurations by looping through XTC trajectory
+     *
+     * This move will load frames from a trajectory file and with this
+     * replace particle positions in the system. No energy is evaluated
+     * and energyChange will always return 0.
+     *
+     * Notes:
+     *
+     *   - JSON keywords: `file`.
+     *   - Geometry must be derived from `Geometry::Cuboid`.
+     *   - Number of particle in Space must match that of the trajectory
+     *   - Particles must not overlap with geometry boundaries
+     *   - if the above is violated an exception is thrown
+     *
+     * @date January 2017
+     * @warning Untested
+     */
+    template<class Tspace, class base=Movebase<Tspace>>
+    class TrajectoryMove : public base
+    {
+        FormatXTC xtc;
+        bool _continue;
+        int framecnt;
+        string file;
+
+        void _acceptMove() override {};
+        void _rejectMove() override {};
+        string _info() override { return string(); };
+        double _energyChange() override { return 0; };
+
+        Tmjson _json() override
+        {
+            Tmjson js;
+            if ( base::cnt > 0 )
+            {
+                auto &j = js[base::title];
+                j = {
+                    { "file", file },
+                    { "frames loaded", framecnt}
+                };
+            }
+            return js;
+        }
+
+        void _trialMove() override
+        {
+            if (_continue)
+                _continue = xtc.loadnextframe( *base::spc, true );
+            if (_continue)
+                framecnt++;
+        }
+
+    public:
+
+        TrajectoryMove( Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j )
+            : Movebase<Tspace>(e, s), xtc(0), _continue(true), framecnt(0)
+        {
+            base::title = "XTC Trajectory Move";
+            file = j.at("file");
+            if ( xtc.open(file) == false)
+                throw std::runtime_error(base::title + ": xtc file " + file + " cannot be loaded");
+        }
+
+        bool eof() { return _continue; } //!< True if all frames have been loaded
+    };
+
+    /**
      * @brief Translation of atomic particles
      *
      * This Markov move can work in two modes:
@@ -4846,7 +4913,9 @@ namespace Faunus
                     mPtr.push_back(toPtr(Reptation<Tspace>(e, s, val)));
                 if ( i.key() == "ctransnr" )
                     mPtr.push_back(toPtr(ClusterTranslateNR<Tspace>(e, s, val)));
-            }
+                if ( i.key() == "xtcmove" )
+                    mPtr.push_back(toPtr(TrajectoryMove<Tspace>(e, s, val)));
+             }
             if ( mPtr.empty())
                 throw std::runtime_error("No moves defined - check JSON file.");
 

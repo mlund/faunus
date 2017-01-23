@@ -30,7 +30,10 @@ d = {
       "xtcfile" :   { "file": "bulk.xtc", "nstep":10 },
       "pqrfile" :   { "file": "bulk.pqr" },
       "energyfile": { "file": "energy.dat", "nstep":10 },
-      "statefile" : { "file": "state" }
+      "statefile" : { "file": "state" },
+      "atomrdf" : [
+          {  "sel1":"Na", "sel2":"Cl", "dim":3, "dr":0.1, "file":"rdf_nacl.dat"},
+          ]
       },
 
     "moves" : {

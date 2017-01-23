@@ -614,6 +614,8 @@ namespace Faunus {
     public:
       std::vector<Group*> g;          //!< List of PBC groups to be saved as whole
 
+      inline int getNumAtoms() { return natoms_xtc; }
+
       /**
        * @brief Load a single frame into cuboid
        *
@@ -632,33 +634,36 @@ namespace Faunus {
        *       periodic boundaries are used.
        */
       template<class Tspace>
-        bool loadnextframe(Tspace &c, bool setbox=true) {
-          if (xd!=NULL) {
-            if (natoms_xtc==(int)c.p.size()) { 
-              int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
-              if (rc==0) {
-                Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
-                assert(geo!=nullptr && "Geometry must to derived from Cuboid");
-                if (setbox)
-                  geo->setlen( Point( xdbox[0][0], xdbox[1][1], xdbox[2][2] ) );
-                for (size_t i=0; i<c.p.size(); i++) {
-                  c.p[i].x() = x_xtc[i][0];
-                  c.p[i].y() = x_xtc[i][1];
-                  c.p[i].z() = x_xtc[i][2];
-                  c.p[i] = c.p[i]*10 - geo->len_half;
-                  c.trial[i] = Point(c.p[i]);
-                  if ( geo->collision(c.p[i], 0) ) {
-                    throw std::runtime_error("# ioxtc: particle-container collision!");
-                  }
-                } 
-                return true;
-              }
-            } else
-              throw std::runtime_error("# xtcfile-container particle mismatch!");
-          } else
-            throw std::runtime_error("# xtc file not available for reading!");
-          return false;
-        }
+          bool loadnextframe(Tspace &c, bool setbox=true) {
+              if (xd!=NULL)
+              {
+                  if (natoms_xtc==(int)c.p.size())
+                  { 
+                      int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
+                      if (rc==0)
+                      {
+                          Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
+                          if (geo==nullptr)
+                              throw std::runtime_error("Cuboid-like geometry required");
+                          if (setbox)
+                              geo->setlen( Point( xdbox[0][0], xdbox[1][1], xdbox[2][2] ) );
+                          for (size_t i=0; i<c.p.size(); i++) {
+                              c.p[i].x() = x_xtc[i][0];
+                              c.p[i].y() = x_xtc[i][1];
+                              c.p[i].z() = x_xtc[i][2];
+                              c.p[i] = c.p[i]*10 - geo->len_half;
+                              c.trial[i] = Point(c.p[i]);
+                              if ( geo->collision(c.p[i], 0) )
+                                  throw std::runtime_error("particle-container collision");
+                          } 
+                          return true;
+                      }
+                  } else
+                      throw std::runtime_error("xtcfile<->container particle mismatch");
+              } else
+                  throw std::runtime_error("xtc file cannot be read");
+              return false; // end of file or not opened
+          }
 
       /**
        * This will take an arbitrary particle vector and add it
@@ -729,6 +734,11 @@ namespace Faunus {
         setbox(len);
         xd=NULL;
         x_xtc=NULL;
+      }
+      
+      ~FormatXTC()
+      {
+          close();
       }
 
       inline void setbox(double x, double y, double z) {

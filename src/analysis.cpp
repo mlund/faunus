@@ -202,6 +202,30 @@ namespace Faunus
         t("bilayer_area", A.avg());
     }
 
+    Tmjson MeanForce::_json()
+    {
+        if ( mf1.cnt>0 && mf2.cnt>0 )
+            return {
+                { name,
+                    {
+                        { "groups", {g1, g2} },
+                        { "meanforce", { mf1.avg(), mf2.avg() } },
+                        { "forceunit", "kT/angstrom" }
+                    }
+                }
+            };
+        return Tmjson();
+    }
+
+    void MeanForce::_sample() {
+        func();
+        cout << mf1.cnt << " " << mf2.cnt << "\n";
+    }
+
+    void SystemEnergy::_sample() {
+        f << energy() << "\n"; 
+    }
+ 
     void CombinedAnalysis::sample()
     {
         for ( auto i : v )

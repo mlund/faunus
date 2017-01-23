@@ -2690,96 +2690,74 @@ namespace Faunus
      * operator. Not a problem when handled by `CombinedEnergy` where only a single
      * copy is made.
      */
-    template<class Tspace>
-      class MeanForce : public AnalysisBase {
+    class MeanForce : public AnalysisBase {
 
-        //typedef Energy::Energybase<Tspace> Tenergy;
-        //Tenergy& pot;
-        Tspace& spc;
-        Average<double> mf1, mf2;
-        size_t g1, g2;
+        void _sample() override;
+        Tmjson _json() override;
+
+        Average<double> mf1, mf2; // mean force on the two groups
+        int g1, g2; // group index in Space group list
 
         std::function<void()> func;
 
-        template<class Tenergy>
-          void evalforce(Tenergy &pot) {
-            Point f1 = {0,0,0}; // net force on group 1
-            Point f2 = {0,0,0}; // net force on group 2
-            auto &g = spc.groupList(); // list of groups
-            auto &p = spc.p;           // particle vector
+        template<class Tspace, class Tenergy>
+            void evalforce(Tspace &spc, Tenergy &pot) {
+                Point f1 = {0,0,0}; // net force on group 1
+                Point f2 = {0,0,0}; // net force on group 2
+                auto &g = spc.groupList(); // list of groups
+                auto &p = spc.p;           // particle vector
 
-            // force all others, k <-> g1 and g2
-            for (size_t k=0; k!=g.size(); k++)
-              if (k!=g1)
-                if (k!=g2)
-                  for (auto i : *g[k]) {
-                    for (auto j : *g[g1])
-                      f1 += pot.f_p2p( p[i], p[j] );
-                    for (auto j : *g[g2])
-                      f2 += pot.f_p2p( p[i], p[j] );
-                  }
-            // force g1<->g2
-            for (auto i : *g[g2])
-              for (auto j : *g[g1]) {
-                Point f = pot.f_p2p( p[i], p[j] );
-                f1 += f;
-                f2 -= f;
-              }
+                // force all others, k <-> g1 and g2
+                for (int k=0; k!=(int)g.size(); k++)
+                    if (k!=g1)
+                        if (k!=g2)
+                            for (auto i : *g[k]) {
+                                for (auto j : *g[g1])
+                                    f1 += pot.f_p2p( p[i], p[j] );
+                                for (auto j : *g[g2])
+                                    f2 += pot.f_p2p( p[i], p[j] );
+                            }
+                // force g1<->g2
+                for (auto i : *g[g2])
+                    for (auto j : *g[g1]) {
+                        Point f = pot.f_p2p( p[i], p[j] );
+                        f1 += f;
+                        f2 -= f;
+                    }
 
-            // COM-COM unit vector and mean force
-            Point r = spc.geo.vdist( g[g1]->cm, g[g2]->cm );
-            mf1 += f1.dot( r/r.norm() );
-            mf2 += f2.dot( -r/r.norm() );
-            cout << mf1.cnt << " " << mf2.cnt << "\n";
-          }
-
-        string _info() override { return string(); }
-
-        Tmjson _json() override
-        {
-          if ( mf1.cnt>0 && mf2.cnt>0 )
-            return {
-              { name,
-                {
-                  { "groups", {g1, g2} },
-                  { "meanforce", { mf1.avg(), mf2.avg() } },
-                  { "forceunit", "kT/angstrom" }
-                }
-              }
-            };
-          return Tmjson();
-        }
-
-        void _sample() override {
-          func();
-          cout << mf1.cnt << " " << mf2.cnt << "\n";
-        }
-
-        public:
-        template<class Tenergy>
-          MeanForce( Tmjson j, Tenergy &pot, Tspace &spc ) : AnalysisBase(j), spc(spc)
-        {
-          name = "Mean force";
-          g1 = g2 = -1;
-          if (j["groups"].is_array()) {
-            vector<size_t> v = j["groups"];
-            if (v.size()==2) {
-              g1 = v[0];
-              g2 = v[1];
-              if (g1>=0)
-                if (g2>=0)
-                  if (g1!=g2)
-                    if (g1 < spc.groupList().size() )
-                      if (g2 < spc.groupList().size() ) {
-                        func = std::bind( &MeanForce<Tspace>::evalforce<Tenergy>, this, std::ref(pot));
-                        return;
-                      }
+                // COM-COM unit vector and mean force
+                Point r = spc.geo.vdist( g[g1]->cm, g[g2]->cm );
+                mf1 += f1.dot( r/r.norm() );
+                mf2 += f2.dot( -r/r.norm() );
+                cout << mf1.cnt << " " << mf2.cnt << "\n";
             }
-          }
-          throw std::runtime_error(name + ": group array must contain \
-              exactly two distinct and valid group index");
+
+       public:
+        template<class Tspace, class Tenergy>
+            MeanForce( Tmjson j, Tenergy &pot, Tspace &spc ) : AnalysisBase(j)
+        {
+            name = "Mean force";
+            g1 = g2 = -1;
+            if (j["groups"].is_array()) {
+                vector<size_t> v = j["groups"];
+                if (v.size()==2) {
+                    g1 = v[0];
+                    g2 = v[1];
+                    if (g1>=0)
+                        if (g2>=0)
+                            if (g1!=g2)
+                                if (g1 < (int)spc.groupList().size() )
+                                    if (g2 < (int)spc.groupList().size() ) {
+                                        func = std::bind( &MeanForce::evalforce<Tspace,Tenergy>,
+                                                this, std::ref(spc), std::ref(pot));
+                                        return;
+                                    }
+                }
+            }
+            throw std::runtime_error(name + ": group array must contain \
+                    exactly two distinct and valid group index");
         }
-      };
+    };
 
     /** @brief Save system energy to disk. Keywords: `nstep`, `file` */
     class SystemEnergy : public AnalysisBase {
@@ -2787,9 +2765,7 @@ namespace Faunus
         std::ofstream f;
         std::function<double()> energy;
 
-        void _sample() override {
-            f << energy() << "\n"; 
-        }
+        void _sample() override;
 
         public:
         template<class Tspace, class Tenergy>
@@ -2802,6 +2778,50 @@ namespace Faunus
                 throw std::runtime_error(name + ": cannot open output file " + file);
 
             energy = [&spc, &pot]() { return Energy::systemEnergy(spc, pot, spc.p); };
+        }
+    };
+
+    class KirkwoodFactor : public AnalysisBase {
+        private:
+            std::function<void()> _sampleKW; // wrapper function
+
+            double dr; // distribution resolution (angstrom)
+
+            Table2D<double, double> kw, mucorr_angle;
+            Table2D<double, Average<double> > mucorr, mucorr_dist;
+
+            /**
+             * @brief Samples g(r), \f$ <\hat{\mu}(0) \cdot \hat{\mu}(r)> \f$, \f$ <\frac{1}{2} ( 3 \hat{\mu}(0) \cdot \hat{\mu}(r) - 1 )> \f$, Histogram(\f$ \hat{\mu}(0) \cdot \hat{\mu}(r) \f$) and distant-dependent Kirkwood-factor.
+             */
+            template<class Tspace>
+            void muCorrelationAndKirkwood( const Tspace &spc )
+            {
+                int N = (int)spc.p.size() - 1;
+                for ( int i = 0; i < N; i++ )
+                {
+                    kw(0) += spc.p[i].mu.dot(spc.p[i].mu) * spc.p[i].muscalar * spc.p[i].muscalar;
+                    for ( int j = i + 1.; j < N + 1; j++ )
+                    {
+                        double r = spc.geo.dist(spc.p[i], spc.p[j]);
+                        double sca = spc.p[i].mu.dot(spc.p[j].mu);
+                        mucorr_angle(sca) += 1.;
+                        mucorr(r) += sca;
+                        mucorr_dist(r) += 0.5 * (3 * sca * sca - 1.);
+                        kw(r) += 2 * sca * spc.p[i].muscalar * spc.p[j].muscalar;
+                    }
+                }
+                kw(0) += spc.p[N].mu.dot(spc.p[N].mu) * spc.p[N].muscalar * spc.p[N].muscalar;
+            }
+
+            void _sample() override { _sampleKW(); }
+
+        public:
+        template<class Tspace>
+            KirkwoodFactor( Tmjson j, Tspace &spc ) : AnalysisBase(j)
+        {
+            name = "Kirkwood Factor";
+            _sampleKW = std::bind(
+                    &KirkwoodFactor::muCorrelationAndKirkwood<Tspace>, this, std::ref(spc));
         }
     };
 
@@ -2919,7 +2939,7 @@ namespace Faunus
                     v.push_back(Tptr(new MultipoleDistribution<Tspace>(val, spc)));
 
                 if ( i.key() == "meanforce" )
-                    v.push_back(Tptr(new MeanForce<Tspace>(val, pot, spc)));
+                    v.push_back(Tptr(new MeanForce(val, pot, spc)));
             }
         }
 

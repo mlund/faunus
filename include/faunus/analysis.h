@@ -2781,6 +2781,30 @@ namespace Faunus
         }
       };
 
+    /** @brief Save system energy to disk. Keywords: `nstep`, `file` */
+    class SystemEnergy : public AnalysisBase {
+
+        std::ofstream f;
+        std::function<double()> energy;
+
+        void _sample() override {
+            f << energy() << "\n"; 
+        }
+
+        public:
+        template<class Tspace, class Tenergy>
+            SystemEnergy( Tmjson j, Tenergy &pot, Tspace &spc ) : AnalysisBase(j)
+        {
+            name = "System energy";
+            string file = j.at("file");
+            f.open( file );
+            if (!f)
+                throw std::runtime_error(name + ": cannot open output file " + file);
+
+            energy = [&spc, &pot]() { return Energy::systemEnergy(spc, pot, spc.p); };
+        }
+    };
+
     /**
      * @brief Class for accumulating analysis classes
      *
@@ -2799,6 +2823,7 @@ namespace Faunus
      * `widomscaled`     |  `Analysis::WidomScaled`
      * `widommolecule`   |  `Analysis::WidomMolecule`
      * `meanforce`       |  `Analysis::MeanForce`
+     * `energyfile`      |  `Analysis::SystemEnergy`
      * `_jsonfile`       |  ouput json file w. collected results
      *
      * All analysis classes take the JSON keyword `nstep` for
@@ -2862,6 +2887,9 @@ namespace Faunus
                         []( string file, Tspace &s ) { s.save(file); }, _1, ref(spc));
                     v.push_back(Tptr(new WriteOnceFileAnalysis(val, writer)));
                 }
+
+                if ( i.key() == "energyfile" )
+                    v.push_back(Tptr(new SystemEnergy(val, pot, spc)));
 
                 if ( i.key() == "virial" )
                     v.push_back(Tptr(new VirialPressure<Tspace>(val, pot, spc)));

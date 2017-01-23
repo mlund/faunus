@@ -4751,8 +4751,8 @@ namespace Faunus
         std::vector<basePtr> mPtr;
         Tspace *spc;
 
-        double dusum; // sum of all energy changes by moves
-        double uinit; // initial energy
+        double uinit; // initial energy evaluated just *before* first move
+        double dusum; // sum of all energy *changes* by moves
         Average<double> uavg; // average system energy
         std::function<double()> ufunction; // function to calculate system energy
 

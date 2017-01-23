@@ -29,6 +29,7 @@ d = {
       "virtualvolume" : { "nstep":5, "dV":0.2 },
       "xtcfile" :   { "file": "bulk.xtc", "nstep":10 },
       "pqrfile" :   { "file": "bulk.pqr" },
+      "energyfile": { "file": "energy.dat", "nstep":10 },
       "statefile" : { "file": "state" }
       },
 

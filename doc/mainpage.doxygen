@@ -227,36 +227,14 @@ compatible with your `libfaunus` build.
 A good place to start is to understand the following classes. Also, for a more grouped
 overview do have a look at the Namespace list.
 
-- `Faunus::Point` and derived classes.
-  - All particles in Faunus are based on a 3D vector, `Point`, which in turn is based on the 
-    Eigen library, <http://eigen.tuxfamily.org>. This means you have access
-    to a range of vector and matrix operations including geometric functions, much
-    in the spirit of Numpy in Python.
-    The class `Faunus::Space` is responsible for storing all particles in a STL vector.
-
-- `Faunus::InputMap`
-  - Reads user input parameters from a file in the format "keyword value". This class is frequently
-    used in the constuctor arguments for other Faunus classes.
-
-- `Faunus::Geometry::Geometrybase` and namespace `Faunus::Geometry`.
-  - Derived classes define the simulation geometry (box, sphere, cylinder etc.) and take care
-    of distance calculations as well as boundary conditions.
-
-- Faunus::Space
-  - This is central to any simulation and contains the particles as well
-    as the geometry. Space also knows about all groups in the system.
-
-- Faunus::Group and derived classes
-  - Simply defines a continuous range of particles in the Faunus::Space::p particle vector.
-    Useful for defining molecules, salt groups etc. Groups contain functions for describing how to
-    perform geometric operations (translate, rotate).
-
-- Faunus::Move::Movebase
-  - All Monte Carlo moves are based on this class which is responsible for making a MC
-    move, calculating the energy difference, accepting/rejecting as well as collecting
-    statistics. Derived classes are forced to obey certain rules which leads to an
-    almost identicaly interface for all MC moves.
-    See namespace Faunus::Move for an overview of available moves.
+Class                                | Description
+:----------------------------------- | :----------------------------------------------
+`Faunus::Move::Propagator`           | Controls Monte Carlo moves
+`Faunus::Analysis::CombinedAnalysis` | Controls analysis to be run during simulation
+`Faunus::AtomData`                   | Defines atom properties
+`Faunus::MoleculeData`               | Defines molecule properties
+`Faunus::Space`                      | Contains all particles, molecules, and geometry
+`Faunus::Group`                      | A range of particles
 
 @page guidelines Coding Guidelines
 

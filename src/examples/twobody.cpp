@@ -15,13 +15,10 @@ int main( int argc, char **argv )
         + Energy::EquilibriumEnergy<Tspace>(mcp)
         + Energy::MassCenterConstrain<Tspace>(mcp, spc);
 
-    Analysis::LineDistribution<> rdf(0.2);
-    //Analysis::MultipoleDistribution<Tspace> mpd(mcp);
-    Analysis::CombinedAnalysis analysis(mcp, pot, spc);
-
-    Move::Propagator<Tspace> mv(mcp, pot, spc);
-
     spc.load("state"); // load previous state, if any
+
+    Analysis::CombinedAnalysis analysis(mcp, pot, spc);
+    Move::Propagator<Tspace> mv(mcp, pot, spc);
 
     cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
 
@@ -31,19 +28,10 @@ int main( int argc, char **argv )
         while ( loop[1] )
         {
             mv.move();
-
             analysis.sample();
-
-            //mpd.sample( spc, *spc.groupList()[0], *spc.groupList()[1] );
-            rdf(spc.geo.dist(spc.groupList()[0]->cm, spc.groupList()[1]->cm))++;
-
         } // end of micro loop
 
         cout << loop.timing();
-        rdf.save("rdf.dat");
-        FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
-        spc.save("state");
-        //mpd.save("multipole.dat");
 
     } // end of macro loop
 
@@ -61,8 +49,7 @@ translate, rotate, and protons are kept in equilibrium with bulk
 using particle swap moves.
 
 During simulation we simply sample the probability of observing
-the two bodies at a specific separation
-(using `Faunus::Analysis::LineDistribution`).
+the two bodies at a specific separation.
 As the proteins are confined onto a line, each volume element along
 `r` is constant and there's thus no need to normalize with a spherical
 shell as done for freely moving particles.
@@ -80,7 +67,7 @@ This example can run with the following (the first, optional
 command checks out a specific commit with which this tutorial was created),
 
 ~~~~~~~~~~~~~~~~~~~
-$ (git checkout 10e9a0b)
+$ (git checkout 3cbc360e7af0a8ef57e5abe687fed61517eee516)
 $ make example_twobody
 $ cd src/examples
 $ python twobody.py

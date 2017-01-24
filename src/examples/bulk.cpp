@@ -26,9 +26,7 @@ int main() {
   auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
 
-  Analysis::RadialDistribution<> rdf_ab(0.1);      // 0.1 angstrom resolution
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
-  Average<double> pm;
 
   spc.load("state");                               // load old config. from disk (if any)
 
@@ -50,8 +48,6 @@ int main() {
     cout << loop.timing();
 
   } // end of macro loop
-
-  rdf_ab.save("rdf.dat");                // g(r) - not normalized!
 
   // perform unit tests (irrelevant for the simulation)
   UnitTest test(mcp);                    // class for unit testing

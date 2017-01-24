@@ -64,7 +64,7 @@ namespace Faunus
         virtual void _sample();
     public:
         AnalysisBase();
-        AnalysisBase( Tmjson & );
+        AnalysisBase( Tmjson&, string=string() );
         virtual ~AnalysisBase();
         string info();       //!< Print info and results
         void test( UnitTest & );//!< Perform unit test
@@ -2781,6 +2781,113 @@ namespace Faunus
         }
     };
 
+    /**
+     * @brief Base class for distribution functions etc.
+     */
+    class PairFunctionBase : public AnalysisBase {
+
+        protected:
+            struct data {
+                int dim;
+                double dr;
+                Table2D<double,double> hist;
+                string name1, name2, file;
+            };
+
+            Average<double> V;                // average volume (angstrom^3)
+
+        private:
+            std::vector<data> datavec;        // vector of data sets
+            virtual void update(data &d)=0;   // called on each defined data set
+            void normalize(data&);
+            void _sample() override;
+            Tmjson _json() override;
+
+        public:
+            PairFunctionBase(Tmjson, string);
+            virtual ~PairFunctionBase();
+    };
+
+    /**
+     * @brief Atomic radial distribution function, g(r)
+     *
+     * We sample the pair correlation function between atom id's
+     * i and j,
+     * \f[
+     * g_{ij}(r) = \frac{ N_{ij}(r) }{ \sum N_{ij}(r) } \cdot \frac{ \langle V \rangle }{ V(r) }
+     * \f]
+     *
+     * where \f$ N_{ij}(r) \f$ is the number of observed pairs in shell volume
+     * \f$ V(r) \f$ and
+     *
+     * - \f$ V(r)=4\pi r^2 dr \f$ (3D)
+     * - \f$ V(r)=2\pi r \f$ (2D)
+     * - \f$ V(r)=1 \f$ (1D).
+     *
+     * Example JSON input:
+     *
+     *     { "nstep":20, "pairs":
+     *        [
+     *          { "name1":"Na", "name2":"Cl", "dim":3, "dr":0.1, "file":"rdf-nacl.dat"},
+     *          { "name1":"Na", "name2":"Na", "dim":3, "dr":0.1, "file":"rdf-nana.dat"}
+     *        ]
+     *     }
+     *
+     * @warning Tested only for 3D.
+     */
+    template<class Tspace>
+        class AtomRDF : public PairFunctionBase {
+            Tspace &spc;
+            void update(data &d) override
+            {
+                V += spc.geo.getVolume();
+                int N = spc.p.size();
+                int id1 = atom[ d.name1 ].id;
+                int id2 = atom[ d.name2 ].id;
+                for (int i=0; i<N-1; i++)
+                    if ( spc.p[i].id==id1 || spc.p[i].id==id2 )
+                        for (int j=i+1; j<N; j++)
+                            if ( spc.p[j].id==id1 || spc.p[j].id==id2 ) {
+                                double r = spc.geo.dist( spc.p[i], spc.p[j] );
+                                d.hist(r)++;
+                            }
+            }
+
+            public:
+            AtomRDF( Tmjson j, Tspace &spc ) : PairFunctionBase(j,
+                    "Atomic Pair Distribution Function"), spc(spc) {}
+        };
+
+    /** @brief Same as `AtomRDF` but for molecules. Identical input. */
+    template<class Tspace>
+        class MoleculeRDF : public PairFunctionBase {
+            Tspace &spc;
+            void update(data &d) override
+            {
+                V += spc.geo.getVolume();
+                auto g1 = spc.findMolecules( d.name1 );
+                auto g2 = spc.findMolecules( d.name2 );
+
+                if (d.name1!=d.name2)
+                    for (auto i : g1)
+                        for (auto j : g2) {
+                            double r = spc.geo.dist( i->cm, j->cm );
+                            d.hist(r)++;
+                        }
+                else {
+                    for (int i=0; i<(int)g1.size()-1; i++)
+                        for (int j=i+1; j<(int)g1.size(); j++) {
+                            double r = spc.geo.dist( g1[i]->cm, g1[j]->cm );
+                            d.hist(r)++;
+                        }
+                }
+            }
+
+            public:
+            MoleculeRDF( Tmjson j, Tspace &spc ) : PairFunctionBase(j,
+                    "Molecular Pair Distribution Function"), spc(spc) {}
+        };
+
     class KirkwoodFactor : public AnalysisBase {
         private:
             std::function<void()> _sampleKW; // wrapper function
@@ -2844,6 +2951,8 @@ namespace Faunus
      * `widommolecule`   |  `Analysis::WidomMolecule`
      * `meanforce`       |  `Analysis::MeanForce`
      * `energyfile`      |  `Analysis::SystemEnergy`
+     * `atomrdf`         |  `Analysis::AtomRDF`
+     * `molrdf`          |  `Analysis::MoleculeRDF`
      * `_jsonfile`       |  ouput json file w. collected results
      *
      * All analysis classes take the JSON keyword `nstep` for
@@ -2940,7 +3049,13 @@ namespace Faunus
 
                 if ( i.key() == "meanforce" )
                     v.push_back(Tptr(new MeanForce(val, pot, spc)));
-            }
+
+                if ( i.key() == "atomrdf" )
+                    v.push_back(Tptr(new AtomRDF<Tspace>(val, spc)));
+
+                if ( i.key() == "molrdf" )
+                    v.push_back(Tptr(new MoleculeRDF<Tspace>(val, spc)));
+             }
         }
 
         /**

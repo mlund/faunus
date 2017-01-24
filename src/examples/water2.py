@@ -47,7 +47,19 @@ d = {
     'analysis' : {
         'xtcfile' :   { 'file': 'water2.xtc', 'nstep':20 },
         'pqrfile' :   { 'file': 'water2.pqr' },
-        'statefile' : { 'file': 'state' }
+        'statefile' : { 'file': 'state' },
+        'atomrdf' : {
+            'nstep':20, 'pairs' :
+                [
+                    { 'name1':'OW', 'name2':'OW', 'dim':3, 'file':'rdf_owow.dat', 'dr':0.05  }
+                ]
+            },
+        'molrdf' : {
+            'nstep':20, 'pairs' :
+                [
+                    { 'name1':'water', 'name2':'water', 'dim':3, 'file':'rdf_ww.dat', 'dr':0.1  }
+                ]
+            }
         }
 }
 

@@ -31,9 +31,12 @@ d = {
       "pqrfile" :   { "file": "bulk.pqr" },
       "energyfile": { "file": "energy.dat", "nstep":10 },
       "statefile" : { "file": "state" },
-      "atomrdf" : [
-          {  "sel1":"Na", "sel2":"Cl", "dim":3, "dr":0.1, "file":"rdf_nacl.dat"},
-          ]
+      "atomrdf" : { "nstep":20, "pairs" :
+            [
+               { "name1":"Na", "name2":"Cl", "dim":3, "dr":0.1, "file":"rdf_nacl.dat"},
+               { "name1":"Na", "name2":"Na", "dim":3, "dr":0.1, "file":"rdf_nana.dat"}
+            ]
+          }
       },
 
     "moves" : {

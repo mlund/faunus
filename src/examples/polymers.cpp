@@ -27,9 +27,6 @@ int main() {
 
   Move::Propagator<Tspace> mv( mcp, pot, spc );
   Analysis::CombinedAnalysis analyze(mcp, pot, spc);
-  Analysis::RadialDistribution<> rdf(0.2);
-
-  auto pol = spc.findMolecules("polymer");          // all molecules named "polymer" 
 
   cout << atom.info() << spc.info() << pot.info() << textio::header("MC Simulation Begins!");
 
@@ -37,18 +34,11 @@ int main() {
     while ( loop[1] ) {
       mv.move();
       analyze.sample();
-
-      for (auto i = pol.begin(); i != pol.end(); ++i )// sample cm-cm g(r)
-        for (auto j = i; ++j != pol.end(); )
-          rdf( spc.geo.dist( (**i).cm, (**j).cm) )++;
-
     } // end of micro loop
 
     cout << loop.timing();
 
   } // end of macro loop
-
-  rdf.save("rdf_p2p.dat");
 
   mv.test(test);
 

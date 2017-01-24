@@ -4801,6 +4801,7 @@ namespace Faunus
      * `titrate`         | `Move::SwapMove`          | Particle swap move
      * `conformationswap`| `Move::ConformationSwap`  | Swap between molecular conformations
      * `random`          | `RandomTwister<>`         | Input for random number generator
+     * `_jsonfile`       |  ouput json file name     | Default: `move_out.json`
      *
      * Average system energy and drift thereof are automatically tracked and
      * reported.
@@ -4817,6 +4818,7 @@ namespace Faunus
         typedef std::shared_ptr<base> basePtr;
         std::vector<basePtr> mPtr;
         Tspace *spc;
+        string jsonfile; // output json file name
 
         double uinit; // initial energy evaluated just *before* first move
         double dusum; // sum of all energy *changes* by moves
@@ -4870,10 +4872,16 @@ namespace Faunus
         {
             this->title = "P R O P A G A T O R S";
 
+            jsonfile = "move_out.json";
+
             auto m = in["moves"];
             for ( auto i = m.begin(); i != m.end(); ++i )
             {
                 auto &val = i.value();
+
+                if ( i.key() == "_jsonfile" )
+                  if (val.is_string())
+                    jsonfile = val;
 
                 if ( i.key() == "random" )
                     if (val.is_object()) {
@@ -4924,6 +4932,13 @@ namespace Faunus
             ufunction = std::bind(
                 Energy::systemEnergy<Tspace, Tenergy, typename Tspace::ParticleVector>,
                 ref(s), ref(e), ref(s.p));
+        }
+
+        ~Propagator()
+        {
+            std::ofstream f("move_out.json");
+            if (f)
+                f << std::setw(4) << json() << endl;
         }
 
         /** @brief Append move to list */

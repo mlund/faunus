@@ -16,9 +16,11 @@ namespace Faunus
         stepcnt = 0;
     }
 
-    AnalysisBase::AnalysisBase( Tmjson &j ) : w(30), cnt(0)
+    AnalysisBase::AnalysisBase( Tmjson &j, string name ) : w(30), cnt(0), name(name)
     {
-        steps = j["nstep"] | int(0);
+        if (!j.is_object())
+            std::runtime_error("Analysis JSON entry must be of type object");
+        steps = j.value("nstep", 0);
         stepcnt = 0;
     }
 
@@ -224,6 +226,71 @@ namespace Faunus
 
     void SystemEnergy::_sample() {
         f << energy() << "\n"; 
+    }
+
+    void PairFunctionBase::normalize(data &d)
+    {
+        assert(V.cnt>0);
+        double Vr=1, sum = d.hist.sumy();
+        for (auto &i : d.hist.getMap()) {
+            if (d.dim==3)
+                Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
+            if (d.dim==2)
+                Vr = 2 * pc::pi * i.first * d.dr;
+            if (d.dim==1)
+                Vr = 1;
+            i.second = i.second/sum * V/Vr;
+        }
+    }
+
+    void PairFunctionBase::_sample()
+    {
+        for (auto &d : datavec)
+            update(d);
+    }
+
+    Tmjson PairFunctionBase::_json()
+    {
+        Tmjson j;
+        auto &_j = j[name];
+        for (auto &d : datavec)
+            _j[ d.name1+"-"+d.name2 ] = {
+                { "dr", d.dr },
+                { "file", d.file },
+                { "dim", d.dim }
+            };
+        return j;
+    }
+
+    PairFunctionBase::PairFunctionBase( Tmjson j, string name ) : AnalysisBase(j, name) {
+        try {
+            for (auto &i : j["pairs"])
+                if (i.is_object())
+                {
+                    data d;
+                    d.file = i.at("file");
+                    d.name1 = i.at("name1");
+                    d.name2 = i.at("name2");
+                    d.dim = i.value("dim", 3);
+                    d.dr = i.value("dr", 0.1);
+                    d.hist.setResolution(d.dr);
+                    datavec.push_back( d );
+                }
+        }
+        catch(std::exception& e) {
+            throw std::runtime_error(name + ": " + e.what());
+        }
+
+        if (datavec.empty())
+            std::cerr << name + ": no sample sets defined for analysis\n";
+    }
+
+    PairFunctionBase::~PairFunctionBase()
+    {
+        for (auto &d : datavec) {
+            normalize(d);
+            d.hist.save( d.file );
+        }
     }
  
     void CombinedAnalysis::sample()

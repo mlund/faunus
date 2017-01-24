@@ -27,11 +27,9 @@ int main() {
 #endif
 
   spc.load("state"); // load old config. from disk (if any)
-  auto waters = spc.findMolecules("water");
 
   // Markov moves and analysis
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
-  Analysis::RadialDistribution<> rdf(0.05);
   Move::Propagator<Tspace> mv( mcp, pot, spc );
 
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
@@ -39,20 +37,12 @@ int main() {
   MCLoop loop(mcp);    // class for handling mc loops
   while ( loop[0] ) {          // Markov chain 
     while ( loop[1] ) {
-
       mv.move();
       analyzer.sample();
-
-      double rnd = slump();
-      if ( rnd>0.9 )
-        rdf.sample( spc, atom["OW"].id, atom["OW"].id ); // O-O g(r)
-
     } // end of micro loop
 
     cout << loop.timing();
   } // end of macro loop
-
-  rdf.save("rdf.dat");
 
   // perform unit 
   UnitTest test(mcp);

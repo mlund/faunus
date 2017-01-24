@@ -760,6 +760,15 @@ namespace Faunus
       enum type { HISTOGRAM, XYDATA };
       type tabletype;
 
+      /** @brief Sum of all y values (same as `count()`) */
+      Ty sumy() const
+      {
+          Ty sum = 0;
+          for ( auto &m : map )
+              sum += m.second;
+          return sum;
+      }
+
       /**
        * @brief Constructor
        * @param resolution Resolution of the x axis
@@ -827,7 +836,7 @@ namespace Faunus
 
       /** @brief Save table to disk */
       template<class T=double>
-      void save( string filename, T scale = 1, T translate = 0 )
+      void save( const string &filename, T scale = 1, T translate = 0 )
       {
           if ( tabletype == HISTOGRAM )
           {
@@ -859,7 +868,7 @@ namespace Faunus
 
       /** @brief Save normalized table to disk */
       template<class T=double>
-      void normSave( string filename )
+      void normSave( const string &filename )
       {
           if ( tabletype == HISTOGRAM )
           {
@@ -926,7 +935,12 @@ namespace Faunus
           }
       }
 
-      Tmap getMap()
+      const Tmap& getMap() const
+      {
+          return map;
+      }
+
+      Tmap& getMap()
       {
           return map;
       }

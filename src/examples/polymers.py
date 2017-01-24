@@ -54,7 +54,13 @@ d = {
       "polymershape" : { "nstep":10, "mollist":[ "polymer" ] },
       "xtcfile" :   { "file": "polymers.xtc", "nstep":10 },
       "pqrfile" :   { "file": "polymers.pqr" },
-      "statefile" : { "file": "state" }
+      "statefile" : { "file": "state" },
+      "molrdf" : {
+            "nstep":20, 'pairs' :
+                [
+                    { "name1":"polymer", "name2":"polymer", "dim":3, "file":"rdf.dat", "dr":0.1  }
+                ]
+            }
       },
 
     "system" : {

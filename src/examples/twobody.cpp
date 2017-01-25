@@ -15,6 +15,8 @@ int main( int argc, char **argv )
         + Energy::EquilibriumEnergy<Tspace>(mcp)
         + Energy::MassCenterConstrain<Tspace>(mcp, spc);
 
+    spc.save("init");
+
     spc.load("state"); // load previous state, if any
 
     Analysis::CombinedAnalysis analysis(mcp, pot, spc);

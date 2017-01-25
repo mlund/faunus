@@ -49,7 +49,7 @@ namespace Faunus
     private:
         virtual string _info( char )=0;
         virtual void _setVolume( double )=0;
-        virtual double _getVolume() const =0;
+        virtual double _getVolume(int) const =0;
     protected:
         string name;                                        //!< Name of the geometry
         inline int anint( double x ) const
@@ -59,9 +59,9 @@ namespace Faunus
 
     public:
         enum collisiontype { BOUNDARY, ZONE };                 //!< Types for collision() function
-        double getVolume() const;                           //!< Get volume of container (A^3)
-        void setVolume( double );                             //!< Specify new volume (A^3)
-        double dist( const Point &, const Point & ) const;       //!< Distance between two points (A)
+        double getVolume(int=3) const;                      //!< Get volume of container (A^3, A^2, A)
+        void setVolume( double );                              //!< Specify new volume (A^3)
+        double dist( const Point &, const Point & ) const;     //!< Distance between two points (A)
         std::string info( char= 20 );                          //!< Return info string
 
         virtual bool collision( const Point &,
@@ -96,7 +96,7 @@ namespace Faunus
     private:
         double r, r2, diameter;
         void _setVolume( double ) override;
-        double _getVolume() const override;
+        double _getVolume(int) const override;
         string _info( char ) override;
     public:
         Point len;
@@ -141,7 +141,7 @@ namespace Faunus
     private:
         string _info( char ) override;             //!< Return info string
         void _setVolume( double ) override;
-        double _getVolume() const override;
+        double _getVolume(int) const override;
         enum scaletype { XYZ, XY };
         scaletype scaledir;                      //!< Scale directions for pressure scaling
         string scaledirstr;
@@ -299,7 +299,7 @@ namespace Faunus
     private:
         string _info( char ) override; //!< Cylinder info
         void _setVolume( double ) override;
-        double _getVolume() const override;
+        double _getVolume(int) const override;
         void init( double, double );
         double r2;    //!< Cylinder radius squared
         double r;     //!< Cylinder radius

@@ -80,13 +80,13 @@ def mkinput():
           },
 
       "moleculelist": {
-          "protein1":  { "structure":"manybody.aam", "Ninit":1, "insdir":"0 0 1", "insoffset":"0 0 -20"},
-          "protein2":  { "structure":"manybody.aam", "Ninit":1, "insdir":"0 0 1", "insoffset":"0 0 20"},
-          "salt": {"atoms":"Na Cl", "Ninit":10, "atomic":True }
+          "protein1":  dict(structure='manybody.aam', Ninit=1, insdir='0 0 0', insoffset='0 0 -20'),
+          "protein2":  dict(structure='manybody.aam', Ninit=1, insdir='0 0 0', insoffset='0 0 20'),
+          "salt":      dict(atoms="Na Cl", Ninit=0, atomic=True)
           },
 
       "moves" : {
-          "titrate" : { "prob":0.2,
+          "titrate" : { "prob":0.1,
              "processes" : {
                  "H-Asp" : { "bound":"HASP" , "free":"ASP" , "pKd":4.0  , "pX":pH },
                  "H-Ctr" : { "bound":"HCTR" , "free":"CTR" , "pKd":2.6  , "pX":pH },
@@ -102,27 +102,28 @@ def mkinput():
                  "K3"    : { "bound":"HPO4",  "free":"PO4",  "pKd":12.67, "pX":pH }
                  }
               },
-          "atomtranslate" : {
+          "//atomtranslate" : {
             "salt" : { "peratom":True }
             },
-          "random" : { "hardware": True},
-          "#moltransrotcluster" : {
+          "random" : { "hardware": False},
+          "//moltransrotcluster" : {
             "protein" : { "dp":0, "dprot":3, "prob":1.0, "permol":True, "dir":"0 0 1",
               "threshold":10, "clustergroup": "salt"} 
             }, 
           "moltransrot2body" : {
-            "protein1" : { "dp":4, "dprot":3, "prob":1.0 }, 
-            "protein2" : { "dp":8, "dprot":2, "prob":1.0 }
-            },
+            "protein1" : dict(dp=20, dprot=3, dir="0 0 1"), 
+            "protein2" : dict(dp=20, dprot=3, dir="0 0 1")
+            }
           },
 
       "analysis" : {
           "cyldensity" : { "atomtype":"Na", "zmin":-125, "zmax":125  },
           "pqrfile" :   { "file": "confout.pqr" },
           "statefile" : { "file": "state" },
+          "xtcfile" :   { "file": "traj.xtc", "nstep":1000 },
           "molrdf" : {
                 "nstep":2, "pairs" : [
-                       dict(name1="protein1", name2="protein2", dim=1, file="rdf.dat", dr=0.1)
+                       dict(name1="protein1", name2="protein2", dim=1, file="rdf.dat", dr=0.25)
                     ]
               }
           },
@@ -157,7 +158,7 @@ for Cs in [0.05]:  # ionic strength (mol/l)
         os.remove('state')
       except: pass
 
-      micro=1000
+      micro=5000
       mkinput()
       with open(prefix+'.eq', 'w+') as f:
           f.write( check_output( [exe] ).decode("utf-8")  )
@@ -167,7 +168,7 @@ for Cs in [0.05]:  # ionic strength (mol/l)
     # Production run
     if (runprod==True):
       print("Production run...")
-      micro=50000
+      micro=100000
       mkinput()
       with open(prefix+'.out', 'w+') as f:
           f.write( check_output( [exe] ).decode("utf-8")  )

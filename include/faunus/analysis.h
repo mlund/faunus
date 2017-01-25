@@ -2840,7 +2840,7 @@ namespace Faunus
             Tspace &spc;
             void update(data &d) override
             {
-                V += spc.geo.getVolume();
+                V += spc.geo.getVolume( d.dim );
                 int N = spc.p.size();
                 int id1 = atom[ d.name1 ].id;
                 int id2 = atom[ d.name2 ].id;
@@ -2864,7 +2864,7 @@ namespace Faunus
             Tspace &spc;
             void update(data &d) override
             {
-                V += spc.geo.getVolume();
+                V += spc.geo.getVolume( d.dim );
                 auto g1 = spc.findMolecules( d.name1 );
                 auto g2 = spc.findMolecules( d.name2 );
 

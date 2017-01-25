@@ -55,9 +55,10 @@ namespace Faunus
         _setVolume(volume);
     }
 
-    double Geometrybase::getVolume() const
+    double Geometrybase::getVolume(int dim) const
     {
-        return _getVolume();
+        assert(dim==1 || dim==2 || dim==3);
+        return _getVolume(dim);
     }
 
     Sphere::Sphere( double radius ) : Geometrybase("Sphere")
@@ -90,8 +91,17 @@ namespace Faunus
         len = Point(r, diameter, 0);
     }
 
-    double Sphere::_getVolume() const
+    /**
+     * - 3D: \f$ 4\pi r^3/3 \f$ (default)
+     * - 2D: \f$ \pi r^2 \f$
+     * - 1D: \f$ 2r \f$
+     */
+    double Sphere::_getVolume(int dim) const
     {
+        if (dim==1)
+            return 2*r;
+        if (dim==2)
+            return pc::pi * r * r;
         return 4 / 3. * pc::pi * std::pow(r, 3);
     }
 
@@ -174,8 +184,17 @@ namespace Faunus
         setlen(len);
     }
 
-    double Cuboid::_getVolume() const
+    /**
+     * - 3D: \f$ l_x l_y l_z \f$ (default)
+     * - 2D: \f$ l_x l_y \f$
+     * - 1D: \f$ l_z \f$
+     */
+    double Cuboid::_getVolume(int dim) const
     {
+        if (dim==1)
+            return len.z();
+        if (dim==2)
+            return len.x() * len.y();
         return len.x() * len.y() * len.z();
     }
 
@@ -278,7 +297,6 @@ namespace Faunus
     void Cylinder::init( double length, double radius )
     {
         name = "Cylinder (hard ends)";
-        assert(length > 0 && radius > 0 && "Cylinder length and radius must be bigger than zero.");
         _len = length;
         setVolume(pc::pi * radius * radius * _len);
     }
@@ -290,8 +308,6 @@ namespace Faunus
     void Cylinder::setlen( const Point &l )
     {
         init(l.x(), r);
-        if ( getVolume() < 1e-9 )
-            throw std::runtime_error("Cylinder volume is zero.");
     }
 
     void Cylinder::_setVolume( double newV )
@@ -302,8 +318,17 @@ namespace Faunus
         _halflen = _len / 2;
     }
 
-    double Cylinder::_getVolume() const
+    /**
+     * - 3D: \f$ l \pi r^2 \f$ (default)
+     * - 2D: \f$ \pi r^2 \f$
+     * - 1D: \f$ l \f$
+     */
+    double Cylinder::_getVolume(int dim) const
     {
+        if (dim==1)
+            return _len;
+        if (dim==2)
+            return pc::pi * r2;
         return r2 * pc::pi * _len;
     }
 

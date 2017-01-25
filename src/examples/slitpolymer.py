@@ -45,7 +45,7 @@ d = {
 
     "system" : {
       "temperature"  : 298,
-      "cuboid"       : { "xyzlen" : "300 300 154" },
+      "geometry"     : { "length" : [300, 300, 154] },
       "mcloop"       : { "macro":10, "micro":1000000 },
       "unittest"     : { "testfile":"slitpolymer.test", "stable":False }
       }

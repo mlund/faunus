@@ -16,10 +16,8 @@ namespace Faunus
 
     Geometrybase::Geometrybase() {}
 
-    Geometrybase::Geometrybase( const string &name, string dir ) : name(name), jsondir(dir)
+    Geometrybase::Geometrybase( const string &name ) : name(name)
     {
-        if ( jsondir.empty())
-            jsondir = "system";
     }
 
     Geometrybase::~Geometrybase() {}
@@ -54,10 +52,7 @@ namespace Faunus
 
     void Geometrybase::setVolume( double volume )
     {
-        assert(volume > 0 && "Zero volume not allowed!");
         _setVolume(volume);
-        assert(std::abs((volume - getVolume()) / volume) < 1e-9
-                   && "setVolume() and/or getVolume() is broken!");
     }
 
     double Geometrybase::getVolume() const
@@ -69,6 +64,22 @@ namespace Faunus
     {
         len = Point(r, diameter, 0);
     }
+
+    /**
+     * Key        | Description
+     * :--------- | :-----------------------
+     * `radius`   | Sphere radius [angstrom]
+     */
+    Sphere::Sphere( Tmjson &j ) : Geometrybase("Sphere")
+      {
+          try {
+              setRadius( j.at("radius") );
+          }
+          catch(std::exception& e) {
+              throw std::runtime_error(name + ": " + e.what());
+          }
+      }
+
 
     void Sphere::setRadius( double radius )
     {
@@ -142,14 +153,13 @@ namespace Faunus
 
     void Cuboid::setlen( const Point &l )
     {
-        if ( l.x() < 1e-9 || l.y() < 1e-9 || l.z() < 1e-9 )
-            throw std::runtime_error("Cuboud volume is zero");
-
         len = l;                    // Cuboid sidelength
         len_half = l * 0.5;             // half Cuboid sidelength
         len_inv.x() = 1 / len.x();      // inverse Cuboid side length
         len_inv.y() = 1 / len.y();
         len_inv.z() = 1 / len.z();
+        if ( getVolume() < 1e-9 )
+            throw std::runtime_error("Cuboid volume is zero");
     }
 
     void Cuboid::_setVolume( double newV )
@@ -201,26 +211,41 @@ namespace Faunus
             a = Point(a.x() * s.x() * xy, a.y() * s.y() * xy, a.z() * s.z());
     }
 
-    Cuboid::Cuboid( Tmjson &j, const string sec ) : Geometrybase("Cuboid")
+    /**
+     * The json object is scanned for the following parameters:
+     *
+     * Key           | Description
+     * :------------ | :----------------------------------------------------------------------------
+     * `length`      | Uniform sidelength [angstrom]. Array of sidelength or single length for cube.
+     * `scaledir`    | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
+     */
+    Cuboid::Cuboid( Tmjson &j ) : Geometrybase("Cuboid")
     {
-        if (j.count("system")>0)
-            if (j["system"].count(sec)>0) {
-                auto _j = j["system"][sec];
-                if (_j.is_object()) {
-                    scaledirstr = _j.value("scaledir", string("XYZ"));
-                    scaledir = (scaledirstr == "XY") ? XY : XYZ;
-                    double cubelen = _j.value("len", -1.0);
-                    if ( cubelen < 1e-9 )
-                        len << (_j.value("xyzlen", string("0 0 0")));
-                    else
-                        len.x() = len.y() = len.z() = cubelen;
-                    setlen(len);
-                    if (getVolume()>0)
-                        return;
+        try {
+            if (j.is_object()) {
+                scaledirstr = j.value<string>("scaledir", "XYZ");
+                scaledir = (scaledirstr == "XY") ? XY : XYZ;
+                auto m = j.at("length");
+                if (m.is_number()) {
+                    double l = m.get<double>();
+                    setlen( {l,l,l} );
                 }
+                if (m.is_array()) {
+                    len << m.get<vector<double>>();
+                    setlen( len );
+                }
+                if (getVolume()>0)
+                    return;
             }
-        throw std::runtime_error(name + ": invalid json input");
+        }
+        catch(std::exception& e) {
+            throw std::runtime_error(name + ": " + e.what());
+        }
     }
+
+    Cuboidslit::Cuboidslit() { name += " (XY-periodicity)"; }
+
+    Cuboidslit::Cuboidslit( Tmjson &j ) : Cuboid(j) { name += " (XY-periodicity)"; }
 
     /**
      * @param length Length of the Cylinder (angstrom)
@@ -232,7 +257,7 @@ namespace Faunus
     }
 
     /**
-     * The json object is scanned for the following parameters in section `system/cylinder`:
+     * The json object is scanned for the following parameters:
      *
      * Key      | Description
      * :------- | :-------------------------
@@ -241,10 +266,13 @@ namespace Faunus
      */
     Cylinder::Cylinder( Tmjson &j ) : Geometrybase("Cylinder")
     {
-        auto m = j["system"]["cylinder"];
-        init(
-            m["length"] | 0.0,
-            m["radius"] | 0.0);
+        try {
+            init( j.at("length"),
+                  j.at("radius") );
+        }
+        catch(std::exception& e) {
+            throw std::runtime_error(name + ": " + e.what());
+        }
     }
 
     void Cylinder::init( double length, double radius )
@@ -323,7 +351,7 @@ namespace Faunus
     PeriodicCylinder::PeriodicCylinder(
         double length, double radius ) : Cylinder(length, radius)
     {
-        name = "Cylindrical (periodic ends)";
+        name = "Periodic " + name;
     }
 
     PeriodicCylinder::PeriodicCylinder( Tmjson &j ) : Cylinder(j)
@@ -359,6 +387,8 @@ namespace Faunus
         allowContainerOverlap = false;
         allowMatterOverlap = false;
     }
+
+    CuboidNoPBC::CuboidNoPBC( ) { name += " (No PBC)"; }
 
     CuboidNoPBC::CuboidNoPBC( Tmjson &j ) : Cuboid(j) { name += " (No PBC)"; }
   }//namespace geometry

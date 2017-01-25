@@ -20,7 +20,7 @@ except:
 
 d = {
     'system': {
-        'cuboid': {'len': 19.0288},
+        'geometry': {'length': 19.0288},
         'mcloop': {'macro': 10, 'micro': 100000},
         'unittest': {'testfile': 'gcmol.test', 'stable': False}
     },

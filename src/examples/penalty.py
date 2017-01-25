@@ -21,7 +21,7 @@ def mkinput():
   "moves" : { "atomtranslate" : { "myparticle" : { "peratom":True, "prob":1 } } },
 
   "system" : {
-    "cuboid"   : { "len":4 },
+    "geometry"   : { "length":4 },
     "mcloop"   : { "macro":10, "micro":micro },
     "unittest" : { "testfile":"penalty.test", "stable":False }
   }

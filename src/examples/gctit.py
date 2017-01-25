@@ -39,7 +39,7 @@ def mkinput():
 
       "system": {
         "temperature": 298.15,
-        "cuboid": { "len": 202.5 },
+        "geometry": { "length": 202.5 },
         "unittest": { "testfile": "gctit.test", "stable": False },
         "mcloop": { "macro": 10, "micro": micro },
         "sphere": { "radius": 100 }

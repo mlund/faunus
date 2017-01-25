@@ -64,8 +64,7 @@ d = {
       },
 
     "system" : {
-      "cuboid"       : { "len" : 200 },
-      "sphere"       : { "radius" : 100 },
+      "geometry"     : { "radius" : 100 },
       "mcloop"       : { "macro":10, "micro":20000 },
       "unittest"     : { "testfile":"polymers.test", "stable":False }
       }

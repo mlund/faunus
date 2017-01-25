@@ -28,7 +28,7 @@ def mkinput():
 
       "system": {
         "mcloop"      : { "macro": 10, "micro": 100000 }, 
-        "sphere"      : { "radius": 80 }, 
+        "geometry"    : { "radius": 80 }, 
         "unittest"    : { "testfile": "grand.test", "stable": False }, 
         "coulomb"     : { "epsr": 80 },
         "temperature" : 298.15

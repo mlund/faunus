@@ -20,7 +20,7 @@ except:
 
 d = {
     'system': {
-        'cuboid': {'len': 27.0},
+        'geometry': {'length': 27.0},
         'mcloop': {'macro': 10, 'micro': 100},
         'unittest': {'testfile': 'water2.test', 'stable': False}
     },

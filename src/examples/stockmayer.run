@@ -31,7 +31,7 @@ echo '{
 
   "system" : {
     "temperature"  : 300,
-    "cuboid"       : { "len" : 8.939 },
+    "geometry"     : { "length" : 8.939 },
     "mcloop"       : { "macro":10, "micro":1000 },
     "unittest"     : { "testfile":"stockmayer.test", "stable":false },
     "coulomb" : { "epsr":1, "cutoff":14, "cutoffdip":4.3 }

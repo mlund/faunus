@@ -48,7 +48,7 @@ d = {
 
     "system" : {
       "temperature"  : 1100,
-      "cuboid"       : { "len" : 80 },
+      "geometry"     : { "length" : 80 },
       "mcloop"       : { "macro":5, "micro":40 },
       "unittest"     : { "testfile":"bulk.test", "stable":False },
       "atomlist"     : "bulk.json",

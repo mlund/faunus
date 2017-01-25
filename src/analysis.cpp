@@ -238,7 +238,7 @@ namespace Faunus
             if (d.dim==2)
                 Vr = 2 * pc::pi * i.first * d.dr;
             if (d.dim==1)
-                Vr = 1;
+                Vr = d.dr;
             i.second = i.second/sum * V/Vr;
         }
     }
@@ -264,7 +264,7 @@ namespace Faunus
 
     PairFunctionBase::PairFunctionBase( Tmjson j, string name ) : AnalysisBase(j, name) {
         try {
-            for (auto &i : j["pairs"])
+            for (auto &i : j.at("pairs"))
                 if (i.is_object())
                 {
                     data d;

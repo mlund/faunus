@@ -2822,7 +2822,7 @@ namespace Faunus
      *
      * - \f$ V(r)=4\pi r^2 dr \f$ (3D)
      * - \f$ V(r)=2\pi r \f$ (2D)
-     * - \f$ V(r)=1 \f$ (1D).
+     * - \f$ V(r)=dr \f$ (1D).
      *
      * Example JSON input:
      *

@@ -31,6 +31,6 @@
 
   "system" : {
     "temperature" : 298,
-    "cuboid" : { "len": 10.0 }
+    "geometry" : { "len": 10.0 }
   }
 }

@@ -42,8 +42,8 @@ echo '{
 
   "system" : {
     "temperature"  : 298,
-    "cuboid"       : { "scaledir":"xy",
-                       "xyzlen" : "'`python -c "print($box, $box, $box*2)"`'" },
+    "geometry"     : { "scaledir":"xy",
+                       "length" : '`python -c "print('[{0},{0},{1}]'.format($box,2*$box))"`' },
     "mcloop"       : { "macro":10, "micro":1000 },
     "unittest"     : { "testfile":"membrane.test", "stable":false },
     "lipid_epsilon": '$epsilon',

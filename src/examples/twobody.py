@@ -129,7 +129,7 @@ def mkinput():
 
       "system" : {
           "temperature" : 298.15,
-          "cylinder" : { "length" : 200, "radius" : 40 },
+          "geometry" : { "length" : 200, "radius" : 40 },
           "mcloop"   : { "macro" : 10, "micro" : micro }
           }
       }

@@ -27,7 +27,7 @@ j = {
                 }
             },
         "system" : {
-            "cuboid" : { "len" : L }
+            "geometry" : { "length" : L }
             },
         "analysis" : {
             "pqrfile" :   { "file": "stripes.pqr" },

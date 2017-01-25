@@ -302,7 +302,7 @@ namespace Faunus
 
         Nonbonded(
             Tmjson &j,
-            const string &sec = "nonbonded" ) : geo(j), pairpot(j["energy"][sec])
+            const string &sec = "nonbonded" ) : pairpot(j["energy"][sec])
         {
 
             assert(!j["energy"][sec].is_null());
@@ -582,7 +582,7 @@ namespace Faunus
         Tpairpot pairpot;
 
         NonbondedVector( InputMap &in, const string &dir = "energy" )
-            : Tbase(dir + "/nonbonded"), geo(in), pairpot(in["energy"]["nonbonded"])
+            : Tbase(dir + "/nonbonded"), pairpot(in["energy"]["nonbonded"])
         {
             static_assert(
                 std::is_base_of<Potential::PairPotentialBase, Tpairpot>::value,

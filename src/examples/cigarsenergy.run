@@ -23,7 +23,7 @@ echo '{ "atomlist" :
 
   "system" : {
     "temperature"  : 298.0,
-    "cuboid"       : { "len" : 2000 },
+    "geometry"     : { "length" : 2000 },
     "unittest"     : { "testfile":"cigarsenergy.test", "stable":false }
   }
 }' > cigarsenergy.json

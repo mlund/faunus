@@ -52,7 +52,7 @@ echo '{
 
   "system" : {
     "temperature"  : 298.15,
-    "cuboid"       : { "len" : 100 },
+    "geometry"     : { "length" : 100 },
     "mcloop"       : { "macro":20, "micro":2000 }
   }
 

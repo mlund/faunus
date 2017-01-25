@@ -109,7 +109,7 @@ def mkinput():
 
     "system" : {
       "temperature" : 298.15,
-      "cuboid"   : { "len" : boxlen },
+      "geometry"   : { "length" : boxlen },
       "mcloop"   : { "macro":10, "micro":micro },
       "unittest" : { "testfile":"manybody.test", "stable":False }
     }

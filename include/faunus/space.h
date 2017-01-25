@@ -308,9 +308,9 @@ namespace Faunus
        * is searched for molecules with non-zero `Ninit` and
        * will insert accordingly.
        */
-      Space( Tmjson &j ) : geo(j)
+      Space( Tmjson &j ) : geo( j.at("system").at("geometry") )
       {
-          pc::setT(j["system"]["temperature"] | 298.15);
+          pc::setT( j["system"].value("temperature", 298.15) );
           atom.include(j);
           molecule.include(j);
           for ( auto mol : molecule )

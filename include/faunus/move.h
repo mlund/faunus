@@ -4478,7 +4478,7 @@ namespace Faunus
             Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) : base(e, s), comb(s.molecule)
         {
             init();
-            base::runfraction = j["prob"] | 1.0;
+            base::runfraction = j.value("prob", 1.0);
             comb.include(j); // load combinations
         }
     };

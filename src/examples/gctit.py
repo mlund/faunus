@@ -58,8 +58,10 @@ def mkinput():
         },
 
       "analysis" : {
-        "widom" : { "nstep":20, "ninsert":15, "particles":["La", "Cl", "Cl", "Cl"] },
-        "widomscaled" : { "nstep":20, "ninsert":15, "lB":7.0 },
+        "pqrfile"     : dict(file="confout.pqr"),
+        "statefile"   : dict(file="state"),
+        "widom"       : dict(nstep=20, ninsert=15, particles=["La", "Cl", "Cl", "Cl"]),
+        "widomscaled" : dict(nstep=20, ninsert=15, lB=7.0),
         "molrdf" : {
             "nstep":20, "pairs" :
                 [

@@ -311,8 +311,8 @@ namespace Faunus
       Space( Tmjson &j ) : geo( j.at("system").at("geometry") )
       {
           pc::setT( j["system"].value("temperature", 298.15) );
-          atom.include(j);
-          molecule.include(j);
+          atom.include( j.at("atomlist") );
+          molecule.include( j.at("moleculelist") );
           for ( auto mol : molecule )
               while ( mol.Ninit-- > 0 )
                   insert(mol.id, mol.getRandomConformation(geo, p));

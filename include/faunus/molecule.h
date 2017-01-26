@@ -486,16 +486,12 @@ namespace Faunus
   /**
    * @brief Class for loading and storing Molecule properties
    *
-   * This will load molecule properties from disk and store them in a
-   * vector of `MoleculeData`. The file format is JSON (<http://www.json.org>)
-   * and all molecule properties must be inclosed in an object with
-   * the keyword `moleculelist`.
+   * This will load molecule properties from a JSON object and store them in a
+   * vector of `MoleculeData`.
    *
    * For example:
    *
    * ~~~~
-   * {
-   *   "moleculelist" :
    *   {
    *     "salt" : { "atoms":"Na Cl", "atomic":True },
    *     "polymer" :
@@ -512,13 +508,10 @@ namespace Faunus
    *         }
    *       }
    *   }
-   * }
    * ~~~~
    *
    * Note that faunus currently has a global instance of `MoleculeMap`,
    * simply named `molecule`. This can be accessed from anywhere.
-   *
-   * @todo More documentation. Rename entry for filename to "moleculefile"
    */
   template<class Tpvec, class base=PropertyVector<MoleculeData<Tpvec>>>
   class MoleculeMap : public base
@@ -527,7 +520,6 @@ namespace Faunus
 
       MoleculeMap()
       {
-          base::jsonsection = "moleculelist";
           base::name = "Molecule Properties";
       }
 
@@ -636,12 +628,11 @@ namespace Faunus
       {
           assert(molmap != nullptr);
           base::name = "Molecule Combinations";
-          base::jsonsection = "moleculecombinations";
       }
 
       bool include( Tmjson &j ) override
       {
-          bool r = base::include(j);
+          bool r = base::include( j.at("moleculecombinations") );
           update();
           return r;
       }

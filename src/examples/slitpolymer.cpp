@@ -18,8 +18,7 @@ int main() {
 
   Move::Propagator<Tspace> mv(mcp,pot,spc);           // assembly of all MC moves
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);   // sample polymer shape etc.
-  Analysis::LineDistribution<> surfmapall;            // monomer-surface histogram
-
+  Table2D<double,unsigned int> surfmapall(0.2);       // monomer-surface histogram
 
   cout << spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 

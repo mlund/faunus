@@ -19,13 +19,9 @@ int main()
     spc.load("state", Tspace::RESIZE);             // load old config. from disk (if any)
 
     Analysis::CombinedAnalysis analysis(mcp, pot, spc);
-    Analysis::LineDistribution<> rdf_ab(0.5);      // 0.1 angstrom resolution
-
     Move::Propagator<Tspace> mv(mcp, pot, spc);
 
     cout << atom.info() + spc.info() + pot.info() + "\n";
-
-    auto g = spc.findMolecules("protein");
 
     MCLoop loop(mcp);                             // class for handling mc loops
     while ( loop[0] )
@@ -34,23 +30,13 @@ int main()
         {
             mv.move();                           // move!
             analysis.sample();                   // sample
-
-            if ( slump() < 0.10 )
-                for ( size_t i = 0; i < g.size() - 1; i++ )
-                    for ( size_t j = i + 1; j < g.size(); j++ )
-                        rdf_ab(spc.geo.dist(g[i]->cm, g[j]->cm))++;
-
         }                                           // end of micro loop
         cout << loop.timing();
-        rdf_ab.save("rdf.dat");                     // g(r) - not normalized!
     }                                             // end of macro loop
 
     UnitTest test(mcp);                           // class for unit testing
 
     cout << loop.info() + mv.info() + test.info() + analysis.info();
-
-    FormatPQR::save("confout.pqr", spc.p);        // PQR snapshot for VMD etc.
-    spc.save("state");                            // final simulation state
 
     return test.numFailed();
 }

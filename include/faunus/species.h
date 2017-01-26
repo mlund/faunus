@@ -27,9 +27,7 @@ namespace Faunus
       typedef unsigned char Tid;
       std::string name;  //!< Unique, user-defined name
       Tid id;            //!< Unique id (automatically set by `PropertyVector`)
-      virtual ~PropertyBase() {};
-
-      PropertyBase() : name("UNK") {}
+      inline PropertyBase() : name("UNK") {}
   };
 
   /**
@@ -57,17 +55,17 @@ namespace Faunus
    * v["oxygen"].mass = 15.999;
    *
    * for (auto i : v)
-   *   std::cout << i.name << " " << i.mass << "\n"
+   *   std::cout << i.name << " " << i.mass; // --> oxygen 15.999
+   *
+   * std::cout << v[0].mass; // -> 15.999
    * ~~~~
    *
-   * Element access complexity by `string` is linear with size so be
-   * careful. For constant speed, use direct access.
+   * Complexity: constant if direct access, linear if using string.
    */
   template<class Tproperty, class base=std::vector<Tproperty> >
   class PropertyVector : private base
   {
   protected:
-      string jsonsection; // section to look for elements
       string name;        // name of properties
   public:
       using typename base::value_type;
@@ -138,12 +136,10 @@ namespace Faunus
       /** Load data from json object */
       virtual bool include( Tmjson &j )
       {
-          assert(!jsonsection.empty());
-          auto m = j[jsonsection];
-          base::reserve(m.size());
-          for ( auto it = m.begin(); it != m.end(); ++it )
-              push_back(value_type(it));
-          return (empty() ? false : true);
+          base::reserve( j.size() );
+          for ( auto it = j.begin(); it != j.end(); ++it )
+              push_back( value_type(it) );
+          return !empty();
       }
 
       PropertyVector()
@@ -309,21 +305,16 @@ namespace Faunus
   /**
    * @brief Class for loading and storing atomic properties
    * 
-   * This will load atom properties from disk and store them in a
-   * vector of `AtomData`. The file format is JSON (<http://www.json.org>)
-   * and all atom properties must be inclosed in an object with
-   * the keyword `atomlist`.
+   * This will load atom properties from a JSON object and store them in a
+   * vector of `AtomData`.
    * Due to compatibility, a default fallback property is added upon construction
    * (index 0).
    *
    * For example:
    *
    *     {
-   *       "atomlist" :
-   *       {
-   *         "Na" : { "q": 1.0, "r":1.9, "mw":22.99 },
-   *         "Cl" : { "q":-1.0, "r":1.7, "mw":35.45 }
-   *       }
+   *       "Na" : { "q": 1.0, "r":1.9, "mw":22.99 },
+   *       "Cl" : { "q":-1.0, "r":1.7, "mw":35.45 }
    *     }
    *
    * Code example:
@@ -358,7 +349,6 @@ namespace Faunus
       AtomMap()
       {
           base::name = "Atom Properties";
-          base::jsonsection = "atomlist";
 
           // to be removed! This is here only to be compatible with test
           // data that expects an initial dummy atom with id 0.

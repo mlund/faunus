@@ -110,7 +110,6 @@ namespace Faunus
         Tspace *spc;
         Energy::Energybase <Tspace> *pot;
         int dim;             // dimensions (default: 3)
-        double area;         // area if dim=2 (default: 0)
 
         typedef Eigen::Matrix3d Ttensor;
         Ttensor T;           // excess pressure tensor
@@ -190,12 +189,7 @@ namespace Faunus
             t.setZero();
 
             int N = spc->p.size();
-            double V = spc->geo.getVolume();
-            if ( dim == 2 )
-            {
-                assert(area > 0 && "Area must be specified for 2D sampling");
-                V = area;
-            }
+            double V = spc->geo.getVolume( dim );
 
             // loop over groups internally
             for ( auto g : spc->groupList())
@@ -225,396 +219,10 @@ namespace Faunus
         template<class Tpotential>
         VirialPressure( Tmjson &j, Tpotential &pot, Tspace &spc ) : spc(&spc), pot(&pot), AnalysisBase(j)
         {
-            dim = j["dim"] | 3;
-            area = j["area"] | 0.0;
-            noMolecularPressure = j["noMolecularPressure"] | false;
+            dim = j.value("dim", 3);
+            noMolecularPressure = j.value("noMolecularPressure", false);
             name = "Virial Pressure";
             T.setZero();
-        }
-    };
-
-    /*!
-     * \brief Radial distribution analysis
-     *
-     * This radial distribution is defined as
-     * @f$ g(r) = \rho(r) / \rho(\infty) @f$
-     * where @f$\rho@f$ are particle densities in a spherical volume element
-     * `rdr` and in the bulk, respectively.
-     *
-     * Example:
-     *
-     * ~~~
-     * short cation = atom["Na"].id;
-     * short anion = atom["Cl"].id;
-     * Analysis::RadialDistribution<float,unsigned int> rdf(0.2); // 0.2 Å resolution
-     * rdf.sample( myspace, mygroup, cation, anion );
-     * rdf.save("rdf.dat");
-     * ~~~
-     *
-     * @date Lund 2011
-     */
-    template<typename Tx=float, typename Ty=unsigned long long int>
-    class RadialDistribution : public Table2D<Tx, Ty>
-    {
-    private:
-        typedef Table2D <Tx, Ty> Ttable;
-
-        virtual double volume( Tx x )
-        {
-            return 4. / 3. * pc::pi * (pow(x + 0.5 * this->dx, 3)
-                - pow(x - 0.5 * this->dx, 3));
-        }
-
-        double get( Tx x ) override
-        {
-            assert(volume(x) > 0);
-            assert(this->count() > 0);
-
-            if ( bulkconc.cnt == 0 )
-                bulkconc += 1;
-            if ( bulkconc.avg() < 1e-6 )
-                bulkconc += 1;
-            if ( Npart.cnt == 0 )
-                Npart += 1;
-
-            return ((double) this->operator()(x) * Npart.avg())
-                / (volume(x) * (double) this->count() * bulkconc.avg());
-        }
-
-        Average<double> bulkconc; //!< Average bulk concentration
-        Average<double> Npart;
-    public:
-        Tx maxdist; //!< Pairs with distances above this value will be skipped (default: infinity)
-
-        /*!
-           * \param res Resolution of X axis
-           */
-        RadialDistribution( Tx res = 0.2 ) : Ttable(res, Ttable::HISTOGRAM)
-        {
-            this->name = "Radial Distribution Function";
-
-            maxdist = pc::infty;
-            static_assert(std::is_integral<Ty>::value,
-                          "Histogram must be of integral type");
-            static_assert(std::is_unsigned<Ty>::value,
-                          "Histogram must be unsigned");
-        }
-
-        /*!
-           * \brief Sample radial distibution of two atom types
-           * \param spc Simulation space
-           * \param g Group to search
-           * \param ida Atom id of first particle
-           * \param idb Atom id of second particle
-           */
-        template<class Tspace>
-        void sample( Tspace &spc, Group &g, short ida, short idb )
-        {
-            for ( auto i = g.begin(); i != g.end() - 1; i++ )
-                for ( auto j = i + 1; j != g.end(); j++ )
-                    if ((spc.p[*i].id == ida && spc.p[*j].id == idb) || (spc.p[*i].id == idb && spc.p[*j].id == ida))
-                    {
-                        Tx r = spc.geo.dist(spc.p[*i], spc.p[*j]);
-                        if ( r <= maxdist )
-                            this->operator()(r)++;
-                    }
-            int bulk = 0;
-            for ( auto i : g )
-            {
-                if ( spc.p[i].id == ida || spc.p[i].id == idb )
-                {
-                    bulk++;
-                }
-            }
-            Npart += bulk;
-            bulkconc += bulk / spc.geo.getVolume();
-        }
-
-        template<class Tspace>
-        void sample( Tspace &spc, short ida, short idb )
-        {
-            Group all(0, spc.p.size() - 1);
-            assert(all.size() == (int) spc.p.size());
-            return sample(spc, all, ida, idb);
-        }
-
-        template<class Tspace>
-        void sampleMolecule( Tspace &spc, Group &sol )
-        {
-            for ( int i = 0; i < sol.numMolecules() - 1; i++ )
-            {
-                for ( int j = i + 1; j < sol.numMolecules(); j++ )
-                {
-                    Group ig, jg;
-                    sol.getMolecule(i, ig);
-                    sol.getMolecule(j, jg);
-                    Point icm = ig.massCenter(spc);
-                    Point jcm = jg.massCenter(spc);
-                    this->operator()(spc.geo.dist(icm, jcm))++;
-                }
-            }
-        }
-
-        // Same as sampeMolecule but different inputs
-        template<class Tspace>
-        void sampleMoleculeGroup( Tspace &spc, vector <Group> &g, string name )
-        {
-            int bulk = 0;
-            for ( size_t i = 0; i < g.size() - 1; i++ )
-            {
-                Group ig = g[i];
-                if ( ig.name == name )
-                {
-                    bulk++;
-                    for ( size_t j = i + 1; j < g.size(); j++ )
-                    {
-                        Group jg = g[j];
-                        if ( jg.name == name )
-                        {
-                            Point icm = ig.massCenter(spc);
-                            Point jcm = jg.massCenter(spc);
-                            this->operator()(spc.geo.dist(icm, jcm))++;
-                        }
-                    }
-                }
-            }
-            Npart += bulk;
-            bulkconc += bulk / spc.geo.getVolume();
-        }
-    };
-
-    /**
-     * @brief Distribution along a line
-     *
-     * This is merely a histogram where the volume element of each
-     * bin is set to unity. This differs from i.e. the radial distribution
-     * where spherical volume elements are used.
-     */
-    template<typename Tx=double, typename Ty=unsigned long>
-    class LineDistribution : public RadialDistribution<Tx, Ty>
-    {
-    private:
-        double volume( Tx x ) override { return 1.0; }
-
-    public:
-        LineDistribution( Tx res = 0.2 ) : RadialDistribution<Tx, Ty>(res)
-        {
-            this->name = "Line Distribution";
-        }
-
-    };
-
-    /*!
-     * \brief Line distr. when the bins values should sum up to `n`.
-     *
-     * Example: Salt line distribution
-     *
-     * ~~~
-     * Analysis::LineDistributionNorm<float,unsigned long int> saltdistr(salt.size(), 0.2);
-     * ~~~
-     *
-     * \author Axel Thuresson
-     * \date Lund 2012
-     */
-    template<typename Tx=double, typename Ty=int>
-    class LineDistributionNorm : public RadialDistribution<Tx, Ty>
-    {
-    private:
-        double volume( Tx x ) override { return 1.0; }
-
-        int n;
-    public:
-        LineDistributionNorm( int al_n = 1, Tx res = 0.2 ) : RadialDistribution<Tx, Ty>(res)
-        {
-            this->name = "Line Distribution Normalized for n particles";
-            n = al_n;
-        }
-
-        double get( Tx x ) override
-        {
-            assert(volume(x) > 0);
-            assert(this->count() > 0);
-            return (double) this->operator()(x) * n / (double) this->count();
-        }
-
-        /*!
-           * \brief Simplest form of the midplane pressure
-           */
-        double mid()
-        {
-            return (get(this->dx) + get(-this->dx)) * 0.5 / this->dx;
-        }
-
-        /*!
-           * \brief Simplest form of the end pressure
-           */
-        double end()
-        {
-            return
-                (get(this->minx()) + get(this->minx() + this->dx) + get(-this->minx()) + get(-this->minx() - this->dx))
-                    * 0.25 / this->dx;
-        }
-    };
-
-    /**
-     * @brief Base class for force calculations
-     *
-     * Includes some neccessary functionality for deriving the force.
-     *
-     * @author Axel Thuresson
-     * @date Lund, 2013
-     */
-    class TwobodyForce : public AnalysisBase
-    {
-    protected:
-        string _info();         //!< Print results of analysis
-        Group *igroup1;
-        Group *igroup2;
-        Group *ions;
-    public:
-        virtual Point meanforce();
-        TwobodyForce( InputMap &, Group &, Group &, Group & );//!< Constructor
-        void save( string );
-        void setTwobodies( Group &, Group &, Group & );
-    };
-
-    /*!
-     * \brief Calculates the "direct" twobody mean force
-     *
-     * Calculates the "direct" mean force between two bodies including ions.
-     * This method is usually decent at close distances (large mean force).
-     * When the two bodies are far apart (small mean force) the difference
-     * between two large is taken which gives a relative large error.
-     *
-     * \author Axel Thuresson
-     * \date Lund, 2013
-     */
-    class TwobodyForceDirect : public TwobodyForce
-    {
-    private:
-        Point f_pp;
-        Point f_pi;
-        Point f_ip;
-    protected:
-        string _info();         //!< Print results of analysis
-    public:
-        TwobodyForceDirect( InputMap &, Group &, Group &, Group & );//!< Constructor
-        Point meanforce();
-
-        /** @brief Calculate the direct force between the two bodies */
-        template<class Tpvec, class Tenergy>
-        void calc( Tpvec &p, Tenergy &pot )
-        {
-            // Force between the two bodies
-            for ( auto i : *igroup1 )
-            {
-                for ( auto j : *igroup2 )
-                {
-                    Point f = pot.f_p2p(p[i], p[j]);
-                    f_pp += f;
-                }
-            }
-            //f_pp += 1.0*_f_pp;
-            //f_mean1 += 1.0*_f_pp;
-            //f_mean2 += -1.0*_f_pp;
-            for ( auto i : *igroup1 )
-            {
-                for ( auto j : *ions )
-                {
-                    Point f = pot.f_p2p(p[i], p[j]);
-                    f_pi += f;
-                }
-            }
-            for ( auto i : *igroup2 )
-            {
-                for ( auto j : *ions )
-                {
-                    Point f = pot.f_p2p(p[i], p[j]);
-                    f_ip += f;
-                }
-            }
-        }
-    };
-
-    /*!
-     * \brief Calculates the midplane twobody mean force
-     *
-     * Calculates the midplane mean force between two bodies including ions.
-     * This method has usually faster convergence than direct force calculations.
-     *
-     * \author Axel Thuresson
-     * \date Lund, 2013
-     */
-    class TwobodyForceMidp : public TwobodyForce
-    {
-    private:
-        Point f_pp;
-        Point f_pi;
-        Point f_ip;
-        Point f_ii;
-        Analysis::LineDistributionNorm<float, unsigned long int> *saltdistr;
-    protected:
-        string _info();         //!< Print results of analysis
-    public:
-        TwobodyForceMidp( InputMap &,
-                          Group &,
-                          Group &,
-                          Group &,
-                          Analysis::LineDistributionNorm<float, unsigned long int> * );//!< Constructor
-        Point meanforce();
-
-        /** @brief Calculate the direct force between the two bodies */
-        template<class Tpvec, class Tenergy>
-        void calc( Tpvec &p, Tenergy &pot )
-        {
-            // Force between the two bodies
-            for ( auto i : *igroup1 )
-            {
-                for ( auto j : *igroup2 )
-                {
-                    Point f = pot.f_p2p(p[i], p[j]);
-                    f_pp += f;
-                }
-            }
-
-            for ( auto i : *igroup1 )
-            {
-                for ( auto j : *ions )
-                {
-                    if ( p[j].z() < 0.0 )
-                    {
-                        Point f = pot.f_p2p(p[i], p[j]);
-                        f_pi += f;
-                    }
-                }
-            }
-
-            for ( auto i : *igroup2 )
-            {
-                for ( auto j : *ions )
-                {
-                    if ( p[j].z() >= 0.0 )
-                    {
-                        Point f = pot.f_p2p(p[i], p[j]);
-                        f_ip += f;
-                    }
-                }
-            }
-
-            for ( auto i : *ions )
-            {
-                if ( p[i].z() >= 0.0 )
-                {
-                    for ( auto j : *ions )
-                    {
-                        if ( p[j].z() < 0.0 )
-                        {
-                            Point f = pot.f_p2p(p[i], p[j]);
-                            f_ii += f;
-                        }
-                    }
-                }
-            }
         }
     };
 
@@ -1606,7 +1214,6 @@ namespace Faunus
     class DipoleAnalysis
     {
     private:
-        Analysis::RadialDistribution<> rdf;
         Table2D<double, double> kw, mucorr_angle;
         Table2D<double, Average<double> > mucorr, mucorr_dist;
         Histogram<double, unsigned int> HM_x, HM_y, HM_z, HM_x_box, HM_y_box, HM_z_box, HM2, HM2_box;
@@ -1620,7 +1227,7 @@ namespace Faunus
     public:
         template<class Tspace, class Tinputmap>
         DipoleAnalysis( const Tspace &spc, Tinputmap &in ) :
-            rdf(0.1), kw(0.1), mucorr_angle(0.1), mucorr(0.1), mucorr_dist(0.1), HM_x(0.1), HM_y(0.1),
+            kw(0.1), mucorr_angle(0.1), mucorr(0.1), mucorr_dist(0.1), HM_x(0.1), HM_y(0.1),
             HM_z(0.1), HM_x_box(0.1), HM_y_box(0.1), HM_z_box(0.1), HM2(0.1), HM2_box(0.1)
         {
             sampleKW = 0;
@@ -1745,7 +1352,6 @@ namespace Faunus
                 for ( int j = i + 1.; j < N + 1; j++ )
                 {
                     r = spc.geo.dist(spc.p[i], spc.p[j]);
-                    rdf(r)++;
                     sca = spc.p[i].mu.dot(spc.p[j].mu);
                     mucorr_angle(sca) += 1.;
                     mucorr(r) += sca;
@@ -1827,7 +1433,6 @@ namespace Faunus
          */
         void save( string ext = "", bool reset = false )
         {
-            rdf.save("gofr.dat" + ext);
             mucorr.save("mucorr.dat" + ext);
             mucorr_angle.save("mucorr_angle.dat" + ext);
             mucorr_dist.save("mucorr_dist.dat" + ext);
@@ -1872,7 +1477,6 @@ namespace Faunus
 
             if ( reset )
             {
-                rdf.clear();
                 mucorr.clear();
                 mucorr_angle.clear();
                 mucorr_dist.clear();
@@ -1903,7 +1507,6 @@ namespace Faunus
         {
             if ( ext == "none" )
                 ext = "";
-            rdf.load("gofr.dat" + ext);
             mucorr.load("mucorr.dat" + ext);
             mucorr_angle.load("mucorr_angle.dat" + ext);
             mucorr_dist.load("mucorr_dist.dat" + ext);

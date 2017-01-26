@@ -210,11 +210,11 @@ namespace Faunus
 
     public:
         template<class Tspace>
-        PolarizeMove( InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s ) :
+        PolarizeMove( Tmjson &in, Energy::Energybase<Tspace> &e, Tspace &s ) :
             Tmove(in, e, s)
         {
-            threshold = in.get<double>("pol_threshold", 0.001, "Iteration precision");
-            max_iter = in.get<int>("max_iterations", 40, "Max. iterations");
+            threshold = in.value("pol_threshold", 0.001);
+            max_iter = in.value("max_iterations", 40);
         }
 
         template<class Tspace>
@@ -3925,12 +3925,12 @@ namespace Faunus
         //int iparticle;   //!< Select single particle to move (-1 if none, default)
 
     public:
-        SwapCharge( InputMap &, Energy::Energybase<Tspace> &, Tspace & );
+        SwapCharge( Tmjson&, Energy::Energybase<Tspace> &, Tspace & );
         std::set<int> swappableParticles;  //!< Particle index that can be swapped
     };
 
     template<class Tspace>
-    SwapCharge<Tspace>::SwapCharge( InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s ) : base(e, s)
+    SwapCharge<Tspace>::SwapCharge( Tmjson &in, Energy::Energybase<Tspace> &e, Tspace &s ) : base(e, s)
     {
         base::title = "Swap head groups of different charges";
     }
@@ -4770,7 +4770,7 @@ namespace Faunus
 
     public:
         SwapMoveMSR(
-            InputMap &in, Energy::Energybase<Tspace> &ham, Tspace &spc ) : SwapMove<Tspace>(in, ham, spc)
+            Tmjson &in, Energy::Energybase<Tspace> &ham, Tspace &spc ) : SwapMove<Tspace>(in, ham, spc)
         {
             this->title += " (min. shortrange)";
             this->useAlternativeReturnEnergy = true;
@@ -4868,13 +4868,13 @@ namespace Faunus
 
     public:
         template<typename Tenergy>
-        Propagator( InputMap &in, Tenergy &e, Tspace &s ) : base(e, s), dusum(0)
+        Propagator( Tmjson &in, Tenergy &e, Tspace &s ) : base(e, s), dusum(0)
         {
             this->title = "P R O P A G A T O R S";
 
             jsonfile = "move_out.json";
 
-            auto m = in["moves"];
+            auto m = in.at("moves");
             for ( auto i = m.begin(); i != m.end(); ++i )
             {
                 auto &val = i.value();

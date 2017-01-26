@@ -180,7 +180,7 @@ namespace Faunus
     }
 
     /**
-     * @brief Construct from `InputMap`.
+     * @brief Construct from JSON object
      *
      * Call this *after* particles have been loaded into `Space`, i.e.
      * typically just before starting the Markov chain. Also make

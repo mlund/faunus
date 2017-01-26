@@ -21,13 +21,11 @@ namespace Faunus
    *
    * Used to collect properties for atoms, molecules etc.
    */
-  class PropertyBase
+  struct PropertyBase
   {
-  public:
       typedef unsigned char Tid;
       std::string name;  //!< Unique, user-defined name
       Tid id;            //!< Unique id (automatically set by `PropertyVector`)
-      inline PropertyBase() : name("UNK") {}
   };
 
   /**
@@ -134,11 +132,19 @@ namespace Faunus
       }
 
       /** Load data from json object */
-      virtual bool include( Tmjson &j )
+      bool include( Tmjson &j )
       {
           base::reserve( j.size() );
           for ( auto it = j.begin(); it != j.end(); ++it )
-              push_back( value_type(it) );
+          {
+              try {
+                  push_back( value_type(it) );
+              }
+              catch(std::exception& e) {
+                  throw std::runtime_error(name + ", element " + it.key() + ": " + e.what());
+              }
+          }
+
           return !empty();
       }
 
@@ -147,8 +153,6 @@ namespace Faunus
           static_assert(std::is_base_of<PropertyBase, Tproperty>::value,
                         "Elements must be derived from `PropertyBase`");
       }
-
-      virtual ~PropertyVector() {};
 
       string info()
       {
@@ -255,7 +259,6 @@ namespace Faunus
       /** @brief Constructor - by default data is initialized; mass set to unity */
       inline AtomData( Tmjson::iterator &atom )
       {
-
           auto _js = atom.value();
           if ( !atom.key().empty())
               name = atom.key();

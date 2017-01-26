@@ -279,7 +279,7 @@ namespace Faunus
      * `Tpairpot` is expected to be a pair potential with the following
      * properties:
      *
-     * - `Tpairpot(const InputMap&)`
+     * - `Tpairpot(const Tmjson&)`
      * - `double Tpairpot::operator()(const particle&, const particle&, double sqdist))`
      *
      * For a list of implemented potentials, see the `Faunus::Potential`
@@ -462,7 +462,7 @@ namespace Faunus
      * `Tpairpot` is expected to be a pair potential with the following
      * properties:
      *
-     * - `Tpairpot(const InputMap&)`
+     * - `Tpairpot(const Tmjson&)`
      * - `double Tpairpot::operator()(const particle&, const particle&, double sqdist))`
      *
      * For a list of implemented potentials, see the `Faunus::Potential`
@@ -560,7 +560,7 @@ namespace Faunus
      *
      * `Tpairpot` is expected to be a pair potential with the following properties:
      *
-     * - `Tpairpot(const InputMap&)`
+     * - `Tpairpot(const Tmjson&)`
      * - `double Tpairpot::operator()(const particle&, const particle&, double sqdist))`
      *
      * For a list of implemented potentials, see the Faunus::Potential namespace.
@@ -581,14 +581,14 @@ namespace Faunus
         typename Tspace::GeometryType geo;
         Tpairpot pairpot;
 
-        NonbondedVector( InputMap &in, const string &dir = "energy" )
+        NonbondedVector( Tmjson &in, const string &dir = "energy" )
             : Tbase(dir + "/nonbonded"), pairpot(in["energy"]["nonbonded"])
         {
             static_assert(
                 std::is_base_of<Potential::PairPotentialBase, Tpairpot>::value,
                 "Tpairpot must be a pair potential");
             Tbase::name = "Nonbonded N" + textio::squared + " - " + pairpot.name;
-            groupBasedField = in.get<bool>("pol_g2g", false, "Field will exclude own group");
+            groupBasedField = in.value("pol_g2g", false);
         }
 
         void setSpace( Tspace &s ) override
@@ -776,7 +776,7 @@ namespace Faunus
     private:
         typedef Tnonbonded base;
     public:
-        NonbondedEarlyReject( InputMap &in ) : base(in)
+        NonbondedEarlyReject( Tmjson &in ) : base(in)
         {
             base::name += " (early reject)";
         }
@@ -823,7 +823,7 @@ namespace Faunus
      * particle-particle cutoff plus the maximum radii of the two groups,
      * @f$ r_{cut}^{g2g} = r_{cut}^{p2p} + a_{g1} + a_{g2} @f$.
      *
-     * Upon construction the `InputMap` is searched for the following in
+     * Upon construction the `Tmjson` is searched for the following in
      * section `energy/nonbonded/`:
      *
      * Keyword      |  Description
@@ -972,13 +972,13 @@ namespace Faunus
         }
 
     public:
-        NonbondedCutg2gMonopole( InputMap &in ) : base(in), dh(in)
+        NonbondedCutg2gMonopole( Tmjson &in ) : base(in), dh(in)
         {
             base::name += "+MP";
-            R = in.get<double>("monopole_radius", 0, "g2g cutoff monopole radius (angstrom)");
+            R = in.value("monopole_radius", 0.0);
             double k = 1 / dh.debyeLength();
             qscale = std::sinh(k * R) / (k * R);
-            Q = qscale * in.get<double>("monopole_charge", 0, "g2g cutoff monopole charge number (e)");
+            Q = qscale * in.value("monopole_charge", 0.0);
         }
 
         double g2g( const typename base::Tpvec &p, Group &g1, Group &g2 ) override
@@ -1416,7 +1416,7 @@ namespace Faunus
     public:
         Texpot expot;
 
-        ExternalPotential( InputMap &in ) : expot(in)
+        ExternalPotential( Tmjson &in ) : expot(in)
         {
             base::name = "External Potential (" + expot.name + ")";
         }
@@ -1465,7 +1465,7 @@ namespace Faunus
      * correct sampling. Can also be used to restrain the mass center of a group to
      * a subset of the simulation cell volume in other type of systems.
      *
-     * The InputMap parameters are:
+     * The JSON parameters are:
      *
      * Key                | Description
      * :----------------- | :---------------------------
@@ -1490,10 +1490,10 @@ namespace Faunus
         double min, max;
         Group *gPtr;
     public:
-        MassCenterRestrain( InputMap &in )
+        MassCenterRestrain( Tmjson &in )
         {
-            min = in.get<double>("bin_min", 0);
-            max = in.get<double>("bin_max", pc::infty);
+            min = in.value("bin_min", 0.0);
+            max = in.value("bin_max", pc::infty);
             base::name = "Mass Center Restrain";
             gPtr = nullptr;
         }
@@ -2390,7 +2390,7 @@ dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
      ** @brief General energy class for handling penalty function (PF) methods.
      **
      ** @details The reaction coordinate(s) is specified in the input file.
-     ** The InputMap class is scanned for the following keys:
+     ** The Tmjson class is scanned for the following keys:
      **
      ** Key              | Description
      ** :--------------- | :-----------------------------

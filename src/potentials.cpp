@@ -538,7 +538,7 @@ namespace Faunus
         return DebyeHuckel::info(w);
     }
 
-    DebyeHuckelDenton::DebyeHuckelDenton( InputMap &in, const string &dir ) : DebyeHuckel(in, dir)
+    DebyeHuckelDenton::DebyeHuckelDenton( Tmjson &in, const string &dir ) : DebyeHuckel(in, dir)
     {
         name += "-Denton";
         lB_org = lB;

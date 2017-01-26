@@ -65,7 +65,7 @@ namespace Faunus
 
         Potential::DebyeHuckel _dh;
     public:
-        ExcessDH( Faunus::InputMap &in ) : _dh(in)
+        ExcessDH( Tmjson &in ) : _dh(in)
         {
             name = "Debye-Huckel Single Ion Excess";
         }
@@ -250,7 +250,7 @@ namespace Faunus
         bool loadfromdisk; //!< `True` = Load from disk, `False` = Sample charge density
         string _info();
     public:
-        CylindricalCorrectionDH( InputMap &, std::string= "mfc_" );  //!< Constructor
+        CylindricalCorrectionDH( Tmjson&, std::string= "mfc_" );    //!< Constructor
         template<class Tparticle> T operator()( const Tparticle & );//!< External potential on particle
         template<class Tpvec> void sample( const Tpvec &, T, T );   //!< Sample charge density
     };
@@ -289,7 +289,7 @@ namespace Faunus
     }
 
     /**
-     * @brief Construct from InputMap
+     * @brief Construct from JSON
      *
      * The addtion to `Potential::DebyeHuckel` keywords, we look for:
      *
@@ -300,14 +300,14 @@ namespace Faunus
      * mfc_radius    | Radius of cut-off
      */
     template<class T>
-    CylindricalCorrectionDH<T>::CylindricalCorrectionDH( InputMap &in, string pfx ) :
-        bin(in.get<T>("CylindricalCorrectionDH_binsize", 2)),
+    CylindricalCorrectionDH<T>::CylindricalCorrectionDH( Tmjson &in, string pfx ) :
+        bin(in.value<T>("CylindricalCorrectionDH_binsize", 2)),
         qdensity(bin, Ttable::XYDATA)
     {
         name = "Cylindrical DH Correction";
         Potential::DebyeHuckel dh(in);
-        threshold = in(pfx + "radius", pc::infty);
-        loadfromdisk = in(pfx + "load", false);
+        threshold = in.value(pfx + "radius", pc::infty);
+        loadfromdisk = in.value(pfx + "load", false);
         filename = textio::prefix + pfx + "qdensity";
         prefactor = std::exp(-threshold / dh.debyeLength())
             * dh.bjerrumLength() * pc::pi * 2 * bin * dh.debyeLength();
@@ -333,7 +333,7 @@ namespace Faunus
      * This is a "potential" for `ExternalPotential` to
      * mimic a uniform electric field. The template argument must
      * be a pair potential that implements a `fieldEnergy` function.
-     * The `InputMap` is searched for `field_x`, `field_y`, and
+     * The JSON object is searched for `field_x`, `field_y`, and
      * `field_z` which indicate the electric field vector. Default
      * value is `(0,0,0)`.
      *
@@ -357,12 +357,12 @@ namespace Faunus
         string _info() { return pairpot.info(); }
 
     public:
-        ElectricField( InputMap &in ) : pairpot(in)
+        ElectricField( Tmjson &in ) : pairpot(in)
         {
             base::name = "Uniform electric field";
-            E.x() = in.get<double>("field_x", 0, "Electric field (x)");
-            E.y() = in.get<double>("field_y", 0, "Electric field (y)");
-            E.z() = in.get<double>("field_z", 0, "Electric field (z)");
+            E.x() = in.value("field_x", 0.0);
+            E.y() = in.value("field_y", 0.0);
+            E.z() = in.value("field_z", 0.0);
         }
 
         /** @brief Interaction of particle `p` with electric field */
@@ -419,7 +419,7 @@ namespace Faunus
      * a particle of opposite charge. The addition of the non-shifted LJ potential to the same system would make the particles 
      * enter in a repulsive regime at distances greater than zero, thus decreasing adsorption, which defeats its purpose. 
      *   
-     * The InputMap parameters are:
+     * The JSON parameters are:
      *
      * Key                      | Description
      * :----------------------- | :---------------------------
@@ -437,20 +437,20 @@ namespace Faunus
         enum InteractionType { SQWL, LJ, R6, R3, LINEAR }; //
         InteractionType _type;                           // faster than evaluating strings
     public:
-        StickyWall( InputMap & );
+        StickyWall( Tmjson & );
         void setSurfPositionZ( T * );                       // sets position of surface
         template<typename Tparticle>
         T operator()( const Tparticle &p );              // returns energy
     };
 
     template<class T>
-    StickyWall<T>::StickyWall( InputMap &in )
+    StickyWall<T>::StickyWall( Tmjson &in )
     {
         string prefix = "stickywall_";
         name = "Sticky Wall";
-        _depth = in.get<double>(prefix + "depth", 0);
-        _threshold = in.get<double>(prefix + "threshold", 0);
-        string type = in.get<string>(prefix
+        _depth = in.value<double>(prefix + "depth", 0);
+        _threshold = in.value<double>(prefix + "threshold", 0);
+        string type = in.at(prefix
                                          + "type");     // got rid of the default value because the following block turns anything that is not 'lj', 'r6', 'r3' or 'linear' into 'sqwl'.
         if ( type.compare("lj") == 0 )
             _type = LJ;
@@ -559,7 +559,7 @@ namespace Faunus
     template<class T=double>
     struct HydrophobicWall : public StickyWall<T>
     {
-        HydrophobicWall( InputMap &in ) : StickyWall<T>::StickyWall(in)
+        HydrophobicWall( Tmjson &in ) : StickyWall<T>::StickyWall(in)
         {
             this->name += " (Hydrophobic)";
         }

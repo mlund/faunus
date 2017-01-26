@@ -992,7 +992,7 @@ namespace Faunus {
       private:
         double c;
       public:
-        ChargeNonpolar(Tmjson&, const string &sec="coulomb"); //!< Construction from InputMap
+        ChargeNonpolar(Tmjson&, const string &sec="coulomb");
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -1248,7 +1248,7 @@ namespace Faunus {
           }
 
       public:
-        DebyeHuckelDenton(InputMap &in, const string &dir="");
+        DebyeHuckelDenton(Tmjson &in, const string &dir="");
 
         // Effective macroion-macroion interaction (Eq. 37)
         template<class Tparticle>

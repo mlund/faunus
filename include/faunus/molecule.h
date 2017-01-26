@@ -630,7 +630,7 @@ namespace Faunus
           base::name = "Molecule Combinations";
       }
 
-      bool include( Tmjson &j ) override
+      bool include( Tmjson &j )
       {
           bool r = base::include( j.at("moleculecombinations") );
           update();

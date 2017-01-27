@@ -14,7 +14,7 @@ typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
 int main() {
 
   cout << textio::splash();      // show faunus banner and credits
-  InputMap mcp("water2.json");   // read input file
+  Tmjson mcp = openjson("water2.json");// read input file
   Tspace spc(mcp);
 
   // Energy functions and space

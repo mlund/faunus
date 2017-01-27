@@ -6,7 +6,7 @@ typedef Potential::LennardJonesLB Tpair;  // and pair potential
 
 int main()
 {
-    InputMap in("minimal.json");            // open parameter file for user input
+    Tmjson in = openjson("minimal.json");   // open parameter file for user input
     Tspace spc(in);                         // Simulation space, particles etc.
     Energy::Nonbonded<Tspace, Tpair> pot(in);// Hamiltonian, non-bonded only
     Move::Propagator<Tspace> mv(in, pot, spc);// Monte Carlo move class
@@ -19,6 +19,7 @@ int main()
  
   This is a minimal example of how to set up a Metropolis Monte Carlo simulation
   with the following characteristics:
+
   - Lennard-Jones particles
   - Periodic boundaries, minimum image convention
   - Canonical ensemble (NVT)
@@ -61,9 +62,8 @@ int main()
       well as geometry information
  
   - **line 7**
-    - Load the user input parameters into a `Faunus::InputMap` object.
-    This simply uses the JSON format
-      to get user input and is heavily used in constructors throughout Faunus.
+    - Load the user input parameters into a JSON object
+      heavily used in constructors throughout Faunus.
  
   - **line 8**
     - Specify how to calculate energies in the system - i.e. the Hamiltonian.

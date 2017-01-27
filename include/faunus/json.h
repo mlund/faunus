@@ -28,11 +28,9 @@ namespace Faunus
           {
               js << f;
           }
-          catch (...)
+          catch(std::exception& e)
           {
-              std::cerr << "Error loading json file '" << file
-                        << "'. Carefully check the syntax." << endl;
-              std::exit(1);
+              throw std::runtime_error("Error loading json file " + file + ": " + e.what());
           }
       }
       return js;

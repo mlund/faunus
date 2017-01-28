@@ -9,4 +9,6 @@ language:
 compiler:
   - clang
 script:
-  cmake . ; make -j2
+  cmake .
+  make -j2
+  make test

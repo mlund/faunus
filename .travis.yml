@@ -9,4 +9,4 @@ language:
 compiler:
   - clang
 script:
-  cmake . ; make example_twobody
+  cmake . ; make -j2

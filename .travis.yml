@@ -1,6 +1,6 @@
 language:
   c++
 compiler:
-  clang
+  gcc
 script:
   cmake . ; make ; make test

@@ -3,6 +3,7 @@
 
 #include <random>
 #include <faunus/json.h>
+#include <faunus/textio.h>
 
 /// @brief Namespace for Faunus
 namespace Faunus
@@ -109,9 +110,13 @@ namespace Faunus
 
       Tmjson json() const
       {
-          return {
-              {"hardware", hardware},
-                  {"range", {dist.min(), dist.max()} }
+          std::ostringstream o;
+          o << eng;
+          return
+          {
+              {"hardware", hardware },
+                  {"range", {dist.min(), dist.max()} },
+                  {"state", o.str() }
           };
       }
   };

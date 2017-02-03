@@ -3,7 +3,6 @@
 
 #include <faunus/common.h>
 #include <faunus/inputfile.h>
-#include <faunus/analysis.h>
 
 namespace Faunus
 {
@@ -188,13 +187,17 @@ namespace Faunus
         std::map<T, T> I; //!< Sampled, average I(q)
         std::map<T, T> S; //!< Weighted number of samplings
 
-        DebyeFormula( Tmjson &j ) : geo(10)
-        {
-            auto m = j["analysis"]["scatter"];
-            dq = m["dq"] | -1.0;
-            qmin = m["qmin"] | -1.0;
-            qmax = m["qmax"] | -1.0;
-            rc = m["cutoff"] | 1.0e9;
+        DebyeFormula( Tmjson &j ) : geo(10) {
+          try {
+            dq = j.at("dq");
+            qmin = j.at("qmin");
+            qmax = j.at("qmax");
+            rc = j.value("cutoff", 1.0e9);
+            vector<string> groups = j.at("molecules");
+          }
+          catch(std::exception& e) {
+            throw std::runtime_error(e.what());
+          }
         }
 
         /**

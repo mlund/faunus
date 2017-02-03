@@ -18,6 +18,8 @@ namespace Faunus
    * a non-deternimistic sequence, call `seed()` with no
    * arguments to activate a hardware induced seed using
    * `std::random_device`.
+   * @note See http://www.pcg-random.org/posts/ease-of-use-without-loss-of-power.html for some interesting stuff about
+           random numbers in C++11.
    */
   template<typename T=double, typename Tengine=std::mt19937>
   class RandomTwister

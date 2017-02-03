@@ -9,6 +9,7 @@
 #include <faunus/point.h>
 #include <faunus/textio.h>
 #include <faunus/energy.h>
+#include <faunus/scatter.h>
 #include <Eigen/Core>
 #include <chrono>
 #include <thread>
@@ -2533,6 +2534,23 @@ namespace Faunus
             _sampleKW = std::bind(
                     &KirkwoodFactor::muCorrelationAndKirkwood<Tspace>, this, std::ref(spc));
         }
+    };
+
+
+    class ScatteringFunction : public AnalysisBase {
+      private:
+
+        Scatter::DebyeFormula<Scatter::FormFactorSphere<double> > debye;
+
+        void _sample() override {
+        }
+
+      public:
+
+        template<class Tspace>
+          ScatteringFunction( Tmjson &j, Tspace &spc ) :
+            AnalysisBase(j, "Debye Formula Scattering"), debye(j, spc) {
+            }
     };
 
     /**

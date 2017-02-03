@@ -33,12 +33,6 @@ doxyhtml
 # Kdevelop
 *.kdev4
 
-# XCode build
-build
-*.xcuserstate
-*project.xcworkspace*
-xcuserdata
-
 # MacOS X generated files
 .DS_Store
 .DS_Store?

@@ -389,8 +389,8 @@ namespace Faunus {
 	  Point cts =  ( r - capsphere.cap_center_point );    // Vector from origin of capsphere.cap pointing towards the center of 'sphere'
 	  Point closest_cap_point = ( capsphere + capsphere.cap_center_point ) + cts/cts.norm()*capsphere.cap_radius; // Closesed point from sphere.center to surface of capsphere.cap
 	  
-	  if( ( (capsphere - closest_cap_point).norm() <= capsphere.radius ))   // If that point is closer than capsphere.radius then it truly is on the capsphere.cap
-	    if( (-r  + capsphere.cap_center_point + cts/cts.norm()*capsphere.cap_radius ).norm() < sphere.radius) {          // If the distance between sphere.center to the closesed point on capsphere is shorter than the radius of sphere then...
+	  if( ( (capsphere - closest_cap_point).norm() <= capsphere.radius )) {   // If that point is closer than capsphere.radius then it truly is on the capsphere.cap
+	    if( (-r  + capsphere.cap_center_point + cts/cts.norm()*capsphere.cap_radius ).norm() < sphere.radius)          // If the distance between sphere.center to the closesed point on capsphere is shorter than the radius of sphere then...
 	      return true;                                                   // Return collision
 	    return false;                                                    // Return no collision
 	  } else {

@@ -1956,7 +1956,7 @@ namespace Faunus
         base::useAlternativeReturnEnergy = true;
         base::runfraction = _j["prob"] | 1.0;
         skipEnergyUpdate = _j["skipenergy"] | false;
-        dp = _j["dp"] | 0.0;
+        dp = _j.at("dp");
         if ( dp < 1e-6 )
             base::runfraction = 0;
         g = spc->groupList(); // currently ALL groups in the system will be moved!
@@ -2108,9 +2108,9 @@ namespace Faunus
         for ( auto &i : this->mollist )
         {
             string name = spc->molList()[i.first].name;
-            i.second.dp1 = m[name]["dp"] | 0.0;
-            _minlen[i.first] = m[name]["minlen"] | 1.0;
-            _maxlen[i.first] = m[name]["maxlen"] | 4.0;
+            i.second.dp1 = m[name].at("dp");
+            _minlen[i.first] = m[name].at("minlen");
+            _maxlen[i.first] = m[name].at("maxlen");
         }
     }
 
@@ -2519,8 +2519,9 @@ namespace Faunus
 
         this->title = "Isobaric Volume Fluctuations";
         this->w = 30;
-        dp = j["dp"] | 0.0;
-        P = (j["pressure"] | 0.0) * 1.0_mM;
+        dp = j.at("dp");
+        P = j.at("pressure");
+        P = P * 1.0_mM;
         base::runfraction = j["prob"] | 1.0;
         if ( dp < 1e-6 )
             base::runfraction = 0;
@@ -2711,7 +2712,7 @@ namespace Faunus
     {
         this->title = "Isochoric Side Lengths Fluctuations";
         this->w = 30;
-        dp = j["dp"] | 0.0;
+        dp = j.at("dp");
         base::runfraction = j["prob"] | 1.0;
         if ( dp < 1e-6 )
             base::runfraction = 0;
@@ -4895,56 +4896,63 @@ namespace Faunus
             {
                 auto &val = i.value();
 
-                if ( i.key() == "_jsonfile" )
-                  if (val.is_string())
-                    jsonfile = val;
+                try {
 
-                if ( i.key() == "random" )
-                    if (val.is_object()) {
-                        cout << "Seeding move random number generator." << endl;
-                        base::_slump() = RandomTwister<>(val);
-                    }
+                    if ( i.key() == "_jsonfile" )
+                        if (val.is_string())
+                            jsonfile = val;
 
-                if ( i.key() == "atomtranslate" )
-                    mPtr.push_back(toPtr(AtomicTranslation<Tspace>(e, s, val)));
-                if ( i.key() == "atomrotate" )
-                    mPtr.push_back(toPtr(AtomicRotation<Tspace>(e, s, val)));
-                if ( i.key() == "atomgc" )
-                    mPtr.push_back(toPtr(GrandCanonicalSalt<Tspace>(e, s, val)));
-                if ( i.key() == "gctit" )
-                    mPtr.push_back(toPtr(GrandCanonicalTitration<Tspace>(e, s, val)));
-                if ( i.key() == "moltransrot" )
-                    mPtr.push_back(toPtr(TranslateRotate<Tspace>(e, s, val)));
-                if ( i.key() == "conformationswap" )
-                    mPtr.push_back(toPtr(ConformationSwap<Tspace>(e, s, val)));
-                if ( i.key() == "moltransrot2body" )
-                    mPtr.push_back(toPtr(TranslateRotateTwobody<Tspace>(e, s, val)));
-                if ( i.key() == "moltransrotcluster" )
-                    mPtr.push_back(toPtr(TranslateRotateCluster<Tspace>(e, s, val)));
-                if ( i.key() == "isobaric" )
-                    mPtr.push_back(toPtr(Isobaric<Tspace>(e, s, val)));
-                if ( i.key() == "isochoric" )
-                    mPtr.push_back(toPtr(Isochoric<Tspace>(e, s, val)));
-                if ( i.key() == "gc" )
-                    mPtr.push_back(toPtr(GreenGC<Tspace>(e, s, val)));
-                if ( i.key() == "titrate" )
-                    mPtr.push_back(toPtr(SwapMove<Tspace>(e, s, val)));
-                if ( i.key() == "crankshaft" )
-                    mPtr.push_back(toPtr(CrankShaft<Tspace>(e, s, val)));
-                if ( i.key() == "pivot" )
-                    mPtr.push_back(toPtr(Pivot<Tspace>(e, s, val)));
-                if ( i.key() == "reptate" )
-                    mPtr.push_back(toPtr(Reptation<Tspace>(e, s, val)));
-                if ( i.key() == "ctransnr" )
-                    mPtr.push_back(toPtr(ClusterTranslateNR<Tspace>(e, s, val)));
-                if ( i.key() == "xtcmove" )
-                    mPtr.push_back(toPtr(TrajectoryMove<Tspace>(e, s, val)));
+                    if ( i.key() == "random" )
+                        if (val.is_object()) {
+                            cout << "Seeding move random number generator." << endl;
+                            base::_slump() = RandomTwister<>(val);
+                        }
+
+                    if ( i.key() == "atomtranslate" )
+                        mPtr.push_back(toPtr(AtomicTranslation<Tspace>(e, s, val)));
+                    if ( i.key() == "atomrotate" )
+                        mPtr.push_back(toPtr(AtomicRotation<Tspace>(e, s, val)));
+                    if ( i.key() == "atomgc" )
+                        mPtr.push_back(toPtr(GrandCanonicalSalt<Tspace>(e, s, val)));
+                    if ( i.key() == "gctit" )
+                        mPtr.push_back(toPtr(GrandCanonicalTitration<Tspace>(e, s, val)));
+                    if ( i.key() == "moltransrot" )
+                        mPtr.push_back(toPtr(TranslateRotate<Tspace>(e, s, val)));
+                    if ( i.key() == "conformationswap" )
+                        mPtr.push_back(toPtr(ConformationSwap<Tspace>(e, s, val)));
+                    if ( i.key() == "moltransrot2body" )
+                        mPtr.push_back(toPtr(TranslateRotateTwobody<Tspace>(e, s, val)));
+                    if ( i.key() == "moltransrotcluster" )
+                        mPtr.push_back(toPtr(TranslateRotateCluster<Tspace>(e, s, val)));
+                    if ( i.key() == "isobaric" )
+                        mPtr.push_back(toPtr(Isobaric<Tspace>(e, s, val)));
+                    if ( i.key() == "isochoric" )
+                        mPtr.push_back(toPtr(Isochoric<Tspace>(e, s, val)));
+                    if ( i.key() == "gc" )
+                        mPtr.push_back(toPtr(GreenGC<Tspace>(e, s, val)));
+                    if ( i.key() == "titrate" )
+                        mPtr.push_back(toPtr(SwapMove<Tspace>(e, s, val)));
+                    if ( i.key() == "crankshaft" )
+                        mPtr.push_back(toPtr(CrankShaft<Tspace>(e, s, val)));
+                    if ( i.key() == "pivot" )
+                        mPtr.push_back(toPtr(Pivot<Tspace>(e, s, val)));
+                    if ( i.key() == "reptate" )
+                        mPtr.push_back(toPtr(Reptation<Tspace>(e, s, val)));
+                    if ( i.key() == "ctransnr" )
+                        mPtr.push_back(toPtr(ClusterTranslateNR<Tspace>(e, s, val)));
+                    if ( i.key() == "xtcmove" )
+                        mPtr.push_back(toPtr(TrajectoryMove<Tspace>(e, s, val)));
 #ifdef ENABLE_MPI
-                if ( i.key() == "temper" )
-                    if (mpi!=nullptr)
-                        mPtr.push_back(toPtr(ParallelTempering<Tspace>(e, s, val, *mpi)));
+                    if ( i.key() == "temper" )
+                        if (mpi!=nullptr)
+                            mPtr.push_back(toPtr(ParallelTempering<Tspace>(e, s, val, *mpi)));
 #endif
-             }
+                }
+                catch (std::exception &e) {
+                    std::cerr << "Moves initialization error: " << i.key() << endl;
+                    throw;
+                }
+            }
             if ( mPtr.empty())
                 throw std::runtime_error("No moves defined - check JSON file.");
 

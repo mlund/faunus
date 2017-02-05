@@ -33,10 +33,10 @@ d = {
         "polymer" : { "dp":100, "dprot":6, "permol":True } 
         },
       "crankshaft" : {
-        "polymer" : { "dp":6, "maxlen":6, "permol":True }
+        "polymer" : dict(dp=6, minlen=1, maxlen=6, permol=True)
         },
       "pivot" : {
-        "polymer" : { "dp":6, "maxlen":6, "permol":True }
+        "polymer" : dict(dp=6, minlen=1, maxlen=6, permol=True)
         },
       "reptate" : {
         "polymer" : { "bondlength":4.9, "permol":True, "prob":1.0 }

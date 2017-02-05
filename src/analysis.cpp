@@ -233,5 +233,5 @@ namespace Faunus
         }
     }
 
-  }//namespace
-}//namespace
+  }//Analysis namespace
+}//Faunus namespace

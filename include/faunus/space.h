@@ -285,17 +285,17 @@ namespace Faunus
           // loop over moved groups
           for ( auto m : c.mvGroup )
           {
-              auto &g = groupList()[m.first];
+              auto g = groupList()[m.first];
               if ( m.second.empty()) // no index given; assume all have changed
-                  for ( auto i : g )
+                  for ( auto i : *g )
                       p[i] = trial[i];
               else                  // index given; update only those
                   for ( auto i : m.second )
                   {
-                      assert(g.find(i));
+                      assert(g->find(i));
                       p[i] = trial[i];
                   }
-              g.setMassCenter(*this); // update mass center
+              g->setMassCenter(*this); // update mass center
           }
           assert(!"incomplete");
       }

@@ -140,9 +140,9 @@ namespace Faunus
     CosAttract::CosAttract( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
     {
         name = "CosAttract";
-        eps = j[sec]["eps"] | 0.0;
-        rc = j[sec]["rc"] | 0.0;
-        wc = j[sec]["wc"] | 0.0;
+        eps = j[sec].at("eps");
+        rc = j[sec].at("rc");
+        wc = j[sec].at("wc");
         rc2 = rc * rc;
         c = pc::pi / 2 / wc;
         rcwc2 = pow((rc + wc), 2);
@@ -207,8 +207,8 @@ namespace Faunus
     SquareWell::SquareWell( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
     {
         name = "Square Well";
-        threshold = j[sec]["threshold"] | 0.0;
-        depth = j[sec]["depth"] | 0.0;
+        threshold = j[sec].at("threshold");
+        depth = j[sec].at("depth");
     }
 
     string SquareWell::_brief()
@@ -323,7 +323,7 @@ namespace Faunus
 
     CoulombWolf::CoulombWolf( Tmjson &j, const string &sec ) : Coulomb(j, sec)
     {
-        double Rc = j[sec]["cutoff"] | 10.0;
+        double Rc = j[sec].at("cutoff");
         Rcinv = 1 / Rc;
         Rc2 = Rc * Rc;
         name += "Wolf/Yonezawa";
@@ -560,18 +560,18 @@ namespace Faunus
         const double zero = 1e-10;
         name = "Debye-Huckel";
         c = 8 * lB * pc::pi * pc::Nav / 1e27;
-        double I = j[sec]["ionicstrength"] | 0.0;   // [mol/l]
-        z_count = j[sec]["countervalency"] | 0.0;  // [e]
+        double I = j[sec].value("ionicstrength", 0.0);   // [mol/l]
+        z_count = j[sec].value("countervalency", 0.0);  // [e]
         k2_count = 0;
         k = sqrt(I * c);
         if ( k < zero )
-            k = 1 / (j[sec]["debyelength"] | 1.0 / zero); // [A]
+            k = 1 / j[sec].at("debyelength").get<double>(); // [A]
     }
 
     R12Repulsion::R12Repulsion( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
     {
         name = "r12-Repulsion";
-        eps = 4 * (j[sec]["eps"] | 0.05);
+        eps = 4.0 * j[sec].at("eps").get<double>();
     }
 
     string SoftRepulsion::info( char w )

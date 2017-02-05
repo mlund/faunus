@@ -308,14 +308,19 @@ namespace Faunus
        * is searched for molecules with non-zero `Ninit` and
        * will insert accordingly.
        */
-      Space( Tmjson &j ) : geo( j.at("system").at("geometry") )
+      Space( Tmjson &j ) try : geo( j.at("system").at("geometry") )
       {
-          pc::setT( j["system"].value("temperature", 298.15) );
+          pc::setT( j.at("system").value("temperature", 298.15) );
           atom.include( j.at("atomlist") );
           molecule.include( j.at("moleculelist") );
           for ( auto mol : molecule )
               while ( mol.Ninit-- > 0 )
                   insert(mol.id, mol.getRandomConformation(geo, p));
+      }
+      catch (std::exception &e)
+      {
+          std::cerr << "Space construction error: " << e.what();
+          throw;
       }
 
       std::vector<Group *> &groupList() { return g; };   //!< Vector with pointers to all groups

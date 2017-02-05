@@ -48,6 +48,7 @@ d = {
         'xtcfile' :   { 'file': 'water2.xtc', 'nstep':20 },
         'pqrfile' :   { 'file': 'water2.pqr' },
         'statefile' : { 'file': 'state' },
+        'sofq' :      dict(nstep=20, qmin=2, qmax=10, dq=0.5, mollist=["water"], file='debye.dat'),
         'atomrdf' : {
             'nstep':20, 'pairs' :
                 [

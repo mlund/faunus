@@ -25,16 +25,19 @@ namespace Faunus {
 }
 
 int main() {
-  InputMap in("stripes.json");            // open parameter file for user input
+  InputMap in("stripes.json");              // open parameter file for user input
   Tspace spc(in);                         // simulation space, particles etc.
   Energy::Nonbonded<Tspace,Potential::CoreShell> pot(in);// Hamiltonian, non-bonded only
 
   spc.load("state");                      // load old configuration if any
 
   Move::Propagator<Tspace> mv(in,pot,spc);// particle move class
+  Analysis::CombinedAnalysis analyse(in,pot,spc); // analysis
 
-  for (int i=0; i<1e3; i++)
+  for (int i=0; i<1e3; i++) {
     mv.move();
+    analyse.sample();
+  }
 
   cout << spc.info() + pot.info() + mv.info(); // final information
 }

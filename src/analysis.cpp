@@ -224,5 +224,14 @@ namespace Faunus
         return js;
     }
 
+    CombinedAnalysis::~CombinedAnalysis()
+    {
+        if (cnt>0) {
+            std::ofstream f(jsonfile);
+            if ( f )
+                f << std::setw(4) << json() << std::endl;
+        }
+    }
+
   }//namespace
 }//namespace

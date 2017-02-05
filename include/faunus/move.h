@@ -330,7 +330,7 @@ namespace Faunus
             {  // iterate over molecules
                 auto mol = spc->molList().find(it.key()); // is molecule defined?
                 if ( mol == spc->molList().end())
-                    throw std::runtime_error(title+": molecule "+it.key()+" undefined");
+                    throw std::runtime_error(title+": molecule '"+it.key()+"' undefined");
                 else
                     addMol(mol->id, MolListData(it.value()));
             }
@@ -755,7 +755,6 @@ namespace Faunus
     AtomicTranslation<Tspace>::AtomicTranslation(
         Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) : Movebase<Tspace>(e, s)
     {
-
         base::title = "Single Particle Translation";
         iparticle = -1;
         igroup = nullptr;
@@ -3616,7 +3615,7 @@ namespace Faunus
                 }
             }
         }
-        std::ofstream f("gctit-output.json");
+        std::ofstream f(textio::prefix + "gctit-output.json");
         f << setw(4) << infojson() << "\n";
         return o.str();
     }
@@ -3694,7 +3693,7 @@ namespace Faunus
           void _acceptMove();
           void _rejectMove();
           double _energyChange();
-          std::ofstream temperPath;
+          //std::ofstream temperPath;
 
           Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
           Faunus::MPI::ParticleTransmitter<Tpvec> pt;//!< Class for transmitting particles over MPI
@@ -3724,16 +3723,18 @@ namespace Faunus
         this->mpiPtr  = &mpi;
         partner=-1;
         this->useAlternativeReturnEnergy=true; //dont return dU from partner replica (=drift)
-        this->runfraction = j["prob"] | 1.0;
+        this->runfraction = j.value("prob", 1.0);
         pt.recvExtra.resize(1);
         pt.sendExtra.resize(1);
-        pt.setFormat( j["format"] | string("XYZQI") );
+        pt.setFormat( j.value("format", string("XYZQI") ) );
 
         setEnergyFunction(
             Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,Tpvec> );
 
         this->haveCurrentEnergy=false;
-        assert( this->mpiPtr != nullptr );
+
+        if ( this->mpiPtr == nullptr )
+            throw std::runtime_error(this->title + ": invalid MPIcontroller");
       }
 
     template<class Tspace>
@@ -4791,6 +4792,7 @@ namespace Faunus
      * `atomtranslate`   | `Move::AtomicTranslation` | Translate atoms
      * `atomrotate`      | `Move::AtomicRotation`    | Rotate atoms
      * `atomgc`          | `Move::GrandCanonicalSalt`| GC salt move (muVT ensemble)
+     * `conformationswap`| `Move::ConformationSwap`  | Swap between molecular conformations
      * `crankshaft`      | `Move::CrankShaft`        | Crank shaft polymer move
      * `ctransnr`        | `Move::ClusterTranslateNR`| Rejection free cluster translate
      * `gc`              | `Move::GreenGC`           | Grand canonical move (muVT ensemble)
@@ -4798,18 +4800,28 @@ namespace Faunus
      * `moltransrot`     | `Move::TranslateRotate`   | Translate/rotate molecules
      * `pivot`           | `Move::Pivot`             | Pivot polymer move
      * `reptate`         | `Move::Reptation`         | Reptation polymer move
+     * `temper`          | `Move::ParallelTempering` | Parallel tempering (requires MPI)
      * `titrate`         | `Move::SwapMove`          | Particle swap move
-     * `conformationswap`| `Move::ConformationSwap`  | Swap between molecular conformations
+     * `xtcmove`         | `Move::TrajectoryMove`    | Propagate via a filed trajectory
      * `random`          | `RandomTwister<>`         | Input for random number generator
      * `_jsonfile`       |  ouput json file name     | Default: `move_out.json`
      *
      * Average system energy and drift thereof are automatically tracked and
      * reported.
-     * You may also control the random number generator,
+     *
+     * All moves share a random number generator with by default generates a
+     * deterministic sequence. If you instead want to attempt a non-deterministric
+     * seed, add
      *
      *     "random" : { "hardware":true }
-     * 
-     * to use a hardware seed instead of the default deterministic sequence.
+     *
+     * Upon destruction of the class, a JSON file is written to disk with
+     * details about each move. The output filename can be controlled by i.e.,
+     *
+     *     "_jsonfile" : "move_out.json"
+     *
+     * If the string is empty, no file will be written.
+     *
      */
     template<typename Tspace, bool polarise = false, typename base=Movebase<Tspace>>
     class Propagator : public base
@@ -4868,7 +4880,11 @@ namespace Faunus
 
     public:
         template<typename Tenergy>
-        Propagator( Tmjson &in, Tenergy &e, Tspace &s ) : base(e, s), dusum(0)
+#ifdef ENABLE_MPI
+        Propagator( Tmjson &in, Tenergy &e, Tspace &s, MPI::MPIController *mpi=nullptr) : base(e, s), dusum(0)
+#else
+        Propagator( Tmjson &in, Tenergy &e, Tspace &s) : base(e, s), dusum(0)
+#endif
         {
             this->title = "P R O P A G A T O R S";
 
@@ -4923,6 +4939,11 @@ namespace Faunus
                     mPtr.push_back(toPtr(ClusterTranslateNR<Tspace>(e, s, val)));
                 if ( i.key() == "xtcmove" )
                     mPtr.push_back(toPtr(TrajectoryMove<Tspace>(e, s, val)));
+#ifdef ENABLE_MPI
+                if ( i.key() == "temper" )
+                    if (mpi!=nullptr)
+                        mPtr.push_back(toPtr(ParallelTempering<Tspace>(e, s, val, *mpi)));
+#endif
              }
             if ( mPtr.empty())
                 throw std::runtime_error("No moves defined - check JSON file.");
@@ -4936,9 +4957,12 @@ namespace Faunus
 
         ~Propagator()
         {
-            std::ofstream f("move_out.json");
-            if (f)
-                f << std::setw(4) << json() << endl;
+            if (!jsonfile.empty())
+                if (this->cnt>0) {
+                    std::ofstream f(textio::prefix + jsonfile);
+                    if (f)
+                        f << std::setw(4) << json() << endl;
+                }
         }
 
         /** @brief Append move to list */
@@ -4950,6 +4974,7 @@ namespace Faunus
 
         double move( int n = 1 ) override
         {
+            this->cnt++;
             double du = 0;
             if ( mPtr.empty())
                 return du;
@@ -4988,11 +5013,12 @@ namespace Faunus
         }
 
 #ifdef ENABLE_MPI
-                                                                                                                                void setMPI( Faunus::MPI::MPIController* mpi ) {
+        void setMPI( Faunus::MPI::MPIController* mpi )
+        {
             base::mpiPtr = mpi;
             for ( auto i : mPtr )
-              i->mpiPtr = mpi;
-          }
+                i->mpiPtr = mpi;
+        }
 #endif
 
     };

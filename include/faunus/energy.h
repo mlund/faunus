@@ -1859,9 +1859,9 @@ namespace Faunus
       public:
           ReactionCoordinateBase( Tmjson &j )
           {
-              _min = j["min"].get<Tvec>();
-              _max = j["max"].get<Tvec>();
-              _scale = j["scale"].get<Tvec>();
+              _min = j.at("min").get<Tvec>();
+              _max = j.at("max").get<Tvec>();
+              _scale = j.at("scale").get<Tvec>();
               _nstep = j["nstep"] | 1000;
               assert(_min.size() >= 1);
               assert(_min.size() == _max.size());

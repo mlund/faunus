@@ -31,7 +31,10 @@ j = {
             },
         "analysis" : {
             "pqrfile" :   { "file": "stripes.pqr" },
-            "statefile" : { "file": "state" }
+            "statefile" : { "file": "state" },
+            "atomrdf" : { "nstep":20, "pairs" : [
+                dict(name1="CS", name2="CS", dr=0.1, file="rdf.dat", dim=2) 
+                ] }
             }
         }
 
@@ -39,6 +42,7 @@ with open("stripes.json", "w+") as f:
     f.write(json.dumps(j, indent=4))
 
 exe="./stripes"
+rc=1
 if ( os.access( exe, os.X_OK )):
     rc = call( [exe] )
-  sys.exit( rc )
+sys.exit( rc )

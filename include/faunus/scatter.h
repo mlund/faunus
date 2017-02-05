@@ -164,8 +164,7 @@ namespace Faunus
  * It is important to note that distances should be calculated without
  * periodicity and if molecules cross periodic boundaries, these
  * must be made whole before performing the analysis.
- * The `InputMap` is scanned for the following keywords in section
- * `analysis/scatter`:
+ * The JSON object is scanned for the following keywords:
  *
  * - `qmin` Minimum q value (1/angstrom)
  * - `qmax` Maximum q value (1/angstrom)
@@ -179,7 +178,6 @@ namespace Faunus
     {
     private:
         T qmin, qmax, dq, rc;
-        TimeRelativeOfTotal <std::chrono::microseconds> timer;
     protected:
         Tformfactor F; // scattering from a single particle
         Tgeometry geo; // geometry to use for distance calculations
@@ -188,16 +186,13 @@ namespace Faunus
         std::map<T, T> S; //!< Weighted number of samplings
 
         DebyeFormula( Tmjson &j ) : geo(10) {
-          try {
             dq = j.at("dq");
             qmin = j.at("qmin");
             qmax = j.at("qmax");
             rc = j.value("cutoff", 1.0e9);
-            vector<string> groups = j.at("molecules");
-          }
-          catch(std::exception& e) {
-            throw std::runtime_error(e.what());
-          }
+
+            if (dq<=0 || qmin<=0 || qmax<=0 || qmin>qmax)
+                throw std::runtime_error("DebyeFormula: invalid q parameters");
         }
 
         /**
@@ -216,10 +211,8 @@ namespace Faunus
         void
         sample( const Tpvec &p, T f = 1, T V = -1 )
         {
-            timer.start();
             assert(qmin > 0 && qmax > 0 && dq > 0 && "q range invalid.");
             sample(p, qmin, qmax, dq, f, V);
-            timer.stop();
         }
 
         /**
@@ -328,7 +321,6 @@ namespace Faunus
                 std::ofstream f(filename.c_str());
                 if ( f )
                 {
-                    f << "# relative time = " << timer.result() << "\n";
                     for ( auto &i : I )
                         f << i.first << " " << i.second / S[i.first] << "\n";
                 }

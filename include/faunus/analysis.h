@@ -661,7 +661,9 @@ namespace Faunus
         /** @brief Save multipole distribution to disk */
         void save( const string &filename ) const
         {
-            std::ofstream f(filename.c_str());
+            if (cnt==0)
+                return;
+            std::ofstream f(textio::prefix + filename.c_str());
             if ( f )
             {
                 char w = 12;
@@ -2437,7 +2439,6 @@ namespace Faunus
      *        ]
      *     }
      *
-     * @warning Tested only for 3D.
      */
     template<class Tspace>
         class AtomRDF : public PairFunctionBase {
@@ -2536,22 +2537,78 @@ namespace Faunus
         }
     };
 
+    /**
+     * @brief Sample scattering intensity
+     *
+     * A list of groups can be specified and the Debye formula is
+     * used to calculate the isotropic scattering. If `com` is true
+     * (default) only the mass center of molecular groups will be
+     * considered as a _single_ scattering site.
+     *
+     * Keyword   | Description
+     * :-------- | :------------------
+     * `nstep`   | Interval with which to sample (default: 1)
+     * `mollist` | List of molecule name to sample (array)
+     * `com`     | Use molecular mass center (bool, default: true)
+     * `qmin`    | Minimum q value (1/angstrom)
+     * `qmax`    | Maximum q value (1/angstrom)
+     * `dq`      | q spacing (1/angstrom)
+     */
+    template<class Tspace, class Tformfactor=Scatter::FormFactorUnity<double>>
+        class ScatteringFunction : public AnalysisBase {
+            private:
 
-    class ScatteringFunction : public AnalysisBase {
-      private:
+                Tspace &spc;
+                vector<Point> p; // vector of scattering points
+                vector<string> mollist; // molecules to consider
+                bool usecom; // scatter from mass center, only?
+                string filename; // output file name of S(q) file
 
-        Scatter::DebyeFormula<Scatter::FormFactorSphere<double> > debye;
+                Scatter::DebyeFormula<Tformfactor> debye;
 
-        void _sample() override {
-        }
+                void _sample() override {
+                    p.clear();
+                    for (auto &name : mollist) { // loop over molecule names
+                        auto groups = spc.findMolecules(name);
+                        for (auto g : groups) // loop over groups
+                            if (usecom && g->isMolecular())
+                                p.push_back( g->cm );
+                            else
+                                for (auto i : *g) // loop over particle index in group
+                                    p.push_back( spc.p[i] );
+                    }
+                    debye.sample( p, spc.geo.getVolume() );
+                }
 
-      public:
+                Tmjson _json() override
+                {
+                    return {
+                        { name,
+                            {
+                                { "mollist", mollist },
+                                { "com", usecom }
+                            }
+                        }
+                    };
+                }
 
-        template<class Tspace>
-          ScatteringFunction( Tmjson &j, Tspace &spc ) :
-            AnalysisBase(j, "Debye Formula Scattering"), debye(j, spc) {
-            }
-    };
+            public:
+
+                ScatteringFunction( Tmjson &j, Tspace &spc ) try :
+                    AnalysisBase(j, "Debye Formula Scattering"), spc(spc), debye(j) {
+                        usecom = j.value("com", true);
+                        mollist = j.at("mollist").get<decltype(mollist)>();
+                        filename = j.at("file");
+                    }
+                catch( std::exception &e ) {
+                    std::cerr << "Debye Formula Scattering: ";
+                    throw;
+                }
+
+                ~ScatteringFunction() {
+                    debye.save( filename );
+                }
+        };
 
     /**
      * @brief Class for accumulating analysis classes
@@ -2574,6 +2631,7 @@ namespace Faunus
      * `energyfile`      |  `Analysis::SystemEnergy`
      * `atomrdf`         |  `Analysis::AtomRDF`
      * `molrdf`          |  `Analysis::MoleculeRDF`
+     * `scatter`         |  `Analysis::ScatteringFunction`
      * `_jsonfile`       |  ouput json file w. collected results
      *
      * All analysis classes take the JSON keyword `nstep` for
@@ -2603,80 +2661,91 @@ namespace Faunus
 
             jsonfile = "analysis_out.json";
 
+
             auto m = j["analysis"];
             for ( auto i = m.begin(); i != m.end(); ++i )
             {
                 auto &val = i.value();
 
-                if ( i.key() == "_jsonfile" )
-                  if (val.is_string())
-                    jsonfile = val;
+                try {
+                    if ( i.key() == "_jsonfile" )
+                        if (val.is_string())
+                            jsonfile = val;
 
-                if ( i.key() == "xtcfile" )
-                    v.push_back(Tptr(new XTCtraj<Tspace>(val, spc)));
+                    if ( i.key() == "xtcfile" )
+                        v.push_back(Tptr(new XTCtraj<Tspace>(val, spc)));
 
-                if ( i.key() == "pqrfile" )
-                {
-                    auto writer = std::bind(
-                        []( string file, Tspace &s ) { FormatPQR::save(file, s.p, s.geo.inscribe().len); },
-                        _1, ref(spc));
-                    v.push_back(Tptr(new WriteOnceFileAnalysis(val, writer)));
+                    if ( i.key() == "pqrfile" )
+                    {
+                        auto writer = std::bind(
+                                []( string file, Tspace &s ) { FormatPQR::save(file, s.p, s.geo.inscribe().len); },
+                                _1, ref(spc));
+                        v.push_back(Tptr(new WriteOnceFileAnalysis(val, writer)));
+                    }
+
+                    if ( i.key() == "aamfile" )
+                    {
+                        auto writer = std::bind(
+                                []( string file, Tspace &s ) { FormatAAM::save(file, s.p); },
+                                _1, ref(spc));
+                        v.push_back(Tptr(new WriteOnceFileAnalysis(val, writer)));
+                    }
+
+                    if ( i.key() == "statefile" )
+                    {
+                        auto writer = std::bind(
+                                []( string file, Tspace &s ) { s.save(file); }, _1, ref(spc));
+                        v.push_back(Tptr(new WriteOnceFileAnalysis(val, writer)));
+                    }
+
+                    if ( i.key() == "energyfile" )
+                        v.push_back(Tptr(new SystemEnergy(val, pot, spc)));
+
+                    if ( i.key() == "virial" )
+                        v.push_back(Tptr(new VirialPressure<Tspace>(val, pot, spc)));
+
+                    if ( i.key() == "virtualvolume" )
+                        v.push_back(Tptr(new VirtualVolumeMove<Tspace>(val, pot, spc)));
+
+                    if ( i.key() == "polymershape" )
+                        v.push_back(Tptr(new PolymerShape<Tspace>(val, spc)));
+
+                    if ( i.key() == "cyldensity" )
+                        v.push_back(Tptr(new CylindricalDensity<Tspace>(val, spc)));
+
+                    if ( i.key() == "widom" )
+                        v.push_back(Tptr(new Widom<Tspace>(val, pot, spc)));
+
+                    if ( i.key() == "widomscaled" )
+                        v.push_back(Tptr(new WidomScaled<Tspace>(val, spc)));
+
+                    if ( i.key() == "widommolecule" )
+                        v.push_back(Tptr(new WidomMolecule<Tspace>(val, pot, spc)));
+
+                    if ( i.key() == "chargemultipole" )
+                        v.push_back(Tptr(new ChargeMultipole<Tspace>(val, spc)));
+
+                    if ( i.key() == "multipoledistribution" )
+                        v.push_back(Tptr(new MultipoleDistribution<Tspace>(val, spc)));
+
+                    if ( i.key() == "meanforce" )
+                        v.push_back(Tptr(new MeanForce(val, pot, spc)));
+
+                    if ( i.key() == "atomrdf" )
+                        v.push_back(Tptr(new AtomRDF<Tspace>(val, spc)));
+
+                    if ( i.key() == "molrdf" )
+                        v.push_back(Tptr(new MoleculeRDF<Tspace>(val, spc)));
+
+                    if ( i.key() == "scatter" )
+                        v.push_back(Tptr(new ScatteringFunction<Tspace>(val, spc)));
                 }
-
-                if ( i.key() == "aamfile" )
+                catch(std::exception &e)
                 {
-                    auto writer = std::bind(
-                        []( string file, Tspace &s ) { FormatAAM::save(file, s.p); },
-                        _1, ref(spc));
-                    v.push_back(Tptr(new WriteOnceFileAnalysis(val, writer)));
+                    std::cerr << "Analysis error: " << i.key() << endl;
+                    throw;
                 }
-
-                if ( i.key() == "statefile" )
-                {
-                    auto writer = std::bind(
-                        []( string file, Tspace &s ) { s.save(file); }, _1, ref(spc));
-                    v.push_back(Tptr(new WriteOnceFileAnalysis(val, writer)));
-                }
-
-                if ( i.key() == "energyfile" )
-                    v.push_back(Tptr(new SystemEnergy(val, pot, spc)));
-
-                if ( i.key() == "virial" )
-                    v.push_back(Tptr(new VirialPressure<Tspace>(val, pot, spc)));
-
-                if ( i.key() == "virtualvolume" )
-                    v.push_back(Tptr(new VirtualVolumeMove<Tspace>(val, pot, spc)));
-
-                if ( i.key() == "polymershape" )
-                    v.push_back(Tptr(new PolymerShape<Tspace>(val, spc)));
-
-                if ( i.key() == "cyldensity" )
-                    v.push_back(Tptr(new CylindricalDensity<Tspace>(val, spc)));
-
-                if ( i.key() == "widom" )
-                    v.push_back(Tptr(new Widom<Tspace>(val, pot, spc)));
-
-                if ( i.key() == "widomscaled" )
-                    v.push_back(Tptr(new WidomScaled<Tspace>(val, spc)));
-
-                if ( i.key() == "widommolecule" )
-                    v.push_back(Tptr(new WidomMolecule<Tspace>(val, pot, spc)));
-
-                if ( i.key() == "chargemultipole" )
-                    v.push_back(Tptr(new ChargeMultipole<Tspace>(val, spc)));
-
-                if ( i.key() == "multipoledistribution" )
-                    v.push_back(Tptr(new MultipoleDistribution<Tspace>(val, spc)));
-
-                if ( i.key() == "meanforce" )
-                    v.push_back(Tptr(new MeanForce(val, pot, spc)));
-
-                if ( i.key() == "atomrdf" )
-                    v.push_back(Tptr(new AtomRDF<Tspace>(val, spc)));
-
-                if ( i.key() == "molrdf" )
-                    v.push_back(Tptr(new MoleculeRDF<Tspace>(val, spc)));
-             }
+            }
         }
 
         /**
@@ -2715,12 +2784,7 @@ namespace Faunus
         string info();
         Tmjson json();
 
-        inline ~CombinedAnalysis()
-        {
-            std::ofstream f(jsonfile);
-            if ( f )
-                f << std::setw(4) << json() << std::endl;
-        }
+        ~CombinedAnalysis();
     };
 
   }//namespace

@@ -143,23 +143,23 @@ namespace Faunus
     template<class T, bool linearize>
     GouyChapman<T, linearize>::GouyChapman( Tmjson &j, const string &sec ) : base(sec), dh(j["energy"]["nonbonded"])
     {
-        auto js = j["energy"][sec];
+        auto js = j.at("energy").at(sec);
         name = "Gouy-Chapman";
         c0 = dh.ionicStrength() * 1.0_molar; // assuming 1:1 salt, so c0=I
         lB = dh.bjerrumLength();
         k = 1 / dh.debyeLength();
-        phi0 = js["phi0"] | 0.0; // Unitless potential = beta*e*phi0
+        phi0 = js.value("phi0", 0.0); // Unitless potential = beta*e*phi0
         if ( std::abs(phi0) > 1e-6 )
             rho = sqrt(2 * c0 / (pc::pi * lB)) * sinh(.5 * phi0); //Evans&Wennerstrom,Colloidal Domain p 138-140
         else
         {
-            rho = 1 / (js["qarea"] | 0.0);
+            rho = 1.0 / js.value("qarea", 0.0);
             if ( rho > 1e9 )
-                rho = js["rho"] | 0.0;
+                rho = js.at("rho");
             phi0 = 2. * asinh(rho * sqrt(0.5 * lB * pc::pi / c0));//[Evans..]
         }
         gamma0 = tanh(phi0 / 4); // assuming z=1  [Evans..]
-        offset = js["offset"] | 0.0;
+        offset = js.value("offset", 0.0);
     }
 
     /**

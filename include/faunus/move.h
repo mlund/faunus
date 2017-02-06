@@ -3,6 +3,7 @@
 
 #ifndef SWIG
 #include <functional>
+#include <memory>
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/average.h>
@@ -22,7 +23,14 @@
 namespace Faunus
 {
 
-  /** @brief Monte Carlo move related classes */
+  /**
+   * @brief Monte Carlo move related classes
+   *
+   * All moves are based on `Movebase` and most end-users
+   * will probably want to start with `Propagator` which
+   * collects all moves and allows for control via input
+   * JSON files.
+   */
   namespace Move
   {
 
@@ -311,9 +319,9 @@ namespace Faunus
             MolListData( Tmjson &j )
             {
                 *this = MolListData();
-                prob = j["prob"] | 1.0;
-                perMol = j["permol"] | false;
-                perAtom = j["peratom"] | false;
+                prob = j.value("prob", 1.0);
+                perMol = j.value("permol", false);
+                perAtom = j.value("peratom", false);
                 dir << (j["dir"] | std::string("1 1 1"));
             }
         };
@@ -2536,9 +2544,8 @@ namespace Faunus
         this->title = "Isobaric Volume Fluctuations";
         this->w = 30;
         dp = j.at("dp");
-        P = j.at("pressure");
-        P = P * 1.0_mM;
-        base::runfraction = j["prob"] | 1.0;
+        P = j.at("pressure").get<double>() * 1.0_mM;
+        base::runfraction = j.value("prob", 1.0);
         if ( dp < 1e-6 )
             base::runfraction = 0;
 
@@ -2729,7 +2736,7 @@ namespace Faunus
         this->title = "Isochoric Side Lengths Fluctuations";
         this->w = 30;
         dp = j.at("dp");
-        base::runfraction = j["prob"] | 1.0;
+        base::runfraction = j.value("prob", 1.0);
         if ( dp < 1e-6 )
             base::runfraction = 0;
     }
@@ -2985,7 +2992,7 @@ namespace Faunus
         base::title = "Grand Canonical Salt";
         base::useAlternativeReturnEnergy = true;
         base::runfraction = j["prob"] | 1.0;
-        string saltname = j["molecule"] | string();
+        string saltname = j.at("molecule");
 
         auto v = spc->findMolecules(saltname);
         if ( v.empty())
@@ -4826,9 +4833,11 @@ namespace Faunus
      * Average system energy and drift thereof are automatically tracked and
      * reported.
      *
-     * All moves share a random number generator with by default generates a
-     * deterministic sequence. If you instead want to attempt a non-deterministric
-     * seed, add
+     * In addition to a global random number generator, the move classes
+     * share a unique (static) random number generator that dictates the
+     * Markov Chains. By default the state of the latter is copied from the
+     * former upon construction of `Propagator`.
+     * To instead attempt a _non-deterministric seed_, add
      *
      *     "random" : { "hardware":true }
      *
@@ -4844,7 +4853,7 @@ namespace Faunus
     class Propagator : public base
     {
     private:
-        typedef std::shared_ptr<base> basePtr;
+        typedef std::unique_ptr<base> basePtr;
         std::vector<basePtr> mPtr;
         Tspace *spc;
         string jsonfile; // output json file name
@@ -4870,7 +4879,7 @@ namespace Faunus
                   << pad(SUB, base::w, "Absolute drift") << ucurr - (uinit + dusum) << kT << "\n"
                   << pad(SUB, base::w, "Relative drift") << (ucurr - (uinit + dusum)) / uinit * 100 << percent << "\n";
 
-                for ( auto i : mPtr )
+                for ( auto &i : mPtr )
                     o << i->info();
             }
             return o.str();
@@ -4892,7 +4901,7 @@ namespace Faunus
         basePtr toPtr( Tmove m )
         {
             typedef typename std::conditional<polarise, PolarizeMove<Tmove>, Tmove>::type T;
-            return basePtr(new T(m));
+            return basePtr(new T(m)); // convert to std::make_unique<>() in C++14
         }
 
     public:
@@ -4917,6 +4926,8 @@ namespace Faunus
                     if ( i.key() == "_jsonfile" )
                         if (val.is_string())
                             jsonfile = val;
+
+                    base::_slump().eng = slump.eng; // seed from global slump() instance
 
                     if ( i.key() == "random" )
                         if (val.is_object()) {
@@ -5017,7 +5028,7 @@ namespace Faunus
         {
             Tmjson js;
             auto &j = js["moves"];
-            for ( auto i : mPtr )
+            for ( auto &i : mPtr )
                 j = merge(j, i->json());
             j["random"] = base::_slump().json();
             return js;
@@ -5025,7 +5036,7 @@ namespace Faunus
 
         void test( UnitTest &t )
         {
-            for ( auto i : mPtr )
+            for ( auto &i : mPtr )
                 i->test(t);
 
             if (uavg.cnt>0) {
@@ -5040,7 +5051,7 @@ namespace Faunus
         void setMPI( Faunus::MPI::MPIController* mpi )
         {
             base::mpiPtr = mpi;
-            for ( auto i : mPtr )
+            for ( auto &i : mPtr )
                 i->mpiPtr = mpi;
         }
 #endif

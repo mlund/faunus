@@ -1373,7 +1373,7 @@ namespace Faunus
         ExternalPressure( Tmjson &j, string sec = "isobaric" )
         {
             this->name = "External Pressure";
-            P = (j["moves"][sec]["pressure"] | 0.0) * 1.0_mM;
+            P = (j["moves"][sec].at("pressure").get<double>()) * 1.0_mM;
             if ( P < 0 )
                 throw std::runtime_error("Negative pressure forbidden.");
         }
@@ -1591,8 +1591,8 @@ namespace Faunus
                         if ( it2 != spc->molecule.end())
                         {
                             data d = {
-                                i.value()["mindist"] | 0.0,
-                                i.value()["maxdist"] | 1.0e9
+                                i.value().at("mindist"),
+                                i.value().at("maxdist")
                             };
                             molIdMap[opair<int>(it1->id, it2->id)] = d;
                         }
@@ -1767,12 +1767,12 @@ namespace Faunus
         {
             base::name = "Hydrophobic SASA";
             auto m = j["energy"][sec];
-            threshold = m["threshold"] | 3.0;
-            tension_dyne = m["tension"] | 0.0;
-            duplicate = m["duplicate"] | 0.0;
-            sample_uofr = m["uofr"] | false;
-            dr = m["dr"] | 0.5;
-            file = m["sasafile"] | string();
+            threshold = m.at("threshold");
+            tension_dyne = m.at("tension");
+            duplicate = m.value("duplicate", 0.0);
+            sample_uofr = m.value("uofr", false);
+            dr = m.at("dr");
+            file = m.at("sasafile");
 
             // dyne/cm converted to kT/A^2; 1 dyne/cm = 0.001 J/m^2
             tension = tension_dyne * 1e-23 / (pc::kB * pc::T());

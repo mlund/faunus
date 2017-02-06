@@ -21,7 +21,7 @@ except:
 d = {
     'system': {
         'geometry': {'length': 27.0},
-        'mcloop': {'macro': 10, 'micro': 100},
+        'mcloop': {'macro': 10, 'micro': 1000},
         'unittest': {'testfile': 'water2.test', 'stable': False}
     },
     'energy': {
@@ -40,7 +40,7 @@ d = {
     },
     'moves': {
         'moltransrot': {
-            'water': {'dp': 0.5, 'dprot': 0.5, 'dir': '1 1 1', 'permol': True}
+            'water': {'dp': 0.5, 'dprot': 0.5, 'dir': '1 1 1', 'permol': True, 'prob': 0.1}
         },
         'isobaric': {'dp': 0.1, 'pressure': 39.3155, 'prop': 1.0}
     },

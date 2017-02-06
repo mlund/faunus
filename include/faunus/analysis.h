@@ -20,6 +20,11 @@ namespace Faunus
 
   /**
    * @brief Namespace for analysis routines
+   *
+   * Most end-users will be interested in jumping
+   * directly to `Analysis::CombinedAnalysis` which
+   * aggregates most analysis methods below and lets
+   * them be controlled by JSON input.
    */
   namespace Analysis
   {
@@ -1950,11 +1955,11 @@ namespace Faunus
         CylindricalDensity( Tmjson &j, Tspace &spc ) : spc(&spc), data(0.2), AnalysisBase(j)
         {
             name = "Cylindrical Density";
-            zmin = j["zmin"] | 0.0;
-            zmax = j["zmax"] | -zmin;
-            dz = j["dz"] | 0.2;
+            zmin = j.at("zmin");
+            zmax = j.at("zmax");
+            dz = j.at("dz");
 
-            string atomtype = j["atomtype"] | string();
+            string atomtype = j.at("atomtype");
             cout << "atomtype = " << atomtype << endl;
             id = atom[atomtype].id;
 
@@ -2004,8 +2009,8 @@ namespace Faunus
     public:
         WriteOnceFileAnalysis( Tmjson &j, std::function<void(string)> writer ) : AnalysisBase(j)
         {
-            steps = j["nstep"] | int(-1);
-            filename = j["file"] | string();
+            steps = j.value("nstep", int(-1));
+            filename = j.at("file");
             name = filename; // better than nothing...
             f = writer;
         }
@@ -2051,7 +2056,7 @@ namespace Faunus
         XTCtraj( Tmjson &j, Tspace &s ) : AnalysisBase(j), xtc(1e6), spc(&s)
         {
             name = "XTC trajectory reporter";
-            filename = j["file"] | string("traj.xtc");
+            filename = j.at("file");
             cite = "http://manual.gromacs.org/online/xtc.html";
         }
     };
@@ -2175,7 +2180,7 @@ namespace Faunus
     public:
         VirtualVolumeMove( Tmjson &j, Tenergy &pot, Tspace &spc ) : AnalysisBase(j), spc(&spc), pot(&pot)
         {
-            dV = j["dV"] | 0.1;
+            dV = j.at("dV");
             dir = {1, 1, 1};  // scale directions
             fullenergy = j["fullenergy"] | false;
             name = "Virtual Volume Move";
@@ -2366,7 +2371,7 @@ namespace Faunus
         {
             name = "Mean force";
             g1 = g2 = -1;
-            if (j["groups"].is_array()) {
+            if (j.at("groups").is_array()) {
                 vector<size_t> v = j["groups"];
                 if (v.size()==2) {
                     g1 = v[0];
@@ -2685,7 +2690,7 @@ namespace Faunus
 
             jsonfile = "analysis_out.json";
 
-            auto m = j["analysis"];
+            auto m = j.at("analysis");
             for ( auto i = m.begin(); i != m.end(); ++i )
             {
                 auto &val = i.value();

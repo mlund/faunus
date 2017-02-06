@@ -1,3 +1,6 @@
+[![Documentation](https://codedocs.xyz/mlund/faunus.svg)](https://codedocs.xyz/mlund/faunus/)
+[![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
+
 Welcome to Faunus
 =================
 
@@ -13,7 +16,7 @@ molecular systems. Below is a brief overview of features:
 
 Detailed information and support:
 
-- Manual: <http://faunus.sourceforge.net>
+- Manual: <https://codedocs.xyz/mlund/faunus>
 - Support: <http://github.com/mlund/faunus/issues>
 - Source code: <http://github.com/mlund/faunus>
 

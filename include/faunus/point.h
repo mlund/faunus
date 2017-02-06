@@ -17,6 +17,15 @@ namespace Faunus
 
   class AtomData;
 
+  /** @brief Convert eigen type to std::vector */
+  template<typename OtherDerived>
+      std::vector<double> Eigen2Vector( const Eigen::MatrixBase<OtherDerived> &v1 ) {
+          std::vector<double> v2;
+          v2.resize(v1.size());
+          OtherDerived::Map(&v2[0], v1.size()) = v1;
+          return v2;
+      }
+
   /**
    * @brief Cartesian coordinates
    *
@@ -139,6 +148,14 @@ namespace Faunus
           return *this;
       }
 
+      operator std::vector<double>() const
+      {
+          return Eigen2Vector(*this);
+          //std::vector<double> v;
+          //v.resize( size() );
+          //Tvec::Map(&v[0], size()) = *this;
+          //return v;
+      }
   };
 
   template<class T=double>

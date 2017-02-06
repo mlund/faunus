@@ -221,6 +221,7 @@ namespace Faunus
   private:
       bool checkSanity();                    //!< Check group length and vector sync
       std::vector<Group *> g;                 //!< Pointers to ALL groups in the system
+      Tmjson to_json();
 
   public:
       typedef std::vector<Tparticle, Eigen::aligned_allocator<Tparticle> > p_vec;
@@ -689,6 +690,40 @@ namespace Faunus
       cout << "FAILED!\n";
       return false;
   }
+
+  template<class Tgeometry, class Tparticle>
+  Tmjson Space<Tgeometry, Tparticle>::to_json()
+  {
+      Tmjson j;
+      j = {
+          { "volume", geo.getVolume() },
+          { "Nparticles", p.size() },
+          { "Ngroups", p.size() }
+      };
+
+      vector<string> v;
+      v.reserve( p.size() );
+
+      for ( auto &i : p ) {
+          std::ostringstream o;
+          o << i;
+          v.push_back(o.str());
+      }
+      j["particles" ] = v;
+
+      v.clear();
+      for ( auto i : g ) {
+          std::ostringstream o;
+          o << *i;
+          v.push_back(o.str());
+      }
+      j["groups" ] = v;
+
+      if ( std::is_base_of<Geometry::Cuboid, Tgeometry>::value )
+          j["length"] = geo.len;
+      return j;
+  }
+ 
 
   /**
    * @param file Filename

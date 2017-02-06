@@ -123,7 +123,7 @@ Citing Faunus
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  Faunus - A Framework for Molecular Modelling 
- Copyright (C) 2002-2016 Mikael Lund
+ Copyright (C) 2002-2017 Mikael Lund
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

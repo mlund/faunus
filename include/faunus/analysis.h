@@ -2183,6 +2183,22 @@ namespace Faunus
         }
     };
 
+    /**
+     * @brief Excess chemical potential of molecules
+     *
+     * This will insert a non-perturbing ghost molecule into
+     * the system and calculate a Widom average to measure
+     * the free energy of the insertion process. The position
+     * and molecular rotation is random.
+     *
+     * JSON input:
+     *
+     * Keyword       | Description
+     * :------------ | :-----------------------------------------
+     * `dir`         | Inserting direction array. Default [1,1,1]
+     * `molecule`    | Name of molecule to insert
+     * `ninsert`     | Number of insertions per sample event
+     */
     template<typename Tspace>
     class WidomMolecule : public AnalysisBase
     {
@@ -2216,7 +2232,6 @@ namespace Faunus
 
         inline string _info() override
         {
-
             using namespace Faunus::textio;
             std::ostringstream o;
             char w = 30;
@@ -2235,29 +2250,36 @@ namespace Faunus
 
         inline Tmjson _json() override
         {
-            Tmjson j;
-            Tmjson &_j = j[name];
-            std::ostringstream o;
-            o << dir.transpose();
-            _j["dir"] = o.str();
-            _j["molecule"] = molecule;
+            using namespace Faunus::textio;
             double excess = -std::log(expu.avg());
             double ideal = std::log(rho.avg()); // todo: think about units -> look in other Widom class
-            _j["mu_excess_potential"] = excess;
-            _j["rho_particle_density"] = rho.avg();
-            _j["mu_ideal_potential"] = ideal; // todo
-            _j["mu_total"] = ideal + excess; // todo
-            _j["nr_of_samples"] = expu.cnt;
-
-            return j;
+            return {
+                { name,
+                    {
+                        { "dir", vector<double>( dir ) },
+                        { "molecule", molecule },
+                        { "insertions", expu.cnt },
+                        { "rho", rho.avg() },
+                        { "rho_unit", angstrom + superminus + cubed },
+                        { "mu",
+                            {
+                                {"excess", excess },
+                                {"ideal", ideal },
+                                {"total", ideal+excess },
+                                {"unit", trim(kT) }
+                            }
+                        }
+                    }
+                }
+            };
         }
 
         WidomMolecule( Tmjson &j, Tenergy &pot, Tspace &spc ) : spc(&spc), pot(&pot), AnalysisBase(j)
         {
             name = "Widom Molecule";
-            ninsert = j["ninsert"];
-            dir << j["dir"];  // magic!
-            molecule = j["molecule"];
+            ninsert = j.at("ninsert");
+            dir << j.value("dir", vector<double>({1,1,1}) );  // magic!
+            molecule = j.at("molecule");
             // look up the id of the molecule that we want to insert
             molid = -1;
             for ( unsigned long i = 0; i < spc.molecule.size(); ++i )
@@ -2417,18 +2439,21 @@ namespace Faunus
     /**
      * @brief Atomic radial distribution function, g(r)
      *
-     * We sample the pair correlation function between atom id's
-     * i and j,
+     * We sample the pair correlation function between atom id's _i_ and _j_,
      * \f[
-     * g_{ij}(r) = \frac{ N_{ij}(r) }{ \sum N_{ij}(r) } \cdot \frac{ \langle V \rangle }{ V(r) }
+     * g_{ij}(r) = \frac{ N_{ij}(r) }{ \sum_{r=0}^{\infty} N_{ij}(r) } \cdot \frac{ \langle V \rangle }{ V(r) }
      * \f]
      *
-     * where \f$ N_{ij}(r) \f$ is the number of observed pairs in shell volume
-     * \f$ V(r) \f$ and
+     * where \f$ N_{ij}(r) \f$ is the number of observed pairs, accumulated over the
+     * entire ensemble,  in the separation
+     * interval \f$[r, r+dr] \f$ and \f$ V(r) \f$ is the corresponding volume element
+     * which depends on dimensionality:
      *
-     * - \f$ V(r)=4\pi r^2 dr \f$ (3D)
-     * - \f$ V(r)=2\pi r \f$ (2D)
-     * - \f$ V(r)=dr \f$ (1D).
+     * \f$ V(r)        \f$ | Dimensions (`dim`)
+     * :------------------ | :----------------------------------------
+     * \f$ 4\pi r^2 dr \f$ | 3 (for particles in free space, default)
+     * \f$ 2\pi r dr   \f$ | 2 (for particles confined on a plane)
+     * \f$ dr          \f$ | 1 (for particles confined on a line)
      *
      * Example JSON input:
      *
@@ -2438,7 +2463,6 @@ namespace Faunus
      *          { "name1":"Na", "name2":"Na", "dim":3, "dr":0.1, "file":"rdf-nana.dat"}
      *        ]
      *     }
-     *
      */
     template<class Tspace>
         class AtomRDF : public PairFunctionBase {
@@ -2661,7 +2685,6 @@ namespace Faunus
 
             jsonfile = "analysis_out.json";
 
-
             auto m = j["analysis"];
             for ( auto i = m.begin(); i != m.end(); ++i )
             {
@@ -2779,7 +2802,8 @@ namespace Faunus
             return nullptr;
         }
 
-        void sample();
+        void sample(); //!< Sample all enclosed analysis
+
         void test( UnitTest & );
         string info();
         Tmjson json();

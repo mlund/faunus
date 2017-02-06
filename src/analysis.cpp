@@ -194,6 +194,7 @@ namespace Faunus
  
     void CombinedAnalysis::sample()
     {
+        cnt++;
         for ( auto i : v )
             i->sample();
     }

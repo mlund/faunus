@@ -383,7 +383,6 @@ namespace Faunus
      * @brief Constructor
      * @param e Energy class
      * @param s Space
-     * @param rootsec Name of section in input file to search for parameters
      */
     template<class Tspace>
     Movebase<Tspace>::Movebase( Energy::Energybase<Tspace> &e, Tspace &s )
@@ -923,7 +922,7 @@ namespace Faunus
             auto &j = js[base::title];
             j = {
                 {"moves/particle", base::cnt / gsize.avg()},
-                {"dir", 999},
+                {"dir", vector<double>( dir ) },
                 {"genericdp", genericdp}
             };
             for ( auto m : sqrmap )
@@ -1075,12 +1074,13 @@ namespace Faunus
         using base::pot;
         using base::w;
         using base::cnt;
-        void _test( UnitTest & );
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        string _info();
+        void _test( UnitTest & ) override;
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        Tmjson _json() override;
+        double _energyChange() override;
+        string _info() override;
         typedef std::map<string, Average<double> > map_type;
         map_type accmap;   //!< Group particle acceptance map
         map_type sqrmap_t; //!< Group mean square displacement map (translation)
@@ -1296,6 +1296,22 @@ namespace Faunus
             }
         }
         return o.str();
+    }
+
+    template<class Tspace>
+    Tmjson TranslateRotate<Tspace>::_json()
+    {
+        using namespace textio;
+        Tmjson j;
+        j = {
+            { this->title,
+                {
+                    { "max translation", pm + std::to_string(dp_trans/2) + _angstrom },
+                    { "max rotation", pm + std::to_string(dp_rot/2*180/pc::pi) + degrees }
+                }
+            }
+        };
+        return j;
     }
 
     template<class Tspace>
@@ -1642,11 +1658,11 @@ namespace Faunus
         using base::dir;
         Geometry::QuaternionRotate vrot;
         vector<int> cindex; //!< index of mobile ions to move with group
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        string _info();
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        double _energyChange() override;
+        string _info() override;
         Average<double> avgsize; //!< Average number of ions in cluster
         Average<double> avgbias; //!< Average bias
         Group *gmobile;          //!< Pointer to group with potential cluster particles
@@ -2059,12 +2075,12 @@ namespace Faunus
     {
     private:
         typedef Movebase<Tspace> base;
-        void _test( UnitTest & );
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        string _info();
+        void _test( UnitTest & ) override;
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        double _energyChange() override;
+        string _info() override;
         virtual bool findParticles(); //!< This will set the end points and find particles to rotate
     protected:
         std::map<int, int> _minlen, _maxlen;
@@ -2318,12 +2334,12 @@ namespace Faunus
     private:
         typedef Movebase<Tspace> base;
         AcceptanceMap<string> accmap;
-        void _test( UnitTest & );
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        string _info();
+        void _test( UnitTest & ) override;
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        double _energyChange() override;
+        string _info() override;
         Group *gPtr;
         double bondlength; //!< Reptation length used when generating new head group position
     protected:
@@ -2488,13 +2504,13 @@ namespace Faunus
     private:
         typedef Movebase<Tspace> base;
     protected:
-        string _info();
-        void _test( UnitTest & );
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
+        string _info() override;
+        void _test( UnitTest & ) override;
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
         template<class Tpvec> double _energy( const Tpvec & );
-        double _energyChange();
+        double _energyChange() override;
         using base::spc;
         using base::pot;
         using base::w;
@@ -3227,11 +3243,11 @@ namespace Faunus
         using base::spc;
         using base::pot;
         using base::w;
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        string _info();
-        double _energyChange();
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        string _info() override;
+        double _energyChange() override;
 
         void add( Group & ) {};       // scan group for ions with non-zero activities
 
@@ -3689,11 +3705,11 @@ namespace Faunus
           double currentEnergy;         //!< Energy of configuration before move (uold)
           bool haveCurrentEnergy;       //!< True if currentEnergy has been set
 
-          string _info();
-          void _trialMove();
-          void _acceptMove();
-          void _rejectMove();
-          double _energyChange();
+          string _info() override;
+          void _trialMove() override;
+          void _acceptMove() override;
+          void _rejectMove() override;
+          double _energyChange() override;
           //std::ofstream temperPath;
 
           Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
@@ -3913,12 +3929,12 @@ namespace Faunus
     private:
         typedef Movebase<Tspace> base;
         typedef std::map<short, Average<double> > map_type;
-        string _info();
+        string _info() override;
     protected:
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        void _trialMove();
+        void _acceptMove() override;
+        void _rejectMove() override;
+        double _energyChange() override;
+        void _trialMove() override;
         using base::spc;
         using base::pot;
         map_type accmap; //!< Single particle acceptance map
@@ -4022,11 +4038,11 @@ namespace Faunus
         using base::pot;
         using base::w;
         using base::cnt;
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        string _info();
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        double _energyChange() override;
+        string _info() override;
         typedef std::map<string, Average<double> > map_type;
         map_type accmap;   //!< Group particle acceptance map
         Group *igroup;

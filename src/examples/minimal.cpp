@@ -25,7 +25,7 @@ int main()
   - Canonical ensemble (NVT)
   - Parameters and atom properties are read from disk
  
-  This amounts to 14 lines of C++ code as illustrated in the minimal.cpp
+  This amounts to around a handful of C++ lines as illustrated in the minimal.cpp
   program:
  
   @includelineno minimal.cpp
@@ -61,11 +61,15 @@ int main()
     - This defines the simulation space, which includes all properties as
       well as geometry information
  
-  - **line 7**
+  - **line 9**
     - Load the user input parameters into a JSON object
       heavily used in constructors throughout Faunus.
  
-  - **line 8**
+  - **line 10**
+    - Space takes care of inserting, storing and deleting particles and knows about
+      all particle groups in the system.
+
+  - **line 11**
     - Specify how to calculate energies in the system - i.e. the Hamiltonian.
       Here we only have non-bonded interactions and we need to specify
       the pair potential and space type
@@ -74,11 +78,7 @@ int main()
       We will later see how we can construct more advanced Hamiltonians
       to adding Energy classes together. For a list of energy classes, see Faunus::Energy.
  
-  - **line 9**
-    - Space takes care of inserting, storing and deleting particles and knows about
-      all particle groups in the system.
- 
-  - **line 10**
+  - **line 12**
     - Instantiate a Monte Carlo move object for translating atomic particles.
       Moves always take care of generating a trial move, calculate the energy change,
       accepting/rejecting and collecting statistics. For a list of all MC moves,
@@ -87,7 +87,7 @@ int main()
       from the json input file. In this example we add simple translational
       move.
  
-  - **line 11-12**
+  - **line 13-14**
     - Perform N-particle Metropolis Monte Carlo moves.
       Particles are randomly selected, moved, and depending on the
       energy change accepted or rejected. Note that the move requires access to
@@ -95,7 +95,7 @@ int main()
       Space. The former is used for energy evaluation, while the latter is needed
       to move particles. 
  
-  - **line 13**
+  - **line 15**
     - Print final information to standard output.
 
   Exercise
@@ -108,9 +108,9 @@ int main()
      Plot (msq) vs. (dp) and explain why it is desirable to maximize
      this function.
 
-  3. Modify the code so that a final PQR snapshot is saved at the of
-     the simulation. Usuful for visualization in i.e. VMD.
-     Hint: Look for `FormatPQR` in the documentation.
+  3. Add an instance of `Faunus::Analysis::CombinedAnalysis` to the simulation
+     and sample the A-B radial distribution function as well as save a PQR
+     file that can be viewed in i.e. VMD.
 
   4. Modify the input so that the system freezes. There are several ways to do this;
      discuss these.

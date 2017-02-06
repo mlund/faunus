@@ -1862,10 +1862,11 @@ namespace Faunus
               _min = j.at("min").get<Tvec>();
               _max = j.at("max").get<Tvec>();
               _scale = j.at("scale").get<Tvec>();
-              _nstep = j["nstep"] | 1000;
-              assert(_min.size() >= 1);
-              assert(_min.size() == _max.size());
-              assert(_min.size() == _scale.size());
+              _nstep = j.at("nstep");
+
+              if ( (_min.size()!=_max.size() ) || _min.size()!=_scale.size() || _min.size()<1 )
+                  throw std::runtime_error(
+                      "Reaction coordinate error: min, max, scale must have same length >=1");
           }
 
           ReactionCoordinateBase() {}
@@ -1876,10 +1877,10 @@ namespace Faunus
           size_t dim() const { return _min.size(); }   //!< dimension of coordinate
           const Tvec &min() const { return _min; }     //!< min value(s) for penalty coordinates
           const Tvec &max() const { return _max; }     //!< max value(s) for penalty coordinates
-          unsigned int nstep() const { return _nstep; } //!< update frequency (steps)
-          const Tvec &scale() const { return _scale; } //!< max value(s) for penalty coordinates
+          unsigned int nstep() const { return _nstep; }//!< update frequency (steps)
+          const Tvec &scale() const { return _scale; } //!< scaling value value(s) for penalty coordinates
 
-          /** @brief Determines if coordinate is within min:max */
+          /** @brief Determines if coordinate is within [min,max] */
           bool inrange( const Tvec &coord ) const
           {
               for ( size_t i = 0; i < coord.size(); ++i )
@@ -1944,9 +1945,9 @@ namespace Faunus
        *
        * Example:
        *
-       *     "cmcm" : {
-       *        "first":"water", "second":"sodium", "index":"0 0", "dir":"1 1 1",
-       *        "min":{0}, "max":{50.}
+       *     {
+       *        "first":"water", "second":"sodium", "index":"0 0", "dir":[1,1,1],
+       *        "min":[0], "max":[50]
        *     }
        */
       template<class Tspace, class base=ReactionCoordinateBase<Tspace>>
@@ -1959,16 +1960,16 @@ namespace Faunus
       public:
 
           MassCenterSeparation(
-              Tspace &s, Tmjson &j, string sec = "cmcm" ) : base(j[sec])
+              Tspace &s, Tmjson &j ) : base(j)
           {
 
-              dir << (j[sec]["dir"] | string("1 1 1"));
-              auto i = textio::words2vec<int>(j[sec]["index"] | string("0 0"));
-              assert(i.size() == 2);
-              assert(dir.size() == 3);
+              dir << j.value("dir", Tvec({1,1,1}) );
+              vector<int> i = j.value("index", vector<int>({0,0}) );
+              if (i.size()!=2 || dir.size()!=3)
+                  throw std::runtime_error("CM reaction coordinate error");
 
-              string name1 = j[sec]["first"];
-              string name2 = j[sec]["second"];
+              string name1 = j.at("first");
+              string name2 = j.at("second");
               g1 = s.findMolecules(name1, true).at(i[0]);
               g2 = s.findMolecules(name2, true).at(i[1]);
 
@@ -1976,6 +1977,7 @@ namespace Faunus
               assert(!g2->empty());
           }
 
+          /** @brief Returns reaction coordinate */
           Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p ) override
           {
               Point cm1 = massCenter(s.geo, p, *g1);

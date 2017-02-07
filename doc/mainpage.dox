@@ -1,158 +1,89 @@
 /*!
-@mainpage Welcome to Faunus!
+@page video Video Tutorial
 
-____
-![](faunus-textart.jpg)
-____
-
-Table of contents
-=================
-
-- [Overview / Readme](md_doc_README.html)
-- @ref license
-- Getting Started
-  - @ref downloadbuild
-  - @ref linkingyourown
-  - @ref importantclasses
-  - @ref videos
-- Examples
-  - @ref example_minimal 
-  - @ref example_keesom
-  - @ref example_bulk 
-  - @ref example_grand 
-  - @ref example_twobody
-  - @ref example_GCMolecular
-  - @ref example_water2
-  - @ref example_polymers
-  - @ref example_temper   
-  - @ref example_penalty
-  - @ref example_slitpolymer
-  - @ref example_membrane
-  - @ref example_cigars2fibrils
-  - @ref example_stripes
-- Development
-  - @ref guidelines
-  - @ref todo
-
-@page videos Video Tutorials
-
-### Download and compilation ###
 @htmlonly
 <iframe src="https://docs.google.com/file/d/0BzpLUBrTxmurRzN0RnFZc2lhZFE/preview" width="640" height="385"></iframe>
 @endhtmlonly
 
-@page downloadbuild Downloading and building Faunus
+*/
 
-System Requirements
-===================
+/*!
+@page jsonyaml Working with JSON and YAML files
 
-Faunus compiles in most unix-like environment including Linux, MacOS,
-and possibly also under Cygwin on Windows. The minimum requirements
-are:
+Faunus uses JSON files for input and, in many cases, also for output.
+JSON is a subset of the more general format YAML and the latter can be
+made more human readable:
 
-- [CMake 2.8+](http://www.cmake.org)
-- C++11 compliant compiler
+To convert between the two formats we
+provide a Python script `scripts/yason.py` that can be used to pass
+YAML input files,
 
-For more advanced features you may also need:
+    $ ./myprogram < yason.py < input.yml
 
-- MPI (mpich, openmpi)
-- Openbabel
-- Doxygen
+where we assume that `myprogram` reads JSON from standard input,
 
-Most major compilers support the C++11 features used in Faunus and for debugging and
-development, the clang compiler is recommended whereas for speedy production runs,
-gcc and intel are probably preferable. Below is a list of compilers, known to
-work:
+    Tmjson in;
+    std::cin >> in;
 
-Compiler       | Version        | Comment
-:------------- | :-----------   | :----------
-GCC            | (4.6), 4.7+    | Good optimization
-Clang          | 3.1+           | Good warning/error info
-Intel Composer | 13+            | Pedantic warnings, good optimization
+The script can also be used to pretty print JSON output files as YAML,
+
+    $ yason.py move_out.json
+
+Example YAML file:
+
+~~~~~~~~~~~~~{.yaml}
+atomlist:
+    A: {eps: 0.15, sigma: 4, dp: 40}
+    B: {eps: 0.2, sigma: 10, dp: 10}
+moleculelist:
+    salt: {atoms: 'A B', atomic: true, Ninit: 50}
+moves:
+    atomtranslate:
+        {salt: {peratom: true}}
+energy:
+    nonbonded: {}
+system:
+    temperature: 298.15
+    geometry: {length: 50}
+~~~~~~~~~~~~~
+
+And the corresponding JSON file,
+
+~~~~~~~~~~~~~{.js}
+{
+    "atomlist" : {
+        "A" : { "eps": 0.15, "sigma":4.0, "dp":40 },
+        "B" : { "eps": 0.20, "sigma":10.0, "dp":10 }
+    },
+    "moleculelist" : { 
+        "salt" : { "atoms":"A B", "atomic":true, "Ninit":50 }
+    },
+    "moves" : {
+        "atomtranslate" : {
+            "salt" : { "peratom":true }
+        }
+    },
+    "energy" : {
+        "nonbonded" : {}
+    },
+    "system" : {
+        "temperature" : 298.15,
+        "geometry" : { "length":50 }
+    }
+}
+~~~~~~~~~~~~~
+*/
 
 
-Getting the source code
-=======================
+/*!
+@page development Development
+@tableofcontents
 
-Faunus is hosted on GitHub (http://github.com/mlund/faunus) and can be downloaded
-by cloning the main repository:
-
-    git clone https://github.com/mlund/faunus.git
-
-If you intend to change and contribute to the project, consider making
-a *fork* as explained in the [development guidelines](@ref guidelines).
-
-
-Compiling
-=========
-
-Using the default compiler
---------------------------
-
-Assuming the default compiler meets the minimum requirements,
-simply do:
-
-    $ cd faunus
-    $ cmake . [options]
-    $ make
-
-All available build options are listed in the README
-file - for example,
-
-    $ cmake . -DENABLE_MPI=on -DCMAKE_BUILD_TYPE=Release
-
-If you have installed `ccmake` you can also control the build settings
-from a text based interface:
-
-    $ ccmake .
-
-Using a custom compiler
------------------------
-
-For compilers in non-standard locations or when multiple compilers
-are installed, use the `CXX` and `CC` shell variables to guide cmake to
-the desired compiler. For example:
-
-    $ rm -fR CMakeCache.txt CMakeFiles
-    $ export CXX=/opt/local/bin/g++
-    $ export CC=/opt/local/bin/gcc
-    $ cmake . [options]
-
-Out of source build
--------------------
-
-The above method builds Faunus directly in the `faunus` directory.
-To leave the source directory untouched, use instead an *out-of-source build*.
-This can be useful for making multiple builds with different settings or compilers.
-To make an out-of-source build do:
-
-    $ mkdir build
-    $ cd build
-    $ cmake ../faunus [options]
-    $ make
-
-Running the test suite
-======================
-
-Finally, after having build faunus as described above, run the test suite to check
-if everything works as expected:
-
-    $ make
-    $ make test
-
-If a test fails, it does not necessarily mean that all is horribly wrong.
-The tests compare numerics from simulations run on different systems and especially small
-differences in energy drifts (very small numbers) may cause a test to fail.
-To get verbose output from the tests, run:
-
-    $ ctest -V
-
-@page linkingyourown Making a new Faunus program
+# Make a new Faunus program
 
 We'll here show three ways to link a new, external program to the Faunus library.
 
-1. Using CMake
---------------
+## Using CMake
 
 Start by making a new directory (anywhere you want), put your source file there,
 and make a `CMakeLists.txt` file telling CMake about the new executable.
@@ -182,8 +113,8 @@ directly from the `newproject` directory:
 Note that all options selected when configuring faunus will be applied to `hello` as well,
 and any changes to the faunus code base will trigger re-compilation upon running `make`.
 
-2. Using CMake and automatic faunus download
---------------------------------------------
+
+## Using CMake and automatic faunus download
 
 Here we unleash CMake magic to automatically *download and build faunus*, as well as link it
 to your program. Only two files are required:
@@ -209,20 +140,7 @@ Place both in a fresh directory and do:
     $ make hello
 
 
-3. Using manual linking
------------------------
-
-Linking can also be done in the more traditional way by
-compiling with `libfaunus`. For example:
-
-    $ export faunus=$HOME/faunus
-    $ c++ hello.cpp $faunus/src/libfaunus.so -I$faunus/include
-
-This will, however, require that you manually set compiler options as well as macro definitions
-compatible with your `libfaunus` build.
-
-
-@page importantclasses Important Classes
+# Quick Class Overview
 
 A good place to start is to understand the following classes. Also, for a more grouped
 overview do have a look at the Namespace list.
@@ -236,13 +154,10 @@ Class                                | Description
 `Faunus::Space`                      | Contains all particles, molecules, and geometry
 `Faunus::Group`                      | A range of particles
 
-@page guidelines Coding Guidelines
 
-Guidelines
-==========
+# Coding Guidelines
 
-Naming Style
-------------
+## Naming Style
 
 Object                          | Example                     | Comment
 :------------------------------ | :-------------------------- | :----------
@@ -251,9 +166,7 @@ Member functions, functions     | `double getTemperature();`  | mixed case start
 Public variables (*avoid!*)     | `int numberOfParticles;`    | mixed case starting with lower case
 Private variables               | `int _i;`                   | Underscore prefix 
 
-
-Editing code
-------------
+## Editing code
 
 - Document code using Doxygen tags - the
   [Markdown](http://www.stack.nl/~dimitri/doxygen/markdown.html) syntax is recommended.
@@ -261,12 +174,11 @@ Editing code
   - VIM: add the following to `.vimrc`:
   ~~~
   set expandtab
-  set shiftwidth=2
-  set softtabstop=2
+  set shiftwidth=4
+  set softtabstop=4
   ~~~
 
-Design
-------
+## Design
 
 Some books on C++ design,
 
@@ -286,8 +198,7 @@ A few basic tips,
 - Stride for [const-correctness](http://en.wikipedia.org/wiki/Const-correctness)
 - Treat compiler warnings as errors
 
-Committing code
----------------
+## Committing code
 
 To contribute to the Faunus project, first make a *fork* of the
 repository and request changes to be added via a *pull request*.
@@ -301,8 +212,26 @@ Before submitting changes, please make sure nothing is broken:
     $ make all
     $ make manual
     $ make test
+*/
+
+/*!
+@page examples Examples
+- @subpage example_minimal 
+- @subpage example_keesom
+- @subpage example_bulk 
+- @subpage example_grand 
+- @subpage example_twobody
+- @subpage example_GCMolecular
+- @subpage example_water2
+- @subpage example_polymers
+- @subpage example_temper   
+- @subpage example_penalty
+- @subpage example_slitpolymer
+- @subpage example_membrane
+- @subpage example_cigars2fibrils
+- @subpage example_stripes
+*/
 
 @page license License
 @verbinclude LICENSE
-
 */

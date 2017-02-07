@@ -16,7 +16,10 @@ int main()
 }
 /**
   @page example_minimal Example: Hello Monte Carlo!
- 
+
+  Introduction
+  ============
+
   This is a minimal example of how to set up a Metropolis Monte Carlo simulation
   with the following characteristics:
 
@@ -25,7 +28,7 @@ int main()
   - Canonical ensemble (NVT)
   - Parameters and atom properties are read from disk
  
-  This amounts to around a handful of C++ lines as illustrated in the minimal.cpp
+  This amounts to a handful of C++ lines as illustrated in the minimal.cpp
   program:
  
   @includelineno minimal.cpp
@@ -37,17 +40,19 @@ int main()
       $ ./minimal
  
   Let's walk through the code line by line:
-  - **line 1-2**
+  - **line 1-3**
     - Include faunus header files and add the Faunus namespace to search path
  
-  - **line 3**
+  - **line 4**
     - Here we define what kind of simulation cell we wish to use
       a periodic box, `Faunus::Geometry::Cuboid`.
       There are many other geometries including spheres, slits and
       cylinders. The geometry takes
       care of all distance calculations as well as boundary conditions.
+      The geometry is used to construct `Faunus::Space` which containes
+      all particle positions, molecules etc.
  
-  - **line 4**
+  - **line 5**
     - This defines the pair potantial between our particles.
       Pair potentials can
       be arbitrarily mixed and `Faunus::Potential::CoulombLJ` is actually
@@ -56,14 +61,11 @@ int main()
       `Faunus::Potential::LennardJones`. To see
       a full list of pair potentials, check out the `Faunus::Potential`
       namespace.
- 
-  - **line 5**
-    - This defines the simulation space, which includes all properties as
-      well as geometry information
- 
+
   - **line 9**
-    - Load the user input parameters into a JSON object
-      heavily used in constructors throughout Faunus.
+    - Load user input parameters into a JSON object
+      heavily used in constructors throughout Faunus. If you prefer to
+      use YAML input files, this is possible using `scripts/yason.py`.
  
   - **line 10**
     - Space takes care of inserting, storing and deleting particles and knows about
@@ -99,7 +101,8 @@ int main()
     - Print final information to standard output.
 
   Exercise
-  --------
+  ========
+
   1. Discuss why the acceptance (acc) and mean square displacement (msq)
      differ between particle A and B?
 

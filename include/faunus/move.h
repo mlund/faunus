@@ -98,8 +98,6 @@ namespace Faunus
      * This is thus an expensive computation and is best used with
      * MC moves that propagate  all particles.
      *
-     * ### Update frequency ###
-     *
      * Updating induced moments is an iterative N*N operation and
      * very inefficient for MC moves that update only a subset of the system.
      * In liquid systems that propagate only slowly as a function of MC steps

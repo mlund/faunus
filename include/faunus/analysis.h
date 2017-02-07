@@ -619,13 +619,14 @@ namespace Faunus
         }
 
         /**
-           * @brief Sample multipole energy
-           * @param spc Simulation space
-           * @param g1  Group with molecule 1
-           * @param g2  Group with molecule 2
-           * @note Group mass-centers (`Group::cm`) must be up-to-date before
-           *       calling this function
-           */
+         * @brief Sample multipole energy
+         *
+         * @param spc Simulation space
+         * @param g1  Group with molecule 1
+         * @param g2  Group with molecule 2
+         * @note Group mass-centers (`Group::cm`) must be up-to-date before
+         *       calling this function
+         */
         void sample( Tspace &spc, Group &g1, Group &g2 )
         {
             // multipoles and cm-cm distance
@@ -927,7 +928,7 @@ namespace Faunus
         Tvec expuw;
         vector<int> ihc, irej;
         int ghostin;        //< ghost insertions
-        double lB;          //!< Bjerrum length [a]
+        double lB;          //!< Bjerrum length
 
         void init()
         {
@@ -1100,11 +1101,11 @@ namespace Faunus
         }
 
         /**
-           * @brief Add ghost particle
-           *
-           * This will add particle `p` to the list of ghost particles
-           * to insert.
-           */
+         * @brief Add ghost particle
+         *
+         * This will add particle `p` to the list of ghost particles
+         * to insert.
+         */
         void add( const Tparticle &p )
         {
             g.push_back(p);
@@ -1112,11 +1113,11 @@ namespace Faunus
         }
 
         /**
-           * @brief Add ghost particles
-           *
-           * This will scan the particle vector for particles and each unique type
-           * will be added to the list a ghost particles to insert.
-           */
+         * @brief Add ghost particles
+         *
+         * This will scan the particle vector for particles and each unique type
+         * will be added to the list a ghost particles to insert.
+         */
         template<class Tpvec>
         void add( const Tpvec &p )
         {
@@ -1214,10 +1215,7 @@ namespace Faunus
     /**
      * @brief Analyse dielectric constant outside the cutoff limit.
      *
-     * @note [Neumann, M. (1983) Mol. Phys., 50, 841-858].
-     *
-     * @param spc The space
-     * @param filename Extention of filename from previous saved run (optional)
+     * @note Neumann, M. (1983) Mol. Phys., 50, 841-858.
      */
     class DipoleAnalysis
     {

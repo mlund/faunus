@@ -69,8 +69,8 @@ int main() {
   This gives essentially identical results to the more elaborate Particle
   Mesh Ewald method - see figure below. In contrast, using the simple minimum image
   approach with a cubic cutoff, the system freezes.
-  The `bulk.cpp` program can be used to simulate any atomic mixtures and the
-  dielectric constant may also be varied (it is unity in this example).
+  The `bulk.cpp` program can be used to simulate any atomic (or molecular) mixtures
+  and the dielectric constant may also be varied (it is unity in this example).
 
   We have the following MC moves:
   - salt translation
@@ -80,12 +80,7 @@ int main() {
 
   ![Na-Cl distribution function with various electrostatic potentials.](wolf.png)
 
-  bulk.json
-  =========
-  @includelineno examples/bulk.json
-
   bulk.cpp
   ========
   @includelineno examples/bulk.cpp
-
 */

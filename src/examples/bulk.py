@@ -27,11 +27,11 @@ d = {
     "analysis" : {
       "virial" : { "nstep":5 },
       "virtualvolume" : { "nstep":5, "dV":0.2 },
-      "xtcfile" :   { "file": "bulk.xtc", "nstep":10 },
+      "xtcfile" :   { "file": "bulk.xtc", "nstep":20 },
+      "energyfile": { "file": "energy.dat", "nstep":20 },
       "pqrfile" :   { "file": "bulk.pqr" },
-      "energyfile": { "file": "energy.dat", "nstep":10 },
       "statefile" : { "file": "state" },
-      "atomrdf" : { "nstep":20, "pairs" :
+      "atomrdf" : { "nstep":10, "pairs" :
             [
                { "name1":"Na", "name2":"Cl", "dim":3, "dr":0.1, "file":"rdf_nacl.dat"},
                { "name1":"Na", "name2":"Na", "dim":3, "dr":0.1, "file":"rdf_nana.dat"}
@@ -40,7 +40,7 @@ d = {
       },
 
     "moves" : {
-      "isobaric" : { "dp":0, "pressure":11, "prob":0.1 },
+      "isobaric" : { "dp":0.0, "pressure":11, "prob":0.0 },
       "atomtranslate" : { 
         "NaCl" : { "peratom":True }
         }
@@ -48,8 +48,8 @@ d = {
 
     "system" : {
       "temperature"  : 1100,
-      "geometry"     : { "length" : 80 },
-      "mcloop"       : { "macro":5, "micro":40 },
+      "geometry"     : { "length" : 42.5 },
+      "mcloop"       : { "macro":5, "micro":50 },
       "unittest"     : { "testfile":"bulk.test", "stable":False },
       "atomlist"     : "bulk.json",
       "moleculelist" : "bulk.json"

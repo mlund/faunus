@@ -2477,12 +2477,15 @@ namespace Faunus
                 int id1 = atom[ d.name1 ].id;
                 int id2 = atom[ d.name2 ].id;
                 for (int i=0; i<N-1; i++)
-                    if ( spc.p[i].id==id1 || spc.p[i].id==id2 )
-                        for (int j=i+1; j<N; j++)
-                            if ( spc.p[j].id==id1 || spc.p[j].id==id2 ) {
-                                double r = spc.geo.dist( spc.p[i], spc.p[j] );
-                                d.hist(r)++;
-                            }
+                    for (int j=i+1; j<N; j++)
+                        if (
+                                ( spc.p[i].id==id1 && spc.p[j].id==id2 ) ||
+                                ( spc.p[i].id==id2 && spc.p[j].id==id1 )
+                           )
+                        {
+                            double r = spc.geo.dist( spc.p[i], spc.p[j] );
+                            d.hist(r)++;
+                        }
             }
 
             public:

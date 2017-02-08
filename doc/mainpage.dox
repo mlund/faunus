@@ -12,10 +12,9 @@
 
 Faunus uses JSON files for input and, in many cases, also for output.
 JSON is a subset of the more general format YAML and the latter can be
-made more human readable:
-
+made more human readable.
 To convert between the two formats we
-provide a Python script `scripts/yason.py` that can be used to pass
+provide a script, `scripts/yason.py`, that can pass
 YAML input files,
 
     $ ./myprogram < yason.py < input.yml
@@ -25,7 +24,7 @@ where we assume that `myprogram` reads JSON from standard input,
     Tmjson in;
     std::cin >> in;
 
-The script can also be used to pretty print JSON output files as YAML,
+The script can also be used oppositely to pretty print JSON as YAML,
 
     $ yason.py move_out.json
 
@@ -162,8 +161,8 @@ Class                                | Description
 Object                          | Example                     | Comment
 :------------------------------ | :-------------------------- | :----------
 Types and namespaces            | `class AtomicTranslation;`  | Mixed case starting with upper case
-Member functions, functions     | `double getTemperature();`  | mixed case starting with lower case
-Public variables (*avoid!*)     | `int numberOfParticles;`    | mixed case starting with lower case
+Member functions, functions     | `double getTemperature();`  | Mixed case starting with lower case
+Public variables (*avoid!*)     | `int numberOfParticles;`    | Mixed case starting with lower case
 Private variables               | `int _i;`                   | Underscore prefix 
 
 ## Editing code

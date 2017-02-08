@@ -1338,7 +1338,8 @@ namespace Faunus
        * @brief Move that will swap conformation of a molecule
        *
        * This will swap between different molecular conformations
-       * as defined in `MoleculeData`. If defined, the weight
+       * as defined in `MoleculeData` with `traj` and `weight`.
+       * If defined, the weight
        * distribution is respected, otherwise all conformations
        * have equal intrinsic weight. Upon insertion, the new conformation
        * is randomly oriented and placed on top of the mass-center of

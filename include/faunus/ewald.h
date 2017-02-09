@@ -19,7 +19,7 @@ namespace Faunus {
         typedef Potential::Coulomb Tbase;
         double alpha, rc2i;
 
-        EwaldReal(InputMap &in, string pfx="coulomb") : Tbase(in,pfx), alpha(0), rc2i(0) {
+        EwaldReal(InputMap &in) : Tbase(in), alpha(0), rc2i(0) {
           Tbase::name="Ewald Real";
         }
 

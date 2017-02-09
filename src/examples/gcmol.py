@@ -27,7 +27,7 @@ d = {
 
     'energy': {
         'nonbonded': {
-            'coulomb': {'epsr': 1.0, 'cutoff': 9.0}
+            'epsr': 1.0, 'cutoff': 9.0
         }
     },
 

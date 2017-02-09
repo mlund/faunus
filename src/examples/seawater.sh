@@ -17,7 +17,7 @@ echo '{
   },
 
   "energy" : {
-    "nonbonded" : { "coulomb" : { "epsr":80 } }
+    "nonbonded" : { "epsr":80 }
   },
 
   "moves" : {

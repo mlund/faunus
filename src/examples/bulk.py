@@ -21,7 +21,7 @@ d = {
       },
 
     "energy" : {
-      "nonbonded" : { "coulomb" : { "epsr":1, "cutoff":14 } }
+        "nonbonded" : { "cutoff":14, "epsr":1 }
       },
 
     "analysis" : {
@@ -42,14 +42,14 @@ d = {
     "moves" : {
       "isobaric" : { "dp":0.0, "pressure":11, "prob":0.0 },
       "atomtranslate" : { 
-        "NaCl" : { "peratom":True }
+          "NaCl" : { "peratom":True, "prob": 1.0 }
         }
       },
 
     "system" : {
       "temperature"  : 1100,
       "geometry"     : { "length" : 42.5 },
-      "mcloop"       : { "macro":5, "micro":50 },
+      "mcloop"       : { "macro":10, "micro":50 },
       "unittest"     : { "testfile":"bulk.test", "stable":False },
       "atomlist"     : "bulk.json",
       "moleculelist" : "bulk.json"

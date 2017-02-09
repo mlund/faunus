@@ -20,7 +20,7 @@ echo '{
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "epsr":1, "cutoff":14, "cutoffdip":4.3 }
+       "epsr":1, "cutoff":14, "cutoffdip":4.3
     }
   },
 

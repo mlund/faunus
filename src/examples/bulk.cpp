@@ -9,6 +9,7 @@ typedef CombinedPairPotential<Coulomb,LennardJonesTrunkShift> Tpairpot; // pair 
 typedef CombinedPairPotential<DebyeHuckelDenton,LennardJonesTrunkShift> Tpairpot; // pair potential
 #else
 typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
+typedef CutShift<Tpairpot,false> TpairpotCut;
 #endif
 
 typedef Geometry::Cuboid Tgeometry;   // geometry: cube w. periodic boundaries
@@ -23,7 +24,7 @@ int main() {
   // Construct Hamiltonian and Space
   Tspace spc(mcp);
 
-  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
+  auto pot = Energy::Nonbonded<Tspace,TpairpotCut>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
 
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);

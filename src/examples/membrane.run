@@ -21,10 +21,9 @@ echo '{
   "energy" : {
     "nonbonded" : {
       "cutoff_g2g" : 40,
-      "coulomb" : { "epsr" : 80.0, "ionicstrength":0.05 },
-      "cosattract" : {
-        "wc":'`python -c "print($sigma*1.6)"`',
-        "rc":'`python -c "print($sigma*2**(1/6.))"`', "eps":'$epsilon' }
+      "epsr" : 80.0, "ionicstrength":0.05,
+      "wc":'`python -c "print($sigma*1.6)"`',
+      "rc":'`python -c "print($sigma*2**(1/6.))"`', "eps":'$epsilon'
     }
   },
     "analysis" : {

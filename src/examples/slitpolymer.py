@@ -25,7 +25,7 @@ d = {
 
     "energy" : {
       "gouychapman" : { "phi0":-2 },
-      "nonbonded" : { "coulomb" : { "epsr" : 78.9, "debyelength":11.6492873993050 } }
+      "nonbonded" : { "epsr" : 78.9, "debyelength":11.6492873993050 }
       },
 
     "moves" : {

@@ -71,15 +71,11 @@ namespace Faunus {
     class PairPotentialBase {
       private:
         virtual string _brief();
-      protected:
-        string jsonsec;    //!< JSON section where input is stored
       public:
         typedef PairMatrix<double> Tcutoff;
         Tcutoff rcut2;                        //!< Squared cut-off distance (angstrom^2)
 
         PairPotentialBase( );
-
-        PairPotentialBase( const string &sec );
 
         virtual ~PairPotentialBase();
         string name;       //!< Name of potential
@@ -158,13 +154,12 @@ namespace Faunus {
      * \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
      * (kT/angstrom^2) and req is the equilibrium distance (angstrom).
      *
-     * Upon construction the following keywords are searched
-     * for in section `harmonic`:
+     * JSON keywords:
      *
      * Keyword   | Description
      * :-------- | :-----------------------------------------------
-     * req       | Equilibrium distance (angstrom)
-     * k         | Force constant (kT/angstrom^2). See note below.
+     * `req`     | Equilibrium distance (angstrom)
+     * `k`       | Force constant (kT/angstrom^2). See note below.
      *
      * @note We do not multiply with 1/2 which must be included in the
      * supplied force constant, `k`.
@@ -178,7 +173,7 @@ namespace Faunus {
         double req; //!< Equilibrium distance (angstrom)
 
         Harmonic( double k=0, double req=0 );
-        Harmonic( Tmjson &j, const string &sec="harmonic");
+        Harmonic( Tmjson &j );
 
         template<class Tparticle>
           double operator()( const Tparticle &a, const Tparticle &b, double r2 ) const {
@@ -203,7 +198,7 @@ namespace Faunus {
      * for \f$r_c\leq r \leq r_c+w_c\f$. For \f$r<r_c\f$, \f$\beta u=-\epsilon\f$,
      * while zero for \f$r>r_c+w_c\f$.
      *
-     * Keywords in json section `cosattract` are:
+     * JSON keywords:
      *
      * Key     | Description
      * :-------| :---------------------------
@@ -218,7 +213,7 @@ namespace Faunus {
         string _brief();
       public:
 
-        CosAttract(Tmjson&, const string &sec="cosattract");
+        CosAttract(Tmjson&);
 
         /**
          * @todo
@@ -273,7 +268,7 @@ namespace Faunus {
      * @f[
      *     \beta u(r) = -\frac{k r_0^2}{2}\ln \left [ 1-(r/r_0)^2 \right ]
      * @f]
-     * for \f$r<r_0\f$, otherwise infinity. Parameters are read from section `fene`:
+     * for \f$r<r_0\f$, otherwise infinity. JSON keywords:
      *
      * - `stiffness` Bond stiffness, `k` [kT]
      * - `maxsep` Maximum separation, `r_0` [angstrom]
@@ -289,10 +284,10 @@ namespace Faunus {
       public:
         FENE(double k_kT, double rmax_A);
 
-        FENE( Tmjson &j, const string &sec="fene" ) : PairPotentialBase( sec ) {
+        FENE( Tmjson &j ) {
           name="FENE";
-          k  = j[sec]["stiffness"] | 0.0;
-          r02 = pow( j[sec]["maxsep"] | 0.0, 2);
+          k  = j.at("stiffness");
+          r02 = std::pow( double(j.at("maxsep")), 2);
           r02inv = 1/r02;
         }
 
@@ -315,7 +310,7 @@ namespace Faunus {
         double E;
         string _brief();
       public:
-        Hertz(Tmjson&, const string &sec="hertz");
+        Hertz(Tmjson&);
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
@@ -343,7 +338,7 @@ namespace Faunus {
         HardSphere();
 
         template<typename T>
-          HardSphere(const T&, const string &sec="") { name="Hardsphere"; }
+          HardSphere(const T&) { name="Hardsphere"; }
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -372,8 +367,7 @@ namespace Faunus {
      * and \f$\epsilon_{lj}=\epsilon\f$
      * is the same for all pairs in this class.
      *
-     * Upon construction the input section `ljsimple` is scanned for
-     * the following:
+     * JSON keywords:
      *
      * Keyword    |  Description
      * :--------- |  :------------------------
@@ -392,9 +386,7 @@ namespace Faunus {
       public:
         LennardJones();
 
-        LennardJones(
-                    Tmjson &j,
-                    const string &sec="ljsimple" );
+        LennardJones(Tmjson &j);
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -429,33 +421,35 @@ namespace Faunus {
      * typedef CutShift<LennardJones> Tpairpot;
      * ~~~~
      *
-     * Upon construction the json section is read from
-     * `Tpairpot::jsonsec` and the `cutoff` keyword
-     * is used to set the cut-off.
+     * JSON keywords: `cutoff`.
      *
      * @todo Implement continuous force calculation
      */
-    template<class Tpairpot>
+    template<class Tpairpot, bool shift=true, bool precalc=false>
       class CutShift : public Tpairpot {
         private:
           double rc2; // squared cut-off distance
+          PairMatrix<double> ucut; // energy at cutoff
         public:
           CutShift( Tmjson &j ) : Tpairpot(j) {
-            rc2 = pow( ( j[Tpairpot::jsonsec]["cutoff"] | pc::infty ), 2 );
+            rc2 = pow( ( j.value("cutoff", pc::infty) ), 2 );
             Tpairpot::name+=" (rcut="
               + std::to_string( sqrt(rc2) ) + textio::_angstrom + ")";
           }
 
           template<class Tparticle>
-            double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
-              return (r2>rc2) ? 0 : Tpairpot::operator()(a,b,r2) - Tpairpot::operator()(a,b,rc2);
+            double operator() (const Tparticle &a, const Tparticle &b, double r2) {
+              if (r2>rc2)
+                  return 0;
+              if (shift) // "shift" is deduced at compile time --> no overhead
+                  return Tpairpot::operator()(a,b,r2) - Tpairpot::operator()(a,b,rc2);
+              return Tpairpot::operator()(a,b,r2);
             }
       };
 
     /** @brief Lorentz-Berthelot Mixing Rule for sigma and epsilon */
     struct LorentzBerthelot {
-      string name;
-      inline LorentzBerthelot() : name("Lorentz-Berthelot Mixing") {}
+      const std::string name = "Lorentz-Berthelot Mixing";
       inline double mixSigma(double sigma1, double sigma2) const { return 0.5 * ( sigma1 + sigma2 ); }
       inline double mixEpsilon(double eps1, double eps2) const { return sqrt( eps1 * eps2 ); }
     };
@@ -495,12 +489,11 @@ namespace Faunus {
 
         public:
           template<typename T>
-            LennardJonesMixed(T &j, const string &sec="lj") {
+            LennardJonesMixed(T &j) {
               name="Lennard-Jones";
               init();
-              if (j.count(sec)>0)
-                if (j[sec].count("custom")>0)
-                  customParameters( j[sec]["custom"] );
+              if (j.count("ljcustom")>0)
+                  customParameters( j["ljcustom"] );
             }
 
           template<class Tparticle>
@@ -593,7 +586,7 @@ namespace Faunus {
           PairMatrix<double> rc2,rc,c; // matrix of sigma_ij^2 and eps_ij
         public:
           template<class T>
-            CosAttractMixed(const T &dummy, const string &dir="") : base( dummy ) {
+            CosAttractMixed(const T &dummy ) : base( dummy ) {
               base::name="Cos" + textio::squared + " attraction (mixed)";
               size_t n=atom.size(); // number of atom types
               c.resize(n);
@@ -646,8 +639,8 @@ namespace Faunus {
         typedef LennardJonesMixed<LorentzBerthelot> Tbase;
 
         template<class T>
-          inline WeeksChandlerAndersen(const T &dummy, const string &dir="lj")
-          : Tbase( dummy, dir ), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
+          inline WeeksChandlerAndersen(const T &dummy)
+          : Tbase( dummy ), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
             name="WeeksChandlerAnderson";
           }
 
@@ -686,7 +679,7 @@ namespace Faunus {
       public:
         double threshold;                           //!< Threshold between particle *surface* [A]
         double depth;                               //!< Energy depth [kT] (positive number)
-        SquareWell(Tmjson&, const string &sec="squarewell"); //!< Constructor
+        SquareWell(Tmjson&); //!< Constructor
 
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -707,7 +700,7 @@ namespace Faunus {
         string _brief();
       public:
         double threshold_lower;
-        SquareWellShifted( Tmjson&, const string &sec="squarewell"); //!< Constructor
+        SquareWellShifted( Tmjson& ); //!< Constructor
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -740,7 +733,7 @@ namespace Faunus {
      */
     class SquareWellHydrophobic : public SquareWell {
       public:
-        SquareWellHydrophobic(Tmjson &j, const string &sec="squarewell");
+        SquareWellHydrophobic(Tmjson &j);
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -760,7 +753,7 @@ namespace Faunus {
         string _brief();
         double sigma6;
       public:
-        SoftRepulsion(Tmjson &j, const string &sec);
+        SoftRepulsion(Tmjson &j);
 
         string info(char w);
 
@@ -789,7 +782,7 @@ namespace Faunus {
       protected:
         double eps;
       public:
-        R12Repulsion(Tmjson &j, const string &sec="lj");
+        R12Repulsion(Tmjson &j);
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -807,7 +800,7 @@ namespace Faunus {
      */
     class LennardJonesR12 : public LennardJones {
       public:
-        LennardJonesR12( Tmjson &j, const string &sec="ljr12") {//: LennardJones(j,sec) {
+        LennardJonesR12( Tmjson &j ) {
           name+="R12";
         }
 
@@ -823,7 +816,7 @@ namespace Faunus {
      */
     class LennardJonesTrunkShift : public LennardJones {
       public:
-        LennardJonesTrunkShift( Tmjson&, const string &sec="");
+        LennardJonesTrunkShift( Tmjson& );
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -854,13 +847,12 @@ namespace Faunus {
      * @f]
      * where \f$\lambda_B\f$ is the Bjerrum length and \c z are the valencies.
      *
-     * Upon construction, the following parameters are read from the
-     * json section `coulomb`.
+     * JSON keywords:
      *
      * Keyword        |  Description
      * :------------- | :---------------------
      *  `epsr`        | Relative dielectric constant [default: 80]
-     *  `depsdt`      | Dielectric constant temperature derivative [default: -0.368]
+     *  `depsdt`      | \f$ \partial\epsilon_r/\partial T\f$ [default: -0.368]
      */
     class Coulomb : public PairPotentialBase {
       friend class Potential::DebyeHuckel;
@@ -874,7 +866,7 @@ namespace Faunus {
 
       public:
 
-      Coulomb(Tmjson&, const string &sec="coulomb"); //!< Construct from json entry
+      Coulomb(Tmjson&); //!< Construct from json entry
 
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
@@ -936,10 +928,11 @@ namespace Faunus {
       private:
 
         double Rc2, Rcinv;
+        PairMatrix<double> lBxQQ; // matrix of lB * Qa * Qb
 
       public:
 
-        CoulombWolf( Tmjson&, const string &dir="coulomb" );
+        CoulombWolf( Tmjson& );
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -947,10 +940,10 @@ namespace Faunus {
               return 0;
 #ifdef FAU_APPROXMATH
             r2=invsqrtQuake(r2);  // 1/r
-            return lB * a.charge * b.charge * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
+            return lBxQQ(a.id, b.id) * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
 #else
             r2=sqrt(r2); // r
-            return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
+            return lBxQQ(a.id, b.id) * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
 #endif
           }
 
@@ -992,7 +985,7 @@ namespace Faunus {
       private:
         double c;
       public:
-        ChargeNonpolar(Tmjson&, const string &sec="coulomb");
+        ChargeNonpolar(Tmjson&);
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -1021,7 +1014,7 @@ namespace Faunus {
 
     class PolarPolar : public Coulomb {
       public:
-        PolarPolar(Tmjson&, const string &sec="coulomb"); //!< Construction from InputMap
+        PolarPolar(Tmjson&); //!< Construction from InputMap
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -1043,7 +1036,7 @@ namespace Faunus {
 
       public:
 
-        YukawaGel(Tmjson&, const string &sec="yukawagel");
+        YukawaGel(Tmjson&);
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
@@ -1098,8 +1091,7 @@ namespace Faunus {
      * \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
      * where \f$\kappa=1/D\f$ is the inverse Debye screening length.
      *
-     * Upon construction, the following keywords will be read from
-     * input section `coulomb` (in addition to those read be `Coulomb`):
+     * JSON keywords:
      *
      * - `ionicstrength` [mol/l] 
      * - `debyelength` [angstrom] (only if I=0, default)
@@ -1113,7 +1105,7 @@ namespace Faunus {
 
       public:
 
-        DebyeHuckel( Tmjson &j, const string &sec="coulomb" );
+        DebyeHuckel( Tmjson &j );
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
@@ -1180,7 +1172,7 @@ namespace Faunus {
      */
     class DebyeHuckelSD : public DebyeHuckel {
       public:
-        DebyeHuckelSD(Tmjson &j, const string &sec="coulomb") : DebyeHuckel(j,sec) {}
+        DebyeHuckelSD(Tmjson &j ) : DebyeHuckel(j) {}
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
@@ -1248,7 +1240,7 @@ namespace Faunus {
           }
 
       public:
-        DebyeHuckelDenton(Tmjson &in, const string &dir="");
+        DebyeHuckelDenton(Tmjson &in);
 
         // Effective macroion-macroion interaction (Eq. 37)
         template<class Tparticle>
@@ -1303,16 +1295,15 @@ namespace Faunus {
      * where @f$r_c@f$ is a spherical cut-off beyond which the
      * energy is zero.
      * See more in for example <http://dx.doi.org/10/fm7qm5>.
-     * The cut-off distance is read from json section `coulomb`) with the following
-     * keyword:
-     * - `cutoff` Spherical cut-off in angstroms (default: infinity)
+     *
+     * Additional JSON keyword: `cutoff`
      */
     class DebyeHuckelShift : public DebyeHuckel {
       private:
         double rc2,rc; // (squared) cutoff distance
         double u_rc,dudrc;
       public:
-        DebyeHuckelShift(Tmjson &j, const string &sec="coulomb");
+        DebyeHuckelShift(Tmjson &j);
 
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -1365,7 +1356,7 @@ namespace Faunus {
 
       public:
 
-        Cardinaux( Tmjson &j, const string &sec="cardinaux");
+        Cardinaux( Tmjson &j );
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -1421,9 +1412,9 @@ namespace Faunus {
 
         public:
 
-          FromDisk( Tmjson &j, const string &sec="fromdisk") {
+          FromDisk( Tmjson &j ) {
             PairPotentialBase::name = "fromdisk";
-            string filename = j[sec] | string();
+            string filename = j.at( string("file") );
             if (!t.load(filename))
               throw std::runtime_error("Couldn't load tabulated potential.");
           }

@@ -1241,15 +1241,14 @@ namespace Faunus
     public:
         PotentialTabulate( Tmjson &j ) : Tpairpot(j)
         {
-            string sec = Tpairpot::jsonsec;
             tab.setRange(
-                j[sec]["tab_rmin"] | 1.0,
-                j[sec]["tab_rmax"] | 100.0);
+                j["tab_rmin"] | 1.0,
+                j["tab_rmax"] | 100.0);
             tab.setTolerance(
-                j[sec]["tab_utol"] | 0.01,
-                j[sec]["tab_ftol"] | -1.0,
-                j[sec]["tab_umaxtol"] | -1.0,
-                j[sec]["tab_fmaxtol"] | -1.0);
+                j["tab_utol"] | 0.01,
+                j["tab_ftol"] | -1.0,
+                j["tab_umaxtol"] | -1.0,
+                j["tab_fmaxtol"] | -1.0);
         }
 
         template<class Tparticle>
@@ -1371,12 +1370,12 @@ namespace Faunus
         string _brief() override { return string("splined pair-potentials"); }
 
     public:
-        PotentialMapSpline( Tmjson &in, const string sec = "pairpotentialmap" ) : PairPotentialBase(sec)
+        PotentialMapSpline( Tmjson &in )
         {
 
             PairPotentialBase::name = "pairpotentialmap";
 
-            auto j = in[sec]["spline"];
+            auto j = in.at("spline");
 
             rmin = j["rmin"] | 1.0;
             rmax = j["rmax"] | 100.0;
@@ -1387,12 +1386,12 @@ namespace Faunus
                 j["umaxtol"] | -1,
                 j["fmaxtol"] | -1);
 
-            verbose = in[sec]["verbose"] | false;
+            verbose = in["verbose"] | false;
 
             m.resize(atom.size());
 
             // loop over all pairs in json entry
-            for ( auto i = in[sec].begin(); i != in[sec].end(); ++i )
+            for ( auto i = in.begin(); i != in.end(); ++i )
             {
                 auto v = textio::words2vec<string>(i.key());
                 if ( v.size() == 2 )
@@ -1412,7 +1411,7 @@ namespace Faunus
                     if ( i.id > 0 && j.id > 0 )
                         if ( m(i.id, j.id).empty())
                         {
-                            auto d = mixPairPotential(in[sec]["default"], i.id, j.id);
+                            auto d = mixPairPotential(in["default"], i.id, j.id);
                             m.set(i.id, j.id, tab.generate(d.first));
                             nfo[d.second].insert(Tpair(i.id, j.id));
                         }

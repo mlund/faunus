@@ -22,14 +22,6 @@ namespace Faunus
         rcut2.resize(atom.size());
     }
 
-    PairPotentialBase::PairPotentialBase( const std::string &sec ) : jsonsec(sec)
-    {
-        assert(!jsonsec.empty());
-        if ( atom.empty())
-            std::cerr << "Warning: no atoms defined when initializing pair potential.\n";
-        rcut2.resize(atom.size());
-    }
-
     PairPotentialBase::~PairPotentialBase()
     {
     }
@@ -77,10 +69,10 @@ namespace Faunus
         return o.str();
     }
 
-    Hertz::Hertz( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
+    Hertz::Hertz( Tmjson &j )
     {
         name = "Hertz";
-        E = j[sec]["_E"] = 0.0;
+        E = j.at("_E") = 0.0;
     }
 
     string Hertz::_brief()
@@ -99,15 +91,15 @@ namespace Faunus
         return o.str();
     }
 
-    YukawaGel::YukawaGel( Tmjson &j, const string &sec ) : Coulomb(j, sec)
+    YukawaGel::YukawaGel( Tmjson &j ) : Coulomb(j)
     {
         name = "YukawaGel";
 
-        Z = j[sec]["yukawagel_Z"] | 0.0;
-        nc = j[sec]["yukawagel_nc"] | 0.0;
-        ns = j[sec]["yukawagel_ns"] | 0.0;
-        v = j[sec]["yukawagel_v"] | 1.0;
-        d = j[sec]["yukawagel_d"] | 1.0;
+        Z  = j["yukawagel_Z"] | 0.0;
+        nc = j["yukawagel_nc"] | 0.0;
+        ns = j["yukawagel_ns"] | 0.0;
+        v  = j["yukawagel_v"] | 1.0;
+        d  = j["yukawagel_d"] | 1.0;
 
         k = sqrt(4. * pc::pi * (nc + 2. * ns) * v * v * bjerrumLength());
         Z2e2overER = Z * Z * bjerrumLength();
@@ -137,12 +129,12 @@ namespace Faunus
         return o.str();
     }
 
-    CosAttract::CosAttract( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
+    CosAttract::CosAttract( Tmjson &j )
     {
         name = "CosAttract";
-        eps = j[sec].at("eps");
-        rc = j[sec].at("rc");
-        wc = j[sec].at("wc");
+        eps = j.at("eps");
+        rc = j.at("rc");
+        wc = j.at("wc");
         rc2 = rc * rc;
         c = pc::pi / 2 / wc;
         rcwc2 = pow((rc + wc), 2);
@@ -195,20 +187,19 @@ namespace Faunus
         return o.str();
     }
 
-    LennardJonesTrunkShift::LennardJonesTrunkShift( Tmjson &j, const string &sec ) : LennardJones(j, sec)
+    LennardJonesTrunkShift::LennardJonesTrunkShift( Tmjson &j ) : LennardJones(j)
     {
         name += " Truncated and shifted to sigma";
     }
 
     /**
      * @param j json obect is scanned for the keys `threshold` (angstrom) and `depth` (kT).
-     * @param sec json section for the above
      */
-    SquareWell::SquareWell( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
+    SquareWell::SquareWell( Tmjson &j )
     {
         name = "Square Well";
-        threshold = j[sec].at("threshold");
-        depth = j[sec].at("depth");
+        threshold = j.at("threshold");
+        depth = j.at("depth");
     }
 
     string SquareWell::_brief()
@@ -232,10 +223,10 @@ namespace Faunus
      * searched for:
      * - `threshold_lower`
      */
-    SquareWellShifted::SquareWellShifted( Tmjson &j, const string &sec ) : SquareWell(j, sec)
+    SquareWellShifted::SquareWellShifted( Tmjson &j ) : SquareWell(j)
     {
         name += " Shifted";
-        threshold_lower = j[sec]["threshold_lower"] | 0.0;
+        threshold_lower = j.at("threshold_lower");
     }
 
     string SquareWellShifted::_brief()
@@ -271,24 +262,11 @@ namespace Faunus
         return o.str();
     }
 
-    /**
-     * The following keywords are searched searched in section `coulomb`:
-     * - `temperature` [Kelvin, default = 298.15]
-     * - `epsilon_r` - relative dielectric constant. Default is 80.
-     * - `depsdt` - temperature dependence of dielectric constant,
-     *   \f$ \partial\epsilon_r/\partial T\approx-0.368\f$ for water.
-     */
-    Coulomb::Coulomb( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
+    Coulomb::Coulomb( Tmjson &j )
     {
         name = "Coulomb";
-        Tmjson _j;
-        if (j.count(sec)==0)
-           _j = j;
-        else
-           _j = j[sec];
-
-        epsilon_r = _j.value("epsr", 80.0);
-        depsdt = _j.value("depsdt", -0.368*pc::T()/epsilon_r);
+        epsilon_r = j.value("epsr", 80.0);
+        depsdt = j.value("depsdt", -0.368*pc::T()/epsilon_r);
         lB = pc::lB(epsilon_r);
     }
 
@@ -321,13 +299,17 @@ namespace Faunus
         t("bjerrum", bjerrumLength(), 1e-6);
     }
 
-    CoulombWolf::CoulombWolf( Tmjson &j, const string &sec ) : Coulomb(j, sec)
+    CoulombWolf::CoulombWolf( Tmjson &j ) : Coulomb(j)
     {
-        double Rc = j[sec].at("cutoff");
+        double Rc = j.at("cutoff");
         Rcinv = 1 / Rc;
         Rc2 = Rc * Rc;
         name += "Wolf/Yonezawa";
-    }
+
+        for (auto &i : atom)
+            for (auto &j : atom)
+                lBxQQ.set(i.id, j.id, bjerrumLength() * i.charge * j.charge );
+     }
 
     string CoulombWolf::info( char w )
     {
@@ -339,7 +321,7 @@ namespace Faunus
         return o.str();
     }
 
-    ChargeNonpolar::ChargeNonpolar( Tmjson &j, const string &sec ) : Coulomb(j, sec)
+    ChargeNonpolar::ChargeNonpolar( Tmjson &j ) : Coulomb(j)
     {
         name = "Charge-Nonpolar";
         c = bjerrumLength() / 2.;
@@ -353,7 +335,7 @@ namespace Faunus
         return o.str();
     }
 
-    PolarPolar::PolarPolar( Tmjson &j, const string &sec ) : Coulomb(j, sec)
+    PolarPolar::PolarPolar( Tmjson &j ) : Coulomb(j)
     {
         name = "Polar-Polar";
     }
@@ -455,21 +437,19 @@ namespace Faunus
         r02inv = 1 / r02;
     }
 
-    LennardJones::LennardJones(
-        Tmjson &j,
-        const string &sec ) : PairPotentialBase(sec)
+    LennardJones::LennardJones( Tmjson &j )
     {
 
         name = "Lennard-Jones";
-        eps = 4.0 * (j[sec]["eps"] | 0.0);
-        string unit = j[sec]["unit"] | string("kT");
+        eps = 4.0 * j.at("eps").get<double>();
+        string unit = j.value("unit", string("kT"));
         if ( unit == "kJ/mol" )
             eps *= 1.0_kJmol;
     }
 
     LennardJones::LennardJones() : eps(0) { name = "Lennard-Jones"; }
 
-    SquareWellHydrophobic::SquareWellHydrophobic( Tmjson &j, const string &sec ) : SquareWell(j, sec)
+    SquareWellHydrophobic::SquareWellHydrophobic( Tmjson &j ) : SquareWell(j)
     {
         name = "Hydrophobic " + name;
     }
@@ -481,17 +461,17 @@ namespace Faunus
         return o.str();
     }
 
-    SoftRepulsion::SoftRepulsion( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
+    SoftRepulsion::SoftRepulsion( Tmjson &j )
     {
         name = "Repulsive r6";
-        sigma6 = pow(j[sec]["sigma"] | 5.0, 6);
+        sigma6 = pow(j["sigma"] | 5.0, 6);
     }
 
-    Harmonic::Harmonic( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
+    Harmonic::Harmonic( Tmjson &j )
     {
         name = "Harmonic";
-        k = j[sec]["k"] | 0.0;
-        req = j[sec]["req"] | 0.0;
+        k = j.at("k");
+        req = j.at("req");
     }
 
     string FENE::_brief()
@@ -502,10 +482,10 @@ namespace Faunus
         return o.str();
     }
 
-    Cardinaux::Cardinaux( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
+    Cardinaux::Cardinaux( Tmjson &j )
     {
         name = "Cardinaux";
-        alpha = j[sec]["alpha"] | 90;
+        alpha = j.at("alpha");
         alphahalf = 0.5 * alpha;
         for ( auto &i : atom )
             for ( auto &j : atom )
@@ -517,9 +497,9 @@ namespace Faunus
         return name + ": a=" + std::to_string(alpha);
     }
 
-    DebyeHuckelShift::DebyeHuckelShift( Tmjson &j, const string &sec ) : DebyeHuckel(j, sec)
+    DebyeHuckelShift::DebyeHuckelShift( Tmjson &j ) : DebyeHuckel(j)
     {
-        rc = j[sec]["cutoff"] | sqrt(std::numeric_limits<double>::max());
+        rc = j.at("cutoff");
         rc2 = rc * rc;
 #ifdef FAU_APPROXMATH
         u_rc = exp_cawley(-k*rc)/rc; // use approx. func even here!
@@ -538,7 +518,7 @@ namespace Faunus
         return DebyeHuckel::info(w);
     }
 
-    DebyeHuckelDenton::DebyeHuckelDenton( Tmjson &in, const string &dir ) : DebyeHuckel(in, dir)
+    DebyeHuckelDenton::DebyeHuckelDenton( Tmjson &in ) : DebyeHuckel(in)
     {
         name += "-Denton";
         lB_org = lB;
@@ -555,23 +535,23 @@ namespace Faunus
         return k * (m * m + n * n + k * (m + n) * m * n) / ((1 + k * m) * (1 + k * n));
     }
 
-    DebyeHuckel::DebyeHuckel( Tmjson &j, const string &sec ) : Coulomb(j, sec)
+    DebyeHuckel::DebyeHuckel( Tmjson &j ) : Coulomb(j)
     {
         const double zero = 1e-10;
         name = "Debye-Huckel";
         c = 8 * lB * pc::pi * pc::Nav / 1e27;
-        double I = j[sec].value("ionicstrength", 0.0);   // [mol/l]
-        z_count = j[sec].value("countervalency", 0.0);  // [e]
+        double I = j.value("ionicstrength", 0.0);   // [mol/l]
+        z_count = j.value("countervalency", 0.0);  // [e]
         k2_count = 0;
         k = sqrt(I * c);
         if ( k < zero )
-            k = 1 / j[sec].at("debyelength").get<double>(); // [A]
+            k = 1 / j.at("debyelength").get<double>(); // [A]
     }
 
-    R12Repulsion::R12Repulsion( Tmjson &j, const string &sec ) : PairPotentialBase(sec)
+    R12Repulsion::R12Repulsion( Tmjson &j )
     {
         name = "r12-Repulsion";
-        eps = 4.0 * j[sec].at("eps").get<double>();
+        eps = 4.0 * j.at("eps").get<double>();
     }
 
     string SoftRepulsion::info( char w )

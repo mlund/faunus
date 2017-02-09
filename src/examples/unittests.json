@@ -18,9 +18,7 @@
   },
 
   "energy" : { 
-    "nonbonded" : {
-      "coulomb" : { "epsr":1.0 }
-    }
+    "nonbonded" : { "epsr":1.0 } }
   },
 
   "moves" : {

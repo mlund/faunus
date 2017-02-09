@@ -70,5 +70,4 @@ if [ -x $exe ]; then
   vmd -e vmd.script
   #rm -f cigars2fibrils.json cigars2fibrils.input cigars2fibrils.pdb cigars2fibrils.psf vmd.script cigars2fibrils-mov
 fi
-exit 1
 

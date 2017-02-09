@@ -18,7 +18,7 @@ j = {
             },
         "energy" : {
             "nonbonded" : {
-                "coreshell" : { "core_radius":1.0, "shell_radius":2.5, "epsilon" : eps }
+                "core_radius":1.0, "shell_radius":2.5, "epsilon" : eps
                 }
             },
         "moves" : {

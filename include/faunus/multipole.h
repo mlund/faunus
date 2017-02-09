@@ -839,9 +839,9 @@ namespace Faunus {
             protected:
               double _lB;
             public:
-              IonDipole(Tmjson &j, const string &sec="coulomb") : PairPotentialBase(sec) {
+              IonDipole(Tmjson &j) {
                 name="Ion-dipole";
-                _lB = Coulomb(j,sec).bjerrumLength();
+                _lB = Coulomb(j).bjerrumLength();
               }
 
               /**
@@ -878,9 +878,9 @@ namespace Faunus {
                 _lB = pc::lB(epsilon_r);
               }
               
-              DipoleDipole(Tmjson &j, const string &sec="coulomb") : PairPotentialBase(sec) {
+              DipoleDipole(Tmjson &j) {
                 name="Dipole-dipole";
-                _lB = Coulomb(j,sec).bjerrumLength();
+                _lB = Coulomb(j).bjerrumLength();
               }
               template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {

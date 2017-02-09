@@ -39,15 +39,14 @@ namespace Faunus
      * - `_info()`
      * - `_sample()`
      *
-     * It is strongly recommended that derived classes also implement:
+     * It is recommended that derived classes also implement:
      *
      * - the `cite` string to provide external information
      * - `_test()` for unit testing
      *
      * The `sample()` wrapper function takes care of timing the analysis
      * as well as sample the number of sample points at a given interval
-     * specified with the JSON keyword `nstep`. For some examples, see
-     * i.e. `VirialPressure` or `PolymerShape`.
+     * specified with the JSON keyword `nstep`.
      *
      * @todo Make `_sample()` pure virtual
      */
@@ -70,7 +69,7 @@ namespace Faunus
         virtual void _sample();
     public:
         AnalysisBase();
-        AnalysisBase( Tmjson&, string=string() );
+        AnalysisBase( Tmjson&, string=string() ); //!< Construct from JSON
         virtual ~AnalysisBase();
         string info();       //!< Print info and results
         void test( UnitTest & );//!< Perform unit test
@@ -155,7 +154,7 @@ namespace Faunus
 
         inline void _test( UnitTest &test ) override
         {
-            test("virial_pressure_mM", (T / cnt).trace() / 1.0_mM);
+            test("virial_pressure_mM", (T / cnt).trace() / 1.0_mM, 0.2);
         }
 
         template<class Tpvec, class Tgeo, class Tpot>
@@ -2172,7 +2171,7 @@ namespace Faunus
         void _test( UnitTest &test ) override
         {
             double pex = -log(duexp.avg()) / dV;
-            test("virtualvolume_pressure_mM", pex / 1.0_mM);
+            test("virtualvolume_pressure_mM", pex / 1.0_mM, 0.2);
         }
 
     public:

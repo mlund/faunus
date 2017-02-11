@@ -18,19 +18,17 @@ typedef Space<Tgeometry,PointParticle> Tspace;
 int main() {
   cout << textio::splash();           // show faunus banner and credits
 
-  InputMap mcp("bulk.json");          // open user input file
+  Tmjson mcp = openjson("bulk.json"); // open JSON input file
   MCLoop loop(mcp);                   // class for handling mc loops
 
-  // Construct Hamiltonian and Space
-  Tspace spc(mcp);
+  Tspace spc(mcp);                    // simulation space
 
   auto pot = Energy::Nonbonded<Tspace,TpairpotCut>(mcp)
-    + Energy::ExternalPressure<Tspace>(mcp);
+    + Energy::ExternalPressure<Tspace>(mcp); // hamiltonian
+
+  spc.load("state");                  // load old config. from disk (if any)
 
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
-
-  spc.load("state");                               // load old config. from disk (if any)
-
   Move::Propagator<Tspace> mv(mcp,pot,spc);
 
   cout << atom.info() + spc.info() + pot.info()

@@ -156,7 +156,7 @@ namespace Faunus
    * `insdir`      | string  | Directions for generation of random position. Default: "1 1 1" = XYZ
    * `insoffset`   | string  | Translate generated random position. Default: "0 0 0" = no translation
    * `keeppos`     | bool    | Keep original positions (`insdir`, `insoffset` ignored. Default: `false`)
-   * `Ninit`       | int     | Initial number of molecules
+   * `Ninit`       | int     | Initial number of molecules to be inserted into the simulation container
    * `checkoverlap`| bool    | Check for overlap while inserting. Default: true
    * `rotate`      | bool    | Randomly rotate molecule or anisotropic atom upon insertion. Default: true
    * `structure`   | string  | Read conformation from PQR/XYZ/AAM file

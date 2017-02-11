@@ -33,8 +33,8 @@ namespace Faunus
           R,                   //!< Molar gas constant [J/(K*mol)]
           Nav;                 //!< Avogadro's number [1/mol]
       static Td lB( Td );      //!< Bjerrum length [Aangstrom]
-      static Td T();         //!< Return temperature [K]
-      static Td kT();        //!< Returns k_bT [J]
+      static Td T();           //!< Temperature [K]
+      static Td kT();          //!< Thermal energy [J]
       static void setT( Td );  //!< Set temperature [K]
   };
 
@@ -68,9 +68,11 @@ namespace Faunus
   template<class Td>
   Td PhysicalConstants<Td>::_T = 298.15;
 
+  /** @param temp Temperature in Kelvin */
   template<class Td>
   PhysicalConstants<Td>::PhysicalConstants( Td temp ) { setT(temp); }
 
+  /** @param temp Temperature in Kelvin */
   template<class Td>
   void PhysicalConstants<Td>::setT( Td temp ) { _T = temp; }
 
@@ -80,6 +82,7 @@ namespace Faunus
   template<class Td>
   Td PhysicalConstants<Td>::kT() { return kB * _T; }
 
+  /** @param e_r Relative dielectric constant */
   template<class Td>
   Td PhysicalConstants<Td>::lB( Td e_r )
   {

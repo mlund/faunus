@@ -118,17 +118,37 @@ namespace Faunus
    * :-------| :----------------------------
    * `macro` | Number of steps in outer loop
    * `micro` | Number of steps in inner loop
+   *
+   * Example:
+   *
+   * ~~~{.cpp}
+   * MCLoop loop( R"({"macro":2, "micro":5})"_json );
+   * while ( loop[0] ) // 2 times
+   *     while ( loop[1] ) // 5 times
+   *         ...
+   * ~~~
    */
   class MCLoop : public TimedCounter<int>
   {
   private:
       typedef TimedCounter<int> base;
   public:
-      inline MCLoop( Tmjson &j, string sec = "system" )
+      inline MCLoop( const Tmjson &j, const string &sec = "system" )
       {
-          Tmjson _j = j.at(sec).at("mcloop");
-          base::set( { _j.value("macro", 0), _j.value("micro", 0) } );
-          assert(base::l[0] * base::l[1] >= 0);
+          try
+          {
+              Tmjson _j = j;
+              if (j.count(sec)>0)
+                  if (j[sec].count("mcloop")>0)
+                      _j = j[sec]["mcloop"];
+              base::set( { _j.at("macro"), _j.at("micro") } );
+              assert(base::l[0] * base::l[1] >= 0);
+          }
+          catch (std::exception &e)
+          {
+              std::cerr << "Error initializing MCLoop: " << e.what() << endl;
+              throw;
+          }
       }
 
       inline std::string timing() const

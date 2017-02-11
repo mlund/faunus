@@ -4846,7 +4846,8 @@ namespace Faunus
      *     "_jsonfile" : "move_out.json"
      *
      * If the string is empty, no file will be written.
-     *
+     * See @ref inputoutput for more information about pretty printing
+     * JSON output.
      */
     template<typename Tspace, bool polarise = false, typename base=Movebase<Tspace>>
     class Propagator : public base

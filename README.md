@@ -27,7 +27,7 @@ Get the latest revision from GitHub:
 Requirements
 ============
 
-- C/C++11 compiler (clang3.5+, gcc4.9+, intel14+, ...)
+- C/C++11 compiler (clang3.5+, gcc4.9+, intel15+, ...)
 - CMake 2.8.5+
 
 Optional:

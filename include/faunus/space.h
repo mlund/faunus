@@ -208,12 +208,33 @@ namespace Faunus
   /**
    * @brief Placeholder for particles and groups
    *
-   * Every simulation must have a `Space` instance as this contains
-   * the particles and information about groups (particle ranges).
-   * Space also contains the geometry as given by the template
-   * parameter.
+   * This is normally the very first class
+   * initialized in a Faunus program as most other classes depend
+   * upon it. Space defines the particle types, molecule types,
+   * geometry of the simulation container, boundary conditions,
+   * and contains the state of all particles and groups.
    *
-   * @todo insert/erase functions are a mess.
+   * This happens upon construction from a JSON object:
+   *
+   * 1. The given geometry, `Tgeometry`, is initialized with
+   *    data from the JSON section `geometry`.
+   *
+   * 2. The system temperature is set with `PhysicalConstants::setT()`
+   *    with data from JSON section `system/temperature`. The default
+   *    value is 298.15 K.
+   *
+   * 3. `AtomMap` is initialized with data found in JSON section
+   *    `atomlist`. If `AtomData::Ninit` is given, atoms will be
+   *    inserted into the simulation container, respecting
+   *    boundary conditions.
+   *
+   * 4. `MoleculeMap` is initialized with data found in JSON section
+   *    `atomlist`. If `MoleculeData::Ninit` is given, molecules will be
+   *    inserted into the simulation container, respecting
+   *    boundary conditions.
+   *
+   * @tparam Tgeometry Simulation container geometry derived from `Geometry::Geometrybase`
+   * @tparam Tparticle Particle type based on `PointParticle`
    */
   template<typename Tgeometry, typename Tparticle=PointParticle>
   class Space

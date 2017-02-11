@@ -1,16 +1,7 @@
 namespace Faunus {
 
 /*!
-@page video Video Tutorial
-
-@htmlonly
-<iframe src="https://docs.google.com/file/d/0BzpLUBrTxmurRzN0RnFZc2lhZFE/preview" width="640" height="385"></iframe>
-@endhtmlonly
-
-*/
-
-/*!
-@page jsonyaml Input and output
+@page inputoutput Input and output
 @tableofcontents
 
 # JSON input and output
@@ -53,7 +44,7 @@ for melted NaCl for the `bulk.cpp` program:
 ~~~
 
 Each section is read by a constructor of a C++ class, called
-from the main program:
+from the main program (`bulk.cpp`):
 
  Section       |   Class                        |  Control  |  Notes
 -------------- | ------------------------------ | --------- | --------------------
@@ -158,6 +149,14 @@ the following to `~/.vimrc`:
 
     au! BufRead,BufNewFile *.json set filetype=javascript
 
+*/
+
+/*!
+@page video Video Tutorial
+
+@htmlonly
+<iframe src="https://docs.google.com/file/d/0BzpLUBrTxmurRzN0RnFZc2lhZFE/preview" width="640" height="385"></iframe>
+@endhtmlonly
 */
 
 /*!

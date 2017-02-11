@@ -222,7 +222,7 @@ namespace Faunus
   class AtomData : public PropertyBase
   {
   public:
-      double sigma,            //!< LJ diameter [angstrom]
+      double sigma,         //!< LJ diameter [angstrom]
           eps,              //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
           radius,           //!< Radius [angstrom]
           muscalar,         //!< Dipole momentscalar [e \f$ \unicode{x212B} \f$]
@@ -247,7 +247,7 @@ namespace Faunus
           tfe,              //!< Transfer free energy (J/mol/angstrom^2/M)
           alphax;           //!< Excess polarizability [angstrom^3]
       Point mu;                //!< Dipolemoment vector
-      int Ninit;               //!<
+      int Ninit;               //!< Initial number of atoms to insert into simulation container
       short int patchtype;     //!< If patchy particle, which type of patch
       bool hydrophobic;        //!< Are we hydrophobic?
       Tensor<double>

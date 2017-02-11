@@ -1179,7 +1179,7 @@ namespace Faunus
          *
          * @f[
          * S = \frac{1}{2} \left ( 3 (\mathbf{an})^2 -1 \right )
-         * @\]
+         * @f]
          *
          * where `a` is the unit vector between the tail and the head group,
          * `n` is the normal to the bilayer plane.

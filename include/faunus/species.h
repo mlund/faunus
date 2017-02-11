@@ -337,11 +337,6 @@ namespace Faunus
    * Note that faunus currently has a global instance of `AtomMap`,
    * simply named `atom`. This can be accessed from anywhere.
    * 
-   * @note
-   * For simple JSON syntax highlighting in the VIM editor, add
-   * the following to `~/.vimrc`:
-   *
-   *     au! BufRead,BufNewFile *.json set filetype=javascript
    */
 
   class AtomMap : public PropertyVector<AtomData>

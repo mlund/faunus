@@ -1,3 +1,5 @@
+namespace Faunus {
+
 /*!
 @page video Video Tutorial
 
@@ -8,14 +10,73 @@
 */
 
 /*!
-@page jsonyaml Working with JSON and YAML files
+@page jsonyaml Input and output
+@tableofcontents
+
+# JSON input and output
 
 Faunus uses JSON files for input and, in many cases, also for output.
-JSON is a subset of the more general format YAML and the latter can be
-made more human readable.
-To convert between the two formats we
+It is a structured format that can be easily read my most programming
+languages such as Python, C++ etc. Here's an example of an input file
+for melted NaCl for the `bulk.cpp` program:
+
+~~~{.java}
+{
+    "atomlist" : {
+        "Na" : { "q": 1.0, "sigma":3.33, "eps":0.01158968, "dp":1.0 },
+        "Cl" : { "q":-1.0, "sigma":4.40, "eps":0.4184,     "dp":1.0 }
+    },
+    "moleculelist" : { 
+        "salt" : { "atoms":"Na Cl", "atomic":true, "Ninit":512 }
+    },
+    "moves" : {
+        "atomtranslate" : { "salt" : { "peratom":true } }
+    },
+    "energy" : {
+        "nonbonded" : { "epsr": 80.0, "cutoff":14.0 }
+    },
+    "analysis" : {
+        "xtcfile" : { "file": "traj.xtc", "nstep":20 },
+        "pqrfile" : { "file": "confout.pqr" },
+        "atomrdf" : { "nstep":10, "pairs" :
+              [
+                  { "name1":"Na", "name2":"Cl", "dim":3, "dr":0.1, "file":"rdf_nacl.dat"},
+                  { "name1":"Na", "name2":"Na", "dim":3, "dr":0.1, "file":"rdf_nana.dat"}
+              ]
+          }
+      },
+    "system" : {
+        "temperature" : 1100,
+        "geometry" : { "length":40 }
+    }
+}
+~~~
+
+Each section is read by a constructor of a C++ class, called
+from the main program:
+
+ Section       |   Class                        |  Control  |  Notes
+-------------- | ------------------------------ | --------- | --------------------
+`analysis`     |  `Analysis::CombinedAnalysis`  |  Dynamic  | |
+`atomlist`     |  `AtomData`                    |  Dynamic  | Initiated by `Space`
+`moleculelist` |  `MoleculeData`                |  Dynamic  | Initiated by `Space`
+`mcloop`       |  `MCLoop`                      |  Dynamic  | |
+`energy`       |  `Energy::Energybase`          |  Static   | |
+`geometry`     |  `Geometry`                    |  Static   | Initiated by `Space`
+
+Here _static_ means that the Hamiltonian (derived from `Energy::Energybase`) is defined
+in your main program and only the input for that particular hamiltonian can be given in
+the input. In contrast, all analysis functions, for example, can be added _dynamically_ via input.
+Likewise you cannot change the geometry (cube, sphere, cylinder etc.) from input, but will need
+to recompile.
+
+
+## Working with YAML files
+
+JSON is a subset of the more general format YAML and the latter is
+somewhat more human readable. To convert between JSON and YAML we
 provide a script, `scripts/yason.py`, that can pass
-YAML input files,
+YAML (and JSON) input files,
 
     $ ./myprogram < yason.py < input.yml
 
@@ -28,51 +89,76 @@ The script can also be used oppositely to pretty print JSON as YAML,
 
     $ yason.py move_out.json
 
-Example YAML file:
+Example YAML file from a Monte Carlo move class:
 
-~~~~~~~~~~~~~{.yaml}
-atomlist:
-    A: {eps: 0.15, sigma: 4, dp: 40}
-    B: {eps: 0.2, sigma: 10, dp: 10}
-moleculelist:
-    salt: {atoms: 'A B', atomic: true, Ninit: 50}
+~~~{.yaml}
 moves:
-    atomtranslate:
-        {salt: {peratom: true}}
-energy:
-    nonbonded: {}
-system:
-    temperature: 298.15
-    geometry: {length: 50}
-~~~~~~~~~~~~~
+    Single Particle Translation:
+        acceptance: 0.637203358890106
+        atoms:
+            Na: {acceptance: 63.7203358890106, dp: 1, mean displacement: 0.385081517298659}
+        dir: [1, 1, 1]
+        moves/particle: 20086
+        relative time: 0.483203542345245
+        trials: 602580
+~~~
 
-And the corresponding JSON file,
+which is less verbose than the corresponding JSON file,
 
-~~~~~~~~~~~~~{.js}
+~~~{.java}
 {
-    "atomlist" : {
-        "A" : { "eps": 0.15, "sigma":4.0, "dp":40 },
-        "B" : { "eps": 0.20, "sigma":10.0, "dp":10 }
-    },
-    "moleculelist" : { 
-        "salt" : { "atoms":"A B", "atomic":true, "Ninit":50 }
-    },
-    "moves" : {
-        "atomtranslate" : {
-            "salt" : { "peratom":true }
-        }
-    },
-    "energy" : {
-        "nonbonded" : {}
-    },
-    "system" : {
-        "temperature" : 298.15,
-        "geometry" : { "length":50 }
+    "moves" {
+        "Single Particle Translation": {
+            "acceptance": 0.637203358890106,
+            "atoms": {
+                "Na": {
+                    "acceptance": 63.7203358890106,
+                    "dp": 1,
+                    "mean displacement": 0.385081517298659
+                }
+            },
+            "dir": [ 1, 1, 1 ],
+            "moves/particle": 20086,
+            "relative time": 0.483203542345245,
+            "trials": 602580
+        },
     }
 }
-~~~~~~~~~~~~~
-*/
+~~~
 
+## Reading JSON files
+
+### Python
+
+~~~{.py}
+import json
+with open('move_out.json') as f:
+    data = json.load(f)
+    print( data['moves']['Single Particle Translation']['trials'] ) # --> 602580
+~~~
+
+### C++11
+
+~~~{.cpp}
+#include <iostream>
+#include <json.hpp> // https://github.com/nlohmann/json
+
+int main() {
+    nlohmann::json j;
+    j << std::cin;
+    std::cout << j["moves"]["Single Particle Translation"]["trials"]; // --> 602580
+}
+~~~
+
+
+## The VIM editor
+
+For simple JSON syntax highlighting in the VIM editor, add
+the following to `~/.vimrc`:
+
+    au! BufRead,BufNewFile *.json set filetype=javascript
+
+*/
 
 /*!
 @page development Development
@@ -144,14 +230,14 @@ Place both in a fresh directory and do:
 A good place to start is to understand the following classes. Also, for a more grouped
 overview do have a look at the Namespace list.
 
-Class                                | Description
-:----------------------------------- | :----------------------------------------------
-`Faunus::Move::Propagator`           | Controls Monte Carlo moves
-`Faunus::Analysis::CombinedAnalysis` | Controls analysis to be run during simulation
-`Faunus::AtomData`                   | Defines atom properties
-`Faunus::MoleculeData`               | Defines molecule properties
-`Faunus::Space`                      | Contains all particles, molecules, and geometry
-`Faunus::Group`                      | A range of particles
+Class                        | Description
+:--------------------------- | :----------------------------------------------
+`Move::Propagator`           | Controls Monte Carlo moves
+`Analysis::CombinedAnalysis` | Controls analysis to be run during simulation
+`AtomData`                   | Defines atom properties
+`MoleculeData`               | Defines molecule properties
+`Space`                      | Contains all particles, molecules, and geometry
+`Group`                      | A range of particles
 
 
 # Coding Guidelines
@@ -215,6 +301,8 @@ Before submitting changes, please make sure nothing is broken:
 
 /*!
 @page examples Examples
+@tableofcontents
+
 - @subpage example_minimal 
 - @subpage example_keesom
 - @subpage example_bulk 
@@ -234,3 +322,4 @@ Before submitting changes, please make sure nothing is broken:
 @page license License
 @verbinclude LICENSE
 */
+}

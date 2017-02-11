@@ -234,8 +234,8 @@ namespace Faunus
      * The json object is scanned for the following parameters:
      *
      * Key           | Description
-     * :------------ | :----------------------------------------------------------------------------
-     * `length`      | Uniform sidelength [angstrom]. Array of sidelength or single length for cube.
+     * :------------ | :-----------------------------------------------------------
+     * `length`      | Array of sidelengths _or_ single length for cube [angstrom]
      * `scaledir`    | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
      */
     Cuboid::Cuboid( Tmjson &j ) : Geometrybase("Cuboid")

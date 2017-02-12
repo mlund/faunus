@@ -31,7 +31,7 @@ echo '{
     "system" : {
       "temperature"   : 300,
       "spheresurface" : { "radius" :1 },
-      "mcloop"        : { "macro":10, "micro":100 },
+      "mcloop"        : { "macro":10, "micro":1000 },
       "unittest"      : { "testfile":"spheresurface.test", "stable":false },
       "atomlist"      : "spheresurface.json",
       "moleculelist"  : "spheresurface.json"

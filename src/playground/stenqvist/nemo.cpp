@@ -6,7 +6,8 @@ using namespace Faunus::Potential;
 typedef Space<Geometry::Cuboid,CapParticle> Tspace;
 //typedef DebyeHuckel TpairpotEl;
 typedef Coulomb TpairpotEl;
-typedef CombinedPairPotential<TpairpotEl,HardSphereCap> Tpairpot;
+//typedef CombinedPairPotential<TpairpotEl,HardSphereCap> Tpairpot;
+typedef HardSphereCap Tpairpot;
 
 template<class Tspace, class Tanalyze>
 void analyzeDirection(Tspace &spc, Tanalyze &mucorrCC, Tanalyze &mucorrCS) {

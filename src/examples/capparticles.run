@@ -10,38 +10,43 @@ cp -f $source_tests_dir/capparticles.state state 2> /dev/null
 
 echo '{
   "atomlist" : {
-    "Cap" : { "sigma":10.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":1.0, "cap_radius":5.0, "cap_center":5.0, "charge_position": -2.5 },
-    "Sph" : { "sigma":10.0, "eps":0.0, "dp":10.0, "dprot":90.0, "q":-0.1, "cap_radius":0.0, "cap_center":0.0, "charge_position": 0.0 }
+    "C" : { "sigma":10.0, "eps":0.0, "dp":4.0, "dprot":180.0, "q":10.0, "cap_radius":5.0, "cap_center":5.0, "charge_position": -2.5 },
+    "S" : { "sigma":10.0, "eps":0.0, "dp":4.0, "dprot":0.0, "q":-10.0, "cap_radius":0.0, "cap_center":0.0, "charge_position": 0.0 }
   },
   
+  "seed": 1,
+  "saveState": true,
+  "traj_nbrs": 100,
+  "resolution":0.2,
+  
   "xyz" : {
-    "z":0.0, "minX":-11.0, "maxX":11.0, "minY":-11.0, "maxY":11.0, "step":0.01, "scaled_center_point":1.0, "scaled_radius":1.0, "cone":true
+    "z":0.0, "minX":-11.0, "maxX":11.0, "minY":-11.0, "maxY":11.0, "step":0.01, "scaled_center_point":0.1, "scaled_radius":1.0, "cone":true
   },
 
   "moleculelist" : {
-    "solA" : { "atoms":"Cap", "Ninit":1, "atomic":true },
-    "solB" : { "atoms":"Sph", "Ninit":1, "atomic":true }
+    "cap" :    { "atoms":"C", "Ninit":10, "atomic":true },
+    "sphere" : { "atoms":"S", "Ninit":10, "atomic":true }
   },
 
   "energy" : {
     "nonbonded" : {
-       "coulomb" : { "eps_r" : 80.0, "cutoff":15.0, "eps_rf":80.0 }
+       "coulomb" : { "eps_r" : 80.0, "cutoff":30.0, "eps_rf":80.0 }
     }
   },
 
   "moves" : {
     "atomtranslate" : { 
-			"solA" : { "peratom":true, "prob":1.0, "dir":"1 1 1" },
-			"solB" : { "peratom":true, "prob":1.0, "dir":"1 1 1" }
+			"cap" : { "peratom":true, "prob":1.0, "dir":"1 1 1" },
+			"sphere" : { "peratom":true, "prob":1.0, "dir":"1 1 1" }
 			},
-    "atomrotate"    : { "solA" : { "peratom":true, "prob":1.0 } },
-    "_isobaric"      : { "dp":0.1, "pressure":500.0, "prop":1.0 }
+    "atomrotate"    : { "cap" : { "peratom":true, "prob":1.0 } },
+    "isobaric"      : { "dp":0.1, "pressure":5000.0, "prop":1.0 }
   },
 
   "system" : {
     "temperature"  : 298.15,
-    "cuboid"       : { "len" : 100 },
-    "mcloop"       : { "macro":10, "micro":1000 },
+    "cuboid"       : { "len" : 50 },
+    "mcloop"       : { "macro":10, "micro":10000 },
     "unittest"     : { "testfile":"capparticles.test", "stable":true },
     "coulomb"      : { "epsr":1, "cutoff":15.0 }
   }

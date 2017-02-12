@@ -175,6 +175,7 @@ namespace Faunus {
         Harmonic( double k=0, double req=0 );
         Harmonic( Tmjson &j );
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator()( const Tparticle &a, const Tparticle &b, double r2 ) const {
             double d=sqrt(r2)-req;
@@ -291,6 +292,7 @@ namespace Faunus {
           r02inv = 1/r02;
         }
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             return (r2>r02) ? pc::infty : -0.5*k*r02*std::log(1-r2*r02inv);
@@ -312,6 +314,7 @@ namespace Faunus {
       public:
         Hertz(Tmjson&);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             double m = a.radius+b.radius;
@@ -340,6 +343,7 @@ namespace Faunus {
         template<typename T>
           HardSphere(const T&) { name="Hardsphere"; }
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double m=a.radius+b.radius;
@@ -388,6 +392,7 @@ namespace Faunus {
 
         LennardJones(Tmjson &j);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
             double x(r6(a.radius+b.radius,r2));
@@ -412,38 +417,65 @@ namespace Faunus {
      * @brief Cuts a pair-potential and shift to zero at cutoff
      *
      * This will cut any pair potential at `cutoff` and shift to
-     * zero at that distance. Slow but general.
+     * zero at that distance.
+     * If `precalc=false` the evaluation
+     * potential is *twice* is expensive as the original since the
+     * energy needs to be evaluated at the cutoff for each pair
+     * of particles. By setting `precalc=true`, this is pre-calculated
+     * in the constructor but assumes that particle properties such
+     * as charge, size etc. do not change during simulation.
+     *
+     * In addition to the JSON keywords taken by the original pair
+     * potential, `cutoff` must be supplied.
      *
      * Example:
      *
      * ~~~~
      * using namespace Faunus::Potential;
-     * typedef CutShift<LennardJones> Tpairpot;
+     * typedef CutShift<LennardJones> LennardJonesCutShift;
      * ~~~~
      *
-     * JSON keywords: `cutoff`.
+     * @tparam Tpairpot Pair potential to cut and shift
+     * @tparam precalc Pre-calculate energy at cutoff for all atom types for speedup.
+     *                 This is enabled by default (`true`) but will generate problems
+     *                 if particle properties fluctuate during simulation (charge swap moves,
+     *                 for example)
      *
+     * @note Twice as expensive as `Tpairpot` if `precalc=false`
      * @todo Implement continuous force calculation
      */
-    template<class Tpairpot, bool shift=true, bool precalc=false>
+    template<class Tpairpot, bool precalc=true>
       class CutShift : public Tpairpot {
         private:
           double rc2; // squared cut-off distance
           PairMatrix<double> ucut; // energy at cutoff
         public:
           CutShift( Tmjson &j ) : Tpairpot(j) {
-            rc2 = pow( ( j.value("cutoff", pc::infty) ), 2 );
-            Tpairpot::name+=" (rcut="
-              + std::to_string( sqrt(rc2) ) + textio::_angstrom + ")";
+              rc2 = pow( double(j.at("cutoff")), 2 );
+              Tpairpot::name+=" (rcut="
+                  + std::to_string( sqrt(rc2) ) + textio::_angstrom + ")";
+
+              if (precalc) { // calculate energy at cutoff between all atom types
+                  size_t n = atom.size(); // number of atom types
+                  ucut.resize(n);
+                  for (auto &i : atom)
+                      for (auto &j : atom) {
+                          PointParticle a, b;
+                          a = atom[i.id];
+                          b = atom[j.id];
+                          ucut.set(i.id, j.id, Tpairpot::operator()(a,b,rc2));
+                      }
+              }
           }
 
+          /** @brief Energy in kT between two particles, r2 = squared distance */
           template<class Tparticle>
             double operator() (const Tparticle &a, const Tparticle &b, double r2) {
               if (r2>rc2)
                   return 0;
-              if (shift) // "shift" is deduced at compile time --> no overhead
-                  return Tpairpot::operator()(a,b,r2) - Tpairpot::operator()(a,b,rc2);
-              return Tpairpot::operator()(a,b,r2);
+              if (precalc) // "precalc" deduced at compile time --> no overhead
+                  return Tpairpot::operator()(a,b,r2) - ucut(a.id, b.id);
+              else return Tpairpot::operator()(a,b,r2) - Tpairpot::operator()(a,b,rc2);
             }
       };
 
@@ -496,6 +528,7 @@ namespace Faunus {
                   customParameters( j["ljcustom"] );
             }
 
+          /** @brief Energy in kT between two particles, r2 = squared distance */
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
               double x=s2(a.id,b.id)/r2; //s2/r2
@@ -603,6 +636,7 @@ namespace Faunus {
                 }
             }
 
+          /** @brief Energy in kT between two particles, r2 = squared distance */
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
               if (r2<rc2(a.id,b.id)) {
@@ -627,7 +661,7 @@ namespace Faunus {
      * at @f$r_c=2^{1/6}\sigma@f$. More info can be found in at
      * <http://doi.org/ct4kh9> and the functional form is:
      * @f[
-     * \beta u = 4 \epsilon \left ( (b/r)^{12} - (b/r)^6 + \frac{1}{4} \right )
+     * \beta u = 4 \beta \epsilon \left ( (b/r)^{12} - (b/r)^6 + \frac{1}{4} \right )
      * @f]
      * where sigma, epsilon per default are set
      * using Lorentz-Berthelot mixing rules.
@@ -644,6 +678,7 @@ namespace Faunus {
             name="WeeksChandlerAnderson";
           }
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=s2(a.id,b.id); // s^2
@@ -654,6 +689,7 @@ namespace Faunus {
             return eps(a.id,b.id)*(x*x - x + onefourth);
           }
 
+        /** @brief Energy in kT between two particles, r2 = distance vector  */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
             return operator()(a,b,r.squaredNorm());
@@ -681,6 +717,7 @@ namespace Faunus {
         double depth;                               //!< Energy depth [kT] (positive number)
         SquareWell(Tmjson&); //!< Constructor
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double d=a.radius+b.radius+threshold;
@@ -702,6 +739,7 @@ namespace Faunus {
         double threshold_lower;
         SquareWellShifted( Tmjson& ); //!< Constructor
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
             double d=a.radius+b.radius+threshold_lower;
@@ -735,6 +773,7 @@ namespace Faunus {
       public:
         SquareWellHydrophobic(Tmjson &j);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             if (a.hydrophobic)
@@ -757,6 +796,7 @@ namespace Faunus {
 
         string info(char w);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double d=a.radius+b.radius;
@@ -784,6 +824,7 @@ namespace Faunus {
       public:
         R12Repulsion(Tmjson &j);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=(a.radius+b.radius);
@@ -804,6 +845,7 @@ namespace Faunus {
           name+="R12";
         }
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=r6(a.radius+b.radius,r2);
@@ -818,6 +860,7 @@ namespace Faunus {
       public:
         LennardJonesTrunkShift( Tmjson& );
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double sigma = a.radius+b.radius;
@@ -870,6 +913,7 @@ namespace Faunus {
 
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
+      /** @brief Energy in kT between two particles separated by squared distance r2 */
       template<class Tparticle>
         double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
 #ifdef FAU_APPROXMATH
@@ -934,6 +978,7 @@ namespace Faunus {
 
         CoulombWolf( Tmjson& );
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             if (r2>Rc2)
@@ -987,6 +1032,7 @@ namespace Faunus {
       public:
         ChargeNonpolar(Tmjson&);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double qq=a.charge * a.charge;
@@ -1016,6 +1062,7 @@ namespace Faunus {
       public:
         PolarPolar(Tmjson&); //!< Construction from InputMap
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             return -3*a.alphax*b.alphax/(r2*r2*r2);
@@ -1038,6 +1085,7 @@ namespace Faunus {
 
         YukawaGel(Tmjson&);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             double m = a.radius+b.radius;

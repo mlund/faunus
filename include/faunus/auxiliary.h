@@ -487,11 +487,13 @@ namespace Faunus
    * Use the `set()` function for setting values and the function
    * operator for access:
    *
-   *     int i=2,j=3; // particle type, for example
-   *     PairMatrix<double> m;
-   *     m.set(i,j,12.0);
-   *     cout << m(i,j);         // -> 12.0
-   *     cout << m(i,j)==m(j,i); // -> true
+   * ~~~{.cpp}
+   * int i=2,j=3; // particle type, for example
+   * PairMatrix<double> m;
+   * m.set(i,j,12.0);
+   * cout << m(i,j);         // -> 12.0
+   * cout << m(i,j)==m(j,i); // -> true
+   * ~~~
    */
   template<class T=double>
   class PairMatrix

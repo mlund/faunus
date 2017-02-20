@@ -1342,7 +1342,7 @@ namespace Faunus
      * If more than one potential is given, these will be added
      * together, then tabulated.
      *
-     * ~~~~
+     * ~~~{.js}
      * "pairpotentialmap" : {
      *     "spline"  : { "rmin":1e-6, "rmax":100, "utol":0.01 },
      *     "default" : {
@@ -1351,7 +1351,7 @@ namespace Faunus
      *     },
      *     "Na Cl" : { "coulomb" : { "epsr":2.0 } }
      * }
-     * ~~~~
+     * ~~~
      *
      * All pair-potentials are tabulated in constructor
      */
@@ -1377,8 +1377,8 @@ namespace Faunus
 
             auto j = in.at("spline");
 
-            rmin = j["rmin"] | 1.0;
-            rmax = j["rmax"] | 100.0;
+            rmin = j.at("rmin").get<double>();
+            rmax = j.at("rmax").get<double>();
             tab.setRange(rmin, rmax);
             tab.setTolerance(
                 j["utol"] | 0.01,
@@ -1386,7 +1386,7 @@ namespace Faunus
                 j["umaxtol"] | -1,
                 j["fmaxtol"] | -1);
 
-            verbose = in["verbose"] | false;
+            verbose = in.value("verbose", false);
 
             m.resize(atom.size());
 

@@ -2027,8 +2027,8 @@ namespace Faunus
         Table<int> histo;
 #ifdef ENABLE_MPI
         TimeRelativeOfTotal<std::chrono::microseconds> timer;
-Faunus::MPI::MPIController *mpiPtr;
-Faunus::MPI::FloatTransmitter ft;
+        Faunus::MPI::MPIController *mpiPtr;
+        Faunus::MPI::FloatTransmitter ft;
 #endif
     protected:
         typedef std::vector<double> Tvec;
@@ -2133,9 +2133,9 @@ _samplings = 1;
                     _du = penalty[v] - _du;
 #ifdef ENABLE_MPI
                     timer.start();
-int size = penalty.size();
-Faunus::MPI::avgTables<Table<double>>(mpiPtr, ft, penalty, size);
-timer.stop();
+                    int size = penalty.size();
+                    Faunus::MPI::avgTables<Table<double>>(mpiPtr, ft, penalty, size);
+                    timer.stop();
 #endif
                     double max = penalty.maxCoeff();
                     double min = penalty.minCoeff();
@@ -2237,9 +2237,9 @@ timer.stop();
 
 #ifdef ENABLE_MPI
         CmCm(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="cm-cm") : base(mpi,j,s,sec) {
-mol1 = base::PenalizedGroup(j,sec,"first");
-mol2 = base::PenalizedGroup(j,sec,"second");
-dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
+            mol1 = base::PenalizedGroup(j,sec,"first");
+            mol2 = base::PenalizedGroup(j,sec,"second");
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
 }
 #endif
 
@@ -2274,9 +2274,9 @@ dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
 
 #ifdef ENABLE_MPI
         XYZ(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="xyz") : base(mpi,j,s,sec) {
-mol = base::PenalizedGroup(j,sec,"first");
-dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
-}
+            mol = base::PenalizedGroup(j,sec,"first");
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
+        }
 #endif
 
         double operator()( const typename base::Tpvec &p, bool trial )
@@ -2310,8 +2310,8 @@ dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
 
 #ifdef ENABLE_MPI
         Rg(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="R_g") : base(mpi,j,s,sec) {
-mol = base::PenalizedGroup(j,sec,"first");
-}
+            mol = base::PenalizedGroup(j,sec,"first");
+        }
 #endif
 
         double operator()( const typename base::Tpvec &p, bool trial )
@@ -2351,10 +2351,10 @@ mol = base::PenalizedGroup(j,sec,"first");
 
 #ifdef ENABLE_MPI
         CmAngle(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="cm-angle") : base(mpi,j,s,sec) {
-mol1 = base::PenalizedGroup(j,sec,"first");
-mol2 = base::PenalizedGroup(j,sec,"second");
-dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
-}
+            mol1 = base::PenalizedGroup(j,sec,"first");
+            mol2 = base::PenalizedGroup(j,sec,"second");
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
+        }
 #endif
 
         double operator()( const typename base::Tpvec &p, bool trial )
@@ -2437,16 +2437,16 @@ dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
 
 #ifdef ENABLE_MPI
         PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s) {
-auto m = j["energy"]["penalty"];
-if (m.begin().key()=="cm-cm")
-ptr = std::make_shared<CmCm<Tspace>>(mpi,j,s);
-if (m.begin().key()=="xyz")
-ptr = std::make_shared<XYZ<Tspace>>(mpi,j,s);
-if (m.begin().key()=="R_g")
-ptr = std::make_shared<Rg<Tspace>>(mpi,j,s);
-if (m.begin().key()=="cm-angle")
-ptr = std::make_shared<CmAngle<Tspace>>(mpi,j,s);
-}
+            auto m = j["energy"]["penalty"];
+            if (m.begin().key()=="cm-cm")
+                ptr = std::make_shared<CmCm<Tspace>>(mpi,j,s);
+            if (m.begin().key()=="xyz")
+                ptr = std::make_shared<XYZ<Tspace>>(mpi,j,s);
+            if (m.begin().key()=="R_g")
+                ptr = std::make_shared<Rg<Tspace>>(mpi,j,s);
+            if (m.begin().key()=="cm-angle")
+                ptr = std::make_shared<CmAngle<Tspace>>(mpi,j,s);
+        }
 #endif
 
         auto tuple() -> decltype(std::make_tuple(this))
@@ -2550,149 +2550,172 @@ ptr = std::make_shared<CmAngle<Tspace>>(mpi,j,s);
     };
 
 #ifdef FAU_POWERSASA
-    /**
-* @brief SASA energy from transfer free energies
-*
-* Detailed description here...
-*/
+/**
+ * @brief SASA energy from transfer free energies
+ *
+ * Detailed description here...
+ */
 template<class Tspace>
 class SASAEnergy : public Energybase<Tspace> {
-private:
-vector<double> tfe; // transfer free energies (1/angstrom^2)
-vector<double> sasa; // transfer free energies (1/angstrom^2)
-vector<Point> sasaCoords;
-vector<double> sasaWeights;
-double probe; // sasa probe radius (angstrom)
-double conc;  // co-solute concentration (mol/l)
-Average<double> avgArea; // average surface area
+    private:
+        vector<double> tfe; // transfer free energies (1/angstrom^2)
+        vector<double> sasa; // transfer free energies (1/angstrom^2)
+        vector<Point> sasaCoords;
+        vector<double> sasaWeights;
+        double probe; // sasa probe radius (angstrom)
+        double conc;  // co-solute concentration (mol/l)
+        Average<double> avgArea; // average surface area
 
-typedef Energybase<Tspace> base;
-typedef typename base::Tpvec Tpvec;
+        typedef Energybase<Tspace> base;
+        typedef typename base::Tpvec Tpvec;
 
-string _info() override {
-char w=20;
-std::ostringstream o;
-o << textio::pad(textio::SUB,w,"Probe radius")
-<< probe << textio::_angstrom << "\n"
-<< textio::pad(textio::SUB,w,"Co-solute conc.")
-<< conc << " mol/l\n"
-<< textio::pad(textio::SUB,w,"Average area")
-<< avgArea.avg() << textio::_angstrom+textio::squared << "\n";
-return o.str();
-}
+        string _info() override {
+            char w=20;
+            std::ostringstream o;
+            o << textio::pad(textio::SUB,w,"Probe radius")
+                << probe << textio::_angstrom << "\n"
+                << textio::pad(textio::SUB,w,"Co-solute conc.")
+                << conc << " mol/l\n"
+                << textio::pad(textio::SUB,w,"Average area")
+                << avgArea.avg() << textio::_angstrom+textio::squared << "\n";
+            return o.str();
+        }
 
-template<class Tpvec>
-void updateSASA(const Tpvec &p) {
-size_t n=p.size(); // number of particles
-sasa.resize(n);
-sasaCoords.resize(n);
-sasaWeights.resize(n);
+        template<class Tpvec>
+            void updateSASA(const Tpvec &p) {
+                size_t n=p.size(); // number of particles
+                sasa.resize(n);
+                sasaCoords.resize(n);
+                sasaWeights.resize(n);
 
-for (size_t i=0; i<n; ++i) {
-sasaCoords[i]  = p[i];
-sasaWeights[i] = p[i].radius + probe;
-}
+                for (size_t i=0; i<n; ++i) {
+                    sasaCoords[i]  = p[i];
+                    sasaWeights[i] = p[i].radius + probe;
+                }
 
-// generate powersasa object and calc. sasa for all particles
-POWERSASA::PowerSasa<double,Point> ps(sasaCoords, sasaWeights, 1, 1, 1, 1);
-ps.calc_sasa_all();
-for (size_t i=0; i<n; ++i)
-sasa[i] = ps.getSasa()[i];
-}
+                // generate powersasa object and calc. sasa for all particles
+                POWERSASA::PowerSasa<double,Point> ps(sasaCoords, sasaWeights, 1, 1, 1, 1);
+                ps.calc_sasa_all();
+                for (size_t i=0; i<n; ++i)
+                    sasa[i] = ps.getSasa()[i];
+            }
 
-public:
-SASAEnergy(Tmjson &j, const string &dir="sasaenergy") : base(dir) {
-base::name = "SASA Energy";
-auto _j = j["energy"][dir];
-probe = _j["proberadius"] | 1.4; // angstrom
-conc = _j["conc"] | 0.0;         // co-solute concentratil (mol/l);
-}
+    public:
+        SASAEnergy(Tmjson &j, const string &dir="sasaenergy") : base(dir) {
+            base::name = "SASA Energy";
+            auto _j = j["energy"][dir];
+            probe = _j["proberadius"] | 1.4; // angstrom
+            conc = _j["conc"] | 0.0;         // co-solute concentratil (mol/l);
+        }
 
-auto tuple() -> decltype(std::make_tuple(this)) {
-return std::make_tuple(this);
-}
+        auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
+        }
 
-/**
-* @brief The SASA calculation is implemented
-* as an external potential, only
-*/
-double external(const Tpvec &p) override {
-// if first run, resize and fill tfe vector
-if (tfe.size()!=p.size()) {
-tfe.resize(p.size());
-for (size_t i=0; i<p.size(); ++i)
-tfe[i] = atom[ p[i].id ].tfe / (pc::kT() * pc::Nav); // -> kT
-}
+        /**
+         * @brief The SASA calculation is implemented
+         * as an external potential, only
+         */
+        double external(const Tpvec &p) override {
+            // if first run, resize and fill tfe vector
+            if (tfe.size()!=p.size()) {
+                tfe.resize(p.size());
+                for (size_t i=0; i<p.size(); ++i)
+                    tfe[i] = atom[ p[i].id ].tfe / (pc::kT() * pc::Nav); // -> kT
+            }
 
-// calc. sasa and energy
-updateSASA(p);
-assert(sasa.size() == p.size());
-double u=0, A=0;
-for (size_t i=0; i<sasa.size(); ++i) {
-u += sasa[i] * tfe[i]; // a^2 * kT/a^2/M -> kT/M
-if (!this->isTrial(p))
-A+=sasa[i];
-}
-if (!this->isTrial(p))
-avgArea+=A; // sample average area for accepted confs. only
-return u * conc; // -> kT
-}
+            // calc. sasa and energy
+            updateSASA(p);
+            assert(sasa.size() == p.size());
+            double u=0, A=0;
+            for (size_t i=0; i<sasa.size(); ++i) {
+                u += sasa[i] * tfe[i]; // a^2 * kT/a^2/M -> kT/M
+                if (!this->isTrial(p))
+                    A+=sasa[i];
+            }
+            if (!this->isTrial(p))
+                avgArea+=A; // sample average area for accepted confs. only
+            return u * conc; // -> kT
+        }
 };
 #endif
 
+    /**
+     * @breif Additive Hamiltonian
+     *
+     * ~~~{.js}
+     * "energy" : {
+     *     "nonbonded" : { "type":"debyehuckel-lj", "epsr":80, "debyelength":0.01 },
+     *     "isobaric" : { "pressure": 0.2 },
+     *     "cmconstrain" : { ... }
+     * }
+     * ~~~
+     */
     template<class Tspace, class Tbase=Energybase<Tspace>>
     class Hamiltonian : public Tbase
     {
     private:
         typedef Tbase *baseptr;
-        vector <baseptr> baselist;
+        typedef std::shared_ptr<Tbase> Tptr;
+        std::vector<Tptr> baselist;
         typedef typename Tspace::ParticleType Tparticle;
         typedef typename Tspace::ParticleVector Tpvec;
+        typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJonesLB> Tpairpot_dhlj;
+        typedef Potential::CombinedPairPotential<Potential::CoulombWolf, Potential::LennardJonesLB> Tpairpot_wolf;
 
     public:
-        Hamiltonian() { Tbase::name = "Hamiltonian"; }
-
-        Hamiltonian( Tmjson &j )
+        Hamiltonian( Tspace &spc, Tmjson &j )
         {
             Tbase::name = "Hamiltonian";
-            auto m = j["energy"];
+            setSpace(spc);
+
+            auto &m = j.at("energy");
             for ( auto i = m.begin(); i != m.end(); ++i )
             {
+                try {
+                    auto &val = i.value();
 
-                if ( i.key() == "nonbonded-dhlj" )
-                    push_back(Energy::Nonbonded<Tspace, Potential::DebyeHuckelLJ>(j, i.key()));
+                    if (i.key()=="nonbonded")
+                    {
+                        size_t n = baselist.size();
+                        string type = val.at("type").get<string>();
+                        if (type=="debyehuckel+lj")
+                            baselist.push_back( Tptr( new Energy::Nonbonded<Tspace, Tpairpot_dhlj>(val, i.key()) ) );
 
-                if ( i.key() == "cmconstrain" )
-                {
-                    if ( Tbase::spc != nullptr )
-                        push_back(Energy::MassCenterConstrain<Tspace>(j, *Tbase::spc));
-                    else
-                        std::cerr << "Warning: call setSpace() on Energy::Hamiltonian.\n";
+                        if (n==baselist.size()) // nothing was added --> unknown type given --> error
+                            throw std::runtime_error("Error in " << Tbase::name << ": unknown nonbonded type " << type);
+                    }
+
+                    if ( i.key() == "isobaric" )
+                        baselist.push_back( Tptr( new Energy::ExternalPressure<Tspace>(val) ) );
+
+                    if ( i.key() == "cmconstrain" )
+                        baselist.push_back( Tptr( new Energy::MassCenterConstrain<Tspace>(val, *Tbase::spc)) );
+
+                    if ( i.key() == "penalty" )
+                    {
+                    }
                 }
-
-                if ( i.key() == "penalty" )
-                {
+                catch (std::exception &e) {
+                    std::cerr << "Error in " << Tbase::name << ". " << i.key() << ": " << e.what() << endl;
+                    throw;
                 }
             }
-        }
+            if (baselist.empty())
+                std::cerr << "Warning: Hamiltonian is empty\n";
 
-        /** @brief Add energy term to Hamiltonian. Local copy created. */
-        template<class Tenergychild>
-        Hamiltonian<Tspace> &push_back( const Tenergychild &pot )
-        {
-            baselist.push_back(baseptr(new Tenergychild(pot)));
-            return *this;
+            setSpace(spc);
         }
 
         /** @brief Find pointer to given energy type; `nullptr` if not found. */
         template<class Tenergy>
-        Tenergy *find()
+        std::shared_ptr<Tenergy> get()
         {
-            static_assert(std::is_base_of<Tbase, Tenergy>::value,
-                          "`Tenergy` must be derived from `Energy::Energybase`");
-            for ( auto b : baselist )
+            static_assert(std::is_base_of<Energybase<Tspace>, Tenergy>::value,
+                          "Template parameter must be derived from `Energy::Energybase`");
+            for (auto b : baselist)
             {
-                auto ptr = dynamic_cast< Tenergy * >( b );
+                auto ptr = std::dynamic_pointer_cast<Tenergy>( b );
                 if ( ptr != nullptr )
                     return ptr;
             }
@@ -2851,7 +2874,7 @@ return u * conc; // -> kT
         }
     };
 
-/**
+    /**
      * @brief Calculates the total system energy
      *
      * For a given particle vector, space, and energy class we try to
@@ -2875,7 +2898,7 @@ return u * conc; // -> kT
         return u;
     }
 
-/**
+    /**
      * @brief Calculate energy change due to proposed modification defined by `Space::Change`
      *
      * @todo Optimize when only subset of group is changes (atom trans. etc.)

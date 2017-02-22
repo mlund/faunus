@@ -528,7 +528,31 @@ namespace Faunus
      *    electrostatics
      *
      * The points 1-3 above will be done as a function of group-to-group
-     * mass center separation.
+     * mass center separation @f$R@f$ and moments
+     * on molecule @f$a@f$ and @f$b@f$ with charges @f$q_i@f$ in position @f$\boldsymbol{r}_i@f$
+     * with respect to the mass center are calculated according to:
+     *
+     * \f{eqnarray*}{
+     *     q_{a/b}                & = & \sum_i q_i \\
+     *     \boldsymbol{\mu}_{a/b} & = & \sum_i q_i\mathbf{r_i} \\
+     *     \boldsymbol{Q}_{a/b}   & = & \frac{1}{2} \sum_i q_i\mathbf{r_i} \mathbf{r_i}^T
+     * \f}
+     *
+     * And, ignoring prefactors, the energy between molecule @f$a@f$ and @f$b@f$ at @f$R@f$ is:
+     *
+     * \f{eqnarray*}{
+     *    u_{ion-ion}  & = & \frac{q_aq_b}{R} \\
+     *    u_{ion-dip}  & = & \frac{q_a \boldsymbol{\mu}_b \boldsymbol{R}}{R^3} + ... \\
+     *    u_{dip-dip}  & = & \frac{\boldsymbol{\mu_a}\boldsymbol{\mu_b}   }{ R^3  }
+     *         - \frac{3 (\boldsymbol{\mu_a} \cdot \boldsymbol{R}) ( \boldsymbol{\mu_b}\cdot\boldsymbol{R})  }{R^5}   \\
+     *    u_{ion-quad} & = & \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}
+     *         - \frac{  q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3} + ... \\
+     *    u_{total}    & = & u_{ion-ion} + u_{ion-dip} + u_{dip-dip} + u_{ion-quad}\\
+     *    u_{exact}    & = & \sum_i^a\sum_j^b \frac{q_iq_j}{ | \boldsymbol{r_i} - \boldsymbol{r_j}  |    }
+     * \f}
+     *
+     * During simulation, these are thermally averaged over angles, co-solute degrees of
+     * freedom etc.
      *
      * Note also that the moments are defined with
      * respect to the *mass* center, not *charge* center. While for most
@@ -576,6 +600,9 @@ namespace Faunus
 
         std::map<int, data> m; // slow, but OK for infrequent sampling
 
+        /**
+         * @brief Calculates quadrupole moment tensor (not traceless)
+         */
         template<class Tgroup>
         Tensor<double> quadrupoleMoment( const Tspace &s, const Tgroup &g ) const
         {

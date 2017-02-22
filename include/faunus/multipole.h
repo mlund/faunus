@@ -301,9 +301,9 @@ namespace Faunus {
   /**
    * @brief Returns ion-quadrupole interaction
    * @param qA Charge of particle A
-   * @param quadB Quadrupole moment of particle B
+   * @param quadB Quadrupole moment of particle B (not traceless)
    * @param qB Charge of particle B
-   * @param quadA Quadrupole moment of particle A
+   * @param quadA Quadrupole moment of particle A (not traceless)
    * @param r Direction \f$ r_A - r_B \f$
    */
   template<class Tvec, class Tmat>

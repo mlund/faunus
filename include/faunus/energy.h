@@ -2641,9 +2641,9 @@ class SASAEnergy : public Energybase<Tspace> {
 #endif
 
     /**
-     * @breif Additive Hamiltonian
+     * @brief Additive Hamiltonian
      *
-     * ~~~{.js}
+     * ~~~{.java}
      * "energy" : {
      *     "nonbonded" : { "type":"debyehuckel-lj", "epsr":80, "debyelength":0.01 },
      *     "isobaric" : { "pressure": 0.2 },

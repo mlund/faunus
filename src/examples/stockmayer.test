@@ -1,6 +1,5 @@
-# Generated on Jul 31 2014 15:10:34 using 4.8.2
-energyAverage                      -1359.55            
-relativeEnergyDrift                4.78909e-15         
-SingleParticleTranslation_acceptance     20.2006             
-SingleParticleRotation_acceptance        25.528              
-
+# Generated on Feb 24 2017 13:01:11 using 5.4.0 20160609
+SingleParticleRotation_acceptance            33.2754             
+SingleParticleTranslation_acceptance         31.8063             
+energyAverage                                -2518.97            
+relativeEnergyDrift                          3.65135e-16         

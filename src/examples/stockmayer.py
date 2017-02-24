@@ -50,7 +50,7 @@ d = {
   "system" : {
     "temperature"  : 315.8,
     "geometry"     : { "length" : 19.8377 },
-    "mcloop"       : { "macro":10, "micro":30 },
+    "mcloop"       : { "macro":10, "micro":100 },
     "unittest"     : { "testfile":"stockmayer.test", "stable":False }
   }
 }

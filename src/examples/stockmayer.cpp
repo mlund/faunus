@@ -1,5 +1,6 @@
 #include <faunus/faunus.h>
 #include <faunus/multipole.h>
+#define DIPOLEPARTICLE
 
 using namespace Faunus;
 using namespace Faunus::Move;

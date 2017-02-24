@@ -85,6 +85,48 @@ namespace Faunus
 
         virtual ~Geometrybase();
     };
+    
+    /**
+     * @brief Spherical-surface geometry
+     *
+     * This is a spherical-surface simulation container.
+     */
+    class SphereSurface : public Geometrybase 
+    {
+      private:
+        double r,r2,diameter;
+        void _setVolume(double) override;
+        double _getVolume(int) const override;
+        string _info(char) override;
+      public:
+        Point len;
+        void setlen(const Point&);              //!< Reset radius (angstrom)
+        void setRadius(double);                 //!< Set radius (angstrom)
+        double getRadius();                     //!< Get radius (angstrom)
+        SphereSurface(double=0);                         //!< Construct from radius (angstrom)
+
+        /** @brief Construct from json object */
+        SphereSurface( Tmjson & );
+
+        void randompos(Point &) override;
+        void boundary(Point &p) const override {};
+        bool collision(const Point&, double, collisiontype=BOUNDARY) const override;
+
+        inline double sqdist(const Point &a, const Point &b) const override {
+	  double r1 = r*std::acos(a.dot(b)/r2);
+	  return r1*r1;
+        }
+
+        /**
+	 * @warning Not true!
+	 */
+        inline Point vdist(const Point &a, const Point &b) override { return a-b; }
+
+        void scale(Point&, Point &, const double, const double) const override; //!< Linear scaling along radius (NPT ensemble)
+
+        Cuboid inscribe() const override;
+        
+    };
 
     /**
      * @brief Spherical geometry

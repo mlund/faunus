@@ -108,6 +108,38 @@ namespace Faunus
       {
           geo.scale(*this, s, xyz, xy);
       }
+      
+      
+    /**
+     * @brief Convert cartesian- to spherical-coordinates
+     * @param origin The origin to be used (optional)
+     *
+     * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$.
+     */
+      PointBase xyz2rtp(PointBase origin=PointBase(0,0,0)) {
+	PointBase xyz_t = *this - origin;
+	double radius = xyz_t.norm();
+	PointBase rtp(radius,0.0,0.0);
+	rtp.y() = std::atan2(xyz_t.y(),xyz_t.x());
+	rtp.z() = std::acos(xyz_t.z()/radius);
+	return rtp;
+      }
+
+    /**
+     * @brief Convert spherical- to cartesian-coordinates
+     * @param origin The origin to be added (optional)
+     *
+     * @note Input \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$, and output (x,y,z).
+     */
+      PointBase rtp2xyz(PointBase origin=PointBase(0,0,0)) {
+	PointBase rtp_t = *this;
+	PointBase xyz(0,0,0);
+	xyz.x() = rtp_t.x()*std::cos(rtp_t.y())*std::sin(rtp_t.z());
+	xyz.y() = rtp_t.x()*std::sin(rtp_t.y())*std::sin(rtp_t.z());
+	xyz.z() = rtp_t.x()*std::cos(rtp_t.z());
+	xyz += origin;
+	return xyz;
+      }
 
       Tcoord len() const
       {

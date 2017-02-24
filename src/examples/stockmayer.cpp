@@ -6,7 +6,7 @@ using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid, DipoleParticle> Tspace;
-typedef CombinedPairPotential<LennardJonesLB, DipoleDipole> Tpair;
+typedef CombinedPairPotential<LennardJonesLB, DipoleDipoleRF> Tpair;
 
 int main()
 {
@@ -23,8 +23,7 @@ int main()
     Move::Propagator<Tspace, false> mv(in, pot, spc);
 #endif
 
-    Analysis::DipoleAnalysis dian(spc, in);
-    DipoleWRL sdp;
+    Analysis::CombinedAnalysis analyzer(in,pot,spc);
 
     MCLoop loop(in);                               // class for mc loop counting
     while ( loop[0] )
@@ -32,21 +31,18 @@ int main()
         while ( loop[1] )
         {
             mv.move();
-            if ( slump() > 0.5 )
-                dian.sampleMuCorrelationAndKirkwood(spc);
-            dian.sampleDP(spc);
+	    analyzer.sample();
         }
         cout << loop.timing() << std::flush;
     }
 
     UnitTest test(in);
     mv.test(test);
+    analyzer.test(test);
+    DipoleWRL sdp;
     sdp.saveDipoleWRL("stockmayer.wrl", spc, Group(0, spc.p.size() - 1));
-    FormatPQR().save("confout.pqr", spc.p);
-    dian.save();
-    spc.save("state");
 
-    std::cout << spc.info() + pot.info() + mv.info() + test.info() + dian.info();
+    std::cout << spc.info() + pot.info() + mv.info() + test.info() + analyzer.info();
 
     return test.numFailed();
 }
@@ -59,7 +55,7 @@ int main()
   ~~~~~~~~~~~~~~~~~~~
   $ make
   $ cd src/examples
-  $ ./stockmayer.run
+  $ ./stockmayer.py
   ~~~~~~~~~~~~~~~~~~~
 
   stockmayer.cpp

@@ -600,7 +600,7 @@ namespace Faunus
 
         std::map<int, data> m; // slow, but OK for infrequent sampling
 
-        /**
+	 /**
          * @brief Calculates quadrupole moment tensor (not traceless)
          */
         template<class Tgroup>
@@ -1243,7 +1243,7 @@ namespace Faunus
      *
      * @note Neumann, M. (1983) Mol. Phys., 50, 841-858.
      */
-    class DipoleAnalysis
+    class MultipoleAnalysis : public AnalysisBase
     {
     private:
         Table2D<double, double> kw, mucorr_angle;
@@ -1258,7 +1258,7 @@ namespace Faunus
 
     public:
         template<class Tspace, class Tinputmap>
-        DipoleAnalysis( const Tspace &spc, Tinputmap &in ) :
+        MultipoleAnalysis( const Tspace &spc, Tinputmap &in ) :
             kw(0.1), mucorr_angle(0.1), mucorr(0.1), mucorr_dist(0.1), HM_x(0.1), HM_y(0.1),
             HM_z(0.1), HM_x_box(0.1), HM_y_box(0.1), HM_z_box(0.1), HM2(0.1), HM2_box(0.1)
         {
@@ -2449,14 +2449,14 @@ namespace Faunus
                 double dr;
                 Table2D<double,double> hist;
                 string name1, name2, file;
+		double Rhypersphere; // Radius of 2D hypersphere
             };
-
+	    std::vector<data> datavec;        // vector of data sets
             Average<double> V;                // average volume (angstrom^3)
 
         private:
-            std::vector<data> datavec;        // vector of data sets
             virtual void update(data &d)=0;   // called on each defined data set
-            void normalize(data&);
+            void normalize(data &);
             void _sample() override;
             Tmjson _json() override;
 
@@ -2478,11 +2478,12 @@ namespace Faunus
      * interval \f$[r, r+dr] \f$ and \f$ V(r) \f$ is the corresponding volume element
      * which depends on dimensionality:
      *
-     * \f$ V(r)        \f$ | Dimensions (`dim`)
-     * :------------------ | :----------------------------------------
-     * \f$ 4\pi r^2 dr \f$ | 3 (for particles in free space, default)
-     * \f$ 2\pi r dr   \f$ | 2 (for particles confined on a plane)
-     * \f$ dr          \f$ | 1 (for particles confined on a line)
+     * \f$ V(r) \f$               | Dimensions (`dim`)
+     * :------------------------- | :----------------------------------------
+     * \f$ 4\pi r^2 dr \f$        | 3 (for particles in free space, default)
+     * \f$ 2\pi r dr \f$          | 2 (for particles confined on a plane)
+     * \f$ 2\pi R sin(r/R) dr \f$ | 2 (for particles confined on a 2D hypersphere surface, also needs input `Rhypersphere`)
+     * \f$ dr \f$                 | 1 (for particles confined on a line)
      *
      * Example JSON input:
      *
@@ -2513,10 +2514,36 @@ namespace Faunus
                             d.hist(r)++;
                         }
             }
+            
+	    void normalize(data &d)
+	    {
+	      assert(V.cnt>0);
+	      double Vr=1, sum = d.hist.sumy();
+	      for (auto &i : d.hist.getMap()) {
+		if (d.dim==3)
+		  Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
+		  if (d.dim==2) {
+		    Vr = 2 * pc::pi * i.first * d.dr;
+		  if (d.Rhypersphere > 0)
+		    Vr = 2.0*pc::pi*d.Rhypersphere*sin(i.first/d.Rhypersphere) * d.dr;
+		  }
+		  if (d.dim==1)
+		    Vr = d.dr;
+		  i.second = i.second/sum * V/Vr;
+		  }
+	    }
 
             public:
             AtomRDF( Tmjson j, Tspace &spc ) : PairFunctionBase(j,
                     "Atomic Pair Distribution Function"), spc(spc) {}
+                    
+	    ~AtomRDF()
+	    {
+	      for (auto &d : datavec) {
+		normalize(d);
+		d.hist.save( d.file );
+	      }
+	    }
         };
 
     /** @brief Same as `AtomRDF` but for molecules. Identical input. */
@@ -2543,31 +2570,56 @@ namespace Faunus
                         }
                 }
             }
+            
+	    void normalize(data &d)
+	    {
+	      assert(V.cnt>0);
+	      double Vr=1, sum = d.hist.sumy();
+	      for (auto &i : d.hist.getMap()) {
+		if (d.dim==3)
+		  Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
+		  if (d.dim==2) {
+		    Vr = 2 * pc::pi * i.first * d.dr;
+		  if (d.Rhypersphere > 0)
+		    Vr = 2.0*pc::pi*d.Rhypersphere*sin(i.first/d.Rhypersphere) * d.dr;
+		  }
+		  if (d.dim==1)
+		    Vr = d.dr;
+		  i.second = i.second/sum * V/Vr;
+		  }
+	    }
 
             public:
             MoleculeRDF( Tmjson j, Tspace &spc ) : PairFunctionBase(j,
                     "Molecular Pair Distribution Function"), spc(spc) {}
+                    
+	    ~MoleculeRDF()
+	    {
+	      for (auto &d : datavec) {
+		normalize(d);
+		d.hist.save( d.file );
+	      }
+	    }
         };
-
-    class KirkwoodFactor : public AnalysisBase {
-        private:
-            std::function<void()> _sampleKW; // wrapper function
-
-            double dr; // distribution resolution (angstrom)
-
-            Table2D<double, double> kw, mucorr_angle;
+	
+    /** @brief Samples the Kirkwood-factor and also some dipole-correlations. */
+    template<class Tspace>
+        class KirkwoodFactor : public PairFunctionBase {
+            Tspace &spc;
+	    
+            Table2D<double, double> mucorr_angle;
             Table2D<double, Average<double> > mucorr, mucorr_dist;
-
+	    
             /**
-             * @brief Samples g(r), \f$ <\hat{\mu}(0) \cdot \hat{\mu}(r)> \f$, \f$ <\frac{1}{2} ( 3 \hat{\mu}(0) \cdot \hat{\mu}(r) - 1 )> \f$, Histogram(\f$ \hat{\mu}(0) \cdot \hat{\mu}(r) \f$) and distant-dependent Kirkwood-factor.
+             * @brief Samples \f$ <\hat{\mu}(0) \cdot \hat{\mu}(r)> \f$, \f$ <\frac{1}{2} ( 3 \hat{\mu}(0) \cdot \hat{\mu}(r) - 1 )> \f$, Histogram(\f$ \hat{\mu}(0) \cdot \hat{\mu}(r) \f$) and distant-dependent Kirkwood-factor.
              */
-            template<class Tspace>
-            void muCorrelationAndKirkwood( const Tspace &spc )
+            void update( data &d ) override
             {
-                int N = (int)spc.p.size() - 1;
+#ifdef DIPOLEPARTICLE
+                int N = spc.p.size() - 1;
                 for ( int i = 0; i < N; i++ )
                 {
-                    kw(0) += spc.p[i].mu.dot(spc.p[i].mu) * spc.p[i].muscalar * spc.p[i].muscalar;
+                    d.hist(0) += spc.p[i].mu.dot(spc.p[i].mu) * spc.p[i].muscalar * spc.p[i].muscalar;
                     for ( int j = i + 1.; j < N + 1; j++ )
                     {
                         double r = spc.geo.dist(spc.p[i], spc.p[j]);
@@ -2575,23 +2627,41 @@ namespace Faunus
                         mucorr_angle(sca) += 1.;
                         mucorr(r) += sca;
                         mucorr_dist(r) += 0.5 * (3 * sca * sca - 1.);
-                        kw(r) += 2 * sca * spc.p[i].muscalar * spc.p[j].muscalar;
+                        d.hist(r) += 2 * sca * spc.p[i].muscalar * spc.p[j].muscalar;
                     }
                 }
-                kw(0) += spc.p[N].mu.dot(spc.p[N].mu) * spc.p[N].muscalar * spc.p[N].muscalar;
+                d.hist(0) += spc.p[N].mu.dot(spc.p[N].mu) * spc.p[N].muscalar * spc.p[N].muscalar;
+#endif
             }
+            
+	    void normalize(data &d)
+	    {
+	      double sum = 0;  
+	      for (auto &i : d.hist.getMap()) {
+		sum += i.second;
+		i.second = sum;
+	      }
+	    }
 
-            void _sample() override { _sampleKW(); }
-
-        public:
-        template<class Tspace>
-            KirkwoodFactor( Tmjson j, Tspace &spc ) : AnalysisBase(j)
-        {
-            name = "Kirkwood Factor";
-            _sampleKW = std::bind(
-                    &KirkwoodFactor::muCorrelationAndKirkwood<Tspace>, this, std::ref(spc));
-        }
-    };
+            public:
+            KirkwoodFactor( Tmjson j, Tspace &spc ) : PairFunctionBase(j,"KirkwoodFactor (and some dipole-correlation)"), spc(spc) {
+	      mucorr_angle.setResolution(datavec.back().dr);
+	      mucorr.setResolution(datavec.back().dr);
+	      mucorr_dist.setResolution(datavec.back().dr);
+	    }
+        
+	    ~KirkwoodFactor()
+	    {
+	      for (auto &d : datavec) {
+		normalize(d);
+		d.hist.save( d.file );
+		mucorr_angle.save( d.file+"1" );
+		mucorr.save( d.file+"2" );
+		mucorr_dist.save( d.file+"3" );
+	      }
+	    }
+        
+	};
 
     /**
      * @brief Sample scattering intensity
@@ -2782,6 +2852,9 @@ namespace Faunus
 
                     if ( i.key() == "multipoledistribution" )
                         v.push_back(Tptr(new MultipoleDistribution<Tspace>(val, spc)));
+		    
+                    if ( i.key() == "KirkwoodFactor" )
+                        v.push_back(Tptr(new KirkwoodFactor<Tspace>(val, spc)));
 
                     if ( i.key() == "meanforce" )
                         v.push_back(Tptr(new MeanForce(val, pot, spc)));

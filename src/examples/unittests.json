@@ -18,7 +18,10 @@
   },
 
   "energy" : { 
-    "nonbonded" : { "epsr":1.0 } }
+    "nonbonded" : {
+      "epsr":1.0,
+      "ewald"   : { "epsr":1.0, "eps_surf":1.0, "cutoff":5, "alpha":0.894427190999916, "cutoffK":11, "spherical_sum":true }  
+    }
   },
 
   "moves" : {
@@ -29,6 +32,6 @@
 
   "system" : {
     "temperature" : 298,
-    "geometry" : { "len": 10.0 }
+    "geometry" : { "length": 10.0 }
   }
 }

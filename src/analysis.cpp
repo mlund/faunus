@@ -127,21 +127,6 @@ namespace Faunus
         f << energy() << "\n"; 
     }
 
-    void PairFunctionBase::normalize(data &d)
-    {
-        assert(V.cnt>0);
-        double Vr=1, sum = d.hist.sumy();
-        for (auto &i : d.hist.getMap()) {
-            if (d.dim==3)
-                Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
-            if (d.dim==2)
-                Vr = 2 * pc::pi * i.first * d.dr;
-            if (d.dim==1)
-                Vr = d.dr;
-            i.second = i.second/sum * V/Vr;
-        }
-    }
-
     void PairFunctionBase::_sample()
     {
         for (auto &d : datavec)
@@ -156,7 +141,8 @@ namespace Faunus
             _j[ d.name1+"-"+d.name2 ] = {
                 { "dr", d.dr },
                 { "file", d.file },
-                { "dim", d.dim }
+                { "dim", d.dim },
+		{ "Rhyper", d.Rhypersphere }
             };
         return j;
     }
@@ -173,6 +159,7 @@ namespace Faunus
                     d.dim = i.value("dim", 3);
                     d.dr = i.value("dr", 0.1);
                     d.hist.setResolution(d.dr);
+		    d.Rhypersphere = i.value("Rhyper", -1.0);
                     datavec.push_back( d );
                 }
         }
@@ -186,12 +173,10 @@ namespace Faunus
 
     PairFunctionBase::~PairFunctionBase()
     {
-        for (auto &d : datavec) {
-            normalize(d);
+        for (auto &d : datavec)
             d.hist.save( d.file );
-        }
     }
- 
+    
     void CombinedAnalysis::sample()
     {
         cnt++;

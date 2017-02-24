@@ -1063,6 +1063,124 @@ namespace Faunus
         }
         return o.str();
     }
+    
+    /**
+     * @brief Translate single particles
+     *
+     * This move works in the same way as AtomicTranslation but does
+     * translations on a 2D hypersphere-surface.
+     */
+    template<class Tspace>
+      class AtomicTranslation2D : public AtomicTranslation<Tspace> {
+        protected:
+          typedef AtomicTranslation<Tspace> base;
+          using base::spc;
+          using base::iparticle;
+          using base::igroup;
+          using base::w;
+          using base::gsize;
+          using base::genericdp;
+          using base::accmap;
+          using base::sqrmap;
+          Geometry::QuaternionRotate rot;
+          string _info();
+          void _trialMove();
+          void _acceptMove();
+          void _rejectMove();
+          double dp;      //!< Temporary storage for current angle
+          double radius;
+
+        public:
+          AtomicTranslation2D(Energy::Energybase<Tspace> &, Tspace &,Tmjson &);
+      };
+
+    template<class Tspace>
+      AtomicTranslation2D<Tspace>::AtomicTranslation2D(
+          Energy::Energybase<Tspace> &e,
+          Tspace &s,
+          Tmjson &j) : base(e, s, j) {
+        base::title="Single Particle Translation on 2D sphere-surface";
+	//radius = s.geo.getRadius();
+	assert(radius > 0 && "Radius has to be larger than zero!");
+      }
+    template<class Tspace>
+      void AtomicTranslation2D<Tspace>::_trialMove() {
+        if ( ! this->mollist.empty() ) {
+          igroup = spc->randomMol( this->currentMolId );
+          if ( igroup != nullptr ) {
+            iparticle = igroup->random();
+            gsize += igroup->size();
+          } else return;
+        } else return;
+
+        if (iparticle>-1) {
+          assert( iparticle<(int)spc->p.size() && "Trial particle out of range");
+          dp = atom[spc->p[iparticle].id ].dp;
+          if (dp<1e-6)
+            dp = base::genericdp;
+	  
+	  Point rtp = spc->trial[iparticle].xyz2rtp(); // Get the spherical coordinates of the particle
+	  double slump_theta = dp*(slump()-0.5);  // Get random theta-move
+          double slump_phi = dp*(slump()-0.5);   // Get random phi-move
+	  
+	  double scalefactor_theta = radius*sin(rtp.z()); // Scale-factor for theta
+	  double scalefactor_phi = radius;                // Scale-factor for phi
+	  
+	  Point theta_dir = Point(-sin(rtp.y()),cos(rtp.y()),0);    // Unit-vector in theta-direction
+	  Point phi_dir = Point(cos(rtp.y())*cos(rtp.z()),sin(rtp.y())*cos(rtp.z()),-sin(rtp.z()));  // Unit-vector in phi-direction
+	  Point xyz = spc->trial[iparticle] + scalefactor_theta*theta_dir*slump_theta + scalefactor_phi*phi_dir*slump_phi; // New position
+	  spc->trial[iparticle] = radius*xyz/xyz.norm(); // Convert to cartesian coordinates
+	  
+	  assert( fabs((spc->trial[iparticle].norm() - radius)/radius) < 1e-9 && "Trial particle does not lie on the sphere surface!");
+        }
+        base::change.mvGroup[spc->findIndex(igroup)].push_back(iparticle);
+      }
+
+    template<class Tspace>
+      void AtomicTranslation2D<Tspace>::_acceptMove() {
+        sqrmap[ spc->p[iparticle].id ] += pow(dp*180/pc::pi, 2);
+        accmap[ spc->p[iparticle].id ] += 1;
+        spc->p[iparticle] = spc->trial[iparticle];
+      }
+
+    template<class Tspace>
+      void AtomicTranslation2D<Tspace>::_rejectMove() {
+        spc->trial[iparticle] = spc->p[iparticle];
+        sqrmap[ spc->p[iparticle].id ] += 0;
+        accmap[ spc->p[iparticle].id ] += 0;
+      }
+
+    template<class Tspace>
+      string AtomicTranslation2D<Tspace>::_info() {
+        using namespace textio;
+        std::ostringstream o;
+	o << pad(SUB,w,"Radius") << radius << endl;
+        if (gsize.cnt>0)
+          o << pad(SUB,w,"Average moves/particle") << base::cnt / gsize.avg() << endl;
+        if (base::genericdp>1e-6)
+          o << pad(SUB,w,"Generic displacement") << genericdp
+            << _angstrom << endl;
+        if (base::cnt>0) {
+          char l=12;
+          o << endl
+            << indent(SUB) << "Individual particle rotation:" << endl << endl
+            << indent(SUBSUB) << std::left << string(7,' ')
+            << setw(l-6) << "dp"
+            << setw(l+1) << "Acc. "+percent
+            << setw(l+7) << bracket("d"+theta+squared)+"/"+degrees
+            << rootof+bracket("d"+theta+squared)+"/"+degrees << endl;
+          for (auto m : sqrmap) {
+            auto id=m.first;
+            o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
+              << setw(l-6) << ( (atom[id].dp<1e-6) ? genericdp : atom[id].dp);
+            o.precision(3);
+            o << setw(l) << accmap[id].avg()*100
+              << setw(l) << sqrmap[id].avg()
+              << setw(l) << sqrt(sqrmap[id].avg()) << endl;
+          }
+        }
+        return o.str();
+      } 
 
     /**
      * @brief Combined rotation and rotation of groups
@@ -4800,7 +4918,7 @@ namespace Faunus
             this->useAlternativeReturnEnergy = true;
         }
     };
-
+    
     /**
      * @brief Multiple moves controlled via JSON input
      *
@@ -4810,24 +4928,25 @@ namespace Faunus
      * in the table below; each can occur only once and are picked
      * with uniform weight.
      *
-     * Keyword           | Class                     | Description
-     * :---------------- | :------------------------ | :----------------
-     * `atomtranslate`   | `Move::AtomicTranslation` | Translate atoms
-     * `atomrotate`      | `Move::AtomicRotation`    | Rotate atoms
-     * `atomgc`          | `Move::GrandCanonicalSalt`| GC salt move (muVT ensemble)
-     * `conformationswap`| `Move::ConformationSwap`  | Swap between molecular conformations
-     * `crankshaft`      | `Move::CrankShaft`        | Crank shaft polymer move
-     * `ctransnr`        | `Move::ClusterTranslateNR`| Rejection free cluster translate
-     * `gc`              | `Move::GreenGC`           | Grand canonical move (muVT ensemble)
-     * `isobaric`        | `Move::Isobaric`          | Volume move (NPT ensemple)
-     * `moltransrot`     | `Move::TranslateRotate`   | Translate/rotate molecules
-     * `pivot`           | `Move::Pivot`             | Pivot polymer move
-     * `reptate`         | `Move::Reptation`         | Reptation polymer move
-     * `temper`          | `Move::ParallelTempering` | Parallel tempering (requires MPI)
-     * `titrate`         | `Move::SwapMove`          | Particle swap move
-     * `xtcmove`         | `Move::TrajectoryMove`    | Propagate via a filed trajectory
-     * `random`          | `RandomTwister<>`         | Input for random number generator
-     * `_jsonfile`       |  ouput json file name     | Default: `move_out.json`
+     * Keyword           | Class                      | Description
+     * :---------------- | :------------------------  | :----------------
+     * `atomtranslate`   | `Move::AtomicTranslation`  | Translate atoms
+     * `atomrotate`      | `Move::AtomicRotation`     | Rotate atoms
+     * `atomgc`          | `Move::GrandCanonicalSalt` | GC salt move (muVT ensemble)
+     * `atomtranslate2D` | `Move::AtomicTranslation2D`| Translate atoms on a 2D hypersphere
+     * `conformationswap`| `Move::ConformationSwap`   | Swap between molecular conformations
+     * `crankshaft`      | `Move::CrankShaft`         | Crank shaft polymer move
+     * `ctransnr`        | `Move::ClusterTranslateNR` | Rejection free cluster translate
+     * `gc`              | `Move::GreenGC`            | Grand canonical move (muVT ensemble)
+     * `isobaric`        | `Move::Isobaric`           | Volume move (NPT ensemple)
+     * `moltransrot`     | `Move::TranslateRotate`    | Translate/rotate molecules
+     * `pivot`           | `Move::Pivot`              | Pivot polymer move
+     * `reptate`         | `Move::Reptation`          | Reptation polymer move
+     * `temper`          | `Move::ParallelTempering`  | Parallel tempering (requires MPI)
+     * `titrate`         | `Move::SwapMove`           | Particle swap move
+     * `xtcmove`         | `Move::TrajectoryMove`     | Propagate via a filed trajectory
+     * `random`          | `RandomTwister<>`          | Input for random number generator
+     * `_jsonfile`       |  ouput json file name      | Default: `move_out.json`
      *
      * Average system energy and drift thereof are automatically tracked and
      * reported.
@@ -4941,6 +5060,8 @@ namespace Faunus
                         mPtr.push_back(toPtr(AtomicRotation<Tspace>(e, s, val)));
                     if ( i.key() == "atomgc" )
                         mPtr.push_back(toPtr(GrandCanonicalSalt<Tspace>(e, s, val)));
+		    if (i.key()=="atomictranslation2D")
+			mPtr.push_back( toPtr( AtomicTranslation2D<Tspace>(e,s, val)));
                     if ( i.key() == "gctit" )
                         mPtr.push_back(toPtr(GrandCanonicalTitration<Tspace>(e, s, val)));
                     if ( i.key() == "moltransrot" )

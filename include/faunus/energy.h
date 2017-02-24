@@ -55,12 +55,15 @@ namespace Faunus
         string jsondir; // inputmap section
         char w; //!< Width of info output
         Tspace *spc;
+	typename Tspace::GeometryType* geo;
         virtual std::string
         _info()=0;
 
         /** @brief Determines if given particle vector is the trial vector */
         template<class Tpvec>
         bool isTrial( const Tpvec &p ) const { return (&p == &spc->trial); }
+        
+        bool isGeometryTrial(typename Tspace::GeometryType &g) const { return (&g==&spc->geo_trial); }
 
     public:
         typedef Tspace SpaceType;
@@ -72,20 +75,35 @@ namespace Faunus
 
         virtual ~Energybase() {}
 
-        Energybase( const string &dir = "" ) : jsondir(dir), w(25), spc(nullptr)
+        Energybase( const string &dir = "" ) : jsondir(dir), w(25), spc(nullptr), geo()
         {
             if ( jsondir.empty())
                 jsondir = "energy";
         }
 
-        virtual void setSpace( Tspace &s ) { spc = &s; }
+        virtual void setSpace( Tspace &s )
+	{ 
+	  spc = &s;
+	  setGeometry(s.geo);
+	}
 
         virtual Tspace &getSpace()
         {
             assert(spc != nullptr);
             return *spc;
         }
-
+        
+        virtual void setGeometry(typename Tspace::GeometryType &g)
+	{ 
+	  geo=&g; 
+	}
+	  
+        virtual typename Tspace::GeometryType& getGeometry() 
+	{
+	  assert(geo!=nullptr);
+          return *geo;
+        }
+        
         virtual double p2p( const Tparticle &, const Tparticle & ) // Particle-particle energy
         { return 0; }
 

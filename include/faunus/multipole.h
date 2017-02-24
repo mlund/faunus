@@ -301,9 +301,9 @@ namespace Faunus {
   /**
    * @brief Returns ion-quadrupole interaction
    * @param qA Charge of particle A
-   * @param quadB Quadrupole moment of particle B (not traceless)
+   * @param quadB Quadrupole moment of particle B
    * @param qB Charge of particle B
-   * @param quadA Quadrupole moment of particle A (not traceless)
+   * @param quadA Quadrupole moment of particle A
    * @param r Direction \f$ r_A - r_B \f$
    */
   template<class Tvec, class Tmat>
@@ -954,11 +954,13 @@ namespace Faunus {
               string _brief() { return "Dipole-dipole (RF)"; }
               double rc2,eps,eps_rf,eps_r;
             public:
-              DipoleDipoleRF(InputMap &in) : DipoleDipole(in) {
+              DipoleDipoleRF(Tmjson &in) : DipoleDipole(in) {
                 name+=" Reaction Field";
-                rc2 = pow(in.get<double>("dipdip_cutoff",pc::infty), 2);
-                eps_rf = in.get<double>("epsilon_rf",80.);
-                eps_r = in.get<double>("epsilon_r",1.);
+		
+                rc2 = pow(in["cutoff"] | pc::infty, 2);
+                eps_rf = in["eps_rf"] | 80.0;
+                eps_r = in["epsr"] | 1.0;
+		
                 updateDiel(eps_rf);
               }
               template<class Tparticle>

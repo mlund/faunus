@@ -143,12 +143,12 @@ namespace Faunus
                 for ( size_t i = 0; i < p.size(); i++ )
                 {
                     Point E = field.col(i);                  // field on i
-                    Point mu_trial = p[i].alpha * E + p[i].mup;// new tot. dipole
-                    Point mu_err = mu_trial - p[i].mu * p[i].muscalar;// mu difference
+                    Point mu_trial = p[i].alpha * E + p[i].mup();// new tot. dipole
+                    Point mu_err = mu_trial - p[i].mu() * p[i].muscalar();// mu difference
                     mu_err_norm[i] = mu_err.norm();          // norm of previous row
-                    p[i].muscalar = mu_trial.norm();         // update dip scalar in particle
-                    if ( p[i].muscalar > 1e-6 )
-                        p[i].mu = mu_trial / p[i].muscalar;      // update article dip.
+                    p[i].setMuscalar(mu_trial.norm());         // update dip scalar in particle
+                    if ( p[i].muscalar() > 1e-6 )
+                        p[i].setMu(mu_trial / p[i].muscalar());      // update article dip.
                 }
                 if ( cnt > max_iter )
                     throw std::runtime_error("Field induction reached maximum number of iterations.");

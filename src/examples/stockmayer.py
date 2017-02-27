@@ -30,7 +30,8 @@ d = {
       "energyfile": { "file": "energy.dat", "nstep":20 },
       "pqrfile" :   { "file": "stockmayer.pqr" },
       "statefile" : { "file": "state" },
-      "KirkwoodFactor" : { "nstep":20, "pairs" :
+      "multipoleanalysis" : { "nstep":20, "cutoff":9, "diel_RF":True },
+      "kirkwoodfactor" : { "nstep":20, "pairs" :
             [
                { "name1":"dip", "name2":"dip", "dim":3, "dr":0.1, "file":"kwfactor_dipdip.dat"}
             ]

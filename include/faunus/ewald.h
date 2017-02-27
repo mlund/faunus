@@ -105,14 +105,14 @@ namespace Faunus {
 #ifdef DIPOLEPARTICLE
 	    double T1 = T1_tabulator.eval(table_T1,r1)/r1/r2;
             if(useIonDipole) {
-              E += a.charge*r.dot(b.mu)*b.muscalar*T1;
-              E -= b.charge*r.dot(a.mu)*a.muscalar*T1;
+              E += a.charge*r.dot(b.mu())*b.muscalar()*T1;
+              E -= b.charge*r.dot(a.mu())*a.muscalar()*T1;
             }
 
             if(useDipoleDipole) {
-              double t3 = -b.mu.dot(a.mu)*T1;
-              double t5 = b.mu.dot(r)*a.mu.dot(r)*T2_tabulator.eval(table_T2,r1)/r2/r2/r1;
-              E += -(t5 + t3)*b.muscalar*a.muscalar;
+              double t3 = -b.mu().dot(a.mu())*T1;
+              double t5 = b.mu().dot(r)*a.mu().dot(r)*T2_tabulator.eval(table_T2,r1)/r2/r2/r1;
+              E += -(t5 + t3)*b.muscalar()*a.muscalar();
             }
 #endif
             return E*Tbase::bjerrumLength();
@@ -236,7 +236,7 @@ namespace Faunus {
                   Eq += p[i].charge * p[i].charge;
 #ifdef DIPOLEPARTICLE
                 if (useIonDipole || useDipoleDipole)
-                  Emu += p[i].muscalar * p[i].muscalar;
+                  Emu += p[i].muscalar() * p[i].muscalar();
 #endif
               }
               return (-parameters_in.alpha*( Eq + parameters_in.alpha2*(2.0/3.0)*Emu ) / sqrt(pc::pi))*lB;
@@ -258,7 +258,7 @@ namespace Faunus {
                   qrs = qrs + p[i].charge*p[i];
 #ifdef DIPOLEPARTICLE
                 if (useIonDipole || useDipoleDipole)
-                  mus = mus + p[i].mu*p[i].muscalar;
+                  mus = mus + p[i].mu()*p[i].muscalar();
 #endif
               }
               
@@ -369,11 +369,11 @@ namespace Faunus {
 		}
 #ifdef DIPOLEPARTICLE 
                 if(useDipoleDipole && !isotropic_pbc) {
-                  Q_temp_dip += kv.dot(p[i].mu) * p[i].muscalar * complex<double>(-sin(dot),cos(dot));
+                  Q_temp_dip += kv.dot(p[i].mu()) * p[i].muscalar() * complex<double>(-sin(dot),cos(dot));
 		} else if(useDipoleDipole && isotropic_pbc) {
-		  Q_temp_dip += sin(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu.x()*kv.x()*spc->p[i].muscalar;
-		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu.y()*kv.y()*spc->p[i].muscalar;
-		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu.z()*kv.z()*spc->p[i].muscalar;
+		  Q_temp_dip += sin(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().x()*kv.x()*spc->p[i].muscalar();
+		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().y()*kv.y()*spc->p[i].muscalar();
+		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu().z()*kv.z()*spc->p[i].muscalar();
 		}
 #endif
               }
@@ -598,17 +598,17 @@ namespace Faunus {
 		  }
 #ifdef DIPOLEPARTICLE
                   if ( ( useDipoleDipole || useIonDipole ) && !isotropic_pbc ) {
-                    Q2_dip += kVectors_trial.col(k).dot(spc->trial[i].mu) * spc->trial[i].muscalar * complex<double>(-sin(dotTrial),cos(dotTrial));
-                    Q2_dip -= kVectors.col(k).dot(spc->p[i].mu) * spc->p[i].muscalar * complex<double>(-sin(dot),cos(dot));
+                    Q2_dip += kVectors_trial.col(k).dot(spc->trial[i].mu()) * spc->trial[i].muscalar() * complex<double>(-sin(dotTrial),cos(dotTrial));
+                    Q2_dip -= kVectors.col(k).dot(spc->p[i].mu()) * spc->p[i].muscalar() * complex<double>(-sin(dot),cos(dot));
                   } else if ( ( useDipoleDipole || useIonDipole ) && isotropic_pbc ) {
 		    Point kv = kVectors_trial.col(k);
-		    Q2_dip += sin(spc->trial[i].x()*kv.x())*cos(spc->trial[i].y()*kv.y())*cos(spc->trial[i].z()*kv.z())*spc->trial[i].mu.x()*kv.x()*spc->trial[i].muscalar;
-		    Q2_dip += cos(spc->trial[i].x()*kv.x())*sin(spc->trial[i].y()*kv.y())*cos(spc->trial[i].z()*kv.z())*spc->trial[i].mu.y()*kv.y()*spc->trial[i].muscalar;
-		    Q2_dip += cos(spc->trial[i].x()*kv.x())*cos(spc->trial[i].y()*kv.y())*sin(spc->trial[i].z()*kv.z())*spc->trial[i].mu.z()*kv.z()*spc->trial[i].muscalar;
+		    Q2_dip += sin(spc->trial[i].x()*kv.x())*cos(spc->trial[i].y()*kv.y())*cos(spc->trial[i].z()*kv.z())*spc->trial[i].mu().x()*kv.x()*spc->trial[i].muscalar();
+		    Q2_dip += cos(spc->trial[i].x()*kv.x())*sin(spc->trial[i].y()*kv.y())*cos(spc->trial[i].z()*kv.z())*spc->trial[i].mu().y()*kv.y()*spc->trial[i].muscalar();
+		    Q2_dip += cos(spc->trial[i].x()*kv.x())*cos(spc->trial[i].y()*kv.y())*sin(spc->trial[i].z()*kv.z())*spc->trial[i].mu().z()*kv.z()*spc->trial[i].muscalar();
 		    kv = kVectors.col(k);
-		    Q2_dip -= sin(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu.x()*kv.x()*spc->p[i].muscalar;
-		    Q2_dip -= cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu.y()*kv.y()*spc->p[i].muscalar;
-		    Q2_dip -= cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu.z()*kv.z()*spc->p[i].muscalar;
+		    Q2_dip -= sin(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().x()*kv.x()*spc->p[i].muscalar();
+		    Q2_dip -= cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().y()*kv.y()*spc->p[i].muscalar();
+		    Q2_dip -= cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu().z()*kv.z()*spc->p[i].muscalar();
                   }
 #endif
                 }

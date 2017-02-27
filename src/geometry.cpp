@@ -61,6 +61,17 @@ namespace Faunus
         return _getVolume(dim);
     }
 
+    double Geometrybase::_getRadius() const
+    {
+      throw std::runtime_error(name + " error: radius undefined.");
+      return 0;
+    }
+    
+    double Geometrybase::getRadius() const
+    {
+      return _getRadius();
+    }
+
     Sphere::Sphere( double radius ) : Geometrybase("Sphere")
     {
         len = Point(r, diameter, 0);
@@ -175,7 +186,7 @@ namespace Faunus
       len = Point(r,diameter,0);
     }
     
-    double SphereSurface::getRadius() {
+    double SphereSurface::_getRadius() const {
       return r;
     }
 

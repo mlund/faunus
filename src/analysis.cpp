@@ -176,7 +176,7 @@ namespace Faunus
         for (auto &d : datavec)
             d.hist.save( d.file );
     }
-    
+
     void CombinedAnalysis::sample()
     {
         cnt++;

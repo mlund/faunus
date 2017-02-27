@@ -852,7 +852,7 @@ namespace Faunus {
                */
               template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                  return _lB*q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
+                  return _lB*q2mu(a.charge*b.muscalar(),b.mu(),b.charge*a.muscalar(),a.mu(),r);
                 }
 
               string info(char w) { return _brief(); }
@@ -884,7 +884,7 @@ namespace Faunus {
               }
               template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                  return _lB*mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r);
+                  return _lB*mu2mu(a.mu(), b.mu(), a.muscalar()*b.muscalar(), r);
                 }
 
               /** @brief Dipole field at `r` due to dipole `p` 
@@ -893,7 +893,7 @@ namespace Faunus {
                 Point field(const Tparticle &p, const Point &r) const {
                   double r2i = 1.0/r.squaredNorm();
                   double r1i = sqrt(r2i);
-                  return ((3.0*p.mu.dot(r)*r*r2i - p.mu)*r2i*r1i)*p.muscalar*_lB;
+                  return ((3.0*p.mu().dot(r)*r*r2i - p.mu())*r2i*r1i)*p.muscalar()*_lB;
                 }
 
               /**
@@ -902,7 +902,7 @@ namespace Faunus {
                */
               template<class Tparticle>
                 double fieldEnergy(const Tparticle &p, const Point &E) {
-                  return -p.muscalar*p.mu.dot(E);
+                  return -p.muscalar()*p.mu().dot(E);
                 }
 
               string info(char w) {
@@ -966,7 +966,7 @@ namespace Faunus {
               template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                   if (r.squaredNorm() < rc2)
-                    return (DipoleDipole::operator()(a,b,r) - eps*a.mu.dot(b.mu)*a.muscalar*b.muscalar);
+                    return (DipoleDipole::operator()(a,b,r) - eps*a.mu().dot(b.mu())*a.muscalar()*b.muscalar());
                   return 0;
                 }
                 
@@ -975,7 +975,7 @@ namespace Faunus {
                */
               template<class Tparticle>
                 Point field(const Tparticle &p, const Point &r) const {
-                  return (DipoleDipole::field(p,r) + eps*p.mu*p.muscalar);
+                  return (DipoleDipole::field(p,r) + eps*p.mu()*p.muscalar());
                 }
 
               void updateDiel(double er) {
@@ -1022,14 +1022,14 @@ namespace Faunus {
                     if (wolf.getR2i() < wolf.getRc2i())
                       return 0;
                     if(useIonIon == true) U_total += wolf.q2q<true>(a.charge,b.charge,r);
-                    if(useIonDipole == true) U_total += wolf.q2mu<true>(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
-                    if(useDipoleDipole == true) U_total += wolf.mu2mu<true>(a.mu,b.mu, a.muscalar*b.muscalar, r);
+                    if(useIonDipole == true) U_total += wolf.q2mu<true>(a.charge*b.muscalar(),b.mu(),b.charge*a.muscalar(),a.mu(),r);
+                    if(useDipoleDipole == true) U_total += wolf.mu2mu<true>(a.mu(),b.mu(), a.muscalar()*b.muscalar(), r);
                     if(useIonQuadrupole == true) U_total += wolf.q2quad<true>(a.charge, b.theta,b.charge, a.theta,r);
                     return _lB*U_total;
                   }
                   if(useIonIon == true) U_total += wolf.q2q(a.charge,b.charge,r);
-                  if(useIonDipole == true) U_total += wolf.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
-                  if(useDipoleDipole == true) U_total += wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
+                  if(useIonDipole == true) U_total += wolf.q2mu(a.charge*b.muscalar(),b.mu(),b.charge*a.muscalar(),a.mu(),r);
+                  if(useDipoleDipole == true) U_total += wolf.mu2mu(a.mu(),b.mu(), a.muscalar()*b.muscalar(), r);
                   if(useIonQuadrupole == true) U_total += wolf.q2quad(a.charge, b.theta,b.charge, a.theta,r);
                   return _lB*U_total;
                 }
@@ -1099,91 +1099,6 @@ namespace Faunus {
                 return o.str();
               }
           };
-
-          class IonDipoleWolf : public IonDipole {
-            private:
-              string _brief() { return "Ion-dipole Wolf"; }
-              WolfBase wolf;
-            public:
-              IonDipoleWolf(InputMap &in) : IonDipole(in),
-              wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
-                  in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
-                name+=" Wolf";
-              }
-
-              template<class Tparticle>
-                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                  return _lB*wolf.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,r);
-                }
-
-              string info(char w) {
-                using namespace textio;
-                std::ostringstream o;
-                o << IonDipole::info(w)
-                  << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-                  << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-                return o.str();
-              }
-          };
-          
-          class DipoleDipoleWolf : public DipoleDipole {
-            private:
-              string _brief() { return "Dipole-dipole Wolf"; }
-              WolfBase wolf;
-            public:
-              DipoleDipoleWolf(InputMap &in) : DipoleDipole(in),
-              wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
-                  in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
-                name+=" Wolf";
-              }
-
-              template<class Tparticle>
-                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                  return _lB*wolf.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar, r);
-                }
-
-              /** @brief Dipole field at `r` due to dipole `p` 
-               */
-              template<class Tparticle>
-                Point field(const Tparticle &p, const Point &r) const {
-                  return _lB*wolf.fieldDipole(p,r);
-                }
-
-              string info(char w) {
-                using namespace textio;
-                std::ostringstream o;
-                o << DipoleDipole::info(w)
-                  << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-                  << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-                return o.str();
-              }
-          };
-          
-          class IonQuadWolf : public IonQuad {
-            private:
-              string _brief() { return "Ion-Quadrupole Wolf"; }
-              WolfBase wolf;
-            public:
-              IonQuadWolf(InputMap &in) : IonQuad(in),
-              wolf(in.get<double>("kappa", 0.0, "Kappa-damping"),
-                  in.get<double>("wolf_cutoff",in.get<double>("cuboid_len",pc::infty)/2)) {
-                name+=" Wolf";
-              }
-
-              template<class Tparticle>
-                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                  return _lB*wolf.q2quad(a.charge, b.theta,b.charge, a.theta,r);
-                }
-
-              string info(char w) {
-                using namespace textio;
-                std::ostringstream o;
-                o << IonQuad::info(w)
-                  << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-                  << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-                return o.str();
-              }
-          };
           
           class IonIonGaussianDamping : public Coulomb {
             private:
@@ -1214,7 +1129,7 @@ namespace Faunus {
 
               template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
-                  return _lB*gdb.q2mu(a.charge*b.muscalar,b.mu,b.charge*a.muscalar,a.mu,a.id,b.id,r);
+                  return _lB*gdb.q2mu(a.charge*b.muscalar(),b.mu(),b.charge*a.muscalar(),a.mu(),a.id,b.id,r);
                 }
           };
           
@@ -1228,7 +1143,7 @@ namespace Faunus {
 
               template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
-                  return _lB*gdb.mu2mu(a.mu,b.mu, a.muscalar*b.muscalar,a.id,b.id,r);
+                  return _lB*gdb.mu2mu(a.mu(),b.mu(), a.muscalar()*b.muscalar(),a.id,b.id,r);
                 }
                 
               template<class Tparticle>

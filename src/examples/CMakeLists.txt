@@ -12,9 +12,7 @@ endif ()
 
 #----- add examples to build process -----
 fau_example(unittests "./" unittests.cpp)
-add_test(unittests ${CMAKE_BINARY_DIR}/src/examples/unittests
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-set_target_properties(unittests PROPERTIES EXCLUDE_FROM_ALL false)
+add_test(NAME unittests COMMAND unittests WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 fau_example(example_minimal "./" minimal.cpp)
 set_target_properties(example_minimal PROPERTIES OUTPUT_NAME "minimal")

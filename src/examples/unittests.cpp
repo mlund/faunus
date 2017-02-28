@@ -123,6 +123,7 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
 
   CHECK( pc::T() == 298 );
   CHECK( spc.p.size() == 2 );
+
   CHECK( mv.move(1) == Approx(-5.695030454893824) ); // check energy change
   CHECK( spc.p[1].muscalar() == Approx(0.1625) ); // check induced moment
 }
@@ -177,7 +178,6 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
   CHECK(usurf_reci == Approx(0.582251578315622*lB)); // reciprocal energy in addition to surface energy
   CHECK(uself == Approx(-0.538268271364301*lB));
   CHECK(Energy::systemEnergy(spc,pot,spc.p) == Approx(-2.0003749*lB));  // Total dipole-dipole interaction energy
-  
 }
 
 TEST_CASE("Groups", "Check group range and size properties")

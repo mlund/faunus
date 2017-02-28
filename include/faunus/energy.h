@@ -2084,25 +2084,26 @@ namespace Faunus
 
 #ifdef ENABLE_MPI
         ReactionCoordinateBase(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec)
-: mpiPtr(&mpi) {
-spc = &s;
-auto m = j["energy"]["penalty"][sec];
-_f = m["f0"] | 0.5;
-_scale = m["scale"] | 0.8;
-_update = m["update"] | 1e5;
-for (int i=0; i!=2; ++i) {
-string num = std::to_string(i+1);
-_bw.push_back(m["bw"+num] | 1.);
-_lo.push_back(m["lo"+num] | 0.);
-_hi.push_back(m["hi"+num] | 0.);
-_size.push_back((_hi[i]-_lo[i])/_bw[i]+1.);
-}
-penalty.reInitializer(_bw,_lo,_hi);
-histo.reInitializer(_bw,_lo,_hi);
-_cnt = 0;
-_du = 0;
-_samplings = 1;
-}
+            : mpiPtr(&mpi)
+        {
+            spc = &s;
+            auto m = j["energy"]["penalty"][sec];
+            _f = m["f0"] | 0.5;
+            _scale = m["scale"] | 0.8;
+            _update = m["update"] | 1e5;
+            for (int i=0; i!=2; ++i) {
+                string num = std::to_string(i+1);
+                _bw.push_back(m["bw"+num] | 1.);
+                _lo.push_back(m["lo"+num] | 0.);
+                _hi.push_back(m["hi"+num] | 0.);
+                _size.push_back((_hi[i]-_lo[i])/_bw[i]+1.);
+            }
+            penalty.reInitializer(_bw,_lo,_hi);
+            histo.reInitializer(_bw,_lo,_hi);
+            _cnt = 0;
+            _du = 0;
+            _samplings = 1;
+        }
 #endif
 
         vector<Group *> PenalizedGroup( Tmjson &j, const string &sec, const string &mol )

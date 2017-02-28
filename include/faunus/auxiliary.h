@@ -471,6 +471,71 @@ namespace Faunus
       };
 
   /**
+   * @brief Round and bin numbers for use with tables and histograms
+   *
+   * This will round a float to nearest value divisible by `dx` or
+   * convert to an integer corresponding to a binning value. In the
+   * latter case, a minimum value must be specified upon construction.
+   *
+   * Example:
+   *
+   * ~~~{.cpp}
+   * Quantize<double> Q(0.5, -0.5);
+   * Q = 0.61;
+   * double x = Q;      // --> 0.5
+   * int bin = Q;       // --> 2 
+   * bin = Q(-0.5);     // --> 0
+   * x = Q.frombin(2);  // --> 0.5
+   *
+   * std::vector<bool> v;
+   * v[ Q(0.61) ] = false; // 2nd element set to false
+   * ~~~
+   *
+   */
+  template<class Tfloat=double>
+      class Quantize {
+          private:
+              Tfloat xmin, dx, x;
+          public:
+              /**
+               * @brief Constructor
+               * @param dx resolution
+               * @param xmin minimum value if converting to integral type (binning)
+               */
+              Quantize(Tfloat dx, Tfloat xmin=0) : xmin(xmin), dx(dx) {}
+
+              /** @brief Assigment operator */
+              Quantize& operator=(Tfloat val) {
+                  assert( val>=xmin );
+                  if (val >= 0)
+                      x = int(val / dx + 0.5) * dx;
+                  else
+                      x = int(val / dx - 0.5) * dx;
+                  assert(x>=xmin);
+                  return *this;
+              }
+
+              Quantize& frombin(unsigned int i) {
+                  x = i*dx + xmin;
+                  return *this;
+              }
+
+              /** @brief Assignment with function operator */
+              Quantize& operator()(Tfloat val) {
+                  *this = val;
+                  return *this;
+              }
+
+              /** @brief Implicit convertion to integral (bin) or float (rounded) */
+              template<typename T> operator T()
+              {
+                  if (std::is_integral<T>::value)
+                      return T( (x-xmin) / dx + 0.5);
+                  return x;
+              }
+      };
+
+  /**
    * @brief Use xy data from disk as function object
    *
    * This is a very basic structure to store xy data

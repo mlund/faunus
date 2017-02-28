@@ -40,6 +40,14 @@ Optional:
 
 Developed and tested on Linux and MacOS X.
 
+Getting the Source Code
+=======================
+
+Download the [latest release](https://github.com/mlund/faunus/releases/latest) or, if you're feeling adventurous, clone the development version directly from github,
+
+    git clone https://github.com/mlund/faunus.git
+    cd faunus
+
 Compiling
 =========
 

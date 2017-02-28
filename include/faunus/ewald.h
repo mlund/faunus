@@ -102,7 +102,6 @@ namespace Faunus {
             if(!useIonDipole && !useDipoleDipole)
               return E*Tbase::bjerrumLength();
 	    
-#ifdef DIPOLEPARTICLE
 	    double T1 = T1_tabulator.eval(table_T1,r1)/r1/r2;
             if(useIonDipole) {
               E += a.charge*r.dot(b.mu())*b.muscalar()*T1;
@@ -114,7 +113,6 @@ namespace Faunus {
               double t5 = b.mu().dot(r)*a.mu().dot(r)*T2_tabulator.eval(table_T2,r1)/r2/r2/r1;
               E += -(t5 + t3)*b.muscalar()*a.muscalar();
             }
-#endif
             return E*Tbase::bjerrumLength();
           }
       };
@@ -234,10 +232,8 @@ namespace Faunus {
               for (auto i : g) {
                 if (useIonIon || useIonDipole)
                   Eq += p[i].charge * p[i].charge;
-#ifdef DIPOLEPARTICLE
                 if (useIonDipole || useDipoleDipole)
                   Emu += p[i].muscalar() * p[i].muscalar();
-#endif
               }
               return (-parameters_in.alpha*( Eq + parameters_in.alpha2*(2.0/3.0)*Emu ) / sqrt(pc::pi))*lB;
             }
@@ -256,10 +252,8 @@ namespace Faunus {
               for (auto i : g) {  
                 if (useIonIon || useIonDipole)
                   qrs = qrs + p[i].charge*p[i];
-#ifdef DIPOLEPARTICLE
                 if (useIonDipole || useDipoleDipole)
                   mus = mus + p[i].mu()*p[i].muscalar();
-#endif
               }
               
               return const_inf * (2*pc::pi/(( 2*eps_surf + 1)*V_in))*( qrs.dot(qrs) + 2*qrs.dot(mus) +  mus.dot(mus) )*lB;
@@ -367,7 +361,6 @@ namespace Faunus {
 		} else if( ( useIonIon || useIonDipole ) && isotropic_pbc ) {
 		  Q_temp_ion += p[i].charge*std::cos(kv.x()*p[i].x())*std::cos(kv.y()*p[i].y())*std::cos(kv.z()*p[i].z()); 
 		}
-#ifdef DIPOLEPARTICLE 
                 if(useDipoleDipole && !isotropic_pbc) {
                   Q_temp_dip += kv.dot(p[i].mu()) * p[i].muscalar() * complex<double>(-sin(dot),cos(dot));
 		} else if(useDipoleDipole && isotropic_pbc) {
@@ -375,7 +368,6 @@ namespace Faunus {
 		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().y()*kv.y()*spc->p[i].muscalar();
 		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu().z()*kv.z()*spc->p[i].muscalar();
 		}
-#endif
               }
               Q_ion_tot_in.at(k) = Q_temp_ion;
               Q_dip_tot_in.at(k) = Q_temp_dip;
@@ -596,7 +588,6 @@ namespace Faunus {
 		    kv = kVectors.col(k);
 		    Q2_ion -= spc->p[i].charge*std::cos(kv.x()*spc->p[i].x())*std::cos(kv.y()*spc->p[i].y())*std::cos(kv.z()*spc->p[i].z()); 
 		  }
-#ifdef DIPOLEPARTICLE
                   if ( ( useDipoleDipole || useIonDipole ) && !isotropic_pbc ) {
                     Q2_dip += kVectors_trial.col(k).dot(spc->trial[i].mu()) * spc->trial[i].muscalar() * complex<double>(-sin(dotTrial),cos(dotTrial));
                     Q2_dip -= kVectors.col(k).dot(spc->p[i].mu()) * spc->p[i].muscalar() * complex<double>(-sin(dot),cos(dot));
@@ -610,7 +601,6 @@ namespace Faunus {
 		    Q2_dip -= cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().y()*kv.y()*spc->p[i].muscalar();
 		    Q2_dip -= cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu().z()*kv.z()*spc->p[i].muscalar();
                   }
-#endif
                 }
               }
               Q_ion_tot_trial.at(k) = Q2_ion;

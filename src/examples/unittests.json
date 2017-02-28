@@ -24,14 +24,15 @@
     }
   },
 
-  "moves" : {
-    "atomtranslate" : {
-      "multipoles" : { "peratom":false }
-    }
-  },
+    "moves" : {
+        "atomtranslate" : {
+            "pol_threshold":0.0011, "max_iterations":39,
+            "multipoles" : { "peratom":false }
+        }
+    },
 
   "system" : {
-    "temperature" : 298,
+    "temperature" : 298.0,
     "geometry" : { "length": 10.0 }
   }
 }

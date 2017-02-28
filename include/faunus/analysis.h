@@ -625,10 +625,10 @@ namespace Faunus
                         DipoleParticle m;
                         m = g.cm;
                         m.charge = netCharge(spc.p, g);            // monopole
-                        m.setMu(Geometry::dipoleMoment(spc, g)); // dipole
-                        m.setMuscalar(m.mu().norm());
+                        m.mu() = Geometry::dipoleMoment(spc, g); // dipole
+                        m.muscalar() = m.mu().norm();
                         if ( m.muscalar() > 1e-8 )
-                            m.setMu(m.mu() * (1.0/ m.muscalar()));
+                            m.mu() = m.mu() / m.muscalar();
                         m.theta = quadrupoleMoment(spc, g);    // quadrupole
                         return m;
                     }

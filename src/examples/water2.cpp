@@ -1,5 +1,6 @@
 #include <faunus/faunus.h>
 #include <faunus/ewald.h>
+//#define EWALD
 
 using namespace Faunus;
 using namespace Faunus::Potential;
@@ -16,11 +17,11 @@ int main() {
   cout << textio::splash();      // show faunus banner and credits
   Tmjson mcp = openjson("water2.json");// read input file
   Tspace spc(mcp);
-
+  
   // Energy functions and space
 #ifdef EWALD
-  auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp)
-    + Energy::ExternalPressure<Tspace>(mcp);
+  auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp);
+   // + Energy::ExternalPressure<Tspace>(mcp);
 #else
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
@@ -33,7 +34,7 @@ int main() {
   Move::Propagator<Tspace> mv( mcp, pot, spc );
 
   cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
-
+  
   MCLoop loop(mcp);    // class for handling mc loops
   while ( loop[0] ) {          // Markov chain 
     while ( loop[1] ) {
@@ -67,7 +68,7 @@ int main() {
  ~~~~~~~~~~~~~~~~~~~
  $ make example_water2
  $ cd src/examples
- $ ./water2.run
+ $ ./water2.py
  ~~~~~~~~~~~~~~~~~~~
 
  ![Water](water.png)

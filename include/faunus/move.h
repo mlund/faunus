@@ -146,9 +146,9 @@ namespace Faunus
                     Point mu_trial = p[i].alpha * E + p[i].mup();// new tot. dipole
                     Point mu_err = mu_trial - p[i].mu() * p[i].muscalar();// mu difference
                     mu_err_norm[i] = mu_err.norm();          // norm of previous row
-                    p[i].setMuscalar(mu_trial.norm());         // update dip scalar in particle
+                    p[i].muscalar() = mu_trial.norm();         // update dip scalar in particle
                     if ( p[i].muscalar() > 1e-6 )
-                        p[i].setMu(mu_trial / p[i].muscalar());      // update article dip.
+                        p[i].mu() = mu_trial / p[i].muscalar();      // update article dip.
                 }
                 if ( cnt > max_iter )
                     throw std::runtime_error("Field induction reached maximum number of iterations.");
@@ -215,6 +215,10 @@ namespace Faunus
         }
 
     public:
+
+        double getThreshold() const { return threshold; }
+        int getMaxIterations() const { return max_iter; }
+
         template<class Tspace>
         PolarizeMove( Tmjson &in, Energy::Energybase<Tspace> &e, Tspace &s ) :
             Tmove(in, e, s)
@@ -227,11 +231,11 @@ namespace Faunus
         PolarizeMove( Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) :
             Tmove(e, s, j)
         {
-            threshold = j["pol_threshold"] | 0.001;
-            max_iter = j["max_iterations"] | 40;
+            threshold = j.value("pol_threshold", 0.001);
+            max_iter = j.value("max_iterations", 40);
         }
 
-        PolarizeMove( const Tmove &m ) : max_iter(40), threshold(0.001), Tmove(m) {};
+        //PolarizeMove( const Tmove &m ) : max_iter(40), threshold(0.001), Tmove(m) {};
 
         double move( int n ) override
         {
@@ -335,10 +339,12 @@ namespace Faunus
             for ( auto it = j.begin(); it != j.end(); ++it )
             {  // iterate over molecules
                 auto mol = spc->molList().find(it.key()); // is molecule defined?
-                if ( mol == spc->molList().end())
-                    throw std::runtime_error(title+": molecule '"+it.key()+"' undefined");
-                else
+                if ( mol != spc->molList().end())
                     addMol(mol->id, MolListData(it.value()));
+#ifndef NDEBUG
+                else
+                    std::cerr << title << ": unknown molecule '" << it.key() << "' was not added.\n";
+#endif
             }
         }
 
@@ -1100,7 +1106,7 @@ namespace Faunus
           Tspace &s,
           Tmjson &j) : base(e, s, j) {
         base::title="Single Particle Translation on 2D sphere-surface";
-	//radius = s.geo.getRadius();
+	radius = s.geo.getRadius();
 	assert(radius > 0 && "Radius has to be larger than zero!");
       }
     template<class Tspace>

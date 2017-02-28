@@ -7,6 +7,15 @@
 
 using namespace Faunus;
 
+TEST_CASE( "Test Quantize", "[Quantize]" ) {
+    Quantize<float> Q(0.5, -0.5);
+    Q = 0.61;
+    CHECK( double(Q) == Approx(0.5) );
+    CHECK( int(Q) == 2 );
+    //CHECK( Q.frombin(2) == Approx(0.5) );
+    CHECK( int(Q(-0.5)) == 0 );
+}
+
 /* check tabulator */
 template<typename Ttabulator>
 void checkTabulator(Ttabulator t) {
@@ -22,7 +31,7 @@ void checkTabulator(Ttabulator t) {
   }
 }
 
-TEST_CASE("Spline table", "...")
+TEST_CASE("Spline table", "Spline")
 {
   checkTabulator(Tabulate::Hermite<double>());
   checkTabulator(Tabulate::AndreaIntel<double>());
@@ -38,6 +47,8 @@ TEST_CASE("Spline table", "...")
   atom.include(mcp);
   Potential::Coulomb pot_org( js );
   Potential::PotentialTabulate<Potential::Coulomb> pot_tab( js );
+
+  CHECK( pot_org.bjerrumLength() == Approx(560.455786334) );
 
   double error = fabs( pot_org(a,b,25)-pot_tab(a,b,25) ) ;
   CHECK(error>0);
@@ -98,7 +109,10 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
   InputMap in("unittests.json");
   Tspace spc(in);
   Energy::NonbondedVector<Tspace,Tpair> pot(in);
-  Move::PolarizeMove<Move::AtomicTranslation<Tspace> > mv(pot,spc,in["moves"]["atomtranslate"]);
+  Move::PolarizeMove<Move::AtomicTranslation<Tspace> > mv(pot,spc,in.at("moves").at("atomtranslate"));
+
+  CHECK( mv.getThreshold() == Approx(0.0011) );
+  CHECK( mv.getMaxIterations() == 39 );
 
   auto m = spc.molList().find( "multipoles" );
   spc.insert( m->id, m->getRandomConformation() );
@@ -107,6 +121,7 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
   spc.p[1] = Point(0,0,4);
   spc.trial = spc.p;
 
+  CHECK( pc::T() == 298 );
   CHECK( spc.p.size() == 2 );
   CHECK( mv.move(1) == Approx(-5.695030454893824) ); // check energy change
   CHECK( spc.p[1].muscalar() == Approx(0.1625) ); // check induced moment
@@ -128,7 +143,7 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
   spc.p[3] = Point(1,0,1);
   for(unsigned int i = 0; i < spc.p.size(); i++) {
       spc.p[i].charge = 0.0;
-      spc.p[i].setMuscalar(0.0);
+      spc.p[i].muscalar() = 0.0;
   }
   spc.p[0].charge = 1.0;
   spc.p[1].charge = -1.0;
@@ -148,10 +163,10 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
   
   spc.p[0].charge = 0.0;
   spc.p[1].charge = 0.0;
-  spc.p[2].setMuscalar(1.0);
-  spc.p[3].setMuscalar(1.0);
-  spc.p[2].setMu(Point(1,0,0));
-  spc.p[3].setMu(Point(1,0,0));
+  spc.p[2].muscalar() = 1.0;
+  spc.p[3].muscalar() = 1.0;
+  spc.p[2].mu() = Point(1,0,0);
+  spc.p[3].mu() = Point(1,0,0);
   spc.trial = spc.p;
   pot.setSpace(spc); // Updates vectors in Ewald
   ureal = pot.pairpot(spc.p[2],spc.p[3],spc.p[2]-spc.p[3]);

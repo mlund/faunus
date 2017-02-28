@@ -451,6 +451,9 @@ namespace Faunus
       Talphax alphax;
       Tmw mw;                                   //!< Molecular weight
       Thydrophobic hydrophobic;                 //!< Hydrophobic flag
+      
+      Point zeroP;
+      double zeroD;
 
       PointParticle() { clear(); }              //!< Constructor
 
@@ -468,9 +471,12 @@ namespace Faunus
 
       Tcharge q() const { return charge; }
       
-      Point mu() { return Point(0,0,0); }
-      Point mup() { return Point(0,0,0); }
-      double muscalar() { return 0; }
+      Point mu() const { return zeroP; }
+      Point mup() const { return zeroP; }
+      double muscalar() const { return zeroD; }
+      Point& mu() { return zeroP; }
+      Point& mup() { return zeroP; }
+      double& muscalar() { return zeroD; }
 
       template<class T,
           class = typename std::enable_if<std::is_base_of<AtomData, T>::value>::type>
@@ -531,6 +537,8 @@ namespace Faunus
           charge = mw = radius = alphax = 0;
           hydrophobic = false;
           id = 0;
+	  zeroP = Point(0,0,0);
+	  zeroD = 0.0;
       }
 
   };
@@ -546,17 +554,13 @@ namespace Faunus
       double _muscalar; //!< Dipole moment scalar (permanent+induced)
 
       public:
-      const Point& mu() const { return _mu; } 
-      const Point& mup() const { return _mup; }
-      const double& muscalar() const { return _muscalar; }
+      Point mu() const { return _mu; } 
+      Point mup() const { return _mup; }
+      double muscalar() const { return _muscalar; }
       Point& mu() { return _mu; } 
       Point& mup() { return _mup; }
       double& muscalar() { return _muscalar; }
       
-      void setMu(const Point &mu_in) {_mu = mu_in; } 
-      void setMup(const Point &mup_in) {_mup = mup_in; }
-      void setMuscalar(double muscalar_in) {_muscalar = muscalar_in; }
-    
       Tensor<double> alpha;   //!< Polarization matrix
       Tensor<double> theta;   //!< Quadrupole matrix
 
@@ -622,8 +626,8 @@ namespace Faunus
       void rotate( const Trotator &rot )
       {
           assert(rot.getOrigin().squaredNorm() < 1e-6);
-          setMu(rot(mu()));
-          setMup(rot(mup()));
+          mu() = rot(mu());
+          mup() = rot(mup());
           alpha = rot(alpha);
           theta = rot(theta);
       }

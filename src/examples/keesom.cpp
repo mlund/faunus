@@ -10,8 +10,8 @@ double keesom(double mu, double r) {
 int main() {
   DipoleParticle a;            // create a dipole particle
   a.clear();                   // ...and make sure it is empty 
-  a.setMu(Point(1,0,0));              // initial dipole direction (unit vector)
-  a.setMuscalar(2.2_Debye);      // ...and  magnitude (see also "_eA", "_Cm")
+  a.mu() = Point(1,0,0);              // initial dipole direction (unit vector)
+  a.muscalar() = 2.2_Debye;      // ...and  magnitude (see also "_eA", "_Cm")
   auto b=a;                    // duplicate particle...
   b.x() = 0.9_angstrom;        // ...and separate by 0.9 angstrom
 

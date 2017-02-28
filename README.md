@@ -22,10 +22,6 @@ Detailed information and support:
 - Source code: <http://github.com/mlund/faunus>
 - Code documentation: <https://codedocs.xyz/mlund/faunus>
 
-Get the latest revision from GitHub:
-
-    $ git clone https://github.com/mlund/faunus.git
-
 Requirements
 ============
 

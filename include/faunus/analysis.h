@@ -2031,10 +2031,9 @@ namespace Faunus
                 };
                 std::vector<data> datavec;        // vector of data sets
                 Average<double> V;                // average volume (angstrom^3)
-
+		virtual void normalize(data &);
             private:
                 virtual void update(data &d)=0;   // called on each defined data set
-                void normalize(data &);
                 void _sample() override;
                 Tmjson _json() override;
 
@@ -2092,25 +2091,7 @@ namespace Faunus
                                 d.hist(r)++;
                             }
                 }
-
-                void normalize(data &d)
-                {
-                    assert(V.cnt>0);
-                    double Vr=1, sum = d.hist.sumy();
-                    for (auto &i : d.hist.getMap()) {
-                        if (d.dim==3)
-                            Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
-                        if (d.dim==2) {
-                            Vr = 2 * pc::pi * i.first * d.dr;
-                            if (d.Rhypersphere > 0)
-                                Vr = 2.0*pc::pi*d.Rhypersphere*sin(i.first/d.Rhypersphere) * d.dr;
-                        }
-                        if (d.dim==1)
-                            Vr = d.dr;
-                        i.second = i.second/sum * V/Vr;
-                    }
-                }
-
+                
                 public:
                 AtomRDF( Tmjson j, Tspace &spc ) : PairFunctionBase(j,
                         "Atomic Pair Distribution Function"), spc(spc) {}
@@ -2149,24 +2130,6 @@ namespace Faunus
                     }
                 }
 
-                void normalize(data &d)
-                {
-                    assert(V.cnt>0);
-                    double Vr=1, sum = d.hist.sumy();
-                    for (auto &i : d.hist.getMap()) {
-                        if (d.dim==3)
-                            Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
-                        if (d.dim==2) {
-                            Vr = 2 * pc::pi * i.first * d.dr;
-                            if (d.Rhypersphere > 0)
-                                Vr = 2.0*pc::pi*d.Rhypersphere*sin(i.first/d.Rhypersphere) * d.dr;
-                        }
-                        if (d.dim==1)
-                            Vr = d.dr;
-                        i.second = i.second/sum * V/Vr;
-                    }
-                }
-
                 public:
                 MoleculeRDF( Tmjson j, Tspace &spc ) : PairFunctionBase(j,
                         "Molecular Pair Distribution Function"), spc(spc) {}
@@ -2180,7 +2143,13 @@ namespace Faunus
                 }
             };
 
-        /** @brief Samples the Kirkwood-factor and also some dipole-correlations. */
+        /**
+	 * @brief Samples the Kirkwood-factor and also some dipole-correlations
+	 *
+	 * Keyword  |  Description
+	 * -------- |  ---------------
+	 * `file`
+	 */
         template<class Tspace>
             class KirkwoodFactor : public PairFunctionBase {
                 Tspace &spc;
@@ -2210,7 +2179,7 @@ namespace Faunus
                     d.hist(0) += spc.p[N].mu().dot(spc.p[N].mu()) * spc.p[N].muscalar() * spc.p[N].muscalar();
                 }
 
-                void normalize(data &d)
+                void normalize(data &d) override
                 {
                     double sum = 0;  
                     for (auto &i : d.hist.getMap()) {
@@ -2218,7 +2187,7 @@ namespace Faunus
                         i.second = sum;
                     }
                 }
-
+                
                 public:
                 KirkwoodFactor( Tmjson j, Tspace &spc ) : PairFunctionBase(j,"KirkwoodFactor (and some dipole-correlation)"), spc(spc) {
                     mucorr_angle.setResolution(datavec.back().dr);
@@ -2229,11 +2198,9 @@ namespace Faunus
                 ~KirkwoodFactor()
                 {
                     for (auto &d : datavec) {
-                        normalize(d);
-                        d.hist.save( d.file );
-                        mucorr_angle.save( d.file+"1" );
-                        mucorr.save( d.file+"2" );
-                        mucorr_dist.save( d.file+"3" );
+                        mucorr_angle.save( d.file+".angledist" );
+                        mucorr.save( d.file+".dipolecorr" );
+                        mucorr_dist.save( d.file+".dipoleint" );
                     }
                 }
 
@@ -2305,17 +2272,26 @@ namespace Faunus
                     }
                     groupDipole += (mus_group / double(spc.groupList().size()));
                 }
-
+                
                 public:
                 MultipoleAnalysis( Tmjson j, Tspace &spc ) : AnalysisBase(j,"MultipoleAnalysis"), spc(spc) 
                 {
 		    alpha = j.value("alpha", 0.0);
-		    cutoff = j.value("cutoff", 0.0);
+		    cutoff = j.at("cutoff");
 		    cutoff2 = cutoff*cutoff;
-		    diel_tinfoil = j.value("diel_tinfoil", false);
-		    diel_RF = j.value("diel_RF", false);
-		    diel_wolf = j.value("diel_wolf", false);
-		  
+		    diel_tinfoil = false;
+		    diel_RF = false;
+		    diel_wolf = false;
+		    string d = j.at("dielectric");
+		    if ( d =="tinfoil") {
+		        diel_tinfoil = true;
+		    } else if ( d =="rf") {
+		      diel_RF = true;
+		    } else if ( d =="wolf") {
+		      diel_wolf = true;
+		    } else {
+		      throw std::runtime_error(name + " error: invalid dielectric type");
+		    }
                     const_Diel = pc::e * pc::e * 1e10 / (3 * pc::kT() * pc::e0);
                     atomsize = atom.size();
 		    mu_abs.resize(atomsize-1);

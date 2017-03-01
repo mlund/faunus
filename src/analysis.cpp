@@ -170,6 +170,24 @@ namespace Faunus
         if (datavec.empty())
             std::cerr << name + ": no sample sets defined for analysis\n";
     }
+    
+    void PairFunctionBase::normalize(data &d)
+    {
+	assert(V.cnt>0);
+	double Vr=1, sum = d.hist.sumy();
+	for (auto &i : d.hist.getMap()) {
+	    if (d.dim==3)
+		Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
+	    if (d.dim==2) {
+		Vr = 2 * pc::pi * i.first * d.dr;
+		if (d.Rhypersphere > 0)
+		    Vr = 2.0*pc::pi*d.Rhypersphere*sin(i.first/d.Rhypersphere) * d.dr;
+	    }
+	    if (d.dim==1)
+		Vr = d.dr;
+	    i.second = i.second/sum * V/Vr;
+	}
+    }
 
     PairFunctionBase::~PairFunctionBase()
     {

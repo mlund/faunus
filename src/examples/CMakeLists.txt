@@ -34,7 +34,7 @@ fau_example(example_stockmayer_polarizable "./" stockmayer.cpp)
 set_target_properties(example_stockmayer PROPERTIES OUTPUT_NAME "stockmayer" EXCLUDE_FROM_ALL FALSE)
 set_target_properties(example_stockmayer_polarizable PROPERTIES OUTPUT_NAME "stockmayer_polarizable")
 set_target_properties(example_stockmayer_polarizable PROPERTIES COMPILE_DEFINITIONS "POLARIZE;DIPOLEPARTICLE")
-add_test(example_stockmayer ${CMAKE_CURRENT_SOURCE_DIR}/stockmayer.run)
+add_test(example_stockmayer python ${CMAKE_CURRENT_SOURCE_DIR}/stockmayer.py)
 
 #fau_example(example_titrate "./" titrate.cpp)
 #set_target_properties(example_titrate PROPERTIES OUTPUT_NAME "titrate")
@@ -68,6 +68,9 @@ add_test(example_bulk python ${CMAKE_CURRENT_SOURCE_DIR}/bulk.py)
 fau_example(example_seawater "./" seawater.cpp)
 set_target_properties(example_seawater PROPERTIES OUTPUT_NAME "seawater")
 add_test(example_seawater ${CMAKE_CURRENT_SOURCE_DIR}/seawater.sh)
+
+fau_example(example_spheresurface "./" spheresurface.cpp)
+set_target_properties(example_spheresurface PROPERTIES OUTPUT_NAME "spheresurface")
 
 fau_example(example_twobody "./" twobody.cpp)
 set_target_properties(example_twobody PROPERTIES OUTPUT_NAME "twobody")

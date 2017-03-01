@@ -191,16 +191,16 @@ namespace Faunus {
             << "]}}\n";
 
           for (auto i : sol) { 
-            auto dipx = spc.p[i].mu.x();
-            auto dipy = spc.p[i].mu.y();
-            auto dipz = spc.p[i].mu.z();
+            auto dipx = spc.p[i].mu().x();
+            auto dipy = spc.p[i].mu().y();
+            auto dipz = spc.p[i].mu().z();
             auto r = spc.p[i].radius;
             f << "Transform { translation " << spc.p[i].transpose() << "\n"
               << " children [ DEF par_0 Shape{ appearance Appearance { material\n"
               << " Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}\n"
               << "  geometry Sphere {radius " << r <<"}}]}\n";
 
-            auto size = spc.p[i].mu.norm(); // always unity??
+            auto size = spc.p[i].mu().norm(); // always unity??
             auto cosT = dipy/size;
             auto angle = acos(cosT);
             auto Xdipx = -dipx;

@@ -7,6 +7,8 @@
 
 #endif
 
+#include <faunus/textio.h>
+
 namespace Faunus
 {
   /**
@@ -219,6 +221,79 @@ namespace Faunus
           return o;
       }
   };
+  
+  /**
+   * @brief Creates a number of vectors containing average values. Thus this function takes the mean of the mean.
+   */
+  template<class T=double>
+    class MeanValue {
+      private:
+        int size_of_block, counter;
+        T total_value;
+        vector<T> values;
+        string name;
+      public:
+
+        MeanValue (int size_of_block_in, string name_in="") {
+          name = name_in;
+          size_of_block = size_of_block_in;
+          counter = 0;
+          total_value = 0.0;
+        }
+
+        void operator+=(T input) {
+          total_value += input;
+          counter++;
+          if(counter >= size_of_block) {
+            values.push_back( total_value / T(counter) );
+            total_value = 0.0;
+            counter = 0;
+          }
+        }
+
+        void clear() {
+          size_of_block = 1e9;
+          counter = 0;
+          total_value = 0.0;
+          values.clear();
+          name = "";
+        }
+        
+        int cnt() {
+	  return counter;
+	}
+
+        T avg() {
+          T meanValue = 0.0;
+          for(unsigned int i = 0; i < values.size(); i++)
+            meanValue += values.at(i);
+          meanValue /= T(values.size());
+          return meanValue;
+        }
+
+        T std() {
+          T varValue = 0.0;
+          T meanValue = avg();
+          for(unsigned int i = 0; i < values.size(); i++) {
+            T temp = values.at(i) - meanValue;
+            varValue += temp*temp;
+          }
+          return sqrt(varValue);
+        }
+
+        string info() {
+          using namespace Faunus::textio;
+          std::ostringstream o;
+          o << header("Mean Value " + name);
+          o << indent(SUBSUB) << "Block size " << setw(25) << size_of_block  << "\n";
+          o << indent(SUBSUB) << "Sampled values " << setw(25) << values.size()  << "\n";
+          o << indent(SUBSUB) << "Average value " << setw(25) << avg()  << "\n";
+          o << indent(SUBSUB) << "Standard deviation " << setw(25) << std()  << "\n";
+          o << indent(SUBSUB) << "Unfinished block count" << setw(25) << counter  << "\n";
+          o << indent(SUBSUB) << "Unfinished block average" << setw(25) << total_value/T(counter)  << endl;
+          return o.str();
+        }
+    };
 
   /*!
    * \brief Class to keep track of block correlations

@@ -61,6 +61,17 @@ namespace Faunus
         return _getVolume(dim);
     }
 
+    double Geometrybase::_getRadius() const
+    {
+      throw std::runtime_error(name + " error: radius undefined.");
+      return 0;
+    }
+    
+    double Geometrybase::getRadius() const
+    {
+      return _getRadius();
+    }
+
     Sphere::Sphere( double radius ) : Geometrybase("Sphere")
     {
         len = Point(r, diameter, 0);
@@ -146,7 +157,95 @@ namespace Faunus
     {
         return (a.squaredNorm() > r2) ? true : false;
     }
+    
+    SphereSurface::SphereSurface( double radius ) : Geometrybase("SphereSurface")
+    {
+        len = Point(r, diameter, 0);
+    }
 
+    /**
+     * Key        | Description
+     * :--------- | :-----------------------
+     * `radius`   | Sphere radius [angstrom]
+     */
+    SphereSurface::SphereSurface( Tmjson &j ) : Geometrybase("SphereSurface")
+      {
+          try {
+              setRadius( j.at("radius") );
+          }
+          catch(std::exception& e) {
+              throw std::runtime_error(name + ": " + e.what());
+          }
+      }
+
+    void SphereSurface::setRadius(double radius) {
+      assert(radius>0 && "Radius must be larger than zero.");
+      r = radius; 
+      r2 = r*r; 
+      diameter = 2.0*r; 
+      len = Point(r,diameter,0);
+    }
+    
+    double SphereSurface::_getRadius() const {
+      return r;
+    }
+
+    double SphereSurface::_getVolume(int dim) const {
+        if (dim==1)
+            return 2*pc::pi*r;      // circumference (surface area of a 2-sphere)
+        if (dim==2)
+            return 4.0*pc::pi * r * r;   // surface area (of a 3-sphere)
+        return 2.0 * pc::pi*pc::pi * std::pow(r, 3); // surface area of a 4-sphere 
+    }
+
+    /**
+     * @param vol The surface area of the sphere
+     */
+    void SphereSurface::_setVolume(double vol) {
+      setRadius( cbrt( vol/(2.0*pc::pi*pc::pi) ) );
+    }
+
+    void SphereSurface::setlen(const Point &l) {
+      SphereSurface::setRadius( l.x() );
+      if ( getVolume()<1e-9 )
+        throw std::runtime_error( "Sphere volume is zero." );
+    }
+
+    void SphereSurface::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {
+      assert( getVolume()>0 );
+      double newradius = cbrt( 3*xyz*xyz*xyz*getVolume()/(4*pc::pi) );
+      a = a * (newradius/r);
+    }
+
+    string SphereSurface::_info(char w) {
+      std::ostringstream o;
+      o << pad(SUB, w, "Area") << getVolume(2) << _angstrom << squared
+        << " = " << getVolume(2) / 1e2 << " nm" << squared
+        << " = " << getVolume(2) / 1e18 << " dm" << squared << endl
+        << pad(SUB,w,"Radius") << r << textio::_angstrom << endl;
+      return o.str();
+    }
+
+    void SphereSurface::randompos(Point &a) {
+      do {
+        a.x() = (slump()-0.5)*diameter;
+        a.y() = (slump()-0.5)*diameter;
+        a.z() = (slump()-0.5)*diameter;
+      } while ( a.squaredNorm()>r2 );
+      a = r*a/a.norm();
+    }
+
+    bool SphereSurface::collision(const Point &a, double radius, collisiontype type) const {
+      return (std::fabs( a.squaredNorm() - r2 ) > 1e-6) ? true:false;
+    }
+
+    Cuboid SphereSurface::inscribe() const
+    {
+        Cuboid c;
+        c.setlen({diameter, diameter, diameter});
+        return c;
+    }
+    
     Cuboid Sphere::inscribe() const
     {
         Cuboid c;

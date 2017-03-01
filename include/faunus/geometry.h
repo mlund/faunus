@@ -50,6 +50,7 @@ namespace Faunus
         virtual string _info( char )=0;
         virtual void _setVolume( double )=0;
         virtual double _getVolume(int) const =0;
+	virtual double _getRadius() const;
     protected:
         string name;                                        //!< Name of the geometry
         inline int anint( double x ) const
@@ -60,6 +61,7 @@ namespace Faunus
     public:
         enum collisiontype { BOUNDARY, ZONE };                 //!< Types for collision() function
         double getVolume(int=3) const;                      //!< Get volume of container (A^3, A^2, A)
+        double getRadius() const;                           //!< Get radius of appropriate geometries (A)
         void setVolume( double );                              //!< Specify new volume (A^3)
         double dist( const Point &, const Point & ) const;     //!< Distance between two points (A)
         std::string info( char= 20 );                          //!< Return info string
@@ -84,6 +86,49 @@ namespace Faunus
         Geometrybase( const string& );
 
         virtual ~Geometrybase();
+    };
+    
+    /**
+     * @brief Spherical-surface geometry
+     *
+     * This is a spherical-surface simulation container.
+     */
+    class SphereSurface : public Geometrybase 
+    {
+      private:
+        double r,r2,diameter;
+        void _setVolume(double) override;
+        double _getVolume(int) const override;
+	double _getRadius() const override;                     //!< Get radius (angstrom)
+        string _info(char) override;
+      public:
+        Point len;
+        void setlen(const Point&);              //!< Reset radius (angstrom)
+        void setRadius(double);                 //!< Set radius (angstrom)
+        
+        SphereSurface(double=0);                         //!< Construct from radius (angstrom)
+
+        /** @brief Construct from json object */
+        SphereSurface( Tmjson & );
+
+        void randompos(Point &) override;
+        void boundary(Point &p) const override {};
+        bool collision(const Point&, double, collisiontype=BOUNDARY) const override;
+
+        inline double sqdist(const Point &a, const Point &b) const override {
+	  double r1 = r*std::acos(a.dot(b)/r2);
+	  return r1*r1;
+        }
+
+        /**
+	 * @warning Not true!
+	 */
+        inline Point vdist(const Point &a, const Point &b) override { return a-b; }
+
+        void scale(Point&, Point &, const double, const double) const override; //!< Linear scaling along radius (NPT ensemble)
+
+        Cuboid inscribe() const override;
+        
     };
 
     /**

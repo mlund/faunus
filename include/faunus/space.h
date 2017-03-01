@@ -254,6 +254,7 @@ namespace Faunus
       enum keys { OVERLAP_CHECK, NOOVERLAP_CHECK, RESIZE, NORESIZE };
 
       Tgeometry geo;                         //!< System geometry
+      Tgeometry geo_trial;                   //!< Trial geometry
       ParticleVector p;                      //!< Main particle vector
       ParticleVector trial;                  //!< Trial particle vector.
       MoleculeMap<ParticleVector> molecule;  //!< Map of molecules
@@ -274,6 +275,7 @@ namespace Faunus
       struct Change
       {
           double dV;  // volume change
+          bool geometryChange;
           std::map<int, vector<int>> mvGroup; // move groups
           std::map<int, vector<int>> rmGroup; // remove groups
           std::map<int, ParticleVector> inGroup; // insert groups
@@ -283,6 +285,7 @@ namespace Faunus
           void clear()
           {
               dV = 0;
+	      geometryChange = false;
               mvGroup.clear();
               rmGroup.clear();
               inGroup.clear();
@@ -296,7 +299,8 @@ namespace Faunus
                   if ( rmGroup.empty())
                       if ( inGroup.empty())
                           if ( std::fabs(dV) < 1e-9 )
-                              return true;
+			      if(!geometryChange)
+                                  return true;
               return false;
           }
       };
@@ -317,7 +321,11 @@ namespace Faunus
                       assert(g->find(i));
                       p[i] = trial[i];
                   }
-              g->setMassCenter(*this); // update mass center
+            if(c.geometryChange) {
+	      g.setMassCenter(p,geo_trial); // update mass center
+	    } else {
+	      g.setMassCenter(p,geo); // update mass center
+	    }
           }
           assert(!"incomplete");
       }

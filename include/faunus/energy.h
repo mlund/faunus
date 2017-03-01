@@ -55,12 +55,15 @@ namespace Faunus
         string jsondir; // inputmap section
         char w; //!< Width of info output
         Tspace *spc;
+	typename Tspace::GeometryType* geo;
         virtual std::string
         _info()=0;
 
         /** @brief Determines if given particle vector is the trial vector */
         template<class Tpvec>
         bool isTrial( const Tpvec &p ) const { return (&p == &spc->trial); }
+        
+        bool isGeometryTrial(typename Tspace::GeometryType &g) const { return (&g==&spc->geo_trial); }
 
     public:
         typedef Tspace SpaceType;
@@ -72,20 +75,35 @@ namespace Faunus
 
         virtual ~Energybase() {}
 
-        Energybase( const string &dir = "" ) : jsondir(dir), w(25), spc(nullptr)
+        Energybase( const string &dir = "" ) : jsondir(dir), w(25), spc(nullptr), geo()
         {
             if ( jsondir.empty())
                 jsondir = "energy";
         }
 
-        virtual void setSpace( Tspace &s ) { spc = &s; }
+        virtual void setSpace( Tspace &s )
+	{ 
+	  spc = &s;
+	  setGeometry(s.geo);
+	}
 
         virtual Tspace &getSpace()
         {
             assert(spc != nullptr);
             return *spc;
         }
-
+        
+        virtual void setGeometry(typename Tspace::GeometryType &g)
+	{ 
+	  geo=&g; 
+	}
+	  
+        virtual typename Tspace::GeometryType& getGeometry() 
+	{
+	  assert(geo!=nullptr);
+          return *geo;
+        }
+        
         virtual double p2p( const Tparticle &, const Tparticle & ) // Particle-particle energy
         { return 0; }
 
@@ -2898,54 +2916,55 @@ class SASAEnergy : public Energybase<Tspace> {
                 u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
         return u;
     }
+    
+      /**
+       * @brief Help-funciton to 'energyChange'
+       * @todo Fix such that it works to inserted and removed particles
+       */
+    template<class Tspace, class Tenergy, class Tpvec>
+      double energyChangeConfiguration(Tspace &spc, Tenergy &pot, const Tpvec &p, const typename Tspace::Change &c) {
+	double du = 0.0;
+	auto& g = spc.groupList();
+	du += pot.external(p);
+        for (auto m : c.mvGroup) {
+          size_t i = size_t( m.first );
+          for (size_t j=0; j<g.size(); j++)
+            if ( c.mvGroup.find(j)==c.mvGroup.end() )
+	      du += pot.g2g(p, *g[i], *g[j]); // moved group<->static groups
+	  du += pot.g_external(p, *g[i]);      // moved group <-> external
+          if (g[i]->isAtomic()) {                                             // Check if moved group is atomic 
+            for(auto j : m.second)                                          // For the moved atoms in a group,
+              for(auto k : *g[i])                                           // for every atom in that group,
+                if (std::find (m.second.begin(), m.second.end(), k) == m.second.end() || j > k) // check such that moved atoms does not interact OR moved atoms interact only once
+		  du += pot.i2i(p,j,k);
+          } else {
+	    du += pot.g_internal(p, *g[i]);
+          }
+        }
+        for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); i++) {
+          for (auto j=i; j != c.mvGroup.end(); j++) {
+            auto _i = i->first;
+            auto _j = j->first;
+	    du += pot.g2g(p, *g[_i], *g[_j] ); // moved <-> moved
+          }
+        }
+        return du;
+      }
 
     /**
      * @brief Calculate energy change due to proposed modification defined by `Space::Change`
-     *
-     * @todo Optimize when only subset of group is changes (atom trans. etc.)
      */
     template<class Tspace, class Tenergy>
-    double energyChange( Tspace &s, Tenergy &pot, const typename Tspace::Change &c )
-    {
-        // variables and shortcuts
-        double du = 0;
-        auto &g = s.groupList();
-
-        // moved<->rest
-        for ( auto m : c.mvGroup )
-        {
-            size_t i = size_t(m.first); // group index
-            du += pot.g_external(s.trial, *g[i]) - pot.g_external(s.p, *g[i]);
-            for ( size_t j = 0; j < g.size(); j++ )
-                if ( i != j )
-                    du += pot.g2g(s.trial, *g[i], *g[j]) - pot.g2g(s.p, *g[i], *g[j]);
-        }
-        // moved<->moved
-        for ( auto i = c.mvGroup.begin(); i != c.mvGroup.end(); ++i )
-        {
-            for ( auto j = i; ++j != c.mvGroup.end();/**/)
-            {
-                auto _i = i->first;
-                auto _j = j->first;
-                du += pot.g2g(s.trial, *g[_i], *g[_j]) - pot.g2g(s.p, *g[_i], *g[_j]);
-            }
-        }
-
-        // removed<->rest
-
-        // removed<->removed
-
-        // inserted<->inserted
-
-        // inserted<->rest
-
-        // external potential
-        du += pot.external(s.trial) - pot.external(s.p);
-
-        assert(!"to be completed!");
-
-        return du;
-    }
+      double energyChange(Tspace &s, Tenergy &pot, const typename Tspace::Change &c) {
+	pot.setChange(c);
+	if(c.geometryChange)
+	  pot.setGeometry(s.geo_trial);
+	double duNew = energyChangeConfiguration(s,pot,s.trial,c);
+	if(c.geometryChange)
+	  pot.setGeometry(s.geo);
+	double duOld = energyChangeConfiguration(s,pot,s.p,c);
+	return (duNew - duOld);
+      }
 
 /* typedefs */
 

@@ -31,6 +31,7 @@ namespace Faunus
           kB,                  //!< Boltzmann's constant [J/K]
           e,                   //!< Absolute electronic unit charge [C] 
           R,                   //!< Molar gas constant [J/(K*mol)]
+          c,                   //!< Speed of light [m/s]
           Nav;                 //!< Avogadro's number [1/mol]
       static Td lB( Td );      //!< Bjerrum length [Aangstrom]
       static Td T();           //!< Temperature [K]
@@ -61,6 +62,9 @@ namespace Faunus
 
   template<class Td>
   const Td PhysicalConstants<Td>::Nav = 6.022137e23;
+  
+  template<class Td>
+  const Td PhysicalConstants<Td>::c = 299792458.0;
 
   template<class Td>
   const Td PhysicalConstants<Td>::R = kB * Nav;
@@ -128,13 +132,13 @@ namespace Faunus
     constexpr long double operator "" _C( long double T ) { return 273.15 + T; }
 
     /// Dipole moment in Debye
-    constexpr long double operator "" _Debye( long double mu ) { return mu * 0.20819434; }
+    constexpr long double operator "" _Debye( long double mu ) { return mu * 0.208194334424626; } // 0.208194334424626 \apporx 1e-11/pc::c/pc::e
 
     /// Dipole moment in electron angstrom
     constexpr long double operator "" _eA( long double mu ) { return mu; }
 
     /// Dipole moment in Coulomb meter
-    constexpr long double operator "" _Cm( long double mu ) { return mu * 1.0_Debye / 3.33564e-30; }
+    constexpr long double operator "" _Cm( long double mu ) { return mu * 1.0_Debye / 3.335640951981520e-30; } // 3.335640951981520e-30 \approx 1e-21/pc::c
 
     /// Length in Angstrom
     constexpr long double operator "" _angstrom( long double l ) { return l; }

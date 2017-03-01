@@ -108,6 +108,38 @@ namespace Faunus
       {
           geo.scale(*this, s, xyz, xy);
       }
+      
+      
+    /**
+     * @brief Convert cartesian- to spherical-coordinates
+     * @param origin The origin to be used (optional)
+     *
+     * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$.
+     */
+      PointBase xyz2rtp(PointBase origin=PointBase(0,0,0)) {
+	PointBase xyz_t = *this - origin;
+	double radius = xyz_t.norm();
+	PointBase rtp(radius,0.0,0.0);
+	rtp.y() = std::atan2(xyz_t.y(),xyz_t.x());
+	rtp.z() = std::acos(xyz_t.z()/radius);
+	return rtp;
+      }
+
+    /**
+     * @brief Convert spherical- to cartesian-coordinates
+     * @param origin The origin to be added (optional)
+     *
+     * @note Input \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$, and output (x,y,z).
+     */
+      PointBase rtp2xyz(PointBase origin=PointBase(0,0,0)) {
+	PointBase rtp_t = *this;
+	PointBase xyz(0,0,0);
+	xyz.x() = rtp_t.x()*std::cos(rtp_t.y())*std::sin(rtp_t.z());
+	xyz.y() = rtp_t.x()*std::sin(rtp_t.y())*std::sin(rtp_t.z());
+	xyz.z() = rtp_t.x()*std::cos(rtp_t.z());
+	xyz += origin;
+	return xyz;
+      }
 
       Tcoord len() const
       {
@@ -419,6 +451,9 @@ namespace Faunus
       Talphax alphax;
       Tmw mw;                                   //!< Molecular weight
       Thydrophobic hydrophobic;                 //!< Hydrophobic flag
+      
+      Point zeroP;
+      double zeroD;
 
       PointParticle() { clear(); }              //!< Constructor
 
@@ -435,6 +470,13 @@ namespace Faunus
       Tcharge &q() { return charge; }
 
       Tcharge q() const { return charge; }
+      
+      Point mu() const { return zeroP; }
+      Point mup() const { return zeroP; }
+      double muscalar() const { return zeroD; }
+      Point& mu() { return zeroP; }
+      Point& mup() { return zeroP; }
+      double& muscalar() { return zeroD; }
 
       template<class T,
           class = typename std::enable_if<std::is_base_of<AtomData, T>::value>::type>
@@ -495,6 +537,8 @@ namespace Faunus
           charge = mw = radius = alphax = 0;
           hydrophobic = false;
           id = 0;
+	  zeroP = Point(0,0,0);
+	  zeroD = 0.0;
       }
 
   };
@@ -504,13 +548,23 @@ namespace Faunus
    */
   struct DipoleParticle : public PointParticle
   {
-      Point mu;               //!< Dipole moment unit vector (permanent+induced)
-      double muscalar;        //!< Dipole moment scalar (permanent+induced)
-      Point mup;              //!< Permanent dipole moment vector
+      private:
+      Point _mu;        //!< Dipole moment unit vector (permanent+induced)
+      Point _mup;       //!< Permanent dipole moment vector
+      double _muscalar; //!< Dipole moment scalar (permanent+induced)
+
+      public:
+      Point mu() const { return _mu; } 
+      Point mup() const { return _mup; }
+      double muscalar() const { return _muscalar; }
+      Point& mu() { return _mu; } 
+      Point& mup() { return _mup; }
+      double& muscalar() { return _muscalar; }
+      
       Tensor<double> alpha;   //!< Polarization matrix
       Tensor<double> theta;   //!< Quadrupole matrix
 
-      inline DipoleParticle() : mu(0, 0, 0), muscalar(0), mup(0, 0, 0) {};
+      inline DipoleParticle() : _mu(0, 0, 0), _muscalar(0), _mup(0, 0, 0) {};
 
       /** @brief Copy constructor for Eigen derivatives */
       template<typename OtherDerived>
@@ -537,9 +591,9 @@ namespace Faunus
       DipoleParticle &operator=( const T &d )
       {
           PointParticle::operator=(d);
-          muscalar = d.muscalar;
-          mu = d.mu;
-          mup = mu * muscalar;
+          _muscalar = d.muscalar;
+          _mu = d.mu;
+          _mup = _mu * _muscalar;
           alpha = d.alpha;
           theta = d.theta;
           return *this;
@@ -549,9 +603,9 @@ namespace Faunus
       inline DipoleParticle &operator<<( std::istream &in )
       {
           PointParticle::operator<<(in);
-          mu.operator<<(in);
-          in >> muscalar;
-          mup.operator<<(in);
+          _mu.operator<<(in);
+          in >> _muscalar;
+          _mup.operator<<(in);
           alpha.operator<<(in);
           theta.operator<<(in);
           return *this;
@@ -560,8 +614,8 @@ namespace Faunus
       /* write data members to stream */
       friend std::ostream &operator<<( std::ostream &o, const DipoleParticle &p )
       {
-          o << PointParticle(p) << " " << p.mu.transpose() << " " << p.muscalar
-            << " " << p.mup << " " << p.alpha << " " << p.theta;
+          o << PointParticle(p) << " " << p._mu.transpose() << " " << p._muscalar
+            << " " << p._mup << " " << p.alpha << " " << p.theta;
           return o;
       }
 
@@ -572,8 +626,8 @@ namespace Faunus
       void rotate( const Trotator &rot )
       {
           assert(rot.getOrigin().squaredNorm() < 1e-6);
-          mu = rot(mu);
-          mup = rot(mup);
+          mu() = rot(mu());
+          mup() = rot(mup());
           alpha = rot(alpha);
           theta = rot(theta);
       }

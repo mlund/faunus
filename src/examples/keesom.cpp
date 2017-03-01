@@ -10,8 +10,8 @@ double keesom(double mu, double r) {
 int main() {
   DipoleParticle a;            // create a dipole particle
   a.clear();                   // ...and make sure it is empty 
-  a.mu = {1,0,0};              // initial dipole direction (unit vector)
-  a.muscalar = 2.2_Debye;      // ...and  magnitude (see also "_eA", "_Cm")
+  a.mu() = Point(1,0,0);              // initial dipole direction (unit vector)
+  a.muscalar() = 2.2_Debye;      // ...and  magnitude (see also "_eA", "_Cm")
   auto b=a;                    // duplicate particle...
   b.x() = 0.9_angstrom;        // ...and separate by 0.9 angstrom
 
@@ -22,12 +22,12 @@ int main() {
     Average<double> Q;         // partition function (just an average)
     auto r = a-b;              // separation vector
     for (int i=0; i<1e5; i++) {// loop over angular space...
-      a.mu.ranunit( ran );     // ...via random dipole directions
-      b.mu.ranunit( ran );     //    - / / -
+      a.mu().ranunit( ran );     // ...via random dipole directions
+      b.mu().ranunit( ran );     //    - / / -
       Q += exp( -u(a,b,r) );   // Boltzmann weighted dipole-dipole energy
     }
     printf("%9.2f %9.5f %9.5f\n",
-        r.norm(), -log(Q), keesom(a.muscalar, r.norm()) );
+        r.norm(), -log(Q), keesom(a.muscalar(), r.norm()) );
 
     b.x() += 0.1_angstrom;     // increase separation
   }

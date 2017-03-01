@@ -459,19 +459,17 @@ namespace Faunus {
             cnt_accepted = 0;
             update_drift = 0.0;
             lB = Tbase::pairpot.first.bjerrumLength();
-            eps_surf = ( _j["eps_surf"] | 0.0 );
-            const_inf = (eps_surf < 1) ? 0.0 : 1.0; // if the value is unphysical (< 1) then we set infinity as the dielectric sonatant of the surronding medium
-            spherical_sum = _j["spherical_sum"] | true; // specifies if Spherical or Cubical summation should be used in reciprocal space
-            update_frequency = _j["update_frequency"] | -1;
-	    
-            parameters.alpha = ( _j["alpha"] | -1.0 );
+	    eps_surf = ( _j.at("eps_surf") );
+            const_inf = (eps_surf < 1) ? 0.0 : 1.0;                 // if the value is unphysical (< 1) then we set infinity as the dielectric sonatant of the surronding medium
+            spherical_sum = ( _j.value("spherical_sum",true) );     // specifies if Spherical or Cubical summation should be used in reciprocal space
+	    update_frequency = ( _j.value("update_frequency",-1) );
+	    parameters.alpha = ( _j.at("alpha") );
 	    parameters.alpha2 = parameters.alpha*parameters.alpha;
-            parameters.rc = ( _j["cutoff"] | -1.0 );
-            parameters.kc = ( _j["cutoffK"] | -1.0 );
+	    parameters.rc = ( _j.at("cutoff") );
+	    parameters.kc = ( _j.at("cutoffK") );
             parameters.kc2 = parameters.kc*parameters.kc;
             parameters.kcc = ceil(parameters.kc);
-            isotropic_pbc = _j["isotropic_pbc"] | false ;
-	    
+            isotropic_pbc = ( _j.value("isotropic_pbc",false) );
             Tbase::pairpot.first.updateAlpha(parameters.alpha);
             Tbase::pairpot.first.updateRcut(parameters.rc);
 	    Tbase::pairpot.first.updateSpline();
@@ -527,6 +525,7 @@ namespace Faunus {
 	   * @note Assumes energy and trial-energy has been calculated consecutively
            */
           double update(bool move_accepted) override {
+	    cout << "Change: " << change.empty() << endl;
 	    assert(!change.empty());
             if (!move_accepted ) {
 	      // Move has been declined

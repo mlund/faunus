@@ -1,19 +1,29 @@
 #include <faunus/faunus.h>
 #include <faunus/multipole.h>
+#include <faunus/ewald.h>
+//#define EWALD
 
 using namespace Faunus;
 using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
 typedef Space<Geometry::Cuboid, DipoleParticle> Tspace;
-typedef CombinedPairPotential<LennardJonesLB, DipoleDipoleRF> Tpair;
+#ifdef EWALD
+typedef LennardJonesLB Tpair;
+#else
+typedef CombinedPairPotential<LennardJonesLB,DipoleDipoleRF> Tpair;
+#endif
 
 int main()
 {
     InputMap in("stockmayer.json");                // open parameter file for user input
     Tspace spc(in);                                // sim.space, particles etc.
 
-    Energy::NonbondedVector<Tspace, Tpair> pot(in); // non-bonded only
+#ifdef EWALD
+    auto pot = Energy::NonbondedEwald<Tspace,Tpair,false,false,true>(in);
+#else
+    auto pot = Energy::NonbondedVector<Tspace,Tpair>(in);
+#endif
 
     spc.load("state");
 

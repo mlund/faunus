@@ -21,7 +21,8 @@ d = {
 
   "energy" : {
     "nonbonded" : {
-       "epsr":1.0, "cutoff":9.9188, "eps_rf":140.0
+       "epsr":1.0, "cutoff":9.9188, "eps_rf":140.0,
+       'ewald': {'epsr_surf': 1e11, 'cutoff': 9.9188, 'alpha': 0.2, "cutoffK":3, "spherical_sum":True}
     }
   },
   

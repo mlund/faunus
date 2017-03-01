@@ -2145,10 +2145,6 @@ namespace Faunus
 
         /**
 	 * @brief Samples the Kirkwood-factor and also some dipole-correlations
-	 *
-	 * Keyword  |  Description
-	 * -------- |  ---------------
-	 * `file`
 	 */
         template<class Tspace>
             class KirkwoodFactor : public PairFunctionBase {

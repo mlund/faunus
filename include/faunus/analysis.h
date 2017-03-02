@@ -2459,24 +2459,25 @@ namespace Faunus
          * for the following keywords to activate various analysis
          * functions:
          *
-         * Keyword            |  Description
-         * :----------------- |  :----------------------------
-         * `polymershape`     |  `Analysis::PolymerShape`
-         * `virial`           |  `Analysis::VirialPressure`
-         * `virtualvolume`    |  `Analysis::VirtualVolumeMove`
-         * `chargemultipole`  |  `Analysis::ChargeMultipole`
-	 * `kirkwoodfactor`   |  `Analysis::KirkwoodFactor`
-	 * `multipoleanalysis`|  `Analysis::MultipoleAnalysis`
-         * `xtctraj`          |  `Analysis::XTCtraj`
-         * `widom`            |  `Analysis::Widom`  
-         * `widomscaled`      |  `Analysis::WidomScaled`
-         * `widommolecule`    |  `Analysis::WidomMolecule`
-         * `meanforce`        |  `Analysis::MeanForce`
-         * `energyfile`       |  `Analysis::SystemEnergy`
-         * `atomrdf`          |  `Analysis::AtomRDF`
-         * `molrdf`           |  `Analysis::MoleculeRDF`
-         * `scatter`          |  `Analysis::ScatteringFunction`
-         * `_jsonfile`        |  ouput json file w. collected results
+         * Keyword                 |  Description
+         * :---------------------  |  :----------------------------
+	 * `atomrdf`               |  `Analysis::AtomRDF`
+         * `polymershape`          |  `Analysis::PolymerShape`
+         * `virial`                |  `Analysis::VirialPressure`
+         * `virtualvolume`         |  `Analysis::VirtualVolumeMove`
+         * `chargemultipole`       |  `Analysis::ChargeMultipole`
+	 * `kirkwoodfactor`        |  `Analysis::KirkwoodFactor`
+	 * `multipoledistribution` | `Analysis::MultipoleDistribution`
+	 * `multipoleanalysis`     |  `Analysis::MultipoleAnalysis`
+         * `xtctraj`               |  `Analysis::XTCtraj`
+         * `widom`                 |  `Analysis::Widom`  
+         * `widomscaled`           |  `Analysis::WidomScaled`
+         * `widommolecule`         |  `Analysis::WidomMolecule`
+         * `meanforce`             |  `Analysis::MeanForce`
+         * `energyfile`            |  `Analysis::SystemEnergy`
+         * `molrdf`                |  `Analysis::MoleculeRDF`
+         * `scatter`               |  `Analysis::ScatteringFunction`
+         * `_jsonfile`             |  ouput json file w. collected results
          *
          * All analysis classes take the JSON keyword `nstep` for
          * specifying how many microloops to count between

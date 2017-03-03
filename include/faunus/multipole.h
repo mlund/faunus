@@ -945,6 +945,96 @@ namespace Faunus {
         };
 
         /**
+         * @brief Coulomb type potentials with spherical cutoff
+         *
+         * Beyond a spherical cutoff, \f$r_c\f$, the potential is cut and shifted to zero while
+         * \f$ u(r) = \lambda_B z_i z_j \mathcal{S} / r \f$
+         * is used otherwise with the following choice of splitting functions, \f$\mathcal{S}\f$,
+         *
+         *  Coulomb-type     |  Splitting function, \f$\mathcal{S}\f$ | Additional keywords  | Reference
+         *  ---------------- |  ------------------------------------- | -------------------- | ---------
+         *  `yukawa`         |  \f$\exp(-\kappa r) + ...\f$           | `debyelength`        | doi
+         *  `reactionfield`  |  ...                                   | `epsrf`              | doi
+         *  `qpotential`     |  ...                                   | ...                  | doi
+         *  `yonezawa`       |  ...                                   | ...                  | http://dx.doi.org/10/j97
+         *  `grekiss`        |  ...                                   | ...                  | doi
+         *  `plain`          |  \f$ 1 + ... \f$                       | none                 | doi
+         *
+         *  The following keywords are *required*:
+         *
+         *  Keyword       |  Description
+         *  ------------- |  -------------------------------------------
+         *  `coulombtype` |  Type of splitting function as defined above
+         *  `cutoff`      |  Spherical cutoff in angstroms
+         *  `epsr`        |  Relative dielectric constant of the medium
+         *
+         *  @todo Under construction!
+         */
+        class CoulombGalore : public PairPotentialBase {
+            private:
+                Tabulate::Andrea<double> sf; // splitting function
+                Tabulate::TabulatorBase<double>::data table; // data for splitting function
+
+                std::function<double(double)> calcDielectric; // function for dielectric const. calc.
+
+                double lB, rc, rc2, rci, epsr;
+
+                void sfReactionField(const Tmjson &j) {
+                    double epsrf = j.at("epsrf");
+                    double A = ( epsrf - epsr ) / ( 2 * epsrf + epsr );
+                    double B = -3 * epsrf / ( 2 * epsrf + epsr );
+                    table = sf.generate( [&](double q) { return 1 + A*q*q*q + B*q ; } ); 
+                    calcDielectric = [&](double M2V) {
+                        return 0.5 * ( 2 * epsrf - 1
+                                + sqrt( -72*M2V*M2V*epsrf + 4*epsrf*epsrf + 4*epsrf + 1)
+                                ) / (3 * M2V - 1 ); // Needs to be checked!
+                    };
+                    // we could also fill in some info string or JSON output...
+                }
+
+                void sfYukawa(const Tmjson &j) {
+                    double kappa = 1 / j.at("debyelength").get<double>();
+                    table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) ; } ); 
+                    // we could also fill in some info string or JSON output...
+                }
+
+            public:
+                CoulombGalore(const Tmjson &j) {
+
+                    string type = j.at("coulombtype");
+                    rc = j.at("cutoff");
+                    rc2 = rc*rc;
+                    rci = 1/rc;
+                    epsr = j.at("epsr");
+                    lB = pc::lB( epsr );
+
+                    sf.setRange(0, 1);
+                    sf.setTolerance(
+                            j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2) );
+
+                    if (type=="reactionfield")
+                        sfReactionField(j);
+
+                    if (type=="yukawa")
+                        sfYukawa(j);
+                }
+
+                template<class Tparticle>
+                    double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+                        if (r2 < rc2) {
+                            double r = sqrt(r2);
+                            return lB * a.charge * b.charge / r * sf.eval( table, r*rci );
+                        }
+                        return 0;
+                    }
+
+                template<class Tparticle>
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        return operator()(a,b,r.squaredNorm());
+                    }
+        };
+
+        /**
          * @brief Ion-ion interaction with reaction field. The potential can be shifted such to be zero at the cut-off.
          * 
          *  Keyword          |  Description

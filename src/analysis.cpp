@@ -120,7 +120,6 @@ namespace Faunus
 
     void MeanForce::_sample() {
         func();
-        cout << mf1.cnt << " " << mf2.cnt << "\n";
     }
 
     void SystemEnergy::_sample() {

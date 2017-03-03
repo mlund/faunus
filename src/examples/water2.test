@@ -1,11 +1,10 @@
-# Generated on Aug 29 2013 11:08:36 using 4.2.1 Compatible Apple LLVM 4.2 (clang-425.0.28)
-energyAverage                                -64953              
-IsobaricVolumeFluctuations_MSQDisplacement     3.21898             
-IsobaricVolumeFluctuations_acceptance          22.2111
-IsobaricVolumeFluctuations_averageSideLength   19.0288             
-relativeEnergyDrift                         1.67865e-15         
-GroupRotation/Translation_acceptance       27.7569             
-GroupRotation/Translation_water_acceptance 27.7569             
-GroupRotation/Translation_water_dRot       4.05379             
-GroupRotation/Translation_water_dTrans     0.118618       
-
+# Generated on Mar  3 2017 12:09:12 using 5.4.0 20160609
+GroupRotation/Translation_acceptance         24.7409             
+GroupRotation/Translation_water_acceptance   24.7409             
+GroupRotation/Translation_water_dRot         3.79121             
+GroupRotation/Translation_water_dTrans       0.110279            
+IsobaricVolumeFluctuations_MSQDisplacement   2.98135             
+IsobaricVolumeFluctuations_acceptance        18.2581             
+IsobaricVolumeFluctuations_averageSideLength 18.5978             
+energyAverage                                -68401.2            
+relativeEnergyDrift                          6.38368e-16         

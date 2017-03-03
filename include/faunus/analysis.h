@@ -2139,10 +2139,49 @@ namespace Faunus
                     }
                 }
             };
-
+	
         /**
-	 * @brief Samples the Kirkwood-factor and also some dipole-correlations
-	 */
+         * @brief We sample the following pair functions between atom id's _i_ and _j_: the distant-dependent Kirkwood-factor
+	 * 
+         * \f[
+         * ...
+         * \f]
+	 * 
+	 * along the dipole correlation (extention ".dipolecorr")
+	 * 
+         * \f[
+         * \langle\hat{\mu}(0) \cdot \hat{\mu}(r)\rangle,
+         * \f]
+	 * 
+	 * the dipole correlation (extention ".dipoleint")
+	 * 
+         * \f[
+         * \langle\frac{1}{2} ( 3 \hat{\mu}(0) \cdot \hat{\mu}(r) - 1 )\rangle,
+         * \f]
+	 * 
+	 * and also a dipole angle distribution (extention ".angledist")
+	 * 
+         * \f[
+         * \hat{\mu}(0) \cdot \hat{\mu}(r).
+         * \f]
+         *
+         * Here \f$ \hat{\mu} \f$ is a unit dipole moment vector.
+	 * 
+         * Input          | 
+         * :------------- | :----------------------------------------
+         * `name1`        | name of particle type 1
+         * `name2`        | name of particle type 2
+         * `dr`           | size of bins in analysis
+         * `file`         | filename where data is saved
+         *
+         * Example JSON input:
+         *
+         *     { "nstep":20, "pairs":
+         *        [
+         *          { "name1":"dip", "name2":"dip", "dr":0.1, "file":"rdf-dipdip.dat"}
+         *        ]
+         *     }
+         */
         template<class Tspace>
             class KirkwoodFactor : public PairFunctionBase {
                 Tspace &spc;
@@ -2150,26 +2189,30 @@ namespace Faunus
                 Table2D<double, double> mucorr_angle;
                 Table2D<double, Average<double> > mucorr, mucorr_dist;
 
-                /**
-                 * @brief Samples \f$ <\hat{\mu}(0) \cdot \hat{\mu}(r)> \f$, \f$ <\frac{1}{2} ( 3 \hat{\mu}(0) \cdot \hat{\mu}(r) - 1 )> \f$, Histogram(\f$ \hat{\mu}(0) \cdot \hat{\mu}(r) \f$) and distant-dependent Kirkwood-factor.
-                 */
                 void update( data &d ) override
                 {
                     int N = spc.p.size() - 1;
+                    int id1 = atom[ d.name1 ].id;
+                    int id2 = atom[ d.name2 ].id;
                     for ( int i = 0; i < N; i++ )
                     {
-                        d.hist(0) += spc.p[i].mu().dot(spc.p[i].mu()) * spc.p[i].muscalar() * spc.p[i].muscalar();
+		        if ( spc.p[i].id==id1 || spc.p[i].id==id2 )
+			    d.hist(0) += spc.p[i].mu().dot(spc.p[i].mu()) * spc.p[i].muscalar() * spc.p[i].muscalar();
                         for ( int j = i + 1.; j < N + 1; j++ )
                         {
-                            double r = spc.geo.dist(spc.p[i], spc.p[j]);
-                            double sca = spc.p[i].mu().dot(spc.p[j].mu());
-                            mucorr_angle(sca) += 1.;
-                            mucorr(r) += sca;
-                            mucorr_dist(r) += 0.5 * (3 * sca * sca - 1.);
-                            d.hist(r) += 2 * sca * spc.p[i].muscalar() * spc.p[j].muscalar();
+                            if ( ( spc.p[i].id==id1 && spc.p[j].id==id2 ) || ( spc.p[i].id==id2 && spc.p[j].id==id1 ) )
+                            {
+				double r = spc.geo.dist(spc.p[i], spc.p[j]);
+				double sca = spc.p[i].mu().dot(spc.p[j].mu());
+				mucorr_angle(sca) += 1.;
+				mucorr(r) += sca;
+				mucorr_dist(r) += 0.5 * (3 * sca * sca - 1.);
+				d.hist(r) += 2 * sca * spc.p[i].muscalar() * spc.p[j].muscalar();
+			    }
                         }
                     }
-                    d.hist(0) += spc.p[N].mu().dot(spc.p[N].mu()) * spc.p[N].muscalar() * spc.p[N].muscalar();
+                    if ( spc.p[N].id==id1 || spc.p[N].id==id2 )
+			d.hist(0) += spc.p[N].mu().dot(spc.p[N].mu()) * spc.p[N].muscalar() * spc.p[N].muscalar();
                 }
 
                 void normalize(data &d) override
@@ -2182,7 +2225,7 @@ namespace Faunus
                 }
                 
                 public:
-                KirkwoodFactor( Tmjson j, Tspace &spc ) : PairFunctionBase(j,"KirkwoodFactor (and some dipole-correlation)"), spc(spc) {
+                KirkwoodFactor( Tmjson j, Tspace &spc ) : PairFunctionBase(j,"KirkwoodFactor"), spc(spc) {
                     mucorr_angle.setResolution(datavec.back().dr);
                     mucorr.setResolution(datavec.back().dr);
                     mucorr_dist.setResolution(datavec.back().dr);
@@ -2191,15 +2234,48 @@ namespace Faunus
                 ~KirkwoodFactor()
                 {
                     for (auto &d : datavec) {
+                        normalize(d);
+                        d.hist.save( d.file );
                         mucorr_angle.save( d.file+".angledist" );
                         mucorr.save( d.file+".dipolecorr" );
                         mucorr_dist.save( d.file+".dipoleint" );
                     }
                 }
-
             };
-	    
-        /** @brief Samples multipole aspects of the system. */
+	
+        /**
+         * @brief We sample multipole aspects of the system. Firstly we sample
+	 * 
+         * \f[
+         * \langle M_{\alpha}\rangle = \sum_{i=1}^N\left(r_{i,\alpha}q_i  \mu_{i,\alpha}\right)
+         * \f]
+	 * 
+	 * where \f[ \alpha \in \{x,y,z \} \f], \f[ N \f] is the sumber of particles in the system, \f[ r_{i,\alpha} \f] 
+	 * is the \f[ \alpha \f]-component of particle \f[ i \f]'s position, and \f[ \mu_{i,\alpha} \f] is its dipole moment.
+	 * Both a spherical volume around the origin and the total volume is sampled. We also sample
+	 * 
+         * \f[
+         * \langle {\bf M}\cdot {\bf M}\rangle
+         * \f]
+	 * 
+	 * again for both a spherical volume around the origin and the total volume. Finally we also get the dielectric constant.
+	 * 
+         * Input           | 
+         * :-------------- | :----------------------------------------
+         * `cutoff`        | Cutoff for spherical analysis
+         * `dielectric`    | Dielectric type 
+         * `alpha`         | Wolf-damping parameter. Only needed if dielectric type is `wolf`
+	 * 
+	 * The dielectric type is either: `tinfoil` for conducting boundary conditions, `rf` for reaction-field 
+	 * using insulating boundary conditions, or `wolf` for electrostatics using the Wolf-formalism. See DOI:http://doi.org/6v3
+	 * for more details.
+         *
+         * Example JSON input:
+         *
+         *     "multipoleanalysis" : { "nstep":20, "cutoff":15.0, "dielectric":"tinfoil" }
+	 * 
+	 * @note This analysis can be expanded to include quadrupole moment analysis with minor changes.
+         */
         template<class Tspace>
             class MultipoleAnalysis : public AnalysisBase {
                 Tspace &spc;
@@ -2369,6 +2445,7 @@ namespace Faunus
                                 { "<M^2>_SPHERE", M2.avg() },
                                 { "<M^2>_BOX", M2_box.avg() },
                                 { "dielectric constant("+type+")", diel.avg() },
+			        { "dielectric constant std:", diel.stdev() },
                                 { "<mu>", groupDipole.avg() }
                             }
                         }

@@ -553,7 +553,6 @@ namespace Faunus
          *
          * During simulation, these are thermally averaged over angles, co-solute degrees of
          * freedom etc.
-         *
          * Note also that the moments are defined with
          * respect to the *mass* center, not *charge* center. While for most
          * macromolecules there is only a minor difference between the two,
@@ -567,12 +566,10 @@ namespace Faunus
          * :-------- | :---------------------------------------------
          * `dr`      | Distance resolution in angstrom (default: 0.2)
          * `groups`  | Exactly two group names (array)
-         * `file`    | Output filename
+         * `file`    | Output filename (default: multipole.dat)
          *
          * @date Malmo 2014
-         * @note Needs testing!
          * @todo Add option to use charge center instead of mass center
-         * @todo _sample() functionality unfinished
          */
         template<class Tspace, class Tcoulomb=Potential::Coulomb>
             class MultipoleDistribution : public AnalysisBase
@@ -2533,36 +2530,36 @@ namespace Faunus
          * @brief Class for accumulating analysis classes
          *
          * Upon construction the JSON section `analysis` is searched
-         * for the following keywords to activate various analysis
-         * functions:
-         *
-         * Keyword            |  Description
-         * :----------------- |  :----------------------------
-         * `polymershape`     |  `Analysis::PolymerShape`
-         * `virial`           |  `Analysis::VirialPressure`
-         * `virtualvolume`    |  `Analysis::VirtualVolumeMove`
-         * `chargemultipole`  |  `Analysis::ChargeMultipole`
-	 * `kirkwoodfactor`   |  `Analysis::KirkwoodFactor`
-	 * `multipoleanalysis`|  `Analysis::MultipoleAnalysis`
-         * `xtctraj`          |  `Analysis::XTCtraj`
-         * `widom`            |  `Analysis::Widom`  
-         * `widomscaled`      |  `Analysis::WidomScaled`
-         * `widommolecule`    |  `Analysis::WidomMolecule`
-         * `meanforce`        |  `Analysis::MeanForce`
-         * `energyfile`       |  `Analysis::SystemEnergy`
-         * `atomrdf`          |  `Analysis::AtomRDF`
-         * `molrdf`           |  `Analysis::MoleculeRDF`
-         * `scatter`          |  `Analysis::ScatteringFunction`
-         * `_jsonfile`        |  ouput json file w. collected results
-         *
+         * for the keywords below to activate analysis functions.
          * All analysis classes take the JSON keyword `nstep` for
          * specifying how many microloops to count between
          * each analysis call.
+         * Aggregated results of all analysis function are saved
+         * to a JSON file upon descruction. Use `_jsonfile` to
+         * control the output file name.
          *
-         * Upon destruction, a json file, "analysis_out.json"
-         * with collected results will be saved. The name
-         * can be customized by adding the `_jsonfile` keyword
-         * to the "analysis" list.
+         * Keyword                 |  Description
+         * :---------------------  |  :----------------------------
+	 * `atomrdf`               |  `Analysis::AtomRDF`
+         * `chargemultipole`       |  `Analysis::ChargeMultipole`
+         * `energyfile`            |  `Analysis::SystemEnergy`
+	 * `kirkwoodfactor`        |  `Analysis::KirkwoodFactor`
+         * `meanforce`             |  `Analysis::MeanForce`
+         * `molrdf`                |  `Analysis::MoleculeRDF`
+	 * `multipoleanalysis`     |  `Analysis::MultipoleAnalysis`
+	 * `multipoledistribution` |  `Analysis::MultipoleDistribution`
+         * `polymershape`          |  `Analysis::PolymerShape`
+         * `scatter`               |  `Analysis::ScatteringFunction`
+         * `virial`                |  `Analysis::VirialPressure`
+         * `virtualvolume`         |  `Analysis::VirtualVolumeMove`
+         * `widom`                 |  `Analysis::Widom`  
+         * `widommolecule`         |  `Analysis::WidomMolecule`
+         * `widomscaled`           |  `Analysis::WidomScaled`
+         * `xtctraj`               |  `Analysis::XTCtraj`
+         * `pqrfile`               |  Save PQR file at end of simulation, i.e. `"pqrfile" : {"file":"conf.pqr"}`
+         * `aamfile`               |  Save AAM file at end of simulation, i.e. `"aamfile" : {"file":"conf.aam"}`
+         * `statefile`             |  Save state file at end of simulation, i.e. `"statefile" : {"file":"state"}`
+         * `_jsonfile`             |  Ouput json file w. collected results (default: analysis_out.json)
          */
         class CombinedAnalysis : public AnalysisBase
         {
@@ -2580,18 +2577,15 @@ namespace Faunus
                         using std::ref;
                         using std::placeholders::_1;
 
-                        jsonfile = "analysis_out.json";
+                        auto &m = j.at("analysis");
 
-                        auto m = j.at("analysis");
+                        jsonfile = m.value("_jsonfile", "analysis_out.json");
+
                         for ( auto i = m.begin(); i != m.end(); ++i )
                         {
                             auto &val = i.value();
 
                             try {
-                                if ( i.key() == "_jsonfile" )
-                                    if (val.is_string())
-                                        jsonfile = val;
-
                                 if ( i.key() == "xtcfile" )
                                     v.push_back(Tptr(new XTCtraj<Tspace>(val, spc)));
 

@@ -47,7 +47,7 @@ int main() {
 }
 
 /**
-  @page example_bulk Example: Charges on a 2D hypersphere-surface
+  @page example_spheresurface Example: Charges on a 2D hypersphere-surface
 
   The `spheresurface.cpp` program can be used to get evenly spread particles on a surface of a sphere.
 

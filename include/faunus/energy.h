@@ -205,6 +205,12 @@ namespace Faunus
             second.setSpace(s);
             Tbase::setSpace(s);
         }
+        
+        void setGeometry(typename T1::SpaceType::GeometryType &g) override {
+          first.setGeometry(g);
+          second.setGeometry(g);
+          Tbase::setGeometry(g);
+        } 
 
         double p2p( const Tparticle &a, const Tparticle &b ) override { return first.p2p(a, b) + second.p2p(a, b); }
 
@@ -2938,7 +2944,7 @@ class SASAEnergy : public Energybase<Tspace> {
                 if (std::find (m.second.begin(), m.second.end(), k) == m.second.end() || j > k) // check such that moved atoms does not interact OR moved atoms interact only once
 		  du += pot.i2i(p,j,k);
           } else {
-	    du += pot.g_internal(p, *g[i]);
+	    //du += pot.g_internal(p, *g[i]);
           }
         }
         for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); i++) {
@@ -2956,7 +2962,7 @@ class SASAEnergy : public Energybase<Tspace> {
      */
     template<class Tspace, class Tenergy>
       double energyChange(Tspace &s, Tenergy &pot, const typename Tspace::Change &c) {
-	pot.setChange(c);
+	pot.updateChange(c);
 	if(c.geometryChange)
 	  pot.setGeometry(s.geo_trial);
 	double duNew = energyChangeConfiguration(s,pot,s.trial,c);

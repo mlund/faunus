@@ -12,8 +12,8 @@ except: pass
 
 d = {
     "atomlist" : {
-      "Pos" : { "q": 1.0, "sigma":0.1, "eps":0.0, "dp":0.1 },
-      "Neg" : { "q":-1.0, "sigma":0.1, "eps":0.0, "dp":0.1 }
+      "Pos" : { "q": 1.0, "sigma":1.0, "eps":0.0, "dp":0.2 },
+      "Neg" : { "q":-1.0, "sigma":1.0, "eps":0.0, "dp":0.2 }
       },
 
     "moleculelist" : {
@@ -31,8 +31,8 @@ d = {
       "statefile" : { "file": "state" },
       "atomrdf" : { "nstep":10, "pairs" :
             [
-               { "name1":"Pos", "name2":"Neg", "dim":2, "dr":0.1, "file":"rdf_PosNeg.dat", "Rhyper":1.0},
-               { "name1":"Pos", "name2":"Pos", "dim":2, "dr":0.1, "file":"rdf_PosPos.dat", "Rhyper":1.0}
+               { "name1":"Pos", "name2":"Neg", "dim":2, "dr":0.1, "file":"rdf_PosNeg.dat", "Rhyper":10.0},
+               { "name1":"Pos", "name2":"Pos", "dim":2, "dr":0.1, "file":"rdf_PosPos.dat", "Rhyper":10.0}
             ]
           }
       },
@@ -45,7 +45,7 @@ d = {
 
     "system" : {
       "temperature"  : 300,
-      "geometry"     : { "radius" : 1.0 },
+      "geometry"     : { "radius" : 10.0 },
       "mcloop"       : { "macro":10, "micro":100 },
       "unittest"     : { "testfile":"spheresurface.test", "stable":False },
       "atomlist"     : "spheresurface.json",

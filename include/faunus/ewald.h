@@ -194,6 +194,7 @@ namespace Faunus {
      * 
      * @todo Need to implement measurement of the average evaluation time for real part of Ewald, this in order to get optimal parametrization to work properly.
      * @warning Current version is constucted such that paramaters can not be correctly updated during a run if splines are used (i.e. only isotropic Coulomb is handled).
+     * @warning Ewald summation does not work properly at the moment.
      * 
      */
     template<
@@ -525,8 +526,7 @@ namespace Faunus {
 	   * @note Assumes energy and trial-energy has been calculated consecutively
            */
           double update(bool move_accepted) override {
-	    cout << "Change: " << change.empty() << endl;
-	    assert(!change.empty());
+	    assert(!change.empty() && "Change object is empty!");
             if (!move_accepted ) {
 	      // Move has been declined
 	      undo();
@@ -535,6 +535,7 @@ namespace Faunus {
 	      surfaceEnergyAverage += surfaceEnergy;
 	      reciprocalEnergyAverage += reciprocalEnergy;
 	      //realEnergyAverage += getRealEnergy(spc->p); // Takes a lot of time
+	      change.clear();
               return 0.0;
 	    }
 	    // Move has been accepted
@@ -551,9 +552,11 @@ namespace Faunus {
 	      accept(); 
 	      cnt_accepted = 0;
 	      update_drift += fabs(duA - duB);
+	      change.clear();
 	      return (duA - duB);
 	    }
 	    accept();
+	    change.clear();
 	    return 0.0;
           }
 

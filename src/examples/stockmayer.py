@@ -16,13 +16,13 @@ d = {
   },
 
   "moleculelist" : {
-    "sol" : { "atoms":"dip", "Ninit":300, "atomic":True }
+    "sol" : { "atoms":"dip", "Ninit":1000, "atomic":True }
   },
 
   "energy" : {
     "nonbonded" : {
-       "epsr":1.0, "cutoff":9.9188, "eps_rf":140.0,
-       'ewald': {'epsr_surf': 1e11, 'cutoff': 9.9188, 'alpha': 0.2, "cutoffK":3, "spherical_sum":True}
+       "epsr":1.0, "cutoff":14.8167, "eps_rf":140.0,
+       'ewald': { "cutoff":14.8167,'eps_surf':1e11, "alpha":0.14, "cutoffK":4, "spherical_sum":True, "update_frequency":1000}
     }
   },
   
@@ -31,7 +31,7 @@ d = {
       "energyfile": { "file": "energy.dat", "nstep":20 },
       "pqrfile" :   { "file": "stockmayer.pqr" },
       "statefile" : { "file": "state" },
-      "multipoleanalysis" : { "nstep":20, "cutoff":9, "dielectric":"rf" },
+      "multipoleanalysis" : { "nstep":20, "cutoff":14.8167, "dielectric":"tinfoil" },
       "kirkwoodfactor" : { "nstep":20, "pairs" :
             [
                { "name1":"dip", "name2":"dip", "dim":3, "dr":0.1, "file":"kwfactor_dipdip.dat"}
@@ -51,8 +51,8 @@ d = {
 
   "system" : {
     "temperature"  : 315.8,
-    "geometry"     : { "length" : 19.8377 },
-    "mcloop"       : { "macro":10, "micro":100 },
+    "geometry"     : { "length" : 29.6336 },
+    "mcloop"       : { "macro":5, "micro":80 },
     "unittest"     : { "testfile":"stockmayer.test", "stable":False }
   }
 }

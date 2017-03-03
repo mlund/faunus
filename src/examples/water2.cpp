@@ -9,7 +9,8 @@ typedef Space<Geometry::Cuboid> Tspace;
 #ifdef EWALD
 typedef LennardJonesLB Tpairpot;
 #else
-typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
+//typedef CombinedPairPotential<Qpotential<>,LennardJonesLB> Tpairpot;
+typedef CombinedPairPotential<CoulombRF,LennardJonesLB> Tpairpot;
 #endif
 
 int main() {
@@ -20,8 +21,8 @@ int main() {
   
   // Energy functions and space
 #ifdef EWALD
-  auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp);
-   // + Energy::ExternalPressure<Tspace>(mcp);
+  auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp);
 #else
   auto pot = Energy::NonbondedCutg2g<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
@@ -55,13 +56,17 @@ int main() {
   return test.numFailed();
 }
 
-/**  @page example_water2 Example: SPC Water (V2)
+/**  @page example_water2 Example: SPC/E Water (V2)
 
- This will simulate SPC water in a cubic volume using
- the Wolf method for electrostatic interactions.
- This version uses a fake cell list to discard
- interactions beyond a specified water-water mass-center
- cutoff.
+ This will simulate SPC/E water in a cubic volume using
+ the q-potential for electrostatic interactions. When
+ `order` in input is set to 1 then the q-potential is
+ equal to the Wolf method. This version uses a fake 
+ cell list to discard interactions beyond a specified 
+ water-water mass-center cutoff.
+ 
+ The simulation results can be directly compared with
+ results presented in DOI:10.1063/1.476482.
 
  Run this example from the main faunus directory:
 

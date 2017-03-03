@@ -8,7 +8,8 @@ typedef CombinedPairPotential<Coulomb,LennardJonesTrunkShift> Tpairpot; // pair 
 #elif defined(DEBYEHUCKEL)
 typedef CombinedPairPotential<DebyeHuckelDenton,LennardJonesTrunkShift> Tpairpot; // pair potential
 #else
-typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
+//typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
+typedef CombinedPairPotential<Qpotential<>,LennardJonesLB> Tpairpot; // pair potential
 typedef CutShift<Tpairpot,false> TpairpotCut;
 #endif
 

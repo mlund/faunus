@@ -22,7 +22,7 @@ d = {
     'system': {
 	"temperature"  : 300,
         'geometry': {'length': 18.67},
-        'mcloop': {'macro': 50, 'micro': 20000},
+        'mcloop': {'macro': 10, 'micro': 200},
         'unittest': {'testfile': 'water2.test', 'stable': False}
     },
     'energy': {
@@ -43,13 +43,14 @@ d = {
         'moltransrot': {
             'water': {'dp': 0.5, 'dprot': 0.5, 'dir': '1 1 1', 'permol': True, 'prob': 1.0}
         },
-        'isobaric': {'dp': 0.0, 'pressure': 40.0906, 'prop': 1.0}
+        'isobaric': {'dp': 0.1, 'pressure': 40.0906, 'prop': 1.0}
     },
     'analysis' : {
         'xtcfile' :   { 'file': 'water2.xtc', 'nstep':20 },
         'pqrfile' :   { 'file': 'water2.pqr' },
         'statefile' : { 'file': 'state' },
         "energyfile": { "file": "energy.dat", "nstep":20 },
+        "multipoleanalysis" : { "nstep":20, "cutoff":9.0, "dielectric":"rf" },
         'widommolecule' : dict(nstep=20, ninsert=10, molecule="water"),
         'sofq' :      dict(nstep=20, qmin=2, qmax=10, dq=0.5, mollist=["water"], file='debye.dat'),
         'atomrdf' : {

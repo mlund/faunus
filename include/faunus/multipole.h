@@ -917,9 +917,8 @@ namespace Faunus {
                 }
         };
 
-        /**
-         * @brief Ion-quadrupole interaction
-         *
+        /** @brief Ion-quadrupole interaction
+	 * 
          * More info...
          */
         class IonQuad : public PairPotentialBase {
@@ -954,112 +953,103 @@ namespace Faunus {
          * `epsr`            |  Dielectric constant of the medium.                      ( Default: 1 )
          * `eps_rf`          |  Dielectric constant of the surroundings.
          * `kappa`           |  Inverse Debye screening length.                         ( Default: 0 )
+         * `tab_utol`        |  Tolerance in splitting-function error.                  (Default: \f$ 10^{-9}\f$)
+         * `tab_ftol`        |  Tolerance of splitting-function derivative error.       (Default: \f$ 10^{-2}\f$)
          * 
          * @note If 'eps_rf' is set to ( epsr , < 0 , 0 ) then 'vacuum'/insulating/conducting boundary conditions will be used. 
          * @warning Untested! Generalized approach using ionic strength does not work!
-	 * 
-	 * @DOI See DOI: 10.1080/00268978300102721 for specifics on the dielectric constant.
-	 * @DOI See DOI: 10.1063/1.469273 for the generalized approach using ionic strength in the surrounding.
+         * 
+	 * @DOI See DOI: 10.1080/00268978000100361 for specifics on the reaction field potential.
+         * @DOI See DOI: 10.1080/00268978300102721 for specifics on the dielectric constant.
+         * @DOI See DOI: 10.1063/1.469273 for the generalized approach using ionic strength in the surrounding.
          */
-            class CoulombRF : public Coulomb {
-                private:
-                    string _brief() { return "Coulomb (reaction field)"; }
-                    double rc1,rc2,eps_RF,epsr,krf,crf,kappa,kappa2;
-                    bool eps_inf, eps_ins, eps_vac, eps_user; // Surrounding is: Conducting, Insulating, 'Vacuum', Set by user
-                    
-                    double pre;
-                    
-		    Tabulate::Andrea<double> pf;
-		    Tabulate::TabulatorBase<double>::data tabel;
-                public:
-                    CoulombRF(Tmjson &j) : Coulomb(j) {
-                        name+=" Reaction Field";
-			rc1 = j.at("cutoff");
-                        rc2 = rc1*rc1;
-                        epsr = j.value("epsr",1.0);
-                        eps_RF = j.at("eps_rf");
-                        kappa = j.value("kappa",0.0);
-                        kappa2 = kappa*kappa;
-                        eps_inf = false;
-                        eps_ins = false;
-                        eps_user = false;
-                        eps_vac = false;
-                        if(fabs(eps_RF) < 1e-6) {
-			    eps_RF = 1e100;
-                            eps_inf = true; // Conducting boundary conditions
-                            pre = 0.5;
-                        } else if(eps_RF < 0.0) {
-                            eps_ins = true; // Insulating boundary conditions
-                            pre = 0.0;
-                        } else if(fabs(eps_RF-epsr) < 1e-6) {
-                            eps_vac = true; // 'Vacuum' boundary conditions
-                            pre = 0.0;
-                        } else {
-                            eps_user = true; // Set by user
-                            pre = (eps_RF - epsr)/(2.0*eps_RF+epsr);
-			    cout << "YES!" << endl;
-                        }
-			
-			/*
-			std::function<double(double)> PFF;
-			double pre = 0.0;
-                        if(eps_inf) {
-			    PFF = [&](double q2) { return (1.0 + 0.5*pow(q2,1.5)); };
-                        } else if(eps_vac) {
-			    PFF = [&](double q2) { return 1.0; };
-                        } else {
-			    pre = (eps_RF - epsr)/(2.0*eps_RF+epsr);
-                            PFF = [&](double q2) { return (1.0 + pre*pow(q2,1.5)); };
-                        }
-                        
-                        pf.setRange(0,1);
-			pf.setTolerance(j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2)); // Tolerance in energy and force
-                        tabel = pf.generate( PFF );
-			
-			
-			for(double r1 = 0; r1 < rc1; r1+=0.01) {
-			    cout << r1 << " " << pf.eval( tabel, r1*r1 /rc2 ) << endl;
-			}
-			*/
-                    }
-                    
-                    template<class Tparticle>
-                        double operator()(const Tparticle &a, const Tparticle &b, double r2) {
-                            if (r2 < rc2) {
-			        return Coulomb::operator()(a,b,r2)*(1.0 + pre*pow(r2/rc2,1.5));
-				//return Coulomb::operator()(a,b,r2)*pf.eval( tabel, r2 /rc2 );
-			    }
-                            return 0;
-                        }
+        class CoulombRF : public Coulomb {
+            private:
+                string _brief() { return "Coulomb (reaction field)"; }
+                double rc1,rc2,eps_RF,epsr,krf,crf,kappa,kappa2, prefactorA, prefactorB;
+                bool eps_inf, eps_ins, eps_vac, eps_user; // Surrounding is: Conducting, Insulating, 'Vacuum', Set by user
 
-                    /**
-                     * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
-                     * @brief Returns dielectric constant for the reaction field method (see DOI:10.1080/00268978300102721)
-                     */
-                    double dielectric_constant(double M2V) const { 
-                        if(eps_inf)
-                            return (1.0 + 3.0*M2V);
-                        if(eps_ins)
-                            return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
-                        if(eps_vac)
-                            return (2*M2V + 1.0)/(1.0 - M2V);
-                        return (6*M2V*eps_RF + 2*eps_RF + 1.0)/(1.0 + 2*eps_RF - 3*M2V);
+                Tabulate::Andrea<double> splitting_function;
+                Tabulate::TabulatorBase<double>::data table;
+            public:
+                CoulombRF(Tmjson &j) : Coulomb(j) {
+                    name+=" Reaction Field";
+                    rc1 = j.at("cutoff");
+                    rc2 = rc1*rc1;
+                    epsr = j.value("epsr",1.0);
+                    eps_RF = j.at("eps_rf");
+                    kappa = j.value("kappa",0.0);
+                    kappa2 = kappa*kappa;
+                    eps_inf = false;
+                    eps_ins = false;
+                    eps_user = false;
+                    eps_vac = false;
+                    if(fabs(eps_RF) < 1e-6) {
+                        eps_RF = pc::infty;
+                        eps_inf = true; // Conducting boundary conditions
+                        prefactorA = 0.5;
+			prefactorB = -1.5;
+                    } else if(fabs(eps_RF-epsr) < 1e-6) {
+                        eps_ins = true; // Insulating boundary conditions
+                        prefactorA = 0.0;
+			prefactorB = -1.0;
+                    } else if(fabs(eps_RF-1.0) < 1e-6) {
+                        eps_vac = true; // Vacuum boundary conditions
+                        prefactorA = (1.0 - epsr)/(2.0+epsr);
+			prefactorB = -3.0/(2.0 + epsr);
+                    } else {
+                        eps_user = true; // Set by user
+                        prefactorA = (eps_RF - epsr)/(2.0*eps_RF+epsr);
+			prefactorB = -3.0*eps_RF/(2.0*eps_RF + epsr);
                     }
 
-                    string info(char w) {
-                        using namespace textio;
-                        std::ostringstream o;
-                        o << Coulomb::info(w)
-                            << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
-                        if(eps_inf) {
-                            o << pad(SUB,w, epsilon_m+"_RF") << infinity << endl;
-                        } else {
-                            o << pad(SUB,w, epsilon_m+"_RF") << eps_RF << endl;
-                        }
-                        o << pad(SUB,w, "Inverse Debye length") << kappa << endl;
-                        return o.str();
+                    std::function<double(double)> PFF = [&](double q) { return (1.0 + prefactorA*q*q*q + prefactorB*q); };
+                    splitting_function.setRange(0,1);
+                    splitting_function.setTolerance(j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2)); // Tolerance in splitting-function and its derivative
+                    table = splitting_function.generate( PFF );
+                }
+
+                template<class Tparticle>
+                    double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+                        if (r2 < rc2)
+                            return Coulomb::operator()(a,b,r2)*splitting_function.eval(table,sqrt(r2)/rc1);
+                        return 0;
                     }
-            };
+
+                template<class Tparticle>
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        return operator()(a,b,r.squaredNorm());
+                    }
+
+                /**
+                 * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+                 * @brief Returns dielectric constant for the reaction field method (see DOI:10.1080/00268978300102721)
+                 */
+                double dielectric_constant(double M2V) const { 
+                    if(eps_inf)
+                        return (1.0 + 3.0*M2V);
+                    if(eps_ins)
+                        return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
+                    if(eps_vac)
+                        return (2*M2V + 1.0)/(1.0 - M2V);
+                    return 0.5*(2.0*eps_RF-1.0+sqrt(-72.0*M2V*M2V*eps_RF + 4.0*eps_RF*eps_RF + 4.0*eps_RF + 1.0))/(3*M2V-1.0); // Needs to be checked!
+                    //return (6*M2V*eps_RF + 2*eps_RF + 1.0)/(1.0 + 2*eps_RF - 3*M2V); // Is OK when epsr=1.0
+                }
+
+                string info(char w) {
+                    using namespace textio;
+                    std::ostringstream o;
+                    o << Coulomb::info(w)
+                        << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
+                    if(eps_inf) {
+                        o << pad(SUB,w, epsilon_m+"_RF") << infinity << endl;
+                    } else {
+                        o << pad(SUB,w, epsilon_m+"_RF") << eps_RF << endl;
+                    }
+                    o << pad(SUB,w, "Inverse Debye length") << kappa << endl;
+                    return o.str();
+                }
+        };
 
         /**
          * @brief Dipole-dipole interaction with reaction field.
@@ -1136,7 +1126,8 @@ namespace Faunus {
                         return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
                     if(eps_vac)
                         return (2*M2V + 1.0)/(1.0 - M2V);
-                    return (6*M2V*eps_RF + 2*eps_RF + 1.0)/(1.0 + 2*eps_RF - 3*M2V);
+                    return 0.5*(2.0*eps_RF-1.0+sqrt(-72.0*M2V*M2V*eps_RF + 4.0*eps_RF*eps_RF + 4.0*eps_RF + 1.0))/(3*M2V-1.0); // Needs to be checked!
+                    //return (6*M2V*eps_RF + 2*eps_RF + 1.0)/(1.0 + 2*eps_RF - 3*M2V); // Is OK when epsr=1.0
                 }
 
                 string info(char w) {
@@ -1168,7 +1159,7 @@ namespace Faunus {
                     //template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
                     MultipoleWolf(Tmjson &in) : wolf(in.value("kappa",0.0),in.at("cutoff")) {
                         name="Multipole Wolf";
-			_lB = Coulomb(in).bjerrumLength();
+                        _lB = Coulomb(in).bjerrumLength();
                     }
                     template<class Tparticle>
                         double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
@@ -1329,8 +1320,8 @@ namespace Faunus {
          * :--------------   | :---------------
          * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
          * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
-         * `tab_utol`        |  Tolerance of splined energy-error.                      (Default: \f$ 10^{-9}\f$)
-         * `tab_ftol`        |  Tolerance of splined force-error.                       (Default: \f$ 10^{-5}\f$)
+         * `tab_utol`        |  Tolerance in splitting-function error.                  (Default: \f$ 10^{-9}\f$)
+         * `tab_ftol`        |  Tolerance of splitting-function derivative error.       (Default: \f$ 10^{-2}\f$)
          */
         class IonIonSP3 : public Coulomb {
             private:
@@ -1348,7 +1339,7 @@ namespace Faunus {
 
                     std::function<double(double)> temp_function = [&](double q) { return (1.0 - 1.75*q + 5.25*q*q*q*q*q - 7.0*q*q*q*q*q*q + 2.5*q*q*q*q*q*q*q); };
                     splitting_function.setRange(0,rc1);
-                    splitting_function.setTolerance(j.value("tab_utol",1e-7),j.value("tab_ftol",1e-2)); // Tolerance in energy and force
+                    splitting_function.setTolerance(j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2)); // Tolerance in splitting-function and its derivative
                     tabel = splitting_function.generate( temp_function );
                 }
 
@@ -1495,7 +1486,7 @@ namespace Faunus {
             }
             return value;
         }
-	
+
         /**
          * @brief Coulomb interaction with long-ranged compensation using moment cancellation, see Paper V in ISBN: 978-91-7422-440-5.
          *
@@ -1506,8 +1497,8 @@ namespace Faunus {
          * `cutoff`    |  Cut-off distance for interactions (float, required)
          * `order`     |  Number of moments to cancel (default: 300)
          * `epsr`      |  Dielectric constant of the medium (default: \f$ \varepsilon_r = 1 \f$)
-         * `tab_utol`  |  Tolerance of splined energy-error (default: \f$ 10^{-9}\f$)
-         * `tab_ftol`  |  Tolerance of splined force-error (default: \f$ 10^{-2}\f$)
+         * `tab_utol`  |  Tolerance in splitting-function error.                  (Default: \f$ 10^{-9}\f$)
+         * `tab_ftol`  |  Tolerance of splitting-function derivative error.       (Default: \f$ 10^{-2}\f$)
          */
         template<class base=Coulomb, int k=1>
             class Qpotential : public base {
@@ -1515,7 +1506,7 @@ namespace Faunus {
                     string _brief() { return base::brief() + ", Cutoff=" + std::to_string(rc1) + textio::_angstrom ; }
                     int order;
                     double rc1, rc1i, rc2;
-                    Tabulate::Andrea<double> qk;
+                    Tabulate::Andrea<double> splitting_function;
                     Tabulate::TabulatorBase<double>::data tabel;
                 public:
                     Qpotential(Tmjson &j) : base(j) { 
@@ -1526,15 +1517,15 @@ namespace Faunus {
                         order = j.value("order",300);
 
                         std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,k,order); };  // Sets r^k-dependence, Ion-Ion -> k = 1, Ion-Dipole -> k = 2, etc. etc. 
-                        qk.setRange(0,1);
-			qk.setTolerance(j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2)); // Tolerance in energy and force
-                        tabel = qk.generate( Qk );
+                        splitting_function.setRange(0,1);
+                        splitting_function.setTolerance(j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2)); // Tolerance in splitting-function and its derivative
+                        tabel = splitting_function.generate( Qk );
                     }
 
                     template<class Tparticle>
                         double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
                             if ( r2 < rc2 )
-                                return base::operator()(a, b, r2) * qk.eval( tabel, sqrt( r2 ) * rc1i );
+                                return base::operator()(a, b, r2) * splitting_function.eval( tabel, sqrt(r2)  / rc1 );
                             return 0;
                         }
 
@@ -1542,7 +1533,7 @@ namespace Faunus {
                         double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                             double r2 = r.squaredNorm();
                             if (r2 < rc2)
-                                return base::operator()(a, b, r) * qk.eval( tabel, sqrt(r2) * rc1i );
+                                return base::operator()(a, b, r) * splitting_function.eval( tabel, sqrt(r2) / rc1 );
                             return 0;
                         }
 
@@ -1551,11 +1542,11 @@ namespace Faunus {
                      * @brief Returns dielectric constant for the ionic (k=1) or dipolar (k=3) \emph{q}-potential
                      */
                     double dielectric_constant(double M2V) const { 
-			if( k == 1 )
-                        	return (1.0 + 3.0*M2V);
-			if( k == 3 )
-				return (2*M2V + 1.0)/(1.0 - M2V);
-			return 0.0;
+                        if( k == 1 )
+                            return (1.0 + 3.0*M2V);
+                        if( k == 3 )
+                            return (2*M2V + 1.0)/(1.0 - M2V);
+                        return 0.0;
                     }
 
                     string info(char w) {
@@ -1564,7 +1555,7 @@ namespace Faunus {
                         o << base::info(w)
                             << pad(SUB,w,"Cutoff") << rc1 << _angstrom << endl
                             << pad(SUB,w,"Order") << order << endl
-                            << qk.info() << endl;
+                            << splitting_function.info() << endl;
                         return o.str();
                     }
             };
@@ -1599,8 +1590,8 @@ namespace Faunus {
          * :--------------   | :---------------
          * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
          * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
-         * `tab_utol`        |  Tolerance of splined energy-error.                      (Default: \f$ 10^{-7}\f$)
-         * `tab_ftol`        |  Tolerance of splined force-error.                       (Default: \f$ 10^{-5}\f$)
+         * `tab_utol`        |  Tolerance in prefactor-function error.                  (Default: \f$ 10^{-7}\f$)
+         * `tab_ftol`        |  Tolerance of prefactor-function derivative error.       (Default: \f$ 10^{-2}\f$)
          * 
          * @warning Be careful with the splines, they tend to give diverging values for low `tab_utol` and `tab_ftol`!
          */
@@ -1626,12 +1617,12 @@ namespace Faunus {
 
                     std::function<double(double)> Ak = [&](double q) { return Euler_type_function(q,N); };
                     ak.setRange(0,1);
-                    ak.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+                    ak.setTolerance(tab_utol,tab_ftol); // Tolerance in first prefactor-function and its derivative
                     tableA = ak.generate( Ak );
 
                     std::function<double(double)> Bk = [&](double q) { return Euler_type_function(q,N,false); };
                     bk.setRange(0.0,1.0);
-                    bk.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+                    bk.setTolerance(tab_utol,tab_ftol); // Tolerance in second prefactor-function and its derivative
                     tableB = bk.generate( Bk );
                 }
 

@@ -9,7 +9,6 @@ typedef Space<Geometry::Cuboid> Tspace;
 #ifdef EWALD
 typedef LennardJonesLB Tpairpot;
 #else
-//typedef CombinedPairPotential<Qpotential<>,LennardJonesLB> Tpairpot;
 typedef CombinedPairPotential<CoulombRF,LennardJonesLB> Tpairpot;
 #endif
 

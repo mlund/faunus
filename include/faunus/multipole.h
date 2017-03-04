@@ -943,6 +943,20 @@ namespace Faunus {
 
                 string info(char w) { return _brief(); }
         };
+	
+        /**
+         * @brief Help-function for Qpotential
+         */
+        inline double qPochhammerSymbol(double q, int k=1, int P=300) {
+            //P = 300 gives an error of about 10^-17 for k < 4
+            double value = 1.0;
+            double temp = pow(q,k);
+            for(int i = 0; i < P; i++) {
+                value *= (1.0 - temp);
+                temp *= q;
+            }
+            return value;
+        }
 
         /**
          * @brief Coulomb type potentials with spherical cutoff
@@ -957,7 +971,7 @@ namespace Faunus {
          *  `reactionfield`  |  ...                                   | `epsrf`              | doi
          *  `qpotential`     |  ...                                   | ...                  | doi
          *  `yonezawa`       |  ...                                   | ...                  | http://dx.doi.org/10/j97
-         *  `grekiss`        |  ...                                   | ...                  | doi
+         *  `fanourgakis`    |  ...                                   | ...                  | doi
          *  `plain`          |  \f$ 1 + ... \f$                       | none                 | doi
          *
          *  The following keywords are *required*:
@@ -997,6 +1011,20 @@ namespace Faunus {
                     table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) ; } ); 
                     // we could also fill in some info string or JSON output...
                 }
+                
+                void sfQpotential(const Tmjson &j) {
+		    int order = j.value("order",300);
+                    table = sf.generate( [&](double q) { return qPochhammerSymbol(q,1,order); } );
+		}
+		
+		void sfYonezawa(const Tmjson &j) {
+		    double alpha = j.at("alpha").get<double>();
+                    table = sf.generate( [&](double q) { return (1.0 + erfc(alpha*rc)*q + q*q); } );
+		}
+		
+		void sfFanourgakis(const Tmjson &j) {
+                    table = sf.generate( [&](double q) { return (1.0 - 1.75*q + 5.25*pow(q,5) - 7.0*pow(q,6) + 2.5*pow(q,7)); } );
+		}
 
             public:
                 CoulombGalore(const Tmjson &j) {
@@ -1017,6 +1045,9 @@ namespace Faunus {
 
                     if (type=="yukawa")
                         sfYukawa(j);
+		    
+                    if (type=="qpotential")
+                        sfQpotential(j);
                 }
 
                 template<class Tparticle>
@@ -1049,9 +1080,10 @@ namespace Faunus {
          * @note If 'eps_rf' is set to ( epsr , < 0 , 0 ) then 'vacuum'/insulating/conducting boundary conditions will be used. 
          * @warning Untested! Generalized approach using ionic strength does not work!
          * 
-	 * @DOI See DOI: 10.1080/00268978000100361 for specifics on the reaction field potential.
-         * @DOI See DOI: 10.1080/00268978300102721 for specifics on the dielectric constant.
-         * @DOI See DOI: 10.1063/1.469273 for the generalized approach using ionic strength in the surrounding.
+	 * [More info on the reaction field potential](http://dx.doi.org/10.1080/00268978000100361)
+	 * [More info on the dielectric constant](http://dx.doi.org/10.1080/00268978300102721)
+	 * [More info on the generalized approach using ionic strength in the surrounding](http://dx.doi.org/10.1063/1.469273)
+	 * 
          */
         class CoulombRF : public Coulomb {
             private:
@@ -1563,19 +1595,7 @@ namespace Faunus {
                 }
         };
 
-        /**
-         * @brief Help-function for Qpotential
-         */
-        inline double qPochhammerSymbol(double q, int k=1, int P=300) {
-            //P = 300 gives an error of about 10^-17 for k < 4
-            double value = 1.0;
-            double temp = pow(q,k);
-            for(int i = 0; i < P; i++) {
-                value *= (1.0 - temp);
-                temp *= q;
-            }
-            return value;
-        }
+
 
         /**
          * @brief Coulomb interaction with long-ranged compensation using moment cancellation, see Paper V in ISBN: 978-91-7422-440-5.
@@ -1629,7 +1649,7 @@ namespace Faunus {
 
                     /**
                      * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
-                     * @brief Returns dielectric constant for the ionic (k=1) or dipolar (k=3) \emph{q}-potential
+                     * @brief Returns dielectric constant for the ionic (k=1) or dipolar (k=3) \f$ q \f$-potential
                      */
                     double dielectric_constant(double M2V) const { 
                         if( k == 1 )
@@ -1729,7 +1749,7 @@ namespace Faunus {
 
                 /**
                  * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
-                 * @brief Returns dielectric constant for the expanded ionic \emph{q}-potential
+                 * @brief Returns dielectric constant for the expanded ionic \f$ q \f$-potential
                  */
                 double dielectric_constant(double M2V) const { 
                     return (1.0 + 3.0*M2V);

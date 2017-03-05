@@ -832,7 +832,7 @@ namespace Faunus {
         };
 	
         /**
-         * @brief Help-function for Qpotential
+         * @brief Help-function for the q-potential in class CoulombGalore
          */
         inline double qPochhammerSymbol(double q, int k=1, int P=300) {
             //P = 300 gives an error of about 10^-17 for k < 4
@@ -1294,36 +1294,6 @@ namespace Faunus {
                     }
             };
 
-        class IonIonWolf : public Coulomb {
-            private:
-                string _brief() { return "Coulomb Wolf"; }
-                WolfBase wolf;
-            public:
-                IonIonWolf(Tmjson &in) : Coulomb(in),
-                wolf(in.at("kappa"), in.at("cutoff")) { 
-                    name+=" Wolf"; 
-                }
-
-                template<class Tparticle>
-                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        return lB*wolf.q2q(a.charge,b.charge,r);
-                    }
-
-                template<class Tparticle>
-                    Point field(const Tparticle &p, const Point &r) const {
-                        return lB*wolf.fieldCharge(p,r);
-                    }
-
-                string info(char w) {
-                    using namespace textio;
-                    std::ostringstream o;
-                    o << Coulomb::info(w)
-                        << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-                        << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
-                    return o.str();
-                }
-        };
-
         class IonIonGaussianDamping : public Coulomb {
             private:
                 string _brief() { return "Coulomb Gaussian Damping"; }
@@ -1388,69 +1358,6 @@ namespace Faunus {
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
                         return _lB*gdb.q2quad(a.charge, b.theta,b.charge, a.theta,a.id,b.id,r);
                     }
-        };
-
-        /**
-         * @brief Coulomb interaction with long-ranged compensation using radial-derivates 1-3 to be zero at the cut-off, see DOI: 10.1021/jp510612w.
-         * The potential also mimics the interaction-tensor \f$ T_0(r,\alpha) = erfc(\alpha r)/r \f$ with \f$ \alpha = \sqrt{\pi} \f$.
-         * 
-         *  Keyword          |  Description
-         * :--------------   | :---------------
-         * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
-         * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
-         * `tab_utol`        |  Tolerance in splitting-function error.                  (Default: \f$ 10^{-9}\f$)
-         * `tab_ftol`        |  Tolerance of splitting-function derivative error.       (Default: \f$ 10^{-2}\f$)
-         */
-        class IonIonSP3 : public Coulomb {
-            private:
-                string _brief() { return "Coulomb SP3"; }
-                double rc1, rc1i, rc2, _lB;
-                Tabulate::Andrea<double> splitting_function;
-                Tabulate::TabulatorBase<double>::data tabel;
-            public:
-                IonIonSP3(Tmjson &j) : Coulomb(j) { 
-                    name += " SP3"; 
-                    _lB = Coulomb(j).bjerrumLength();
-                    rc1 = j.at("cutoff");
-                    rc1i = 1.0/rc1;
-                    rc2 = rc1*rc1;
-
-                    std::function<double(double)> temp_function = [&](double q) { return (1.0 - 1.75*q + 5.25*q*q*q*q*q - 7.0*q*q*q*q*q*q + 2.5*q*q*q*q*q*q*q); };
-                    splitting_function.setRange(0,rc1);
-                    splitting_function.setTolerance(j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2)); // Tolerance in splitting-function and its derivative
-                    tabel = splitting_function.generate( temp_function );
-                }
-
-                template<class Tparticle>
-                    double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
-                        double r1 = sqrt(r2);
-                        if(r2 < rc2)
-                            return _lB*(a.charge*b.charge/r1)*splitting_function.eval(tabel,r1*rc1i);
-                        return 0.0;
-                    }
-
-                template<class Tparticle>
-                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        double r2 = r.squaredNorm();
-                        return operator()(a,b,r2);
-                    }
-
-                /**
-                 * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
-                 * @brief Returns dielectric constant for the SP3 method
-                 */
-                double dielectric_constant(double M2V) const { 
-                    return (1.0 + 3.0*M2V);
-                }
-
-                string info(char w) {
-                    using namespace textio;
-                    std::ostringstream o;
-                    o << Coulomb::info(w)
-                        << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl
-                        << splitting_function.info() << endl;
-                    return o.str();
-                }
         };
 
         /**
@@ -1550,81 +1457,64 @@ namespace Faunus {
                     return o.str();
                 }
         };
-
-
-
+	    
         /**
-         * @brief Coulomb interaction with long-ranged compensation using moment cancellation, see Paper V in ISBN: 978-91-7422-440-5.
-         *
-         * Input parameters:
+         * @brief Dipole-dipole interaction with long-ranged compensation using moment cancellation, see Paper V in ISBN: 978-91-7422-440-5.
          * 
-         *  Keyword    |  Description
-         * :---------- | :---------------
-         * `cutoff`    |  Cut-off distance for interactions (float, required)
-         * `order`     |  Number of moments to cancel (default: 300)
-         * `epsr`      |  Dielectric constant of the medium (default: \f$ \varepsilon_r = 1 \f$)
-         * `tab_utol`  |  Tolerance in splitting-function error.                  (Default: \f$ 10^{-9}\f$)
-         * `tab_ftol`  |  Tolerance of splitting-function derivative error.       (Default: \f$ 10^{-2}\f$)
+         *  Keyword          |  Description
+         * :--------------   | :---------------
+         * `cutoff`          |  Cut-off for interactions.
+         * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+         * `tab_utol`        |  Tolerance in prefactor-function error.                  (Default: \f$ 10^{-9}\f$)
+         * `tab_ftol`        |  Tolerance of prefactor-function derivative error.       (Default: \f$ 10^{-2}\f$)
+         * 
+	 * @warning Untested since remade!
          */
-        template<class base=Coulomb, int k=1>
-            class Qpotential : public base {
-                private:
-                    string _brief() { return base::brief() + ", Cutoff=" + std::to_string(rc1) + textio::_angstrom ; }
-                    int order;
-                    double rc1, rc1i, rc2;
-                    Tabulate::Andrea<double> splitting_function;
-                    Tabulate::TabulatorBase<double>::data tabel;
-                public:
-                    Qpotential(Tmjson &j) : base(j) { 
-                        base::name += " Q"; 
-                        rc1 = j.at("cutoff");
-                        rc1i = 1.0/rc1;
-                        rc2 = rc1*rc1;
-                        order = j.value("order",300);
+        class DipoleDipoleQ : public DipoleDipole {
+            private:
+                string _brief() { return "Dipole-dipole Q, Cutoff=" + std::to_string(rc1) + textio::_angstrom ; }
+                double rc1, rc1i, tab_utol, tab_ftol;
+                int order;
+                Tabulate::Andrea<double> sf;
+                Tabulate::TabulatorBase<double>::data table;
+            public:
+                DipoleDipoleQ(Tmjson &j) : DipoleDipole(j) {
+                    name += " Q"; 
+                    _lB = Coulomb(j).bjerrumLength();
+                    rc1 = j.at("cutoff");
+                    tab_utol = j.value("tab_utol",1e-9); // Higher accuracy than 1e-7 gives error
+                    tab_ftol = j.value("tab_ftol",1e-2);
+                    rc1i = 1.0/rc1;
+		    order = j.value("order",300);
 
-                        std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,k,order); };  // Sets r^k-dependence, Ion-Ion -> k = 1, Ion-Dipole -> k = 2, etc. etc. 
-                        splitting_function.setRange(0,1);
-                        splitting_function.setTolerance(j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2)); // Tolerance in splitting-function and its derivative
-                        tabel = splitting_function.generate( Qk );
-                    }
+                    std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,3,order); };
+                }
 
-                    template<class Tparticle>
-                        double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
-                            if ( r2 < rc2 )
-                                return base::operator()(a, b, r2) * splitting_function.eval( tabel, sqrt(r2)  / rc1 );
-                            return 0;
-                        }
-
-                    template<class Tparticle>
-                        double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                            double r2 = r.squaredNorm();
-                            if (r2 < rc2)
-                                return base::operator()(a, b, r) * splitting_function.eval( tabel, sqrt(r2) / rc1 );
-                            return 0;
-                        }
-
-                    /**
-                     * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
-                     * @brief Returns dielectric constant for the ionic (k=1) or dipolar (k=3) \f$ q \f$-potential
-                     */
-                    double dielectric_constant(double M2V) const { 
-                        if( k == 1 )
-                            return (1.0 + 3.0*M2V);
-                        if( k == 3 )
-                            return (2*M2V + 1.0)/(1.0 - M2V);
+                template<class Tparticle>
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        double r1 = r.norm();
+                        if (r1 < rc1)
+                            return _lB*mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r)*sf.eval(table,r1*rc1i);
                         return 0.0;
                     }
 
-                    string info(char w) {
-                        using namespace textio;
-                        std::ostringstream o;
-                        o << base::info(w)
-                            << pad(SUB,w,"Cutoff") << rc1 << _angstrom << endl
-                            << pad(SUB,w,"Order") << order << endl
-                            << splitting_function.info() << endl;
-                        return o.str();
-                    }
-            };
+                /**
+                 * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
+                 * @brief Returns dielectric constant for the dipolar \f$ q \f$-potential
+                 */
+                double dielectric_constant(double M2V) const { 
+                    return (2*M2V + 1.0)/(1.0 - M2V);
+                }
+
+                string info(char w) {
+                    using namespace textio;
+                    std::ostringstream o;
+                    o << DipoleDipole::info(w)
+                        << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl;
+                    o << sf.info() << endl;
+                    return o.str();
+                }
+        };
 
         /**
          * @brief Help-function for DipoleDipoleQ2.

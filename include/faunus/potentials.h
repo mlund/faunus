@@ -484,6 +484,15 @@ namespace Faunus {
       const std::string name = "Lorentz-Berthelot Mixing";
       inline double mixSigma(double sigma1, double sigma2) const { return 0.5 * ( sigma1 + sigma2 ); }
       inline double mixEpsilon(double eps1, double eps2) const { return sqrt( eps1 * eps2 ); }
+      /**
+       * @brief Function operator
+       * @param sigma Pair of sigma values
+       * @param eps Pair of epsilon values
+       * @returns Pair of mixed sigma (first) and epsilon (second)
+       */
+      inline std::pair<double,double> operator()( const std::pair<double,double> &sigma, const std::pair<double,double> &eps) const {
+          return { 0.5 * ( sigma.first+sigma.second ), std::sqrt( eps.first*eps.second ) };
+      }
     };
 
     /**
@@ -514,8 +523,10 @@ namespace Faunus {
             eps.resize(n);// ...but possible reduced mem. fragmentation
             for (auto &i : atom)
               for (auto &j : atom) {
-                s2.set(i.id, j.id, pow( mixer.mixSigma( i.sigma, j.sigma), 2));
-                eps.set(i.id, j.id, 4.0*mixer.mixEpsilon( i.eps, j.eps ));
+                double sigma, epsilon; // mixed values
+                std::tie( sigma, epsilon ) = mixer( {i.sigma, j.sigma}, {i.eps, j.eps} );
+                s2.set(  i.id, j.id, sigma*sigma );
+                eps.set( i.id, j.id, 4*epsilon );
               }
           }
 

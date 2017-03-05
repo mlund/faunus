@@ -146,6 +146,13 @@ namespace Faunus
         return s;
     }
 
+    /** @brief Uppercase first letter in string */
+    inline std::string toupper_first( std::string s ) {
+        if (!s.empty())
+            s[0] = std::toupper( s[0] ); 
+        return s;
+    }
+
     /**
      * @brief Show Faunus welcome text, version etc.
      * @note See http://patorjk.com/software/taag for ASCII art generation

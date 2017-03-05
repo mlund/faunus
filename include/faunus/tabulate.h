@@ -343,8 +343,14 @@ namespace Faunus
                     }
                     dr *= drfrac;
                 }
+
+                if ( j>=ndr )
+                    throw std::runtime_error("Andrea spline: try to increase utol/ftol");
+                if ( ubuft.size() != 7 )
+                    throw std::runtime_error("Andrea spline: wrong size of ubuft, minvalue + 6 coefficients");
                 assert(j < ndr && "Try to increase utol/ftol");
                 assert(ubuft.size() == 7 && "Wrong size of ubuft, minvalue + 6 coefficients");
+
                 td.r2.push_back(zlow);
                 for ( size_t k = 1; k < ubuft.size(); k++ )
                     td.c.push_back(ubuft.at(k));
@@ -358,6 +364,9 @@ namespace Faunus
                 if ( rlow <= rumin || repul == true )
                     break;
             }
+
+            if (i >=mngrid)
+                throw std::runtime_error("Andrea spline: try to increase utol/ftol");
             assert(i < mngrid && "Try to increase utol/ftol");
 
             // Sort td

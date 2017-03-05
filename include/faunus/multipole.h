@@ -830,6 +830,191 @@ namespace Faunus {
 
                 string info(char w) { return _brief(); }
         };
+	
+        /**
+         * @brief Help-function for Qpotential
+         */
+        inline double qPochhammerSymbol(double q, int k=1, int P=300) {
+            //P = 300 gives an error of about 10^-17 for k < 4
+            double value = 1.0;
+            double temp = pow(q,k);
+            for(int i = 0; i < P; i++) {
+                value *= (1.0 - temp);
+                temp *= q;
+            }
+            return value;
+        }
+
+        /**
+         * @brief Coulomb type potentials with spherical cutoff
+         *
+         * Beyond a spherical cutoff, \f$r_c\f$, the potential is cut and shifted to zero while
+         * \f$ u(r) = \lambda_B z_i z_j \mathcal{S} / r \f$
+         * is used otherwise with the following choice of splitting functions, \f$\mathcal{S}\f$,
+         *
+         *  Coulomb-type     |  Splitting function, \f$\mathcal{S}\f$    | Additional keywords  | Reference
+         *  ---------------- |  ---------------------------------------- | -------------------- | ---------
+         *  `yukawa`         |  \f$ \exp(-\kappa r) + ...\f$             | `debyelength`        | doi
+         *  `reactionfield`  |  \f$ 1 + \frac{\varpesilon_{RF}-\varpesilon_{r}}{2\varpesilon_{RF}+\varpesilon_{r}}\frac{r^3}{R_c^3}  - 3\frac{\varpesilon_{RF}}{2\varpesilon_{RF}+\varpesilon_{r}}\frac{r}{R_c} \f$      | `epsrf`     | http://dx.doi.org/10.1080/00268978000100361
+         *  `qpotential`     |  \f$ \prod_{n=1}^{order}(1-\left(\frac{r}{R_c} \right)^n) \f$ | `order`  | Paper V in ISBN: 978-91-7422-440-5
+         *  `yonezawa`       |  \f$ 1 + erfc(\alpha R_c)\frac{r}{R_c} + \frac{r^2}{R_c^2} \f$| `alpha`              | http://dx.doi.org/10/j97
+         *  `fanourgakis`    |  \f$ 1 - \frac{7}{4}\frac{r}{R_c} + \frac{21}{4}\frac{r^5}{R_c^5} - 7\frac{r^6}{R_c^6} + \frac{5}{2}\frac{r^7}{R_c^7} \f$  | none | http://dx.doi.org/10.1021/jp510612w
+         *  `fennel`         |  \f$ 1 \f$                                | `alpha`              | http://dx.doi.org/10.1063/1.2206581
+         *  `wolf`           |  \f$ erfc(\alpha r) - erfc(alpha R_c)\frac{r}{R_c} \f$ | `alpha` | http://dx.doi.org/10.1063/1.478738
+         *  `plain`          |  \f$ 1 \f$                                | none                 | -
+         *
+         *  The following keywords are *required*:
+         *
+         *  Keyword       |  Description
+         *  ------------- |  -------------------------------------------
+         *  `coulombtype` |  Type of splitting function as defined above
+         *  `cutoff`      |  Spherical cutoff in angstroms
+         *  `epsr`        |  Relative dielectric constant of the medium
+         * 
+         * [More info on the dielectric constant](http://dx.doi.org/10.1080/00268978300102721)
+         * [More info on the generalized reaction field using ionic strength in the surrounding](http://dx.doi.org/10.1063/1.469273)
+         *
+         *  @todo Under construction!
+         */
+        class CoulombGalore : public PairPotentialBase {
+            private:
+                Tabulate::Andrea<double> sf; // splitting function
+                Tabulate::TabulatorBase<double>::data table; // data for splitting function
+                std::function<double(double)> calcDielectric; // function for dielectric const. calc.
+                string type;
+                double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha;
+                int order;
+
+                void sfYukawa(const Tmjson &j) {
+                    double kappa = 1 / j.at("debyelength").get<double>();
+                    table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) ; } ); 
+                    // we could also fill in some info string or JSON output...
+                }
+
+                void sfReactionField(const Tmjson &j) {
+                    epsrf = j.at("epsrf");
+                    table = sf.generate( [&](double q) { return 1 + (( epsrf - epsr ) / ( 2 * epsrf + epsr ))*q*q*q - 3.0 * ( epsrf / ( 2 * epsrf + epsr ))*q ; } ); 
+                    calcDielectric = [&](double M2V) {
+                        if(epsrf > 1e10)
+                            return (1.0 + 3.0*M2V);
+                        if(fabs(epsrf-epsr) < 1e-6)
+                            return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
+                        if(fabs(epsrf-1.0) < 1e-6)
+                            return (2*M2V + 1.0)/(1.0 - M2V);
+                        return 0.5*(2.0*epsrf-1.0+sqrt(-72.0*M2V*M2V*epsrf + 4.0*epsrf*epsrf + 4.0*epsrf + 1.0))/(3*M2V-1.0); // Needs to be checked!
+                        //return (6*M2V*epsrf + 2*epsrf + 1.0)/(1.0 + 2*epsrf - 3*M2V); // Is OK when epsr=1.0
+                    };
+                    // we could also fill in some info string or JSON output...
+                }
+
+                void sfQpotential(const Tmjson &j) {
+                    order = j.value("order",300);
+                    table = sf.generate( [&](double q) { return qPochhammerSymbol(q,1,order); } );
+                    calcDielectric = [&](double M2V) { return (1.0 + 3.0*M2V); };
+                }
+
+                void sfYonezawa(const Tmjson &j) {
+                    alpha = j.value("alpha",0.0);
+                    table = sf.generate( [&](double q) { return (1.0 + erfc(alpha*rc)*q + q*q); } );
+                }
+
+                void sfFanourgakis(const Tmjson &j) {
+                    table = sf.generate( [&](double q) { return (1.0 - 1.75*q + 5.25*pow(q,5) - 7.0*pow(q,6) + 2.5*pow(q,7)); } );
+                    calcDielectric = [&](double M2V) { return (1.0 + 3.0*M2V); };
+                }
+                
+                void sfFennel(const Tmjson &j) {
+                    alpha = j.value("alpha",0.0);
+                    table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q + (erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc))*(q*q-q)); } );
+                }
+                
+                void sfWolf(const Tmjson &j) {
+                    alpha = j.value("alpha",0.0);
+                    table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q); } );
+                }
+                
+                void sfPlain(const Tmjson &j) {
+                    table = sf.generate( [&](double q) { return 1.0; } );
+                }
+
+            public:
+                CoulombGalore(const Tmjson &j) {
+                    type = j.at("coulombtype");
+		    name+=" "+type;
+                    rc = j.at("cutoff");
+                    rc2 = rc*rc;
+                    rc1i = 1/rc;
+                    epsr = j.at("epsr");
+                    lB = pc::lB( epsr );
+                    depsdt = j.value("depsdt", -0.368*pc::T()/epsr);
+
+                    sf.setRange(0, 1);
+                    sf.setTolerance(
+                            j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2) );
+
+                    if (type=="yukawa")
+                        sfYukawa(j);
+
+                    if (type=="reactionfield")
+                        sfReactionField(j);
+
+                    if (type=="qpotential")
+                        sfQpotential(j);
+
+                    if (type=="yonezawa")
+                        sfYonezawa(j);
+
+                    if (type=="fanourgakis")
+                        sfFanourgakis(j);
+		    
+                    if (type=="fennel")
+                        sfFennel(j);
+
+                    if (type=="wolf")
+                        sfWolf(j);
+		    
+                    if (type=="plain")
+                        sfPlain(j);
+                }
+
+                template<class Tparticle>
+                    double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+                        if (r2 < rc2) {
+                            double r = sqrt(r2);
+                            return lB * a.charge * b.charge / r * sf.eval( table, r*rc1i );
+                        }
+                        return 0;
+                    }
+
+                template<class Tparticle>
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        return operator()(a,b,r.squaredNorm());
+                    }
+
+                string info(char w) {
+                    using namespace textio;
+                    std::ostringstream o;
+                    o << pad(SUB, w, "Temperature") << pc::T() << " K" << endl
+                        << pad(SUB, w, "Dielectric constant") << epsr << endl
+                        << pad(SUB, w + 6, "T" + partial + epsilon + "/" + epsilon + partial + "T") << depsdt << endl
+                        << pad(SUB, w, "Bjerrum length") << lB << " " + angstrom << endl
+                        << pad(SUB,w,"Cutoff") << rc << " "+angstrom << endl;
+                    if (type=="yukawa")
+                        o << pad(SUB,w, "Inverse Debye length") << kappa << endl;
+                    if (type=="reactionfield") {
+                        if(epsrf > 1e10) {
+                            o << pad(SUB,w, epsilon_m+"_RF") << infinity << endl;
+                        } else {
+                            o << pad(SUB,w, epsilon_m+"_RF") << epsrf << endl;
+                        }
+                    }
+                    if (type=="qpotential")
+                        o << pad(SUB,w, "order") << order << endl;
+                    if (type=="yonezawa" || type=="fennel" || type=="wolf")
+                        o << pad(SUB,w, "alpha") << alpha << endl;
+                    return o.str();
+                }
+        };
 
         /**
          * @brief Ion-dipole interaction, 
@@ -918,7 +1103,7 @@ namespace Faunus {
         };
 
         /** @brief Ion-quadrupole interaction
-	 * 
+         * 
          * More info...
          */
         class IonQuad : public PairPotentialBase {
@@ -942,235 +1127,6 @@ namespace Faunus {
                     }
 
                 string info(char w) { return _brief(); }
-        };
-	
-        /**
-         * @brief Help-function for Qpotential
-         */
-        inline double qPochhammerSymbol(double q, int k=1, int P=300) {
-            //P = 300 gives an error of about 10^-17 for k < 4
-            double value = 1.0;
-            double temp = pow(q,k);
-            for(int i = 0; i < P; i++) {
-                value *= (1.0 - temp);
-                temp *= q;
-            }
-            return value;
-        }
-
-        /**
-         * @brief Coulomb type potentials with spherical cutoff
-         *
-         * Beyond a spherical cutoff, \f$r_c\f$, the potential is cut and shifted to zero while
-         * \f$ u(r) = \lambda_B z_i z_j \mathcal{S} / r \f$
-         * is used otherwise with the following choice of splitting functions, \f$\mathcal{S}\f$,
-         *
-         *  Coulomb-type     |  Splitting function, \f$\mathcal{S}\f$ | Additional keywords  | Reference
-         *  ---------------- |  ------------------------------------- | -------------------- | ---------
-         *  `yukawa`         |  \f$\exp(-\kappa r) + ...\f$           | `debyelength`        | doi
-         *  `reactionfield`  |  ...                                   | `epsrf`              | doi
-         *  `qpotential`     |  ...                                   | ...                  | doi
-         *  `yonezawa`       |  ...                                   | ...                  | http://dx.doi.org/10/j97
-         *  `fanourgakis`    |  ...                                   | ...                  | doi
-         *  `plain`          |  \f$ 1 + ... \f$                       | none                 | doi
-         *
-         *  The following keywords are *required*:
-         *
-         *  Keyword       |  Description
-         *  ------------- |  -------------------------------------------
-         *  `coulombtype` |  Type of splitting function as defined above
-         *  `cutoff`      |  Spherical cutoff in angstroms
-         *  `epsr`        |  Relative dielectric constant of the medium
-         *
-         *  @todo Under construction!
-         */
-        class CoulombGalore : public PairPotentialBase {
-            private:
-                Tabulate::Andrea<double> sf; // splitting function
-                Tabulate::TabulatorBase<double>::data table; // data for splitting function
-
-                std::function<double(double)> calcDielectric; // function for dielectric const. calc.
-
-                double lB, rc, rc2, rci, epsr;
-
-                void sfReactionField(const Tmjson &j) {
-                    double epsrf = j.at("epsrf");
-                    double A = ( epsrf - epsr ) / ( 2 * epsrf + epsr );
-                    double B = -3 * epsrf / ( 2 * epsrf + epsr );
-                    table = sf.generate( [&](double q) { return 1 + A*q*q*q + B*q ; } ); 
-                    calcDielectric = [&](double M2V) {
-                        return 0.5 * ( 2 * epsrf - 1
-                                + sqrt( -72*M2V*M2V*epsrf + 4*epsrf*epsrf + 4*epsrf + 1)
-                                ) / (3 * M2V - 1 ); // Needs to be checked!
-                    };
-                    // we could also fill in some info string or JSON output...
-                }
-
-                void sfYukawa(const Tmjson &j) {
-                    double kappa = 1 / j.at("debyelength").get<double>();
-                    table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) ; } ); 
-                    // we could also fill in some info string or JSON output...
-                }
-                
-                void sfQpotential(const Tmjson &j) {
-		    int order = j.value("order",300);
-                    table = sf.generate( [&](double q) { return qPochhammerSymbol(q,1,order); } );
-		}
-		
-		void sfYonezawa(const Tmjson &j) {
-		    double alpha = j.at("alpha").get<double>();
-                    table = sf.generate( [&](double q) { return (1.0 + erfc(alpha*rc)*q + q*q); } );
-		}
-		
-		void sfFanourgakis(const Tmjson &j) {
-                    table = sf.generate( [&](double q) { return (1.0 - 1.75*q + 5.25*pow(q,5) - 7.0*pow(q,6) + 2.5*pow(q,7)); } );
-		}
-
-            public:
-                CoulombGalore(const Tmjson &j) {
-
-                    string type = j.at("coulombtype");
-                    rc = j.at("cutoff");
-                    rc2 = rc*rc;
-                    rci = 1/rc;
-                    epsr = j.at("epsr");
-                    lB = pc::lB( epsr );
-
-                    sf.setRange(0, 1);
-                    sf.setTolerance(
-                            j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2) );
-
-                    if (type=="reactionfield")
-                        sfReactionField(j);
-
-                    if (type=="yukawa")
-                        sfYukawa(j);
-		    
-                    if (type=="qpotential")
-                        sfQpotential(j);
-                }
-
-                template<class Tparticle>
-                    double operator()(const Tparticle &a, const Tparticle &b, double r2) {
-                        if (r2 < rc2) {
-                            double r = sqrt(r2);
-                            return lB * a.charge * b.charge / r * sf.eval( table, r*rci );
-                        }
-                        return 0;
-                    }
-
-                template<class Tparticle>
-                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        return operator()(a,b,r.squaredNorm());
-                    }
-        };
-
-        /**
-         * @brief Ion-ion interaction with reaction field. The potential can be shifted such to be zero at the cut-off.
-         * 
-         *  Keyword          |  Description
-         * :--------------   | :---------------
-         * `cutoff`          |  Cut-off for interactions.
-         * `epsr`            |  Dielectric constant of the medium.                      ( Default: 1 )
-         * `eps_rf`          |  Dielectric constant of the surroundings.
-         * `kappa`           |  Inverse Debye screening length.                         ( Default: 0 )
-         * `tab_utol`        |  Tolerance in splitting-function error.                  (Default: \f$ 10^{-9}\f$)
-         * `tab_ftol`        |  Tolerance of splitting-function derivative error.       (Default: \f$ 10^{-2}\f$)
-         * 
-         * @note If 'eps_rf' is set to ( epsr , < 0 , 0 ) then 'vacuum'/insulating/conducting boundary conditions will be used. 
-         * @warning Untested! Generalized approach using ionic strength does not work!
-         * 
-	 * [More info on the reaction field potential](http://dx.doi.org/10.1080/00268978000100361)
-	 * [More info on the dielectric constant](http://dx.doi.org/10.1080/00268978300102721)
-	 * [More info on the generalized approach using ionic strength in the surrounding](http://dx.doi.org/10.1063/1.469273)
-	 * 
-         */
-        class CoulombRF : public Coulomb {
-            private:
-                string _brief() { return "Coulomb (reaction field)"; }
-                double rc1,rc2,eps_RF,epsr,krf,crf,kappa,kappa2, prefactorA, prefactorB;
-                bool eps_inf, eps_ins, eps_vac, eps_user; // Surrounding is: Conducting, Insulating, 'Vacuum', Set by user
-
-                Tabulate::Andrea<double> splitting_function;
-                Tabulate::TabulatorBase<double>::data table;
-            public:
-                CoulombRF(Tmjson &j) : Coulomb(j) {
-                    name+=" Reaction Field";
-                    rc1 = j.at("cutoff");
-                    rc2 = rc1*rc1;
-                    epsr = j.value("epsr",1.0);
-                    eps_RF = j.at("eps_rf");
-                    kappa = j.value("kappa",0.0);
-                    kappa2 = kappa*kappa;
-                    eps_inf = false;
-                    eps_ins = false;
-                    eps_user = false;
-                    eps_vac = false;
-                    if(fabs(eps_RF) < 1e-6) {
-                        eps_RF = pc::infty;
-                        eps_inf = true; // Conducting boundary conditions
-                        prefactorA = 0.5;
-			prefactorB = -1.5;
-                    } else if(fabs(eps_RF-epsr) < 1e-6) {
-                        eps_ins = true; // Insulating boundary conditions
-                        prefactorA = 0.0;
-			prefactorB = -1.0;
-                    } else if(fabs(eps_RF-1.0) < 1e-6) {
-                        eps_vac = true; // Vacuum boundary conditions
-                        prefactorA = (1.0 - epsr)/(2.0+epsr);
-			prefactorB = -3.0/(2.0 + epsr);
-                    } else {
-                        eps_user = true; // Set by user
-                        prefactorA = (eps_RF - epsr)/(2.0*eps_RF+epsr);
-			prefactorB = -3.0*eps_RF/(2.0*eps_RF + epsr);
-                    }
-
-                    std::function<double(double)> PFF = [&](double q) { return (1.0 + prefactorA*q*q*q + prefactorB*q); };
-                    splitting_function.setRange(0,1);
-                    splitting_function.setTolerance(j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2)); // Tolerance in splitting-function and its derivative
-                    table = splitting_function.generate( PFF );
-                }
-
-                template<class Tparticle>
-                    double operator()(const Tparticle &a, const Tparticle &b, double r2) {
-                        if (r2 < rc2)
-                            return Coulomb::operator()(a,b,r2)*splitting_function.eval(table,sqrt(r2)/rc1);
-                        return 0;
-                    }
-
-                template<class Tparticle>
-                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        return operator()(a,b,r.squaredNorm());
-                    }
-
-                /**
-                 * @param M2V Input of \f$ \frac{<M^2>}{9V\epsilon_0k_BT} \f$
-                 * @brief Returns dielectric constant for the reaction field method (see DOI:10.1080/00268978300102721)
-                 */
-                double dielectric_constant(double M2V) const { 
-                    if(eps_inf)
-                        return (1.0 + 3.0*M2V);
-                    if(eps_ins)
-                        return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
-                    if(eps_vac)
-                        return (2*M2V + 1.0)/(1.0 - M2V);
-                    return 0.5*(2.0*eps_RF-1.0+sqrt(-72.0*M2V*M2V*eps_RF + 4.0*eps_RF*eps_RF + 4.0*eps_RF + 1.0))/(3*M2V-1.0); // Needs to be checked!
-                    //return (6*M2V*eps_RF + 2*eps_RF + 1.0)/(1.0 + 2*eps_RF - 3*M2V); // Is OK when epsr=1.0
-                }
-
-                string info(char w) {
-                    using namespace textio;
-                    std::ostringstream o;
-                    o << Coulomb::info(w)
-                        << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom << endl;
-                    if(eps_inf) {
-                        o << pad(SUB,w, epsilon_m+"_RF") << infinity << endl;
-                    } else {
-                        o << pad(SUB,w, epsilon_m+"_RF") << eps_RF << endl;
-                    }
-                    o << pad(SUB,w, "Inverse Debye length") << kappa << endl;
-                    return o.str();
-                }
         };
 
         /**

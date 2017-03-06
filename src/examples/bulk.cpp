@@ -1,14 +1,17 @@
 #include <faunus/faunus.h>
 #include <faunus/ewald.h>
+//#define EWALD
 using namespace Faunus;
 using namespace Faunus::Potential;
 
 #if defined(COULOMB)
-typedef CombinedPairPotential<Coulomb,LennardJonesTrunkShift> Tpairpot; // pair potential
+typedef CombinedPairPotential<CoulombGalore,LennardJonesTrunkShift> Tpairpot; // pair potential
 #elif defined(DEBYEHUCKEL)
 typedef CombinedPairPotential<DebyeHuckelDenton,LennardJonesTrunkShift> Tpairpot; // pair potential
+#elif defined(EWALD)
+typedef LennardJonesLB Tpairpot;
 #else
-typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
+typedef CombinedPairPotential<CoulombGalore,LennardJonesLB> Tpairpot; // pair potential
 typedef CutShift<Tpairpot,false> TpairpotCut;
 #endif
 
@@ -23,8 +26,13 @@ int main() {
 
   Tspace spc(mcp);                    // simulation space
 
-  auto pot = Energy::Nonbonded<Tspace,TpairpotCut>(mcp)
-    + Energy::ExternalPressure<Tspace>(mcp); // hamiltonian
+#ifdef EWALD
+  auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp);
+#else
+  auto pot = Energy::NonbondedCutg2g<Tspace,TpairpotCut>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp);
+#endif
 
   spc.load("state");                  // load old config. from disk (if any)
 

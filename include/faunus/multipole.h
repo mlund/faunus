@@ -830,7 +830,7 @@ namespace Faunus {
 
                 string info(char w) { return _brief(); }
         };
-	
+
         /**
          * @brief Help-function for the q-potential in class CoulombGalore
          */
@@ -882,11 +882,12 @@ namespace Faunus {
                 Tabulate::TabulatorBase<double>::data table; // data for splitting function
                 std::function<double(double)> calcDielectric; // function for dielectric const. calc.
                 string type;
-                double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha;
+                double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
                 int order;
 
                 void sfYukawa(const Tmjson &j) {
-                    double kappa = 1 / j.at("debyelength").get<double>();
+                    kappa = 1 / j.at("debyelength").get<double>();
+		    I = kappa*kappa / ( 8.0*lB*pc::pi*pc::Nav/1e27 );
                     table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) ; } ); 
                     // we could also fill in some info string or JSON output...
                 }
@@ -922,17 +923,17 @@ namespace Faunus {
                     table = sf.generate( [&](double q) { return (1.0 - 1.75*q + 5.25*pow(q,5) - 7.0*pow(q,6) + 2.5*pow(q,7)); } );
                     calcDielectric = [&](double M2V) { return (1.0 + 3.0*M2V); };
                 }
-                
+
                 void sfFennel(const Tmjson &j) {
                     alpha = j.value("alpha",0.0);
                     table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q + (erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc))*(q*q-q)); } );
                 }
-                
+
                 void sfWolf(const Tmjson &j) {
                     alpha = j.value("alpha",0.0);
                     table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q); } );
                 }
-                
+
                 void sfPlain(const Tmjson &j) {
                     table = sf.generate( [&](double q) { return 1.0; } );
                 }
@@ -940,7 +941,7 @@ namespace Faunus {
             public:
                 CoulombGalore(const Tmjson &j) {
                     type = j.at("coulombtype");
-		    name+=" "+type;
+                    name+=" "+type;
                     rc = j.at("cutoff");
                     rc2 = rc*rc;
                     rc1i = 1/rc;
@@ -966,13 +967,13 @@ namespace Faunus {
 
                     if (type=="fanourgakis")
                         sfFanourgakis(j);
-		    
+
                     if (type=="fennel")
                         sfFennel(j);
 
                     if (type=="wolf")
                         sfWolf(j);
-		    
+
                     if (type=="plain")
                         sfPlain(j);
                 }
@@ -991,6 +992,18 @@ namespace Faunus {
                         return operator()(a,b,r.squaredNorm());
                     }
 
+                    /**
+		     * @warning Not ready!
+		     */
+                template<typename Tparticle>
+                    Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+                        if (r2 < rc2) {
+			  double r = sqrt(r2);
+			  return lB*a.charge*b.charge*( -sf.eval( table, r*rc1i )/r2 + 1.0/r )*p;
+			}
+			return Point(0,0,0);
+                    }
+
                 string info(char w) {
                     using namespace textio;
                     std::ostringstream o;
@@ -999,8 +1012,10 @@ namespace Faunus {
                         << pad(SUB, w + 6, "T" + partial + epsilon + "/" + epsilon + partial + "T") << depsdt << endl
                         << pad(SUB, w, "Bjerrum length") << lB << " " + angstrom << endl
                         << pad(SUB,w,"Cutoff") << rc << " "+angstrom << endl;
-                    if (type=="yukawa")
+                    if (type=="yukawa") {
                         o << pad(SUB,w, "Inverse Debye length") << kappa << endl;
+			o << pad(SUB,w, "Ionic strenght") << I << endl;
+		    }
                     if (type=="reactionfield") {
                         if(epsrf > 1e10) {
                             o << pad(SUB,w, epsilon_m+"_RF") << infinity << endl;
@@ -1457,7 +1472,7 @@ namespace Faunus {
                     return o.str();
                 }
         };
-	    
+
         /**
          * @brief Dipole-dipole interaction with long-ranged compensation using moment cancellation, see Paper V in ISBN: 978-91-7422-440-5.
          * 
@@ -1468,7 +1483,7 @@ namespace Faunus {
          * `tab_utol`        |  Tolerance in prefactor-function error.                  (Default: \f$ 10^{-9}\f$)
          * `tab_ftol`        |  Tolerance of prefactor-function derivative error.       (Default: \f$ 10^{-2}\f$)
          * 
-	 * @warning Untested since remade!
+         * @warning Untested since remade!
          */
         class DipoleDipoleQ : public DipoleDipole {
             private:
@@ -1485,7 +1500,7 @@ namespace Faunus {
                     tab_utol = j.value("tab_utol",1e-9); // Higher accuracy than 1e-7 gives error
                     tab_ftol = j.value("tab_ftol",1e-2);
                     rc1i = 1.0/rc1;
-		    order = j.value("order",300);
+                    order = j.value("order",300);
 
                     std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,3,order); };
                 }

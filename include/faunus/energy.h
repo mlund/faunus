@@ -2700,19 +2700,17 @@ class SASAEnergy : public Energybase<Tspace> {
             {
                 try {
                     auto &val = i.value();
+                    size_t n = baselist.size();
 
-                    if (i.key()=="nonbonded")
-                    {
-                        using namespace Potential;
-                        size_t n = baselist.size();
-                        string type = val.at("type").get<string>();
-                        if (type=="coulomb+lj")
-                            baselist.push_back( Tptr( new Energy::Nonbonded<Tspace,
-                                        CombinedPairPotential<CoulombGalore, LennardJonesLB>>(j) ) );
+                    using namespace Potential;
 
-                        if (n==baselist.size()) // nothing was added --> unknown type given --> error
-                            throw std::runtime_error("Unknown nonbonded type '" + type + "'");
-                    }
+                    if (i.key()=="coulomb+lj")
+                        baselist.push_back( Tptr( new Energy::Nonbonded<Tspace,
+                                    CombinedPairPotential<CoulombGalore, LennardJonesLB>>(j) ) );
+
+                    if (i.key()=="coulomb+hs")
+                        baselist.push_back( Tptr( new Energy::Nonbonded<Tspace,
+                                    CombinedPairPotential<CoulombGalore, HardSphere>>(j) ) );
 
                     if ( i.key() == "isobaric" )
                         baselist.push_back( Tptr( new Energy::ExternalPressure<Tspace>( j ) ) );
@@ -2723,6 +2721,10 @@ class SASAEnergy : public Energybase<Tspace> {
                     if ( i.key() == "penalty" )
                     {
                     }
+
+                    if (n==baselist.size()) // nothing was added --> unknown type given --> error
+                        throw std::runtime_error("unknown energy '" + i.key() + "'");
+
                 }
                 catch (std::exception &e) {
                     std::cerr << "Error in " << string(Tbase::name) << ". " << i.key() << ": " << e.what() << endl;

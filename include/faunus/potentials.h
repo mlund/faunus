@@ -1609,6 +1609,12 @@ namespace Faunus {
               setCutoff();
             }
 
+          CombinedPairPotential(Tmjson &j1, Tmjson &j2) :
+            PairPotentialBase(), first(j1), second(j2) {
+              name=first.name+"+"+second.name;
+              setCutoff();
+            }
+
           template<class Tparticle, class Tdist>
             double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) {
               return first(a,b,r2) + second(a,b,r2);

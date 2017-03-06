@@ -850,19 +850,19 @@ namespace Faunus {
          *
          * Beyond a spherical cutoff, \f$R_c\f$, the potential is cut and if
          * below, \f$ u(r) = \frac{\lambda_B z_i z_j \mathcal{S}(q)}{ r } \f$ with \f$q=r/R_c\f$
-         * is used with the following choice of splitting function, \f$\mathcal{S}\f$, that
-         * will be splined during construction and thus evaluate at the similar speed,
+         * is returned with the following splitting functions, \f$\mathcal{S}\f$, that
+         * will be splined during construction and thus evaluate at similar speeds,
          *
          *  Type            | \f$\mathcal{S}(q=r/R_c)\f$               | Additional keywords  | Reference
          *  --------------- | ---------------------------------------- | -------------------- | ---------
-         *  `plain`         | \f$ 1 \f$                                | none                 | -
+         *  `plain`         | \f$ 1 \f$                                | none                 | ISBN 0486652424
          *  `wolf`          | \f$ erfc(\alpha r)-erfc(\alpha R_c)q \f$ | `alpha`              | [doi](http://dx.doi.org/10.1063/1.478738)
          *  `fennel`        | \f$ - \f$                                | `alpha`              | [doi](http://dx.doi.org/10.1063/1.2206581)
          *  `yonezawa`      | \f$ 1 + erfc(\alpha R_c)q + q^2 \f$      | `alpha`              | [doi](http://dx.doi.org/10/j97)
          *  `fanourgakis`   | \f$ 1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7\f$| none | [doi](http://dx.doi.org/10.1021/jp510612w)
-         *  `stenqvist`     | \f$ \prod_{n=1}^{order}(1-q^n) \f$       | `order=300`          | Paper V in ISBN [978-91-7422-440-5](http://goo.gl/hynRTS)
+         *  `stenqvist`     | \f$ \prod_{n=1}^{order}(1-q^n) \f$       | `order=300`          | ISBN [9789174224405](http://goo.gl/hynRTS) (Paper V)
          *  `reactionfield` | \f$ 1 + \frac{\varepsilon_{RF}-\varepsilon_{r}}{2\varepsilon_{RF}+\varepsilon_{r}} q^3  - 3\frac{\varepsilon_{RF}}{2\varepsilon_{RF}+\varepsilon_{r}}q \f$      | `epsrf`     | [doi](http://dx.doi.org/10.1080/00268978000100361)
-         *  `yukawa`        | \f$ \exp(-\kappa r) + ...\f$             | `debyelength`        | (under construction)
+         *  `yukawa`        | \f$ e^{-\kappa qR_c}-e^{-\kappa R_c}\f$  | `debyelength`        | ISBN 0486652424
          *
          *  The following keywords are required for all types:
          *
@@ -891,7 +891,7 @@ namespace Faunus {
                 void sfYukawa(const Tmjson &j) {
                     throw std::runtime_error( "unfinished" );
                     double kappa = 1 / j.at("debyelength").get<double>();
-                    table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) ; } ); // q=r/Rc 
+                    table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) - std::exp(-kappa*rc); } ); // q=r/Rc 
                     // we could also fill in some info string or JSON output...
                 }
 

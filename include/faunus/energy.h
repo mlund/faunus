@@ -11,6 +11,7 @@
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
 #include <faunus/bonded.h>
+#include <faunus/multipole.h>
 #include <Eigen/Eigenvalues>
 
 #endif
@@ -2675,6 +2676,8 @@ class SASAEnergy : public Energybase<Tspace> {
      *     "cmconstrain" : { ... }
      * }
      * ~~~
+     *
+     * @todo Unfinished and under construction
      */
     template<class Tspace, class Tbase=Energybase<Tspace>>
     class Hamiltonian : public Tbase
@@ -2685,11 +2688,9 @@ class SASAEnergy : public Energybase<Tspace> {
         std::vector<Tptr> baselist;
         typedef typename Tspace::ParticleType Tparticle;
         typedef typename Tspace::ParticleVector Tpvec;
-        typedef Potential::CombinedPairPotential<Potential::DebyeHuckel, Potential::LennardJonesLB> Tpairpot_dhlj;
-        typedef Potential::CombinedPairPotential<Potential::CoulombWolf, Potential::LennardJonesLB> Tpairpot_wolf;
 
     public:
-        Hamiltonian( Tspace &spc, Tmjson &j )
+        Hamiltonian( Tmjson &j, Tspace &spc )
         {
             Tbase::name = "Hamiltonian";
             setSpace(spc);
@@ -2699,30 +2700,34 @@ class SASAEnergy : public Energybase<Tspace> {
             {
                 try {
                     auto &val = i.value();
+                    size_t n = baselist.size();
 
-                    if (i.key()=="nonbonded")
-                    {
-                        size_t n = baselist.size();
-                        string type = val.at("type").get<string>();
-                        if (type=="debyehuckel+lj")
-                            baselist.push_back( Tptr( new Energy::Nonbonded<Tspace, Tpairpot_dhlj>(val, i.key()) ) );
+                    using namespace Potential;
 
-                        if (n==baselist.size()) // nothing was added --> unknown type given --> error
-                            throw std::runtime_error("Error in " << Tbase::name << ": unknown nonbonded type " << type);
-                    }
+                    if (i.key()=="coulomb+lj")
+                        baselist.push_back( Tptr( new Energy::Nonbonded<Tspace,
+                                    CombinedPairPotential<CoulombGalore, LennardJonesLB>>(j) ) );
+
+                    if (i.key()=="coulomb+hs")
+                        baselist.push_back( Tptr( new Energy::Nonbonded<Tspace,
+                                    CombinedPairPotential<CoulombGalore, HardSphere>>(j) ) );
 
                     if ( i.key() == "isobaric" )
-                        baselist.push_back( Tptr( new Energy::ExternalPressure<Tspace>(val) ) );
+                        baselist.push_back( Tptr( new Energy::ExternalPressure<Tspace>( j ) ) );
 
                     if ( i.key() == "cmconstrain" )
-                        baselist.push_back( Tptr( new Energy::MassCenterConstrain<Tspace>(val, *Tbase::spc)) );
+                        baselist.push_back( Tptr( new Energy::MassCenterConstrain<Tspace>(j, *Tbase::spc)) );
 
                     if ( i.key() == "penalty" )
                     {
                     }
+
+                    if (n==baselist.size()) // nothing was added --> unknown type given --> error
+                        throw std::runtime_error("unknown energy '" + i.key() + "'");
+
                 }
                 catch (std::exception &e) {
-                    std::cerr << "Error in " << Tbase::name << ". " << i.key() << ": " << e.what() << endl;
+                    std::cerr << "Error in " << string(Tbase::name) << ". " << i.key() << ": " << e.what() << endl;
                     throw;
                 }
             }
@@ -2730,6 +2735,11 @@ class SASAEnergy : public Energybase<Tspace> {
                 std::cerr << "Warning: Hamiltonian is empty\n";
 
             setSpace(spc);
+        }
+
+        auto tuple() -> decltype(std::make_tuple(this))
+        {
+            return std::make_tuple(this);
         }
 
         /** @brief Find pointer to given energy type; `nullptr` if not found. */
@@ -2882,7 +2892,7 @@ class SASAEnergy : public Energybase<Tspace> {
         {
             using namespace textio;
             std::ostringstream o;
-            o << indent(SUB) << "Registered Energy Functions:" << endl;
+            o << indent(SUB) << "Energy Terms:" << endl;
             int i = 1;
             for ( auto e : baselist )
                 o << indent(SUBSUB) << std::left << setw(4) << i++ << e->name << endl;

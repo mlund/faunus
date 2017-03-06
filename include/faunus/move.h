@@ -2692,6 +2692,11 @@ namespace Faunus
             (*ptr)->setPressure(P);
         else
             throw std::runtime_error(base::title+": pressure term required in hamiltonian");
+        //auto ptr = e.template get<Energy::ExternalPressure<Tspace>>();
+        //if ( ptr != nullptr )
+        //    ptr->setPressure(P);
+        //else
+        //    throw std::runtime_error(base::title+": pressure term required in hamiltonian");
     }
 
     template<class Tspace>

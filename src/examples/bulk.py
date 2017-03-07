@@ -51,7 +51,7 @@ d = {
     "system" : {
       "temperature"  : 1100,
       "geometry"     : { "length" : 42.5 },
-      "mcloop"       : { "macro":10, "micro":5 },
+      "mcloop"       : { "macro":10, "micro":50 },
       "unittest"     : { "testfile":"bulk.test", "stable":False },
       "atomlist"     : "bulk.json",
       "moleculelist" : "bulk.json"

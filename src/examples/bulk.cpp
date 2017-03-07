@@ -5,13 +5,13 @@ using namespace Faunus;
 using namespace Faunus::Potential;
 
 #if defined(COULOMB)
-typedef CombinedPairPotential<CoulombGalore,LennardJonesTrunkShift> Tpairpot; // pair potential
+typedef CombinedPairPotential<Coulomb,LennardJonesTrunkShift> Tpairpot; // pair potential
 #elif defined(DEBYEHUCKEL)
 typedef CombinedPairPotential<DebyeHuckelDenton,LennardJonesTrunkShift> Tpairpot; // pair potential
 #elif defined(EWALD)
 typedef LennardJonesLB Tpairpot;
 #else
-typedef CombinedPairPotential<CoulombGalore,LennardJonesLB> Tpairpot; // pair potential
+typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
 typedef CutShift<Tpairpot,false> TpairpotCut;
 #endif
 

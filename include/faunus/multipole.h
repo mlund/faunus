@@ -1001,7 +1001,7 @@ namespace Faunus {
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
 		      if (r2 < rc2) {
 			double r = sqrt(r2);
-			return lB * a.charge * b.charge * ( -sf.eval( table, r*rc1i )/r2 + sf.evalDer( table, r*rc1i )/r );
+			return lB * a.charge * b.charge * ( -sf.eval( table, r*rc1i )/r2 + sf.evalDer( table, r*rc1i )/r )*p;
 		      }
 		      return Point(0,0,0);
                     }

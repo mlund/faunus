@@ -1,6 +1,6 @@
 #include <faunus/faunus.h>
 #include <faunus/ewald.h>
-#define EWALD
+//#define EWALD
 
 using namespace Faunus;
 using namespace Faunus::Potential;

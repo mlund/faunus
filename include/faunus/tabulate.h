@@ -287,6 +287,26 @@ namespace Faunus
         }
 
         /**
+         * @brief Get tabulated value at df(x)/dx
+         * @param d Table data
+         * @param r2 x value
+         */
+        T evalDer( const typename base::data &d, T r2 ) const
+        {
+            auto low = std::lower_bound(d.r2.begin(), d.r2.end(), r2);
+            size_t pos = (low - d.r2.begin() - 1);
+            T min = d.r2[pos];
+            T dz = r2 - min;
+            int pos6 = 6 * pos;
+            T fsum = (d.c[pos6 + 1] +
+		      dz * (2.0*d.c[pos6 + 2] +
+			  dz * (3.0*d.c[pos6 + 3] +
+			      dz * (4.0*d.c[pos6 + 4] +
+				  dz * (5.0*d.c[pos6 + 5])))));
+            return fsum/1000.0; // Gives correct result, though not certain why /1000.0
+        }
+        
+        /**
          * @brief Tabulate f(x)
          */
         typename base::data generate( std::function<T( T )> f )

@@ -41,7 +41,7 @@ int main()
         while ( loop[1] )
         {
             mv.move();
-	    analyzer.sample();
+            analyzer.sample();
         }
         cout << loop.timing() << std::flush;
     }
@@ -73,4 +73,4 @@ int main()
 
   @includelineno examples/stockmayer.cpp
 
-*/
+ */

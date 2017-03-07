@@ -1,110 +1,153 @@
 #include <faunus/faunus.h>
 
 using namespace Faunus;
-using namespace Faunus::Move;
 using namespace Faunus::Potential;
 
-typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
-typedef CombinedPairPotential<LennardJonesLB,MultipoleWolf<true,true,true,false>> Tpairpot;
-//typedef CombinedPairPotential<LennardJonesLB,Coulomb> Tpairpot1;
-//typedef CombinedPairPotential<Tpairpot1,IonDipole> Tpairpot2;
-//typedef CombinedPairPotential<Tpairpot2,DipoleDipole> Tpairpot;
+typedef Space<Geometry::Cuboid> Tspace;
+typedef DebyeHuckel TpairpotEl;
+//typedef Coulomb TpairpotEl;
+//typedef WeeksChandlerAndersen TpairpotSR;
+typedef HardSphere TpairpotSR;
+typedef CombinedPairPotential<TpairpotSR,TpairpotEl> Tpairpot;
 
-//typedef CombinedPairPotential<LennardJonesLB,IonIonGaussianDamping> Tpairpot1;
-//typedef CombinedPairPotential<Tpairpot1,IonDipoleGaussianDamping> Tpairpot2;
-//typedef CombinedPairPotential<Tpairpot2,DipoleDipoleGaussianDamping> Tpairpot;
+/**
+ * @brief Returns the direction of the cap.
+ */
+template<class Tspace, class Tgroup>
+Point getDirectionOfCap(Tspace &spc, Tgroup& gi) {
+  Point centerAtom(0,0,0);
+  Point backAtom(0,0,0);
+  int cnt1 = 0;
+  int cnt2 = 0;
+  for (auto i : *(*gi)) {
+    Point t = spc.p[i] - (*gi)->cm;
+    spc.geo.boundary(t);
+    if(cnt1 == 0) {
+      cnt1 = 1;
+      centerAtom = t;
+      continue;
+    }
+    if(cnt2 == 0) {
+      cnt2 = 1;
+      backAtom = t;
+      break;
+    }
+  }
+  Point temp = (centerAtom - backAtom);
+  return temp/temp.norm();
+}
+
+template<class Tspace, class Tanalyze>
+void analyzeDirection(Tspace &spc, Tanalyze &mucorrCC, Tanalyze &mucorrCS) {
+	auto beg=spc.groupList().begin();
+	auto end=spc.groupList().end();
+	for (auto gi=beg; gi!=end; ++gi) {
+	  for (auto gj=gi; ++gj!=end;) {
+	   if ((*gi)->name.compare("cap") == 0 && (*gj)->name.compare("cap") == 0) {
+	      Point dirA = getDirectionOfCap(spc,gi);
+	      Point dirB = getDirectionOfCap(spc,gj);
+	      mucorrCC(spc.geo.dist((*gi)->cm,(*gj)->cm)) += dirA.dot(dirB);
+	    }
+	   if ((*gi)->name.compare("cap") == 0 && (*gj)->name.compare("sphere") == 0) {
+	      Point dirA = getDirectionOfCap(spc,gi);
+	      Point dirB = -spc.geo.vdist((*gi)->cm,(*gj)->cm);
+	      dirB = dirB/dirB.norm();
+	      mucorrCS(spc.geo.dist((*gi)->cm,(*gj)->cm)) += dirA.dot(dirB);
+	    }
+	   if ((*gi)->name.compare("sphere") == 0 && (*gj)->name.compare("cap") == 0) {
+	      Point dirA = spc.geo.vdist((*gj)->cm,(*gi)->cm);
+	      dirA = dirA/dirA.norm();
+	      Point dirB = getDirectionOfCap(spc,gj);
+	      mucorrCS(spc.geo.dist((*gi)->cm,(*gj)->cm)) += dirA.dot(dirB);
+	    }
+	  }
+	}
+}
 
 int main() {
-  InputMap mcp("water2.input");//read input file
-  slump.seed(mcp.get<int>("seed", -7));
-
-  // Energy functions and space
-  auto pot = Energy::NonbondedVector<Tspace,Tpairpot>(mcp)
-    + Energy::ExternalPressure<Tspace>(mcp);
+  InputMap mcp("cap.json");   
   Tspace spc(mcp);
-
-  // Load and add polymer to Space
-  auto N    = mcp.get<int>("mol_N",1);
-  auto file = mcp.get<string>("mol_file");
-  vector<Group> water(N);
-  Tspace::ParticleVector v;                   // temporary, empty particle vector
-  FormatAAM::load(file,v);                    // load AAM structure into v
-  for (auto &i : water) {
-    Geometry::FindSpace f;
-    f.allowMatterOverlap=true;
-    f.find(spc.geo,spc.p,v);// find empty spot in particle vector
-    i = spc.insert(v);                          // Insert into Space
-    i.name="h2o";
-    spc.enroll(i);
-  }
-
-  // Markov moves and analysis
-  Move::PolarizeMove<TranslateRotate<Tspace> >  gmv(mcp,pot,spc);
-  //Move::TranslateRotate<Tspace> gmv(mcp,pot,spc);
-  Move::Isobaric<Tspace> iso(mcp,pot,spc);
+  int seed = mcp["seed"];
+  cout << "Seed: " << seed << endl;
+  spc.load("state"); 
+  slump.seed(seed);
   
-  Analysis::RadialDistribution<> rdfOO(0.05);
-  Analysis::RadialDistribution<> rdfOH(0.05);
-  Analysis::RadialDistribution<> rdfHH(0.05);
+  int traj_nbrs = mcp["traj_nbrs"];
+  int micro_steps = 0;//mcp["system"]["micro"] | 10;
+  int macro_steps = 0;//mcp["system"]["macro"] | 10;
+  cout << "Microsteps: " << micro_steps << ", macrosteps: " << macro_steps << endl;
+  
+  double resolution = 0.2;
 
-  spc.load("state"); // load old config. from disk (if any)
-  Analysis::DipoleAnalysis dian(spc,mcp);
-  dian.load(mcp.get<string>("dipole_data_ext", ""));
+  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp);
+  auto caps = spc.findMolecules("cap");
+  auto spheres = spc.findMolecules("sphere");
+  
+  int sphereIndex = 0;
+  auto beg=spc.groupList().begin();
+  auto end=spc.groupList().end();
+  for (auto gi=beg; gi!=end; ++gi) {
+    if ((*gi)->name.compare("sphere") == 0 ) {
+      for (auto i : *(*gi))
+	sphereIndex = i;
+      break;
+    }
+  }
+  spc.p[sphereIndex] = Point(0,0,0);
+  spc.trial = spc.p;
+  cout << "Sphere: " << spc.p[sphereIndex].transpose() << endl;
+  
+  Move::Propagator<Tspace> mv( mcp, pot, spc );
+  Analysis::RadialDistribution<> rdfCC(resolution);
+  Analysis::RadialDistribution<> rdfCS(resolution);
+  Analysis::RadialDistribution<> rdfSS(resolution);
+  Table2D<double,Average<double> > mucorrCC, mucorrCS;
+  mucorrCC.setResolution(resolution);
+  mucorrCS.setResolution(resolution);
+  FormatXTC xtc(1000);
+  EnergyDrift sys; 
 
-  FormatPQR::save("initial.pqr", spc.p);
+  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); 
+  cout << atom.info() + spc.info() + pot.info();
+  
+  MCLoop loop(mcp);   
+  while ( loop[0] ) {        
+    while ( loop[1] ) {
+      sys+=mv.move();
 
-  EnergyDrift sys;   // class for tracking system energy drifts
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  ); // store total energy
+      double rnd = slump();
+      if ( rnd > 0.8 ) {
+        rdfCC.sample( spc, atom["C"].id, atom["C"].id );
+        rdfCS.sample( spc, atom["C"].id, atom["S"].id );
+        rdfSS.sample( spc, atom["S"].id, atom["S"].id );
 
-  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
+	analyzeDirection(spc,mucorrCC,mucorrCS);
 
-  MCLoop loop(mcp);            // class for handling mc loops
-  while ( loop.macroCnt() ) {  // Markov chain 
-    while ( loop.microCnt() ) {
-      int i= slump.rand() % 2;
-      int j,k=water.size();
-      Group g;
-      switch (i) {
-        case 0:
-          while (k-->0) {
-            j= slump.rand() % (water.size());
-            gmv.setGroup(water[j]);
-            sys+=gmv.move();          // translate/rotate polymers
-          }
-          break;
-        case 1:
-          sys+=iso.move();
-          break;
+        if ( rnd > 0.99 ) {
+          //xtc.setbox( spc.geo.len );
+          xtc.save( "traj.xtc", spc.p );
+        }
       }
-      dian.sampleDP(spc);
-      // sample oxygen-oxygen rdf
-      if (slump()>0.5) {
-        dian.sampleMuCorrelationAndKirkwood(spc);
-        auto idO = atom["OW"].id;
-        auto idH = atom["HW"].id;
-        rdfOO.sample(spc,idO,idO);
-        rdfOH.sample(spc,idO,idH);
-        rdfHH.sample(spc,idH,idH);
-      }
-    } // end of micro loop
-    //rdfOO.save("rdfOO.dat"+std::to_string(loop.count()));
-    //rdfOH.save("rdfOH.dat"+std::to_string(loop.count()));
-    //rdfHH.save("rdfHH.dat"+std::to_string(loop.count()));
-    //dian.save(std::to_string(loop.count()));
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // energy drift?
-
+    }
+    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); 
     cout << loop.timing();
-  } // end of macro loop
+  } 
 
   // save to disk
-  spc.save("state");
-  rdfOO.save("rdfOO.dat");
-  rdfOH.save("rdfOH.dat");
-  rdfHH.save("rdfHH.dat");
-  spc.save("state");
-  dian.save();
   FormatPQR::save("confout.pqr", spc.p, spc.geo.len);
 
+  spc.save("state");
+  rdfCC.save("rdfCC.dat");
+  rdfCS.save("rdfCS.dat");
+  rdfSS.save("rdfSS.dat");
+  mucorrCC.save("mucorrCC.dat");
+  mucorrCS.save("mucorrCS.dat");
+
   // print information
-  cout << loop.info() + sys.info() + gmv.info() + iso.info() + dian.info();
+  cout << loop.info() + sys.info() + mv.info() + pot.info();
+  
+  cout << "Sphere: " << spc.p[sphereIndex].transpose() << endl;
+
+  return 0;
 }
+

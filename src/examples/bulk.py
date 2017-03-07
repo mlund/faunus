@@ -21,7 +21,9 @@ d = {
       },
 
     "energy" : {
-        "nonbonded" : { "cutoff":14, "epsr":1 }
+        "nonbonded" : {'coulombtype':"yonezawa" ,'epsr': 1.0, 'cutoff': 14, 'order':2, 'alpha':0.0,
+		       "ewald": { "cutoff": 14, "epsr":1, "eps_surf": 1e11, "alpha": 0.2, "cutoffK":0, "spherical_sum":True}
+		       }
       },
 
     "analysis" : {

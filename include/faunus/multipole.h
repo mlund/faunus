@@ -830,7 +830,7 @@ namespace Faunus {
 
                 string info(char w) { return _brief(); }
         };
-	
+
         /**
          * @brief Help-function for the q-potential in class CoulombGalore
          */
@@ -856,13 +856,13 @@ namespace Faunus {
          *  Type            | \f$\mathcal{S}(q=r/R_c)\f$               | Additional keywords  | Reference
          *  --------------- | ---------------------------------------- | -------------------- | ---------
          *  `plain`         | \f$ 1 \f$                                | none                 | ISBN 0486652424
-         *  `wolf`          | \f$ erfc(\alpha r)-erfc(\alpha R_c)q \f$ | `alpha`              | [doi](http://dx.doi.org/10.1063/1.478738)
+         *  `wolf`          | \f$ erfc(\alpha R_c q)-erfc(\alpha R_c)q \f$ | `alpha`              | [doi](http://dx.doi.org/10.1063/1.478738)
          *  `fennel`        | \f$ - \f$                                | `alpha`              | [doi](http://dx.doi.org/10.1063/1.2206581)
          *  `yonezawa`      | \f$ 1 + erfc(\alpha R_c)q + q^2 \f$      | `alpha`              | [doi](http://dx.doi.org/10/j97)
          *  `fanourgakis`   | \f$ 1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7\f$| none | [doi](http://dx.doi.org/10.1021/jp510612w)
          *  `stenqvist`     | \f$ \prod_{n=1}^{order}(1-q^n) \f$       | `order=300`          | ISBN [9789174224405](http://goo.gl/hynRTS) (Paper V)
          *  `reactionfield` | \f$ 1 + \frac{\varepsilon_{RF}-\varepsilon_{r}}{2\varepsilon_{RF}+\varepsilon_{r}} q^3  - 3\frac{\varepsilon_{RF}}{2\varepsilon_{RF}+\varepsilon_{r}}q \f$      | `epsrf`     | [doi](http://dx.doi.org/10.1080/00268978000100361)
-         *  `yukawa`        | \f$ e^{-\kappa qR_c}-e^{-\kappa R_c}\f$  | `debyelength`        | ISBN 0486652424
+         *  `yukawa`        | \f$ e^{-\kappa R_c q}-e^{-\kappa R_c}\f$  | `debyelength`        | ISBN 0486652424
          *
          *  The following keywords are required for all types:
          *
@@ -885,12 +885,13 @@ namespace Faunus {
                 Tabulate::TabulatorBase<double>::data table; // data for splitting function
                 std::function<double(double)> calcDielectric; // function for dielectric const. calc.
                 string type;
-                double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha;
+                double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
                 int order;
 
                 void sfYukawa(const Tmjson &j) {
                     throw std::runtime_error( "unfinished" );
                     double kappa = 1 / j.at("debyelength").get<double>();
+                    I = kappa*kappa / ( 8.0*lB*pc::pi*pc::Nav/1e27 );
                     table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) - std::exp(-kappa*rc); } ); // q=r/Rc 
                     // we could also fill in some info string or JSON output...
                 }
@@ -930,18 +931,18 @@ namespace Faunus {
                     table = sf.generate( [&](double q) { return 1 - 1.75*q + 5.25*pow(q,5) - 7*pow(q,6) + 2.5*pow(q,7); } );
                     calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
                 }
-                
+
                 void sfFennel(const Tmjson &j) {
                     alpha = j.at("alpha");
                     table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q + (erfc(alpha*rc)
                                     + 2 * alpha * rc / sqrt(pc::pi) * exp(-alpha*alpha*rc*rc))*(q*q-q)); } );
                 }
-                
+
                 void sfWolf(const Tmjson &j) {
                     alpha = j.at("alpha");
                     table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q); } );
                 }
-                
+
                 void sfPlain(const Tmjson &j) {
                     table = sf.generate( [&](double q) { return 1; } );
                 }
@@ -996,6 +997,15 @@ namespace Faunus {
                         return operator()(a,b,r.squaredNorm());
                     }
 
+                template<typename Tparticle>
+                    Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+		      if (r2 < rc2) {
+			double r = sqrt(r2);
+			return lB * a.charge * b.charge * ( -sf.eval( table, r*rc1i )/r2 + sf.evalDer( table, r*rc1i )/r )*p;
+		      }
+		      return Point(0,0,0);
+                    }
+
                 double dielectric_constant(double M2V) {
                     return calcDielectric( M2V );
                 } 
@@ -1008,8 +1018,10 @@ namespace Faunus {
                         << pad(SUB, w + 6, "T" + partial + epsilon + "/" + epsilon + partial + "T") << depsdt << endl
                         << pad(SUB, w, "Bjerrum length") << lB << _angstrom << endl
                         << pad(SUB,w,"Cutoff") << rc << _angstrom << endl;
-                    if (type=="yukawa")
+                    if (type=="yukawa") {
                         o << pad(SUB,w, "Inverse Debye length") << kappa << endl;
+                        o << pad(SUB,w, "Ionic strenght") << I << endl;
+                    }
                     if (type=="reactionfield") {
                         if(epsrf > 1e10)
                             o << pad(SUB,w+1, epsilon_m+"_RF") << infinity << endl;
@@ -1465,7 +1477,7 @@ namespace Faunus {
                     return o.str();
                 }
         };
-	    
+
         /**
          * @brief Dipole-dipole interaction with long-ranged compensation using moment cancellation, see Paper V in ISBN: 978-91-7422-440-5.
          * 
@@ -1476,7 +1488,7 @@ namespace Faunus {
          * `tab_utol`        |  Tolerance in prefactor-function error.                  (Default: \f$ 10^{-9}\f$)
          * `tab_ftol`        |  Tolerance of prefactor-function derivative error.       (Default: \f$ 10^{-2}\f$)
          * 
-	 * @warning Untested since remade!
+         * @warning Untested since remade!
          */
         class DipoleDipoleQ : public DipoleDipole {
             private:
@@ -1493,7 +1505,7 @@ namespace Faunus {
                     tab_utol = j.value("tab_utol",1e-9); // Higher accuracy than 1e-7 gives error
                     tab_ftol = j.value("tab_ftol",1e-2);
                     rc1i = 1.0/rc1;
-		    order = j.value("order",300);
+                    order = j.value("order",300);
 
                     std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,3,order); };
                 }

@@ -27,8 +27,8 @@ d = {
     },
     'energy': {
         'nonbonded': {
-            'coulombtype':"reactionfield" ,'epsr': 1.0, 'cutoff': 9, 'epsrf':78.5, 'order':2, 'alpha':0.2,
-            'ewald': {'eps_surf': 1e11, 'cutoff': 9, 'alpha': 0.2, "cutoffK":3, "spherical_sum":True},
+            'coulombtype':"reactionfield" ,'epsr': 1.0, 'cutoff': 9.0, 'eps_rf':78.5, 'order':2, 'alpha':0.2,
+            'ewald': {'eps_surf': 1e11, 'cutoff': 9, 'alpha': 0.2, "cutoffK":3, "spherical_sum":True, "update_frequency":216},
             'cutoff_g2g': 10
         }
     },
@@ -50,7 +50,7 @@ d = {
         'pqrfile' :   { 'file': 'water2.pqr' },
         'statefile' : { 'file': 'state' },
         "energyfile": { "file": "energy.dat", "nstep":20 },
-        "multipoleanalysis" : { "nstep":20, "cutoff":9.0, "dielectric":"rf" },
+        "multipoleanalysis" : { "nstep":20, "cutoff":9.0, "dielectric":"reactionfield", 'eps_rf':78.5 },
         'widommolecule' : dict(nstep=20, ninsert=10, molecule="water"),
         'sofq' :      dict(nstep=20, qmin=2, qmax=10, dq=0.5, mollist=["water"], file='debye.dat'),
         'atomrdf' : {

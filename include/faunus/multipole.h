@@ -334,9 +334,12 @@ namespace Faunus {
             double r1i_d, r2i, der_dT0c, T1, T1c_r1i, der_dT1c_r1i, T21, T22, T2c2_r2i, der_dT2c1, der_dT2c2_r2i;
         };
         private:
-        double rc1, rc1i, rc1i_d, rc2i, kappa, kappa2, constant;
+        double rc1, rc1i, rc1i_d, rc2, rc2i, kappa, kappa2, constant;
         double dT0c, T1c_rc1, dT1c_rc1, T2c1, T2c2_rc2, dT2c1, dT2c2_rc2;
         wdata data;
+	
+	Tabulate::Andrea<double> T0_tabulator, T1_tabulator, T2_tabulator;
+	Tabulate::TabulatorBase<double>::data table_T0, table_T1, table_T2;
 
         public:
         void calcWolfData(const Point &r) {
@@ -369,7 +372,7 @@ namespace Faunus {
             kappa2 = kappa*kappa;
             constant = 2*kappa/sqrt(pc::pi);
             rc1 = rcut;
-            double rc2 = rc1*rc1;
+            rc2 = rc1*rc1;
             rc2i = 1/rc2;
             rc1i = 1/rc1;
             double expKc = constant*exp(-kappa2/rc2i);
@@ -388,6 +391,21 @@ namespace Faunus {
             dT1c_rc1 = dT1c_rc1*rc1;
             T2c2_rc2 = T2c2_rc2*rc2;
             dT2c2_rc2 = dT2c2_rc2*rc2;
+	    
+	    std::function<double(double)> T0 = [&](double r1) { return erfc(kappa*r1); };
+	    T0_tabulator.setRange(0,rc1);
+	    T0_tabulator.setTolerance(1e-9,1e-2); // Tolerance in energy and force
+	    table_T0 = T0_tabulator.generate( T0 );
+	    
+	    std::function<double(double)> T1 = [&](double r1) { return (r1*constant*exp(-kappa2*r1*r1) + erfc(kappa*r1)); };
+	    T1_tabulator.setRange(0,rc1);
+	    T1_tabulator.setTolerance(1e-9,1e-2); // Tolerance in energy and force
+	    table_T1 = T1_tabulator.generate( T1 );
+	    
+	    std::function<double(double)> T2 = [&](double r1) { return (3.*erfc(kappa*r1) + r1*(3.0 + 2.*kappa2*r1*r1)*constant*exp(-kappa2*r1*r1)); };
+	    T2_tabulator.setRange(0,rc1);
+	    T2_tabulator.setTolerance(1e-9,1e-2); // Tolerance in energy and force
+	    table_T2 = T2_tabulator.generate( T2 );
         }
 
         /**
@@ -409,6 +427,13 @@ namespace Faunus {
                     return (qA*qB*(r1i_d - rc1i_d - der*dT0c));
                 }
                 return (qA*qB*(data.r1i_d - rc1i_d - data.der_dT0c));
+		
+		double r2 = r.squaredNorm();
+		if (rc2 < r2)
+		    return 0.0;
+		double r1 = sqrt(r2);
+		double der = r1 - rc1;
+		return qA*qB*( T0_tabulator.eval(table_T0,r1)/r1 - rc1i_d - der*dT0c);
             }
 
         /**
@@ -452,14 +477,19 @@ namespace Faunus {
                     double r2i = 1.0/r.squaredNorm();
                     if (r2i < rc2i)
                         return 0;
-                    double r1i = sqrt(r2i);
-                    double r1i_d = erfc_x(kappa/r1i)*r1i;
-                    double expK = constant*exp(-kappa2/r2i);
-                    double T2_1 = -(r1i_d + expK)*r2i;
-                    double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
-                    double der = (1/r1i) - rc1;
+                    //double r1i = sqrt(r2i);
+                    //double r1i_d = erfc_x(kappa/r1i)*r1i;
+                    //double expK = constant*exp(-kappa2/r2i);
+                    //double T2_1 = -(r1i_d + expK)*r2i;
+		    double r1 = 1.0/sqrt(r2i);
+		    double r3i = r2i/r1;
+		    double T2_1 = -T1_tabulator.eval(table_T1,r1)*r3i;
+		    double T2_2 = T2_tabulator.eval(table_T2,r1)*r3i;
+                    //double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
+                    //double der = (1/r1i) - rc1;
+		    double der = r1 - rc1;
                     double t3 = muA.dot(muB)*(T2_1 - T2c1 - der*dT2c1);
-                    double t5 = muA.dot(r)*muB.dot(r)*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i);
+                    double t5 = muA.dot(r)*muB.dot(r)*r2i*(T2_2 - T2c2_rc2 - der*dT2c2_rc2);
                     return -(t5 + t3)*muAxmuB;
                 }
                 double t3 = muA.dot(muB)*(data.T21 - T2c1 - data.der_dT2c1);
@@ -539,13 +569,13 @@ namespace Faunus {
                     double T2_1 = -(r1i_d + expK)*r2i;
                     double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
                     double der = (1/r1i) - rc1;
-                    Point t3 = p.mu*(T2_1 - T2c1 - der*dT2c1);
-                    Point t5 = r*p.mu.dot(r)*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i);
-                    return (t5 + t3)*p.muscalar;
+                    Point t3 = p.mu()*(T2_1 - T2c1 - der*dT2c1);
+                    Point t5 = r*p.mu().dot(r)*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i);
+                    return (t5 + t3)*p.muscalar();
                 }
-                Point t3 = p.mu*(data.T21 - T2c1 - data.der_dT2c1);
-                Point t5 = r*p.mu.dot(r)*(data.T22 - data.T2c2_r2i - data.der_dT2c2_r2i);
-                return (t5 + t3)*p.muscalar;
+                Point t3 = p.mu()*(data.T21 - T2c1 - data.der_dT2c1);
+                Point t5 = r*p.mu().dot(r)*(data.T22 - data.T2c2_r2i - data.der_dT2c2_r2i);
+                return (t5 + t3)*p.muscalar();
             }
 
         double getRc2i() const { return rc2i; }
@@ -897,7 +927,7 @@ namespace Faunus {
                 }
 
                 void sfReactionField(const Tmjson &j) {
-                    epsrf = j.at("epsrf");
+                    epsrf = j.at("eps_rf");
                     table = sf.generate( [&](double q) { return 1 + (( epsrf - epsr ) / ( 2 * epsrf + epsr ))*q*q*q
                             - 3 * ( epsrf / ( 2 * epsrf + epsr ))*q ; } ); 
 
@@ -1255,7 +1285,7 @@ namespace Faunus {
                     double _lB;
                 public:
                     //template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
-                    MultipoleWolf(Tmjson &in) : wolf(in.value("kappa",0.0),in.at("cutoff")) {
+                    MultipoleWolf(Tmjson &in) : wolf(in.at("kappa"),in.at("cutoff")) {
                         name="Multipole Wolf";
                         _lB = Coulomb(in).bjerrumLength();
                     }

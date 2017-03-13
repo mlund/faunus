@@ -21,8 +21,8 @@ d = {
 
   "energy" : {
     "nonbonded" : {
-       "epsr":1.0, "cutoff":14.8167, "eps_rf":140.0,
-       'ewald': { "cutoff":14.8167,'eps_surf':1e11, "alpha":0.14, "cutoffK":4, "spherical_sum":True, "update_frequency":1000}
+       "epsr":1.0, "cutoff":14.4315, "eps_rf":140.0, "kappa":0.21,
+       'ewald': { "cutoff":14.4315,'eps_surf':1e11, "alpha":0.14, "cutoffK":4, "spherical_sum":True, "update_frequency":1000}
     }
   },
   
@@ -31,7 +31,7 @@ d = {
       "energyfile": { "file": "energy.dat", "nstep":20 },
       "pqrfile" :   { "file": "stockmayer.pqr" },
       "statefile" : { "file": "state" },
-      "multipoleanalysis" : { "nstep":20, "cutoff":14.8167, "dielectric":"tinfoil" },
+      "multipoleanalysis" : { "nstep":20, "cutoff":14.4315, "dielectric":"reactionfield", "eps_rf":140.0, "kappa":0.21 },
       "kirkwoodfactor" : { "nstep":20, "pairs" :
             [
                { "name1":"dip", "name2":"dip", "dim":3, "dr":0.1, "file":"kwfactor_dipdip.dat"}
@@ -45,8 +45,8 @@ d = {
       },
 
   "moves" : {
-    "atomtranslate" : { "sol" : { "peratom":True } },
-    "atomrotate" : { "sol" : { "peratom":True } }
+    "atomtranslate" : { "sol" : { "peratom":True, "prob":1.0 } },
+    "atomrotate" : { "sol" : { "peratom":True, "prob":1.0 } }
   },
 
   "system" : {

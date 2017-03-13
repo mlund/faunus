@@ -2028,7 +2028,7 @@ namespace Faunus
                 };
                 std::vector<data> datavec;        // vector of data sets
                 Average<double> V;                // average volume (angstrom^3)
-		virtual void normalize(data &);
+                virtual void normalize(data &);
             private:
                 virtual void update(data &d)=0;   // called on each defined data set
                 void _sample() override;
@@ -2088,7 +2088,7 @@ namespace Faunus
                                 d.hist(r)++;
                             }
                 }
-                
+
                 public:
                 AtomRDF( Tmjson j, Tspace &spc ) : PairFunctionBase(j,
                         "Atomic Pair Distribution Function"), spc(spc) {}
@@ -2139,34 +2139,34 @@ namespace Faunus
                     }
                 }
             };
-	
+
         /**
          * @brief We sample the following pair functions between atom id's _i_ and _j_: the distant-dependent Kirkwood-factor
-	 * 
+         * 
          * \f[
          * ...
          * \f]
-	 * 
-	 * along the dipole correlation (extention ".dipolecorr")
-	 * 
+         * 
+         * along the dipole correlation (extention ".dipolecorr")
+         * 
          * \f[
          * \langle\hat{\mu}(0) \cdot \hat{\mu}(r)\rangle,
          * \f]
-	 * 
-	 * the dipole correlation (extention ".dipoleint")
-	 * 
+         * 
+         * the dipole correlation (extention ".dipoleint")
+         * 
          * \f[
          * \langle\frac{1}{2} ( 3 \hat{\mu}(0) \cdot \hat{\mu}(r) - 1 )\rangle,
          * \f]
-	 * 
-	 * and also a dipole angle distribution (extention ".angledist")
-	 * 
+         * 
+         * and also a dipole angle distribution (extention ".angledist")
+         * 
          * \f[
          * \hat{\mu}(0) \cdot \hat{\mu}(r).
          * \f]
          *
          * Here \f$ \hat{\mu} \f$ is a unit dipole moment vector.
-	 * 
+         * 
          * Input          | 
          * :------------- | :----------------------------------------
          * `name1`        | name of particle type 1
@@ -2196,23 +2196,23 @@ namespace Faunus
                     int id2 = atom[ d.name2 ].id;
                     for ( int i = 0; i < N; i++ )
                     {
-		        if ( spc.p[i].id==id1 || spc.p[i].id==id2 )
-			    d.hist(0) += spc.p[i].mu().dot(spc.p[i].mu()) * spc.p[i].muscalar() * spc.p[i].muscalar();
+                        if ( spc.p[i].id==id1 || spc.p[i].id==id2 )
+                            d.hist(0) += spc.p[i].mu().dot(spc.p[i].mu()) * spc.p[i].muscalar() * spc.p[i].muscalar();
                         for ( int j = i + 1.; j < N + 1; j++ )
                         {
                             if ( ( spc.p[i].id==id1 && spc.p[j].id==id2 ) || ( spc.p[i].id==id2 && spc.p[j].id==id1 ) )
                             {
-				double r = spc.geo.dist(spc.p[i], spc.p[j]);
-				double sca = spc.p[i].mu().dot(spc.p[j].mu());
-				mucorr_angle(sca) += 1.;
-				mucorr(r) += sca;
-				mucorr_dist(r) += 0.5 * (3 * sca * sca - 1.);
-				d.hist(r) += 2 * sca * spc.p[i].muscalar() * spc.p[j].muscalar();
-			    }
+                                double r = spc.geo.dist(spc.p[i], spc.p[j]);
+                                double sca = spc.p[i].mu().dot(spc.p[j].mu());
+                                mucorr_angle(sca) += 1.;
+                                mucorr(r) += sca;
+                                mucorr_dist(r) += 0.5 * (3 * sca * sca - 1.);
+                                d.hist(r) += 2 * sca * spc.p[i].muscalar() * spc.p[j].muscalar();
+                            }
                         }
                     }
                     if ( spc.p[N].id==id1 || spc.p[N].id==id2 )
-			d.hist(0) += spc.p[N].mu().dot(spc.p[N].mu()) * spc.p[N].muscalar() * spc.p[N].muscalar();
+                        d.hist(0) += spc.p[N].mu().dot(spc.p[N].mu()) * spc.p[N].muscalar() * spc.p[N].muscalar();
                 }
 
                 void normalize(data &d) override
@@ -2223,7 +2223,7 @@ namespace Faunus
                         i.second = sum;
                     }
                 }
-                
+
                 public:
                 KirkwoodFactor( Tmjson j, Tspace &spc ) : PairFunctionBase(j,"KirkwoodFactor"), spc(spc) {
                     mucorr_angle.setResolution(datavec.back().dr);
@@ -2242,39 +2242,40 @@ namespace Faunus
                     }
                 }
             };
-	
+
         /**
          * @brief We sample multipole aspects of the system. Firstly we sample
-	 * 
+         * 
          * \f[
          * \langle M_{\alpha}\rangle = \sum_{i=1}^N\left(r_{i,\alpha}q_i  \mu_{i,\alpha}\right)
          * \f]
-	 * 
-	 * where \f[ \alpha \in \{x,y,z \} \f], \f[ N \f] is the sumber of particles in the system, \f[ r_{i,\alpha} \f] 
-	 * is the \f[ \alpha \f]-component of particle \f[ i \f]'s position, and \f[ \mu_{i,\alpha} \f] is its dipole moment.
-	 * Both a spherical volume around the origin and the total volume is sampled. We also sample
-	 * 
+         * 
+         * where \f[ \alpha \in \{x,y,z \} \f], \f[ N \f] is the sumber of particles in the system, \f[ r_{i,\alpha} \f] 
+         * is the \f[ \alpha \f]-component of particle \f[ i \f]'s position, and \f[ \mu_{i,\alpha} \f] is its dipole moment.
+         * Both a spherical volume around the origin and the total volume is sampled. We also sample
+         * 
          * \f[
          * \langle {\bf M}\cdot {\bf M}\rangle
          * \f]
-	 * 
-	 * again for both a spherical volume around the origin and the total volume. Finally we also get the dielectric constant.
-	 * 
+         * 
+         * again for both a spherical volume around the origin and the total volume. Finally we also get the dielectric constant.
+         * 
          * Input           | 
          * :-------------- | :----------------------------------------
          * `cutoff`        | Cutoff for spherical analysis
          * `dielectric`    | Dielectric type 
-         * `alpha`         | Wolf-damping parameter. Only needed if dielectric type is `wolf`
-	 * 
-	 * The dielectric type is either: `tinfoil` for conducting boundary conditions, `rf` for reaction-field 
-	 * using insulating boundary conditions, or `wolf` for electrostatics using the Wolf-formalism. See DOI:http://doi.org/6v3
-	 * for more details.
+         * `kappa`         | Wolf-damping parameter. Only needed if dielectric type is `wolf`
+         * `eps_rf`        | Dielectric constant of the surrounding. If `eps_rf` < 0 then insulating boundary conditions will be used.
+         * 
+         * The dielectric type is either: `tinfoil` for conducting boundary conditions, `rf` for reaction-field 
+         * using insulating boundary conditions, or `wolf` for electrostatics using the Wolf-formalism. See DOI:http://doi.org/6v3
+         * for more details.
          *
          * Example JSON input:
          *
          *     "multipoleanalysis" : { "nstep":20, "cutoff":15.0, "dielectric":"tinfoil" }
-	 * 
-	 * @note This analysis can be expanded to include quadrupole moment analysis with minor changes.
+         * 
+         * @note This analysis can be expanded to include quadrupole moment analysis with minor changes.
          */
         template<class Tspace>
             class MultipoleAnalysis : public AnalysisBase {
@@ -2282,19 +2283,18 @@ namespace Faunus
                 vector <Average<double>> mu_abs;
                 Average<double> M_x, M_y, M_z, M_x_box, M_y_box, M_z_box, M2, M2_box, diel, V_t, groupDipole;
                 int atomsize;
-                double cutoff, cutoff2, const_Diel, alpha;
+                double cutoff, cutoff2, const_Diel, kappa, eps_rf;
                 bool diel_tinfoil, diel_RF, diel_wolf;
 
                 void _sample() override
                 {
-		  
                     V_t += spc.geo.getVolume();
 
                     // Updates from point dipoles
                     Point origin(0, 0, 0);
                     Point mu(0, 0, 0);        // In e\AA
                     Point mu_box(0, 0, 0);    // In e\AA
-		    
+
                     for ( auto &i : spc.p )
                     {
                         if ( spc.geo.sqdist(i, origin) < cutoff2 )
@@ -2341,36 +2341,37 @@ namespace Faunus
                     }
                     groupDipole += (mus_group / double(spc.groupList().size()));
                 }
-                
+
                 public:
                 MultipoleAnalysis( Tmjson j, Tspace &spc ) : AnalysisBase(j,"MultipoleAnalysis"), spc(spc) 
                 {
-		    alpha = j.value("alpha", 0.0);
-		    cutoff = j.at("cutoff");
-		    cutoff2 = cutoff*cutoff;
-		    diel_tinfoil = false;
-		    diel_RF = false;
-		    diel_wolf = false;
-		    string d = j.at("dielectric");
-		    if ( d =="tinfoil") {
-		        diel_tinfoil = true;
-		    } else if ( d =="rf") {
-		      diel_RF = true;
-		    } else if ( d =="wolf") {
-		      diel_wolf = true;
-		    } else {
-		      throw std::runtime_error(name + " error: invalid dielectric type");
-		    }
-                    const_Diel = pc::e * pc::e * 1e10 / (3 * pc::kT() * pc::e0);
+                    kappa = j.value("alpha", 0.0);
+                    cutoff = j.at("cutoff");
+                    cutoff2 = cutoff*cutoff;
+                    diel_tinfoil = false;
+                    diel_RF = false;
+                    diel_wolf = false;
+                    string d = j.at("dielectric");
+                    if ( d =="tinfoil") {
+                        diel_tinfoil = true;
+                    } else if ( d =="reactionfield") {
+                        diel_RF = true;
+                        eps_rf = j.at("eps_rf");
+                    } else if ( d =="wolf") {
+                        diel_wolf = true;
+                    } else {
+                        throw std::runtime_error(name + " error: invalid dielectric type");
+                    }
+                    const_Diel = pc::e * pc::e * 1e10 / (9.0 * pc::kT() * pc::e0);
                     atomsize = atom.size();
-		    mu_abs.resize(atomsize-1);
+                    mu_abs.resize(atomsize-1);
                 }  
 
                 ~MultipoleAnalysis() { }
 
                 /**
-		 * @note Assumes only one of the bool variables to be true.
-		 */
+                 * @note Assumes only one of the bool variables to be true.
+                 */
                 double getDielectricConstant() {
                     if(diel_tinfoil)
                         return getDielectricConstantTinfoil();
@@ -2387,24 +2388,20 @@ namespace Faunus
                  */
                 double getDielectricConstantTinfoil()
                 {
+                    //Point M(M_x_box.avg(),M_y_box.avg(),M_z_box.avg());
                     // 1 + ( ( ( 4 * pi * <M^2> ) / ( 3 * V * kT ) ) / ( 4 * pi * e0 ) )
-                    return (1 + M2_box.avg() * const_Diel / V_t.avg());
+                    return (1 + 3.0*M2_box.avg() * const_Diel / V_t.avg());
                 }
 
                 /**
-                 * @brief Returns dielectric constant when
-                 * \f$ \varepsilon_r = \varepsilon_{RF} \f$
-                 * according to
-                 * \f$ \frac{(2\varepsilon_r + 1)(\varepsilon_r - 1)}{9\varepsilon_r} = \frac{4\pi}{3}\frac{\langle M^2 \rangle}{3Vk_BT} \f$
-                 *
-                 * @warning Needs to be checked!
+                 * @brief Returns dielectric constant for the reaction field method.
                  */
-                double getDielectricConstantRF()
-                {
-                    double avgRF = M2_box.avg() * const_Diel / V_t.avg() / 3.0;
-                    double tempEps = 2.25 * avgRF + 0.25 + 0.75 * sqrt(9 * avgRF * avgRF + 2 * avgRF + 1);
-                    return tempEps;
-                } 
+                double getDielectricConstantRF() { 
+                    double M2V = M2_box.avg() * const_Diel / V_t.avg();
+                    if(eps_rf < 0.0)
+                        return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
+                    return (6*M2V*eps_rf + 2*eps_rf + 1.0)/(1.0 + 2*eps_rf - 3*M2V);
+                }
 
                 /**
                  * @brief Returns dielectric constant, \f$ \varepsilon_r \f$, according to
@@ -2416,23 +2413,23 @@ namespace Faunus
                  */
                 double getDielectricConstantWolf( )
                 {
-                    double alphaRc = alpha * cutoff;
+                    double alphaRc = kappa * cutoff;
                     double alphaRc2 = alphaRc * alphaRc;
                     double T = erf(alphaRc)
                         - (2 / (3 * sqrt(pc::pi))) * exp(-alphaRc2) * (alphaRc2 * alphaRc2 + 2.0 * alphaRc2 + 3.0);
                     return (((T + 2.0) * M2_box.avg() * const_Diel / V_t.avg() + 1.0)
-                            / ((T - 2.0) * M2_box.avg() * const_Diel / V_t.avg() + 1.0));
+                            / ((T - 1.0) * M2_box.avg() * const_Diel / V_t.avg() + 1.0));
                 }
 
                 Tmjson _json() override
                 {
-		    string type = "";
-		    if(diel_tinfoil)
-		      type = "Tinfoil";
-		    if(diel_RF)
-		      type = "Reaction-field";
-		    if(diel_wolf)
-		      type = "Wolf";
+                    string type = "";
+                    if(diel_tinfoil)
+                        type = "Tinfoil";
+                    if(diel_RF)
+                        type = "Reaction-field";
+                    if(diel_wolf)
+                        type = "Wolf";
                     return {
                         { name,
                             {
@@ -2445,7 +2442,7 @@ namespace Faunus
                                 { "<M^2>_SPHERE", M2.avg() },
                                 { "<M^2>_BOX", M2_box.avg() },
                                 { "dielectric constant("+type+")", diel.avg() },
-			        { "dielectric constant std:", diel.stdev() },
+                                { "dielectric constant std:", diel.stdev() },
                                 { "<mu>", groupDipole.avg() }
                             }
                         }
@@ -2540,14 +2537,14 @@ namespace Faunus
          *
          * Keyword                 |  Description
          * :---------------------  |  :----------------------------
-	 * `atomrdf`               |  `Analysis::AtomRDF`
+         * `atomrdf`               |  `Analysis::AtomRDF`
          * `chargemultipole`       |  `Analysis::ChargeMultipole`
          * `energyfile`            |  `Analysis::SystemEnergy`
-	 * `kirkwoodfactor`        |  `Analysis::KirkwoodFactor`
+         * `kirkwoodfactor`        |  `Analysis::KirkwoodFactor`
          * `meanforce`             |  `Analysis::MeanForce`
          * `molrdf`                |  `Analysis::MoleculeRDF`
-	 * `multipoleanalysis`     |  `Analysis::MultipoleAnalysis`
-	 * `multipoledistribution` |  `Analysis::MultipoleDistribution`
+         * `multipoleanalysis`     |  `Analysis::MultipoleAnalysis`
+         * `multipoledistribution` |  `Analysis::MultipoleDistribution`
          * `polymershape`          |  `Analysis::PolymerShape`
          * `scatter`               |  `Analysis::ScatteringFunction`
          * `virial`                |  `Analysis::VirialPressure`

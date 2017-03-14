@@ -1608,10 +1608,12 @@ namespace Faunus
             public:
                 WriteOnceFileAnalysis( Tmjson &j, std::function<void(string)> writer ) : AnalysisBase(j)
             {
+	      
                 steps = j.value("nstep", int(-1));
                 filename = j.at("file");
                 name = filename; // better than nothing...
                 f = writer;
+		
             }
 
                 ~WriteOnceFileAnalysis()

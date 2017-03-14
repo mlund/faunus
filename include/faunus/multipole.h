@@ -285,7 +285,7 @@ namespace Faunus {
      * @param r Direction \f$ r_A - r_B \f$
      */
     template<class Tvec>
-        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) {
+        double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r, double a=1.0, double b=0.0) {
 #ifdef FAU_APPROXMATH
             double r1i = invsqrtQuake( r.squaredNorm() );
             double r2i = r1i*r1i;
@@ -297,7 +297,8 @@ namespace Faunus {
             //double r5i = r3i*r2i;
             //Eigen::Matrix3d T = 3*r5i*r*r.transpose() - r3i*Matrix3d::Identity();
             //double W = -muA.transpose()*T*muB;
-            double W = r3i*(3*muA.dot(r)*muB.dot(r)*r2i - muA.dot(muB));
+	    double dot = muA.dot(muB);
+            double W = r3i*( (3*muA.dot(r)*muB.dot(r)*r2i - dot)*a + dot*b );
             return -W*muAxmuB;
         }
 
@@ -1014,7 +1015,7 @@ namespace Faunus {
                 }
 
                 template<class Tparticle>
-                    double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+                    double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
                         if (r2 < rc2) {
                             double r = sqrt(r2);
                             return lB * a.charge * b.charge / r * sf.eval( table, r*rc1i );
@@ -1532,19 +1533,22 @@ namespace Faunus {
                     name += " Q"; 
                     _lB = Coulomb(j).bjerrumLength();
                     rc1 = j.at("cutoff");
-                    tab_utol = j.value("tab_utol",1e-9); // Higher accuracy than 1e-7 gives error
+                    tab_utol = j.value("tab_utol",1e-9);
                     tab_ftol = j.value("tab_ftol",1e-2);
                     rc1i = 1.0/rc1;
                     order = j.value("order",300);
 
                     std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,3,order); };
+                    sf.setRange(0,1);
+                    sf.setTolerance(tab_utol,tab_ftol); // Tolerance in first prefactor-function and its derivative
+                    table = sf.generate( Qk );
                 }
 
                 template<class Tparticle>
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r1 = r.norm();
                         if (r1 < rc1)
-                            return _lB*mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r)*sf.eval(table,r1*rc1i);
+                            return _lB*mu2mu(a.mu(), b.mu(), a.muscalar()*b.muscalar(), r)*sf.eval(table,r1*rc1i);
                         return 0.0;
                     }
 
@@ -1572,8 +1576,10 @@ namespace Faunus {
         inline double Euler_type_function(double q, int P=300, bool all=true) {
             if(q >= 1.0 - (1.0/2400.0))
                 return 0.0;
-            if(q <= (1.0/2400.0))
+            if(q <= (1.0/2400.0) && all)
                 return 1.0;
+            if(q <= (1.0/2400.0) && !all)
+                return 0.0;
             double value1 = 0.0;
             double value2 = 0.0;
             double value3 = 0.0;
@@ -1638,7 +1644,7 @@ namespace Faunus {
                         if (r1 < rc1) {
                             double af = ak.eval(tableA,r1*rc1i);
                             double bf = bk.eval(tableB,r1*rc1i);
-                            return _lB*mu2mu(a.mu, b.mu, a.muscalar*b.muscalar, r,af,bf);
+                            return _lB*mu2mu(a.mu(), b.mu(), a.muscalar()*b.muscalar(), r,af,bf);
                         }
                         return 0.0;
                     }

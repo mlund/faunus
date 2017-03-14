@@ -10,8 +10,7 @@ def mkinput():
   d = {
       "energy" : {
         "nonbonded" : {
-          "ljsimple" : { "eps":0.05  },
-          "coulomb" : { "epsr" : 78.7, "ionicstrength" : Cs }
+          "eps":0.05, "epsr" : 78.7, "ionicstrength" : Cs
           },
         "cmconstrain" : {
           "protein protein" : { "mindist": 0, "maxdist": 1000 }

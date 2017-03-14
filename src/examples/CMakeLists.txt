@@ -74,6 +74,7 @@ set_target_properties(example_spheresurface PROPERTIES OUTPUT_NAME "spheresurfac
 
 fau_example(example_twobody "./" twobody.cpp)
 set_target_properties(example_twobody PROPERTIES OUTPUT_NAME "twobody")
+target_link_libraries(example_twobody libfaunus docopt)
 
 fau_example(example_keesom "./" keesom.cpp)
 set_target_properties(example_keesom PROPERTIES OUTPUT_NAME "keesom")

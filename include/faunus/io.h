@@ -26,7 +26,7 @@ namespace Faunus {
 
     /* @brief Read lines from file into vector */
     inline bool readFile(const std::string &file, std::vector<string> &v) {
-      std::ifstream f(file.c_str() );
+      std::ifstream f( file );
       if (f) {
         std::string s;
         while (getline(f,s))

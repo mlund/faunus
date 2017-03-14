@@ -21,17 +21,16 @@ namespace Faunus
   inline Tmjson openjson( const string &file )
   {
       Tmjson js;
-      std::ifstream f(file.c_str());
-      if ( f )
-      {
-          try
-          {
+      std::ifstream f;
+      f.exceptions( std::ifstream::failbit );
+      try {
+          f.open( file );
+          if ( f )
               js << f;
-          }
-          catch(std::exception& e)
-          {
-              throw std::runtime_error("Error loading json file " + file + ": " + e.what());
-          }
+      }
+      catch(std::exception& e)
+      {
+          throw std::runtime_error("Error loading json file " + file + ": " + e.what());
       }
       return js;
   }

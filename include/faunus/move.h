@@ -1833,8 +1833,11 @@ namespace Faunus
             for ( auto &i : this->mollist )
             {
                 string molname = spc->molList()[i.first].name;
-                string mobname = m[molname]["clustergroup"] | string();
-                threshold = m[molname]["threshold"] | 0.0;
+                string mobname = m[molname].at("clustergroup");
+                threshold = m[molname].at("threshold");
+                dp_trans = m[molname].at("dp");
+                dp_rot = m[molname].at("dprot");
+                dir << j.value("dir", string("1 1 1") );  // magic!
 
                 auto mob = spc->findMolecules(mobname); // mobile atoms to include in move
                 if ( mob.size() == 1 )
@@ -1883,12 +1886,6 @@ namespace Faunus
             igroup = *slump.element(gvec.begin(), gvec.end());
             assert(!igroup->empty());
             auto it = this->mollist.find(this->currentMolId);
-            if ( it != this->mollist.end())
-            {
-                dp_trans = it->second.dp1;
-                dp_rot = it->second.dp2;
-                dir = it->second.dir;
-            }
         }
 
         assert(gmobile != nullptr && "Cluster group not defined");

@@ -646,12 +646,12 @@ namespace Faunus {
                           if (geo==nullptr)
                               throw std::runtime_error("Cuboid-like geometry required");
                           if (setbox)
-                              geo->setlen( Point( xdbox[0][0], xdbox[1][1], xdbox[2][2] ) );
+                              geo->setlen( Point( 10.0*xdbox[0][0], 10.0*xdbox[1][1], 10.0*xdbox[2][2] ) );
                           for (size_t i=0; i<c.p.size(); i++) {
-                              c.p[i].x() = x_xtc[i][0];
-                              c.p[i].y() = x_xtc[i][1];
-                              c.p[i].z() = x_xtc[i][2];
-                              c.p[i] = c.p[i]*10 - geo->len_half;
+                              c.p[i].x() = 10.0*x_xtc[i][0];
+                              c.p[i].y() = 10.0*x_xtc[i][1];
+                              c.p[i].z() = 10.0*x_xtc[i][2];
+                              c.p[i] = c.p[i] - geo->len_half;
                               c.trial[i] = Point(c.p[i]);
                               if ( geo->collision(c.p[i], 0) )
                                   throw std::runtime_error("particle-container collision");

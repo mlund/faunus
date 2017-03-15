@@ -795,8 +795,11 @@ namespace Faunus
                   throw std::runtime_error("State file has different number of particles. Try using the RESIZE keyword.");
               else
               {
-                  for ( int i = 0; i < n; i++ )
-                      p[i] << f;
+                  for ( int i = 0; i < n; i++ ) {
+                      p.at(i) << f;
+                      if ( p.at(i).id >= atom.size() )
+                          throw std::runtime_error("State file has more species than in the atom list.");
+                  }
                   trial = p;
                   cout << indent(SUB) << "Read " << n << " particle(s)." << endl;
 

@@ -39,6 +39,9 @@ set(objs
         geometry potentials slump species analysis)
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
+include_directories(${CMAKE_SOURCE_DIR}/include/docopt.cpp-0.6.2)
+add_library(docopt ${CMAKE_SOURCE_DIR}/include/docopt.cpp-0.6.2/docopt.cpp)
+
 add_subdirectory(xdrfile)
 
 if (ENABLE_NOPBC)

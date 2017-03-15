@@ -9,5 +9,5 @@ compiler:
 script:
   - cmake .
   - make -j2
-  - ctest -V
+  - ctest --output-on-failure -j1
 

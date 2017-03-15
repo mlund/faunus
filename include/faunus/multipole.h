@@ -297,7 +297,7 @@ namespace Faunus {
             //double r5i = r3i*r2i;
             //Eigen::Matrix3d T = 3*r5i*r*r.transpose() - r3i*Matrix3d::Identity();
             //double W = -muA.transpose()*T*muB;
-	    double dot = muA.dot(muB);
+            double dot = muA.dot(muB);
             double W = r3i*( (3*muA.dot(r)*muB.dot(r)*r2i - dot)*a + dot*b );
             return -W*muAxmuB;
         }
@@ -322,269 +322,6 @@ namespace Faunus {
             WBA = 3*WBA*r5i - quadA.trace()*r3i;
             return (qA*WAB + qB*WBA);
         }
-
-    /**
-     * @brief Base class for Wolf based interactions
-     *
-     * The idea is that this class has no dependencies and is
-     * to be used as a helper class for other classes.
-     */
-    class WolfBase {
-
-        struct wdata {
-            double r1i_d, r2i, der_dT0c, T1, T1c_r1i, der_dT1c_r1i, T21, T22, T2c2_r2i, der_dT2c1, der_dT2c2_r2i;
-        };
-        private:
-        double rc1, rc1i, rc1i_d, rc2, rc2i, kappa, kappa2, constant;
-        double dT0c, T1c_rc1, dT1c_rc1, T2c1, T2c2_rc2, dT2c1, dT2c2_rc2;
-        wdata data;
-	
-	Tabulate::Andrea<double> T0_tabulator, T1_tabulator, T2_tabulator;
-	Tabulate::TabulatorBase<double>::data table_T0, table_T1, table_T2;
-
-        public:
-        void calcWolfData(const Point &r) {
-            data.r2i = 1/r.squaredNorm();
-            double r1i = sqrt(data.r2i);
-            data.r1i_d = erfc_x(kappa/r1i)*r1i;
-            double der = (1/r1i) - rc1;
-            der = 0;
-            double expK = constant*exp(-kappa2/data.r2i);
-            data.der_dT0c = der*dT0c;
-            data.T1 = (expK + data.r1i_d)*data.r2i;
-            data.T1c_r1i = T1c_rc1*r1i;
-            data.der_dT1c_r1i = der*dT1c_rc1*r1i;
-            data.T21 = -(data.r1i_d + expK)*data.r2i;
-            data.T22 = (3.*data.r1i_d*data.r2i + (3.*data.r2i + 2.*kappa2)*expK)*data.r2i;
-            data.T2c2_r2i = T2c2_rc2*data.r2i;
-            data.der_dT2c1 = der*dT2c1;
-            data.der_dT2c2_r2i = der*dT2c2_rc2*data.r2i;
-            data.T2c2_r2i = 0.0; // No Energy
-            data.der_dT2c2_r2i = 0.0; // No Force
-        }
-
-        /**
-         * @brief Constructor
-         * @param alpha Dampening factor (inverse angstrom)
-         * @param rcut Cutoff distance (angstrom)
-         */
-        WolfBase(double alpha, double rcut) {
-            kappa = alpha;
-            kappa2 = kappa*kappa;
-            constant = 2*kappa/sqrt(pc::pi);
-            rc1 = rcut;
-            rc2 = rc1*rc1;
-            rc2i = 1/rc2;
-            rc1i = 1/rc1;
-            double expKc = constant*exp(-kappa2/rc2i);
-            rc1i_d = erfc_x(kappa*rc1)*rc1i;
-
-            T1c_rc1 = (expKc + rc1i_d)*rc2i;
-            T2c1 = -(expKc + rc1i_d)*rc2i;
-            T2c2_rc2 = (3.*rc1i_d*rc2i*rc2i + (3.*rc2i + 2.*kappa2)*expKc*rc2i);
-
-            dT0c = -(expKc + rc1i_d)*rc1i;
-            dT1c_rc1 = (-2*T1c_rc1/rc1) - 2*kappa2*expKc*rc1i;
-            dT2c1 = -(3*T2c1/rc1) + (2*kappa2*exp(-rc2*kappa2)*rc1i*constant);
-            dT2c2_rc2 = (-3*T2c2_rc2/rc1) - (4*kappa2*kappa2*exp(-rc2*kappa2)*rc1i*constant);
-
-            T1c_rc1 = T1c_rc1*rc1;
-            dT1c_rc1 = dT1c_rc1*rc1;
-            T2c2_rc2 = T2c2_rc2*rc2;
-            dT2c2_rc2 = dT2c2_rc2*rc2;
-	    
-	    std::function<double(double)> T0 = [&](double r1) { return erfc(kappa*r1); };
-	    T0_tabulator.setRange(0,rc1);
-	    T0_tabulator.setTolerance(1e-9,1e-2); // Tolerance in energy and force
-	    table_T0 = T0_tabulator.generate( T0 );
-	    
-	    std::function<double(double)> T1 = [&](double r1) { return (r1*constant*exp(-kappa2*r1*r1) + erfc(kappa*r1)); };
-	    T1_tabulator.setRange(0,rc1);
-	    T1_tabulator.setTolerance(1e-9,1e-2); // Tolerance in energy and force
-	    table_T1 = T1_tabulator.generate( T1 );
-	    
-	    std::function<double(double)> T2 = [&](double r1) { return (3.*erfc(kappa*r1) + r1*(3.0 + 2.*kappa2*r1*r1)*constant*exp(-kappa2*r1*r1)); };
-	    T2_tabulator.setRange(0,rc1);
-	    T2_tabulator.setTolerance(1e-9,1e-2); // Tolerance in energy and force
-	    table_T2 = T2_tabulator.generate( T2 );
-        }
-
-        /**
-         * @brief Returns ion-ion interaction.
-         * @param qA Charge of ion A
-         * @param qB Charge of ion B
-         * @param r Direction \f$ r_A - r_B \f$
-         */
-        template<bool useWdata=false, class Tvec>
-            double q2q(double qA, double qB, const Tvec &r) const {
-                /* Code to use if calcWolfData is not called */
-                if (useWdata==false) {
-                    double r2i = 1/r.squaredNorm();
-                    if (r2i < rc2i)
-                        return 0;
-                    double r1i = sqrt(r2i);
-                    double der = (1/r1i) - rc1;
-                    double r1i_d = erfc_x(kappa/r1i)*r1i;
-                    return (qA*qB*(r1i_d - rc1i_d - der*dT0c));
-                }
-                return (qA*qB*(data.r1i_d - rc1i_d - data.der_dT0c));
-		
-		double r2 = r.squaredNorm();
-		if (rc2 < r2)
-		    return 0.0;
-		double r1 = sqrt(r2);
-		double der = r1 - rc1;
-		return qA*qB*( T0_tabulator.eval(table_T0,r1)/r1 - rc1i_d - der*dT0c);
-            }
-
-        /**
-         * @brief Returns ion-dipole interaction.
-         * @param QBxMuA Product of ion B:s charge and dipole A:s scalar
-         * @param muA Unit dipole moment vector of particel A
-         * @param QAxMuB Product of ion A:s charge and dipole B:s scalar
-         * @param muB Unit dipole moment vector of particel B
-         * @param r Direction \f$ r_A - r_B \f$
-         */
-        template<bool useWdata=false, class Tvec>
-            double q2mu(double QBxMuA, const Tvec &muA, double QAxMuB, const Tvec &muB, const Tvec &r) const {
-                /* Code to use if calcWolfData is not called */
-                if (useWdata==false) {
-                    double r2i = 1/r.squaredNorm();
-                    if (r2i < rc2i)
-                        return 0;
-                    double r1i = sqrt(r2i);
-                    double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
-                    double der = (1/r1i) - rc1;
-                    double W1 = QBxMuA*muA.dot(r)*(T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i);
-                    double W2 = QAxMuB*muB.dot(-r)*(T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i);
-                    return (W1 + W2);
-                }
-                double W1 = QBxMuA*muA.dot(r)*(data.T1 - data.T1c_r1i - data.der_dT1c_r1i);
-                double W2 = QAxMuB*muB.dot(-r)*(data.T1 - data.T1c_r1i - data.der_dT1c_r1i);
-                return (W1 + W2);
-            }
-
-        /**
-         * @brief Dipole-dipole energy
-         * @param muA Dipole moment (A) unit vector
-         * @param muB Dipole moment (B) unit vector
-         * @param muAxmuB Product of dipole moment scalars, |A|*|B|
-         * @param r Direction \f$ r_A - r_B \f$
-         */
-        template<bool useWdata=false, class Tvec>
-            double mu2mu(const Tvec &muA, const Tvec &muB, double muAxmuB, const Tvec &r) const {
-                /* Code to use if calcWolfData is not called */
-                if (useWdata==false) {
-                    double r2i = 1.0/r.squaredNorm();
-                    if (r2i < rc2i)
-                        return 0;
-                    //double r1i = sqrt(r2i);
-                    //double r1i_d = erfc_x(kappa/r1i)*r1i;
-                    //double expK = constant*exp(-kappa2/r2i);
-                    //double T2_1 = -(r1i_d + expK)*r2i;
-		    double r1 = 1.0/sqrt(r2i);
-		    double r3i = r2i/r1;
-		    double T2_1 = -T1_tabulator.eval(table_T1,r1)*r3i;
-		    double T2_2 = T2_tabulator.eval(table_T2,r1)*r3i;
-                    //double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
-                    //double der = (1/r1i) - rc1;
-		    double der = r1 - rc1;
-                    double t3 = muA.dot(muB)*(T2_1 - T2c1 - der*dT2c1);
-                    double t5 = muA.dot(r)*muB.dot(r)*r2i*(T2_2 - T2c2_rc2 - der*dT2c2_rc2);
-                    return -(t5 + t3)*muAxmuB;
-                }
-                double t3 = muA.dot(muB)*(data.T21 - T2c1 - data.der_dT2c1);
-                double t5 = muA.dot(r)*muB.dot(r)*(data.T22 - data.T2c2_r2i - data.der_dT2c2_r2i);
-                return -(t5 + t3)*muAxmuB;
-            }
-
-        /**
-         * @brief Returns ion-quadrupole energy
-         * @param qA Charge of particle A
-         * @param quadB Quadrupole moment of particle B
-         * @param qB Charge of particle B
-         * @param quadA Quadrupole moment of particle A
-         * @param r Direction @f$ r_A - r_B @f$
-         */
-        template<bool useWdata=false, class Tvec, class Tmat>
-            double q2quad(double qA, const Tmat &quadB,double qB, const Tmat &quadA, const Tvec &r) const {
-                /* Code to use if calcWolfData is not called */
-                if (useWdata==false) {
-                    double r2i = 1/r.squaredNorm();
-                    if (r2i < rc2i)
-                        return 0;
-                    double r1i = sqrt(r2i);
-                    double r1i_d = erfc_x(kappa/r1i)*r1i;
-                    double expK = constant*exp(-kappa2/r2i);
-                    double T2_1 = -(r1i_d + expK)*r2i;
-                    double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
-                    double der = (1/r1i) - rc1;
-                    double WAB = r.transpose()*quadB*r;
-                    WAB = WAB*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i) + quadB.trace()*(T2_1 - T2c1 - der*dT2c1);
-                    double WBA = r.transpose()*quadA*r;
-                    WBA = WBA*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i) + quadA.trace()*(T2_1 - T2c1 - der*dT2c1);
-                    return (qA*WAB + qB*WBA);
-                }
-                double WAB = r.transpose()*quadB*r;
-                WAB = WAB*(data.T22 - data.T2c2_r2i - data.der_dT2c2_r2i) + quadB.trace()*(data.T21 - T2c1 - data.der_dT2c1);
-                double WBA = r.transpose()*quadA*r;
-                WBA = WBA*(data.T22 - data.T2c2_r2i - data.der_dT2c2_r2i) + quadA.trace()*(data.T21 - T2c1 - data.der_dT2c1);
-                return (qA*WAB + qB*WBA);
-            }
-
-        /** 
-         * @brief Field at `r` due to charge `p` 
-         * @param p Particles from which field arises
-         * @param r Direction @f$ r_A - r_B @f$
-         */
-        template<bool useWdata=false, class Tparticle>
-            Point fieldCharge(const Tparticle &p, const Point &r) const {
-                /* Code to use if calcWolfData is not called */
-                if (useWdata==false) {
-                    double r2i = 1/r.squaredNorm();
-                    if (r2i < rc2i)
-                        return Point(0,0,0);
-                    double r1i = sqrt(r2i);
-                    double T1 = (constant*exp(-kappa2/r2i) + erfc_x(kappa/r1i)*r1i)*r2i;
-                    double der = (1/r1i) - rc1;
-                    return (T1 - T1c_rc1*r1i - der*dT1c_rc1*r1i)*r*p.charge;
-                }
-                return (data.T1 - data.T1c_r1i - data.der_dT1c_r1i)*r*p.charge;
-            }
-
-        /** 
-         * @brief Field at `r` due to dipole `p` 
-         * @param p Particles from which field arises
-         * @param r Direction @f$ r_A - r_B @f$
-         */
-        template<bool useWdata=false, class Tparticle>
-            Point fieldDipole(const Tparticle &p, const Point &r) const {
-                /* Code to use if calcWolfData is not called */
-                if (useWdata==false) {
-                    double r2i = 1.0/r.squaredNorm();
-                    if (r2i < rc2i)
-                        return Point(0,0,0);
-                    double r1i = sqrt(r2i);
-                    double r1i_d = erfc_x(kappa/r1i)*r1i;
-                    double expK = constant*exp(-kappa2/r2i);
-                    double T2_1 = -(r1i_d + expK)*r2i;
-                    double T2_2 = (3.*r1i_d*r2i + (3.*r2i + 2.*kappa2)*expK)*r2i;
-                    double der = (1/r1i) - rc1;
-                    Point t3 = p.mu()*(T2_1 - T2c1 - der*dT2c1);
-                    Point t5 = r*p.mu().dot(r)*(T2_2 - T2c2_rc2*r2i - der*dT2c2_rc2*r2i);
-                    return (t5 + t3)*p.muscalar();
-                }
-                Point t3 = p.mu()*(data.T21 - T2c1 - data.der_dT2c1);
-                Point t5 = r*p.mu().dot(r)*(data.T22 - data.T2c2_r2i - data.der_dT2c2_r2i);
-                return (t5 + t3)*p.muscalar();
-            }
-
-        double getRc2i() const { return rc2i; }
-        double getR2i() const { return data.r2i; }
-        double getKappa() { return kappa; }
-        double getCutoff() { return rc1; }
-    };
-
 
     /**
      * @brief Base class for Gaussian-damped interactions. Implemented according to DOI: 10.1002/jcc.20574
@@ -1030,11 +767,11 @@ namespace Faunus {
 
                 template<typename Tparticle>
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-		      if (r2 < rc2) {
-			double r = sqrt(r2);
-			return lB * a.charge * b.charge * ( -sf.eval( table, r*rc1i )/r2 + sf.evalDer( table, r*rc1i )/r )*p;
-		      }
-		      return Point(0,0,0);
+                        if (r2 < rc2) {
+                            double r = sqrt(r2);
+                            return lB * a.charge * b.charge * ( -sf.eval( table, r*rc1i )/r2 + sf.evalDer( table, r*rc1i )/r )*p;
+                        }
+                        return Point(0,0,0);
                     }
 
                 double dielectric_constant(double M2V) {
@@ -1068,9 +805,21 @@ namespace Faunus {
         };
 
         /**
-         * @brief Ion-dipole interaction, 
+         * @brief Ion-dipole interaction energy
          *
-         * More info...
+         * \f$ u = q\boldsymbol{{\rm T}}_1(\boldsymbol{r})\cdot \boldsymbol{\mu} \f$ 
+         * 
+         * where
+         * 
+         * \f$ \boldsymbol{{\rm T}}_1(\boldsymbol{r}) = \nabla\left(\frac{1}{|\boldsymbol{r}|}\right). \f$
+         * 
+         * Here \f$ \boldsymbol{\mu} \f$ is the dipole moment, \f$ q \f$ is the charge and \f$ \boldsymbol{r} \f$ is the 
+         * distance-vector between the two. The expression can also be written as
+         * 
+         * \f$ u = \frac {q\mu \cos(\theta)}{|\boldsymbol{r}|^2}  \f$
+         * 
+         * where \f$ \theta \f$ is the angle between \f$ \boldsymbol{r} \f$ and \f$ \boldsymbol{\mu} \f$.
+         * 
          */
         class IonDipole : public PairPotentialBase {
             private:
@@ -1098,9 +847,19 @@ namespace Faunus {
         };
 
         /**
-         * @brief Dipole-dipole interaction
+         * @brief Dipole-dipole interaction energy
          *
-         * More info...
+         * \f$ u = -\boldsymbol{\mu}_A^T\boldsymbol{{\rm T}}_2(\boldsymbol{r}_{AB})\boldsymbol{\mu}_B \f$ 
+         * 
+         * where
+         * 
+         * \f$ \boldsymbol{{\rm T}}_2(\boldsymbol{r}) = \nabla^2\left(\frac{1}{|\boldsymbol{r}|}\right). \f$
+         * 
+         * Here \f$ A \f$ and \f$ B \f$ index different dipoles, \f$ \boldsymbol{\mu} \f$ the dipole moment and \f$ \boldsymbol{r} \f$ the 
+         * distance-vector between the two. The expression can also be written as
+         * 
+         * \f$ u = -3\frac { (\boldsymbol{\mu}_A\cdot  \boldsymbol{r})(\boldsymbol{\mu}_B\cdot  \boldsymbol{r})}{|\boldsymbol{r}|^5} + \frac{(\boldsymbol{\mu}_A\cdot\boldsymbol{\mu}_B)}{|\boldsymbol{r}|^3}.  \f$
+         * 
          */
         class DipoleDipole : public PairPotentialBase {
             private:
@@ -1153,9 +912,20 @@ namespace Faunus {
                 }
         };
 
-        /** @brief Ion-quadrupole interaction
+        /**
+         * @brief Ion-quadupole interaction energy
+         *
+         * \f$ u = q\boldsymbol{{\rm T}}_2(\boldsymbol{r}):\Theta \f$ 
          * 
-         * More info...
+         * where
+         * 
+         * \f$ \boldsymbol{{\rm T}}_2(\boldsymbol{r}) = \nabla^2\left(\frac{1}{|\boldsymbol{r}|}\right). \f$
+         * 
+         * Here \f$ q \f$ is the charge, \f$ \Theta \f$ the quadrupole moment and \f$ \boldsymbol{r} \f$ the 
+         * distance-vector between the two. The expression can also be written as
+         * 
+         * \f$ u = 3\frac{\boldsymbol{r}^T\Theta \boldsymbol{r}}{|\boldsymbol{r}|^5} - \frac{tr(\Theta)}{|\boldsymbol{r}|^3}  \f$
+         * 
          */
         class IonQuad : public PairPotentialBase {
             private:
@@ -1188,6 +958,8 @@ namespace Faunus {
          * `cutoff`          |  Cut-off for interactions.                             
          * `epsr`            |  Dielectric constant of the medium.                      (Default: 1)
          * `eps_rf`          |  Dielectric constant of the surroundings.            
+         * 
+         * [doi](http://dx.doi.org/10.1080/00268978000100361
          * 
          * @note If 'eps_rf' is set to (epsr,<0,0) then 'vacuum'/insulating/conducting boundary conditions will be used. 
          */
@@ -1273,10 +1045,51 @@ namespace Faunus {
                 }
         };
 
+        /**
+         * @brief Wolf summation for electrostatic interactions
+         *
+         * This will take care of long-ranged electrostatic interactions using the Wolf summation scheme. Currently it is possible to include ions, dipoles and quadrupoles. 
+         * 
+         *  Keyword          |  Description
+         * :--------------   | :---------------
+         * `kappa`           |  Damping-parameter                                                          
+         * `cutoff`          |  Cut-off                                                                        
+         * `forceshifted`    |  Sets if the potential will be force-shifted 
+         * `tab_utol`        |  Tolerance for splines in energy-calculations.                         (Default: \f$ 10^{-9}\f$)
+         * `tab_ftol`        |  Tolerance for splines in force-calculations.                          (Default: \f$ 10^{-2}\f$)
+         * 
+         * The formalism used the following basic interaction-tensor.
+         * 
+         * @f[
+         * \boldsymbol{{\rm T}}_0(\boldsymbol{r}) = \frac{{\rm erfc}(\kappa |\boldsymbol{r}|)}{|\boldsymbol{r}|}
+         * @f]
+         * 
+         * Higher order interaction-tensors are retrieved by taking the gradient of the previous one. I.e.
+         * 
+         * @f[
+         * \boldsymbol{{\rm T}}_1(\boldsymbol{r}) = \nabla \boldsymbol{{\rm T}}_0(\boldsymbol{r}).
+         * @f]
+         * 
+         * The effective potential is shifted and possibly also force-shifted according to the equation below.
+         * 
+         * @f[
+         * \boldsymbol{{\rm T}}_{Mod}(\boldsymbol{r}) = \boldsymbol{{\rm T}}(\boldsymbol{r}) - \left.\boldsymbol{{\rm T}}(\boldsymbol{r})\right|_{|\boldsymbol{r}|\to R_c^-} - (|\boldsymbol{r}| - R_c)\frac{\partial \boldsymbol{{\rm T}}(\boldsymbol{r})}{\partial |\boldsymbol{r}|}
+         * @f]
+         * 
+         * Original article for ionic interactions [doi](http://dx.doi.org/10.1063/1.478738)
+         * Force-shifted exansion for ionic interactions [doi](http://dx.doi.org/10.1063/1.2206581)
+         * Force-shifted exansion for dipolar interactions [doi](http://dx.doi.org/10.1063/1.4923001)
+         * 
+	 * @todo Implement field-functions.
+         */
         template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
             class MultipoleWolf : public PairPotentialBase {
                 private:
-                    WolfBase wolf;
+                    double kappa, cutoff, cutoff2, der;
+                    bool forceshifted;
+                    Tabulate::Andrea<double> T0, T1, T2a, T2b; // splitting function
+                    Tabulate::TabulatorBase<double>::data tableT0, tableT1, tableT2a, tableT2b; // data for splitting function
+
                     string _brief() {
                         std::ostringstream o;
                         o << "Multipole Wolf, lB=" << _lB << textio::_angstrom;
@@ -1284,51 +1097,70 @@ namespace Faunus {
                     }
                 protected:
                     double _lB;
+
                 public:
-                    //template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
-                    MultipoleWolf(Tmjson &in) : wolf(in.at("kappa"),in.at("cutoff")) {
+                    MultipoleWolf(Tmjson &in) {
                         name="Multipole Wolf";
                         _lB = Coulomb(in).bjerrumLength();
+
+                        kappa = in.at("kappa");
+                        cutoff = in.at("cutoff");
+                        cutoff2 = cutoff*cutoff;
+                        forceshifted = in.at("forceshifted");
+                        der = 0.0;
+                        if(forceshifted)
+                            der = 1.0;
+                        double kR = kappa*cutoff;
+
+                        T0.setRange(0, 1);
+                        T0.setTolerance(in.value("tab_utol",1e-9),in.value("tab_ftol",1e-2) );
+                        tableT0 = T0.generate( [&](double q) { return ( erfc(kR*q) - q*erfc(kR) + der*q*(q - 1.0)*(erfc(kR)+2.0*kR/sqrt(pc::pi)*exp(-kR*kR)) ); } );
+
+                        T1.setRange(0, 1);
+                        T1.setTolerance(in.value("tab_utol",1e-9),in.value("tab_ftol",1e-2) );
+                        tableT1 = T1.generate( [&](double q) { return ((2.0*kR*q/pc::pi*exp(-kR*kR*q*q) + erfc(kR*q)) - (2.0*kR/pc::pi*exp(-kR*kR) + erfc(kR))*q*q + der*q*q*(q - 1.0)*2.0*( (kR/sqrt(pc::pi)*exp(-kR*kR)*(1.0/sqrt(pc::pi) + 1.0 + 2.0*kR*kR/sqrt(pc::pi)) + erfc(kR) ))); } );
+
+                        T2a.setRange(0, 1);
+                        T2a.setTolerance(in.value("tab_utol",1e-9),in.value("tab_ftol",1e-2) );
+                        tableT2a = T2a.generate( [&](double q) { return ( erfc(kR*q) + 2.0*kR*q*exp(-kR*kR*q*q)*(2.0*kR*kR*q*q + 3.0)/sqrt(pc::pi) - (erfc(kR) + 2.0*kR*exp(-kR*kR)*(2.0*kR*kR + 3.0)/sqrt(pc::pi))*q*q*q + der*q*q*q*(q-1.0)*( 3.0*erfc(kR) + 2.0*kR*exp(-kR*kR)*(7.0 + 6.0*kR*kR + 4.0*kR*kR*kR*kR)/sqrt(pc::pi))); } );
+
+                        T2b.setRange(0, 1);
+                        T2b.setTolerance(in.value("tab_utol",1e-9),in.value("tab_ftol",1e-2) );
+                        tableT2b = T2b.generate( [&](double q) { return ( 4.0*kR*q*(kR*kR*q*q + 1.0)*exp(-kR*kR*q*q)/sqrt(pc::pi) - 4.0*kR*(kR*kR + 1.0)*exp(-kR*kR)/sqrt(pc::pi)*q*q*q + der*q*q*q*(q - 1.0)*8.0*kR*exp(-kR*kR)*(kR*kR*kR*kR + kR*kR + 1.0)/sqrt(pc::pi) ); } );
                     }
+
                     template<class Tparticle>
                         double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
+                            double r2 = r.squaredNorm();
+                            if(r2 > cutoff2)
+                                return 0.0;
+
                             double U_total = 0;
-                            if((useIonIon? 1:0) + (useIonDipole? 1:0) + (useDipoleDipole? 1:0) + (useIonQuadrupole? 1:0) > 1) {
-                                wolf.calcWolfData(r);
-                                if (wolf.getR2i() < wolf.getRc2i())
-                                    return 0;
-                                if(useIonIon == true) U_total += wolf.q2q<true>(a.charge,b.charge,r);
-                                if(useIonDipole == true) U_total += wolf.q2mu<true>(a.charge*b.muscalar(),b.mu(),b.charge*a.muscalar(),a.mu(),r);
-                                if(useDipoleDipole == true) U_total += wolf.mu2mu<true>(a.mu(),b.mu(), a.muscalar()*b.muscalar(), r);
-                                if(useIonQuadrupole == true) U_total += wolf.q2quad<true>(a.charge, b.theta,b.charge, a.theta,r);
-                                return _lB*U_total;
+                            double r1 = sqrt(r2);
+
+                            if(useIonIon == true) U_total += a.charge * b.charge / r1 * T0.eval( tableT0, r1/cutoff );
+                            if(useIonDipole == true) {
+                                double T1_temp = T1.eval( tableT1, r1/cutoff );
+                                U_total += a.charge*b.muscalar()*b.mu().dot(r)/r1*T1_temp/r2;
+                                U_total += b.charge*a.muscalar()*a.mu().dot(-r)/r1*T1_temp/r2;
                             }
-                            if(useIonIon == true) U_total += wolf.q2q(a.charge,b.charge,r);
-                            if(useIonDipole == true) U_total += wolf.q2mu(a.charge*b.muscalar(),b.mu(),b.charge*a.muscalar(),a.mu(),r);
-                            if(useDipoleDipole == true) U_total += wolf.mu2mu(a.mu(),b.mu(), a.muscalar()*b.muscalar(), r);
-                            if(useIonQuadrupole == true) U_total += wolf.q2quad(a.charge, b.theta,b.charge, a.theta,r);
+                            if(useDipoleDipole == true) U_total += mu2mu(a.mu(), b.mu(), a.muscalar()*b.muscalar(), r,T2a.eval(tableT2a,r1/cutoff),T2b.eval(tableT2b,r1/cutoff));
+                            if(useIonQuadrupole == true) {
+                                double traceA = a.theta.trace();
+                                double traceB = b.theta.trace();
+                                double crossA = r.transpose()*a.theta*r;
+                                double crossB = r.transpose()*b.theta*r;
+                                U_total += b.charge*((3*crossA/r2 - traceA)*T2a.eval(tableT2a,r1/cutoff) - traceA*T2b.eval(tableT2b,r1/cutoff))/r1/r2;
+                                U_total += a.charge*((3*crossB/r2 - traceB)*T2a.eval(tableT2a,r1/cutoff) - traceB*T2b.eval(tableT2b,r1/cutoff))/r1/r2;
+                            }
                             return _lB*U_total;
                         }
 
-                    template<bool useIon=true, bool useDipole=true, class Tparticle>
+                    template<class Tparticle>
                         Point field(const Tparticle &p, const Point &r) {
-                            if(useIon && useDipole) {
-                                wolf.calcWolfData(r);
-                                if (wolf.getR2i() < wolf.getRc2i())
-                                    return Point(0,0,0);
-                                Point E = wolf.fieldCharge<true>(p,r);
-                                E += wolf.fieldDipole<true>(p,r);
-                                return _lB*E;
-                            }
-                            if(useIon == true) return _lB*wolf.fieldCharge(p,r);
-                            if(useDipole == true) return _lB*wolf.fieldDipole(p,r);
                             return Point(0,0,0);
                         }
 
-                    /**
-                     * @brief Interaction of dipole `p` with field `E`, see 'Intermolecular and SUrface Forces' by J. Israelachvili, p. 97 eq. 5.15
-                     * @todo Needs to be tested!
-                     */
                     template<class Tparticle>
                         double fieldEnergy(const Tparticle &p, const Point &E) {
                             return 0;
@@ -1339,8 +1171,9 @@ namespace Faunus {
                         std::ostringstream o;
                         o << pad(SUB,w,"Temperature") << pc::T() << " K" << endl
                             << pad(SUB,w,"Bjerrum length") << _lB << " "+angstrom << endl
-                            << pad(SUB,w,"Cutoff") << wolf.getCutoff() << " "+angstrom << endl
-                            << pad(SUB,w,"Kappa") << wolf.getKappa() << " "+angstrom+"^-1" << endl;
+                            << pad(SUB,w,"Cutoff") << cutoff << " "+angstrom << endl
+                            << pad(SUB,w,"Kappa") << kappa << " "+angstrom+"^-1" << endl
+                            << pad(SUB,w,"Force-shifted") << std::boolalpha << forceshifted << endl;
                         return o.str();
                     }
             };

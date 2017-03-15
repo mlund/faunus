@@ -36,45 +36,45 @@ namespace Faunus {
       struct EwaldReal : public Potential::Coulomb {
 
         typedef Potential::Coulomb Tbase;
-        double alpha, alpha2, constant, rc, rc2, tab_utol, tab_ftol;
+        double alpha, alpha2, constant, rc, rc2, tab_utol, tab_ftol, lB;
 	bool only_coulomb, only_dipoledipole;
-	Tabulate::Andrea<double> erfc_tabulator, T1_tabulator, T2_tabulator;
-	Tabulate::TabulatorBase<double>::data table_erfc, table_T1, table_T2;
+	Tabulate::Andrea<double> T0_tabulator, T1_tabulator, T2_tabulator;
+	Tabulate::TabulatorBase<double>::data table_T0, table_T1, table_T2;
+	
+	std::function<double(double)> T0_sf = [&](double r1) { return erfc(alpha*r1); }; // .. then spline
+	std::function<double(double)> T1_sf = [&](double r1) { return (r1*2.0*alpha/sqrt(pc::pi)*exp(-alpha2*r1*r1) + erfc(alpha*r1)); }; // .. then spline
+	std::function<double(double)> T2_sf = [&](double r1) { return 3.0*(T1_sf(r1) + 4.0*alpha2*alpha/3.0/sqrt(pc::pi)*r1*r1*r1*exp(-alpha2*r1*r1) ); }; // .. then spline
 
         EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j), alpha(0), alpha2(0), constant(0), rc(1), rc2(1) {
           Tbase::name="Ewald Real";
 	  tab_utol = j[sec]["tab_utol"] | 1e-9;
 	  tab_ftol = j[sec]["tab_ftol"] | 1e-5;
+	  T0_tabulator.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+	  T1_tabulator.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+	  T2_tabulator.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
+	  lB = Tbase::bjerrumLength();
         }
         
         void updateAlpha(double alpha_in) {
           alpha = alpha_in;
           alpha2 = alpha*alpha;
           constant = 2*alpha/sqrt(pc::pi);
-	  //updateSpline();
+	  updateSpline();
         }
 
         void updateRcut(double rc_in) {
           rc = rc_in;
 	  rc2 = rc*rc;
-	  //updateSpline();
+	  T0_tabulator.setRange(0,rc);
+	  T1_tabulator.setRange(0,rc);
+	  T2_tabulator.setRange(0,rc);
+	  updateSpline();
         }
         
         void updateSpline() {
-	  std::function<double(double)> erfc_temp = [&](double r1) { return erfc(alpha*r1); }; // .. then spline
-	  erfc_tabulator.setRange(0,rc);
-	  erfc_tabulator.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
-	  table_erfc = erfc_tabulator.generate( erfc_temp );
-	  
-	  std::function<double(double)> T1_temp = [&](double r1) { return (r1*2.0*alpha/sqrt(pc::pi)*exp(-alpha2*r1*r1) + erfc(alpha*r1)); }; // .. then spline
-	  T1_tabulator.setRange(0,rc);
-	  T1_tabulator.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
-	  table_T1 = T1_tabulator.generate( T1_temp );
-	    
-	  std::function<double(double)> T2_temp = [&](double r1) { return 3.0*(T1_temp(r1) + 4.0*alpha2*alpha/3.0/sqrt(pc::pi)*r1*r1*r1*exp(-alpha2*r1*r1) ); }; // .. then spline
-	  T2_tabulator.setRange(0,rc);
-	  T2_tabulator.setTolerance(tab_utol,tab_ftol); // Tolerance in energy and force
-	  table_T2 = T2_tabulator.generate( T2_temp );
+	  table_T0 = T0_tabulator.generate( T0_sf );
+	  table_T1 = T1_tabulator.generate( T1_sf );
+	  table_T2 = T2_tabulator.generate( T2_sf );
 	}
         
 	 /**
@@ -98,9 +98,9 @@ namespace Faunus {
             double r1 = sqrt(r2);
 	    double E = 0.0;
             if(useIonIon)
-              E += a.charge*b.charge*erfc_tabulator.eval(table_erfc,r1)*r1;  // return Tbase::bjerrumLength() * a.charge * b.charge * (1.0/r1 - 1.0/rc + (r1 - rc)/rc2 );
+              E += a.charge*b.charge*T0_tabulator.eval(table_T0,r1)/r1;
             if(!useIonDipole && !useDipoleDipole)
-              return E*Tbase::bjerrumLength();
+              return lB*E;
 	    
 	    double T1 = T1_tabulator.eval(table_T1,r1)/r1/r2;
             if(useIonDipole) {
@@ -113,7 +113,7 @@ namespace Faunus {
               double t5 = b.mu().dot(r)*a.mu().dot(r)*T2_tabulator.eval(table_T2,r1)/r2/r2/r1;
               E += -(t5 + t3)*b.muscalar()*a.muscalar();
             }
-            return E*Tbase::bjerrumLength();
+            return lB*E;
           }
       };
       
@@ -471,9 +471,8 @@ namespace Faunus {
             parameters.kc2 = parameters.kc*parameters.kc;
             parameters.kcc = ceil(parameters.kc);
             isotropic_pbc = ( _j.value("isotropic_pbc",false) );
+	    Tbase::pairpot.first.updateRcut(parameters.rc);
             Tbase::pairpot.first.updateAlpha(parameters.alpha);
-            Tbase::pairpot.first.updateRcut(parameters.rc);
-	    Tbase::pairpot.first.updateSpline();
 	    kVectorChange(kVectors,Aks,Q_ion_tot,Q_dip_tot,kVectorsInUse,parameters);
           }
           

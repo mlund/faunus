@@ -69,7 +69,7 @@ somewhat more human readable. To convert between JSON and YAML we
 provide a script, `scripts/yason.py`, that can pass
 YAML (and JSON) input files,
 
-    $ ./myprogram < yason.py < input.yml
+    $ scripts/yason.py < input.yml | ./myprogram
 
 where we assume that `myprogram` reads JSON from standard input,
 

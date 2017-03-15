@@ -687,7 +687,7 @@ namespace Faunus
     public:
 
         TrajectoryMove( Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j )
-            : Movebase<Tspace>(e, s), xtc(0), _continue(true), framecnt(0)
+            : Movebase<Tspace>(e, s), xtc(1), _continue(true), framecnt(0)
         {
             base::title = "XTC Trajectory Move";
             file = j.at("file");

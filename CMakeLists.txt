@@ -10,7 +10,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
-    message(FATAL "GCC 4.9 or higher is required.")
+    message(FATAL "GCC 4.9 or higher required.")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.5)
+        message(FATAL_ERROR "Clang 3.5 or higher required.")
+    endif()
 endif()
 
 # ----------------------------

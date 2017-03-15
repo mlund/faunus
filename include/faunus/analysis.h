@@ -1608,12 +1608,10 @@ namespace Faunus
             public:
                 WriteOnceFileAnalysis( Tmjson &j, std::function<void(string)> writer ) : AnalysisBase(j)
             {
-	      
                 steps = j.value("nstep", int(-1));
                 filename = j.at("file");
                 name = filename; // better than nothing...
                 f = writer;
-		
             }
 
                 ~WriteOnceFileAnalysis()
@@ -2286,7 +2284,7 @@ namespace Faunus
                 Average<double> M_x, M_y, M_z, M_x_box, M_y_box, M_z_box, M2, M2_box, diel, V_t, groupDipole;
                 int atomsize;
                 double cutoff, cutoff2, const_Diel, kappa, eps_rf;
-                bool diel_tinfoil, diel_RF, diel_wolf;
+                bool diel_tinfoil, diel_RF, diel_wolf, diel_fennel;
 
                 void _sample() override
                 {
@@ -2353,6 +2351,7 @@ namespace Faunus
                     diel_tinfoil = false;
                     diel_RF = false;
                     diel_wolf = false;
+		    diel_fennel = false;
                     string d = j.at("dielectric");
                     if ( d =="tinfoil") {
                         diel_tinfoil = true;
@@ -2361,6 +2360,8 @@ namespace Faunus
                         eps_rf = j.at("eps_rf");
                     } else if ( d =="wolf") {
                         diel_wolf = true;
+                    } else if ( d =="fennel") {
+                        diel_fennel = true;
                     } else {
                         throw std::runtime_error(name + " error: invalid dielectric type");
                     }
@@ -2381,6 +2382,8 @@ namespace Faunus
                         return getDielectricConstantRF();
                     if(diel_wolf)
                         return getDielectricConstantWolf();
+                    if(diel_fennel)
+                        return getDielectricConstantFennel();
                     return 0.0;
                 }
 
@@ -2409,11 +2412,29 @@ namespace Faunus
                  * @brief Returns dielectric constant, \f$ \varepsilon_r \f$, according to
                  * \f$ \frac{\varepsilon_r - 1}{\varepsilon_r + 2} \left[1 - \frac{\varepsilon_r - 1}{\varepsilon_r + 2}\tilde{T}(0) \right]^{-1} = \frac{4\pi}{3}\frac{\langle M^2 \rangle}{3Vk_BT} \f$
                  * where
-                 * \f$ \tilde{T}(0) = erf(\alpha R_c) - ((\alpha R_c)^4 + 2(\alpha R_c)^2 + 3 )\frac{2\alpha R_ce^{-\alpha^2R_c^2}}{3\sqrt{\pi}}    \f$
+                 * \f$ \tilde{T}(0) = erf(\alpha R_c) - ( 2(\alpha R_c)^2 + 3 )\frac{2\alpha R_ce^{-\alpha^2R_c^2}}{3\sqrt{\pi}}    \f$
                  *
                  * @warning Needs to be checked!
                  */
                 double getDielectricConstantWolf( )
+                {
+                    double alphaRc = kappa * cutoff;
+                    double alphaRc2 = alphaRc * alphaRc;
+                    double T = erf(alphaRc)
+                        - (2 / (3 * sqrt(pc::pi))) * exp(-alphaRc2) * ( 2.0 * alphaRc2 + 3.0);
+                    return (((T + 2.0) * M2_box.avg() * const_Diel / V_t.avg() + 1.0)
+                            / ((T - 1.0) * M2_box.avg() * const_Diel / V_t.avg() + 1.0));
+                }
+                
+                /**
+                 * @brief Returns dielectric constant, \f$ \varepsilon_r \f$, according to
+                 * \f$ \frac{\varepsilon_r - 1}{\varepsilon_r + 2} \left[1 - \frac{\varepsilon_r - 1}{\varepsilon_r + 2}\tilde{T}(0) \right]^{-1} = \frac{4\pi}{3}\frac{\langle M^2 \rangle}{3Vk_BT} \f$
+                 * where
+                 * \f$ \tilde{T}(0) = erf(\alpha R_c) - ((\alpha R_c)^4 + 2(\alpha R_c)^2 + 3 )\frac{2\alpha R_ce^{-\alpha^2R_c^2}}{3\sqrt{\pi}}    \f$
+                 *
+                 * @warning Needs to be checked!
+                 */
+                double getDielectricConstantFennel( )
                 {
                     double alphaRc = kappa * cutoff;
                     double alphaRc2 = alphaRc * alphaRc;
@@ -2432,6 +2453,8 @@ namespace Faunus
                         type = "Reaction-field";
                     if(diel_wolf)
                         type = "Wolf";
+                    if(diel_fennel)
+                        type = "Fennel";
                     return {
                         { name,
                             {

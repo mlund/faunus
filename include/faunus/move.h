@@ -638,9 +638,17 @@ namespace Faunus
      * replace particle positions in the system. No energy is evaluated
      * and energyChange will always return 0.
      *
+     * If the trajectory is saved with molecules that extend beyond
+     * the box boundaries, the PBC boundary control should be set
+     * to true.
+     *
+     *  Keyword  | Description
+     *  -------- | ---------------
+     *  `file`   | Trajectory file to load (.xtc)
+     *  `trump`  | Enforce (PBC) boundary control (default: false)
+     *
      * Notes:
      *
-     *   - JSON keywords: `file`.
      *   - Geometry must be derived from `Geometry::Cuboid`.
      *   - Number of particle in Space must match that of the trajectory
      *   - Particles must not overlap with geometry boundaries
@@ -656,6 +664,7 @@ namespace Faunus
         bool _continue;
         int framecnt;
         string file;
+        bool applyPBC; // true if PBC should be applied to loaded frames
 
         void _acceptMove() override {};
         void _rejectMove() override {};
@@ -670,6 +679,7 @@ namespace Faunus
                 auto &j = js[base::title];
                 j = {
                     { "file", file },
+                    { "boundary control", applyPBC },
                     { "frames loaded", framecnt}
                 };
             }
@@ -679,7 +689,7 @@ namespace Faunus
         void _trialMove() override
         {
             if (_continue)
-                _continue = xtc.loadnextframe( *base::spc, true );
+                _continue = xtc.loadnextframe( *base::spc, true, applyPBC );
             if (_continue)
                 framecnt++;
         }
@@ -691,6 +701,7 @@ namespace Faunus
         {
             base::title = "XTC Trajectory Move";
             file = j.at("file");
+            applyPBC = j.value("trump", false);
             if ( xtc.open(file) == false)
                 throw std::runtime_error(base::title + ": xtc file " + file + " cannot be loaded");
         }

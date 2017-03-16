@@ -634,7 +634,7 @@ namespace Faunus {
        *       periodic boundaries are used.
        */
       template<class Tspace>
-          bool loadnextframe(Tspace &c, bool setbox=true) {
+          bool loadnextframe(Tspace &c, bool setbox=true, bool applypbc=false) {
               if (xd!=NULL)
               {
                   if (natoms_xtc==(int)c.p.size())
@@ -652,6 +652,8 @@ namespace Faunus {
                               c.p[i].y() = 10.0*x_xtc[i][1];
                               c.p[i].z() = 10.0*x_xtc[i][2];
                               c.p[i] = c.p[i] - geo->len_half;
+                              if (applypbc)
+                                  geo->boundary( c.p[i] );
                               c.trial[i] = Point(c.p[i]);
                               if ( geo->collision(c.p[i], 0) )
                                   throw std::runtime_error("particle-container collision");

@@ -2226,7 +2226,7 @@ namespace Faunus
 
                 public:
                 KirkwoodFactor( Tmjson j, Tspace &spc ) : PairFunctionBase(j,"KirkwoodFactor"), spc(spc) {
-                    mucorr_angle.setResolution(datavec.back().dr);
+                    mucorr_angle.setResolution(datavec.back().dr*0.1); // Interval goes only from -1 to 1, thus we must increase the resolution, hence the factor of 0.1
                     mucorr.setResolution(datavec.back().dr);
                     mucorr_dist.setResolution(datavec.back().dr);
                 }

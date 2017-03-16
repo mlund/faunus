@@ -1407,7 +1407,7 @@ namespace Faunus {
         /**
          * @brief Help-function for DipoleDipoleQ2.
          */
-        inline double _DipoleDipoleQ2Help(double q, int l, int P=300, bool all=true) {
+        inline double _DipoleDipoleQ2Help(double q, int l=0, int P=300, bool all=true) {
             if(q >= 1.0 - (1.0/2400.0))
                 return 0.0;
             if(q <= (1.0/2400.0) && all)
@@ -1465,12 +1465,12 @@ namespace Faunus {
                     rc3i = rc1i*rc1i*rc1i;
                     order = j.value("order",300);
 
-                    std::function<double(double)> Ak = [&](double q) { return _DipoleDipoleQ2Help(q,1,order); };
+                    std::function<double(double)> Ak = [&](double q) { return _DipoleDipoleQ2Help(q,0,order); };
                     ak.setRange(0,1);
                     ak.setTolerance(tab_utol,tab_ftol); // Tolerance in first prefactor-function and its derivative
                     tableA = ak.generate( Ak );
 
-                    std::function<double(double)> Bk = [&](double q) { return _DipoleDipoleQ2Help(q,1,order,false); };
+                    std::function<double(double)> Bk = [&](double q) { return _DipoleDipoleQ2Help(q,0,order,false); };
                     bk.setRange(0,1);
                     bk.setTolerance(tab_utol,tab_ftol); // Tolerance in second prefactor-function and its derivative
                     tableB = bk.generate( Bk );

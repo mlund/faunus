@@ -306,7 +306,6 @@ Before submitting changes, please make sure nothing is broken:
 - @subpage example_keesom
 - @subpage example_bulk 
 - @subpage example_grand 
-- @subpage example_twobody
 - @subpage example_GCMolecular
 - @subpage example_water2
 - @subpage example_polymers

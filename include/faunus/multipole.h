@@ -1296,32 +1296,47 @@ namespace Faunus {
          * :--------------   | :---------------
          * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
          * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+         * `tab_utol`        |  Tolerance in prefactor-function error.                  (Default: \f$ 10^{-9}\f$)
+         * `tab_ftol`        |  Tolerance of prefactor-function derivative error.       (Default: \f$ 10^{-2}\f$)
          */
         class DipoleDipoleSP3 : public DipoleDipole {
             private:
-                string _brief() { return "DipoleDipole SP3"; }
-                double rc1, rc1i, rc2, rc3;
+                string _brief() { return "Dipole-dipole SP3"; }
+                double rc1, rc1i, rc3i, tab_utol, tab_ftol;
+                Tabulate::Andrea<double> ak;
+                Tabulate::Andrea<double> bk;
+                Tabulate::TabulatorBase<double>::data tableA;
+                Tabulate::TabulatorBase<double>::data tableB;
             public:
-                DipoleDipoleSP3(Tmjson &j) : DipoleDipole(j) { 
+                DipoleDipoleSP3(Tmjson &j) : DipoleDipole(j) {
                     name += " SP3"; 
+                    _lB = Coulomb(j).bjerrumLength();
                     rc1 = j.at("cutoff");
+                    tab_utol = j.value("tab_utol",1e-9);
+                    tab_ftol = j.value("tab_ftol",1e-2);
                     rc1i = 1.0/rc1;
-                    rc2 = rc1*rc1;
-                    rc3 = rc2*rc1;
+                    rc3i = rc1i*rc1i*rc1i;
+
+                    std::function<double(double)> Ak = [&](double q) { return ( 1.0 + 14.0*pow(q,5) - 35.0*pow(q,6) + 20.0*pow(q,7) ); };
+                    ak.setRange(0,1);
+                    ak.setTolerance(tab_utol,tab_ftol); // Tolerance in first prefactor-function and its derivative
+                    tableA = ak.generate( Ak );
+
+                    std::function<double(double)> Bk = [&](double q) { return 35.0*pow(q,5)*( 1.0 - 2.0*q + q*q ); };
+                    bk.setRange(0,1);
+                    bk.setTolerance(tab_utol,tab_ftol); // Tolerance in second prefactor-function and its derivative
+                    tableB = bk.generate( Bk );
+
                 }
 
                 template<class Tparticle>
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        double r2 = r.squaredNorm();
-                        if(r2 < rc2) {
-                            double q = sqrt(r2)/rc1;
-                            double q2 = q*q;
-                            Eigen::Matrix3d T1 = r*r.transpose()/r2;
-                            Eigen::Matrix3d T2 = Eigen::Matrix3d::Identity();
-                            Eigen::Matrix3d T = ((42.0 - 105.0*q + 60.0*q2)*q2*T1 + (21.0 - 35.0*q + 15.0*q2)*q2*T2)/rc3;
+                        double r1 = r.norm();
+                        if (r1 < rc1) {
+                            double af = ak.eval(tableA,r1*rc1i);
+                            double bf = bk.eval(tableB,r1*rc1i);
 
-                            double W = a.mu().transpose()*T*b.mu();
-                            return (DipoleDipole::operator()(a,b,r) - _lB*W*a.muscalar()*b.muscalar());
+                            return _lB*mu2mu(a.mu(), b.mu(), a.muscalar()*b.muscalar(), r,af,bf);
                         }
                         return 0.0;
                     }
@@ -1405,6 +1420,25 @@ namespace Faunus {
         };
 
         /**
+         * @brief Help-function for DipoleDipoleQ2 using order 3.
+         */
+        inline void _DipoleDipoleQ2Help_3(double &a3, double &b3, double q) {
+            double q2 = q*q;
+            a3 = ( ( (-5.0 * q2 + 8.0 / 3.0 * q)*q + q)*q + 1.0 / 3.0)*q2 + 1.0;
+            b3 = -2.0 / 3.0 * (  (15.0 * q2 - 10.0 * q - 5.0 )*q2 + 1.0) * q2;
+        }
+
+        /**
+         * @brief Help-function for DipoleDipoleQ2 using order 4.
+         */
+        inline void _DipoleDipoleQ2Help_4(double &a4, double &b4, double q) {
+            double q2 = q*q;
+            double q3 = q2*q;
+            a4 = ( ( (10.0 * q2 - 9.0 * q - 8.0 )*q3 + 10.0 )*q3 - 2.0 )*q - 1.0;
+            b4 = ( ( ( 21.0 * q2 - 16.0 * q - 35.0 / 3.0 )*q3 + 16.0 / 3.0 )*q3 + 1.0 / 3.0 )*q2 + 1.0;
+        }
+
+        /**
          * @brief Help-function for DipoleDipoleQ2.
          */
         inline double _DipoleDipoleQ2Help(double q, int l=0, int P=300, bool all=true) {
@@ -1418,7 +1452,7 @@ namespace Faunus {
             double Q = 0.0;
             double T = 0.0;
             double qP = 1.0; // Will end as q-Pochhammer Symbol, (q^l;q)_P
-	    double fac = pow(q,l);
+            double fac = pow(q,l);
             for( int n = 1; n <= P; n++) {
                 double temp2 = (n + l)/(1.0 - pow(q,(n+l)));
                 fac *= q;
@@ -1440,7 +1474,7 @@ namespace Faunus {
          * :--------------   | :---------------
          * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
          * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
-	 * `order`           |  Higher order moments -3 to cancel
+         * `order`           |  Higher order moments -3 to cancel
          * `tab_utol`        |  Tolerance in prefactor-function error.                  (Default: \f$ 10^{-7}\f$)
          * `tab_ftol`        |  Tolerance of prefactor-function derivative error.       (Default: \f$ 10^{-2}\f$)
          * 
@@ -1465,30 +1499,34 @@ namespace Faunus {
                     rc3i = rc1i*rc1i*rc1i;
                     order = j.at("order");
                     if ( order < 3 )
-			throw std::runtime_error("'order' is too low to be meaningful" );
+                        throw std::runtime_error("'order' is too low to be meaningful" );
 
-                    std::function<double(double)> Ak = [&](double q) { return _DipoleDipoleQ2Help(q,0,order); };
-                    ak.setRange(0,1);
-                    ak.setTolerance(tab_utol,tab_ftol); // Tolerance in first prefactor-function and its derivative
-                    //tableA = ak.generate( Ak );
+                    if(order > 4){
+                        std::function<double(double)> Ak = [&](double q) { return _DipoleDipoleQ2Help(q,0,order); };
+                        ak.setRange(0,1);
+                        ak.setTolerance(tab_utol,tab_ftol); // Tolerance in first prefactor-function and its derivative
+                        tableA = ak.generate( Ak );
 
-                    std::function<double(double)> Bk = [&](double q) { return _DipoleDipoleQ2Help(q,0,order,false); };
-                    bk.setRange(0,1);
-                    bk.setTolerance(tab_utol,tab_ftol); // Tolerance in second prefactor-function and its derivative
-                    //tableB = bk.generate( Bk );
-		    
-		    for(double r1 = 0.0; r1 <= rc1; r1 += 0.001) {
-		      //cout << r1 << " " << ak.eval(tableA,r1*rc1i) << " " << bk.eval(tableB,r1*rc1i) << endl;
-		      cout << r1 << " " << _DipoleDipoleQ2Help(r1*rc1i,0,order) << " " << _DipoleDipoleQ2Help(r1*rc1i,0,order,false) << endl;
-		    }
+                        std::function<double(double)> Bk = [&](double q) { return _DipoleDipoleQ2Help(q,0,order,false); };
+                        bk.setRange(0,1);
+                        bk.setTolerance(tab_utol,tab_ftol); // Tolerance in second prefactor-function and its derivative
+                        tableB = bk.generate( Bk );
+                    }
                 }
 
                 template<class Tparticle>
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r1 = r.norm();
                         if (r1 < rc1) {
-                            double af = ak.eval(tableA,r1*rc1i);
-                            double bf = bk.eval(tableB,r1*rc1i);
+                            double af, bf;
+                            if(order == 3) {
+                                _DipoleDipoleQ2Help_3(af,bf, r1*rc1i);
+                            } else if(order == 4) {
+                                _DipoleDipoleQ2Help_4(af,bf, r1*rc1i);
+                            } else {
+                                af = ak.eval(tableA,r1*rc1i);
+                                bf = bk.eval(tableB,r1*rc1i);
+                            }
 
                             return _lB*mu2mu(a.mu(), b.mu(), a.muscalar()*b.muscalar(), r,af,bf);
                         }
@@ -1508,7 +1546,7 @@ namespace Faunus {
                     std::ostringstream o;
                     o << DipoleDipole::info(w)
                         << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl
-			<< pad(SUB,w,"order") << order << endl;
+                        << pad(SUB,w,"order") << order << endl;
                     o << ak.info() << endl;
                     o << bk.info() << endl;
                     return o.str();

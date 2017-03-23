@@ -1,5 +1,6 @@
 #ifndef FAUNUS_MULTIPOLE_H
 #define FAUNUS_MULTIPOLE_H
+#define DIPOLEPARTICLE
 
 #include <faunus/common.h>
 #include <faunus/auxiliary.h>
@@ -293,13 +294,9 @@ namespace Faunus {
             double r2i = 1/r.squaredNorm();
             double r1i = sqrt(r2i);
 #endif
-            double r3i = r1i*r2i;
-            //double r5i = r3i*r2i;
-            //Eigen::Matrix3d T = 3*r5i*r*r.transpose() - r3i*Matrix3d::Identity();
-            //double W = -muA.transpose()*T*muB;
             double dot = muA.dot(muB);
-            double W = r3i*( (3*muA.dot(r)*muB.dot(r)*r2i - dot)*a + dot*b );
-            return -W*muAxmuB;
+            double T = (3*muA.dot(r)*muB.dot(r)*r2i - dot)*a + dot*b;
+            return -muAxmuB*T*r1i*r2i;
         }
 
     /**
@@ -1119,16 +1116,16 @@ namespace Faunus {
 
                         T1.setRange(0, 1);
                         T1.setTolerance(in.value("tab_utol",1e-9),in.value("tab_ftol",1e-2) );
-                        tableT1 = T1.generate( [&](double q) { return ((2.0*kR*q/pc::pi*exp(-kR*kR*q*q) + erfc(kR*q)) - (2.0*kR/pc::pi*exp(-kR*kR) + erfc(kR))*q*q + der*q*q*(q - 1.0)*2.0*( (kR/sqrt(pc::pi)*exp(-kR*kR)*(1.0/sqrt(pc::pi) + 1.0 + 2.0*kR*kR/sqrt(pc::pi)) + erfc(kR) ))); } );
+                        tableT1 = T1.generate( [&](double q) { return ((2.0*kR*q/sqrt(pc::pi)*exp(-kR*kR*q*q) + erfc(kR*q)) - (2.0*kR/sqrt(pc::pi)*exp(-kR*kR) + erfc(kR))*q*q + der*q*q*(q - 1.0)*2.0*( (kR/sqrt(pc::pi)*exp(-kR*kR)*(1.0/sqrt(pc::pi) + 1.0 + 2.0*kR*kR/sqrt(pc::pi)) + erfc(kR) ))); } );
 
                         T2a.setRange(0, 1);
                         T2a.setTolerance(in.value("tab_utol",1e-9),in.value("tab_ftol",1e-2) );
-                        tableT2a = T2a.generate( [&](double q) { return ( erfc(kR*q) + 2.0*kR*q*exp(-kR*kR*q*q)*(2.0*kR*kR*q*q + 3.0)/sqrt(pc::pi) - (erfc(kR) + 2.0*kR*exp(-kR*kR)*(2.0*kR*kR + 3.0)/sqrt(pc::pi))*q*q*q + der*q*q*q*(q-1.0)*( 3.0*erfc(kR) + 2.0*kR*exp(-kR*kR)*(7.0 + 6.0*kR*kR + 4.0*kR*kR*kR*kR)/sqrt(pc::pi))); } );
-
+                        tableT2a = T2a.generate( [&](double q) { return ( ( 2.0*kR*q*exp(-kR*kR*q*q)*(2.0*kR*kR*q*q/3.0 + 1.0)/sqrt(pc::pi) + erfc(kR*q)) - (erfc(kR) + 2.0*kR*exp(-kR*kR)*(2.0*kR*kR/3.0 + 1.0)/sqrt(pc::pi))*q*q*q + der*q*q*q*(q-1.0)*( 3.0*erfc(kR) + 2.0*kR*exp(-kR*kR)*(3.0 + 2.0*kR*kR + 4.0/3.0*kR*kR*kR*kR)/sqrt(pc::pi))); } );
+			
                         T2b.setRange(0, 1);
                         T2b.setTolerance(in.value("tab_utol",1e-9),in.value("tab_ftol",1e-2) );
-                        tableT2b = T2b.generate( [&](double q) { return ( 4.0*kR*q*(kR*kR*q*q + 1.0)*exp(-kR*kR*q*q)/sqrt(pc::pi) - 4.0*kR*(kR*kR + 1.0)*exp(-kR*kR)/sqrt(pc::pi)*q*q*q + der*q*q*q*(q - 1.0)*8.0*kR*exp(-kR*kR)*(kR*kR*kR*kR + kR*kR + 1.0)/sqrt(pc::pi) ); } );
-                    }
+			tableT2b = T2b.generate( [&](double q) { return ( 4.0/3.0*kR*kR*kR*q*q*q*exp(-kR*kR*q*q)/sqrt(pc::pi) - 4.0/3.0*kR*kR*kR*exp(-kR*kR)/sqrt(pc::pi)*q*q*q + der*q*q*q*(q - 1.0)*8.0/3.0*exp(-kR*kR)*pow(kR,5)/sqrt(pc::pi) ); } );
+		    }   
 
                     template<class Tparticle>
                         double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {

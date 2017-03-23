@@ -1,5 +1,6 @@
 #ifndef FAUNUS_MULTIPOLE_H
 #define FAUNUS_MULTIPOLE_H
+#define DIPOLEPARTICLE
 
 #include <faunus/common.h>
 #include <faunus/auxiliary.h>
@@ -293,13 +294,9 @@ namespace Faunus {
             double r2i = 1/r.squaredNorm();
             double r1i = sqrt(r2i);
 #endif
-            double r3i = r1i*r2i;
-            //double r5i = r3i*r2i;
-            //Eigen::Matrix3d T = 3*r5i*r*r.transpose() - r3i*Matrix3d::Identity();
-            //double W = -muA.transpose()*T*muB;
             double dot = muA.dot(muB);
-            double W = r3i*( (3*muA.dot(r)*muB.dot(r)*r2i - dot)*a + dot*b );
-            return -W*muAxmuB;
+            double T = (3*muA.dot(r)*muB.dot(r)*r2i - dot)*a + dot*b;
+            return -muAxmuB*T*r1i*r2i;
         }
 
     /**
@@ -604,6 +601,7 @@ namespace Faunus {
          */
         inline double qPochhammerSymbol(double q, int k=1, int P=300) {
             //P = 300 gives an error of about 10^-17 for k < 4
+
             double value = 1.0;
             double temp = pow(q,k);
             for(int i = 0; i < P; i++) {
@@ -626,7 +624,7 @@ namespace Faunus {
          *  `plain`         | \f$ 1 \f$                                | none                 | http://doi.org/ctnnsj
          *  `none`          | \f$ 0 \f$                                | none                 | For convenience, only.
          *  `wolf`          | \f$ erfc(\alpha R_c q)-erfc(\alpha R_c)q \f$ | `alpha`          | http://doi.org/cfcxdk
-         *  `fennel`        | \f$ - \f$                                | `alpha`              | http://doi.org/bqgmv2
+         *  `fennel`        | \f$ erfc(\alpha R_c q)-erfc(\alpha R_c)q + ( q -1 ) q \left( erfc(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right) f$ | `alpha`| http://doi.org/bqgmv2
          *  `yonezawa`      | \f$ 1 + erfc(\alpha R_c)q + q^2 \f$      | `alpha`              | http://dx.doi.org/10/j97
          *  `fanourgakis`   | \f$ 1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7\f$| none | http://doi.org/f639q5
          *  `stenqvist`     | \f$ \prod_{n=1}^{order}(1-q^n) \f$       | `order=300`          | ISBN [9789174224405](http://goo.gl/hynRTS) (Paper V)
@@ -691,7 +689,7 @@ namespace Faunus {
                 void sfYonezawa(const Tmjson &j)
                 {
                     alpha = j.at("alpha");
-                    table = sf.generate( [&](double q) { return 1 + erfc(alpha*rc)*q + q*q; } );
+                    table = sf.generate( [&](double q) { return 1 - erfc(alpha*rc)*q + q*q; } );
                 }
 
                 void sfFanourgakis(const Tmjson &j) {
@@ -701,8 +699,8 @@ namespace Faunus {
 
                 void sfFennel(const Tmjson &j) {
                     alpha = j.at("alpha");
-                    table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q + (erfc(alpha*rc)
-                                    + 2 * alpha * rc / sqrt(pc::pi) * exp(-alpha*alpha*rc*rc))*(q*q-q)); } );
+                    table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q + (q-1.0)*q*(erfc(alpha*rc)
+                                    + 2 * alpha * rc / sqrt(pc::pi) * exp(-alpha*alpha*rc*rc))); } );
                 }
 
                 void sfWolf(const Tmjson &j) {
@@ -1080,7 +1078,7 @@ namespace Faunus {
          * Force-shifted exansion for ionic interactions [doi](http://dx.doi.org/10.1063/1.2206581)
          * Force-shifted exansion for dipolar interactions [doi](http://dx.doi.org/10.1063/1.4923001)
          * 
-	 * @todo Implement field-functions.
+         * @todo Implement field-functions.
          */
         template<bool useIonIon=false, bool useIonDipole=false, bool useDipoleDipole=false, bool useIonQuadrupole=false>
             class MultipoleWolf : public PairPotentialBase {
@@ -1118,16 +1116,16 @@ namespace Faunus {
 
                         T1.setRange(0, 1);
                         T1.setTolerance(in.value("tab_utol",1e-9),in.value("tab_ftol",1e-2) );
-                        tableT1 = T1.generate( [&](double q) { return ((2.0*kR*q/pc::pi*exp(-kR*kR*q*q) + erfc(kR*q)) - (2.0*kR/pc::pi*exp(-kR*kR) + erfc(kR))*q*q + der*q*q*(q - 1.0)*2.0*( (kR/sqrt(pc::pi)*exp(-kR*kR)*(1.0/sqrt(pc::pi) + 1.0 + 2.0*kR*kR/sqrt(pc::pi)) + erfc(kR) ))); } );
+                        tableT1 = T1.generate( [&](double q) { return ((2.0*kR*q/sqrt(pc::pi)*exp(-kR*kR*q*q) + erfc(kR*q)) - (2.0*kR/sqrt(pc::pi)*exp(-kR*kR) + erfc(kR))*q*q + der*q*q*(q - 1.0)*2.0*( (kR/sqrt(pc::pi)*exp(-kR*kR)*(1.0/sqrt(pc::pi) + 1.0 + 2.0*kR*kR/sqrt(pc::pi)) + erfc(kR) ))); } );
 
                         T2a.setRange(0, 1);
                         T2a.setTolerance(in.value("tab_utol",1e-9),in.value("tab_ftol",1e-2) );
-                        tableT2a = T2a.generate( [&](double q) { return ( erfc(kR*q) + 2.0*kR*q*exp(-kR*kR*q*q)*(2.0*kR*kR*q*q + 3.0)/sqrt(pc::pi) - (erfc(kR) + 2.0*kR*exp(-kR*kR)*(2.0*kR*kR + 3.0)/sqrt(pc::pi))*q*q*q + der*q*q*q*(q-1.0)*( 3.0*erfc(kR) + 2.0*kR*exp(-kR*kR)*(7.0 + 6.0*kR*kR + 4.0*kR*kR*kR*kR)/sqrt(pc::pi))); } );
-
+                        tableT2a = T2a.generate( [&](double q) { return ( ( 2.0*kR*q*exp(-kR*kR*q*q)*(2.0*kR*kR*q*q/3.0 + 1.0)/sqrt(pc::pi) + erfc(kR*q)) - (erfc(kR) + 2.0*kR*exp(-kR*kR)*(2.0*kR*kR/3.0 + 1.0)/sqrt(pc::pi))*q*q*q + der*q*q*q*(q-1.0)*( 3.0*erfc(kR) + 2.0*kR*exp(-kR*kR)*(3.0 + 2.0*kR*kR + 4.0/3.0*kR*kR*kR*kR)/sqrt(pc::pi))); } );
+			
                         T2b.setRange(0, 1);
                         T2b.setTolerance(in.value("tab_utol",1e-9),in.value("tab_ftol",1e-2) );
-                        tableT2b = T2b.generate( [&](double q) { return ( 4.0*kR*q*(kR*kR*q*q + 1.0)*exp(-kR*kR*q*q)/sqrt(pc::pi) - 4.0*kR*(kR*kR + 1.0)*exp(-kR*kR)/sqrt(pc::pi)*q*q*q + der*q*q*q*(q - 1.0)*8.0*kR*exp(-kR*kR)*(kR*kR*kR*kR + kR*kR + 1.0)/sqrt(pc::pi) ); } );
-                    }
+			tableT2b = T2b.generate( [&](double q) { return ( 4.0/3.0*kR*kR*kR*q*q*q*exp(-kR*kR*q*q)/sqrt(pc::pi) - 4.0/3.0*kR*kR*kR*exp(-kR*kR)/sqrt(pc::pi)*q*q*q + der*q*q*q*(q - 1.0)*8.0/3.0*exp(-kR*kR)*pow(kR,5)/sqrt(pc::pi) ); } );
+		    }   
 
                     template<class Tparticle>
                         double operator()(const Tparticle &a, const Tparticle &b, const Point &r) {
@@ -1295,32 +1293,47 @@ namespace Faunus {
          * :--------------   | :---------------
          * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
          * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+         * `tab_utol`        |  Tolerance in prefactor-function error.                  (Default: \f$ 10^{-9}\f$)
+         * `tab_ftol`        |  Tolerance of prefactor-function derivative error.       (Default: \f$ 10^{-2}\f$)
          */
         class DipoleDipoleSP3 : public DipoleDipole {
             private:
-                string _brief() { return "DipoleDipole SP3"; }
-                double rc1, rc1i, rc2, rc3;
+                string _brief() { return "Dipole-dipole SP3"; }
+                double rc1, rc1i, rc3i, tab_utol, tab_ftol;
+                Tabulate::Andrea<double> ak;
+                Tabulate::Andrea<double> bk;
+                Tabulate::TabulatorBase<double>::data tableA;
+                Tabulate::TabulatorBase<double>::data tableB;
             public:
-                DipoleDipoleSP3(Tmjson &j) : DipoleDipole(j) { 
+                DipoleDipoleSP3(Tmjson &j) : DipoleDipole(j) {
                     name += " SP3"; 
+                    _lB = Coulomb(j).bjerrumLength();
                     rc1 = j.at("cutoff");
+                    tab_utol = j.value("tab_utol",1e-9);
+                    tab_ftol = j.value("tab_ftol",1e-2);
                     rc1i = 1.0/rc1;
-                    rc2 = rc1*rc1;
-                    rc3 = rc2*rc1;
+                    rc3i = rc1i*rc1i*rc1i;
+
+                    std::function<double(double)> Ak = [&](double q) { return ( 1.0 + 14.0*pow(q,5) - 35.0*pow(q,6) + 20.0*pow(q,7) ); };
+                    ak.setRange(0,1);
+                    ak.setTolerance(tab_utol,tab_ftol); // Tolerance in first prefactor-function and its derivative
+                    tableA = ak.generate( Ak );
+
+                    std::function<double(double)> Bk = [&](double q) { return 35.0*pow(q,5)*( 1.0 - 2.0*q + q*q ); };
+                    bk.setRange(0,1);
+                    bk.setTolerance(tab_utol,tab_ftol); // Tolerance in second prefactor-function and its derivative
+                    tableB = bk.generate( Bk );
+
                 }
 
                 template<class Tparticle>
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        double r2 = r.squaredNorm();
-                        if(r2 < rc2) {
-                            double q = sqrt(r2)/rc1;
-                            double q2 = q*q;
-                            Eigen::Matrix3d T1 = r*r.transpose()/r2;
-                            Eigen::Matrix3d T2 = Eigen::Matrix3d::Identity();
-                            Eigen::Matrix3d T = ((42.0 - 105.0*q + 60.0*q2)*q2*T1 + (21.0 - 35.0*q + 15.0*q2)*q2*T2)/rc3;
+                        double r1 = r.norm();
+                        if (r1 < rc1) {
+                            double af = ak.eval(tableA,r1*rc1i);
+                            double bf = bk.eval(tableB,r1*rc1i);
 
-                            double W = a.mu.transpose()*T*b.mu;
-                            return (DipoleDipole::operator()(a,b,r) - _lB*W*a.muscalar*b.muscalar);
+                            return _lB*mu2mu(a.mu(), b.mu(), a.muscalar()*b.muscalar(), r,af,bf);
                         }
                         return 0.0;
                     }
@@ -1369,7 +1382,7 @@ namespace Faunus {
                     tab_utol = j.value("tab_utol",1e-9);
                     tab_ftol = j.value("tab_ftol",1e-2);
                     rc1i = 1.0/rc1;
-                    order = j.value("order",300);
+                    order = j.at("order");
 
                     std::function<double(double)> Qk = [&](double q) { return qPochhammerSymbol(q,3,order); };
                     sf.setRange(0,1);
@@ -1404,27 +1417,50 @@ namespace Faunus {
         };
 
         /**
+         * @brief Help-function for DipoleDipoleQ2 using order 3.
+         */
+        inline void _DipoleDipoleQ2Help_3(double &a3, double &b3, double q) {
+            double q2 = q*q;
+            a3 = ( ( (-5.0 * q2 + 8.0 / 3.0 * q)*q + q)*q + 1.0 / 3.0)*q2 + 1.0;
+            b3 = -2.0 / 3.0 * (  (15.0 * q2 - 10.0 * q - 5.0 )*q2 + 1.0) * q2;
+        }
+
+        /**
+         * @brief Help-function for DipoleDipoleQ2 using order 4.
+         */
+        inline void _DipoleDipoleQ2Help_4(double &a4, double &b4, double q) {
+            double q2 = q*q;
+            double q3 = q2*q;
+            a4 = ( ( (10.0 * q2 - 9.0 * q - 8.0 )*q3 + 10.0 )*q3 - 2.0 )*q - 1.0;
+            b4 = ( ( ( 21.0 * q2 - 16.0 * q - 35.0 / 3.0 )*q3 + 16.0 / 3.0 )*q3 + 1.0 / 3.0 )*q2 + 1.0;
+        }
+
+        /**
          * @brief Help-function for DipoleDipoleQ2.
          */
-        inline double Euler_type_function(double q, int P=300, bool all=true) {
+        inline double _DipoleDipoleQ2Help(double q, int l=0, int P=300, bool all=true) {
             if(q >= 1.0 - (1.0/2400.0))
                 return 0.0;
             if(q <= (1.0/2400.0) && all)
                 return 1.0;
             if(q <= (1.0/2400.0) && !all)
                 return 0.0;
-            double value1 = 0.0;
-            double value2 = 0.0;
-            double value3 = 0.0;
-            for(int pt = -P; pt <= P; pt++) {
-                double p = double(pt);
-                if(all) {
-                    value1 += pow(-1.0,p)*pow(q,(3.0*p*p-p)/2.0);
-                    value2 += pow(-1.0,p)*(3.0*p*p-p)/(2.0*q)*pow(q,(3.0*p*p-p)/2.0);
-                }
-                value3 += pow(-1.0,p)*(3.0*p*p-p)/(2.0*q*q)*(3.0*p*p - p - 2.0)/2.0*pow(q,(3.0*p*p-p)/2.0);
+
+            double Q = 0.0;
+            double T = 0.0;
+            double qP = 1.0; // Will end as q-Pochhammer Symbol, (q^l;q)_P
+            double fac = pow(q,l);
+            for( int n = 1; n <= P; n++) {
+                double temp2 = (n + l)/(1.0 - pow(q,(n+l)));
+                fac *= q;
+                Q -= temp2*fac;
+                T -= temp2*temp2*fac;
+                qP *= (1.0 - fac);
             }
-            return (value1 - value2*q + value3*q*q/3.0);
+
+            if(!all)
+                return qP*(-Q + T + Q*Q)/3.0;
+            return qP*(-Q + T + Q*Q - 3.0*Q + 3.0)/3.0;
         }
 
         /**
@@ -1435,16 +1471,16 @@ namespace Faunus {
          * :--------------   | :---------------
          * `cutoff`          |  Cut-off for interactions.                               (Default: Infinity)
          * `eps_r`           |  Dielectric constant of the medium.                      (Default: \f$ \varepsilon_r = 1 \f$)
+         * `order`           |  Higher order moments -3 to cancel
          * `tab_utol`        |  Tolerance in prefactor-function error.                  (Default: \f$ 10^{-7}\f$)
          * `tab_ftol`        |  Tolerance of prefactor-function derivative error.       (Default: \f$ 10^{-2}\f$)
          * 
-         * @warning Be careful with the splines, they tend to give diverging values for low `tab_utol` and `tab_ftol`!
          */
         class DipoleDipoleQ2 : public DipoleDipole {
             private:
                 string _brief() { return "Dipole-dipole Q2"; }
                 double rc1, rc1i, rc3i, tab_utol, tab_ftol;
-                int N;
+                int order;
                 Tabulate::Andrea<double> ak;
                 Tabulate::Andrea<double> bk;
                 Tabulate::TabulatorBase<double>::data tableA;
@@ -1454,29 +1490,41 @@ namespace Faunus {
                     name += " Q2"; 
                     _lB = Coulomb(j).bjerrumLength();
                     rc1 = j.at("cutoff");
-                    tab_utol = j.value("tab_utol",1e-7); // Higher accuracy than 1e-7 gives error
-                    tab_ftol = j.value("tab_ftol",1e-2);
+                    tab_utol = j.value("tab_utol",1e-7); // Higher accuracy than 1e-7 gives error (in combination with default `tab_ftol` and `order`)
+                    tab_ftol = j.value("tab_ftol",1e-2); // Higher accuracy than 1e-2 gives error (in combination with default `tab_utol` and `order`)
                     rc1i = 1.0/rc1;
                     rc3i = rc1i*rc1i*rc1i;
-                    N = 300;
+                    order = j.at("order");
+                    if ( order < 3 )
+                        throw std::runtime_error("'order' is too low to be meaningful" );
 
-                    std::function<double(double)> Ak = [&](double q) { return Euler_type_function(q,N); };
-                    ak.setRange(0,1);
-                    ak.setTolerance(tab_utol,tab_ftol); // Tolerance in first prefactor-function and its derivative
-                    tableA = ak.generate( Ak );
+                    if(order > 4){
+                        std::function<double(double)> Ak = [&](double q) { return _DipoleDipoleQ2Help(q,0,order); };
+                        ak.setRange(0,1);
+                        ak.setTolerance(tab_utol,tab_ftol); // Tolerance in first prefactor-function and its derivative
+                        tableA = ak.generate( Ak );
 
-                    std::function<double(double)> Bk = [&](double q) { return Euler_type_function(q,N,false); };
-                    bk.setRange(0.0,1.0);
-                    bk.setTolerance(tab_utol,tab_ftol); // Tolerance in second prefactor-function and its derivative
-                    tableB = bk.generate( Bk );
+                        std::function<double(double)> Bk = [&](double q) { return _DipoleDipoleQ2Help(q,0,order,false); };
+                        bk.setRange(0,1);
+                        bk.setTolerance(tab_utol,tab_ftol); // Tolerance in second prefactor-function and its derivative
+                        tableB = bk.generate( Bk );
+                    }
                 }
 
                 template<class Tparticle>
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r1 = r.norm();
                         if (r1 < rc1) {
-                            double af = ak.eval(tableA,r1*rc1i);
-                            double bf = bk.eval(tableB,r1*rc1i);
+                            double af, bf;
+                            if(order == 3) {
+                                _DipoleDipoleQ2Help_3(af,bf, r1*rc1i);
+                            } else if(order == 4) {
+                                _DipoleDipoleQ2Help_4(af,bf, r1*rc1i);
+                            } else {
+                                af = ak.eval(tableA,r1*rc1i);
+                                bf = bk.eval(tableB,r1*rc1i);
+                            }
+
                             return _lB*mu2mu(a.mu(), b.mu(), a.muscalar()*b.muscalar(), r,af,bf);
                         }
                         return 0.0;
@@ -1494,7 +1542,8 @@ namespace Faunus {
                     using namespace textio;
                     std::ostringstream o;
                     o << DipoleDipole::info(w)
-                        << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl;
+                        << pad(SUB,w,"Cutoff") << rc1 << " "+angstrom+"^-1" << endl
+                        << pad(SUB,w,"order") << order << endl;
                     o << ak.info() << endl;
                     o << bk.info() << endl;
                     return o.str();

@@ -62,7 +62,7 @@ d = {
         'molrdf' : {
             'nstep':20, 'pairs' :
                 [
-                    { 'name1':'water', 'name2':'water', 'dim':3, 'file':'rdf_ww.dat', 'dr':0.1  }
+                    { 'name1':'water', 'name2':'water', 'dim':3, 'file':'rdf_ww.dat', 'dr':0.05  }
                 ]
             }
         }

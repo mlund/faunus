@@ -192,13 +192,19 @@ namespace Faunus
 
   private:
       bool _isAtomic;
+      int _confid;                                //!< Last picked conformation if `conformations.size()>0`
 
   public:
       TinserterFunc inserterFunctor;              //!< Function for insertion into space
 
+      int getConformationIndex() const
+      {
+          return _confid;
+      }
+
       /** @brief Constructor - by default data is initialized; mass set to unity */
       inline MoleculeData( Tmjson::iterator &molecule )
-          : Ninit(0), _isAtomic(false)
+          : Ninit(0), _isAtomic(false), _confid(0)
       {
           readJSON(molecule);
           auto ins = RandomInserter<MoleculeData<Tpvec> >();
@@ -239,7 +245,8 @@ namespace Faunus
           assert(size_t(confDist.max()) == conformations.size() - 1);
           assert(atoms.size() == conformations.front().size());
 
-          return conformations[confDist(slump.eng)];
+          _confid = confDist(slump.eng); // store the index of the conformation
+          return conformations.at( _confid );
       }
 
       /**

@@ -65,9 +65,9 @@ fau_example(example_bulk "./" bulk.cpp)
 set_target_properties(example_bulk PROPERTIES OUTPUT_NAME "bulk")
 add_test(example_bulk python ${CMAKE_CURRENT_SOURCE_DIR}/bulk.py)
 
-fau_example(example_seawater "./" seawater.cpp)
-set_target_properties(example_seawater PROPERTIES OUTPUT_NAME "seawater")
-add_test(example_seawater ${CMAKE_CURRENT_SOURCE_DIR}/seawater.sh)
+#fau_example(example_seawater "./" seawater.cpp)
+#set_target_properties(example_seawater PROPERTIES OUTPUT_NAME "seawater")
+#add_test(example_seawater ${CMAKE_CURRENT_SOURCE_DIR}/seawater.sh)
 
 fau_example(example_spheresurface "./" spheresurface.cpp)
 set_target_properties(example_spheresurface PROPERTIES OUTPUT_NAME "spheresurface")

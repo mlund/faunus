@@ -544,6 +544,7 @@ namespace Faunus
         z_count = j.value("countervalency", 0.0);  // [e]
         k2_count = 0;
         k = sqrt(I * c);
+        cout << "Ionic s = " << I << endl;
         if ( k < zero )
             k = 1 / j.at("debyelength").get<double>(); // [A]
     }

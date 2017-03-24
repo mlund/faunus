@@ -615,19 +615,20 @@ namespace Faunus {
          * @brief Coulomb type potentials with spherical cutoff
          *
          * Beyond a spherical cutoff, \f$R_c\f$, the potential is cut and if
-         * below, \f$ u(r) = \frac{\lambda_B z_i z_j \mathcal{S}(q)}{ r } \f$ with \f$q=r/R_c\f$
+         * below, \f$ u(r) = \frac{\lambda_B z_i z_j }{ r }\mathcal{S}(q) \f$ with \f$q=r/R_c\f$
          * is returned with the following splitting functions, \f$\mathcal{S}\f$, that
          * will be splined during construction and thus evaluate at similar speeds,
          *
-         *  Type            | \f$\mathcal{S}(q=r/R_c)\f$               | Additional keywords  | Reference
-         *  --------------- | ---------------------------------------- | -------------------- | ---------
-         *  `plain`         | \f$ 1 \f$                                | none                 | ISBN 0486652424
-         *  `wolf`          | \f$ erfc(\alpha R_c q)-erfc(\alpha R_c)q \f$ | `alpha`              | [doi](http://dx.doi.org/10.1063/1.478738)
-         *  `fennel`        | \f$ erfc(\alpha R_c q)-erfc(\alpha R_c)q + ( q -1 ) q \left( erfc(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right) f$  | `alpha` | [doi](http://dx.doi.org/10.1063/1.2206581)
-         *  `yonezawa`      | \f$ 1 - erfc(\alpha R_c)q + q^2 \f$      | `alpha`              | [doi](http://dx.doi.org/10/j97)
-         *  `fanourgakis`   | \f$ 1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7\f$| none | [doi](http://dx.doi.org/10.1021/jp510612w)
-         *  `stenqvist`     | \f$ \prod_{n=1}^{{\rm order}}(1-q^n) \f$       | `order=300`          | ISBN [9789174224405](http://goo.gl/hynRTS) (Paper V)
-         *  `reactionfield` | \f$ 1 + \frac{\varepsilon_{RF}-\varepsilon_{r}}{2\varepsilon_{RF}+\varepsilon_{r}} q^3  - 3\frac{\varepsilon_{RF}}{2\varepsilon_{RF}+\varepsilon_{r}}q \f$      | `epsrf`     | [doi](http://dx.doi.org/10.1080/00268978000100361)
+         *  Type            | \f$\mathcal{S}(q=r/R_c)\f$               | Additional keywords  | Reference / Comment
+         *  --------------- | ---------------------------------------- | -------------------- | ----------------------
+         *  `plain`         | \f$ 1 \f$                                | none                 | http://doi.org/ctnnsj
+         *  `none`          | \f$ 0 \f$                                | none                 | For convenience, only.
+         *  `wolf`          | \f$ erfc(\alpha R_c q)-erfc(\alpha R_c)q \f$ | `alpha`          | http://doi.org/cfcxdk
+         *  `fennel`        | \f$ erfc(\alpha R_c q)-erfc(\alpha R_c)q + ( q -1 ) q \left( erfc(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right) f$ | `alpha`| http://doi.org/bqgmv2
+         *  `yonezawa`      | \f$ 1 + erfc(\alpha R_c)q + q^2 \f$      | `alpha`              | http://dx.doi.org/10/j97
+         *  `fanourgakis`   | \f$ 1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7\f$| none | http://doi.org/f639q5
+         *  `stenqvist`     | \f$ \prod_{n=1}^{order}(1-q^n) \f$       | `order=300`          | ISBN [9789174224405](http://goo.gl/hynRTS) (Paper V)
+         *  `reactionfield` | \f$ 1 + \frac{\varepsilon_{RF}-\varepsilon_{r}}{2\varepsilon_{RF}+\varepsilon_{r}} q^3  - 3\frac{\varepsilon_{RF}}{2\varepsilon_{RF}+\varepsilon_{r}}q \f$      | `epsrf`     | http://doi.org/dbs99w
          *  `yukawa`        | \f$ e^{-\kappa R_c q}-e^{-\kappa R_c}\f$  | `debyelength`        | ISBN 0486652424
          *
          *  The following keywords are required for all types:
@@ -642,8 +643,6 @@ namespace Faunus {
          * 
          *  - On the dielectric constant, http://dx.doi.org/10.1080/00268978300102721
          *  - Generalized reaction field using ionic strength, http://dx.doi.org/10.1063/1.469273
-         *
-         *  @todo Under construction!
          */
         class CoulombGalore : public PairPotentialBase {
             private:
@@ -709,8 +708,8 @@ namespace Faunus {
                     table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q); } );
                 }
 
-                void sfPlain(const Tmjson &j) {
-                    table = sf.generate( [&](double q) { return 1; } );
+                void sfPlain(const Tmjson &j, double val=1) {
+                    table = sf.generate( [&](double q) { return val; } );
                 }
 
             public:
@@ -735,7 +734,8 @@ namespace Faunus {
                         if (type=="yonezawa") sfYonezawa(j);
                         if (type=="yukawa") sfYukawa(j);
                         if (type=="fennel") sfFennel(j);
-                        if (type=="plain") sfPlain(j);
+                        if (type=="plain") sfPlain(j,1);
+                        if (type=="none") sfPlain(j,0);
                         if (type=="wolf") sfWolf(j);
 
                         if ( table.empty() )

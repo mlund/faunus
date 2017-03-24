@@ -732,8 +732,10 @@ namespace Faunus {
             LennardJonesMixed(T &j) {
               name="Lennard-Jones";
               init();
-              if (j.count("ljcustom")>0)
+              if (j.count("ljcustom")>0) {
+                  cout << name+": custom LJ parameters found...\n";
                   customParameters( j["ljcustom"] );
+              }
             }
 
           /** @brief Energy in kT between two particles, r2 = squared distance */

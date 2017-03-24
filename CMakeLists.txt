@@ -1,9 +1,21 @@
-cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 project("Faunus")
 
 if (POLICY CMP0042)
     cmake_policy(SET CMP0042 OLD)
 endif ()
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
+    message(FATAL "GCC 4.9 or higher required.")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.5)
+        message(FATAL_ERROR "Clang 3.5 or higher required.")
+    endif()
+endif()
 
 # ----------------------------
 #   Locate external packages
@@ -60,30 +72,11 @@ if (GIT_FOUND)
     endif ()
 endif ()
 
-# -------------------------------
-#   Check C/C++ code generation
-# -------------------------------
-CHECK_CXX_SOURCE_COMPILES("int main() { unsigned long long int i; }" unsigned_long_long_int)
-CHECK_CXX_SOURCE_COMPILES("int main() { long double f; }" long_double)
-CHECK_CXX_SOURCE_COMPILES("int main() { int a[0]; for (int &i:a) i++; }" range_based_for_loop)
-CHECK_CXX_SOURCE_COMPILES("int main() { auto i=0; }" auto_type_inference)
-CHECK_CXX_SOURCE_COMPILES("int main() { nullptr; }" nullptr)
-CHECK_CXX_SOURCE_COMPILES("auto f()->decltype(int()) {return 0;} int main() {return f();}" decltype_)
-CHECK_CXX_SOURCE_COMPILES("#include<memory>\nint main() {std::shared_ptr<int> i;}" smart_pointers)
-
-if (NOT decltype_)
-    message(FATAL_ERROR "Required C++11 features unsupported by compiler.")
-endif ()
-if (NOT (auto_type_inference AND unsigned_long_long_int AND long_double AND range_based_for_loop AND nullptr AND smart_pointers))
-    message(FATAL_ERROR "Required C++11 features unsupported by compiler.")
-endif ()
-
 # ---------------------------
 #   Add source directories
 # ---------------------------
 add_subdirectory(src)
 add_subdirectory(scripts)
-#add_subdirectory(xcode)
 add_subdirectory(doc EXCLUDE_FROM_ALL)
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")

@@ -783,6 +783,98 @@ namespace Faunus
           return o;
       }
   };
+  
+  /**
+   * @brief Cap particle
+   */
+  struct CapParticle : public PointParticle {
+    Point cap_center_point;               //!< Center of cap
+    Point charge_position;                //!< Position of charge
+    double cap_radius;                    //!< Radius of cap
+    double cap_center;                    //!< Distance between particle and cap center
+    double angle_p, angle_c;              //!< angle_p is the angle between the vector going from the particle center to cap center and the particle-cap rim.
+    bool is_sphere;
 
+    inline CapParticle() : cap_center_point(0,0,0),charge_position(0,0,0),cap_radius(0),cap_center(0),angle_p(0),angle_c(0),is_sphere(true) {};
+
+    /** @brief Copy constructor for Eigen derivatives */
+    template<typename OtherDerived>
+      CapParticle(const Eigen::MatrixBase<OtherDerived>& other) : PointParticle(other) {}
+
+    /** @brief Generic copy operator for Eigen derivatives */
+    template<typename OtherDerived>
+      CapParticle& operator=(const Eigen::MatrixBase<OtherDerived> &other) {
+        PointParticle::operator=(other);
+        return *this;
+      }
+
+    /** @brief Copy operator for base class (i.e no casting to Eigen derivatives) */
+    inline CapParticle& operator=(const PointParticle &p) {
+      PointParticle::operator=(p);
+      return *this;
+    }
+
+    /** @brief Copy properties from AtomData object */
+    template<class T,
+      class = typename std::enable_if<std::is_base_of<AtomData,T>::value>::type>
+        CapParticle& operator=(const T &d) {
+          PointParticle::operator=(d);
+          cap_center=d.cap_center;
+          cap_center_point = Point(cap_center,0,0);
+	  charge_position = Point(d.charge_position,0,0);
+	  cap_radius=d.cap_radius;
+	  if(cap_radius > 1e-6)
+	    is_sphere = false;
+	  if( ( cap_radius > 1e-6 ) && ( cap_center > 1e-6) && ( radius > 1e-6 ) ) {
+	    angle_p = std::acos((radius*radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*radius*cap_center));
+	    angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - radius*radius)/(2.0*cap_center*cap_radius));
+	  }
+          return *this;
+        }
+
+    /* read in same order as written! */
+    inline CapParticle& operator<<(std::istream &in) {
+      PointParticle::operator<<(in);
+      cap_center_point.operator<<(in);
+      charge_position.operator<<(in);
+      in >> cap_radius;
+      if(cap_radius > 1e-6)
+	is_sphere = false;
+      in >> cap_center;
+      if( ( cap_radius > 1e-6 ) && (cap_center > 1e-6) && ( radius > 1e-6 ) ) {
+	angle_p = std::acos((radius*radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*radius*cap_center));
+	angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - radius*radius)/(2.0*cap_center*cap_radius));
+      }
+      return *this;
+    }
+    
+    // remove later when not used!!!
+    void update() {
+      if(!is_sphere) {
+	angle_p = std::acos((radius*radius + cap_center*cap_center - cap_radius*cap_radius)/(2.0*radius*cap_center));
+	angle_c = std::acos((cap_center*cap_center + cap_radius*cap_radius - radius*radius)/(2.0*cap_center*cap_radius));
+      } else {
+	angle_p = 0.0;
+	angle_c = 0.0;
+      }
+    }
+
+    /* write data members to stream */
+    friend std::ostream &operator<<(std::ostream &o, const CapParticle &p)
+    {
+      o << PointParticle(p) << " " << p.cap_center_point.transpose() << " " << p.charge_position.transpose() << " " << p.cap_radius << " " << p.cap_center;
+      return o;
+    }
+
+    /**
+     * @brief Internal rotation: center-to-cap-vector
+     */
+    template<typename Trotator>
+      void rotate(const Trotator &rot) {
+        assert(rot.getOrigin().squaredNorm()<1e-6);
+        cap_center_point = rot(cap_center_point);
+	charge_position = rot(charge_position);
+      }
+  };
 }//namespace
 #endif

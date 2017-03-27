@@ -654,8 +654,7 @@ namespace Faunus {
                 int order;
 
                 void sfYukawa(const Tmjson &j) {
-                    throw std::runtime_error( "unfinished" );
-                    double kappa = 1 / j.at("debyelength").get<double>();
+                    kappa = 1.0 / j.at("debyelength").get<double>();
                     I = kappa*kappa / ( 8.0*lB*pc::pi*pc::Nav/1e27 );
                     table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) - std::exp(-kappa*rc); } ); // q=r/Rc 
                     // we could also fill in some info string or JSON output...
@@ -785,8 +784,8 @@ namespace Faunus {
                         << pad(SUB, w, "Bjerrum length") << lB << _angstrom << endl
                         << pad(SUB,w,"Cutoff") << rc << _angstrom << endl;
                     if (type=="yukawa") {
-                        o << pad(SUB,w, "Inverse Debye length") << kappa << endl;
-                        o << pad(SUB,w, "Ionic strenght") << I << endl;
+                        o << pad(SUB,w, "Debye length") << 1.0/kappa << endl;
+                        o << pad(SUB,w, "Ionic strength") << I << endl;
                     }
                     if (type=="reactionfield") {
                         if(epsrf > 1e10)

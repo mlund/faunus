@@ -2474,6 +2474,67 @@ namespace Faunus
                     };
                 }
             };
+	    
+        template<class Tspace>
+            class Capanalysis : public PairFunctionBase {
+                Tspace &spc;
+
+                Table2D<double, double> capcorr_angle;
+                Table2D<double, Average<double> > capcorr, capcorr_dist;
+
+                void update( data &d ) override
+                {
+                    int N = spc.p.size() - 1;
+                    int id1 = atom[ d.name1 ].id;
+                    int id2 = atom[ d.name2 ].id;
+                    for ( int i = 0; i < N; i++ )
+                    {
+                        if ( spc.p[i].id==id1 || spc.p[i].id==id2 )
+                            d.hist(0) += spc.p[i].cap_center_point().dot(spc.p[i].cap_center_point()) * spc.p[i].cap_center() * spc.p[i].cap_center();
+                        for ( int j = i + 1.; j < N + 1; j++ )
+                        {
+                            if ( ( spc.p[i].id==id1 && spc.p[j].id==id2 ) || ( spc.p[i].id==id2 && spc.p[j].id==id1 ) )
+                            {
+                                double r = spc.geo.dist(spc.p[i], spc.p[j]);
+                                double sca = spc.p[i].cap_center_point().dot(spc.p[j].cap_center_point());
+                                capcorr_angle(sca) += 1.;
+                                capcorr(r) += sca;
+                                capcorr_dist(r) += 0.5 * (3 * sca * sca - 1.);
+                                d.hist(r) += 2 * sca * spc.p[i].cap_center() * spc.p[j].cap_center();
+                            }
+                        }
+                    }
+                    if ( spc.p[N].id==id1 || spc.p[N].id==id2 )
+                        d.hist(0) += spc.p[N].cap_center_point().dot(spc.p[N].cap_center_point()) * spc.p[N].cap_center() * spc.p[N].cap_center();
+                }
+
+                void normalize(data &d) override
+                {
+                    double sum = 0;  
+                    for (auto &i : d.hist.getMap()) {
+                        sum += i.second;
+                        i.second = sum;
+                    }
+                }
+
+                public:
+                Capanalysis( Tmjson j, Tspace &spc ) : PairFunctionBase(j,"Capanalysis"), spc(spc) {
+                    capcorr_angle.setResolution(datavec.back().dr*0.1); // Interval goes only from -1 to 1, thus we must increase the resolution, hence the factor of 0.1
+                    capcorr.setResolution(datavec.back().dr);
+                    capcorr_dist.setResolution(datavec.back().dr);
+                }
+
+                ~Capanalysis()
+                {
+                    for (auto &d : datavec) {
+                        normalize(d);
+                        d.hist.save( d.file );
+                        capcorr_angle.save( d.file+".angledist" );
+                        capcorr.save( d.file+".capcorr" );
+                        capcorr_dist.save( d.file+".capint" );
+                    }
+                }
+            };
 
         /**
          * @brief Sample scattering intensity
@@ -2566,6 +2627,7 @@ namespace Faunus
          * `chargemultipole`       |  `Analysis::ChargeMultipole`
          * `energyfile`            |  `Analysis::SystemEnergy`
          * `kirkwoodfactor`        |  `Analysis::KirkwoodFactor`
+         * `capanalysis`           |  `Analysis::Capanalysis`
          * `meanforce`             |  `Analysis::MeanForce`
          * `molrdf`                |  `Analysis::MoleculeRDF`
          * `multipoleanalysis`     |  `Analysis::MultipoleAnalysis`
@@ -2666,6 +2728,9 @@ namespace Faunus
 
                                 if ( i.key() == "kirkwoodfactor" )
                                     v.push_back(Tptr(new KirkwoodFactor<Tspace>(val, spc)));
+				
+                                if ( i.key() == "capanalysis" )
+                                    v.push_back(Tptr(new Capanalysis<Tspace>(val, spc)));
 
                                 if ( i.key() == "multipoleanalysis" )
                                     v.push_back(Tptr(new MultipoleAnalysis<Tspace>(val, spc)));

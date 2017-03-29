@@ -454,6 +454,7 @@ namespace Faunus
 
         Point zeroP;
         double zeroD;
+	bool trueD;
 
         PointParticle() { clear(); }              //!< Constructor
 
@@ -477,6 +478,21 @@ namespace Faunus
         Point& mu() { return zeroP; }
         Point& mup() { return zeroP; }
         double& muscalar() { return zeroD; }
+
+        Point cap_center_point() const { return zeroP; } 
+        Point charge_position() const { return zeroP; }
+        double cap_radius() const { return zeroD; }
+        double cap_center() const { return zeroD; }
+        double angle_p() const { return zeroD; }
+        double angle_c() const { return zeroD; }
+        bool is_sphere() const { return trueD; }
+        Point& cap_center_point() { return zeroP; } 
+        Point& charge_position() { return zeroP; }
+        double& cap_radius() { return zeroD; }
+        double& cap_center() { return zeroD; }
+        double& angle_p() { return zeroD; }
+        double& angle_c() { return zeroD; }
+        bool& is_sphere() { return trueD; }
 
         template<class T,
             class = typename std::enable_if<std::is_base_of<AtomData, T>::value>::type>
@@ -539,6 +555,7 @@ namespace Faunus
             id = 0;
             zeroP = Point(0,0,0);
             zeroD = 0.0;
+	    trueD = true;
         }
 
     };
@@ -793,8 +810,8 @@ namespace Faunus
             Point _charge_position;                //!< Position of charge
             double _cap_radius;                    //!< Radius of cap
             double _cap_center;                    //!< Distance between particle and cap center
-            double _angle_p;		          //!< angle_p is the azimuth angle of the spherical back segment of the particles surface
-            double _angle_c; 			  //!< angle_c is the azimuth angle of the spherical front segment of the particles surface
+            double _angle_p;		           //!< angle_p is the azimuth angle of the spherical back segment of the particles surface
+            double _angle_c; 			   //!< angle_c is the azimuth angle of the spherical front segment of the particles surface
             bool _is_sphere;
 
         public:
@@ -869,13 +886,13 @@ namespace Faunus
             // remove later when not used!!!
             void update() {
                 if(!_is_sphere) {
-		    if( ( _cap_radius > 1e-6 ) && ( _cap_center > 1e-6) && ( radius > 1e-6 ) ) {
-			_angle_p = std::acos(-1.) - std::acos((radius*radius + _cap_center*_cap_center - _cap_radius*_cap_radius)/(2.0*radius*_cap_center));
-			_angle_c = std::acos((_cap_center*_cap_center + _cap_radius*_cap_radius - radius*radius)/(2.0*_cap_center*_cap_radius));
-		    } else {
-			_angle_p = std::acos(-1.);
-			_angle_c = 0.0;
-		    }
+                    if( ( _cap_radius > 1e-6 ) && ( _cap_center > 1e-6) && ( radius > 1e-6 ) ) {
+                        _angle_p = std::acos(-1.) - std::acos((radius*radius + _cap_center*_cap_center - _cap_radius*_cap_radius)/(2.0*radius*_cap_center));
+                        _angle_c = std::acos((_cap_center*_cap_center + _cap_radius*_cap_radius - radius*radius)/(2.0*_cap_center*_cap_radius));
+                    } else {
+                        _angle_p = std::acos(-1.);
+                        _angle_c = 0.0;
+                    }
                 } else {
                     _angle_p = std::acos(-1.);
                     _angle_c = 0.0;

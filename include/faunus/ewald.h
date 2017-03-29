@@ -120,14 +120,19 @@ namespace Faunus {
     template<bool useIonIon=true, bool useIonDipole=false, bool useDipoleDipole=false>
       struct EwaldParameters {
 
-	int kcc;
-	double alpha, alpha2, rc, kc, kc2, maxL, check_k2_zero;
+	int kcc, N;
+	double alpha, alpha2, rc, kc, kc2, minL, maxL, check_k2_zero;
 	Point L;
 	
         EwaldParameters() { }
 
           void update(Point L_in) {
 	    L = L_in;
+	    minL = L.x();
+            if(L.y() < minL)
+              minL = L.y();
+            if(L.z() < minL)
+              minL = L.z();
             maxL = L.x();
             if(L.y() > maxL)
               maxL = L.y();
@@ -135,7 +140,18 @@ namespace Faunus {
               maxL = L.z();
             check_k2_zero = 0.1*(4*pc::pi*pc::pi)/(maxL*maxL);
 	  }
-
+	  /**
+	   * @note Implemented from  <http://dx.doi.org/10.1080/08927029208049126>
+	   */
+	  void ForLaterUse() {
+	    if(pc::pi/pow(N,1.0/3.0) > 0.25)
+	      cout << "Cutoff is larger than half the box-length!" << endl;
+	    rc = minL*sqrt(pc::pi)/pow(N,1.0/6.0);
+	    alpha = pc::pi/rc;
+	    alpha2 = alpha*alpha;
+	    kc = alpha*minL;
+	    kc2 = kc*kc;
+	  }
       };
       
   }//namespace
@@ -659,7 +675,7 @@ namespace Faunus {
 	    surfaceEnergy = getSurfaceEnergy(s.p,g,V);
 	    reciprocalEnergy = getReciprocalEnergy(Q_ion_tot,Q_dip_tot,Aks,V);
 	    undo(); // initialization of trial-entities
-            change.clear();
+            //change.clear();
           }
       };
 

@@ -1,10 +1,10 @@
-# Generated on Mar 13 2017 09:08:50 using 4.2.1 Compatible Clang 3.8.0 (tags/RELEASE_380/final)
-GroupRotation/Translation_acceptance         24.3085             
-GroupRotation/Translation_water_acceptance   24.3085             
-GroupRotation/Translation_water_dRot         3.75188             
-GroupRotation/Translation_water_dTrans       0.109184            
-IsobaricVolumeFluctuations_MSQDisplacement   3.20567             
-IsobaricVolumeFluctuations_acceptance        19.9183             
-IsobaricVolumeFluctuations_averageSideLength 18.9635             
-energyAverage                                -68447.1            
-relativeEnergyDrift                          1.02113e-14         
+# Generated on Mar 29 2017 20:04:25 using 5.4.0 20160609
+GroupRotation/Translation_acceptance         34.0539             
+GroupRotation/Translation_water_acceptance   34.0539             
+GroupRotation/Translation_water_dRot         3.64838             
+GroupRotation/Translation_water_dTrans       0.107132            
+IsobaricVolumeFluctuations_MSQDisplacement   4.45178             
+IsobaricVolumeFluctuations_acceptance        35.6863             
+IsobaricVolumeFluctuations_averageSideLength 31.0922             
+energyAverage                                -332421             
+relativeEnergyDrift                          4.20117e-15         

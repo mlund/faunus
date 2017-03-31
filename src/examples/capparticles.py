@@ -12,13 +12,13 @@ except: pass
 
 d = {
     "atomlist" : {
-      "Cap" : { "q": 0.0, "sigma":1.00, "dp":2.0, "dprot":360.0, "cap_center":0.5, "charge_position":0.0, "cap_radius":0.5 },
-      "Sph" : { "q": 0.0, "sigma":1.00, "dp":2.0, "dprot":0.0, "cap_center":0.0, "charge_position":0.0, "cap_radius":0.0 }
+      "Cap" : { "q": 0.0, "sigma":1.00, "dp":1.0, "dprot":360.0, "cap_center":0.5, "charge_position":0.0, "cap_radius":0.5 },
+      "Sph" : { "q": 0.0, "sigma":1.00, "dp":1.0, "dprot":0.0, "cap_center":0.0, "charge_position":0.0, "cap_radius":0.0 }
       },
 
     "moleculelist" : {
       "Capsphere" : { "atoms":"Cap", "Ninit":1, "atomic":True },
-      "Sphere" : { "atoms":"Sph", "Ninit":1, "atomic":True }
+      "Sphere" : { "atoms":"Sph", "Ninit":10, "atomic":True }
       },
 
     "energy" : {

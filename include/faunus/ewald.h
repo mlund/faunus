@@ -376,14 +376,18 @@ namespace Faunus {
                 if( ( useIonIon || useIonDipole ) && !isotropic_pbc ) {
                   Q_temp_ion += p[i].charge * complex<double>(cos(dot),sin(dot));
 		} else if( ( useIonIon || useIonDipole ) && isotropic_pbc ) {
-		  Q_temp_ion += p[i].charge*std::cos(kv.x()*p[i].x())*std::cos(kv.y()*p[i].y())*std::cos(kv.z()*p[i].z()); 
+		  Q_temp_ion += p[i].charge*cos(kv.x()*p[i].x())*cos(kv.y()*p[i].y())*cos(kv.z()*p[i].z()); 
 		}
                 if(useDipoleDipole && !isotropic_pbc) {
                   Q_temp_dip += kv.dot(p[i].mu()) * p[i].muscalar() * complex<double>(-sin(dot),cos(dot));
 		} else if(useDipoleDipole && isotropic_pbc) {
-		  Q_temp_dip += sin(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().x()*kv.x()*spc->p[i].muscalar();
-		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().y()*kv.y()*spc->p[i].muscalar();
-		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu().z()*kv.z()*spc->p[i].muscalar();
+		  double xx = spc->p[i].x()*kv.x();
+		  double yy = spc->p[i].y()*kv.y();
+		  double zz = spc->p[i].z()*kv.z();
+		  double cosX = cos(xx);
+		  double cosY = cos(yy);
+		  double cosZ = cos(zz);
+		  Q_temp_dip += ( sin(xx)*cosY*cosZ*spc->p[i].mu().x()*kv.x() + cosX*sin(yy)*cosZ*spc->p[i].mu().y()*kv.y() + cosX*cosY*sin(zz)*spc->p[i].mu().z()*kv.z() )*spc->p[i].muscalar();
 		}
               }
               Q_ion_tot_in.at(k) = Q_temp_ion;
@@ -601,22 +605,30 @@ namespace Faunus {
                     Q2_ion -= spc->p[i].charge * complex<double>(cos(dot),sin(dot));
                   } else if( ( useIonIon || useIonDipole ) && isotropic_pbc ) {
 		    Point kv = kVectors_trial.col(k);
-		    Q2_ion += spc->trial[i].charge*std::cos(kv.x()*spc->trial[i].x())*std::cos(kv.y()*spc->trial[i].y())*std::cos(kv.z()*spc->trial[i].z()); 
+		    Q2_ion += spc->trial[i].charge*cos(kv.x()*spc->trial[i].x())*cos(kv.y()*spc->trial[i].y())*cos(kv.z()*spc->trial[i].z()); 
 		    kv = kVectors.col(k);
-		    Q2_ion -= spc->p[i].charge*std::cos(kv.x()*spc->p[i].x())*std::cos(kv.y()*spc->p[i].y())*std::cos(kv.z()*spc->p[i].z()); 
+		    Q2_ion -= spc->p[i].charge*cos(kv.x()*spc->p[i].x())*cos(kv.y()*spc->p[i].y())*cos(kv.z()*spc->p[i].z()); 
 		  }
                   if ( ( useDipoleDipole || useIonDipole ) && !isotropic_pbc ) {
                     Q2_dip += kVectors_trial.col(k).dot(spc->trial[i].mu()) * spc->trial[i].muscalar() * complex<double>(-sin(dotTrial),cos(dotTrial));
                     Q2_dip -= kVectors.col(k).dot(spc->p[i].mu()) * spc->p[i].muscalar() * complex<double>(-sin(dot),cos(dot));
                   } else if ( ( useDipoleDipole || useIonDipole ) && isotropic_pbc ) {
 		    Point kv = kVectors_trial.col(k);
-		    Q2_dip += sin(spc->trial[i].x()*kv.x())*cos(spc->trial[i].y()*kv.y())*cos(spc->trial[i].z()*kv.z())*spc->trial[i].mu().x()*kv.x()*spc->trial[i].muscalar();
-		    Q2_dip += cos(spc->trial[i].x()*kv.x())*sin(spc->trial[i].y()*kv.y())*cos(spc->trial[i].z()*kv.z())*spc->trial[i].mu().y()*kv.y()*spc->trial[i].muscalar();
-		    Q2_dip += cos(spc->trial[i].x()*kv.x())*cos(spc->trial[i].y()*kv.y())*sin(spc->trial[i].z()*kv.z())*spc->trial[i].mu().z()*kv.z()*spc->trial[i].muscalar();
+		    double xx = spc->trial[i].x()*kv.x();
+		    double yy = spc->trial[i].y()*kv.y();
+		    double zz = spc->trial[i].z()*kv.z();
+		    double cosX = cos(xx);
+		    double cosY = cos(yy);
+		    double cosZ = cos(zz);
+		    Q2_dip += ( sin(xx)*cosY*cosZ*spc->trial[i].mu().x()*kv.x() + cosX*sin(yy)*cosZ*spc->trial[i].mu().y()*kv.y() + cosX*cosY*sin(zz)*spc->trial[i].mu().z()*kv.z() )*spc->trial[i].muscalar();
 		    kv = kVectors.col(k);
-		    Q2_dip -= sin(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().x()*kv.x()*spc->p[i].muscalar();
-		    Q2_dip -= cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().y()*kv.y()*spc->p[i].muscalar();
-		    Q2_dip -= cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu().z()*kv.z()*spc->p[i].muscalar();
+		    xx = spc->p[i].x()*kv.x();
+		    yy = spc->p[i].y()*kv.y();
+		    zz = spc->p[i].z()*kv.z();
+		    cosX = cos(xx);
+		    cosY = cos(yy);
+		    cosZ = cos(zz);
+		    Q2_dip -= ( sin(xx)*cosY*cosZ*spc->p[i].mu().x()*kv.x() + cosX*sin(yy)*cosZ*spc->p[i].mu().y()*kv.y() + cosX*cosY*sin(zz)*spc->p[i].mu().z()*kv.z() )*spc->p[i].muscalar();
                   }
                 }
               }

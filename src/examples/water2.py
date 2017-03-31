@@ -22,13 +22,13 @@ d = {
     'system': {
 	"temperature"  : 300,
         'geometry': {'length': 32.00},
-        'mcloop': {'macro': 10, 'micro': 100},
+        'mcloop': {'macro': 10, 'micro': 50},
         'unittest': {'testfile': 'water2.test', 'stable': False}
     },
     'energy': {
         'nonbonded': {
             'coulombtype':"fanourgakis" ,'epsr': 1.0, 'cutoff': 14.8, 'eps_rf':78.5, 'order':2, 'alpha':0.2,
-            'ewald': {'eps_surf': 1e11, 'cutoff': 14.8, 'alpha': 0.21, "cutoffK":7.3, "spherical_sum":True, "update_frequency":700},
+            'ewald': {'eps_surf': 1e11, 'cutoff': 14.8, 'alpha': 0.21, "cutoffK":7.3, "spherical_sum":True, "update_frequency":1000},
             'cutoff_g2g': 15.0
         }
     },
@@ -41,9 +41,9 @@ d = {
     },
     'moves': {
         'moltransrot': {
-            'water': {'dp': 0.5, 'dprot': 0.5, 'dir': '1 1 1', 'permol': True, 'prob': 1.0}
+            'water': {'dp': 0.4, 'dprot': 0.4, 'dir': '1 1 1', 'permol': True, 'prob': 1.0}
         },
-        'isobaric': {'dp': 0.1, 'pressure': 40.0906, 'prop': 1.0}
+        'isobaric': {'dp': 0.03, 'pressure': 40.0906, 'prop': 1.0}
     },
     'analysis' : {
         'xtcfile' :   { 'file': 'water2.xtc', 'nstep':20 },

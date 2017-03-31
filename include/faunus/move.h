@@ -1379,15 +1379,15 @@ namespace Faunus
         for ( auto i : *igroup )
             if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
                 return pc::infty;
-	return Energy::energyChange(*spc, *base::pot, base::change);
+	//return Energy::energyChange(*spc, *base::pot, base::change);
 
-	/*
+	
         double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if ( unew == pc::infty )
             return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
-        #ifdef ENABLE_MPI
+#ifdef ENABLE_MPI
           if (base::mpiPtr!=nullptr) {
           double du=0;
           auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
@@ -1411,7 +1411,7 @@ namespace Faunus
             }
         }
         return unew - uold;
-	*/
+	
     }
 
     template<class Tspace>

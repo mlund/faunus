@@ -17,7 +17,7 @@ d = {
       },
 
     "moleculelist" : {
-      "Capsphere" : { "atoms":"Cap", "Ninit":10, "atomic":True },
+      "Capsphere" : { "atoms":"Cap", "Ninit":1, "atomic":True },
       "Sphere" : { "atoms":"Sph", "Ninit":1, "atomic":True }
       },
 
@@ -55,8 +55,8 @@ d = {
 
     "system" : {
       "temperature"  : 300,
-      "geometry"     : { "length" : 5.0 },
-      "mcloop"       : { "macro":10, "micro":1000 },
+      "geometry"     : { "length" : 3.0 },
+      "mcloop"       : { "macro":10, "micro":10000 },
       "unittest"     : { "testfile":"capparticles.test", "stable":False },
       "atomlist"     : "capparticles.json",
       "moleculelist" : "capparticles.json"

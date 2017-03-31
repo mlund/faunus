@@ -255,6 +255,7 @@ namespace Faunus {
 	  
 	  string color_particle = "Blue";
 	  string color_cap = "Red";
+	  double ambient = 1.0; // Light on particles, 0.0 = little light, 1.0 = much light
 	  for(unsigned int i = 0; i < spc.p.size(); i++) {
 	    Point xyz = spc.p[i];
 	    Point cap = spc.p[i].cap_center_point()*spc.p[i].cap_center();
@@ -263,11 +264,13 @@ namespace Faunus {
 	    f << "<" << xyz.x() << "," << xyz.y() << "," << xyz.z() << ">\n";
 	    f << "," << spc.p[i].radius << "\n";
 	    f << "texture { pigment { " << color_particle << " } }\n";
+	    f << "}finish {ambient " << ambient << "}\n";
 	    f << "}\n";
 	    f << "sphere {\n";
 	    f << "<" << (xyz.x() + cap.x()) << "," << (xyz.y() + cap.y()) << "," << (xyz.z() + cap.z()) << ">\n";
 	    f << "," << spc.p[i].cap_radius() << "\n";
 	    f << "texture { pigment { " << color_cap << " } }\n";
+	    f << "}finish {ambient " << ambient << "}\n";
 	    f << "}\n}\n\n";
 	  }
           f.close();

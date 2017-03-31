@@ -21,15 +21,15 @@ except:
 d = {
     'system': {
 	"temperature"  : 300,
-        'geometry': {'length': 28.00},
+        'geometry': {'length': 32.00},
         'mcloop': {'macro': 10, 'micro': 100},
         'unittest': {'testfile': 'water2.test', 'stable': False}
     },
     'energy': {
         'nonbonded': {
-            'coulombtype':"fanourgakis" ,'epsr': 1.0, 'cutoff': 13.9, 'eps_rf':78.5, 'order':2, 'alpha':0.2,
-            'ewald': {'eps_surf': 1e11, 'cutoff': 13.9, 'alpha': 0.23, "cutoffK":6.5, "spherical_sum":True, "update_frequency":700},
-            'cutoff_g2g': 14.0
+            'coulombtype':"fanourgakis" ,'epsr': 1.0, 'cutoff': 14.8, 'eps_rf':78.5, 'order':2, 'alpha':0.2,
+            'ewald': {'eps_surf': 1e11, 'cutoff': 14.8, 'alpha': 0.21, "cutoffK":7.3, "spherical_sum":True, "update_frequency":700},
+            'cutoff_g2g': 15.0
         }
     },
     'atomlist': {
@@ -37,7 +37,7 @@ d = {
         'HW': {'q': 0.4238, 'sigma': 0.0, 'eps': 0.0}
     },
     'moleculelist': {
-        'water': {'structure': 'water2.aam', 'Ninit': 700, 'insdir': '1 1 1'}
+        'water': {'structure': 'water2.aam', 'Ninit': 1000, 'insdir': '1 1 1'}
     },
     'moves': {
         'moltransrot': {
@@ -50,7 +50,7 @@ d = {
         'pqrfile' :   { 'file': 'water2.pqr' },
         'statefile' : { 'file': 'state' },
         "energyfile": { "file": "energy.dat", "nstep":20 },
-        "multipoleanalysis" : { "nstep":20, "cutoff":13.9, "dielectric":"tinfoil", 'eps_rf':78.5 },
+        "multipoleanalysis" : { "nstep":20, "cutoff":14.8, "dielectric":"tinfoil", 'eps_rf':78.5 },
         'widommolecule' : dict(nstep=20, ninsert=10, molecule="water"),
         'sofq' :      dict(nstep=20, qmin=2, qmax=10, dq=0.5, mollist=["water"], file='debye.dat'),
         'atomrdf' : {

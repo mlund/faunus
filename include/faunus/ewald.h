@@ -36,16 +36,16 @@ namespace Faunus {
       struct EwaldReal : public Potential::Coulomb {
 
         typedef Potential::Coulomb Tbase;
-        double alpha, alpha2, constant, rc, rc2, tab_utol, tab_ftol, lB;
+        double alpha, alpha2, rc, rc2, tab_utol, tab_ftol, lB;
 	bool only_coulomb, only_dipoledipole;
 	Tabulate::Andrea<double> T0_tabulator, T1_tabulator, T2_tabulator;
 	Tabulate::TabulatorBase<double>::data table_T0, table_T1, table_T2;
 	
-	std::function<double(double)> T0_sf = [&](double r1) { return erfc(alpha*r1); }; // .. then spline
-	std::function<double(double)> T1_sf = [&](double r1) { return (r1*2.0*alpha/sqrt(pc::pi)*exp(-alpha2*r1*r1) + erfc(alpha*r1)); }; // .. then spline
-	std::function<double(double)> T2_sf = [&](double r1) { return 3.0*(T1_sf(r1) + 4.0*alpha2*alpha/3.0/sqrt(pc::pi)*r1*r1*r1*exp(-alpha2*r1*r1) ); }; // .. then spline
+	std::function<double(double)> T0_sf = [&](double r1) { return erfc(alpha*r1); }; 
+	std::function<double(double)> T1_sf = [&](double r1) { return (r1*2.0*alpha/sqrt(pc::pi)*exp(-alpha2*r1*r1) + erfc(alpha*r1)); }; 
+	std::function<double(double)> T2_sf = [&](double r1) { return 3.0*(T1_sf(r1) + 4.0*alpha2*alpha/3.0/sqrt(pc::pi)*r1*r1*r1*exp(-alpha2*r1*r1) ); }; 
 
-        EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j), alpha(0), alpha2(0), constant(0), rc(1), rc2(1) {
+        EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j), alpha(0), alpha2(0), rc(1), rc2(1) {
           Tbase::name="Ewald Real";
 	  tab_utol = j[sec]["tab_utol"] | 1e-9;
 	  tab_ftol = j[sec]["tab_ftol"] | 1e-5;
@@ -58,7 +58,6 @@ namespace Faunus {
         void updateAlpha(double alpha_in) {
           alpha = alpha_in;
           alpha2 = alpha*alpha;
-          constant = 2*alpha/sqrt(pc::pi);
 	  updateSpline();
         }
 

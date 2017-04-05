@@ -626,7 +626,7 @@ namespace Faunus
                         m.muscalar() = m.mu().norm();
                         if ( m.muscalar() > 1e-8 )
                             m.mu() = m.mu() / m.muscalar();
-                        m.theta = quadrupoleMoment(spc, g);    // quadrupole
+                        m.theta() = quadrupoleMoment(spc, g);    // quadrupole
                         return m;
                     }
 
@@ -667,7 +667,7 @@ namespace Faunus
                     d.ii = a.charge * b.charge * rinv; // ion-ion, etc.
                     d.id = q2mu(a.charge*b.muscalar(),b.mu(),b.charge*a.muscalar(),a.mu(),r);
                     d.dd = mu2mu(a.mu(), b.mu(), a.muscalar() * b.muscalar(), r);
-                    d.iq = q2quad(a.charge, b.theta, b.charge, a.theta, r);
+                    d.iq = q2quad(a.charge, b.theta(), b.charge, a.theta(), r);
                     d.mucorr = a.mu().dot(b.mu());
 
                     // add to grand average
@@ -2280,8 +2280,8 @@ namespace Faunus
         template<class Tspace>
             class MultipoleAnalysis : public AnalysisBase {
                 Tspace &spc;
-                vector <Average<double>> mu_abs;
-                Average<double> M_x, M_y, M_z, M_x_box, M_y_box, M_z_box, M2, M2_box, diel, V_t, groupDipole;
+                Average<double> M2, M2_box, diel, V_t, groupDipole;
+                vector<Average<double>> Q, Q_box, mu_abs, M, M_box;
                 int atomsize;
                 double cutoff, cutoff2, const_Diel, kappa, eps_rf;
                 bool diel_tinfoil, diel_RF, diel_wolf, diel_fennel;
@@ -2294,36 +2294,54 @@ namespace Faunus
                     Point origin(0, 0, 0);
                     Point mu(0, 0, 0);        // In e\AA
                     Point mu_box(0, 0, 0);    // In e\AA
+                    Tensor<double> quad;
+                    Tensor<double> quad_box;
 
                     for ( auto &i : spc.p )
                     {
                         if ( spc.geo.sqdist(i, origin) < cutoff2 )
                         {
                             mu += i.mu() * i.muscalar();
+                            quad += i*i.mu().transpose()*i.muscalar();
+                            quad += i.theta();
                         }
                         else
                         {
                             mu_box += i.mu() * i.muscalar();
+                            quad_box += i*i.mu().transpose()*i.muscalar();
+                            quad_box += i.theta();
                         }
                         for ( int j = 0; j < atomsize - 1; j++ )
                             if ( int(i.id) == j + 1 )
                                 mu_abs[j] += i.muscalar();
                     }
                     mu_box += mu;
+                    quad_box += quad;
 
                     // Updates from point charges
                     Group all(0, spc.p.size() - 1);
                     all.setMassCenter(spc);
+
                     mu += Geometry::dipoleMoment(spc, all, cutoff);
                     mu_box += Geometry::dipoleMoment(spc, all);
 
+                    quad += Geometry::quadrupoleMoment(spc, all, cutoff);
+                    quad_box += Geometry::quadrupoleMoment(spc, all);
+
                     // Update system statistics
-                    M_x += mu.x();
-                    M_y += mu.y();
-                    M_z += mu.z();
-                    M_x_box += mu_box.x();
-                    M_y_box += mu_box.y();
-                    M_z_box += mu_box.z();
+                    for(int i = 0; i < 3; i++) {
+                        M.at(i) += mu[i];
+                        M_box.at(i) += mu_box[i];
+                    }
+
+                    int cnt = 0;
+                    for(int i = 0; i < 3; i++) {
+                        for(int j = 0; j < 3; j++) {
+                            Q.at(cnt) += quad(i,j);
+                            Q_box.at(cnt++) += quad_box(i,j);
+                        }
+                    }
+
                     double sca = mu.dot(mu);
                     M2 += sca;
                     sca = mu_box.dot(mu_box);
@@ -2351,7 +2369,7 @@ namespace Faunus
                     diel_tinfoil = false;
                     diel_RF = false;
                     diel_wolf = false;
-		    diel_fennel = false;
+                    diel_fennel = false;
                     string d = j.at("dielectric");
                     if ( d =="tinfoil") {
                         diel_tinfoil = true;
@@ -2368,6 +2386,20 @@ namespace Faunus
                     const_Diel = pc::e * pc::e * 1e10 / (9.0 * pc::kT() * pc::e0);
                     atomsize = atom.size();
                     mu_abs.resize(atomsize-1);
+
+                    M.resize(3);
+                    M_box.resize(3);
+                    Q.resize(9);
+                    Q_box.resize(9);
+
+                    for(int i = 0; i < 3; i++) {
+                        M.at(i).reset();
+                        M_box.at(i).reset();
+                    }
+                    for(int i = 0; i < 9; i++) {
+                        Q.at(i).reset();
+                        Q_box.at(i).reset();
+                    }
                 }  
 
                 ~MultipoleAnalysis() { }
@@ -2425,7 +2457,7 @@ namespace Faunus
                     return (((T + 2.0) * M2_box.avg() * const_Diel / V_t.avg() + 1.0)
                             / ((T - 1.0) * M2_box.avg() * const_Diel / V_t.avg() + 1.0));
                 }
-                
+
                 /**
                  * @brief Returns dielectric constant, \f$ \varepsilon_r \f$, according to
                  * \f$ \frac{\varepsilon_r - 1}{\varepsilon_r + 2} \left[1 - \frac{\varepsilon_r - 1}{\varepsilon_r + 2}\tilde{T}(0) \right]^{-1} = \frac{4\pi}{3}\frac{\langle M^2 \rangle}{3Vk_BT} \f$
@@ -2458,14 +2490,32 @@ namespace Faunus
                     return {
                         { name,
                             {
-                                { "<M_x>_SPHERE", M_x.avg() },
-                                { "<M_y>_SPHERE", M_y.avg() },
-                                { "<M_z>_SPHERE", M_z.avg() },
-                                { "<M_x>_BOX", M_x_box.avg() },
-                                { "<M_y>_BOX", M_y_box.avg() },
-                                { "<M_z>_BOX", M_z_box.avg() },
+                                { "<M_x>_SPHERE", M[0].avg() },
+                                { "<M_y>_SPHERE", M[1].avg() },
+                                { "<M_z>_SPHERE", M[2].avg() },
+                                { "<M_x>_BOX", M_box[0].avg() },
+                                { "<M_y>_BOX", M_box[1].avg() },
+                                { "<M_z>_BOX", M_box[2].avg() },
                                 { "<M^2>_SPHERE", M2.avg() },
                                 { "<M^2>_BOX", M2_box.avg() },
+                                { "<Q_xx>_SPHERE", Q.at(0).avg() },
+                                { "<Q_xy>_SPHERE", Q.at(1).avg() },
+                                { "<Q_xz>_SPHERE", Q.at(2).avg() },
+                                { "<Q_yx>_SPHERE", Q.at(3).avg() },
+                                { "<Q_yy>_SPHERE", Q.at(4).avg() },
+                                { "<Q_yz>_SPHERE", Q.at(5).avg() },
+                                { "<Q_zx>_SPHERE", Q.at(6).avg() },
+                                { "<Q_zy>_SPHERE", Q.at(7).avg() },
+                                { "<Q_zz>_SPHERE", Q.at(8).avg() },
+                                { "<Q_xx>_BOX", Q_box.at(0).avg() },
+                                { "<Q_xy>_BOX", Q_box.at(1).avg() },
+                                { "<Q_xz>_BOX", Q_box.at(2).avg() },
+                                { "<Q_yx>_BOX", Q_box.at(3).avg() },
+                                { "<Q_yy>_BOX", Q_box.at(4).avg() },
+                                { "<Q_yz>_BOX", Q_box.at(5).avg() },
+                                { "<Q_zx>_BOX", Q_box.at(6).avg() },
+                                { "<Q_zy>_BOX", Q_box.at(7).avg() },
+                                { "<Q_zz>_BOX", Q_box.at(8).avg() },
                                 { "dielectric constant("+type+")", diel.avg() },
                                 { "dielectric constant std:", diel.stdev() },
                                 { "<mu>", groupDipole.avg() }
@@ -2474,7 +2524,7 @@ namespace Faunus
                     };
                 }
             };
-	    
+
         template<class Tspace>
             class Capanalysis : public PairFunctionBase {
                 Tspace &spc;
@@ -2728,7 +2778,7 @@ namespace Faunus
 
                                 if ( i.key() == "kirkwoodfactor" )
                                     v.push_back(Tptr(new KirkwoodFactor<Tspace>(val, spc)));
-				
+
                                 if ( i.key() == "capanalysis" )
                                     v.push_back(Tptr(new Capanalysis<Tspace>(val, spc)));
 

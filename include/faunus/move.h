@@ -143,7 +143,7 @@ namespace Faunus
                 for ( size_t i = 0; i < p.size(); i++ )
                 {
                     Point E = field.col(i);                  // field on i
-                    Point mu_trial = p[i].alpha * E + p[i].mup();// new tot. dipole
+                    Point mu_trial = p[i].alpha() * E + p[i].mup();// new tot. dipole
                     Point mu_err = mu_trial - p[i].mu() * p[i].muscalar();// mu difference
                     mu_err_norm[i] = mu_err.norm();          // norm of previous row
                     p[i].muscalar() = mu_trial.norm();         // update dip scalar in particle

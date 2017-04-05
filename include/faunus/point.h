@@ -451,7 +451,8 @@ namespace Faunus
         Talphax alphax;
         Tmw mw;                                   //!< Molecular weight
         Thydrophobic hydrophobic;                 //!< Hydrophobic flag
-
+        
+        Tensor<double> zeroT;
         Point zeroP;
         double zeroD;
 	bool trueD;
@@ -493,6 +494,8 @@ namespace Faunus
         double& angle_p() { return zeroD; }
         double& angle_c() { return zeroD; }
         bool& is_sphere() { return trueD; }
+        Tensor<double> alpha() const { return zeroT; }
+	Tensor<double> theta() const { return zeroT; }
 
         template<class T,
             class = typename std::enable_if<std::is_base_of<AtomData, T>::value>::type>
@@ -569,17 +572,21 @@ namespace Faunus
             Point _mu;        //!< Dipole moment unit vector (permanent+induced)
             Point _mup;       //!< Permanent dipole moment vector
             double _muscalar; //!< Dipole moment scalar (permanent+induced)
+            Tensor<double> _alpha;   //!< Polarization matrix
+            Tensor<double> _theta;   //!< Quadrupole matrix
 
         public:
             Point mu() const { return _mu; } 
             Point mup() const { return _mup; }
             double muscalar() const { return _muscalar; }
+	    Tensor<double> alpha() const { return _alpha; }
+	    Tensor<double> theta() const { return _theta; }
             Point& mu() { return _mu; } 
             Point& mup() { return _mup; }
             double& muscalar() { return _muscalar; }
+	    Tensor<double>& alpha() { return _alpha; }
+	    Tensor<double>& theta() { return _theta; }
 
-            Tensor<double> alpha;   //!< Polarization matrix
-            Tensor<double> theta;   //!< Quadrupole matrix
 
             inline DipoleParticle() : _mu(0, 0, 0), _muscalar(0), _mup(0, 0, 0) {};
 
@@ -611,8 +618,8 @@ namespace Faunus
                         _muscalar = d.muscalar;
                         _mu = d.mu;
                         _mup = _mu * _muscalar;
-                        alpha = d.alpha;
-                        theta = d.theta;
+                        _alpha = d.alpha;
+                        _theta = d.theta;
                         return *this;
                     }
 
@@ -623,8 +630,8 @@ namespace Faunus
                 _mu.operator<<(in);
                 in >> _muscalar;
                 _mup.operator<<(in);
-                alpha.operator<<(in);
-                theta.operator<<(in);
+                _alpha.operator<<(in);
+                _theta.operator<<(in);
                 return *this;
             }
 
@@ -632,7 +639,7 @@ namespace Faunus
             friend std::ostream &operator<<( std::ostream &o, const DipoleParticle &p )
             {
                 o << PointParticle(p) << " " << p._mu.transpose() << " " << p._muscalar
-                    << " " << p._mup << " " << p.alpha << " " << p.theta;
+                    << " " << p._mup << " " << p._alpha << " " << p._theta;
                 return o;
             }
 
@@ -645,8 +652,8 @@ namespace Faunus
                     assert(rot.getOrigin().squaredNorm() < 1e-6);
                     mu() = rot(mu());
                     mup() = rot(mup());
-                    alpha = rot(alpha);
-                    theta = rot(theta);
+                    _alpha = rot(_alpha);
+                    _theta = rot(_theta);
                 }
     };
 

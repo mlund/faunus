@@ -31,7 +31,11 @@ d = {
       "energyfile": { "file": "energy.dat", "nstep":20 },
       "pqrfile" :   { "file": "stockmayer.pqr" },
       "statefile" : { "file": "state" },
-      "multipoleanalysis" : { "nstep":20, "cutoff":14.4315, "dielectric":"reactionfield", "eps_rf":140.0, "kappa":0.21 },
+      "multipoleanalysis" : { "nstep":20, "cutoff":14.4315, "dielectric":"reactionfield", "eps_rf":140.0, "kappa":0.21, 'pairs' :
+            [
+               { 'name1':'sol', 'name2':'sol', 'dim':3, 'file':'rdf_ss.dat', 'dr':0.1  }
+            ] 
+	  },
       "kirkwoodfactor" : { "nstep":20, "pairs" :
             [
                { "name1":"dip", "name2":"dip", "dim":3, "dr":0.1, "file":"kwfactor_dipdip.dat"}

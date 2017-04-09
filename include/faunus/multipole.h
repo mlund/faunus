@@ -665,7 +665,6 @@ namespace Faunus {
                     epsrf = j.at("eps_rf");
                     table = sf.generate( [&](double q) { return 1 + (( epsrf - epsr ) / ( 2 * epsrf + epsr ))*q*q*q
                             - 3 * ( epsrf / ( 2 * epsrf + epsr ))*q ; } ); 
-
                     calcDielectric = [&](double M2V) {
                         if(epsrf > 1e10)
                             return 1 + 3*M2V;
@@ -675,8 +674,8 @@ namespace Faunus {
                             return ( 2*M2V + 1 ) / ( 1 - M2V );
                         return 0.5 * ( 2*epsrf - 1 + sqrt( -72*M2V*M2V*epsrf + 4*epsrf*epsrf + 4*epsrf + 1) ) / ( 3*M2V-1 ); // Needs to be checked!
                         //return (6*M2V*epsrf + 2*epsrf + 1.0)/(1.0 + 2*epsrf - 3*M2V); // Is OK when epsr=1.0
-			selfenergy_prefactor = 1.5*epsrf/(2.0*epsrf + epsr); // Correct?!, see Eq.14 in DOI: 10.1021/jp510612w
                     };
+		    selfenergy_prefactor = 1.5*epsrf/(2.0*epsrf + epsr); // Correct?!, see Eq.14 in DOI: 10.1021/jp510612w
                     // we could also fill in some info string or JSON output...
                 }
 
@@ -692,6 +691,7 @@ namespace Faunus {
                 {
                     alpha = j.at("alpha");
                     table = sf.generate( [&](double q) { return 1 - erfc(alpha*rc)*q + q*q; } );
+		    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
 		    selfenergy_prefactor = erf(alpha*rc);
                 }
 
@@ -703,19 +703,23 @@ namespace Faunus {
 
                 void sfFennel(const Tmjson &j) {
                     alpha = j.at("alpha");
-                    table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q + (q-1.0)*q*(erfc(alpha*rc)
-                                    + 2 * alpha * rc / sqrt(pc::pi) * exp(-alpha*alpha*rc*rc))); } );
+                    table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q + (q-1.0)*q*(erfc(alpha*rc) + 2 * alpha * rc / sqrt(pc::pi) * exp(-alpha*alpha*rc*rc))); } );
+		    calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi))) * exp(-alpha*alpha*rc*rc) * (alpha*alpha*rc*rc * alpha*alpha*rc*rc + 2.0 * alpha*alpha*rc*rc + 3.0);
+						       return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0)); };
 		    selfenergy_prefactor = ( erfc(alpha*rc)/2.0 + alpha*rc/sqrt(pc::pi) );
                 }
 
                 void sfWolf(const Tmjson &j) {
                     alpha = j.at("alpha");
                     table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q); } );
+		    calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi))) * exp(-alpha*alpha*rc*rc) * ( 2.0 * alpha*alpha*rc*rc + 3.0);
+						       return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0));};
 		    selfenergy_prefactor = ( erfc(alpha*rc) + alpha*rc/sqrt(pc::pi)*(1.0 + exp(-alpha*alpha*rc2)) );
                 }
 
                 void sfPlain(const Tmjson &j, double val=1) {
                     table = sf.generate( [&](double q) { return val; } );
+		    calcDielectric = [&](double M2V) { return (2.0*M2V + 1.0)/(1.0 - M2V); };
 		    selfenergy_prefactor = 0.0;
                 }
 
@@ -779,8 +783,11 @@ namespace Faunus {
                         return Point(0,0,0);
                     }
                     
-		template<class Tpvec, class Tgroup>
-		    double self_energy(const Tpvec &p, const Tgroup &g) const { 
+                /**
+		 * @brief Self-energy of the potential
+		 */
+		template<class Tpvec>
+		    double internal(const Tpvec &p, const Group &g) const { 
 		    double Eq = 0;
 		    for (auto i : g)
 			Eq += p[i].charge * p[i].charge;

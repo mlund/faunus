@@ -50,19 +50,17 @@ d = {
         'pqrfile' :   { 'file': 'water2.pqr' },
         'statefile' : { 'file': 'state' },
         "energyfile": { "file": "energy.dat", "nstep":20 },
-        "multipoleanalysis" : { "nstep":20, "cutoff":14.8, "dielectric":"tinfoil", 'eps_rf':78.5 },
+        "multipoleanalysis" : { "nstep":20, "cutoff":14.8, "dielectric":"tinfoil", 'eps_rf':78.5, 'pairs' :
+                [
+                    { 'name1':'water', 'name2':'water', 'dim':3, 'file':'rdf_ww.dat', 'file2':'mucorr_ww.dat', 'dr':0.05  }
+                ] 
+		},
         'widommolecule' : dict(nstep=20, ninsert=10, molecule="water"),
         'sofq' :      dict(nstep=20, qmin=2, qmax=10, dq=0.5, mollist=["water"], file='debye.dat'),
         'atomrdf' : {
             'nstep':20, 'pairs' :
                 [
                     { 'name1':'OW', 'name2':'OW', 'dim':3, 'file':'rdf_owow.dat', 'dr':0.05  }
-                ]
-            },
-        'molrdf' : {
-            'nstep':20, 'pairs' :
-                [
-                    { 'name1':'water', 'name2':'water', 'dim':3, 'file':'rdf_ww.dat', 'dr':0.05  }
                 ]
             }
         }

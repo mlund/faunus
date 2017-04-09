@@ -468,6 +468,7 @@ namespace Faunus
                 for ( int i = f; i < b; ++i )
                     for ( int j = i + 1; j <= b; ++j )
                         u += pairpot(p[i], p[j], geo.sqdist(p[i], p[j]));
+	    u += pairpot.internal(p,g);
             return u;
         }
 

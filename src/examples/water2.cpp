@@ -33,7 +33,7 @@ int main() {
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
   Move::Propagator<Tspace> mv( mcp, pot, spc );
 
-  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
+  cout << atom.info() + spc.info() + textio::header("MC Simulation Begins!");
   
   MCLoop loop(mcp);    // class for handling mc loops
   while ( loop[0] ) {          // Markov chain 
@@ -50,7 +50,7 @@ int main() {
   mv.test(test);
 
   // print information
-  cout << loop.info() + mv.info() + analyzer.info() + test.info();
+  cout << pot.info() + loop.info() + mv.info() + analyzer.info() + test.info();
 
   return test.numFailed();
 }

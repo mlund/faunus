@@ -99,6 +99,11 @@ namespace Faunus {
           Point field(const Tparticle &a, const Point &r) const {
             return Point(0,0,0);
           }
+          
+        template<typename Tpvec>
+          double internal(const Tpvec &p, const Group &g) const {
+            return 0.0;
+          }
 
         /**
          * @brief Set space dependent features such as density dependent potentials
@@ -1790,6 +1795,11 @@ namespace Faunus {
               return first.field(a,r) + second.field(a,r);
             }
 
+          template<typename Tpvec>
+            double internal(const Tpvec &p, const Group &g) {
+              return first.internal(p,g) + second.internal(p,g);
+            }
+            
           template<class Tspace>
             void setSpace(Tspace &s) {
               first.setSpace(s);

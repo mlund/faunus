@@ -678,8 +678,8 @@ namespace Faunus {
                 double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha;
 		int order;
 
-                void sfReactionField(const Tmjson &j) {
-                    epsrf = j.at("eps_rf");
+                void sfReactionField(double epsrf_in) {
+                    epsrf = epsrf_in;
                     tableA = ak.generate( [&](double q) { return 1.0; } ); 
 		    tableB = bk.generate( [&](double q) { return -(2*(epsrf-epsr)/(2*epsrf+epsr))/epsr*q*q*q; } ); 
                     calcDielectric = [&](double M2V) {
@@ -695,33 +695,33 @@ namespace Faunus {
                     };
                 }
 
-                void sfQ2potential(const Tmjson &j)
+                void sfQ2potential(int order_in)
                 {
-                    order = j.value("order",300);
+                    order = order_in;
                     tableA = ak.generate( [&](double q) { return qPochhammerSymbol(q,3,order); } );
                     tableB = bk.generate( [&](double q) { return 0.0; } );
 		    calcDielectric = [&](double M2V) { return (2*M2V + 1.0)/(1.0 - M2V); };
 		    selfenergy_prefactor = 0.5;
                 }
 
-                void sfQpotential(const Tmjson &j)
+                void sfQpotential(int order_in)
                 {
-                    order = j.value("order",300);
+                    order = order_in;
                     tableA = ak.generate( [&](double q) { return _DipoleDipoleQ2Help(q,0,order); } );
                     tableB = bk.generate( [&](double q) { return _DipoleDipoleQ2Help(q,0,order,false); } );
 		    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
 		    selfenergy_prefactor = 0.5;
                 }
 
-                void sfFanourgakis(const Tmjson &j) {
+                void sfFanourgakis() {
                     tableA = ak.generate( [&](double q) { return ( 1.0 + 14.0*pow(q,5) - 35.0*pow(q,6) + 20.0*pow(q,7) ); } );
                     tableB = bk.generate( [&](double q) { return 35.0*pow(q,5)*( 1.0 - 2.0*q + q*q ); } );
 		    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
 		    selfenergy_prefactor = 0.0; // Seems so but is it really correct? Check!
                 }
 
-                void sfFennel(const Tmjson &j) {
-                    alpha = j.at("alpha");
+                void sfFennel(double alpha_in) {
+                    alpha = alpha_in;
 		    double ar = alpha*rc;
                     tableA = ak.generate( [&](double q) { return ( ( 2.0*ar*q*exp(-ar*ar*q*q)*(2.0*ar*ar*q*q/3.0 + 1.0)/sqrt(pc::pi) + erfc(ar*q)) - (erfc(ar) + 2.0*ar*exp(-ar*ar)*(2.0*ar*ar/3.0 + 1.0)/sqrt(pc::pi))*q*q*q + q*q*q*(q-1.0)*( 3.0*erfc(ar) + 2.0*ar*exp(-ar*ar)*(3.0 + 2.0*ar*ar + 4.0/3.0*ar*ar*ar*ar)/sqrt(pc::pi))); } );
 		    tableB = bk.generate( [&](double q) { return ( 4.0/3.0*ar*ar*ar*q*q*q*exp(-ar*ar*q*q)/sqrt(pc::pi) - 4.0/3.0*ar*ar*ar*exp(-ar*ar)/sqrt(pc::pi)*q*q*q + q*q*q*(q - 1.0)*8.0/3.0*exp(-ar*ar)*pow(ar,5)/sqrt(pc::pi) ); } );
@@ -730,8 +730,8 @@ namespace Faunus {
 		    selfenergy_prefactor = ( erfc(ar)/2.0 + ar/sqrt(pc::pi)*exp(-ar*ar) + (2.0/3.0)*ar*ar*ar/sqrt(pc::pi) );
                 }
 
-                void sfWolf(const Tmjson &j) {
-                    alpha = j.at("alpha");
+                void sfWolf(double alpha_in) {
+                    alpha = alpha_in;
 		    double ar = alpha*rc;
                     tableA = ak.generate( [&](double q) { return ( ( 2.0*ar*q*exp(-ar*ar*q*q)*(2.0*ar*ar*q*q/3.0 + 1.0)/sqrt(pc::pi) + erfc(ar*q)) - (erfc(ar) + 2.0*ar*exp(-ar*ar)*(2.0*ar*ar/3.0 + 1.0)/sqrt(pc::pi))*q*q*q ); } );
 		    tableB = bk.generate( [&](double q) { return ( 4.0/3.0*ar*ar*ar*q*q*q*exp(-ar*ar*q*q)/sqrt(pc::pi) - 4.0/3.0*ar*ar*ar*exp(-ar*ar)/sqrt(pc::pi)*q*q*q ); } );
@@ -740,7 +740,7 @@ namespace Faunus {
 		    selfenergy_prefactor = ( erfc(ar)/2.0 + ar/sqrt(pc::pi)*exp(-ar*ar) + (2.0/3.0)*ar*ar*ar/sqrt(pc::pi) );
                 }
 
-                void sfPlain(const Tmjson &j, double val=1) {
+                void sfPlain(double val=1) {
                     tableA = ak.generate( [&](double q) { return val; } );
 		    tableB = bk.generate( [&](double q) { return 0.0; } );
 		    calcDielectric = [&](double M2V) { return (2.0*M2V + 1.0)/(1.0 - M2V); };
@@ -764,14 +764,51 @@ namespace Faunus {
                         bk.setRange(0, 1);
                         bk.setTolerance( j.value("tab_utol",1e-9) , j.value("tab_ftol",1e-2) );
 
-                        if (type=="reactionfield") sfReactionField(j);
-                        if (type=="fanourgakis") sfFanourgakis(j);
-                        if (type=="qpotential") sfQpotential(j);
-			if (type=="q2potential") sfQ2potential(j);
-                        if (type=="fennel") sfFennel(j);
-                        if (type=="plain") sfPlain(j,1);
-                        if (type=="none") sfPlain(j,0);
-                        if (type=="wolf") sfWolf(j);
+                        if (type=="reactionfield") sfReactionField(j.at("eps_rf"));
+                        if (type=="fanourgakis") sfFanourgakis();
+                        if (type=="qpotential") sfQpotential(j.value("order",300));
+			if (type=="q2potential") sfQ2potential(j.value("order",300));
+                        if (type=="fennel") sfFennel(j.at("alpha"));
+                        if (type=="plain") sfPlain(1);
+                        if (type=="none") sfPlain(0);
+                        if (type=="wolf") sfWolf(j.at("alpha"));
+
+                        if ( tableA.empty() )
+                            throw std::runtime_error("unknown coulomb type '" + type + "'" );
+                    }
+
+                    catch ( std::exception &e )
+                    {
+                        std::cerr << "DipoleDipoleGalore error: " << e.what();
+                        throw;
+                    }
+                }
+                
+                DipoleDipoleGalore(double temperature, double epsr_in, double cutoff, string name, double parameter=0.0, double tab_utol=1e-9, double tab_ftol=1e-2) {
+		  
+                    try {
+                        type = name;
+                        name = "DipoleDipole-" + textio::toupper_first( type );
+                        rc = cutoff;
+                        rc2 = rc*rc;
+                        rc1i = 1/rc;
+                        epsr = epsr_in;
+                        lB = pc::lB( epsr );
+			pc::setT(temperature);
+
+                        ak.setRange(0, 1);
+                        ak.setTolerance( tab_utol , tab_ftol );
+                        bk.setRange(0, 1);
+                        bk.setTolerance( tab_utol , tab_ftol );
+
+                        if (type=="reactionfield") sfReactionField(parameter);
+                        if (type=="fanourgakis") sfFanourgakis();
+                        if (type=="qpotential") sfQpotential(int(parameter));
+			if (type=="q2potential") sfQ2potential(int(parameter));
+                        if (type=="fennel") sfFennel(parameter);
+                        if (type=="plain") sfPlain(1);
+                        if (type=="none") sfPlain(0);
+                        if (type=="wolf") sfWolf(parameter);
 
                         if ( tableA.empty() )
                             throw std::runtime_error("unknown coulomb type '" + type + "'" );

@@ -680,7 +680,6 @@ namespace Faunus {
            */
           void setSpace(Tspace &s) override {
             Tbase::setSpace(s);
-	    setGeometry(s.geo);
             N = s.p.size();
 	    Group g(0, N-1);
 	    surfaceEnergy = getSurfaceEnergy(s.p,g,V);

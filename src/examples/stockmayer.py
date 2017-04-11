@@ -22,12 +22,12 @@ d = {
   "energy" : {
     "nonbonded" : {
        "coulombtype":"wolf" ,"epsr":1.0, "cutoff":14.4315, "eps_rf":140.0, "alpha":0.21,
-       'ewald': { "cutoff":14.4315,'eps_surf':1e11, "alpha":0.14, "cutoffK":4, "spherical_sum":True, "update_frequency":1000}
+       'ewald': { "cutoff":14.4315,'eps_surf':1e11, "alpha":0.14, "cutoffK":4, "spherical_sum":True, "update_frequency":1000, "isotropic_pbc":False}
     }
   },
   
     "analysis" : {
-      "xtcfile" :   { "file": "stockmayer.xtc", "nstep":20 },
+      "_xtcfile" :   { "file": "stockmayer.xtc", "nstep":20 },
       "energyfile": { "file": "energy.dat", "nstep":20 },
       "pqrfile" :   { "file": "stockmayer.pqr" },
       "statefile" : { "file": "state" },
@@ -56,7 +56,7 @@ d = {
   "system" : {
     "temperature"  : 315.8,
     "geometry"     : { "length" : 29.6336 },
-    "mcloop"       : { "macro":5, "micro":80 },
+    "mcloop"       : { "macro":10, "micro":320 },
     "unittest"     : { "testfile":"stockmayer.test", "stable":False }
   }
 }

@@ -1,6 +1,5 @@
 #ifndef FAUNUS_MULTIPOLE_H
 #define FAUNUS_MULTIPOLE_H
-#define DIPOLEPARTICLE
 
 #include <faunus/common.h>
 #include <faunus/auxiliary.h>

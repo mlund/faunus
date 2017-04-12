@@ -131,8 +131,9 @@ TEST_CASE("Polar Test","Ion-induced dipole test (polarization)")
 TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction") 
 {
   // Check against values from article: http://dx.doi.org/10.1063/1.481216
+  typedef Space<Geometry::Cuboid,DipoleParticle> Tspace;
   InputMap in("unittests.json");    
-  auto pot = Energy::NonbondedEwald<Space<Geometry::Cuboid,DipoleParticle>,Potential::HardSphere,true,false,true>(in);
+  auto pot = Energy::NonbondedEwald<Tspace,Potential::HardSphere,true,false,true>(in);
   Space<Geometry::Cuboid,DipoleParticle> spc(in);         
   spc.p.resize(4);
   Group g(0,3);
@@ -150,6 +151,17 @@ TEST_CASE("Ewald Test","Ion-Ion- and Dipole-Dipole-interaction")
   spc.p[1].charge = -1.0;
   spc.trial = spc.p;
   pot.setSpace(spc); // Updates vectors in Ewald
+  
+  // Extra check. Checks that 'updateChange' and 'update' is working OK
+  spc.p[0] = Point(0.5,0,0); // Move particle 
+  spc.trial = spc.p;
+  pot.setSpace(spc);
+  spc.trial[0] = Point(0,0,0); // Move particle back
+  Tspace::Change c;
+  c.mvGroup[0].push_back(0); // Add particle 0 in group 0 to moved particles
+  pot.updateChange(c);
+  pot.update(true);
+  spc.p = spc.trial;
   
   double ureal = pot.pairpot(spc.p[0],spc.p[1],spc.p[1]-spc.p[0]);
   double usurf_reci = pot.external(spc.p);

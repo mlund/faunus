@@ -99,6 +99,11 @@ namespace Faunus {
           Point field(const Tparticle &a, const Point &r) const {
             return Point(0,0,0);
           }
+          
+        template<typename Tpvec>
+          double internal(const Tpvec &p, const Group &g) const {
+            return 0.0;
+          }
 
         /**
          * @brief Set space dependent features such as density dependent potentials
@@ -356,6 +361,164 @@ namespace Faunus {
           }
 
         string info(char w);
+    };
+    
+       /**
+	* @brief Hard overlap interaction between 'Capparticles'.
+	* @warning If both particles in a pair-interactions have non-zero cap-radius and one of them 
+	* is large enough to fully enclose the other, the potential may give inaccurate results.
+	*/
+    class HardSphereCap : public PairPotentialBase {
+      private:
+        string _brief() {
+          std::ostringstream o;
+          o << "HardSphereCap";
+          return o.str();          
+        }
+        
+      public:
+	template<typename T>
+        HardSphereCap(const T&, const string &sec="") : PairPotentialBase() { 
+	  name="HardsphereCap"; 
+	}
+	
+       /**
+	* @brief Checks if a segmant of a spherical surface intersects with a segmant of another spherical surface.
+	* @param n_i Normalized direction-vector of particle 'i's spherical surface segment
+	* @param n_j Normalized direction-vector of particle 'j's spherical surface segment
+	* @param theta_i The azimuth angle of particle 'i's spherical surface segment
+	* @param theta_j The azimuth angle of particle 'j's spherical surface segment
+	* @param R_i Radius of particle 'i's spherical surface segment
+	* @param R_j Radius of particle 'j's spherical surface segment
+	* @param r The distance-vector between the spherical surface segment centers
+	* @note Implemented from  <https://doi.org/10.1103/PhysRevE.82.031405>
+	* @warning Tested, but not fully.
+	*/
+	bool SurfaceSurfaceOverlap(Point n_i, Point n_j, double theta_i, double theta_j, double R_i, double R_j, Point r) const {
+	    assert( ( ( fabs(n_i.norm()-1.0) < 1e-6 ) || ( fabs(n_j.norm()-1.0) < 1e-6 ) ) && "Center-of-cap point is not normalized!");
+	    double r2 = r.squaredNorm();
+	    double r1 = sqrt(r2);
+	    Point r_hat = -r/r1; // Now 'r_hat' points from particle 'i' towards particle 'j'. Same as in article
+	    
+	    double cosPhi_ij_i = ( R_i*R_i - R_j*R_j + r1*r1 )/( 2.0*r1*R_i );
+	    double cosPhi_ij_j = ( R_j*R_j - R_i*R_i + r1*r1 )/( 2.0*r1*R_j );
+	    double phi_ij_i = acos( cosPhi_ij_i ); // Eq. A5, the results is always in the interval 0 <= phi_ij_i <= pi
+	    double phi_ij_j = acos( cosPhi_ij_j ); // Eq. A5, the results is always in the interval 0 <= phi_ij_i <= pi
+	    double cosW_ij_i = n_i.dot(r_hat);     // Eq. A6
+	    double cosW_ij_j = n_j.dot(-r_hat);    // Eq. A6
+	    double w_ij_i = acos( cosW_ij_i );     // Eq. A6, since 'phi_ij_i' is always the principal value this evaluation will always yield true if-statements (marked ***) below 
+	    double w_ij_j = acos( cosW_ij_j );     // Eq. A6, since 'phi_ij_j' is always the principal value this evaluation will always yield true if-statements (marked ***) below 
+	    
+	    bool bowl_i_sphere_j_intersection = false;
+	    bool sphere_i_bowl_j_intersection = false;
+	    bool bowl_i_sphere_j_full_intersection = false;
+	    bool sphere_i_bowl_j_full_intersection = false;
+	    
+	    if( ( fabs(w_ij_i - phi_ij_i) < theta_i ) || ( fabs(w_ij_i + phi_ij_i) < theta_i ) ) // (***)
+	      bowl_i_sphere_j_intersection = true;
+	    if( ( fabs(w_ij_i - phi_ij_i) < theta_i ) && ( fabs(w_ij_i + phi_ij_i) < theta_i ) ) // (***)
+	      bowl_i_sphere_j_full_intersection = true;
+	    if( ( fabs(w_ij_j - phi_ij_j) < theta_j ) || ( fabs(w_ij_j + phi_ij_j) < theta_j ) ) // (***)
+	      sphere_i_bowl_j_intersection = true;
+	    if( ( fabs(w_ij_j - phi_ij_j) < theta_j ) && ( fabs(w_ij_j + phi_ij_j) < theta_j ) ) // (***)
+	      sphere_i_bowl_j_full_intersection = true;
+	    
+	    if( ( bowl_i_sphere_j_full_intersection && sphere_i_bowl_j_intersection) || ( sphere_i_bowl_j_full_intersection && bowl_i_sphere_j_intersection) )
+	      return true;
+	    if( !bowl_i_sphere_j_intersection && !sphere_i_bowl_j_intersection )
+	      return false;
+	    
+	    double gamma_i = acos( ( cos(theta_i) - cosPhi_ij_i*cosW_ij_i )/( sqrt(1.0-cosPhi_ij_i*cosPhi_ij_i)*sqrt(1.0-cosW_ij_i*cosW_ij_i) ) ); // Eq. A9
+	    double gamma_j = acos( ( cos(theta_j) - cosPhi_ij_j*cosW_ij_j )/( sqrt(1.0-cosPhi_ij_j*cosPhi_ij_j)*sqrt(1.0-cosW_ij_j*cosW_ij_j) ) ); // Eq. A9
+	    Point np_i = n_i - cosW_ij_i*r_hat;
+	    Point np_j = n_j - cosW_ij_j*(-r_hat);
+	    double alpha_ij = acos( np_i.dot(np_j)/(np_i.norm()*np_j.norm()) ); // Eq. A8
+	    if(fabs(alpha_ij) < fabs(gamma_i) + fabs(gamma_j))                  // Eq. A7
+	      return true;
+	    
+	    return false;
+	}
+	
+       /**
+	* @brief Checks is a particle with a cap collides with a true sphere.
+	* @param capsphere The cap-particle
+	* @param sphere The sphere particle
+	* @param r The distance-vector ( sphere.xyz - capsphere.xyz )
+	* @param r1 The length of parameter 'r'
+	* @note Important that the 'r'-parameter is in the correct direction!
+	*/
+      template<class Tparticle>
+	bool CapsphereSphereOverlap(const Tparticle &capsphere, const Tparticle &sphere, const Point &r, double r1) const {
+	  assert( fabs(capsphere.cap_center_point().norm()-1.0) < 1e-6 && "Center-of-cap point is not normalized!");
+	  double angle = acos(r.dot(capsphere.cap_center_point())/r1); // Angle between capsphere-center to sphere-center and capsphere-center to cap-center
+	  if( (angle > pc::pi - capsphere.angle_p()) && (r1 > capsphere.radius) ) // If the sphere is outside the prolonged cone formed by the origin of the cap-particle and the cap-'ring' then...
+	    return true;
+	  
+	  Point cts =  ( r - capsphere.cap_center_point()*capsphere.cap_center() );    // Vector from origin of capsphere.cap pointing towards the center of 'sphere'
+	  double cts_norm = cts.norm();
+	  if( ( cts_norm > capsphere.cap_radius() - sphere.radius ) && (angle > pc::pi - capsphere.angle_p()) )
+	    return true;
+	  
+	  Point cap_vector = capsphere.cap_center_point()*capsphere.cap_center() + cts/cts_norm*capsphere.cap_radius();
+	  Point closest_cap_point = capsphere + cap_vector; // Closesed point from sphere.center to surface of capsphere.cap
+	  if( ( (capsphere - closest_cap_point).norm() <= capsphere.radius )) {   // If that point is closer than capsphere.radius then it truly is on the capsphere.cap
+	    if( (-r  + cap_vector ).norm() < sphere.radius)          // If the distance between sphere.center to the closesed point on capsphere is shorter than the radius of sphere then...
+	      return true;                                                   // Return collision
+	    return false;                                                    // Return no collision
+	  } else {
+	    // Now we are on the cap-surface that is not really a true surface on the particle
+	    double closest_cap_distance_squared = capsphere.radius*capsphere.radius + r1*r1 - 2.0*capsphere.radius*r1*cos(pc::pi - capsphere.angle_p() - angle); // Closesed distance to the rim of the cap and sphere
+	    if(closest_cap_distance_squared < sphere.radius*sphere.radius)
+	      return true;
+	    return false;
+	  }
+	  return false;
+	}
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+	    double r1 = r.norm();
+	    if( r1 > a.radius+b.radius )
+	      return 0.0;
+	    
+	    if(a.is_sphere() && b.is_sphere()) {
+	      if(r1 < a.radius+b.radius)
+		return pc::infty;
+	      return 0.0;
+	    }
+	    
+	    
+	    // Now we know at least one particles to be a 'Capparticle'
+	    if(a.is_sphere())
+		if(CapsphereSphereOverlap(b, a,r, r1))
+		    return pc::infty;
+		
+	    if(b.is_sphere())
+		if(CapsphereSphereOverlap(a, b,-r, r1))
+		    return pc::infty;
+		
+	    
+	    // Now we know both particles to be 'Capparticles'
+	    //if( SurfaceSurfaceOverlap(-a.cap_center_point(),-b.cap_center_point(), a.angle_p(), b.angle_p(), a.radius, b.radius, r) ) // back-back surface overlap
+	    //  return pc::infty;
+	    
+	    //if( SurfaceSurfaceOverlap(-a.cap_center_point(),-b.cap_center_point(), a.angle_p(), b.angle_c(), a.radius, b.cap_radius(), r - b.cap_center_point()*b.cap_center()) ) // back-front surface overlap
+	    //  return pc::infty;
+	    
+	    if( SurfaceSurfaceOverlap(-a.cap_center_point(),-b.cap_center_point(), a.angle_c(), b.angle_p(), a.cap_radius(), b.radius, r + a.cap_center_point()*a.cap_center()) ) // front-back surface overlap
+	      return pc::infty;
+	    
+	    //if( SurfaceSurfaceOverlap(-a.cap_center_point(),-b.cap_center_point(), a.angle_c(), b.angle_c(), a.cap_radius(), b.cap_radius(), r + a.cap_center_point()*a.cap_center() - b.cap_center_point()*b.cap_center()) ) // front-front surface overlap
+	    //  return pc::infty;
+	    
+	    return 0.0;
+          }
+          
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          return o.str();
+        }
     };
 
     /**
@@ -1632,6 +1795,11 @@ namespace Faunus {
               return first.field(a,r) + second.field(a,r);
             }
 
+          template<typename Tpvec>
+            double internal(const Tpvec &p, const Group &g) {
+              return first.internal(p,g) + second.internal(p,g);
+            }
+            
           template<class Tspace>
             void setSpace(Tspace &s) {
               first.setSpace(s);

@@ -468,7 +468,6 @@ namespace Faunus
                 for ( int i = f; i < b; ++i )
                     for ( int j = i + 1; j <= b; ++j )
                         u += pairpot(p[i], p[j], geo.sqdist(p[i], p[j]));
-	    u += pairpot.internal(p,g);
             return u;
         }
 
@@ -2148,34 +2147,33 @@ namespace Faunus
                     penalty[v] += _f;
                     histo[v] += 1;
                 }
-            }
-            if ( _cnt % _update == 0 )
-            {
-                bool b = histo.minCoeff() >= _samplings;
+	    }
+	    if (_cnt%_update==0) {
+              bool b = histo.minCoeff() >= _samplings;
 #ifdef ENABLE_MPI
-                b = reduceDouble(*mpiPtr,histo.minCoeff())*mpiPtr->nproc() >= _samplings;
+	      b = reduceDouble(*mpiPtr,histo.minCoeff())*mpiPtr->nproc() >= _samplings;
 #endif
-                if ( b )
-                {
-                    _du = penalty[v] - _du;
-#ifdef ENABLE_MPI
-                    timer.start();
-                    int size = penalty.size();
-                    Faunus::MPI::avgTables<Table<double>>(mpiPtr, ft, penalty, size);
-                    timer.stop();
+	      if (b) {
+	        _du = penalty[v] - _du; 
+#ifdef ENABLE_MPI               
+                timer.start();
+	        int size = penalty.size();
+	        Faunus::MPI::avgTables<Table<double>>(mpiPtr, ft, penalty, size);
+	        timer.stop();
 #endif
-                    double max = penalty.maxCoeff();
-                    double min = penalty.minCoeff();
-                    penalty.translate(-min);
-                    _du = penalty[v] - _du;
-                    _f = _scale * _f;
-                    _samplings = ceil(_samplings / _scale);
-                    cout << "Energy barrier: " << max - min << endl;
-                    histo.clear();
-                }
-            }
-            return _du;
-        }
+         	double max = penalty.maxCoeff();
+	        double min = penalty.minCoeff();
+	        penalty.translate(-min);
+	        _du = penalty[v] - _du; 
+	        _f = _scale*_f;
+                _samplings = ceil(_samplings/_scale);
+                double dh = log(double(histo.maxCoeff())/histo.minCoeff());
+	        cout << "Energy barrier: " << max - min << ", delta histo: " << dh << endl;
+	        histo.clear();
+              }    
+	    }    
+	    return _du;        
+	} 
 
         /** @brief Save table to disk */
         void save( const string &filename, double s, const Tvec &limits )
@@ -2937,7 +2935,6 @@ class SASAEnergy : public Energybase<Tspace> {
       /**
        * @brief Help-funciton to 'energyChange'
        * @todo Fix such that it works to inserted and removed particles
-       * @warning Fairly certain something is wrong here!
        */
     template<class Tspace, class Tenergy, class Tpvec>
       double energyChangeConfiguration(Tspace &spc, Tenergy &pot, const Tpvec &p, const typename Tspace::Change &c) {
@@ -2945,10 +2942,10 @@ class SASAEnergy : public Energybase<Tspace> {
 	auto& g = spc.groupList();
 	du += pot.external(p);
         for (auto m : c.mvGroup) {
-          size_t i = size_t( m.first );     // Moved group index
-          for (size_t j=0; j<g.size(); j++) // Go through all groups
-            if ( c.mvGroup.find(j)==c.mvGroup.end() ) // If group j is not in mvGroup
-	      du += pot.g2g(p, *g[i], *g[j]); 	      // moved group<->static groups
+          size_t i = size_t( m.first );
+          for (size_t j=0; j<g.size(); j++)
+            if ( c.mvGroup.find(j)==c.mvGroup.end() )
+	      du += pot.g2g(p, *g[i], *g[j]); // moved group<->static groups
 	  du += pot.g_external(p, *g[i]);      // moved group <-> external
           if (g[i]->isAtomic()) {                                             // Check if moved group is atomic 
             for(auto j : m.second)                                          // For the moved atoms in a group,
@@ -2959,7 +2956,6 @@ class SASAEnergy : public Energybase<Tspace> {
 	    du += pot.g_internal(p, *g[i]);
           }
         }
-        
         for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); i++) {
           for (auto j=i; j != c.mvGroup.end(); j++) {
             auto _i = i->first;
@@ -2975,6 +2971,7 @@ class SASAEnergy : public Energybase<Tspace> {
      */
     template<class Tspace, class Tenergy>
       double energyChange(Tspace &s, Tenergy &pot, const typename Tspace::Change &c) {
+	pot.updateChange(c);
 	if(c.geometryChange)
 	  pot.setGeometry(s.geo_trial);
 	double duNew = energyChangeConfiguration(s,pot,s.trial,c);

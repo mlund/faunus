@@ -143,7 +143,7 @@ namespace Faunus
                 for ( size_t i = 0; i < p.size(); i++ )
                 {
                     Point E = field.col(i);                  // field on i
-                    Point mu_trial = p[i].alpha() * E + p[i].mup();// new tot. dipole
+                    Point mu_trial = p[i].alpha * E + p[i].mup();// new tot. dipole
                     Point mu_err = mu_trial - p[i].mu() * p[i].muscalar();// mu difference
                     mu_err_norm[i] = mu_err.norm();          // norm of previous row
                     p[i].muscalar() = mu_trial.norm();         // update dip scalar in particle
@@ -527,7 +527,6 @@ namespace Faunus
             while ( n-- > 0 )
             {
                 trialMove();
-		pot->updateChange(change);
                 double du = energyChange();
                 acceptance = metropolis(du);
                 if ( !acceptance )
@@ -639,17 +638,9 @@ namespace Faunus
      * replace particle positions in the system. No energy is evaluated
      * and energyChange will always return 0.
      *
-     * If the trajectory is saved with molecules that extend beyond
-     * the box boundaries, the PBC boundary control should be set
-     * to true.
-     *
-     *  Keyword  | Description
-     *  -------- | ---------------
-     *  `file`   | Trajectory file to load (.xtc)
-     *  `trump`  | Enforce (PBC) boundary control (default: false)
-     *
      * Notes:
      *
+     *   - JSON keywords: `file`.
      *   - Geometry must be derived from `Geometry::Cuboid`.
      *   - Number of particle in Space must match that of the trajectory
      *   - Particles must not overlap with geometry boundaries
@@ -665,7 +656,6 @@ namespace Faunus
         bool _continue;
         int framecnt;
         string file;
-        bool applyPBC; // true if PBC should be applied to loaded frames
 
         void _acceptMove() override {};
         void _rejectMove() override {};
@@ -680,7 +670,6 @@ namespace Faunus
                 auto &j = js[base::title];
                 j = {
                     { "file", file },
-                    { "boundary control", applyPBC },
                     { "frames loaded", framecnt}
                 };
             }
@@ -690,7 +679,7 @@ namespace Faunus
         void _trialMove() override
         {
             if (_continue)
-                _continue = xtc.loadnextframe( *base::spc, true, applyPBC );
+                _continue = xtc.loadnextframe( *base::spc, true );
             if (_continue)
                 framecnt++;
         }
@@ -698,11 +687,10 @@ namespace Faunus
     public:
 
         TrajectoryMove( Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j )
-            : Movebase<Tspace>(e, s), xtc(1), _continue(true), framecnt(0)
+            : Movebase<Tspace>(e, s), xtc(0), _continue(true), framecnt(0)
         {
             base::title = "XTC Trajectory Move";
             file = j.at("file");
-            applyPBC = j.value("trump", false);
             if ( xtc.open(file) == false)
                 throw std::runtime_error(base::title + ": xtc file " + file + " cannot be loaded");
         }
@@ -892,8 +880,8 @@ namespace Faunus
                 spc->trial[iparticle], spc->trial[iparticle].radius, Geometry::Geometrybase::BOUNDARY))
                 return pc::infty;
 	    
-	    //return Energy::energyChange(*spc, *base::pot, base::change);
-            return (base::pot->i_total(spc->trial, iparticle) + base::pot->external(spc->trial)) - (base::pot->i_total(spc->p, iparticle) + base::pot->external(spc->p));
+	    return Energy::energyChange(*spc, *base::pot, base::change);
+            //return (base::pot->i_total(spc->trial, iparticle) + base::pot->external(spc->trial)) - (base::pot->i_total(spc->p, iparticle) + base::pot->external(spc->p));
         }
         return 0;
     }
@@ -1375,19 +1363,19 @@ namespace Faunus
     {
         if ( dp_rot < 1e-6 && dp_trans < 1e-6 )
             return 0;
-
+        double du = Energy::energyChange(*spc, *base::pot, base::change);
         for ( auto i : *igroup )
             if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
                 return pc::infty;
-	//return Energy::energyChange(*spc, *base::pot, base::change);
+	return du;
 
-	
+	/*
         double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if ( unew == pc::infty )
             return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
-#ifdef ENABLE_MPI
+        #ifdef ENABLE_MPI
           if (base::mpiPtr!=nullptr) {
           double du=0;
           auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
@@ -1411,7 +1399,7 @@ namespace Faunus
             }
         }
         return unew - uold;
-	
+	*/
     }
 
     template<class Tspace>
@@ -1845,11 +1833,8 @@ namespace Faunus
             for ( auto &i : this->mollist )
             {
                 string molname = spc->molList()[i.first].name;
-                string mobname = m[molname].at("clustergroup");
-                threshold = m[molname].at("threshold");
-                dp_trans = m[molname].at("dp");
-                dp_rot = m[molname].at("dprot");
-                dir << j.value("dir", string("1 1 1") );  // magic!
+                string mobname = m[molname]["clustergroup"] | string();
+                threshold = m[molname]["threshold"] | 0.0;
 
                 auto mob = spc->findMolecules(mobname); // mobile atoms to include in move
                 if ( mob.size() == 1 )
@@ -1898,6 +1883,12 @@ namespace Faunus
             igroup = *slump.element(gvec.begin(), gvec.end());
             assert(!igroup->empty());
             auto it = this->mollist.find(this->currentMolId);
+            if ( it != this->mollist.end())
+            {
+                dp_trans = it->second.dp1;
+                dp_rot = it->second.dp2;
+                dir = it->second.dir;
+            }
         }
 
         assert(gmobile != nullptr && "Cluster group not defined");

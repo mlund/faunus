@@ -2,7 +2,11 @@
 #define FAUNUS_COMMON_H
 
 #ifndef SWIG
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <Eigen/StdVector>
+
+#pragma GCC diagnostic pop
 #include <string>
 #include <list>
 #include <iostream>
@@ -21,18 +25,12 @@
 #include <type_traits>
 #include <tuple>
 #include <iterator>
-#endif
 
-
-// Use explicit virtual override and final keywords (C++11)
-#ifdef NO_EXPLICIT_OVERRIDE
-  #define FOVERRIDE
-#else
-  #define FOVERRIDE override
 #endif
 
 /// @brief Name space for Faunus
-namespace Faunus {
+namespace Faunus
+{
   //Keep this at a minimum, please!
   using std::string;
   using std::vector;
@@ -47,25 +45,33 @@ namespace Faunus {
   using std::ostringstream;
   using std::shared_ptr;
 
-  namespace Geometry {
+  namespace Geometry
+  {
     class Geometrybase;
+
     class VectorRotate;
   }
 
-  namespace Potential {
+  namespace Potential
+  {
     class PairPotentialBase;
+
     class HardSphere;
   }
 
   class AtomData;
+
   class Group;
-  class GroupMolecular;
+
   class InputMap;
+
   class UnitTest;
 
   //class Point;
   class PointParticle;
+
   class DipoleParticle;
+
   class CigarParticle;
 
   // FUNCTORS

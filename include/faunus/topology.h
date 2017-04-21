@@ -1,20 +1,22 @@
 
-namespace Faunus {
+namespace Faunus
+{
 
-  class System {
-    Space p,trial;
+  class System
+  {
+      Space p, trial;
 
-    vector<Group> g;
-
-    
+      vector <Group> g;
 
   }
 
-  class topology {
-    protected:
+  class topology
+  {
+  protected:
 
-      class atomtype {
-        public:
+      class atomtype
+      {
+      public:
           string name;
           unsigned short id;
           double charge;
@@ -24,17 +26,18 @@ namespace Faunus {
           double dp;
       };
 
-      class bond {
-        public:
+      class bond
+      {
+      public:
           unsigned short id;
           int i;
           int j;
       };
 
-    public:
+  public:
 
-      vector<atomtype> atomlist;
-      vector<bond> bondlist;
+      vector <atomtype> atomlist;
+      vector <bond> bondlist;
 
   };
 }//namespace

@@ -1,36 +1,38 @@
 {
-  "atomlist" : {
-    "Na" : { "q": 0.0, "r":0.0, "dp":40.0, "activity":0.01 },
-    "Cl" : { "q": 0.0, "r":0.0, "dp":40.0, "activity":0.01 },
-    "MM" : { "q": 0.0, "r":2.0, "dp":10.0 },
-    "sol1" : {"q":1, "dp":0, "dprot":0, "alpha":"0 0 0 0 0 0"},
-    "sol2" : {"q":0, "dp":0, "dprot":0, "alpha":"2.6 0 0 2.6 0 2.6"}
-  },
+    "atomlist" : {
+        "Na" : { "q": 0.0, "r":0.0, "dp":40.0, "activity":0.01 },
+        "Cl" : { "q": 0.0, "r":0.0, "dp":40.0, "activity":0.01 },
+        "MM" : { "q": 0.0, "r":2.0, "dp":10.0 },
+        "sol1" : {"q":1, "dp":0, "dprot":0, "alpha":"0 0 0 0 0 0"},
+        "sol2" : {"q":0, "dp":0, "dprot":0, "alpha":"2.6 0 0 2.6 0 2.6"}
+    },
 
-  "moleculelist": {
-    "salt": { "atoms": "Na Cl", "atomic":true },
-    "multipoles" : { "atoms" : "sol1 sol2", "atomic":true },
-    "square"  : { "activity": 0.01, "atoms": "MM MM MM MM", "structure":"unittests.aam" }
-  },
+    "moleculelist": {
+        "salt": { "atoms": "Na Cl", "atomic":true },
+        "multipoles" : { "atoms" : "sol1 sol2", "atomic":true },
+        "square"  : { "activity": 0.01, "atoms": "MM MM MM MM", "structure":"unittests.aam" }
+    },
 
-  "moleculecombinations" : {
-    "shapemix" : { "molecules" : "triangle", "prob": 1.0 }
-  },
+    "moleculecombinations" : {
+        "shapemix" : { "molecules" : "triangle", "prob": 1.0 }
+    },
 
   "energy" : { 
     "nonbonded" : {
-      "coulomb" : { "epsr":1.0 }
+      "epsr":1.0,
+      "ewald"   : { "epsr":1.0, "eps_surf":1.0, "cutoff":5, "alpha":0.894427190999916, "cutoffK":11, "spherical_sum":true, "update_frequency":10 }  
     }
   },
-
+    
   "moves" : {
-    "atomtranslate" : {
-      "multipoles" : { "peratom":false }
-    }
-  },
+        "atomtranslate" : {
+            "pol_threshold":0.0011, "max_iterations":39,
+            "multipoles" : { "peratom":false }
+        }
+    },
 
   "system" : {
-    "temperature" : 298,
-    "cuboid" : { "len": 10.0 }
+    "temperature" : 298.0,
+    "geometry" : { "length": 10.0 }
   }
 }

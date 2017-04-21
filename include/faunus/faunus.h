@@ -39,13 +39,11 @@
 #include <faunus/mcloop.h>
 #include <faunus/group.h>
 #include <faunus/io.h>
-#include <faunus/drift.h>
 #include <faunus/tabulate.h>
-//#include <faunus/titrate.h>
 #include <faunus/analysis.h>
 #include <faunus/scatter.h>
 #include <faunus/spherocylinder.h>
-//#include <faunus/multipole.h>
+
 #endif
 
 #endif

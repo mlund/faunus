@@ -3,16 +3,16 @@
 using namespace Faunus;                   // use Faunus namespace
 typedef Space<Geometry::Cuboid> Tspace;   // Type of simulation space
 
+// let's make a new pair potential
 namespace Faunus {
   namespace Potential {
-    // let's make a new pair potential
     struct CoreShell : public PairPotentialBase {
       double a1,a2,eps;
-      inline CoreShell(Tmjson &j, const string &sec="coreshell") : PairPotentialBase(sec) {
+      inline CoreShell(Tmjson &j) {
         name = "Core-shell potential";
-        a1 = pow( j[sec]["core_radius"]  | 1.0, 2 );
-        a2 = pow( j[sec]["shell_radius"] | 2.5, 2 );
-        eps = j[sec]["epsilon"] | 0.2;
+        a1 = pow( double(j.at("core_radius")), 2);
+        a2 = pow( double(j.at("shell_radius")), 2);
+        eps = j.at("epsilon");
       }
       template<class Tparticle>
         double operator() (const Tparticle &a, const Tparticle &b, double r2) {
@@ -25,19 +25,19 @@ namespace Faunus {
 }
 
 int main() {
-  InputMap in("stripes.json");            // open parameter file for user input
+  InputMap in("stripes.json");              // open parameter file for user input
   Tspace spc(in);                         // simulation space, particles etc.
   Energy::Nonbonded<Tspace,Potential::CoreShell> pot(in);// Hamiltonian, non-bonded only
 
   spc.load("state");                      // load old configuration if any
 
   Move::Propagator<Tspace> mv(in,pot,spc);// particle move class
+  Analysis::CombinedAnalysis analyse(in,pot,spc); // analysis
 
-  for (int i=0; i<1e3; i++)
+  for (int i=0; i<1e3; i++) {
     mv.move();
-
-  spc.save("state");                      // save final state
-  FormatPQR::save("stripes.pqr", spc.p);  // save PQR file for i.e. VMD
+    analyse.sample();
+  }
 
   cout << spc.info() + pot.info() + mv.info(); // final information
 }

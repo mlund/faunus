@@ -26,7 +26,7 @@ namespace Faunus {
 
     /* @brief Read lines from file into vector */
     inline bool readFile(const std::string &file, std::vector<string> &v) {
-      std::ifstream f(file.c_str() );
+      std::ifstream f( file );
       if (f) {
         std::string s;
         while (getline(f,s))
@@ -116,6 +116,8 @@ namespace Faunus {
           o >> name;
           a = atom[name];
           o >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
+          if (a.id==0)
+            std::cerr << "Warning: Atom name " << name << " is not in the atom list.\n";
           return a;
         }
 
@@ -189,16 +191,16 @@ namespace Faunus {
             << "]}}\n";
 
           for (auto i : sol) { 
-            auto dipx = spc.p[i].mu.x();
-            auto dipy = spc.p[i].mu.y();
-            auto dipz = spc.p[i].mu.z();
+            auto dipx = spc.p[i].mu().x();
+            auto dipy = spc.p[i].mu().y();
+            auto dipz = spc.p[i].mu().z();
             auto r = spc.p[i].radius;
             f << "Transform { translation " << spc.p[i].transpose() << "\n"
               << " children [ DEF par_0 Shape{ appearance Appearance { material\n"
               << " Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}\n"
               << "  geometry Sphere {radius " << r <<"}}]}\n";
 
-            auto size = spc.p[i].mu.norm(); // always unity??
+            auto size = spc.p[i].mu().norm(); // always unity??
             auto cosT = dipy/size;
             auto angle = acos(cosT);
             auto Xdipx = -dipx;
@@ -215,6 +217,65 @@ namespace Faunus {
           f.close();
         }
   };
+  
+  /**
+   * @brief Produced a file which can be used with POV-Ray in order to create an image of the configuration in the state-file. 
+   * In terminal: 'povray filename.pov' which gives the output 'filename.png' file. Add option 'Output_Alpha=on' to create transparent image.
+   */
+  class CapparticlePOVRay {
+    public:
+      template<class Tspace>
+        void saveCapparticlePOVRay(const string &filename, const Tspace &spc) {
+          std::ofstream f;
+          f.open(filename);
+          f << "#include \"colors.inc\"\n\n";
+	  
+	  Point camera_at(0,0,-10);
+	  f << "camera {\n";
+	  f << "location <" << camera_at.x() << "," << camera_at.y() << "," << camera_at.z() << ">\n";
+	  
+	  Point look_at(0,0,0);
+	  f << "look_at <" << look_at.x() << "," << look_at.y() << "," << look_at.z() << ">\n";
+	  f << "}\n\n";
+	  
+	  Point light_from(0,0,-10);
+	  f << "light_source {\n";
+	  f << "<" << light_from.x() << "," << light_from.x() << "," << light_from.x() << ">\n";
+	  f << "color White\n";
+	  f << "}\n\n";
+	  
+	  /*
+	  // Add a second lightsource
+	  Point second_light_from(0,10,-10);
+	  f << "light_source {\n";
+	  f << "<" << second_light_from.x() << "," << second_light_from.x() << "," << second_light_from.x() << ">\n";
+	  f << "color White\n";
+	  f << "}\n\n";
+	  */
+	  
+	  string color_particle = "Blue";
+	  string color_cap = "Red";
+	  double ambient = 1.0; // Light on particles, 0.0 = little light, 1.0 = much light
+	  for(unsigned int i = 0; i < spc.p.size(); i++) {
+	    Point xyz = spc.p[i];
+	    Point cap = spc.p[i].cap_center_point()*spc.p[i].cap_center();
+	    f << "difference {\n";
+	    f << "sphere {\n";
+	    f << "<" << xyz.x() << "," << xyz.y() << "," << xyz.z() << ">\n";
+	    f << "," << spc.p[i].radius << "\n";
+	    f << "texture { pigment { " << color_particle << " } }\n";
+	    f << "}finish {ambient " << ambient << "}\n";
+	    f << "}\n";
+	    f << "sphere {\n";
+	    f << "<" << (xyz.x() + cap.x()) << "," << (xyz.y() + cap.y()) << "," << (xyz.z() + cap.z()) << ">\n";
+	    f << "," << spc.p[i].cap_radius() << "\n";
+	    f << "texture { pigment { " << color_cap << " } }\n";
+	    f << "}finish {ambient " << ambient << "}\n";
+	    f << "}\n}\n\n";
+	  }
+          f.close();
+        }
+  };
 
   /**
    * @brief PQR format
@@ -228,7 +289,7 @@ namespace Faunus {
       // Write box dimensions (standard PDB format)
       template<class Tvec>
         static string writeCryst1(const Tvec &len, Tvec angle=Tvec(90,90,90)) {
-          char buf[100];
+          char buf[500];
           sprintf(buf, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n", 
               len.x(),len.y(),len.z(),angle.x(),angle.y(),angle.z());
           return string(buf);
@@ -282,41 +343,50 @@ namespace Faunus {
        * @param v Vector of particle vectors
        */
       template<class Tparticle, class Talloc>
-        static void load(const std::string &file, vector< vector<Tparticle,Talloc> > &v) {
-          std::ifstream in( file );
-          if ( in ) {
-            Tparticle a;
-            vector<Tparticle,Talloc> p;
-            int iatom, ires;
-            std::string line,key,aname,rname;
-            while ( std::getline( in, line ) ) {
-              std::stringstream o( line );
-              while ( o >> key )
-                if ( key=="ATOM" || key=="HETATM" ) {
-                  o >> iatom >> aname;
-                  a=atom[aname];
-                  o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius; 
-                  p.push_back(a);
-                } else if ( key=="END" ) {
-                  v.push_back( p );
-                  p.clear();
-                  p.reserve( v.back().size() );
-                }
-            }
-          } else
-            std::cerr << "Warning: PQR trajectory " + file + " could not be opened." << endl;
+      static void load( const std::string &file, vector <vector<Tparticle, Talloc>> &v )
+      {
+        std::ifstream in(file);
+        if ( in )
+        {
+          Tparticle a;
+          vector<Tparticle, Talloc> p;
+          int iatom, ires;
+          std::string line, key, aname, rname;
+          while ( std::getline(in, line))
+          {
+            std::stringstream o(line);
+            while ( o >> key )
+              if ( key == "ATOM" || key == "HETATM" )
+              {
+                o >> iatom >> aname;
+                a = atom[aname];
+                o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius;
+                p.push_back(a);
+                if ( a.id == 0 )
+                  std::cerr << "Warning: Atom name " << aname << " is not in the atom list.\n";
+              }
+              else if ( key == "END" )
+              {
+                v.push_back(p);
+                p.clear();
+                p.reserve(v.back().size());
+              }
+          }
         }
+        else
+          throw std::runtime_error("Error loading PQR trajectory " + file);
+      }
 
       /**
        * @param file Filename
        * @param p Particle vector
        * @param len Unit cell dimensions (optional)
-       * @param n Number of atoms in each residue (default: 1e20)
+       * @param n Number of atoms in each residue (default: 1e9)
        */
       template<class Tpvec, class Tvec=Point>
         static bool save(const string &file, const Tpvec &p, Tvec len=Point(0,0,0), unsigned int n=1e9) {
           unsigned int nres=1, natom=1;
-          char buf[100];
+          char buf[500];
           std::ostringstream o;
           if (len.norm()>1e-6)
             o << writeCryst1(len);
@@ -378,16 +448,52 @@ namespace Faunus {
    * the first line; comment on second line followed by positions of all
    * particles xyz position on each line
    */
-  class FormatXYZ {
-    public:
-      template<class Tpvec, class Tvec=Point>
-        static bool save(const string &file, const Tpvec &p, Tvec len=Tvec(0,0,0)) {
-          std::ostringstream o;
-          o << p.size() << "\nGenerated by Faunus\n";
-          for (auto &i : p)
-            o << atom[i.id].name << " " << Tvec(i).transpose() << "\n";
-          return IO::writeFile(file, o.str());
+  struct FormatXYZ {
+    template<class Tpvec, class Tvec=Point>
+      static bool save(const string &file, const Tpvec &p, Tvec len=Tvec(0,0,0)) {
+        std::ostringstream o;
+        o << p.size() << "\nGenerated by Faunus\n";
+        for (auto &i : p)
+          o << atom[i.id].name << " " << Tvec(i).transpose() << "\n";
+        return IO::writeFile(file, o.str());
+      }
+
+    /*
+     * @brief Load XYZ file with atom positions
+     *
+     * Loads coordinates from XYZ file into particle vector. Remaining atom properties
+     * are taken from the defined atom list; a warning is issued of the atom name
+     * is unknown.
+     *
+     * @param file Filename
+     * @param p Destination particle vector
+     * @param append True means append to `p` (default). If `false`,`p` is first cleared.
+     */
+    template<class Tparticle, class Talloc>
+      static bool load(const std::string &file, vector<Tparticle,Talloc> &p, bool append=true) {
+        std::ifstream f( file );
+        if (f)
+        {
+          if (append==false)
+            p.clear();
+          int n;
+          Tparticle a;
+          string comment, name;
+          f >> n;
+          std::getline(f, comment); // ">>" token doesn't gobble new line
+          std::getline(f, comment); // read comment line
+          for (int i=0; i<n; i++) {
+            f >> name >> a.x() >> a.y() >> a.z();
+            a = atom[name]; // this will preserve positions
+            if (a.id==0)
+              std::cerr << "FormatXYZ: unknown atom name '" << name << "'." << endl;
+            p.push_back(a);
+          }
+          if (!p.empty())
+            return true;
         }
+        return false; 
+      }
   };
 
   /**
@@ -567,6 +673,8 @@ namespace Faunus {
     public:
       std::vector<Group*> g;          //!< List of PBC groups to be saved as whole
 
+      inline int getNumAtoms() { return natoms_xtc; }
+
       /**
        * @brief Load a single frame into cuboid
        *
@@ -585,33 +693,38 @@ namespace Faunus {
        *       periodic boundaries are used.
        */
       template<class Tspace>
-        bool loadnextframe(Tspace &c) {
-          if (xd!=NULL) {
-            if (natoms_xtc==(int)c.p.size()) { 
-              int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
-              if (rc==0) {
-                Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(c.geo);
-                assert(geo!=nullptr && "Geometry must to derived from Cuboid");
-                geo->setlen( Point( xdbox[0][0], xdbox[1][1], xdbox[2][2] ) );
-                for (size_t i=0; i<c.p.size(); i++) {
-                  c.p[i].x() = x_xtc[i][0];
-                  c.p[i].y() = x_xtc[i][1];
-                  c.p[i].z() = x_xtc[i][2];
-                  c.p[i] = c.p[i]*10 - geo->len_half;
-                  c.trial[i] = Point(c.p[i]);
-                  if ( geo->collision(c.p[i]) ) {
-                    std::cerr << "# ioxtc load error: particle-container collision!" << endl;
-                    return false;
-                  }
-                } 
-                return true;
-              }
-            } else
-              std::cerr << "# ioxtc load error: xtcfile-container particle mismatch!" << endl;
-          } else
-            std::cerr << "# ioxtc load error: xtc file not available for reading!" << endl;
-          return false;
-        }
+          bool loadnextframe(Tspace &c, bool setbox=true, bool applypbc=false) {
+              if (xd!=NULL)
+              {
+                  if (natoms_xtc==(int)c.p.size())
+                  { 
+                      int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
+                      if (rc==0)
+                      {
+                          Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
+                          if (geo==nullptr)
+                              throw std::runtime_error("Cuboid-like geometry required");
+                          if (setbox)
+                              geo->setlen( Point( 10.0*xdbox[0][0], 10.0*xdbox[1][1], 10.0*xdbox[2][2] ) );
+                          for (size_t i=0; i<c.p.size(); i++) {
+                              c.p[i].x() = 10.0*x_xtc[i][0];
+                              c.p[i].y() = 10.0*x_xtc[i][1];
+                              c.p[i].z() = 10.0*x_xtc[i][2];
+                              c.p[i] = c.p[i] - geo->len_half;
+                              if (applypbc)
+                                  geo->boundary( c.p[i] );
+                              c.trial[i] = Point(c.p[i]);
+                              if ( geo->collision(c.p[i], 0) )
+                                  throw std::runtime_error("particle-container collision");
+                          } 
+                          return true;
+                      }
+                  } else
+                      throw std::runtime_error("xtcfile<->container particle mismatch");
+              } else
+                  throw std::runtime_error("xtc file cannot be read");
+              return false; // end of file or not opened
+          }
 
       /**
        * This will take an arbitrary particle vector and add it
@@ -621,20 +734,30 @@ namespace Faunus {
        * Box dimensions for the frame must be manually
        * set by the `ioxtc::setbox()` function before calling this.
        */
-      template<class Tpoint, class Talloc>
-        bool save(const string &file, const std::vector<Tpoint,Talloc> &p) {
-          if (xd==NULL)
-            xd=xdrfile_open(&file[0], "w");
-          if (xd!=NULL) {
-            rvec *x = new rvec [p.size()];
+      template<class Tpoint, class Talloc, class Tgroup=Group>
+        bool save(const string &file, const std::vector<Tpoint,Talloc> &p, Tgroup g = Group() ) {
+          if ( g.empty() ) {
+            g.resize( p.size() );
+            assert( g.front() == 0 );
+            assert( g.back()  == int(p.size()-1) );
+            assert( g.size()  == int(p.size()) );
+          }
+          size_t N = g.size();
+          assert( N > 0 );
+          if ( xd == NULL )
+            xd = xdrfile_open(&file[0], "w");
+          if ( xd != NULL ) {
+            rvec *x = new rvec[N];
             unsigned int i=0;
-            for (auto &pi : p) {
-              x[i][0] = pi.x()*0.1 + xdbox[0][0]*0.5; // AA->nm
-              x[i][1] = pi.y()*0.1 + xdbox[1][1]*0.5; // move inside sim. box
-              x[i][2] = pi.z()*0.1 + xdbox[2][2]*0.5; //
+            for ( auto j : g ) {
+              assert( i>=0 && i<p.size() && "Index out of range" );
+              assert( i<N );
+              x[i][0] = p.at(j).x()*0.1 + xdbox[0][0]*0.5; // AA->nm
+              x[i][1] = p.at(j).y()*0.1 + xdbox[1][1]*0.5; // move inside sim. box
+              x[i][2] = p.at(j).z()*0.1 + xdbox[2][2]*0.5; //
               i++;
             }
-            write_xtc(xd,p.size(),step_xtc++,time_xtc++,xdbox,x,prec_xtc);
+            write_xtc( xd, N, step_xtc++, time_xtc++, xdbox, x, prec_xtc );
             delete[] x;
             return true;
           }
@@ -672,6 +795,11 @@ namespace Faunus {
         setbox(len);
         xd=NULL;
         x_xtc=NULL;
+      }
+      
+      ~FormatXTC()
+      {
+          close();
       }
 
       inline void setbox(double x, double y, double z) {
@@ -843,82 +971,34 @@ namespace Faunus {
    */
   inline std::vector<PointParticle::Tid> FastaToAtoms(const string &fasta) {
 
-    std::map<char,string> map = {
-      {'A',"ALA"},
-      {'R',"ARG"},
-      {'N',"ASN"},
-      {'D',"ASP"},
-      {'C',"CYS"},
-      {'E',"GLU"},
-      {'Q',"GLN"},
-      {'G',"GLY"},
-      {'H',"HIS"},
-      {'I',"ILE"},
-      {'L',"LEU"},
-      {'K',"LYS"},
-      {'M',"MET"},
-      {'F',"PHE"},
-      {'P',"PRO"},
-      {'S',"SER"},
-      {'T',"THR"},
-      {'W',"TRP"},
-      {'Y',"TYR"},
-      {'V',"VAL"}
-    };
-
     std::vector<PointParticle::Tid> atomid;
     atomid.reserve( fasta.size() + 2 ); // later we may insert ctr and ntr, hence +2
+    std::map<char,string> map = {
+      {'A',"ALA"}, {'R',"ARG"}, {'N',"ASN"}, {'D',"ASP"}, {'C',"CYS"},
+      {'E',"GLU"}, {'Q',"GLN"}, {'G',"GLY"}, {'H',"HIS"}, {'I',"ILE"},
+      {'L',"LEU"}, {'K',"LYS"}, {'M',"MET"}, {'F',"PHE"}, {'P',"PRO"},
+      {'S',"SER"}, {'T',"THR"}, {'W',"TRP"}, {'Y',"TYR"}, {'V',"VAL"}
+    };
 
-    for (auto c : fasta) {
-      auto it = map.find(c);
+    for (auto c : fasta) {   // loop over letters
+      auto it = map.find(c); // is it in map?
       if ( it!=map.end() ) {
-        auto id = atom[ it->second ].id;
-        if (id>0)
+        auto id = atom[ it->second ].id; // is it in atommap?
+        if (id>0)            // id==0 is the fallback value if not found
           atomid.push_back( atom[ it->second ].id );
-        else
-          throw std::runtime_error( "Fasta residue '"+it->second+"' not defined in atom list." );
+        else {
+          std::cerr << "Error: Fasta residue '" + it->second + "' not defined in atom list.\n";
+          exit(1);
+        }
       }
-      else
-        throw std::runtime_error( "Unknown character '"+string(1,c)+"' in fasta sequence." );
+      else {
+        std::cerr << "Error: Invalid fasta character '" + string(1,c) + "'.\n";
+        exit(1);
+      }
     }
     assert( fasta.size() == atomid.size() );
     return atomid;
   }
-
-  /**
-   * @brief Add bonded peptide from fasta sequence
-   * @param spc Space
-   * @param bonded Bonded energy class, i.e. `Energy::Bonded`
-   * @param pairpot Bond potential, i.e. `Potential::Harmonic`
-   * @param fasta Fasta sequence (capital letters, no spacing)
-   * @return Group with peptide -- remember to enroll in space using `Space::enroll`
-   * @note Untested
-   * @todo Split out function `FastaToAtoms()`.
-   */
-  template<class Tspace, class Tbonded, class Tpairpot>
-    Group addFastaSequence(Tspace &spc, Tbonded &bonded, const Tpairpot &pairpot, const string &fasta) {
-
-      typedef typename Tspace::ParticleVector Tpvec;
-      typedef typename Tspace::ParticleVector::value_type Tparticle;
-
-      Group g;
-      auto atomid = FastaToAtoms( fasta );
-
-      if ( !atomid.empty() ) {
-        Tpvec t;
-        t.reserve( atomid.size() );
-        for (auto id : atomid) {
-          t.push_back( Tparticle() );
-          t.back() = atom[id];
-          spc.geo.randompos(t.back()); // random position
-        }
-        g = spc.insert(t);             // add to space
-        g.name = fasta;
-        for (int i=g.front(); i<g.back(); i++)
-          bonded.add(i, i+1, pairpot); // add bonds
-      }
-      return g;
-    }
 
 }//namespace
 #endif

@@ -1,5 +1,6 @@
 #include <faunus/faunus.h>
 #include <faunus/ewald.h>
+//#define EWALD
 using namespace Faunus;
 using namespace Faunus::Potential;
 
@@ -7,8 +8,11 @@ using namespace Faunus::Potential;
 typedef CombinedPairPotential<Coulomb,LennardJonesTrunkShift> Tpairpot; // pair potential
 #elif defined(DEBYEHUCKEL)
 typedef CombinedPairPotential<DebyeHuckelDenton,LennardJonesTrunkShift> Tpairpot; // pair potential
+#elif defined(EWALD)
+typedef LennardJonesLB Tpairpot;
 #else
 typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot; // pair potential
+typedef CutShift<Tpairpot,false> TpairpotCut;
 #endif
 
 typedef Geometry::Cuboid Tgeometry;   // geometry: cube w. periodic boundaries
@@ -17,24 +21,23 @@ typedef Space<Tgeometry,PointParticle> Tspace;
 int main() {
   cout << textio::splash();           // show faunus banner and credits
 
-  InputMap mcp("bulk.json");          // open user input file
+  Tmjson mcp = openjson("bulk.json"); // open JSON input file
   MCLoop loop(mcp);                   // class for handling mc loops
-  EnergyDrift sys;                    // class for tracking system energy drifts
 
-  // Construct Hamiltonian and Space
-  Tspace spc(mcp);
+  Tspace spc(mcp);                    // simulation space
 
-  auto pot = Energy::Nonbonded<Tspace,Tpairpot>(mcp)
+#ifdef EWALD
+  auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp)
     + Energy::ExternalPressure<Tspace>(mcp);
+#else
+  auto pot = Energy::NonbondedCutg2g<Tspace,TpairpotCut>(mcp)
+    + Energy::ExternalPressure<Tspace>(mcp);
+#endif
 
-  // Markov moves and analysis
+  spc.load("state");                  // load old config. from disk (if any)
+
+  Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
   Move::Propagator<Tspace> mv(mcp,pot,spc);
-  Analysis::RadialDistribution<> rdf_ab(0.1);      // 0.1 angstrom resolution
-  Analysis::VirialPressure virial;
-  Average<double> pm;
-
-  spc.load("state");                               // load old config. from disk (if any)
-  sys.init( Energy::systemEnergy(spc,pot,spc.p)  );// store initial total system energy
 
   cout << atom.info() + spc.info() + pot.info()
     + textio::header("MC Simulation Begins!");
@@ -45,31 +48,21 @@ int main() {
 
   while ( loop[0] ) {  // Markov chain 
     while ( loop[1] ) {
-      sys += mv.move();
-
-      if (slump() < 0.05) {
-        //rdf_ab.sample(spc,salt,atom["Na"].id,atom["Cl"].id);
-        virial.sample(spc,pot);
-      }
+      mv.move();
+      analyzer.sample();
     } // end of micro loop
 
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
     cout << loop.timing();
 
   } // end of macro loop
 
-  // save to disk
-  FormatPQR::save("confout.pqr", spc.p); // final PQR snapshot for VMD etc.
-  rdf_ab.save("rdf.dat");                // g(r) - not normalized!
-  spc.save("state");                     // final simulation state
-
   // perform unit tests (irrelevant for the simulation)
   UnitTest test(mcp);                    // class for unit testing
   mv.test(test);
-  sys.test(test);
+  analyzer.test(test);
 
   // print information
-  cout << loop.info() + sys.info() + mv.info() + virial.info() + test.info();
+  cout << loop.info() + mv.info() + analyzer.info() + test.info();
 
   return test.numFailed();
 }
@@ -83,23 +76,18 @@ int main() {
   This gives essentially identical results to the more elaborate Particle
   Mesh Ewald method - see figure below. In contrast, using the simple minimum image
   approach with a cubic cutoff, the system freezes.
-  The `bulk.cpp` program can be used to simulate any atomic mixtures and the
-  dielectric constant may also be varied (it is unity in this example).
+  The `bulk.cpp` program can be used to simulate any atomic (or molecular) mixtures
+  and the dielectric constant may also be varied (it is unity in this example).
 
   We have the following MC moves:
   - salt translation
   - isotropic volume move (NPT ensemble)
 
-  Information about the input file can be found in `src/examples/bulk.run`.
+  Information about the input file can be found in `src/examples/bulk.py`.
 
   ![Na-Cl distribution function with various electrostatic potentials.](wolf.png)
-
-  bulk.json
-  =========
-  @includelineno examples/bulk.json
 
   bulk.cpp
   ========
   @includelineno examples/bulk.cpp
-
 */

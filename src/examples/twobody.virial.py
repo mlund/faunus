@@ -17,7 +17,7 @@ from scipy.optimize import curve_fit
 infile      = "rdf.dat"           # input g(r) arbitrarily normalized
 outfile     = "wofr.dat"          # output pmf
 rmin        = 40.                 # fitting interval (min)
-rmax        = 90.                 # - / / - (max)
+rmax        = 60.                 # - / / - (max)
 lB          = 7.                  # bjerrum length
 Q           = [  7.1,  7.1 ]      # charges of the g(r) particles
 Mw          = [ 6.52e3, 6.52e3 ]  # molecular weight, g/mol
@@ -41,7 +41,7 @@ def f(r,D,shift,a):
   return lB * s**2 * Q[0] * Q[1] / r * np.exp(-r/D) - shift
 
 if (os.path.isfile(infile)==False):
-  print "Error: Input rdf file", infile, "is empty or could not be found."
+  print("Error: Input rdf file", infile, "is empty or could not be found.")
   exit(1)
 
 #
@@ -56,15 +56,15 @@ shift = popt[1]                              # -//-
 rfit = r[m]                                  # r array in fitting interval
 wfit = f(rfit, *popt) + shift                # w array -//-
 w    = w + shift                             # shift PMF
-print "Loaded g(r) file      = ", infile
-print "Saved w(r) file       = ", outfile
-print "Particle charges      = ", Q
-print "Particle weights      = ", Mw, "g/mol"
-print "Fit range [rmin,rmax] = ", rmin, rmax
-print "Fitted Debye length   = ", debye, "A"
-print "Fitted ionic strength = ", (3.04/debye)**2*1000., "mM"
-print "Fitted shift          = ", shift, "kT"
-print "Fitted radius         = ", popt[2], "A"
+print("Loaded g(r) file      = ", infile)
+print("Saved w(r) file       = ", outfile)
+print("Particle charges      = ", Q)
+print("Particle weights      = ", Mw, "g/mol")
+print("Fit range [rmin,rmax] = ", rmin, rmax)
+print("Fitted Debye length   = ", debye, "A")
+print("Fitted ionic strength = ", (3.04/debye)**2*1000., "mM")
+print("Fitted shift          = ", shift, "kT")
+print("Fitted radius         = ", popt[2], "A")
 
 #
 # 2ND VIRIAL COEFFICIENT
@@ -83,13 +83,13 @@ b2_dh = np.trapz(inte, r_dh )        # integrate using Debye-Huckel
 b2_hc = 2 * pi / 3 *r[0]**3          # zero -> contact assuming hard spheres
 b2_tot = b2_hc+b2_dat+b2_dh          # total B2 (A**3)
 
-print "Virial coefficient (cubic angstrom):"
-print "  Hard sphere  [%5d:%5d] = " % ( 0, r[0] ), b2_hc
-print "  Loaded data  [%5d:%5d] = " % ( r[0], rmin ), b2_dat 
-print "  Debye-Huckel [%5d:%5d] = " % ( rmin, infty ), b2_dh
-print "  TOTAL        [%5d:%5d] = " % ( 0, infty ), b2_tot, "A^3"
-print "                             = ", b2_tot*6.022e23*1e-23/Mw[0]/Mw[1], "ml*mol/g^2"
-print "  Reduced, B2/B2_HS          = ", b2_tot / b2_hc
+print("Virial coefficient (cubic angstrom):")
+print("  Hard sphere  [%5d:%5d] = " % ( 0, r[0] ), b2_hc)
+print("  Loaded data  [%5d:%5d] = " % ( r[0], rmin ), b2_dat)
+print("  Debye-Huckel [%5d:%5d] = " % ( rmin, infty ), b2_dh)
+print("  TOTAL        [%5d:%5d] = " % ( 0, infty ), b2_tot, "A^3")
+print("                             = ", b2_tot*6.022e23*1e-23/Mw[0]/Mw[1], "ml*mol/g^2")
+print("  Reduced, B2/B2_HS          = ", b2_tot / b2_hc)
 
 #
 # SAVE FINAL PMF TO DISK
@@ -102,7 +102,7 @@ np.savetxt(outfile, np.transpose( (r_final,w_final) ) )
 # PLOT POTENTIAL OF MEAN FORCE ?
 # (requires matplotlib)
 #
-ans = raw_input("\nPlot the pmf (y/N) ? ")
+ans = input("\nPlot the pmf (y/N) ? ")
 if (ans!="y"):
   exit(0)
 

@@ -1,11 +1,11 @@
 # Generated on Dec 17 2014 14:06:47 using 4.2.1 Compatible Apple LLVM 6.0 (clang-600.0.56)
 energyAverage                      -32.2989            
-moves/atomtranslate_acceptance      60.025              
+SingleParticleTranslation_acceptance      60.025              
 relativeEnergyDrift                1.45501e-14         
-moves/atomgc_Cl_activity           0.05                
-moves/atomgc_Cl_conc               0.0599804           
-moves/atomgc_Na_activity           0.05                
-moves/atomgc_Na_conc               0.0599804           
-moves/atomgc_acceptance            68.1877             
+GrandCanonicalSalt_Cl_activity           0.05                
+GrandCanonicalSalt_Cl_conc               0.0599804           
+GrandCanonicalSalt_Na_activity           0.05                
+GrandCanonicalSalt_Na_conc               0.0599804           
+GrandCanonicalSalt_acceptance            68.1877             
 widom_muex                         -0.186618           
 

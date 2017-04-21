@@ -17,7 +17,7 @@ echo '{
   },
 
   "energy" : {
-    "nonbonded" : { "coulomb" : { "epsr":80 } }
+    "nonbonded" : { "epsr":80 }
   },
 
   "moves" : {
@@ -27,9 +27,13 @@ echo '{
     }
   },
 
+  "analysis" : {
+    "widomscaled" : {"nstep":20, "ninsert":20, "lB":7}
+  },
+
   "system" : {
     "temperature"  : 300,
-    "cuboid"       : { "len" : 100 },
+    "geometry"     : { "length" : 100 },
     "mcloop"       : { "macro":10, "micro":1000 },
     "unittest"     : { "testfile":"seawater.test", "stable":false }
   }

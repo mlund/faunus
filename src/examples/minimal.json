@@ -16,6 +16,6 @@
   },
   "system" : {
     "temperature" : 298.15,
-    "cuboid" : { "len":50 }
+    "geometry" : { "length":50 }
   }
 }

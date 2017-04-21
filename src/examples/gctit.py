@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import json, sys, os
 from subprocess import call
 from shutil import copyfile
@@ -30,63 +31,78 @@ def mkinput():
 
       "energy": {
         "eqstate": { "processfile": "gctit.json" },
-        "nonbonded": { "ljsimple": { "eps": 0.05 }, "coulomb": { "epsr": 80 } }
+        "nonbonded": {
+          "coulomb": { "epsr": 80 },
+          "ljsimple": { "eps": 0.05 }, "coulomb": { "epsr": 80 }
+          }
         },
 
       "system": {
         "temperature": 298.15,
-        "coulomb": { "epsr": 80 },
-        "cuboid": { "len": 202.5 },
+        "geometry": { "length": 202.5 },
         "unittest": { "testfile": "gctit.test", "stable": False },
         "mcloop": { "macro": 10, "micro": micro },
         "sphere": { "radius": 100 }
         },
 
       "moves": {
-          "gctit"         : { "molecule": "salt", "prob": 0.01 },
-          "atomtranslate" : { "salt": { "prob": 0.1, "dp": 100 } },
-          "moltransrot"   : { "protein":
-            { "permol": True, "dp": 60, "prob": 1, "dir": "0 0 1", "dprot": 0 } }
-          },
+        "gctit"         : { "molecule": "salt", "prob": 0.01 },
+        "atomtranslate" : { "salt": { "prob": 0.1, "dp": 100 } },
+        "moltransrot"   : { "protein":
+          { "permol": True, "dp": 60, "prob": 1, "dir": "0 0 1", "dprot": 0 } }
+        },
 
       "moleculelist": {
         "protein": { "Ninit": 2, "structure": "gctit_mol.aam", "insdir": "0 0 1" },
         "salt": { "Ninit": 50, "atomic": True, "atoms": "La Cl Cl Cl" }
         },
 
-      "atomlist": {
-        "La":   { "q": 3, "r": 2, "dp": 20, "activity": 0.001601 },
-        "Cl":   { "q": -1,"r": 2, "dp": 50, "activity": 0.02276 },
-        "Na":   { "q": 1, "r": 2, "dp": 50 },
-        "ASP":  { "q": -1, "r": 2 },
-        "HASP": { "q": 0, "r": 2 },
-        "GLU":  { "q": -1, "r": 2 },
-        "HGLU": { "q": 0, "r": 2 },
-        "M+08": { "q": 8, "r": 5 },
-        "M+09": { "q": 9, "r": 5 },
-        "M+01": { "q": 1, "r": 5 },
-        "M+02": { "q": 2, "r": 5 },
-        "M+03": { "q": 3, "r": 5 },
-        "M+04": { "q": 4, "r": 5 },
-        "M+05": { "q": 5, "r": 5 },
-        "M+06": { "q": 6, "r": 5 },
-        "M+07": { "q": 7, "r": 5 },
-        "M-08": { "q": -8, "r": 5 },
-        "M-06": { "q": -6, "r": 5 },
-        "M-07": { "q": -7, "r": 5 },
-        "M-04": { "q": -4, "r": 5 },
-        "M-05": { "q": -5, "r": 5 },
-        "M-02": { "q": -2, "r": 5 },
-        "M-03": { "q": -3, "r": 5 },
-        "M-01": { "q": -1, "r": 5 },
-        "M+10": { "q": 10, "r": 5 },
-        "M-09": { "q": -9, "r": 5 },
-        "M+-0": { "q": 0, "r": 5 },
-        "M-10": { "q": -10, "r": 5 }
-        }
-      }
+      "analysis" : {
+        "pqrfile"     : dict(file="confout.pqr"),
+        "statefile"   : dict(file="state"),
+        "widom"       : dict(nstep=20, ninsert=15, particles=["La", "Cl", "Cl", "Cl"]),
+        "widomscaled" : dict(nstep=20, ninsert=15, lB=7.0),
+        "molrdf" : {
+            "nstep":20, "pairs" :
+                [
+                    dict(name1="protein", name2="protein", dim=3, file="rdf.dat", dr=0.1)
+                ]
+            }
+        },
 
-  print >> open('gctit.json', 'w+'), json.dumps(j, indent=4)
+      "atomlist": {
+          "La":   { "q": 3, "r": 2, "dp": 20, "activity": 0.001601 },
+          "Cl":   { "q": -1,"r": 2, "dp": 50, "activity": 0.02276 },
+          "Na":   { "q": 1, "r": 2, "dp": 50 },
+          "ASP":  { "q": -1, "r": 2 },
+          "HASP": { "q": 0, "r": 2 },
+          "GLU":  { "q": -1, "r": 2 },
+          "HGLU": { "q": 0, "r": 2 },
+          "M+08": { "q": 8, "r": 5 },
+          "M+09": { "q": 9, "r": 5 },
+          "M+01": { "q": 1, "r": 5 },
+          "M+02": { "q": 2, "r": 5 },
+          "M+03": { "q": 3, "r": 5 },
+          "M+04": { "q": 4, "r": 5 },
+          "M+05": { "q": 5, "r": 5 },
+          "M+06": { "q": 6, "r": 5 },
+          "M+07": { "q": 7, "r": 5 },
+          "M-08": { "q": -8, "r": 5 },
+          "M-06": { "q": -6, "r": 5 },
+          "M-07": { "q": -7, "r": 5 },
+          "M-04": { "q": -4, "r": 5 },
+          "M-05": { "q": -5, "r": 5 },
+          "M-02": { "q": -2, "r": 5 },
+          "M-03": { "q": -3, "r": 5 },
+          "M-01": { "q": -1, "r": 5 },
+          "M+10": { "q": 10, "r": 5 },
+          "M-09": { "q": -9, "r": 5 },
+          "M+-0": { "q": 0, "r": 5 },
+          "M-10": { "q": -10, "r": 5 }
+          }
+      }
+  with open('gctit.json', 'w+') as f:
+    f.write(json.dumps(j, indent=4))
 
 exe            = './gctit'
 runeq          = True

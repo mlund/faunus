@@ -67,6 +67,10 @@ set_target_properties(alexei_cyl PROPERTIES OUTPUT_NAME "cyl")
 # Jana's playground
 fau_example(jana-wall "./jana" wall.cpp)
 
+if(ENABLE_POWERSASA)
+  fau_example(heyda-polymers "./heyda" polymers.cpp)
+endif()
+
 if (EXISTS ${MYPLAYGROUND})
   add_subdirectory(${MYPLAYGROUND} ${MYPLAYGROUND})
 endif()

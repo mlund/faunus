@@ -1,15 +1,15 @@
-# Generated on Aug 26 2014 07:29:37 using 4.2.1 Compatible Apple LLVM 5.1 (clang-503.0.40)
-bilayer_area                       1.16585             
-bilayer_order                      0.852092            
-energyAverage                      2672.88             
-moves/atomtranslate_acceptance     24.9637             
-moves/isobaric_MSQDisplacement     14.2044             
-moves/isobaric_acceptance          4.31433             
-moves/isobaric_averageSideLength   97.3421             
-moves/pivot_Acceptancelipid        0.478701            
-moves/pivot_acceptance             47.8701             
-relativeEnergyDrift                6.29743e-15         
-moves/moltransrot_acceptance       16.2533             
-moves/moltransrot_lipid_acceptance 16.2533             
-moves/moltransrot_lipid_dRot       2.63071             
-moves/moltransrot_lipid_dTrans     0.360374            
+# Generated on Nov 14 2016 11:50:40 using 4.2.1 Compatible Apple LLVM 8.0.0 (clang-800.0.42.1)
+GroupRotation/Translation_acceptance         15.4002             
+GroupRotation/Translation_lipid_acceptance   15.4002             
+GroupRotation/Translation_lipid_dRot         2.52923             
+GroupRotation/Translation_lipid_dTrans       0.349177            
+IsobaricVolumeFluctuations_MSQDisplacement   13.1859             
+IsobaricVolumeFluctuations_acceptance        4.06504             
+IsobaricVolumeFluctuations_averageSideLength 96.6776             
+PolymerPivotMove_Acceptancelipid             0.454827            
+PolymerPivotMove_acceptance                  45.4827             
+SingleParticleTranslation_acceptance         24.5433             
+bilayer_area                                 1.14874             
+bilayer_order                                0.809416            
+energyAverage                                2633.92             
+relativeEnergyDrift                          1.07928e-14         

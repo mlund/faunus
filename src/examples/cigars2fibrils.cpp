@@ -1,45 +1,43 @@
 #include <faunus/faunus.h>
+
 using namespace Faunus;
 using namespace Faunus::Potential;
 
-typedef Space<Geometry::Cuboid,CigarParticle> Tspace;
-typedef CombinedPairPotential<CosAttractMixed<>,WeeksChandlerAndersen> Tpair;
+typedef Space<Geometry::Cuboid, CigarParticle> Tspace;
+typedef CombinedPairPotential<CosAttractMixed<>, WeeksChandlerAndersen> Tpair;
 //the first interaction is a patchy, the second one is isotropic
-typedef CigarSphereSplit<Tpair,Tpair,Tpair> Tpairpot;
+typedef CigarSphereSplit<Tpair, Tpair, Tpair> Tpairpot;
 
-int main() {
-  cout << textio::splash();
-  InputMap mcp("cigars2fibrils.json");
-  FormatMXYZ mxyz;
-  EnergyDrift sys;
+int main()
+{
+    cout << textio::splash();
+    InputMap mcp("cigars2fibrils.json");
+    FormatMXYZ mxyz;
 
-  // Energy functions and space
-  Tspace spc(mcp);
-  Energy::NonbondedVector<Tspace,Tpairpot> pot(mcp);
+    // Energy functions and space
+    Tspace spc(mcp);
+    Energy::NonbondedVector<Tspace, Tpairpot> pot(mcp);
 
-  // Markov moves and analysis
-  Move::Propagator<Tspace> mv( mcp, pot, spc );
+    // Markov moves and analysis
+    Move::Propagator<Tspace> mv(mcp, pot, spc);
 
-  sys.init( Energy::systemEnergy( spc,pot,spc.p ) );
+    cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
 
-  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
+    MCLoop loop(mcp);
+    mxyz.save("cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount());
 
-  MCLoop loop( mcp );
-  mxyz.save( "cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount() );
+    while ( loop[0] )
+    {  // Markov chain
+        while ( loop[1] )
+            mv.move();
 
-  while ( loop[0] ) {  // Markov chain 
-    while ( loop[1] )
-      sys += mv.move();
+        cout << loop.timing();
 
-    sys.checkDrift(Energy::systemEnergy(spc,pot,spc.p)); // compare energy sum with current
+        mxyz.save("cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount());
+    } // end of macro loop
 
-    cout << loop.timing();
-
-    mxyz.save( "cigars2fibrils-mov", spc.p, spc.geo.len, loop.innerCount() );
-  } // end of macro loop
-
-  // print information about simulationat the end
-  cout << loop.info() + sys.info() + mv.info();
+    // print information about simulationat the end
+    cout << loop.info() + mv.info();
 }
 
 /**

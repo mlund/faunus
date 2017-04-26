@@ -46,6 +46,7 @@ d = {
         'isobaric': {'dp': 0.1, 'pressure': 40.0906, 'prop': 1.0}
     },
     'analysis' : {
+        'chargemultipole' : {'nstep':20, 'mollist':['water'] },
         'xtcfile' :   { 'file': 'water2.xtc', 'nstep':20 },
         'pqrfile' :   { 'file': 'water2.pqr' },
         'statefile' : { 'file': 'state' },

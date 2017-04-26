@@ -509,6 +509,24 @@ namespace Faunus
         return mu;
     }
 
+    /**
+     * @brief Calculates quadrupole moment tensor (with trace)
+     */
+    template<class Tpvec, class Tgroup, class Tgeo>
+        Tensor<double> quadrupoleMoment( const Tpvec &p, const Tgeo &geo, const Tgroup &g )
+        {
+            Tensor<double> theta;
+            theta.setZero();
+            assert(g.size() <= (int) p.size());
+            for ( auto i : g )
+            {
+                Point t = p[i] - g.cm;
+                geo.boundary(t);
+                theta = theta + t * t.transpose() * p[i].charge;
+            }
+            return 0.5 * theta;
+        }
+
     /** @brief Translate a particle vector by a vector */
     template<class Tgeo, class Tpvec>
     void translate( const Tgeo &geo, Tpvec &p, const Point &d )

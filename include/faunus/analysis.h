@@ -396,31 +396,7 @@ namespace Faunus
             private:
                 Tspace *spc;
                 vector<int> molid; // molid to analyse
-                std::map<string, Average < double> > Z, Z2, mu,
-                    mu2;
-
-                double charge( const Group &g, double Z = 0 )
-                {
-                    for ( auto i : g )
-                        if ( !excluded(spc->p[i]))
-                            Z += spc->p[i].charge;
-                    return Z;
-                }
-
-                double dipole( const Group &g )
-                {
-                    assert(spc->geo.dist(g.cm, g.massCenter(*spc)) < 1e-9
-                            && "Mass center must be in sync.");
-                    Point t, mu(0, 0, 0);
-                    for ( auto i : g )
-                        if ( !excluded(spc->p[i]))
-                        {
-                            t = spc->p[i] - g.cm;                // vector to center of mass
-                            spc->geo.boundary(t);               // periodic boundary (if any)
-                            mu += spc->p[i].charge * t;
-                        }
-                    return mu.len();
-                }
+                std::map<string, Average<double> > Z, Z2, mu, mu2, quad;
 
                 /** @brief Determines particle should be excluded from analysis */
                 template<class Tparticle>
@@ -437,12 +413,15 @@ namespace Faunus
                     assert(!g.name.empty() && "All Groups should have a name!");
                     if ( spc->molecule[g.molId].isMolecular())
                     {
-                        double z = charge(g);
-                        double dip = dipole(g);
+                        double z = netCharge(spc->p, g);
+                        Point dip = Geometry::dipoleMoment(*spc, g);
+                        auto Q = Geometry::quadrupoleMoment(spc->p, spc->geo, g);
+   
                         Z[g.name] += z;
                         Z2[g.name] += z * z;
-                        mu[g.name] += dip;
-                        mu2[g.name] += dip * dip;
+                        mu[g.name] += dip.norm();
+                        mu2[g.name] += dip.norm() * dip.norm();
+                        quad[g.name] += Q.determinant();
                     }
                 }
 
@@ -469,12 +448,16 @@ namespace Faunus
                         << setw(k + 4) << bracket("Z")
                         << setw(k + 11) << bracket("Z" + squared) + "-" + bracket("Z") + squared
                         << setw(k + 5) << bracket(textio::mu)
-                        << setw(k + 5) << bracket(textio::mu + squared) + "-" + bracket(textio::mu) + squared << endl;
+                        << setw(k + 13) << bracket(textio::mu + squared) + "-" + bracket(textio::mu) + squared
+                        << setw(k + 5) << bracket("|Quad|")
+                        << endl;
                     for ( auto &m : Z )
                         o << indent(SUB) << std::left << setw(w) << m.first << setw(k) << m.second.avg()
                             << setw(k + 1) << Z2[m.first].avg() - pow(m.second.avg(), 2)
                             << setw(k) << mu[m.first].avg()
-                            << setw(k) << mu2[m.first].avg() - pow(mu[m.first].avg(), 2) << endl;
+                            << setw(k) << mu2[m.first].avg() - pow(mu[m.first].avg(), 2)
+                            << setw(k) << quad[m.first].avg()
+                            << endl;
                     return o.str();
                 }
 
@@ -488,6 +471,7 @@ namespace Faunus
                         _j[m.first]["Z2"] = Z2[m.first].avg();
                         _j[m.first]["mu"] = mu[m.first].avg();
                         _j[m.first]["mu2"] = mu2[m.first].avg();
+                        _j[m.first]["quad"] = quad[m.first].avg();
                     }
                     return j;
                 }
@@ -597,24 +581,6 @@ namespace Faunus
 
                 std::map<int, data> m; // slow, but OK for infrequent sampling
 
-                /**
-                 * @brief Calculates quadrupole moment tensor (not traceless)
-                 */
-                template<class Tgroup>
-                    Tensor<double> quadrupoleMoment( const Tspace &s, const Tgroup &g ) const
-                    {
-                        Tensor<double> theta;
-                        theta.setZero();
-                        assert(g.size() <= (int) s.p.size());
-                        for ( auto i : g )
-                        {
-                            Point t = s.p[i] - g.cm;
-                            s.geo.boundary(t);
-                            theta = theta + t * t.transpose() * s.p[i].charge;
-                        }
-                        return 0.5 * theta;
-                    }
-
                 // convert group to multipolar particle
                 template<class Tgroup>
                     DipoleParticle toMultipole( const Tspace &spc, const Tgroup &g ) const
@@ -626,7 +592,7 @@ namespace Faunus
                         m.muscalar() = m.mu().norm();
                         if ( m.muscalar() > 1e-8 )
                             m.mu() = m.mu() / m.muscalar();
-                        m.theta = quadrupoleMoment(spc, g);    // quadrupole
+                        m.theta = Geometry::quadrupoleMoment(spc.p, spc.geo, g); // quadrupole
                         return m;
                     }
 

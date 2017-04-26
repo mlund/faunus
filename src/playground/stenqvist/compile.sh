@@ -1,8 +1,8 @@
 #!/bin/sh
 
-name=main
 faunusV=faunus  # name of faunus-folder
-path=$nb/faunus/src/playground/stenqvist/ # path to cpp-file
+name=main # Name of cpp-file
+path=$nb/$faunusV/src/playground/stenqvist/ # path to folder of cpp-file
 
 cd $path
 mkdir CM

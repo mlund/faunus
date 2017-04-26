@@ -140,6 +140,7 @@ namespace Faunus
             _j[ d.name1+"-"+d.name2 ] = {
                 { "dr", d.dr },
                 { "file", d.file },
+		{ "file2", d.file2 },
                 { "dim", d.dim },
 		{ "Rhyper", d.Rhypersphere }
             };
@@ -153,11 +154,13 @@ namespace Faunus
                 {
                     data d;
                     d.file = i.at("file");
+		    d.file2 = i.value("file2",d.file+".avg");
                     d.name1 = i.at("name1");
                     d.name2 = i.at("name2");
                     d.dim = i.value("dim", 3);
                     d.dr = i.value("dr", 0.1);
                     d.hist.setResolution(d.dr);
+		    d.hist2.setResolution(d.dr);
 		    d.Rhypersphere = i.value("Rhyper", -1.0);
                     datavec.push_back( d );
                 }
@@ -190,8 +193,10 @@ namespace Faunus
 
     PairFunctionBase::~PairFunctionBase()
     {
-        for (auto &d : datavec)
+        for (auto &d : datavec) {
             d.hist.save( d.file );
+	    d.hist2.save( d.file2 );
+	}
     }
 
     void CombinedAnalysis::sample()

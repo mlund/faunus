@@ -245,6 +245,9 @@ namespace Faunus
           betaD,            //!< Value of the dipole distribution (inverse) width [1/angstrom]
           betaQ,            //!< Value of the quadrupole distribution (inverse) width [1/angstrom]
           tfe,              //!< Transfer free energy (J/mol/angstrom^2/M)
+          cap_radius,       //!< Radius of cap
+	  cap_center,       //!< Distance to cap center from particle center
+	  charge_position,  //!< Position of charge
           alphax;           //!< Excess polarizability [angstrom^3]
       Point mu;                //!< Dipolemoment vector
       int Ninit;               //!< Initial number of atoms to insert into simulation container
@@ -277,6 +280,9 @@ namespace Faunus
           muscalar = mu.len() * 1.0_Debye;
           if ( mu.len() > 1e-6 )
               mu = mu / mu.len();
+	  cap_radius   =  ( _js["cap_radius"] | 0.0 );
+	  cap_center   =  ( _js["cap_center"] | 0.0 );
+	  charge_position   =  ( _js["charge_position"] | 0.0 );
 
           mw = _js["mw"] | 1.0;
           Ninit = _js["Ninit"] | 0.0;

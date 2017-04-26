@@ -11,7 +11,7 @@ typedef Space<Geometry::Cuboid, DipoleParticle> Tspace;
 #ifdef EWALD
 typedef LennardJonesLB Tpair;
 #else
-typedef CombinedPairPotential<LennardJonesLB,DipoleDipoleRF> Tpair;
+typedef CombinedPairPotential<LennardJonesLB,DipoleDipoleGalore> Tpair;
 #endif
 
 int main()

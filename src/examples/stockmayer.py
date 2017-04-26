@@ -21,17 +21,21 @@ d = {
 
   "energy" : {
     "nonbonded" : {
-       "epsr":1.0, "cutoff":14.4315, "eps_rf":140.0, "kappa":0.21,
-       'ewald': { "cutoff":14.4315,'eps_surf':1e11, "alpha":0.14, "cutoffK":4, "spherical_sum":True, "update_frequency":1000}
+       "coulombtype":"wolf" ,"epsr":1.0, "cutoff":14.4315, "eps_rf":140.0, "alpha":0.21,
+       'ewald': { "cutoff":14.4315,'eps_surf':1e11, "alpha":0.14, "cutoffK":4, "spherical_sum":True, "update_frequency":1000, "isotropic_pbc":False}
     }
   },
   
     "analysis" : {
-      "xtcfile" :   { "file": "stockmayer.xtc", "nstep":20 },
+      "_xtcfile" :   { "file": "stockmayer.xtc", "nstep":20 },
       "energyfile": { "file": "energy.dat", "nstep":20 },
       "pqrfile" :   { "file": "stockmayer.pqr" },
       "statefile" : { "file": "state" },
-      "multipoleanalysis" : { "nstep":20, "cutoff":14.4315, "dielectric":"reactionfield", "eps_rf":140.0, "kappa":0.21 },
+      "multipoleanalysis" : { "nstep":20, "cutoff":14.4315, "dielectric":"reactionfield", "eps_rf":140.0, "kappa":0.21, 'pairs' :
+            [
+               { 'name1':'sol', 'name2':'sol', 'dim':3, 'file':'rdf_ss.dat', 'dr':0.1  }
+            ] 
+	  },
       "kirkwoodfactor" : { "nstep":20, "pairs" :
             [
                { "name1":"dip", "name2":"dip", "dim":3, "dr":0.1, "file":"kwfactor_dipdip.dat"}
@@ -52,7 +56,7 @@ d = {
   "system" : {
     "temperature"  : 315.8,
     "geometry"     : { "length" : 29.6336 },
-    "mcloop"       : { "macro":5, "micro":80 },
+    "mcloop"       : { "macro":10, "micro":50 },
     "unittest"     : { "testfile":"stockmayer.test", "stable":False }
   }
 }

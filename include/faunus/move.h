@@ -892,8 +892,8 @@ namespace Faunus
                 spc->trial[iparticle], spc->trial[iparticle].radius, Geometry::Geometrybase::BOUNDARY))
                 return pc::infty;
 	    
-	    //return Energy::energyChange(*spc, *base::pot, base::change);
-            return (base::pot->i_total(spc->trial, iparticle) + base::pot->external(spc->trial)) - (base::pot->i_total(spc->p, iparticle) + base::pot->external(spc->p));
+	    return Energy::energyChange(*spc, *base::pot, base::change);
+            //return (base::pot->i_total(spc->trial, iparticle) + base::pot->external(spc->trial)) - (base::pot->i_total(spc->p, iparticle) + base::pot->external(spc->p));
         }
         return 0;
     }

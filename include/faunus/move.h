@@ -892,8 +892,8 @@ namespace Faunus
                 spc->trial[iparticle], spc->trial[iparticle].radius, Geometry::Geometrybase::BOUNDARY))
                 return pc::infty;
 	    
-	    //return Energy::energyChange(*spc, *base::pot, base::change);
-            return (base::pot->i_total(spc->trial, iparticle) + base::pot->external(spc->trial)) - (base::pot->i_total(spc->p, iparticle) + base::pot->external(spc->p));
+	    return Energy::energyChange(*spc, *base::pot, base::change);
+            //return (base::pot->i_total(spc->trial, iparticle) + base::pot->external(spc->trial)) - (base::pot->i_total(spc->p, iparticle) + base::pot->external(spc->p));
         }
         return 0;
     }
@@ -1375,14 +1375,15 @@ namespace Faunus
     {
         if ( dp_rot < 1e-6 && dp_trans < 1e-6 )
             return 0;
-
+        double du = Energy::energyChange(*spc, *base::pot, base::change);
         for ( auto i : *igroup )
             if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
                 return pc::infty;
+        return du;
 	//return Energy::energyChange(*spc, *base::pot, base::change);
 
 	
-        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
+        /*double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if ( unew == pc::infty )
             return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
@@ -1410,7 +1411,7 @@ namespace Faunus
                 uold += pot->g2g(spc->p, *g, *igroup);
             }
         }
-        return unew - uold;
+        return unew - uold;*/
 	
     }
 

@@ -2170,7 +2170,8 @@ namespace Faunus
                     _du = penalty[v] - _du;
                     _f = _scale * _f;
                     _samplings = ceil(_samplings / _scale);
-                    cout << "Energy barrier: " << max - min << endl;
+                    double dh = log(double(histo.maxCoeff())/histo.minCoeff());
+                    cout << "Energy barrier: " << max - min << ", delta histo: " << dh << endl;
                     histo.clear();
                 }
             }

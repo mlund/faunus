@@ -464,6 +464,9 @@ namespace Faunus
       /** @brief Count number of molecules with matching molid */
       inline int numMolecules( int molId ) const { return molTrack.size(molId); }
 
+      inline int numMolecules( string name ) const {
+      }
+
       /**
        * @brief Returns vector of molecules with matching name
        *

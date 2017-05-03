@@ -122,6 +122,15 @@ namespace Faunus
         func();
     }
 
+    void PropertyTraj::_sample() {
+        if ( !v.empty() )
+        {
+            for (auto &i : v)
+                f << i() << " ";
+            f << "\n"; 
+        }
+    }
+
     void SystemEnergy::_sample() {
         f << energy() << "\n"; 
     }

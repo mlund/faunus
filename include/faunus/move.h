@@ -4766,11 +4766,11 @@ namespace Faunus
     {
 
         base::title = "Site Titration - Swap Move";
-        base::runfraction = j["prob"] | 1.0;
+        base::runfraction = j.value("prob", 1.0);
         base::w = 30;
         ipart = -1;
 
-        saveChargeBool = j["savecharge"] | false;
+        saveChargeBool = j.value("savecharge", false);
 
         auto t = e.tuple();
         auto ptr = TupleFindType::get<Energy::EquilibriumEnergy<Tspace> *>(t);

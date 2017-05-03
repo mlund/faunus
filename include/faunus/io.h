@@ -217,6 +217,65 @@ namespace Faunus {
           f.close();
         }
   };
+  
+  /**
+   * @brief Produced a file which can be used with POV-Ray in order to create an image of the configuration in the state-file. 
+   * In terminal: 'povray filename.pov' which gives the output 'filename.png' file. Add option 'Output_Alpha=on' to create transparent image.
+   */
+  class CapparticlePOVRay {
+    public:
+      template<class Tspace>
+        void saveCapparticlePOVRay(const string &filename, const Tspace &spc) {
+          std::ofstream f;
+          f.open(filename);
+          f << "#include \"colors.inc\"\n\n";
+	  
+	  Point camera_at(0,0,-10);
+	  f << "camera {\n";
+	  f << "location <" << camera_at.x() << "," << camera_at.y() << "," << camera_at.z() << ">\n";
+	  
+	  Point look_at(0,0,0);
+	  f << "look_at <" << look_at.x() << "," << look_at.y() << "," << look_at.z() << ">\n";
+	  f << "}\n\n";
+	  
+	  Point light_from(0,0,-10);
+	  f << "light_source {\n";
+	  f << "<" << light_from.x() << "," << light_from.x() << "," << light_from.x() << ">\n";
+	  f << "color White\n";
+	  f << "}\n\n";
+	  
+	  /*
+	  // Add a second lightsource
+	  Point second_light_from(0,10,-10);
+	  f << "light_source {\n";
+	  f << "<" << second_light_from.x() << "," << second_light_from.x() << "," << second_light_from.x() << ">\n";
+	  f << "color White\n";
+	  f << "}\n\n";
+	  */
+	  
+	  string color_particle = "Blue";
+	  string color_cap = "Red";
+	  double ambient = 1.0; // Light on particles, 0.0 = little light, 1.0 = much light
+	  for(unsigned int i = 0; i < spc.p.size(); i++) {
+	    Point xyz = spc.p[i];
+	    Point cap = spc.p[i].cap_center_point()*spc.p[i].cap_center();
+	    f << "difference {\n";
+	    f << "sphere {\n";
+	    f << "<" << xyz.x() << "," << xyz.y() << "," << xyz.z() << ">\n";
+	    f << "," << spc.p[i].radius << "\n";
+	    f << "texture { pigment { " << color_particle << " } }\n";
+	    f << "}finish {ambient " << ambient << "}\n";
+	    f << "}\n";
+	    f << "sphere {\n";
+	    f << "<" << (xyz.x() + cap.x()) << "," << (xyz.y() + cap.y()) << "," << (xyz.z() + cap.z()) << ">\n";
+	    f << "," << spc.p[i].cap_radius() << "\n";
+	    f << "texture { pigment { " << color_cap << " } }\n";
+	    f << "}finish {ambient " << ambient << "}\n";
+	    f << "}\n}\n\n";
+	  }
+          f.close();
+        }
+  };
 
   /**
    * @brief PQR format

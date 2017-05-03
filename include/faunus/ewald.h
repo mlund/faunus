@@ -36,16 +36,16 @@ namespace Faunus {
       struct EwaldReal : public Potential::Coulomb {
 
         typedef Potential::Coulomb Tbase;
-        double alpha, alpha2, constant, rc, rc2, tab_utol, tab_ftol, lB;
+        double alpha, alpha2, rc, rc2, tab_utol, tab_ftol, lB;
 	bool only_coulomb, only_dipoledipole;
 	Tabulate::Andrea<double> T0_tabulator, T1_tabulator, T2_tabulator;
 	Tabulate::TabulatorBase<double>::data table_T0, table_T1, table_T2;
 	
-	std::function<double(double)> T0_sf = [&](double r1) { return erfc(alpha*r1); }; // .. then spline
-	std::function<double(double)> T1_sf = [&](double r1) { return (r1*2.0*alpha/sqrt(pc::pi)*exp(-alpha2*r1*r1) + erfc(alpha*r1)); }; // .. then spline
-	std::function<double(double)> T2_sf = [&](double r1) { return 3.0*(T1_sf(r1) + 4.0*alpha2*alpha/3.0/sqrt(pc::pi)*r1*r1*r1*exp(-alpha2*r1*r1) ); }; // .. then spline
+	std::function<double(double)> T0_sf = [&](double r1) { return erfc(alpha*r1); }; 
+	std::function<double(double)> T1_sf = [&](double r1) { return (r1*2.0*alpha/sqrt(pc::pi)*exp(-alpha2*r1*r1) + erfc(alpha*r1)); }; 
+	std::function<double(double)> T2_sf = [&](double r1) { return 3.0*(T1_sf(r1) + 4.0*alpha2*alpha/3.0/sqrt(pc::pi)*r1*r1*r1*exp(-alpha2*r1*r1) ); }; 
 
-        EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j), alpha(0), alpha2(0), constant(0), rc(1), rc2(1) {
+        EwaldReal(Tmjson &j, string sec="ewald") : Tbase(j), alpha(0), alpha2(0), rc(1), rc2(1) {
           Tbase::name="Ewald Real";
 	  tab_utol = j[sec]["tab_utol"] | 1e-9;
 	  tab_ftol = j[sec]["tab_ftol"] | 1e-5;
@@ -58,7 +58,6 @@ namespace Faunus {
         void updateAlpha(double alpha_in) {
           alpha = alpha_in;
           alpha2 = alpha*alpha;
-          constant = 2*alpha/sqrt(pc::pi);
 	  updateSpline();
         }
 
@@ -120,14 +119,19 @@ namespace Faunus {
     template<bool useIonIon=true, bool useIonDipole=false, bool useDipoleDipole=false>
       struct EwaldParameters {
 
-	int kcc;
-	double alpha, alpha2, rc, kc, kc2, maxL, check_k2_zero;
+	int kcc, N;
+	double alpha, alpha2, rc, kc, kc2, minL, maxL, check_k2_zero;
 	Point L;
 	
         EwaldParameters() { }
 
           void update(Point L_in) {
 	    L = L_in;
+	    minL = L.x();
+            if(L.y() < minL)
+              minL = L.y();
+            if(L.z() < minL)
+              minL = L.z();
             maxL = L.x();
             if(L.y() > maxL)
               maxL = L.y();
@@ -135,7 +139,18 @@ namespace Faunus {
               maxL = L.z();
             check_k2_zero = 0.1*(4*pc::pi*pc::pi)/(maxL*maxL);
 	  }
-
+	  /**
+	   * @note Implemented from  <http://dx.doi.org/10.1080/08927029208049126>
+	   */
+	  void ForLaterUse() {
+	    if(pc::pi/pow(N,1.0/3.0) > 0.25)
+	      cout << "Cutoff is larger than half the box-length!" << endl;
+	    rc = minL*sqrt(pc::pi)/pow(N,1.0/6.0);
+	    alpha = pc::pi/rc;
+	    alpha2 = alpha*alpha;
+	    kc = alpha*minL;
+	    kc2 = kc*kc;
+	  }
       };
       
   }//namespace
@@ -360,14 +375,18 @@ namespace Faunus {
                 if( ( useIonIon || useIonDipole ) && !isotropic_pbc ) {
                   Q_temp_ion += p[i].charge * complex<double>(cos(dot),sin(dot));
 		} else if( ( useIonIon || useIonDipole ) && isotropic_pbc ) {
-		  Q_temp_ion += p[i].charge*std::cos(kv.x()*p[i].x())*std::cos(kv.y()*p[i].y())*std::cos(kv.z()*p[i].z()); 
+		  Q_temp_ion += p[i].charge*cos(kv.x()*p[i].x())*cos(kv.y()*p[i].y())*cos(kv.z()*p[i].z()); 
 		}
                 if(useDipoleDipole && !isotropic_pbc) {
                   Q_temp_dip += kv.dot(p[i].mu()) * p[i].muscalar() * complex<double>(-sin(dot),cos(dot));
 		} else if(useDipoleDipole && isotropic_pbc) {
-		  Q_temp_dip += sin(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().x()*kv.x()*spc->p[i].muscalar();
-		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().y()*kv.y()*spc->p[i].muscalar();
-		  Q_temp_dip += cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu().z()*kv.z()*spc->p[i].muscalar();
+		  double xx = spc->p[i].x()*kv.x();
+		  double yy = spc->p[i].y()*kv.y();
+		  double zz = spc->p[i].z()*kv.z();
+		  double cosX = cos(xx);
+		  double cosY = cos(yy);
+		  double cosZ = cos(zz);
+		  Q_temp_dip += ( sin(xx)*cosY*cosZ*spc->p[i].mu().x()*kv.x() + cosX*sin(yy)*cosZ*spc->p[i].mu().y()*kv.y() + cosX*cosY*sin(zz)*spc->p[i].mu().z()*kv.z() )*spc->p[i].muscalar();
 		}
               }
               Q_ion_tot_in.at(k) = Q_temp_ion;
@@ -585,22 +604,30 @@ namespace Faunus {
                     Q2_ion -= spc->p[i].charge * complex<double>(cos(dot),sin(dot));
                   } else if( ( useIonIon || useIonDipole ) && isotropic_pbc ) {
 		    Point kv = kVectors_trial.col(k);
-		    Q2_ion += spc->trial[i].charge*std::cos(kv.x()*spc->trial[i].x())*std::cos(kv.y()*spc->trial[i].y())*std::cos(kv.z()*spc->trial[i].z()); 
+		    Q2_ion += spc->trial[i].charge*cos(kv.x()*spc->trial[i].x())*cos(kv.y()*spc->trial[i].y())*cos(kv.z()*spc->trial[i].z()); 
 		    kv = kVectors.col(k);
-		    Q2_ion -= spc->p[i].charge*std::cos(kv.x()*spc->p[i].x())*std::cos(kv.y()*spc->p[i].y())*std::cos(kv.z()*spc->p[i].z()); 
+		    Q2_ion -= spc->p[i].charge*cos(kv.x()*spc->p[i].x())*cos(kv.y()*spc->p[i].y())*cos(kv.z()*spc->p[i].z()); 
 		  }
                   if ( ( useDipoleDipole || useIonDipole ) && !isotropic_pbc ) {
                     Q2_dip += kVectors_trial.col(k).dot(spc->trial[i].mu()) * spc->trial[i].muscalar() * complex<double>(-sin(dotTrial),cos(dotTrial));
                     Q2_dip -= kVectors.col(k).dot(spc->p[i].mu()) * spc->p[i].muscalar() * complex<double>(-sin(dot),cos(dot));
                   } else if ( ( useDipoleDipole || useIonDipole ) && isotropic_pbc ) {
 		    Point kv = kVectors_trial.col(k);
-		    Q2_dip += sin(spc->trial[i].x()*kv.x())*cos(spc->trial[i].y()*kv.y())*cos(spc->trial[i].z()*kv.z())*spc->trial[i].mu().x()*kv.x()*spc->trial[i].muscalar();
-		    Q2_dip += cos(spc->trial[i].x()*kv.x())*sin(spc->trial[i].y()*kv.y())*cos(spc->trial[i].z()*kv.z())*spc->trial[i].mu().y()*kv.y()*spc->trial[i].muscalar();
-		    Q2_dip += cos(spc->trial[i].x()*kv.x())*cos(spc->trial[i].y()*kv.y())*sin(spc->trial[i].z()*kv.z())*spc->trial[i].mu().z()*kv.z()*spc->trial[i].muscalar();
+		    double xx = spc->trial[i].x()*kv.x();
+		    double yy = spc->trial[i].y()*kv.y();
+		    double zz = spc->trial[i].z()*kv.z();
+		    double cosX = cos(xx);
+		    double cosY = cos(yy);
+		    double cosZ = cos(zz);
+		    Q2_dip += ( sin(xx)*cosY*cosZ*spc->trial[i].mu().x()*kv.x() + cosX*sin(yy)*cosZ*spc->trial[i].mu().y()*kv.y() + cosX*cosY*sin(zz)*spc->trial[i].mu().z()*kv.z() )*spc->trial[i].muscalar();
 		    kv = kVectors.col(k);
-		    Q2_dip -= sin(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().x()*kv.x()*spc->p[i].muscalar();
-		    Q2_dip -= cos(spc->p[i].x()*kv.x())*sin(spc->p[i].y()*kv.y())*cos(spc->p[i].z()*kv.z())*spc->p[i].mu().y()*kv.y()*spc->p[i].muscalar();
-		    Q2_dip -= cos(spc->p[i].x()*kv.x())*cos(spc->p[i].y()*kv.y())*sin(spc->p[i].z()*kv.z())*spc->p[i].mu().z()*kv.z()*spc->p[i].muscalar();
+		    xx = spc->p[i].x()*kv.x();
+		    yy = spc->p[i].y()*kv.y();
+		    zz = spc->p[i].z()*kv.z();
+		    cosX = cos(xx);
+		    cosY = cos(yy);
+		    cosZ = cos(zz);
+		    Q2_dip -= ( sin(xx)*cosY*cosZ*spc->p[i].mu().x()*kv.x() + cosX*sin(yy)*cosZ*spc->p[i].mu().y()*kv.y() + cosX*cosY*sin(zz)*spc->p[i].mu().z()*kv.z() )*spc->p[i].muscalar();
                   }
                 }
               }
@@ -653,13 +680,12 @@ namespace Faunus {
            */
           void setSpace(Tspace &s) override {
             Tbase::setSpace(s);
-	    setGeometry(s.geo);
             N = s.p.size();
 	    Group g(0, N-1);
 	    surfaceEnergy = getSurfaceEnergy(s.p,g,V);
 	    reciprocalEnergy = getReciprocalEnergy(Q_ion_tot,Q_dip_tot,Aks,V);
 	    undo(); // initialization of trial-entities
-            change.clear();
+            //change.clear();
           }
       };
 

@@ -15,7 +15,7 @@ int main() {
   auto b=a;                    // duplicate particle...
   b.x() = 0.9_angstrom;        // ...and separate by 0.9 angstrom
 
-  Potential::DipoleDipole u(298.15_K, 80.); // pair potential
+  Potential::DipoleDipoleGalore u(298.15_K, 80.,4,"plain"); // pair potential
   RandomTwister<> ran;         // random number generator
 
   while (b.x() < 0.4_nm) {     // loop over separations

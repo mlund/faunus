@@ -2008,7 +2008,7 @@ namespace Faunus
                     f << "confid ";
                     for (auto &i : mol)
                     {
-                        v.push_back( [&spc]() { return spc.molecule.getConformationIndex() } );
+                        //v.push_back( [&spc]() { return spc.molecule[i].getConformationIndex(); } );
                     }
                 }
             }

@@ -1979,6 +1979,42 @@ namespace Faunus
             }
         };
 
+        /** @brief Save system energy to disk. Keywords: `nstep`, `file` */
+        class PropertyTraj : public AnalysisBase {
+
+            std::ofstream f;
+            typedef std::function<double()> Tf;
+            std::vector<Tf> v;
+
+            void _sample() override;
+
+            public:
+            template<class Tspace, class Tenergy>
+                PropertyTraj( Tmjson j, Tenergy &pot, Tspace &spc ) : AnalysisBase(j)
+            {
+                name = "Property Trajectory";
+                string file = j.at("file");
+                f.open( file );
+                if (!f)
+                    throw std::runtime_error(name + ": cannot open output file " + file);
+
+                if (j.value("energy", false)) {
+                    f << "# U/kT ";
+                    v.push_back( [&spc, &pot]() { return Energy::systemEnergy(spc, pot, spc.p); } );
+                }
+                auto mol = j.value("confindex", vector<string>() );
+                if (!mol.empty())
+                {
+                    f << "confid ";
+                    for (auto &i : mol)
+                    {
+                        //v.push_back( [&spc]() { return spc.molecule[i].getConformationIndex(); } );
+                    }
+                }
+            }
+        };
+
+
         /**
          * @brief Base class for distribution functions etc.
          */
@@ -2636,6 +2672,7 @@ namespace Faunus
          * `multipoleanalysis`     |  `Analysis::MultipoleAnalysis`
          * `multipoledistribution` |  `Analysis::MultipoleDistribution`
          * `polymershape`          |  `Analysis::PolymerShape`
+         * `propertytraj`          |  `Analysis::PropertyTraj`
          * `scatter`               |  `Analysis::ScatteringFunction`
          * `virial`                |  `Analysis::VirialPressure`
          * `virtualvolume`         |  `Analysis::VirtualVolumeMove`
@@ -2710,6 +2747,9 @@ namespace Faunus
 
                                 if ( i.key() == "polymershape" )
                                     v.push_back(Tptr(new PolymerShape<Tspace>(val, spc)));
+
+                                if ( i.key() == "propertytraj" )
+                                    v.push_back(Tptr(new PropertyTraj(val, pot, spc)));
 
                                 if ( i.key() == "cyldensity" )
                                     v.push_back(Tptr(new CylindricalDensity<Tspace>(val, spc)));

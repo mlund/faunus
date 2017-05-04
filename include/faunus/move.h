@@ -2577,7 +2577,7 @@ namespace Faunus
         Point u;
         u.ranunit(slump);                          // generate random unit vector
         spc->trial[first].translate(spc->geo, u * bond); // trans. 1st w. scaled unit vector
-        assert(std::abs(spc->geo.dist(spc->p[first], spc->trial[first]) - bond) < 1e-7);
+        assert(std::fabs(spc->geo.dist(spc->p[first], spc->trial[first]) - bond) < 1e-7);
 
         for ( auto i : *gPtr )
             spc->geo.boundary(spc->trial[i]);  // respect boundary conditions
@@ -3186,7 +3186,7 @@ namespace Faunus
         for ( auto i : g )
         {
             auto id = spc->p[i].id;
-            if ( atom[id].activity > 1e-10 && abs(atom[id].charge) > 1e-10 )
+            if ( atom[id].activity > 1e-10 && fabs(atom[id].charge) > 1e-10 )
             {
                 map[id].p = atom[id];
                 map[id].chempot = log(atom[id].activity * pc::Nav * 1e-27); // beta mu
@@ -5213,7 +5213,7 @@ namespace Faunus
               double ucurr = ufunction();
               double drift = ucurr - (uinit + dusum);
               t("energyAverage", uavg.avg());
-              t("relativeEnergyDrift", std::abs(drift / ucurr), 10.0);
+              t("relativeEnergyDrift", std::fabs(drift / ucurr), 1000.0);
             }
         }
 

@@ -352,8 +352,8 @@ namespace Faunus
                     len << m.get<vector<double>>();
                     setlen( len );
                 }
-                if (getVolume()>0)
-                    return;
+                if (getVolume()<=0)
+                    throw std::runtime_error("volume is zero or less");
             }
         }
         catch(std::exception& e) {

@@ -1,7 +1,6 @@
-[![Faunus](doc/images/animation.gif)](https://github.com/mlund/faunus)
-
 [![Documentation](https://codedocs.xyz/mlund/faunus.svg)](https://codedocs.xyz/mlund/faunus/)
 [![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
+[![Faunus](doc/images/animation.gif)](https://github.com/mlund/faunus)
 
 Welcome to Faunus
 =================
@@ -11,7 +10,7 @@ molecular systems. Below is a brief overview of features:
 
 - Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
 - General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
-- **Anisotropic** atoms (multipoles, sphero-cylinders)
+- **Anisotropic** atoms (multipoles, sphero-cylinders, capped particles)
 - Ion titration moves (pKa prediction, Hofmeister effects etc.)
 - Highy modular
 - Free and open source (**GPL**)
@@ -26,7 +25,7 @@ Requirements
 ============
 
 - C/C++11 compiler (clang3.5+, gcc4.9+, intel15+, ...)
-- CMake 2.8.5+
+- CMake 3.1+
 
 Optional:
 

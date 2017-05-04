@@ -754,15 +754,15 @@ namespace Faunus {
            * }
            * ~~~~
            */
-          void customParameters( Tmjson j ) {
+          void customParameters( const Tmjson &j ) {
             if (j.is_object()) {
               for (auto it=j.begin(); it!=j.end(); ++it) { 
                 auto v = textio::words2vec<string>( it.key() );
                 if (v.size()==2) {
                   auto id1 = atom[ v[0] ].id;
                   auto id2 = atom[ v[1] ].id;
-                  customEpsilon( id1, id2, (it.value()["eps"] | 0.0) * 1.0_kJmol );
-                  customSigma( id1, id2, it.value()["sigma"] | 0.0 );
+                  customEpsilon( id1, id2, it.value().at("eps").get<double>() * 1.0_kJmol );
+                  customSigma( id1, id2, it.value().at("sigma").get<double>() );
                 } else
                   std::runtime_error( name+": Exactly two atom types must be given for custom LJ parameters");
               }

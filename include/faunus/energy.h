@@ -11,6 +11,7 @@
 #include <faunus/potentials.h>
 #include <faunus/auxiliary.h>
 #include <faunus/bonded.h>
+#include <faunus/multipole.h>
 #include <Eigen/Eigenvalues>
 
 #endif
@@ -24,7 +25,6 @@
 
 namespace Faunus
 {
-
 /**
    * @brief Classes/templates that calculate the energy of particles, groups, system.
    *
@@ -36,8 +36,6 @@ namespace Faunus
    */
   namespace Energy
   {
-
-
 
 /**
      *  @brief Base class for energy evaluation
@@ -58,12 +56,15 @@ namespace Faunus
         string jsondir; // inputmap section
         char w; //!< Width of info output
         Tspace *spc;
+	typename Tspace::GeometryType* geo;
         virtual std::string
         _info()=0;
 
         /** @brief Determines if given particle vector is the trial vector */
         template<class Tpvec>
         bool isTrial( const Tpvec &p ) const { return (&p == &spc->trial); }
+        
+        bool isGeometryTrial(typename Tspace::GeometryType &g) const { return (&g==&spc->geo_trial); }
 
     public:
         typedef Tspace SpaceType;
@@ -75,20 +76,35 @@ namespace Faunus
 
         virtual ~Energybase() {}
 
-        Energybase( const string &dir = "" ) : jsondir(dir), w(25), spc(nullptr)
+        Energybase( const string &dir = "" ) : jsondir(dir), w(25), spc(nullptr), geo()
         {
             if ( jsondir.empty())
                 jsondir = "energy";
         }
 
-        virtual void setSpace( Tspace &s ) { spc = &s; }
+        virtual void setSpace( Tspace &s )
+	{ 
+	  spc = &s;
+	  setGeometry(s.geo);
+	}
 
         virtual Tspace &getSpace()
         {
             assert(spc != nullptr);
             return *spc;
         }
-
+        
+        virtual void setGeometry(typename Tspace::GeometryType &g)
+	{ 
+	  geo=&g; 
+	}
+	  
+        virtual typename Tspace::GeometryType& getGeometry() 
+	{
+	  assert(geo!=nullptr);
+          return *geo;
+        }
+        
         virtual double p2p( const Tparticle &, const Tparticle & ) // Particle-particle energy
         { return 0; }
 
@@ -142,7 +158,7 @@ namespace Faunus
         { return 0; }
 
         /** @brief Update energy function due to Change */
-        virtual double updateChange(bool acc) { return 0; }
+        virtual double updateChange( const typename Tspace::Change &c ) { return 0; }
 
         virtual void field( const Tpvec &, Eigen::MatrixXd & ) //!< Calculate electric field on all particles
         {}
@@ -154,407 +170,7 @@ namespace Faunus
                 return string();
             return textio::header("Energy: " + name) + _info();
         }
-
-        virtual double systemEnergy( const Tpvec &p )
-        {
-            double u = external(p);
-            for ( auto g : spc->groupList())
-                u += g_external(p, *g) + g_internal(p, *g);
-            for ( unsigned int i = 0; i < spc->groupList().size() - 1; i++ )
-                for ( unsigned int j = i + 1; j < spc->groupList().size(); j++ )
-                    u += g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
-            return u;
-        }
-
-        virtual double g2All(const Tpvec & p, Group &g)
-        {
-            double unew = 0.0;
-            for ( auto o : spc->groupList()) {
-                if ( o != &g ) {
-                    unew += g2g(p, *o, g);
-                    if ( unew == pc::infty )
-                        return pc::infty;   // early rejection
-                }
-            }
-            return unew;
-        }
     };
-
-
-class EnergyMatrix {
-private:
-    std::vector< std::vector<double> > eMatrix;
-    std::vector< std::vector<double> > eMatrix2;
-
-public:
-    std::vector<double> changes;
-
-    bool all = false; // modify entire matrix
-    Group* multi = nullptr; // modify group
-    int single = -1; // modify single particle
-
-    std::vector< std::vector<double> >* energyMatrix;
-    std::vector< std::vector<double> >* energyMatrixTrial;
-
-    bool firstGlobal=true;
-
-    EnergyMatrix() {
-        unsigned int size = 0;
-        energyMatrix = &eMatrix;
-        energyMatrixTrial = &eMatrix2;
-
-        try{
-            changes.reserve(1024 + size);
-            energyMatrix->reserve(1024 + size);
-            energyMatrix->resize( size );
-            for(unsigned int i=0; i < size; i++) {
-                energyMatrix->operator [](i).reserve(1024 + size);
-                energyMatrix->operator [](i).resize( size );
-            }
-
-            energyMatrixTrial->reserve(1024 + size);
-            energyMatrixTrial->resize( size );
-            for(unsigned int i=0; i < size; i++) {
-                energyMatrixTrial->operator [](i).reserve(1024 + size);
-                energyMatrixTrial->operator [](i).resize( size );
-            }
-        } catch(std::bad_alloc& bad) {
-            fprintf(stderr, "\nTOPOLOGY ERROR: Could not allocate memory for Energy matrix");
-            exit(1);
-        }
-    }
-
-    void resizeEMatrix(unsigned int size) {
-        assert(size >= 0);
-
-            energyMatrix->resize(size);
-        for(unsigned int i=0; i < size; i++) {
-            energyMatrix->at(i).resize( size );
-        }
-
-        energyMatrixTrial->resize(size);
-        for(unsigned int i=0; i < size; i++) {
-            energyMatrixTrial->at(i).resize( size );
-        }
-    }
-
-    inline void modify() {
-        if(multi != nullptr) {
-            fixEMatrixChain(multi);
-            multi = nullptr;
-            return;
-        }
-        if(single != -1) {
-            fixEMatrixSingle(single);
-            single = -1;
-            return;
-        }
-        if(all) {
-            std::swap(energyMatrix, energyMatrixTrial);
-            all = false;
-            return;
-        }
-        std::cout << "Error, move not recorded" << std::endl;
-    }
-
-protected:
-    void show() {
-        std::cout << "Energy matrix: " << std::endl;
-        for(unsigned int i=0; i<energyMatrix->size(); ++i) {
-            for(unsigned int j=0; j<energyMatrix->size(); ++j)
-                std::cout << (*energyMatrix)[i][j] << " ";
-            std::cout << std::endl;
-        }
-    }
-
-    void fixEMatrixSingle(int target) {
-        assert(changes.size() == energyMatrix->size());
-        for(unsigned int i=0; i < energyMatrix->size(); i++) {
-            energyMatrix->operator [](target)[i] = changes[i];
-            energyMatrix->operator [](i)[target] = changes[i];
-        }
-    }
-
-    void fixEMatrixChain(Group* g) {
-        std::vector<int > chain = g->range();
-        for(unsigned int i=0; i<chain.size(); i++) { // for all particles in molecule
-            // for cycles => pair potential with all particles except those in molecule
-            for (int j = 0; j < chain[0]; j++) { // pair potential with all particles from 0 to the first one in molecule
-                energyMatrix->operator [](chain[i])[j] = changes[i * energyMatrix->size() + j];
-                energyMatrix->operator [](j)[chain[i]] = changes[i * energyMatrix->size() + j];
-            }
-
-            for (int j = chain[chain.size()-1] + 1; j < (int)energyMatrix->size(); j++) {
-                energyMatrix->operator [](chain[i])[j] = changes[i * energyMatrix->size() + j];
-                energyMatrix->operator [](j)[chain[i]] = changes[i * energyMatrix->size() + j];
-            }
-
-        }
-    }
-};
-
-/**
- *  \brief Energy matrix speedup for potential calculation
- *
- *  the move needs to call either g2All or systemEnergy in order to be valid
- *
- *  Tested with Isobaric and TranslateRotate + inheritors
- *
- *  With trivial changes to Move classes usable with TranslateRotateNbody, Crankshaft, Reptation, FlipFlop + inheritors
- *
- *  Warning untested for more then 1 molecular type species (for loop in system energy may be wrong)
- */
-template<class Tspace, class Base>
-  class EnergyMatrixGroup : public Base, public EnergyMatrix {
-private:
-    typedef Energy::Energybase<Tspace> SuperBase;
-    typedef typename Tspace::ParticleType Tparticle;
-    typedef typename Tspace::GeometryType Tgeometry;
-    typedef typename Space<Tgeometry, Tparticle>::ParticleVector Tpvec;
-
-    using SuperBase::spc;
-    using SuperBase::isTrial;
-
-public:
-    EnergyMatrixGroup(Tmjson &j) : Base(j) {}
-
-    double g2g( const Tpvec &p, Group &g1, Group &g2 )
-    {
-        if(isTrial(p))
-            return Base::g2g(p, g1, g2);
-        else
-            return (*energyMatrix)[g1.molIndex][g2.molIndex];
-    }
-
-    double g1g2( const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2 )
-    {
-        if(isTrial(p1) || isTrial(p2))
-            return Base::g1g2(p1, g1, p2, g2);
-        else
-            return (*energyMatrix)[g1.molIndex][g2.molIndex];
-    }
-
-    virtual double i2all( Tpvec &, int ) {
-        assert(false && "Not a supported move for Group ENergy marix\n");
-        return 0.0;
-    }
-
-    double systemEnergy( const Tpvec &p )
-    {
-        double u = Base::external(p);
-        for ( auto g : spc->groupList())
-            u += Base::g_external(p, *g) + Base::g_internal(p, *g);
-
-        if(firstGlobal) { // calc energy matrix
-            resizeEMatrix(spc->molTrack.size());
-            firstGlobal = false;
-
-            // initialize energy matrix
-            if(!energyMatrix->empty()) {
-                auto map = spc->molTrack.getMap();
-
-                /**
-                * Unefficient way of looping through nontrivial getters
-                */
-                /*for ( int i = 0; i < (int) spc->molTrack.size() - 1; i++ ) {
-                    for ( int j = i + 1; j < (int) spc->molTrack.size(); j++ ) {
-                        (*energyMatrix)[i][j] = Base::g2g(p, *spc->molTrack.get(i), *spc->molTrack.get(j) );
-                        (*energyMatrix)[j][i] = (*energyMatrix)[i][j];
-                        u += (*energyMatrix)[i][j];
-                    }
-                }*/
-                int i=0, j=0;
-                for(auto oit = map.begin(); oit != map.end(); ++oit) {
-                    auto limit = oit->second.end();
-                    for(auto it = oit->second.begin(); it != limit; ++it) { // loop over all molecules of type
-
-                        j=i;
-                        for(auto ojt = oit; ojt != map.end(); ++ojt) {
-                            if(oit == ojt) {
-                                ++j;
-                                limit = (oit->second.end()-1);
-                            }
-                            for(auto jt = ((oit == ojt) ? (it+1) : ojt->second.begin());
-                                jt != ojt->second.end(); ++jt) { // loop over all molecules of type
-                                (*energyMatrix)[i][j] = Base::g2g(p, **it, **jt );
-                                (*energyMatrix)[j][i] = (*energyMatrix)[i][j];
-                                u += (*energyMatrix)[i][j];
-                                ++j;
-                            }
-                        }
-                        ++i;
-                    }
-                }
-            }
-            assert(u == Base::systemEnergy(p));
-            return u;
-        }
-
-        if(isTrial(p)) {
-            all = true;
-            if(!energyMatrix->empty()) {
-                auto map = spc->molTrack.getMap();
-                int i=0, j=0;
-                for(auto oit = map.begin(); oit != map.end(); ++oit) {
-                    auto limit = oit->second.end();
-                    for(auto it = oit->second.begin(); it != limit; ++it) { // loop over all molecules of type
-
-                        j=i;
-                        for(auto ojt = oit; ojt != map.end(); ++ojt) {
-                            if(oit == ojt) {
-                                ++j;
-                                limit = (oit->second.end()-1);
-                            }
-                            for(auto jt = ((oit == ojt) ? (it+1) : ojt->second.begin());
-                                jt != ojt->second.end(); ++jt) { // loop over all molecules of type
-                                (*energyMatrixTrial)[i][j] = Base::g2g(p, **it, **jt );
-                                (*energyMatrixTrial)[j][i] = (*energyMatrixTrial)[i][j];
-                                u += (*energyMatrixTrial)[i][j];
-                                ++j;
-                            }
-                        }
-                        ++i;
-                    }
-                }
-            }
-        } else {
-            assert(energyMatrix->size() == spc->molTrack.size());
-            if(!energyMatrix->empty()) {
-                for ( unsigned int i = 0; i < energyMatrix->size() - 1; i++ ) {
-                    for ( unsigned int j = i + 1; j < energyMatrix->size(); j++ ) {
-                        u += (*energyMatrix)[i][j];
-                    }
-                }
-            }
-        }
-        assert(u == Base::systemEnergy(p));
-        return u;
-    }
-
-    inline double updateChange(bool acc) override {
-        if(acc) {
-            modify();
-        } else {
-            all = false;
-            single = -1;
-            multi = nullptr;
-        }
-        return 0.0;
-    }
-
-    double g2All(const Tpvec &p, Group &g2) {
-        assert(g2.isMolecular());
-
-        double unew = 0.0;
-        unsigned int g2Index = g2.molIndex;
-        assert(g2Index >= 0);
-        if(isTrial(p)) {
-            changes.resize(spc->molTrack.size());
-            single = g2Index;
-
-            unsigned int i=0;
-            for(auto& item : spc->molTrack.getMap()) {
-                for(auto g : item.second) {
-                    if ( g != &g2 ) {
-                        changes[i] = Base::g2g(p, *g, g2);
-                        unew += changes[i];
-
-                        if ( unew == pc::infty )
-                            return pc::infty;   // early rejection
-                    }
-                    ++i;
-                }
-            }
-        } else {
-            for(unsigned int i=0; i < spc->molTrack.size(); ++i) {
-                if ( i != g2Index ) {
-                    unew += (*energyMatrix)[g2Index][i];
-                }
-            }
-        }
-        return unew;
-    }
-};
-
-/**
- *  \brief Energy matrix speedup for potential calculation
- *
- *  the move needs to call either i2All or systemEnergy in order to be valid
- *
- *  Tested with AtomicTranslation
- *
- *  With trivial changes to Move classes usable with TranslateRotateCluster, Swapcharge, SwapMove
- *
- *  With new g2g and g2All function usable with all moves as Group Energy Matrix, however the speedup is very small < 5% for small molecules
- */
-template<class Tspace, class Base>
-  class EnergyMatrixParticle : public Base, public EnergyMatrix {
-private:
-    typedef Energy::Energybase<Tspace> SuperBase;
-    typedef typename Tspace::ParticleType Tparticle;
-    typedef typename Tspace::GeometryType Tgeometry;
-    typedef typename Space<Tgeometry, Tparticle>::ParticleVector Tpvec;
-
-    using SuperBase::spc;
-    using SuperBase::isTrial;
-
-public:
-    EnergyMatrixParticle(Tmjson &j) : Base(j) {}
-
-    double i2all( Tpvec &p, int i ) override
-    {
-        assert(i >= 0 && i < int(p.size()) && "index i outside particle vector");
-        double u = 0;
-        int n = (int) p.size();
-        if(SuperBase::isTrial(p)) {
-            single = i;
-            changes.resize(p.size());
-
-            for ( int j = 0; j != i; ++j ) {
-                changes[j] = Base::i2i(p,i,j);
-                u += changes[j];
-            }
-            for ( int j = i + 1; j < n; ++j ) {
-                changes[j] = Base::i2i(p,i,j);
-                u += changes[j];
-            }
-        } else {
-            for ( int j = 0; j != i; ++j ) {
-                u += (*energyMatrix)[i][j];
-            }
-            for ( int j = i + 1; j < n; ++j ) {
-                u += (*energyMatrix)[i][j];
-            }
-        }
-        return u;
-    }
-
-    double systemEnergy( const Tpvec &p )
-    {
-        if(firstGlobal) { // calc energy matrix
-            resizeEMatrix(p.size());
-            firstGlobal = false;
-            for ( unsigned int i = 0; i < p.size()-1; i++ )
-                for ( unsigned int j = i + 1; j < p.size(); j++ ) {
-                    (*energyMatrix)[i][j] = Base::i2i(p,i,j);
-                    (*energyMatrix)[j][i] = (*energyMatrix)[i][j];
-                }
-        }
-
-        return Base::systemEnergy(p);
-    }
-
-    inline double updateChange(bool acc) override {
-        if(acc) {
-            modify();
-        } else {
-            all = false;
-            single = -1;
-            multi = nullptr;
-        }
-        return 0.0;
-    }
-};
 
 /**
      * @brief Add two energy classes together
@@ -590,6 +206,12 @@ public:
             second.setSpace(s);
             Tbase::setSpace(s);
         }
+        
+        void setGeometry(typename T1::SpaceType::GeometryType &g) override {
+          first.setGeometry(g);
+          second.setGeometry(g);
+          Tbase::setGeometry(g);
+        } 
 
         double p2p( const Tparticle &a, const Tparticle &b ) override { return first.p2p(a, b) + second.p2p(a, b); }
 
@@ -634,9 +256,9 @@ public:
 
         double update( bool b ) override { return first.update(b) + second.update(b); }
 
-        double updateChange(bool acc) override
+        double updateChange( const typename Tspace::Change &c ) override
         {
-            return first.updateChange(acc) + second.updateChange(acc);
+            return first.updateChange(c) + second.updateChange(c);
         }
 
         double v2v( const Tpvec &p1, const Tpvec &p2 ) override { return first.v2v(p1, p2) + second.v2v(p1, p2); }
@@ -645,16 +267,6 @@ public:
         {
             first.field(p, E);
             second.field(p, E);
-        }
-
-        double systemEnergy( const Tpvec &p )
-        {
-            return first.systemEnergy(p) + second.systemEnergy(p);
-        }
-
-        double g2All(const Tpvec & p, Group &g)
-        {
-            return first.g2All(p,g) + second.g2All(p,g);
         }
     };
 
@@ -692,7 +304,7 @@ public:
      * `Tpairpot` is expected to be a pair potential with the following
      * properties:
      *
-     * - `Tpairpot(const InputMap&)`
+     * - `Tpairpot(const Tmjson&)`
      * - `double Tpairpot::operator()(const particle&, const particle&, double sqdist))`
      *
      * For a list of implemented potentials, see the `Faunus::Potential`
@@ -715,7 +327,7 @@ public:
 
         Nonbonded(
             Tmjson &j,
-            const string &sec = "nonbonded" ) : geo(j), pairpot(j["energy"][sec])
+            const string &sec = "nonbonded" ) : pairpot(j["energy"][sec])
         {
 
             assert(!j["energy"][sec].is_null());
@@ -856,6 +468,7 @@ public:
                 for ( int i = f; i < b; ++i )
                     for ( int j = i + 1; j <= b; ++j )
                         u += pairpot(p[i], p[j], geo.sqdist(p[i], p[j]));
+	    u += pairpot.internal(p,g);
             return u;
         }
 
@@ -875,7 +488,7 @@ public:
      * `Tpairpot` is expected to be a pair potential with the following
      * properties:
      *
-     * - `Tpairpot(const InputMap&)`
+     * - `Tpairpot(const Tmjson&)`
      * - `double Tpairpot::operator()(const particle&, const particle&, double sqdist))`
      *
      * For a list of implemented potentials, see the `Faunus::Potential`
@@ -973,7 +586,7 @@ public:
      *
      * `Tpairpot` is expected to be a pair potential with the following properties:
      *
-     * - `Tpairpot(const InputMap&)`
+     * - `Tpairpot(const Tmjson&)`
      * - `double Tpairpot::operator()(const particle&, const particle&, double sqdist))`
      *
      * For a list of implemented potentials, see the Faunus::Potential namespace.
@@ -994,14 +607,14 @@ public:
         typename Tspace::GeometryType geo;
         Tpairpot pairpot;
 
-        NonbondedVector( InputMap &in, const string &dir = "energy" )
-            : Tbase(dir + "/nonbonded"), geo(in), pairpot(in["energy"]["nonbonded"])
+        NonbondedVector( Tmjson &in, const string &dir = "energy" )
+            : Tbase(dir + "/nonbonded"), pairpot(in["energy"]["nonbonded"])
         {
             static_assert(
                 std::is_base_of<Potential::PairPotentialBase, Tpairpot>::value,
                 "Tpairpot must be a pair potential");
             Tbase::name = "Nonbonded N" + textio::squared + " - " + pairpot.name;
-            groupBasedField = in.get<bool>("pol_g2g", false, "Field will exclude own group");
+            groupBasedField = in.value("pol_g2g", false);
         }
 
         void setSpace( Tspace &s ) override
@@ -1189,7 +802,7 @@ public:
     private:
         typedef Tnonbonded base;
     public:
-        NonbondedEarlyReject( InputMap &in ) : base(in)
+        NonbondedEarlyReject( Tmjson &in ) : base(in)
         {
             base::name += " (early reject)";
         }
@@ -1236,7 +849,7 @@ public:
      * particle-particle cutoff plus the maximum radii of the two groups,
      * @f$ r_{cut}^{g2g} = r_{cut}^{p2p} + a_{g1} + a_{g2} @f$.
      *
-     * Upon construction the `InputMap` is searched for the following in
+     * Upon construction the `Tmjson` is searched for the following in
      * section `energy/nonbonded/`:
      *
      * Keyword      |  Description
@@ -1247,8 +860,7 @@ public:
     template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace, Tpairpot> >
     class NonbondedCutg2g : public Tnonbonded
     {
-    protected:
-        typedef Energybase<Tspace> SuperBase;
+    private:
         typedef Tnonbonded base;
         using typename base::Tpvec;
         double rcut2;
@@ -1386,13 +998,13 @@ public:
         }
 
     public:
-        NonbondedCutg2gMonopole( InputMap &in ) : base(in), dh(in)
+        NonbondedCutg2gMonopole( Tmjson &in ) : base(in), dh(in)
         {
             base::name += "+MP";
-            R = in.get<double>("monopole_radius", 0, "g2g cutoff monopole radius (angstrom)");
+            R = in.value("monopole_radius", 0.0);
             double k = 1 / dh.debyeLength();
             qscale = std::sinh(k * R) / (k * R);
-            Q = qscale * in.get<double>("monopole_charge", 0, "g2g cutoff monopole charge number (e)");
+            Q = qscale * in.value("monopole_charge", 0.0);
         }
 
         double g2g( const typename base::Tpvec &p, Group &g1, Group &g2 ) override
@@ -1414,8 +1026,6 @@ public:
             return base::base::g2g(p, g1, g2);
         }
     };
-
-
 
 /**
      * @brief Class for handling bond pairs
@@ -1789,7 +1399,7 @@ public:
         ExternalPressure( Tmjson &j, string sec = "isobaric" )
         {
             this->name = "External Pressure";
-            P = (j["moves"][sec]["pressure"] | 0.0) * 1.0_mM;
+            P = (j["moves"][sec].at("pressure").get<double>()) * 1.0_mM;
             if ( P < 0 )
                 throw std::runtime_error("Negative pressure forbidden.");
         }
@@ -1832,7 +1442,7 @@ public:
     public:
         Texpot expot;
 
-        ExternalPotential( InputMap &in ) : expot(in)
+        ExternalPotential( Tmjson &in ) : expot(in)
         {
             base::name = "External Potential (" + expot.name + ")";
         }
@@ -1881,7 +1491,7 @@ public:
      * correct sampling. Can also be used to restrain the mass center of a group to
      * a subset of the simulation cell volume in other type of systems.
      *
-     * The InputMap parameters are:
+     * The JSON parameters are:
      *
      * Key                | Description
      * :----------------- | :---------------------------
@@ -1906,10 +1516,10 @@ public:
         double min, max;
         Group *gPtr;
     public:
-        MassCenterRestrain( InputMap &in )
+        MassCenterRestrain( Tmjson &in )
         {
-            min = in.get<double>("bin_min", 0);
-            max = in.get<double>("bin_max", pc::infty);
+            min = in.value("bin_min", 0.0);
+            max = in.value("bin_max", pc::infty);
             base::name = "Mass Center Restrain";
             gPtr = nullptr;
         }
@@ -2007,8 +1617,8 @@ public:
                         if ( it2 != spc->molecule.end())
                         {
                             data d = {
-                                i.value()["mindist"] | 0.0,
-                                i.value()["maxdist"] | 1.0e9
+                                i.value().at("mindist"),
+                                i.value().at("maxdist")
                             };
                             molIdMap[opair<int>(it1->id, it2->id)] = d;
                         }
@@ -2183,12 +1793,12 @@ public:
         {
             base::name = "Hydrophobic SASA";
             auto m = j["energy"][sec];
-            threshold = m["threshold"] | 3.0;
-            tension_dyne = m["tension"] | 0.0;
-            duplicate = m["duplicate"] | 0.0;
-            sample_uofr = m["uofr"] | false;
-            dr = m["dr"] | 0.5;
-            file = m["sasafile"] | string();
+            threshold = m.at("threshold");
+            tension_dyne = m.at("tension");
+            duplicate = m.value("duplicate", 0.0);
+            sample_uofr = m.value("uofr", false);
+            dr = m.at("dr");
+            file = m.at("sasafile");
 
             // dyne/cm converted to kT/A^2; 1 dyne/cm = 0.001 J/m^2
             tension = tension_dyne * 1e-23 / (pc::kB * pc::T());
@@ -2275,13 +1885,14 @@ public:
       public:
           ReactionCoordinateBase( Tmjson &j )
           {
-              _min = j["min"].get<Tvec>();
-              _max = j["max"].get<Tvec>();
-              _scale = j["scale"].get<Tvec>();
-              _nstep = j["nstep"] | 1000;
-              assert(_min.size() >= 1);
-              assert(_min.size() == _max.size());
-              assert(_min.size() == _scale.size());
+              _min = j.at("min").get<Tvec>();
+              _max = j.at("max").get<Tvec>();
+              _scale = j.at("scale").get<Tvec>();
+              _nstep = j.at("nstep");
+
+              if ( (_min.size()!=_max.size() ) || _min.size()!=_scale.size() || _min.size()<1 )
+                  throw std::runtime_error(
+                      "Reaction coordinate error: min, max, scale must have same length >=1");
           }
 
           ReactionCoordinateBase() {}
@@ -2292,10 +1903,10 @@ public:
           size_t dim() const { return _min.size(); }   //!< dimension of coordinate
           const Tvec &min() const { return _min; }     //!< min value(s) for penalty coordinates
           const Tvec &max() const { return _max; }     //!< max value(s) for penalty coordinates
-          unsigned int nstep() const { return _nstep; } //!< update frequency (steps)
-          const Tvec &scale() const { return _scale; } //!< max value(s) for penalty coordinates
+          unsigned int nstep() const { return _nstep; }//!< update frequency (steps)
+          const Tvec &scale() const { return _scale; } //!< scaling value value(s) for penalty coordinates
 
-          /** @brief Determines if coordinate is within min:max */
+          /** @brief Determines if coordinate is within [min,max] */
           bool inrange( const Tvec &coord ) const
           {
               for ( size_t i = 0; i < coord.size(); ++i )
@@ -2360,9 +1971,9 @@ public:
        *
        * Example:
        *
-       *     "cmcm" : {
-       *        "first":"water", "second":"sodium", "index":"0 0", "dir":"1 1 1",
-       *        "min":{0}, "max":{50.}
+       *     {
+       *        "first":"water", "second":"sodium", "index":"0 0", "dir":[1,1,1],
+       *        "min":[0], "max":[50]
        *     }
        */
       template<class Tspace, class base=ReactionCoordinateBase<Tspace>>
@@ -2375,16 +1986,16 @@ public:
       public:
 
           MassCenterSeparation(
-              Tspace &s, Tmjson &j, string sec = "cmcm" ) : base(j[sec])
+              Tspace &s, Tmjson &j ) : base(j)
           {
 
-              dir << (j[sec]["dir"] | string("1 1 1"));
-              auto i = textio::words2vec<int>(j[sec]["index"] | string("0 0"));
-              assert(i.size() == 2);
-              assert(dir.size() == 3);
+              dir << j.value("dir", Tvec({1,1,1}) );
+              vector<int> i = j.value("index", vector<int>({0,0}) );
+              if (i.size()!=2 || dir.size()!=3)
+                  throw std::runtime_error("CM reaction coordinate error");
 
-              string name1 = j[sec]["first"];
-              string name2 = j[sec]["second"];
+              string name1 = j.at("first");
+              string name2 = j.at("second");
               g1 = s.findMolecules(name1, true).at(i[0]);
               g2 = s.findMolecules(name2, true).at(i[1]);
 
@@ -2392,6 +2003,7 @@ public:
               assert(!g2->empty());
           }
 
+          /** @brief Returns reaction coordinate */
           Tvec operator()( Tspace &s, typename Tspace::ParticleVector &p ) override
           {
               Point cm1 = massCenter(s.geo, p, *g1);
@@ -2441,8 +2053,8 @@ public:
         Table<int> histo;
 #ifdef ENABLE_MPI
         TimeRelativeOfTotal<std::chrono::microseconds> timer;
-Faunus::MPI::MPIController *mpiPtr;
-Faunus::MPI::FloatTransmitter ft;
+        Faunus::MPI::MPIController *mpiPtr;
+        Faunus::MPI::FloatTransmitter ft;
 #endif
     protected:
         typedef std::vector<double> Tvec;
@@ -2480,25 +2092,26 @@ Faunus::MPI::FloatTransmitter ft;
 
 #ifdef ENABLE_MPI
         ReactionCoordinateBase(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec)
-: mpiPtr(&mpi) {
-spc = &s;
-auto m = j["energy"]["penalty"][sec];
-_f = m["f0"] | 0.5;
-_scale = m["scale"] | 0.8;
-_update = m["update"] | 1e5;
-for (int i=0; i!=2; ++i) {
-string num = std::to_string(i+1);
-_bw.push_back(m["bw"+num] | 1.);
-_lo.push_back(m["lo"+num] | 0.);
-_hi.push_back(m["hi"+num] | 0.);
-_size.push_back((_hi[i]-_lo[i])/_bw[i]+1.);
-}
-penalty.reInitializer(_bw,_lo,_hi);
-histo.reInitializer(_bw,_lo,_hi);
-_cnt = 0;
-_du = 0;
-_samplings = 1;
-}
+            : mpiPtr(&mpi)
+        {
+            spc = &s;
+            auto m = j["energy"]["penalty"][sec];
+            _f = m["f0"] | 0.5;
+            _scale = m["scale"] | 0.8;
+            _update = m["update"] | 1e5;
+            for (int i=0; i!=2; ++i) {
+                string num = std::to_string(i+1);
+                _bw.push_back(m["bw"+num] | 1.);
+                _lo.push_back(m["lo"+num] | 0.);
+                _hi.push_back(m["hi"+num] | 0.);
+                _size.push_back((_hi[i]-_lo[i])/_bw[i]+1.);
+            }
+            penalty.reInitializer(_bw,_lo,_hi);
+            histo.reInitializer(_bw,_lo,_hi);
+            _cnt = 0;
+            _du = 0;
+            _samplings = 1;
+        }
 #endif
 
         vector<Group *> PenalizedGroup( Tmjson &j, const string &sec, const string &mol )
@@ -2547,9 +2160,9 @@ _samplings = 1;
                     _du = penalty[v] - _du;
 #ifdef ENABLE_MPI
                     timer.start();
-int size = penalty.size();
-Faunus::MPI::avgTables<Table<double>>(mpiPtr, ft, penalty, size);
-timer.stop();
+                    int size = penalty.size();
+                    Faunus::MPI::avgTables<Table<double>>(mpiPtr, ft, penalty, size);
+                    timer.stop();
 #endif
                     double max = penalty.maxCoeff();
                     double min = penalty.minCoeff();
@@ -2557,7 +2170,8 @@ timer.stop();
                     _du = penalty[v] - _du;
                     _f = _scale * _f;
                     _samplings = ceil(_samplings / _scale);
-                    cout << "Energy barrier: " << max - min << endl;
+                    double dh = log(double(histo.maxCoeff())/histo.minCoeff());
+                    cout << "Energy barrier: " << max - min << ", delta histo: " << dh << endl;
                     histo.clear();
                 }
             }
@@ -2651,9 +2265,9 @@ timer.stop();
 
 #ifdef ENABLE_MPI
         CmCm(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="cm-cm") : base(mpi,j,s,sec) {
-mol1 = base::PenalizedGroup(j,sec,"first");
-mol2 = base::PenalizedGroup(j,sec,"second");
-dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
+            mol1 = base::PenalizedGroup(j,sec,"first");
+            mol2 = base::PenalizedGroup(j,sec,"second");
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
 }
 #endif
 
@@ -2688,9 +2302,9 @@ dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
 
 #ifdef ENABLE_MPI
         XYZ(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="xyz") : base(mpi,j,s,sec) {
-mol = base::PenalizedGroup(j,sec,"first");
-dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
-}
+            mol = base::PenalizedGroup(j,sec,"first");
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
+        }
 #endif
 
         double operator()( const typename base::Tpvec &p, bool trial )
@@ -2724,8 +2338,8 @@ dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("1 1 0") );
 
 #ifdef ENABLE_MPI
         Rg(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="R_g") : base(mpi,j,s,sec) {
-mol = base::PenalizedGroup(j,sec,"first");
-}
+            mol = base::PenalizedGroup(j,sec,"first");
+        }
 #endif
 
         double operator()( const typename base::Tpvec &p, bool trial )
@@ -2765,10 +2379,10 @@ mol = base::PenalizedGroup(j,sec,"first");
 
 #ifdef ENABLE_MPI
         CmAngle(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s, const string &sec="cm-angle") : base(mpi,j,s,sec) {
-mol1 = base::PenalizedGroup(j,sec,"first");
-mol2 = base::PenalizedGroup(j,sec,"second");
-dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
-}
+            mol1 = base::PenalizedGroup(j,sec,"first");
+            mol2 = base::PenalizedGroup(j,sec,"second");
+            dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
+        }
 #endif
 
         double operator()( const typename base::Tpvec &p, bool trial )
@@ -2806,7 +2420,7 @@ dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
      ** @brief General energy class for handling penalty function (PF) methods.
      **
      ** @details The reaction coordinate(s) is specified in the input file.
-     ** The InputMap class is scanned for the following keys:
+     ** The Tmjson class is scanned for the following keys:
      **
      ** Key              | Description
      ** :--------------- | :-----------------------------
@@ -2851,16 +2465,16 @@ dir << ( j["energy"]["penalty"][sec]["dir"] | std::string("0 0 1") );
 
 #ifdef ENABLE_MPI
         PenaltyEnergy(Faunus::MPI::MPIController &mpi, Tmjson &j, Tspace &s) {
-auto m = j["energy"]["penalty"];
-if (m.begin().key()=="cm-cm")
-ptr = std::make_shared<CmCm<Tspace>>(mpi,j,s);
-if (m.begin().key()=="xyz")
-ptr = std::make_shared<XYZ<Tspace>>(mpi,j,s);
-if (m.begin().key()=="R_g")
-ptr = std::make_shared<Rg<Tspace>>(mpi,j,s);
-if (m.begin().key()=="cm-angle")
-ptr = std::make_shared<CmAngle<Tspace>>(mpi,j,s);
-}
+            auto m = j["energy"]["penalty"];
+            if (m.begin().key()=="cm-cm")
+                ptr = std::make_shared<CmCm<Tspace>>(mpi,j,s);
+            if (m.begin().key()=="xyz")
+                ptr = std::make_shared<XYZ<Tspace>>(mpi,j,s);
+            if (m.begin().key()=="R_g")
+                ptr = std::make_shared<Rg<Tspace>>(mpi,j,s);
+            if (m.begin().key()=="cm-angle")
+                ptr = std::make_shared<CmAngle<Tspace>>(mpi,j,s);
+        }
 #endif
 
         auto tuple() -> decltype(std::make_tuple(this))
@@ -2964,149 +2578,181 @@ ptr = std::make_shared<CmAngle<Tspace>>(mpi,j,s);
     };
 
 #ifdef FAU_POWERSASA
-    /**
-* @brief SASA energy from transfer free energies
-*
-* Detailed description here...
-*/
+/**
+ * @brief SASA energy from transfer free energies
+ *
+ * Detailed description here...
+ */
 template<class Tspace>
 class SASAEnergy : public Energybase<Tspace> {
-private:
-vector<double> tfe; // transfer free energies (1/angstrom^2)
-vector<double> sasa; // transfer free energies (1/angstrom^2)
-vector<Point> sasaCoords;
-vector<double> sasaWeights;
-double probe; // sasa probe radius (angstrom)
-double conc;  // co-solute concentration (mol/l)
-Average<double> avgArea; // average surface area
+    private:
+        vector<double> tfe; // transfer free energies (1/angstrom^2)
+        vector<double> sasa; // transfer free energies (1/angstrom^2)
+        vector<Point> sasaCoords;
+        vector<double> sasaWeights;
+        double probe; // sasa probe radius (angstrom)
+        double conc;  // co-solute concentration (mol/l)
+        Average<double> avgArea; // average surface area
 
-typedef Energybase<Tspace> base;
-typedef typename base::Tpvec Tpvec;
+        typedef Energybase<Tspace> base;
+        typedef typename base::Tpvec Tpvec;
 
-string _info() override {
-char w=20;
-std::ostringstream o;
-o << textio::pad(textio::SUB,w,"Probe radius")
-<< probe << textio::_angstrom << "\n"
-<< textio::pad(textio::SUB,w,"Co-solute conc.")
-<< conc << " mol/l\n"
-<< textio::pad(textio::SUB,w,"Average area")
-<< avgArea.avg() << textio::_angstrom+textio::squared << "\n";
-return o.str();
-}
+        string _info() override {
+            char w=20;
+            std::ostringstream o;
+            o << textio::pad(textio::SUB,w,"Probe radius")
+                << probe << textio::_angstrom << "\n"
+                << textio::pad(textio::SUB,w,"Co-solute conc.")
+                << conc << " mol/l\n"
+                << textio::pad(textio::SUB,w,"Average area")
+                << avgArea.avg() << textio::_angstrom+textio::squared << "\n";
+            return o.str();
+        }
 
-template<class Tpvec>
-void updateSASA(const Tpvec &p) {
-size_t n=p.size(); // number of particles
-sasa.resize(n);
-sasaCoords.resize(n);
-sasaWeights.resize(n);
+        template<class Tpvec>
+            void updateSASA(const Tpvec &p) {
+                size_t n=p.size(); // number of particles
+                sasa.resize(n);
+                sasaCoords.resize(n);
+                sasaWeights.resize(n);
 
-for (size_t i=0; i<n; ++i) {
-sasaCoords[i]  = p[i];
-sasaWeights[i] = p[i].radius + probe;
-}
+                for (size_t i=0; i<n; ++i) {
+                    sasaCoords[i]  = p[i];
+                    sasaWeights[i] = p[i].radius + probe;
+                }
 
-// generate powersasa object and calc. sasa for all particles
-POWERSASA::PowerSasa<double,Point> ps(sasaCoords, sasaWeights, 1, 1, 1, 1);
-ps.calc_sasa_all();
-for (size_t i=0; i<n; ++i)
-sasa[i] = ps.getSasa()[i];
-}
+                // generate powersasa object and calc. sasa for all particles
+                POWERSASA::PowerSasa<double,Point> ps(sasaCoords, sasaWeights, 1, 1, 1, 1);
+                ps.calc_sasa_all();
+                for (size_t i=0; i<n; ++i)
+                    sasa[i] = ps.getSasa()[i];
+            }
 
-public:
-SASAEnergy(Tmjson &j, const string &dir="sasaenergy") : base(dir) {
-base::name = "SASA Energy";
-auto _j = j["energy"][dir];
-probe = _j["proberadius"] | 1.4; // angstrom
-conc = _j["conc"] | 0.0;         // co-solute concentratil (mol/l);
-}
+    public:
+        SASAEnergy(Tmjson &j, const string &dir="sasaenergy") : base(dir) {
+            base::name = "SASA Energy";
+            auto _j = j["energy"][dir];
+            probe = _j["proberadius"] | 1.4; // angstrom
+            conc = _j["conc"] | 0.0;         // co-solute concentratil (mol/l);
+        }
 
-auto tuple() -> decltype(std::make_tuple(this)) {
-return std::make_tuple(this);
-}
+        auto tuple() -> decltype(std::make_tuple(this)) {
+            return std::make_tuple(this);
+        }
 
-/**
-* @brief The SASA calculation is implemented
-* as an external potential, only
-*/
-double external(const Tpvec &p) override {
-// if first run, resize and fill tfe vector
-if (tfe.size()!=p.size()) {
-tfe.resize(p.size());
-for (size_t i=0; i<p.size(); ++i)
-tfe[i] = atom[ p[i].id ].tfe / (pc::kT() * pc::Nav); // -> kT
-}
+        /**
+         * @brief The SASA calculation is implemented
+         * as an external potential, only
+         */
+        double external(const Tpvec &p) override {
+            // if first run, resize and fill tfe vector
+            if (tfe.size()!=p.size()) {
+                tfe.resize(p.size());
+                for (size_t i=0; i<p.size(); ++i)
+                    tfe[i] = atom[ p[i].id ].tfe / (pc::kT() * pc::Nav); // -> kT
+            }
 
-// calc. sasa and energy
-updateSASA(p);
-assert(sasa.size() == p.size());
-double u=0, A=0;
-for (size_t i=0; i<sasa.size(); ++i) {
-u += sasa[i] * tfe[i]; // a^2 * kT/a^2/M -> kT/M
-if (!this->isTrial(p))
-A+=sasa[i];
-}
-if (!this->isTrial(p))
-avgArea+=A; // sample average area for accepted confs. only
-return u * conc; // -> kT
-}
+            // calc. sasa and energy
+            updateSASA(p);
+            assert(sasa.size() == p.size());
+            double u=0, A=0;
+            for (size_t i=0; i<sasa.size(); ++i) {
+                u += sasa[i] * tfe[i]; // a^2 * kT/a^2/M -> kT/M
+                if (!this->isTrial(p))
+                    A+=sasa[i];
+            }
+            if (!this->isTrial(p))
+                avgArea+=A; // sample average area for accepted confs. only
+            return u * conc; // -> kT
+        }
 };
 #endif
 
+    /**
+     * @brief Additive Hamiltonian
+     *
+     * ~~~{.java}
+     * "energy" : {
+     *     "nonbonded" : { "type":"debyehuckel-lj", "epsr":80, "debyelength":0.01 },
+     *     "isobaric" : { "pressure": 0.2 },
+     *     "cmconstrain" : { ... }
+     * }
+     * ~~~
+     *
+     * @todo Unfinished and under construction
+     */
     template<class Tspace, class Tbase=Energybase<Tspace>>
     class Hamiltonian : public Tbase
     {
     private:
         typedef Tbase *baseptr;
-        vector <baseptr> baselist;
+        typedef std::shared_ptr<Tbase> Tptr;
+        std::vector<Tptr> baselist;
         typedef typename Tspace::ParticleType Tparticle;
         typedef typename Tspace::ParticleVector Tpvec;
 
     public:
-        Hamiltonian() { Tbase::name = "Hamiltonian"; }
-
-        Hamiltonian( Tmjson &j )
+        Hamiltonian( Tmjson &j, Tspace &spc )
         {
             Tbase::name = "Hamiltonian";
-            auto m = j["energy"];
+            setSpace(spc);
+
+            auto &m = j.at("energy");
             for ( auto i = m.begin(); i != m.end(); ++i )
             {
+                try {
+                    auto &val = i.value();
+                    size_t n = baselist.size();
 
-                if ( i.key() == "nonbonded-dhlj" )
-                    push_back(Energy::Nonbonded<Tspace, Potential::DebyeHuckelLJ>(j, i.key()));
+                    using namespace Potential;
 
-                if ( i.key() == "cmconstrain" )
-                {
-                    if ( Tbase::spc != nullptr )
-                        push_back(Energy::MassCenterConstrain<Tspace>(j, *Tbase::spc));
-                    else
-                        std::cerr << "Warning: call setSpace() on Energy::Hamiltonian.\n";
+                    if (i.key()=="coulomb+lj")
+                        baselist.push_back( Tptr( new Energy::Nonbonded<Tspace,
+                                    CombinedPairPotential<CoulombGalore, LennardJonesLB>>(j) ) );
+
+                    if (i.key()=="coulomb+hs")
+                        baselist.push_back( Tptr( new Energy::Nonbonded<Tspace,
+                                    CombinedPairPotential<CoulombGalore, HardSphere>>(j) ) );
+
+                    if ( i.key() == "isobaric" )
+                        baselist.push_back( Tptr( new Energy::ExternalPressure<Tspace>( j ) ) );
+
+                    if ( i.key() == "cmconstrain" )
+                        baselist.push_back( Tptr( new Energy::MassCenterConstrain<Tspace>(j, *Tbase::spc)) );
+
+                    if ( i.key() == "penalty" )
+                    {
+                    }
+
+                    if (n==baselist.size()) // nothing was added --> unknown type given --> error
+                        throw std::runtime_error("unknown energy '" + i.key() + "'");
+
                 }
-
-                if ( i.key() == "penalty" )
-                {
+                catch (std::exception &e) {
+                    std::cerr << "Error in " << string(Tbase::name) << ". " << i.key() << ": " << e.what() << endl;
+                    throw;
                 }
             }
+            if (baselist.empty())
+                std::cerr << "Warning: Hamiltonian is empty\n";
+
+            setSpace(spc);
         }
 
-        /** @brief Add energy term to Hamiltonian. Local copy created. */
-        template<class Tenergychild>
-        Hamiltonian<Tspace> &push_back( const Tenergychild &pot )
+        auto tuple() -> decltype(std::make_tuple(this))
         {
-            baselist.push_back(baseptr(new Tenergychild(pot)));
-            return *this;
+            return std::make_tuple(this);
         }
 
         /** @brief Find pointer to given energy type; `nullptr` if not found. */
         template<class Tenergy>
-        Tenergy *find()
+        std::shared_ptr<Tenergy> get()
         {
-            static_assert(std::is_base_of<Tbase, Tenergy>::value,
-                          "`Tenergy` must be derived from `Energy::Energybase`");
-            for ( auto b : baselist )
+            static_assert(std::is_base_of<Energybase<Tspace>, Tenergy>::value,
+                          "Template parameter must be derived from `Energy::Energybase`");
+            for (auto b : baselist)
             {
-                auto ptr = dynamic_cast< Tenergy * >( b );
+                auto ptr = std::dynamic_pointer_cast<Tenergy>( b );
                 if ( ptr != nullptr )
                     return ptr;
             }
@@ -3248,7 +2894,7 @@ return u * conc; // -> kT
         {
             using namespace textio;
             std::ostringstream o;
-            o << indent(SUB) << "Registered Energy Functions:" << endl;
+            o << indent(SUB) << "Energy Terms:" << endl;
             int i = 1;
             for ( auto e : baselist )
                 o << indent(SUBSUB) << std::left << setw(4) << i++ << e->name << endl;
@@ -3265,7 +2911,7 @@ return u * conc; // -> kT
         }
     };
 
-/**
+    /**
      * @brief Calculates the total system energy
      *
      * For a given particle vector, space, and energy class we try to
@@ -3286,214 +2932,58 @@ return u * conc; // -> kT
         for ( int i = 0; i < (int) spc.groupList().size() - 1; i++ )
             for ( int j = i + 1; j < (int) spc.groupList().size(); j++ )
                 u += pot.g2g(p, *spc.groupList()[i], *spc.groupList()[j]);
-
-        if(u != systemEnergy2(spc, pot, p))
-            std::cout << "systemEnergy != systemEnergy2, " << u << " " << systemEnergy2(spc, pot, p) << endl;
         return u;
     }
-
+    
+      /**
+       * @brief Help-funciton to 'energyChange'
+       * @todo Fix such that it works to inserted and removed particles
+       * @warning Fairly certain something is wrong here!
+       */
     template<class Tspace, class Tenergy, class Tpvec>
-    double systemEnergy2( Tspace &spc, Tenergy &pot, const Tpvec &p )
-    {
-        pot.setSpace(spc); // ensure pot geometry is in sync with spc
-        return pot.systemEnergy(p);
-    }
+      double energyChangeConfiguration(Tspace &spc, Tenergy &pot, const Tpvec &p, const typename Tspace::Change &c) {
+	double du = 0.0;
+	auto& g = spc.groupList();
+	du += pot.external(p);
+        for (auto m : c.mvGroup) {
+          size_t i = size_t( m.first );     // Moved group index
+          for (size_t j=0; j<g.size(); j++) // Go through all groups
+            if ( c.mvGroup.find(j)==c.mvGroup.end() ) // If group j is not in mvGroup
+	      du += pot.g2g(p, *g[i], *g[j]); 	      // moved group<->static groups
+	  du += pot.g_external(p, *g[i]);      // moved group <-> external
+          if (g[i]->isAtomic()) {                                             // Check if moved group is atomic 
+            for(auto j : m.second)                                          // For the moved atoms in a group,
+              for(auto k : *g[i])                                           // for every atom in that group,
+                if (std::find (m.second.begin(), m.second.end(), k) == m.second.end() || j > k) // check such that moved atoms does not interact OR moved atoms interact only once
+		  du += pot.i2i(p,j,k);
+          } else {
+	    du += pot.g_internal(p, *g[i]);
+          }
+        }
+        
+        for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); i++) {
+          for (auto j=i; j != c.mvGroup.end(); j++) {
+            auto _i = i->first;
+            auto _j = j->first;
+	    du += pot.g2g(p, *g[_i], *g[_j] ); // moved <-> moved
+          }
+        }
+        return du;
+      }
 
-/**
+    /**
      * @brief Calculate energy change due to proposed modification defined by `Space::Change`
-     *
-     * @todo Optimize when only subset of group is changes (atom trans. etc.)
      */
     template<class Tspace, class Tenergy>
-    double energyChange( Tspace &s, Tenergy &pot, const typename Tspace::Change &c )
-    {
-        // variables and shortcuts
-        double du = 0;
-        auto &g = s.groupList();
-
-        // moved<->rest
-        for ( auto m : c.mvGroup )
-        {
-            size_t i = size_t(m.first); // group index
-            du += pot.g_external(s.trial, *g[i]) - pot.g_external(s.p, *g[i]);
-            for ( size_t j = 0; j < g.size(); j++ )
-                if ( i != j )
-                    du += pot.g2g(s.trial, *g[i], *g[j]) - pot.g2g(s.p, *g[i], *g[j]);
-        }
-        // moved<->moved
-        for ( auto i = c.mvGroup.begin(); i != c.mvGroup.end(); ++i )
-        {
-            for ( auto j = i; ++j != c.mvGroup.end();/**/)
-            {
-                auto _i = i->first;
-                auto _j = j->first;
-                du += pot.g2g(s.trial, *g[_i], *g[_j]) - pot.g2g(s.p, *g[_i], *g[_j]);
-            }
-        }
-
-        // removed<->rest
-
-        // removed<->removed
-
-        // inserted<->inserted
-
-        // inserted<->rest
-
-        // external potential
-        du += pot.external(s.trial) - pot.external(s.p);
-
-        assert(!"to be completed!");
-
-        return du;
-    }
-
-    template<class T1, class T2>
-    class EnergyTester : public Energybase<typename T1::SpaceType>
-    {
-    private:
-        string
-        _info() override { return first.info() + second.info(); }
-
-        typedef typename T1::SpaceType Tspace;
-        typedef Energybase<Tspace> Tbase;
-        typedef typename Tbase::Tparticle Tparticle;
-        typedef typename Tbase::Tpvec Tpvec;
-
-    public:
-        T1 first;
-        T2 second;
-
-        bool test(double a, double b) {
-            return fabs(a-b) < 1e-10;
-        }
-
-        auto tuple() -> decltype(std::tuple_cat(first.tuple(), second.tuple()))
-        {
-            return std::tuple_cat(first.tuple(), second.tuple());
-        }
-
-        EnergyTester( const T1 &a, const T2 &b ) : first(a), second(b) {
-            cout << "\n\n ENERGY TESTER RUNNING \n\n" << endl;
-        }
-
-        string info() override { return _info(); }
-
-        void setSpace( typename T1::SpaceType &s ) override
-        {
-            first.setSpace(s);
-            second.setSpace(s);
-            Tbase::setSpace(s);
-        }
-
-        double p2p( const Tparticle &a, const Tparticle &b ) override { return first.p2p(a, b); }
-
-        Point f_p2p( const Tparticle &a, const Tparticle &b ) override
-        {
-            return first.f_p2p(a, b);
-        }
-
-        double all2p( const Tpvec &p, const Tparticle &a ) override { return first.all2p(p, a); }
-
-        double i2i( const Tpvec &p, int i, int j ) override { return first.i2i(p, i, j); }
-
-        double i2g( const Tpvec &p, Group &g, int i ) override { return first.i2g(p, g, i); }
-
-        double i2all( Tpvec &p, int i ) override {
-            double a = first.i2all(p, i);
-            double b = second.i2all(p, i);
-            if(!test(a,b)) {
-                if(Tbase::isTrial(p))
-                    std::cout << "Trial ";
-                else
-                    std::cout << "pvec ";
-                std::cout << "Error i2all " << a << " " << b << endl;
-            }
-            return a;
-        }
-
-        double i_external( const Tpvec &p, int i ) override { return first.i_external(p, i); }
-
-        double i_internal( const Tpvec &p, int i ) override { return first.i_internal(p, i); }
-
-        double g2g( const Tpvec &p, Group &g1, Group &g2 ) override
-        {
-            double a = first.g2g(p, g1, g2);
-            double b = second.g2g(p, g1, g2);
-            if(!test(a,b))
-                std::cout << "Error g2g" << a << " " << b << endl;
-            return a;
-        }
-
-        double g1g2( const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2 ) override
-        {
-            return first.g1g2(p1, g1, p2, g2);
-        }
-
-        double g_external( const Tpvec &p, Group &g ) override
-        {
-            return first.g_external(p, g);
-        }
-
-        double g_internal( const Tpvec &p, Group &g ) override
-        {
-            return first.g_internal(p, g);
-        }
-
-        double external( const Tpvec &p ) override { return first.external(p); }
-
-        double update( bool b ) override { return first.update(b) + second.update(b); }
-
-        double updateChange(bool acc) override
-        {
-            return first.updateChange(acc) + second.updateChange(acc);
-        }
-
-        double v2v( const Tpvec &p1, const Tpvec &p2 ) override { return first.v2v(p1, p2) + second.v2v(p1, p2); }
-
-        void field( const Tpvec &p, Eigen::MatrixXd &E ) override
-        {
-            first.field(p, E);
-            second.field(p, E);
-        }
-
-        double g2All(const Tpvec & p, Group &g)
-        {
-            double a = first.g2All(p, g);
-            double b = second.g2All(p, g);
-            if(!test(a,b)) {
-                if(Tbase::isTrial(p))
-                    std::cout << "Trial ";
-                else
-                    std::cout << "pvec ";
-                std::cout << "Error g2all " << a << " " << b << " " << fabs(a-b)<< endl;
-            }
-            return a;
-        }
-
-        double systemEnergy(const Tpvec & p)
-        {
-            double a = first.systemEnergy(p);
-            double b = second.systemEnergy(p);
-            if(!test(a,b)) {
-                if(Tbase::isTrial(p))
-                    std::cout << "Trial ";
-                else
-                    std::cout << "pvec ";
-                std::cout << "Error system E " << a << " " << b << " " << fabs(a-b) << endl;
-            }
-            return a;
-        }
-    };
-
-        /**
-     * @brief Operator to conveniently compare two energy classes together
-     */
-    template<class T1, class T2,
-        class = typename
-        std::enable_if<std::is_base_of<Energybase<typename T1::SpaceType>, T1>::value>::type,
-        class = typename
-        std::enable_if<std::is_base_of<Energybase<typename T1::SpaceType>, T2>::value>::type >
-    EnergyTester<T1, T2> &operator==( const T1 &u1, const T2 &u2 ) { return *(new EnergyTester<T1, T2>(u1, u2)); }
+      double energyChange(Tspace &s, Tenergy &pot, const typename Tspace::Change &c) {
+	if(c.geometryChange)
+	  pot.setGeometry(s.geo_trial);
+	double duNew = energyChangeConfiguration(s,pot,s.trial,c);
+	if(c.geometryChange)
+	  pot.setGeometry(s.geo);
+	double duOld = energyChangeConfiguration(s,pot,s.p,c);
+	return (duNew - duOld);
+      }
 
 /* typedefs */
 

@@ -16,10 +16,8 @@ namespace Faunus
 
     Geometrybase::Geometrybase() {}
 
-    Geometrybase::Geometrybase( const string &name, string dir ) : name(name), jsondir(dir)
+    Geometrybase::Geometrybase( const string &name ) : name(name)
     {
-        if ( jsondir.empty())
-            jsondir = "system";
     }
 
     Geometrybase::~Geometrybase() {}
@@ -54,21 +52,46 @@ namespace Faunus
 
     void Geometrybase::setVolume( double volume )
     {
-        assert(volume > 0 && "Zero volume not allowed!");
         _setVolume(volume);
-        assert(std::abs((volume - getVolume()) / volume) < 1e-9
-                   && "setVolume() and/or getVolume() is broken!");
     }
 
-    double Geometrybase::getVolume() const
+    double Geometrybase::getVolume(int dim) const
     {
-        return _getVolume();
+        assert(dim==1 || dim==2 || dim==3);
+        return _getVolume(dim);
+    }
+
+    double Geometrybase::_getRadius() const
+    {
+      throw std::runtime_error(name + " error: radius undefined.");
+      return 0;
+    }
+    
+    double Geometrybase::getRadius() const
+    {
+      return _getRadius();
     }
 
     Sphere::Sphere( double radius ) : Geometrybase("Sphere")
     {
         len = Point(r, diameter, 0);
     }
+
+    /**
+     * Key        | Description
+     * :--------- | :-----------------------
+     * `radius`   | Sphere radius [angstrom]
+     */
+    Sphere::Sphere( Tmjson &j ) : Geometrybase("Sphere")
+      {
+          try {
+              setRadius( j.at("radius") );
+          }
+          catch(std::exception& e) {
+              throw std::runtime_error(name + ": " + e.what());
+          }
+      }
+
 
     void Sphere::setRadius( double radius )
     {
@@ -79,8 +102,17 @@ namespace Faunus
         len = Point(r, diameter, 0);
     }
 
-    double Sphere::_getVolume() const
+    /**
+     * - 3D: \f$ 4\pi r^3/3 \f$ (default)
+     * - 2D: \f$ \pi r^2 \f$
+     * - 1D: \f$ 2r \f$
+     */
+    double Sphere::_getVolume(int dim) const
     {
+        if (dim==1)
+            return 2*r;
+        if (dim==2)
+            return pc::pi * r * r;
         return 4 / 3. * pc::pi * std::pow(r, 3);
     }
 
@@ -125,7 +157,95 @@ namespace Faunus
     {
         return (a.squaredNorm() > r2) ? true : false;
     }
+    
+    SphereSurface::SphereSurface( double radius ) : Geometrybase("SphereSurface")
+    {
+        len = Point(r, diameter, 0);
+    }
 
+    /**
+     * Key        | Description
+     * :--------- | :-----------------------
+     * `radius`   | Sphere radius [angstrom]
+     */
+    SphereSurface::SphereSurface( Tmjson &j ) : Geometrybase("SphereSurface")
+      {
+          try {
+              setRadius( j.at("radius") );
+          }
+          catch(std::exception& e) {
+              throw std::runtime_error(name + ": " + e.what());
+          }
+      }
+
+    void SphereSurface::setRadius(double radius) {
+      assert(radius>0 && "Radius must be larger than zero.");
+      r = radius; 
+      r2 = r*r; 
+      diameter = 2.0*r; 
+      len = Point(r,diameter,0);
+    }
+    
+    double SphereSurface::_getRadius() const {
+      return r;
+    }
+
+    double SphereSurface::_getVolume(int dim) const {
+        if (dim==1)
+            return 2*pc::pi*r;      // circumference (surface area of a 2-sphere)
+        if (dim==2)
+            return 4.0*pc::pi * r * r;   // surface area (of a 3-sphere)
+        return 2.0 * pc::pi*pc::pi * std::pow(r, 3); // surface area of a 4-sphere 
+    }
+
+    /**
+     * @param vol The surface area of the sphere
+     */
+    void SphereSurface::_setVolume(double vol) {
+      setRadius( cbrt( vol/(2.0*pc::pi*pc::pi) ) );
+    }
+
+    void SphereSurface::setlen(const Point &l) {
+      SphereSurface::setRadius( l.x() );
+      if ( getVolume()<1e-9 )
+        throw std::runtime_error( "Sphere volume is zero." );
+    }
+
+    void SphereSurface::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {
+      assert( getVolume()>0 );
+      double newradius = cbrt( 3*xyz*xyz*xyz*getVolume()/(4*pc::pi) );
+      a = a * (newradius/r);
+    }
+
+    string SphereSurface::_info(char w) {
+      std::ostringstream o;
+      o << pad(SUB, w, "Area") << getVolume(2) << _angstrom << squared
+        << " = " << getVolume(2) / 1e2 << " nm" << squared
+        << " = " << getVolume(2) / 1e18 << " dm" << squared << endl
+        << pad(SUB,w,"Radius") << r << textio::_angstrom << endl;
+      return o.str();
+    }
+
+    void SphereSurface::randompos(Point &a) {
+      do {
+        a.x() = (slump()-0.5)*diameter;
+        a.y() = (slump()-0.5)*diameter;
+        a.z() = (slump()-0.5)*diameter;
+      } while ( a.squaredNorm()>r2 );
+      a = r*a/a.norm();
+    }
+
+    bool SphereSurface::collision(const Point &a, double radius, collisiontype type) const {
+      return (std::fabs( a.squaredNorm() - r2 ) > 1e-6) ? true:false;
+    }
+
+    Cuboid SphereSurface::inscribe() const
+    {
+        Cuboid c;
+        c.setlen({diameter, diameter, diameter});
+        return c;
+    }
+    
     Cuboid Sphere::inscribe() const
     {
         Cuboid c;
@@ -142,14 +262,13 @@ namespace Faunus
 
     void Cuboid::setlen( const Point &l )
     {
-        if ( l.x() < 1e-9 || l.y() < 1e-9 || l.z() < 1e-9 )
-            throw std::runtime_error("Cuboud volume is zero");
-
         len = l;                    // Cuboid sidelength
         len_half = l * 0.5;             // half Cuboid sidelength
         len_inv.x() = 1 / len.x();      // inverse Cuboid side length
         len_inv.y() = 1 / len.y();
         len_inv.z() = 1 / len.z();
+        if ( getVolume() < 1e-9 )
+            throw std::runtime_error("Cuboid volume is zero");
     }
 
     void Cuboid::_setVolume( double newV )
@@ -164,8 +283,17 @@ namespace Faunus
         setlen(len);
     }
 
-    double Cuboid::_getVolume() const
+    /**
+     * - 3D: \f$ l_x l_y l_z \f$ (default)
+     * - 2D: \f$ l_x l_y \f$
+     * - 1D: \f$ l_z \f$
+     */
+    double Cuboid::_getVolume(int dim) const
     {
+        if (dim==1)
+            return len.z();
+        if (dim==2)
+            return len.x() * len.y();
         return len.x() * len.y() * len.z();
     }
 
@@ -201,19 +329,41 @@ namespace Faunus
             a = Point(a.x() * s.x() * xy, a.y() * s.y() * xy, a.z() * s.z());
     }
 
-    Cuboid::Cuboid( Tmjson &j, const string sec ) : Geometrybase("Cuboid")
+    /**
+     * The json object is scanned for the following parameters:
+     *
+     * Key           | Description
+     * :------------ | :-----------------------------------------------------------
+     * `length`      | Array of sidelengths _or_ single length for cube [angstrom]
+     * `scaledir`    | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
+     */
+    Cuboid::Cuboid( Tmjson &j ) : Geometrybase("Cuboid")
     {
-        auto m = j["system"][sec];
-        assert(!m.empty() && "Cuboid json section is empty");
-        scaledirstr = m["scaledir"] | string("XYZ");
-        scaledir = (scaledirstr == "XY") ? XY : XYZ;
-        double cubelen = m["len"] | -1.0;
-        if ( cubelen < 1e-9 )
-            len << (m["xyzlen"] | string("0 0 0"));
-        else
-            len.x() = len.y() = len.z() = cubelen;
-        setlen(len);
+        try {
+            if (j.is_object()) {
+                scaledirstr = j.value<string>("scaledir", "XYZ");
+                scaledir = (scaledirstr == "XY") ? XY : XYZ;
+                auto m = j.at("length");
+                if (m.is_number()) {
+                    double l = m.get<double>();
+                    setlen( {l,l,l} );
+                }
+                if (m.is_array()) {
+                    len << m.get<vector<double>>();
+                    setlen( len );
+                }
+                if (getVolume()<=0)
+                    throw std::runtime_error("volume is zero or less");
+            }
+        }
+        catch(std::exception& e) {
+            throw std::runtime_error(name + ": " + e.what());
+        }
     }
+
+    Cuboidslit::Cuboidslit() { name += " (XY-periodicity)"; }
+
+    Cuboidslit::Cuboidslit( Tmjson &j ) : Cuboid(j) { name += " (XY-periodicity)"; }
 
     /**
      * @param length Length of the Cylinder (angstrom)
@@ -225,7 +375,7 @@ namespace Faunus
     }
 
     /**
-     * The json object is scanned for the following parameters in section `system/cylinder`:
+     * The json object is scanned for the following parameters:
      *
      * Key      | Description
      * :------- | :-------------------------
@@ -234,16 +384,18 @@ namespace Faunus
      */
     Cylinder::Cylinder( Tmjson &j ) : Geometrybase("Cylinder")
     {
-        auto m = j["system"]["cylinder"];
-        init(
-            m["length"] | 0.0,
-            m["radius"] | 0.0);
+        try {
+            init( j.at("length"),
+                  j.at("radius") );
+        }
+        catch(std::exception& e) {
+            throw std::runtime_error(name + ": " + e.what());
+        }
     }
 
     void Cylinder::init( double length, double radius )
     {
         name = "Cylinder (hard ends)";
-        assert(length > 0 && radius > 0 && "Cylinder length and radius must be bigger than zero.");
         _len = length;
         setVolume(pc::pi * radius * radius * _len);
     }
@@ -255,8 +407,6 @@ namespace Faunus
     void Cylinder::setlen( const Point &l )
     {
         init(l.x(), r);
-        if ( getVolume() < 1e-9 )
-            throw std::runtime_error("Cylinder volume is zero.");
     }
 
     void Cylinder::_setVolume( double newV )
@@ -267,8 +417,17 @@ namespace Faunus
         _halflen = _len / 2;
     }
 
-    double Cylinder::_getVolume() const
+    /**
+     * - 3D: \f$ l \pi r^2 \f$ (default)
+     * - 2D: \f$ \pi r^2 \f$
+     * - 1D: \f$ l \f$
+     */
+    double Cylinder::_getVolume(int dim) const
     {
+        if (dim==1)
+            return _len;
+        if (dim==2)
+            return pc::pi * r2;
         return r2 * pc::pi * _len;
     }
 
@@ -316,7 +475,7 @@ namespace Faunus
     PeriodicCylinder::PeriodicCylinder(
         double length, double radius ) : Cylinder(length, radius)
     {
-        name = "Cylindrical (periodic ends)";
+        name = "Periodic " + name;
     }
 
     PeriodicCylinder::PeriodicCylinder( Tmjson &j ) : Cylinder(j)
@@ -352,6 +511,8 @@ namespace Faunus
         allowContainerOverlap = false;
         allowMatterOverlap = false;
     }
+
+    CuboidNoPBC::CuboidNoPBC( ) { name += " (No PBC)"; }
 
     CuboidNoPBC::CuboidNoPBC( Tmjson &j ) : Cuboid(j) { name += " (No PBC)"; }
   }//namespace geometry

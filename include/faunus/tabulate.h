@@ -287,6 +287,26 @@ namespace Faunus
         }
 
         /**
+         * @brief Get tabulated value at df(x)/dx
+         * @param d Table data
+         * @param r2 x value
+         */
+        T evalDer( const typename base::data &d, T r2 ) const
+        {
+            auto low = std::lower_bound(d.r2.begin(), d.r2.end(), r2);
+            size_t pos = (low - d.r2.begin() - 1);
+            T min = d.r2[pos];
+            T dz = r2 - min;
+            int pos6 = 6 * pos;
+            T fsum = (d.c[pos6 + 1] +
+		      dz * (2.0*d.c[pos6 + 2] +
+			  dz * (3.0*d.c[pos6 + 3] +
+			      dz * (4.0*d.c[pos6 + 4] +
+				  dz * (5.0*d.c[pos6 + 5])))));
+            return fsum/1000.0; // Gives correct result, though not certain why /1000.0
+        }
+        
+        /**
          * @brief Tabulate f(x)
          */
         typename base::data generate( std::function<T( T )> f )
@@ -343,8 +363,14 @@ namespace Faunus
                     }
                     dr *= drfrac;
                 }
+
+                if ( j>=ndr )
+                    throw std::runtime_error("Andrea spline: try to increase utol/ftol");
+                if ( ubuft.size() != 7 )
+                    throw std::runtime_error("Andrea spline: wrong size of ubuft, minvalue + 6 coefficients");
                 assert(j < ndr && "Try to increase utol/ftol");
                 assert(ubuft.size() == 7 && "Wrong size of ubuft, minvalue + 6 coefficients");
+
                 td.r2.push_back(zlow);
                 for ( size_t k = 1; k < ubuft.size(); k++ )
                     td.c.push_back(ubuft.at(k));
@@ -358,6 +384,9 @@ namespace Faunus
                 if ( rlow <= rumin || repul == true )
                     break;
             }
+
+            if (i >=mngrid)
+                throw std::runtime_error("Andrea spline: try to increase utol/ftol");
             assert(i < mngrid && "Try to increase utol/ftol");
 
             // Sort td
@@ -1241,15 +1270,14 @@ namespace Faunus
     public:
         PotentialTabulate( Tmjson &j ) : Tpairpot(j)
         {
-            string sec = Tpairpot::jsonsec;
             tab.setRange(
-                j[sec]["tab_rmin"] | 1.0,
-                j[sec]["tab_rmax"] | 100.0);
+                j["tab_rmin"] | 1.0,
+                j["tab_rmax"] | 100.0);
             tab.setTolerance(
-                j[sec]["tab_utol"] | 0.01,
-                j[sec]["tab_ftol"] | -1.0,
-                j[sec]["tab_umaxtol"] | -1.0,
-                j[sec]["tab_fmaxtol"] | -1.0);
+                j["tab_utol"] | 0.01,
+                j["tab_ftol"] | -1.0,
+                j["tab_umaxtol"] | -1.0,
+                j["tab_fmaxtol"] | -1.0);
         }
 
         template<class Tparticle>
@@ -1343,7 +1371,7 @@ namespace Faunus
      * If more than one potential is given, these will be added
      * together, then tabulated.
      *
-     * ~~~~
+     * ~~~{.js}
      * "pairpotentialmap" : {
      *     "spline"  : { "rmin":1e-6, "rmax":100, "utol":0.01 },
      *     "default" : {
@@ -1352,7 +1380,7 @@ namespace Faunus
      *     },
      *     "Na Cl" : { "coulomb" : { "epsr":2.0 } }
      * }
-     * ~~~~
+     * ~~~
      *
      * All pair-potentials are tabulated in constructor
      */
@@ -1371,15 +1399,15 @@ namespace Faunus
         string _brief() override { return string("splined pair-potentials"); }
 
     public:
-        PotentialMapSpline( Tmjson &in, const string sec = "pairpotentialmap" ) : PairPotentialBase(sec)
+        PotentialMapSpline( Tmjson &in )
         {
 
             PairPotentialBase::name = "pairpotentialmap";
 
-            auto j = in[sec]["spline"];
+            auto j = in.at("spline");
 
-            rmin = j["rmin"] | 1.0;
-            rmax = j["rmax"] | 100.0;
+            rmin = j.at("rmin").get<double>();
+            rmax = j.at("rmax").get<double>();
             tab.setRange(rmin, rmax);
             tab.setTolerance(
                 j["utol"] | 0.01,
@@ -1387,12 +1415,12 @@ namespace Faunus
                 j["umaxtol"] | -1,
                 j["fmaxtol"] | -1);
 
-            verbose = in[sec]["verbose"] | false;
+            verbose = in.value("verbose", false);
 
             m.resize(atom.size());
 
             // loop over all pairs in json entry
-            for ( auto i = in[sec].begin(); i != in[sec].end(); ++i )
+            for ( auto i = in.begin(); i != in.end(); ++i )
             {
                 auto v = textio::words2vec<string>(i.key());
                 if ( v.size() == 2 )
@@ -1412,7 +1440,7 @@ namespace Faunus
                     if ( i.id > 0 && j.id > 0 )
                         if ( m(i.id, j.id).empty())
                         {
-                            auto d = mixPairPotential(in[sec]["default"], i.id, j.id);
+                            auto d = mixPairPotential(in["default"], i.id, j.id);
                             m.set(i.id, j.id, tab.generate(d.first));
                             nfo[d.second].insert(Tpair(i.id, j.id));
                         }

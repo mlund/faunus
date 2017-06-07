@@ -21,15 +21,11 @@ namespace Faunus
    *
    * Used to collect properties for atoms, molecules etc.
    */
-  class PropertyBase
+  struct PropertyBase
   {
-  public:
       typedef unsigned char Tid;
       std::string name;  //!< Unique, user-defined name
       Tid id;            //!< Unique id (automatically set by `PropertyVector`)
-      virtual ~PropertyBase() {};
-
-      PropertyBase() : name("UNK") {}
   };
 
   /**
@@ -57,17 +53,17 @@ namespace Faunus
    * v["oxygen"].mass = 15.999;
    *
    * for (auto i : v)
-   *   std::cout << i.name << " " << i.mass << "\n"
+   *   std::cout << i.name << " " << i.mass; // --> oxygen 15.999
+   *
+   * std::cout << v[0].mass; // -> 15.999
    * ~~~~
    *
-   * Element access complexity by `string` is linear with size so be
-   * careful. For constant speed, use direct access.
+   * Complexity: constant if direct access, linear if using string.
    */
   template<class Tproperty, class base=std::vector<Tproperty> >
   class PropertyVector : private base
   {
   protected:
-      string jsonsection; // section to look for elements
       string name;        // name of properties
   public:
       using typename base::value_type;
@@ -136,14 +132,20 @@ namespace Faunus
       }
 
       /** Load data from json object */
-      virtual bool include( Tmjson &j )
+      bool include( Tmjson &j )
       {
-          assert(!jsonsection.empty());
-          auto m = j[jsonsection];
-          base::reserve(m.size());
-          for ( auto it = m.begin(); it != m.end(); ++it )
-              push_back(value_type(it));
-          return (empty() ? false : true);
+          base::reserve( j.size() );
+          for ( auto it = j.begin(); it != j.end(); ++it )
+          {
+              try {
+                  push_back( value_type(it) );
+              }
+              catch(std::exception& e) {
+                  throw std::runtime_error(name + ", element " + it.key() + ": " + e.what());
+              }
+          }
+
+          return !empty();
       }
 
       PropertyVector()
@@ -151,8 +153,6 @@ namespace Faunus
           static_assert(std::is_base_of<PropertyBase, Tproperty>::value,
                         "Elements must be derived from `PropertyBase`");
       }
-
-      virtual ~PropertyVector() {};
 
       string info()
       {
@@ -222,7 +222,7 @@ namespace Faunus
   class AtomData : public PropertyBase
   {
   public:
-      double sigma,            //!< LJ diameter [angstrom]
+      double sigma,         //!< LJ diameter [angstrom]
           eps,              //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
           radius,           //!< Radius [angstrom]
           muscalar,         //!< Dipole momentscalar [e \f$ \unicode{x212B} \f$]
@@ -245,9 +245,12 @@ namespace Faunus
           betaD,            //!< Value of the dipole distribution (inverse) width [1/angstrom]
           betaQ,            //!< Value of the quadrupole distribution (inverse) width [1/angstrom]
           tfe,              //!< Transfer free energy (J/mol/angstrom^2/M)
+          cap_radius,       //!< Radius of cap
+	  cap_center,       //!< Distance to cap center from particle center
+	  charge_position,  //!< Position of charge
           alphax;           //!< Excess polarizability [angstrom^3]
       Point mu;                //!< Dipolemoment vector
-      int Ninit;               //!<
+      int Ninit;               //!< Initial number of atoms to insert into simulation container
       short int patchtype;     //!< If patchy particle, which type of patch
       bool hydrophobic;        //!< Are we hydrophobic?
       Tensor<double>
@@ -259,25 +262,27 @@ namespace Faunus
       /** @brief Constructor - by default data is initialized; mass set to unity */
       inline AtomData( Tmjson::iterator &atom )
       {
-
           auto _js = atom.value();
           if ( !atom.key().empty())
               name = atom.key();
 
-          activity = _js["activity"] | 0.0;
+          activity = _js.value("activity", 0.0);
           chemPot = log(activity * 1.0_molar);
-          alpha << (_js["alpha"] | string());
+          alpha << _js.value("alpha", string());
           alpha /= pc::lB(1.0);
-          theta << (_js["theta"] | string());
+          theta << _js.value("theta", string());
           theta *= 1.0_Debye;
-          dp = _js["dp"] | 0.0;
-          dprot = (_js["dprot"] | 0.0) * 1._deg; // deg->rads
+          dp = _js.value("dp", 0.0);
+          dprot = _js.value("dprot", 0.0) * 1.0_deg; // deg->rads
           eps = (_js["eps"] | 0.0) * 1.0_kJmol;
           hydrophobic = _js["hydrophobic"] | false;
           mu << (_js["mu"] | string("0 0 0"));
           muscalar = mu.len() * 1.0_Debye;
           if ( mu.len() > 1e-6 )
               mu = mu / mu.len();
+	  cap_radius   =  ( _js["cap_radius"] | 0.0 );
+	  cap_center   =  ( _js["cap_center"] | 0.0 );
+	  charge_position   =  ( _js["charge_position"] | 0.0 );
 
           mw = _js["mw"] | 1.0;
           Ninit = _js["Ninit"] | 0.0;
@@ -309,21 +314,16 @@ namespace Faunus
   /**
    * @brief Class for loading and storing atomic properties
    * 
-   * This will load atom properties from disk and store them in a
-   * vector of `AtomData`. The file format is JSON (<http://www.json.org>)
-   * and all atom properties must be inclosed in an object with
-   * the keyword `atomlist`.
+   * This will load atom properties from a JSON object and store them in a
+   * vector of `AtomData`.
    * Due to compatibility, a default fallback property is added upon construction
    * (index 0).
    *
    * For example:
    *
    *     {
-   *       "atomlist" :
-   *       {
-   *         "Na" : { "q": 1.0, "r":1.9, "mw":22.99 },
-   *         "Cl" : { "q":-1.0, "r":1.7, "mw":35.45 }
-   *       }
+   *       "Na" : { "q": 1.0, "r":1.9, "mw":22.99 },
+   *       "Cl" : { "q":-1.0, "r":1.7, "mw":35.45 }
    *     }
    *
    * Code example:
@@ -343,11 +343,6 @@ namespace Faunus
    * Note that faunus currently has a global instance of `AtomMap`,
    * simply named `atom`. This can be accessed from anywhere.
    * 
-   * @note
-   * For simple JSON syntax highlighting in the VIM editor, add
-   * the following to `~/.vimrc`:
-   *
-   *     au! BufRead,BufNewFile *.json set filetype=javascript
    */
 
   class AtomMap : public PropertyVector<AtomData>
@@ -358,7 +353,6 @@ namespace Faunus
       AtomMap()
       {
           base::name = "Atom Properties";
-          base::jsonsection = "atomlist";
 
           // to be removed! This is here only to be compatible with test
           // data that expects an initial dummy atom with id 0.

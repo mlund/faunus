@@ -2,6 +2,8 @@
 #define FAU_slump_h
 
 #include <random>
+#include <faunus/json.h>
+#include <faunus/textio.h>
 
 /// @brief Namespace for Faunus
 namespace Faunus
@@ -16,6 +18,8 @@ namespace Faunus
    * a non-deternimistic sequence, call `seed()` with no
    * arguments to activate a hardware induced seed using
    * `std::random_device`.
+   * @note See http://www.pcg-random.org/posts/ease-of-use-without-loss-of-power.html for some interesting stuff about
+           random numbers in C++11.
    */
   template<typename T=double, typename Tengine=std::mt19937>
   class RandomTwister
@@ -24,17 +28,18 @@ namespace Faunus
   private:
       std::uniform_real_distribution<T> dist;
       long long int discard;
+      bool hardware; // use hardware seed?
 
   public:
       Tengine eng; //!< Random number engine
 
       /** @brief Constructor -- default deterministic seed */
-      RandomTwister() : dist(0, 1), discard(0) {}
+      RandomTwister() : dist(0, 1), discard(0), hardware(false) {}
 
       /**
        * @brief Construct from JSON object
        *
-       * The following keywords are read from JSON section "random":
+       * The following keywords are read from the JSON object:
        *
        *  Key         | Description
        * :----------  | :------------------------------------------------
@@ -44,11 +49,12 @@ namespace Faunus
        * @note `mpidiscard` is under construction.
        */
       template<class Tmjson>
-      RandomTwister( Tmjson &j, const std::string &sec = "random" ) : dist(0, 1)
+      RandomTwister(Tmjson &j) : dist(0, 1), discard(0)
       {
-          if ((j[sec]["hardware"] | false) == true )
+          hardware = j.value("hardware", false);
+          if ( hardware )
               seed();
-          if ((j[sec]["mpidiscard"] | false) == true )
+          if ( j.value("mpidiscard", false) )
               setDiscard(0); // <-- put mpi rank here
       }
 
@@ -102,6 +108,18 @@ namespace Faunus
           auto i = beg;
           std::advance(i, range(0, std::distance(beg, end) - 1));
           return i;
+      }
+
+      Tmjson json() const
+      {
+          std::ostringstream o;
+          o << eng;
+          return
+          {
+              {"hardware", hardware },
+                  {"range", {dist.min(), dist.max()} },
+                  {"state", o.str() }
+          };
       }
   };
 

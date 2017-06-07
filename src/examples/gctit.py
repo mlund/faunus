@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import json, sys, os
 from subprocess import call
 from shutil import copyfile
@@ -38,7 +39,7 @@ def mkinput():
 
       "system": {
         "temperature": 298.15,
-        "cuboid": { "len": 202.5 },
+        "geometry": { "length": 202.5 },
         "unittest": { "testfile": "gctit.test", "stable": False },
         "mcloop": { "macro": 10, "micro": micro },
         "sphere": { "radius": 100 }
@@ -54,6 +55,19 @@ def mkinput():
       "moleculelist": {
         "protein": { "Ninit": 2, "structure": "gctit_mol.aam", "insdir": "0 0 1" },
         "salt": { "Ninit": 50, "atomic": True, "atoms": "La Cl Cl Cl" }
+        },
+
+      "analysis" : {
+        "pqrfile"     : dict(file="confout.pqr"),
+        "statefile"   : dict(file="state"),
+        "widom"       : dict(nstep=20, ninsert=15, particles=["La", "Cl", "Cl", "Cl"]),
+        "widomscaled" : dict(nstep=20, ninsert=15, lB=7.0),
+        "molrdf" : {
+            "nstep":20, "pairs" :
+                [
+                    dict(name1="protein", name2="protein", dim=3, file="rdf.dat", dr=0.1)
+                ]
+            }
         },
 
       "atomlist": {
@@ -87,8 +101,8 @@ def mkinput():
           "M-10": { "q": -10, "r": 5 }
           }
       }
-
-  print >> open('gctit.json', 'w+'), json.dumps(j, indent=4)
+  with open('gctit.json', 'w+') as f:
+    f.write(json.dumps(j, indent=4))
 
 exe            = './gctit'
 runeq          = True

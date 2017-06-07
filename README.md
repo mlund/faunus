@@ -1,3 +1,7 @@
+[![Documentation](https://codedocs.xyz/mlund/faunus.svg)](https://codedocs.xyz/mlund/faunus/)
+[![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
+[![Faunus](doc/images/animation.gif)](https://github.com/mlund/faunus)
+
 Welcome to Faunus
 =================
 
@@ -6,26 +10,22 @@ molecular systems. Below is a brief overview of features:
 
 - Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
 - General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
-- **Anisotropic** atoms (multipoles, sphero-cylinders)
+- **Anisotropic** atoms (multipoles, sphero-cylinders, capped particles)
 - Ion titration moves (pKa prediction, Hofmeister effects etc.)
 - Highy modular
 - Free and open source (**GPL**)
 
 Detailed information and support:
 
-- Manual: <http://faunus.sourceforge.net>
 - Support: <http://github.com/mlund/faunus/issues>
 - Source code: <http://github.com/mlund/faunus>
-
-Get the latest revision from GitHub:
-
-    $ git clone https://github.com/mlund/faunus.git
+- Code documentation: <https://codedocs.xyz/mlund/faunus>
 
 Requirements
 ============
 
-- C/C++11 compiler (clang3.5+, gcc4.9+, intel14+, ...)
-- CMake 2.8.5+
+- C/C++11 compiler (clang3.5+, gcc4.9+, intel15+, ...)
+- CMake 3.1+
 
 Optional:
 
@@ -34,6 +34,14 @@ Optional:
 - Python (for python module, experimental)
 
 Developed and tested on Linux and MacOS X.
+
+Getting the Source Code
+=======================
+
+Download the [latest release](https://github.com/mlund/faunus/releases/latest) or, if you're feeling adventurous, clone the development version directly from github,
+
+    git clone https://github.com/mlund/faunus.git
+    cd faunus
 
 Compiling
 =========
@@ -117,10 +125,12 @@ Citing Faunus
 
   [![DOI](https://img.shields.io/badge/DOI-10%2Fdfqgch-orange.svg)](http://dx.doi.org/10/dfqgch)
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Licence
+=======
 
  Faunus - A Framework for Molecular Modelling 
- Copyright (C) 2002-2016 Mikael Lund
+ Copyright (C) 2002-2017 Mikael Lund
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -135,6 +145,4 @@ Citing Faunus
  You should have received a copy of the GNU General Public License along
  with this program; if not, write to the Free Software Foundation, Inc.,
  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

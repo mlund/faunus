@@ -26,7 +26,7 @@ namespace Faunus {
 
     /* @brief Read lines from file into vector */
     inline bool readFile(const std::string &file, std::vector<string> &v) {
-      std::ifstream f(file.c_str() );
+      std::ifstream f( file );
       if (f) {
         std::string s;
         while (getline(f,s))
@@ -191,16 +191,16 @@ namespace Faunus {
             << "]}}\n";
 
           for (auto i : sol) { 
-            auto dipx = spc.p[i].mu.x();
-            auto dipy = spc.p[i].mu.y();
-            auto dipz = spc.p[i].mu.z();
+            auto dipx = spc.p[i].mu().x();
+            auto dipy = spc.p[i].mu().y();
+            auto dipz = spc.p[i].mu().z();
             auto r = spc.p[i].radius;
             f << "Transform { translation " << spc.p[i].transpose() << "\n"
               << " children [ DEF par_0 Shape{ appearance Appearance { material\n"
               << " Material {diffuseColor  0.00 1.00 1.00 transparency 0.2 }}\n"
               << "  geometry Sphere {radius " << r <<"}}]}\n";
 
-            auto size = spc.p[i].mu.norm(); // always unity??
+            auto size = spc.p[i].mu().norm(); // always unity??
             auto cosT = dipy/size;
             auto angle = acos(cosT);
             auto Xdipx = -dipx;
@@ -214,6 +214,65 @@ namespace Faunus {
               << "diffuseColor  1.00 0.00 0.00 }}  geometry Cone { bottomRadius  "
               << 0.3*r << "  height  " << 0.6*r << "}}]}\n";
           }
+          f.close();
+        }
+  };
+  
+  /**
+   * @brief Produced a file which can be used with POV-Ray in order to create an image of the configuration in the state-file. 
+   * In terminal: 'povray filename.pov' which gives the output 'filename.png' file. Add option 'Output_Alpha=on' to create transparent image.
+   */
+  class CapparticlePOVRay {
+    public:
+      template<class Tspace>
+        void saveCapparticlePOVRay(const string &filename, const Tspace &spc) {
+          std::ofstream f;
+          f.open(filename);
+          f << "#include \"colors.inc\"\n\n";
+	  
+	  Point camera_at(0,0,-10);
+	  f << "camera {\n";
+	  f << "location <" << camera_at.x() << "," << camera_at.y() << "," << camera_at.z() << ">\n";
+	  
+	  Point look_at(0,0,0);
+	  f << "look_at <" << look_at.x() << "," << look_at.y() << "," << look_at.z() << ">\n";
+	  f << "}\n\n";
+	  
+	  Point light_from(0,0,-10);
+	  f << "light_source {\n";
+	  f << "<" << light_from.x() << "," << light_from.x() << "," << light_from.x() << ">\n";
+	  f << "color White\n";
+	  f << "}\n\n";
+	  
+	  /*
+	  // Add a second lightsource
+	  Point second_light_from(0,10,-10);
+	  f << "light_source {\n";
+	  f << "<" << second_light_from.x() << "," << second_light_from.x() << "," << second_light_from.x() << ">\n";
+	  f << "color White\n";
+	  f << "}\n\n";
+	  */
+	  
+	  string color_particle = "Blue";
+	  string color_cap = "Red";
+	  double ambient = 1.0; // Light on particles, 0.0 = little light, 1.0 = much light
+	  for(unsigned int i = 0; i < spc.p.size(); i++) {
+	    Point xyz = spc.p[i];
+	    Point cap = spc.p[i].cap_center_point()*spc.p[i].cap_center();
+	    f << "difference {\n";
+	    f << "sphere {\n";
+	    f << "<" << xyz.x() << "," << xyz.y() << "," << xyz.z() << ">\n";
+	    f << "," << spc.p[i].radius << "\n";
+	    f << "texture { pigment { " << color_particle << " } }\n";
+	    f << "}finish {ambient " << ambient << "}\n";
+	    f << "}\n";
+	    f << "sphere {\n";
+	    f << "<" << (xyz.x() + cap.x()) << "," << (xyz.y() + cap.y()) << "," << (xyz.z() + cap.z()) << ">\n";
+	    f << "," << spc.p[i].cap_radius() << "\n";
+	    f << "texture { pigment { " << color_cap << " } }\n";
+	    f << "}finish {ambient " << ambient << "}\n";
+	    f << "}\n}\n\n";
+	  }
           f.close();
         }
   };
@@ -284,32 +343,39 @@ namespace Faunus {
        * @param v Vector of particle vectors
        */
       template<class Tparticle, class Talloc>
-        static void load(const std::string &file, vector< vector<Tparticle,Talloc> > &v) {
-          std::ifstream in( file );
-          if ( in ) {
-            Tparticle a;
-            vector<Tparticle,Talloc> p;
-            int iatom, ires;
-            std::string line,key,aname,rname;
-            while ( std::getline( in, line ) ) {
-              std::stringstream o( line );
-              while ( o >> key )
-                if ( key=="ATOM" || key=="HETATM" ) {
-                  o >> iatom >> aname;
-                  a=atom[aname];
-                  o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius; 
-                  p.push_back(a);
-                  if (a.id==0)
-                    std::cerr << "Warning: Atom name " << aname << " is not in the atom list.\n";
-                } else if ( key=="END" ) {
-                  v.push_back( p );
-                  p.clear();
-                  p.reserve( v.back().size() );
-                }
-            }
-          } else
-            std::cerr << "Warning: PQR trajectory " + file + " could not be opened." << endl;
+      static void load( const std::string &file, vector <vector<Tparticle, Talloc>> &v )
+      {
+        std::ifstream in(file);
+        if ( in )
+        {
+          Tparticle a;
+          vector<Tparticle, Talloc> p;
+          int iatom, ires;
+          std::string line, key, aname, rname;
+          while ( std::getline(in, line))
+          {
+            std::stringstream o(line);
+            while ( o >> key )
+              if ( key == "ATOM" || key == "HETATM" )
+              {
+                o >> iatom >> aname;
+                a = atom[aname];
+                o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius;
+                p.push_back(a);
+                if ( a.id == 0 )
+                  std::cerr << "Warning: Atom name " << aname << " is not in the atom list.\n";
+              }
+              else if ( key == "END" )
+              {
+                v.push_back(p);
+                p.clear();
+                p.reserve(v.back().size());
+              }
+          }
         }
+        else
+          throw std::runtime_error("Error loading PQR trajectory " + file);
+      }
 
       /**
        * @param file Filename
@@ -607,6 +673,8 @@ namespace Faunus {
     public:
       std::vector<Group*> g;          //!< List of PBC groups to be saved as whole
 
+      inline int getNumAtoms() { return natoms_xtc; }
+
       /**
        * @brief Load a single frame into cuboid
        *
@@ -625,33 +693,38 @@ namespace Faunus {
        *       periodic boundaries are used.
        */
       template<class Tspace>
-        bool loadnextframe(Tspace &c, bool setbox=true) {
-          if (xd!=NULL) {
-            if (natoms_xtc==(int)c.p.size()) { 
-              int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
-              if (rc==0) {
-                Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
-                assert(geo!=nullptr && "Geometry must to derived from Cuboid");
-                if (setbox)
-                  geo->setlen( Point( xdbox[0][0], xdbox[1][1], xdbox[2][2] ) );
-                for (size_t i=0; i<c.p.size(); i++) {
-                  c.p[i].x() = x_xtc[i][0];
-                  c.p[i].y() = x_xtc[i][1];
-                  c.p[i].z() = x_xtc[i][2];
-                  c.p[i] = c.p[i]*10 - geo->len_half;
-                  c.trial[i] = Point(c.p[i]);
-                  if ( geo->collision(c.p[i], 0) ) {
-                    throw std::runtime_error("# ioxtc: particle-container collision!");
-                  }
-                } 
-                return true;
-              }
-            } else
-              throw std::runtime_error("# xtcfile-container particle mismatch!");
-          } else
-            throw std::runtime_error("# xtc file not available for reading!");
-          return false;
-        }
+          bool loadnextframe(Tspace &c, bool setbox=true, bool applypbc=false) {
+              if (xd!=NULL)
+              {
+                  if (natoms_xtc==(int)c.p.size())
+                  { 
+                      int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
+                      if (rc==0)
+                      {
+                          Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
+                          if (geo==nullptr)
+                              throw std::runtime_error("Cuboid-like geometry required");
+                          if (setbox)
+                              geo->setlen( Point( 10.0*xdbox[0][0], 10.0*xdbox[1][1], 10.0*xdbox[2][2] ) );
+                          for (size_t i=0; i<c.p.size(); i++) {
+                              c.p[i].x() = 10.0*x_xtc[i][0];
+                              c.p[i].y() = 10.0*x_xtc[i][1];
+                              c.p[i].z() = 10.0*x_xtc[i][2];
+                              c.p[i] = c.p[i] - geo->len_half;
+                              if (applypbc)
+                                  geo->boundary( c.p[i] );
+                              c.trial[i] = Point(c.p[i]);
+                              if ( geo->collision(c.p[i], 0) )
+                                  throw std::runtime_error("particle-container collision");
+                          } 
+                          return true;
+                      }
+                  } else
+                      throw std::runtime_error("xtcfile<->container particle mismatch");
+              } else
+                  throw std::runtime_error("xtc file cannot be read");
+              return false; // end of file or not opened
+          }
 
       /**
        * This will take an arbitrary particle vector and add it
@@ -722,6 +795,11 @@ namespace Faunus {
         setbox(len);
         xd=NULL;
         x_xtc=NULL;
+      }
+      
+      ~FormatXTC()
+      {
+          close();
       }
 
       inline void setbox(double x, double y, double z) {

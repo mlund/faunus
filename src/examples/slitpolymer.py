@@ -25,7 +25,7 @@ d = {
 
     "energy" : {
       "gouychapman" : { "phi0":-2 },
-      "nonbonded" : { "coulomb" : { "epsr" : 78.9, "debyelength":11.6492873993050 } }
+      "nonbonded" : { "epsr" : 78.9, "debyelength":11.6492873993050 }
       },
 
     "moves" : {
@@ -33,10 +33,10 @@ d = {
         "polymer" : { "dp":100, "dprot":6, "permol":True } 
         },
       "crankshaft" : {
-        "polymer" : { "dp":6, "maxlen":6, "permol":True }
+        "polymer" : dict(dp=6, minlen=1, maxlen=6, permol=True)
         },
       "pivot" : {
-        "polymer" : { "dp":6, "maxlen":6, "permol":True }
+        "polymer" : dict(dp=6, minlen=1, maxlen=6, permol=True)
         },
       "reptate" : {
         "polymer" : { "bondlength":4.9, "permol":True, "prob":1.0 }
@@ -45,7 +45,7 @@ d = {
 
     "system" : {
       "temperature"  : 298,
-      "cuboid"       : { "xyzlen" : "300 300 154" },
+      "geometry"     : { "length" : [300, 300, 154] },
       "mcloop"       : { "macro":10, "micro":1000000 },
       "unittest"     : { "testfile":"slitpolymer.test", "stable":False }
       }

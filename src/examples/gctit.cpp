@@ -18,19 +18,10 @@ int main()
 
     spc.load("state", Tspace::RESIZE);             // load old config. from disk (if any)
 
-    // Two different Widom analysis methods
-    double lB = 7.1;
-    Analysis::Widom<PointParticle> widom1;        // widom analysis (I)
-    Analysis::WidomScaled<Tspace> widom2(lB, 1);   // ...and (II)
-    widom1.add(spc.p);
-    widom2.add(spc.p);
-    Analysis::LineDistribution<> rdf_ab(0.5);      // 0.1 angstrom resolution
-
+    Analysis::CombinedAnalysis analysis(mcp, pot, spc);
     Move::Propagator<Tspace> mv(mcp, pot, spc);
 
     cout << atom.info() + spc.info() + pot.info() + "\n";
-
-    auto g = spc.findMolecules("protein");
 
     MCLoop loop(mcp);                             // class for handling mc loops
     while ( loop[0] )
@@ -38,26 +29,14 @@ int main()
         while ( loop[1] )
         {
             mv.move();                           // move!
-            widom1.sample(spc, pot, 1);
-            widom2.sample(spc.p, spc.geo);
-
-            if ( slump() < 0.10 )
-                for ( size_t i = 0; i < g.size() - 1; i++ )
-                    for ( size_t j = i + 1; j < g.size(); j++ )
-                        rdf_ab(spc.geo.dist(g[i]->cm, g[j]->cm))++;
-
+            analysis.sample();                   // sample
         }                                           // end of micro loop
         cout << loop.timing();
-        rdf_ab.save("rdf.dat");                     // g(r) - not normalized!
     }                                             // end of macro loop
 
     UnitTest test(mcp);                           // class for unit testing
 
-    cout << loop.info() + mv.info() + test.info()
-        + widom1.info() + widom2.info();
-
-    FormatPQR::save("confout.pqr", spc.p);        // PQR snapshot for VMD etc.
-    spc.save("state");                            // final simulation state
+    cout << loop.info() + mv.info() + test.info() + analysis.info();
 
     return test.numFailed();
 }

@@ -16,9 +16,11 @@ namespace Faunus
         stepcnt = 0;
     }
 
-    AnalysisBase::AnalysisBase( Tmjson &j ) : w(30), cnt(0)
+    AnalysisBase::AnalysisBase( Tmjson &j, string name ) : w(30), cnt(0), name(name)
     {
-        steps = j["nstep"] | int(0);
+        if (!j.is_object())
+            std::runtime_error("Analysis JSON entry must be of type object");
+        steps = j.value("nstep", 0);
         stepcnt = 0;
     }
 
@@ -82,6 +84,7 @@ namespace Faunus
             if ( cnt > 0 )
             {
                 j[name] = {
+                    {"nstep", steps},
                     {"samples", cnt},
                     {"relative time", timer.result()}
                 };
@@ -94,115 +97,120 @@ namespace Faunus
         return j;
     }
 
-    TwobodyForce::TwobodyForce( InputMap &in, Group &g1, Group &g2, Group &_ions )
-    {
-        name = "Twobody mean force calculation";
-        igroup1 = nullptr;
-        igroup2 = nullptr;
-        setTwobodies(g1, g2, _ions);
-    }
-
-    /*!
-     * \brief Set the groups
-     * \param g1 Body #1
-     * \param g2 Body #2
-     * \param _ions Salt, counterions etc that mediates the two bodies
-     */
-    void TwobodyForce::setTwobodies( Group &g1, Group &g2, Group &_ions )
-    {
-        assert(!g1.name.empty() && "Group 1 (body 1) should have a name.");
-        assert(!g2.name.empty() && "Group 2 (body 2) have a name.");
-        assert(!_ions.name.empty() && "Group 3 (ions) should have a name.");
-        igroup1 = &g1;
-        igroup2 = &g2;
-        ions = &_ions;
-    }
-
-    Point TwobodyForce::meanforce() { return Point(0, 0, 0); }
-
-    void TwobodyForce::save( string filename )
-    {
-        Point p = meanforce();
-        std::ofstream f(filename.c_str());
-        f.precision(10);
-        if ( f )
-            f << p.transpose() << endl;
-    }
-
-    string TwobodyForce::_info()
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << "Base class of twobody force." << endl;
-        return o.str();
-    }
-
-    TwobodyForceDirect::TwobodyForceDirect( InputMap &in, Group &g1, Group &g2, Group &_ions ) : TwobodyForce(in,
-                                                                                                              g1,
-                                                                                                              g2,
-                                                                                                              _ions)
-    {
-        name = "Twobody direct mean force calculation";
-        f_pp = f_pi = f_ip = Point(0, 0, 0);
-    }
-
-    Point TwobodyForceDirect::meanforce()
-    {
-        Point p = (f_pp + (f_pi - f_ip) * 0.5) / (double) cnt;
-        return p;
-    }
-
-    string TwobodyForceDirect::_info()
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << pad(SUB, w, "Mean direct Force p-p:") << "(" << (f_pp / cnt).transpose() << ") kT/Å" << endl;
-        o << pad(SUB, w, "Mean direct Force p-i:") << "(" << (f_pi / cnt).transpose() << ") kT/Å" << endl;
-        o << pad(SUB, w, "Mean direct Force i-p:") << "(" << (f_ip / cnt).transpose() << ") kT/Å" << endl;
-        o << pad(SUB, w, "Mean direct Force:") << "(" << meanforce().transpose() << ") kT/Å" << endl;
-        return o.str();
-    }
-
-    TwobodyForceMidp::TwobodyForceMidp( InputMap &in, Group &g1, Group &g2, Group &_ions,
-                                        Analysis::LineDistributionNorm<float, unsigned long int> *_saltdistr )
-        : TwobodyForce(in, g1, g2, _ions)
-    {
-        name = "Twobody midplane mean force calculation";
-        f_pp = f_pi = f_ip = f_ii = Point(0, 0, 0);
-        saltdistr = _saltdistr;
-    }
-
-    Point TwobodyForceMidp::meanforce()
-    {
-        Point p = f_pp + f_pi - f_ip + f_ii;
-        float midp = saltdistr->mid();
-        float endp = saltdistr->end();
-        Point I = Point(1, 1, 1);
-        return p / (double) cnt + I * (midp - endp);
-    }
-
-    string TwobodyForceMidp::_info()
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << pad(SUB, w, "Mean midp Force p-p:") << "(" << (f_pp / cnt).transpose() << ") kT/Å" << endl;
-        o << pad(SUB, w, "Mean midp Force p-i:") << "(" << (f_pi / cnt).transpose() << ") kT/Å" << endl;
-        o << pad(SUB, w, "Mean midp Force i-p:") << "(" << (f_ip / cnt).transpose() << ") kT/Å" << endl;
-        o << pad(SUB, w, "Mean midp Force i-i:") << "(" << (f_ii / cnt).transpose() << ") kT/Å" << endl;
-        o << pad(SUB, w, "Midpressure:") << saltdistr->mid() << " kT/Å" << endl;
-        o << pad(SUB, w, "Endpressure:") << saltdistr->end() << " kT/Å" << endl;
-        o << pad(SUB, w, "Mean midp Force:") << "(" << meanforce().transpose() << ") kT/Å" << endl;
-        return o.str();
-    }
-
     void BilayerStructure::_test( UnitTest &t )
     {
         t("bilayer_order", S.avg());
         t("bilayer_area", A.avg());
     }
 
+    Tmjson MeanForce::_json()
+    {
+        if ( mf1.cnt>0 && mf2.cnt>0 )
+            return {
+                { name,
+                    {
+                        { "groups", {g1, g2} },
+                        { "meanforce", { mf1.avg(), mf2.avg() } },
+                        { "forceunit", "kT/angstrom" }
+                    }
+                }
+            };
+        return Tmjson();
+    }
+
+    void MeanForce::_sample() {
+        func();
+    }
+
+    void PropertyTraj::_sample() {
+        if ( !v.empty() )
+        {
+            for (auto &i : v)
+                f << i() << " ";
+            f << "\n"; 
+        }
+    }
+
+    void SystemEnergy::_sample() {
+        f << energy() << "\n"; 
+    }
+
+    void PairFunctionBase::_sample()
+    {
+        for (auto &d : datavec)
+            update(d);
+    }
+
+    Tmjson PairFunctionBase::_json()
+    {
+        Tmjson j;
+        auto &_j = j[name];
+        for (auto &d : datavec)
+            _j[ d.name1+"-"+d.name2 ] = {
+                { "dr", d.dr },
+                { "file", d.file },
+		{ "file2", d.file2 },
+                { "dim", d.dim },
+		{ "Rhyper", d.Rhypersphere }
+            };
+        return j;
+    }
+
+    PairFunctionBase::PairFunctionBase( Tmjson j, string name ) : AnalysisBase(j, name) {
+        try {
+            for (auto &i : j.at("pairs"))
+                if (i.is_object())
+                {
+                    data d;
+                    d.file = i.at("file");
+		    d.file2 = i.value("file2",d.file+".avg");
+                    d.name1 = i.at("name1");
+                    d.name2 = i.at("name2");
+                    d.dim = i.value("dim", 3);
+                    d.dr = i.value("dr", 0.1);
+                    d.hist.setResolution(d.dr);
+		    d.hist2.setResolution(d.dr);
+		    d.Rhypersphere = i.value("Rhyper", -1.0);
+                    datavec.push_back( d );
+                }
+        }
+        catch(std::exception& e) {
+            throw std::runtime_error(name + ": " + e.what());
+        }
+
+        if (datavec.empty())
+            std::cerr << name + ": no sample sets defined for analysis\n";
+    }
+    
+    void PairFunctionBase::normalize(data &d)
+    {
+	assert(V.cnt>0);
+	double Vr=1, sum = d.hist.sumy();
+	for (auto &i : d.hist.getMap()) {
+	    if (d.dim==3)
+		Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
+	    if (d.dim==2) {
+		Vr = 2 * pc::pi * i.first * d.dr;
+		if (d.Rhypersphere > 0)
+		    Vr = 2.0*pc::pi*d.Rhypersphere*sin(i.first/d.Rhypersphere) * d.dr;
+	    }
+	    if (d.dim==1)
+		Vr = d.dr;
+	    i.second = i.second/sum * V/Vr;
+	}
+    }
+
+    PairFunctionBase::~PairFunctionBase()
+    {
+        for (auto &d : datavec) {
+            d.hist.save( d.file );
+	    d.hist2.save( d.file2 );
+	}
+    }
+
     void CombinedAnalysis::sample()
     {
+        cnt++;
         for ( auto i : v )
             i->sample();
     }
@@ -233,5 +241,14 @@ namespace Faunus
         return js;
     }
 
-  }//namespace
-}//namespace
+    CombinedAnalysis::~CombinedAnalysis()
+    {
+        if (cnt>0) {
+            std::ofstream f(jsonfile);
+            if ( f )
+                f << std::setw(4) << json() << std::endl;
+        }
+    }
+
+  }//Analysis namespace
+}//Faunus namespace

@@ -22,6 +22,11 @@ struct myenergy : public Energy::Energybase<Tspace> {  //custom energy class
     return u; // in kT
   }
   string _info() override { return "myenergy"; }         //mandatory info 
+  auto tuple() -> decltype(std::make_tuple(this))
+  {
+      return std::make_tuple(this);
+  }
+
 };
 
 int main() {
@@ -33,35 +38,26 @@ int main() {
   myenergy<Tspace> pot;                         //our custom potential!
   pot.Tscale = in["system"]["Tscale"] | 1.0;    //temperature from input (default: 1)
 
-  Analysis::LineDistribution<> dst(.05);        //distribution func.
-  Move::ParallelTempering<Tspace> pt(pot,spc,in,mpi);//temper move
-  Move::AtomicTranslation<Tspace> trans(pot,spc,in); //translational move
-
-  EnergyDrift sys;                              // class for tracking system energy drifts
-  sys.init(Energy::systemEnergy(spc,pot,spc.p));// store initial total system energy
+  Table2D<double,int> dst(0.05);                //distribution func.
+  Move::Propagator<Tspace> mv(in,pot,spc,&mpi); //MC moves
 
   mpi.cout << spc.info();                       //print initial info
                                                
   MCLoop loop( in );                            //handle mc loops
   while ( loop[0] ) {                           //start markov chain
     while ( loop[1] ) {                        
-      sys += trans.move();                      //translate particle
+      mv.move();                                //translate particle
       dst( spc.p[0].x() )++;                    //update histogram
     }                                          
-    sys += pt.move();
     mpi.cout << loop.timing();                  //print progress
   }                                            
 
   UnitTest test( in );                          //unit testing
-  trans.test( test );                          
-  sys.test( test );
-  pt.test( test );                             
-
-  sys.checkDrift( Energy::systemEnergy(spc,pot,spc.p) ); // calc. energy drift
+  mv.test( test );                          
 
   dst.save( textio::prefix+"dist" );            //save histogram
 
-  mpi.cout << trans.info() << pt.info() << sys.info() << test.info();
+  mpi.cout << mv.info() << test.info();
 
   return test.numFailed();
 }
@@ -86,7 +82,7 @@ int main() {
 
   ~~~
   $ cmake . -DENABLE_MPI=on
-  $ make
+  $ make example_temper
   $ cd src/examples
   $ ./temper.run mpirun
   ~~~
@@ -94,31 +90,6 @@ int main() {
   The tempering routine in Faunus is general and implemented in
   MPI where each replica has its own rank. The temper parameter(s) is
   given simply by giving different input files for each replica.
-  The input files, `mpi$rank.temper.input`, for this example look like this:
-
-  ~~~~
-  {
-    "atomlist" : { "A" : { "dp":0.5 } },
-
-    "moleculelist" : {
-      "myparticles" : { "atoms":"A", "atomic":true, "Ninit":1 }
-    },
-
-    "moves" : {
-      "temper"        : { "prob":1.0, "format":"XYZ" },
-      "atomtranslate" : { "myparticles" : {} }
-    },
-
-    "system" : {
-      "Tscale"       : 1.0,
-      "cuboid"       : { "len" : 4. },
-      "mcloop"       : { "macro":2000, "micro":10000 },
-      "unittest"     : { "testfile":"mpi2.temper.test", "stable":false },
-      "atomlist"     : "mpi2.temper.json",
-      "moleculelist" : "mpi2.temper.json"
-    }
-  }
-  ~~~~
 
   temper.cpp
   ==========

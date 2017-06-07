@@ -1,9 +1,0 @@
-/*! \page programs Programs
-
-- \subpage test_twobody - Two rigid bodies in a continuum solvent - cubic box.
-- \subpage test_pka - Protein titration in an aqueous salt solution
-- \subpage test_manybody - Many rigid molecules in an explicit salt solution
-- \subpage test_widom - Activity coefficient calculation in a salt solution
-*/
-
-

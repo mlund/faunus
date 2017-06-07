@@ -71,15 +71,11 @@ namespace Faunus {
     class PairPotentialBase {
       private:
         virtual string _brief();
-      protected:
-        string jsonsec;    //!< JSON section where input is stored
       public:
         typedef PairMatrix<double> Tcutoff;
         Tcutoff rcut2;                        //!< Squared cut-off distance (angstrom^2)
 
         PairPotentialBase( );
-
-        PairPotentialBase( const string &sec );
 
         virtual ~PairPotentialBase();
         string name;       //!< Name of potential
@@ -102,6 +98,11 @@ namespace Faunus {
         template<typename Tparticle>
           Point field(const Tparticle &a, const Point &r) const {
             return Point(0,0,0);
+          }
+          
+        template<typename Tpvec>
+          double internal(const Tpvec &p, const Group &g) const {
+            return 0.0;
           }
 
         /**
@@ -158,13 +159,12 @@ namespace Faunus {
      * \f$ \beta u_{ij} = k(r_{ij}-r_{eq})^2 \f$ where k is the force constant
      * (kT/angstrom^2) and req is the equilibrium distance (angstrom).
      *
-     * Upon construction the following keywords are searched
-     * for in section `harmonic`:
+     * JSON keywords:
      *
      * Keyword   | Description
      * :-------- | :-----------------------------------------------
-     * req       | Equilibrium distance (angstrom)
-     * k         | Force constant (kT/angstrom^2). See note below.
+     * `req`     | Equilibrium distance (angstrom)
+     * `k`       | Force constant (kT/angstrom^2). See note below.
      *
      * @note We do not multiply with 1/2 which must be included in the
      * supplied force constant, `k`.
@@ -178,8 +178,9 @@ namespace Faunus {
         double req; //!< Equilibrium distance (angstrom)
 
         Harmonic( double k=0, double req=0 );
-        Harmonic( Tmjson &j, const string &sec="harmonic");
+        Harmonic( Tmjson &j );
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator()( const Tparticle &a, const Tparticle &b, double r2 ) const {
             double d=sqrt(r2)-req;
@@ -203,7 +204,7 @@ namespace Faunus {
      * for \f$r_c\leq r \leq r_c+w_c\f$. For \f$r<r_c\f$, \f$\beta u=-\epsilon\f$,
      * while zero for \f$r>r_c+w_c\f$.
      *
-     * Keywords in json section `cosattract` are:
+     * JSON keywords:
      *
      * Key     | Description
      * :-------| :---------------------------
@@ -218,7 +219,7 @@ namespace Faunus {
         string _brief();
       public:
 
-        CosAttract(Tmjson&, const string &sec="cosattract");
+        CosAttract(Tmjson&);
 
         /**
          * @todo
@@ -273,7 +274,7 @@ namespace Faunus {
      * @f[
      *     \beta u(r) = -\frac{k r_0^2}{2}\ln \left [ 1-(r/r_0)^2 \right ]
      * @f]
-     * for \f$r<r_0\f$, otherwise infinity. Parameters are read from section `fene`:
+     * for \f$r<r_0\f$, otherwise infinity. JSON keywords:
      *
      * - `stiffness` Bond stiffness, `k` [kT]
      * - `maxsep` Maximum separation, `r_0` [angstrom]
@@ -289,13 +290,14 @@ namespace Faunus {
       public:
         FENE(double k_kT, double rmax_A);
 
-        FENE( Tmjson &j, const string &sec="fene" ) : PairPotentialBase( sec ) {
+        FENE( Tmjson &j ) {
           name="FENE";
-          k  = j[sec]["stiffness"] | 0.0;
-          r02 = pow( j[sec]["maxsep"] | 0.0, 2);
+          k  = j.at("stiffness");
+          r02 = std::pow( double(j.at("maxsep")), 2);
           r02inv = 1/r02;
         }
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             return (r2>r02) ? pc::infty : -0.5*k*r02*std::log(1-r2*r02inv);
@@ -315,8 +317,9 @@ namespace Faunus {
         double E;
         string _brief();
       public:
-        Hertz(Tmjson&, const string &sec="hertz");
+        Hertz(Tmjson&);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             double m = a.radius+b.radius;
@@ -343,8 +346,9 @@ namespace Faunus {
         HardSphere();
 
         template<typename T>
-          HardSphere(const T&, const string &sec="") { name="Hardsphere"; }
+          HardSphere(const T&) { name="Hardsphere"; }
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double m=a.radius+b.radius;
@@ -357,6 +361,164 @@ namespace Faunus {
           }
 
         string info(char w);
+    };
+    
+       /**
+	* @brief Hard overlap interaction between 'Capparticles'.
+	* @warning If both particles in a pair-interactions have non-zero cap-radius and one of them 
+	* is large enough to fully enclose the other, the potential may give inaccurate results.
+	*/
+    class HardSphereCap : public PairPotentialBase {
+      private:
+        string _brief() {
+          std::ostringstream o;
+          o << "HardSphereCap";
+          return o.str();          
+        }
+        
+      public:
+	template<typename T>
+        HardSphereCap(const T&, const string &sec="") : PairPotentialBase() { 
+	  name="HardsphereCap"; 
+	}
+	
+       /**
+	* @brief Checks if a segmant of a spherical surface intersects with a segmant of another spherical surface.
+	* @param n_i Normalized direction-vector of particle 'i's spherical surface segment
+	* @param n_j Normalized direction-vector of particle 'j's spherical surface segment
+	* @param theta_i The azimuth angle of particle 'i's spherical surface segment
+	* @param theta_j The azimuth angle of particle 'j's spherical surface segment
+	* @param R_i Radius of particle 'i's spherical surface segment
+	* @param R_j Radius of particle 'j's spherical surface segment
+	* @param r The distance-vector between the spherical surface segment centers
+	* @note Implemented from  <https://doi.org/10.1103/PhysRevE.82.031405>
+	* @warning Tested, but not fully.
+	*/
+	bool SurfaceSurfaceOverlap(Point n_i, Point n_j, double theta_i, double theta_j, double R_i, double R_j, Point r) const {
+	    assert( ( ( fabs(n_i.norm()-1.0) < 1e-6 ) || ( fabs(n_j.norm()-1.0) < 1e-6 ) ) && "Center-of-cap point is not normalized!");
+	    double r2 = r.squaredNorm();
+	    double r1 = sqrt(r2);
+	    Point r_hat = -r/r1; // Now 'r_hat' points from particle 'i' towards particle 'j'. Same as in article
+	    
+	    double cosPhi_ij_i = ( R_i*R_i - R_j*R_j + r1*r1 )/( 2.0*r1*R_i );
+	    double cosPhi_ij_j = ( R_j*R_j - R_i*R_i + r1*r1 )/( 2.0*r1*R_j );
+	    double phi_ij_i = acos( cosPhi_ij_i ); // Eq. A5, the results is always in the interval 0 <= phi_ij_i <= pi
+	    double phi_ij_j = acos( cosPhi_ij_j ); // Eq. A5, the results is always in the interval 0 <= phi_ij_i <= pi
+	    double cosW_ij_i = n_i.dot(r_hat);     // Eq. A6
+	    double cosW_ij_j = n_j.dot(-r_hat);    // Eq. A6
+	    double w_ij_i = acos( cosW_ij_i );     // Eq. A6, since 'phi_ij_i' is always the principal value this evaluation will always yield true if-statements (marked ***) below 
+	    double w_ij_j = acos( cosW_ij_j );     // Eq. A6, since 'phi_ij_j' is always the principal value this evaluation will always yield true if-statements (marked ***) below 
+	    
+	    bool bowl_i_sphere_j_intersection = false;
+	    bool sphere_i_bowl_j_intersection = false;
+	    bool bowl_i_sphere_j_full_intersection = false;
+	    bool sphere_i_bowl_j_full_intersection = false;
+	    
+	    if( ( fabs(w_ij_i - phi_ij_i) < theta_i ) || ( fabs(w_ij_i + phi_ij_i) < theta_i ) ) // (***)
+	      bowl_i_sphere_j_intersection = true;
+	    if( ( fabs(w_ij_i - phi_ij_i) < theta_i ) && ( fabs(w_ij_i + phi_ij_i) < theta_i ) ) // (***)
+	      bowl_i_sphere_j_full_intersection = true;
+	    if( ( fabs(w_ij_j - phi_ij_j) < theta_j ) || ( fabs(w_ij_j + phi_ij_j) < theta_j ) ) // (***)
+	      sphere_i_bowl_j_intersection = true;
+	    if( ( fabs(w_ij_j - phi_ij_j) < theta_j ) && ( fabs(w_ij_j + phi_ij_j) < theta_j ) ) // (***)
+	      sphere_i_bowl_j_full_intersection = true;
+	    
+	    if( ( bowl_i_sphere_j_full_intersection && sphere_i_bowl_j_intersection) || ( sphere_i_bowl_j_full_intersection && bowl_i_sphere_j_intersection) )
+	      return true;
+	    if( !bowl_i_sphere_j_intersection && !sphere_i_bowl_j_intersection )
+	      return false;
+	    
+	    double gamma_i = acos( ( cos(theta_i) - cosPhi_ij_i*cosW_ij_i )/( sqrt(1.0-cosPhi_ij_i*cosPhi_ij_i)*sqrt(1.0-cosW_ij_i*cosW_ij_i) ) ); // Eq. A9
+	    double gamma_j = acos( ( cos(theta_j) - cosPhi_ij_j*cosW_ij_j )/( sqrt(1.0-cosPhi_ij_j*cosPhi_ij_j)*sqrt(1.0-cosW_ij_j*cosW_ij_j) ) ); // Eq. A9
+	    Point np_i = n_i - cosW_ij_i*r_hat;
+	    Point np_j = n_j - cosW_ij_j*(-r_hat);
+	    double alpha_ij = acos( np_i.dot(np_j)/(np_i.norm()*np_j.norm()) ); // Eq. A8
+	    if(fabs(alpha_ij) < fabs(gamma_i) + fabs(gamma_j))                  // Eq. A7
+	      return true;
+	    
+	    return false;
+	}
+	
+       /**
+	* @brief Checks is a particle with a cap collides with a true sphere.
+	* @param capsphere The cap-particle
+	* @param sphere The sphere particle
+	* @param r The distance-vector ( sphere.xyz - capsphere.xyz )
+	* @param r1 The length of parameter 'r'
+	* @note Important that the 'r'-parameter is in the correct direction!
+	*/
+      template<class Tparticle>
+	bool CapsphereSphereOverlap(const Tparticle &capsphere, const Tparticle &sphere, const Point &r, double r1) const {
+	  assert( fabs(capsphere.cap_center_point().norm()-1.0) < 1e-6 && "Center-of-cap point is not normalized!");
+	  double angle = acos(r.dot(capsphere.cap_center_point())/r1); // Angle between capsphere-center to sphere-center and capsphere-center to cap-center
+	  if( (angle > pc::pi - capsphere.angle_p()) && (r1 > capsphere.radius) ) // If the sphere is outside the prolonged cone formed by the origin of the cap-particle and the cap-'ring' then...
+	    return true;
+	  
+	  Point cts =  ( r - capsphere.cap_center_point()*capsphere.cap_center() );    // Vector from origin of capsphere.cap pointing towards the center of 'sphere'
+	  double cts_norm = cts.norm();
+	  if( ( cts_norm > capsphere.cap_radius() - sphere.radius ) && (angle > pc::pi - capsphere.angle_p()) )
+	    return true;
+	  
+	  Point cap_vector = capsphere.cap_center_point()*capsphere.cap_center() + cts/cts_norm*capsphere.cap_radius();
+	  Point closest_cap_point = capsphere + cap_vector; // Closesed point from sphere.center to surface of capsphere.cap
+	  if( ( (capsphere - closest_cap_point).norm() <= capsphere.radius )) {   // If that point is closer than capsphere.radius then it truly is on the capsphere.cap
+	    if( (-r  + cap_vector ).norm() < sphere.radius)          // If the distance between sphere.center to the closesed point on capsphere is shorter than the radius of sphere then...
+	      return true;                                                   // Return collision
+	    return false;                                                    // Return no collision
+	  } else {
+	    // Now we are on the cap-surface that is not really a true surface on the particle
+	    double closest_cap_distance_squared = capsphere.radius*capsphere.radius + r1*r1 - 2.0*capsphere.radius*r1*cos(pc::pi - capsphere.angle_p() - angle); // Closesed distance to the rim of the cap and sphere
+	    if(closest_cap_distance_squared < sphere.radius*sphere.radius)
+	      return true;
+	    return false;
+	  }
+	  return false;
+	}
+
+        template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+	    double r1 = r.norm();
+	    if( r1 > a.radius+b.radius )
+	      return 0.0;
+	    
+	    if(a.is_sphere() && b.is_sphere()) {
+	      if(r1 < a.radius+b.radius)
+		return pc::infty;
+	      return 0.0;
+	    }
+	    
+	    
+	    // Now we know at least one particles to be a 'Capparticle'
+	    if(a.is_sphere())
+		if(CapsphereSphereOverlap(b, a,r, r1))
+		    return pc::infty;
+		
+	    if(b.is_sphere())
+		if(CapsphereSphereOverlap(a, b,-r, r1))
+		    return pc::infty;
+		
+	    
+	    // Now we know both particles to be 'Capparticles'
+	    //if( SurfaceSurfaceOverlap(-a.cap_center_point(),-b.cap_center_point(), a.angle_p(), b.angle_p(), a.radius, b.radius, r) ) // back-back surface overlap
+	    //  return pc::infty;
+	    
+	    //if( SurfaceSurfaceOverlap(-a.cap_center_point(),-b.cap_center_point(), a.angle_p(), b.angle_c(), a.radius, b.cap_radius(), r - b.cap_center_point()*b.cap_center()) ) // back-front surface overlap
+	    //  return pc::infty;
+	    
+	    if( SurfaceSurfaceOverlap(-a.cap_center_point(),-b.cap_center_point(), a.angle_c(), b.angle_p(), a.cap_radius(), b.radius, r + a.cap_center_point()*a.cap_center()) ) // front-back surface overlap
+	      return pc::infty;
+	    
+	    //if( SurfaceSurfaceOverlap(-a.cap_center_point(),-b.cap_center_point(), a.angle_c(), b.angle_c(), a.cap_radius(), b.cap_radius(), r + a.cap_center_point()*a.cap_center() - b.cap_center_point()*b.cap_center()) ) // front-front surface overlap
+	    //  return pc::infty;
+	    
+	    return 0.0;
+          }
+          
+        string info(char w) {
+          using namespace textio;
+          std::ostringstream o;
+          return o.str();
+        }
     };
 
     /**
@@ -372,8 +534,7 @@ namespace Faunus {
      * and \f$\epsilon_{lj}=\epsilon\f$
      * is the same for all pairs in this class.
      *
-     * Upon construction the input section `ljsimple` is scanned for
-     * the following:
+     * JSON keywords:
      *
      * Keyword    |  Description
      * :--------- |  :------------------------
@@ -392,10 +553,9 @@ namespace Faunus {
       public:
         LennardJones();
 
-        LennardJones(
-                    Tmjson &j,
-                    const string &sec="ljsimple" );
+        LennardJones(Tmjson &j);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
             double x(r6(a.radius+b.radius,r2));
@@ -420,44 +580,82 @@ namespace Faunus {
      * @brief Cuts a pair-potential and shift to zero at cutoff
      *
      * This will cut any pair potential at `cutoff` and shift to
-     * zero at that distance. Slow but general.
+     * zero at that distance.
+     * If `precalc=false` the evaluation
+     * potential is *twice* is expensive as the original since the
+     * energy needs to be evaluated at the cutoff for each pair
+     * of particles. By setting `precalc=true`, this is pre-calculated
+     * in the constructor but assumes that particle properties such
+     * as charge, size etc. do not change during simulation.
+     *
+     * In addition to the JSON keywords taken by the original pair
+     * potential, `cutoff` must be supplied.
      *
      * Example:
      *
      * ~~~~
      * using namespace Faunus::Potential;
-     * typedef CutShift<LennardJones> Tpairpot;
+     * typedef CutShift<LennardJones> LennardJonesCutShift;
      * ~~~~
      *
-     * Upon construction the json section is read from
-     * `Tpairpot::jsonsec` and the `cutoff` keyword
-     * is used to set the cut-off.
+     * @tparam Tpairpot Pair potential to cut and shift
+     * @tparam precalc Pre-calculate energy at cutoff for all atom types for speedup.
+     *                 This is enabled by default (`true`) but will generate problems
+     *                 if particle properties fluctuate during simulation (charge swap moves,
+     *                 for example)
      *
+     * @note Twice as expensive as `Tpairpot` if `precalc=false`
      * @todo Implement continuous force calculation
      */
-    template<class Tpairpot>
+    template<class Tpairpot, bool precalc=true>
       class CutShift : public Tpairpot {
         private:
           double rc2; // squared cut-off distance
+          PairMatrix<double> ucut; // energy at cutoff
         public:
           CutShift( Tmjson &j ) : Tpairpot(j) {
-            rc2 = pow( ( j[Tpairpot::jsonsec]["cutoff"] | pc::infty ), 2 );
-            Tpairpot::name+=" (rcut="
-              + std::to_string( sqrt(rc2) ) + textio::_angstrom + ")";
+              rc2 = pow( double(j.at("cutoff")), 2 );
+              Tpairpot::name+=" (rcut="
+                  + std::to_string( sqrt(rc2) ) + textio::_angstrom + ")";
+
+              if (precalc) { // calculate energy at cutoff between all atom types
+                  size_t n = atom.size(); // number of atom types
+                  ucut.resize(n);
+                  for (auto &i : atom)
+                      for (auto &j : atom) {
+                          PointParticle a, b;
+                          a = atom[i.id];
+                          b = atom[j.id];
+                          ucut.set(i.id, j.id, Tpairpot::operator()(a,b,rc2));
+                      }
+              }
           }
 
+          /** @brief Energy in kT between two particles, r2 = squared distance */
           template<class Tparticle>
-            double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
-              return (r2>rc2) ? 0 : Tpairpot::operator()(a,b,r2) - Tpairpot::operator()(a,b,rc2);
+            double operator() (const Tparticle &a, const Tparticle &b, double r2) {
+              if (r2>rc2)
+                  return 0;
+              if (precalc) // "precalc" deduced at compile time --> no overhead
+                  return Tpairpot::operator()(a,b,r2) - ucut(a.id, b.id);
+              else return Tpairpot::operator()(a,b,r2) - Tpairpot::operator()(a,b,rc2);
             }
       };
 
     /** @brief Lorentz-Berthelot Mixing Rule for sigma and epsilon */
     struct LorentzBerthelot {
-      string name;
-      inline LorentzBerthelot() : name("Lorentz-Berthelot Mixing") {}
+      const std::string name = "Lorentz-Berthelot Mixing";
       inline double mixSigma(double sigma1, double sigma2) const { return 0.5 * ( sigma1 + sigma2 ); }
       inline double mixEpsilon(double eps1, double eps2) const { return sqrt( eps1 * eps2 ); }
+      /**
+       * @brief Function operator
+       * @param sigma Pair of sigma values
+       * @param eps Pair of epsilon values
+       * @returns Pair of mixed sigma (first) and epsilon (second)
+       */
+      inline std::pair<double,double> operator()( const std::pair<double,double> &sigma, const std::pair<double,double> &eps) const {
+          return { 0.5 * ( sigma.first+sigma.second ), std::sqrt( eps.first*eps.second ) };
+      }
     };
 
     /**
@@ -488,18 +686,25 @@ namespace Faunus {
             eps.resize(n);// ...but possible reduced mem. fragmentation
             for (auto &i : atom)
               for (auto &j : atom) {
-                s2.set(i.id, j.id, pow( mixer.mixSigma( i.sigma, j.sigma), 2));
-                eps.set(i.id, j.id, 4.0*mixer.mixEpsilon( i.eps, j.eps ));
+                double sigma, epsilon; // mixed values
+                std::tie( sigma, epsilon ) = mixer( {i.sigma, j.sigma}, {i.eps, j.eps} );
+                s2.set(  i.id, j.id, sigma*sigma );
+                eps.set( i.id, j.id, 4*epsilon );
               }
           }
 
         public:
           template<typename T>
-            LennardJonesMixed(const T&, const string &sec="") {
+            LennardJonesMixed(T &j) {
               name="Lennard-Jones";
               init();
+              if (j.count("ljcustom")>0) {
+                  cout << name+": custom LJ parameters found...\n";
+                  customParameters( j["ljcustom"] );
+              }
             }
 
+          /** @brief Energy in kT between two particles, r2 = squared distance */
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
               double x=s2(a.id,b.id)/r2; //s2/r2
@@ -549,16 +754,18 @@ namespace Faunus {
            * }
            * ~~~~
            */
-          void customParameters( Tmjson &j ) {
-            for (auto it=j.begin(); it!=j.end(); ++it) { 
-              auto v = textio::words2vec<string>( it.key() );
-              if (v.size()==2) {
-                auto id1 = atom[ v[0] ].id;
-                auto id2 = atom[ v[1] ].id;
-                customEpsilon( id1, id2, (it.value()["eps"] | 0.0) * 1.0_kJmol );
-                customSigma( id1, id2, it.value()["sigma"] | 0.0 );
-              } else
-                std::cerr << "Warning: Exactly two atom types must be given for custom LJ param.\n";
+          void customParameters( const Tmjson &j ) {
+            if (j.is_object()) {
+              for (auto it=j.begin(); it!=j.end(); ++it) { 
+                auto v = textio::words2vec<string>( it.key() );
+                if (v.size()==2) {
+                  auto id1 = atom[ v[0] ].id;
+                  auto id2 = atom[ v[1] ].id;
+                  customEpsilon( id1, id2, it.value().at("eps").get<double>() * 1.0_kJmol );
+                  customSigma( id1, id2, it.value().at("sigma").get<double>() );
+                } else
+                  std::runtime_error( name+": Exactly two atom types must be given for custom LJ parameters");
+              }
             }
           }
 
@@ -588,7 +795,7 @@ namespace Faunus {
           PairMatrix<double> rc2,rc,c; // matrix of sigma_ij^2 and eps_ij
         public:
           template<class T>
-            CosAttractMixed(const T &dummy, const string &dir="") : base( dummy ) {
+            CosAttractMixed(const T &dummy ) : base( dummy ) {
               base::name="Cos" + textio::squared + " attraction (mixed)";
               size_t n=atom.size(); // number of atom types
               c.resize(n);
@@ -605,6 +812,7 @@ namespace Faunus {
                 }
             }
 
+          /** @brief Energy in kT between two particles, r2 = squared distance */
           template<class Tparticle>
             double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
               if (r2<rc2(a.id,b.id)) {
@@ -629,7 +837,7 @@ namespace Faunus {
      * at @f$r_c=2^{1/6}\sigma@f$. More info can be found in at
      * <http://doi.org/ct4kh9> and the functional form is:
      * @f[
-     * \beta u = 4 \epsilon \left ( (b/r)^{12} - (b/r)^6 + \frac{1}{4} \right )
+     * \beta u = 4 \beta \epsilon \left ( (b/r)^{12} - (b/r)^6 + \frac{1}{4} \right )
      * @f]
      * where sigma, epsilon per default are set
      * using Lorentz-Berthelot mixing rules.
@@ -641,11 +849,12 @@ namespace Faunus {
         typedef LennardJonesMixed<LorentzBerthelot> Tbase;
 
         template<class T>
-          inline WeeksChandlerAndersen(const T &dummy, const string &dir="")
-          : Tbase( dummy, dir ), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
+          inline WeeksChandlerAndersen(const T &dummy)
+          : Tbase( dummy ), onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
             name="WeeksChandlerAnderson";
           }
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=s2(a.id,b.id); // s^2
@@ -656,6 +865,7 @@ namespace Faunus {
             return eps(a.id,b.id)*(x*x - x + onefourth);
           }
 
+        /** @brief Energy in kT between two particles, r2 = distance vector  */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
             return operator()(a,b,r.squaredNorm());
@@ -681,8 +891,9 @@ namespace Faunus {
       public:
         double threshold;                           //!< Threshold between particle *surface* [A]
         double depth;                               //!< Energy depth [kT] (positive number)
-        SquareWell(Tmjson&, const string &sec="squarewell"); //!< Constructor
+        SquareWell(Tmjson&); //!< Constructor
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double d=a.radius+b.radius+threshold;
@@ -702,8 +913,9 @@ namespace Faunus {
         string _brief();
       public:
         double threshold_lower;
-        SquareWellShifted( Tmjson&, const string &sec="squarewell"); //!< Constructor
+        SquareWellShifted( Tmjson& ); //!< Constructor
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
             double d=a.radius+b.radius+threshold_lower;
@@ -735,8 +947,9 @@ namespace Faunus {
      */
     class SquareWellHydrophobic : public SquareWell {
       public:
-        SquareWellHydrophobic(Tmjson &j, const string &sec="squarewell");
+        SquareWellHydrophobic(Tmjson &j);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             if (a.hydrophobic)
@@ -755,10 +968,11 @@ namespace Faunus {
         string _brief();
         double sigma6;
       public:
-        SoftRepulsion(Tmjson &j, const string &sec);
+        SoftRepulsion(Tmjson &j);
 
         string info(char w);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double d=a.radius+b.radius;
@@ -784,8 +998,9 @@ namespace Faunus {
       protected:
         double eps;
       public:
-        R12Repulsion(Tmjson &j, const string &sec="lj");
+        R12Repulsion(Tmjson &j);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=(a.radius+b.radius);
@@ -802,10 +1017,11 @@ namespace Faunus {
      */
     class LennardJonesR12 : public LennardJones {
       public:
-        LennardJonesR12( Tmjson &j, const string &sec="ljr12") {//: LennardJones(j,sec) {
+        LennardJonesR12( Tmjson &j ) {
           name+="R12";
         }
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double x=r6(a.radius+b.radius,r2);
@@ -818,8 +1034,9 @@ namespace Faunus {
      */
     class LennardJonesTrunkShift : public LennardJones {
       public:
-        LennardJonesTrunkShift( Tmjson&, const string &sec="");
+        LennardJonesTrunkShift( Tmjson& );
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double sigma = a.radius+b.radius;
@@ -849,13 +1066,12 @@ namespace Faunus {
      * @f]
      * where \f$\lambda_B\f$ is the Bjerrum length and \c z are the valencies.
      *
-     * Upon construction, the following parameters are read from the
-     * json section `coulomb`.
+     * JSON keywords:
      *
      * Keyword        |  Description
      * :------------- | :---------------------
      *  `epsr`        | Relative dielectric constant [default: 80]
-     *  `depsdt`      | Dielectric constant temperature derivative [default: -0.368]
+     *  `depsdt`      | \f$ \partial\epsilon_r/\partial T\f$ [default: -0.368]
      */
     class Coulomb : public PairPotentialBase {
       friend class Potential::DebyeHuckel;
@@ -869,10 +1085,11 @@ namespace Faunus {
 
       public:
 
-      Coulomb(Tmjson&, const string &sec="coulomb"); //!< Construct from json entry
+      Coulomb(Tmjson&); //!< Construct from json entry
 
       double bjerrumLength() const;  //!< Returns Bjerrum length [AA]
 
+      /** @brief Energy in kT between two particles separated by squared distance r2 */
       template<class Tparticle>
         double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
 #ifdef FAU_APPROXMATH
@@ -931,21 +1148,23 @@ namespace Faunus {
       private:
 
         double Rc2, Rcinv;
+        PairMatrix<double> lBxQQ; // matrix of lB * Qa * Qb
 
       public:
 
-        CoulombWolf( Tmjson&, const string &dir="coulomb" );
+        CoulombWolf( Tmjson& );
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             if (r2>Rc2)
               return 0;
 #ifdef FAU_APPROXMATH
             r2=invsqrtQuake(r2);  // 1/r
-            return lB * a.charge * b.charge * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
+            return lBxQQ(a.id, b.id) * (r2 - Rcinv + (Rcinv/r2-1)*Rcinv );
 #else
             r2=sqrt(r2); // r
-            return lB * a.charge * b.charge * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
+            return lBxQQ(a.id, b.id) * (1/r2 - Rcinv + (r2*Rcinv-1)*Rcinv );
 #endif
           }
 
@@ -987,8 +1206,9 @@ namespace Faunus {
       private:
         double c;
       public:
-        ChargeNonpolar(Tmjson&, const string &sec="coulomb"); //!< Construction from InputMap
+        ChargeNonpolar(Tmjson&);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             double qq=a.charge * a.charge;
@@ -1016,8 +1236,9 @@ namespace Faunus {
 
     class PolarPolar : public Coulomb {
       public:
-        PolarPolar(Tmjson&, const string &sec="coulomb"); //!< Construction from InputMap
+        PolarPolar(Tmjson&); //!< Construction from InputMap
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) {
             return -3*a.alphax*b.alphax/(r2*r2*r2);
@@ -1038,8 +1259,9 @@ namespace Faunus {
 
       public:
 
-        YukawaGel(Tmjson&, const string &sec="yukawagel");
+        YukawaGel(Tmjson&);
 
+        /** @brief Energy in kT between two particles, r2 = squared distance */
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
             double m = a.radius+b.radius;
@@ -1093,8 +1315,7 @@ namespace Faunus {
      * \frac{z_i z_j}{r_{ij}} \exp(-\kappa r_{ij}) \f]
      * where \f$\kappa=1/D\f$ is the inverse Debye screening length.
      *
-     * Upon construction, the following keywords will be read from
-     * input section `coulomb` (in addition to those read be `Coulomb`):
+     * JSON keywords:
      *
      * - `ionicstrength` [mol/l] 
      * - `debyelength` [angstrom] (only if I=0, default)
@@ -1108,7 +1329,7 @@ namespace Faunus {
 
       public:
 
-        DebyeHuckel( Tmjson &j, const string &sec="coulomb" );
+        DebyeHuckel( Tmjson &j );
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
@@ -1175,7 +1396,7 @@ namespace Faunus {
      */
     class DebyeHuckelSD : public DebyeHuckel {
       public:
-        DebyeHuckelSD(Tmjson &j, const string &sec="coulomb") : DebyeHuckel(j,sec) {}
+        DebyeHuckelSD(Tmjson &j ) : DebyeHuckel(j) {}
 
         template<class Tparticle>
           double operator()(const Tparticle &a, const Tparticle &b, double r2) {
@@ -1243,7 +1464,7 @@ namespace Faunus {
           }
 
       public:
-        DebyeHuckelDenton(InputMap &in, const string &dir="");
+        DebyeHuckelDenton(Tmjson &in);
 
         // Effective macroion-macroion interaction (Eq. 37)
         template<class Tparticle>
@@ -1298,16 +1519,15 @@ namespace Faunus {
      * where @f$r_c@f$ is a spherical cut-off beyond which the
      * energy is zero.
      * See more in for example <http://dx.doi.org/10/fm7qm5>.
-     * The cut-off distance is read from json section `coulomb`) with the following
-     * keyword:
-     * - `cutoff` Spherical cut-off in angstroms (default: infinity)
+     *
+     * Additional JSON keyword: `cutoff`
      */
     class DebyeHuckelShift : public DebyeHuckel {
       private:
         double rc2,rc; // (squared) cutoff distance
         double u_rc,dudrc;
       public:
-        DebyeHuckelShift(Tmjson &j, const string &sec="coulomb");
+        DebyeHuckelShift(Tmjson &j);
 
         template<class Tparticle>
           inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -1360,7 +1580,7 @@ namespace Faunus {
 
       public:
 
-        Cardinaux( Tmjson &j, const string &sec="cardinaux");
+        Cardinaux( Tmjson &j );
 
         template<class Tparticle>
           double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
@@ -1416,9 +1636,9 @@ namespace Faunus {
 
         public:
 
-          FromDisk( Tmjson &j, const string &sec="fromdisk") {
+          FromDisk( Tmjson &j ) {
             PairPotentialBase::name = "fromdisk";
-            string filename = j[sec] | string();
+            string filename = j.at( string("file") );
             if (!t.load(filename))
               throw std::runtime_error("Couldn't load tabulated potential.");
           }
@@ -1554,6 +1774,12 @@ namespace Faunus {
               setCutoff();
             }
 
+          CombinedPairPotential(Tmjson &j1, Tmjson &j2) :
+            PairPotentialBase(), first(j1), second(j2) {
+              name=first.name+"+"+second.name;
+              setCutoff();
+            }
+
           template<class Tparticle, class Tdist>
             double operator()(const Tparticle &a, const Tparticle &b, const Tdist &r2) {
               return first(a,b,r2) + second(a,b,r2);
@@ -1569,6 +1795,11 @@ namespace Faunus {
               return first.field(a,r) + second.field(a,r);
             }
 
+          template<typename Tpvec>
+            double internal(const Tpvec &p, const Group &g) {
+              return first.internal(p,g) + second.internal(p,g);
+            }
+            
           template<class Tspace>
             void setSpace(Tspace &s) {
               first.setSpace(s);

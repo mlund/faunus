@@ -20,15 +20,6 @@
 namespace Faunus
 {
 
-    /**
-     * @brief The MoleculeVec class - used to identify a list of molecules
-     */
-    template<class T>
-    class FaunusVector : public std::vector<T> {
-    public:
-        int offsetIndex = -1;
-    };
-
   /**
    * @brief Particle and molecule tracker
    *
@@ -66,11 +57,9 @@ namespace Faunus
   template<class T, class Tid=int>
   class Tracker
   {
-  protected:
-      std::map<Tid, FaunusVector<T> > _map;
+  private:
+      std::map<Tid, std::vector<T> > _map;
       std::map<Tid, Average<double> > Navg; // average vector length. TO BE REMOVED
-
-      typedef Tid myTid;
   public:
       /** @brief Number of elements of type id */
       size_t size( Tid id ) const
@@ -81,12 +70,6 @@ namespace Faunus
           return 0;
       }
 
-      const std::map<Tid, FaunusVector<T> >& getMap() {
-        return _map;
-      }
-
-      virtual void fillIndex() {}
-
       /** @brief Sum of all elements **/
       size_t size() const
       {
@@ -94,16 +77,6 @@ namespace Faunus
           for ( auto &m : _map )
               sum += m.second.size();
           return sum;
-      }
-
-      Group* get(int i)
-      {
-          for ( auto &m : _map ) {
-              if(m.second.size() > i)
-                  return m.second[i];
-              i -= m.second.size();
-          }
-          return nullptr;
       }
 
       const std::vector<T> &operator[]( Tid i ) const { return _map.at(i); };
@@ -232,40 +205,36 @@ namespace Faunus
 
   };
 
-  class TrackerGroup : public Tracker<Group *> {
-  public:
-      using Tracker<Group *>::_map;
-      using Tracker<Group *>::myTid;
-
-      virtual void fillIndex() {
-          std::vector<myTid> array(_map.size());
-          unsigned int i=0;
-          for ( auto &m : _map ) {
-              array[i] = m.first;
-              ++i;
-          }
-          std::sort(array.begin(), array.end());
-          int sum = 0;
-          for(i = 0; i<_map.size(); ++i) {
-            _map[array[i]].offsetIndex = sum;
-            for(unsigned int q=0; q < _map[array[i]].size(); ++q ) {
-                _map[array[i]][q]->molIndex = q+sum;
-                _map[array[i]][q]->Index = q;
-            }
-            sum += _map[array[i]].size();
-          }
-      }
-  };
-
   /**
    * @brief Placeholder for particles and groups
    *
-   * Every simulation must have a `Space` instance as this contains
-   * the particles and information about groups (particle ranges).
-   * Space also contains the geometry as given by the template
-   * parameter.
+   * This is normally the very first class
+   * initialized in a Faunus program as most other classes depend
+   * upon it. Space defines the particle types, molecule types,
+   * geometry of the simulation container, boundary conditions,
+   * and contains the state of all particles and groups.
    *
-   * @todo insert/erase functions are a mess.
+   * This happens upon construction from a JSON object:
+   *
+   * 1. The given geometry, `Tgeometry`, is initialized with
+   *    data from the JSON section `geometry`.
+   *
+   * 2. The system temperature is set with `PhysicalConstants::setT()`
+   *    with data from JSON section `system/temperature`. The default
+   *    value is 298.15 K.
+   *
+   * 3. `AtomMap` is initialized with data found in JSON section
+   *    `atomlist`. If `AtomData::Ninit` is given, atoms will be
+   *    inserted into the simulation container, respecting
+   *    boundary conditions.
+   *
+   * 4. `MoleculeMap` is initialized with data found in JSON section
+   *    `atomlist`. If `MoleculeData::Ninit` is given, molecules will be
+   *    inserted into the simulation container, respecting
+   *    boundary conditions.
+   *
+   * @tparam Tgeometry Simulation container geometry derived from `Geometry::Geometrybase`
+   * @tparam Tparticle Particle type based on `PointParticle`
    */
   template<typename Tgeometry, typename Tparticle=PointParticle>
   class Space
@@ -273,6 +242,7 @@ namespace Faunus
   private:
       bool checkSanity();                    //!< Check group length and vector sync
       std::vector<Group *> g;                 //!< Pointers to ALL groups in the system
+      Tmjson to_json();
 
   public:
       typedef std::vector<Tparticle, Eigen::aligned_allocator<Tparticle> > p_vec;
@@ -284,12 +254,13 @@ namespace Faunus
       enum keys { OVERLAP_CHECK, NOOVERLAP_CHECK, RESIZE, NORESIZE };
 
       Tgeometry geo;                         //!< System geometry
+      Tgeometry geo_trial;                   //!< Trial geometry
       ParticleVector p;                      //!< Main particle vector
       ParticleVector trial;                  //!< Trial particle vector.
       MoleculeMap<ParticleVector> molecule;  //!< Map of molecules
 
       Tracker<int> atomTrack;                //!< Track atom index based on atom type
-      TrackerGroup molTrack;              //!< Track groups pointers based on molecule type
+      Tracker<Group *> molTrack;              //!< Track groups pointers based on molecule type
 
       /**
        * @brief Struct for specifying changes to be made to Space
@@ -304,6 +275,7 @@ namespace Faunus
       struct Change
       {
           double dV;  // volume change
+          bool geometryChange;
           std::map<int, vector<int>> mvGroup; // move groups
           std::map<int, vector<int>> rmGroup; // remove groups
           std::map<int, ParticleVector> inGroup; // insert groups
@@ -313,6 +285,7 @@ namespace Faunus
           void clear()
           {
               dV = 0;
+	      geometryChange = false;
               mvGroup.clear();
               rmGroup.clear();
               inGroup.clear();
@@ -326,7 +299,8 @@ namespace Faunus
                   if ( rmGroup.empty())
                       if ( inGroup.empty())
                           if ( std::fabs(dV) < 1e-9 )
-                              return true;
+			      if(!geometryChange)
+                                  return true;
               return false;
           }
       };
@@ -337,17 +311,21 @@ namespace Faunus
           // loop over moved groups
           for ( auto m : c.mvGroup )
           {
-              auto &g = groupList()[m.first];
+              auto g = groupList()[m.first];
               if ( m.second.empty()) // no index given; assume all have changed
-                  for ( auto i : g )
+                  for ( auto i : *g )
                       p[i] = trial[i];
               else                  // index given; update only those
                   for ( auto i : m.second )
                   {
-                      assert(g.find(i));
+                      assert(g->find(i));
                       p[i] = trial[i];
                   }
-              g.setMassCenter(*this); // update mass center
+            if(c.geometryChange) {
+	      g.setMassCenter(p,geo_trial); // update mass center
+	    } else {
+	      g.setMassCenter(p,geo); // update mass center
+	    }
           }
           assert(!"incomplete");
       }
@@ -360,15 +338,19 @@ namespace Faunus
        * is searched for molecules with non-zero `Ninit` and
        * will insert accordingly.
        */
-      Space( Tmjson &j ) : geo(j)
+      Space( Tmjson &j ) try : geo( j.at("system").at("geometry") )
       {
-          pc::setT(j["system"]["temperature"] | 298.15);
-          atom.include(j);
-          molecule.include(j);
+          pc::setT( j.at("system").value("temperature", 298.15) );
+          atom.include( j.at("atomlist") );
+          molecule.include( j.at("moleculelist") );
           for ( auto mol : molecule )
               while ( mol.Ninit-- > 0 )
                   insert(mol.id, mol.getRandomConformation(geo, p));
-          molTrack.fillIndex();
+      }
+      catch (std::exception &e)
+      {
+          std::cerr << "Space construction error: " << e.what();
+          throw;
       }
 
       std::vector<Group *> &groupList() { return g; };   //!< Vector with pointers to all groups
@@ -403,8 +385,6 @@ namespace Faunus
               for ( auto i : *g )
                   atomTrack.insert(p.at(i).id, i);
           }
-
-          molTrack.fillIndex();
       }
 
       /**
@@ -463,7 +443,7 @@ namespace Faunus
       }
 
       /** @brief Returns vector of molecules with matching molid */
-      inline std::vector<Group *> findMolecules( int molId, bool sort = false )
+      inline std::vector<Group *> findMolecules( int molId, bool sort = false ) const
       {
           auto v = molTrack[molId];
           if ( sort )
@@ -484,6 +464,9 @@ namespace Faunus
       /** @brief Count number of molecules with matching molid */
       inline int numMolecules( int molId ) const { return molTrack.size(molId); }
 
+      inline int numMolecules( string name ) const {
+      }
+
       /**
        * @brief Returns vector of molecules with matching name
        *
@@ -500,7 +483,7 @@ namespace Faunus
        * }
        * ~~~~
        */
-      inline std::vector<Group *> findMolecules( const std::string &name, bool sort = false )
+      inline std::vector<Group *> findMolecules( const std::string &name, bool sort = false ) const
       {
           auto it = molecule.find(name);
           if ( it != molecule.end())
@@ -740,6 +723,40 @@ namespace Faunus
       return false;
   }
 
+  template<class Tgeometry, class Tparticle>
+  Tmjson Space<Tgeometry, Tparticle>::to_json()
+  {
+      Tmjson j;
+      j = {
+          { "volume", geo.getVolume() },
+          { "Nparticles", p.size() },
+          { "Ngroups", p.size() }
+      };
+
+      vector<string> v;
+      v.reserve( p.size() );
+
+      for ( auto &i : p ) {
+          std::ostringstream o;
+          o << i;
+          v.push_back(o.str());
+      }
+      j["particles" ] = v;
+
+      v.clear();
+      for ( auto i : g ) {
+          std::ostringstream o;
+          o << *i;
+          v.push_back(o.str());
+      }
+      j["groups" ] = v;
+
+      if ( std::is_base_of<Geometry::Cuboid, Tgeometry>::value )
+          j["length"] = geo.len;
+      return j;
+  }
+ 
+
   /**
    * @param file Filename
    * @param key If set to `RESIZE`, `p` and `trial` will be
@@ -777,13 +794,15 @@ namespace Faunus
                   p.resize(n);
               }
 
-              assert(
-                  n == (int) p.size() && "State file has different number of particles. Try using the RESIZE keyword.");
-
-              if ( n == (int) p.size())
+              if ( n!=(int)p.size() )
+                  throw std::runtime_error("State file has different number of particles. Try using the RESIZE keyword.");
+              else
               {
-                  for ( int i = 0; i < n; i++ )
-                      p[i] << f;
+                  for ( int i = 0; i < n; i++ ) {
+                      p.at(i) << f;
+                      if ( p.at(i).id >= atom.size() )
+                          throw std::runtime_error("State file has more species than in the atom list.");
+                  }
                   trial = p;
                   cout << indent(SUB) << "Read " << n << " particle(s)." << endl;
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import print_function
 import json, sys, os
 from subprocess import call
@@ -21,7 +23,7 @@ def mkinput():
   "moves" : { "atomtranslate" : { "myparticle" : { "peratom":True, "prob":1 } } },
 
   "system" : {
-    "cuboid"   : { "len":4 },
+    "geometry" : { "length":4 },
     "mcloop"   : { "macro":10, "micro":micro },
     "unittest" : { "testfile":"penalty.test", "stable":False }
   }
@@ -32,8 +34,6 @@ def mkinput():
 exe  = './penalty'
 if os.path.exists('./pf_penalty'):
   os.remove('./pf_penalty')
-else:
-  print("Sorry, I can not remove pf_penalty.")
 
 if ( os.access( exe, os.X_OK )):
 

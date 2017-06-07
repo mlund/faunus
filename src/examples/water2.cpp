@@ -1,5 +1,6 @@
 #include <faunus/faunus.h>
 #include <faunus/ewald.h>
+//#define EWALD
 
 using namespace Faunus;
 using namespace Faunus::Potential;
@@ -8,15 +9,15 @@ typedef Space<Geometry::Cuboid> Tspace;
 #ifdef EWALD
 typedef LennardJonesLB Tpairpot;
 #else
-typedef CombinedPairPotential<CoulombWolf,LennardJonesLB> Tpairpot;
+typedef CombinedPairPotential<CoulombGalore,LennardJonesLB> Tpairpot;
 #endif
 
 int main() {
 
   cout << textio::splash();      // show faunus banner and credits
-  InputMap mcp("water2.json");   // read input file
+  Tmjson mcp = openjson("water2.json");// read input file
   Tspace spc(mcp);
-
+  
   // Energy functions and space
 #ifdef EWALD
   auto pot = Energy::NonbondedEwald<Tspace,Tpairpot>(mcp)
@@ -27,57 +28,51 @@ int main() {
 #endif
 
   spc.load("state"); // load old config. from disk (if any)
-  auto waters = spc.findMolecules("water");
 
   // Markov moves and analysis
   Analysis::CombinedAnalysis analyzer(mcp,pot,spc);
-  Analysis::RadialDistribution<> rdf(0.05);
   Move::Propagator<Tspace> mv( mcp, pot, spc );
 
-  cout << atom.info() + spc.info() + pot.info() + textio::header("MC Simulation Begins!");
-
+  cout << atom.info() + spc.info() + textio::header("MC Simulation Begins!");
+  
   MCLoop loop(mcp);    // class for handling mc loops
   while ( loop[0] ) {          // Markov chain 
     while ( loop[1] ) {
-
       mv.move();
       analyzer.sample();
-
-      double rnd = slump();
-      if ( rnd>0.9 )
-        rdf.sample( spc, atom["OW"].id, atom["OW"].id ); // O-O g(r)
-
     } // end of micro loop
 
     cout << loop.timing();
   } // end of macro loop
-
-  rdf.save("rdf.dat");
 
   // perform unit 
   UnitTest test(mcp);
   mv.test(test);
 
   // print information
-  cout << loop.info() + mv.info() + analyzer.info() + test.info();
+  cout << pot.info() + loop.info() + mv.info() + analyzer.info() + test.info();
 
   return test.numFailed();
 }
 
-/**  @page example_water2 Example: SPC Water (V2)
+/**  @page example_water2 Example: SPC/E Water (V2)
 
- This will simulate SPC water in a cubic volume using
- the Wolf method for electrostatic interactions.
- This version uses a fake cell list to discard
- interactions beyond a specified water-water mass-center
- cutoff.
+ This will simulate SPC/E water in a cubic volume using
+ the q-potential for electrostatic interactions. When
+ `order` in input is set to 1 then the q-potential is
+ equal to the Wolf method. This version uses a fake 
+ cell list to discard interactions beyond a specified 
+ water-water mass-center cutoff.
+ 
+ The simulation results can be directly compared with
+ results presented in DOI:10.1063/1.476482.
 
  Run this example from the main faunus directory:
 
  ~~~~~~~~~~~~~~~~~~~
  $ make example_water2
  $ cd src/examples
- $ ./water2.run
+ $ ./water2.py
  ~~~~~~~~~~~~~~~~~~~
 
  ![Water](water.png)

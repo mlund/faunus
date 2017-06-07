@@ -1,5 +1,5 @@
 # Generated on Dec 23 2014 14:23:32 using 4.2.1 Compatible Apple LLVM 6.0 (clang-600.0.56)
 energyAverage                      0.610458            
-moves/atomtranslate_acceptance     61.6729             
-relativeEnergyDrift                0                   
-moves/temper_acceptance            66.15               
+SingleParticleTranslation_acceptance 61.6729             
+relativeEnergyDrift                1.35836e-08 
+ParallelTempering_acceptance       66.15               

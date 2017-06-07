@@ -3,6 +3,7 @@
 
 #ifndef SWIG
 #include <functional>
+#include <memory>
 #include <faunus/common.h>
 #include <faunus/point.h>
 #include <faunus/average.h>
@@ -22,7 +23,14 @@
 namespace Faunus
 {
 
-  /** @brief Monte Carlo move related classes */
+  /**
+   * @brief Monte Carlo move related classes
+   *
+   * All moves are based on `Movebase` and most end-users
+   * will probably want to start with `Propagator` which
+   * collects all moves and allows for control via input
+   * JSON files.
+   */
   namespace Move
   {
 
@@ -90,8 +98,6 @@ namespace Faunus
      * This is thus an expensive computation and is best used with
      * MC moves that propagate  all particles.
      *
-     * ### Update frequency ###
-     *
      * Updating induced moments is an iterative N*N operation and
      * very inefficient for MC moves that update only a subset of the system.
      * In liquid systems that propagate only slowly as a function of MC steps
@@ -137,12 +143,12 @@ namespace Faunus
                 for ( size_t i = 0; i < p.size(); i++ )
                 {
                     Point E = field.col(i);                  // field on i
-                    Point mu_trial = p[i].alpha * E + p[i].mup;// new tot. dipole
-                    Point mu_err = mu_trial - p[i].mu * p[i].muscalar;// mu difference
+                    Point mu_trial = p[i].alpha() * E + p[i].mup();// new tot. dipole
+                    Point mu_err = mu_trial - p[i].mu() * p[i].muscalar();// mu difference
                     mu_err_norm[i] = mu_err.norm();          // norm of previous row
-                    p[i].muscalar = mu_trial.norm();         // update dip scalar in particle
-                    if ( p[i].muscalar > 1e-6 )
-                        p[i].mu = mu_trial / p[i].muscalar;      // update article dip.
+                    p[i].muscalar() = mu_trial.norm();         // update dip scalar in particle
+                    if ( p[i].muscalar() > 1e-6 )
+                        p[i].mu() = mu_trial / p[i].muscalar();      // update article dip.
                 }
                 if ( cnt > max_iter )
                     throw std::runtime_error("Field induction reached maximum number of iterations.");
@@ -176,8 +182,8 @@ namespace Faunus
         double _energyChange() override
         {
             if ( updateDip )
-                return Energy::systemEnergy2(*spc, *pot, spc->trial)
-                    - Energy::systemEnergy2(*spc, *pot, spc->p);
+                return Energy::systemEnergy(*spc, *pot, spc->trial)
+                    - Energy::systemEnergy(*spc, *pot, spc->p);
             else
                 return Tmove::_energyChange();
         }
@@ -209,23 +215,27 @@ namespace Faunus
         }
 
     public:
+
+        double getThreshold() const { return threshold; }
+        int getMaxIterations() const { return max_iter; }
+
         template<class Tspace>
-        PolarizeMove( InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s ) :
+        PolarizeMove( Tmjson &in, Energy::Energybase<Tspace> &e, Tspace &s ) :
             Tmove(in, e, s)
         {
-            threshold = in.get<double>("pol_threshold", 0.001, "Iteration precision");
-            max_iter = in.get<int>("max_iterations", 40, "Max. iterations");
+            threshold = in.value("pol_threshold", 0.001);
+            max_iter = in.value("max_iterations", 40);
         }
 
         template<class Tspace>
         PolarizeMove( Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) :
             Tmove(e, s, j)
         {
-            threshold = j["pol_threshold"] | 0.001;
-            max_iter = j["max_iterations"] | 40;
+            threshold = j.value("pol_threshold", 0.001);
+            max_iter = j.value("max_iterations", 40);
         }
 
-        PolarizeMove( const Tmove &m ) : max_iter(40), threshold(0.001), Tmove(m) {};
+        //PolarizeMove( const Tmove &m ) : max_iter(40), threshold(0.001), Tmove(m) {};
 
         double move( int n ) override
         {
@@ -311,9 +321,9 @@ namespace Faunus
             MolListData( Tmjson &j )
             {
                 *this = MolListData();
-                prob = j["prob"] | 1.0;
-                perMol = j["permol"] | false;
-                perAtom = j["peratom"] | false;
+                prob = j.value("prob", 1.0);
+                perMol = j.value("permol", false);
+                perAtom = j.value("peratom", false);
                 dir << (j["dir"] | std::string("1 1 1"));
             }
         };
@@ -329,13 +339,12 @@ namespace Faunus
             for ( auto it = j.begin(); it != j.end(); ++it )
             {  // iterate over molecules
                 auto mol = spc->molList().find(it.key()); // is molecule defined?
-                if ( mol == spc->molList().end())
-                {
-                    std::cerr << "Error: molecule '" << it.key() << "' not defined.\n";
-                    exit(1);
-                }
-                else
+                if ( mol != spc->molList().end())
                     addMol(mol->id, MolListData(it.value()));
+#ifndef NDEBUG
+                else
+                    std::cerr << title << ": unknown molecule '" << it.key() << "' was not added.\n";
+#endif
             }
         }
 
@@ -386,7 +395,6 @@ namespace Faunus
      * @brief Constructor
      * @param e Energy class
      * @param s Space
-     * @param rootsec Name of section in input file to search for parameters
      */
     template<class Tspace>
     Movebase<Tspace>::Movebase( Energy::Energybase<Tspace> &e, Tspace &s )
@@ -399,6 +407,7 @@ namespace Faunus
         w = 30;
         runfraction = 1;
         useAlternativeReturnEnergy = false; //this has no influence on metropolis sampling!
+        change.clear();
 #ifdef ENABLE_MPI
         mpiPtr=nullptr;
 #endif
@@ -453,11 +462,11 @@ namespace Faunus
     template<class Tspace>
     void Movebase<Tspace>::trialMove()
     {
+      assert(change.empty() && "Change object is not empty!");
         if ( cnt == 0 )
             for ( auto i : spc->groupList())
                 i->setMassCenter(*spc);
         cnt++;
-        change.clear();
         _trialMove();
     }
 
@@ -518,6 +527,7 @@ namespace Faunus
             while ( n-- > 0 )
             {
                 trialMove();
+		pot->updateChange(change);
                 double du = energyChange();
                 acceptance = metropolis(du);
                 if ( !acceptance )
@@ -530,9 +540,9 @@ namespace Faunus
                     dusum += du;
                     utot += du;
                 }
-                pot->updateChange(acceptance);
+                utot += pot->update(acceptance);
+                change.clear();
             }
-            utot += pot->update(acceptance);
         }
         assert(spc->p == spc->trial && "Trial particle vector out of sync!");
         timer.stop();
@@ -623,6 +633,84 @@ namespace Faunus
     }
 
     /**
+     * @brief Generate new configurations by looping through XTC trajectory
+     *
+     * This move will load frames from a trajectory file and with this
+     * replace particle positions in the system. No energy is evaluated
+     * and energyChange will always return 0.
+     *
+     * If the trajectory is saved with molecules that extend beyond
+     * the box boundaries, the PBC boundary control should be set
+     * to true.
+     *
+     *  Keyword  | Description
+     *  -------- | ---------------
+     *  `file`   | Trajectory file to load (.xtc)
+     *  `trump`  | Enforce (PBC) boundary control (default: false)
+     *
+     * Notes:
+     *
+     *   - Geometry must be derived from `Geometry::Cuboid`.
+     *   - Number of particle in Space must match that of the trajectory
+     *   - Particles must not overlap with geometry boundaries
+     *   - if the above is violated an exception is thrown
+     *
+     * @date January 2017
+     * @warning Untested
+     */
+    template<class Tspace, class base=Movebase<Tspace>>
+    class TrajectoryMove : public base
+    {
+        FormatXTC xtc;
+        bool _continue;
+        int framecnt;
+        string file;
+        bool applyPBC; // true if PBC should be applied to loaded frames
+
+        void _acceptMove() override {};
+        void _rejectMove() override {};
+        string _info() override { return string(); };
+        double _energyChange() override { return 0; };
+
+        Tmjson _json() override
+        {
+            Tmjson js;
+            if ( base::cnt > 0 )
+            {
+                auto &j = js[base::title];
+                j = {
+                    { "file", file },
+                    { "boundary control", applyPBC },
+                    { "frames loaded", framecnt}
+                };
+            }
+            return js;
+        }
+
+        void _trialMove() override
+        {
+            if (_continue)
+                _continue = xtc.loadnextframe( *base::spc, true, applyPBC );
+            if (_continue)
+                framecnt++;
+        }
+
+    public:
+
+        TrajectoryMove( Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j )
+            : Movebase<Tspace>(e, s), xtc(1), _continue(true), framecnt(0)
+        {
+            base::title = "XTC Trajectory Move";
+            file = j.at("file");
+            applyPBC = j.value("trump", false);
+            if ( xtc.open(file) == false)
+                throw std::runtime_error(base::title + ": xtc file " + file + " cannot be loaded");
+        }
+
+        bool eof() { return _continue; } //!< True if all frames have been loaded
+    };
+
+    /**
      * @brief Translation of atomic particles
      *
      * This Markov move can work in two modes:
@@ -692,7 +780,6 @@ namespace Faunus
     AtomicTranslation<Tspace>::AtomicTranslation(
         Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) : Movebase<Tspace>(e, s)
     {
-
         base::title = "Single Particle Translation";
         iparticle = -1;
         igroup = nullptr;
@@ -766,6 +853,7 @@ namespace Faunus
                     assert((base::spc->p[j] - base::spc->trial[j]).squaredNorm() < 1e-6);
 #endif
         }
+        base::change.mvGroup[spc->findIndex(igroup)].push_back(iparticle);
     }
 
     template<class Tspace>
@@ -803,11 +891,9 @@ namespace Faunus
             if ( spc->geo.collision(
                 spc->trial[iparticle], spc->trial[iparticle].radius, Geometry::Geometrybase::BOUNDARY))
                 return pc::infty;
-            return
-                (base::pot->i_total(spc->trial, iparticle)
-                    + base::pot->external(spc->trial))
-                    - (base::pot->i_total(spc->p, iparticle)
-                        + base::pot->external(spc->p));
+	    
+	    return Energy::energyChange(*spc, *base::pot, base::change);
+            //return (base::pot->i_total(spc->trial, iparticle) + base::pot->external(spc->trial)) - (base::pot->i_total(spc->p, iparticle) + base::pot->external(spc->p));
         }
         return 0;
     }
@@ -861,7 +947,7 @@ namespace Faunus
             auto &j = js[base::title];
             j = {
                 {"moves/particle", base::cnt / gsize.avg()},
-                {"dir", 999},
+                {"dir", vector<double>( dir ) },
                 {"genericdp", genericdp}
             };
             for ( auto m : sqrmap )
@@ -945,6 +1031,7 @@ namespace Faunus
             rot.setAxis(spc->geo, Point(0, 0, 0), u, dprot * slump.half());
             spc->trial[iparticle].rotate(rot);
         }
+        base::change.mvGroup[spc->findIndex(igroup)].push_back(iparticle);
     }
 
     template<class Tspace>
@@ -996,6 +1083,124 @@ namespace Faunus
         }
         return o.str();
     }
+    
+    /**
+     * @brief Translate single particles
+     *
+     * This move works in the same way as AtomicTranslation but does
+     * translations on a 2D hypersphere-surface.
+     */
+    template<class Tspace>
+      class AtomicTranslation2D : public AtomicTranslation<Tspace> {
+        protected:
+          typedef AtomicTranslation<Tspace> base;
+          using base::spc;
+          using base::iparticle;
+          using base::igroup;
+          using base::w;
+          using base::gsize;
+          using base::genericdp;
+          using base::accmap;
+          using base::sqrmap;
+          Geometry::QuaternionRotate rot;
+          string _info();
+          void _trialMove();
+          void _acceptMove();
+          void _rejectMove();
+          double dp;      //!< Temporary storage for current angle
+          double radius;
+
+        public:
+          AtomicTranslation2D(Energy::Energybase<Tspace> &, Tspace &,Tmjson &);
+      };
+
+    template<class Tspace>
+      AtomicTranslation2D<Tspace>::AtomicTranslation2D(
+          Energy::Energybase<Tspace> &e,
+          Tspace &s,
+          Tmjson &j) : base(e, s, j) {
+        base::title="Single Particle Translation 2D sphere";
+	radius = s.geo.getRadius();
+	assert(radius > 0 && "Radius has to be larger than zero!");
+      }
+    template<class Tspace>
+      void AtomicTranslation2D<Tspace>::_trialMove() {
+        if ( ! this->mollist.empty() ) {
+          igroup = spc->randomMol( this->currentMolId );
+          if ( igroup != nullptr ) {
+            iparticle = igroup->random();
+            gsize += igroup->size();
+          } else return;
+        } else return;
+
+        if (iparticle>-1) {
+          assert( iparticle<(int)spc->p.size() && "Trial particle out of range");
+          dp = atom[spc->p[iparticle].id ].dp;
+          if (dp<1e-6)
+            dp = base::genericdp;
+	  
+	  Point rtp = spc->trial[iparticle].xyz2rtp(); // Get the spherical coordinates of the particle
+	  double slump_theta = dp*(slump()-0.5);  // Get random theta-move
+          double slump_phi = dp*(slump()-0.5);   // Get random phi-move
+	  
+	  double scalefactor_theta = radius*sin(rtp.z()); // Scale-factor for theta
+	  double scalefactor_phi = radius;                // Scale-factor for phi
+	  
+	  Point theta_dir = Point(-sin(rtp.y()),cos(rtp.y()),0);    // Unit-vector in theta-direction
+	  Point phi_dir = Point(cos(rtp.y())*cos(rtp.z()),sin(rtp.y())*cos(rtp.z()),-sin(rtp.z()));  // Unit-vector in phi-direction
+	  Point xyz = spc->trial[iparticle] + scalefactor_theta*theta_dir*slump_theta + scalefactor_phi*phi_dir*slump_phi; // New position
+	  spc->trial[iparticle] = radius*xyz/xyz.norm(); // Convert to cartesian coordinates
+	  
+	  assert( fabs((spc->trial[iparticle].norm() - radius)/radius) < 1e-9 && "Trial particle does not lie on the sphere surface!");
+        }
+        base::change.mvGroup[spc->findIndex(igroup)].push_back(iparticle);
+      }
+
+    template<class Tspace>
+      void AtomicTranslation2D<Tspace>::_acceptMove() {
+        sqrmap[ spc->p[iparticle].id ] += pow(dp*180/pc::pi, 2);
+        accmap[ spc->p[iparticle].id ] += 1;
+        spc->p[iparticle] = spc->trial[iparticle];
+      }
+
+    template<class Tspace>
+      void AtomicTranslation2D<Tspace>::_rejectMove() {
+        spc->trial[iparticle] = spc->p[iparticle];
+        sqrmap[ spc->p[iparticle].id ] += 0;
+        accmap[ spc->p[iparticle].id ] += 0;
+      }
+
+    template<class Tspace>
+      string AtomicTranslation2D<Tspace>::_info() {
+        using namespace textio;
+        std::ostringstream o;
+	o << pad(SUB,w,"Radius") << radius << endl;
+        if (gsize.cnt>0)
+          o << pad(SUB,w,"Average moves/particle") << base::cnt / gsize.avg() << endl;
+        if (base::genericdp>1e-6)
+          o << pad(SUB,w,"Generic displacement") << genericdp
+            << _angstrom << endl;
+        if (base::cnt>0) {
+          char l=12;
+          o << endl
+            << indent(SUB) << "Individual particle rotation:" << endl << endl
+            << indent(SUBSUB) << std::left << string(7,' ')
+            << setw(l-6) << "dp"
+            << setw(l+1) << "Acc. "+percent
+            << setw(l+7) << bracket("d"+theta+squared)+"/"+degrees
+            << rootof+bracket("d"+theta+squared)+"/"+degrees << endl;
+          for (auto m : sqrmap) {
+            auto id=m.first;
+            o << indent(SUBSUB) << std::left << setw(7) << atom[id].name
+              << setw(l-6) << ( (atom[id].dp<1e-6) ? genericdp : atom[id].dp);
+            o.precision(3);
+            o << setw(l) << accmap[id].avg()*100
+              << setw(l) << sqrmap[id].avg()
+              << setw(l) << sqrt(sqrmap[id].avg()) << endl;
+          }
+        }
+        return o.str();
+      } 
 
     /**
      * @brief Combined rotation and rotation of groups
@@ -1013,12 +1218,13 @@ namespace Faunus
         using base::pot;
         using base::w;
         using base::cnt;
-        void _test( UnitTest & );
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        string _info();
+        void _test( UnitTest & ) override;
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        Tmjson _json() override;
+        double _energyChange() override;
+        string _info() override;
         typedef std::map<string, Average<double> > map_type;
         map_type accmap;   //!< Group particle acceptance map
         map_type sqrmap_t; //!< Group mean square displacement map (translation)
@@ -1105,6 +1311,7 @@ namespace Faunus
     template<class Tspace>
     void TranslateRotate<Tspace>::_trialMove()
     {
+
         // if `mollist` has data, favor this over `setGroup()`
         // Note that `currentMolId` is set by Movebase::move()
         if ( !this->mollist.empty())
@@ -1138,6 +1345,10 @@ namespace Faunus
             p.z() = dir.z() * dp_trans * slump.half();
             igroup->translate(*spc, p);
         }
+        
+        int g_index = spc->findIndex(igroup);
+        for(auto i : *igroup)
+          base::change.mvGroup[g_index].push_back(i);
     }
 
     template<class Tspace>
@@ -1164,35 +1375,44 @@ namespace Faunus
     {
         if ( dp_rot < 1e-6 && dp_trans < 1e-6 )
             return 0;
-
+        double du = Energy::energyChange(*spc, *base::pot, base::change);
         for ( auto i : *igroup )
             if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
                 return pc::infty;
+        return du;
+	//return Energy::energyChange(*spc, *base::pot, base::change);
 
-        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
+	
+        /*double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if ( unew == pc::infty )
             return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
 
 #ifdef ENABLE_MPI
-        if (base::mpiPtr!=nullptr) {
-            double du=0;
-            auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
-            for (auto i=s.first; i<=s.second; ++i) {
-                auto gi=spc->groupList()[i];
-                if (gi!=igroup)
-                    du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
-            }
-            return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
-        }
+          if (base::mpiPtr!=nullptr) {
+          double du=0;
+          auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
+          for (auto i=s.first; i<=s.second; ++i) {
+          auto gi=spc->groupList()[i];
+          if (gi!=igroup)
+          du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
+          }
+          return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
+          }
 #endif
 
-        unew += pot->g2All(spc->trial, *igroup);
-        if ( unew == pc::infty )
-            return pc::infty;   // early rejection
-        uold += pot->g2All(spc->p, *igroup);
-
-        return unew - uold;
+        for ( auto g : spc->groupList())
+        {
+            if ( g != igroup )
+            {
+                unew += pot->g2g(spc->trial, *g, *igroup);
+                if ( unew == pc::infty )
+                    return pc::infty;   // early rejection
+                uold += pot->g2g(spc->p, *g, *igroup);
+            }
+        }
+        return unew - uold;*/
+	
     }
 
     template<class Tspace>
@@ -1231,6 +1451,22 @@ namespace Faunus
     }
 
     template<class Tspace>
+    Tmjson TranslateRotate<Tspace>::_json()
+    {
+        using namespace textio;
+        Tmjson j;
+        j = {
+            { this->title,
+                {
+                    { "max translation", pm + std::to_string(dp_trans/2) + _angstrom },
+                    { "max rotation", pm + std::to_string(dp_rot/2*180/pc::pi) + degrees }
+                }
+            }
+        };
+        return j;
+    }
+
+    template<class Tspace>
     void TranslateRotate<Tspace>::_test( UnitTest &t )
     {
         string sec = textio::trim(base::title) + "_";
@@ -1248,11 +1484,12 @@ namespace Faunus
        * @brief Move that will swap conformation of a molecule
        *
        * This will swap between different molecular conformations
-       * as defined in `MoleculeData`. If defined, the weight
+       * as defined in `MoleculeData` with `traj` and `weight`.
+       * If defined, the weight
        * distribution is respected, otherwise all conformations
        * have equal intrinsic weight. Upon insertion, the new conformation
        * is randomly oriented and placed on top of the mass-center of
-       * an exising molecule.
+       * an exising molecule. That is, there is no mass center movement.
        *
        * The JSON input is identical to `Move::TranslateRotate` except that
        * displacement parameters are ignored.
@@ -1274,27 +1511,40 @@ namespace Faunus
         typedef MoleculeData<typename Tspace::ParticleVector> Tmoldata;
         RandomInserter<Tmoldata> inserter;
 
-        string _info() override { return string(); }
-
         void _trialMove() override
         {
-
             auto gvec = spc->findMolecules(base::currentMolId);
             assert(!gvec.empty());
             igroup = *slump.element(gvec.begin(), gvec.end());
+            assert(igroup != nullptr); // make sure we really found a group
 
             if ( !igroup->empty())
             {
+                assert( igroup->cm == igroup->cm_trial);
+                inserter.offset = igroup->cm_trial;
                 auto pnew = inserter(spc->geo, spc->p, spc->molecule[igroup->molId]); // get conformation
-                Geometry::translate(spc->geo, pnew, igroup->cm_trial); // place on top of existing molecule
-                std::copy(pnew.begin(),
-                          pnew.end(),
-                          spc->trial.begin() + igroup->front()); // override w. new conformation
 
-                assert(pnew.size() == size_t(igroup->size()));
-                assert(spc->p.size() == spc->trial.size());
+                if (pnew.size() == size_t(igroup->size()))
+                    std::copy( pnew.begin(), pnew.end(),
+                               spc->trial.begin() + igroup->front()); // override w. new conformation
+                else
+                    throw std::runtime_error(base::title + ": conformation atom count mismatch");
+
+                // this move shouldn't move mass centers, so let's check if this is true:
+                igroup->cm_trial = Geometry::massCenter(spc->geo, spc->trial, *igroup);
+                if ( (igroup->cm_trial - igroup->cm).norm()>1e-6 )
+                    throw std::runtime_error(base::title + ": unexpected mass center movement");
             }
-            assert(igroup != nullptr); // make sure we really found a group
+
+            assert(spc->p.size() == spc->trial.size());
+        }
+
+        double _energyChange() override
+        {
+            double du = base::_energyChange();
+            base::alternateReturnEnergy = du
+                + base::pot->g_internal(spc->trial, *igroup) - base::pot->g_internal(spc->p, *igroup);
+            return du;
         }
 
     public:
@@ -1303,7 +1553,10 @@ namespace Faunus
         {
             base::title = "Conformation Swap";
             inserter.checkOverlap = false; // will be done by _energyChange()
-            inserter.dir = {0, 0, 0}; // initial placement at origo
+            inserter.dir = {0, 0, 0};      // initial placement at origo
+            inserter.rotate = true;        // rotate conformation randomly
+            base::useAlternativeReturnEnergy=true; // yes, we Metropolis doesn't need internal energy change
+            base::dp_trans = 1; // if zero, base::energyChange() returns 0 which we don't want!
         }
     };
 
@@ -1558,11 +1811,11 @@ namespace Faunus
         using base::dir;
         Geometry::QuaternionRotate vrot;
         vector<int> cindex; //!< index of mobile ions to move with group
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        string _info();
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        double _energyChange() override;
+        string _info() override;
         Average<double> avgsize; //!< Average number of ions in cluster
         Average<double> avgbias; //!< Average bias
         Group *gmobile;          //!< Pointer to group with potential cluster particles
@@ -1587,26 +1840,23 @@ namespace Faunus
         base::fillMolList(m);// find molecules to be moved
 
         if ( this->mollist.size() != 1 )
-        {
-            std::cerr << "Error: only one group allowed for cluster moves." << endl;
-            exit(1);
-        }
+            throw std::runtime_error(base::title+": only one cluster group allowed");
         else
         {
             for ( auto &i : this->mollist )
             {
                 string molname = spc->molList()[i.first].name;
-                string mobname = m[molname]["clustergroup"] | string();
-                threshold = m[molname]["threshold"] | 0.0;
+                string mobname = m[molname].at("clustergroup");
+                threshold = m[molname].at("threshold");
+                dp_trans = m[molname].at("dp");
+                dp_rot = m[molname].at("dprot");
+                dir << j.value("dir", string("1 1 1") );  // magic!
 
                 auto mob = spc->findMolecules(mobname); // mobile atoms to include in move
                 if ( mob.size() == 1 )
                     setMobile(*mob.front());
                 else
-                {
-                    std::cerr << "Error: atomic group in clustermove ill defined." << endl;
-                    exit(1);
-                }
+                    throw std::runtime_error(base::title+": atomic group ill defined");
             }
         }
     }
@@ -1649,12 +1899,6 @@ namespace Faunus
             igroup = *slump.element(gvec.begin(), gvec.end());
             assert(!igroup->empty());
             auto it = this->mollist.find(this->currentMolId);
-            if ( it != this->mollist.end())
-            {
-                dp_trans = it->second.dp1;
-                dp_rot = it->second.dp2;
-                dir = it->second.dir;
-            }
         }
 
         assert(gmobile != nullptr && "Cluster group not defined");
@@ -1878,7 +2122,7 @@ namespace Faunus
         base::useAlternativeReturnEnergy = true;
         base::runfraction = _j["prob"] | 1.0;
         skipEnergyUpdate = _j["skipenergy"] | false;
-        dp = _j["dp"] | 0.0;
+        dp = _j.at("dp");
         if ( dp < 1e-6 )
             base::runfraction = 0;
         g = spc->groupList(); // currently ALL groups in the system will be moved!
@@ -1981,12 +2225,12 @@ namespace Faunus
     {
     private:
         typedef Movebase<Tspace> base;
-        void _test( UnitTest & );
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        string _info();
+        void _test( UnitTest & ) override;
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        double _energyChange() override;
+        string _info() override;
         virtual bool findParticles(); //!< This will set the end points and find particles to rotate
     protected:
         std::map<int, int> _minlen, _maxlen;
@@ -2030,9 +2274,9 @@ namespace Faunus
         for ( auto &i : this->mollist )
         {
             string name = spc->molList()[i.first].name;
-            i.second.dp1 = m[name]["dp"] | 0.0;
-            _minlen[i.first] = m[name]["minlen"] | 1.0;
-            _maxlen[i.first] = m[name]["maxlen"] | 4.0;
+            i.second.dp1 = m[name].at("dp");
+            _minlen[i.first] = m[name].at("minlen");
+            _maxlen[i.first] = m[name].at("maxlen");
         }
     }
 
@@ -2063,6 +2307,10 @@ namespace Faunus
         for ( auto i : index )
             spc->trial[i] = vrot(spc->p[i]); // (boundaries are accounted for)
         gPtr->cm_trial = Geometry::massCenter(spc->geo, spc->trial, *gPtr);
+	
+        int g_index = spc->findIndex(gPtr);
+        for(auto i : index)
+          base::change.mvGroup[g_index].push_back(i);
     }
 
     template<class Tspace>
@@ -2097,6 +2345,7 @@ namespace Faunus
         for ( auto i : index )
             if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
                 return pc::infty;
+	return Energy::energyChange(*spc, *base::pot, base::change); 
         du = pot->g_internal(spc->trial, *gPtr) - pot->g_internal(spc->p, *gPtr);
         for ( auto i : index )
             du += pot->i_external(spc->trial, i) - pot->i_external(spc->p, i);
@@ -2240,12 +2489,12 @@ namespace Faunus
     private:
         typedef Movebase<Tspace> base;
         AcceptanceMap<string> accmap;
-        void _test( UnitTest & );
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        string _info();
+        void _test( UnitTest & ) override;
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        double _energyChange() override;
+        string _info() override;
         Group *gPtr;
         double bondlength; //!< Reptation length used when generating new head group position
     protected:
@@ -2328,7 +2577,7 @@ namespace Faunus
         Point u;
         u.ranunit(slump);                          // generate random unit vector
         spc->trial[first].translate(spc->geo, u * bond); // trans. 1st w. scaled unit vector
-        assert(std::abs(spc->geo.dist(spc->p[first], spc->trial[first]) - bond) < 1e-7);
+        assert(std::fabs(spc->geo.dist(spc->p[first], spc->trial[first]) - bond) < 1e-7);
 
         for ( auto i : *gPtr )
             spc->geo.boundary(spc->trial[i]);  // respect boundary conditions
@@ -2410,12 +2659,13 @@ namespace Faunus
     private:
         typedef Movebase<Tspace> base;
     protected:
-        string _info();
-        void _test( UnitTest & );
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
+        string _info() override;
+        void _test( UnitTest & ) override;
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        template<class Tpvec> double _energy( const Tpvec & );
+        double _energyChange() override;
         using base::spc;
         using base::pot;
         using base::w;
@@ -2440,9 +2690,9 @@ namespace Faunus
 
         this->title = "Isobaric Volume Fluctuations";
         this->w = 30;
-        dp = j["dp"] | 0.0;
-        P = (j["pressure"] | 0.0) * 1.0_mM;
-        base::runfraction = j["prob"] | 1.0;
+        dp = j.at("dp");
+        P = j.at("pressure").get<double>() * 1.0_mM;
+        base::runfraction = j.value("prob", 1.0);
         if ( dp < 1e-6 )
             base::runfraction = 0;
 
@@ -2451,10 +2701,12 @@ namespace Faunus
         if ( ptr != nullptr )
             (*ptr)->setPressure(P);
         else
-        {
-            std::cerr << "Error: Volume move requires pressure term in Hamiltonian." << endl;
-            exit(1);
-        }
+            throw std::runtime_error(base::title+": pressure term required in hamiltonian");
+        //auto ptr = e.template get<Energy::ExternalPressure<Tspace>>();
+        //if ( ptr != nullptr )
+        //    ptr->setPressure(P);
+        //else
+        //    throw std::runtime_error(base::title+": pressure term required in hamiltonian");
     }
 
     template<class Tspace>
@@ -2513,6 +2765,7 @@ namespace Faunus
         oldval = spc->geo.getVolume();
         oldlen = newlen = spc->geo.len;
         newval = std::exp(std::log(oldval) + slump.half() * dp);
+	//newval = oldval*std::exp( slump.half()*dp ); // Is this not more simple?
         Point s = Point(1, 1, 1);
         double xyz = cbrt(newval / oldval);
         double xy = sqrt(newval / oldval);
@@ -2522,8 +2775,20 @@ namespace Faunus
             g->setMassCenter(*spc);
             g->scale(*spc, s, xyz, xy); // scale trial coordinates to new volume
         }
+        
+        int i=0;
+        for (auto gPtr : spc->groupList()) {
+          base::change.mvGroup[i].resize( gPtr->size() );
+          std::iota (base::change.mvGroup[i].begin(), base::change.mvGroup[i].end(), gPtr->front());
+          assert( gPtr->size() == int(base::change.mvGroup[i].size()) );
+          assert( gPtr->front()== base::change.mvGroup[i].front() );
+          assert( gPtr->back() == base::change.mvGroup[i].back() );
+          i++;
+        }
+        base::change.geometryChange = true;
+	base::change.dV = newval - oldval;
     }
-
+    
     template<class Tspace>
     void Isobaric<Tspace>::_acceptMove()
     {
@@ -2548,14 +2813,39 @@ namespace Faunus
             g->undo(*spc);
     }
 
-    /**pot
+    /**
+     * This will calculate the total energy of the configuration
+     * associated with the current Hamiltonian volume
+     */
+    template<class Tspace>
+    template<class Tpvec>
+    double Isobaric<Tspace>::_energy( const Tpvec &p )
+    {
+        double u = 0;
+        if ( dp < 1e-6 )
+            return u;
+        size_t n = spc->groupList().size();  // number of groups
+        for ( size_t i = 0; i < n - 1; ++i )      // group-group
+            for ( size_t j = i + 1; j < n; ++j )
+                u += pot->g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
+
+        for ( auto g : spc->groupList())
+        {
+            u += pot->g_external(p, *g);
+            if ( g->numMolecules() > 1 )
+                u += pot->g_internal(p, *g);
+        }
+        return u + pot->external(p);
+    }
+
+    /**
      * @todo Early rejection could be implemented
      *       - not relevant for geometries with periodicity, though.
      */
     template<class Tspace>
     double Isobaric<Tspace>::_energyChange()
     {
-        double uold = ( dp < 1e-6 ) ? 0.0 : pot->systemEnergy(spc->p); // calculates internal energy of all molecules, redundant but neccesary for Emat
+        double uold = _energy(spc->p);
         spc->geo.setlen(newlen);
         pot->setSpace(*spc); // potential must know about volume, too
 
@@ -2565,8 +2855,9 @@ namespace Faunus
             for ( auto i : *g )
                 if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
                     return pc::infty;
-        double unew = ( dp < 1e-6 ) ? 0.0 : pot->systemEnergy(spc->trial);
+        double unew = _energy(spc->trial);
         return unew - uold;
+	//return Energy::energyChange(*spc, *base::pot, base::change); // Does not work for 'Isobaric' at the moment
     }
 
     /**
@@ -2610,8 +2901,8 @@ namespace Faunus
     {
         this->title = "Isochoric Side Lengths Fluctuations";
         this->w = 30;
-        dp = j["dp"] | 0.0;
-        base::runfraction = j["prob"] | 1.0;
+        dp = j.at("dp");
+        base::runfraction = j.value("prob", 1.0);
         if ( dp < 1e-6 )
             base::runfraction = 0;
     }
@@ -2867,7 +3158,7 @@ namespace Faunus
         base::title = "Grand Canonical Salt";
         base::useAlternativeReturnEnergy = true;
         base::runfraction = j["prob"] | 1.0;
-        string saltname = j["molecule"] | string();
+        string saltname = j.at("molecule");
 
         auto v = spc->findMolecules(saltname);
         if ( v.empty())
@@ -2895,7 +3186,7 @@ namespace Faunus
         for ( auto i : g )
         {
             auto id = spc->p[i].id;
-            if ( atom[id].activity > 1e-10 && abs(atom[id].charge) > 1e-10 )
+            if ( atom[id].activity > 1e-10 && fabs(atom[id].charge) > 1e-10 )
             {
                 map[id].p = atom[id];
                 map[id].chempot = log(atom[id].activity * pc::Nav * 1e-27); // beta mu
@@ -3014,10 +3305,8 @@ namespace Faunus
             uold += potold;
         }
         else
-        {
-            std::cerr << "!! No salt to insert or delete !!" << endl;
-            exit(1);
-        }
+            throw std::runtime_error(base::title+": no to insert or delete");
+
         base::alternateReturnEnergy = potnew - potold; // track only pot. energy
         return unew - uold;
     }
@@ -3127,11 +3416,11 @@ namespace Faunus
         using base::spc;
         using base::pot;
         using base::w;
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        string _info();
-        double _energyChange();
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        string _info() override;
+        double _energyChange() override;
 
         void add( Group & ) {};       // scan group for ions with non-zero activities
 
@@ -3227,11 +3516,8 @@ namespace Faunus
                     id = base::tracker.randomAtomType();
                     z = atom[id].charge;
                     if ( --maxtry == 0 )
-                    {
-                        std::cerr << "Error: Failed to find GC ions capable of "
-                                  << "neutralizing system." << endl;
-                        exit(1);
-                    }
+                        throw std::runtime_error(base::title+
+                                ": no GC ions capable of neutralizing system found");
                 }
                 while ( Z * z > 0 || (fabs(fmod(Z, z)) > 1e-9) || atom[id].activity == 0 );
 
@@ -3519,7 +3805,7 @@ namespace Faunus
                 }
             }
         }
-        std::ofstream f("gctit-output.json");
+        std::ofstream f(textio::prefix + "gctit-output.json");
         f << setw(4) << infojson() << "\n";
         return o.str();
     }
@@ -3592,12 +3878,12 @@ namespace Faunus
           double currentEnergy;         //!< Energy of configuration before move (uold)
           bool haveCurrentEnergy;       //!< True if currentEnergy has been set
 
-          string _info();
-          void _trialMove();
-          void _acceptMove();
-          void _rejectMove();
-          double _energyChange();
-          std::ofstream temperPath;
+          string _info() override;
+          void _trialMove() override;
+          void _acceptMove() override;
+          void _rejectMove() override;
+          double _energyChange() override;
+          //std::ofstream temperPath;
 
           Faunus::MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
           Faunus::MPI::ParticleTransmitter<Tpvec> pt;//!< Class for transmitting particles over MPI
@@ -3627,16 +3913,18 @@ namespace Faunus
         this->mpiPtr  = &mpi;
         partner=-1;
         this->useAlternativeReturnEnergy=true; //dont return dU from partner replica (=drift)
-        this->runfraction = j["prob"] | 1.0;
+        this->runfraction = j.value("prob", 1.0);
         pt.recvExtra.resize(1);
         pt.sendExtra.resize(1);
-        pt.setFormat( j["format"] | string("XYZQI") );
+        pt.setFormat( j.value("format", string("XYZQI") ) );
 
         setEnergyFunction(
-            Energy::systemEnergy2<Tspace,Energy::Energybase<Tspace>,Tpvec> );
+            Energy::systemEnergy<Tspace,Energy::Energybase<Tspace>,Tpvec> );
 
         this->haveCurrentEnergy=false;
-        assert( this->mpiPtr != nullptr );
+
+        if ( this->mpiPtr == nullptr )
+            throw std::runtime_error(this->title + ": invalid MPIcontroller");
       }
 
     template<class Tspace>
@@ -3814,12 +4102,12 @@ namespace Faunus
     private:
         typedef Movebase<Tspace> base;
         typedef std::map<short, Average<double> > map_type;
-        string _info();
+        string _info() override;
     protected:
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        void _trialMove();
+        void _acceptMove() override;
+        void _rejectMove() override;
+        double _energyChange() override;
+        void _trialMove() override;
         using base::spc;
         using base::pot;
         map_type accmap; //!< Single particle acceptance map
@@ -3828,12 +4116,12 @@ namespace Faunus
         //int iparticle;   //!< Select single particle to move (-1 if none, default)
 
     public:
-        SwapCharge( InputMap &, Energy::Energybase<Tspace> &, Tspace & );
+        SwapCharge( Tmjson&, Energy::Energybase<Tspace> &, Tspace & );
         std::set<int> swappableParticles;  //!< Particle index that can be swapped
     };
 
     template<class Tspace>
-    SwapCharge<Tspace>::SwapCharge( InputMap &in, Energy::Energybase<Tspace> &e, Tspace &s ) : base(e, s)
+    SwapCharge<Tspace>::SwapCharge( Tmjson &in, Energy::Energybase<Tspace> &e, Tspace &s ) : base(e, s)
     {
         base::title = "Swap head groups of different charges";
     }
@@ -3923,11 +4211,11 @@ namespace Faunus
         using base::pot;
         using base::w;
         using base::cnt;
-        void _trialMove();
-        void _acceptMove();
-        void _rejectMove();
-        double _energyChange();
-        string _info();
+        void _trialMove() override;
+        void _acceptMove() override;
+        void _rejectMove() override;
+        double _energyChange() override;
+        string _info() override;
         typedef std::map<string, Average<double> > map_type;
         map_type accmap;   //!< Group particle acceptance map
         Group *igroup;
@@ -4381,7 +4669,7 @@ namespace Faunus
             Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) : base(e, s), comb(s.molecule)
         {
             init();
-            base::runfraction = j["prob"] | 1.0;
+            base::runfraction = j.value("prob", 1.0);
             comb.include(j); // load combinations
         }
     };
@@ -4480,11 +4768,11 @@ namespace Faunus
     {
 
         base::title = "Site Titration - Swap Move";
-        base::runfraction = j["prob"] | 1.0;
+        base::runfraction = j.value("prob", 1.0);
         base::w = 30;
         ipart = -1;
 
-        saveChargeBool = j["savecharge"] | false;
+        saveChargeBool = j.value("savecharge", false);
 
         auto t = e.tuple();
         auto ptr = TupleFindType::get<Energy::EquilibriumEnergy<Tspace> *>(t);
@@ -4543,9 +4831,10 @@ namespace Faunus
 
         if ( spc->geo.collision(spc->trial[ipart], spc->trial[ipart].radius))  // trial<->container collision?
             return pc::infty;
-
+        double uold = pot->external(spc->p) + pot->i_total(spc->p, ipart);
+        double unew = pot->external(spc->trial) + pot->i_total(spc->trial, ipart);
 #ifdef ENABLE_MPI
-        if ( base::mpiPtr != nullptr ) {
+                                                                                                                                if ( base::mpiPtr != nullptr ) {
           double sum=0;
           auto r = Faunus::MPI::splitEven(*base::mpiPtr, (int)spc->p.size());
           for (int i=r.first; i<=r.second; ++i)
@@ -4558,8 +4847,6 @@ namespace Faunus
             + pot->i_internal(spc->trial, ipart) - pot->i_internal(spc->p, ipart);
         }
 #endif
-        double uold = pot->external(spc->p) + pot->i_total(spc->p, ipart);
-        double unew = pot->external(spc->trial) + pot->i_total(spc->trial, ipart);
 
         return unew - uold;
     }
@@ -4674,13 +4961,13 @@ namespace Faunus
 
     public:
         SwapMoveMSR(
-            InputMap &in, Energy::Energybase<Tspace> &ham, Tspace &spc ) : SwapMove<Tspace>(in, ham, spc)
+            Tmjson &in, Energy::Energybase<Tspace> &ham, Tspace &spc ) : SwapMove<Tspace>(in, ham, spc)
         {
             this->title += " (min. shortrange)";
             this->useAlternativeReturnEnergy = true;
         }
     };
-
+    
     /**
      * @brief Multiple moves controlled via JSON input
      *
@@ -4690,34 +4977,57 @@ namespace Faunus
      * in the table below; each can occur only once and are picked
      * with uniform weight.
      *
-     * Keyword           | Move class                | Description
-     * :---------------- | :------------------------ | :----------------
-     * `atomtranslate`   | `Move::AtomicTranslation` | Translate atoms
-     * `atomrotate`      | `Move::AtomicRotation`    | Rotate atoms
-     * `atomgc`          | `Move::GrandCanonicalSalt`| GC salt move (muVT ensemble)
-     * `crankshaft`      | `Move::CrankShaft`        | Crank shaft polymer move
-     * `ctransnr`        | `Move::ClusterTranslateNR`| Rejection free cluster translate
-     * `gc`              | `Move::GreenGC`           | Grand canonical move (muVT ensemble)
-     * `isobaric`        | `Move::Isobaric`          | Volume move (NPT ensemple)
-     * `moltransrot`     | `Move::TranslateRotate`   | Translate/rotate molecules
-     * `pivot`           | `Move::Pivot`             | Pivot polymer move
-     * `reptate`         | `Move::Reptation`         | Reptation polymer move
-     * `titrate`         | `Move::SwapMove`          | Particle swap move
-     * `conformationswap`| `Move::ConformationSwap`  | Swap between molecular conformations
+     * Keyword           | Class                      | Description
+     * :---------------- | :------------------------  | :----------------
+     * `atomtranslate`   | `Move::AtomicTranslation`  | Translate atoms
+     * `atomrotate`      | `Move::AtomicRotation`     | Rotate atoms
+     * `atomgc`          | `Move::GrandCanonicalSalt` | GC salt move (muVT ensemble)
+     * `atomtranslate2D` | `Move::AtomicTranslation2D`| Translate atoms on a 2D hypersphere
+     * `conformationswap`| `Move::ConformationSwap`   | Swap between molecular conformations
+     * `crankshaft`      | `Move::CrankShaft`         | Crank shaft polymer move
+     * `ctransnr`        | `Move::ClusterTranslateNR` | Rejection free cluster translate
+     * `gc`              | `Move::GreenGC`            | Grand canonical move (muVT ensemble)
+     * `isobaric`        | `Move::Isobaric`           | Volume move (NPT ensemple)
+     * `moltransrot`     | `Move::TranslateRotate`    | Translate/rotate molecules
+     * `pivot`           | `Move::Pivot`              | Pivot polymer move
+     * `reptate`         | `Move::Reptation`          | Reptation polymer move
+     * `temper`          | `Move::ParallelTempering`  | Parallel tempering (requires MPI)
+     * `titrate`         | `Move::SwapMove`           | Particle swap move
+     * `xtcmove`         | `Move::TrajectoryMove`     | Propagate via a filed trajectory
+     * `random`          | `RandomTwister<>`          | Input for random number generator
+     * `_jsonfile`       |  ouput json file name      | Default: `move_out.json`
      *
      * Average system energy and drift thereof are automatically tracked and
      * reported.
+     *
+     * In addition to a global random number generator, the move classes
+     * share a unique (static) random number generator that dictates the
+     * Markov Chains. By default the state of the latter is copied from the
+     * former upon construction of `Propagator`.
+     * To instead attempt a _non-deterministric seed_, add
+     *
+     *     "random" : { "hardware":true }
+     *
+     * Upon destruction of the class, a JSON file is written to disk with
+     * details about each move. The output filename can be controlled by i.e.,
+     *
+     *     "_jsonfile" : "move_out.json"
+     *
+     * If the string is empty, no file will be written.
+     * See @ref inputoutput for more information about pretty printing
+     * JSON output.
      */
     template<typename Tspace, bool polarise = false, typename base=Movebase<Tspace>>
     class Propagator : public base
     {
     private:
-        typedef std::shared_ptr<base> basePtr;
+        typedef std::unique_ptr<base> basePtr;
         std::vector<basePtr> mPtr;
         Tspace *spc;
+        string jsonfile; // output json file name
 
-        double dusum; // sum of all energy changes by moves
-        double uinit; // initial energy
+        double uinit; // initial energy evaluated just *before* first move
+        double dusum; // sum of all energy *changes* by moves
         Average<double> uavg; // average system energy
         std::function<double()> ufunction; // function to calculate system energy
 
@@ -4737,7 +5047,7 @@ namespace Faunus
                   << pad(SUB, base::w, "Absolute drift") << ucurr - (uinit + dusum) << kT << "\n"
                   << pad(SUB, base::w, "Relative drift") << (ucurr - (uinit + dusum)) / uinit * 100 << percent << "\n";
 
-                for ( auto i : mPtr )
+                for ( auto &i : mPtr )
                     o << i->info();
             }
             return o.str();
@@ -4759,51 +5069,86 @@ namespace Faunus
         basePtr toPtr( Tmove m )
         {
             typedef typename std::conditional<polarise, PolarizeMove<Tmove>, Tmove>::type T;
-            return basePtr(new T(m));
+            return basePtr(new T(m)); // convert to std::make_unique<>() in C++14
         }
 
     public:
         template<typename Tenergy>
-        Propagator( InputMap &in, Tenergy &e, Tspace &s ) : base(e, s), dusum(0)
+#ifdef ENABLE_MPI
+        Propagator( Tmjson &in, Tenergy &e, Tspace &s, MPI::MPIController *mpi=nullptr) : base(e, s), dusum(0)
+#else
+        Propagator( Tmjson &in, Tenergy &e, Tspace &s) : base(e, s), dusum(0)
+#endif
         {
             this->title = "P R O P A G A T O R S";
 
-            auto m = in["moves"];
+            jsonfile = "move_out.json";
+
+            auto m = in.at("moves");
             for ( auto i = m.begin(); i != m.end(); ++i )
             {
                 auto &val = i.value();
-                if ( i.key() == "atomtranslate" )
-                    mPtr.push_back(toPtr(AtomicTranslation<Tspace>(e, s, val)));
-                if ( i.key() == "atomrotate" )
-                    mPtr.push_back(toPtr(AtomicRotation<Tspace>(e, s, val)));
-                if ( i.key() == "atomgc" )
-                    mPtr.push_back(toPtr(GrandCanonicalSalt<Tspace>(e, s, val)));
-                if ( i.key() == "gctit" )
-                    mPtr.push_back(toPtr(GrandCanonicalTitration<Tspace>(e, s, val)));
-                if ( i.key() == "moltransrot" )
-                    mPtr.push_back(toPtr(TranslateRotate<Tspace>(e, s, val)));
-                if ( i.key() == "conformationswap" )
-                    mPtr.push_back(toPtr(ConformationSwap<Tspace>(e, s, val)));
-                if ( i.key() == "moltransrot2body" )
-                    mPtr.push_back(toPtr(TranslateRotateTwobody<Tspace>(e, s, val)));
-                if ( i.key() == "moltransrotcluster" )
-                    mPtr.push_back(toPtr(TranslateRotateCluster<Tspace>(e, s, val)));
-                if ( i.key() == "isobaric" )
-                    mPtr.push_back(toPtr(Isobaric<Tspace>(e, s, val)));
-                if ( i.key() == "isochoric" )
-                    mPtr.push_back(toPtr(Isochoric<Tspace>(e, s, val)));
-                if ( i.key() == "gc" )
-                    mPtr.push_back(toPtr(GreenGC<Tspace>(e, s, val)));
-                if ( i.key() == "titrate" )
-                    mPtr.push_back(toPtr(SwapMove<Tspace>(e, s, val)));
-                if ( i.key() == "crankshaft" )
-                    mPtr.push_back(toPtr(CrankShaft<Tspace>(e, s, val)));
-                if ( i.key() == "pivot" )
-                    mPtr.push_back(toPtr(Pivot<Tspace>(e, s, val)));
-                if ( i.key() == "reptate" )
-                    mPtr.push_back(toPtr(Reptation<Tspace>(e, s, val)));
-                if ( i.key() == "ctransnr" )
-                    mPtr.push_back(toPtr(ClusterTranslateNR<Tspace>(e, s, val)));
+
+                try {
+
+                    if ( i.key() == "_jsonfile" )
+                        if (val.is_string())
+                            jsonfile = val;
+
+                    base::_slump().eng = slump.eng; // seed from global slump() instance
+
+                    if ( i.key() == "random" )
+                        if (val.is_object()) {
+                            cout << "Seeding move random number generator." << endl;
+                            base::_slump() = RandomTwister<>(val);
+                        }
+
+                    if ( i.key() == "atomtranslate" )
+                        mPtr.push_back(toPtr(AtomicTranslation<Tspace>(e, s, val)));
+                    if ( i.key() == "atomrotate" )
+                        mPtr.push_back(toPtr(AtomicRotation<Tspace>(e, s, val)));
+                    if ( i.key() == "atomgc" )
+                        mPtr.push_back(toPtr(GrandCanonicalSalt<Tspace>(e, s, val)));
+		    if (i.key()=="atomictranslation2D")
+			mPtr.push_back( toPtr( AtomicTranslation2D<Tspace>(e,s, val)));
+                    if ( i.key() == "gctit" )
+                        mPtr.push_back(toPtr(GrandCanonicalTitration<Tspace>(e, s, val)));
+                    if ( i.key() == "moltransrot" )
+                        mPtr.push_back(toPtr(TranslateRotate<Tspace>(e, s, val)));
+                    if ( i.key() == "conformationswap" )
+                        mPtr.push_back(toPtr(ConformationSwap<Tspace>(e, s, val)));
+                    if ( i.key() == "moltransrot2body" )
+                        mPtr.push_back(toPtr(TranslateRotateTwobody<Tspace>(e, s, val)));
+                    if ( i.key() == "moltransrotcluster" )
+                        mPtr.push_back(toPtr(TranslateRotateCluster<Tspace>(e, s, val)));
+                    if ( i.key() == "isobaric" )
+                        mPtr.push_back(toPtr(Isobaric<Tspace>(e, s, val)));
+                    if ( i.key() == "isochoric" )
+                        mPtr.push_back(toPtr(Isochoric<Tspace>(e, s, val)));
+                    if ( i.key() == "gc" )
+                        mPtr.push_back(toPtr(GreenGC<Tspace>(e, s, val)));
+                    if ( i.key() == "titrate" )
+                        mPtr.push_back(toPtr(SwapMove<Tspace>(e, s, val)));
+                    if ( i.key() == "crankshaft" )
+                        mPtr.push_back(toPtr(CrankShaft<Tspace>(e, s, val)));
+                    if ( i.key() == "pivot" )
+                        mPtr.push_back(toPtr(Pivot<Tspace>(e, s, val)));
+                    if ( i.key() == "reptate" )
+                        mPtr.push_back(toPtr(Reptation<Tspace>(e, s, val)));
+                    if ( i.key() == "ctransnr" )
+                        mPtr.push_back(toPtr(ClusterTranslateNR<Tspace>(e, s, val)));
+                    if ( i.key() == "xtcmove" )
+                        mPtr.push_back(toPtr(TrajectoryMove<Tspace>(e, s, val)));
+#ifdef ENABLE_MPI
+                    if ( i.key() == "temper" )
+                        if (mpi!=nullptr)
+                            mPtr.push_back(toPtr(ParallelTempering<Tspace>(e, s, val, *mpi)));
+#endif
+                }
+                catch (std::exception &e) {
+                    std::cerr << "Moves initialization error: " << i.key() << endl;
+                    throw;
+                }
             }
             if ( mPtr.empty())
                 throw std::runtime_error("No moves defined - check JSON file.");
@@ -4811,8 +5156,18 @@ namespace Faunus
             // Bind function to calculate initial system energy
             using std::ref;
             ufunction = std::bind(
-                Energy::systemEnergy2<Tspace, Tenergy, typename Tspace::ParticleVector>,
+                Energy::systemEnergy<Tspace, Tenergy, typename Tspace::ParticleVector>,
                 ref(s), ref(e), ref(s.p));
+        }
+
+        ~Propagator()
+        {
+            if (!jsonfile.empty())
+                if (this->cnt>0) {
+                    std::ofstream f(textio::prefix + jsonfile);
+                    if (f)
+                        f << std::setw(4) << json() << endl;
+                }
         }
 
         /** @brief Append move to list */
@@ -4824,13 +5179,13 @@ namespace Faunus
 
         double move( int n = 1 ) override
         {
+            this->cnt++;
             double du = 0;
             if ( mPtr.empty())
                 return du;
 
             if ( uavg.cnt == 0 )
                 uinit = ufunction(); // calculate initial energy, prior to any moves
-
 
             du = (*base::_slump().element(mPtr.begin(), mPtr.end()))->move();
             dusum += du;
@@ -4843,28 +5198,32 @@ namespace Faunus
         {
             Tmjson js;
             auto &j = js["moves"];
-            for ( auto i : mPtr )
+            for ( auto &i : mPtr )
                 j = merge(j, i->json());
+            j["random"] = base::_slump().json();
             return js;
         }
 
         void test( UnitTest &t )
         {
-            for ( auto i : mPtr )
+            for ( auto &i : mPtr )
                 i->test(t);
 
-            double ucurr = ufunction();
-            double drift = ucurr - (uinit + dusum);
-            t("energyAverage", uavg.avg());
-            t("relativeEnergyDrift", std::abs(drift / ucurr), 10.0); // allow 200% deviation
+            if (uavg.cnt>0) {
+              double ucurr = ufunction();
+              double drift = ucurr - (uinit + dusum);
+              t("energyAverage", uavg.avg());
+              t("relativeEnergyDrift", std::fabs(drift / ucurr), 1000.0);
+            }
         }
 
 #ifdef ENABLE_MPI
-                                                                                                                                void setMPI( Faunus::MPI::MPIController* mpi ) {
+        void setMPI( Faunus::MPI::MPIController* mpi )
+        {
             base::mpiPtr = mpi;
-            for ( auto i : mPtr )
-              i->mpiPtr = mpi;
-          }
+            for ( auto &i : mPtr )
+                i->mpiPtr = mpi;
+        }
 #endif
 
     };

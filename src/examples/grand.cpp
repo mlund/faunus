@@ -15,14 +15,8 @@ int main()
 
     spc.load("state", Tspace::RESIZE);             // load old config. from disk (if any)
 
-    // Two different Widom analysis methods
-    double lB = pot.pairpot.first.bjerrumLength();// get bjerrum length
-    Analysis::Widom<PointParticle> widom1;        // widom analysis (I)
-    Analysis::WidomScaled<Tspace> widom2(lB, 1);   // ...and (II)
-    widom1.add(spc.p);
-    widom2.add(spc.p);
-
     Move::Propagator<Tspace> mv(mcp, pot, spc);
+    Analysis::CombinedAnalysis analysis(mcp, pot, spc);
 
     cout << atom.info() + spc.info() + pot.info() + "\n";
 
@@ -31,22 +25,20 @@ int main()
     {
         while ( loop[1] )
         {
-            mv.move();                           // move!
-            widom1.sample(spc, pot, 1);
-            widom2.sample(spc.p, spc.geo);
-        }                                           // end of micro loop
+            mv.move();                            // move!
+            analysis.sample(); 
+        }                                         // end of micro loop
         cout << loop.timing();
     }                                             // end of macro loop
 
-    FormatPQR::save("confout.pqr", spc.p);        // PQR snapshot for VMD etc.
-    spc.save("state");                            // final simulation state
-
     UnitTest test(mcp);                           // class for unit testing
     mv.test(test);
-    widom1.test(test);
+    analysis.test(test);
 
-    cout << loop.info() + mv.info() + test.info()
-        + widom1.info() + widom2.info();
+    cout << loop.info() + mv.info() + analysis.info() + test.info(); 
+
+    std::ofstream o("move_out.json");
+    o << std::setw(4) << mv.json() << endl;
 
     return test.numFailed();
 }

@@ -406,6 +406,71 @@ namespace Faunus
   }
 
   /**
+   * @brief Round and bin numbers for use with tables and histograms
+   *
+   * This will round a float to nearest value divisible by `dx` or
+   * convert to an integer corresponding to a binning value. In the
+   * latter case, a minimum value must be specified upon construction.
+   *
+   * Example:
+   *
+   * ~~~{.cpp}
+   * Quantize<double> Q(0.5, -0.5);
+   * Q = 0.61;
+   * double x = Q;      // --> 0.5
+   * int bin = Q;       // --> 2 
+   * bin = Q(-0.5);     // --> 0
+   * x = Q.frombin(2);  // --> 0.5
+   *
+   * std::vector<bool> v;
+   * v[ Q(0.61) ] = false; // 2nd element set to false
+   * ~~~
+   *
+   */
+  template<class Tfloat=double>
+      class Quantize {
+          private:
+              Tfloat xmin, dx, x;
+          public:
+              /**
+               * @brief Constructor
+               * @param dx resolution
+               * @param xmin minimum value if converting to integral type (binning)
+               */
+              Quantize(Tfloat dx, Tfloat xmin=0) : xmin(xmin), dx(dx) {}
+
+              /** @brief Assigment operator */
+              Quantize& operator=(Tfloat val) {
+                  assert( val>=xmin );
+                  if (val >= 0)
+                      x = int(val / dx + 0.5) * dx;
+                  else
+                      x = int(val / dx - 0.5) * dx;
+                  assert(x>=xmin);
+                  return *this;
+              }
+
+              Quantize& frombin(unsigned int i) {
+                  x = i*dx + xmin;
+                  return *this;
+              }
+
+              /** @brief Assignment with function operator */
+              Quantize& operator()(Tfloat val) {
+                  *this = val;
+                  return *this;
+              }
+
+              /** @brief Implicit convertion to integral (bin) or float (rounded) */
+              template<typename T> operator T()
+              {
+                  if (std::is_integral<T>::value)
+                      return T( (x-xmin) / dx + 0.5);
+                  return x;
+              }
+      };
+
+  /**
    * @brief Use xy data from disk as function object
    *
    * This is a very basic structure to store xy data
@@ -487,11 +552,13 @@ namespace Faunus
    * Use the `set()` function for setting values and the function
    * operator for access:
    *
-   *     int i=2,j=3; // particle type, for example
-   *     PairMatrix<double> m;
-   *     m.set(i,j,12.0);
-   *     cout << m(i,j);         // -> 12.0
-   *     cout << m(i,j)==m(j,i); // -> true
+   * ~~~{.cpp}
+   * int i=2,j=3; // particle type, for example
+   * PairMatrix<double> m;
+   * m.set(i,j,12.0);
+   * cout << m(i,j);         // -> 12.0
+   * cout << m(i,j)==m(j,i); // -> true
+   * ~~~
    */
   template<class T=double>
   class PairMatrix
@@ -760,6 +827,15 @@ namespace Faunus
       enum type { HISTOGRAM, XYDATA };
       type tabletype;
 
+      /** @brief Sum of all y values (same as `count()`) */
+      Ty sumy() const
+      {
+          Ty sum = 0;
+          for ( auto &m : map )
+              sum += m.second;
+          return sum;
+      }
+
       /**
        * @brief Constructor
        * @param resolution Resolution of the x axis
@@ -827,7 +903,7 @@ namespace Faunus
 
       /** @brief Save table to disk */
       template<class T=double>
-      void save( string filename, T scale = 1, T translate = 0 )
+      void save( const string &filename, T scale = 1, T translate = 0 )
       {
           if ( tabletype == HISTOGRAM )
           {
@@ -859,7 +935,7 @@ namespace Faunus
 
       /** @brief Save normalized table to disk */
       template<class T=double>
-      void normSave( string filename )
+      void normSave( const string &filename )
       {
           if ( tabletype == HISTOGRAM )
           {
@@ -926,7 +1002,12 @@ namespace Faunus
           }
       }
 
-      Tmap getMap()
+      const Tmap& getMap() const
+      {
+          return map;
+      }
+
+      Tmap& getMap()
       {
           return map;
       }

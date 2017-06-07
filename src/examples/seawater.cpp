@@ -10,18 +10,16 @@ int main() {
 
   Move::Propagator<Tspace> mv(in,pot,spc);// particle move class
 
-  Analysis::WidomScaled<Tspace>
-    widom( pot.pairpot.first.bjerrumLength(), 10 );
-  widom.add( spc.p );
+  Analysis::CombinedAnalysis analyse(in,pot,spc);
 
   MCLoop loop(in);
   while ( loop[0] )
     while ( loop[1] ) {
       mv.move();
-      widom.sample( spc.p, spc.geo );
+      analyse.sample();
     }
 
-  cout << spc.info() + loop.info() + pot.info() + mv.info() + widom.info();
+  cout << spc.info() + loop.info() + pot.info() + mv.info() + analyse.info();
 }
 /**
 @page example_seawater Example: Activity Coefficients in Seawater

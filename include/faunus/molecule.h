@@ -156,12 +156,13 @@ namespace Faunus
    * `insdir`      | string  | Directions for generation of random position. Default: "1 1 1" = XYZ
    * `insoffset`   | string  | Translate generated random position. Default: "0 0 0" = no translation
    * `keeppos`     | bool    | Keep original positions (`insdir`, `insoffset` ignored. Default: `false`)
-   * `Ninit`       | int     | Initial number of molecules
+   * `Ninit`       | int     | Initial number of molecules to be inserted into the simulation container
    * `checkoverlap`| bool    | Check for overlap while inserting. Default: true
    * `rotate`      | bool    | Randomly rotate molecule or anisotropic atom upon insertion. Default: true
-   * `structure`   | string  | Read conformation from AAM file
+   * `structure`   | string  | Read conformation from PQR/XYZ/AAM file
    * `traj`        | string  | Read conformations from PQR trajectory (`structure` will be ignored)
-   * `trajweight`  | string  | One column file w. relative weights for each conformations. Must match `traj` file.
+   * `trajweight`  | string  | One column file w. relative weights for each conformation. Must match `traj` file.
+   * `centertraj`  | bool    | Center CM of conformations to origo assuming whole molecules (default: `false`)
    * `Cavg`        | float   | Charge capacitance [e^2]
    * `Zavg`        | float   | Average charge number [e]
    */
@@ -191,13 +192,19 @@ namespace Faunus
 
   private:
       bool _isAtomic;
+      int _confid;                                //!< Last picked conformation if `conformations.size()>0`
 
   public:
       TinserterFunc inserterFunctor;              //!< Function for insertion into space
 
+      int getConformationIndex() const
+      {
+          return _confid;
+      }
+
       /** @brief Constructor - by default data is initialized; mass set to unity */
       inline MoleculeData( Tmjson::iterator &molecule )
-          : Ninit(0), _isAtomic(false)
+          : Ninit(0), _isAtomic(false), _confid(0)
       {
           readJSON(molecule);
           auto ins = RandomInserter<MoleculeData<Tpvec> >();
@@ -238,7 +245,8 @@ namespace Faunus
           assert(size_t(confDist.max()) == conformations.size() - 1);
           assert(atoms.size() == conformations.front().size());
 
-          return conformations[confDist(slump.eng)];
+          _confid = confDist(slump.eng); // store the index of the conformation
+          return conformations.at( _confid );
       }
 
       /**
@@ -272,6 +280,12 @@ namespace Faunus
           }
           conformations.push_back(vec);
           assert(confDist.probabilities().size() == conformations.size());
+      }
+
+      /** @brief Nunber of conformations stored for molecule */
+      size_t numConformations() const
+      {
+          return conformations.size();
       }
 
       /** True if molecule holds individual atoms */
@@ -309,15 +323,16 @@ namespace Faunus
 
           // read conformation from disk
           {
-              string structure = _js["structure"] | string();
+              string structure = _js.value("structure", string());
               if ( !structure.empty())
               {
                   Tpvec v;
-                  if ( structure.substr(structure.find_last_of(".") + 1) == "aam" )
+                  string suffix = structure.substr(structure.find_last_of(".") + 1);
+                  if ( suffix == "aam" )
                       FormatAAM::load(structure, v);
-                  if ( structure.substr(structure.find_last_of(".") + 1) == "pqr" )
+                  if ( suffix == "pqr" )
                       FormatPQR::load(structure, v);
-                  if ( structure.substr(structure.find_last_of(".") + 1) == "xyz" )
+                  if ( suffix == "xyz" )
                       FormatXYZ::load(structure, v);
                   if ( !v.empty())
                   {
@@ -328,13 +343,13 @@ namespace Faunus
                       for ( auto &p : v )           // add atoms to atomlist
                           atoms.push_back(p.id);
                   }
-                  if ( v.empty())
-                      throw std::runtime_error("Structure " + structure + " not loaded. Filetype must be .aam/.pqr");
+                  if ( v.empty() )
+                      throw std::runtime_error("Structure " + structure + " not loaded. Filetype must be .aam/.pqr/.xyz");
               }
           }
 
           // construct flexible peptide from fasta sequence
-          string fasta = _js["fasta"] | string();
+          string fasta = _js.value("fasta", string());
           if ( !fasta.empty())
           {
               assert(atoms.empty());
@@ -366,7 +381,7 @@ namespace Faunus
           }
 
           // read tracjectory w. conformations from disk
-          string traj = _js["traj"] | string();
+          string traj = _js.value("traj", string());
           if ( !traj.empty())
           {
               conformations.clear();
@@ -379,12 +394,21 @@ namespace Faunus
                   for ( auto &p : conformations.front())           // add atoms to atomlist
                       atoms.push_back(p.id);
 
+                  // center mass center for each frame to origo assuming whole molecules
+                  if (_js.value("centertraj", false))
+                  {
+                      cout << "Centering conformations in trajectory file " + traj + ". ";
+                      for ( auto &p : conformations ) // loop over conformations
+                          Geometry::cm2origo(Geometry::Sphere(1e6), p);
+                      cout << "Done.\n";
+                  }
+
                   // set default uniform weight
                   vector<float> w(conformations.size(), 1);
                   confDist = std::discrete_distribution<>(w.begin(), w.end());
 
                   // look for weight file
-                  string weightfile = _js["trajweight"] | string();
+                  string weightfile = _js.value("trajweight", string());
                   if ( !weightfile.empty())
                   {
                       std::ifstream f(weightfile.c_str());
@@ -405,7 +429,7 @@ namespace Faunus
                   }
               }
               else
-                  throw std::runtime_error("Error: trajectory " + traj + " not loaded or empty.");
+                  throw std::runtime_error("Trajectory " + traj + " not loaded or empty.");
           }
 
           // add atoms to atom list
@@ -469,16 +493,12 @@ namespace Faunus
   /**
    * @brief Class for loading and storing Molecule properties
    *
-   * This will load molecule properties from disk and store them in a
-   * vector of `MoleculeData`. The file format is JSON (<http://www.json.org>)
-   * and all molecule properties must be inclosed in an object with
-   * the keyword `moleculelist`.
+   * This will load molecule properties from a JSON object and store them in a
+   * vector of `MoleculeData`.
    *
    * For example:
    *
    * ~~~~
-   * {
-   *   "moleculelist" :
    *   {
    *     "salt" : { "atoms":"Na Cl", "atomic":True },
    *     "polymer" :
@@ -495,13 +515,10 @@ namespace Faunus
    *         }
    *       }
    *   }
-   * }
    * ~~~~
    *
    * Note that faunus currently has a global instance of `MoleculeMap`,
    * simply named `molecule`. This can be accessed from anywhere.
-   *
-   * @todo More documentation. Rename entry for filename to "moleculefile"
    */
   template<class Tpvec, class base=PropertyVector<MoleculeData<Tpvec>>>
   class MoleculeMap : public base
@@ -510,7 +527,6 @@ namespace Faunus
 
       MoleculeMap()
       {
-          base::jsonsection = "moleculelist";
           base::name = "Molecule Properties";
       }
 
@@ -619,12 +635,11 @@ namespace Faunus
       {
           assert(molmap != nullptr);
           base::name = "Molecule Combinations";
-          base::jsonsection = "moleculecombinations";
       }
 
-      bool include( Tmjson &j ) override
+      bool include( Tmjson &j )
       {
-          bool r = base::include(j);
+          bool r = base::include( j.at("moleculecombinations") );
           update();
           return r;
       }

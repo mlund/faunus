@@ -104,12 +104,14 @@ def mkinput():
     },
 
     "analysis" : {
-      "scatter" : { "qmin":0.05, "qmax":0.4, "dq":0.005, "cutoff":1e10 }
+      'scatter' : dict(nstep=20, qmin=0.05, qmax=0.4, dq=0.005, mollist=["protein"], file='debye.dat'),
+      'statefile' : {'file':'state' },
+      'pqrfile' : {'file':'confout.pqr' }
     },
 
     "system" : {
       "temperature" : 298.15,
-      "cuboid"   : { "len" : boxlen },
+      "geometry"   : { "length" : boxlen },
       "mcloop"   : { "macro":10, "micro":micro },
       "unittest" : { "testfile":"manybody.test", "stable":False }
     }

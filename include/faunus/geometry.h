@@ -49,10 +49,10 @@ namespace Faunus
     private:
         virtual string _info( char )=0;
         virtual void _setVolume( double )=0;
-        virtual double _getVolume() const =0;
+        virtual double _getVolume(int) const =0;
+	virtual double _getRadius() const;
     protected:
         string name;                                        //!< Name of the geometry
-        string jsondir;                                     //!< Default input section
         inline int anint( double x ) const
         {
             return int(x > 0. ? x + .5 : x - .5);
@@ -60,9 +60,10 @@ namespace Faunus
 
     public:
         enum collisiontype { BOUNDARY, ZONE };                 //!< Types for collision() function
-        double getVolume() const;                           //!< Get volume of container (A^3)
-        void setVolume( double );                             //!< Specify new volume (A^3)
-        double dist( const Point &, const Point & ) const;       //!< Distance between two points (A)
+        double getVolume(int=3) const;                      //!< Get volume of container (A^3, A^2, A)
+        double getRadius() const;                           //!< Get radius of appropriate geometries (A)
+        void setVolume( double );                              //!< Specify new volume (A^3)
+        double dist( const Point &, const Point & ) const;     //!< Distance between two points (A)
         std::string info( char= 20 );                          //!< Return info string
 
         virtual bool collision( const Point &,
@@ -81,11 +82,53 @@ namespace Faunus
         /**
          * @brief Constructor
          * @param name Name of geometry
-         * @param dir Name of input section to look for parameters. If empty (default), fallback to default "system".
          */
-        Geometrybase( const string &, string= "" );
+        Geometrybase( const string& );
 
         virtual ~Geometrybase();
+    };
+    
+    /**
+     * @brief Spherical-surface geometry
+     *
+     * This is a spherical-surface simulation container.
+     */
+    class SphereSurface : public Geometrybase 
+    {
+      private:
+        double r,r2,diameter;
+        void _setVolume(double) override;
+        double _getVolume(int) const override;
+	double _getRadius() const override;                     //!< Get radius (angstrom)
+        string _info(char) override;
+      public:
+        Point len;
+        void setlen(const Point&);              //!< Reset radius (angstrom)
+        void setRadius(double);                 //!< Set radius (angstrom)
+        
+        SphereSurface(double=0);                         //!< Construct from radius (angstrom)
+
+        /** @brief Construct from json object */
+        SphereSurface( Tmjson & );
+
+        void randompos(Point &) override;
+        void boundary(Point &p) const override {};
+        bool collision(const Point&, double, collisiontype=BOUNDARY) const override;
+
+        inline double sqdist(const Point &a, const Point &b) const override {
+	  double r1 = r*std::acos(a.dot(b)/r2);
+	  return r1*r1;
+        }
+
+        /**
+	 * @warning Not true!
+	 */
+        inline Point vdist(const Point &a, const Point &b) override { return a-b; }
+
+        void scale(Point&, Point &, const double, const double) const override; //!< Linear scaling along radius (NPT ensemble)
+
+        Cuboid inscribe() const override;
+        
     };
 
     /**
@@ -98,27 +141,16 @@ namespace Faunus
     private:
         double r, r2, diameter;
         void _setVolume( double ) override;
-        double _getVolume() const override;
+        double _getVolume(int) const override;
         string _info( char ) override;
     public:
         Point len;
         void setlen( const Point & );              //!< Reset radius (angstrom)
         void setRadius( double );                 //!< Set radius (angstrom)
-        Sphere( double );                         //!< Construct from radius (angstrom)
+        Sphere( double=0 );                       //!< Construct from radius (angstrom)
 
-        /**
-         * @brief Construct from json object.
-         *
-         * Keywords in section `system/sphere` are scanned for,
-         *
-         * Key       | Description
-         * :-------- | :-----------------------
-         * radius`   | Sphere radius [angstrom]
-         */
-        inline Sphere( Tmjson &j ) : Geometrybase("Sphere")
-        {
-            setRadius(j["system"][textio::lowercase(name)]["radius"] | -1.0);
-        }
+        /** @brief Construct from json object */
+        Sphere( Tmjson & );
 
         void randompos( Point & ) override;
 
@@ -154,7 +186,7 @@ namespace Faunus
     private:
         string _info( char ) override;             //!< Return info string
         void _setVolume( double ) override;
-        double _getVolume() const override;
+        double _getVolume(int) const override;
         enum scaletype { XYZ, XY };
         scaletype scaledir;                      //!< Scale directions for pressure scaling
         string scaledirstr;
@@ -165,16 +197,7 @@ namespace Faunus
 
         Cuboid();
 
-        /**
-         * The json object is scanned for the following parameters in section `system/cuboid`:
-         *
-         * Key           | Description
-         * :------------ | :-------------------------------------------------------
-         * `len`         | Uniform sidelength [angstrom]. If negative, continue to...
-         * `xyzlen`      | Vector of sidelengths (specifies as string, i.e. "10 20 5"
-         * `scaledir`    | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
-         */
-        Cuboid( Tmjson &j, const string sec = "cuboid" );
+        Cuboid( Tmjson & ); //!< Construct from JSON input
 
         void setlen( const Point & );               //!< Reset Cuboid sidelengths
         Point len;                               //!< Sidelengths
@@ -246,13 +269,17 @@ namespace Faunus
 
     /**
      * @brief Cuboid with no periodic boundaries in z direction
+     *
+     * Same input as for `Cuboid`.
+     *
      * @author Chris Evers
      * @date Lund, nov 2010
      */
     class Cuboidslit : public Cuboid
     {
     public:
-        Cuboidslit( Tmjson &j ) : Cuboid(j) { name += " (XY-periodicity)"; }
+        Cuboidslit();
+        Cuboidslit( Tmjson & );
 
         inline double sqdist( const Point &a, const Point &b ) const override
         {
@@ -292,7 +319,8 @@ namespace Faunus
     /** @brief Cuboid with no periodic boundaries (hard box) */
     struct CuboidNoPBC : public Cuboid
     {
-        CuboidNoPBC( Tmjson &j );
+        CuboidNoPBC();
+        CuboidNoPBC( Tmjson & );
 
         inline Point vdist( const Point &a, const Point &b ) override { return a - b; }
 
@@ -316,7 +344,7 @@ namespace Faunus
     private:
         string _info( char ) override; //!< Cylinder info
         void _setVolume( double ) override;
-        double _getVolume() const override;
+        double _getVolume(int) const override;
         void init( double, double );
         double r2;    //!< Cylinder radius squared
         double r;     //!< Cylinder radius
@@ -325,9 +353,9 @@ namespace Faunus
         double _len;   //!< Cylinder length
         double _halflen; //!< Cylinder half length
     public:
-        Point len;                     //!< Dummy
+        Point len;                        //!< Dummy
         Cylinder( Tmjson & );             //!< Constructor
-        Cylinder( double, double );      //!< Construct from length and radius
+        Cylinder( double=0, double=0);    //!< Construct from length and radius
         void setlen( const Point & );     //!< Set length via vector (dummy function)
         void randompos( Point & ) override;
         void boundary( Point & ) const override;
@@ -357,7 +385,7 @@ namespace Faunus
     public:
 
         PeriodicCylinder( Tmjson & );
-        PeriodicCylinder( double, double );
+        PeriodicCylinder( double=0, double=0 );
 
         void boundary( Point & ) const override;
 
@@ -480,6 +508,45 @@ namespace Faunus
         }
         return mu;
     }
+    
+    /**
+     * @brief Electric quadrupole moment
+     * @param s Space
+     * @param g Group or other contained with atom index
+     * @param cutoff Spherical cutoff (default: 1e9 angstrom)
+     * @param quad Initial quadrupole moment (default: [0 0 0,0 0 0,0 0 0])
+     */
+    template<class Tspace, class Tgroup, class T=double>
+      Tensor<T> quadrupoleMoment(const Tspace &s, const Tgroup &g, double cutoff=1e9, Tensor<T> quad=Tensor<T>()) {
+        assert(g.size()<=(int)s.p.size());
+        for (auto i : g) {
+          Point t=s.p[i] - g.cm;
+          s.geo.boundary(t);
+          if(t.squaredNorm() < cutoff*cutoff)  {
+	    Tensor<T> temp = t*t.transpose();
+            quad += temp*s.p[i].charge;
+	  }
+        }
+        return quad;
+      }
+
+    /**
+     * @brief Calculates quadrupole moment tensor (with trace)
+     */
+    template<class Tpvec, class Tgroup, class Tgeo>
+        Tensor<double> quadrupoleMoment( const Tpvec &p, const Tgeo &geo, const Tgroup &g )
+        {
+            Tensor<double> theta;
+            theta.setZero();
+            assert(g.size() <= (int) p.size());
+            for ( auto i : g )
+            {
+                Point t = p[i] - g.cm;
+                geo.boundary(t);
+                theta = theta + t * t.transpose() * p[i].charge;
+            }
+            return 0.5 * theta;
+        }
 
     /** @brief Translate a particle vector by a vector */
     template<class Tgeo, class Tpvec>

@@ -180,7 +180,7 @@ namespace Faunus
     }
 
     /**
-     * @brief Construct from `InputMap`.
+     * @brief Construct from JSON object
      *
      * Call this *after* particles have been loaded into `Space`, i.e.
      * typically just before starting the Markov chain. Also make
@@ -194,10 +194,10 @@ namespace Faunus
         for ( auto p = m.begin(); p != m.end(); ++p )
         {
             cout << "# Reading process " << p.key() << " ... ";
-            string bound = p.value()["bound"] | string();
-            string free = p.value()["free"] | string();
-            double pKd = p.value()["pKd"] | 0.0;
-            double pX = p.value()["pX"] | 0.0;
+            string bound = p.value().at("bound");
+            string free = p.value().at("free");
+            double pKd = p.value().at("pKd");
+            double pX = p.value().at("pX");
             processdata d;
             d.id_AX = atom[bound].id;
             d.id_A = atom[free].id;

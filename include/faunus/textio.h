@@ -28,6 +28,7 @@ namespace Faunus
     const string epsilon_m="eps_m";
     const string gamma="gamma";
     const string Gamma="Gamma";
+    const string infinity="oo";
     const string kappa="k";
     const string kT=" kT";
     const string mu="mu";
@@ -52,6 +53,7 @@ namespace Faunus
     const string epsilon_m = "\u03b5";  //!< Greek epsilon (minuscule)
     const string gamma = "\u0263";      //!< Greek gamma
     const string Gamma = "\u0393";      //!< Greek capital gamma
+    const string infinity="\u221E";     //!< Infinity
     const string kappa = "\u03ba";      //!< Greek kappa
     const string kT = " kT";            //!< kT (energy) with space in front
     const string mu = "\u03bc";         //!< Greek mu
@@ -144,6 +146,13 @@ namespace Faunus
         return s;
     }
 
+    /** @brief Uppercase first letter in string */
+    inline std::string toupper_first( std::string s ) {
+        if (!s.empty())
+            s[0] = std::toupper( s[0] ); 
+        return s;
+    }
+
     /**
      * @brief Show Faunus welcome text, version etc.
      * @note See http://patorjk.com/software/taag for ASCII art generation
@@ -153,7 +162,7 @@ namespace Faunus
         std::ostringstream o;
         o << std::string(71, '.') << endl
           << "  Welcome to FAUNUS - A Framework for Molecule Simulation.\n"
-          << "  Copyright (C) 2002-2016 Mikael Lund\n"
+          << "  Copyright (C) 2002-2017 Mikael Lund\n"
           << "\n"
           << "  This program is free software; you can redistribute it and/or modify\n"
           << "  it under the terms of the GNU General Public License as published by\n"

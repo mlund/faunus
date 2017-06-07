@@ -29,13 +29,13 @@ echo '{
     "atomtranslate" : {
       "myparticles" : { }
     },
-    "temper" : { "format":"XYZ" }
+    "temper" : { "format":"XYZ", "prob":0.001 }
   },
 
   "system" : {
     "Tscale"       : '$Tscale',
-    "cuboid"       : { "len" : 4.0 },
-    "mcloop"       : { "macro":2000, "micro":10000 },
+    "geometry"     : { "length" : 4.0 },
+    "mcloop"       : { "macro":10, "micro":1000000 },
     "unittest"     : { "testfile":"mpi'$proc'.temper.test", "stable":false }
   }
 }' > mpi$proc.temper.json

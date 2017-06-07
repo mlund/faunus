@@ -22,16 +22,8 @@ namespace Faunus
   {
   private:
       int molsize; // Number of atoms per molecule
-
-
   public:
       typedef PropertyBase::Tid Tid;
-      int molIndex = -1; /// \brief Index of group in molecular tracker (sum of previous molecules in vector and on lower TID)
-      int Index;        /// \brief Index of group in molecular tracker sub vector
-      string name;                            //!< Information time (and short) name
-      Point cm_trial;                         //!< mass center vector for trial position
-      Point cm;                               //!< mass center vector
-      Tid molId;                              //!< molecule id
 
       /**
        * @brief Constructor
@@ -53,6 +45,11 @@ namespace Faunus
           if ( front < 0 || back < 0 )
               resize(0);
       }
+
+      string name;                            //!< Information time (and short) name
+      Point cm_trial;                         //!< mass center vector for trial position
+      Point cm;                               //!< mass center vector
+      Tid molId;                              //!< molecule id
 
       inline int getMolSize() { return molsize; }
 

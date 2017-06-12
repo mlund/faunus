@@ -265,7 +265,7 @@ namespace Faunus
      *
      * @date Lund, 2007-2011
      */
-    template<class Tspace=Space<class Tgeometry, class Tparticle> >
+    template<class Tspace>
     class Movebase
     {
     private:
@@ -292,7 +292,7 @@ namespace Faunus
         virtual string _info()=0;        //!< info for derived moves
         void trialMove();                //!< Do a trial move (wrapper)
         Energy::Energybase<Tspace> *pot; //!< Pointer to energy functions
-        Tspace *spc;                     //!< Pointer to Space
+        Space<typename Tspace::GeometryType, typename Tspace::ParticleType> *spc; //!< Pointer to Space
         string title;                    //!< Title of move (mandatory!)
         string cite;                     //!< Reference, url, DOI etc.
         char w;                          //!< info text width. Adjust this in constructor if needed.
@@ -527,9 +527,9 @@ namespace Faunus
             while ( n-- > 0 )
             {
                 trialMove();
-		pot->updateChange(change);
+		        pot->updateChange(change);
                 double du = energyChange();
-                acceptance = metropolis(du);
+                acceptance = metropolis(du); // true or false?
                 if ( !acceptance )
                     rejectMove();
                 else
@@ -888,12 +888,7 @@ namespace Faunus
         {
             assert(spc->geo.collision(spc->p[iparticle], spc->p[iparticle].radius) == false
                        && "An untouched particle collides with simulation container.");
-            if ( spc->geo.collision(
-                spc->trial[iparticle], spc->trial[iparticle].radius, Geometry::Geometrybase::BOUNDARY))
-                return pc::infty;
-	    
-	    return Energy::energyChange(*spc, *base::pot, base::change);
-            //return (base::pot->i_total(spc->trial, iparticle) + base::pot->external(spc->trial)) - (base::pot->i_total(spc->p, iparticle) + base::pot->external(spc->p));
+            return Energy::energyChange(*spc, *base::pot, base::change);
         }
         return 0;
     }
@@ -1345,10 +1340,12 @@ namespace Faunus
             p.z() = dir.z() * dp_trans * slump.half();
             igroup->translate(*spc, p);
         }
-        
+
+        // register the moved group but set the number of moved particles
+        // to zero. Doing so, it is assumed that all particles have been moved and
+        // no internal energy calculation is performed.
         int g_index = spc->findIndex(igroup);
-        for(auto i : *igroup)
-          base::change.mvGroup[g_index].push_back(i);
+        base::change.mvGroup[g_index].clear();
     }
 
     template<class Tspace>
@@ -1375,44 +1372,23 @@ namespace Faunus
     {
         if ( dp_rot < 1e-6 && dp_trans < 1e-6 )
             return 0;
-        double du = Energy::energyChange(*spc, *base::pot, base::change);
-        for ( auto i : *igroup )
-            if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
-                return pc::infty;
-        return du;
-	//return Energy::energyChange(*spc, *base::pot, base::change);
 
-	
-        /*double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
-        if ( unew == pc::infty )
-            return pc::infty;       // early rejection
-        double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
+        return Energy::energyChange(*spc, *base::pot, base::change);
+
+        // The code below is obsolete and will be removed in the future.
 
 #ifdef ENABLE_MPI
-          if (base::mpiPtr!=nullptr) {
-          double du=0;
-          auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
-          for (auto i=s.first; i<=s.second; ++i) {
-          auto gi=spc->groupList()[i];
-          if (gi!=igroup)
-          du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
-          }
-          return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
-          }
-#endif
-
-        for ( auto g : spc->groupList())
-        {
-            if ( g != igroup )
-            {
-                unew += pot->g2g(spc->trial, *g, *igroup);
-                if ( unew == pc::infty )
-                    return pc::infty;   // early rejection
-                uold += pot->g2g(spc->p, *g, *igroup);
+        if (base::mpiPtr!=nullptr) {
+            double du=0;
+            auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
+            for (auto i=s.first; i<=s.second; ++i) {
+                auto gi=spc->groupList()[i];
+                if (gi!=igroup)
+                    du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
             }
+            return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
         }
-        return unew - uold;*/
-	
+#endif
     }
 
     template<class Tspace>
@@ -2309,8 +2285,10 @@ namespace Faunus
         gPtr->cm_trial = Geometry::massCenter(spc->geo, spc->trial, *gPtr);
 	
         int g_index = spc->findIndex(gPtr);
+
+        // register index of the moved group and all it's moved particles
         for(auto i : index)
-          base::change.mvGroup[g_index].push_back(i);
+            base::change.mvGroup[g_index].push_back(i);
     }
 
     template<class Tspace>
@@ -2341,21 +2319,7 @@ namespace Faunus
     template<class Tspace>
     double CrankShaft<Tspace>::_energyChange()
     {
-        double du = 0;
-        for ( auto i : index )
-            if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
-                return pc::infty;
-	return Energy::energyChange(*spc, *base::pot, base::change); 
-        du = pot->g_internal(spc->trial, *gPtr) - pot->g_internal(spc->p, *gPtr);
-        for ( auto i : index )
-            du += pot->i_external(spc->trial, i) - pot->i_external(spc->p, i);
-        for ( auto g : spc->groupList())
-            if ( g != gPtr )
-                du += pot->g2g(spc->trial, *g, *gPtr) - pot->g2g(spc->p, *g, *gPtr);
-        du += pot->external(spc->trial) - pot->external(spc->p);
-        //for (auto i : index)
-        //  du += pot->i2all(spc->trial, i) - pot->i2all(spc->p, i);
-        return du;
+	    return Energy::energyChange(*spc, *base::pot, base::change);
     }
 
     /**
@@ -2669,6 +2633,7 @@ namespace Faunus
         using base::spc;
         using base::pot;
         using base::w;
+        using base::change;
         double P; //!< Pressure
         double dp; //!< Volume displacement parameter
         double oldval;
@@ -2765,7 +2730,7 @@ namespace Faunus
         oldval = spc->geo.getVolume();
         oldlen = newlen = spc->geo.len;
         newval = std::exp(std::log(oldval) + slump.half() * dp);
-	//newval = oldval*std::exp( slump.half()*dp ); // Is this not more simple?
+        //newval = oldval*std::exp( slump.half()*dp ); // Is this not more simple?
         Point s = Point(1, 1, 1);
         double xyz = cbrt(newval / oldval);
         double xy = sqrt(newval / oldval);
@@ -2775,18 +2740,27 @@ namespace Faunus
             g->setMassCenter(*spc);
             g->scale(*spc, s, xyz, xy); // scale trial coordinates to new volume
         }
-        
-        int i=0;
-        for (auto gPtr : spc->groupList()) {
-          base::change.mvGroup[i].resize( gPtr->size() );
-          std::iota (base::change.mvGroup[i].begin(), base::change.mvGroup[i].end(), gPtr->front());
-          assert( gPtr->size() == int(base::change.mvGroup[i].size()) );
-          assert( gPtr->front()== base::change.mvGroup[i].front() );
-          assert( gPtr->back() == base::change.mvGroup[i].back() );
-          i++;
+
+        spc->geo_trial.setlen(newlen);
+
+        // register all moved groups in change object
+        int i = 0;
+        for ( auto gPtr : spc->groupList())
+        {
+            if (gPtr->isAtomic())
+            {
+                change.mvGroup[i].resize(gPtr->size());
+                std::iota( change.mvGroup[i].begin(), change.mvGroup[i].end(), gPtr->front());
+                assert(gPtr->size() == int(change.mvGroup[i].size()));
+                assert(gPtr->front() == change.mvGroup[i].front());
+                assert(gPtr->back() == change.mvGroup[i].back());
+            }
+            else
+                change.mvGroup[i].clear();
+            i++;
         }
-        base::change.geometryChange = true;
-	base::change.dV = newval - oldval;
+        change.geometryChange = true;
+        change.dV = newval - oldval;
     }
     
     template<class Tspace>
@@ -2808,6 +2782,7 @@ namespace Faunus
         val += oldval;
         rval += 1. / oldval;
         spc->geo.setlen(oldlen);
+        spc->geo_trial = spc->geo;
         pot->setSpace(*spc);
         for ( auto g : spc->groupList())
             g->undo(*spc);
@@ -2838,26 +2813,10 @@ namespace Faunus
         return u + pot->external(p);
     }
 
-    /**
-     * @todo Early rejection could be implemented
-     *       - not relevant for geometries with periodicity, though.
-     */
     template<class Tspace>
     double Isobaric<Tspace>::_energyChange()
     {
-        double uold = _energy(spc->p);
-        spc->geo.setlen(newlen);
-        pot->setSpace(*spc); // potential must know about volume, too
-
-        // In spherical geometries, molecules may collide with
-        // cell boundary upon mass center scaling:
-        for ( auto g : spc->groupList())
-            for ( auto i : *g )
-                if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
-                    return pc::infty;
-        double unew = _energy(spc->trial);
-        return unew - uold;
-	//return Energy::energyChange(*spc, *base::pot, base::change); // Does not work for 'Isobaric' at the moment
+        return Energy::energyChange(*spc, *pot, change);
     }
 
     /**
@@ -3482,7 +3441,7 @@ namespace Faunus
             eqpot = *ptr;
         else
         {
-            std::runtime_error("Error: `Energy::EquilibriumEnergy` required in Hamiltonian\
+            throw std::runtime_error("Error: `Energy::EquilibriumEnergy` required in Hamiltonian\
             for Grand Canonical Titration moves.");
         }
         eqpot->eq = Energy::EquilibriumController(j);
@@ -4779,7 +4738,7 @@ namespace Faunus
         if ( ptr != nullptr )
             eqpot = *ptr;
         else
-            std::runtime_error("`EquilibriumEnergy` required in Hamiltonian.");
+            throw std::runtime_error("`EquilibriumEnergy` required in Hamiltonian.");
 
         eqpot->eq = Energy::EquilibriumController(j);
 
@@ -5109,8 +5068,8 @@ namespace Faunus
                         mPtr.push_back(toPtr(AtomicRotation<Tspace>(e, s, val)));
                     if ( i.key() == "atomgc" )
                         mPtr.push_back(toPtr(GrandCanonicalSalt<Tspace>(e, s, val)));
-		    if (i.key()=="atomictranslation2D")
-			mPtr.push_back( toPtr( AtomicTranslation2D<Tspace>(e,s, val)));
+                    if (i.key()=="atomictranslation2D")
+			            mPtr.push_back( toPtr( AtomicTranslation2D<Tspace>(e,s, val)));
                     if ( i.key() == "gctit" )
                         mPtr.push_back(toPtr(GrandCanonicalTitration<Tspace>(e, s, val)));
                     if ( i.key() == "moltransrot" )

@@ -107,17 +107,18 @@ namespace Faunus
          * @todo At the moment this analysis is limited to "soft" systems only,
          * i.e. for non-rigid systems with continuous potentials.
          */
-        template<typename Tspace>
+        template<typename SpaceType>
             class VirialPressure : public AnalysisBase
         {
+            public:
+                typedef Space<typename SpaceType::GeometryType, typename SpaceType::ParticleType> Tspace;
             private:
-
                 Tspace *spc;
                 Energy::Energybase <Tspace> *pot;
                 int dim;             // dimensions (default: 3)
 
                 typedef Eigen::Matrix3d Ttensor;
-                Ttensor T;           // excess pressure tensor
+                Ttensor Texcess;           // excess pressure tensor
                 Average<double> Pid; // ideal pressure
 
                 /** @brief Ignore internal pressure in molecular groups (default: false) */
@@ -133,7 +134,7 @@ namespace Faunus
                         vector<string> id = {"Ideal", "Excess", "Total"};
 
                         P[0] = Pid.avg();       // ideal
-                        P[1] = (T / cnt).trace(); // excess
+                        P[1] = (Texcess / cnt).trace(); // excess
                         P[2] = P[0] + P[1];     // total
 
                         char l = 15;
@@ -147,14 +148,14 @@ namespace Faunus
                                 << setw(l) << P[i] / 1.0_Pa
                                 << setw(l) << P[i] / 1.0_atm << "\n";
                         o << "\n  Osmotic coefficient = " << 1 + P[1] / P[0] << "\n"
-                            << "  Excess pressure tensor (mM):\n\n" << T / cnt / 1.0_mM << endl;
+                            << "  Excess pressure tensor (mM):\n\n" << Texcess / cnt / 1.0_mM << endl;
                     }
                     return o.str();
                 }
 
                 inline void _test( UnitTest &test ) override
                 {
-                    test("virial_pressure_mM", (T / cnt).trace() / 1.0_mM, 0.2);
+                    test("virial_pressure_mM", (Texcess / cnt).trace() / 1.0_mM, 0.2);
                 }
 
                 template<class Tpvec, class Tgeo, class Tpot>
@@ -216,7 +217,7 @@ namespace Faunus
                             t += g2g(spc->p, spc->geo, *pot, *(*gi), *(*gj));
 
                     // add to grand avarage
-                    T += t / (dim * V);
+                    Texcess += t / (dim * V);
                     Pid += N / V;
                 }
 
@@ -227,7 +228,7 @@ namespace Faunus
                     dim = j.value("dim", 3);
                     noMolecularPressure = j.value("noMolecularPressure", false);
                     name = "Virial Pressure";
-                    T.setZero();
+                    Texcess.setZero();
                 }
         };
 
@@ -246,9 +247,11 @@ namespace Faunus
          * `nstep`   | Interval with which to sample (default: 1)
          * `mollist` | List of molecule name to sample
          */
-        template<class Tspace>
+        template<class SpaceType>
             class PolymerShape : public AnalysisBase
         {
+            public:
+                typedef Space<typename SpaceType::GeometryType, typename SpaceType::ParticleType> Tspace;
             private:
                 std::map<string, Average < double> > Rg2, Rg, Re2, Rs, Rs2, Rg2x, Rg2y,
                     Rg2z;

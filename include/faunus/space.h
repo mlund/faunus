@@ -263,6 +263,7 @@ namespace Faunus
       ParticleVector p;                      //!< Main particle vector
       ParticleVector trial;                  //!< Trial particle vector.
       MoleculeMap<ParticleVector> molecule;  //!< Map of molecules
+      std::vector<Group*> &groupList() { return g; };   //!< Vector with pointers to all groups
 
       Tracker<int> atomTrack;                //!< Track atom index based on atom type
       Tracker<Group *> molTrack;              //!< Track groups pointers based on molecule type
@@ -290,7 +291,7 @@ namespace Faunus
           void clear()
           {
               dV = 0;
-	      geometryChange = false;
+    	      geometryChange = false;
               mvGroup.clear();
               rmGroup.clear();
               inGroup.clear();
@@ -304,8 +305,8 @@ namespace Faunus
                   if ( rmGroup.empty())
                       if ( inGroup.empty())
                           if ( std::fabs(dV) < 1e-9 )
-			      if(!geometryChange)
-                                  return true;
+            			      if(!geometryChange)
+                                 return true;
               return false;
           }
       };
@@ -326,11 +327,14 @@ namespace Faunus
                       assert(g->find(i));
                       p[i] = trial[i];
                   }
-            if(c.geometryChange) {
-	      g.setMassCenter(p,geo_trial); // update mass center
-	    } else {
-	      g.setMassCenter(p,geo); // update mass center
-	    }
+              if ( c.geometryChange )
+              {
+                  g.setMassCenter(p, geo_trial); // update mass center
+              }
+              else
+              {
+                  g.setMassCenter(p, geo); // update mass center
+              }
           }
           assert(!"incomplete");
       }
@@ -357,8 +361,6 @@ namespace Faunus
           std::cerr << "Space construction error: " << e.what();
           throw;
       }
-
-      std::vector<Group *> &groupList() { return g; };   //!< Vector with pointers to all groups
 
       AtomMap &atomList() { return atom; } //!< Vector of atoms
 
@@ -834,6 +836,8 @@ namespace Faunus
                   cout << indent(SUB) << "Restoring random number generator state." << endl;
                   f >> slump.eng;
               }
+
+              geo_trial = geo;
 
               initTracker(); // update trackers
 

@@ -54,13 +54,19 @@ namespace Faunus
     template<class Tspace>
     class Energybase
     {
+    public:
+        typedef typename Tspace::ParticleType Tparticle;
+        typedef typename Tspace::GeometryType Tgeometry;
+        typedef Space<Tgeometry, Tparticle> SpaceType;
+        typedef typename SpaceType::ParticleVector Tpvec;
+
     protected:
         string jsondir; // inputmap section
         char w; //!< Width of info output
-        Tspace *spc;
-	typename Tspace::GeometryType* geo;
-        virtual std::string
-        _info()=0;
+        SpaceType *spc;
+
+	    typename Tspace::GeometryType* geo;
+        virtual std::string _info()=0;
 
         /** @brief Determines if given particle vector is the trial vector */
         template<class Tpvec>
@@ -69,11 +75,6 @@ namespace Faunus
         bool isGeometryTrial(typename Tspace::GeometryType &g) const { return (&g==&spc->geo_trial); }
 
     public:
-        typedef Tspace SpaceType;
-        typedef typename Tspace::ParticleType Tparticle;
-        typedef typename Tspace::GeometryType Tgeometry;
-        typedef typename Space<Tgeometry, Tparticle>::ParticleVector Tpvec;
-
         string name;  //!< Short informative name
 
         virtual ~Energybase() {}
@@ -85,10 +86,10 @@ namespace Faunus
         }
 
         virtual void setSpace( Tspace &s )
-	{ 
-	  spc = &s;
-	  setGeometry(s.geo);
-	}
+        {
+            spc = &s;
+            setGeometry(s.geo);
+        }
 
         virtual Tspace &getSpace()
         {
@@ -97,9 +98,9 @@ namespace Faunus
         }
         
         virtual void setGeometry(typename Tspace::GeometryType &g)
-	{ 
-	  geo=&g; 
-	}
+        {
+            geo=&g;
+        }
 	  
         virtual typename Tspace::GeometryType& getGeometry() 
 	{
@@ -1156,11 +1157,11 @@ namespace Faunus
      *
      * Useful for potentials with a hard sphere part
      */
-    template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace, Tpairpot> >
-    class NonbondedEarlyReject : public Tnonbonded
+    template<class Tspace, class Tpairpot >
+    class NonbondedEarlyReject : public Energy::Nonbonded<Tspace, Tpairpot>
     {
     private:
-        typedef Tnonbonded base;
+        typedef Energy::Nonbonded<Tspace, Tpairpot> base;
     public:
         NonbondedEarlyReject( Tmjson &in ) : base(in)
         {
@@ -1217,11 +1218,11 @@ namespace Faunus
      * `cutoff_g2g` |  Cutoff (angstrom) [default: infinity]
      *
      */
-    template<class Tspace, class Tpairpot, class Tnonbonded=Energy::Nonbonded<Tspace, Tpairpot> >
-    class NonbondedCutg2g : public Tnonbonded
+    template<class Tspace, class Tpairpot>
+    class NonbondedCutg2g : public Energy::Nonbonded<Tspace, Tpairpot>
     {
     private:
-        typedef Tnonbonded base;
+        typedef Energy::Nonbonded<Tspace, Tpairpot> base;
         using typename base::Tpvec;
         double rcut2;
 
@@ -3351,55 +3352,110 @@ class SASAEnergy : public Energybase<Tspace> {
     }
     
       /**
-       * @brief Help-funciton to 'energyChange'
-       * @todo Fix such that it works to inserted and removed particles
-       * @warning Fairly certain something is wrong here!
+       * @brief Help-function to 'energyChange'
+       * @todo Fix such that it works for inserted and removed particles
        */
-    template<class Tspace, class Tenergy, class Tpvec>
-    double energyChangeConfiguration(Tspace &spc, Tenergy &pot, const Tpvec &p, const typename Tspace::Change &c) {
-        double du = 0.0;
-        auto& g = spc.groupList();
-        du += pot.external(p);
-        for (auto m : c.mvGroup) {
-            size_t i = size_t( m.first );     // Moved group index
-            for (size_t j=0; j<g.size(); j++) // Go through all groups
-                if ( c.mvGroup.find(j)==c.mvGroup.end() ) { // If group j is not in mvGroup
-                    du += pot.g2g(p, *g[i], *g[j]); 	      // moved group<->static groups
-                }
-            du += pot.g_external(p, *g[i]);      // moved group <-> external
-            if (g[i]->isAtomic()) {                                             // Check if moved group is atomic
-                for(auto j : m.second)                                          // For the moved atoms in a group,
-                    for(auto k : *g[i])                                           // for every atom in that group,
-                        if (std::find (m.second.begin(), m.second.end(), k) == m.second.end() || j > k) // check such that moved atoms does not interact OR moved atoms interact only once
-                            du += pot.i2i(p,j,k);
-            } else {
-                du += pot.g_internal(p, *g[i]);
-            }
-        }
-        
-        for (auto i=c.mvGroup.begin(); i!=c.mvGroup.end(); i++) {
-            for (auto j=i; j != c.mvGroup.end(); j++) {
-                auto _i = i->first;
-                auto _j = j->first;
-                du += pot.g2g(p, *g[_i], *g[_j] ); // moved <-> moved
-            }
-        }
-        return du;
-    }
+      template<class Tenergy, class Tpvec, class Tgeo, class Tparticle>
+      double energyChangeConfiguration (
+          Space<Tgeo,Tparticle> &spc,
+          Tenergy &pot,
+          const Tpvec &p,
+          const typename Space<Tgeo,Tparticle>::Change &c )
+      {
+          double du = 0;
+          auto &g = spc.groupList();
+          du += pot.external(p);
+
+          for ( auto &m : c.mvGroup ) // loop over all moved groups
+          {
+              size_t i = size_t(m.first);                       // index of moved group
+
+              // Calculate energy moved <-> static groups
+
+              for ( size_t j = 0; j < g.size(); j++ )           // loop over through all groups
+                  if ( c.mvGroup.count(j) == 0 )                // If group j is not in mvGroup
+                      du += pot.g2g(p, *g[i], *g[j]);           // moved group<->static groups
+
+              du += pot.g_external(p, *g[i]);                   // moved group <-> external
+
+              if ( g[i]->isAtomic() )
+              {                                                 // Check if moved group is atomic
+                  for ( auto j : m.second )                     // loop over all moved groups
+                      for ( auto k : *g[i] )                    // loop over all atoms in moved group
+                          if ( std::find(m.second.begin(), m.second.end(), k) == m.second.end() || j
+                              > k ) // check such that moved atoms does not interact OR moved atoms interact only once
+                              du += pot.i2i(p, j, k);
+              }
+              if ( g[i]->isMolecular() )
+              {
+                  if (!m.second.empty()) // only recalculate internal energy if N>0
+                     du += pot.g_internal(p, *g[i]);
+              }
+          }
+
+          // Calculate energy moved <-> moved
+          for ( auto i = c.mvGroup.begin(); i != c.mvGroup.end(); i++ )
+          {
+              for ( auto j = i; j != c.mvGroup.end(); j++ )
+              {
+                  auto _i = i->first;
+                  auto _j = j->first;
+                  du += pot.g2g(p, *g[_i], *g[_j]);
+              }
+          }
+
+          return du;
+      }
 
     /**
      * @brief Calculate energy change due to proposed modification defined by `Space::Change`
      */
-    template<class Tspace, class Tenergy>
-      double energyChange(Tspace &s, Tenergy &pot, const typename Tspace::Change &c) {
-	if(c.geometryChange)
-	  pot.setGeometry(s.geo_trial);
-	double duNew = energyChangeConfiguration(s,pot,s.trial,c);
-	if(c.geometryChange)
-	  pot.setGeometry(s.geo);
-	double duOld = energyChangeConfiguration(s,pot,s.p,c);
-	return (duNew - duOld);
+      template<class Tenergy, class Tgeometry, class Tparticle>
+      double energyChange( Space<Tgeometry, Tparticle> &s,
+                           Tenergy &pot,
+                           const typename Space<Tgeometry, Tparticle>::Change &c )
+      {
+
+          if (c.empty())
+              return 0;
+
+          auto backup = s.geo; // backup geometry;
+
+          // make sure the new (trial) geometry is active
+          if ( c.geometryChange )
+          {
+              s.geo = s.geo_trial;
+              pot.setSpace(s);
+          }
+
+          // Check for container overlap
+
+          for ( auto &m : c.mvGroup )  // loop over all moved groups
+              if ( m.second.empty())  // if index vector is empty, assume that all particles have moved
+              {
+                  for ( auto j : *s.groupList()[m.first] )
+                      if ( s.geo.collision(s.trial[j], s.trial[j].radius, Geometry::Geometrybase::BOUNDARY))
+                          return pc::infty;
+              }
+              else
+                  for ( auto j : m.second ) // if given, loop over specific particle index
+                      if ( s.geo.collision(s.trial[j], s.trial[j].radius, Geometry::Geometrybase::BOUNDARY))
+                          return pc::infty;
+
+          double duNew = energyChangeConfiguration(s, pot, s.trial, c);
+
+          // restore original geometry
+          if ( c.geometryChange )
+          {
+              s.geo = backup;
+              pot.setSpace(s);
+          }
+
+          double duOld = energyChangeConfiguration(s, pot, s.p, c);
+
+          return (duNew - duOld);
       }
+
 
 
       /**
@@ -3561,11 +3617,6 @@ class SASAEnergy : public Energybase<Tspace> {
       std::enable_if<std::is_base_of<Energybase<typename T1::SpaceType>, T2>::value>::type >
   EnergyTester<T1, T2> &operator==( const T1 &u1, const T2 &u2 ) { return *(new EnergyTester<T1, T2>(u1, u2)); }
 
-/* typedefs */
-
-// template aliasing requires gcc 4.7+
-// template<class Tpairpot, class Tgeometry>
-//   using PairWise = Nonbonded<Tpairpot, Tgeometry>;
 
   }//Energy namespace
 }//Faunus namespace

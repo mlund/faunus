@@ -527,7 +527,7 @@ namespace Faunus
             while ( n-- > 0 )
             {
                 trialMove();
-		pot->updateChange(change);
+                pot->updateChange(change);
                 double du = energyChange();
                 acceptance = metropolis(du);
                 if ( !acceptance )
@@ -1311,7 +1311,6 @@ namespace Faunus
     template<class Tspace>
     void TranslateRotate<Tspace>::_trialMove()
     {
-
         // if `mollist` has data, favor this over `setGroup()`
         // Note that `currentMolId` is set by Movebase::move()
         if ( !this->mollist.empty())
@@ -1375,19 +1374,19 @@ namespace Faunus
     {
         if ( dp_rot < 1e-6 && dp_trans < 1e-6 )
             return 0;
-        double du = Energy::energyChange(*spc, *base::pot, base::change);
+        //double du = Energy::energyChange(*spc, *base::pot, base::change);
         for ( auto i : *igroup )
             if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
                 return pc::infty;
-        return du;
+        //return du;
 	//return Energy::energyChange(*spc, *base::pot, base::change);
 
 	
-        /*double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
+        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
         if ( unew == pc::infty )
             return pc::infty;       // early rejection
         double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
-
+/*
 #ifdef ENABLE_MPI
           if (base::mpiPtr!=nullptr) {
           double du=0;
@@ -1399,20 +1398,15 @@ namespace Faunus
           }
           return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
           }
-#endif
+#endif*/
 
-        for ( auto g : spc->groupList())
-        {
-            if ( g != igroup )
-            {
-                unew += pot->g2g(spc->trial, *g, *igroup);
-                if ( unew == pc::infty )
-                    return pc::infty;   // early rejection
-                uold += pot->g2g(spc->p, *g, *igroup);
-            }
-        }
-        return unew - uold;*/
-	
+
+        unew += pot->g2All(spc->trial, *igroup);
+        if ( unew == pc::infty )
+            return pc::infty;   // early rejection
+        uold += pot->g2All(spc->p, *igroup);
+
+        return unew - uold;
     }
 
     template<class Tspace>

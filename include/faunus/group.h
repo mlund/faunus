@@ -33,6 +33,8 @@ namespace Faunus
       Group( int front = -1, int back = -1 ) : Range(front, back - front + 1), name("")
       {
           molId = 0;
+          id = Group::nextId;
+          ++Group::nextId;
           setMolSize(-1);
           if ( front < 0 || back < 0 )
               resize(0);
@@ -41,6 +43,8 @@ namespace Faunus
       Group( string name, int front = -1, int back = -1 ) : Range(front, back - front + 1), name(name)
       {
           molId = 0;
+          id = Group::nextId;
+          ++Group::nextId;
           setMolSize(-1);
           if ( front < 0 || back < 0 )
               resize(0);
@@ -50,6 +54,8 @@ namespace Faunus
       Point cm_trial;                         //!< mass center vector for trial position
       Point cm;                               //!< mass center vector
       Tid molId;                              //!< molecule id
+      unsigned int id;                        //!< Unique identificator of Group
+      static unsigned int nextId;             //!< Next unique identificator of Group
 
       inline int getMolSize() { return molsize; }
 

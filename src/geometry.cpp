@@ -7,6 +7,8 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+unsigned int Faunus::Group::nextId = 0; //!< Instantiate static member of Group class, ordinarily given after class, however it needs to be in *.cpp file
+
 namespace Faunus
 {
   namespace Geometry

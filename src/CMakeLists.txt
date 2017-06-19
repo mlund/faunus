@@ -34,9 +34,12 @@ set(hdrs
         ${CMAKE_SOURCE_DIR}/include/faunus/textio.h
         ${CMAKE_SOURCE_DIR}/include/faunus/titrate.h
         ${CMAKE_SOURCE_DIR}/include/faunus/topology.h
+        ${CMAKE_SOURCE_DIR}/src/group.cpp
         )
 set(objs
         geometry potentials slump species analysis)
+
+
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 include_directories(${CMAKE_SOURCE_DIR}/include/docopt.cpp-0.6.2)
@@ -159,7 +162,7 @@ function(fau_example tname tdir tsrc)
             PATTERN ".svn" EXCLUDE)
 endfunction(fau_example)
 
-#add_subdirectory(playground EXCLUDE_FROM_ALL)
+add_subdirectory(playground EXCLUDE_FROM_ALL)
 add_subdirectory(examples)
 
 if (EXISTS ${MYPLAYGROUND})

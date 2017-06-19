@@ -1373,7 +1373,7 @@ namespace Faunus
         if ( dp_rot < 1e-6 && dp_trans < 1e-6 )
                     return 0;
 
-        //return Energy::energyChange(*spc, *base::pot, base::change);
+        return Energy::energyChange(*spc, *base::pot, base::change);
 
         // The code below is obsolete and will be removed in the future.
         /*#ifdef ENABLE_MPI
@@ -1388,23 +1388,6 @@ namespace Faunus
                     return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
                 }
         #endif*/
-
-
-        for ( auto i : *igroup )
-            if ( spc->geo.collision(spc->trial[i], spc->trial[i].radius, Geometry::Geometrybase::BOUNDARY))
-                return pc::infty;
-
-        double unew = pot->external(spc->trial) + pot->g_external(spc->trial, *igroup);
-        if ( unew == pc::infty )
-            return pc::infty;       // early rejection
-        double uold = pot->external(spc->p) + pot->g_external(spc->p, *igroup);
-
-        unew += pot->g2All(spc->trial, *igroup);
-        if ( unew == pc::infty )
-            return pc::infty;   // early rejection
-        uold += pot->g2All(spc->p, *igroup);
-
-        return unew - uold;
     }
 
     template<class Tspace>

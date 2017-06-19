@@ -168,26 +168,49 @@ namespace Faunus
 
         virtual double systemEnergy( const Tpvec &p )
         {
+            double u_pair = 0.0;
             double u = external(p);
             for ( auto g : spc->groupList())
                 u += g_external(p, *g) + g_internal(p, *g);
             for ( unsigned int i = 0; i < spc->groupList().size() - 1; i++ )
                 for ( unsigned int j = i + 1; j < spc->groupList().size(); j++ )
-                    u += g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
-            return u;
+                    u_pair += g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
+            return u + u_pair;
         }
 
-        virtual double g2All(const Tpvec & p, Group &g)
+        virtual double g2All(const Tpvec & p, const std::map<int, vector<int>>& mg)
         {
-            double unew = 0.0;
-            for ( auto o : spc->groupList()) {
-                if ( o != &g ) {
-                    unew += g2g(p, *o, g);
-                    if ( unew == pc::infty )
+            double du = 0;
+            auto &g = spc->groupList();
+
+            for ( auto &m : mg ) // loop over all moved groups
+            {
+                size_t i = size_t(m.first);                       // index of moved group
+
+                // Calculate energy moved <-> static groups
+                for ( size_t j = 0; j < g.size(); j++ ) {           // loop over through all groups
+                    if ( mg.count(j) == 0 ) {                // If group j is not in mvGroup
+                        du += g2g(p, *g[i], *g[j]);           // moved group<->static groups
+                        if ( du == pc::infty )
+                            return pc::infty;   // early rejection
+                    }
+                }
+            }
+
+            // Calculate energy moved <-> moved
+            for ( auto i = mg.begin(); i != mg.end(); i++ )
+            {
+                for ( auto j = i; j != mg.end(); j++ ) // MIKAEL should it not be j = (++mg.begin()) instead of j = i, why include interaction with self
+                {
+                    auto _i = i->first;
+                    auto _j = j->first;
+                    du += g2g(p, *g[_i], *g[_j]);
+                    if ( du == pc::infty )
                         return pc::infty;   // early rejection
                 }
             }
-            return unew;
+
+            return du;
         }
 
         inline virtual std::string info()
@@ -202,6 +225,13 @@ namespace Faunus
     /**
      *  \brief Energy matrix - allows acceleration of Metropolis algorithm up to 2x by storing pair-wise enegies
      *  \param EType - set type for energy storage in energy matrix - e.g. double, float, half_float
+     *
+     *  Usage:
+     *
+     * Energy::EnergyMatrix<double, Tspace, Energy::NonbondedCutg2g<Tspace,Tpairpot> > nonEM(mcp);
+     *
+     * NOTE: Currently only works for rigid many-particle species, i.e. All groups of GroupList needs to be molecular.
+     *
      */
     template<typename EType, class Tspace, class Base>
       class EnergyMatrix : public Base {
@@ -222,7 +252,7 @@ namespace Faunus
         std::vector<double> changes;    /// \brief Temporarily stored changes to the Energy matrix generated in each trial configuration energy calculation
 
         bool all = false;       /// \brief true signifies that we need to swap EMs
-        Group* multi = nullptr; /// \brief true signifies that we modified a series of particles and its interactions
+        std::map<int, vector<int>> multi; /// \brief !empty() - signifies that we modified a series of particles and its interactions
         int single = -1;        /// \brief true signifies that we modified a single particle and its interactions
 
         std::vector< std::vector<EType> >* energyMatrix;       /// \brief We are using eMatrix via a pointer for easy swapping
@@ -266,7 +296,6 @@ namespace Faunus
 
         double g2g( const Tpvec &p, Group &g1, Group &g2 )
         {
-            cout << "g2g" << endl;
             if(isTrial(p)) {
                 return Base::g2g(p, g1, g2);
             } else {
@@ -312,7 +341,7 @@ namespace Faunus
                 //  4 particles -> 0, 1, 2, 3
                 //  Looping(i,j) : (1,0), (2,0), (2,1), (3,0), (3,1), (3,2)
                 //
-                int i=1, j=0;
+                unsigned int i=1, j=0;
                 for(auto tid_i = map.begin(); tid_i != map.end(); ++tid_i) { // loop over molecule types -> elements of map <KEY = TID, vector<GROUP*>>
                     for(auto group_i = tid_i->second.begin(); group_i != tid_i->second.end(); ++group_i) { // loop over molecules of tid_i type -> elements of vector<GROUP*>
                         if(tid_i == map.begin() && group_i == tid_i->second.begin()) // discart first particle due to i > j ordering
@@ -337,8 +366,9 @@ namespace Faunus
             return u;
         }
 
-        double systemEnergy( const Tpvec &p )
+        double systemEnergy( const Tpvec &p ) override
         {
+            double u_pair = 0.0;
             double u = Base::external(p);
             for ( auto g : spc->groupList())
                 u += Base::g_external(p, *g) + Base::g_internal(p, *g);
@@ -352,7 +382,7 @@ namespace Faunus
                 if(!energyMatrix->empty()) {
                     auto map = spc->molTrack.getMap();
 
-                    int i=1, j=0;
+                    unsigned int i=1, j=0;
                     for(auto tid_i = map.begin(); tid_i != map.end(); ++tid_i) { // loop over molecule types -> elements of map <KEY = TID, vector<GROUP*>>
                         for(auto group_i = tid_i->second.begin(); group_i != tid_i->second.end(); ++group_i) { // loop over molecules of tid_i type -> elements of vector<GROUP*>
                             if(tid_i == map.begin() && group_i == tid_i->second.begin()) // discart first particle due to i > j ordering
@@ -365,7 +395,7 @@ namespace Faunus
                                     assert( j == groupMap[(**group_j).id] );
                                     assert(i > j);
                                     (*energyMatrix)[i][j] = Base::g2g(p, **group_i, **group_j );
-                                    u += (*energyMatrix)[i][j];
+                                    u_pair += (*energyMatrix)[i][j];
                                     ++j;
                                 }
                             }
@@ -378,15 +408,17 @@ namespace Faunus
                 // No need to translate through groupMap, sum all elements
                 assert(energyMatrix->size() == spc->molTrack.size());
                 if(!energyMatrix->empty()) {
-                    for ( unsigned int i = 1; i < energyMatrix->size() - 1; ++i ) {
+                    for ( unsigned int i = 1; i < energyMatrix->size(); ++i ) {
                         for ( unsigned int j = 0; j < i; ++j ) {
-                            u += (*energyMatrix)[i][j];
+                            u_pair += (*energyMatrix)[i][j];
+                            assert( (*energyMatrix)[i][j] == g2g(p, *spc->groupList()[i], *spc->groupList()[j]) );
                         }
                     }
                 }
             }
-            assert(u == Base::systemEnergy(p));
-            return u;
+
+            assert(fabs( (u_pair+u) - Base::systemEnergy(p) ) < Base::systemEnergy(p)*1e-9 && "EM system energy significantly different from base");
+            return u + u_pair;
         }
 
         inline double update(bool acc) override {
@@ -395,44 +427,85 @@ namespace Faunus
             } else {
                 all = false;
                 single = -1;
-                multi = nullptr;
+                multi.clear();
             }
             return 0.0;
         }
 
-        double g2All(const Tpvec &p, Group &g2) {
-            assert(g2.isMolecular());
+        double g2All(const Tpvec & p, const std::map<int, vector<int>>& mg) override
+        {
+            double du = 0;
+            auto &g = spc->groupList();
+            int count = 0;
 
-            double unew = 0.0;
-            unsigned int g2Index = groupMap[g2.id];
             if(isTrial(p)) {
-                changes.resize(spc->molTrack.size());
-                single = g2Index;
+                changes.resize(g.size() * mg.size());
+                multi = std::map<int, vector<int>>(mg);
 
-                unsigned int i=0;
-                for(auto& item : spc->molTrack.getMap()) {  // loop through all TIDS
-                    for(auto g : item.second) {             // loop through all other groups
-                        if ( g != &g2 ) {
-                            changes[i] = Base::g2g(p, *g, g2); // order of interaction is irrelevant
-                            unew += changes[i];
+                for ( auto &m : mg ) // loop over all moved groups
+                {
+                    size_t i = size_t(m.first);                       // index of moved group
+                    assert(g[i]->isMolecular());
 
-                            if ( unew == pc::infty )
+                    // Calculate energy moved <-> static groups
+                    for ( size_t j = 0; j < g.size(); j++ ) {           // loop over through all groups
+                        if ( mg.count(j) == 0 ) {                // If group j is not in mvGroup
+                            changes[count] = g2g(p, *g[i], *g[j]);
+                            du += changes[count];           // moved group<->static groups
+                            ++count;
+                            if ( du == pc::infty )
                                 return pc::infty;   // early rejection
                         }
-                        ++i;
+                    }
+                }
+
+                // Calculate energy moved <-> moved
+                for ( auto i = mg.begin(); i != mg.end(); i++ )
+                {
+                    for ( auto j = (++mg.begin()); j != mg.end(); j++ )
+                    {
+                        auto _i = i->first;
+                        auto _j = j->first;
+                        changes[count] = g2g(p, *g[_i], *g[_j]);
+                        du += changes[count];
+                        ++count;
+                        if ( du == pc::infty )
+                            return pc::infty;   // early rejection
                     }
                 }
             } else {
-                 // g2Index is enough to identify all of its interactions, PS: with pair-list use groupMap
-                for(unsigned int i=0; i < g2Index; ++i) {
-                    unew += (*energyMatrix)[g2Index][i];
-                }
+                for ( auto &m : mg ) {
+                    for ( auto &m : mg ) {
+                        size_t i = size_t(m.first);
+                        assert(g[i]->isMolecular());
 
-                for(unsigned int i=g2Index+1; i < spc->molTrack.size(); ++i) {
-                    unew += (*energyMatrix)[i][g2Index];
+                        for ( size_t j = 0; j < g.size(); j++ ) {
+                            if ( mg.count(j) == 0 ) {
+                                if(i > j) {
+                                    du += (*energyMatrix)[i][j];
+                                } else {
+                                    du += (*energyMatrix)[j][i];
+                                }
+                            }
+                        }
+                    }
+                    for ( auto i = mg.begin(); i != mg.end(); i++ )
+                    {
+                        for ( auto j = (++mg.begin()); j != mg.end(); j++ ) // Can't use energy matrix for calculation of internal energy (j = i as in the rest of energy implementation)
+                        {
+                            auto _i = i->first;
+                            auto _j = j->first;
+                            if(_i > _j) {
+                                du += (*energyMatrix)[_i][_j];
+                            }
+                            else {
+                                du += (*energyMatrix)[_j][_i];
+                            }
+                        }
+                    }
                 }
             }
-            return unew;
+            return du;
         }
 
         void resizeEMatrix(unsigned int size) {
@@ -450,9 +523,9 @@ namespace Faunus
         }
 
         inline void modify() {
-            if(multi != nullptr) {
-                fixEMatrixChain(multi);
-                multi = nullptr;
+            if(!multi.empty()) {
+                fixEMatrixMulti(multi);
+                multi.clear();
                 return;
             }
             if(single != -1) {
@@ -465,7 +538,7 @@ namespace Faunus
                 all = false;
                 return;
             }
-            std::cout << "Error, move not recorded" << std::endl;
+            std::cout << "EnergyMatrix::Modify() Error, move not recorded" << std::endl;
         }
 
     private:
@@ -486,9 +559,9 @@ namespace Faunus
 
         void show() {
             std::cout << "Energy matrix: " << std::endl;
-            for(unsigned int i=0; i<energyMatrix->size(); ++i) {
-                for(unsigned int j=0; j<energyMatrix->size(); ++j)
-                    std::cout << (*energyMatrix)[i][j] << " ";
+            for(unsigned int i=1; i<energyMatrix->size(); ++i) {
+                for(unsigned int j=0; j<i; ++j)
+                    std::cout << std::setw(7) << std::setprecision(4) << (*energyMatrix)[i][j] << " ";
                 std::cout << std::endl;
             }
         }
@@ -508,27 +581,37 @@ namespace Faunus
         }
 
         /**
-         * @brief fixEMatrixChain - fix interaction energies when moving a multiple particles in Energy matrix
-         * @param g
+         * @brief fixEMatrixMultin - fix interaction energies when moving a multiple particles/groups in Energy matrix
          */
-        void fixEMatrixChain(Group* g) {
-            std::vector<int > chain = g->range();
-            for(unsigned int i=0; i<chain.size(); i++) { // for all particles in molecule
-                // for cycles => pair potential with all particles except those in molecule
-                for (int j = 0; j < chain[0]; j++) { // pair potential with all particles from 0 to the first one in molecule
-            if(chain[i] > j)
-                        energyMatrix->operator [](chain[i])[j] = changes[i * energyMatrix->size() + j];
-            else
-                        energyMatrix->operator [](j)[chain[i]] = changes[i * energyMatrix->size() + j];
+        void fixEMatrixMulti(std::map<int, vector<int>>& multi) {
+            auto &g = spc->groupList();
+            int count = 0;
+            for ( auto &m : multi )
+            {
+                size_t i = size_t(m.first);
+                for ( size_t j = 0; j < g.size(); j++ ) {
+                    if ( multi.count(j) == 0 ) {
+                        if(i > j)
+                            (*energyMatrix)[i][j] = changes[count];
+                        else
+                            (*energyMatrix)[j][i] = changes[count];
+                        ++count;
+                    }
                 }
+            }
 
-                for (int j = chain[chain.size()-1] + 1; j < (int)energyMatrix->size(); j++) {
-            if(chain[i] > j)
-                        energyMatrix->operator [](chain[i])[j] = changes[i * energyMatrix->size() + j];
-            else
-                        energyMatrix->operator [](j)[chain[i]] = changes[i * energyMatrix->size() + j];
+            for ( auto i = multi.begin(); i != multi.end(); i++ )
+            {
+                for ( auto j = (++multi.begin()); j != multi.end(); j++ )
+                {
+                    auto _i = i->first;
+                    auto _j = j->first;
+                    if(_i > _j)
+                        (*energyMatrix)[_i][_j] = changes[count];
+                    else
+                        (*energyMatrix)[_j][_i] = changes[count];
+                    ++count;
                 }
-
             }
         }
     };
@@ -3364,6 +3447,7 @@ class SASAEnergy : public Energybase<Tspace> {
       {
           double du = 0;
           auto &g = spc.groupList();
+          du += pot.g2All(p, c.mvGroup);
           du += pot.external(p);
 
           for ( auto &m : c.mvGroup ) // loop over all moved groups
@@ -3372,9 +3456,9 @@ class SASAEnergy : public Energybase<Tspace> {
 
               // Calculate energy moved <-> static groups
 
-              for ( size_t j = 0; j < g.size(); j++ )           // loop over through all groups
+              /*for ( size_t j = 0; j < g.size(); j++ ) // moved to g2all          // loop over through all groups
                   if ( c.mvGroup.count(j) == 0 )                // If group j is not in mvGroup
-                      du += pot.g2g(p, *g[i], *g[j]);           // moved group<->static groups
+                      du += pot.g2g(p, *g[i], *g[j]);*/           // moved group<->static groups
 
               du += pot.g_external(p, *g[i]);                   // moved group <-> external
 
@@ -3394,7 +3478,7 @@ class SASAEnergy : public Energybase<Tspace> {
           }
 
           // Calculate energy moved <-> moved
-          for ( auto i = c.mvGroup.begin(); i != c.mvGroup.end(); i++ )
+          /*for ( auto i = c.mvGroup.begin(); i != c.mvGroup.end(); i++ ) // moved to g2all
           {
               for ( auto j = i; j != c.mvGroup.end(); j++ )
               {
@@ -3402,7 +3486,7 @@ class SASAEnergy : public Energybase<Tspace> {
                   auto _j = j->first;
                   du += pot.g2g(p, *g[_i], *g[_j]);
               }
-          }
+          }*/
 
           return du;
       }
@@ -3572,21 +3656,21 @@ class SASAEnergy : public Energybase<Tspace> {
               second.field(p, E);
           }
 
-          double g2All(const Tpvec & p, Group &g)
+          double g2All(const Tpvec & p, const std::map<int, vector<int>>& mg) override
           {
-              double a = first.g2All(p, g);
-              double b = second.g2All(p, g);
+              double a = first.g2All(p, mg);
+              double b = second.g2All(p, mg);
               if(!test(a,b)) {
                   if(Tbase::isTrial(p))
                       std::cout << "Trial ";
                   else
                       std::cout << "pvec ";
-                  std::cout << "Error g2all " << a << " " << b << " " << fabs(a-b)<< endl;
+                  std::cout << "Error g2All " << a << " " << b << " " << fabs(a-b)<< endl;
               }
               return a;
           }
 
-          double systemEnergy(const Tpvec & p)
+          double systemEnergy(const Tpvec & p) override
           {
               double a = first.systemEnergy(p);
               double b = second.systemEnergy(p);

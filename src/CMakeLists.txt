@@ -34,7 +34,6 @@ set(hdrs
         ${CMAKE_SOURCE_DIR}/include/faunus/textio.h
         ${CMAKE_SOURCE_DIR}/include/faunus/titrate.h
         ${CMAKE_SOURCE_DIR}/include/faunus/topology.h
-        ${CMAKE_SOURCE_DIR}/src/group.cpp
         )
 set(objs
         geometry potentials slump species analysis)

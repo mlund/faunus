@@ -238,7 +238,7 @@ namespace Faunus
     private:
         std::vector< std::vector<EType> > eMatrix;                 /// \brief Energy matrix, elements only valid for i > j indexes
         std::vector< std::vector<EType> > eMatrix2;                /// \brief Energy matrix duplicate, useful for certain move(isobaric for example)
-        std::unordered_map<unsigned int , unsigned int> groupMap;   /// \brief Mapping unique_Group_ID==KEY to index in Energy matrix, groupMap[group.id] = index in eMatrix
+        std::unordered_map<Group* , unsigned int> groupMap;   /// \brief Mapping unique_Group_ID==KEY to index in Energy matrix, groupMap[group.id] = index in eMatrix
 
         typedef Energy::Energybase<Tspace> SuperBase;
         typedef typename Tspace::ParticleType Tparticle;
@@ -299,10 +299,10 @@ namespace Faunus
             if(isTrial(p)) {
                 return Base::g2g(p, g1, g2);
             } else {
-                if( groupMap[g1.id] > groupMap[g2.id] )
-                    return (*energyMatrix)[groupMap[g1.id]][groupMap[g2.id]];
+                if( groupMap[&g1] > groupMap[&g2] )
+                    return (*energyMatrix)[groupMap[&g1]][groupMap[&g2]];
                 else
-                    return (*energyMatrix)[groupMap[g2.id]][groupMap[g1.id]];
+                    return (*energyMatrix)[groupMap[&g2]][groupMap[&g1]];
             }
         }
 
@@ -311,10 +311,10 @@ namespace Faunus
             if(isTrial(p1) || isTrial(p2)) {
                 return Base::g1g2(p1, g1, p2, g2);
             } else {
-                if( groupMap[g1.id] > groupMap[g2.id] )
-                    return (*energyMatrix)[groupMap[g1.id]][groupMap[g2.id]];
+                if( groupMap[&g1] > groupMap[&g2] )
+                    return (*energyMatrix)[groupMap[&g1]][groupMap[&g2]];
                 else
-                    return (*energyMatrix)[groupMap[g2.id]][groupMap[g1.id]];
+                    return (*energyMatrix)[groupMap[&g2]][groupMap[&g1]];
             }
         }
 
@@ -350,8 +350,8 @@ namespace Faunus
                         for(auto tid_j = map.begin(); tid_j != map.end(); ++tid_j) { // loop over molecule types -> elements of map <KEY = TID, vector<GROUP*>>
                             // loop over molecules of tid_j type -> elements of vector<GROUP*>, end when END of container or reached group_i
                             for(auto group_j = tid_j->second.begin(); ( (group_j != tid_j->second.end()) && (group_j != group_i) ); ++group_j) {
-                                assert( i == groupMap[(**group_i).id] );
-                                assert( j == groupMap[(**group_j).id] );
+                                assert( i == groupMap[&(**group_i)] );
+                                assert( j == groupMap[&(**group_j)] );
                                 assert(i > j);
                                 (*energyMatrix)[i][j] = Base::g2g(p, **group_i, **group_j );
                                 u += (*energyMatrix)[i][j];
@@ -366,6 +366,14 @@ namespace Faunus
             return u;
         }
 
+        /**
+         * @brief systemEnergy - Calculate system energy on the basis on Groups
+         *
+         * This implementation assumes the order of groups in EnergyMatrix is identical to the one in GroupList
+         *
+         * @param p
+         * @return
+         */
         double systemEnergy( const Tpvec &p ) override
         {
             double u_pair = 0.0;
@@ -391,8 +399,8 @@ namespace Faunus
                             for(auto tid_j = map.begin(); tid_j != map.end(); ++tid_j) { // loop over molecule types -> elements of map <KEY = TID, vector<GROUP*>>
                                 // loop over molecules of tid_j type -> elements of vector<GROUP*>, end when END of container or reached group_i
                                 for(auto group_j = tid_j->second.begin(); ( (group_j != tid_j->second.end()) && (group_j != group_i) ); ++group_j) {
-                                    assert( i == groupMap[(**group_i).id] );
-                                    assert( j == groupMap[(**group_j).id] );
+                                    assert( i == groupMap[&(**group_i)] );
+                                    assert( j == groupMap[&(**group_j)] );
                                     assert(i > j);
                                     (*energyMatrix)[i][j] = Base::g2g(p, **group_i, **group_j );
                                     u_pair += (*energyMatrix)[i][j];
@@ -432,6 +440,15 @@ namespace Faunus
             return 0.0;
         }
 
+        /**
+         * @brief g2All Calculate group to group energies between groups of mg (moved groups) and rest of groups
+         *
+         * This implementation assumes the order of groups in EnergyMatrix is identical to the one in GroupList
+         *
+         * @param p
+         * @param mg
+         * @return
+         */
         double g2All(const Tpvec & p, const std::map<int, vector<int>>& mg) override
         {
             double du = 0;
@@ -544,6 +561,12 @@ namespace Faunus
     private:
         /**
          * @brief initGroupMap - Initialize groupMap
+         *
+         * Take the adress of a Group (&Group) and map its position in GroupList
+         *
+         * SystemEnergy and g2All functions depends on the right ordering of Group in groupMap
+         *
+         * e.g. First group mapped to 0, second to 1, ...
          */
         void initGroupMap()
         {
@@ -551,7 +574,7 @@ namespace Faunus
             int i=0;
             for(auto g = map.begin(); g != map.end(); ++g) { // initiate mapping
                 for(auto gg = g->second.begin(); gg != g->second.end(); ++gg) {
-                    groupMap.insert( std::make_pair((**gg).id, i) );
+                    groupMap.insert( std::make_pair(&(**gg), i) );
                     ++i;
                 }
             }

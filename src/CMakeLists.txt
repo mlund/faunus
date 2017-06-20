@@ -161,10 +161,10 @@ function(fau_example tname tdir tsrc)
             PATTERN ".svn" EXCLUDE)
 endfunction(fau_example)
 
-add_subdirectory(playground EXCLUDE_FROM_ALL)
+#add_subdirectory(playground EXCLUDE_FROM_ALL)
 add_subdirectory(examples)
 
-if (EXISTS ${MYPLAYGROUND})
-    add_subdirectory(${MYPLAYGROUND} ${MYPLAYGROUND})
-endif ()
+#if (EXISTS ${MYPLAYGROUND})
+#    add_subdirectory(${MYPLAYGROUND} ${MYPLAYGROUND})
+#endif ()
 

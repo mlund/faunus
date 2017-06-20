@@ -1,6 +1,8 @@
 #ifndef FAUNUS_ENERGY_H
 #define FAUNUS_ENERGY_H
 
+#include <unordered_map>
+
 #ifndef SWIG
 #include <faunus/common.h>
 #include <faunus/point.h>
@@ -164,12 +166,476 @@ namespace Faunus
         virtual void field( const Tpvec &, Eigen::MatrixXd & ) //!< Calculate electric field on all particles
         {}
 
+        virtual double systemEnergy( const Tpvec &p )
+        {
+            double u_pair = 0.0;
+            double u = external(p);
+            for ( auto g : spc->groupList())
+                u += g_external(p, *g) + g_internal(p, *g);
+            for ( unsigned int i = 0; i < spc->groupList().size() - 1; i++ )
+                for ( unsigned int j = i + 1; j < spc->groupList().size(); j++ )
+                    u_pair += g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
+            return u + u_pair;
+        }
+
+        virtual double g2All(const Tpvec & p, const std::map<int, vector<int>>& mg)
+        {
+            double du = 0;
+            auto &g = spc->groupList();
+
+            for ( auto &m : mg ) // loop over all moved groups
+            {
+                size_t i = size_t(m.first);                       // index of moved group
+
+                // Calculate energy moved <-> static groups
+                for ( size_t j = 0; j < g.size(); j++ ) {           // loop over through all groups
+                    if ( mg.count(j) == 0 ) {                // If group j is not in mvGroup
+                        du += g2g(p, *g[i], *g[j]);           // moved group<->static groups
+                        if ( du == pc::infty )
+                            return pc::infty;   // early rejection
+                    }
+                }
+            }
+
+            // Calculate energy moved <-> moved
+            for ( auto i = mg.begin(); i != mg.end(); i++ )
+            {
+                for ( auto j = i; j != mg.end(); j++ ) // MIKAEL should it not be j = (++mg.begin()) instead of j = i, why include interaction with self
+                {
+                    auto _i = i->first;
+                    auto _j = j->first;
+                    du += g2g(p, *g[_i], *g[_j]);
+                    if ( du == pc::infty )
+                        return pc::infty;   // early rejection
+                }
+            }
+
+            return du;
+        }
+
         inline virtual std::string info()
         {
             assert(!name.empty() && "Energy name cannot be empty");
             if ( _info().empty())
                 return string();
             return textio::header("Energy: " + name) + _info();
+        }
+    };
+
+    /**
+     *  \brief Energy matrix - allows acceleration of Metropolis algorithm up to 2x by storing pair-wise enegies
+     *  \param EType - set type for energy storage in energy matrix - e.g. double, float, half_float
+     *
+     *  Usage:
+     *
+     * Energy::EnergyMatrix<double, Tspace, Energy::NonbondedCutg2g<Tspace,Tpairpot> > nonEM(mcp);
+     *
+     * NOTE: Currently only works for rigid many-particle species, i.e. All groups of GroupList needs to be molecular.
+     *
+     */
+    template<typename EType, class Tspace, class Base>
+      class EnergyMatrix : public Base {
+    private:
+        std::vector< std::vector<EType> > eMatrix;                 /// \brief Energy matrix, elements only valid for i > j indexes
+        std::vector< std::vector<EType> > eMatrix2;                /// \brief Energy matrix duplicate, useful for certain move(isobaric for example)
+        std::unordered_map<Group* , unsigned int> groupMap;   /// \brief Mapping unique_Group_ID==KEY to index in Energy matrix, groupMap[group.id] = index in eMatrix
+
+        typedef Energy::Energybase<Tspace> SuperBase;
+        typedef typename Tspace::ParticleType Tparticle;
+        typedef typename Tspace::GeometryType Tgeometry;
+        typedef typename Space<Tgeometry, Tparticle>::ParticleVector Tpvec;
+
+        using SuperBase::spc;
+        using SuperBase::isTrial;
+
+    public:
+        std::vector<double> changes;    /// \brief Temporarily stored changes to the Energy matrix generated in each trial configuration energy calculation
+
+        bool all = false;       /// \brief true signifies that we need to swap EMs
+        std::map<int, vector<int>> multi; /// \brief !empty() - signifies that we modified a series of particles and its interactions
+        int single = -1;        /// \brief true signifies that we modified a single particle and its interactions
+
+        std::vector< std::vector<EType> >* energyMatrix;       /// \brief We are using eMatrix via a pointer for easy swapping
+        std::vector< std::vector<EType> >* energyMatrixTrial;
+
+        ///  The simulation starts by systemEnergy() call to set up for drift calculation, this used for EM initiation
+        ///
+        ///
+        ///  @Warning Mikael - This is potentialy problematic since the proper initiation of EM is depended on systemEnergy call outside of this class
+        ///                  - Maybe modify ufunction and add another Init function call to it
+        ///
+        ///
+        bool firstGlobal=true;  /// \brief Used to distinguish first systemEnergy method call for EM initiation
+
+        /**
+         * @brief EnergyMatrix - Constructor, allocates eMatrix and eMatrix2
+         */
+        EnergyMatrix(Tmjson &j) : Base(j)
+        {
+            unsigned int size = 0;
+            energyMatrix = &eMatrix;
+            energyMatrixTrial = &eMatrix2;
+
+            try{
+                changes.reserve(1024 + size);
+
+                energyMatrix->resize( size ); // resize EMs so it has minimal space to properly store all i > j elements
+                for(unsigned int i=0; i < size; i++) {
+                    energyMatrix->operator [](i).resize( i );
+                }
+
+                energyMatrixTrial->resize( size );
+                for(unsigned int i=0; i < size; i++) {
+                    energyMatrixTrial->operator [](i).resize( i );
+                }
+            } catch(std::bad_alloc& bad) {
+                fprintf(stderr, "\nTOPOLOGY ERROR: Could not allocate memory for Energy matrix");
+                exit(1);
+            }
+        }
+
+        double g2g( const Tpvec &p, Group &g1, Group &g2 )
+        {
+            if(isTrial(p)) {
+                return Base::g2g(p, g1, g2);
+            } else {
+                if( groupMap[&g1] > groupMap[&g2] )
+                    return (*energyMatrix)[groupMap[&g1]][groupMap[&g2]];
+                else
+                    return (*energyMatrix)[groupMap[&g2]][groupMap[&g1]];
+            }
+        }
+
+        double g1g2( const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2 )
+        {
+            if(isTrial(p1) || isTrial(p2)) {
+                return Base::g1g2(p1, g1, p2, g2);
+            } else {
+                if( groupMap[&g1] > groupMap[&g2] )
+                    return (*energyMatrix)[groupMap[&g1]][groupMap[&g2]];
+                else
+                    return (*energyMatrix)[groupMap[&g2]][groupMap[&g1]];
+            }
+        }
+
+        double init( const Tpvec &p )
+        {
+            cout << "\n...Initiating Energy Matrix...\n" << endl;
+            double u = 0.0;
+
+            resizeEMatrix(spc->molTrack.size());
+            firstGlobal = false;
+
+            // initialize energy matrix
+            if(!energyMatrix->empty()) {
+                auto map = spc->molTrack.getMap();
+
+                initGroupMap();
+
+                //
+                // Equivalent of doing 2 for cycles:
+                //
+                //  for( i=1; i < size; ++i )
+                //      for( j=0; j < i; ++j )
+                //
+                //  4 particles -> 0, 1, 2, 3
+                //  Looping(i,j) : (1,0), (2,0), (2,1), (3,0), (3,1), (3,2)
+                //
+                unsigned int i=1, j=0;
+                for(auto tid_i = map.begin(); tid_i != map.end(); ++tid_i) { // loop over molecule types -> elements of map <KEY = TID, vector<GROUP*>>
+                    for(auto group_i = tid_i->second.begin(); group_i != tid_i->second.end(); ++group_i) { // loop over molecules of tid_i type -> elements of vector<GROUP*>
+                        if(tid_i == map.begin() && group_i == tid_i->second.begin()) // discart first particle due to i > j ordering
+                            ++group_i;
+
+                        for(auto tid_j = map.begin(); tid_j != map.end(); ++tid_j) { // loop over molecule types -> elements of map <KEY = TID, vector<GROUP*>>
+                            // loop over molecules of tid_j type -> elements of vector<GROUP*>, end when END of container or reached group_i
+                            for(auto group_j = tid_j->second.begin(); ( (group_j != tid_j->second.end()) && (group_j != group_i) ); ++group_j) {
+                                assert( i == groupMap[&(**group_i)] );
+                                assert( j == groupMap[&(**group_j)] );
+                                assert(i > j);
+                                (*energyMatrix)[i][j] = Base::g2g(p, **group_i, **group_j );
+                                u += (*energyMatrix)[i][j];
+                                ++j;
+                            }
+                        }
+                        j=0;
+                        ++i;
+                    }
+                }
+            }
+            return u;
+        }
+
+        /**
+         * @brief systemEnergy - Calculate system energy on the basis on Groups
+         *
+         * This implementation assumes the order of groups in EnergyMatrix is identical to the one in GroupList
+         *
+         * @param p
+         * @return
+         */
+        double systemEnergy( const Tpvec &p ) override
+        {
+            double u_pair = 0.0;
+            double u = Base::external(p);
+            for ( auto g : spc->groupList())
+                u += Base::g_external(p, *g) + Base::g_internal(p, *g);
+
+            if(firstGlobal) {
+                return u + init(p);
+            }
+
+            if(isTrial(p)) {
+                all = true;
+                if(!energyMatrix->empty()) {
+                    auto map = spc->molTrack.getMap();
+
+                    unsigned int i=1, j=0;
+                    for(auto tid_i = map.begin(); tid_i != map.end(); ++tid_i) { // loop over molecule types -> elements of map <KEY = TID, vector<GROUP*>>
+                        for(auto group_i = tid_i->second.begin(); group_i != tid_i->second.end(); ++group_i) { // loop over molecules of tid_i type -> elements of vector<GROUP*>
+                            if(tid_i == map.begin() && group_i == tid_i->second.begin()) // discart first particle due to i > j ordering
+                                ++group_i;
+
+                            for(auto tid_j = map.begin(); tid_j != map.end(); ++tid_j) { // loop over molecule types -> elements of map <KEY = TID, vector<GROUP*>>
+                                // loop over molecules of tid_j type -> elements of vector<GROUP*>, end when END of container or reached group_i
+                                for(auto group_j = tid_j->second.begin(); ( (group_j != tid_j->second.end()) && (group_j != group_i) ); ++group_j) {
+                                    assert( i == groupMap[&(**group_i)] );
+                                    assert( j == groupMap[&(**group_j)] );
+                                    assert(i > j);
+                                    (*energyMatrix)[i][j] = Base::g2g(p, **group_i, **group_j );
+                                    u_pair += (*energyMatrix)[i][j];
+                                    ++j;
+                                }
+                            }
+                            j=0;
+                            ++i;
+                        }
+                    }
+                }
+            } else {
+                // No need to translate through groupMap, sum all elements
+                assert(energyMatrix->size() == spc->molTrack.size());
+                if(!energyMatrix->empty()) {
+                    for ( unsigned int i = 1; i < energyMatrix->size(); ++i ) {
+                        for ( unsigned int j = 0; j < i; ++j ) {
+                            u_pair += (*energyMatrix)[i][j];
+                            assert( (*energyMatrix)[i][j] == g2g(p, *spc->groupList()[i], *spc->groupList()[j]) );
+                        }
+                    }
+                }
+            }
+
+            assert(fabs( (u_pair+u) - Base::systemEnergy(p) ) < Base::systemEnergy(p)*1e-9 && "EM system energy significantly different from base");
+            return u + u_pair;
+        }
+
+        inline double update(bool acc) override {
+            if(acc) {
+                modify();
+            } else {
+                all = false;
+                single = -1;
+                multi.clear();
+            }
+            return 0.0;
+        }
+
+        /**
+         * @brief g2All Calculate group to group energies between groups of mg (moved groups) and rest of groups
+         *
+         * This implementation assumes the order of groups in EnergyMatrix is identical to the one in GroupList
+         *
+         * @param p
+         * @param mg
+         * @return
+         */
+        double g2All(const Tpvec & p, const std::map<int, vector<int>>& mg) override
+        {
+            double du = 0;
+            auto &g = spc->groupList();
+            int count = 0;
+
+            if(isTrial(p)) {
+                changes.resize(g.size() * mg.size());
+                multi = std::map<int, vector<int>>(mg);
+
+                for ( auto &m : mg ) // loop over all moved groups
+                {
+                    size_t i = size_t(m.first);                       // index of moved group
+                    assert(g[i]->isMolecular());
+
+                    // Calculate energy moved <-> static groups
+                    for ( size_t j = 0; j < g.size(); j++ ) {           // loop over through all groups
+                        if ( mg.count(j) == 0 ) {                // If group j is not in mvGroup
+                            changes[count] = g2g(p, *g[i], *g[j]);
+                            du += changes[count];           // moved group<->static groups
+                            ++count;
+                            if ( du == pc::infty )
+                                return pc::infty;   // early rejection
+                        }
+                    }
+                }
+
+                // Calculate energy moved <-> moved
+                for ( auto i = mg.begin(); i != mg.end(); i++ )
+                {
+                    for ( auto j = (++mg.begin()); j != mg.end(); j++ )
+                    {
+                        auto _i = i->first;
+                        auto _j = j->first;
+                        changes[count] = g2g(p, *g[_i], *g[_j]);
+                        du += changes[count];
+                        ++count;
+                        if ( du == pc::infty )
+                            return pc::infty;   // early rejection
+                    }
+                }
+            } else {
+                for ( auto &m : mg ) {
+                    for ( auto &m : mg ) {
+                        size_t i = size_t(m.first);
+                        assert(g[i]->isMolecular());
+
+                        for ( size_t j = 0; j < g.size(); j++ ) {
+                            if ( mg.count(j) == 0 ) {
+                                if(i > j) {
+                                    du += (*energyMatrix)[i][j];
+                                } else {
+                                    du += (*energyMatrix)[j][i];
+                                }
+                            }
+                        }
+                    }
+                    for ( auto i = mg.begin(); i != mg.end(); i++ )
+                    {
+                        for ( auto j = (++mg.begin()); j != mg.end(); j++ ) // Can't use energy matrix for calculation of internal energy (j = i as in the rest of energy implementation)
+                        {
+                            auto _i = i->first;
+                            auto _j = j->first;
+                            if(_i > _j) {
+                                du += (*energyMatrix)[_i][_j];
+                            }
+                            else {
+                                du += (*energyMatrix)[_j][_i];
+                            }
+                        }
+                    }
+                }
+            }
+            return du;
+        }
+
+        void resizeEMatrix(unsigned int size) {
+            assert(size >= 0);
+
+            energyMatrix->resize(size);
+            for(unsigned int i=0; i < size; i++) {
+                energyMatrix->at(i).resize( i );
+            }
+
+            energyMatrixTrial->resize(size);
+            for(unsigned int i=0; i < size; i++) {
+                energyMatrixTrial->at(i).resize( i );
+            }
+        }
+
+        inline void modify() {
+            if(!multi.empty()) {
+                fixEMatrixMulti(multi);
+                multi.clear();
+                return;
+            }
+            if(single != -1) {
+                fixEMatrixSingle(single);
+                single = -1;
+                return;
+            }
+            if(all) {
+                std::swap(energyMatrix, energyMatrixTrial);
+                all = false;
+                return;
+            }
+            std::cout << "EnergyMatrix::Modify() Error, move not recorded" << std::endl;
+        }
+
+    private:
+        /**
+         * @brief initGroupMap - Initialize groupMap
+         *
+         * Take the adress of a Group (&Group) and map its position in GroupList
+         *
+         * SystemEnergy and g2All functions depends on the right ordering of Group in groupMap
+         *
+         * e.g. First group mapped to 0, second to 1, ...
+         */
+        void initGroupMap()
+        {
+            auto map = spc->molTrack.getMap();
+            int i=0;
+            for(auto g = map.begin(); g != map.end(); ++g) { // initiate mapping
+                for(auto gg = g->second.begin(); gg != g->second.end(); ++gg) {
+                    groupMap.insert( std::make_pair(&(**gg), i) );
+                    ++i;
+                }
+            }
+        }
+
+        void show() {
+            std::cout << "Energy matrix: " << std::endl;
+            for(unsigned int i=1; i<energyMatrix->size(); ++i) {
+                for(unsigned int j=0; j<i; ++j)
+                    std::cout << std::setw(7) << std::setprecision(4) << (*energyMatrix)[i][j] << " ";
+                std::cout << std::endl;
+            }
+        }
+
+        /**
+         * @brief fixEMatrixSingle - fix interaction energies when moving a single particle/molecule in Energy matrix
+         * @param target - id of element whose inteactions changed
+         */
+        void fixEMatrixSingle(unsigned int target) {
+            assert(changes.size() == energyMatrix->size());
+            for(unsigned int i=0; i < target; i++) {
+                energyMatrix->operator [](target)[i] = changes[i];
+            }
+            for(unsigned int i=target+1; i < energyMatrix->size(); i++) {
+                energyMatrix->operator [](i)[target] = changes[i];
+            }
+        }
+
+        /**
+         * @brief fixEMatrixMultin - fix interaction energies when moving a multiple particles/groups in Energy matrix
+         */
+        void fixEMatrixMulti(std::map<int, vector<int>>& multi) {
+            auto &g = spc->groupList();
+            int count = 0;
+            for ( auto &m : multi )
+            {
+                size_t i = size_t(m.first);
+                for ( size_t j = 0; j < g.size(); j++ ) {
+                    if ( multi.count(j) == 0 ) {
+                        if(i > j)
+                            (*energyMatrix)[i][j] = changes[count];
+                        else
+                            (*energyMatrix)[j][i] = changes[count];
+                        ++count;
+                    }
+                }
+            }
+
+            for ( auto i = multi.begin(); i != multi.end(); i++ )
+            {
+                for ( auto j = (++multi.begin()); j != multi.end(); j++ )
+                {
+                    auto _i = i->first;
+                    auto _j = j->first;
+                    if(_i > _j)
+                        (*energyMatrix)[_i][_j] = changes[count];
+                    else
+                        (*energyMatrix)[_j][_i] = changes[count];
+                    ++count;
+                }
+            }
         }
     };
 
@@ -2910,6 +3376,43 @@ class SASAEnergy : public Energybase<Tspace> {
             for ( auto b : baselist )
                 b->field(p, E);
         }
+
+        /**
+         * @brief systemEnergy Calculate System energy = external + internal + g2g() for all groups i,j from Space::Grouplist
+         *        A convenience function intented for easy Energy matrix integration of configuration-wide moves - such as isobaric move
+         * @param p
+         * @return
+         */
+        virtual double systemEnergy( const Tpvec &p )
+        {
+            double u = external(p);
+            for ( auto g : Energybase<Tspace>::spc->groupList())
+                u += g_external(p, *g) + g_internal(p, *g);
+            for ( unsigned int i = 0; i < Energybase<Tspace>::spc->groupList().size() - 1; i++ )
+                for ( unsigned int j = i + 1; j < Energybase<Tspace>::spc->groupList().size(); j++ )
+                    u += g2g(p, *Energybase<Tspace>::spc->groupList()[i], *Energybase<Tspace>::spc->groupList()[j]);
+            return u;
+        }
+
+        /**
+         * @brief g2All - Calculate energy between group g and Particle vector p based on Space::Grouplist using g2g() function
+         *        A convenience function intended for easy Energy matrix intergration of group-based moves - such as TranslateRotate
+         * @param p
+         * @param g
+         * @return
+         */
+        virtual double g2All(const Tpvec & p, Group &g)
+        {
+            double unew = 0.0;
+            for ( auto o : Energybase<Tspace>::spc->groupList()) {
+                if ( o != &g ) {
+                    unew += g2g(p, *o, g);
+                    if ( unew == pc::infty )
+                        return pc::infty;   // early rejection
+                }
+            }
+            return unew;
+        }
     };
 
     /**
@@ -2925,6 +3428,24 @@ class SASAEnergy : public Energybase<Tspace> {
      */
     template<class Tspace, class Tenergy, class Tpvec>
     double systemEnergy( Tspace &spc, Tenergy &pot, const Tpvec &p )
+    {
+        pot.setSpace(spc); // ensure pot geometry is in sync with spc
+        return pot.systemEnergy(p);
+    }
+
+    /**
+     * @brief Calculates the total system energy
+     *
+     * For a given particle vector, space, and energy class we try to
+     * calculate the total energy taking into account inter- and
+     * intra-molecular interactions as well as external potentials.
+     * While this may not work for all systems it may be a useful
+     * first guess.
+     * This is the default energy routine for `Move::ParallelTempering`
+     * and may also be used for checking energy drifts.
+     */
+    template<class Tspace, class Tenergy, class Tpvec>
+    double systemEnergy_old( Tspace &spc, Tenergy &pot, const Tpvec &p )
     {
         pot.setSpace(spc); // ensure pot geometry is in sync with spc
         double u = pot.external(p);
@@ -2949,6 +3470,7 @@ class SASAEnergy : public Energybase<Tspace> {
       {
           double du = 0;
           auto &g = spc.groupList();
+          du += pot.g2All(p, c.mvGroup);
           du += pot.external(p);
 
           for ( auto &m : c.mvGroup ) // loop over all moved groups
@@ -2957,9 +3479,9 @@ class SASAEnergy : public Energybase<Tspace> {
 
               // Calculate energy moved <-> static groups
 
-              for ( size_t j = 0; j < g.size(); j++ )           // loop over through all groups
+              /*for ( size_t j = 0; j < g.size(); j++ ) // moved to g2all          // loop over through all groups
                   if ( c.mvGroup.count(j) == 0 )                // If group j is not in mvGroup
-                      du += pot.g2g(p, *g[i], *g[j]);           // moved group<->static groups
+                      du += pot.g2g(p, *g[i], *g[j]);*/           // moved group<->static groups
 
               du += pot.g_external(p, *g[i]);                   // moved group <-> external
 
@@ -2979,7 +3501,7 @@ class SASAEnergy : public Energybase<Tspace> {
           }
 
           // Calculate energy moved <-> moved
-          for ( auto i = c.mvGroup.begin(); i != c.mvGroup.end(); i++ )
+          /*for ( auto i = c.mvGroup.begin(); i != c.mvGroup.end(); i++ ) // moved to g2all
           {
               for ( auto j = i; j != c.mvGroup.end(); j++ )
               {
@@ -2987,7 +3509,7 @@ class SASAEnergy : public Energybase<Tspace> {
                   auto _j = j->first;
                   du += pot.g2g(p, *g[_i], *g[_j]);
               }
-          }
+          }*/
 
           return du;
       }
@@ -2995,51 +3517,213 @@ class SASAEnergy : public Energybase<Tspace> {
     /**
      * @brief Calculate energy change due to proposed modification defined by `Space::Change`
      */
-    template<class Tenergy, class Tgeometry, class Tparticle>
-    double energyChange( Space<Tgeometry, Tparticle> &s,
-                         Tenergy &pot,
-                         const typename Space<Tgeometry, Tparticle>::Change &c )
-    {
+      template<class Tenergy, class Tgeometry, class Tparticle>
+      double energyChange( Space<Tgeometry, Tparticle> &s,
+                           Tenergy &pot,
+                           const typename Space<Tgeometry, Tparticle>::Change &c )
+      {
 
-        if (c.empty())
-            return 0;
+          if (c.empty())
+              return 0;
 
-        auto backup = s.geo; // backup geometry;
+          auto backup = s.geo; // backup geometry;
 
-        // make sure the new (trial) geometry is active
-        if ( c.geometryChange )
-        {
-            s.geo = s.geo_trial;
-            pot.setSpace(s);
-        }
+          // make sure the new (trial) geometry is active
+          if ( c.geometryChange )
+          {
+              s.geo = s.geo_trial;
+              pot.setSpace(s);
+          }
 
-        // Check for container overlap
+          // Check for container overlap
 
-        for ( auto &m : c.mvGroup )  // loop over all moved groups
-            if ( m.second.empty())  // if index vector is empty, assume that all particles have moved
-            {
-                for ( auto j : *s.groupList()[m.first] )
-                    if ( s.geo.collision(s.trial[j], s.trial[j].radius, Geometry::Geometrybase::BOUNDARY))
-                        return pc::infty;
-            }
-            else
-                for ( auto j : m.second ) // if given, loop over specific particle index
-                    if ( s.geo.collision(s.trial[j], s.trial[j].radius, Geometry::Geometrybase::BOUNDARY))
-                        return pc::infty;
+          for ( auto &m : c.mvGroup )  // loop over all moved groups
+              if ( m.second.empty())  // if index vector is empty, assume that all particles have moved
+              {
+                  for ( auto j : *s.groupList()[m.first] )
+                      if ( s.geo.collision(s.trial[j], s.trial[j].radius, Geometry::Geometrybase::BOUNDARY))
+                          return pc::infty;
+              }
+              else
+                  for ( auto j : m.second ) // if given, loop over specific particle index
+                      if ( s.geo.collision(s.trial[j], s.trial[j].radius, Geometry::Geometrybase::BOUNDARY))
+                          return pc::infty;
 
-        double duNew = energyChangeConfiguration(s, pot, s.trial, c);
+          double duNew = energyChangeConfiguration(s, pot, s.trial, c);
 
-        // restore original geometry
-        if ( c.geometryChange )
-        {
-            s.geo = backup;
-            pot.setSpace(s);
-        }
+          // restore original geometry
+          if ( c.geometryChange )
+          {
+              s.geo = backup;
+              pot.setSpace(s);
+          }
 
-        double duOld = energyChangeConfiguration(s, pot, s.p, c);
+          double duOld = energyChangeConfiguration(s, pot, s.p, c);
 
-        return (duNew - duOld);
-    }
+          return (duNew - duOld);
+      }
+
+
+
+      /**
+   * @brief EnergyTester class to conveniently compare two energy classes together
+   *
+   * Usage:     Energy::NonbondedCutg2g<Tspace,Tpairpot> non(mcp);
+                Energy::EnergyMatrix<double, Tspace, Energy::NonbondedCutg2g<Tspace,Tpairpot> > nonEM(mcp);
+
+                EnergyTester<Energy::NonbondedCutg2g<Tspace,Tpairpot>, Energy::EnergyMatrix<double, Tspace, Energy::NonbondedCutg2g<Tspace,Tpairpot> > > pot;
+
+                or more conveniently -> auto pot = ((non) == (nonEM));
+   */
+      template<class T1, class T2>
+      class EnergyTester : public Energybase<typename T1::SpaceType>
+      {
+      private:
+          string
+          _info() override { return first.info() + second.info(); }
+
+          typedef typename T1::SpaceType Tspace;
+          typedef Energybase<Tspace> Tbase;
+          typedef typename Tbase::Tparticle Tparticle;
+          typedef typename Tbase::Tpvec Tpvec;
+
+      public:
+          T1 first;
+          T2 second;
+
+          bool test(double a, double b) {
+              return fabs(a-b) < 1e-9;
+          }
+
+          auto tuple() -> decltype(std::tuple_cat(first.tuple(), second.tuple()))
+          {
+              return std::tuple_cat(first.tuple(), second.tuple());
+          }
+
+          EnergyTester( const T1 &a, const T2 &b ) : first(a), second(b) {
+              cout << "\n\n ENERGY TESTER RUNNING \n\n" << endl;
+          }
+
+          string info() override { return _info(); }
+
+          void setSpace( typename T1::SpaceType &s ) override
+          {
+              first.setSpace(s);
+              second.setSpace(s);
+              Tbase::setSpace(s);
+          }
+
+          double p2p( const Tparticle &a, const Tparticle &b ) override { return first.p2p(a, b); }
+
+          Point f_p2p( const Tparticle &a, const Tparticle &b ) override
+          {
+              return first.f_p2p(a, b);
+          }
+
+          double all2p( const Tpvec &p, const Tparticle &a ) override { return first.all2p(p, a); }
+
+          double i2i( const Tpvec &p, int i, int j ) override { return first.i2i(p, i, j); }
+
+          double i2g( const Tpvec &p, Group &g, int i ) override { return first.i2g(p, g, i); }
+
+          double i2all( Tpvec &p, int i ) override {
+              double a = first.i2all(p, i);
+              double b = second.i2all(p, i);
+              if(!test(a,b)) {
+                  if(Tbase::isTrial(p))
+                      std::cout << "Trial ";
+                  else
+                      std::cout << "pvec ";
+                  std::cout << "Error i2all " << a << " " << b << endl;
+              }
+              return a;
+          }
+
+          double i_external( const Tpvec &p, int i ) override { return first.i_external(p, i); }
+
+          double i_internal( const Tpvec &p, int i ) override { return first.i_internal(p, i); }
+
+          double g2g( const Tpvec &p, Group &g1, Group &g2 ) override
+          {
+              double a = first.g2g(p, g1, g2);
+              double b = second.g2g(p, g1, g2);
+              if(!test(a,b))
+                  std::cout << "Error g2g" << a << " " << b << endl;
+              return a;
+          }
+
+          double g1g2( const Tpvec &p1, Group &g1, const Tpvec &p2, Group &g2 ) override
+          {
+              return first.g1g2(p1, g1, p2, g2);
+          }
+
+          double g_external( const Tpvec &p, Group &g ) override
+          {
+              return first.g_external(p, g);
+          }
+
+          double g_internal( const Tpvec &p, Group &g ) override
+          {
+              return first.g_internal(p, g);
+          }
+
+          double external( const Tpvec &p ) override { return first.external(p); }
+
+          double update( bool b ) override { return first.update(b) + second.update(b); }
+
+          double v2v( const Tpvec &p1, const Tpvec &p2 ) override { return first.v2v(p1, p2) + second.v2v(p1, p2); }
+
+          void field( const Tpvec &p, Eigen::MatrixXd &E ) override
+          {
+              first.field(p, E);
+              second.field(p, E);
+          }
+
+          double g2All(const Tpvec & p, const std::map<int, vector<int>>& mg) override
+          {
+              double a = first.g2All(p, mg);
+              double b = second.g2All(p, mg);
+              if(!test(a,b)) {
+                  if(Tbase::isTrial(p))
+                      std::cout << "Trial ";
+                  else
+                      std::cout << "pvec ";
+                  std::cout << "Error g2All " << a << " " << b << " " << fabs(a-b)<< endl;
+              }
+              return a;
+          }
+
+          double systemEnergy(const Tpvec & p) override
+          {
+              double a = first.systemEnergy(p);
+              double b = second.systemEnergy(p);
+              if(!test(a,b)) {
+                  if(Tbase::isTrial(p))
+                      std::cout << "Trial ";
+                  else
+                      std::cout << "pvec ";
+                  std::cout << "Error system E " << a << " " << b << " " << fabs(a-b) << "\n NOTE: Different order of sum - is the error numeric?" << endl;
+              }
+              return a;
+          }
+      };
+
+
+      /**
+   * @brief Operator to conveniently compare two energy classes together
+   *
+   * Usage:     Energy::NonbondedCutg2g<Tspace,Tpairpot> non(mcp);
+                Energy::EnergyMatrix<double, Tspace, Energy::NonbondedCutg2g<Tspace,Tpairpot> > nonEM(mcp);
+
+                auto pot = ((non) == (nonEM));
+   */
+  template<class T1, class T2,
+      class = typename
+      std::enable_if<std::is_base_of<Energybase<typename T1::SpaceType>, T1>::value>::type,
+      class = typename
+      std::enable_if<std::is_base_of<Energybase<typename T1::SpaceType>, T2>::value>::type >
+  EnergyTester<T1, T2> &operator==( const T1 &u1, const T2 &u2 ) { return *(new EnergyTester<T1, T2>(u1, u2)); }
+
 
   }//Energy namespace
 }//Faunus namespace

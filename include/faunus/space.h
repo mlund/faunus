@@ -83,6 +83,11 @@ namespace Faunus
 
       std::vector<T> &operator[]( Tid i ) { return _map[i]; };
 
+      const std::map<Tid, std::vector<T> >& getMap()
+      {
+        return _map;
+      }
+
       /** @brief Clear map -- preserve averages */
       void clear() { _map.clear(); }
 

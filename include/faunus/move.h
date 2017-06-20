@@ -527,7 +527,8 @@ namespace Faunus
             while ( n-- > 0 )
             {
                 trialMove();
-		        pot->updateChange(change);
+                pot->updateChange(change);
+
                 double du = energyChange();
                 acceptance = metropolis(du); // true or false?
                 if ( !acceptance )
@@ -1306,7 +1307,6 @@ namespace Faunus
     template<class Tspace>
     void TranslateRotate<Tspace>::_trialMove()
     {
-
         // if `mollist` has data, favor this over `setGroup()`
         // Note that `currentMolId` is set by Movebase::move()
         if ( !this->mollist.empty())
@@ -1371,24 +1371,23 @@ namespace Faunus
     double TranslateRotate<Tspace>::_energyChange()
     {
         if ( dp_rot < 1e-6 && dp_trans < 1e-6 )
-            return 0;
+                    return 0;
 
         return Energy::energyChange(*spc, *base::pot, base::change);
 
         // The code below is obsolete and will be removed in the future.
-
-#ifdef ENABLE_MPI
-        if (base::mpiPtr!=nullptr) {
-            double du=0;
-            auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
-            for (auto i=s.first; i<=s.second; ++i) {
-                auto gi=spc->groupList()[i];
-                if (gi!=igroup)
-                    du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
-            }
-            return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
-        }
-#endif
+        /*#ifdef ENABLE_MPI
+                if (base::mpiPtr!=nullptr) {
+                    double du=0;
+                    auto s = Faunus::MPI::splitEven(*base::mpiPtr, spc->groupList().size());
+                    for (auto i=s.first; i<=s.second; ++i) {
+                        auto gi=spc->groupList()[i];
+                        if (gi!=igroup)
+                            du += pot->g2g(spc->trial, *gi, *igroup) - pot->g2g(spc->p, *gi, *igroup);
+                    }
+                    return (unew-uold) + Faunus::MPI::reduceDouble(*base::mpiPtr, du);
+                }
+        #endif*/
     }
 
     template<class Tspace>

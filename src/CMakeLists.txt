@@ -37,6 +37,8 @@ set(hdrs
         )
 set(objs
         geometry potentials slump species analysis)
+
+
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 include_directories(${CMAKE_SOURCE_DIR}/include/docopt.cpp-0.6.2)
@@ -162,7 +164,7 @@ endfunction(fau_example)
 #add_subdirectory(playground EXCLUDE_FROM_ALL)
 add_subdirectory(examples)
 
-if (EXISTS ${MYPLAYGROUND})
-    add_subdirectory(${MYPLAYGROUND} ${MYPLAYGROUND})
-endif ()
+#if (EXISTS ${MYPLAYGROUND})
+#    add_subdirectory(${MYPLAYGROUND} ${MYPLAYGROUND})
+#endif ()
 

@@ -83,10 +83,16 @@ namespace Faunus
 
       std::vector<T> &operator[]( Tid i ) { return _map[i]; };
 
-      const std::map<Tid, std::vector<T> >& getMap()
+      const std::map<Tid, std::vector<T> >& getMap() const
       {
         return _map;
       }
+
+      std::map<Tid, std::vector<T> >& getMap()
+      {
+        return _map;
+      }
+
 
       /** @brief Clear map -- preserve averages */
       void clear() { _map.clear(); }
@@ -180,11 +186,11 @@ namespace Faunus
       /**
        * @brief Erase data using search (slower than using id)
        */
-      bool erase( Tid id )
+      bool erase( T data )
       {
           for ( auto &m : _map )
           {
-              auto it = std::find(m.second.begin(), m.second.end(), id);
+              auto it = std::find(m.second.begin(), m.second.end(), data);
               if ( it != m.second.end())
               {
                   m.second.erase(it);
@@ -355,6 +361,7 @@ namespace Faunus
           for ( auto mol : molecule )
               while ( mol.Ninit-- > 0 )
                   insert(mol.id, mol.getRandomConformation(geo, p));
+          initTracker();
       }
       catch (std::exception &e)
       {
@@ -383,6 +390,17 @@ namespace Faunus
       {
           atomTrack.clear();
           molTrack.clear();
+
+          // make sure all atom and molecule id's are registered eventhough
+          // they may be empty
+          for (auto &a : atom)
+              atomTrack[a.id].clear(); 
+          for (auto &m : molecule)
+              molTrack[m.id].clear(); 
+
+          assert( atomTrack.getMap().size() == atom.size() );
+          assert( molTrack.getMap().size() == molecule.size() );
+
           for ( auto g : groupList())
           {
               assert((size_t) g->front() < p.size()
@@ -558,12 +576,12 @@ namespace Faunus
 
       for ( size_t i = 0; i < p.size(); ++i )
           if ( atomTrack.exists(p[i].id, i) == false )
-              throw std::runtime_error("Error: Atom tracker out of sync.");
+              throw std::runtime_error("Error: Atom tracker out of sync. (particle loop)");
 
       for ( auto gi : groupList())
           for ( auto i : *gi )
               if ( atomTrack.exists(p.at(i).id, i) == false )
-                  throw std::runtime_error("Error: Atom tracker out of sync.");
+                  throw std::runtime_error("Error: Atom tracker out of sync. (group loop)");
 
       if ( rc == false )
           throw std::runtime_error("Space sanity check failed.");
@@ -595,6 +613,13 @@ namespace Faunus
           p.insert(p.begin() + i, a);
           trial.insert(trial.begin() + i, a);
       }
+
+      // push forward all index > i in atom tracker
+      for ( auto &m : atomTrack.getMap() )    // loop over all maps
+          for ( auto &j : m.second ) // and their particle index
+              if ( j >= i )
+                  j++; // push forward particles beyond inserted particle
+
       atomTrack.insert(a.id, i);
 
       for ( auto gj : g )
@@ -621,7 +646,7 @@ namespace Faunus
 
           Group *is_empty = nullptr;
           for ( auto gj : g )
-          {               // downshift groups
+          { // downshift groups
               if ( i < gj->front())
                   gj->setfront(gj->front() - 1);
               if ( i <= gj->back())
@@ -631,11 +656,18 @@ namespace Faunus
           }
 
           if ( is_empty != nullptr )
-          {          // remove empty group
+          { // remove empty group
               molTrack.erase(is_empty->molId, is_empty);
               g.erase(g.begin() + findIndex(is_empty));
               delete (is_empty);
           }
+
+          // down-shift all particle index above i
+          for ( auto &m : atomTrack.getMap() )
+              for ( auto &j : m.second )
+                  if ( j > i )
+                      j--;
+
           return true;
       }
       return false;

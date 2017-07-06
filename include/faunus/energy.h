@@ -171,7 +171,8 @@ namespace Faunus
             double u_pair = 0.0;
             double u = external(p);
             for ( auto g : spc->groupList())
-                u += g_external(p, *g) + g_internal(p, *g);
+                if (!g->empty())
+                    u += g_external(p, *g) + g_internal(p, *g);
             for ( unsigned int i = 0; i < spc->groupList().size() - 1; i++ )
                 for ( unsigned int j = i + 1; j < spc->groupList().size(); j++ )
                     u_pair += g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
@@ -1943,75 +1944,6 @@ namespace Faunus
         auto tuple() -> decltype(std::make_tuple(this))
         {
             return std::make_tuple(this);
-        }
-    };
-
-/**
-     * @brief Restrain a group mass center within a certain z-axis interval [bin_min:bin_max]
-     * @author Joao Henriques
-     * @date Lund, 2013
-     *
-     * This energy class will restrain the mass center of a given group within a certain
-     * window/bin along the z-axis.
-     * Mainly for use with free energy vs. surface distance simulations, where the
-     * surface is too attractive and prevents
-     * correct sampling. Can also be used to restrain the mass center of a group to
-     * a subset of the simulation cell volume in other type of systems.
-     *
-     * The JSON parameters are:
-     *
-     * Key                | Description
-     * :----------------- | :---------------------------
-     * `bin_min`          | Lower limit (always positive, i.e. from 0 to `cuboid_zlen`), [angstrom]
-     * `bin_max`          | Higher limit (from `bin_min` to `cuboid_zlen`), [angstrom]
-     *
-     */
-    template<class Tspace>
-    class MassCenterRestrain : public Energybase<Tspace>
-    {
-    private:
-        typedef Energybase<Tspace> base;
-        typedef typename Tspace::p_vec Tpvec;
-
-        string _info() override
-        {
-            std::ostringstream o;
-            o << pad(textio::SUB, 25, "Bin limits (z-axis)")
-              << "[" << min << ":" << max << "]" << textio::_angstrom << endl;
-            return o.str();
-        };
-        double min, max;
-        Group *gPtr;
-    public:
-        MassCenterRestrain( Tmjson &in )
-        {
-            min = in.value("bin_min", 0.0);
-            max = in.value("bin_max", pc::infty);
-            base::name = "Mass Center Restrain";
-            gPtr = nullptr;
-        }
-
-        void add( Group &g )
-        {
-            gPtr = &g;
-        }
-
-        double g_external( const Tpvec &p, Group &g )
-        {
-            if ( &g != gPtr )
-                return 0;
-            double boxlenz = base::spc->geo.len.z();
-            double mc = Geometry::massCenter(base::spc->geo, p, g).z() + (boxlenz / 2);
-            if ( mc >= min && mc <= max )
-                return 0;
-            else
-                return pc::infty;
-        }
-
-        double i_external( const Tpvec &p, int i )
-        {
-            auto gi = base::spc->findGroup(i);
-            return g_external(p, *gi);
         }
     };
 

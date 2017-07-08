@@ -173,9 +173,9 @@ namespace Faunus
             for ( auto g : spc->groupList())
                 if (!g->empty())
                     u += g_external(p, *g) + g_internal(p, *g);
-            for ( unsigned int i = 0; i < spc->groupList().size() - 1; i++ )
-                for ( unsigned int j = i + 1; j < spc->groupList().size(); j++ )
-                    u_pair += g2g(p, *spc->groupList()[i], *spc->groupList()[j]);
+            for ( auto i = spc->groupList().begin(); i != spc->groupList().end(); ++i )
+                for ( auto j = i; ++j != spc->groupList().end(); )
+                    u_pair += g2g(p, **i, **j);
             return u + u_pair;
         }
 

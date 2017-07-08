@@ -384,8 +384,8 @@ namespace Faunus {
        * @param n Number of atoms in each residue (default: 1e9)
        */
       template<class Tpvec, class Tvec=Point>
-        static bool save(const string &file, const Tpvec &p, Tvec len=Point(0,0,0), unsigned int n=1e9) {
-          unsigned int nres=1, natom=1;
+        static bool save(const string &file, const Tpvec &p, Tvec len=Point(0,0,0), int n=1e9) {
+          int nres=1, natom=1;
           char buf[500];
           std::ostringstream o;
           if (len.norm()>1e-6)

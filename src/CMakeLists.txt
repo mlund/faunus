@@ -138,9 +138,9 @@ find_program(CPPCHECK_EXE "cppcheck")
 if (CPPCHECK_EXE)
     add_custom_target(
             cppcheck
-            COMMAND ${CPPCHECK_EXE}
-            -I ${CMAKE_SOURCE_DIR}/include -j2 --quiet --enable=warning
-            #--suppress=noExplicitConstructor --suppress=uninitMemberVar
+            COMMAND ${CPPCHECK_EXE} --std=c++11
+            -I ${CMAKE_SOURCE_DIR}/include --quiet --enable=warning
+            --suppress=noExplicitConstructor --suppress=uninitMemberVar
             ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/moves/*.cpp
             COMMENT "Running C++ static analyzer..."
     )

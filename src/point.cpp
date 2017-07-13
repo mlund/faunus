@@ -1,4 +1,5 @@
 #include <vector>
+#include <map>
 #include <iostream>
 #include <sstream>
 #include <type_traits>
@@ -242,15 +243,15 @@ namespace Faunus {
     };
 
     struct Radius : public ParticlePropertyBase {
-        double radius;
+        double radius; //!< Particle radius
         void to_json(Tjson &j) const override { j["r"] = radius; }
         void from_json(const Tjson& j) override { radius = j.value("r", 0); }
     };
 
     /** @brief Sphero-cylinder properties */
     struct Cigar : public ParticlePropertyBase {
-        double sclen=0;       //!< length
-        Point scdir = {1,0,0};//!< direction unit vector
+        double sclen=0;       //!< Sphero-cylinder length
+        Point scdir = {1,0,0};//!< Sphero-cylinder direction unit vector
 
         void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&) {
             cout << "cigar rotate\n";
@@ -648,19 +649,49 @@ namespace Faunus {
 
         };
 
+    /**
+     * @brief Class for specifying changes to Space
+     *
+     * - If `moved` or `removed` are defined for a group, but are
+     *   empty, it is assumed that *all* particles in the group are affected.
+     * - The total volume change is defined as `|dV| = dV.norm()`.
+     */
+    template<class Tpvec>
+        struct Change
+        {
+            typedef int groupindex; //!< Group index in group vector
+            typedef int atomindex;  //!< Atom index in particle vector
+            typedef int molid;      //!< Molecule id (unique)
+            Point dV = {0,0,0};     //!< Volume change (in different directions)
+            std::map<groupindex, std::vector<atomindex>> moved;  //!< Moved particles, grouped by group index
+            std::map<groupindex, std::vector<atomindex>> removed;//!< Removed particles, grouped by group index
+            std::map<molid, Tpvec> inserted; //!< Particles to be inserted, grouped by *molecule id*
+
+            void clear()
+            {
+                dV.setZero();
+                moved.clear();
+                removed.clear();
+                inserted.clear();
+                assert(empty());
+            } //!< Clear all change data
+
+            bool empty() const
+            {
+                if ( moved.empty())
+                    if ( removed.empty())
+                        if ( inserted.empty())
+                            if ( dV.squaredNorm()<1e-9 )
+                                return true;
+                return false;
+            } //!< Check if change object is empty
+        };
+
+
 }//namespace
 
 using namespace Faunus;
 using namespace std;
-
-void hejsa( Point p, std::function<void(Point&)> f) {
-    f(p);
-}
-
-template<class boundaryFunc>
-void hejsa2( Point p, boundaryFunc &f) {
-    f(p);
-}
 
 int main() {
     using DipoleParticle = Particle<Radius, Dipole, Cigar>;
@@ -686,10 +717,6 @@ int main() {
 
     p.pos = {1,0,1};
     dst.pos = {0,0,0};
-
-    cyl.boundary(p.pos);
-
-    hejsa(p.pos, cyl.boundaryFunc);
 
     cout << "d = " << cuboid.vdist( dst.pos, p.pos ) << endl;
 

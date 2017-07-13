@@ -19,8 +19,7 @@ set(Cpp11RangeIncludeDir ${source_dir})
 ExternalProject_Add( modernjson
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/nlohmann/json/releases/download/v2.1.1/json.hpp"
-    DOWNLOAD_NO_EXTRACT 0
-    DOWNLOAD_NO_PROGRESS ON
+    DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(modernjson source_dir)
 set(JSONIncludeDir ${source_dir}/../../src/)

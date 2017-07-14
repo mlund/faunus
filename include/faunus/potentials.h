@@ -151,6 +151,88 @@ namespace Faunus {
         }
         return false;
       }
+    
+	 /**
+	 * @brief An Effective potential that is read from a file.
+	 * @details The potential utilizez the a
+	 * @f[
+	 * ax^2+bx+c 
+	 * @f]
+	 * regression between 3 points to determine the value of the interaction and is
+	 * zero if outside the min max value.
+	 * 
+	 * In json under nonbonded you need to specify the keyword "datafile": myfile
+	 * 
+	 */
+
+	class Potfromfile : public PairPotentialBase {
+	private:
+	  std::vector <double> x, y;
+	    double xmin,xmax;
+
+	public:
+	    Potfromfile();
+
+	    Potfromfile(Tmjson &j){
+
+	      name = "Potfromfile";
+	      string file = j.at("datafile").get<string>(); //WILL CRASH THE RUN IF THERE IS NO FILE SPECIFIED IN THE JSON 
+	      std::ifstream fin(file);
+
+
+	      while (!fin.eof()){
+		double tmpX, tmpY;
+		fin >> tmpX >> tmpY;
+		x.push_back(tmpX);
+		y.push_back(tmpY);
+	      }
+	      fin.close();
+
+	     if (x.size()<3)
+	      throw std::runtime_error("Table must have at least three points");
+
+	      xmin = x[1];
+	      xmax = x[x.size() - 2];
+	    }
+
+	      template<class Tparticle>
+		double operator() (const Tparticle &a, const Tparticle &b, double r2) {
+
+		double m=sqrt(r2);
+		if(m >= xmin && m <= xmax){
+
+		  //Should change this for loop for a better search algorithm in the next update.
+		    for(size_t i=1; i < x.size()-2; ++i){
+			if(x[i] > m) {
+
+			  double x2im1=x[i-1]*x[i-1];
+			  double x2i = x[i]*x[i];
+			  double x2ip1 = x[i+1]*x[i+1];
+			  double ximxim1 = x[i]-x[i-1];
+			  double xip1mxim1 = x[i+1]-x[i-1];
+			  double x2imx2im1 = x2i-x2im1;
+
+			  double a = (((y[i+1]-y[i-1])*ximxim1) + (xip1mxim1*(-y[i]+y[i-1]))) / 
+				    (((x2im1 + x2ip1)*ximxim1)-(x2imx2im1*xip1mxim1));
+
+			  double b = (y[i]-a*x2imx2im1-y[i-1])/ximxim1;
+
+			  double c = y[i-1]- a*x2im1-b*x[i-1];
+
+			    return a*m*m + b*m + c;
+			}   
+		    }
+		}
+		return 0;  
+	      }
+		 template<class Tparticle>
+	      double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+		return operator()(a,b,r.squaredNorm());
+	      }
+	};
+
+
+
 
     /**
      * @brief Harmonic pair potential

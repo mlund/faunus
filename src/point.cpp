@@ -1,5 +1,6 @@
 #include <vector>
 #include <map>
+#include <tuple>
 #include <iostream>
 #include <sstream>
 #include <type_traits>
@@ -623,6 +624,25 @@ namespace Faunus {
                 }
         }
 
+    namespace Potential {
+        
+        struct Coulomb {
+            double lB; //!< Bjerrum length
+            template<typename... T>
+            double operator()(const Particle<T...> &a, const Particle<T...> &b, double r2) {
+                return 2;
+            }
+        };
+
+        struct HardSphere {
+            template<typename... T>
+            double operator()(const Particle<T...> &a, const Particle<T...> &b, double r2) {
+                return 3;
+            }
+        };
+
+     }
+
     template<class Tparticle>
         class Space {
             typedef std::vector<Tparticle> Tpvec;
@@ -693,6 +713,18 @@ namespace Faunus {
 using namespace Faunus;
 using namespace std;
 
+template<typename...T>
+struct ppot {
+    std::tuple<T...> tu;
+
+    template<typename Tparticle>
+        double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+            double sum=0;
+            std::apply([&](auto ...x){std::make_tuple(sum+=x(a,b,r2)...);} , tu);
+            return sum;
+        }
+};
+
 int main() {
     using DipoleParticle = Particle<Radius, Dipole, Cigar>;
     using PointParticle = Particle<>;
@@ -738,6 +770,9 @@ int main() {
         cout << i << endl;
 
     cout << rr.front() << " - " << rr.back() << endl;
+
+    auto pot = ppot<Potential::Coulomb, Potential::HardSphere>();
+    cout << "pot sum = " << pot(p,p,45) << endl;
 
     //analyse<Tparticle> a;
     //a.sample(p);

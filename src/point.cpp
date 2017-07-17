@@ -550,6 +550,11 @@ namespace Faunus {
             assert( !empty() );
             return *(end()-1);
         }
+
+        int random(Random &r) const {
+            assert(!empty());
+            return *r.element(begin(), end()); 
+        } //!< Random index
     };
 
     /**
@@ -625,105 +630,254 @@ namespace Faunus {
         }
 
     namespace Potential {
-        
-        struct Coulomb {
+
+        struct PairPotentialBase {};
+
+        template<class T1, class T2>
+            struct CombinedPairPotential : public PairPotentialBase {
+                T1 first;  //!< First pair potential of type T1
+                T2 second; //!< Second pair potential of type T2
+
+                CombinedPairPotential(const T1 &a, const T2 &b) : first(a), second(b) {}
+
+                template<class Tparticle>
+                    inline double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        return first(a,b,r) + second(a,b,r);
+                    }
+            };
+
+        template<class T1, class T2,
+            class = typename std::enable_if<std::is_base_of<PairPotentialBase,T1>::value>::type,
+            class = typename std::enable_if<std::is_base_of<PairPotentialBase,T2>::value>::type>
+                CombinedPairPotential<T1,T2>& operator+(const T1 &pot1, const T2 &pot2) {
+                    return *(new CombinedPairPotential<T1,T2>(pot1,pot2));
+                } //!< Add two pair potentials
+
+        struct Coulomb : public PairPotentialBase {
             double lB; //!< Bjerrum length
             template<typename... T>
-            double operator()(const Particle<T...> &a, const Particle<T...> &b, double r2) {
-                return 2;
-            }
+                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                    return 2;
+                }
         };
 
-        struct HardSphere {
+        struct HardSphere : public PairPotentialBase {
             template<typename... T>
-            double operator()(const Particle<T...> &a, const Particle<T...> &b, double r2) {
-                return 3;
-            }
+                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r2) const {
+                    return 3;
+                }
         };
-
-     }
-
-    template<class Tparticle>
-        class Space {
-            typedef std::vector<Tparticle> Tpvec;
-            static std::vector<AtomData> atoms;
-            static std::vector<MoleculeData<Tpvec>> molecules;
-            Tpvec p;
-            std::vector<Group> g;
-
-            auto findMolecule(int molid) const {
-                return std::find_if( g.begin(), g.end(),
-                        [&molid](const Group &g) { return g.id==molid; } );
-            }
-
-            void insert(int molid, int N=1) {
-            }
-
-            template<class Tindex>
-                void erase(int molid, Tindex ndx );
-
-            auto findAtomData(const std::string &name) const {
-                return std::find_if( atoms.begin(), atoms.end(),
-                        [&name](const AtomData &a) { return a.name==name; } );
-            } //!< Iterator to AtomData with `name` -- `end()` if not found
-
-        };
+    }//end of namespace potential
 
     /**
      * @brief Class for specifying changes to Space
      *
      * - If `moved` or `removed` are defined for a group, but are
      *   empty, it is assumed that *all* particles in the group are affected.
-     * - The total volume change is defined as `|dV| = dV.norm()`.
      */
     template<class Tpvec>
         struct Change
         {
-            typedef int groupindex; //!< Group index in group vector
-            typedef int atomindex;  //!< Atom index in particle vector
-            typedef int molid;      //!< Molecule id (unique)
-            Point dV = {0,0,0};     //!< Volume change (in different directions)
-            std::map<groupindex, std::vector<atomindex>> moved;  //!< Moved particles, grouped by group index
-            std::map<groupindex, std::vector<atomindex>> removed;//!< Removed particles, grouped by group index
-            std::map<molid, Tpvec> inserted; //!< Particles to be inserted, grouped by *molecule id*
+            double dV = 0;     //!< Volume change (in different directions)
+            std::map<int, std::vector<int>> moved;  //!< Moved particles, grouped by group index
 
             void clear()
             {
-                dV.setZero();
                 moved.clear();
-                removed.clear();
-                inserted.clear();
                 assert(empty());
             } //!< Clear all change data
 
             bool empty() const
             {
                 if ( moved.empty())
-                    if ( removed.empty())
-                        if ( inserted.empty())
-                            if ( dV.squaredNorm()<1e-9 )
-                                return true;
+                    if ( std::fabs(dV)>0 )
+                        return true;
                 return false;
             } //!< Check if change object is empty
         };
 
+    template<class Tgeometry, class Tparticle>
+        struct Space {
 
-}//namespace
+            typedef Space<Tgeometry,Tparticle> Tspace;
+            typedef std::vector<Group> Tgvec;
+            typedef std::vector<Tparticle> Tpvec;
+            typedef Change<Tpvec> Tchange;
+
+            typedef std::function<void(Tspace&, const Tchange&)> ChangeTrigger;
+            typedef std::function<void(Tspace&, const Tspace&, const Tchange&)> SyncTrigger;
+
+            std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied
+            std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched
+
+            Tpvec p;       //!< Particle vector
+            Tgvec groups;  //!< Group vector
+            Tgeometry geo; //!< Container geometry
+
+            template<typename T>
+                std::vector<int> findIndex(const std::vector<T> &v, int id) const {
+                    std::vector<int> ndx;
+                    ndx.reserve( v.size() );
+                    for (size_t i=0; i<v.size(); i++)
+                        if (v[i].id==id)
+                            ndx.push_back(i);
+                    return ndx;
+                } //!< ordered vector of index pointing to `v`-elements of type `id`
+
+            template<typename T>
+                int random(const std::vector<T> &v, int id, Random &r) const {
+                    auto i = findIndex(v, id);
+                    if (i.empty())
+                        return -1;
+                    return *r.element(i.begin(), i.end());
+                } //!< find index to random element of `id`. Returns -1 if not found.
+
+            void insert(int molid, const Tpvec&) {
+            }
+
+            void sync(const Tspace &o, const Tchange &change) {
+
+                if (std::fabs(change.dV)>0)
+                    geo = o.geo;
+
+                for (auto& m : change.moved) { // loop over moved groups
+                    groups[ m.first ] = o.groups[ m.first ];
+                    for (auto i : m.second)
+                        p[i] = o.p[i];
+                }
+
+            } //!< Copy differing data from other Space using Change object
+
+            void applyChange(const Tchange &change) {
+                for (auto& f : changeTriggers)
+                    f(*this, change);
+            }
+
+            template<class Tindex>
+                void erase(int molid, Tindex ndx );
+
+            //auto findAtomData(const std::string &name) const {
+            //    return std::find_if( atoms.begin(), atoms.end(),
+            //            [&name](const AtomData &a) { return a.name==name; } );
+            //} //!< Iterator to AtomData with `name` -- `end()` if not found
+        };
+
+    /**
+     * @brief Nonbonded energy using a pair-potential
+     */
+    template<typename Tspace, typename Tpairpot>
+        struct Nonbonded {
+            Tpairpot pairpot;
+            double energy(const Tspace &spc, const typename Tspace::Change &change) {
+                double u=0;
+
+                for (auto& m : change.moved()) {
+                    // moved<->moved
+                    for (auto& n : change.moved())
+                        if (n.first>m.first)
+                            for (auto& i : m.second)
+                                for (auto& j : n.second)
+                                    u+=pairpot( spc.p[i], spc.p[j],
+                                            spc.geo.vdist( spc.p[i].pos, spc.p[j].pos) );
+
+                    // internally in moved
+                    if ( spc.groups[m.first].isatomic
+                            || (m.second.size()>0 && m.second.size!=spc.groups[m.first].size() ) )
+                        for (int i=0; i<(int)m.second.size()-1; i++)
+                            for (int j=i+1; j<(int)m.second.size(); j++)
+                                u+=pairpot( spc.p[i], spc.p[j],
+                                        spc.geo.vdist( spc.p[i].pos, spc.p[j].pos) );
+
+                    // moved<->static
+                    for (auto& i : m.second)
+                        for (int j=0; j<(int)spc.p.size(); j++) // atom index, all
+                            if (i!=j) // inner loop conditionals are bad...
+                                u+=pairpot( spc.p[i], spc.p[j],
+                                        spc.geo.vdist( spc.p[i].pos, spc.p[j].pos) );
+                }
+                return u;
+            }
+        };
+
+    template<typename Tspace>
+        struct TranslateMove {
+            typename Tspace::Tchange change;
+            Random slump;
+            std::vector<int> mollist; // list of molecule id to pick from
+            Tspace spc, trial;
+
+            void move(Tspace &spc) {
+                assert(!mollist.empty());
+
+                change.clear();
+
+                int molid = *slump.element( mollist.begin(), mollist.end() ); // random molecule id
+                int igroup = trial.random(trial.groups, molid, slump); // random group index
+                if (igroup>-1)
+                    if (!trial.g[igroup].empty()) {
+                        int iatom = trial.g[igroup].random(slump);
+
+                        trial.p[iatom].pos += {1,1,1};
+                        change.moved[igroup].push_back(iatom);
+                    }
+
+                auto pairpot = Potential::Coulomb() + Potential::HardSphere();
+                Nonbonded<Tspace,decltype(pairpot)> pot;
+                pot.pairpot = pairpot;
+                double du = pot.energy(spc, change);
+            }
+
+            void accept() {
+                spc.sync(trial, change);
+            }
+
+            void reject() {
+                trial.sync(spc, change);
+            }
+        };
+
+    template<class Tspace>
+        class MCSimulation {
+            private:
+                Tspace spc, backup;
+                TranslateMove<Tspace> mv;
+                //Propagator mv;
+                //Reporter analyse;
+
+            public:
+                MCSimulation() {
+                }
+
+                void move() {
+                    typename Tspace::Tchange change;
+                    // make change to trial
+                    //std::pair<double> u = pot.energyChange( spc, trial, change );
+                    //if (metropolis( u.second-u.first ) )
+                    //    spc.sync( trial, change );
+                    //else
+                    //    trial.sync( spc, change );
+                }
+
+        };
+
+
+}//end of faunus namespace
 
 using namespace Faunus;
 using namespace std;
 
-template<typename...T>
-struct ppot {
-    std::tuple<T...> tu;
+/*
+   template<typename...T>
+   struct ppot {
+   std::tuple<T...> tu;
 
-    template<typename Tparticle>
-        double operator()(const Tparticle &a, const Tparticle &b, double r2) {
-            double sum=0;
-            std::apply([&](auto ...x){std::make_tuple(sum+=x(a,b,r2)...);} , tu);
-            return sum;
-        }
-};
+   template<typename Tparticle>
+   double operator()(const Tparticle &a, const Tparticle &b, double r2) {
+   double sum=0;
+   std::apply([&](auto ...x){std::make_tuple(sum+=x(a,b,r2)...);} , tu);
+   return sum;
+   }
+   };*/
 
 int main() {
     using DipoleParticle = Particle<Radius, Dipole, Cigar>;
@@ -771,8 +925,13 @@ int main() {
 
     cout << rr.front() << " - " << rr.back() << endl;
 
-    auto pot = ppot<Potential::Coulomb, Potential::HardSphere>();
-    cout << "pot sum = " << pot(p,p,45) << endl;
+    auto pairpot = Potential::Coulomb() + Potential::HardSphere();
+
+    Space<Tparticle, Geometry::Cuboid> spc; 
+    TranslateMove<decltype(spc)> mv;
+
+    //auto pot = ppot<Potential::Coulomb, Potential::HardSphere>();
+    //cout << "pot sum = " << pot(p,p,45) << endl;
 
     //analyse<Tparticle> a;
     //a.sample(p);

@@ -735,85 +735,70 @@ namespace Faunus {
         struct IterRange : std::pair<T,T> { 
             using std::pair<T,T>::pair;
             T& begin() { return this->first; }
-            T& begin() const { return this->first; }
             T& end() { return this->second; }
-            T& end() const { return this->second; }
+            const T& begin() const { return this->first; }
+            const T& end() const { return this->second; }
             size_t size() const { return std::distance(this->first, this->second); }
-        };
+            bool empty() const { return this->first==this->second; }
+            void clear() { this->second = this->first; }
+        }; //!< Turns a pair of iterators into a range
 
     /**
      * @brief Turns a pair of iterators into an elastic range
      *
      * By elastic, we mean a range where elements can be deactivated
-     * and later activated. Partial (de)activating leads to shuffling
-     * and the order initial order is not maintained. However, when
+     * and later activated without inserting/erasing. Partial (de)activating leads to shuffling
+     * and the initial order is lost. However, when
      * de-activating the entire range, the original state is restored
      * upon activation.
      */
-    template<class Tpvec>
-        class ElasticRange {
+    template<class T>
+        class ElasticRange : public IterRange<T> {
             private:
-                typedef typename Tpvec::iterator iter;
-                typedef typename Tpvec::iterator const_iter;
-                iter _begin, _end, _trueend;
-
-                struct iter_pair : std::pair<iter,iter> { 
-                    using std::pair<iter,iter>::pair;
-                    iter begin() { return this->first; }
-                    iter end() { return this->second; }
-                    size_t size() const { return std::distance(this->first, this->second); }
-                };
-
+                T _trueend;
             public:
+                typedef typename T::value_type Tvalue;
+                using IterRange<T>::begin;
+                using IterRange<T>::end;
+                using IterRange<T>::size;
 
-                void set(iter begin, iter end) {
-                    _begin = begin;
-                    _end = end;
-                    _trueend = end;
-                }
+                ElasticRange(T begin, T end) : IterRange<T>({begin,end}), _trueend(end) {}
 
-                ElasticRange(iter begin, iter end) { set(begin, end); }
+                size_t capacity() const { return std::distance(begin(), _trueend); }
 
-                iter& begin() { return _begin; }
-                iter& end() { return _end; }
+                auto inactive() const { return IterRange<T>({ end(), _trueend}); }
 
-                const_iter& begin() const { return _begin; }
-                const_iter& end() const { return _end; }
-
-                size_t size() const { return std::distance(_begin, _end); }
-                size_t capacity() const { return std::distance(_begin, _trueend); }
-
-                auto inactive() const { return iter_pair{_end, _trueend}; }
-
-                Tpvec deactivate(iter first, iter last) {
+                std::vector<Tvalue> deactivate(T first, T last) {
                     size_t n = std::distance(first,last);
                     assert(n>=0);
-                    assert(first>=_begin && last<=_end);
-                    Tpvec v(first, last);
-                    std::rotate( _begin, last, _end );
-                    _end -= n;
+                    assert(first>=begin() && last<=end() );
+                    std::vector<Tvalue> v(first, last);
+                    std::rotate( begin(), last, end() );
+                    end() -= n;
                     assert(size() + inactive().size() == capacity());
                     return v;
                 } //!< Deactivate particles by moving to end and reduzing effective size (complexity: order N)
 
-                void activate(iter first, iter last) {
+                void activate(T first, T last) {
                     size_t n = std::distance(first,last);
-                    std::rotate( _end, first, _trueend );
-                    _end += n;
+                    std::rotate( end(), first, _trueend );
+                    end() += n;
                     assert(size() + inactive().size() == capacity());
                 } //!< Activate previously deactivated elements (complexity: order N)
         };
 
     TEST_CASE("ElasticRange") {
         std::vector<int> v = {10,20,30,40,50,60};
-        ElasticRange<decltype(v)> r(v.begin(), v.end());
+        ElasticRange< typename std::vector<int>::iterator> r(v.begin(), v.end());
         CHECK( r.size() == 6 );
+        CHECK( r.empty() == false );
         CHECK( r.size() == r.capacity() );
         *r.begin() += 1;
         CHECK( v[0]==11 );
 
         r.deactivate( r.begin(), r.end() ); 
         CHECK( r.size() == 0 );
+        CHECK( r.empty() == true );
         CHECK( r.capacity() == 6 );
         CHECK( r.begin() == r.end() );
 
@@ -821,14 +806,23 @@ namespace Faunus {
         CHECK( r.size() == 6) ;
         CHECK( std::is_sorted(r.begin(), r.end() ) == true );
 
-        r.deactivate( r.begin()+1, r.begin()+3 ); 
+        auto out = r.deactivate( r.begin()+1, r.begin()+3 ); 
         CHECK( r.size() == 4 );
         CHECK( std::find(r.begin(), r.end(), 20)==r.end() );
         CHECK( std::find(r.begin(), r.end(), 30)==r.end() );
+        CHECK( out.size() == 2);
+        CHECK( std::find(out.begin(), out.end(), 20)!=r.end() );
+        CHECK( std::find(out.begin(), out.end(), 30)!=r.end() );
     }
 
-    template<class Tpvec>
-        class Group : public ElasticRange<Tpvec> {
+    template<class Titer>
+        struct Group : public ElasticRange<Titer> {
+            typedef ElasticRange<Titer> base;
+            int id=-1;           //!< Type id
+            bool atomic=false;   //!< Is it an atomic group?
+            Point cm={0,0,0};    //!< Mass center
+            Group(Titer begin, Titer end) : base(begin,end) {}
+
         };
 
     /**
@@ -862,8 +856,11 @@ namespace Faunus {
         struct Space {
 
             typedef Space<Tgeometry,Tparticle> Tspace;
-            //typedef std::vector<Group> Tgvec;
             typedef std::vector<Tparticle> Tpvec;
+
+            typedef Group<typename Tpvec::iterator> Tgroup;
+            typedef std::vector<Tgroup> Tgvec;
+
             typedef Change<Tpvec> Tchange;
 
             typedef std::function<void(Tspace&, const Tchange&)> ChangeTrigger;
@@ -873,7 +870,7 @@ namespace Faunus {
             std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched
 
             Tpvec p;       //!< Particle vector
-            //Tgvec groups;  //!< Group vector
+            Tgvec groups;  //!< Group vector
             Tgeometry geo; //!< Container geometry
 
             template<typename T>
@@ -903,7 +900,7 @@ namespace Faunus {
                     geo = o.geo;
 
                 for (auto& m : change.moved) { // loop over moved groups
-                    //groups[ m.first ] = o.groups[ m.first ];
+                    groups[ m.first ] = o.groups[ m.first ];
                     for (auto i : m.second)
                         p[i] = o.p[i];
                 }

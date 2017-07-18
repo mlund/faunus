@@ -5,11 +5,14 @@
 #include <sstream>
 #include <type_traits>
 #include <string>
-#include <json.hpp>
 #include <cmath>
 #include <random>
 #include <Eigen/Geometry>
-#include <range.hpp>
+#include <json.hpp>
+#include <doctest.h>
+//#include <range.hpp>
+
+//#include "particles.h"
 
 // Eigen<->JSON (de)serialization
 namespace Eigen {
@@ -50,11 +53,11 @@ namespace Faunus {
                   c = 299792458.0,   //!< Speed of light [m/s]
                   R = kB * Nav;      //!< Molar gas constant [J/(K*mol)] 
 
-        static T temperature=298.15; //!< Temperature (Kelvin)
-        static inline T kT() { return temperature*kB; } //!< Thermal energy (Joule)
-        static inline T lB( T epsilon_r ) {
-            return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
-        } //!< Bjerrum length (angstrom)
+                  static T temperature=298.15; //!< Temperature (Kelvin)
+                  static inline T kT() { return temperature*kB; } //!< Thermal energy (Joule)
+                  static inline T lB( T epsilon_r ) {
+                      return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
+                  } //!< Bjerrum length (angstrom)
 
     }
     namespace pc = PhysicalConstants;
@@ -246,7 +249,7 @@ namespace Faunus {
     struct Radius : public ParticlePropertyBase {
         double radius; //!< Particle radius
         void to_json(Tjson &j) const override { j["r"] = radius; }
-        void from_json(const Tjson& j) override { radius = j.value("r", 0); }
+        void from_json(const Tjson& j) override { radius = j.value("r", 0.0); }
     };
 
     /** @brief Sphero-cylinder properties */
@@ -322,7 +325,6 @@ namespace Faunus {
     template<typename... Properties>
         void to_json(Tjson& j, const Particle<Properties...> &a) {
             j["q"] = a.charge; j["mw"]=a.mw;
-            //j["r"]=a.radius;
             j["id"]=a.id;
             j["pos"] = a.pos; 
             to_json<Properties...>(j, Properties(a)... );
@@ -331,12 +333,26 @@ namespace Faunus {
     template<typename... Properties>
         void from_json(const Tjson& j, Particle<Properties...> &a) {
             a.charge = j.value<double>("q", 0.0); 
-            //a.radius = j.value<double>("r", 0.0); 
             a.mw = j.value<double>("mw", 0.0); 
             a.id = j.value<int>("id",-1);
             a.pos = j.value("pos", Point(0,0,0));
             from_json<Properties...>(j, dynamic_cast<Properties&>(a)...);
         }
+
+    TEST_CASE("Particle") {
+        Particle<Dipole,Cigar,Radius> p1, p2;
+        p1.pos={1,2,3};
+        p1.charge=-0.8;
+        p1.mu={0,0,1};
+        p1.mulen = 2.8;
+        p1.sclen = 0.5;
+        p1.radius = 7.1;
+        p1.mw = 0.2;
+
+        Tjson j = p1; // p1 --> json
+        p2 = j;       // json --> p2
+        CHECK( j == Tjson(p2) ); // identical json objects?
+    }
 
     /** @brief Simulation geometries and related operations */
     namespace Geometry {
@@ -535,28 +551,6 @@ namespace Faunus {
 
     }//namespace
 
-    struct Group : public Range::range {
-        Point cm;     //!< Mass center
-        int id;       //!< Group ID
-        bool atomic;  //!< True if container species are atomic
-        Group() {}
-        Group(int beg, int end) : Range::range(beg, end+1, 1) {}
-
-        int front() const {
-            assert( !empty() );
-            return *begin();
-        }
-        int back() const {
-            assert( !empty() );
-            return *(end()-1);
-        }
-
-        int random(Random &r) const {
-            assert(!empty());
-            return *r.element(begin(), end()); 
-        } //!< Random index
-    };
-
     /**
      * @brief General properties for atoms
      */
@@ -700,7 +694,7 @@ namespace Faunus {
         struct Space {
 
             typedef Space<Tgeometry,Tparticle> Tspace;
-            typedef std::vector<Group> Tgvec;
+            //typedef std::vector<Group> Tgvec;
             typedef std::vector<Tparticle> Tpvec;
             typedef Change<Tpvec> Tchange;
 
@@ -711,7 +705,7 @@ namespace Faunus {
             std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched
 
             Tpvec p;       //!< Particle vector
-            Tgvec groups;  //!< Group vector
+            //Tgvec groups;  //!< Group vector
             Tgeometry geo; //!< Container geometry
 
             template<typename T>
@@ -741,7 +735,7 @@ namespace Faunus {
                     geo = o.geo;
 
                 for (auto& m : change.moved) { // loop over moved groups
-                    groups[ m.first ] = o.groups[ m.first ];
+                    //groups[ m.first ] = o.groups[ m.first ];
                     for (auto i : m.second)
                         p[i] = o.p[i];
                 }
@@ -860,80 +854,96 @@ namespace Faunus {
 
         };
 
+    template<typename T>
+        void swap_to_back(T first, T last, T end) {
+            while (end-- > last)
+                std::iter_swap(first++,end);
+        } //!< Move range [first:last] to [end] by swapping elements
+
+    TEST_CASE("swap_to_back") {
+        typedef std::vector<int> T;
+        T v = {1,2,3,4};
+
+        swap_to_back( v.begin(), v.end(), v.end() );
+        CHECK( v==T({1,2,3,4}) );
+
+        std::sort(v.begin(), v.end());
+        swap_to_back( v.begin()+1, v.begin()+3, v.end() );
+        CHECK( v==T({1,4,3,2}) );
+    }
+
+    /**
+     * @brief Turns a pair of iterators into an elastic range
+     */
+    template<class Tpvec>
+        class ElasticRange {
+            private:
+                typedef typename Tpvec::iterator iter;
+                typedef typename Tpvec::iterator const_iter;
+                iter _begin, _end, _trueend;
+
+                struct iter_pair : std::pair<iter,iter> { 
+                    using std::pair<iter,iter>::pair;
+                    iter begin() { return this->first; }
+                    iter end() { return this->second; }
+                    size_t size() const { return std::distance(this->first, this->second); }
+                };
+
+            public:
+
+                ElasticRange(iter begin, iter end) : _begin(begin), _end(end), _trueend(end) {}
+
+                iter& begin() { return _begin; }
+                iter& end() { return _end; }
+
+                const_iter& begin() const { return _begin; }
+                const_iter& end() const { return _end; }
+
+                size_t size() const { return std::distance(_begin, _end); }
+                size_t capacity() const { return std::distance(_begin, _trueend); }
+
+                auto inactive() const { return iter_pair{_end, _trueend}; }
+
+                Tpvec deactivate(iter first, iter last) {
+                    size_t n = std::distance(first,last);
+                    assert(n>=0);
+                    assert(first>=_begin && last<=_end);
+                    Tpvec v(first, last);
+                    std::rotate( _begin, last, _end );
+                    _end -= n;
+                    assert(size() + inactive().size() == capacity());
+                    return v;
+                } //!< Deactivate particles by moving to end and reduzing effective size (complexity: order N)
+
+                void activate(iter first, iter last) {
+                    size_t n = std::distance(first,last);
+                    std::rotate( _end, first, _trueend );
+                    _end += n;
+                    assert(size() + inactive().size() == capacity());
+                } //!< Activate previously deactivated elements (complexity: order N)
+        };
+
+    TEST_CASE("ElasticRange") {
+        std::vector<int> v = {10,20,30,40,50,60};
+        ElasticRange<decltype(v)> r(v.begin(), v.end());
+        CHECK( r.size() == 6 );
+        CHECK( r.size() == r.capacity() );
+        *r.begin() += 1;
+        CHECK( v[0]==11 );
+
+        r.deactivate( r.begin()+1, r.begin()+3 ); 
+        CHECK( r.size() == 4 );
+        CHECK( std::find(r.begin(), r.end(), 20)==r.end() );
+        CHECK( std::find(r.begin(), r.end(), 30)==r.end() );
+
+        r.deactivate( r.begin(), r.end() ); 
+        CHECK( r.size() == 0 );
+        CHECK( r.capacity() == 6 );
+        CHECK( r.begin() == r.end() );
+
+        r.activate( r.inactive().begin(), r.inactive().end()-1 );
+        CHECK( r.size() == 5) ;
+    }
 
 }//end of faunus namespace
-
-using namespace Faunus;
-using namespace std;
-
-/*
-   template<typename...T>
-   struct ppot {
-   std::tuple<T...> tu;
-
-   template<typename Tparticle>
-   double operator()(const Tparticle &a, const Tparticle &b, double r2) {
-   double sum=0;
-   std::apply([&](auto ...x){std::make_tuple(sum+=x(a,b,r2)...);} , tu);
-   return sum;
-   }
-   };*/
-
-int main() {
-    using DipoleParticle = Particle<Radius, Dipole, Cigar>;
-    using PointParticle = Particle<>;
-    typedef DipoleParticle Tparticle;
-
-    Tparticle p, dst;
-    p.charge = 1.0;
-    p.sclen=10.2;
-    p.mulen = -0.5;
-    p.radius = 999;
-
-    Tjson j = p;
-
-    std::cout << j << "\n";
-
-    dst = j;
-
-    std::cout << Tjson(dst) << "\n";
-
-    Geometry::Cuboid cuboid;
-    Geometry::Cylinder cyl;
-
-    p.pos = {1,0,1};
-    dst.pos = {0,0,0};
-
-    cout << "d = " << cuboid.vdist( dst.pos, p.pos ) << endl;
-
-    Eigen::Quaterniond q;
-    Eigen::Matrix3d m;
-
-    p.rotate(q, m);
-    vector<decltype(p)> vec;
-    vec.push_back(p);
-    Geometry::translate(vec, {0,0,0});
-
-    Random r = R"( {"randomseed" : "hardware"} )"_json;
-
-    cout << r() << endl;
-
-    Group rr(0,11);
-
-    for (auto i : rr)
-        cout << i << endl;
-
-    cout << rr.front() << " - " << rr.back() << endl;
-
-    auto pairpot = Potential::Coulomb() + Potential::HardSphere();
-
-    Space<Tparticle, Geometry::Cuboid> spc; 
-    TranslateMove<decltype(spc)> mv;
-
-    //auto pot = ppot<Potential::Coulomb, Potential::HardSphere>();
-    //cout << "pot sum = " << pot(p,p,45) << endl;
-
-    //analyse<Tparticle> a;
-    //a.sample(p);
-}
 

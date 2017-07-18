@@ -8,14 +8,6 @@ project(neofaunus)
 
 include(ExternalProject)
 
-ExternalProject_Add( cpp11range
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    GIT_REPOSITORY "https://github.com/klmr/cpp11-range.git"
-    GIT_TAG "master"
-    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-ExternalProject_Get_Property(cpp11range source_dir)
-set(Cpp11RangeIncludeDir ${source_dir})
-
 ExternalProject_Add( modernjson
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/nlohmann/json/releases/download/v2.1.1/json.hpp"
@@ -23,7 +15,14 @@ ExternalProject_Add( modernjson
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(modernjson source_dir)
 set(JSONIncludeDir ${source_dir}/../../src/)
-message(${JSONIncludeDir})
+
+ExternalProject_Add( cpp11range
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    GIT_REPOSITORY "https://github.com/klmr/cpp11-range.git"
+    GIT_TAG "master"
+    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
+ExternalProject_Get_Property(cpp11range source_dir)
+set(Cpp11RangeIncludeDir ${source_dir})
 
 ExternalProject_Add( range
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
@@ -33,6 +32,13 @@ ExternalProject_Add( range
 ExternalProject_Get_Property(range source_dir)
 set(RangeIncludeDir ${source_dir})
 
+ExternalProject_Add( range-v3
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    URL "https://github.com/ericniebler/range-v3/archive/0.3.0.tar.gz"
+    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
+ExternalProject_Get_Property(range-v3 source_dir)
+set(RangeV3IncludeDir ${source_dir}/include)
+
 ExternalProject_Add( eigen
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "http://bitbucket.org/eigen/eigen/get/3.3.4.tar.gz"
@@ -41,8 +47,31 @@ ExternalProject_Add( eigen
 ExternalProject_Get_Property(eigen source_dir)
 set(EigenIncludeDir ${source_dir})
 
-add_executable(point src/point.cpp)
-add_dependencies(point modernjson range eigen)
-target_include_directories(point PRIVATE
-    ${EigenIncludeDir} ${RangeIncludeDir} ${JSONIncludeDir})
+ExternalProject_Add( doctest
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.1/doctest/doctest.h"
+    DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
+    CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
+ExternalProject_Get_Property(doctest source_dir)
+set(DocTestIncludeDir ${source_dir}/../../src/)
+
+ExternalProject_Add( catch
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    URL "https://github.com/philsquared/Catch/releases/download/v1.9.6/catch.hpp"
+    DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
+    CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
+ExternalProject_Get_Property(catch source_dir)
+set(CatchIncludeDir ${source_dir}/../../src/)
+
+set_target_properties(range PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set_target_properties(range-v3 PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set_target_properties(cpp11range PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set_target_properties(catch PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+add_definitions(-DDOCTEST_CONFIG_DISABLE)
+include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir})
+
+add_executable(tests src/tests.cpp)
+add_dependencies(tests modernjson doctest eigen)
+
 

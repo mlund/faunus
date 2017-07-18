@@ -108,6 +108,22 @@ namespace Faunus {
     }
     using namespace ChemistryUnits;
 
+    TEST_CASE("Check unit conversion and string literals")
+    {
+        using doctest::Approx;
+        pc::temperature = 298.15_K;
+        CHECK( 1.0e-10_m == 1 );
+        CHECK( (1/1.0_Debye) == Approx(4.8032) );
+        CHECK( 1.0_Debye == Approx( 3.33564e-30_Cm ) );
+        CHECK( 1.0_Debye == Approx( 0.20819434_eA ) );
+        CHECK( 360.0_deg == Approx( 2*std::acos(-1) ) );
+        CHECK( (1.0_mol / 1.0_liter) == Approx( 1.0_molar ) );
+        CHECK( 1.0_bar == Approx( 0.987_atm ) );
+        CHECK( 1.0_atm == Approx( 101325._Pa) );
+        CHECK( 1.0_kT == Approx( 2.47897_kJmol ) );
+        CHECK( 1.0_hartree == Approx( 2625.499_kJmol ) );
+    }
+
     /**
      * @brief Class for handling random number generation
      *
@@ -168,6 +184,29 @@ namespace Faunus {
         }
     } //!< Tjson to Random conversion
 
+    TEST_CASE("Random")
+    {
+        Random slump;
+        int min=10, max=0, N=1e6;
+        double x=0;
+        for (int i=0; i<N; i++) {
+            int j = slump.range(0,9);
+            if (j<min) min=j;
+            if (j>max) max=j;
+            x+=j;
+        }
+        CHECK( min==0 );
+        CHECK( max==9 );
+        CHECK( std::fabs(x/N) == doctest::Approx(4.5).epsilon(0.01) );
+
+        Random r1 = R"( {"randomseed" : "hardware"} )"_json; // non-deterministic seed
+        Random r2; // default is a deterministic seed
+        CHECK( r1() != r2() );
+
+        Random r3 = Tjson(r1); // r1 --> json --> r2
+        CHECK( r1() == doctest::Approx(r3()) );
+    }
+
     /**
      * @brief Generate random unit vector
      *
@@ -192,6 +231,9 @@ namespace Faunus {
         }
         while ( r2 > 1 );
         return p / std::sqrt(r2);
+    }
+
+    TEST_CASE("ranunit") {
     }
 
     /** @brief Base class for particle properties */
@@ -341,17 +383,19 @@ namespace Faunus {
 
     TEST_CASE("Particle") {
         Particle<Dipole,Cigar,Radius> p1, p2;
-        p1.pos={1,2,3};
-        p1.charge=-0.8;
-        p1.mu={0,0,1};
-        p1.mulen = 2.8;
-        p1.sclen = 0.5;
-        p1.radius = 7.1;
+        p1.id = 100;
         p1.mw = 0.2;
+        p1.pos = {1,2,3};
+        p1.charge = -0.8;
+        p1.radius = 7.1;
+        p1.mu = {0,0,1};
+        p1.mulen = 2.8;
+        p1.scdir = {0.1, 0.3, 1.9};
+        p1.sclen = 0.5;
 
-        Tjson j = p1; // p1 --> json
-        p2 = j;       // json --> p2
-        CHECK( j == Tjson(p2) ); // identical json objects?
+        p2 = Tjson(p1); // p1 --> json --> p2
+        CHECK( Tjson(p1) == Tjson(p2) ); // identical json objects?
+        CHECK( p2.id == 100 );
     }
 
     /** @brief Simulation geometries and related operations */
@@ -499,6 +543,12 @@ namespace Faunus {
                 }
 
         };
+
+        TEST_CASE("Cylinder") {
+            Cylinder c;
+            c.setRadius( 1.0, 1/pc::pi );
+            CHECK( c.getVolume() == doctest::Approx( 1.0 ) );
+        }
 
         /** @brief Spherical cell */
         class Sphere : public PBC<false,false,false> {
@@ -662,6 +712,124 @@ namespace Faunus {
                 }
         };
     }//end of namespace potential
+
+    template<typename T>
+        void swap_to_back(T first, T last, T end) {
+            while (end-- > last)
+                std::iter_swap(first++,end);
+        } //!< Move range [first:last] to [end] by swapping elements
+
+    TEST_CASE("swap_to_back") {
+        typedef std::vector<int> T;
+        T v = {1,2,3,4};
+
+        swap_to_back( v.begin(), v.end(), v.end() );
+        CHECK( v==T({1,2,3,4}) );
+
+        std::sort(v.begin(), v.end());
+        swap_to_back( v.begin()+1, v.begin()+3, v.end() );
+        CHECK( v==T({1,4,3,2}) );
+    }
+
+    template<class T>
+        struct IterRange : std::pair<T,T> { 
+            using std::pair<T,T>::pair;
+            T& begin() { return this->first; }
+            T& begin() const { return this->first; }
+            T& end() { return this->second; }
+            T& end() const { return this->second; }
+            size_t size() const { return std::distance(this->first, this->second); }
+        };
+
+    /**
+     * @brief Turns a pair of iterators into an elastic range
+     *
+     * By elastic, we mean a range where elements can be deactivated
+     * and later activated. Partial (de)activating leads to shuffling
+     * and the order initial order is not maintained. However, when
+     * de-activating the entire range, the original state is restored
+     * upon activation.
+     */
+    template<class Tpvec>
+        class ElasticRange {
+            private:
+                typedef typename Tpvec::iterator iter;
+                typedef typename Tpvec::iterator const_iter;
+                iter _begin, _end, _trueend;
+
+                struct iter_pair : std::pair<iter,iter> { 
+                    using std::pair<iter,iter>::pair;
+                    iter begin() { return this->first; }
+                    iter end() { return this->second; }
+                    size_t size() const { return std::distance(this->first, this->second); }
+                };
+
+            public:
+
+                void set(iter begin, iter end) {
+                    _begin = begin;
+                    _end = end;
+                    _trueend = end;
+                }
+
+                ElasticRange(iter begin, iter end) { set(begin, end); }
+
+                iter& begin() { return _begin; }
+                iter& end() { return _end; }
+
+                const_iter& begin() const { return _begin; }
+                const_iter& end() const { return _end; }
+
+                size_t size() const { return std::distance(_begin, _end); }
+                size_t capacity() const { return std::distance(_begin, _trueend); }
+
+                auto inactive() const { return iter_pair{_end, _trueend}; }
+
+                Tpvec deactivate(iter first, iter last) {
+                    size_t n = std::distance(first,last);
+                    assert(n>=0);
+                    assert(first>=_begin && last<=_end);
+                    Tpvec v(first, last);
+                    std::rotate( _begin, last, _end );
+                    _end -= n;
+                    assert(size() + inactive().size() == capacity());
+                    return v;
+                } //!< Deactivate particles by moving to end and reduzing effective size (complexity: order N)
+
+                void activate(iter first, iter last) {
+                    size_t n = std::distance(first,last);
+                    std::rotate( _end, first, _trueend );
+                    _end += n;
+                    assert(size() + inactive().size() == capacity());
+                } //!< Activate previously deactivated elements (complexity: order N)
+        };
+
+    TEST_CASE("ElasticRange") {
+        std::vector<int> v = {10,20,30,40,50,60};
+        ElasticRange<decltype(v)> r(v.begin(), v.end());
+        CHECK( r.size() == 6 );
+        CHECK( r.size() == r.capacity() );
+        *r.begin() += 1;
+        CHECK( v[0]==11 );
+
+        r.deactivate( r.begin(), r.end() ); 
+        CHECK( r.size() == 0 );
+        CHECK( r.capacity() == 6 );
+        CHECK( r.begin() == r.end() );
+
+        r.activate( r.inactive().begin(), r.inactive().end() );
+        CHECK( r.size() == 6) ;
+        CHECK( std::is_sorted(r.begin(), r.end() ) == true );
+
+        r.deactivate( r.begin()+1, r.begin()+3 ); 
+        CHECK( r.size() == 4 );
+        CHECK( std::find(r.begin(), r.end(), 20)==r.end() );
+        CHECK( std::find(r.begin(), r.end(), 30)==r.end() );
+    }
+
+    template<class Tpvec>
+        class Group : public ElasticRange<Tpvec> {
+        };
 
     /**
      * @brief Class for specifying changes to Space
@@ -853,97 +1021,6 @@ namespace Faunus {
                 }
 
         };
-
-    template<typename T>
-        void swap_to_back(T first, T last, T end) {
-            while (end-- > last)
-                std::iter_swap(first++,end);
-        } //!< Move range [first:last] to [end] by swapping elements
-
-    TEST_CASE("swap_to_back") {
-        typedef std::vector<int> T;
-        T v = {1,2,3,4};
-
-        swap_to_back( v.begin(), v.end(), v.end() );
-        CHECK( v==T({1,2,3,4}) );
-
-        std::sort(v.begin(), v.end());
-        swap_to_back( v.begin()+1, v.begin()+3, v.end() );
-        CHECK( v==T({1,4,3,2}) );
-    }
-
-    /**
-     * @brief Turns a pair of iterators into an elastic range
-     */
-    template<class Tpvec>
-        class ElasticRange {
-            private:
-                typedef typename Tpvec::iterator iter;
-                typedef typename Tpvec::iterator const_iter;
-                iter _begin, _end, _trueend;
-
-                struct iter_pair : std::pair<iter,iter> { 
-                    using std::pair<iter,iter>::pair;
-                    iter begin() { return this->first; }
-                    iter end() { return this->second; }
-                    size_t size() const { return std::distance(this->first, this->second); }
-                };
-
-            public:
-
-                ElasticRange(iter begin, iter end) : _begin(begin), _end(end), _trueend(end) {}
-
-                iter& begin() { return _begin; }
-                iter& end() { return _end; }
-
-                const_iter& begin() const { return _begin; }
-                const_iter& end() const { return _end; }
-
-                size_t size() const { return std::distance(_begin, _end); }
-                size_t capacity() const { return std::distance(_begin, _trueend); }
-
-                auto inactive() const { return iter_pair{_end, _trueend}; }
-
-                Tpvec deactivate(iter first, iter last) {
-                    size_t n = std::distance(first,last);
-                    assert(n>=0);
-                    assert(first>=_begin && last<=_end);
-                    Tpvec v(first, last);
-                    std::rotate( _begin, last, _end );
-                    _end -= n;
-                    assert(size() + inactive().size() == capacity());
-                    return v;
-                } //!< Deactivate particles by moving to end and reduzing effective size (complexity: order N)
-
-                void activate(iter first, iter last) {
-                    size_t n = std::distance(first,last);
-                    std::rotate( _end, first, _trueend );
-                    _end += n;
-                    assert(size() + inactive().size() == capacity());
-                } //!< Activate previously deactivated elements (complexity: order N)
-        };
-
-    TEST_CASE("ElasticRange") {
-        std::vector<int> v = {10,20,30,40,50,60};
-        ElasticRange<decltype(v)> r(v.begin(), v.end());
-        CHECK( r.size() == 6 );
-        CHECK( r.size() == r.capacity() );
-        *r.begin() += 1;
-        CHECK( v[0]==11 );
-
-        r.deactivate( r.begin()+1, r.begin()+3 ); 
-        CHECK( r.size() == 4 );
-        CHECK( std::find(r.begin(), r.end(), 20)==r.end() );
-        CHECK( std::find(r.begin(), r.end(), 30)==r.end() );
-
-        r.deactivate( r.begin(), r.end() ); 
-        CHECK( r.size() == 0 );
-        CHECK( r.capacity() == 6 );
-        CHECK( r.begin() == r.end() );
-
-        r.activate( r.inactive().begin(), r.inactive().end()-1 );
-        CHECK( r.size() == 5) ;
-    }
 
 }//end of faunus namespace
 

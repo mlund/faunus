@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 #include <map>
 #include <tuple>
@@ -9,10 +11,7 @@
 #include <random>
 #include <Eigen/Geometry>
 #include <json.hpp>
-#include <doctest.h>
-//#include <range.hpp>
-
-//#include "particles.h"
+#include <range/v3/all.hpp>
 
 // Eigen<->JSON (de)serialization
 namespace Eigen {
@@ -108,6 +107,7 @@ namespace Faunus {
     }
     using namespace ChemistryUnits;
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("Check unit conversion and string literals")
     {
         using doctest::Approx;
@@ -123,6 +123,7 @@ namespace Faunus {
         CHECK( 1.0_kT == Approx( 2.47897_kJmol ) );
         CHECK( 1.0_hartree == Approx( 2625.499_kJmol ) );
     }
+#endif
 
     /**
      * @brief Class for handling random number generation
@@ -135,12 +136,19 @@ namespace Faunus {
      *     Random r2 = Tjson(r1);                               // copy random engine state from r1
      *     Random r3 = R"( {"randomseed" : "hardware"} )"_json; // non-deterministic seed
      * ```
+     *
+     * @warning
+     * Random number seeding in C++11 has issues, probably not important for molecular
+     * simulations. More here:
+     * https://probablydance.com/2016/12/29/random_seed_seq-a-small-utility-to-properly-seed-random-number-generators-in-c/
      */
     struct Random {
         std::mt19937 engine; //!< Random number engine used for all operations
         std::uniform_real_distribution<double> dist01; //!< Uniform real distribution [0,1)
 
         Random() : dist01(0,1) {}
+
+        void seed() { engine = std::mt19937(std::random_device()()); }
 
         double operator()() { return dist01(engine); } //!< Double in uniform range [0,1)
 
@@ -151,7 +159,7 @@ namespace Faunus {
         } //!< Integer in uniform range [min:max]
 
         template<class Titer>
-            Titer element( const Titer &beg, const Titer &end )
+            Titer sample(const Titer &beg, const Titer &end)
             {
                 auto i = beg;
                 std::advance(i, range(0, std::distance(beg, end) - 1));
@@ -184,6 +192,7 @@ namespace Faunus {
         }
     } //!< Tjson to Random conversion
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("Random")
     {
         Random slump;
@@ -202,10 +211,17 @@ namespace Faunus {
         Random r1 = R"( {"randomseed" : "hardware"} )"_json; // non-deterministic seed
         Random r2; // default is a deterministic seed
         CHECK( r1() != r2() );
+        Random r3 = Tjson(r1); // r1 --> json --> r3
+        CHECK( r1() == r3() );
 
-        Random r3 = Tjson(r1); // r1 --> json --> r2
-        CHECK( r1() == doctest::Approx(r3()) );
+        // check if random_device works
+        Random a, b;
+        CHECK( a() == b() );
+        a.seed();
+        b.seed();
+        CHECK( a() != b() );
     }
+#endif
 
     /**
      * @brief Generate random unit vector
@@ -233,8 +249,10 @@ namespace Faunus {
         return p / std::sqrt(r2);
     }
 
-    TEST_CASE("ranunit") {
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] ranunit") {
     }
+#endif
 
     /** @brief Base class for particle properties */
     struct ParticlePropertyBase {
@@ -381,6 +399,7 @@ namespace Faunus {
             from_json<Properties...>(j, dynamic_cast<Properties&>(a)...);
         }
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("Particle") {
         Particle<Dipole,Cigar,Radius> p1, p2;
         p1.id = 100;
@@ -397,6 +416,7 @@ namespace Faunus {
         CHECK( Tjson(p1) == Tjson(p2) ); // identical json objects?
         CHECK( p2.id == 100 );
     }
+#endif
 
     /** @brief Simulation geometries and related operations */
     namespace Geometry {
@@ -544,11 +564,13 @@ namespace Faunus {
 
         };
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("Cylinder") {
             Cylinder c;
             c.setRadius( 1.0, 1/pc::pi );
             CHECK( c.getVolume() == doctest::Approx( 1.0 ) );
         }
+#endif
 
         /** @brief Spherical cell */
         class Sphere : public PBC<false,false,false> {
@@ -673,63 +695,26 @@ namespace Faunus {
                 }
         }
 
-    namespace Potential {
-
-        struct PairPotentialBase {};
-
-        template<class T1, class T2>
-            struct CombinedPairPotential : public PairPotentialBase {
-                T1 first;  //!< First pair potential of type T1
-                T2 second; //!< Second pair potential of type T2
-
-                CombinedPairPotential(const T1 &a, const T2 &b) : first(a), second(b) {}
-
-                template<class Tparticle>
-                    inline double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        return first(a,b,r) + second(a,b,r);
-                    }
-            };
-
-        template<class T1, class T2,
-            class = typename std::enable_if<std::is_base_of<PairPotentialBase,T1>::value>::type,
-            class = typename std::enable_if<std::is_base_of<PairPotentialBase,T2>::value>::type>
-                CombinedPairPotential<T1,T2>& operator+(const T1 &pot1, const T2 &pot2) {
-                    return *(new CombinedPairPotential<T1,T2>(pot1,pot2));
-                } //!< Add two pair potentials
-
-        struct Coulomb : public PairPotentialBase {
-            double lB; //!< Bjerrum length
-            template<typename... T>
-                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
-                    return 2;
-                }
-        };
-
-        struct HardSphere : public PairPotentialBase {
-            template<typename... T>
-                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r2) const {
-                    return 3;
-                }
-        };
-    }//end of namespace potential
 
     template<typename T>
-        void swap_to_back(T first, T last, T end) {
+        void inline swap_to_back(T first, T last, T end) {
             while (end-- > last)
                 std::iter_swap(first++,end);
         } //!< Move range [first:last] to [end] by swapping elements
 
-    TEST_CASE("swap_to_back") {
-        typedef std::vector<int> T;
-        T v = {1,2,3,4};
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] swap_to_back") {
+        typedef std::vector<int> _T;
+        _T v = {1,2,3,4};
 
         swap_to_back( v.begin(), v.end(), v.end() );
-        CHECK( v==T({1,2,3,4}) );
+        CHECK( v==_T({1,2,3,4}) );
 
         std::sort(v.begin(), v.end());
         swap_to_back( v.begin()+1, v.begin()+3, v.end() );
-        CHECK( v==T({1,4,3,2}) );
+        CHECK( v==_T({1,4,3,2}) );
     }
+#endif
 
     template<class T>
         struct IterRange : std::pair<T,T> { 
@@ -739,18 +724,23 @@ namespace Faunus {
             const T& begin() const { return this->first; }
             const T& end() const { return this->second; }
             size_t size() const { return std::distance(this->first, this->second); }
+            void resize(size_t n) { end() += n; }
             bool empty() const { return this->first==this->second; }
             void clear() { this->second = this->first; }
+            std::pair<int,int> to_index(T reference) {
+                return {std::distance(reference, begin()), std::distance(reference, end())};
+            } //!< Returns index pair relative to reference
         }; //!< Turns a pair of iterators into a range
 
     /**
      * @brief Turns a pair of iterators into an elastic range
      *
-     * By elastic, we mean a range where elements can be deactivated
-     * and later activated without inserting/erasing. Partial (de)activating leads to shuffling
-     * and the initial order is lost. However, when
-     * de-activating the entire range, the original state is restored
-     * upon activation.
+     * The elastic range is a range where elements can be deactivated
+     * and later activated without inserting/erasing:
+     *
+     * - Just deactivated elements are moved to `end()` and can be retrieved from there.
+     * - Just activated elements are placed at `end()-n`.
+     * - The true size the range is given by `capacity()`
      */
     template<class T>
         class ElasticRange : public IterRange<T> {
@@ -768,25 +758,24 @@ namespace Faunus {
 
                 auto inactive() const { return IterRange<T>({ end(), _trueend}); }
 
-                std::vector<Tvalue> deactivate(T first, T last) {
+                void deactivate(T first, T last) {
                     size_t n = std::distance(first,last);
                     assert(n>=0);
                     assert(first>=begin() && last<=end() );
-                    std::vector<Tvalue> v(first, last);
                     std::rotate( begin(), last, end() );
                     end() -= n;
                     assert(size() + inactive().size() == capacity());
-                    return v;
-                } //!< Deactivate particles by moving to end and reduzing effective size (complexity: order N)
+                } //!< Deactivate particles by moving to end, reducing the effective size
 
                 void activate(T first, T last) {
                     size_t n = std::distance(first,last);
                     std::rotate( end(), first, _trueend );
                     end() += n;
                     assert(size() + inactive().size() == capacity());
-                } //!< Activate previously deactivated elements (complexity: order N)
+                } //!< Activate previously deactivated elements
         };
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("ElasticRange") {
         std::vector<int> v = {10,20,30,40,50,60};
         ElasticRange< typename std::vector<int>::iterator> r(v.begin(), v.end());
@@ -803,27 +792,62 @@ namespace Faunus {
         CHECK( r.begin() == r.end() );
 
         r.activate( r.inactive().begin(), r.inactive().end() );
-        CHECK( r.size() == 6) ;
-        CHECK( std::is_sorted(r.begin(), r.end() ) == true );
+        CHECK( r.size() == 6);
+        CHECK( std::is_sorted(r.begin(), r.end() ) == true ); // back to original
 
-        auto out = r.deactivate( r.begin()+1, r.begin()+3 ); 
+        r.deactivate( r.begin()+1, r.begin()+3 ); 
         CHECK( r.size() == 4 );
         CHECK( std::find(r.begin(), r.end(), 20)==r.end() );
         CHECK( std::find(r.begin(), r.end(), 30)==r.end() );
-        CHECK( out.size() == 2);
-        CHECK( std::find(out.begin(), out.end(), 20)!=r.end() );
-        CHECK( std::find(out.begin(), out.end(), 30)!=r.end() );
+        CHECK( *r.end()==20); // deactivated elements can be retrieved from `end()`
+        CHECK( *(r.end()+1)==30);
+
+        auto ipair = r.to_index( v.begin() );
+        CHECK( ipair.first == 0);
+        CHECK( ipair.second == 4);
+
+        r.activate( r.end(), r.end()+2 );
+        CHECK( *(r.end()-2)==20); // activated elements can be retrieved from `end()-n`
+        CHECK( *(r.end()-1)==30);
+        CHECK( r.size() == 6);
     }
+#endif
 
     template<class Titer>
         struct Group : public ElasticRange<Titer> {
             typedef ElasticRange<Titer> base;
+            typedef typename base::Tvalue Tvalue;
             int id=-1;           //!< Type id
             bool atomic=false;   //!< Is it an atomic group?
             Point cm={0,0,0};    //!< Mass center
             Group(Titer begin, Titer end) : base(begin,end) {}
 
+            auto filter( std::function<bool(Tvalue&)> f ) const {
+                return *this | ranges::view::filter(f); 
+            }
+
+            Group& operator=(const Group &o) {
+                if (this->capacity() != o.capacity())
+                    throw std::runtime_error("capacity mismatch");
+                this->resize(o.size());
+                id = o.id;
+                atomic = o.atomic;
+                cm = o.cm;
+                return *this;
+            }
         };
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] Group") {
+        struct particle { int id; };
+        std::vector<particle> p = { {1}, {2}, {1}, {4}, {1} };
+        Group<typename std::vector<particle>::iterator> g(p.begin(), p.end());
+
+        auto slice = g.filter( [](particle &i){return i.id==1;} );
+
+        CHECK( std::distance(slice.begin(), slice.end()) == 3 );
+    }
+#endif
 
     /**
      * @brief Class for specifying changes to Space
@@ -834,18 +858,28 @@ namespace Faunus {
     template<class Tpvec>
         struct Change
         {
+
             double dV = 0;     //!< Volume change (in different directions)
-            std::map<int, std::vector<int>> moved;  //!< Moved particles, grouped by group index
+
+            struct data {
+                typedef std::pair<int,int> Tindexpair;
+                bool all=false;
+                std::vector<int> index;
+                std::vector<Tindexpair> activated, deactivated;
+            };
+
+            std::map<int, data> groups;
 
             void clear()
             {
-                moved.clear();
+                dV = 0;
+                groups.clear();
                 assert(empty());
             } //!< Clear all change data
 
             bool empty() const
             {
-                if ( moved.empty())
+                if ( groups.empty())
                     if ( std::fabs(dV)>0 )
                         return true;
                 return false;
@@ -888,24 +922,56 @@ namespace Faunus {
                     auto i = findIndex(v, id);
                     if (i.empty())
                         return -1;
-                    return *r.element(i.begin(), i.end());
+                    return *r.sample(i.begin(), i.end());
                 } //!< find index to random element of `id`. Returns -1 if not found.
-
-            void insert(int molid, const Tpvec&) {
-            }
 
             void sync(const Tspace &o, const Tchange &change) {
 
-                if (std::fabs(change.dV)>0)
-                    geo = o.geo;
+                for (auto &m : change.groups) {
 
-                for (auto& m : change.moved) { // loop over moved groups
-                    groups[ m.first ] = o.groups[ m.first ];
-                    for (auto i : m.second)
-                        p[i] = o.p[i];
+                    auto &gold = groups[m.first];
+                    auto &gnew = o.groups[m.first];
+
+                    gold = gnew;
+
+                    // whole group has moved
+                    if (m.second.all) {
+                        auto it = gold.begin();
+                        for (auto &i : gnew)
+                            *it++ = i;
+                        assert(it==gold.end());
+                    }
                 }
 
-            } //!< Copy differing data from other Space using Change object
+                    /*
+                    for (auto &m : change.groups) {
+                        int n=0; // total number of activated particles
+                        auto &g = groups[m.first];
+                        assert( g.size() < o.groups[m.first].size() );
+                        for (auto &rng : m.second) {
+                            auto begin = p.begin()+rng.first;
+                            auto end = p.begin()+rng.second;
+                            n += end-begin;
+                            g.activate(begin, end);
+                        }
+                        assert( g.size() == o.groups[m.first].size() );
+
+                        // activated elements end up just below end()
+                        int end = std::distance(p, g.end());
+                        for (int i=end-n; i<end; i++)
+                            p[i] = o.p[i];
+                    }
+                    if (std::fabs(change.dV)>0)
+                        geo = o.geo;
+
+                    for (auto& m : change.moved) { // loop over moved groups
+                        groups[ m.first ] = o.groups[ m.first ];
+                        for (auto i : m.second)
+                            p[i] = o.p[i];
+
+                    }*/
+
+            } //!< Copy differing data from other (o) Space using Change object
 
             void applyChange(const Tchange &change) {
                 for (auto& f : changeTriggers)
@@ -919,104 +985,6 @@ namespace Faunus {
             //    return std::find_if( atoms.begin(), atoms.end(),
             //            [&name](const AtomData &a) { return a.name==name; } );
             //} //!< Iterator to AtomData with `name` -- `end()` if not found
-        };
-
-    /**
-     * @brief Nonbonded energy using a pair-potential
-     */
-    template<typename Tspace, typename Tpairpot>
-        struct Nonbonded {
-            Tpairpot pairpot;
-            double energy(const Tspace &spc, const typename Tspace::Change &change) {
-                double u=0;
-
-                for (auto& m : change.moved()) {
-                    // moved<->moved
-                    for (auto& n : change.moved())
-                        if (n.first>m.first)
-                            for (auto& i : m.second)
-                                for (auto& j : n.second)
-                                    u+=pairpot( spc.p[i], spc.p[j],
-                                            spc.geo.vdist( spc.p[i].pos, spc.p[j].pos) );
-
-                    // internally in moved
-                    if ( spc.groups[m.first].isatomic
-                            || (m.second.size()>0 && m.second.size!=spc.groups[m.first].size() ) )
-                        for (int i=0; i<(int)m.second.size()-1; i++)
-                            for (int j=i+1; j<(int)m.second.size(); j++)
-                                u+=pairpot( spc.p[i], spc.p[j],
-                                        spc.geo.vdist( spc.p[i].pos, spc.p[j].pos) );
-
-                    // moved<->static
-                    for (auto& i : m.second)
-                        for (int j=0; j<(int)spc.p.size(); j++) // atom index, all
-                            if (i!=j) // inner loop conditionals are bad...
-                                u+=pairpot( spc.p[i], spc.p[j],
-                                        spc.geo.vdist( spc.p[i].pos, spc.p[j].pos) );
-                }
-                return u;
-            }
-        };
-
-    template<typename Tspace>
-        struct TranslateMove {
-            typename Tspace::Tchange change;
-            Random slump;
-            std::vector<int> mollist; // list of molecule id to pick from
-            Tspace spc, trial;
-
-            void move(Tspace &spc) {
-                assert(!mollist.empty());
-
-                change.clear();
-
-                int molid = *slump.element( mollist.begin(), mollist.end() ); // random molecule id
-                int igroup = trial.random(trial.groups, molid, slump); // random group index
-                if (igroup>-1)
-                    if (!trial.g[igroup].empty()) {
-                        int iatom = trial.g[igroup].random(slump);
-
-                        trial.p[iatom].pos += {1,1,1};
-                        change.moved[igroup].push_back(iatom);
-                    }
-
-                auto pairpot = Potential::Coulomb() + Potential::HardSphere();
-                Nonbonded<Tspace,decltype(pairpot)> pot;
-                pot.pairpot = pairpot;
-                double du = pot.energy(spc, change);
-            }
-
-            void accept() {
-                spc.sync(trial, change);
-            }
-
-            void reject() {
-                trial.sync(spc, change);
-            }
-        };
-
-    template<class Tspace>
-        class MCSimulation {
-            private:
-                Tspace spc, backup;
-                TranslateMove<Tspace> mv;
-                //Propagator mv;
-                //Reporter analyse;
-
-            public:
-                MCSimulation() {
-                }
-
-                void move() {
-                    typename Tspace::Tchange change;
-                    // make change to trial
-                    //std::pair<double> u = pot.energyChange( spc, trial, change );
-                    //if (metropolis( u.second-u.first ) )
-                    //    spc.sync( trial, change );
-                    //else
-                    //    trial.sync( spc, change );
-                }
-
         };
 
 }//end of faunus namespace

@@ -224,6 +224,37 @@ namespace Faunus {
 #endif
 
     /**
+     * @brief Convert cartesian- to spherical-coordinates
+     * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$.
+     */
+    inline Point xyz2rtp(const Point &p, const Point &origin={0,0,0}) {
+        Point xyz = p - origin;
+        double radius = xyz.norm();
+        return {
+                radius,
+                std::atan2( xyz.y(), xyz.x() ),
+                std::acos( xyz.z()/radius) };
+    }
+
+    /**
+     * @brief Convert spherical- to cartesian-coordinates
+     * @param origin The origin to be added (optional)
+     *
+     * @note Input \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$, and output (x,y,z).
+     */
+    Point rtp2xyz(const Point &rtp, const Point &origin = {0, 0, 0}) {
+        return origin + Point(
+                rtp.x() * std::cos(rtp.y()) * std::sin(rtp.z()),
+                rtp.x() * std::sin(rtp.y()) * std::sin(rtp.z()),
+                rtp.x() * std::cos(rtp.z()) );
+    }
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] spherical coordinates") {
+    }
+#endif
+ 
+    /**
      * @brief Generate random unit vector
      *
      * Based on the von Neumann method described in
@@ -242,7 +273,7 @@ namespace Faunus {
         do
         {
             for ( size_t i = 0; i < 3; ++i )
-                p(i) = 2 * rand() - 1;
+                p[i] = 2*rand()-0.5;
             r2 = p.squaredNorm();
         }
         while ( r2 > 1 );
@@ -251,6 +282,17 @@ namespace Faunus {
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] ranunit") {
+        Random r;
+        CHECK( ranunit(r).squaredNorm() == doctest::Approx(1) );
+
+        int n=1e5;
+        Point rtp(0,0,0);
+        for (int i=0; i<n; i++)
+            rtp += xyz2rtp( ranunit(r) );
+        rtp = rtp * (1.0/n);
+        CHECK( rtp.x() == doctest::Approx(1) );
+        CHECK( rtp.y() == doctest::Approx(0.326).epsilon(0.01) ); // why??
+        CHECK( rtp.z() == doctest::Approx(1.346).epsilon(0.01) ); // why??
     }
 #endif
 
@@ -304,6 +346,7 @@ namespace Faunus {
             mulen = j.at("mulen").get<double>();
             mu = j.value("mu", Point(1,0,0) );
         }
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };
 
     struct Radius : public ParticlePropertyBase {
@@ -330,6 +373,7 @@ namespace Faunus {
             sclen = j.at("sclen").get<double>();
             scdir = j.value("scdir", Point(1,0,0) );
         }
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };
 
     /** @brief Particle
@@ -380,6 +424,8 @@ namespace Faunus {
                 void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
                     _rotate<Properties...>(q, m, dynamic_cast<Properties&>(*this)...);
                 } //!< Rotate all internal coordinates if needed
+
+                EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         };
 
     template<typename... Properties>
@@ -409,12 +455,21 @@ namespace Faunus {
         p1.radius = 7.1;
         p1.mu = {0,0,1};
         p1.mulen = 2.8;
-        p1.scdir = {0.1, 0.3, 1.9};
+        p1.scdir = {-0.1, 0.3, 1.9};
         p1.sclen = 0.5;
 
         p2 = Tjson(p1); // p1 --> json --> p2
-        CHECK( Tjson(p1) == Tjson(p2) ); // identical json objects?
-        CHECK( p2.id == 100 );
+        CHECK( Tjson(p1) == Tjson(p2) ); // p1 --> json == json <-- p2 ?
+
+        CHECK( p2.id == 100);
+        CHECK( p2.mw == 0.2);
+        CHECK( p2.pos == Point(1,2,3));
+        CHECK( p2.charge == -0.8);
+        CHECK( p2.radius == 7.1);
+        CHECK( p2.mu == Point(0,0,1));
+        CHECK( p2.mulen == 2.8);
+        CHECK( p2.scdir == Point(-0.1, 0.3, 1.9));
+        CHECK( p2.sclen == 0.5);
     }
 #endif
 
@@ -743,22 +798,24 @@ namespace Faunus {
      * - The true size the range is given by `capacity()`
      */
     template<class T>
-        class ElasticRange : public IterRange<T> {
-            private:
-                T _trueend;
+        class ElasticRange : public IterRange<typename std::vector<T>::iterator> {
             public:
-                typedef typename T::value_type Tvalue;
-                using IterRange<T>::begin;
-                using IterRange<T>::end;
-                using IterRange<T>::size;
+                typedef typename std::vector<T>::iterator Titer;
+            private:
+                Titer _trueend;
+            public:
+                typedef IterRange<typename std::vector<T>::iterator> base;
+                using base::begin;
+                using base::end;
+                using base::size;
 
-                ElasticRange(T begin, T end) : IterRange<T>({begin,end}), _trueend(end) {}
+                ElasticRange(Titer begin, Titer end) : base({begin,end}), _trueend(end) {}
 
                 size_t capacity() const { return std::distance(begin(), _trueend); }
 
-                auto inactive() const { return IterRange<T>({ end(), _trueend}); }
+                auto inactive() const { return base({ end(), _trueend}); }
 
-                void deactivate(T first, T last) {
+                void deactivate(Titer first, Titer last) {
                     size_t n = std::distance(first,last);
                     assert(n>=0);
                     assert(first>=begin() && last<=end() );
@@ -767,7 +824,7 @@ namespace Faunus {
                     assert(size() + inactive().size() == capacity());
                 } //!< Deactivate particles by moving to end, reducing the effective size
 
-                void activate(T first, T last) {
+                void activate(Titer first, Titer last) {
                     size_t n = std::distance(first,last);
                     std::rotate( end(), first, _trueend );
                     end() += n;
@@ -778,7 +835,7 @@ namespace Faunus {
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("ElasticRange") {
         std::vector<int> v = {10,20,30,40,50,60};
-        ElasticRange< typename std::vector<int>::iterator> r(v.begin(), v.end());
+        ElasticRange<int> r(v.begin(), v.end());
         CHECK( r.size() == 6 );
         CHECK( r.empty() == false );
         CHECK( r.size() == r.capacity() );
@@ -813,16 +870,16 @@ namespace Faunus {
     }
 #endif
 
-    template<class Titer>
-        struct Group : public ElasticRange<Titer> {
-            typedef ElasticRange<Titer> base;
-            typedef typename base::Tvalue Tvalue;
+    template<class T>
+        struct Group : public ElasticRange<T> {
+            typedef ElasticRange<T> base;
+            typedef typename base::Titer iter;
             int id=-1;           //!< Type id
             bool atomic=false;   //!< Is it an atomic group?
             Point cm={0,0,0};    //!< Mass center
-            Group(Titer begin, Titer end) : base(begin,end) {}
+            Group(iter begin, iter end) : base(begin,end) {}
 
-            auto filter( std::function<bool(Tvalue&)> f ) const {
+            auto filter( std::function<bool(T&)> f ) const {
                 return *this | ranges::view::filter(f); 
             }
 
@@ -841,7 +898,7 @@ namespace Faunus {
     TEST_CASE("[Faunus] Group") {
         struct particle { int id; };
         std::vector<particle> p = { {1}, {2}, {1}, {4}, {1} };
-        Group<typename std::vector<particle>::iterator> g(p.begin(), p.end());
+        Group<particle> g(p.begin(), p.end());
 
         auto slice = g.filter( [](particle &i){return i.id==1;} );
 
@@ -929,47 +986,47 @@ namespace Faunus {
 
                 for (auto &m : change.groups) {
 
-                    auto &gold = groups[m.first];
-                    auto &gnew = o.groups[m.first];
+                    auto &go = groups[m.first];  // old group
+                    auto &gn = o.groups[m.first];// new group
 
-                    gold = gnew;
+                    go = gn; // sync group (*not* the actual elements)
 
                     // whole group has moved
                     if (m.second.all) {
-                        auto it = gold.begin();
-                        for (auto &i : gnew)
-                            *it++ = i;
-                        assert(it==gold.end());
+                        auto i = go.begin();
+                        for (auto &j : gn())
+                            *j++ = i;
+                        assert(i==go.end());
                     }
                 }
 
-                    /*
-                    for (auto &m : change.groups) {
-                        int n=0; // total number of activated particles
-                        auto &g = groups[m.first];
-                        assert( g.size() < o.groups[m.first].size() );
-                        for (auto &rng : m.second) {
-                            auto begin = p.begin()+rng.first;
-                            auto end = p.begin()+rng.second;
-                            n += end-begin;
-                            g.activate(begin, end);
-                        }
-                        assert( g.size() == o.groups[m.first].size() );
+                /*
+                   for (auto &m : change.groups) {
+                   int n=0; // total number of activated particles
+                   auto &g = groups[m.first];
+                   assert( g.size() < o.groups[m.first].size() );
+                   for (auto &rng : m.second) {
+                   auto begin = p.begin()+rng.first;
+                   auto end = p.begin()+rng.second;
+                   n += end-begin;
+                   g.activate(begin, end);
+                   }
+                   assert( g.size() == o.groups[m.first].size() );
 
-                        // activated elements end up just below end()
-                        int end = std::distance(p, g.end());
-                        for (int i=end-n; i<end; i++)
-                            p[i] = o.p[i];
-                    }
-                    if (std::fabs(change.dV)>0)
-                        geo = o.geo;
+            // activated elements end up just below end()
+            int end = std::distance(p, g.end());
+            for (int i=end-n; i<end; i++)
+            p[i] = o.p[i];
+            }
+            if (std::fabs(change.dV)>0)
+            geo = o.geo;
 
-                    for (auto& m : change.moved) { // loop over moved groups
-                        groups[ m.first ] = o.groups[ m.first ];
-                        for (auto i : m.second)
-                            p[i] = o.p[i];
+            for (auto& m : change.moved) { // loop over moved groups
+            groups[ m.first ] = o.groups[ m.first ];
+            for (auto i : m.second)
+            p[i] = o.p[i];
 
-                    }*/
+            }*/
 
             } //!< Copy differing data from other (o) Space using Change object
 

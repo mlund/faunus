@@ -108,7 +108,7 @@ namespace Faunus {
     using namespace ChemistryUnits;
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("Check unit conversion and string literals")
+    TEST_CASE("[Faunus] Check unit conversion and string literals")
     {
         using doctest::Approx;
         pc::temperature = 298.15_K;
@@ -193,7 +193,7 @@ namespace Faunus {
     } //!< Tjson to Random conversion
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("Random")
+    TEST_CASE("[Faunus] Random")
     {
         Random slump;
         int min=10, max=0, N=1e6;
@@ -225,7 +225,7 @@ namespace Faunus {
 
     /**
      * @brief Convert cartesian- to spherical-coordinates
-     * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$.
+     * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [-\pi,\pi) \f$, and \f$ \phi\in [0,\pi] \f$.
      */
     inline Point xyz2rtp(const Point &p, const Point &origin={0,0,0}) {
         Point xyz = p - origin;
@@ -242,11 +242,11 @@ namespace Faunus {
      *
      * @note Input \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$, and output (x,y,z).
      */
-    Point rtp2xyz(const Point &rtp, const Point &origin = {0, 0, 0}) {
-        return origin + Point(
-                rtp.x() * std::cos(rtp.y()) * std::sin(rtp.z()),
-                rtp.x() * std::sin(rtp.y()) * std::sin(rtp.z()),
-                rtp.x() * std::cos(rtp.z()) );
+    Point rtp2xyz(const Point &rtp, const Point &origin = {0,0,0}) {
+        return origin + rtp.x() * Point(
+                std::cos(rtp.y()) * std::sin(rtp.z()),
+                std::sin(rtp.y()) * std::sin(rtp.z()),
+                std::cos(rtp.z()) );
     }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -254,45 +254,57 @@ namespace Faunus {
     }
 #endif
  
-    /**
-     * @brief Generate random unit vector
-     *
-     * Based on the von Neumann method described in
-     * *Allen and Tildesley*, page 349, which ensures
-     * a uniform distribution on a unit sphere. More information
-     * about *Sphere Point Picking* can be found at
-     * [MathWorld](http://mathworld.wolfram.com/SpherePointPicking.html).
-     *
-     * @param rand Function object that takes no arguments and returns a random
-     *             float uniformly distributed in the range `[0:1[`.
-     */
-    Point ranunit( Random &rand )
+    Point ranunit_neuman( Random &rand )
     {
         Point p;
         double r2;
         do
         {
             for ( size_t i = 0; i < 3; ++i )
-                p[i] = 2*rand()-0.5;
+                p[i] = 2*rand()-1;
             r2 = p.squaredNorm();
         }
         while ( r2 > 1 );
         return p / std::sqrt(r2);
+    } //!< Random unit vector using Neuman's method
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] ranunit_neuman") {
+        Random r;
+        int n=2e5;
+        Point rtp(0,0,0);
+
+        for (int i=0; i<n; i++)
+            rtp += xyz2rtp( ranunit_neuman(r) );
+        rtp = rtp * (1.0/n);
+        CHECK( rtp.x() == doctest::Approx(1) );
+        CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
+        CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
     }
+#endif
+
+    Point ranunit( Random &rand ) {
+        double theta = 2*pc::pi*rand();
+        double phi = std::acos(2*rand()-1);
+        return {
+            std::cos(theta)*std::sin(phi),
+                std::sin(theta)*std::sin(phi),
+                std::cos(phi)
+        };
+    } //!< Random unit vector using polar coordinates
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] ranunit") {
         Random r;
-        CHECK( ranunit(r).squaredNorm() == doctest::Approx(1) );
-
-        int n=1e5;
+        int n=2e5;
         Point rtp(0,0,0);
+
         for (int i=0; i<n; i++)
             rtp += xyz2rtp( ranunit(r) );
         rtp = rtp * (1.0/n);
         CHECK( rtp.x() == doctest::Approx(1) );
-        CHECK( rtp.y() == doctest::Approx(0.326).epsilon(0.01) ); // why??
-        CHECK( rtp.z() == doctest::Approx(1.346).epsilon(0.01) ); // why??
+        CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
+        CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
     }
 #endif
 
@@ -446,7 +458,7 @@ namespace Faunus {
         }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("Particle") {
+    TEST_CASE("[Faunus] Particle") {
         Particle<Dipole,Cigar,Radius> p1, p2;
         p1.id = 100;
         p1.mw = 0.2;
@@ -620,7 +632,7 @@ namespace Faunus {
         };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-        TEST_CASE("Cylinder") {
+        TEST_CASE("[Faunus] Cylinder") {
             Cylinder c;
             c.setRadius( 1.0, 1/pc::pi );
             CHECK( c.getVolume() == doctest::Approx( 1.0 ) );
@@ -833,7 +845,7 @@ namespace Faunus {
         };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("ElasticRange") {
+    TEST_CASE("[Faunus] ElasticRange") {
         std::vector<int> v = {10,20,30,40,50,60};
         ElasticRange<int> r(v.begin(), v.end());
         CHECK( r.size() == 6 );

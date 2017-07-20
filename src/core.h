@@ -95,7 +95,7 @@ namespace Faunus {
         constexpr T operator "" _molar( T c ) { return c * 1.0_mol / 1.0_liter; } //!< molar to particle / angstrom^3
         constexpr T operator "" _mM( T c ) { return c * 1.0e-3_mol / 1.0_liter; } //!< millimolar to particle / angstrom^3
         constexpr T operator "" _rad( T a ) { return a; } //!< Radians to radians
-        constexpr T operator "" _deg( T a ) { return a * 3.14159265358979323846 / 180; } //!< Degrees to radians
+        constexpr T operator "" _deg( T a ) { return a * pc::pi / 180; } //!< Degrees to radians
         inline T operator "" _Pa( T p ) { return p / pc::kT() / 1.0_m3; } //!< Pascal to particle / angstrom^3
         inline T operator "" _atm( T p ) { return p * 101325.0_Pa; } //!< Atmosphere to particle / angstrom^3
         inline T operator "" _bar( T p ) { return p * 100000.0_Pa; } //!< Bar to particle / angstrom^3
@@ -242,7 +242,7 @@ namespace Faunus {
      *
      * @note Input \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$, and output (x,y,z).
      */
-    Point rtp2xyz(const Point &rtp, const Point &origin = {0,0,0}) {
+    inline Point rtp2xyz(const Point &rtp, const Point &origin = {0,0,0}) {
         return origin + rtp.x() * Point(
                 std::cos(rtp.y()) * std::sin(rtp.z()),
                 std::sin(rtp.y()) * std::sin(rtp.z()),
@@ -251,6 +251,16 @@ namespace Faunus {
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] spherical coordinates") {
+        using doctest::Approx;
+
+        Point sph1 = {2, 0.5, -0.3};
+        auto pnt1 = rtp2xyz(sph1); // sph --> cart
+        auto sph2 = xyz2rtp(pnt1); // cart --> sph
+
+        CHECK( pnt1.norm() == Approx(2));
+        CHECK( sph1.x() == Approx(sph2.x()));
+        //CHECK( sph1.y() == Approx(sph2.y()));
+        //CHECK( sph1.z() == Approx(sph2.z()));
     }
 #endif
  
@@ -260,7 +270,7 @@ namespace Faunus {
         double r2;
         do
         {
-            for ( size_t i = 0; i < 3; ++i )
+            for ( int i = 0; i < 3; ++i )
                 p[i] = 2*rand()-1;
             r2 = p.squaredNorm();
         }
@@ -268,45 +278,89 @@ namespace Faunus {
         return p / std::sqrt(r2);
     } //!< Random unit vector using Neuman's method
 
+    Point ranunit( Random &rand ) {
+        return rtp2xyz( {1, 2*pc::pi*rand(), std::acos(2*rand()-1)} );
+    } //!< Random unit vector using polar coordinates
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] ranunit_neuman") {
         Random r;
         int n=2e5;
         Point rtp(0,0,0);
-
         for (int i=0; i<n; i++)
             rtp += xyz2rtp( ranunit_neuman(r) );
-        rtp = rtp * (1.0/n);
+        rtp = rtp / n;
         CHECK( rtp.x() == doctest::Approx(1) );
         CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
         CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
     }
 #endif
-
-    Point ranunit( Random &rand ) {
-        double theta = 2*pc::pi*rand();
-        double phi = std::acos(2*rand()-1);
-        return {
-            std::cos(theta)*std::sin(phi),
-                std::sin(theta)*std::sin(phi),
-                std::cos(phi)
-        };
-    } //!< Random unit vector using polar coordinates
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] ranunit") {
         Random r;
         int n=2e5;
         Point rtp(0,0,0);
-
         for (int i=0; i<n; i++)
             rtp += xyz2rtp( ranunit(r) );
-        rtp = rtp * (1.0/n);
+        rtp = rtp / n;
         CHECK( rtp.x() == doctest::Approx(1) );
         CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
         CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
     }
 #endif
+
+    /**
+     * @brief Quaternion rotation routine using the Eigen library
+     */
+    struct QuaternionRotate : public std::pair<Eigen::Quaterniond, Eigen::Matrix3d> {
+
+        typedef std::pair<Eigen::Quaterniond, Eigen::Matrix3d> base;
+        using base::pair;
+        using base::first;
+        using base::second;
+
+        double angle=0; //!< Rotation angle
+
+        QuaternionRotate(double angle, Point u) { set(angle,u); };
+
+        void set(double angle, Point u) {
+            this->angle = angle;
+            u.normalize();
+            first = Eigen::AngleAxisd(angle, u);
+            second << 0, -u.z(), u.y(), u.z(), 0, -u.x(), -u.y(), u.x(), 0;
+            second =
+                Eigen::Matrix3d::Identity() + second * std::sin(angle)
+                + second * second * (1 - std::cos(angle));
+        }
+
+        Point operator()( Point a, std::function<void(Point&)> boundary = [](Point &i){}, const Point &shift={0,0,0} ) const
+        {
+            a = a - shift;
+            boundary(a);
+            a = first * a + shift;
+            boundary(a);
+            return a;
+        } //!< Rotate point w. optional PBC boundaries
+
+        auto operator()( const Eigen::Matrix3d &a ) const
+        {
+            return second * a * second.transpose();
+        } //!< Rotate matrix/tensor
+    };
+
+    TEST_CASE("[Faunus] QuaternionRotate")
+    {
+        using doctest::Approx;
+        QuaternionRotate qrot;
+        Point a = {1,0,0};
+        qrot.set( pc::pi/2, {0,1,0} ); // rotate around y-axis
+        CHECK( qrot.angle == Approx(pc::pi/2) );
+        a = qrot(a); // rot. 90 deg.
+        CHECK( a.x() == Approx(0) );
+        a = qrot(a); // rot. 90 deg.
+        CHECK( a.x() == Approx(-1) );
+    }
 
     /** @brief Base class for particle properties */
     struct ParticlePropertyBase {
@@ -345,7 +399,6 @@ namespace Faunus {
         double mulen=0;   //!< dipole moment scalar
 
         void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&) {
-            cout << "dipole rotate\n";
             mu = q * mu;
         } //!< Rotate dipole moment
 
@@ -373,7 +426,6 @@ namespace Faunus {
         Point scdir = {1,0,0};//!< Sphero-cylinder direction unit vector
 
         void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&) {
-            cout << "cigar rotate\n";
             scdir = q * scdir;
         } //!< Rotate sphero-cylinder
 
@@ -459,6 +511,7 @@ namespace Faunus {
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Particle") {
+        using doctest::Approx;
         Particle<Dipole,Cigar,Radius> p1, p2;
         p1.id = 100;
         p1.mw = 0.2;
@@ -482,11 +535,23 @@ namespace Faunus {
         CHECK( p2.mulen == 2.8);
         CHECK( p2.scdir == Point(-0.1, 0.3, 1.9));
         CHECK( p2.sclen == 0.5);
+
+        // check of all properties are rotated
+        QuaternionRotate qrot( pc::pi/2, {0,1,0} );
+        p1.mu = p1.scdir = {1,0,0};
+        p1.rotate( qrot.first, qrot.second );
+
+        CHECK( p1.mu.x() == Approx(0) );
+        CHECK( p1.mu.z() == Approx(-1) );
+        CHECK( p1.scdir.x() == Approx(0) );
+        CHECK( p1.scdir.z() == Approx(-1) );
     }
 #endif
 
     /** @brief Simulation geometries and related operations */
     namespace Geometry {
+
+        typedef std::function<void(Point&)> BoundaryFunction;
 
         struct GeometryBase {
             virtual void setVolume(double, const std::vector<double>&)=0; //!< Set volume
@@ -495,7 +560,7 @@ namespace Faunus {
             virtual Point vdist( const Point &a, const Point &b ) const=0; //!< (Minimum) distance between two points
             virtual void boundary( Point &a ) const=0; //!< Apply boundary conditions
 
-            std::function<void(Point&)> boundaryFunc; //!< Functor for boundary()
+            BoundaryFunction boundaryFunc; //!< Functor for boundary()
 
             GeometryBase() {
                 boundaryFunc = std::bind( &GeometryBase::boundary, this, std::placeholders::_1);
@@ -648,12 +713,12 @@ namespace Faunus {
 
         /** @brief Translate a particle vector by a vector */
         template<class T>
-            void translate( std::vector<T> &p, const Point &d, const std::function<void(Point&)>& boundary=[](Point&){} )
+            void translate( std::vector<T> &p, const Point &d, const BoundaryFunction& func=[](Point&){} )
             {
                 for ( auto &i : p )
                 {
                     i.pos += d;
-                    boundary(i.pos);
+                    func(i.pos);
                 }
             }
 
@@ -694,7 +759,7 @@ namespace Faunus {
      * @brief General properties for atoms
      */
     struct AtomData {
-        int id;            //!< Internal id
+        int id=-1;         //!< Internal id
         double activity=0, //!< Chemical potential (mol/l)
                charge=0,   //!< Valency (e)
                mw=1,       //!< Molecular weight (g/mol)
@@ -714,6 +779,49 @@ namespace Faunus {
             }
         throw std::runtime_error("Invalid JSON data for AtomData");
     }
+
+    template<class T>
+        void json2vector(std::vector<T> &v, const Tjson &j) {
+            if ( j.is_object() ) {
+                v.reserve( v.size() + j.size() );
+                for (auto it=j.begin(); it!=j.end(); ++it) {
+                    T d = Tjson({it.key(), it.value()});
+                    d.id = v.size();
+                    v.push_back(d);
+                }
+            }
+        }
+
+    void from_json(const Tjson& j, std::vector<AtomData> &a) {
+        json2vector(a,j);
+    } //!< Append AtomData to atom list
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] AtomData") {
+        using doctest::Approx;
+
+        Tjson j = {
+            { "atomlist",
+                {
+                    { "B", { {"mw",10.2}, {"activity",0.2}, {"q",-0.5}, {"r",2.3} } },
+                    { "A", { {"mw",20.0} } }
+                }
+            }
+        };
+
+        std::vector<AtomData> v = j["atomlist"];
+
+        CHECK(v.size()==2);
+        CHECK(v.front().id==0);
+        CHECK(v.back().id==1);
+
+        CHECK(v.back().activity==Approx(0.2_molar));
+        CHECK(v.back().charge==-0.5);
+        CHECK(v.back().mw==10.2);
+        CHECK(v.back().radius==2.3);
+        CHECK(v.back().name=="B");
+    }
+#endif
 
     /**
      * @brief General properties for molecules

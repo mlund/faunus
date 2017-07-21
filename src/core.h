@@ -1050,7 +1050,7 @@ namespace Faunus {
     }
 #endif
 
-    template<class T>
+    template<class T /** Particle type */>
         struct Group : public ElasticRange<T> {
             typedef ElasticRange<T> base;
             typedef typename base::Titer iter;
@@ -1072,7 +1072,7 @@ namespace Faunus {
                 cm = o.cm;
                 return *this;
             }
-        };
+        }; //!< Groups of particles
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Group") {

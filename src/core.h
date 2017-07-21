@@ -40,6 +40,43 @@ namespace Faunus {
     using std::cout;
     using std::endl;
 
+    struct Tensor : public Eigen::Matrix3d {
+        typedef Eigen::Matrix3d base;
+
+        Tensor() {
+            base::setZero();
+        } //!< Constructor, clear data
+
+        Tensor( double xx, double xy, double xz, double yy, double yz, double zz ) {
+            (*this) << xx, xy, xz, xy, yy, yz, xz, yz, zz;
+        } //!< Construct from input
+
+        template<typename T>
+            Tensor( const Eigen::MatrixBase<T> &other ) : base(other) {}
+
+        template<typename T>
+            Tensor &operator=( const Eigen::MatrixBase<T> &other )
+            {
+                base::operator=(other);
+                return *this;
+            }
+
+        void rotate( const base &m ) {
+            (*this) = m * (*this) * m.transpose();
+        } //!< Rotate using rotation matrix. Remove?
+        void eye() { *this = base::Identity(3, 3); }
+    }; //!< Tensor class
+
+    void to_json(nlohmann::json& j, const Tensor &t) {
+        j = { t(0,0), t(0,1), t(0,2), t(1,1), t(1,2), t(2,2) };
+    } //!< Tensor -> Json
+
+    void from_json(const nlohmann::json& j, Tensor &t) {
+        if ( j.size()!=6 || !j.is_array() )
+            throw std::runtime_error("Json->Tensor: array w. exactly six coefficients expected.");
+        t = Tensor(j[0],j[1],j[2],j[3],j[4],j[5]);
+    } //!< Json -> Tensor
+
     /** @brief Physical constants */
     namespace PhysicalConstants {
         typedef double T; //!< Float size
@@ -51,7 +88,6 @@ namespace Faunus {
                   Nav = 6.022137e23, //!< Avogadro's number [1/mol]
                   c = 299792458.0,   //!< Speed of light [m/s]
                   R = kB * Nav;      //!< Molar gas constant [J/(K*mol)] 
-
                   static T temperature=298.15; //!< Temperature (Kelvin)
                   static inline T kT() { return temperature*kB; } //!< Thermal energy (Joule)
                   static inline T lB( T epsilon_r ) {
@@ -231,7 +267,7 @@ namespace Faunus {
         Point xyz = p - origin;
         double radius = xyz.norm();
         return {
-                radius,
+            radius,
                 std::atan2( xyz.y(), xyz.x() ),
                 std::acos( xyz.z()/radius) };
     }
@@ -263,7 +299,7 @@ namespace Faunus {
         //CHECK( sph1.z() == Approx(sph2.z()));
     }
 #endif
- 
+
     Point ranunit_neuman( Random &rand )
     {
         Point p;
@@ -332,6 +368,9 @@ namespace Faunus {
             second =
                 Eigen::Matrix3d::Identity() + second * std::sin(angle)
                 + second * second * (1 - std::cos(angle));
+
+            // Quaternion can be converted to rotation matrix:
+            // second = first.toRotationMatrix()
         }
 
         Point operator()( Point a, std::function<void(Point&)> boundary = [](Point &i){}, const Point &shift={0,0,0} ) const
@@ -386,6 +425,18 @@ namespace Faunus {
             from_json<Ts...>(j, rest...);
         }
 
+    struct Radius : public ParticlePropertyBase {
+        double radius=0; //!< Particle radius
+        void to_json(Tjson &j) const override { j["r"] = radius; }
+        void from_json(const Tjson& j) override { radius = j.value("r", 0.0); }
+    }; //!< Radius property
+
+    struct Charge : public ParticlePropertyBase {
+        double charge=0; //!< Particle radius
+        void to_json(Tjson &j) const override { j["q"] = charge; }
+        void from_json(const Tjson& j) override { charge = j.value("q", 0.0); }
+    }; //!< Charge (monopole) property
+
     /** @brief Dipole properties
      *
      * Json (de)serialization:
@@ -408,19 +459,20 @@ namespace Faunus {
         }
 
         void from_json(const Tjson& j) override {
-            mulen = j.at("mulen").get<double>();
+            mulen = j.value("mulen", 0.0);
             mu = j.value("mu", Point(1,0,0) );
         }
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };
 
-    struct Radius : public ParticlePropertyBase {
-        double radius; //!< Particle radius
-        void to_json(Tjson &j) const override { j["r"] = radius; }
-        void from_json(const Tjson& j) override { radius = j.value("r", 0.0); }
-    };
+    struct Quadrupole : public ParticlePropertyBase {
+        Tensor Q;      //!< Quadrupole
+        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) { Q.rotate(m); } //!< Rotate dipole moment
+        void to_json(Tjson &j) const override { j["Q"] = Q; }
+        void from_json(const Tjson& j) override { Q = j.value("Q", Q); }
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    }; // Quadrupole property
 
-    /** @brief Sphero-cylinder properties */
     struct Cigar : public ParticlePropertyBase {
         double sclen=0;       //!< Sphero-cylinder length
         Point scdir = {1,0,0};//!< Sphero-cylinder direction unit vector
@@ -434,11 +486,11 @@ namespace Faunus {
             j["scdir"] = scdir;
         }
         void from_json(const Tjson& j) override {
-            sclen = j.at("sclen").get<double>();
+            sclen = j.value("sclen", 0.0);
             scdir = j.value("scdir", Point(1,0,0) );
         }
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    };
+    }; //!< Sphero-cylinder properties
 
     /** @brief Particle
      *
@@ -457,8 +509,8 @@ namespace Faunus {
      * --------- | ----------- | --------------------
      *  `id`     | `Particle`  |  Type id (int)
      *  `mw`     | `Particle`  |  molecular weight (g/mol)
-     *  `q`      | `Particle`  |  valency (e)
-     *  `r`      | `Radius`  |  radius (angstrom)
+     *  `q`      | `Charge`    |  valency (e)
+     *  `r`      | `Radius`    |  radius (angstrom)
      *  `mu`     | `Dipole`    |  dipole moment unit vector (array)
      *  `mulen`  | `Dipole`    |  dipole moment scalar (eA)
      *  `scdir`  | `Cigar`     |  Sphero-cylinder direction unit vector (array)
@@ -477,11 +529,9 @@ namespace Faunus {
                     }
 
             public:
-                Point pos;       //!< Particle position vector
-                int id=-1;       //!< Particle type
-                double _radius=0, //!< Particle radius
-                       charge=0, //!< Particle charge
-                       mw=0;     //!< Particle molecular weight
+                int id=-1;         //!< Particle id/type
+                double mw=0;       //!< Particle molecular weight
+                Point pos={0,0,0}; //!< Particle position vector
 
                 Particle() : Properties()... {}
 
@@ -494,25 +544,27 @@ namespace Faunus {
 
     template<typename... Properties>
         void to_json(Tjson& j, const Particle<Properties...> &a) {
-            j["q"] = a.charge; j["mw"]=a.mw;
             j["id"]=a.id;
+            j["mw"]=a.mw;
             j["pos"] = a.pos; 
             to_json<Properties...>(j, Properties(a)... );
         }
 
     template<typename... Properties>
         void from_json(const Tjson& j, Particle<Properties...> &a) {
-            a.charge = j.value<double>("q", 0.0); 
-            a.mw = j.value<double>("mw", 0.0); 
-            a.id = j.value<int>("id",-1);
-            a.pos = j.value("pos", Point(0,0,0));
+            a.id = j.value("id", a.id);
+            a.mw = j.value("mw", a.mw); 
+            a.pos = j.value("pos", a.pos);
+            a.charge = j.value("q", a.charge); 
             from_json<Properties...>(j, dynamic_cast<Properties&>(a)...);
         }
+
+    using ParticleAllProperties = Particle<Radius,Dipole,Charge,Quadrupole,Cigar>;
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Particle") {
         using doctest::Approx;
-        Particle<Dipole,Cigar,Radius> p1, p2;
+        ParticleAllProperties p1, p2;
         p1.id = 100;
         p1.mw = 0.2;
         p1.pos = {1,2,3};
@@ -522,19 +574,22 @@ namespace Faunus {
         p1.mulen = 2.8;
         p1.scdir = {-0.1, 0.3, 1.9};
         p1.sclen = 0.5;
+        p1.Q = Tensor(1,2,3,4,5,6);
 
         p2 = Tjson(p1); // p1 --> json --> p2
+
         CHECK( Tjson(p1) == Tjson(p2) ); // p1 --> json == json <-- p2 ?
 
-        CHECK( p2.id == 100);
-        CHECK( p2.mw == 0.2);
-        CHECK( p2.pos == Point(1,2,3));
-        CHECK( p2.charge == -0.8);
-        CHECK( p2.radius == 7.1);
-        CHECK( p2.mu == Point(0,0,1));
-        CHECK( p2.mulen == 2.8);
-        CHECK( p2.scdir == Point(-0.1, 0.3, 1.9));
-        CHECK( p2.sclen == 0.5);
+        CHECK( p2.id == 100 );
+        CHECK( p2.mw == 0.2 );
+        CHECK( p2.pos == Point(1,2,3) );
+        CHECK( p2.charge == -0.8 );
+        CHECK( p2.radius == 7.1 );
+        CHECK( p2.mu == Point(0,0,1) );
+        CHECK( p2.mulen == 2.8 );
+        CHECK( p2.scdir == Point(-0.1, 0.3, 1.9) );
+        CHECK( p2.sclen == 0.5 );
+        CHECK( p2.Q == Tensor(1,2,3,4,5,6) );
 
         // check of all properties are rotated
         QuaternionRotate qrot( pc::pi/2, {0,1,0} );
@@ -545,6 +600,13 @@ namespace Faunus {
         CHECK( p1.mu.z() == Approx(-1) );
         CHECK( p1.scdir.x() == Approx(0) );
         CHECK( p1.scdir.z() == Approx(-1) );
+
+        CHECK( p1.Q(0,0) == Approx(6) );
+        CHECK( p1.Q(0,1) == Approx(5) );
+        CHECK( p1.Q(0,2) == Approx(-3) );
+        CHECK( p1.Q(1,1) == Approx(4) );
+        CHECK( p1.Q(1,2) == Approx(-2) );
+        CHECK( p1.Q(2,2) == Approx(1) );
     }
 #endif
 
@@ -713,12 +775,13 @@ namespace Faunus {
 
         /** @brief Translate a particle vector by a vector */
         template<class T>
-            void translate( std::vector<T> &p, const Point &d, const BoundaryFunction& func=[](Point&){} )
+            void translate( std::vector<T> &p, const Point &d,
+                    std::function<void(Point&)> boundary = [](Point&){} )
             {
                 for ( auto &i : p )
                 {
                     i.pos += d;
-                    func(i.pos);
+                    boundary(i.pos);
                 }
             }
 
@@ -758,43 +821,38 @@ namespace Faunus {
     /**
      * @brief General properties for atoms
      */
-    struct AtomData {
-        int id=-1;         //!< Internal id
-        double activity=0, //!< Chemical potential (mol/l)
-               charge=0,   //!< Valency (e)
-               mw=1,       //!< Molecular weight (g/mol)
-               radius=0;   //!< Radius (A)
-        std::string name;  //!< Name
-    };
-
-    void from_json(const Tjson& j, AtomData& a) {
-        if ( j.is_array() )
-            if ( j.size()==2 ) {
-                a.name     = j[0].get<std::string>();
-                a.activity = j[1].value("activity", 0.0) * 1.0_molar;
-                a.charge   = j[1].value("q", 0.0);
-                a.mw       = j[1].value("mw", 1.0);
-                a.radius   = j[1].value("r", 0.0) * 1.0_angstrom;
-                return;
-            }
-        throw std::runtime_error("Invalid JSON data for AtomData");
-    }
+    template<class T>
+        struct AtomData {
+            T p;               //!< Particle with generic properties
+            std::string name;  //!< Name
+            double activity=0; //!< Chemical potential (mol/l)
+            int& id() { return p.id; } //!< Type id
+            const int& id() const { return p.id; } //!< Type id
+        };
 
     template<class T>
-        void json2vector(std::vector<T> &v, const Tjson &j) {
+        void from_json(const Tjson& j, AtomData<T>& a) {
+            if ( j.is_array() )
+                if ( j.size()==2 ) {
+                    a.name = j[0].get<std::string>();
+                    a.p = j[1];
+                    a.activity = j[1].value("activity", 0.0) * 1.0_molar;
+                    return;
+                }
+            throw std::runtime_error("Invalid JSON data for AtomData");
+        }
+
+    template<class T>
+        void from_json(const Tjson& j, std::vector<T> &v) {
             if ( j.is_object() ) {
                 v.reserve( v.size() + j.size() );
                 for (auto it=j.begin(); it!=j.end(); ++it) {
                     T d = Tjson({it.key(), it.value()});
-                    d.id = v.size();
+                    d.id() = v.size();
                     v.push_back(d);
                 }
             }
-        }
-
-    void from_json(const Tjson& j, std::vector<AtomData> &a) {
-        json2vector(a,j);
-    } //!< Append AtomData to atom list
+        } //!< Append AtomData/MoleculeData to list
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] AtomData") {
@@ -809,17 +867,20 @@ namespace Faunus {
             }
         };
 
-        std::vector<AtomData> v = j["atomlist"];
+        typedef Particle<Radius, Charge, Dipole, Cigar> T;
+        std::vector<AtomData<T>> v = j["atomlist"];
 
         CHECK(v.size()==2);
-        CHECK(v.front().id==0);
-        CHECK(v.back().id==1);
+        CHECK(v.front().id()==0);
+        CHECK(v.back().id()==1);
+
+        CHECK(v.back().name=="B");
+
+        CHECK(v.back().p.charge==-0.5);
+        CHECK(v.back().p.mw==10.2);
+        CHECK(v.back().p.radius==2.3);
 
         CHECK(v.back().activity==Approx(0.2_molar));
-        CHECK(v.back().charge==-0.5);
-        CHECK(v.back().mw==10.2);
-        CHECK(v.back().radius==2.3);
-        CHECK(v.back().name=="B");
     }
 #endif
 
@@ -828,14 +889,14 @@ namespace Faunus {
      */
     template<class Tpvec>
         struct MoleculeData {
-            int id = -1,               //!< Internal molecule id
-                Ninit = 0;             //!< Number of initial molecules
+            int id = -1;               //!< Internal molecule id
+            int Ninit = 0;             //!< Number of initial molecules
             std::string name;          //!< Molecule name
-            bool atomic=false,         //!< True if atomic group (salt etc.)
-                 rotate=true;          //!< True if molecule should be rotated upon insertion
+            bool atomic=false;         //!< True if atomic group (salt etc.)
+            bool rotate=true;          //!< True if molecule should be rotated upon insertion
             double activity=0;         //!< Chemical activity (mol/l)
-            Point insdir = {1,1,1},    //!< Insertion directions
-                  insoffset = {0,0,0}; //!< Insertion offset
+            Point insdir = {1,1,1};    //!< Insertion directions
+            Point insoffset = {0,0,0}; //!< Insertion offset
             std::vector<int> atoms;    //!< Sequence of atoms in molecule (atom id's)
             std::vector<Tpvec> conformations;           //!< Conformations of molecule
             std::discrete_distribution<> confDist;      //!< Weight of conformations
@@ -869,7 +930,6 @@ namespace Faunus {
                     m.activity = j[1].value("activity", 0.0) * 1.0_molar;
                 }
         }
-
 
     template<typename T>
         void inline swap_to_back(T first, T last, T end) {

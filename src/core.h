@@ -40,43 +40,6 @@ namespace Faunus {
     using std::cout;
     using std::endl;
 
-    struct Tensor : public Eigen::Matrix3d {
-        typedef Eigen::Matrix3d base;
-
-        Tensor() {
-            base::setZero();
-        } //!< Constructor, clear data
-
-        Tensor( double xx, double xy, double xz, double yy, double yz, double zz ) {
-            (*this) << xx, xy, xz, xy, yy, yz, xz, yz, zz;
-        } //!< Construct from input
-
-        template<typename T>
-            Tensor( const Eigen::MatrixBase<T> &other ) : base(other) {}
-
-        template<typename T>
-            Tensor &operator=( const Eigen::MatrixBase<T> &other )
-            {
-                base::operator=(other);
-                return *this;
-            }
-
-        void rotate( const base &m ) {
-            (*this) = m * (*this) * m.transpose();
-        } //!< Rotate using rotation matrix. Remove?
-        void eye() { *this = base::Identity(3, 3); }
-    }; //!< Tensor class
-
-    void to_json(nlohmann::json& j, const Tensor &t) {
-        j = { t(0,0), t(0,1), t(0,2), t(1,1), t(1,2), t(2,2) };
-    } //!< Tensor -> Json
-
-    void from_json(const nlohmann::json& j, Tensor &t) {
-        if ( j.size()!=6 || !j.is_array() )
-            throw std::runtime_error("Json->Tensor: array w. exactly six coefficients expected.");
-        t = Tensor(j[0],j[1],j[2],j[3],j[4],j[5]);
-    } //!< Json -> Tensor
-
     /** @brief Physical constants */
     namespace PhysicalConstants {
         typedef double T; //!< Float size
@@ -144,7 +107,7 @@ namespace Faunus {
     using namespace ChemistryUnits;
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] Check unit conversion and string literals")
+    TEST_CASE("[Faunus] Units and string literals")
     {
         using doctest::Approx;
         pc::temperature = 298.15_K;
@@ -158,6 +121,62 @@ namespace Faunus {
         CHECK( 1.0_atm == Approx( 101325._Pa) );
         CHECK( 1.0_kT == Approx( 2.47897_kJmol ) );
         CHECK( 1.0_hartree == Approx( 2625.499_kJmol ) );
+    }
+#endif
+
+    struct Tensor : public Eigen::Matrix3d {
+        typedef Eigen::Matrix3d base;
+
+        Tensor() {
+            base::setZero();
+        } //!< Constructor, clear data
+
+        Tensor( double xx, double xy, double xz, double yy, double yz, double zz ) {
+            (*this) << xx, xy, xz, xy, yy, yz, xz, yz, zz;
+        } //!< Construct from input
+
+        template<typename T>
+            Tensor( const Eigen::MatrixBase<T> &other ) : base(other) {}
+
+        template<typename T>
+            Tensor &operator=( const Eigen::MatrixBase<T> &other )
+            {
+                base::operator=(other);
+                return *this;
+            }
+
+        void rotate( const base &m ) {
+            (*this) = m * (*this) * m.transpose();
+        } //!< Rotate using rotation matrix. Remove?
+        void eye() { *this = base::Identity(3, 3); }
+    }; //!< Tensor class
+
+    void to_json(nlohmann::json& j, const Tensor &t) {
+        j = { t(0,0), t(0,1), t(0,2), t(1,1), t(1,2), t(2,2) };
+    } //!< Tensor -> Json
+
+    void from_json(const nlohmann::json& j, Tensor &t) {
+        if ( j.size()!=6 || !j.is_array() )
+            throw std::runtime_error("Json->Tensor: array w. exactly six coefficients expected.");
+        t = Tensor(j[0],j[1],j[2],j[3],j[4],j[5]);
+    } //!< Json -> Tensor
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] Tensor") {
+        using doctest::Approx;
+        Tensor Q1 = Tensor(1,2,3,4,5,6);
+        Tensor Q2 = Tjson(Q1); // Q1 --> json --> Q2
+        CHECK( Tjson(Q1) == Tjson(Q2) ); // Q1 --> json == json <-- Q2 ?
+        CHECK( Q2 == Tensor(1,2,3,4,5,6) );
+
+        auto m = Eigen::AngleAxisd( pc::pi/2, Point(0,1,0) ).toRotationMatrix();
+        Q1.rotate(m);
+        CHECK( Q1(0,0) == Approx(6) );
+        CHECK( Q1(0,1) == Approx(5) );
+        CHECK( Q1(0,2) == Approx(-3) );
+        CHECK( Q1(1,1) == Approx(4) );
+        CHECK( Q1(1,2) == Approx(-2) );
+        CHECK( Q1(2,2) == Approx(1) );
     }
 #endif
 

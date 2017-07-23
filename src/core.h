@@ -932,48 +932,105 @@ namespace Faunus {
      * @brief General properties for molecules
      */
     template<class Tpvec>
-        struct MoleculeData {
-            int id = -1;               //!< Internal molecule id
-            int Ninit = 0;             //!< Number of initial molecules
-            std::string name;          //!< Molecule name
-            bool atomic=false;         //!< True if atomic group (salt etc.)
-            bool rotate=true;          //!< True if molecule should be rotated upon insertion
-            double activity=0;         //!< Chemical activity (mol/l)
-            Point insdir = {1,1,1};    //!< Insertion directions
-            Point insoffset = {0,0,0}; //!< Insertion offset
-            std::vector<int> atoms;    //!< Sequence of atoms in molecule (atom id's)
-            std::vector<Tpvec> conformations;           //!< Conformations of molecule
-            std::discrete_distribution<> confDist;      //!< Weight of conformations
+        class MoleculeData {
+            private:
+                int _id=-1;
+            public:
+                int& id() { return _id; } //!< Type id
+                const int& id() const { return _id; } //!< Type id
 
-            /**
-             * @brief Store a single conformation
-             * @param vec Vector of particles
-             * @param weight Relative weight of conformation (default: 1)
-             */
-            void addConformation( const Tpvec &vec, double weight = 1 )
-            {
-                if ( !conformations.empty())
-                {     // resize weights
-                    auto w = confDist.probabilities();// (defaults to 1)
-                    w.push_back(weight);
-                    confDist = std::discrete_distribution<>(w.begin(), w.end());
+                int Ninit = 0;             //!< Number of initial molecules
+                std::string name;          //!< Molecule name
+                bool atomic=false;         //!< True if atomic group (salt etc.)
+                bool rotate=true;          //!< True if molecule should be rotated upon insertion
+                double activity=0;         //!< Chemical activity (mol/l)
+                Point insdir = {1,1,1};    //!< Insertion directions
+                Point insoffset = {0,0,0}; //!< Insertion offset
+                std::vector<int> atoms;    //!< Sequence of atoms in molecule (atom id's)
+                std::vector<Tpvec> conformations;           //!< Conformations of molecule
+                std::discrete_distribution<> confDist;      //!< Weight of conformations
+
+                /**
+                 * @brief Store a single conformation
+                 * @param vec Vector of particles
+                 * @param weight Relative weight of conformation (default: 1)
+                 */
+                void addConformation( const Tpvec &vec, double weight = 1 )
+                {
+                    if ( !conformations.empty())
+                    {     // resize weights
+                        auto w = confDist.probabilities();// (defaults to 1)
+                        w.push_back(weight);
+                        confDist = std::discrete_distribution<>(w.begin(), w.end());
+                    }
+                    conformations.push_back(vec);
+                    assert(confDist.probabilities().size() == conformations.size());
                 }
-                conformations.push_back(vec);
-                assert(confDist.probabilities().size() == conformations.size());
-            }
 
         };
+    template<class T>
+        void to_json(json& j, const MoleculeData<T> &a) {
+            auto& _j = j[a.name];
+            _j["activity"] = a.activity / 1.0_molar;
+            _j["atomic"] = a.atomic;
+            _j["id"] = a.id();
+            _j["insdir"] = a.insdir;
+            _j["insoffset"] = a.insoffset;
+        }
 
     template<class T>
-        void from_json(const json& j, MoleculeData<T>& m) {
-            if ( j.is_array() )
-                if ( j.size()==2 ) {
-                    m.name   = j[0].get<std::string>();
-                    m.Ninit  = j[1].value("Ninit", 0);
-                    m.atomic = j[1].value("atomic", false);
-                    m.activity = j[1].value("activity", 0.0) * 1.0_molar;
-                }
+        void from_json(const json& j, MoleculeData<T>& a) {
+            if (j.is_object()==false || j.size()!=1)
+                throw std::runtime_error("Invalid JSON data for AtomData");
+            for (auto it=j.begin(); it!=j.end(); ++it) {
+                a.name = it.key();
+                auto& val = it.value();
+                a.activity = val.value("activity", a.activity) * 1.0_molar;
+                a.atomic = val.value("atomic", a.atomic);
+                a.id() = val.value("id", a.id());
+                a.insdir = val.value("insdir", a.insdir);
+                a.insoffset = val.value("insoffset", a.insoffset);
+            }
         }
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] MoleculeData") {
+        using doctest::Approx;
+
+        json j = {
+            { "moleculelist",
+                {
+                    { "B",
+                        {
+                            {"activity",0.2}, {"atomic",true},
+                            {"insdir",{0.5,0,0}}, {"insoffset",{-1.1, 0.5, 10}}
+                        }
+                    },
+                    { "A", { {"atomic",false} } }
+                }
+            }
+        };
+        typedef Particle<Radius, Charge, Dipole, Cigar> T;
+        typedef MoleculeData<std::vector<T>> Tmoldata;
+
+        std::vector<Tmoldata> v = j["moleculelist"];
+
+        CHECK(v.size()==2);
+        CHECK(v.front().id()==0);
+        CHECK(v.front().name=="A"); // alphabetic order in std::map
+        CHECK(v.front().atomic==false);
+
+        MoleculeData<T> m = json(v.back()); // moldata --> json --> moldata
+
+        CHECK(m.name=="B");
+        CHECK(m.id()==1);
+        CHECK(m.activity==Approx(0.2_molar));
+        CHECK(m.atomic==true);
+        CHECK(m.insdir==Point(0.5,0,0));
+        CHECK(m.insoffset==Point(-1.1,0.5,10));
+    }
+#endif
+
 
     template<typename T>
         void inline swap_to_back(T first, T last, T end) {

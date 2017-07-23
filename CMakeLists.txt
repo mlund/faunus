@@ -56,6 +56,7 @@ include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${
 
 set(hdrs
         ${CMAKE_SOURCE_DIR}/src/average.h
+        ${CMAKE_SOURCE_DIR}/src/auxiliary.h
         ${CMAKE_SOURCE_DIR}/src/core.h
         ${CMAKE_SOURCE_DIR}/src/energy.h
         ${CMAKE_SOURCE_DIR}/src/move.h

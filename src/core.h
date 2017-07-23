@@ -36,7 +36,7 @@ namespace Eigen {
 namespace Faunus {
 
     typedef Eigen::Vector3d Point; //!< 3d vector
-    typedef nlohmann::json Tjson;  //!< Json object
+    typedef nlohmann::json json;  //!< Json object
     using std::cout;
     using std::endl;
 
@@ -165,8 +165,8 @@ namespace Faunus {
     TEST_CASE("[Faunus] Tensor") {
         using doctest::Approx;
         Tensor Q1 = Tensor(1,2,3,4,5,6);
-        Tensor Q2 = Tjson(Q1); // Q1 --> json --> Q2
-        CHECK( Tjson(Q1) == Tjson(Q2) ); // Q1 --> json == json <-- Q2 ?
+        Tensor Q2 = json(Q1); // Q1 --> json --> Q2
+        CHECK( json(Q1) == json(Q2) ); // Q1 --> json == json <-- Q2 ?
         CHECK( Q2 == Tensor(1,2,3,4,5,6) );
 
         auto m = Eigen::AngleAxisd( pc::pi/2, Point(0,1,0) ).toRotationMatrix();
@@ -181,21 +181,14 @@ namespace Faunus {
 #endif
 
     /**
-     * @brief Class for handling random number generation
-     *
-     * By default a deterministic seed is used, but a hardware
-     * or saved state can be used via json (de)serialization:
+     * Example code:
      *
      * ```{.cpp}
-     *     Random r1;                                           // deterministic seed
-     *     Random r2 = Tjson(r1);                               // copy random engine state from r1
+     *     Random r1;                                           // default deterministic seed
+     *     Random r2 = json(r1);                               // copy engine state
      *     Random r3 = R"( {"randomseed" : "hardware"} )"_json; // non-deterministic seed
+     *     Random r1.seed();                                    // non-deterministic seed
      * ```
-     *
-     * @warning
-     * Random number seeding in C++11 has issues, probably not important for molecular
-     * simulations. More here:
-     * https://probablydance.com/2016/12/29/random_seed_seq-a-small-utility-to-properly-seed-random-number-generators-in-c/
      */
     struct Random {
         std::mt19937 engine; //!< Random number engine used for all operations
@@ -220,15 +213,15 @@ namespace Faunus {
                 std::advance(i, range(0, std::distance(beg, end) - 1));
                 return i;
             } //!< Iterator to random element in container (std::vector, std::map, etc)
-    };
+    }; //!< Class for handling random number generation
 
-    void to_json(Tjson &j, const Random &r) {
+    void to_json(json &j, const Random &r) {
         std::ostringstream o;
         o << r.engine;
         j["randomseed"] = o.str();
-    } //!< Random to Tjson conversion
+    } //!< Random to json conversion
 
-    void from_json(const Tjson &j, Random &r) {
+    void from_json(const json &j, Random &r) {
         if (j.is_object()) {
             auto seed = j.value("randomseed", std::string());
             try {
@@ -245,7 +238,7 @@ namespace Faunus {
                 throw;
             }
         }
-    } //!< Tjson to Random conversion
+    } //!< json to Random conversion
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Random")
@@ -266,7 +259,7 @@ namespace Faunus {
         Random r1 = R"( {"randomseed" : "hardware"} )"_json; // non-deterministic seed
         Random r2; // default is a deterministic seed
         CHECK( r1() != r2() );
-        Random r3 = Tjson(r1); // r1 --> json --> r3
+        Random r3 = json(r1); // r1 --> json --> r3
         CHECK( r1() == r3() );
 
         // check if random_device works
@@ -319,23 +312,22 @@ namespace Faunus {
     }
 #endif
 
-    Point ranunit_neuman( Random &rand )
+    Point ranunit_neuman(Random &rand)
     {
-        Point p;
         double r2;
-        do
-        {
-            for ( int i = 0; i < 3; ++i )
-                p[i] = 2*rand()-1;
+        Point p;
+        do {
+            p = {rand()-0.5, rand()-0.5, rand()-0.5};
             r2 = p.squaredNorm();
-        }
-        while ( r2 > 1 );
+        } while ( r2 > 0.25 );
         return p / std::sqrt(r2);
-    } //!< Random unit vector using Neuman's method
+    } //!< Random unit vector using Neuman's method ("sphere picking")
 
-    Point ranunit( Random &rand ) {
+    Point ranunit_polar(Random &rand) {
         return rtp2xyz( {1, 2*pc::pi*rand(), std::acos(2*rand()-1)} );
-    } //!< Random unit vector using polar coordinates
+    } //!< Random unit vector using polar coordinates ("sphere picking")
+
+    const auto& ranunit = ranunit_polar; //!< Alias for default random unit vector function
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] ranunit_neuman") {
@@ -352,12 +344,12 @@ namespace Faunus {
 #endif
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] ranunit") {
+    TEST_CASE("[Faunus] ranunit_polar") {
         Random r;
         int n=2e5;
         Point rtp(0,0,0);
         for (int i=0; i<n; i++)
-            rtp += xyz2rtp( ranunit(r) );
+            rtp += xyz2rtp( ranunit_polar(r) );
         rtp = rtp / n;
         CHECK( rtp.x() == doctest::Approx(1) );
         CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
@@ -407,6 +399,7 @@ namespace Faunus {
         } //!< Rotate matrix/tensor
     };
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] QuaternionRotate")
     {
         using doctest::Approx;
@@ -419,41 +412,42 @@ namespace Faunus {
         a = qrot(a); // rot. 90 deg.
         CHECK( a.x() == Approx(-1) );
     }
+#endif
 
     /** @brief Base class for particle properties */
     struct ParticlePropertyBase {
-        virtual void to_json(Tjson &j) const=0; //!< Convert to JSON object
-        virtual void from_json(const Tjson &j)=0; //!< Convert from JSON object
+        virtual void to_json(json &j) const=0; //!< Convert to JSON object
+        virtual void from_json(const json &j)=0; //!< Convert from JSON object
         inline void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&) {}
     };
 
     template <typename... Ts>
-        auto to_json(Tjson&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {} //!< Particle to JSON
+        auto to_json(json&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {} //!< Particle to JSON
     template<typename T, typename... Ts>
-        void to_json(Tjson& j, const ParticlePropertyBase &a, const Ts&... rest) {
+        void to_json(json& j, const ParticlePropertyBase &a, const Ts&... rest) {
             a.to_json(j);
             to_json<Ts...>(j, rest...);
         } //!< Particle to JSON
 
     // JSON --> Particle
     template <typename... Ts>
-        auto from_json(const Tjson&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
+        auto from_json(const json&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
     template<typename T, typename... Ts>
-        void from_json(const Tjson& j, ParticlePropertyBase &a, Ts&... rest) {
+        void from_json(const json& j, ParticlePropertyBase &a, Ts&... rest) {
             a.from_json(j);
             from_json<Ts...>(j, rest...);
         }
 
     struct Radius : public ParticlePropertyBase {
         double radius=0; //!< Particle radius
-        void to_json(Tjson &j) const override { j["r"] = radius; }
-        void from_json(const Tjson& j) override { radius = j.value("r", 0.0); }
+        void to_json(json &j) const override { j["r"] = radius; }
+        void from_json(const json& j) override { radius = j.value("r", 0.0); }
     }; //!< Radius property
 
     struct Charge : public ParticlePropertyBase {
         double charge=0; //!< Particle radius
-        void to_json(Tjson &j) const override { j["q"] = charge; }
-        void from_json(const Tjson& j) override { charge = j.value("q", 0.0); }
+        void to_json(json &j) const override { j["q"] = charge; }
+        void from_json(const json& j) override { charge = j.value("q", 0.0); }
     }; //!< Charge (monopole) property
 
     /** @brief Dipole properties
@@ -472,12 +466,12 @@ namespace Faunus {
             mu = q * mu;
         } //!< Rotate dipole moment
 
-        void to_json(Tjson &j) const override {
+        void to_json(json &j) const override {
             j["mulen"] = mulen ;
             j["mu"] = mu;
         }
 
-        void from_json(const Tjson& j) override {
+        void from_json(const json& j) override {
             mulen = j.value("mulen", 0.0);
             mu = j.value("mu", Point(1,0,0) );
         }
@@ -487,8 +481,8 @@ namespace Faunus {
     struct Quadrupole : public ParticlePropertyBase {
         Tensor Q;      //!< Quadrupole
         void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) { Q.rotate(m); } //!< Rotate dipole moment
-        void to_json(Tjson &j) const override { j["Q"] = Q; }
-        void from_json(const Tjson& j) override { Q = j.value("Q", Q); }
+        void to_json(json &j) const override { j["Q"] = Q; }
+        void from_json(const json& j) override { Q = j.value("Q", Q); }
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     }; // Quadrupole property
 
@@ -500,11 +494,11 @@ namespace Faunus {
             scdir = q * scdir;
         } //!< Rotate sphero-cylinder
 
-        void to_json(Tjson &j) const override {
+        void to_json(json &j) const override {
             j["sclen"] = sclen;
             j["scdir"] = scdir;
         }
-        void from_json(const Tjson& j) override {
+        void from_json(const json& j) override {
             sclen = j.value("sclen", 0.0);
             scdir = j.value("scdir", Point(1,0,0) );
         }
@@ -519,7 +513,7 @@ namespace Faunus {
      * ```{.cpp}
      *     Particle<Dipole> p
      *     p = R"( {"mulen":2.8} )"_json; // Json --> Particle
-     *     std::cout << Tjson(p); // Particle --> Json --> stream
+     *     std::cout << json(p); // Particle --> Json --> stream
      * ```
      *
      * Currently the following properties are implemented:
@@ -562,7 +556,7 @@ namespace Faunus {
         };
 
     template<typename... Properties>
-        void to_json(Tjson& j, const Particle<Properties...> &a) {
+        void to_json(json& j, const Particle<Properties...> &a) {
             j["id"]=a.id;
             j["mw"]=a.mw;
             j["pos"] = a.pos; 
@@ -570,7 +564,7 @@ namespace Faunus {
         }
 
     template<typename... Properties>
-        void from_json(const Tjson& j, Particle<Properties...> &a) {
+        void from_json(const json& j, Particle<Properties...> &a) {
             a.id = j.value("id", a.id);
             a.mw = j.value("mw", a.mw); 
             a.pos = j.value("pos", a.pos);
@@ -595,9 +589,9 @@ namespace Faunus {
         p1.sclen = 0.5;
         p1.Q = Tensor(1,2,3,4,5,6);
 
-        p2 = Tjson(p1); // p1 --> json --> p2
+        p2 = json(p1); // p1 --> json --> p2
 
-        CHECK( Tjson(p1) == Tjson(p2) ); // p1 --> json == json <-- p2 ?
+        CHECK( json(p1) == json(p2) ); // p1 --> json == json <-- p2 ?
 
         CHECK( p2.id == 100 );
         CHECK( p2.mw == 0.2 );
@@ -844,31 +838,52 @@ namespace Faunus {
         struct AtomData {
             T p;               //!< Particle with generic properties
             std::string name;  //!< Name
-            double activity=0; //!< Chemical potential (mol/l)
+            double eps=0;      //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
+            double activity=0; //!< Chemical activity [mol/l]
+            double dp=0;       //!< Translational displacement parameter [angstrom]
+            double dprot=0;    //!< Rotational displacement parameter [degrees]
+            double weight=1;   //!< Weight
+
             int& id() { return p.id; } //!< Type id
             const int& id() const { return p.id; } //!< Type id
         };
 
     template<class T>
-        void from_json(const Tjson& j, AtomData<T>& a) {
-            if ( j.is_array() )
-                if ( j.size()==2 ) {
-                    a.name = j[0].get<std::string>();
-                    a.p = j[1];
-                    a.activity = j[1].value("activity", 0.0) * 1.0_molar;
-                    return;
-                }
-            throw std::runtime_error("Invalid JSON data for AtomData");
+        void to_json(json& j, const AtomData<T> &a) {
+            auto& _j = j[a.name];
+            _j = a.p;
+            _j["activity"] = a.activity / 1.0_molar;
+            _j["dp"] = a.dp / 1.0_angstrom;
+            _j["dprot"] = a.dprot / 1.0_rad;
+            _j["eps"] = a.eps / 1.0_kJmol;
+            _j["weight"] = a.weight;
         }
 
     template<class T>
-        void from_json(const Tjson& j, std::vector<T> &v) {
+        void from_json(const json& j, AtomData<T>& a) {
+            if (j.is_object()==false || j.size()!=1)
+                throw std::runtime_error("Invalid JSON data for AtomData");
+            for (auto it=j.begin(); it!=j.end(); ++it) {
+                a.name = it.key();
+                auto& val = it.value();
+                a.p = val;
+                a.activity = val.value("activity", a.activity) * 1.0_molar;
+                a.dp       = val.value("dp", a.dp) * 1.0_angstrom;
+                a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
+                a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
+                a.weight   = val.value("weight", a.weight);
+            }
+        }
+
+    template<class T>
+        void from_json(const json& j, std::vector<T> &v) {
             if ( j.is_object() ) {
                 v.reserve( v.size() + j.size() );
                 for (auto it=j.begin(); it!=j.end(); ++it) {
-                    T d = Tjson({it.key(), it.value()});
-                    d.id() = v.size();
-                    v.push_back(d);
+                    json _j;
+                    _j[it.key()] = it.value();
+                    v.push_back(_j);
+                    v.back().id() = v.size()-1; // id always match vector index
                 }
             }
         } //!< Append AtomData/MoleculeData to list
@@ -877,29 +892,39 @@ namespace Faunus {
     TEST_CASE("[Faunus] AtomData") {
         using doctest::Approx;
 
-        Tjson j = {
+        json j = {
             { "atomlist",
                 {
-                    { "B", { {"mw",10.2}, {"activity",0.2}, {"q",-0.5}, {"r",2.3} } },
-                    { "A", { {"mw",20.0} } }
+                    { "B",
+                        {
+                            {"activity",0.2}, {"eps",0.05}, {"dp",9.8},
+                            {"dprot",3.14}, {"weight",1.1}
+                        }
+                    },
+                    { "A", { {"r",1.1} } }
                 }
             }
         };
-
         typedef Particle<Radius, Charge, Dipole, Cigar> T;
+
         std::vector<AtomData<T>> v = j["atomlist"];
 
         CHECK(v.size()==2);
         CHECK(v.front().id()==0);
-        CHECK(v.back().id()==1);
+        CHECK(v.front().name=="A"); // alphabetic order in std::map
+        CHECK(v.front().p.radius==1.1);
 
-        CHECK(v.back().name=="B");
+        AtomData<T> a = json(v.back()); // AtomData -> JSON -> AtomData
 
-        CHECK(v.back().p.charge==-0.5);
-        CHECK(v.back().p.mw==10.2);
-        CHECK(v.back().p.radius==2.3);
+        CHECK(a.name=="B");
+        CHECK(a.id()==1);
+        CHECK(a.id()==a.p.id);
 
-        CHECK(v.back().activity==Approx(0.2_molar));
+        CHECK(a.activity==Approx(0.2_molar));
+        CHECK(a.eps==Approx(0.05_kJmol));
+        CHECK(a.dp==Approx(9.8));
+        CHECK(a.dprot==Approx(3.14));
+        CHECK(a.weight==Approx(1.1));
     }
 #endif
 
@@ -940,7 +965,7 @@ namespace Faunus {
         };
 
     template<class T>
-        void from_json(const Tjson& j, MoleculeData<T>& m) {
+        void from_json(const json& j, MoleculeData<T>& m) {
             if ( j.is_array() )
                 if ( j.size()==2 ) {
                     m.name   = j[0].get<std::string>();

@@ -521,7 +521,7 @@ namespace Faunus {
      * Keyword   | Class       |  Description
      * --------- | ----------- | --------------------
      *  `id`     | `Particle`  |  Type id (int)
-     *  `mw`     | `Particle`  |  molecular weight (g/mol)
+     *  `pos`    | `Particle`  |  Position (Point)
      *  `q`      | `Charge`    |  valency (e)
      *  `r`      | `Radius`    |  radius (angstrom)
      *  `mu`     | `Dipole`    |  dipole moment unit vector (array)
@@ -537,13 +537,12 @@ namespace Faunus {
                     auto _rotate(const Eigen::Quaterniond&, const Eigen::Matrix3d&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
                 template<typename T, typename... Ts>
                     void _rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m, T &a, Ts&... rest) {
-                        a.rotate(q, m);
+                        a.rotate(q,m);
                         _rotate<Ts...>(q, m, rest...);
                     }
 
             public:
                 int id=-1;         //!< Particle id/type
-                double mw=0;       //!< Particle molecular weight
                 Point pos={0,0,0}; //!< Particle position vector
 
                 Particle() : Properties()... {}
@@ -558,7 +557,6 @@ namespace Faunus {
     template<typename... Properties>
         void to_json(json& j, const Particle<Properties...> &a) {
             j["id"]=a.id;
-            j["mw"]=a.mw;
             j["pos"] = a.pos; 
             to_json<Properties...>(j, Properties(a)... );
         }
@@ -566,9 +564,7 @@ namespace Faunus {
     template<typename... Properties>
         void from_json(const json& j, Particle<Properties...> &a) {
             a.id = j.value("id", a.id);
-            a.mw = j.value("mw", a.mw); 
             a.pos = j.value("pos", a.pos);
-            a.charge = j.value("q", a.charge); 
             from_json<Properties...>(j, dynamic_cast<Properties&>(a)...);
         }
 
@@ -579,7 +575,6 @@ namespace Faunus {
         using doctest::Approx;
         ParticleAllProperties p1, p2;
         p1.id = 100;
-        p1.mw = 0.2;
         p1.pos = {1,2,3};
         p1.charge = -0.8;
         p1.radius = 7.1;
@@ -594,7 +589,6 @@ namespace Faunus {
         CHECK( json(p1) == json(p2) ); // p1 --> json == json <-- p2 ?
 
         CHECK( p2.id == 100 );
-        CHECK( p2.mw == 0.2 );
         CHECK( p2.pos == Point(1,2,3) );
         CHECK( p2.charge == -0.8 );
         CHECK( p2.radius == 7.1 );
@@ -786,6 +780,39 @@ namespace Faunus {
             public:
         };
 
+        using Cuboid = PBC<true, true, true>; //!< Cuboid w. PBC in all directions
+        using Cuboidslit = PBC<true, true, false>; //!< Cuboidal slit w. PBC in XY directions
+
+        enum class weight { MASS, CHARGE, GEOMETRIC };
+
+        template<typename Titer, typename Tparticle=typename Titer::value_type, typename weightFunc>
+            Point anyCenter(
+                    Titer begin, Titer end,
+                    std::function<void(Point&)> boundaryFunc,
+                    weightFunc weight = [](Tparticle &p){return 1.0;} ) {
+                double wsum=0;
+                Point c(0,0,0);
+                for (auto &it=begin; it!=end; ++it) {
+                    double w = weight(*it);
+                    c += (*it).pos * w;
+                    wsum += w;
+                }
+                return c/wsum;
+            } //!< Mass, charge, or geometric center of a collection of particles
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+        TEST_CASE("[Faunus] anyCenter") {
+            typedef Particle<Radius, Charge, Dipole, Cigar> T;
+            Cylinder cyl;
+            std::vector<T> p(2);
+            p.front().pos.x()=10;
+            p.back().pos.x()=20;
+
+            Point cm = Geometry::anyCenter(p.begin(), p.end(), cyl.boundaryFunc, [](T x){return 2.0;} );
+            CHECK( cm.x() == doctest::Approx(15) );
+        }
+#endif
+
         /** @brief Translate a particle vector by a vector */
         template<class T>
             void translate( std::vector<T> &p, const Point &d,
@@ -797,17 +824,6 @@ namespace Faunus {
                     boundary(i.pos);
                 }
             }
-
-        enum class weight { MASS, CHARGE, GEOMETRIC };
-
-        template<class Titer>
-            Point anyCenter( const std::pair<Titer,Titer> &iter, weight k) {
-                typedef typename Titer::value_type Tparticle;
-                std::function<double(Tparticle&)> f;
-            } //!< Mass, charge, or geometric center of a collection of particles
-
-        using Cuboid = PBC<true, true, true>; //!< Cuboid w. PBC in all directions
-        using Cuboidslit = PBC<true, true, false>; //!< Cuboidal slit w. PBC in XY directions
 
     } //geometry namespace
 
@@ -1030,7 +1046,6 @@ namespace Faunus {
         CHECK(m.insoffset==Point(-1.1,0.5,10));
     }
 #endif
-
 
     template<typename T>
         void inline swap_to_back(T first, T last, T end) {

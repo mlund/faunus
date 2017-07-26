@@ -56,8 +56,8 @@ namespace Faunus {
                   static inline T lB( T epsilon_r ) {
                       return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
                   } //!< Bjerrum length (angstrom)
-
     }
+
     namespace pc = PhysicalConstants;
 
     /**
@@ -621,6 +621,7 @@ namespace Faunus {
     namespace Geometry {
 
         typedef std::function<void(Point&)> BoundaryFunction;
+        typedef std::function<void(const Point&, const Point&)> DistanceFunction;
 
         struct GeometryBase {
             virtual void setVolume(double, const std::vector<double>&)=0; //!< Set volume
@@ -630,9 +631,14 @@ namespace Faunus {
             virtual void boundary( Point &a ) const=0; //!< Apply boundary conditions
 
             BoundaryFunction boundaryFunc; //!< Functor for boundary()
+            DistanceFunction distanceFunc; //!< Functor for vdist()
+
+            std::string name;
 
             GeometryBase() {
-                boundaryFunc = std::bind( &GeometryBase::boundary, this, std::placeholders::_1);
+                using namespace std::placeholders;
+                boundaryFunc = std::bind( &GeometryBase::boundary, this, _1);
+                distanceFunc = std::bind( &GeometryBase::vdist, this, _1, _2);
             }
 
         }; //!< Base class for all geometries
@@ -658,6 +664,7 @@ namespace Faunus {
                 }
 
                 double getVolume(int dim=3) const override {
+                    assert(dim==3);
                     return len.x() * len.y() * len.z();
                 }
 
@@ -668,9 +675,36 @@ namespace Faunus {
                 }
         };
 
+        void from_json(const json& j, Box &b) {
+            try {
+                if (j.is_object()) {
+                    auto m = j.at("length");
+                    if (m.is_number()) {
+                        double l = m.get<double>();
+                        b.setLength( {l,l,l} );
+                    }
+                    else if (m.is_array()) {
+                        Point len = m.get<Point>();
+                        b.setLength( len );
+                    }
+                    if (b.getVolume()<=0)
+                        throw std::runtime_error("volume is zero or less");
+                }
+            }
+            catch(std::exception& e) {
+                throw std::runtime_error( e.what() );
+            }
+        }
+
         /** @brief Periodic boundary conditions */
         template<bool X=true, bool Y=true, bool Z=true>
             struct PBC : public Box {
+
+                PBC() {
+                    using namespace std::placeholders;
+                    boundaryFunc = std::bind( &PBC<X,Y,Z>::boundary, this, _1);
+                    distanceFunc = std::bind( &PBC<X,Y,Z>::vdist, this, _1, _2);
+                }
 
                 Point vdist( const Point &a, const Point &b ) const override
                 {
@@ -696,6 +730,10 @@ namespace Faunus {
                     return r;
                 } //!< (Minimum) distance between two points
 
+                void unwrap( Point &a, const Point &ref ) const {
+                    a = vdist(a, ref) + ref;
+                } //!< Remove PBC with respect to a reference point
+
                 template<typename T=double>
                     inline int anint( T x ) const
                     {
@@ -717,19 +755,32 @@ namespace Faunus {
 
             };
 
+        using Cuboid = PBC<true,true,true>; //!< Cuboid w. PBC in all directions
+        using Cuboidslit = PBC<true,true,false>; //!< Cuboidal slit w. PBC in XY directions
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] PBC/Cuboid") {
+        Cuboid geo = R"( {"length": [2,3,4]} )"_json;
+
+        CHECK( geo.getVolume() == doctest::Approx(2*3*4) ); 
+
+        Point a(1.1, 1.5, -2.001);
+        geo.boundaryFunc(a);
+        CHECK( a.x() == doctest::Approx(-0.9) );
+        CHECK( a.y() == doctest::Approx(1.5) );
+        CHECK( a.z() == doctest::Approx(1.999) );
+        Point b = a;
+        geo.boundary(b);
+        CHECK( a == b );
+    }
+#endif
+
         /** @brief Cylindrical cell */
         class Cylinder : public PBC<false,false,true> {
             private:
                 double r, r2, diameter, len;
                 typedef PBC<false,false,true> base;
             public:
-                //std::function<void(Point&)> boundaryFunc;
-
-                //Cylinder() {
-                //    using namespace std::placeholders;
-                //    boundaryFunc = std::bind( &Cylinder::boundary, this, _1);
-                //}
-
                 void setRadius(double radius, double length) {
                     len = length;
                     r = radius;
@@ -780,9 +831,6 @@ namespace Faunus {
             public:
         };
 
-        using Cuboid = PBC<true, true, true>; //!< Cuboid w. PBC in all directions
-        using Cuboidslit = PBC<true, true, false>; //!< Cuboidal slit w. PBC in XY directions
-
         enum class weight { MASS, CHARGE, GEOMETRIC };
 
         template<typename Titer, typename Tparticle=typename Titer::value_type, typename weightFunc>
@@ -790,14 +838,14 @@ namespace Faunus {
                     Titer begin, Titer end,
                     std::function<void(Point&)> boundaryFunc,
                     weightFunc weight = [](Tparticle &p){return 1.0;} ) {
-                double wsum=0;
+                double sum=0;
                 Point c(0,0,0);
-                for (auto &it=begin; it!=end; ++it) {
-                    double w = weight(*it);
-                    c += (*it).pos * w;
-                    wsum += w;
+                for (auto &i=begin; i!=end; ++i) {
+                    double w = weight(*i);
+                    c += w * i->pos;
+                    sum += w;
                 }
-                return c/wsum;
+                return c/sum;
             } //!< Mass, charge, or geometric center of a collection of particles
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -808,22 +856,39 @@ namespace Faunus {
             p.front().pos.x()=10;
             p.back().pos.x()=20;
 
-            Point cm = Geometry::anyCenter(p.begin(), p.end(), cyl.boundaryFunc, [](T x){return 2.0;} );
+            Point cm = Geometry::anyCenter(p.begin(), p.end(), cyl.boundaryFunc, [](T x){return 1.0;} );
             CHECK( cm.x() == doctest::Approx(15) );
         }
 #endif
 
-        /** @brief Translate a particle vector by a vector */
-        template<class T>
-            void translate( std::vector<T> &p, const Point &d,
-                    std::function<void(Point&)> boundary = [](Point&){} )
+        template<class T, class Titer=typename std::vector<T>::iterator, class Tboundary>
+            void translate( Titer begin, Titer end, const Point &d,
+                    Tboundary boundary = [](Point&){} )
             {
-                for ( auto &i : p )
+                for ( auto i=begin; i+=end; ++i )
                 {
-                    i.pos += d;
-                    boundary(i.pos);
+                    i->pos += d;
+                    boundary(i->pos);
                 }
-            }
+            } //!< Vector displacement of a range of particles
+
+        template<typename Titer, typename Tboundary>
+            void rotate(
+                    Titer begin,
+                    Titer end,
+                    const Eigen::Quaterniond &q,
+                    const Tboundary &boundary,
+                    const Point &shift=Point(0,0,0) )
+            {
+                auto m = q.toRotationMatrix(); // rotation matrix
+                for (auto &i=begin; i!=end; ++i) {
+                    i->rotate(q,m); // rotate internal coordinates
+                    i->pos += shift;
+                    boundary(i->pos);
+                    i->pos = q*i->pos - shift;
+                    boundary(i->pos);
+                }
+            } //!< Rotate particle pos and internal coordinates
 
     } //geometry namespace
 
@@ -1075,9 +1140,9 @@ namespace Faunus {
             const T& begin() const { return this->first; }
             const T& end() const { return this->second; }
             size_t size() const { return std::distance(this->first, this->second); }
-            void resize(size_t n) { end() += n; }
+            void resize(size_t n) { end() += n; assert(size()==n); }
             bool empty() const { return this->first==this->second; }
-            void clear() { this->second = this->first; }
+            void clear() { this->second = this->first; assert(empty()); }
             std::pair<int,int> to_index(T reference) {
                 return {std::distance(reference, begin()), std::distance(reference, end())};
             } //!< Returns index pair relative to reference
@@ -1170,6 +1235,8 @@ namespace Faunus {
         struct Group : public ElasticRange<T> {
             typedef ElasticRange<T> base;
             typedef typename base::Titer iter;
+            using base::begin;
+            using base::end;
             int id=-1;           //!< Type id
             bool atomic=false;   //!< Is it an atomic group?
             Point cm={0,0,0};    //!< Mass center
@@ -1188,17 +1255,63 @@ namespace Faunus {
                 cm = o.cm;
                 return *this;
             }
+
+            template<typename TdistanceFunc>
+                void unwrap(const TdistanceFunc &vdist) {
+                    for (auto &i : *this)
+                        i.pos = cm + vdist( i.pos, cm );
+                } //!< Remove periodic boundaries with respect to mass center (Order N complexity).
+
+            template<typename TboundaryFunc>
+                void wrap(const TboundaryFunc &boundary) {
+                    boundary(cm);
+                    for (auto &i : *this)
+                        boundary(i.pos);
+                } //!< Apply periodic boundaries (Order N complexity).
+
+            template<typename TboundaryFunc>
+                void translate(const Point &d, const TboundaryFunc &boundary=[](Point&){}) {
+                    cm += d;
+                    boundary(cm);
+                    for (auto &i : *this) {
+                        i.pos += d;
+                        boundary(i.pos);
+                    }
+                } //!< Translate particle positions and mass center
+
+            template<typename Tfunc=std::function<void(Point&)>>
+                void rotate(const Eigen::Quaterniond &q, Tfunc boundary) {
+                    Geometry::rotate(begin(), end(), q, boundary, -cm);
+                } //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
+
+
         }; //!< Groups of particles
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Group") {
-        struct particle { int id; };
-        std::vector<particle> p = { {1}, {2}, {1}, {4}, {1} };
+        typedef ParticleAllProperties particle;
+        std::vector<particle> p(2);
+        p[0].id=0;
+        p[1].id=1;
         Group<particle> g(p.begin(), p.end());
 
         auto slice = g.filter( [](particle &i){return i.id==1;} );
 
-        CHECK( std::distance(slice.begin(), slice.end()) == 3 );
+        CHECK( std::distance(slice.begin(), slice.end()) == 1 );
+
+        // check rotation
+        Eigen::Quaterniond q;
+        q = Eigen::AngleAxisd(pc::pi/2, Point(1,0,0));
+        p[0].pos = p[0].mu = p[0].scdir = {0,1,0};
+
+        Geometry::Cuboid geo = R"({"length" : [2,2,2]})"_json;
+        g.rotate(q, geo.boundaryFunc);
+        CHECK( p[0].pos.y() == doctest::Approx(0) );
+        CHECK( p[0].pos.z() == doctest::Approx(1) );
+        CHECK( p[0].mu.y() == doctest::Approx(0) );
+        CHECK( p[0].mu.z() == doctest::Approx(1) );
+        CHECK( p[0].scdir.y() == doctest::Approx(0) );
+        CHECK( p[0].scdir.z() == doctest::Approx(1) );
     }
 #endif
 

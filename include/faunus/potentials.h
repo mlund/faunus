@@ -202,26 +202,30 @@ namespace Faunus {
 		if(m >= xmin && m <= xmax){
 
 		  //Should change this for loop for a better search algorithm in the next update.
-		    for(size_t i=1; i < x.size()-2; ++i){
-			if(x[i] > m) {
-
-			  double x2im1=x[i-1]*x[i-1];
-			  double x2i = x[i]*x[i];
-			  double x2ip1 = x[i+1]*x[i+1];
-			  double ximxim1 = x[i]-x[i-1];
-			  double xip1mxim1 = x[i+1]-x[i-1];
-			  double x2imx2im1 = x2i-x2im1;
-
-			  double a = (((y[i+1]-y[i-1])*ximxim1) + (xip1mxim1*(-y[i]+y[i-1]))) / 
-				    (((x2im1 + x2ip1)*ximxim1)-(x2imx2im1*xip1mxim1));
-
-			  double b = (y[i]-a*x2imx2im1-y[i-1])/ximxim1;
-
-			  double c = y[i-1]- a*x2im1-b*x[i-1];
-
-			    return a*m*m + b*m + c;
-			}   
-		    }
+		  // for(size_t i=1; i < x.size()-2; ++i){
+		  auto it = std::lower_bound(x.begin(), x.end(), m);
+		  
+		  //double value = *it; // iterator --> value
+		  int i = std::distance(x.begin(), it); // iterator --> index
+		  // if(x[i] > m) {
+		    
+		    double x2im1=x[i-1]*x[i-1];
+		    double x2i = x[i]*x[i];
+		    double x2ip1 = x[i+1]*x[i+1];
+		    double ximxim1 = x[i]-x[i-1];
+		    double xip1mxim1 = x[i+1]-x[i-1];
+		    double x2imx2im1 = x2i-x2im1;
+		    
+		    double a = (((y[i+1]-y[i-1])*ximxim1) + (xip1mxim1*(-y[i]+y[i-1]))) / 
+		      (((x2im1 + x2ip1)*ximxim1)-(x2imx2im1*xip1mxim1));
+		    
+		    double b = (y[i]-a*x2imx2im1-y[i-1])/ximxim1;
+		    
+		    double c = y[i-1]- a*x2im1-b*x[i-1];
+		    
+		    return a*m*m + b*m + c;
+		    //}   
+		    //}
 		}
 		return 0;  
 	      }
@@ -1440,6 +1444,11 @@ namespace Faunus {
             double r=sqrt(r2);
             return lB * a.charge * b.charge / (r*r2) * exp(-k*r) * ( 1 + k*r ) * p;
 #endif
+          }
+
+	 template<class Tparticle>
+          double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+            return operator()(a,b,r.squaredNorm());
           }
 
         /**

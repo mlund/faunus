@@ -226,9 +226,13 @@ namespace Faunus
    * On GCC/Clang this will use the fast `__builtin_powi` function.
    * If not, and `n<7`, a simple loop (that can be unrolled at compile
    * time) is performed. If none of the above, `std::pow` is used.
+   *
+   * See also:
+   * - https://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp
+   * - https://martin.ankerl.com/2007/10/04/optimized-pow-approximation-for-java-and-c-c/
    */
   template<int n, typename T=double>
-  T _powi( T &x )
+  T powi( T &x )
   {
 #if defined(__GNUG__)
       return __builtin_powi(x, n);

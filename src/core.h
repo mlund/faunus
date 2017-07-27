@@ -617,6 +617,107 @@ namespace Faunus {
     }
 #endif
 
+    /**
+     * @brief General properties for atoms
+     */
+    template<class T>
+        struct AtomData {
+            T p;               //!< Particle with generic properties
+            std::string name;  //!< Name
+            double eps=0;      //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
+            double activity=0; //!< Chemical activity [mol/l]
+            double dp=0;       //!< Translational displacement parameter [angstrom]
+            double dprot=0;    //!< Rotational displacement parameter [degrees]
+            double weight=1;   //!< Weight
+
+            int& id() { return p.id; } //!< Type id
+            const int& id() const { return p.id; } //!< Type id
+        };
+
+    template<class T>
+        void to_json(json& j, const AtomData<T> &a) {
+            auto& _j = j[a.name];
+            _j = a.p;
+            _j["activity"] = a.activity / 1.0_molar;
+            _j["dp"] = a.dp / 1.0_angstrom;
+            _j["dprot"] = a.dprot / 1.0_rad;
+            _j["eps"] = a.eps / 1.0_kJmol;
+            _j["weight"] = a.weight;
+        }
+
+    template<class T>
+        void from_json(const json& j, AtomData<T>& a) {
+            if (j.is_object()==false || j.size()!=1)
+                throw std::runtime_error("Invalid JSON data for AtomData");
+            for (auto it=j.begin(); it!=j.end(); ++it) {
+                a.name = it.key();
+                auto& val = it.value();
+                a.p = val;
+                a.activity = val.value("activity", a.activity) * 1.0_molar;
+                a.dp       = val.value("dp", a.dp) * 1.0_angstrom;
+                a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
+                a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
+                a.weight   = val.value("weight", a.weight);
+            }
+        }
+
+    template<class T>
+        void from_json(const json& j, std::vector<T> &v) {
+            if ( j.is_object() ) {
+                v.reserve( v.size() + j.size() );
+                for (auto it=j.begin(); it!=j.end(); ++it) {
+                    json _j;
+                    _j[it.key()] = it.value();
+                    v.push_back(_j);
+                    v.back().id() = v.size()-1; // id always match vector index
+                }
+            }
+        } //!< Append AtomData/MoleculeData to list
+
+    template<typename Tparticle>
+        static std::vector<AtomData<Tparticle>> atoms = {}; //!< Global instance of atom list
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] AtomData") {
+        using doctest::Approx;
+
+        json j = {
+            { "atomlist",
+                {
+                    { "B",
+                        {
+                            {"activity",0.2}, {"eps",0.05}, {"dp",9.8},
+                            {"dprot",3.14}, {"weight",1.1}
+                        }
+                    },
+                    { "A", { {"r",1.1} } }
+                }
+            }
+        };
+        typedef Particle<Radius, Charge, Dipole, Cigar> T;
+
+        atoms<T> = j["atomlist"].get<decltype(atoms<T>)>();
+        auto &v = atoms<T>; // alias to global atom list
+
+        CHECK(v.size()==2);
+        CHECK(v.front().id()==0);
+        CHECK(v.front().name=="A"); // alphabetic order in std::map
+        CHECK(v.front().p.radius==1.1);
+
+        AtomData<T> a = json(v.back()); // AtomData -> JSON -> AtomData
+
+        CHECK(a.name=="B");
+        CHECK(a.id()==1);
+        CHECK(a.id()==a.p.id);
+
+        CHECK(a.activity==Approx(0.2_molar));
+        CHECK(a.eps==Approx(0.05_kJmol));
+        CHECK(a.dp==Approx(9.8));
+        CHECK(a.dprot==Approx(3.14));
+        CHECK(a.weight==Approx(1.1));
+    }
+#endif
+
     /** @brief Simulation geometries and related operations */
     namespace Geometry {
 
@@ -759,20 +860,20 @@ namespace Faunus {
         using Cuboidslit = PBC<true,true,false>; //!< Cuboidal slit w. PBC in XY directions
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] PBC/Cuboid") {
-        Cuboid geo = R"( {"length": [2,3,4]} )"_json;
+        TEST_CASE("[Faunus] PBC/Cuboid") {
+            Cuboid geo = R"( {"length": [2,3,4]} )"_json;
 
-        CHECK( geo.getVolume() == doctest::Approx(2*3*4) ); 
+            CHECK( geo.getVolume() == doctest::Approx(2*3*4) ); 
 
-        Point a(1.1, 1.5, -2.001);
-        geo.boundaryFunc(a);
-        CHECK( a.x() == doctest::Approx(-0.9) );
-        CHECK( a.y() == doctest::Approx(1.5) );
-        CHECK( a.z() == doctest::Approx(1.999) );
-        Point b = a;
-        geo.boundary(b);
-        CHECK( a == b );
-    }
+            Point a(1.1, 1.5, -2.001);
+            geo.boundaryFunc(a);
+            CHECK( a.x() == doctest::Approx(-0.9) );
+            CHECK( a.y() == doctest::Approx(1.5) );
+            CHECK( a.z() == doctest::Approx(1.999) );
+            Point b = a;
+            geo.boundary(b);
+            CHECK( a == b );
+        }
 #endif
 
         /** @brief Cylindrical cell */
@@ -815,6 +916,10 @@ namespace Faunus {
                 }
 
         };
+        void from_json(const json& j, Cylinder &cyl) {
+            cyl.setRadius( j.at("length"), j.at("radius") );
+        }
+
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] Cylinder") {
@@ -833,11 +938,9 @@ namespace Faunus {
 
         enum class weight { MASS, CHARGE, GEOMETRIC };
 
-        template<typename Titer, typename Tparticle=typename Titer::value_type, typename weightFunc>
-            Point anyCenter(
-                    Titer begin, Titer end,
-                    std::function<void(Point&)> boundaryFunc,
-                    weightFunc weight = [](Tparticle &p){return 1.0;} ) {
+        template<typename Titer, typename Tparticle=typename Titer::value_type, typename weightFunc, typename boundaryFunc>
+            Point anyCenter( Titer begin, Titer end, const boundaryFunc &boundary, const weightFunc &weight)
+            {
                 double sum=0;
                 Point c(0,0,0);
                 for (auto &i=begin; i!=end; ++i) {
@@ -848,16 +951,30 @@ namespace Faunus {
                 return c/sum;
             } //!< Mass, charge, or geometric center of a collection of particles
 
+        template<typename Titer, typename Tparticle=typename Titer::value_type, typename boundaryFunc>
+            Point massCenter(Titer begin, Titer end, const boundaryFunc &boundary) {
+                return anyCenter(begin, end, boundary,
+                        []( Tparticle &p ){ return atoms<Tparticle>.at(p.id).weight; } );
+            } // Mass center
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] anyCenter") {
             typedef Particle<Radius, Charge, Dipole, Cigar> T;
-            Cylinder cyl;
-            std::vector<T> p(2);
-            p.front().pos.x()=10;
-            p.back().pos.x()=20;
 
-            Point cm = Geometry::anyCenter(p.begin(), p.end(), cyl.boundaryFunc, [](T x){return 1.0;} );
-            CHECK( cm.x() == doctest::Approx(15) );
+            Cylinder cyl = json( {{"length",100}, {"radius",20}} );
+            std::vector<T> p;
+
+            CHECK( !atoms<T>.empty() ); // set in a previous test
+            p.push_back( atoms<T>[0].p );
+            p.push_back( atoms<T>[0].p );
+
+            p.front().pos = {10, 10, -10};
+            p.back().pos  = {15, -10, 10};
+
+            Point cm = Geometry::massCenter(p.begin(), p.end(), cyl.boundaryFunc);
+            CHECK( cm.x() == doctest::Approx(12.5) );
+            CHECK( cm.y() == doctest::Approx(0) );
+            CHECK( cm.z() == doctest::Approx(0) );
         }
 #endif
 
@@ -892,123 +1009,6 @@ namespace Faunus {
 
     } //geometry namespace
 
-    namespace Analysis {
-
-        /** @brief Example analysis */
-        template<class T, class Enable = void>
-            struct analyse {
-                void sample(T &p) {
-                    std::cout << "not a dipole!" << std::endl;
-                } //!< Sample
-            }; // primary template
-
-        /** @brief Example analysis */
-        template<class T>
-            struct analyse<T, typename std::enable_if<std::is_base_of<Dipole, T>::value>::type> {
-                void sample(T &p) {
-                    std::cout << "dipole!" << std::endl;
-                } //!< Sample
-            }; // specialized template
-
-    }//namespace
-
-    /**
-     * @brief General properties for atoms
-     */
-    template<class T>
-        struct AtomData {
-            T p;               //!< Particle with generic properties
-            std::string name;  //!< Name
-            double eps=0;      //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
-            double activity=0; //!< Chemical activity [mol/l]
-            double dp=0;       //!< Translational displacement parameter [angstrom]
-            double dprot=0;    //!< Rotational displacement parameter [degrees]
-            double weight=1;   //!< Weight
-
-            int& id() { return p.id; } //!< Type id
-            const int& id() const { return p.id; } //!< Type id
-        };
-
-    template<class T>
-        void to_json(json& j, const AtomData<T> &a) {
-            auto& _j = j[a.name];
-            _j = a.p;
-            _j["activity"] = a.activity / 1.0_molar;
-            _j["dp"] = a.dp / 1.0_angstrom;
-            _j["dprot"] = a.dprot / 1.0_rad;
-            _j["eps"] = a.eps / 1.0_kJmol;
-            _j["weight"] = a.weight;
-        }
-
-    template<class T>
-        void from_json(const json& j, AtomData<T>& a) {
-            if (j.is_object()==false || j.size()!=1)
-                throw std::runtime_error("Invalid JSON data for AtomData");
-            for (auto it=j.begin(); it!=j.end(); ++it) {
-                a.name = it.key();
-                auto& val = it.value();
-                a.p = val;
-                a.activity = val.value("activity", a.activity) * 1.0_molar;
-                a.dp       = val.value("dp", a.dp) * 1.0_angstrom;
-                a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
-                a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
-                a.weight   = val.value("weight", a.weight);
-            }
-        }
-
-    template<class T>
-        void from_json(const json& j, std::vector<T> &v) {
-            if ( j.is_object() ) {
-                v.reserve( v.size() + j.size() );
-                for (auto it=j.begin(); it!=j.end(); ++it) {
-                    json _j;
-                    _j[it.key()] = it.value();
-                    v.push_back(_j);
-                    v.back().id() = v.size()-1; // id always match vector index
-                }
-            }
-        } //!< Append AtomData/MoleculeData to list
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] AtomData") {
-        using doctest::Approx;
-
-        json j = {
-            { "atomlist",
-                {
-                    { "B",
-                        {
-                            {"activity",0.2}, {"eps",0.05}, {"dp",9.8},
-                            {"dprot",3.14}, {"weight",1.1}
-                        }
-                    },
-                    { "A", { {"r",1.1} } }
-                }
-            }
-        };
-        typedef Particle<Radius, Charge, Dipole, Cigar> T;
-
-        std::vector<AtomData<T>> v = j["atomlist"];
-
-        CHECK(v.size()==2);
-        CHECK(v.front().id()==0);
-        CHECK(v.front().name=="A"); // alphabetic order in std::map
-        CHECK(v.front().p.radius==1.1);
-
-        AtomData<T> a = json(v.back()); // AtomData -> JSON -> AtomData
-
-        CHECK(a.name=="B");
-        CHECK(a.id()==1);
-        CHECK(a.id()==a.p.id);
-
-        CHECK(a.activity==Approx(0.2_molar));
-        CHECK(a.eps==Approx(0.05_kJmol));
-        CHECK(a.dp==Approx(9.8));
-        CHECK(a.dprot==Approx(3.14));
-        CHECK(a.weight==Approx(1.1));
-    }
-#endif
-
     /**
      * @brief General properties for molecules
      */
@@ -1022,14 +1022,34 @@ namespace Faunus {
 
                 int Ninit = 0;             //!< Number of initial molecules
                 std::string name;          //!< Molecule name
+                std::string structure;     //!< Structure file (pqr|aam|xyz)
                 bool atomic=false;         //!< True if atomic group (salt etc.)
                 bool rotate=true;          //!< True if molecule should be rotated upon insertion
+                bool keeppos=false;        //!< Keep original positions of `structure`
                 double activity=0;         //!< Chemical activity (mol/l)
                 Point insdir = {1,1,1};    //!< Insertion directions
                 Point insoffset = {0,0,0}; //!< Insertion offset
+
                 std::vector<int> atoms;    //!< Sequence of atoms in molecule (atom id's)
                 std::vector<Tpvec> conformations;           //!< Conformations of molecule
                 std::discrete_distribution<> confDist;      //!< Weight of conformations
+
+                /**
+                 * @brief Store a single conformation
+                 * @param vec Vector of particles
+                 * @param weight Relative weight of conformation (default: 1)
+                 */
+                void pushConformation( const Tpvec &vec, double weight = 1 )
+                {
+                    if ( !conformations.empty())
+                    {     // resize weights
+                        auto w = confDist.probabilities();// (defaults to 1)
+                        w.push_back(weight);
+                        confDist = std::discrete_distribution<>(w.begin(), w.end());
+                    }
+                    conformations.push_back(vec);
+                    assert(confDist.probabilities().size() == conformations.size());
+                }
 
                 /**
                  * @brief Store a single conformation
@@ -1048,7 +1068,31 @@ namespace Faunus {
                     assert(confDist.probabilities().size() == conformations.size());
                 }
 
+                /*
+                   void loadConformation(const std::string &file)
+                   {
+                   Tpvec v;
+                   std::string suffix = structure.substr(file.find_last_of(".") + 1);
+                   if ( suffix == "aam" )
+                   FormatAAM::load(structure, v);
+                   if ( suffix == "pqr" )
+                   FormatPQR::load(structure, v);
+                   if ( suffix == "xyz" )
+                   FormatXYZ::load(structure, v);
+                   if ( !v.empty())
+                   {
+                   if ( keeppos == false )
+                   Geometry::cm2origo(
+                   Geometry::Sphere(1e20), v); // move to origo
+                   pushConformation(v);        // add conformation
+                   for ( auto &p : v )           // add atoms to atomlist
+                   atoms.push_back(p.id);
+                   }
+                   if ( v.empty() )
+                   throw std::runtime_error("Structure " + structure + " not loaded. Filetype must be .aam/.pqr/.xyz");
+                   }*/
         };
+
     template<class T>
         void to_json(json& j, const MoleculeData<T> &a) {
             auto& _j = j[a.name];
@@ -1057,6 +1101,7 @@ namespace Faunus {
             _j["id"] = a.id();
             _j["insdir"] = a.insdir;
             _j["insoffset"] = a.insoffset;
+            _j["keeppos"] = a.keeppos;
         }
 
     template<class T>
@@ -1071,8 +1116,12 @@ namespace Faunus {
                 a.id() = val.value("id", a.id());
                 a.insdir = val.value("insdir", a.insdir);
                 a.insoffset = val.value("insoffset", a.insoffset);
+                a.keeppos = val.value("keeppos", a.keeppos);
             }
         }
+
+    template<typename Tpvec>
+        static std::vector<MoleculeData<Tpvec>> molecules = {}; //!< Global instance of molecule list
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] MoleculeData") {
@@ -1240,7 +1289,9 @@ namespace Faunus {
             int id=-1;           //!< Type id
             bool atomic=false;   //!< Is it an atomic group?
             Point cm={0,0,0};    //!< Mass center
-            Group(iter begin, iter end) : base(begin,end) {}
+            Group(iter begin, iter end) : base(begin,end) {
+                // calc mass center here
+            }
 
             auto filter( std::function<bool(T&)> f ) const {
                 return *this | ranges::view::filter(f); 
@@ -1256,6 +1307,14 @@ namespace Faunus {
                 return *this;
             }
 
+            auto findAtoms(int id) const {
+                return ranges::view::filter(*this, [id](auto &i) { return i.id==id; });
+            } //!< Range of elements with atom id
+
+            auto positions() {
+                return ranges::view::transform(*this, [](auto &i) -> Point& {return i.pos;});
+            } //!< Iterable range with positions
+
             template<typename TdistanceFunc>
                 void unwrap(const TdistanceFunc &vdist) {
                     for (auto &i : *this)
@@ -1269,8 +1328,8 @@ namespace Faunus {
                         boundary(i.pos);
                 } //!< Apply periodic boundaries (Order N complexity).
 
-            template<typename TboundaryFunc>
-                void translate(const Point &d, const TboundaryFunc &boundary=[](Point&){}) {
+            template<typename Tboundary>
+                void translate(const Point &d, const Tboundary &boundary=[](Point&){}) {
                     cm += d;
                     boundary(cm);
                     for (auto &i : *this) {
@@ -1279,8 +1338,8 @@ namespace Faunus {
                     }
                 } //!< Translate particle positions and mass center
 
-            template<typename Tfunc=std::function<void(Point&)>>
-                void rotate(const Eigen::Quaterniond &q, Tfunc boundary) {
+            template<typename Tboundary = std::function<void(Point&)>>
+                void rotate(const Eigen::Quaterniond &q, Tboundary boundary) {
                     Geometry::rotate(begin(), end(), q, boundary, -cm);
                 } //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
 
@@ -1312,6 +1371,16 @@ namespace Faunus {
         CHECK( p[0].mu.z() == doctest::Approx(1) );
         CHECK( p[0].scdir.y() == doctest::Approx(0) );
         CHECK( p[0].scdir.z() == doctest::Approx(1) );
+
+        p[0].pos = {1,2,3};
+        p[1].pos = {4,5,6};
+
+        auto r = ranges::view::transform(g, [](auto &i) -> auto& {return i.pos;});
+
+        for (auto &i : r )
+            i = 2* (i);
+        for (auto &i : r )
+            cout << i << "!\n";
     }
 #endif
 
@@ -1357,10 +1426,8 @@ namespace Faunus {
 
             typedef Space<Tgeometry,Tparticle> Tspace;
             typedef std::vector<Tparticle> Tpvec;
-
             typedef Group<typename Tpvec::iterator> Tgroup;
             typedef std::vector<Tgroup> Tgvec;
-
             typedef Change<Tpvec> Tchange;
 
             typedef std::function<void(Tspace&, const Tchange&)> ChangeTrigger;
@@ -1372,6 +1439,12 @@ namespace Faunus {
             Tpvec p;       //!< Particle vector
             Tgvec groups;  //!< Group vector
             Tgeometry geo; //!< Container geometry
+
+            std::vector<MoleculeData<Tpvec>>& molecules;
+
+            Space() {
+                molecules = Faunus::molecules<Tpvec>;
+            }
 
             template<typename T>
                 std::vector<int> findIndex(const std::vector<T> &v, int id) const {
@@ -1408,35 +1481,6 @@ namespace Faunus {
                         assert(i==go.end());
                     }
                 }
-
-                /*
-                   for (auto &m : change.groups) {
-                   int n=0; // total number of activated particles
-                   auto &g = groups[m.first];
-                   assert( g.size() < o.groups[m.first].size() );
-                   for (auto &rng : m.second) {
-                   auto begin = p.begin()+rng.first;
-                   auto end = p.begin()+rng.second;
-                   n += end-begin;
-                   g.activate(begin, end);
-                   }
-                   assert( g.size() == o.groups[m.first].size() );
-
-            // activated elements end up just below end()
-            int end = std::distance(p, g.end());
-            for (int i=end-n; i<end; i++)
-            p[i] = o.p[i];
-            }
-            if (std::fabs(change.dV)>0)
-            geo = o.geo;
-
-            for (auto& m : change.moved) { // loop over moved groups
-            groups[ m.first ] = o.groups[ m.first ];
-            for (auto i : m.second)
-            p[i] = o.p[i];
-
-            }*/
-
             } //!< Copy differing data from other (o) Space using Change object
 
             void applyChange(const Tchange &change) {
@@ -1452,6 +1496,27 @@ namespace Faunus {
             //            [&name](const AtomData &a) { return a.name==name; } );
             //} //!< Iterator to AtomData with `name` -- `end()` if not found
         };
+
+    namespace Analysis {
+
+        /** @brief Example analysis */
+        template<class T, class Enable = void>
+            struct analyse {
+                void sample(T &p) {
+                    std::cout << "not a dipole!" << std::endl;
+                } //!< Sample
+            }; // primary template
+
+        /** @brief Example analysis */
+        template<class T>
+            struct analyse<T, typename std::enable_if<std::is_base_of<Dipole, T>::value>::type> {
+                void sample(T &p) {
+                    std::cout << "dipole!" << std::endl;
+                } //!< Sample
+            }; // specialized template
+
+    }//namespace
+
 
 }//end of faunus namespace
 

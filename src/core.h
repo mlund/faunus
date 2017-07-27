@@ -1289,13 +1289,7 @@ namespace Faunus {
             int id=-1;           //!< Type id
             bool atomic=false;   //!< Is it an atomic group?
             Point cm={0,0,0};    //!< Mass center
-            Group(iter begin, iter end) : base(begin,end) {
-                // calc mass center here
-            }
-
-            auto filter( std::function<bool(T&)> f ) const {
-                return *this | ranges::view::filter(f); 
-            }
+            Group(iter begin, iter end) : base(begin,end) {}
 
             Group& operator=(const Group &o) {
                 if (this->capacity() != o.capacity())
@@ -1304,12 +1298,17 @@ namespace Faunus {
                 id = o.id;
                 atomic = o.atomic;
                 cm = o.cm;
+                std::copy(o.begin(), o.end(), begin());
                 return *this;
-            }
+            } //!< Deep copy contents of another Group
 
-            auto findAtoms(int id) const {
-                return ranges::view::filter(*this, [id](auto &i) { return i.id==id; });
-            } //!< Range of elements with atom id
+            auto filter( std::function<bool(T&)> f ) const {
+                return *this | ranges::view::filter(f); 
+            } //!< Filtered range according to unary function `f`
+
+            auto find_id(int id) const {
+                return filter([id](T &i){ return i.id==id; });
+            } //!< Range of all elements with matching particle id
 
             auto positions() {
                 return ranges::view::transform(*this, [](auto &i) -> Point& {return i.pos;});
@@ -1338,32 +1337,37 @@ namespace Faunus {
                     }
                 } //!< Translate particle positions and mass center
 
-            template<typename Tboundary = std::function<void(Point&)>>
+            template<typename Tboundary>
                 void rotate(const Eigen::Quaterniond &q, Tboundary boundary) {
                     Geometry::rotate(begin(), end(), q, boundary, -cm);
                 } //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
-
 
         }; //!< Groups of particles
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Group") {
+        Random rand;
         typedef ParticleAllProperties particle;
-        std::vector<particle> p(2);
+        std::vector<particle> p(3);
         p[0].id=0;
         p[1].id=1;
+        p[2].id=1;
         Group<particle> g(p.begin(), p.end());
 
-        auto slice = g.filter( [](particle &i){return i.id==1;} );
+        // find all elements with id=1
+        auto slice1 = g.find_id(1);
+        CHECK( std::distance(slice1.begin(), slice1.end()) == 2 );
 
-        CHECK( std::distance(slice.begin(), slice.end()) == 1 );
+        // find *one* random value with id=1
+        auto slice2 = slice1 | ranges::view::sample(1, rand.engine) | ranges::view::bounded;
+        CHECK( std::distance(slice2.begin(), slice2.end()) == 1 );
 
         // check rotation
         Eigen::Quaterniond q;
         q = Eigen::AngleAxisd(pc::pi/2, Point(1,0,0));
         p[0].pos = p[0].mu = p[0].scdir = {0,1,0};
 
-        Geometry::Cuboid geo = R"({"length" : [2,2,2]})"_json;
+        Geometry::Cuboid geo = R"({"length": [2,2,2]})"_json;
         g.rotate(q, geo.boundaryFunc);
         CHECK( p[0].pos.y() == doctest::Approx(0) );
         CHECK( p[0].pos.z() == doctest::Approx(1) );
@@ -1393,7 +1397,6 @@ namespace Faunus {
     template<class Tpvec>
         struct Change
         {
-
             double dV = 0;     //!< Volume change (in different directions)
 
             struct data {

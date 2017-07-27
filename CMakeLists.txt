@@ -33,6 +33,14 @@ ExternalProject_Add( eigen
 ExternalProject_Get_Property(eigen source_dir)
 set(EigenIncludeDir ${source_dir})
 
+ExternalProject_Add( libxdrfile
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    URL "https://github.com/wesbarnett/libxdrfile/archive/2.1.2.tar.gz"
+    CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty"
+    INSTALL_DIR "${CMAKE_SOURCE_DIR}/3rdparty" LOG_DOWNLOAD ON)
+ExternalProject_Get_Property(libxdrfile source_dir)
+set(XDRIncludeDir "${CMAKE_SOURCE_DIR}/3rdparty/include")
+
 ExternalProject_Add( doctest
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.1/doctest/doctest.h"
@@ -52,7 +60,7 @@ set(CatchIncludeDir ${source_dir}/../../src/)
 set_target_properties(catch PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 add_definitions(-DDOCTEST_CONFIG_DISABLE)
-include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir})
+include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir} ${XDRIncludeDir})
 
 set(hdrs
         ${CMAKE_SOURCE_DIR}/src/average.h
@@ -64,7 +72,7 @@ set(hdrs
         )
 
 add_executable(tests src/tests.cpp ${hdrs})
-add_dependencies(tests modernjson doctest eigen range-v3)
+add_dependencies(tests modernjson doctest eigen range-v3 libxdrfile)
 add_test(NAME tests COMMAND tests)
 
 add_executable(example src/example.cpp ${hdrs})

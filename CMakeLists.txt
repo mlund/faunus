@@ -36,8 +36,8 @@ set(EigenIncludeDir ${source_dir})
 ExternalProject_Add( libxdrfile
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/wesbarnett/libxdrfile/archive/2.1.2.tar.gz"
-    CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty"
-    INSTALL_DIR "${CMAKE_SOURCE_DIR}/3rdparty" LOG_DOWNLOAD ON)
+    CMAKE_ARGS "-Wno-dev -DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty"
+    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(libxdrfile source_dir)
 set(XDRIncludeDir "${CMAKE_SOURCE_DIR}/3rdparty/include")
 

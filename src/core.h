@@ -677,6 +677,11 @@ namespace Faunus {
     template<typename Tparticle>
         static std::vector<AtomData<Tparticle>> atoms = {}; //!< Global instance of atom list
 
+    template<class Trange>
+        auto findName(const std::string &name, Trange &rng) {
+            return std::find_if( rng.begin(), rng.end(), [&name](auto &i){ return i.name==name; });
+        } //!< Returns iterator to first element with member `name` matching input
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] AtomData") {
         using doctest::Approx;
@@ -715,6 +720,11 @@ namespace Faunus {
         CHECK(a.dp==Approx(9.8));
         CHECK(a.dprot==Approx(3.14));
         CHECK(a.weight==Approx(1.1));
+
+        auto it = findName("B", v);
+        CHECK( it->id() == 1 );
+        it = findName("unknown atom", v);
+        CHECK( it==v.end() );
     }
 #endif
 
@@ -1286,10 +1296,10 @@ namespace Faunus {
             typedef typename base::Titer iter;
             using base::begin;
             using base::end;
-            int id=-1;           //!< Type id
+            int id=-1;
             bool atomic=false;   //!< Is it an atomic group?
             Point cm={0,0,0};    //!< Mass center
-            Group(iter begin, iter end) : base(begin,end) {}
+            Group(iter begin, iter end) : base(begin,end) {} //!< Constructor
 
             Group& operator=(const Group &o) {
                 if (this->capacity() != o.capacity())
@@ -1300,17 +1310,18 @@ namespace Faunus {
                 cm = o.cm;
                 std::copy(o.begin(), o.end(), begin());
                 return *this;
-            } //!< Deep copy contents of another Group
+            } //!< Deep copy contents from another Group
 
-            auto filter( std::function<bool(T&)> f ) const {
-                return *this | ranges::view::filter(f); 
-            } //!< Filtered range according to unary function `f`
+            template<class Tfunc>
+                auto filter( Tfunc f ) const {
+                    return ranges::view::filter(*this,f); 
+                } //!< Filtered range according to unary function `f`
 
             auto find_id(int id) const {
-                return filter([id](T &i){ return i.id==id; });
+                return *this | ranges::view::filter( [id](T &i){ return (i.id==id); } );
             } //!< Range of all elements with matching particle id
 
-            auto positions() {
+            auto positions() const {
                 return ranges::view::transform(*this, [](auto &i) -> Point& {return i.pos;});
             } //!< Iterable range with positions
 
@@ -1379,12 +1390,12 @@ namespace Faunus {
         p[0].pos = {1,2,3};
         p[1].pos = {4,5,6};
 
-        auto r = ranges::view::transform(g, [](auto &i) -> auto& {return i.pos;});
-
-        for (auto &i : r )
-            i = 2* (i);
-        for (auto &i : r )
-            cout << i << "!\n";
+        // iterate over positions and modify them
+        for (auto &i : g.positions() )
+            i *= 2;
+        CHECK( p[1].pos.x() == doctest::Approx(8) );
+        CHECK( p[1].pos.y() == doctest::Approx(10) );
+        CHECK( p[1].pos.z() == doctest::Approx(12) );
     }
 #endif
 
@@ -1443,29 +1454,19 @@ namespace Faunus {
             Tgvec groups;  //!< Group vector
             Tgeometry geo; //!< Container geometry
 
-            std::vector<MoleculeData<Tpvec>>& molecules;
+            std::vector<MoleculeData<Tpvec>>& molecules; //!< Reference to global molecule list
 
             Space() {
                 molecules = Faunus::molecules<Tpvec>;
             }
 
-            template<typename T>
-                std::vector<int> findIndex(const std::vector<T> &v, int id) const {
-                    std::vector<int> ndx;
-                    ndx.reserve( v.size() );
-                    for (size_t i=0; i<v.size(); i++)
-                        if (v[i].id==id)
-                            ndx.push_back(i);
-                    return ndx;
-                } //!< ordered vector of index pointing to `v`-elements of type `id`
+            auto findMolecules(int molid) const {
+                return groups | ranges::view::filter( [molid](auto &i){ return i.id==molid; } );
+            } //!< Range with all groups of type `molid` (complexity: order N)
 
-            template<typename T>
-                int random(const std::vector<T> &v, int id, Random &r) const {
-                    auto i = findIndex(v, id);
-                    if (i.empty())
-                        return -1;
-                    return *r.sample(i.begin(), i.end());
-                } //!< find index to random element of `id`. Returns -1 if not found.
+            auto findAtoms(int atomid) const {
+                return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
+            } //!< Range with all atoms of type `atomid` (complexity: order N)
 
             void sync(const Tspace &o, const Tchange &change) {
 
@@ -1490,14 +1491,6 @@ namespace Faunus {
                 for (auto& f : changeTriggers)
                     f(*this, change);
             }
-
-            template<class Tindex>
-                void erase(int molid, Tindex ndx );
-
-            //auto findAtomData(const std::string &name) const {
-            //    return std::find_if( atoms.begin(), atoms.end(),
-            //            [&name](const AtomData &a) { return a.name==name; } );
-            //} //!< Iterator to AtomData with `name` -- `end()` if not found
         };
 
     namespace Analysis {

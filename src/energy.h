@@ -40,7 +40,7 @@ namespace Faunus {
                 using namespace ranges;
                 double u = 0;
 
-                auto moved = change.groups | view::keys; // moved groups
+                auto moved = change.touched(); // moved groups
                 auto fixed = view::ints(spc.groups.size()) | action::remove_if(
                         [](int i){return std::binary_search(moved.begin(), moved.end(), i);}); // static groups
 

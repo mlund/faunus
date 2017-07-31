@@ -1215,7 +1215,7 @@ namespace Faunus {
      *
      * - Just deactivated elements are moved to `end()` and can be retrieved from there.
      * - Just activated elements are placed at `end()-n`.
-     * - The true size the range is given by `capacity()`
+     * - The true size is given by `capacity()`
      */
     template<class T>
         class ElasticRange : public IterRange<typename std::vector<T>::iterator> {
@@ -1308,18 +1308,25 @@ namespace Faunus {
                 id = o.id;
                 atomic = o.atomic;
                 cm = o.cm;
-                std::copy(o.begin(), o.end(), begin());
+                //std::copy(o.begin(), o.end(), begin());
                 return *this;
             } //!< Deep copy contents from another Group
 
-            template<class Tfunc>
-                auto filter( Tfunc f ) const {
+            template<class UnaryPredicate>
+                auto filter( UnaryPredicate f ) const {
                     return ranges::view::filter(*this,f); 
-                } //!< Filtered range according to unary function `f`
+                } //!< Filtered range according to unary predicate, `f`
 
             auto find_id(int id) const {
                 return *this | ranges::view::filter( [id](T &i){ return (i.id==id); } );
             } //!< Range of all elements with matching particle id
+
+            template<class Trange=std::vector<int>>
+                auto find_index( const Trange &index ) {
+                    return ranges::view::indirect(
+                            ranges::view::transform(index, [this](int i){return this->begin()+i;}) );
+                } //!< Group subset matching given `index` (Complexity: linear with index size)
+
 
             auto positions() const {
                 return ranges::view::transform(*this, [](auto &i) -> Point& {return i.pos;});
@@ -1396,6 +1403,16 @@ namespace Faunus {
         CHECK( p[1].pos.x() == doctest::Approx(8) );
         CHECK( p[1].pos.y() == doctest::Approx(10) );
         CHECK( p[1].pos.z() == doctest::Approx(12) );
+
+        // a new range by using an index filter
+        auto subset = g.find_index( {0,1} );
+        CHECK( std::distance(subset.begin(), subset.end()) == 2 );
+        for (auto &i : subset)
+            i.pos *= 2;
+        CHECK( p[1].pos.x() == doctest::Approx(16) );
+        CHECK( p[1].pos.y() == doctest::Approx(20) );
+        CHECK( p[1].pos.z() == doctest::Approx(24) );
+
     }
 #endif
 
@@ -1411,13 +1428,18 @@ namespace Faunus {
             double dV = 0;     //!< Volume change (in different directions)
 
             struct data {
-                typedef std::pair<int,int> Tindexpair;
+                int index; //!< Touched group index
+                typedef std::pair<int,int> Tpair;
                 bool all=false;
-                std::vector<int> index;
-                std::vector<Tindexpair> activated, deactivated;
+                std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
+                std::vector<Tpair> activated, deactivated; //!< Range of (de)activated particles
             };
 
-            std::map<int, data> groups;
+            std::vector<data> groups; //!< Touched groups by index in group vector
+
+            auto touched() {
+                return groups | ranges::view::transform([](data &i) -> int {return i.index;});
+            } //!< List of moved groups (index)
 
             void clear()
             {
@@ -1433,6 +1455,7 @@ namespace Faunus {
                         return true;
                 return false;
             } //!< Check if change object is empty
+
         };
 
     template<class Tgeometry, class Tparticle>
@@ -1472,18 +1495,20 @@ namespace Faunus {
 
                 for (auto &m : change.groups) {
 
-                    auto &go = groups[m.first];  // old group
-                    auto &gn = o.groups[m.first];// new group
+                    auto &go = groups.at(m.index);  // old group
+                    auto &gn = o.groups.at(m.index);// new group
 
                     go = gn; // sync group (*not* the actual elements)
 
-                    // whole group has moved
-                    if (m.second.all) {
-                        auto i = go.begin();
-                        for (auto &j : gn())
-                            *j++ = i;
-                        assert(i==go.end());
-                    }
+                    assert( gn.size() == go.size() );
+                    assert( go.size()
+                            < std::max_element(m.atoms.begin(), m.atoms.end()));
+
+                    if (m.second.all) // all atoms have moved
+                        std::copy(gn.begin(), gn.end(), go.begin() );
+                    else // only some atoms have moved
+                        for (auto i : m.atoms)
+                            *(go.begin()+i) = *(gn.begin()+i);
                 }
             } //!< Copy differing data from other (o) Space using Change object
 
@@ -1512,6 +1537,16 @@ namespace Faunus {
             }; // specialized template
 
     }//namespace
+
+    namespace Move {
+        class Movebase {
+        };
+    }//namespace
+
+    template<class Tspace>
+        class MonteCarloSimulation {
+            public:
+        };
 
 
 }//end of faunus namespace

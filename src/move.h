@@ -1,71 +1,87 @@
 #pragma once
 
-#include "core.h"
-#include "potentials.h"
+//#include "core.h"
+//#include "potentials.h"
 
 namespace Faunus {
     namespace Move {
 
+        class Movebase {
+            private:
+                virtual void move(Change&)=0; //!< Perform move and return change object
+            protected:
+                static Random slump; //!< Temporarily here
+            public:
+                std::string name;            //!< Name of move
+                struct data {
+                    int molid;
+                    double weight=1;
+                    unsigned int trials=0;   //!< Number of trial moves
+                    unsigned int accepted=0; //!< Number of accepted moves
+                };
+                std::vector<data> mollist;   //!< Vector of molecule id's to operate on
+
+                inline auto randomMolecule() {
+                    return slump.sample( mollist.begin(), mollist.end() );
+                } //!< Iterator to random molecule (data object)
+
+                inline void operator()(Change &change) {
+                    change.clear();
+                    move(change);
+                } //!< Perform move and return change object
+        };
+
         template<typename Tspace>
-        struct TranslateMove {
-            typename Tspace::Tchange change;
-            Random slump;
-            std::vector<int> mollist; // list of molecule id to pick from
-            Tspace spc, trial;
+            class TranslateRotate : public Movebase {
+                private:
+                    Tspace& trial;
 
-            void move(Tspace &spc) {
-                assert(!mollist.empty());
-
-                change.clear();
-
-                int molid = *slump.sample(mollist.begin(), mollist.end()); // random molecule id
-                int igroup = trial.random(trial.groups, molid, slump); // random group index
-                if (igroup>-1)
-                    if (!trial.g[igroup].empty()) {
-                        int iatom = trial.g[igroup].random(slump);
-
-                        trial.p[iatom].pos += {1,1,1};
-                        change.moved[igroup].push_back(iatom);
+                    void move(Change &change) override {
+                        auto it = randomMolecule(); // random registered molid
+                        auto g = trial.findMolecules(it->molid)
+                            | ranges::view::sample(1, slump.engine); // random group
+                        //Point cm = g.cm;// = Point(0,0,0);
                     }
 
-                auto pairpot = Potential::Coulomb() + Potential::HardSphere();
-                Nonbonded<Tspace,decltype(pairpot)> pot;
-                pot.pairpot = pairpot;
-                double du = pot.energy(spc, change);
-            }
+                public:
+                    TranslateRotate(Tspace &trial) : trial(trial) {
+                        name = "Translate-Rotate";
+                    } 
+            };
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] TranslateRotate")
+    {
+        typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
+        typedef Space<Geometry::Cuboid, Tparticle> Tspace;
+        Tspace spc, trial;
 
-            void accept() {
-                spc.sync(trial, change);
-            }
-
-            void reject() {
-                trial.sync(spc, change);
-            }
-        };
-
+        //TranslateRotate<Tspace> mv(trial);
+    }
+#endif
+ 
         template<class Tspace>
-        class MCSimulation {
-        private:
-            Tspace spc, backup;
-            TranslateMove<Tspace> mv;
-            //Propagator mv;
-            //Reporter analyse;
+            class MCSimulation {
+                private:
+                    Tspace spc, backup;
+                    TranslateRotate<Tspace> mv;
+                    //Propagator mv;
+                    //Reporter analyse;
 
-        public:
-            MCSimulation() {
-            }
+                public:
+                    MCSimulation() {
+                    }
 
-            void move() {
-                typename Tspace::Tchange change;
-                // make change to trial
-                //std::pair<double> u = pot.energyChange( spc, trial, change );
-                //if (metropolis( u.second-u.first ) )
-                //    spc.sync( trial, change );
-                //else
-                //    trial.sync( spc, change );
-            }
+                    void move() {
+                        typename Tspace::Tchange change;
+                        // make change to trial
+                        //std::pair<double> u = pot.energyChange( spc, trial, change );
+                        //if (metropolis( u.second-u.first ) )
+                        //    spc.sync( trial, change );
+                        //else
+                        //    trial.sync( spc, change );
+                    }
 
-        };
+            };
 
     }//namespace
 }//namespace

@@ -8,4 +8,5 @@
 #include "potentials.h"
 #include "average.h"
 #include "energy.h"
+#include "move.h"
 

@@ -194,13 +194,13 @@ namespace Faunus {
         std::mt19937 engine; //!< Random number engine used for all operations
         std::uniform_real_distribution<double> dist01; //!< Uniform real distribution [0,1)
 
-        Random() : dist01(0,1) {}
+        inline Random() : dist01(0,1) {}
 
-        void seed() { engine = std::mt19937(std::random_device()()); }
+        inline void seed() { engine = std::mt19937(std::random_device()()); }
 
-        double operator()() { return dist01(engine); } //!< Double in uniform range [0,1)
+        inline double operator()() { return dist01(engine); } //!< Double in uniform range [0,1)
 
-        int range( int min, int max )
+        inline int range( int min, int max )
         {
             std::uniform_int_distribution<int> d(min, max);
             return d(engine);
@@ -1250,6 +1250,9 @@ namespace Faunus {
                     end() += n;
                     assert(size() + inactive().size() == capacity());
                 } //!< Activate previously deactivated elements
+
+                T& trueend() { return _trueend; }
+                const T& trueend() const { return _trueend; }
         };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -1422,41 +1425,38 @@ namespace Faunus {
      * - If `moved` or `removed` are defined for a group, but are
      *   empty, it is assumed that *all* particles in the group are affected.
      */
-    template<class Tpvec>
-        struct Change
-        {
-            double dV = 0;     //!< Volume change (in different directions)
+    struct Change {
+        double dV = 0;     //!< Volume change (in different directions)
 
-            struct data {
-                int index; //!< Touched group index
-                typedef std::pair<int,int> Tpair;
-                bool all=false;
-                std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
-                std::vector<Tpair> activated, deactivated; //!< Range of (de)activated particles
-            };
-
-            std::vector<data> groups; //!< Touched groups by index in group vector
-
-            auto touched() {
-                return groups | ranges::view::transform([](data &i) -> int {return i.index;});
-            } //!< List of moved groups (index)
-
-            void clear()
-            {
-                dV = 0;
-                groups.clear();
-                assert(empty());
-            } //!< Clear all change data
-
-            bool empty() const
-            {
-                if ( groups.empty())
-                    if ( std::fabs(dV)>0 )
-                        return true;
-                return false;
-            } //!< Check if change object is empty
-
+        struct data {
+            int index; //!< Touched group index
+            bool all=false;
+            std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
+            std::vector<std::pair<int,int>> activated, deactivated; //!< Range of (de)activated particles
         };
+
+        std::vector<data> groups; //!< Touched groups by index in group vector
+
+        auto touched() {
+            return groups | ranges::view::transform([](data &i) -> int {return i.index;});
+        } //!< List of moved groups (index)
+
+        void clear()
+        {
+            dV = 0;
+            groups.clear();
+            assert(empty());
+        } //!< Clear all change data
+
+        bool empty() const
+        {
+            if ( groups.empty())
+                if ( std::fabs(dV)>0 )
+                    return true;
+            return false;
+        } //!< Check if change object is empty
+
+    };
 
     template<class Tgeometry, class Tparticle>
         struct Space {
@@ -1465,7 +1465,7 @@ namespace Faunus {
             typedef std::vector<Tparticle> Tpvec;
             typedef Group<typename Tpvec::iterator> Tgroup;
             typedef std::vector<Tgroup> Tgvec;
-            typedef Change<Tpvec> Tchange;
+            typedef Change Tchange;
 
             typedef std::function<void(Tspace&, const Tchange&)> ChangeTrigger;
             typedef std::function<void(Tspace&, const Tspace&, const Tchange&)> SyncTrigger;
@@ -1477,11 +1477,36 @@ namespace Faunus {
             Tgvec groups;  //!< Group vector
             Tgeometry geo; //!< Container geometry
 
-            std::vector<MoleculeData<Tpvec>>& molecules; //!< Reference to global molecule list
+            //std::vector<MoleculeData<Tpvec>>& molecules; //!< Reference to global molecule list
 
             Space() {
-                molecules = Faunus::molecules<Tpvec>;
+                //molecules = Faunus::molecules<Tpvec>;
             }
+
+            void push_back(int molid, Tpvec &in) {
+                bool resized=false;
+                if (p.size()+in.size() > p.capacity())
+                    resized=true;
+
+                p.insert( p.end(), in.begin(), in.end() );
+
+                if (resized) // group iterators must be updated if `p` is resized...
+                    for (auto &g : groups) {
+                        size_t size=g.size(),
+                               capacity=g.size();
+                        g.begin()   = p.begin() + std::distance(groups[0].begin(), g.begin()); 
+                        g.end()     = p.begin() + std::distance(groups[0].begin(), g.end()); 
+                        g.trueend() = p.begin() + std::distance(groups[0].begin(), g.trueend()); 
+                        if ( size!=g.size() || capacity!=g.capacity() )
+                            throw std::runtime_error("Group relocation error");
+                    }
+
+                Tgroup g( p.end()-in.size(), p.end() );
+                g.id=molid;
+                groups.push_back(g);
+                assert( in.size() == groups.back().size() );
+
+            } //!< Add particles and corresponding group to back
 
             auto findMolecules(int molid) const {
                 return groups | ranges::view::filter( [molid](auto &i){ return i.id==molid; } );
@@ -1504,7 +1529,7 @@ namespace Faunus {
                     assert( go.size()
                             < std::max_element(m.atoms.begin(), m.atoms.end()));
 
-                    if (m.second.all) // all atoms have moved
+                    if (m.all) // all atoms have moved
                         std::copy(gn.begin(), gn.end(), go.begin() );
                     else // only some atoms have moved
                         for (auto i : m.atoms)
@@ -1517,6 +1542,16 @@ namespace Faunus {
                     f(*this, change);
             }
         };
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] Space")
+    {
+        typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
+        typedef Space<Geometry::Cuboid, Tparticle> Tspace;
+        Tspace spc;
+        spc.p.resize(10);
+
+    }
+#endif
 
     namespace Analysis {
 
@@ -1537,17 +1572,6 @@ namespace Faunus {
             }; // specialized template
 
     }//namespace
-
-    namespace Move {
-        class Movebase {
-        };
-    }//namespace
-
-    template<class Tspace>
-        class MonteCarloSimulation {
-            public:
-        };
-
 
 }//end of faunus namespace
 

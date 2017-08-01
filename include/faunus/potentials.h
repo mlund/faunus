@@ -167,8 +167,8 @@ namespace Faunus {
 
 	class Potfromfile : public PairPotentialBase {
 	private:
-	  std::vector <double> x, y;
-	    double xmin,xmax;
+	  std::vector <double> x, y, alfa, beta, gamma;
+	  double xmin,xmax;
 
 	public:
 	    Potfromfile();
@@ -186,13 +186,32 @@ namespace Faunus {
 		x.push_back(tmpX);
 		y.push_back(tmpY);
 	      }
+	      
 	      fin.close();
-
-	     if (x.size()<3)
-	      throw std::runtime_error("Table must have at least three points");
-
+	     
 	      xmin = x[1];
-	      xmax = x[x.size() - 2];
+	      xmax = x[x.size()-2];
+	      
+	      int size = x.size()-2;
+	      if (x.size()<3)
+	      throw std::runtime_error("Table must have at least three points");
+	      
+	      for(int i=1; i<=size; i++){
+		double x2im1=x[i-1]*x[i-1];
+		double x2i = x[i]*x[i];
+		double x2ip1 = x[i+1]*x[i+1];
+		double ximxim1 = x[i]-x[i-1];
+		double xip1mxim1 = x[i+1]-x[i-1];
+		double x2imx2im1 = x2i-x2im1;
+		//Calculates and stores the a,b,c coefficients. 
+		alfa.push_back((((y[i+1]-y[i-1])*ximxim1) + (xip1mxim1*(-y[i]+y[i-1]))) / 
+			    (((x2im1 + x2ip1)*ximxim1)-(x2imx2im1*xip1mxim1)));
+		
+	        beta.push_back((y[i]-alfa[i-1]*x2imx2im1-y[i-1])/ximxim1);
+		
+	        gamma.push_back(y[i-1]- alfa[i-1]*x2im1-beta[i-1]*x[i-1]);
+	
+		}
 	    }
 
 	      template<class Tparticle>
@@ -200,32 +219,11 @@ namespace Faunus {
 
 		double m=sqrt(r2);
 		if(m >= xmin && m <= xmax){
-
-		  //Should change this for loop for a better search algorithm in the next update.
-		  // for(size_t i=1; i < x.size()-2; ++i){
 		  auto it = std::lower_bound(x.begin(), x.end(), m);
-		  
-		  //double value = *it; // iterator --> value
 		  int i = std::distance(x.begin(), it); // iterator --> index
-		  // if(x[i] > m) {
-		    
-		    double x2im1=x[i-1]*x[i-1];
-		    double x2i = x[i]*x[i];
-		    double x2ip1 = x[i+1]*x[i+1];
-		    double ximxim1 = x[i]-x[i-1];
-		    double xip1mxim1 = x[i+1]-x[i-1];
-		    double x2imx2im1 = x2i-x2im1;
-		    
-		    double a = (((y[i+1]-y[i-1])*ximxim1) + (xip1mxim1*(-y[i]+y[i-1]))) / 
-		      (((x2im1 + x2ip1)*ximxim1)-(x2imx2im1*xip1mxim1));
-		    
-		    double b = (y[i]-a*x2imx2im1-y[i-1])/ximxim1;
-		    
-		    double c = y[i-1]- a*x2im1-b*x[i-1];
-		    
-		    return a*m*m + b*m + c;
-		    //}   
-		    //}
+		  
+		  return alfa[i-1]*m*m + beta[i-1]*m + gamma[i-1];
+		   
 		}
 		return 0;  
 	      }

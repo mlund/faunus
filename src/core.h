@@ -40,6 +40,22 @@ namespace Faunus {
     using std::cout;
     using std::endl;
 
+    template<class T1, class T2>
+        int distance(T1 first, T2 last) {
+            return std::distance( &(*first), &(*last) );
+        } //!< Distance between two arbitrary contiguous iterators
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] distance")
+    {
+        std::vector<long long int> v = {10,20,30,40,30};
+        auto rng = v | ranges::view::filter( [](int i){return i==30;} );
+        CHECK( Faunus::distance(v.begin(), rng.begin()) == 2 );
+        auto it = rng.begin();
+        CHECK( Faunus::distance(v.begin(), ++it) == 4 );
+    }
+#endif
+
     /** @brief Physical constants */
     namespace PhysicalConstants {
         typedef double T; //!< Float size
@@ -678,7 +694,7 @@ namespace Faunus {
         static std::vector<AtomData<Tparticle>> atoms = {}; //!< Global instance of atom list
 
     template<class Trange>
-        auto findName(const std::string &name, Trange &rng) {
+        auto findName(Trange &rng, const std::string &name) {
             return std::find_if( rng.begin(), rng.end(), [&name](auto &i){ return i.name==name; });
         } //!< Returns iterator to first element with member `name` matching input
 
@@ -721,9 +737,9 @@ namespace Faunus {
         CHECK(a.dprot==Approx(3.14));
         CHECK(a.weight==Approx(1.1));
 
-        auto it = findName("B", v);
+        auto it = findName(v, "B");
         CHECK( it->id() == 1 );
-        it = findName("unknown atom", v);
+        it = findName(v, "unknown atom");
         CHECK( it==v.end() );
     }
 #endif
@@ -1353,8 +1369,8 @@ namespace Faunus {
                     cm += d;
                     boundary(cm);
                     for (auto &i : *this) {
-                        i.pos += d;
-                        boundary(i.pos);
+                        i->pos += d;
+                        boundary(i->pos);
                     }
                 } //!< Translate particle positions and mass center
 
@@ -1490,7 +1506,7 @@ namespace Faunus {
 
                 p.insert( p.end(), in.begin(), in.end() );
 
-                if (resized) // group iterators must be updated if `p` is resized...
+                if (resized) // update group iterators if `p` is resized...
                     for (auto &g : groups) {
                         size_t size=g.size(),
                                capacity=g.size();
@@ -1508,7 +1524,7 @@ namespace Faunus {
 
             } //!< Add particles and corresponding group to back
 
-            auto findMolecules(int molid) const {
+            auto findMolecules(int molid) {
                 return groups | ranges::view::filter( [molid](auto &i){ return i.id==molid; } );
             } //!< Range with all groups of type `molid` (complexity: order N)
 

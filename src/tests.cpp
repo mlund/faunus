@@ -5,8 +5,8 @@
 #include "doctest.h"
 #include "core.h"
 #include "auxiliary.h"
-#include "potentials.h"
+//#include "potentials.h"
 #include "average.h"
-#include "energy.h"
+//#include "energy.h"
 #include "move.h"
 

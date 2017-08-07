@@ -153,16 +153,29 @@ namespace Faunus {
       }
     
 	 /**
-	 * @brief An Effective potential that is read from a file.
-	 * @details The potential utilizez the a
+	 * @brief A potential that is read from a file.
+	 * @details The potential utilizez the
 	 * @f[
-	 * ax^2+bx+c 
+	 * \alfa x^2 + \beta x + \gamma 
 	 * @f]
-	 * regression between 3 points to determine the value of the interaction and is
-	 * zero if outside the min max value.
+	 * regression between 3 points to determine the value of the
+	 * interaction for a given x value and is
+	 * zero if the x value is outside the min max value.
 	 * 
-	 * In json under nonbonded you need to specify the keyword "datafile": myfile
+	 * When constructing the potential the file where your potential
+	 * is stored will be read and the \alfa, \beta, and \gamma
+	 * coefficients will be calculated and tabulated 
+	 * in coresponding vectors. 
+	 *
+	 * In the json file under nonbonded the following keywords are 
+	 * requiered.
 	 * 
+	 * JSON keywords:
+	 *
+	 * Keyword   | Description
+	 * :-------- | :-----------------------------------------------
+	 * `datafile`  | the filename/path of/to your potential
+	 *
 	 */
 
 	class Potfromfile : public PairPotentialBase {
@@ -203,7 +216,9 @@ namespace Faunus {
 		double ximxim1 = x[i]-x[i-1];
 		double xip1mxim1 = x[i+1]-x[i-1];
 		double x2imx2im1 = x2i-x2im1;
-		//Calculates and stores the a,b,c coefficients. 
+		//Calculates and stores the alfa,beta,gamma coefficients.
+		// WARNING due to the fact that you are skiping the first point in the 
+		// data the indicies between the data and coefficients will be missmached by -1 
 		alfa.push_back((((y[i+1]-y[i-1])*ximxim1) + (xip1mxim1*(-y[i]+y[i-1]))) / 
 			    (((x2im1 + x2ip1)*ximxim1)-(x2imx2im1*xip1mxim1)));
 		
@@ -221,6 +236,9 @@ namespace Faunus {
 		if(m >= xmin && m <= xmax){
 		  auto it = std::lower_bound(x.begin(), x.end(), m);
 		  int i = std::distance(x.begin(), it); // iterator --> index
+		  
+		  // WARNING due to the fact that you are skiping the first point in the 
+		  // data the indicies between the data and coefficients will be missmached by -1 
 		  
 		  return alfa[i-1]*m*m + beta[i-1]*m + gamma[i-1];
 		   

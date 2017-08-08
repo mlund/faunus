@@ -182,15 +182,16 @@ namespace Faunus {
 	private:
 	  std::vector <double> x, y, alfa, beta, gamma;
 	  double xmin,xmax;
-
+	  string _brief();
+	  string filename;
 	public:
 	    Potfromfile();
 
 	    Potfromfile(Tmjson &j){
 
 	      name = "Potfromfile";
-	      string file = j.at("datafile").get<string>(); //WILL CRASH THE RUN IF THERE IS NO FILE SPECIFIED IN THE JSON 
-	      std::ifstream fin(file);
+	      filename = j.at("datafile").get<string>(); //WILL CRASH THE RUN IF THERE IS NO FILE SPECIFIED IN THE JSON 
+	      std::ifstream fin(filename);
 
 
 	      while (!fin.eof()){
@@ -249,6 +250,8 @@ namespace Faunus {
 	      double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
 		return operator()(a,b,r.squaredNorm());
 	      }
+		 
+		 string info(char w);
 	};
 
 

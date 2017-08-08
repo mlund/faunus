@@ -6,20 +6,29 @@
 namespace Faunus {
     namespace Move {
 
+        struct MoleculeMoveParameters {
+            int molid; //!< Molecule type to move
+            float prob=1; //!< Probability
+            unsigned int trials=0;   //!< Number of trial moves
+            unsigned int accepted=0; //!< Number of accepted moves
+            Point dir={1,1,1};
+        };
+
         class Movebase {
             private:
-                virtual void move(Change&)=0; //!< Perform move and return change object
+                virtual void move(Change&)=0; //!< Perform move and modify change object
             protected:
                 Random slump; //!< Temporarily here
             public:
                 std::string name;            //!< Name of move
                 struct data {
                     int molid;
-                    double weight=1;
+                    float prob=1;
                     unsigned int trials=0;   //!< Number of trial moves
                     unsigned int accepted=0; //!< Number of accepted moves
-                    std::vector<double> prop_f;
-                    std::vector<Point> prop_v;
+                    double dp1=0;
+                    double dp2=0;
+                    Point dir={1,1,1};
                 };
                 std::vector<data> mollist;   //!< Vector of molecule id's to operate on
 
@@ -38,39 +47,47 @@ namespace Faunus {
                 private:
                     Tspace* trial;
 
-                    enum keys {DP=0, DPROT=1, DIR=0};
-
                     void move(Change &change) override {
                         auto d = randomMolecule(); // random registered molid
                         auto it = ( trial->findMolecules(d->molid)
-                            | ranges::view::sample(1, slump.engine) ).begin(); // random group
+                                | ranges::view::sample(1, slump.engine) ).begin(); // random group
 
-                        Point dp = ranunit(slump).cwiseProduct( d->prop_v.at(DIR) ) * d->prop_f.at(DP);
+                        Point dp = ranunit(slump).cwiseProduct( d->dir ) * d->dp1;
                         it->translate( dp, trial->geo.boundaryFunc );
 
-                        Change::data cdata;
-                        cdata.index = Faunus::distance( trial->groups.begin(), it );
-                        cdata.all = true;
-                        change.groups.push_back( cdata );
+                        Change::data cdata; // object that describes what was moved
+                        cdata.index = Faunus::distance( trial->groups.begin(), it ); // index of moved group
+                        cdata.all = true; // *all* atoms were moved
+                        change.groups.push_back( cdata ); // add to list of moved groups
                     }
 
                 public:
                     TranslateRotate(Tspace &trial) : trial(&trial) {
                         name = "Translate-Rotate";
-                    } 
+                    }
 
                     void from_json(const json &j) {
-                        typedef typename Tspace::Tpvec Tpvec;
+                        assert( j.is_object() );
                         for ( auto it = j.begin(); it != j.end(); ++it ) {
+                            typedef typename Tspace::Tpvec Tpvec;
                             auto mol = findName(molecules<Tpvec>, it.key());
                             if (mol!=molecules<Tpvec>.end()) {
+                                data d;
+                                d.molid = mol->id();
+                                d.dp1 = j.at("dp").get<double>();
+                                d.dp2 = j.at("dprot").get<double>();
+                                d.dir = j.value("dir",  d.dir);
+                                mollist.push_back(d);
                             }
                             else
                                 throw std::runtime_error("Unknown molecule '" + it.key() + "'");
                         }
                     } //!< Configure via json object
-
             };
+
+        template<class T>
+            void to_json(json &j, const TranslateRotate<T> mv) {
+            }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] TranslateRotate")
@@ -82,6 +99,7 @@ namespace Faunus {
             TranslateRotate<Tspace> mv(trial);
             json j;
             mv.from_json(j);
+            j = mv;
         }
 #endif
 

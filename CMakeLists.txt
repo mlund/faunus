@@ -8,6 +8,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 enable_testing()
 
+option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
+
 # Download external header files (Eigen, JSON for Modern C++, Doctest, Range-V3)
 include(ExternalProject)
 ExternalProject_Add( modernjson
@@ -24,6 +26,13 @@ ExternalProject_Add( range-v3
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(range-v3 source_dir)
 set(RangeV3IncludeDir ${source_dir}/include)
+
+ExternalProject_Add( pybind11
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    URL "https://github.com/pybind/pybind11/archive/v2.1.1.tar.gz"
+    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
+ExternalProject_Get_Property(pybind11 source_dir)
+set(Pybind11IncludeDir ${source_dir}/include)
 
 ExternalProject_Add( eigen
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
@@ -60,7 +69,7 @@ set(CatchIncludeDir ${source_dir}/../../src/)
 set_target_properties(catch PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 add_definitions(-DDOCTEST_CONFIG_DISABLE)
-include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir} ${XDRIncludeDir})
+include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir} ${XDRIncludeDir} ${Pybind11IncludeDir})
 
 set(hdrs
         ${CMAKE_SOURCE_DIR}/src/average.h
@@ -72,8 +81,25 @@ set(hdrs
         )
 
 add_executable(tests src/tests.cpp ${hdrs})
-add_dependencies(tests modernjson doctest eigen range-v3 libxdrfile)
+add_dependencies(tests modernjson doctest eigen range-v3 libxdrfile pybind11)
 add_test(NAME tests COMMAND tests)
 
 add_executable(example src/example.cpp ${hdrs})
 add_dependencies(example modernjson doctest eigen range-v3)
+
+if (ENABLE_PYTHON)
+    INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
+    INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+
+    find_package(PythonLibs)
+    find_package(PythonInterp)
+
+    if (PYTHONLIBS_FOUND)
+        add_library(pyfaunus SHARED src/pyfaunus.cpp)
+        set_target_properties(pyfaunus PROPERTIES PREFIX "")
+        set_target_properties(pyfaunus PROPERTIES SUFFIX ".so")
+        target_link_libraries(pyfaunus ${PYTHON_LIBRARY})
+        INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
+    endif ()
+
+endif ()

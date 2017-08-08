@@ -636,7 +636,7 @@ namespace Faunus {
     /**
      * @brief General properties for atoms
      */
-    template<class T>
+    template<class T /** Particle type */>
         struct AtomData {
             T p;               //!< Particle with generic properties
             std::string name;  //!< Name

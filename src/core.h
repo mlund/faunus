@@ -795,6 +795,8 @@ namespace Faunus {
                     return len.x() * len.y() * len.z();
                 }
 
+                const Point& getLength() const { return len; } //!< Side lengths
+
                 void randompos( Point &m, std::function<double()> &rand ) const override {
                     m.x() = (rand()-0.5) * this->len.x();
                     m.y() = (rand()-0.5) * this->len.y();
@@ -1318,6 +1320,10 @@ namespace Faunus {
             int id=-1;
             bool atomic=false;   //!< Is it an atomic group?
             Point cm={0,0,0};    //!< Mass center
+
+            template<class Trange>
+                Group(Trange &rng) : base(rng.begin(), rng.end()) {} //!< Constructor from range
+
             Group(iter begin, iter end) : base(begin,end) {} //!< Constructor
 
             Group& operator=(const Group &o) {
@@ -1369,8 +1375,8 @@ namespace Faunus {
                     cm += d;
                     boundary(cm);
                     for (auto &i : *this) {
-                        i->pos += d;
-                        boundary(i->pos);
+                        i.pos += d;
+                        boundary(i.pos);
                     }
                 } //!< Translate particle positions and mass center
 
@@ -1479,7 +1485,7 @@ namespace Faunus {
 
             typedef Space<Tgeometry,Tparticle> Tspace;
             typedef std::vector<Tparticle> Tpvec;
-            typedef Group<typename Tpvec::iterator> Tgroup;
+            typedef Group<Tparticle> Tgroup;
             typedef std::vector<Tgroup> Tgvec;
             typedef Change Tchange;
 

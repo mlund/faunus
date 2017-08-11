@@ -171,6 +171,7 @@ namespace Faunus {
 	 * requiered.
 	 * 
 	 * Will crah the program if no file is given, or if the filename is wrong/can't be found.
+	 * Will also crash if the dataset is smaller than 3. 
 	 *
 	 * JSON keywords:
 	 *
@@ -213,7 +214,7 @@ namespace Faunus {
 	      
 	      int size = x.size()-2;
 	      if (x.size()<3)
-	      throw std::runtime_error("Table must have at least three points");
+	       throw std::runtime_error("Table must have at least three points");
 	      
 	      for(int i=1; i<=size; i++){
 		double x2im1=x[i-1]*x[i-1];

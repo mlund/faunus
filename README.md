@@ -1,6 +1,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
 
-{% include toc_pure_liquid.html html=content sanitize=true h_min=my_min h_max=my_max %}
+{% include _includes/toc_pure_liquid.html html=content sanitize=true h_min=my_min h_max=my_max %}
 
 
 * TOC

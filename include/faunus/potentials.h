@@ -170,6 +170,8 @@ namespace Faunus {
 	 * In the json file under nonbonded the following keywords are 
 	 * requiered.
 	 * 
+	 * Will crah the program if no file is given, or if the filename is wrong/can't be found.
+	 *
 	 * JSON keywords:
 	 *
 	 * Keyword   | Description
@@ -192,8 +194,11 @@ namespace Faunus {
 	      name = "Potfromfile";
 	      filename = j.at("datafile").get<string>(); //WILL CRASH THE RUN IF THERE IS NO FILE SPECIFIED IN THE JSON 
 	      std::ifstream fin(filename);
-
-
+	      
+	      if( !fin )
+		throw std::runtime_error("Could not open file"); //WILL CRASH THE RUN IF THE FILE CAN'T BE FOUND
+	      
+	
 	      while (!fin.eof()){
 		double tmpX, tmpY;
 		fin >> tmpX >> tmpY;
@@ -217,7 +222,9 @@ namespace Faunus {
 		double ximxim1 = x[i]-x[i-1];
 		double xip1mxim1 = x[i+1]-x[i-1];
 		double x2imx2im1 = x2i-x2im1;
+		
 		//Calculates and stores the alfa,beta,gamma coefficients.
+		
 		// WARNING due to the fact that you are skiping the first point in the 
 		// data the indicies between the data and coefficients will be missmached by -1 
 		alfa.push_back((((y[i+1]-y[i-1])*ximxim1) + (xip1mxim1*(-y[i]+y[i-1]))) / 
@@ -246,11 +253,15 @@ namespace Faunus {
 		}
 		return 0;  
 	      }
-		 template<class Tparticle>
-	      double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+	      
+	      //This is needed if for some reason you want to run this potential using Energy::NonbonbedVector
+	      //Which is not recomended since it will slow down the calculations. 
+	     
+	      template<class Tparticle>
+		double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
 		return operator()(a,b,r.squaredNorm());
-	      }
-		 
+	       }
+	      
 		 string info(char w);
 	};
 

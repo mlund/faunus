@@ -5,13 +5,22 @@ Sketch for new version of Faunus
 
 Here is a code block
 
-```.cpp
+``` cpp
 int main() {
 double x;
 for (int i=0; i<3; i++)
   std::cout << i << "\n";
 }
 ```
+
+--- cpp
+int main() {
+double x;
+for (int i=0; i<3; i++)
+  std::cout << i << "\n";
+}
+---
+
 
 Here's some math $$\pi$$. And a math block
 

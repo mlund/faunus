@@ -13,14 +13,6 @@ for (int i=0; i<3; i++)
 }
 ```
 
---- cpp
-int main() {
-double x;
-for (int i=0; i<3; i++)
-  std::cout << i << "\n";
-}
----
-
 
 Here's some math $$\pi$$. And a math block
 

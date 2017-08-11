@@ -2,8 +2,13 @@
 
 <script src="https://gist.github.com/allejo/a83bcef99a9e0a6f481fce01e492efff.js"></script>
 
+{% include toc_pure_liquid.html html=content sanitize=true h_min=my_min h_max=my_max %}
+
+
 * TOC
 {:toc}
+
+
 
 # Faunus
 Sketch for new version of Faunus

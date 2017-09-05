@@ -36,31 +36,39 @@ namespace Faunus {
                 return u;
             }
 
-            double energy(const Tspace &spc, const typename Tspace::Change &change) {
+            std::pair<double,double> energy(Tspace &oldspc, Tspace &newspc, typename Tspace::Tchange &change) {
+                if (change.empty())
+                    return {0,0};
+
+                double uold=0, unew=0;
+
                 using namespace ranges;
-                double u = 0;
+                auto moved = change.touchedGroupIndex(); // index of moved groups
+                auto fixed = view::ints( 0, int(oldspc.groups.size()) )
+                    | view::remove_if(
+                            [&moved](int i){return std::binary_search(moved.begin(), moved.end(), i);}
+                            ); // index of static groups
 
-                auto moved = change.touched(); // moved groups
-                auto fixed = view::ints(spc.groups.size()) | action::remove_if(
-                        [](int i){return std::binary_search(moved.begin(), moved.end(), i);}); // static groups
-
-                for (auto &m : change.groups) {
+                for (auto &d : change.groups) {
 
                     // moved<->moved
-                    for (auto &n : change.groups)
-                        if (n.first > m.first) {
-                            auto &g1 = spc.groups[m.first];
-                            auto &g2 = spc.groups[n.first];
-                            u += g2g(spc, g1, g2);
-                        }
+                    /*
+                       for (auto &n : change.groups)
+                       if (n.first > m.first) {
+                       auto &g1 = spc.groups[m.first];
+                       auto &g2 = spc.groups[n.first];
+                       u += g2g(spc, g1, g2);
+                       }*/
 
                     // moved<->static
-                    for (auto i : fixed)
-                        u += g2g(spc, spc.groups[m.first], spc.groups[i]);
+                    for (auto i : fixed) {
+                        uold += g2g(oldspc, oldspc.groups[d.index], oldspc.groups[i]);
+                        unew += g2g(newspc, newspc.groups[d.index], newspc.groups[i]);
+                    }
                 }
-                return u;
+                return {uold, unew};
             }
-        };
+        }; // Nonbonded energy before and after change (returns pair w. uold and unew)
 
     }//namespace
 }//namespace

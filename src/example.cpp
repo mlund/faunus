@@ -1,14 +1,22 @@
 #include "core.h"
+#include "move.h"
 
 using namespace Faunus;
 using namespace std;
 
+typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
+typedef Space<Geometry::Cuboid, Tparticle> Tspace;
+
 int main() {
 
-    Random r;
+    Tspace spc;
 
-    vector<int> v = {1,2,3,4,5,6};
+    MCSimulation<Tspace> sim;
 
-    auto i = v | ranges::view::sample(2, r.engine);
-    cout << i << endl;
+    sim.move();
+
+
+
+
+
 }

@@ -1452,20 +1452,20 @@ namespace Faunus {
 
         struct data {
             int index; //!< Touched group index
-            bool all=false;
+            bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
             std::vector<std::pair<int,int>> activated, deactivated; //!< Range of (de)activated particles
         };
 
         std::vector<data> groups; //!< Touched groups by index in group vector
 
-        auto touched() {
-            return groups | ranges::view::transform([](data &i) -> int {return i.index;});
+        auto touchedGroupIndex() {
+            return ranges::view::transform(groups, [](data &i) -> int {return i.index;});
         } //!< List of moved groups (index)
 
         void clear()
         {
-            dV = 0;
+            dV=0;
             groups.clear();
             assert(empty());
         } //!< Clear all change data
@@ -1548,8 +1548,8 @@ namespace Faunus {
                     go = gn; // sync group (*not* the actual elements)
 
                     assert( gn.size() == go.size() );
-                    assert( go.size()
-                            < std::max_element(m.atoms.begin(), m.atoms.end()));
+                    //assert( go.size()
+                    //        < std::max_element(m.atoms.begin(), m.atoms.end()));
 
                     if (m.all) // all atoms have moved
                         std::copy(gn.begin(), gn.end(), go.begin() );

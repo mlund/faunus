@@ -1,7 +1,6 @@
 #pragma once
 
-//#include "core.h"
-//#include "potentials.h"
+#include "energy.h"
 
 namespace Faunus {
     namespace Move {
@@ -102,30 +101,49 @@ namespace Faunus {
             j = mv;
         }
 #endif
-
-        template<class Tspace>
-            class MCSimulation {
-                private:
-                    Tspace spc, backup;
-                    TranslateRotate<Tspace> mv;
-                    //Propagator mv;
-                    //Reporter analyse;
-
-                public:
-                    MCSimulation() {
-                    }
-
-                    void move() {
-                        typename Tspace::Tchange change;
-                        // make change to trial
-                        //std::pair<double> u = pot.energyChange( spc, trial, change );
-                        //if (metropolis( u.second-u.first ) )
-                        //    spc.sync( trial, change );
-                        //else
-                        //    trial.sync( spc, change );
-                    }
-
-            };
-
     }//namespace
+
+    template<class Tspace>
+        class MCSimulation {
+            private:
+                Random slump;
+                Tspace oldspc, newspc;
+                Move::TranslateRotate<Tspace> mv;
+                Energy::Nonbonded<Tspace, Potential::Coulomb> pot;
+
+                bool metropolis(double du) {
+                    if (du<0)
+                        return true;
+                    if ( slump() > std::exp(-du)) // core of MC!
+                        return false;
+                    return true;
+                } //!< Metropolis criterion
+
+
+            public:
+                MCSimulation() : mv(newspc) {
+                }
+
+                void move() {
+                    typename Tspace::Tchange change;
+                    mv(change);
+                    if (!change.empty()) {
+                        cout << "change!" << endl;
+                        auto u = pot.energy(oldspc, newspc, change);
+                        double du = u.second - u.first;
+                        if (metropolis(du) )
+                            oldspc.sync( newspc, change );
+                        else
+                            newspc.sync( oldspc, change );
+                    }
+                    // make change to trial
+                    //std::pair<double> u = pot.energyChange( spc, trial, change );
+                    //if (metropolis( u.second-u.first ) )
+                    //    spc.sync( trial, change );
+                    //else
+                    //    trial.sync( spc, change );
+                }
+
+        };
+
 }//namespace

@@ -1,0 +1,96 @@
+{
+ "moleculelist": {
+        "cosan": {
+	    "Ninit": 10, 
+            "structure":"cosan.aam"
+
+    }
+    
+    }, 
+    "energy": {
+        "nonbonded": {
+            "cutoff": 14.4315,  
+            "epsr": 80.0,
+	    "datafile":"potfromfile.dat",
+	    "ionicstrength": 0.02
+	    
+        }
+    }, 
+    "system": {
+        "geometry": {
+            "length": 296.336
+        }, 
+        "mcloop": {
+            "macro": 10, 
+            "micro": 5000
+        }, 
+        "unittest": {
+            "testfile": "stockmayer.test", 
+            "stable": false
+        }, 
+        "temperature": 315.8
+    }, 
+    "analysis": {
+	"pqrfile": {
+            "file": "cosan.pqr"
+        }, 
+        "energyfile": {
+            "nstep": 20, 
+            "file": "energy.dat"
+        }, 
+        "atomrdf": {
+            "pairs": [
+                {
+                    "dr": 0.1, 
+                    "dim": 3, 
+                    "name2": "cos", 
+                    "file": "rdf_dipdip.dat", 
+                    "name1": "cos"
+                }
+            ], 
+            "nstep": 10
+        }, 
+        "statefile": {
+            "file": "state"
+        }, 
+	  "scatter": {
+            "qmin": 0.1, 
+            "file": "debye.dat", 
+            "dq": 0.05, 
+            "mollist": [
+                "cosan"
+            ], 
+            "qmax": 20, 
+            "nstep": 20
+        }, 
+        "xtcfile": {
+            "nstep": 20, 
+            "file": "cosan.xtc"
+        }
+    },
+ 
+    "atomlist": {
+        "cos": {
+	    "sigma": 6.0,
+            "q":-1.0
+        }
+
+    }, 
+    "moves": {
+         "moltransrot": {
+            "cosan": {
+                "permol": true, 
+                "dir": "1 1 1", 
+		"dp": 4, 
+                "prob": 0.9
+            }
+        },
+	"ctransnr": {
+	   
+		"dp": 12.0,
+		"skipenergy":false,
+		"prob":0.1
+	
+	    }
+}
+}

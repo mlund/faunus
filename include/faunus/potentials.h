@@ -153,25 +153,28 @@ namespace Faunus {
       }
     
 	 /**
-	 * @brief A potential that is read from a file.
-	 * @details The potential utilizez the
+	 * @brief A potential that is read from an external file.
+	 * @details Make shure that your data measures the Energy in kT and the 
+	 * distance in {\AA}ngrstr{\"o}m. The potential utilizez the
 	 * @f[
 	 * \alfa x^2 + \beta x + \gamma 
 	 * @f]
 	 * regression between 3 points to determine the value of the
 	 * interaction for a given x value and is
-	 * zero if the x value is outside the min max value.
+	 * zero if the x value is outside the min max values.
 	 * 
 	 * When constructing the potential the file where your potential
-	 * is stored will be read and the \alfa, \beta, and \gamma
+	 * is stored will be read and the {\alfa}, {\beta}, and {\gamma}
 	 * coefficients will be calculated and tabulated 
 	 * in coresponding vectors. 
+	 *
+	 * Will crah the program if no file is given, or if the filename is wrong/can't be found.
+	 * Will also crash if the dataset is smaller than 3. 
+	 *
 	 *
 	 * In the json file under nonbonded the following keywords are 
 	 * requiered.
 	 * 
-	 * Will crah the program if no file is given, or if the filename is wrong/can't be found.
-	 * Will also crash if the dataset is smaller than 3. 
 	 *
 	 * JSON keywords:
 	 *
@@ -193,11 +196,13 @@ namespace Faunus {
 	    Potfromfile(Tmjson &j){
 
 	      name = "Potfromfile";
+	      try{
 	      filename = j.at("datafile").get<string>(); //WILL CRASH THE RUN IF THERE IS NO FILE SPECIFIED IN THE JSON 
 	      std::ifstream fin(filename);
 	      
 	      if( !fin )
 		throw std::runtime_error("Could not open file"); //WILL CRASH THE RUN IF THE FILE CAN'T BE FOUND
+	     
 	      
 	
 	      while (!fin.eof()){
@@ -208,13 +213,26 @@ namespace Faunus {
 	      }
 	      
 	      fin.close();
-	     
+	      }
+	      catch (std::exception &e) {
+		 std::cerr << e.what() << endl;
+                    throw;
+	       }
+	      
 	      xmin = x[1];
 	      xmax = x[x.size()-2];
 	      
+	      
 	      int size = x.size()-2;
+	     
+	      try{
 	      if (x.size()<3)
 	       throw std::runtime_error("Table must have at least three points");
+	      }
+	      catch (std::exception &e) {
+		std::cerr << e.what() << endl;
+		throw;
+	      }
 	      
 	      for(int i=1; i<=size; i++){
 		double x2im1=x[i-1]*x[i-1];
@@ -228,6 +246,7 @@ namespace Faunus {
 		
 		// WARNING due to the fact that you are skiping the first point in the 
 		// data the indicies between the data and coefficients will be missmached by -1 
+	
 		alfa.push_back((((y[i+1]-y[i-1])*ximxim1) + (xip1mxim1*(-y[i]+y[i-1]))) / 
 			    (((x2im1 + x2ip1)*ximxim1)-(x2imx2im1*xip1mxim1)));
 		
@@ -242,6 +261,7 @@ namespace Faunus {
 		double operator() (const Tparticle &a, const Tparticle &b, double r2) {
 
 		double m=sqrt(r2);
+	
 		if(m >= xmin && m <= xmax){
 		  auto it = std::lower_bound(x.begin(), x.end(), m);
 		  int i = std::distance(x.begin(), it); // iterator --> index
@@ -265,8 +285,6 @@ namespace Faunus {
 	      
 		 string info(char w);
 	};
-
-
 
 
     /**

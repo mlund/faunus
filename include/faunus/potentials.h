@@ -172,9 +172,6 @@ namespace Faunus {
      * Keyword     | Description
      * :---------- | :------------------------------------------------------------------
      * `datafile`  | filename for double column file with r and u(r) in angstrom and kT
-     *
-     * @warning Will crash the program if no file is given, or if the filename is wrong/can't be found.
-     * Will also crash if the dataset is smaller than 3. 
      */
     class Potfromfile : public PairPotentialBase {
         private:
@@ -195,36 +192,23 @@ namespace Faunus {
                     if( !fin )
                         throw std::runtime_error("Could not open file"); //WILL CRASH THE RUN IF THE FILE CAN'T BE FOUND
 
-
-
-                    while (!fin.eof()){
-                        double tmpX, tmpY;
-                        fin >> tmpX >> tmpY;
+                    double tmpX, tmpY;
+                    while (fin >> tmpX >> tmpY) {
                         x.push_back(tmpX);
                         y.push_back(tmpY);
-                    }
+                    };
+                    if (x.size()<3)
+                        throw std::runtime_error("Table must have at least three points");
 
                     fin.close();
                 }
                 catch (std::exception &e) {
-                    std::cerr << e.what() << endl;
+                    std::cerr << name << ": " << e.what() << endl;
                     throw;
                 }
-
                 xmin = x[1];
                 xmax = x[x.size()-2];
-
-
                 int size = x.size()-2;
-
-                try{
-                    if (x.size()<3)
-                        throw std::runtime_error("Table must have at least three points");
-                }
-                catch (std::exception &e) {
-                    std::cerr << e.what() << endl;
-                    throw;
-                }
 
                 for(int i=1; i<=size; i++){
                     double x2im1=x[i-1]*x[i-1];

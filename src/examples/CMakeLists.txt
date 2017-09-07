@@ -42,6 +42,9 @@ add_test(example_stockmayer python ${CMAKE_CURRENT_SOURCE_DIR}/stockmayer.py)
 fau_example(example_stripes "./" stripes.cpp)
 set_target_properties(example_stripes PROPERTIES OUTPUT_NAME "stripes")
 
+fau_example(example_potfromfile "./" potfromfile.cpp)
+set_target_properties(example_potfromfile PROPERTIES OUTPUT_NAME "potfromfile")
+
 fau_example(example_polymers "./" polymers.cpp)
 set_target_properties(example_polymers PROPERTIES OUTPUT_NAME "polymers")
 add_test(example_polymers python ${CMAKE_CURRENT_SOURCE_DIR}/polymers.py)

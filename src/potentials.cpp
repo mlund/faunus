@@ -60,6 +60,26 @@ namespace Faunus
     }
 
     void PairPotentialBase::test( UnitTest & ) {}
+    
+    
+    string Potfromfile::_brief()
+    {
+        std::ostringstream o;
+        o << name << " Filename = " << filename << std::endl;
+        return o.str();
+    }
+    
+    string Potfromfile::info(char w)
+    {
+      using namespace Faunus::textio;
+      std::ostringstream o;
+      o << pad(SUB, w, "File with the Potential") << filename << std::endl 
+	<< pad(SUB, w, "The range of the tabulated potential")<< std::endl
+	<< pad(SUB, w, "xmin: ") << xmin << _angstrom  << std::endl 
+	<< pad(SUB, w, "xmax: ") << xmax << _angstrom <<  std::endl;
+      
+      return o.str();
+    }
 
     string Harmonic::_brief()
     {

@@ -57,7 +57,7 @@ d = {
                 ] 
 		},
         'widommolecule' : dict(nstep=20, ninsert=10, molecule="water"),
-        'sofq' :      dict(nstep=20, qmin=2, qmax=10, dq=0.5, mollist=["water"], file='debye.dat'),
+        'scatter' :      dict(nstep=20, qmin=2, qmax=10, dq=0.5, mollist=["water"], file='debye.dat'),
         'atomrdf' : {
             'nstep':20, 'pairs' :
                 [

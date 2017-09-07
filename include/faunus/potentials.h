@@ -152,139 +152,131 @@ namespace Faunus {
         return false;
       }
     
-	 /**
-	 * @brief A potential that is read from an external file.
-	 * @details Make shure that your data measures the Energy in kT and the 
-	 * distance in {\AA}ngrstr{\"o}m. The potential utilizez the
-	 * @f[
-	 * \alfa x^2 + \beta x + \gamma 
-	 * @f]
-	 * regression between 3 points to determine the value of the
-	 * interaction for a given x value and is
-	 * zero if the x value is outside the min max values.
-	 * 
-	 * When constructing the potential the file where your potential
-	 * is stored will be read and the {\alfa}, {\beta}, and {\gamma}
-	 * coefficients will be calculated and tabulated 
-	 * in coresponding vectors. 
-	 *
-	 * Will crah the program if no file is given, or if the filename is wrong/can't be found.
-	 * Will also crash if the dataset is smaller than 3. 
-	 *
-	 *
-	 * In the json file under nonbonded the following keywords are 
-	 * requiered.
-	 * 
-	 *
-	 * JSON keywords:
-	 *
-	 * Keyword   | Description
-	 * :-------- | :-----------------------------------------------
-	 * `datafile`  | the filename/path of/to your potential
-	 *
-	 */
+    /**
+     * @brief A potential that is read from an external file.
+     *
+     * Make sure that your data measures the energy in kT and the 
+     * distance in Angstrom. The potential is interpolated using @f$u(r) = \alpha r^2 + \beta r + \gamma @f$
+     * regression between 3 points to determine the value of the
+     * interaction for a given distance, r, and is
+     * zero if the r value is outside the min max values.
+     * 
+     * When constructing the potential the file where your potential
+     * is stored will be read and the \f$\alpha\f$, \f$\beta\f$, and \f$\gamma\f$
+     * coefficients will be calculated and tabulated 
+     * in coresponding vectors. 
+     *
+     * In the json file under nonbonded the following keywords are 
+     * required:
+     *
+     * Keyword     | Description
+     * :---------- | :------------------------------------------------------------------
+     * `datafile`  | filename for double column file with r and u(r) in angstrom and kT
+     *
+     * @warning Will crash the program if no file is given, or if the filename is wrong/can't be found.
+     * Will also crash if the dataset is smaller than 3. 
+     */
+    class Potfromfile : public PairPotentialBase {
+        private:
+            std::vector <double> x, y, alfa, beta, gamma;
+            double xmin,xmax;
+            string _brief();
+            string filename;
+        public:
+            Potfromfile();
 
-	class Potfromfile : public PairPotentialBase {
-	private:
-	  std::vector <double> x, y, alfa, beta, gamma;
-	  double xmin,xmax;
-	  string _brief();
-	  string filename;
-	public:
-	    Potfromfile();
+            Potfromfile(Tmjson &j){
 
-	    Potfromfile(Tmjson &j){
+                name = "Potfromfile";
+                try{
+                    filename = j.at("datafile").get<string>(); //WILL CRASH THE RUN IF THERE IS NO FILE SPECIFIED IN THE JSON 
+                    std::ifstream fin(filename);
 
-	      name = "Potfromfile";
-	      try{
-	      filename = j.at("datafile").get<string>(); //WILL CRASH THE RUN IF THERE IS NO FILE SPECIFIED IN THE JSON 
-	      std::ifstream fin(filename);
-	      
-	      if( !fin )
-		throw std::runtime_error("Could not open file"); //WILL CRASH THE RUN IF THE FILE CAN'T BE FOUND
-	     
-	      
-	
-	      while (!fin.eof()){
-		double tmpX, tmpY;
-		fin >> tmpX >> tmpY;
-		x.push_back(tmpX);
-		y.push_back(tmpY);
-	      }
-	      
-	      fin.close();
-	      }
-	      catch (std::exception &e) {
-		 std::cerr << e.what() << endl;
+                    if( !fin )
+                        throw std::runtime_error("Could not open file"); //WILL CRASH THE RUN IF THE FILE CAN'T BE FOUND
+
+
+
+                    while (!fin.eof()){
+                        double tmpX, tmpY;
+                        fin >> tmpX >> tmpY;
+                        x.push_back(tmpX);
+                        y.push_back(tmpY);
+                    }
+
+                    fin.close();
+                }
+                catch (std::exception &e) {
+                    std::cerr << e.what() << endl;
                     throw;
-	       }
-	      
-	      xmin = x[1];
-	      xmax = x[x.size()-2];
-	      
-	      
-	      int size = x.size()-2;
-	     
-	      try{
-	      if (x.size()<3)
-	       throw std::runtime_error("Table must have at least three points");
-	      }
-	      catch (std::exception &e) {
-		std::cerr << e.what() << endl;
-		throw;
-	      }
-	      
-	      for(int i=1; i<=size; i++){
-		double x2im1=x[i-1]*x[i-1];
-		double x2i = x[i]*x[i];
-		double x2ip1 = x[i+1]*x[i+1];
-		double ximxim1 = x[i]-x[i-1];
-		double xip1mxim1 = x[i+1]-x[i-1];
-		double x2imx2im1 = x2i-x2im1;
-		
-		//Calculates and stores the alfa,beta,gamma coefficients.
-		
-		// WARNING due to the fact that you are skiping the first point in the 
-		// data the indicies between the data and coefficients will be missmached by -1 
-	
-		alfa.push_back((((y[i+1]-y[i-1])*ximxim1) + (xip1mxim1*(-y[i]+y[i-1]))) / 
-			    (((x2im1 + x2ip1)*ximxim1)-(x2imx2im1*xip1mxim1)));
-		
-	        beta.push_back((y[i]-alfa[i-1]*x2imx2im1-y[i-1])/ximxim1);
-		
-	        gamma.push_back(y[i-1]- alfa[i-1]*x2im1-beta[i-1]*x[i-1]);
-	
-		}
-	    }
+                }
 
-	      template<class Tparticle>
-		double operator() (const Tparticle &a, const Tparticle &b, double r2) {
+                xmin = x[1];
+                xmax = x[x.size()-2];
 
-		double m=sqrt(r2);
-	
-		if(m >= xmin && m <= xmax){
-		  auto it = std::lower_bound(x.begin(), x.end(), m);
-		  int i = std::distance(x.begin(), it); // iterator --> index
-		  
-		  // WARNING due to the fact that you are skiping the first point in the 
-		  // data the indicies between the data and coefficients will be missmached by -1 
-		  
-		  return alfa[i-1]*m*m + beta[i-1]*m + gamma[i-1];
-		   
-		}
-		return 0;  
-	      }
-	      
-	      //This is needed if for some reason you want to run this potential using Energy::NonbonbedVector
-	      //Which is not recomended since it will slow down the calculations. 
-	     
-	      template<class Tparticle>
-		double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
-		return operator()(a,b,r.squaredNorm());
-	       }
-	      
-		 string info(char w);
-	};
+
+                int size = x.size()-2;
+
+                try{
+                    if (x.size()<3)
+                        throw std::runtime_error("Table must have at least three points");
+                }
+                catch (std::exception &e) {
+                    std::cerr << e.what() << endl;
+                    throw;
+                }
+
+                for(int i=1; i<=size; i++){
+                    double x2im1=x[i-1]*x[i-1];
+                    double x2i = x[i]*x[i];
+                    double x2ip1 = x[i+1]*x[i+1];
+                    double ximxim1 = x[i]-x[i-1];
+                    double xip1mxim1 = x[i+1]-x[i-1];
+                    double x2imx2im1 = x2i-x2im1;
+
+                    //Calculates and stores the alfa,beta,gamma coefficients.
+
+                    // WARNING due to the fact that you are skiping the first point in the 
+                    // data the indicies between the data and coefficients will be missmached by -1 
+
+                    alfa.push_back((((y[i+1]-y[i-1])*ximxim1) + (xip1mxim1*(-y[i]+y[i-1]))) / 
+                            (((x2im1 + x2ip1)*ximxim1)-(x2imx2im1*xip1mxim1)));
+
+                    beta.push_back((y[i]-alfa[i-1]*x2imx2im1-y[i-1])/ximxim1);
+
+                    gamma.push_back(y[i-1]- alfa[i-1]*x2im1-beta[i-1]*x[i-1]);
+
+                }
+            }
+
+            template<class Tparticle>
+                double operator() (const Tparticle &a, const Tparticle &b, double r2) {
+
+                    double m=sqrt(r2);
+
+                    if(m >= xmin && m <= xmax){
+                        auto it = std::lower_bound(x.begin(), x.end(), m);
+                        int i = std::distance(x.begin(), it); // iterator --> index
+
+                        // WARNING due to the fact that you are skiping the first point in the 
+                        // data the indicies between the data and coefficients will be missmached by -1 
+
+                        return alfa[i-1]*m*m + beta[i-1]*m + gamma[i-1];
+
+                    }
+                    return 0;  
+                }
+
+            //This is needed if for some reason you want to run this potential using Energy::NonbonbedVector
+            //Which is not recomended since it will slow down the calculations. 
+
+            template<class Tparticle>
+                double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+                    return operator()(a,b,r.squaredNorm());
+                }
+
+            string info(char w);
+    };
 
 
     /**

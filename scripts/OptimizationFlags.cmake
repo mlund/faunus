@@ -3,7 +3,7 @@ unset(CMAKE_CXX_FLAGS)
 
 # GNU
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(CMAKE_CXX_FLAGS "-funroll-loops -Wall -Wno-unknown-pragmas -Wextra -Wno-unused-parameter -Wno-reorder -Wno-misleading-indentation")
+  set(CMAKE_CXX_FLAGS "-funroll-loops -Wall -Wno-unknown-pragmas -Wextra -Wno-unused-parameter -Wno-reorder")
 
 # Intel
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")

@@ -2009,10 +2009,10 @@ namespace Faunus
                 if (!mol.empty())
                 {
                     f << "confid ";
-                    for (auto &i : mol)
-                    {
+                    //for (auto &i : mol)
+                    //{
                         //v.push_back( [&spc]() { return spc.molecule[i].getConformationIndex(); } );
-                    }
+                    //}
                 }
             }
         };

@@ -490,6 +490,7 @@ namespace Faunus
       inline int numMolecules( int molId ) const { return molTrack.size(molId); }
 
       inline int numMolecules( string name ) const {
+          return 0;
       }
 
       /**

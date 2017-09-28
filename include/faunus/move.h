@@ -1875,7 +1875,7 @@
                 assert(!gvec.empty());
                 igroup = *slump.element(gvec.begin(), gvec.end());
                 assert(!igroup->empty());
-                auto it = this->mollist.find(this->currentMolId);
+                //auto it = this->mollist.find(this->currentMolId);
             }
 
             assert(gmobile != nullptr && "Cluster group not defined");

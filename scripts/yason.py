@@ -3,7 +3,7 @@
 import sys
 import json, sys, argparse
 try:
-    from ruamel import yaml
+    import ruamel_yaml as yaml
 except:
     import yaml
 

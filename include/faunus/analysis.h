@@ -1763,14 +1763,18 @@ namespace Faunus
          * the system and calculate a Widom average to measure
          * the free energy of the insertion process. The position
          * and molecular rotation is random.
+         * For use with rod-like particles on surfaces, the `absz`
+         * keyword may be used to ensure orientations on only one
+         * half-sphere.
          *
          * JSON input:
          *
          * Keyword       | Description
          * :------------ | :-----------------------------------------
-         * `dir`         | Inserting direction array. Default [1,1,1]
+         * `dir`         | Inserting direction array. Default `[1,1,1]`
          * `molecule`    | Name of molecule to insert
          * `ninsert`     | Number of insertions per sample event
+         * `absz`        | Apply `std::fabs` on all z-coordinates of inserted molecule (default: `false`)
          */
         template<typename Tspace>
             class WidomMolecule : public AnalysisBase
@@ -1783,6 +1787,7 @@ namespace Faunus
                 string molecule;
                 Point dir;
                 int molid;
+                bool absolute_z=false;
 
             public:
                 Average<double> expu;
@@ -1798,7 +1803,15 @@ namespace Faunus
                     for ( int i = 0; i < ninsert; ++i )
                     {
                         auto pin = rins(spc->geo, spc->p, spc->molecule[molid]); // ('spc->molecule' is a vector of molecules
+                        assert( !pin.empty() );
+
+                        if (absolute_z)
+                            for (auto &p : pin)
+                                p.z() = std::fabs(p.z());
+
                         double u = pot->v2v(pin, spc->p); // energy between "ghost molecule" and system in kT
+                        Group g = Group(0, pin.size()-1 );
+                        u += pot->g_external(pin, g);
                         expu += exp(-u); // widom average
                     }
                 }
@@ -1816,7 +1829,6 @@ namespace Faunus
                             << pad(SUB, w, "Particle density") << WidomMolecule::rho.avg() << angstrom + superminus + cubed
                             << "\n"
                             << pad(SUB, w, "Excess chemical potential") << excess << kT << "\n";
-                        //todo : print rho in mol/L
                     }
                     return o.str();
                 }
@@ -1834,6 +1846,7 @@ namespace Faunus
                                 { "insertions", expu.cnt },
                                 { "rho", rho.avg() },
                                 { "rho_unit", angstrom + superminus + cubed },
+                                { "absz", absolute_z },
                                 { "mu",
                                     {
                                         {"excess", excess },
@@ -1851,8 +1864,9 @@ namespace Faunus
             {
                 name = "Widom Molecule";
                 ninsert = j.at("ninsert");
-                dir << j.value("dir", vector<double>({1,1,1}) );  // magic!
+                dir << j.value("dir", vector<double>({1,1,1}) );
                 molecule = j.at("molecule");
+                absolute_z = j.value("absz", false);
                 // look up the id of the molecule that we want to insert
                 molid = -1;
                 for ( unsigned long i = 0; i < spc.molecule.size(); ++i )

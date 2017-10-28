@@ -165,6 +165,7 @@ namespace Faunus
    * `centertraj`  | bool    | Center CM of conformations to origo assuming whole molecules (default: `false`)
    * `Cavg`        | float   | Charge capacitance [e^2]
    * `Zavg`        | float   | Average charge number [e]
+   * `chargefile`  | string  | One-column file with charges to override all previous charges for all conformations.
    */
   template<class Tpvec>
   class MoleculeData : public PropertyBase
@@ -430,6 +431,26 @@ namespace Faunus
               }
               else
                   throw std::runtime_error("Trajectory " + traj + " not loaded or empty.");
+          }
+
+          // load atom charges and override all previously loaded charges for all conformations
+          string chargefile = _js.value("chargefile", string());
+          if (!chargefile.empty()) {
+              std::ifstream f( chargefile.c_str() );
+              if (f) {
+                  std::cout << "Overriding charges using file '" << chargefile << "'\n";
+                  double _q;
+                  std::vector<double> q;
+                  while (f >> _q)
+                      q.push_back(_q);
+                  for (auto &c : conformations) { // loop over conformations
+                      if (c.size()!=q.size())
+                          throw std::runtime_error("Charge file does not match number of atoms.");
+                      int i=0;
+                      for (auto &p : c) // loop over particles in each conformation
+                          p.charge = q[i++];
+                  }
+              }
           }
 
           // add atoms to atom list

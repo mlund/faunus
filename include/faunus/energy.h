@@ -2980,7 +2980,19 @@ namespace Faunus
 /**
  * @brief SASA energy from transfer free energies
  *
- * Detailed description here...
+ * This energy term calculates the change in solvent accessible
+ * surface area (SASA) for each atom and use transfer free energies
+ * to estimate the free energy change. This can be used to capture
+ * salting-out effects caused by co-solutes.
+ * Transfer free energies are defined on a per atom basis via the `tfe`
+ * keyword in `AtomData`.
+ *
+ *  Keyword       | Description
+ *  :------------ | :------------------------------------------------
+ *  `proberadius` | Radius of probe (default: 1.4 angstrom)
+ *  `molarity`    | Molar concentration of co-solute
+ *
+ * For more information see: http://dx.doi.org/10.1002/jcc.21844
  */
 template<class Tspace>
 class SASAEnergy : public Energybase<Tspace> {
@@ -3031,8 +3043,8 @@ class SASAEnergy : public Energybase<Tspace> {
         SASAEnergy(Tmjson &j, const string &dir="sasaenergy") : base(dir) {
             base::name = "SASA Energy";
             auto _j = j["energy"][dir];
-            probe = _j["proberadius"] | 1.4; // angstrom
-            conc = _j["conc"] | 0.0;         // co-solute concentratil (mol/l);
+            probe = _j.value( "proberadius", 1.4 ); // angstrom
+            conc = _j.at("molarity");         // co-solute concentratil (mol/l);
         }
 
         auto tuple() -> decltype(std::make_tuple(this)) {

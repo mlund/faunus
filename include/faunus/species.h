@@ -215,7 +215,7 @@ namespace Faunus
    * `q`           | Valency / partial charge number [e]
    * `r`           | Radius = `sigma/2` [angstrom]
    * `sigma`       | `2*r` [angstrom] (overrides radius)
-   * `tfe`         | Transfer free energy [J/mol/angstrom^2/M] (default: 0)
+   * `tfe`         | Transfer free energy [J/mol/angstrom^2/M] (default: 0.0)
    * `alphax`      | Excess polarizability in units of [angstrom^3]
    */
 

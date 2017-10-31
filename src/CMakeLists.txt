@@ -67,12 +67,13 @@ endif ()
 
 # ----------------------------
 #  Fetch 3rd-party sasa class
+#  doi:10.1002/jcc.21844
 # ----------------------------
 if (ENABLE_POWERSASA)
     foreach (powf array.hpp power_diagram.h power_sasa.h LICENSE)
         if (NOT EXISTS "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}")
             file(DOWNLOAD
-                    "http://sourceforge.net/p/pteros/code/ci/master/tree/src/core/sasa/${powf}?format=raw"
+                    "https://raw.githubusercontent.com/yesint/pteros/49ab75b/thirdparty/sasa/${powf}"
                     "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}" STATUS status)
         endif ()
     endforeach ()

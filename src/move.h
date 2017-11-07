@@ -33,7 +33,7 @@ namespace Faunus {
                     json::iterator currentmol; // iterator to json entry of random molecule type
 
                     void move(Change &change) override {
-                        json::iterator currentmol = randomGroup(); // iterator to json entry of random molecule id
+                        currentmol = randomGroup(); // iterator to json entry of random molecule id
                         json& d = currentmol.value();
 
                         auto g_iter = ( trial->findMolecules( d["molid"].get<int>() )
@@ -60,7 +60,7 @@ namespace Faunus {
                     void from_json(const json &j) {
                         try {
                             config = j;
-                            auto& g = config.at("groups");
+                            auto& g = config.at("mollist");
                             if (g.is_object()) {
                                 for (auto it=g.begin(); it!=g.end(); ++it) {
                                     auto mol = findName(molecules<Tpvec>, it.key());
@@ -73,14 +73,13 @@ namespace Faunus {
                                         v["prob"] = v.value("prob", 1.0);
                                         if (!v.at("dp").is_number() ||
                                                 !v.at("dprot").is_number() )
-                                            throw std::runtime_error("'dp' and 'dprot' must be floats");
+                                            throw std::runtime_error("'dp' and 'dprot' must be numbers");
                                     }
                                 }
                             } else
-                                throw std::runtime_error("'groups' must be of type object");
+                                throw std::runtime_error("'mollist' must be of type object");
                         }
                         catch (std::exception &e) {
-                            config.clear();
                             std::cerr << name << ": " << e.what();
                             throw;
                         }
@@ -104,13 +103,13 @@ namespace Faunus {
             CHECK( !molecules<Tpvec>.empty() ); // set in a previous test
 
             TranslateRotate<Tspace> mv(trial);
-            json j = R"( {"groups" : { "B":{"dp":1.0, "dprot":0.5, "dir":[0,1,0]}  }})"_json;
+            json j = R"( {"mollist" : { "B":{"dp":1.0, "dprot":0.5, "dir":[0,1,0]}  }})"_json;
             mv.from_json(j);
 
-            CHECK( mv.config["groups"]["B"].at("dp")    == 1.0 );
-            CHECK( mv.config["groups"]["B"].at("dir")   == Point(0,1,0) );
-            CHECK( mv.config["groups"]["B"].at("dprot") == 0.5 );
-            CHECK( mv.config["groups"]["B"].at("molid") == 1 );
+            CHECK( mv.config["mollist"]["B"].at("dp")    == 1.0 );
+            CHECK( mv.config["mollist"]["B"].at("dir")   == Point(0,1,0) );
+            CHECK( mv.config["mollist"]["B"].at("dprot") == 0.5 );
+            CHECK( mv.config["mollist"]["B"].at("molid") == 1 );
         }
 #endif
     }//namespace

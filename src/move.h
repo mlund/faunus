@@ -5,35 +5,19 @@
 namespace Faunus {
     namespace Move {
 
-        struct MoleculeMoveParameters {
-            int molid; //!< Molecule type to move
-            float prob=1; //!< Probability
-            unsigned int trials=0;   //!< Number of trial moves
-            unsigned int accepted=0; //!< Number of accepted moves
-            Point dir={1,1,1}; //!< Direction of move if appropriate
-        };
-
         class Movebase {
             private:
                 virtual void move(Change&)=0; //!< Perform move and modify change object
             protected:
                 Random slump; //!< Temporarily here
             public:
+                json config;
                 std::string name;            //!< Name of move
-                struct data {
-                    int molid;               //!< Molecule id
-                    float prob=1;            //!< Probability
-                    unsigned int trials=0;   //!< Number of trial moves
-                    unsigned int accepted=0; //!< Number of accepted moves
-                    double dp1=0;
-                    double dp2=0;
-                    Point dir={1,1,1};
-                };
-                std::vector<data> mollist;   //!< Vector of molecule id's to operate on
 
-                auto randomMolecule() {
-                    return slump.sample( mollist.begin(), mollist.end() );
-                } //!< Iterator to random molecule (data object)
+                auto randomGroup() {
+                    auto &j = config.at("groups");
+                    return slump.sample( j.begin(), j.end() );
+                } //!< iterator to random group to move
 
                 inline void operator()(Change &change) {
                     change.clear();
@@ -46,17 +30,20 @@ namespace Faunus {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace* trial;
+                    json::iterator currentmol; // iterator to json entry of random molecule type
 
                     void move(Change &change) override {
-                        auto d = randomMolecule(); // random registered molid
-                        auto it = ( trial->findMolecules(d->molid)
-                                | ranges::view::sample(1, slump.engine) ).begin(); // random group
+                        json::iterator currentmol = randomGroup(); // iterator to json entry of random molecule id
+                        json& d = currentmol.value();
 
-                        Point dp = ranunit(slump).cwiseProduct( d->dir ) * d->dp1;
-                        it->translate( dp, trial->geo.boundaryFunc );
+                        auto g_iter = ( trial->findMolecules( d["molid"].get<int>() )
+                                | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
+
+                        Point dp = ranunit(slump).cwiseProduct( d["dir"].get<Point>() ) * d["dp"].get<double>();
+                        g_iter->translate( dp, trial->geo.boundaryFunc );
 
                         Change::data cdata; // object that describes what was moved
-                        cdata.index = Faunus::distance( trial->groups.begin(), it ); // index of moved group
+                        cdata.index = Faunus::distance( trial->groups.begin(), g_iter ); // index of moved group
                         cdata.all = true; // *all* atoms were moved
                         change.groups.push_back( cdata ); // add to list of moved groups
                     }
@@ -67,46 +54,33 @@ namespace Faunus {
                     }
 
                     json to_json() const {
-                        json j;
-                        auto& _j = j[name] = json::array();
-                        for (auto &i : mollist) {
-                            auto& molname = molecules<Tpvec>.at(i.molid).name;
-                            _j.push_back({{ molname, {
-                                    { "trials", i.trials },
-                                    { "dp", i.dp1 },
-                                    { "dprot", i.dp2 },
-                                    { "dir", i.dir } }}});
-                            if (i.trials>0)
-                                _j.push_back( {{ molname, {
-                                        { "acceptance", i.accepted / double(i.trials) }
-                                        }}});
-                        }
-                        return j;
+                        return config;
                     }
 
                     void from_json(const json &j) {
                         try {
-                            if (j.is_array()) {
-                                mollist.clear();
-                                for (auto &x : j) {
-                                    for (auto it=x.begin(); it!=x.end(); ++it) {
-                                        auto mol = findName(molecules<Tpvec>, it.key());
-                                        if (mol == molecules<Tpvec>.end())
-                                            throw std::runtime_error("unknown molecule '" + it.key() + "'");
-                                        else {
-                                            data d;
-                                            d.molid = mol->id();
-                                            d.dp1 = it.value().at("dp").get<double>();
-                                            d.dp2 = it.value().at("dprot").get<double>();
-                                            d.dir = it.value().value("dir", d.dir);
-                                            mollist.push_back(d);
-                                        }
+                            config = j;
+                            auto& g = config.at("groups");
+                            if (g.is_object()) {
+                                for (auto it=g.begin(); it!=g.end(); ++it) {
+                                    auto mol = findName(molecules<Tpvec>, it.key());
+                                    if (mol == molecules<Tpvec>.end())
+                                        throw std::runtime_error("unknown molecule '" + it.key() + "'");
+                                    else {
+                                        auto &v = it.value();
+                                        v["molid"] = mol->id();
+                                        v["dir"] = v.value("dir", Point(1,1,1));
+                                        v["prob"] = v.value("prob", 1.0);
+                                        if (!v.at("dp").is_number() ||
+                                                !v.at("dprot").is_number() )
+                                            throw std::runtime_error("'dp' and 'dprot' must be floats");
                                     }
                                 }
                             } else
-                                throw std::runtime_error("json object must be of type array.");
+                                throw std::runtime_error("'groups' must be of type object");
                         }
                         catch (std::exception &e) {
+                            config.clear();
                             std::cerr << name << ": " << e.what();
                             throw;
                         }
@@ -115,6 +89,7 @@ namespace Faunus {
 
         template<class T>
             void to_json(json &j, const TranslateRotate<T> mv) {
+                j = mv.config;
             }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -129,9 +104,13 @@ namespace Faunus {
             CHECK( !molecules<Tpvec>.empty() ); // set in a previous test
 
             TranslateRotate<Tspace> mv(trial);
-            json j = R"( [ { "A" : { "dp":1.0, "dprot":0.5, "dir":[0,1,0] } } ] )"_json;
+            json j = R"( {"groups" : { "B":{"dp":1.0, "dprot":0.5, "dir":[0,1,0]}  }})"_json;
             mv.from_json(j);
-            cout << std::setw(4) << mv.to_json() << endl;
+
+            CHECK( mv.config["groups"]["B"].at("dp")    == 1.0 );
+            CHECK( mv.config["groups"]["B"].at("dir")   == Point(0,1,0) );
+            CHECK( mv.config["groups"]["B"].at("dprot") == 0.5 );
+            CHECK( mv.config["groups"]["B"].at("molid") == 1 );
         }
 #endif
     }//namespace

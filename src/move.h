@@ -66,6 +66,24 @@ namespace Faunus {
                         name = "Translate-Rotate";
                     }
 
+                    json to_json() const {
+                        json j;
+                        auto& _j = j[name] = json::array();
+                        for (auto &i : mollist) {
+                            auto& molname = molecules<Tpvec>.at(i.molid).name;
+                            _j.push_back({{ molname, {
+                                    { "trials", i.trials },
+                                    { "dp", i.dp1 },
+                                    { "dprot", i.dp2 },
+                                    { "dir", i.dir } }}});
+                            if (i.trials>0)
+                                _j.push_back( {{ molname, {
+                                        { "acceptance", i.accepted / double(i.trials) }
+                                        }}});
+                        }
+                        return j;
+                    }
+
                     void from_json(const json &j) {
                         try {
                             if (j.is_array()) {
@@ -113,6 +131,7 @@ namespace Faunus {
             TranslateRotate<Tspace> mv(trial);
             json j = R"( [ { "A" : { "dp":1.0, "dprot":0.5, "dir":[0,1,0] } } ] )"_json;
             mv.from_json(j);
+            cout << std::setw(4) << mv.to_json() << endl;
         }
 #endif
     }//namespace

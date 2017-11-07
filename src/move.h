@@ -10,7 +10,7 @@ namespace Faunus {
             float prob=1; //!< Probability
             unsigned int trials=0;   //!< Number of trial moves
             unsigned int accepted=0; //!< Number of accepted moves
-            Point dir={1,1,1};
+            Point dir={1,1,1}; //!< Direction of move if appropriate
         };
 
         class Movebase {
@@ -21,8 +21,8 @@ namespace Faunus {
             public:
                 std::string name;            //!< Name of move
                 struct data {
-                    int molid;
-                    float prob=1;
+                    int molid;               //!< Molecule id
+                    float prob=1;            //!< Probability
                     unsigned int trials=0;   //!< Number of trial moves
                     unsigned int accepted=0; //!< Number of accepted moves
                     double dp1=0;
@@ -44,6 +44,7 @@ namespace Faunus {
         template<typename Tspace>
             class TranslateRotate : public Movebase {
                 private:
+                    typedef typename Tspace::Tpvec Tpvec;
                     Tspace* trial;
 
                     void move(Change &change) override {
@@ -66,20 +67,30 @@ namespace Faunus {
                     }
 
                     void from_json(const json &j) {
-                        assert( j.is_object() );
-                        for ( auto it = j.begin(); it != j.end(); ++it ) {
-                            typedef typename Tspace::Tpvec Tpvec;
-                            auto mol = findName(molecules<Tpvec>, it.key());
-                            if (mol!=molecules<Tpvec>.end()) {
-                                data d;
-                                d.molid = mol->id();
-                                d.dp1 = j.at("dp").get<double>();
-                                d.dp2 = j.at("dprot").get<double>();
-                                d.dir = j.value("dir",  d.dir);
-                                mollist.push_back(d);
-                            }
-                            else
-                                throw std::runtime_error("Unknown molecule '" + it.key() + "'");
+                        try {
+                            if (j.is_array()) {
+                                mollist.clear();
+                                for (auto &x : j) {
+                                    for (auto it=x.begin(); it!=x.end(); ++it) {
+                                        auto mol = findName(molecules<Tpvec>, it.key());
+                                        if (mol == molecules<Tpvec>.end())
+                                            throw std::runtime_error("unknown molecule '" + it.key() + "'");
+                                        else {
+                                            data d;
+                                            d.molid = mol->id();
+                                            d.dp1 = it.value().at("dp").get<double>();
+                                            d.dp2 = it.value().at("dprot").get<double>();
+                                            d.dir = it.value().value("dir", d.dir);
+                                            mollist.push_back(d);
+                                        }
+                                    }
+                                }
+                            } else
+                                throw std::runtime_error("json object must be of type array.");
+                        }
+                        catch (std::exception &e) {
+                            std::cerr << name << ": " << e.what();
+                            throw;
                         }
                     } //!< Configure via json object
             };
@@ -93,12 +104,15 @@ namespace Faunus {
         {
             typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
             typedef Space<Geometry::Cuboid, Tparticle> Tspace;
+            typedef typename Tspace::Tpvec Tpvec;
             Tspace spc, trial;
 
+            CHECK( !atoms<Tparticle>.empty() ); // set in a previous test
+            CHECK( !molecules<Tpvec>.empty() ); // set in a previous test
+
             TranslateRotate<Tspace> mv(trial);
-            json j;
+            json j = R"( [ { "A" : { "dp":1.0, "dprot":0.5, "dir":[0,1,0] } } ] )"_json;
             mv.from_json(j);
-            j = mv;
         }
 #endif
     }//namespace

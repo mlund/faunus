@@ -1169,9 +1169,13 @@ namespace Faunus {
             }
         };
         typedef Particle<Radius, Charge, Dipole, Cigar> T;
-        typedef MoleculeData<std::vector<T>> Tmoldata;
+        typedef std::vector<T> Tpvec;
+        typedef MoleculeData<Tpvec> Tmoldata;
 
-        std::vector<Tmoldata> v = j["moleculelist"];
+        molecules<Tpvec> = j["moleculelist"].get<decltype(molecules<Tpvec>)>(); // fill global instance
+        auto &v = molecules<Tpvec>; // reference to global molecule vector
+
+        //std::vector<Tmoldata> v = j["moleculelist"];
 
         CHECK(v.size()==2);
         CHECK(v.front().id()==0);

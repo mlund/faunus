@@ -15,10 +15,9 @@ typedef typename Tspace::Tpvec Tpvec;
 typedef typename Tspace::Tgroup Tgroup;
 typedef AtomData<Tparticle> Tatomdata;
  
-PYBIND11_PLUGIN(pyfaunus)
+PYBIND11_MODULE(pyfaunus, m)
 {
     using namespace pybind11::literals;
-    py::module m("pyfaunus", "pybind11 faunus plugin");
 
     // Geometries
     py::class_<Geometry::GeometryBase>(m, "Geometrybase")
@@ -92,6 +91,4 @@ PYBIND11_PLUGIN(pyfaunus)
         .def_readwrite("p", &Tspace::p)
         .def_readwrite("groups", &Tspace::groups)
         .def("findMolecules", &Tspace::findMolecules); 
-
-    return m.ptr();
 }

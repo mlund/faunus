@@ -29,7 +29,7 @@ set(RangeV3IncludeDir ${source_dir}/include)
 
 ExternalProject_Add( pybind11
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/pybind/pybind11/archive/v2.1.1.tar.gz"
+    URL "https://github.com/pybind/pybind11/archive/v2.2.1.tar.gz"
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(pybind11 source_dir)
 set(Pybind11IncludeDir ${source_dir}/include)
@@ -52,7 +52,7 @@ set(XDRIncludeDir "${CMAKE_SOURCE_DIR}/3rdparty/include")
 
 ExternalProject_Add( doctest
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.1/doctest/doctest.h"
+    URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.6/doctest/doctest.h"
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(doctest source_dir)

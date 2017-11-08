@@ -9,15 +9,18 @@ namespace Faunus {
             private:
                 virtual void move(Change&)=0; //!< Perform move and modify change object
             protected:
-                Random slump; //!< Temporarily here
+                Random slump;     //!< Temporarily here
+                json config;      //!< JSON object containing 
+                inline virtual json _to_json() const { return json(); } //!< Extra info for report if needed
             public:
-                json config;
-                std::string name;            //!< Name of move
+                std::string name; //!< Name of move
 
-                auto randomGroup() {
-                    auto &j = config.at("groups");
-                    return slump.sample( j.begin(), j.end() );
-                } //!< iterator to random group to move
+                inline json to_json() const {
+                    assert( !name.empty() );
+                    json j2 = {{ name, _to_json() }};
+                    json j1 = {{ name, config }};
+                    return merge( j1, j2 ); 
+                } //!< JSON report w. statistics, output etc.
 
                 inline void operator()(Change &change) {
                     change.clear();
@@ -25,20 +28,31 @@ namespace Faunus {
                 } //!< Perform move and return change object
         };
 
+        inline void to_json(json &j, const Movebase &m) {
+            j = m.to_json();
+        }
+
         template<typename Tspace>
             class TranslateRotate : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
-                    Tspace* trial;
-                    json::iterator currentmol; // iterator to json entry of random molecule type
+                    Tspace* trial = nullptr;   // pointer to trial space
+                    json* mollist = nullptr;   // json list w. molecule types to move
+                    json::iterator currentmol; // iterator to json entry of selected molecule type
 
                     void move(Change &change) override {
-                        currentmol = randomGroup(); // iterator to json entry of random molecule id
-                        json& d = currentmol.value();
+                        assert( mollist!=nullptr );
+                        assert( trial!=nullptr );
 
+                        // pick random molecule type from json list
+                        currentmol = slump.sample(mollist->begin(), mollist->end());
+                        json& d = currentmol.value(); // json entry w. displacement parameters etc.
+
+                        // pick random group from the system matching molecule type
                         auto g_iter = ( trial->findMolecules( d["molid"].get<int>() )
                                 | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
 
+                        // translate group
                         Point dp = ranunit(slump).cwiseProduct( d["dir"].get<Point>() ) * d["dp"].get<double>();
                         g_iter->translate( dp, trial->geo.boundaryFunc );
 
@@ -50,19 +64,15 @@ namespace Faunus {
 
                 public:
                     TranslateRotate(Tspace &trial) : trial(&trial) {
-                        name = "Translate-Rotate";
-                    }
-
-                    json to_json() const {
-                        return config;
+                        name = "Molecular Translation and Rotation";
                     }
 
                     void from_json(const json &j) {
                         try {
                             config = j;
-                            auto& g = config.at("mollist");
-                            if (g.is_object()) {
-                                for (auto it=g.begin(); it!=g.end(); ++it) {
+                            mollist = &config.at("mollist");
+                            if (mollist->is_object()) {
+                                for (auto it=mollist->begin(); it!=mollist->end(); ++it) {
                                     auto mol = findName(molecules<Tpvec>, it.key());
                                     if (mol == molecules<Tpvec>.end())
                                         throw std::runtime_error("unknown molecule '" + it.key() + "'");
@@ -86,11 +96,6 @@ namespace Faunus {
                     } //!< Configure via json object
             };
 
-        template<class T>
-            void to_json(json &j, const TranslateRotate<T> mv) {
-                j = mv.config;
-            }
-
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] TranslateRotate")
         {
@@ -103,13 +108,15 @@ namespace Faunus {
             CHECK( !molecules<Tpvec>.empty() ); // set in a previous test
 
             TranslateRotate<Tspace> mv(trial);
-            json j = R"( {"mollist" : { "B":{"dp":1.0, "dprot":0.5, "dir":[0,1,0]}  }})"_json;
+            json j = R"( {"mollist" : { "B":{"dp":1.0, "dprot":0.5, "dir":[0,1,0], "prob":0.2 } }})"_json;
             mv.from_json(j);
 
-            CHECK( mv.config["mollist"]["B"].at("dp")    == 1.0 );
-            CHECK( mv.config["mollist"]["B"].at("dir")   == Point(0,1,0) );
-            CHECK( mv.config["mollist"]["B"].at("dprot") == 0.5 );
-            CHECK( mv.config["mollist"]["B"].at("molid") == 1 );
+            j = json(mv)[mv.name]["mollist"];
+            CHECK( j["B"].at("dp")    == 1.0 );
+            CHECK( j["B"].at("dir")   == Point(0,1,0) );
+            CHECK( j["B"].at("prob")  == 0.2 );
+            CHECK( j["B"].at("dprot") == 0.5 );
+            CHECK( j["B"].at("molid") == 1 );
         }
 #endif
     }//namespace

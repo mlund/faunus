@@ -45,6 +45,14 @@ namespace Faunus {
             return std::distance( &(*first), &(*last) );
         } //!< Distance between two arbitrary contiguous iterators
 
+    inline json merge( const json &a, const json &b ) {
+        json result = a.flatten();
+        json tmp = b.flatten();
+        for ( auto it = tmp.begin(); it != tmp.end(); ++it )
+            result[it.key()] = it.value();
+        return result.unflatten();
+    } //!< Merge two json objects
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] distance")
     {

@@ -5,6 +5,7 @@
 #include <tuple>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <type_traits>
 #include <string>
 #include <cmath>
@@ -45,14 +46,6 @@ namespace Faunus {
             return std::distance( &(*first), &(*last) );
         } //!< Distance between two arbitrary contiguous iterators
 
-    inline json merge( const json &a, const json &b ) {
-        json result = a.flatten();
-        json tmp = b.flatten();
-        for ( auto it = tmp.begin(); it != tmp.end(); ++it )
-            result[it.key()] = it.value();
-        return result.unflatten();
-    } //!< Merge two json objects
-
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] distance")
     {
@@ -63,6 +56,30 @@ namespace Faunus {
         CHECK( Faunus::distance(v.begin(), ++it) == 4 );
     }
 #endif
+
+    inline json merge( const json &a, const json &b ) {
+        json result = a.flatten();
+        json tmp = b.flatten();
+        for ( auto it = tmp.begin(); it != tmp.end(); ++it )
+            result[it.key()] = it.value();
+        return result.unflatten();
+    } //!< Merge two json objects
+
+    inline json openjson( const std::string &file ) {
+        json js;
+        std::ifstream f (file );
+        if ( f ) {
+            try {
+                js << f;
+            }
+            catch(std::exception& e) {
+                throw std::runtime_error("Syntax error in JSON file " + file + ": " + e.what());
+            }
+        }
+        else
+            throw std::runtime_error("Cannot find or read JSON file " + file);
+        return js;
+    } //!< Read json file into json object (w. syntax check)
 
     /** @brief Physical constants */
     namespace PhysicalConstants {

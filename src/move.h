@@ -17,15 +17,15 @@ namespace Faunus {
 
                 inline json to_json() const {
                     assert( !name.empty() );
-                    json j2 = {{ name, _to_json() }};
-                    json j1 = {{ name, config }};
-                    return merge( j1, j2 ); 
+                    json j1 = {{ name, _to_json() }};
+                    json j2 = {{ name, config }};
+                    return merge( j2, j1 ); 
                 } //!< JSON report w. statistics, output etc.
 
                 inline void operator()(Change &change) {
                     change.clear();
                     move(change);
-                } //!< Perform move and return change object
+                } //!< Perform move and modify given change object
         };
 
         inline void to_json(json &j, const Movebase &m) {
@@ -93,7 +93,7 @@ namespace Faunus {
                             std::cerr << name << ": " << e.what();
                             throw;
                         }
-                    } //!< Configure via json object
+                    } //!< Configure via json object and check input syntax
             };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -112,8 +112,8 @@ namespace Faunus {
             mv.from_json(j);
 
             j = json(mv)[mv.name]["mollist"];
-            CHECK( j["B"].at("dp")    == 1.0 );
             CHECK( j["B"].at("dir")   == Point(0,1,0) );
+            CHECK( j["B"].at("dp")    == 1.0 );
             CHECK( j["B"].at("prob")  == 0.2 );
             CHECK( j["B"].at("dprot") == 0.5 );
             CHECK( j["B"].at("molid") == 1 );
@@ -135,8 +135,7 @@ namespace Faunus {
                     if ( slump() > std::exp(-du)) // core of MC!
                         return false;
                     return true;
-                } //!< Metropolis criterion
-
+                } //!< Metropolis criterion (true=accept)
 
             public:
                 MCSimulation() : mv(newspc) {

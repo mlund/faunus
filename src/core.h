@@ -1502,7 +1502,7 @@ namespace Faunus {
         bool empty() const
         {
             if ( groups.empty())
-                if ( std::fabs(dV)>0 )
+                if ( dV==0 )
                     return true;
             return false;
         } //!< Check if change object is empty

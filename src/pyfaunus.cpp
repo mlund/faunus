@@ -2,7 +2,10 @@
 #include <pybind11/stl_bind.h>
 #include <pybind11/numpy.h>
 #include <pybind11/eigen.h>
+
 #include <src/core.h>
+#include <src/space.h>
+#include <src/move.h>
 
 namespace py = pybind11;
 using namespace Faunus;

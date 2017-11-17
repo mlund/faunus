@@ -79,11 +79,11 @@ namespace Faunus {
                     }
 
                     void _accept(Change &change) override {
-                        currentmol.value()["accepted"]+=1;
+                        currentmol.value()["accepted"] += 1;
                     }
 
                     void _reject(Change &change) override {
-                        currentmol.value()["rejected"]+=1;
+                        currentmol.value()["rejected"] += 1;
                     }
 
                 public:
@@ -96,6 +96,7 @@ namespace Faunus {
                     void from_json(const json &j) {
                         try {
                             config = j;
+                            std::cout << std::setw(4) << j << endl;
                             mollist = &config.at("mollist");
                             if (mollist->is_object()) {
                                 for (auto it=mollist->begin(); it!=mollist->end(); ++it) {
@@ -107,8 +108,8 @@ namespace Faunus {
                                         v["molid"] = mol->id();
                                         v["dir"] = v.value("dir", Point(1,1,1));
                                         v["prob"] = v.value("prob", 1.0);
-                                        v["accepted"] = v.value("accepted", int());
-                                        v["rejected"] = v.value("rejected", int());
+                                        v["accepted"] = 0;
+                                        v["rejected"] = 0;
                                         if (!v.at("dp").is_number() ||
                                                 !v.at("dprot").is_number() )
                                             throw std::runtime_error("'dp' and 'dprot' must be numbers");
@@ -146,8 +147,8 @@ namespace Faunus {
             CHECK( j["B"].at("prob")  == 0.2 );
             CHECK( j["B"].at("dprot") == 0.5 );
             CHECK( j["B"].at("molid") == 1 );
-            //CHECK( j["B"].at("accepted") == 0 );
-            //CHECK( j["B"].at("rejected") == 0 );
+            CHECK( j["B"].at("accepted") == 0 );
+            CHECK( j["B"].at("rejected") == 0 );
         }
 #endif
     }//namespace

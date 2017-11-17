@@ -1,7 +1,8 @@
 #pragma once
+
 #include "core.h"
-#include "geometry.h"
 #include "io.h"
+#include "geometry.h"
 
 namespace Faunus {
 

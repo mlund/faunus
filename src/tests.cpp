@@ -8,6 +8,7 @@
 #include "molecule.h"
 #include "group.h"
 #include "geometry.h"
+#include "space.h"
 //#include "potentials.h"
 #include "average.h"
 //#include "energy.h"

@@ -12,7 +12,7 @@ namespace Faunus {
                 virtual void _reject(Change&)=0; //!< Call after move is rejected
             protected:
                 Random slump;     //!< Temporarily here
-                json config;      //!< JSON object containing 
+                json config;      //!< JSON object containing
                 inline virtual json _to_json() const { return json(); } //!< Extra info for report if needed
             public:
                 std::string name; //!< Name of move
@@ -21,7 +21,7 @@ namespace Faunus {
                     assert( !name.empty() );
                     json j1 = {{ name, _to_json() }};
                     json j2 = {{ name, config }};
-                    return merge( j2, j1 ); 
+                    return merge( j2, j1 );
                 } //!< JSON report w. statistics, output etc.
 
                 inline void operator()(Change &change) {
@@ -167,12 +167,23 @@ namespace Faunus {
                 } //!< Metropolis criterion (true=accept)
 
             public:
-                MCSimulation() : mv(oldspc, newspc) {
+                typedef typename Tspace::Tparticle Tparticle;
+                typedef typename Tspace::Tpvec Tpvec;
+
+                MCSimulation(json &j) : mv(oldspc, newspc) {
+                    atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
+                    molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+                    mv.from_json( j["moves"].at("moltransrot") );
+                }
+
+                ~MCSimulation() {
+                    std::cout << std::setw(4) << mv.to_json() << endl;
                 }
 
                 void move() {
                     typename Tspace::Tchange change;
                     mv(change);
+                    return;
                     if (!change.empty()) {
                         cout << "change!" << endl;
                         auto u = pot.energy(oldspc, newspc, change);

@@ -11,12 +11,8 @@ int main() {
 
     Tspace spc;
 
-    MCSimulation<Tspace> sim;
+    json j = openjson("example.json");
 
+    MCSimulation<Tspace> sim(j);
     sim.move();
-
-
-
-
-
 }

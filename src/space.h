@@ -1,6 +1,7 @@
 #pragma once
 #include "molecule.h"
 #include "geometry.h"
+#include "group.h"
 
 namespace Faunus {
 

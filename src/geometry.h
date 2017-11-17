@@ -278,6 +278,14 @@ namespace Faunus {
             } //!< Vector displacement of a range of particles
 
         template<typename Titer, typename Tboundary>
+            void cm2origo( Titer begin, Titer end, const Tboundary &boundary )
+            {
+                Point cm = massCenter(begin, end, boundary);
+                translate(begin, end, -cm, boundary);
+            } //!< Translate to that mass center is in (0,0,0)
+
+
+        template<typename Titer, typename Tboundary>
             void rotate(
                     Titer begin,
                     Titer end,

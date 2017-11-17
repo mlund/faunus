@@ -6,7 +6,7 @@ namespace Faunus {
     namespace IO {
 
         /* @brief Read lines from file into vector */
-        inline bool readFile(const std::string &file, std::vector<string> &v) {
+        inline bool readFile(const std::string &file, std::vector<std::string> &v) {
             std::ifstream f( file );
             if (f) {
                 std::string s;
@@ -20,12 +20,12 @@ namespace Faunus {
         }
 
         /**
-         * @brief Write string to file
+         * @brief Write std::string to file
          * @param file Filename
          * @param s String to write
          * @param mode `std::ios_base::out` (new, default) or `std::ios_base::app` (append)
          */
-        inline bool writeFile(const string &file, const string &s,
+        inline bool writeFile(const std::string &file, const std::string &s,
                 std::ios_base::openmode mode=std::ios_base::out) {
             std::ofstream f(file.c_str(), mode);
             cout << "Writing to file '" << file << "'. ";
@@ -41,13 +41,13 @@ namespace Faunus {
 
         /**
          * @brief Strip lines matching a pattern
-         * @param v vector of string
+         * @param v vector of std::string
          * @param pat Pattern to search for
          */
-        inline void strip(std::vector<string> &v, const string &pat) {
+        inline void strip(std::vector<std::string> &v, const std::string &pat) {
             auto iter=v.begin();
             while (iter!=v.end())
-                if ((*iter).find(pat)!=string::npos)
+                if ((*iter).find(pat) != std::string::npos)
                     v.erase(iter);
                 else ++iter;
         }
@@ -83,7 +83,7 @@ namespace Faunus {
                 static std::string p2s(const Tparticle &a, int i) {
                     std::ostringstream o;
                     o.precision(5);
-                    o << atom[a.id].name << " " << i+1 << " "
+                    o << atoms<Tparticle>[a.id].name << " " << i+1 << " "
                         << a.transpose() << " "
                         << a.charge << " " << a.mw << " " << a.radius << endl;
                     return o.str();
@@ -92,10 +92,10 @@ namespace Faunus {
             template<class Tparticle>
                 static Tparticle& s2p(const std::string &s, Tparticle &a) {
                     std::stringstream o;
-                    string name, num;
+                    std::string name, num;
                     o << s;
                     o >> name;
-                    a = atom[name];
+                    a = atoms<Tparticle>[name];
                     o >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
                     if (a.id==0)
                         std::cerr << "Warning: Atom name " << name << " is not in the atom list.\n";
@@ -104,8 +104,8 @@ namespace Faunus {
 
         public:
             template<class Tpvec>
-                static bool load(const string &file, Tpvec &target) {
-                    std::vector<string> v;
+                static bool load(const std::string &file, Tpvec &target) {
+                    std::vector<std::string> v;
                     target.clear();
                     if (IO::readFile(file,v)==true) {
                         IO::strip(v,"#");
@@ -119,7 +119,7 @@ namespace Faunus {
                 }
 
             template<class Tpvec>
-                static bool save(const string &file, const Tpvec &pv) {
+                static bool save(const std::string &file, const Tpvec &pv) {
                     std::ostringstream o;
                     o << pv.size() << endl;
                     for (size_t i=0; i<pv.size(); i++)
@@ -139,11 +139,11 @@ namespace Faunus {
         private:
             // Write box dimensions (standard PDB format)
             template<class Tvec>
-                static string writeCryst1(const Tvec &len, Tvec angle=Tvec(90,90,90)) {
+                static std::string writeCryst1(const Tvec &len, Tvec angle=Tvec(90,90,90)) {
                     char buf[500];
                     sprintf(buf, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n", 
                             len.x(),len.y(),len.z(),angle.x(),angle.y(),angle.z());
-                    return string(buf);
+                    return std::string(buf);
                 }
         public:
 
@@ -177,7 +177,7 @@ namespace Faunus {
                             while (o >> key)
                                 if (key=="ATOM" || key=="HETATM") {
                                     o >> iatom >> aname;
-                                    a=atom[aname];
+                                    a=atoms<Tparticle>[aname];
                                     o >> rname >> ires
                                         >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius; 
                                     p.push_back(a);
@@ -210,7 +210,7 @@ namespace Faunus {
                                 if ( key == "ATOM" || key == "HETATM" )
                                 {
                                     o >> iatom >> aname;
-                                    a = atom[aname];
+                                    a = atoms<Tparticle>[aname];
                                     o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius;
                                     p.push_back(a);
                                     if ( a.id == 0 )
@@ -235,19 +235,20 @@ namespace Faunus {
              * @param n Number of atoms in each residue (default: 1e9)
              */
             template<class Tpvec, class Tvec=Point>
-                static bool save(const string &file, const Tpvec &p, Tvec len=Point(0,0,0), int n=1e9) {
+                static bool save(const std::string &file, const Tpvec &p, Tvec len=Point(0,0,0), int n=1e9) {
+                    typedef typename Tpvec::value_type Tparticle;
                     int nres=1, natom=1;
                     char buf[500];
                     std::ostringstream o;
                     if (len.norm()>1e-6)
                         o << writeCryst1(len);
                     for (auto &p_i : p) {
-                        string name=atom[p_i.id].name;
+                        std::string name=atoms<Tparticle>[p_i.id].name;
                         sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
                                 natom++, name.c_str(), name.c_str(), nres,
                                 (p_i+len/2).x(), (p_i+len/2).y(), (p_i+len/2).z(), p_i.charge, p_i.radius); // move particles inside the sim. box
                         o << buf;
-                        if ( atom[p_i.id].name=="CTR" )
+                        if ( atoms<Tparticle>[p_i.id].name=="CTR" )
                             nres++;
                         else if (natom % n == 0)
                             nres++;
@@ -267,11 +268,12 @@ namespace Faunus {
      */
     struct FormatXYZ {
         template<class Tpvec, class Tvec=Point>
-            static bool save(const string &file, const Tpvec &p, Tvec len=Tvec(0,0,0)) {
+            static bool save(const std::string &file, const Tpvec &p, Tvec len=Tvec(0,0,0)) {
+                typedef typename Tpvec::value_type Tparticle;
                 std::ostringstream o;
                 o << p.size() << "\nGenerated by Faunus\n";
                 for (auto &i : p)
-                    o << atom[i.id].name << " " << Tvec(i).transpose() << "\n";
+                    o << atoms<Tparticle>[i.id].name << " " << Tvec(i).transpose() << "\n";
                 return IO::writeFile(file, o.str());
             }
 
@@ -295,13 +297,13 @@ namespace Faunus {
                         p.clear();
                     int n;
                     Tparticle a;
-                    string comment, name;
+                    std::string comment, name;
                     f >> n;
                     std::getline(f, comment); // ">>" token doesn't gobble new line
                     std::getline(f, comment); // read comment line
                     for (int i=0; i<n; i++) {
                         f >> name >> a.x() >> a.y() >> a.z();
-                        a = atom[name]; // this will preserve positions
+                        a = atoms<Tparticle>[name]; // this will preserve positions
                         if (a.id==0)
                             std::cerr << "FormatXYZ: unknown atom name '" << name << "'." << endl;
                         p.push_back(a);
@@ -343,7 +345,7 @@ namespace Faunus {
                 }
         public:
             template<class Tpvec, class Tvec=Point>
-                static bool save(const string &file, const Tpvec &p, const Point &len, int time) {
+                static bool save(const std::string &file, const Tpvec &p, const Point &len, int time) {
                     std::ostringstream o;
                     o << p.size() << "\n"
                         << "sweep " << time << "; box " << len.transpose() << "\n";
@@ -380,15 +382,15 @@ namespace Faunus {
      */
     class FormatGRO {
         private:
-            std::vector<string> v;
+            std::vector<std::string> v;
 
             template<class Tparticle>
-                inline void s2p(const string &s, Tparticle &dst) {
+                inline void s2p(const std::string &s, Tparticle &dst) {
                     std::stringstream o;
-                    string name;
+                    std::string name;
                     o << s.substr(10,5) << s.substr(20,8) << s.substr(28,8) << s.substr(36,8);
                     o >> name >> dst.x >> dst.y >> dst.z;
-                    dst=atom[name];
+                    dst=atoms<Tparticle>[name];
                     return 10*dst; //nm->angstrom
                 }
 
@@ -401,7 +403,7 @@ namespace Faunus {
              * @param p Destination particle vector
              */
             template<class Tparticle, class Talloc>
-                bool load(const string &file, std::vector<Tparticle,Talloc> &p) {
+                bool load(const std::string &file, std::vector<Tparticle,Talloc> &p) {
                     p.clear();
                     v.resize(0);
                     if (IO::readFile(file,v)==true) {
@@ -417,7 +419,7 @@ namespace Faunus {
                 }
 
             template<class Tparticle, class Talloc>
-                bool save(const string &file, std::vector<Tparticle,Talloc> &p, string mode="") {
+                bool save(const std::string &file, std::vector<Tparticle,Talloc> &p, std::string mode="") {
                     int nres=1, natom=1;
                     char buf[79];
                     double halflen=len/20; // halflen in nm
@@ -425,12 +427,12 @@ namespace Faunus {
                     o << "Generated by Faunus -- http://faunus.sourceforge.net"
                         << std::endl << p.size() << std::endl;
                     for (auto &pi : p) {
-                        string name=atom[pi.id].name;
+                        std::string name=atoms<Tparticle>[pi.id].name;
                         sprintf(buf, "%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",
                                 nres,name.c_str(),name.c_str(),natom++,
                                 pi.x()/10+halflen, pi.y()/10+halflen, pi.z()/10+halflen );
                         o << buf;
-                        if ( atom[pi.id].name=="CTR" )
+                        if ( atoms<Tparticle>[pi.id].name=="CTR" )
                             nres++;
                     }
                     if (len>0)
@@ -442,10 +444,11 @@ namespace Faunus {
                 }
 
             template<class Tspace>
-                bool save(string file, Tspace &spc) {
-                    assert( abs(len*len*len-spc.geo->getVolume())<1e-6
+                bool save(const std::string &file, Tspace &spc) {
+                    typedef typename Tspace::Tparticle Tparticle;
+                    assert( std::fabs(len*len*len-spc.geo->getVolume())<1e-6
                             && "Did you forget to pass box size to FormatGRO?" );
-                    string name;
+                    std::string name;
                     int nres=1, natom=1;
                     char buf[79];
                     double halflen=len/2;
@@ -454,7 +457,7 @@ namespace Faunus {
                         << std::endl << spc.p.size() << std::endl;
                     for (auto g : spc.groupList()) {
                         for (auto i : *g) {
-                            name=atom[ spc.p[i].id ].name;
+                            name=atoms<Tparticle>[ spc.p[i].id ].name;
                             sprintf(buf, "%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",
                                     nres,name.c_str(),name.c_str(),natom++,
                                     spc.p[i].x()/10+halflen, spc.p[i].y()/10+halflen, spc.p[i].z()/10+halflen );
@@ -466,7 +469,6 @@ namespace Faunus {
                         o << len << " " << len << " " << len << std::endl;
                     return IO::writeFile(file, o.str());
                 }
-
     };
 
 }//namespace

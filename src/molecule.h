@@ -1,5 +1,7 @@
 #pragma once
 #include "core.h"
+#include "geometry.h"
+#include "io.h"
 
 namespace Faunus {
 
@@ -56,8 +58,7 @@ namespace Faunus {
                     if ( !v.empty())
                     {
                         if ( keeppos == false )
-                            Geometry::cm2origo(
-                                    Geometry::Sphere(1e20), v); // move to origo
+                            Geometry::cm2origo( v.begin(), v.end() ); // move to origo
                         pushConformation(v);        // add conformation
                         for ( auto &p : v )           // add atoms to atomlist
                             atoms.push_back(p.id);

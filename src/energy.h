@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core.h"
+#include "geometry.h"
+#include "space.h"
 #include "potentials.h"
 
 namespace Faunus {

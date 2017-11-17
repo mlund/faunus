@@ -104,6 +104,7 @@ namespace Faunus {
         CHECK( r.size() == 0 );
         CHECK( r.empty() == true );
         CHECK( r.capacity() == 6 );
+        CHECK( r.inactive().size() == 6 );
         CHECK( r.begin() == r.end() );
 
         r.activate( r.inactive().begin(), r.inactive().end() );

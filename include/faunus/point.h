@@ -68,15 +68,17 @@ namespace Faunus
          *
          * @param ran Function that takes no arguments and returns a random
          *            float uniformly distributed in the range `[0:1[`.
+         * @param dir Directions. Sphere=1,1,1 (default), XY circle=1,1,0 etc.
          */
         template<class Trandombase>
-            PointBase &ranunit( Trandombase &ran )
+            PointBase &ranunit( Trandombase &ran, const PointBase& dir={1,1,1}  )
             {
+                assert( dir.size() == 3 );
                 Tcoord r2;
                 do
                 {
                     for ( size_t i = 0; i < 3; ++i )
-                        this->operator[](i) = 2 * ran() - 1;
+                        operator[](i) = (2 * ran() - 1) * dir[i];
                     r2 = squaredNorm();
                 }
                 while ( r2 > 1 );

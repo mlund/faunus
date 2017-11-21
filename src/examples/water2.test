@@ -4,7 +4,7 @@ GroupRotation/Translation_water_acceptance   34.0539
 GroupRotation/Translation_water_dRot         3.64838             
 GroupRotation/Translation_water_dTrans       0.107132            
 IsobaricVolumeFluctuations_MSQDisplacement   4.45178             
-IsobaricVolumeFluctuations_acceptance        35.6863             
+IsobaricVolumeFluctuations_acceptance        30.1158 
 IsobaricVolumeFluctuations_averageSideLength 31.0922             
 energyAverage                                -367908             
 relativeEnergyDrift                          5.37773e-15         

@@ -14,11 +14,18 @@ namespace Faunus {
                 Random slump;     //!< Temporarily here
                 json config;      //!< JSON object containing
                 inline virtual json _to_json() const { return json(); } //!< Extra info for report if needed
+                double prob=1;
+                unsigned long cnt=0;
+                unsigned long accepted=0;
             public:
                 std::string name; //!< Name of move
 
                 inline json to_json() const {
                     assert( !name.empty() );
+
+                    //config["accepted"] = accepted;
+                    //config["rejected"] = cnt-accepted;
+
                     json j1 = {{ name, _to_json() }};
                     json j2 = {{ name, config }};
                     return merge( j2, j1 );
@@ -53,22 +60,26 @@ namespace Faunus {
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace* oldspc = nullptr;  // pointer to old space
                     Tspace* newspc = nullptr;  // pointer to new (trial) space
-                    json* mollist = nullptr;   // json list w. molecule types to move
-                    json::iterator currentmol; // iterator to json entry of selected molecule type
+
+                    int molid=-1;
+                    double dptrans=0;
+                    double dprot=0;
+                    Point dir;
+
+                    json _to_json() const override {
+                        //config["molid"] = molid;
+                        return json();
+                    }
 
                     void _move(Change &change) override {
-                        assert( mollist!=nullptr );
-
-                        // pick random molecule type from `mollist`
-                        currentmol = slump.sample(mollist->begin(), mollist->end());
-                        json& j = currentmol.value(); // json entry w. displacement parameters etc.
+                        assert(molid>=0);
 
                         // pick random group from the system matching molecule type
-                        auto g_iter = ( newspc->findMolecules( j["molid"].get<int>() )
+                        auto g_iter = ( newspc->findMolecules( molid )
                                 | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
 
                         // translate group
-                        Point dp = ranunit(slump).cwiseProduct( j["dir"].get<Point>() ) * j["dp"].get<double>();
+                        Point dp = ranunit(slump).cwiseProduct(dir) * dptrans;
                         g_iter->translate( dp, newspc->geo.boundaryFunc );
                         // add rotation here...
 
@@ -79,11 +90,9 @@ namespace Faunus {
                     }
 
                     void _accept(Change &change) override {
-                        currentmol.value()["accepted"] += 1;
                     }
 
                     void _reject(Change &change) override {
-                        currentmol.value()["rejected"] += 1;
                     }
 
                 public:
@@ -96,27 +105,16 @@ namespace Faunus {
                     void from_json(const json &j) {
                         try {
                             config = j;
-                            //std::cout << std::setw(4) << j << endl;
-                            mollist = &config.at("mollist");
-                            if (mollist->is_object()) {
-                                for (auto it=mollist->begin(); it!=mollist->end(); ++it) {
-                                    auto mol = findName(molecules<Tpvec>, it.key());
-                                    if (mol == molecules<Tpvec>.end())
-                                        throw std::runtime_error("unknown molecule '" + it.key() + "'");
-                                    else {
-                                        auto &v = it.value();
-                                        v["molid"] = mol->id();
-                                        v["dir"] = v.value("dir", Point(1,1,1));
-                                        v["prob"] = v.value("prob", 1.0);
-                                        v["accepted"] = 0;
-                                        v["rejected"] = 0;
-                                        if (!v.at("dp").is_number() ||
-                                                !v.at("dprot").is_number() )
-                                            throw std::runtime_error("'dp' and 'dprot' must be numbers");
-                                    }
-                                }
-                            } else
-                                throw std::runtime_error("'mollist' must be of type object");
+                            std::string molname = j.at("group");
+                            name += ": " + molname;
+                            auto it = findName(molecules<Tpvec>, molname);
+                            if (it == molecules<Tpvec>.end())
+                                throw std::runtime_error("unknown molecule '" + molname + "'");
+                            molid = it->id();
+                            prob = j.value("prob", 1.0);
+                            dir = j.value("dir", Point(1,1,1));
+                            dprot = j.at("dprot");
+                            dptrans = j.at("dp");
                         }
                         catch (std::exception &e) {
                             std::cerr << name << ": " << e.what();
@@ -138,17 +136,18 @@ namespace Faunus {
 
             Tspace oldspc, newspc;
             TranslateRotate<Tspace> mv(oldspc, newspc);
-            json j = R"( {"mollist" : { "B":{"dp":1.0, "dprot":0.5, "dir":[0,1,0], "prob":0.2 } }})"_json;
+            json j = R"( {"group":"B", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "prob":0.2 })"_json;
             mv.from_json(j);
 
-            j = json(mv)[mv.name]["mollist"];
-            CHECK( j["B"].at("dir")   == Point(0,1,0) );
-            CHECK( j["B"].at("dp")    == 1.0 );
-            CHECK( j["B"].at("prob")  == 0.2 );
-            CHECK( j["B"].at("dprot") == 0.5 );
-            CHECK( j["B"].at("molid") == 1 );
-            CHECK( j["B"].at("accepted") == 0 );
-            CHECK( j["B"].at("rejected") == 0 );
+            j = json(mv)[mv.name];
+            CHECK( j.at("group") == "B");
+            CHECK( j.at("dir")   == Point(0,1,0) );
+            CHECK( j.at("dp")    == 1.0 );
+            CHECK( j.at("prob")  == 0.2 );
+            CHECK( j.at("dprot") == 0.5 );
+            //CHECK( j.at("molid") == 1 );
+            //CHECK( j["B"].at("accepted") == 0 );
+            //CHECK( j["B"].at("rejected") == 0 );
         }
 #endif
     }//namespace

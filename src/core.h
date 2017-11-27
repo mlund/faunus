@@ -10,6 +10,7 @@
 #include <string>
 #include <cmath>
 #include <random>
+#include <memory>
 #include <Eigen/Geometry>
 #include <json.hpp>
 #include <range/v3/all.hpp>

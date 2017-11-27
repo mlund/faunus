@@ -158,7 +158,7 @@ namespace Faunus {
             private:
                 Random slump;
                 Tspace oldspc, newspc;
-                Move::TranslateRotate<Tspace> mv;
+                std::vector<std::shared_ptr<Move::Movebase>> moves;
                 Energy::Nonbonded<Tspace, Potential::Dummy> pot;
 
                 bool metropolis(double du) {
@@ -171,8 +171,14 @@ namespace Faunus {
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
 
-                MCSimulation(const json &j) : oldspc(j), newspc(oldspc), mv(oldspc, newspc) {
-                    mv.from_json( j.at("moves").at("moltransrot") );
+                MCSimulation(const json &j) : oldspc(j), newspc(oldspc) {
+                    for (auto &m : j.at("moves")) // loop over all moves
+                        for (auto it=m.begin(); it!=m.end(); ++it)
+                            if (it.key()=="moltransrot") {
+                                auto ptr = std::make_shared<Move::TranslateRotate<Tspace>>(oldspc, newspc);
+                                ptr->from_json( it.value() );
+                                moves.push_back(ptr);
+                            }
                 }
 
                 ~MCSimulation() {
@@ -181,7 +187,7 @@ namespace Faunus {
 
                 void move() {
                     typename Tspace::Tchange change;
-                    mv(change);
+                    //mv(change);
                     return;
                     if (!change.empty()) {
                         cout << "change!" << endl;
@@ -198,6 +204,6 @@ namespace Faunus {
                     }
                 }
 
-            };
+        };
 
-        }//namespace
+}//namespace

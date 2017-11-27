@@ -17,8 +17,11 @@ namespace Faunus {
                 double prob=1;
                 unsigned long cnt=0;
                 unsigned long accepted=0;
+                unsigned long rejected=0;
             public:
-                std::string name; //!< Name of move
+                std::string name;      //!< Name of move
+                unsigned int repeat=1; //!< How many times the move should be repeated
+                bool permol=true;
 
                 inline json to_json() const {
                     assert( !name.empty() );
@@ -31,10 +34,21 @@ namespace Faunus {
                     return merge( j2, j1 );
                 } //!< JSON report w. statistics, output etc.
 
-                inline void operator()(Change &change) {
+                inline void move(Change &change) {
                     change.clear();
                     _move(change);
+                    cnt++;
                 } //!< Perform move and modify given change object
+
+                void accept(Change &c) {
+                    accepted++;
+                    _accept(c);
+                }
+
+                void reject(Change &c) {
+                    rejected++;
+                    _reject(c);
+                }
         };
 
         inline void to_json(json &j, const Movebase &m) {
@@ -75,8 +89,8 @@ namespace Faunus {
                         assert(molid>=0);
 
                         // pick random group from the system matching molecule type
-                        auto g_iter = ( newspc->findMolecules( molid )
-                                | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
+                        auto mollist =  newspc->findMolecules( molid ); // list of molecules w. 'molid'
+                        auto g_iter  = (mollist | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
 
                         // translate group
                         Point dp = ranunit(slump).cwiseProduct(dir) * dptrans;
@@ -104,17 +118,19 @@ namespace Faunus {
 
                     void from_json(const json &j) {
                         try {
-                            config = j;
                             std::string molname = j.at("group");
-                            name += ": " + molname;
                             auto it = findName(molecules<Tpvec>, molname);
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
+                            name += "(" + molname + ")";
                             molid = it->id();
                             prob = j.value("prob", 1.0);
                             dir = j.value("dir", Point(1,1,1));
                             dprot = j.at("dprot");
                             dptrans = j.at("dp");
+                            permol = j.value("permol", true);
+
+                            config = j; // save input json object
                         }
                         catch (std::exception &e) {
                             std::cerr << name << ": " << e.what();
@@ -166,11 +182,7 @@ namespace Faunus {
                     return ( slump() > std::exp(-du)) ? false : true;
                 } //!< Metropolis criterion (true=accept)
 
-            public:
-                typedef typename Tspace::Tparticle Tparticle;
-                typedef typename Tspace::Tpvec Tpvec;
-
-                MCSimulation(const json &j) : oldspc(j), newspc(oldspc) {
+                void addMoves(const json &j) {
                     for (auto &m : j.at("moves")) // loop over all moves
                         for (auto it=m.begin(); it!=m.end(); ++it)
                             if (it.key()=="moltransrot") {
@@ -178,6 +190,14 @@ namespace Faunus {
                                 ptr->from_json( it.value() );
                                 moves.push_back(ptr);
                             }
+                } // add MC moves
+
+            public:
+                typedef typename Tspace::Tparticle Tparticle;
+                typedef typename Tspace::Tpvec Tpvec;
+
+                MCSimulation(const json &j) : oldspc(j), newspc(oldspc) {
+                    addMoves(j);
                 }
 
                 ~MCSimulation() {
@@ -186,8 +206,11 @@ namespace Faunus {
 
                 void move() {
                     typename Tspace::Tchange change;
-                    //mv(change);
+
+                    auto mv = *slump.sample( moves.begin(), moves.end() ); // pick random move
+                    mv->move(change);
                     return;
+
                     if (!change.empty()) {
                         cout << "change!" << endl;
                         auto u = pot.energy(oldspc, newspc, change);
@@ -195,10 +218,12 @@ namespace Faunus {
                         if (metropolis(du) ) // accept
                         {
                             oldspc.sync( newspc, change ); // copy newspc -> oldspc
+                            mv->accept(change);
                         }
                         else // reject
                         {
                             newspc.sync( oldspc, change ); // copy oldspc -> newspc
+                            mv->reject(change);
                         }
                     }
                 }

@@ -243,9 +243,9 @@ namespace Faunus {
         }
 
     template<class Tpvec>
-        void from_json(const json& j, MoleculeData<Tpvec> & a) {
+        void from_json(const json& j, MoleculeData<Tpvec> &a) {
             if (j.is_object()==false || j.size()!=1)
-                throw std::runtime_error("Invalid JSON data for AtomData");
+                throw std::runtime_error("Invalid JSON data for MoleculeData");
             for (auto it=j.begin(); it!=j.end(); ++it) {
                 a.name = it.key();
                 auto& val = it.value();
@@ -261,6 +261,15 @@ namespace Faunus {
             }
         }
 
+    template<class T>
+        void from_json(const json& j, std::vector<MoleculeData<T>> &v) {
+            v.reserve( v.size() + j.size());
+            for (auto &i : j) {
+                v.push_back(i);
+                v.back().id() = v.size()-1; // id always match vector index
+            }
+        }
+
     template<typename Tpvec>
         static std::vector<MoleculeData<Tpvec>> molecules = {}; //!< Global instance of molecule list
 
@@ -268,19 +277,12 @@ namespace Faunus {
     TEST_CASE("[Faunus] MoleculeData") {
         using doctest::Approx;
 
-        json j = {
-            { "moleculelist",
-                {
-                    { "B",
-                        {
-                            {"activity",0.2}, {"atomic",true},
-                            {"insdir",{0.5,0,0}}, {"insoffset",{-1.1, 0.5, 10}}
-                        }
-                    },
-                    { "A", { {"atomic",false} } }
-                }
-            }
-        };
+        json j = R"(
+            { "moleculelist": [
+                { "B": {"activity":0.2, "atomic":true, "insdir": [0.5,0,0], "insoffset": [-1.1, 0.5, 10] } },
+                { "A": { "atomic":false } }
+            ]})"_json;
+
         typedef Particle<Radius, Charge, Dipole, Cigar> T;
         typedef std::vector<T> Tpvec;
         typedef MoleculeData<Tpvec> Tmoldata;
@@ -289,14 +291,14 @@ namespace Faunus {
         auto &v = molecules<Tpvec>; // reference to global molecule vector
 
         CHECK(v.size()==2);
-        CHECK(v.front().id()==0);
-        CHECK(v.front().name=="A"); // alphabetic order in std::map
-        CHECK(v.front().atomic==false);
+        CHECK(v.back().id()==1);
+        CHECK(v.back().name=="A"); // alphabetic order in std::map
+        CHECK(v.back().atomic==false);
 
-        MoleculeData<Tpvec> m = json(v.back()); // moldata --> json --> moldata
+        MoleculeData<Tpvec> m = json(v.front()); // moldata --> json --> moldata
 
         CHECK(m.name=="B");
-        CHECK(m.id()==1);
+        CHECK(m.id()==0);
         CHECK(m.activity==Approx(0.2_molar));
         CHECK(m.atomic==true);
         CHECK(m.insdir==Point(0.5,0,0));

@@ -673,17 +673,18 @@ namespace Faunus {
      */
     template<class T /** Particle type */>
         struct AtomData {
-            T p;               //!< Particle with generic properties
-            std::string name;  //!< Name
-            double eps=0;      //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
-            double activity=0; //!< Chemical activity [mol/l]
-            double dp=0;       //!< Translational displacement parameter [angstrom]
-            double dprot=0;    //!< Rotational displacement parameter [degrees]
-            double weight=1;   //!< Weight
-            double charge=0;   //!< Partial charge [e]
+            public:
+                T p;               //!< Particle with generic properties
+                std::string name;  //!< Name
+                double eps=0;      //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
+                double activity=0; //!< Chemical activity [mol/l]
+                double dp=0;       //!< Translational displacement parameter [angstrom]
+                double dprot=0;    //!< Rotational displacement parameter [degrees]
+                double weight=1;   //!< Weight
+                double charge=0;   //!< Partial charge [e]
 
-            int& id() { return p.id; } //!< Type id
-            const int& id() const { return p.id; } //!< Type id
+                int& id() { return p.id; } //!< Type id
+                const int& id() const { return p.id; } //!< Type id
         };
 
     template<class T>
@@ -714,17 +715,13 @@ namespace Faunus {
         }
 
     template<class T>
-        void from_json(const json& j, std::vector<T> &v) {
-            if ( j.is_object() ) {
-                v.reserve( v.size() + j.size() );
-                for (auto it=j.begin(); it!=j.end(); ++it) {
-                    json _j;
-                    _j[it.key()] = it.value();
-                    v.push_back(_j);
-                    v.back().id() = v.size()-1; // id always match vector index
-                }
+        void from_json(const json& j, std::vector<AtomData<T>> &v) {
+            v.reserve( v.size() + j.size());
+            for (auto &i : j) {
+                v.push_back(i);
+                v.back().id() = v.size()-1; // id always match vector index
             }
-        } //!< Append AtomData/MoleculeData to list
+        }
 
     template<typename Tparticle>
         static std::vector<AtomData<Tparticle>> atoms = {}; //!< Global instance of atom list
@@ -733,19 +730,11 @@ namespace Faunus {
     TEST_CASE("[Faunus] AtomData") {
         using doctest::Approx;
 
-        json j = {
-            { "atomlist",
-                {
-                    { "B",
-                        {
-                            {"activity",0.2}, {"eps",0.05}, {"dp",9.8},
-                            {"dprot",3.14}, {"weight",1.1}
-                        }
-                    },
-                    { "A", { {"r",1.1} } }
-                }
-            }
-        };
+        json j = R"({ "atomlist" : [
+             { "A": { "r":1.1 } },
+             { "B": { "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "weight":1.1 } }
+             ]})"_json; // non-deterministic seed
+
         typedef Particle<Radius, Charge, Dipole, Cigar> T;
 
         atoms<T> = j["atomlist"].get<decltype(atoms<T>)>();

@@ -86,8 +86,14 @@ namespace Faunus {
                     assert(size() + inactive().size() == capacity());
                 } //!< Activate previously deactivated elements
 
-                T& trueend() { return _trueend; }
-                const T& trueend() const { return _trueend; }
+                void relocate(Titer oldorigin, Titer neworigin) {
+                    begin() = neworigin + std::distance(oldorigin, begin());
+                    end() = neworigin + std::distance(oldorigin, end());
+                    _trueend = neworigin + std::distance(oldorigin, _trueend);
+                } //!< Shift all iterators to new underlying container; useful when resizing vectors
+
+                Titer& trueend() { return _trueend; }
+                const Titer& trueend() const { return _trueend; }
         };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -126,6 +132,12 @@ namespace Faunus {
         CHECK( *(r.end()-2)==20); // activated elements can be retrieved from `end()-n`
         CHECK( *(r.end()-1)==30);
         CHECK( r.size() == 6);
+
+        auto v2 = v;
+        v2.front()=-7;
+        CHECK( *r.begin()!=-7 );
+        r.relocate(v.begin(), v2.begin());
+        CHECK( *r.begin()==-7 );
     }
 #endif
 

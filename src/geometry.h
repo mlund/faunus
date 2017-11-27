@@ -14,9 +14,10 @@ namespace Faunus {
         struct GeometryBase {
             virtual void setVolume(double, const std::vector<double>&)=0; //!< Set volume
             virtual double getVolume(int=3) const=0; //!< Get volume
-            virtual void randompos( Point&, std::function<double()>& ) const=0; //!< Generate random position
-            virtual Point vdist( const Point &a, const Point &b ) const=0; //!< (Minimum) distance between two points
-            virtual void boundary( Point &a ) const=0; //!< Apply boundary conditions
+            virtual void randompos( Point&, Random& ) const=0; //!< Generate random position
+            virtual Point vdist( const Point&, const Point& ) const=0; //!< (Minimum) distance between two points
+            virtual void boundary( Point& ) const=0; //!< Apply boundary conditions
+            virtual bool collision( const Point&, double=0) const=0; //!< Check if position lies within
 
             BoundaryFunction boundaryFunc; //!< Functor for boundary()
             DistanceFunction distanceFunc; //!< Functor for vdist()
@@ -58,7 +59,17 @@ namespace Faunus {
 
                 const Point& getLength() const { return len; } //!< Side lengths
 
-                void randompos( Point &m, std::function<double()> &rand ) const override {
+                bool collision(const Point &a, double r=0) const override {
+                    if ( std::fabs(a.z()+r) > len_half.z())
+                    return true;
+                    if ( std::fabs(a.x()+r) > len_half.x())
+                    return true;
+                    if ( std::fabs(a.y()+r) > len_half.y())
+                    return true;
+                    return false;
+                }
+
+                void randompos( Point &m, Random &rand ) const override {
                     m.x() = (rand()-0.5) * this->len.x();
                     m.y() = (rand()-0.5) * this->len.y();
                     m.z() = (rand()-0.5) * this->len.z();
@@ -171,7 +182,7 @@ namespace Faunus {
                 double r, r2, diameter, len;
                 typedef PBC<false,false,true> base;
             public:
-                void setRadius(double radius, double length) {
+                void set(double radius, double length) {
                     len = length;
                     r = radius;
                     r2 = r*r;
@@ -181,8 +192,8 @@ namespace Faunus {
 
                 void setVolume(double V, const std::vector<double> &s={}) override {
                     r = std::sqrt( V / (pc::pi * len) );
-                    setRadius( r2, len);
-                }
+                    set( r, len );
+                } //!< Adjust radius to match volume; length is conserved.
 
                 double getVolume(int dim=3) const override {
                     if (dim==1)
@@ -190,9 +201,9 @@ namespace Faunus {
                     if (dim==2)
                         return pc::pi * r2;
                     return r2 * pc::pi * len;
-                }
+                } //<! Return volume
 
-                void randompos( Point &m, std::function<double()>& rand ) const override
+                void randompos( Point &m, Random &rand ) const override
                 {
                     double l = r2 + 1;
                     m.z() = (rand()-0.5) * len;
@@ -204,24 +215,43 @@ namespace Faunus {
                     }
                 }
 
+                bool collision(const Point &a, double r=0) const override {
+                    if ( a.z() < -0.5*len )
+                    return true;
+                    if ( a.z() > 0.5*len )
+                    return true;
+                    if ( a.x()*a.x() + a.y()*a.y() > r2 )
+                    return true;
+                    return false;
+                }
         };
+
         void from_json(const json& j, Cylinder &cyl) {
-            cyl.setRadius( j.at("length"), j.at("radius") );
+            cyl.set( j.at("radius"), j.at("length") );
         }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] Cylinder") {
             Cylinder c;
-            c.setRadius( 1.0, 1/pc::pi );
+            c.set( 1.0, 1/pc::pi );
             CHECK( c.getVolume() == doctest::Approx( 1.0 ) );
+            CHECK( c.collision({1.01,0,0}) == true);
+            CHECK( c.collision({0.99,0,0}) == false);
+            CHECK( c.collision({0.99,1/pc::pi+0.01,0}) == true);
         }
 #endif
 
         /** @brief Spherical cell */
         class Sphere : public PBC<false,false,false> {
             private:
-                double r;
+                double r, r2;
             public:
+
+                bool collision(const Point &a, double r) const override
+                {
+                    return (a.squaredNorm() > r2) ? true : false;
+                }
+
         };
 
         enum class weight { MASS, CHARGE, GEOMETRIC };

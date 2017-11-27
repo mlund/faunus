@@ -1,5 +1,6 @@
 #include "core.h"
 #include "move.h"
+#include "system.h"
 
 using namespace Faunus;
 using namespace std;
@@ -9,7 +10,7 @@ typedef Space<Geometry::Cuboid, Tparticle> Tspace;
 
 int main() {
 
-    Tspace spc;
+    //Tspace spc;
 
     json j = openjson("example.json");
 

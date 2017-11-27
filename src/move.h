@@ -171,10 +171,8 @@ namespace Faunus {
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
 
-                MCSimulation(json &j) : mv(oldspc, newspc) {
-                    atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
-                    molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
-                    mv.from_json( j["moves"].at("moltransrot") );
+                MCSimulation(const json &j) : oldspc(j), newspc(oldspc), mv(oldspc, newspc) {
+                    mv.from_json( j.at("moves").at("moltransrot") );
                 }
 
                 ~MCSimulation() {
@@ -200,6 +198,6 @@ namespace Faunus {
                     }
                 }
 
-        };
+            };
 
-}//namespace
+        }//namespace

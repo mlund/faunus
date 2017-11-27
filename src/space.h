@@ -66,33 +66,33 @@ namespace Faunus {
 
             //std::vector<MoleculeData<Tpvec>>& molecules; //!< Reference to global molecule list
 
-            Space() {
-                //molecules = Faunus::molecules<Tpvec>;
+            Space() {}
+
+            Space(const json &j) {
+                atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
+                molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+                for ( auto& mol : molecules<Tpvec> ) {
+                    int n = mol.Ninit;
+                    while ( n-- > 0 ) {
+                        push_back(mol.id(), mol.getRandomConformation(geo, p));
+                    }
+                }
             }
 
-            void push_back(int molid, Tpvec &in) {
-                bool resized=false;
-                if (p.size()+in.size() > p.capacity())
-                    resized=true;
-
-                p.insert( p.end(), in.begin(), in.end() );
-
-                if (resized) // update group iterators if `p` is resized...
-                    for (auto &g : groups) {
-                        size_t size=g.size(),
-                               capacity=g.size();
-                        g.begin()   = p.begin() + std::distance(groups[0].begin(), g.begin());
-                        g.end()     = p.begin() + std::distance(groups[0].begin(), g.end());
-                        g.trueend() = p.begin() + std::distance(groups[0].begin(), g.trueend());
-                        if ( size!=g.size() || capacity!=g.capacity() )
-                            throw std::runtime_error("Group relocation error");
+            void push_back(int molid, const Tpvec &in) {
+                if (!in.empty()) {
+                    auto oldbegin = p.begin();
+                    p.insert( p.end(), in.begin(), in.end() );
+                    if (p.begin() != oldbegin) {// update group iterators if `p` is relocated
+                        for (auto &g : groups) {
+                            g.relocate(oldbegin, p.begin());
+                        }
                     }
-
-                Tgroup g( p.end()-in.size(), p.end() );
-                g.id=molid;
-                groups.push_back(g);
-                assert( in.size() == groups.back().size() );
-
+                    Tgroup g( p.end()-in.size(), p.end() );
+                    g.id=molid;
+                    groups.push_back(g);
+                    assert( in.size() == groups.back().size() );
+                }
             } //!< Add particles and corresponding group to back
 
             auto findMolecules(int molid) {

@@ -269,8 +269,8 @@ namespace Faunus {
                 return c/sum;
             } //!< Mass, charge, or geometric center of a collection of particles
 
-        template<typename Titer, typename Tparticle=typename Titer::value_type, typename boundaryFunc>
-            Point massCenter(Titer begin, Titer end, const boundaryFunc &boundary) {
+        template<typename Titer, typename Tparticle=typename Titer::value_type>
+            Point massCenter(Titer begin, Titer end, const BoundaryFunction &boundary=[](Point&){}) {
                 return anyCenter(begin, end, boundary,
                         []( Tparticle &p ){ return atoms<Tparticle>.at(p.id).weight; } );
             } // Mass center
@@ -296,31 +296,31 @@ namespace Faunus {
         }
 #endif
 
-        template<class T, class Titer=typename std::vector<T>::iterator, class Tboundary>
+        template<class Titer=typename std::vector<T>::iterator>
             void translate( Titer begin, Titer end, const Point &d,
-                    Tboundary boundary = [](Point&){} )
+                    const BoundaryFunction &boundary=[](Point &i){}  )
             {
-                for ( auto i=begin; i+=end; ++i )
+                for ( auto i=begin; i!=end; ++i )
                 {
                     i->pos += d;
                     boundary(i->pos);
                 }
             } //!< Vector displacement of a range of particles
 
-        template<typename Titer, typename Tboundary>
-            void cm2origo( Titer begin, Titer end, const Tboundary &boundary )
+        template<typename Titer>
+            void cm2origo( Titer begin, Titer end, const BoundaryFunction &boundary=[](Point&){} )
             {
                 Point cm = massCenter(begin, end, boundary);
                 translate(begin, end, -cm, boundary);
             } //!< Translate to that mass center is in (0,0,0)
 
 
-        template<typename Titer, typename Tboundary>
+        template<typename Titer>
             void rotate(
                     Titer begin,
                     Titer end,
                     const Eigen::Quaterniond &q,
-                    const Tboundary &boundary,
+                    const BoundaryFunction &boundary=[](Point&){} ,
                     const Point &shift=Point(0,0,0) )
             {
                 auto m = q.toRotationMatrix(); // rotation matrix

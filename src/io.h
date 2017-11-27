@@ -80,28 +80,29 @@ namespace Faunus {
      */
     class FormatAAM {
         private:
-            template<class Tparticle>
-                static std::string p2s(const Tparticle &a, int i) {
-                    std::ostringstream o;
-                    o.precision(5);
-                    o << atoms<Tparticle>[a.id].name << " " << i+1 << " "
-                        << a.transpose() << " "
-                        << a.charge << " " << a.mw << " " << a.radius << endl;
-                    return o.str();
-                }
 
             template<class Tparticle>
-                static Tparticle& s2p(const std::string &s, Tparticle &a) {
-                    std::stringstream o;
-                    std::string name, num;
-                    o << s;
-                    o >> name;
-                    a = atoms<Tparticle>[name];
-                    o >> num >> a.x() >> a.y() >> a.z() >> a.charge >> a.mw >> a.radius;
-                    if (a.id==0)
-                        std::cerr << "Warning: Atom name " << name << " is not in the atom list.\n";
-                    return a;
-                }
+            static std::string p2s(const Tparticle &a, int i) {
+                std::ostringstream o;
+                o.precision(5);
+                o << atoms<Tparticle>[a.id].name << " " << i+1 << " "
+                << a.pos.transpose() << " "
+                << a.charge << " " << a.mw << " " << a.radius << endl;
+                return o.str();
+            }
+
+            template<class Tparticle>
+            static Tparticle& s2p(const std::string &s, Tparticle &a) {
+                std::stringstream o;
+                std::string name, num;
+                o << s;
+                o >> name;
+                //a = atoms<Tparticle>[name];
+                o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> a.mw >> a.radius;
+                if (a.id==0)
+                std::cerr << "Warning: Atom name " << name << " is not in the atom list.\n";
+                return a;
+            }
 
         public:
             template<class Tpvec>
@@ -142,7 +143,7 @@ namespace Faunus {
             template<class Tvec>
                 static std::string writeCryst1(const Tvec &len, Tvec angle=Tvec(90,90,90)) {
                     char buf[500];
-                    sprintf(buf, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n", 
+                    sprintf(buf, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n",
                             len.x(),len.y(),len.z(),angle.x(),angle.y(),angle.z());
                     return std::string(buf);
                 }
@@ -178,9 +179,9 @@ namespace Faunus {
                             while (o >> key)
                                 if (key=="ATOM" || key=="HETATM") {
                                     o >> iatom >> aname;
-                                    a=atoms<Tparticle>[aname];
+                                    a = findName( atoms<Tparticle>, aname)->p;
                                     o >> rname >> ires
-                                        >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius; 
+                                        >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> a.radius;
                                     p.push_back(a);
                                 } else if (key=="CRYST1")
                                     o >> len.x() >> len.y() >> len.z();
@@ -247,7 +248,7 @@ namespace Faunus {
                         std::string name=atoms<Tparticle>[p_i.id].name;
                         sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
                                 natom++, name.c_str(), name.c_str(), nres,
-                                (p_i+len/2).x(), (p_i+len/2).y(), (p_i+len/2).z(), p_i.charge, p_i.radius); // move particles inside the sim. box
+                                (p_i.pos+len/2).x(), (p_i.pos+len/2).y(), (p_i.pos+len/2).z(), p_i.charge, p_i.radius); // move particles inside the sim. box
                         o << buf;
                         if ( atoms<Tparticle>[p_i.id].name=="CTR" )
                             nres++;
@@ -296,23 +297,26 @@ namespace Faunus {
                 {
                     if (append==false)
                         p.clear();
-                    int n;
                     Tparticle a;
                     std::string comment, name;
+                    size_t n;
                     f >> n;
+                    p.reserve( p.size() + n );
                     std::getline(f, comment); // ">>" token doesn't gobble new line
                     std::getline(f, comment); // read comment line
-                    for (int i=0; i<n; i++) {
-                        f >> name >> a.x() >> a.y() >> a.z();
-                        a = atoms<Tparticle>[name]; // this will preserve positions
-                        if (a.id==0)
-                            std::cerr << "FormatXYZ: unknown atom name '" << name << "'." << endl;
+                    for (size_t i=0; i<n; i++) {
+                        f >> name;
+                        auto it = findName( atoms<Tparticle>, name );
+                        if (it==atoms<Tparticle>.end())
+                            throw std::runtime_error("FormatXYZ: unknown atom name '" + name + "'.");
+                        a = it->p;
+                        f >> a.pos.x() >> a.pos.y() >> a.pos.z();
                         p.push_back(a);
                     }
                     if (!p.empty())
                         return true;
                 }
-                return false; 
+                return false;
             }
     };
 
@@ -471,5 +475,37 @@ namespace Faunus {
                     return IO::writeFile(file, o.str());
                 }
     };
+
+    template<class Tpvec, class Enable = void>
+    struct loadStructure {
+        bool operator()(const std::string &file, Tpvec &dst, bool append) {
+            if (append==false)
+            dst.clear();
+            std::string suffix = file.substr(file.find_last_of(".") + 1);
+            if ( suffix == "xyz" )
+            FormatXYZ::load(file, dst);
+            if ( !dst.empty() ) return true;
+            return false;
+        }
+    }; //!< XYZ file into given particle vector (fallback if charges not available)
+
+    template<class Tpvec>
+    struct loadStructure<Tpvec, std::enable_if_t<std::is_base_of<Charge,typename Tpvec::value_type>::value>> {
+        bool operator()(const std::string &file, Tpvec &dst, bool append)
+        {
+            if (append==false)
+            dst.clear();
+            std::string suffix = file.substr(file.find_last_of(".") + 1);
+            if ( suffix == "aam" )
+            FormatAAM::load(file, dst);
+            if ( suffix == "pqr" )
+            FormatPQR::load(file, dst);
+            if ( suffix == "xyz" )
+            FormatXYZ::load(file, dst);
+            if ( !dst.empty() ) return true;
+            return false;
+        }
+    }; //!< Load AAM/PQR/XYZ file into given particle vector
+
 
 }//namespace

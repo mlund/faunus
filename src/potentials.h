@@ -27,6 +27,13 @@ namespace Faunus {
             return *(new CombinedPairPotential<T1, T2>(pot1, pot2));
         } //!< Add two pair potentials
 
+        struct Dummy : public PairPotentialBase {
+            template<typename... T>
+            double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                return 0;
+            }
+        }; //!< A dummy pair potential that always returns zero
+
         struct Coulomb : public PairPotentialBase {
             double lB; //!< Bjerrum length
             template<typename... T>

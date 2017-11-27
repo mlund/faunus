@@ -5,7 +5,7 @@
 using namespace Faunus;
 using namespace std;
 
-typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
+typedef Particle<Radius, Dipole, Cigar, Charge> Tparticle;
 typedef Space<Geometry::Cuboid, Tparticle> Tspace;
 
 int main() {

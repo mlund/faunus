@@ -133,6 +133,7 @@ namespace Faunus {
         CHECK( *(r.end()-1)==30);
         CHECK( r.size() == 6);
 
+        // check relocation
         auto v2 = v;
         v2.front()=-7;
         CHECK( *r.begin()!=-7 );

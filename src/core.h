@@ -563,6 +563,7 @@ namespace Faunus {
      * --------- | ----------- | --------------------
      *  `id`     | `Particle`  |  Type id (int)
      *  `pos`    | `Particle`  |  Position (Point)
+     *  `mw`     | `Particle`  |  Weight (double)
      *  `q`      | `Charge`    |  valency (e)
      *  `r`      | `Radius`    |  radius (angstrom)
      *  `mu`     | `Dipole`    |  dipole moment unit vector (array)
@@ -585,6 +586,7 @@ namespace Faunus {
             public:
                 int id=-1;         //!< Particle id/type
                 Point pos={0,0,0}; //!< Particle position vector
+                double mw=1;       //!< Molecular weight
 
                 Particle() : Properties()... {}
 
@@ -598,6 +600,7 @@ namespace Faunus {
     template<typename... Properties>
         void to_json(json& j, const Particle<Properties...> &a) {
             j["id"]=a.id;
+            j["mw"]= a.mw;
             j["pos"] = a.pos;
             to_json<Properties...>(j, Properties(a)... );
         }
@@ -605,6 +608,7 @@ namespace Faunus {
     template<typename... Properties>
         void from_json(const json& j, Particle<Properties...> &a) {
             a.id = j.value("id", a.id);
+            a.mw = j.value("mw", a.mw);
             a.pos = j.value("pos", a.pos);
             from_json<Properties...>(j, dynamic_cast<Properties&>(a)...);
         }
@@ -658,6 +662,11 @@ namespace Faunus {
     }
 #endif
 
+    template<class Trange>
+        auto findName(Trange &rng, const std::string &name) {
+            return std::find_if( rng.begin(), rng.end(), [&name](auto &i){ return i.name==name; });
+        } //!< Returns iterator to first element with member `name` matching input
+
     /**
      * @brief General properties for atoms
      */
@@ -670,6 +679,7 @@ namespace Faunus {
             double dp=0;       //!< Translational displacement parameter [angstrom]
             double dprot=0;    //!< Rotational displacement parameter [degrees]
             double weight=1;   //!< Weight
+            double charge=0;   //!< Partial charge [e]
 
             int& id() { return p.id; } //!< Type id
             const int& id() const { return p.id; } //!< Type id
@@ -717,11 +727,6 @@ namespace Faunus {
 
     template<typename Tparticle>
         static std::vector<AtomData<Tparticle>> atoms = {}; //!< Global instance of atom list
-
-    template<class Trange>
-        auto findName(Trange &rng, const std::string &name) {
-            return std::find_if( rng.begin(), rng.end(), [&name](auto &i){ return i.name==name; });
-        } //!< Returns iterator to first element with member `name` matching input
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] AtomData") {

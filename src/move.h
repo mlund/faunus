@@ -96,7 +96,7 @@ namespace Faunus {
                     void from_json(const json &j) {
                         try {
                             config = j;
-                            std::cout << std::setw(4) << j << endl;
+                            //std::cout << std::setw(4) << j << endl;
                             mollist = &config.at("mollist");
                             if (mollist->is_object()) {
                                 for (auto it=mollist->begin(); it!=mollist->end(); ++it) {
@@ -159,7 +159,7 @@ namespace Faunus {
                 Random slump;
                 Tspace oldspc, newspc;
                 Move::TranslateRotate<Tspace> mv;
-                Energy::Nonbonded<Tspace, Potential::Coulomb> pot;
+                Energy::Nonbonded<Tspace, Potential::Dummy> pot;
 
                 bool metropolis(double du) {
                     if (du<0)
@@ -176,7 +176,7 @@ namespace Faunus {
                 }
 
                 ~MCSimulation() {
-                    std::cout << std::setw(4) << mv.to_json() << endl;
+                    //std::cout << std::setw(4) << mv.to_json() << endl;
                 }
 
                 void move() {

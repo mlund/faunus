@@ -215,18 +215,10 @@ namespace Faunus {
                     return conformations.size();
                 }
 
-
                 void loadConformation(const std::string &file)
                 {
                     Tpvec v;
-                    std::string suffix = structure.substr(file.find_last_of(".") + 1);
-                    if ( suffix == "aam" )
-                        FormatAAM::load(structure, v);
-                    if ( suffix == "pqr" )
-                        FormatPQR::load(structure, v);
-                    if ( suffix == "xyz" )
-                        FormatXYZ::load(structure, v);
-                    if ( !v.empty())
+                    if (loadStructure<Tpvec>()(file, v, false))
                     {
                         if ( keeppos == false )
                             Geometry::cm2origo( v.begin(), v.end() ); // move to origo
@@ -239,8 +231,8 @@ namespace Faunus {
                 }
         }; // end of class
 
-    template<class T>
-        void to_json(json& j, const MoleculeData<T> &a) {
+    template<class Tpvec>
+        void to_json(json& j, const MoleculeData<Tpvec> &a) {
             auto& _j = j[a.name];
             _j["activity"] = a.activity / 1.0_molar;
             _j["atomic"] = a.atomic;
@@ -250,8 +242,8 @@ namespace Faunus {
             _j["keeppos"] = a.keeppos;
         }
 
-    template<class T>
-        void from_json(const json& j, MoleculeData<T>& a) {
+    template<class Tpvec>
+        void from_json(const json& j, MoleculeData<Tpvec> & a) {
             if (j.is_object()==false || j.size()!=1)
                 throw std::runtime_error("Invalid JSON data for AtomData");
             for (auto it=j.begin(); it!=j.end(); ++it) {
@@ -263,6 +255,9 @@ namespace Faunus {
                 a.insdir = val.value("insdir", a.insdir);
                 a.insoffset = val.value("insoffset", a.insoffset);
                 a.keeppos = val.value("keeppos", a.keeppos);
+                a.structure = val.value("structure", a.structure);
+                if (!a.structure.empty())
+                    a.loadConformation(a.structure);
             }
         }
 
@@ -293,14 +288,12 @@ namespace Faunus {
         molecules<Tpvec> = j["moleculelist"].get<decltype(molecules<Tpvec>)>(); // fill global instance
         auto &v = molecules<Tpvec>; // reference to global molecule vector
 
-        //std::vector<Tmoldata> v = j["moleculelist"];
-
         CHECK(v.size()==2);
         CHECK(v.front().id()==0);
         CHECK(v.front().name=="A"); // alphabetic order in std::map
         CHECK(v.front().atomic==false);
 
-        MoleculeData<T> m = json(v.back()); // moldata --> json --> moldata
+        MoleculeData<Tpvec> m = json(v.back()); // moldata --> json --> moldata
 
         CHECK(m.name=="B");
         CHECK(m.id()==1);

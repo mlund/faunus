@@ -10,9 +10,8 @@ typedef Space<Geometry::Cuboid, Tparticle> Tspace;
 
 int main() {
 
-    //Tspace spc;
-
-    json j = openjson("example.json");
+    json j;
+    std::cin >> j;
 
     MCSimulation<Tspace> sim(j);
     sim.move();

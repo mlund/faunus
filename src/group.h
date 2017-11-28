@@ -68,7 +68,9 @@ namespace Faunus {
 
                 size_t capacity() const { return std::distance(begin(), _trueend); }
 
-                auto inactive() const { return base({ end(), _trueend}); }
+                auto inactive() const {
+                    return base({ end(), _trueend});
+                } //!< Range of inactive elements
 
                 void deactivate(Titer first, Titer last) {
                     size_t n = std::distance(first,last);
@@ -86,14 +88,14 @@ namespace Faunus {
                     assert(size() + inactive().size() == capacity());
                 } //!< Activate previously deactivated elements
 
+                Titer& trueend() { return _trueend; }
+                const Titer& trueend() const { return _trueend; }
+
                 void relocate(Titer oldorigin, Titer neworigin) {
                     begin() = neworigin + std::distance(oldorigin, begin());
                     end() = neworigin + std::distance(oldorigin, end());
-                    _trueend = neworigin + std::distance(oldorigin, _trueend);
+                    trueend() = neworigin + std::distance(oldorigin, trueend());
                 } //!< Shift all iterators to new underlying container; useful when resizing vectors
-
-                Titer& trueend() { return _trueend; }
-                const Titer& trueend() const { return _trueend; }
         };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

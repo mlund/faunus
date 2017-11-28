@@ -6,20 +6,21 @@
 namespace Faunus {
 
     /**
-     * @brief Class for specifying changes to Space
+     * @brief Specify change to a new state
      *
      * - If `moved` or `removed` are defined for a group, but are
      *   empty, it is assumed that *all* particles in the group are affected.
      */
     struct Change {
         double dV = 0;     //!< Volume change (in different directions)
+        bool trial=true;   //!< `true`=trial change to new state; `false`=restoring to old state
 
         struct data {
             int index; //!< Touched group index
             bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
             std::vector<std::pair<int,int>> activated, deactivated; //!< Range of (de)activated particles
-        };
+        }; //!< Properties of changed groups
 
         std::vector<data> groups; //!< Touched groups by index in group vector
 

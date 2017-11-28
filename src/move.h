@@ -170,11 +170,18 @@ namespace Faunus {
 
     template<class Tspace>
         class MCSimulation {
+        public:
+            struct state {
+                Tspace spc;
+                std::vector<std::shared_ptr<Energy::Energybase>> pot;
+            }; //!< Contains everything to describe a state
+
+            state old, trial;
+
             private:
                 Random slump;
-                Tspace oldspc, newspc;
                 std::vector<std::shared_ptr<Move::Movebase>> moves;
-                Energy::Nonbonded<Tspace, Potential::Dummy> pot;
+                //Energy::Nonbonded<Tspace, Potential::Dummy> pot;
 
                 bool metropolis(double du) {
                     if (du<0)
@@ -186,7 +193,7 @@ namespace Faunus {
                     for (auto &m : j.at("moves")) // loop over all moves
                         for (auto it=m.begin(); it!=m.end(); ++it)
                             if (it.key()=="moltransrot") {
-                                auto ptr = std::make_shared<Move::TranslateRotate<Tspace>>(oldspc, newspc);
+                                auto ptr = std::make_shared<Move::TranslateRotate<Tspace>>(old.spc, trial.spc);
                                 ptr->from_json( it.value() );
                                 moves.push_back(ptr);
                             }
@@ -196,7 +203,7 @@ namespace Faunus {
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
 
-                MCSimulation(const json &j) : oldspc(j), newspc(oldspc) {
+                MCSimulation(const json &j) {
                     addMoves(j);
                 }
 
@@ -209,20 +216,19 @@ namespace Faunus {
 
                     auto mv = *slump.sample( moves.begin(), moves.end() ); // pick random move
                     mv->move(change);
-                    return;
 
                     if (!change.empty()) {
-                        cout << "change!" << endl;
-                        auto u = pot.energy(oldspc, newspc, change);
-                        double du = u.second - u.first;
+                        //trial.pot.update(change);
+                        //auto u = newstate.pot.energy(oldstate.spc, newstate.spc, change);
+                        double du = 0;//u.second - u.first;
                         if (metropolis(du) ) // accept
                         {
-                            oldspc.sync( newspc, change ); // copy newspc -> oldspc
+                            old.spc.sync( trial.spc, change ); // copy newspc -> oldspc
                             mv->accept(change);
                         }
                         else // reject
                         {
-                            newspc.sync( oldspc, change ); // copy oldspc -> newspc
+                            trial.spc.sync( old.spc, change ); // copy oldspc -> newspc
                             mv->reject(change);
                         }
                     }

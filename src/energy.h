@@ -8,13 +8,28 @@
 namespace Faunus {
     namespace Energy {
 
+        class Energybase {
+        public:
+            //!< Update energy to reflect `newspc`
+            virtual void update(Change&) {}
+
+            virtual std::pair<double,double> energy(Change&) {
+                return {0,0};
+            } //!< Returns {uold,unew} as a `std::pair`.
+        };
+
         /**
          * @brief Nonbonded energy using a pair-potential
          */
         template<typename Tspace, typename Tpairpot>
-        struct Nonbonded {
+        struct Nonbonded : public Energybase {
+            Tspace& oldspc;   //!< Ref. to original space
+            Tspace& newspc;   //!< Ref. to new or trial space
             Tpairpot pairpot;
             typedef std::vector<int> Tindex;
+
+            Nonbonded(Tspace &oldspc, Tspace &newspc) : oldspc(oldspc), newspc(newspc) {
+            }
 
             template<typename T>
             double i2i(const Tspace &spc, const T &a, const T &b) {
@@ -38,7 +53,7 @@ namespace Faunus {
                 return u;
             }
 
-            std::pair<double,double> energy(Tspace &oldspc, Tspace &newspc, typename Tspace::Tchange &change) {
+            std::pair<double,double> energy(Change &change) {
                 if (change.empty())
                     return {0,0};
 

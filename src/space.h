@@ -98,19 +98,28 @@ namespace Faunus {
 
             void sync(const Tspace &o, const Tchange &change) {
 
+                // if mismatch do a deep copy of everything
+                if ( (p.size()!=o.p.size()) || (groups.size()!=o.groups.size())) {
+                    p = o.p;
+                    groups = o.groups;
+                    for (auto &i : groups)
+                        i.relocate( o.p.begin(), p.begin() );
+                    return;
+                }
+
+                assert( p.begin() != o.p.begin());
+
                 for (auto &m : change.groups) {
 
                     auto &go = groups.at(m.index);  // old group
                     auto &gn = o.groups.at(m.index);// new group
 
-                    go = gn; // sync group (*not* the actual elements)
-
-                    assert( gn.size() == go.size() );
-                    //assert( go.size()
-                    //        < std::max_element(m.atoms.begin(), m.atoms.end()));
+                    //go = gn; // deep copy group
+                    //assert( gn.size() == go.size() );
+                    assert( gn.capacity() == go.capacity() );
 
                     if (m.all) // all atoms have moved
-                        std::copy(gn.begin(), gn.end(), go.begin() );
+                        std::copy( gn.begin(), gn.end(), go.begin() );
                     else // only some atoms have moved
                         for (auto i : m.atoms)
                             *(go.begin()+i) = *(gn.begin()+i);
@@ -144,7 +153,12 @@ namespace Faunus {
     {
         typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
         typedef Space<Geometry::Cuboid, Tparticle> Tspace;
-        Tspace spc;
+        Tspace spc1, spc2;
+
+        Tspace::Tpvec p(10);
+        spc1.push_back(0, p);
+        CHECK( spc1.p.size()==10 );
+
     }
 #endif
 

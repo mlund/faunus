@@ -34,7 +34,7 @@ namespace Faunus {
             const T& begin() const { return this->first; }
             const T& end() const { return this->second; }
             size_t size() const { return std::distance(this->first, this->second); }
-            void resize(size_t n) { end() += n; assert(size()==n); }
+            void resize(size_t n) { end() += n-size(); assert(size()==n); }
             bool empty() const { return this->first==this->second; }
             void clear() { this->second = this->first; assert(empty()); }
             std::pair<int,int> to_index(T reference) {
@@ -271,10 +271,51 @@ namespace Faunus {
         CHECK( p[1].pos.y() == doctest::Approx(20) );
         CHECK( p[1].pos.z() == doctest::Approx(24) );
 
-        // check deep copy
+        // check deep copy and resizing
         std::vector<int> p1(5), p2(5);
+        p1.front() = 1;
+        p2.front() = -1;
+
         Group<int> g1(p1.begin(), p1.end());
         Group<int> g2(p2.begin(), p2.end());
+
+        g2.id=100;
+        g2.atomic=true;
+        g2.cm={1,0,0};
+        g1=g2;
+
+        CHECK(g1.id==100);
+        CHECK(g1.atomic==true);
+        CHECK(g1.cm.x()==1);
+
+        CHECK( *g1.begin()==-1);
+        CHECK( *g2.begin()==-1);
+        CHECK( g1.begin() != g2.begin() );
+        CHECK( g1.size() == g2.size());
+        *g2.begin()=10;
+        g2.resize(4);
+        g1 = g2;
+        CHECK( g1.size() == 4);
+        CHECK( g1.capacity() == 5);
+        CHECK( p1.front()==10);
+
+        std::vector<Group<int>> gvec1, gvec2;
+        gvec1.push_back(g1);
+        gvec2.push_back(g2);
+        p2.front()=21;
+
+        CHECK( *(gvec1.front().begin())==10 );
+        CHECK( *(gvec2.front().begin())==21 );
+
+        // existing groups point to existing particles when overwritten
+        gvec1 = gvec2; // invoke *deep* copy of all contained groups
+        CHECK( gvec1[0].begin() != gvec2[0].begin());
+        CHECK( p1.front() == 21);
+
+        // new groups point to same particles as original
+        auto gvec3 = gvec1;
+        CHECK( gvec1[0].begin() == gvec3[0].begin());
+
     }
 #endif
 

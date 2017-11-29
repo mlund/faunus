@@ -96,7 +96,10 @@ namespace Faunus {
                 return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
             } //!< Range with all atoms of type `atomid` (complexity: order N)
 
-            void sync(const Tspace &o, const Tchange &change) {
+            void sync(Tspace &o, const Tchange &change) {
+
+                if (std::fabs(change.dV)>1e-9)
+                    geo = o.geo;
 
                 // if mismatch do a deep copy of everything
                 if ( (p.size()!=o.p.size()) || (groups.size()!=o.groups.size())) {
@@ -156,19 +159,32 @@ namespace Faunus {
         Tspace spc1, spc2;
 
         Tspace::Tpvec p(10);
+        p.front().pos.x()=0.5;
         spc1.push_back(0, p);
         CHECK( spc1.p.size()==10 );
         CHECK( spc1.groups.size()==1 );
 
-        Change c(1);
-        c[0].index=0;
-        c[0].all=true;
-        spc2.sync(spc1)
+        // sync groups
+        Change c;
+        c.groups.resize(1);
+        c.groups[0].index=0;
+        c.groups[0].all=true;
+        spc2.sync(spc1, c);
         CHECK( spc2.p.size()==10 );
         CHECK( spc2.groups.size()==1 );
-        CHECK( spc2.p.begin() != spc1.p.begin());
+        CHECK( spc2.groups.front().begin() != spc1.groups.front().begin());
+        CHECK( spc2.p.front().pos.x()==0.5);
 
+        // nothing should be synched (all==false)
+        spc2.p.back().pos.z()=-0.1;
+        c.groups[0].all=false;
+        spc1.sync(spc2, c);
+        CHECK( spc1.p.back().pos.z() != -0.1 );
 
+        // everything should be synched (all==true)
+        c.groups[0].all=true;
+        spc1.sync(spc2, c);
+        CHECK( spc1.p.back().pos.z() == -0.1 );
     }
 #endif
 

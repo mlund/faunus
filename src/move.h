@@ -173,7 +173,7 @@ namespace Faunus {
         public:
             struct state {
                 Tspace spc;
-                std::vector<std::shared_ptr<Energy::Energybase>> pot;
+                Energy::Hamiltonian<Tspace> pot;
             }; //!< Contains everything to describe a state
 
             state old, trial;
@@ -218,17 +218,22 @@ namespace Faunus {
                     mv->move(change);
 
                     if (!change.empty()) {
-                        //trial.pot.update(change);
-                        //auto u = newstate.pot.energy(oldstate.spc, newstate.spc, change);
-                        double du = 0;//u.second - u.first;
+
+                        trial.pot.update(change); // update trial potential
+                        double unew = trial.pot.energy(change); // new energy
+                        double uold = old.pot.energy(change); // old energy
+                        double du = unew - uold;
+
                         if (metropolis(du) ) // accept
                         {
-                            old.spc.sync( trial.spc, change ); // copy newspc -> oldspc
+                            old.spc.sync( trial.spc, change ); // sync newspc -> oldspc
+                            // todo: sync hamiltonian
                             mv->accept(change);
                         }
                         else // reject
                         {
                             trial.spc.sync( old.spc, change ); // copy oldspc -> newspc
+                            // todo: sync hamiltonian
                             mv->reject(change);
                         }
                     }

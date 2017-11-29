@@ -1,6 +1,5 @@
 #include "core.h"
 #include "move.h"
-#include "system.h"
 
 using namespace Faunus;
 using namespace std;
@@ -11,7 +10,7 @@ typedef Space<Geometry::Cuboid, Tparticle> Tspace;
 int main() {
 
     // run with:
-    // ./yason.py < example.yml | ./example 
+    // ./yason.py < example.yml | ./example
     json j;
     std::cin >> j;
 

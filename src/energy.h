@@ -11,11 +11,12 @@ namespace Faunus {
         class Energybase {
         public:
             //!< Update energy to reflect `newspc`
-            virtual void update(Change&) {}
+            virtual void update(Change&) {
+            } //!< Update to reflect changes made in other space
 
-            virtual std::pair<double,double> energy(Change&) {
-                return {0,0};
-            } //!< Returns {uold,unew} as a `std::pair`.
+            virtual double energy(Change&) {
+                return 0;
+            } //!< Return energy due to change
         };
 
         /**
@@ -53,9 +54,9 @@ namespace Faunus {
                 return u;
             }
 
-            std::pair<double,double> energy(Change &change) {
+            double energy(Change &change) override {
                 if (change.empty())
-                    return {0,0};
+                    return 0;
 
                 double uold=0, unew=0;
 
@@ -83,9 +84,26 @@ namespace Faunus {
                         unew += g2g(newspc, newspc.groups[d.index], newspc.groups[i]);
                     }
                 }
-                return {uold, unew};
+                return unew-uold;
             }
         }; // Nonbonded energy before and after change (returns pair w. uold and unew)
+
+        template<typename Tspace>
+        class Hamiltonian : public Energybase {
+        private:
+            std::vector<std::shared_ptr<Energy::Energybase>> vec;
+        public:
+            void update(Change &change) override {
+                for (auto i : vec)
+                    i->update(change);
+            }
+            double energy(Change &change) override {
+                double du=0;
+                for (auto i : vec)
+                    du += i->energy(change);
+                return du;
+            } //!< Energy due to changes
+        };
 
     }//namespace
 }//namespace

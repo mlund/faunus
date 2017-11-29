@@ -13,7 +13,6 @@ namespace Faunus {
      */
     struct Change {
         double dV = 0;     //!< Volume change (in different directions)
-        bool trial=true;   //!< `true`=trial change to new state; `false`=restoring to old state
 
         struct data {
             int index; //!< Touched group index

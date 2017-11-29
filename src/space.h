@@ -158,6 +158,16 @@ namespace Faunus {
         Tspace::Tpvec p(10);
         spc1.push_back(0, p);
         CHECK( spc1.p.size()==10 );
+        CHECK( spc1.groups.size()==1 );
+
+        Change c(1);
+        c[0].index=0;
+        c[0].all=true;
+        spc2.sync(spc1)
+        CHECK( spc2.p.size()==10 );
+        CHECK( spc2.groups.size()==1 );
+        CHECK( spc2.p.begin() != spc1.p.begin());
+
 
     }
 #endif

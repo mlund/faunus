@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core.h"
 #include "energy.h"
 
 namespace Faunus {
@@ -8,8 +9,8 @@ namespace Faunus {
         class Movebase {
             private:
                 virtual void _move(Change&)=0; //!< Perform move and modify change object
-                virtual void _accept(Change&)=0; //!< Call after move is accepted
-                virtual void _reject(Change&)=0; //!< Call after move is rejected
+                virtual void _accept(Change&) {}; //!< Call after move is accepted
+                virtual void _reject(Change&) {}; //!< Call after move is rejected
             protected:
                 Random slump;     //!< Temporarily here
                 json config;      //!< JSON object containing
@@ -25,12 +26,13 @@ namespace Faunus {
 
                 inline json to_json() const {
                     assert( !name.empty() );
-
-                    //config["accepted"] = accepted;
-                    //config["rejected"] = cnt-accepted;
-
                     json j1 = {{ name, _to_json() }};
                     json j2 = {{ name, config }};
+                    if (cnt>0)
+                        j2[name]["acceptance"] = double(accepted)/cnt;
+                    j2[name]["cnt"] = accepted;
+                    j2[name]["accepted"] = accepted;
+                    j2[name]["rejected"] = cnt-accepted;
                     return merge( j2, j1 );
                 } //!< JSON report w. statistics, output etc.
 
@@ -57,16 +59,6 @@ namespace Faunus {
 
         /**
          * @brief Translate and rotate a molecular group
-         *
-         * Input format:
-         *
-         * ```.js
-         *     { "mollist" :
-         *         {
-         *             "water" : { "dp" : 1.0, "dprot" : 0.5, "dir" : [1,1,1], "prob" : 1.0 }
-         *         }
-         *     }
-         * ```
          */
         template<typename Tspace>
             class TranslateRotate : public Movebase {
@@ -79,10 +71,14 @@ namespace Faunus {
                     double dptrans=0;
                     double dprot=0;
                     Point dir;
+                    //Average<double> msd; // mean square displacement
 
                     json _to_json() const override {
-                        //config["molid"] = molid;
-                        return json();
+                        return {
+                            {"dir", dir}, {"dp", dptrans}, {"dprot",dprot},
+                            {"molid", molid},
+                            {"group", molecules<Tpvec>[molid].name}
+                        };
                     }
 
                     void _move(Change &change) override {
@@ -103,34 +99,25 @@ namespace Faunus {
                         change.groups.push_back( d ); // add to list of moved groups
                     }
 
-                    void _accept(Change &change) override {
-                    }
-
-                    void _reject(Change &change) override {
-                    }
-
                 public:
                     TranslateRotate(Tspace &oldspc, Tspace &newspc) : oldspc(&oldspc), newspc(&newspc) {
                         name = "Molecular Translation and Rotation";
-                        //assert( &oldspc!=nullptr );
-                        //assert( &newspc!=nullptr );
                     }
 
                     void from_json(const json &j) {
+                        assert(!molecules<Tpvec>.empty());
                         try {
                             std::string molname = j.at("group");
                             auto it = findName(molecules<Tpvec>, molname);
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
-                            name += "(" + molname + ")";
+                            name += ": [" + molname + "]";
                             molid = it->id();
                             prob = j.value("prob", 1.0);
                             dir = j.value("dir", Point(1,1,1));
                             dprot = j.at("dprot");
                             dptrans = j.at("dp");
                             permol = j.value("permol", true);
-
-                            config = j; // save input json object
                         }
                         catch (std::exception &e) {
                             std::cerr << name << ": " << e.what();
@@ -204,11 +191,15 @@ namespace Faunus {
                 typedef typename Tspace::Tpvec Tpvec;
 
                 MCSimulation(const json &j) {
+                    atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
+                    molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+                    insertMolecules(old.spc);
+                    insertMolecules(trial.spc);
                     addMoves(j);
                 }
-
+                
                 ~MCSimulation() {
-                    //std::cout << std::setw(4) << mv.to_json() << endl;
+                    std::cout << std::setw(4) << moves.front()->to_json() << endl;
                 }
 
                 void move() {

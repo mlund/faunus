@@ -15,5 +15,6 @@ int main() {
     std::cin >> j;
 
     MCSimulation<Tspace> sim(j);
-    sim.move();
+    //cout << std::setw(4) << sim.to_json() << endl;
+    //sim.move();
 }

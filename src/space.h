@@ -1,4 +1,5 @@
 #pragma once
+#include "core.h"
 #include "molecule.h"
 #include "geometry.h"
 #include "group.h"
@@ -66,17 +67,9 @@ namespace Faunus {
 
             //std::vector<MoleculeData<Tpvec>>& molecules; //!< Reference to global molecule list
 
-            Space() {}
-
-            Space(const json &j) {
-                atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
-                molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
-                for ( auto& mol : molecules<Tpvec> ) {
-                    int n = mol.Ninit;
-                    while ( n-- > 0 ) {
-                        push_back(mol.id(), mol.getRandomConformation(geo, p));
-                    }
-                }
+            void clear() {
+                p.clear();
+                groups.clear();
             }
 
             void push_back(int molid, const Tpvec &in) {
@@ -129,13 +122,29 @@ namespace Faunus {
                     f(*this, change);
             }
         };
+
+        template<class Tgeometry, class Tparticletype>
+        void from_json(const json &j, Space<Tgeometry,Tparticletype> &p) {
+            assert(1==2 && "to be implemented");
+        }
+
+        template<typename Tspace>
+        void insertMolecules(Tspace &spc) {
+            spc.clear();
+            for ( auto& mol : molecules<typename Tspace::Tpvec> ) {
+                int n = mol.Ninit;
+                while ( n-- > 0 ) {
+                    spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
+                }
+            }
+        } //!< Insert molecules into space as defines in `molecules`
+        
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Space")
     {
         typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
         typedef Space<Geometry::Cuboid, Tparticle> Tspace;
         Tspace spc;
-        spc.p.resize(10);
     }
 #endif
 

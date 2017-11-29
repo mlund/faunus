@@ -166,7 +166,7 @@ namespace Faunus {
                 id = o.id;
                 atomic = o.atomic;
                 cm = o.cm;
-                //std::copy(o.begin(), o.end(), begin());
+                std::copy(o.begin(), o.end(), begin());
                 return *this;
             } //!< Deep copy contents from another Group
 
@@ -270,6 +270,11 @@ namespace Faunus {
         CHECK( p[1].pos.x() == doctest::Approx(16) );
         CHECK( p[1].pos.y() == doctest::Approx(20) );
         CHECK( p[1].pos.z() == doctest::Approx(24) );
+
+        // check deep copy
+        std::vector<int> p1(5), p2(5);
+        Group<int> g1(p1.begin(), p1.end());
+        Group<int> g2(p2.begin(), p2.end());
     }
 #endif
 

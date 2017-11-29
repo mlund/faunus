@@ -75,8 +75,8 @@ namespace Faunus {
 
                     json _to_json() const override {
                         return {
-                            {"dir", dir}, {"dp", dptrans}, {"dprot",dprot},
-                            {"molid", molid},
+                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
+                            {"molid", molid}, {"prob", prob},
                             {"group", molecules<Tpvec>[molid].name}
                         };
                     }
@@ -197,7 +197,7 @@ namespace Faunus {
                     insertMolecules(trial.spc);
                     addMoves(j);
                 }
-                
+
                 ~MCSimulation() {
                     std::cout << std::setw(4) << moves.front()->to_json() << endl;
                 }

@@ -86,7 +86,7 @@ namespace Faunus {
                     groups.push_back(g);
                     assert( in.size() == groups.back().size() );
                 }
-            } //!< Add particles and corresponding group to back
+            } //!< Safely add particles and corresponding group to back
 
             auto findMolecules(int molid) {
                 return groups | ranges::view::filter( [molid](auto &i){ return i.id==molid; } );
@@ -137,8 +137,8 @@ namespace Faunus {
                     spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
                 }
             }
-        } //!< Insert molecules into space as defines in `molecules`
-        
+        } //!< Insert `Ninit` molecules into space as defined in `molecules`
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Space")
     {

@@ -155,18 +155,24 @@ namespace Faunus {
             Point cm={0,0,0};    //!< Mass center
 
             template<class Trange>
-                Group(Trange &rng) : base(rng.begin(), rng.end()) {} //!< Constructor from range
+                Group(Trange &rng) : base(rng.begin(), rng.end()) {
+                    // WARNING: Only iterators are copied!
+                } //!< Constructor from range. WARNING: Only iterators are copied
 
+            Group(Group &o) : base(o.begin(), o.trueend()) { *this = o; }
+            Group(const Group &o) : base(o.begin(), o.trueend()) { *this = o; }
             Group(iter begin, iter end) : base(begin,end) {} //!< Constructor
 
             Group& operator=(const Group &o) {
+                if (&o == this)
+                    return *this;
                 if (this->capacity() != o.capacity())
                     throw std::runtime_error("capacity mismatch");
                 this->resize(o.size());
+                std::copy(o.begin(), o.end(), begin());
                 id = o.id;
                 atomic = o.atomic;
                 cm = o.cm;
-                std::copy(o.begin(), o.end(), begin());
                 return *this;
             } //!< Deep copy contents from another Group
 
@@ -219,6 +225,11 @@ namespace Faunus {
                 } //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
 
         }; //!< Groups of particles
+
+        template<class T /** Particle type */>
+        void to_json(json &j, const Group<T> &g) {
+            j = {{"id", g.id}, {"cm",g.cm}, {"atomic",g.atomic}, {"size",g.size()}};
+        }
 
     template<class Trange>
         auto positions(Trange &r) {

@@ -109,6 +109,8 @@ namespace Faunus {
                     p = o.p;
                     assert( p.begin() != o.p.begin() && "deep copy problem");
                     groups = o.groups;
+                    if (!groups.empty() && !o.groups.empty())
+                        cout << groups.front().id << " " << o.groups.front().id << endl;
                     for (auto &i : groups)
                         i.relocate( o.p.begin(), p.begin() );
                 } else
@@ -150,7 +152,6 @@ namespace Faunus {
             spc.clear();
             for ( auto& mol : molecules<typename Tspace::Tpvec> ) {
                 int n = mol.Ninit;
-                cout << "Ninit = " << mol.Ninit << endl;
                 while ( n-- > 0 ) {
                     spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
                 }

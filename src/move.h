@@ -83,8 +83,8 @@ namespace Faunus {
                     void _to_json(json &j) const override {
                         j = {
                             {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
-                                {"molid", molid}, {"prob", prob},
-                                {"group", molecules<Tpvec>[molid].name}
+                            {"molid", molid}, {"prob", prob},
+                            {"group", molecules<Tpvec>[molid].name}
                         };
                     }
 
@@ -97,7 +97,6 @@ namespace Faunus {
                             auto it = findName(molecules<Tpvec>, molname);
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
-                            //name += ": [" + molname + "]";
                             molid = it->id();
                             prob = j.value("prob", 1.0);
                             dir = j.value("dir", Point(1,1,1));
@@ -114,20 +113,29 @@ namespace Faunus {
 
                     void _move(Change &change) override {
                         assert(molid>=0);
+                        assert(newspc!=nullptr);
+                        assert(!newspc->groups.empty());
+
+                        //cout << std::setw(4) << json(*this) << endl;
+                        //cout << std::setw(4) << json(newspc->groups) << endl;
 
                         // pick random group from the system matching molecule type
-                        auto mollist =  newspc->findMolecules( molid ); // list of molecules w. 'molid'
-                        auto g_iter  = (mollist | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
+                        auto mollist = newspc->findMolecules( molid ); // list of molecules w. 'molid'
+                        if (std::distance(mollist.begin(), mollist.end())>0) {
+                            auto g_iter  = (mollist | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
+                            assert(g_iter->id==molid);
 
-                        // translate group
-                        Point dp = ranunit(slump).cwiseProduct(dir) * dptrans;
-                        g_iter->translate( dp, newspc->geo.boundaryFunc );
-                        // add rotation here...
+                            // translate group
+                            Point dp = ranunit(slump).cwiseProduct(dir) * dptrans;
+                            g_iter->translate( dp, newspc->geo.boundaryFunc );
+                            // add rotation here...
 
-                        Change::data d; // object that describes what was moved in a single group
-                        d.index = Faunus::distance( newspc->groups.begin(), g_iter ); // integer *index* of moved group
-                        d.all = true; // *all* atoms in group were moved
-                        change.groups.push_back( d ); // add to list of moved groups
+                            Change::data d; // object that describes what was moved in a single group
+                            d.index = Faunus::distance( newspc->groups.begin(), g_iter ); // integer *index* of moved group
+                            d.all = true; // *all* atoms in group were moved
+                            change.groups.push_back( d ); // add to list of moved groups
+                        }
+                        else std::cerr << name << ": no molecules found" << std::endl;
                     }
 
                 public:
@@ -175,12 +183,8 @@ namespace Faunus {
 
         inline void to_json(json &j, const Propagator &m) {
             for (auto i : m.vec)
-               j = *i;
+                j = *i;
         }
-
-        inline void from_json(const json &j, Propagator &m) {
-        }
-
 
     }//Move namespace
 
@@ -228,12 +232,16 @@ namespace Faunus {
                     insertMolecules(old.spc);
                     Change c;
                     c.dV=1;
+                    cout << "sizes:" << old.spc.groups.size() << " " << trial.spc.groups.size() << endl;
                     trial.spc.sync(old.spc, c);
+                    cout << "sizes:" << old.spc.groups.size() << " " << trial.spc.groups.size() << endl;
+                    cout << std::setw(4) << json(old.spc.groups.front()) << endl;
+                    cout << std::setw(4) << json(trial.spc.groups.front()) << endl;
                     assert(old.spc.p.size() == trial.spc.p.size());
                     addMoves(j);
 
                     old.pot.template push_back<Energy::Nonbonded<Tspace, Potential::HardSphere>>(old.spc);
-                    trial.pot.template push_back<Energy::Nonbonded<Tspace, Potential::HardSphere>>(trial.spc);
+                    trial.pot = old.pot;
                 }
 
                 ~MCSimulation() {
@@ -250,29 +258,33 @@ namespace Faunus {
                 }
 
                 void move() {
-                    typename Tspace::Tchange change;
+                    auto it = slump.sample( moves.vec.begin(), moves.vec.end() ); // pick random move
+                    if (it==moves.vec.end()) {
+                        std::cerr << "no mc moves found" << endl;
+                    } else {
+                        auto mv = *it;
+                        Change change;
+                        mv->move(change);
 
-                    auto mv = *slump.sample( moves.vec.begin(), moves.vec.end() ); // pick random move
-                    mv->move(change);
+                        if (!change.empty()) {
 
-                    if (!change.empty()) {
+                            //trial.pot.update(change); // update trial potential
+                            double unew = trial.pot.energy(change); // new energy
+                            double uold = old.pot.energy(change); // old energy
+                            double du = unew - uold;
 
-                        trial.pot.update(change); // update trial potential
-                        double unew = trial.pot.energy(change); // new energy
-                        double uold = old.pot.energy(change); // old energy
-                        double du = unew - uold;
-
-                        if (metropolis(du) ) // accept
-                        {
-                            old.spc.sync( trial.spc, change ); // sync newspc -> oldspc
-                            // todo: sync hamiltonian
-                            mv->accept(change);
-                        }
-                        else // reject
-                        {
-                            trial.spc.sync( old.spc, change ); // copy oldspc -> newspc
-                            // todo: sync hamiltonian
-                            mv->reject(change);
+                            if (metropolis(du) ) // accept
+                            {
+                                old.spc.sync( trial.spc, change ); // sync newspc -> oldspc
+                                // todo: sync hamiltonian
+                                mv->accept(change);
+                            }
+                            else // reject
+                            {
+                                trial.spc.sync( old.spc, change ); // copy oldspc -> newspc
+                                // todo: sync hamiltonian
+                                mv->reject(change);
+                            }
                         }
                     }
                 }

@@ -93,11 +93,11 @@ namespace Faunus {
                   Nav = 6.022137e23, //!< Avogadro's number [1/mol]
                   c = 299792458.0,   //!< Speed of light [m/s]
                   R = kB * Nav;      //!< Molar gas constant [J/(K*mol)]
-                  static T temperature=298.15; //!< Temperature (Kelvin)
-                  static inline T kT() { return temperature*kB; } //!< Thermal energy (Joule)
-                  static inline T lB( T epsilon_r ) {
-                      return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
-                  } //!< Bjerrum length (angstrom)
+        static T temperature=298.15; //!< Temperature (Kelvin)
+        static inline T kT() { return temperature*kB; } //!< Thermal energy (Joule)
+        static inline T lB( T epsilon_r ) {
+            return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
+        } //!< Bjerrum length (angstrom)
     }
 
     namespace pc = PhysicalConstants;
@@ -682,6 +682,7 @@ namespace Faunus {
                 double dprot=0;    //!< Rotational displacement parameter [degrees]
                 double mw=1;       //!< Weight
                 double charge=0;   //!< Partial charge [e]
+                double sigma=0;    //!< Diamater for e.g Lennard-Jones etc. [angstrom]
 
                 int& id() { return p.id; } //!< Type id
                 const int& id() const { return p.id; } //!< Type id

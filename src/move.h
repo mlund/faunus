@@ -74,8 +74,8 @@ namespace Faunus {
                     json _to_json() const override {
                         return {
                             {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
-                            {"molid", molid}, {"prob", prob},
-                            {"group", molecules<Tpvec>[molid].name}
+                                {"molid", molid}, {"prob", prob},
+                                {"group", molecules<Tpvec>[molid].name}
                         };
                     }
 
@@ -155,13 +155,13 @@ namespace Faunus {
 
     template<class Tspace>
         class MCSimulation {
-        public:
-            struct state {
-                Tspace spc;
-                Energy::Hamiltonian<Tspace> pot;
-            }; //!< Contains everything to describe a state
+            public:
+                struct state {
+                    Tspace spc;
+                    Energy::Hamiltonian<Tspace> pot;
+                }; //!< Contains everything to describe a state
 
-            state old, trial;
+                state old, trial;
 
             private:
                 Random slump;

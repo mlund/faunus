@@ -55,7 +55,7 @@ namespace Faunus {
                 enum Mixers {LB};
                 Mixers mixer = LB;
                 PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and 4*eps_ij
-                decltype(atoms<Tparticle>)& atomlist = atoms<Tparticle>;
+                //decltype(atoms<Tparticle>)&  = atoms<Tparticle>;
             }; //!< Table of sigma and epsilons
 
         template<typename Tparticle>
@@ -74,15 +74,15 @@ namespace Faunus {
                     default:
                         throw std::runtime_error("unknown mixing rule");
                 }
-                size_t n=m.atomlist.size(); // number of atom types
+                size_t n=atoms<Tparticle>.size(); // number of atom types
                 m.s2.resize(n); // not required...
                 m.eps.resize(n);// ...but possible reduced mem. fragmentation
-                for (auto &i : m.atomlist)
-                    for (auto &j : m.atomlist) {
+                for (auto &i : atoms<Tparticle>)
+                    for (auto &j : atoms<Tparticle>) {
                         double sigma, epsilon; // mixed values
                         std::tie( sigma, epsilon ) = mixerFunc(i.sigma, j.sigma, i.eps, j.eps);
-                        m.s2.set(  i.id, j.id, sigma*sigma );
-                        m.eps.set( i.id, j.id, 4*epsilon ); // should already be in kT
+                        m.s2.set(  i.id(), j.id(), sigma*sigma );
+                        m.eps.set( i.id(), j.id(), 4*epsilon ); // should already be in kT
                     }
 
                 // custom eps/sigma for specific pairs
@@ -91,10 +91,10 @@ namespace Faunus {
                     for (auto it=_j.begin(); it!=_j.end(); ++it) {
                         auto v = words2vec<std::string>( it.key() );
                         if (v.size()==2) {
-                            auto id1 = *findName( m.atomlist, v[0]).id;
-                            auto id2 = *findName( m.atomlist, v[1]).id;
-                            m.eps(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
-                            m.s2(id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
+                            int id1 = (*findName( atoms<Tparticle>, v[0])).id();
+                            int id2 = (*findName( atoms<Tparticle>, v[1])).id();
+                            m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
+                            m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
                         } else
                             std::runtime_error("custom LJ parameters require exactly two atoms");
                     }

@@ -16,9 +16,12 @@ int main() {
 
     json j = openjson("example.json");
 
+    BasePointerVector<Move::Movebase> vec;
+
     MCSimulation<Tspace> sim(j);
-    //cout << std::setw(4) << sim.to_json() << endl;
     //sim.move();
+
+    vec.push_back<Move::TranslateRotate<Tspace>>(sim.old.spc, sim.trial.spc);
 
     FormatPQR::save("confout.pqr", sim.p(), sim.geo().getLength());
 }

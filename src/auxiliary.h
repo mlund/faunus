@@ -1871,4 +1871,14 @@ namespace Faunus
         return s;
     }
 
+    template<typename T>
+        struct BasePointerVector {
+            std::vector<std::shared_ptr<T>> vec; //!< Vector of shared pointers to base class
+
+            template<typename Tderived, class... Args, class = std::enable_if_t<std::is_base_of<T,Tderived>::value>>
+                void push_back(Args&... args) {
+                    vec.push_back( std::make_shared<Tderived>(args...) );
+                } //!< Add (derived) pointer to vector
+        }; //!< Helper class for storing vectors of base pointers
+
 }//namespace

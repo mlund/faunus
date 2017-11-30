@@ -680,7 +680,7 @@ namespace Faunus {
                 double activity=0; //!< Chemical activity [mol/l]
                 double dp=0;       //!< Translational displacement parameter [angstrom]
                 double dprot=0;    //!< Rotational displacement parameter [degrees]
-                double weight=1;   //!< Weight
+                double mw=1;       //!< Weight
                 double charge=0;   //!< Partial charge [e]
 
                 int& id() { return p.id; } //!< Type id
@@ -695,7 +695,7 @@ namespace Faunus {
             _j["dp"] = a.dp / 1.0_angstrom;
             _j["dprot"] = a.dprot / 1.0_rad;
             _j["eps"] = a.eps / 1.0_kJmol;
-            _j["weight"] = a.weight;
+            _j["mw"] = a.mw;
         }
 
     template<class T>
@@ -710,7 +710,7 @@ namespace Faunus {
                 a.dp       = val.value("dp", a.dp) * 1.0_angstrom;
                 a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
                 a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
-                a.weight   = val.value("weight", a.weight);
+                a.mw       = val.value("mw", a.mw);
             }
         }
 
@@ -732,7 +732,7 @@ namespace Faunus {
 
         json j = R"({ "atomlist" : [
              { "A": { "r":1.1 } },
-             { "B": { "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "weight":1.1 } }
+             { "B": { "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "mw":1.1 } }
              ]})"_json; // non-deterministic seed
 
         typedef Particle<Radius, Charge, Dipole, Cigar> T;
@@ -755,7 +755,7 @@ namespace Faunus {
         CHECK(a.eps==Approx(0.05_kJmol));
         CHECK(a.dp==Approx(9.8));
         CHECK(a.dprot==Approx(3.14));
-        CHECK(a.weight==Approx(1.1));
+        CHECK(a.mw==Approx(1.1));
 
         auto it = findName(v, "B");
         CHECK( it->id() == 1 );

@@ -261,18 +261,26 @@ namespace Faunus {
             {
                 double sum=0;
                 Point c(0,0,0);
-                for (auto &i=begin; i!=end; ++i) {
-                    double w = weight(*i);
-                    c += w * i->pos;
-                    sum += w;
+                try {
+                    for (auto &i=begin; i!=end; ++i) {
+                        double w = weight(*i);
+                        c += w * i->pos;
+                        sum += w;
+                    }
+                    c /= sum;
+                    if (std::isnan(c[0]))
+                        throw std::runtime_error("sum of weights is zero");
                 }
-                return c/sum;
+                catch(std::exception& e) {
+                    throw std::runtime_error("anyCenter: " + std::string(e.what()));
+                }
+                return c;
             } //!< Mass, charge, or geometric center of a collection of particles
 
         template<typename Titer, typename Tparticle=typename Titer::value_type>
             Point massCenter(Titer begin, Titer end, const BoundaryFunction &boundary=[](Point&){}) {
                 return anyCenter(begin, end, boundary,
-                        []( Tparticle &p ){ return atoms<Tparticle>.at(p.id).weight; } );
+                        []( const Tparticle &p ){ return atoms<Tparticle>.at(p.id).mw; } );
             } // Mass center
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

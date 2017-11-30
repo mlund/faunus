@@ -82,7 +82,8 @@ namespace Faunus {
                         }
                     }
                     Tgroup g( p.end()-in.size(), p.end() );
-                    g.id=molid;
+                    g.id = molid;
+                    g.cm = Geometry::massCenter(in.begin(), in.end(), geo.boundaryFunc);
                     groups.push_back(g);
                     assert( in.size() == groups.back().size() );
                 }
@@ -158,11 +159,20 @@ namespace Faunus {
         typedef Space<Geometry::Cuboid, Tparticle> Tspace;
         Tspace spc1, spc2;
 
-        Tspace::Tpvec p(10);
-        p.front().pos.x()=0.5;
-        spc1.push_back(0, p);
-        CHECK( spc1.p.size()==10 );
+        // check molecule insertion
+        atoms<typename Tspace::Tpvec>.resize(2);
+        CHECK( atoms<typename Tspace::Tpvec>.at(0).mw == 1);
+        Tparticle a;
+        a.id=0;
+        Tspace::Tpvec p(2, a);
+        CHECK( p[0].mw == 1);
+        p[0].pos.x()=2;
+        p[1].pos.x()=3;
+        spc1.push_back(1, p);
+        CHECK( spc1.p.size()==2 );
         CHECK( spc1.groups.size()==1 );
+        CHECK( spc1.groups.front().id==1);
+        CHECK( spc1.groups.front().cm.x()==doctest::Approx(2.5));
 
         // sync groups
         Change c;
@@ -170,10 +180,10 @@ namespace Faunus {
         c.groups[0].index=0;
         c.groups[0].all=true;
         spc2.sync(spc1, c);
-        CHECK( spc2.p.size()==10 );
+        CHECK( spc2.p.size()==2 );
         CHECK( spc2.groups.size()==1 );
         CHECK( spc2.groups.front().begin() != spc1.groups.front().begin());
-        CHECK( spc2.p.front().pos.x()==0.5);
+        CHECK( spc2.p.front().pos.x()==doctest::Approx(2));
 
         // nothing should be synched (all==false)
         spc2.p.back().pos.z()=-0.1;
@@ -184,7 +194,7 @@ namespace Faunus {
         // everything should be synched (all==true)
         c.groups[0].all=true;
         spc1.sync(spc2, c);
-        CHECK( spc1.p.back().pos.z() == -0.1 );
+        CHECK( spc1.p.back().pos.z() == doctest::Approx(-0.1) );
     }
 #endif
 

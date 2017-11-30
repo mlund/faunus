@@ -68,7 +68,7 @@ namespace Faunus {
                     int molid=-1;
                     double dptrans=0;
                     double dprot=0;
-                    Point dir;
+                    Point dir={1,1,1};
                     Average<double> msd; // mean square displacement
 
                     json _to_json() const override {
@@ -188,16 +188,37 @@ namespace Faunus {
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
 
+                const Tpvec& p() { return old.spc.p; }
+                const auto& geo() { return old.spc.geo; }
+
                 MCSimulation(const json &j) {
                     atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
                     molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+                    old.spc.geo = j.at("system").at("geometry");
                     insertMolecules(old.spc);
-                    insertMolecules(trial.spc);
+                    cout << old.spc.p.size() << endl;
+                    Change c;
+                    c.dV=1;
+                    trial.spc.sync(old.spc, c);
+                    assert(old.spc.p.size() == trial.spc.p.size());
                     addMoves(j);
                 }
 
                 ~MCSimulation() {
-                    std::cout << std::setw(4) << moves.front()->to_json() << endl;
+                    std::ofstream f("out.json");
+                    json j0, j1, j2;
+                    j0 = moves.front()->to_json();
+                    j1["atomlist"] = atoms<Tparticle>;
+                    j2["moleculelist"] = molecules<Tpvec>;
+                    j0 = merge(j0, j1);
+                    j0 = merge(j0, j2);
+                    if (f) {
+                        f << std::setw(4) << j0 << endl;
+                        //f << std::setw(4) << moves.front()->to_json() << endl;
+                        //f << std::setw(4) << j1 << endl;
+                        //f << std::setw(4) << j2 << endl;
+                        f.close();
+                    }
                 }
 
                 void move() {

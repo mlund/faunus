@@ -4,17 +4,21 @@
 using namespace Faunus;
 using namespace std;
 
-typedef Particle<Radius, Dipole, Cigar, Charge> Tparticle;
+typedef Particle<Radius, Charge> Tparticle;
 typedef Space<Geometry::Cuboid, Tparticle> Tspace;
 
 int main() {
 
     // run with:
     // ./yason.py < example.yml | ./example
-    json j;
-    std::cin >> j;
+    //json j;
+    //std::cin >> j;
+
+    json j = openjson("example.json");
 
     MCSimulation<Tspace> sim(j);
     //cout << std::setw(4) << sim.to_json() << endl;
     //sim.move();
+
+    FormatPQR::save("confout.pqr", sim.p(), sim.geo().getLength());
 }

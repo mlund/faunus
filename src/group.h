@@ -220,6 +220,11 @@ namespace Faunus {
 
         }; //!< Groups of particles
 
+        template<class Trange>
+        auto positions(Trange &r) {
+            return ranges::view::transform(r, [](auto &i) -> Point& {return i.pos;});
+        } //!< Iterable range with positions (works for groups and particle vectors)
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Group") {
         Random rand;

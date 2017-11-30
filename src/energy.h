@@ -93,6 +93,9 @@ namespace Faunus {
         private:
             std::vector<std::shared_ptr<Energy::Energybase>> vec;
         public:
+            json to_json() {
+                return json();
+            }
             void update(Change &change) override {
                 for (auto i : vec)
                     i->update(change);

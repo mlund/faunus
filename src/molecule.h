@@ -23,32 +23,31 @@ namespace Faunus {
     {
         typedef typename TMoleculeData::TParticleVector Tpvec;
         std::string name;
-        Point dir;         //!< Scalars for random mass center position. Default (1,1,1)
-        Point offset;      //!< Added to random position. Default (0,0,0)
-        bool checkOverlap; //!< Set to true to enable container overlap check
-        bool rotate;       //!< Set to true to randomly rotate molecule when inserted. Default: true
-        bool keeppos;      //!< Set to true to keep original positions (default: false)
-        int maxtrials;     //!< Maximum number of overlap checks if `checkOverlap==true`
+        Point dir={1,1,1};      //!< Scalars for random mass center position. Default (1,1,1)
+        Point offset={0,0,0};   //!< Added to random position. Default (0,0,0)
+        bool checkOverlap=true; //!< Set to true to enable container overlap check
+        bool rotate=true;       //!< Set to true to randomly rotate molecule when inserted. Default: true
+        bool keeppos=false;     //!< Set to true to keep original positions (default: false)
+        int maxtrials=2e3;      //!< Maximum number of overlap checks if `checkOverlap==true`
+        Random slump;           //!< Temporarily here!
 
-        RandomInserter() : dir(1, 1, 1), offset(0, 0, 0), checkOverlap(true), keeppos(false), maxtrials(2e3)
-        {
-            name = "random";
-        }
+        RandomInserter() : name("random") {}
 
         Tpvec operator()( Geometry::GeometryBase &geo, const Tpvec &p, TMoleculeData &mol )
         {
-            Random slump;
+            if (std::fabs(geo.getVolume())<1e-20)
+                throw std::runtime_error("geometry has zero volume");
             bool _overlap = true;
             Tpvec v;
             int cnt = 0;
             do
             {
                 if ( cnt++ > maxtrials )
-                throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
+                    throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
 
                 v = mol.getRandomConformation();
 
-                if ( mol.isAtomic())
+                if ( mol.atomic )
                 { // insert atomic species
                     for ( auto &i : v )
                     { // for each atom type id
@@ -56,11 +55,11 @@ namespace Faunus {
                         if ( rotate )
                         {
                             rot.set(2*pc::pi*slump(), ranunit(slump));
-                            i.rotate(rot);
+                            i.rotate(rot.first, rot.second);
                         }
-                        geo.randompos(i, slump);
-                        i = i.cwiseProduct(dir) + offset;
-                        geo.boundary(i);
+                        geo.randompos(i.pos, slump);
+                        i.pos = i.pos.cwiseProduct(dir) + offset;
+                        geo.boundary(i.pos);
                     }
                 }
                 else
@@ -68,24 +67,26 @@ namespace Faunus {
                     if ( keeppos )
                     {                   // keep original positions (no rotation/trans)
                         for ( auto &i : v )              // ...but let's make sure it fits
-                        if ( geo.collision(i, 0))
-                        throw std::runtime_error("Error: Inserted molecule does not fit in container");
+                            if ( geo.collision(i.pos, 0))
+                                throw std::runtime_error("Error: Inserted molecule does not fit in container");
                     }
                     else
-                    {                         // generate a now position/orientation
-                        Point a;
-                        geo.randompos(a, slump);       // random point in container
-                        a = a.cwiseProduct(dir);       // apply user defined directions (default: 1,1,1)
-                        Geometry::cm2origo(geo, v);    // translate to origo - obey boundary conditions
+                    {
+                        Point cm;                      // new mass center position
+                        geo.randompos(cm, slump);      // random point in container
+                        cm = cm.cwiseProduct(dir);     // apply user defined directions (default: 1,1,1)
+                        Geometry::cm2origo(v.begin(), v.end());// translate to origin
                         QuaternionRotate rot;
                         rot.set(slump()*2*pc::pi, ranunit(slump)); // random rot around random vector
                         for ( auto &i : v )
                         {            // apply rotation to all points
-                            if ( rotate )
-                            i = rot(i) + a + offset;   // ...and translate
+                            if ( rotate ) {
+                                i.rotate(rot.first, rot.second);    // internal atom rotation
+                                i.pos = rot(i.pos) + cm + offset;   // ...and translate
+                            }
                             else
-                            i += a + offset;
-                            geo.boundary(i);             // ...and obey boundaries
+                                i.pos += cm + offset;
+                            geo.boundary(i.pos);             // ...and obey boundaries
                         }
                     }
                 }
@@ -95,7 +96,7 @@ namespace Faunus {
                 _overlap = false;
                 if ( checkOverlap )              // check for container overlap
                 for ( auto &i : v )
-                if ( geo.collision(i, i.radius))
+                if ( geo.collision(i.pos, i.radius))
                 {
                     _overlap = true;
                     break;
@@ -113,12 +114,14 @@ namespace Faunus {
         class MoleculeData {
             private:
                 int _id=-1;
-                int _confid;
+                int _confid=-1;
                 Random slump;
             public:
+                typedef Tpvec TParticleVector;
+
                 /** @brief Signature for inserted function */
                 typedef std::function<Tpvec( Geometry::GeometryBase &, const Tpvec &, MoleculeData<Tpvec> & )> TinserterFunc;
-                TinserterFunc inserterFunctor;              //!< Function for insertion into space
+                TinserterFunc inserterFunctor=nullptr;      //!< Function for insertion into space
 
                 int& id() { return _id; } //!< Type id
                 const int& id() const { return _id; } //!< Type id
@@ -136,6 +139,10 @@ namespace Faunus {
                 std::vector<int> atoms;    //!< Sequence of atoms in molecule (atom id's)
                 std::vector<Tpvec> conformations;           //!< Conformations of molecule
                 std::discrete_distribution<> confDist;      //!< Weight of conformations
+
+                MoleculeData() {
+                    setInserter( RandomInserter<MoleculeData<Tpvec>>() );
+                }
 
                 void addConformation( const Tpvec &vec, double weight = 1 )
                 {
@@ -189,6 +196,7 @@ namespace Faunus {
                 */
                 Tpvec getRandomConformation(Geometry::GeometryBase &geo, Tpvec otherparticles = Tpvec())
                 {
+                    assert(inserterFunctor!=nullptr);
                     return inserterFunctor(geo, otherparticles, *this);
                 }
 
@@ -233,13 +241,18 @@ namespace Faunus {
 
     template<class Tpvec>
         void to_json(json& j, const MoleculeData<Tpvec> &a) {
-            auto& _j = j[a.name];
-            _j["activity"] = a.activity / 1.0_molar;
-            _j["atomic"] = a.atomic;
-            _j["id"] = a.id();
-            _j["insdir"] = a.insdir;
-            _j["insoffset"] = a.insoffset;
-            _j["keeppos"] = a.keeppos;
+            //auto& _j = j[a.name];
+            j[a.name] = {
+                {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
+                {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
+                {"keeppos", a.keeppos}, {"Ninit", a.Ninit}
+            };
+            //_j["activity"] = a.activity / 1.0_molar;
+            //_j["atomic"] = a.atomic;
+            //_j["id"] = a.id();
+            //_j["insdir"] = a.insdir;
+            //_j["insoffset"] = a.insoffset;
+            //_j["keeppos"] = a.keeppos;
         }
 
     template<class Tpvec>
@@ -255,6 +268,7 @@ namespace Faunus {
                 a.insdir = val.value("insdir", a.insdir);
                 a.insoffset = val.value("insoffset", a.insoffset);
                 a.keeppos = val.value("keeppos", a.keeppos);
+                a.Ninit = val.value("Ninit", a.Ninit);
                 a.structure = val.value("structure", a.structure);
                 if (!a.structure.empty())
                     a.loadConformation(a.structure);

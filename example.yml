@@ -9,8 +9,8 @@ atomlist: # define all atom types below
 energy:
     - nonbonded: {cutoff: 14.8, epsr: 78.5}
 moleculelist:
-    - salt:  {Ninit: 2, atoms: [Na, Cl], atomic: true}
-    - water: {Ninit: 10, insdir: [1,1,1], __structure: water2.aam}
+    - salt:  {Ninit: 0, atoms: [Na, Cl], atomic: true}
+    - water: {Ninit: 10, insdir: [1,1,1], structure: water.pqr}
 moves:
     - moltransrot: { group: water, dir: [1,1,1], dp: 0.8, dprot: 1.0, permol: true, prob: 1.0}
     - moltransrot: { group: water, dp: 10, dprot: 1.0, permol: true, prob: 0.1}

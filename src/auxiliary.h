@@ -1826,4 +1826,49 @@ namespace Faunus
                 }
         };
 
+    /** @brief Count number of white-space separated words in a string */
+    inline size_t numWords( const std::string &s )
+    {
+        return std::distance(std::istream_iterator<std::string>(
+                    std::istringstream(s) >> std::ws), std::istream_iterator<std::string>());
+    }
+
+    /**
+     * @brief Convert whitespace separated words into vector of given type
+     *
+     * Example:
+     *
+     * ~~~~
+     * auto v = textio::words2vec<double>( "0.2 1 100" );
+     * for (auto i : v)
+     *   cout << 2*i << " "; // -> 0.4 2 200
+     * ~~~~
+     */
+    template<class T>
+        std::vector<T> words2vec( const std::string &w )
+        {
+            std::vector<T> v(numWords(w));
+            std::stringstream s(w);
+            size_t i = 0;
+            while ( i < v.size())
+            {
+                s >> v[i++];
+            }
+            return v;
+        }
+
+    /** @brief Convert string to lower case */
+    inline std::string lowercase( std::string s )
+    {
+        std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+        return s;
+    }
+
+    /** @brief Uppercase first letter in string */
+    inline std::string toupper_first( std::string s ) {
+        if (!s.empty())
+            s[0] = std::toupper( s[0] ); 
+        return s;
+    }
+
 }//namespace

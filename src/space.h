@@ -99,34 +99,37 @@ namespace Faunus {
 
             void sync(Tspace &o, const Tchange &change) {
 
+                assert(&o != this);
+
                 if (std::fabs(change.dV)>1e-9)
                     geo = o.geo;
 
                 // if mismatch do a deep copy of everything
                 if ( (p.size()!=o.p.size()) || (groups.size()!=o.groups.size())) {
                     p = o.p;
+                    assert( p.begin() != o.p.begin() && "deep copy problem");
                     groups = o.groups;
                     for (auto &i : groups)
                         i.relocate( o.p.begin(), p.begin() );
-                    return;
-                }
+                } else
+                {
+                    assert( p.begin() != o.p.begin());
 
-                assert( p.begin() != o.p.begin());
+                    for (auto &m : change.groups) {
 
-                for (auto &m : change.groups) {
+                        auto &go = groups.at(m.index);  // old group
+                        auto &gn = o.groups.at(m.index);// new group
 
-                    auto &go = groups.at(m.index);  // old group
-                    auto &gn = o.groups.at(m.index);// new group
+                        //go = gn; // deep copy group
+                        //assert( gn.size() == go.size() );
+                        assert( gn.capacity() == go.capacity() );
 
-                    //go = gn; // deep copy group
-                    //assert( gn.size() == go.size() );
-                    assert( gn.capacity() == go.capacity() );
-
-                    if (m.all) // all atoms have moved
-                        std::copy( gn.begin(), gn.end(), go.begin() );
-                    else // only some atoms have moved
-                        for (auto i : m.atoms)
-                            *(go.begin()+i) = *(gn.begin()+i);
+                        if (m.all) // all atoms have moved
+                            std::copy( gn.begin(), gn.end(), go.begin() );
+                        else // only some atoms have moved
+                            for (auto i : m.atoms)
+                                *(go.begin()+i) = *(gn.begin()+i);
+                    }
                 }
             } //!< Copy differing data from other (o) Space using Change object
 
@@ -136,16 +139,18 @@ namespace Faunus {
             }
         };
 
-        template<class Tgeometry, class Tparticletype>
+    template<class Tgeometry, class Tparticletype>
         void from_json(const json &j, Space<Tgeometry,Tparticletype> &p) {
             assert(1==2 && "to be implemented");
         }
 
-        template<typename Tspace>
+    template<typename Tspace>
         void insertMolecules(Tspace &spc) {
+            assert(spc.geo.getVolume()>0);
             spc.clear();
             for ( auto& mol : molecules<typename Tspace::Tpvec> ) {
                 int n = mol.Ninit;
+                cout << "Ninit = " << mol.Ninit << endl;
                 while ( n-- > 0 ) {
                     spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
                 }

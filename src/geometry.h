@@ -88,9 +88,9 @@ namespace Faunus {
                         Point len = m.get<Point>();
                         b.setLength( len );
                     }
-                    if (b.getVolume()<=0)
-                        throw std::runtime_error("volume is zero or less");
                 }
+                if (b.getVolume()<=0)
+                throw std::runtime_error("box volume is zero or less");
             }
             catch(std::exception& e) {
                 throw std::runtime_error( e.what() );

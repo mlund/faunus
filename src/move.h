@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "energy.h"
+#include "average.h"
 
 namespace Faunus {
     namespace Move {
@@ -13,7 +14,6 @@ namespace Faunus {
                 virtual void _reject(Change&) {}; //!< Call after move is rejected
             protected:
                 Random slump;     //!< Temporarily here
-                json config;      //!< JSON object containing
                 inline virtual json _to_json() const { return json(); } //!< Extra info for report if needed
                 double prob=1;
                 unsigned long cnt=0;
@@ -26,14 +26,12 @@ namespace Faunus {
 
                 inline json to_json() const {
                     assert( !name.empty() );
-                    json j1 = {{ name, _to_json() }};
-                    json j2 = {{ name, config }};
-                    if (cnt>0)
-                        j2[name]["acceptance"] = double(accepted)/cnt;
-                    j2[name]["cnt"] = accepted;
-                    j2[name]["accepted"] = accepted;
-                    j2[name]["rejected"] = cnt-accepted;
-                    return merge( j2, j1 );
+                    json j = {{ name, _to_json() }};
+                    j[name]["acceptance"] = double(accepted)/cnt;
+                    j[name]["cnt"] = accepted;
+                    j[name]["accepted"] = accepted;
+                    j[name]["rejected"] = cnt-accepted;
+                    return j;
                 } //!< JSON report w. statistics, output etc.
 
                 inline void move(Change &change) {
@@ -71,7 +69,7 @@ namespace Faunus {
                     double dptrans=0;
                     double dprot=0;
                     Point dir;
-                    //Average<double> msd; // mean square displacement
+                    Average<double> msd; // mean square displacement
 
                     json _to_json() const override {
                         return {

@@ -10,6 +10,7 @@ namespace Faunus {
 
         class Energybase {
             public:
+                std::string name;
                 //!< Update energy to reflect `newspc`
                 virtual void update(Change&) {
                 } //!< Update to reflect changes made in other space
@@ -24,76 +25,65 @@ namespace Faunus {
          */
         template<typename Tspace, typename Tpairpot>
             struct Nonbonded : public Energybase {
-                Tspace& oldspc;   //!< Ref. to original space
-                Tspace& newspc;   //!< Ref. to new or trial space
+                Tspace& spc;   //!< Ref. to original space
                 Tpairpot pairpot;
-                typedef std::vector<int> Tindex;
 
-                Nonbonded(Tspace &oldspc, Tspace &newspc) : oldspc(oldspc), newspc(newspc) {
+                Nonbonded(Tspace &spc) : spc(spc) {
+                    name="nonbonded";
                 }
 
                 template<typename T>
-                    double i2i(const Tspace &spc, const T &a, const T &b) {
+                    inline double i2i(const T &a, const T &b) {
                         return pairpot(a, b, spc.geo.vdist(a.pos, b.pos));
                     }
 
                 template<typename T>
-                    double g2g(const Tspace &spc, const T &g1, const T &g2) {
+                    double g2g(const T &g1, const T &g2) {
                         double u = 0;
                         for (auto &i : g1)
                             for (auto &j : g2)
-                                u += i2i(spc, i, j);
+                                u += i2i(i, j);
                         return u;
                     }
 
-                double index2index(const Tspace &spc, const Tindex &index1, const Tindex &index2) {
-                    double u = 0;
-                    for (auto &i : index1)
-                        for (auto &j : index2)
-                            u += i2i(spc, spc.p[i], spc.p[j]);
-                    return u;
-                }
+                template<typename T>
+                    double index2index(const T &index1, const T &index2) {
+                        double u = 0;
+                        for (auto i : index1)
+                            for (auto j : index2)
+                                u += i2i(spc.p[i], spc.p[j]);
+                        return u;
+                    }
 
                 double energy(Change &change) override {
-                    if (change.empty())
-                        return 0;
-
-                    double uold=0, unew=0;
-
-                    using namespace ranges;
-                    auto moved = change.touchedGroupIndex(); // index of moved groups
-                    auto fixed = view::ints( 0, int(oldspc.groups.size()) )
-                        | view::remove_if(
-                                [&moved](int i){return std::binary_search(moved.begin(), moved.end(), i);}
-                                ); // index of static groups
-
-                    for (auto &d : change.groups) {
+                    double u=0;
+                    if (!change.empty()) {
+                        using namespace ranges;
+                        auto moved = change.touchedGroupIndex(); // index of moved groups
+                        auto fixed = view::ints( 0, int(spc.groups.size()) )
+                            | view::remove_if(
+                                    [&moved](int i){return std::binary_search(moved.begin(), moved.end(), i);}
+                                    ); // index of static groups
 
                         // moved<->moved
-                        /*
-                           for (auto &n : change.groups)
-                           if (n.first > m.first) {
-                           auto &g1 = spc.groups[m.first];
-                           auto &g2 = spc.groups[n.first];
-                           u += g2g(spc, g1, g2);
-                           }*/
+                        for ( auto i = moved.begin(); i != moved.end(); ++i )
+                            for ( auto j=i; ++j != moved.end(); )
+                                u += g2g( spc.groups[*i], spc.groups[*j] );
 
                         // moved<->static
-                        for (auto i : fixed) {
-                            uold += g2g(oldspc, oldspc.groups[d.index], oldspc.groups[i]);
-                            unew += g2g(newspc, newspc.groups[d.index], newspc.groups[i]);
-                        }
+                        for ( auto i : moved)
+                            for ( auto j : fixed)
+                                u += g2g(spc.groups[i], spc.groups[j]);
+
+                        // more todo!
                     }
-                    return unew-uold;
+                    return u;
                 }
             }; // Nonbonded energy before and after change (returns pair w. uold and unew)
 
         template<typename Tspace>
             class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
                 public:
-                    json to_json() {
-                        return json();
-                    }
                     void update(Change &change) override {
                         for (auto i : this->vec)
                             i->update(change);
@@ -105,6 +95,13 @@ namespace Faunus {
                         return du;
                     } //!< Energy due to changes
             };
+
+        template<typename Tspace>
+            inline void to_json(json &j, const Hamiltonian<Tspace> &pot) {
+                auto& _j = j["energy"];
+                for (auto i : pot.vec)
+                    i->to_json(_j);
+            }
 
     }//namespace
 }//namespace

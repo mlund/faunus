@@ -197,7 +197,6 @@ namespace Faunus {
             private:
                 Random slump;
                 //Energy::Nonbonded<Tspace, Potential::Dummy> pot;
-                Move::Propagator moves;
 
                 bool metropolis(double du) {
                     if (du<0)
@@ -220,6 +219,7 @@ namespace Faunus {
 
                 const Tpvec& p() { return old.spc.p; }
                 const auto& geo() { return old.spc.geo; }
+                Move::Propagator moves;
 
                 MCSimulation(const json &j) {
                     atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
@@ -231,6 +231,9 @@ namespace Faunus {
                     trial.spc.sync(old.spc, c);
                     assert(old.spc.p.size() == trial.spc.p.size());
                     addMoves(j);
+
+                    old.pot.template push_back<Energy::Nonbonded<Tspace, Potential::HardSphere>>(old.spc);
+                    trial.pot.template push_back<Energy::Nonbonded<Tspace, Potential::HardSphere>>(trial.spc);
                 }
 
                 ~MCSimulation() {

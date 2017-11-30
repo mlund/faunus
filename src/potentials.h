@@ -10,7 +10,12 @@ namespace Faunus {
             std::string name;
             PairPotentialBase() {}
             PairPotentialBase(const std::string &name) : name(name) {}
+            virtual void from_json(const json&)=0;
         }; //!< Base for pair-potentials
+
+        void from_json(const json &j, PairPotentialBase &pairpot) {
+            pairpot.from_json(j);
+        } //!< Configure via json
 
         template<class T1, class T2>
             struct CombinedPairPotential : public PairPotentialBase {
@@ -19,10 +24,15 @@ namespace Faunus {
 
                 CombinedPairPotential(const T1 &a, const T2 &b) : first(a), second(b) {}
 
-                template<class Tparticle>
-                    inline double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                template<typename... T>
+                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                         return first(a, b, r) + second(a, b, r);
                     }
+
+                void from_json(const json &j) override {
+                    first = j;
+                    second = j;
+                }
             };
 
         template<class T1, class T2,
@@ -37,26 +47,27 @@ namespace Faunus {
                 double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                     return 0;
                 }
+            void from_json(const json &) override {}
         }; //!< A dummy pair potential that always returns zero
 
         template<typename Tparticle>
-        struct SigmaEpsilonTable {
-            enum Mixers {LB};
-            Mixers mixer = LB;
-            PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and 4*eps_ij
-            decltype(atoms<Tparticle>)& atomlist = atoms<Tparticle>;
-        }; //!< Table of sigma and epsilons
+            struct SigmaEpsilonTable {
+                enum Mixers {LB};
+                Mixers mixer = LB;
+                PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and 4*eps_ij
+                decltype(atoms<Tparticle>)& atomlist = atoms<Tparticle>;
+            }; //!< Table of sigma and epsilons
 
         template<typename Tparticle>
             void from_json(const json &j, SigmaEpsilonTable<Tparticle> &m) {
-                std::function<std::pair<double,double>(double,double,double,double)> Fmixer;
+                std::function<std::pair<double,double>(double,double,double,double)> mixerFunc;
 
                 std::string mixer = j.value("mixer", std::string("LB"));
                 if (mixer=="LB")
                     m.mixer=SigmaEpsilonTable<Tparticle>::LB;
                 switch(m.mixer) {
                     case SigmaEpsilonTable<Tparticle>::LB:
-                        Fmixer = [](double s1, double s2, double e1, double e2) {
+                        mixerFunc = [](double s1, double s2, double e1, double e2) {
                             return std::pair<double,double>( { (s1+s2)/2, std::sqrt(e1*e2) } );
                         };
                         break;
@@ -69,7 +80,7 @@ namespace Faunus {
                 for (auto &i : m.atomlist)
                     for (auto &j : m.atomlist) {
                         double sigma, epsilon; // mixed values
-                        std::tie( sigma, epsilon ) = mixer(i.sigma, j.sigma, i.eps, j.eps);
+                        std::tie( sigma, epsilon ) = mixerFunc(i.sigma, j.sigma, i.eps, j.eps);
                         m.s2.set(  i.id, j.id, sigma*sigma );
                         m.eps.set( i.id, j.id, 4*epsilon ); // should already be in kT
                     }
@@ -94,25 +105,27 @@ namespace Faunus {
          * @brief Lennard-Jones with arbitrary mixing rule
          */
         template<typename Tparticle>
-        struct LennardJones : public PairPotentialBase {
-            LennardJones() { name="Lennard-Jones"; }
-            SigmaEpsilonTable<Tparticle> m; // table w. sigma_ij^2 and 4xepsilon
+            struct LennardJones : public PairPotentialBase {
+                LennardJones() { name="lennardjones"; }
+                SigmaEpsilonTable<Tparticle> m; // table w. sigma_ij^2 and 4xepsilon
 
-            template<typename... T>
-                Point force(const Particle<T...> &a, const Particle<T...> &b, double r2, const Point &p) const {
-                    double s6=powi<3>( m.s2(a.id,b.id) );
-                    double r6=r2*r2*r2;
-                    double r14=r6*r6*r2;
-                    return 6.*m.eps(a.id,b.id) * s6 * (2*s6-r6) / r14 * p;
-                }
+                template<typename... T>
+                    Point force(const Particle<T...> &a, const Particle<T...> &b, double r2, const Point &p) const {
+                        double s6=powi<3>( m.s2(a.id,b.id) );
+                        double r6=r2*r2*r2;
+                        double r14=r6*r6*r2;
+                        return 6.*m.eps(a.id,b.id) * s6 * (2*s6-r6) / r14 * p;
+                    }
 
-            template<typename... T>
-                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
-                    double x=m.s2(a.id,b.id)/r.squaredNorm(); //s2/r2
-                    x=x*x*x; // s6/r6
-                    return m.eps(a.id,b.id) * (x*x - x);
-                }
-        };
+                template<typename... T>
+                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                        double x=m.s2(a.id,b.id)/r.squaredNorm(); //s2/r2
+                        x=x*x*x; // s6/r6
+                        return m.eps(a.id,b.id) * (x*x - x);
+                    }
+
+                void from_json(const json &j) override { m = j.at(name); }
+            };
 
         struct Coulomb : public PairPotentialBase {
             Coulomb() { name="coulomb"; }
@@ -121,7 +134,7 @@ namespace Faunus {
                 double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                     return lB * a.charge * b.charge / r.norm();
                 }
-            void from_json(const json &j) {
+            void from_json(const json &j) override {
                 lB = pc::lB( j.at(name).at("epsr").get<double>() );
             }
             void to_json(json &j) {
@@ -135,6 +148,7 @@ namespace Faunus {
                     auto d=a.radius+b.radius;
                     return (d*d<r2.squaredNorm()) ? pc::infty : 0;
                 }
+            void from_json(const json &j) override {}
         };
     }//end of namespace Potential
 }//end of namespace Faunus

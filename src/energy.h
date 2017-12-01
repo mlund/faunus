@@ -11,8 +11,14 @@ namespace Faunus {
         class Energybase {
             public:
                 std::string name;
-                virtual double energy(Change&)=0; //!< Return energy due to change
+                virtual double energy(Change&)=0; //!< energy due to change
+                virtual void to_json(json &j) const=0 ; //!< json output
         };
+
+        void to_json(json &j, const Energybase &base) {
+            assert(!base.name.empty());
+            base.to_json( j[base.name] );
+        } //!< Converts any energy class to json object
 
         /**
          * @brief Nonbonded energy using a pair-potential
@@ -75,30 +81,41 @@ namespace Faunus {
                     }
                     return u;
                 }
-            }; // Nonbonded energy before and after change (returns pair w. uold and unew)
 
-        template<class T1, class T2>
-            void to_json(json &j, const Nonbonded<T1,T2> &nb) {
-                j[nb.name] = json(nb.pairpot);
-            }
+                void to_json(json &j) const override { j = pairpot; }
+
+            }; //!< Nonbonded, pair-wise additive energy term
 
         template<typename Tspace>
             class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
                 public:
+                    Hamiltonian(Tspace &spc, const json &j) {
+                        using namespace Potential;
+                        typedef CombinedPairPotential<Coulomb,HardSphere> Tpairpot;
+
+                        Energybase::name="Hamiltonian";
+                        for (auto &m : j.at("energy")) {// loop over move list
+                            for (auto it=m.begin(); it!=m.end(); ++it) {
+                                if (it.key()=="nonbonded") {
+                                    this->template push_back<Energy::Nonbonded<Tspace,Tpairpot>>(spc, it.value());
+                                }
+                                // additional energies go here...
+                            }
+                        }
+                    }
+
                     double energy(Change &change) override {
                         double du=0;
                         for (auto i : this->vec)
                             du += i->energy(change);
                         return du;
                     } //!< Energy due to changes
-            };
 
-        template<typename Tspace>
-            void to_json(json &j, const Hamiltonian<Tspace> &h) {
-                auto& _j = j["energy"];
-                for (auto i : h.vec)
-                    i->to_json(_j);
-            }
+                    void to_json(json &j) const override {
+                        for (auto i : this->vec)
+                            j.push_back(*i);
+                    }
+            }; //!< Aggregates and sum energy terms
 
     }//namespace
 }//namespace

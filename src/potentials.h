@@ -14,9 +14,6 @@ namespace Faunus {
             struct CombinedPairPotential : public PairPotentialBase {
                 T1 first;  //!< First pair potential of type T1
                 T2 second; //!< Second pair potential of type T2
-
-                CombinedPairPotential(const T1 &a, const T2 &b) : first(a), second(b) {}
-
                 template<typename... T>
                     double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                         return first(a, b, r) + second(a, b, r);
@@ -137,7 +134,7 @@ namespace Faunus {
                     return lB * a.charge * b.charge / r.norm();
                 }
         };
-        void to_json(json &j, const Coulomb &c) { j[c.name] = {"lB", c.lB}; }
+        void to_json(json &j, const Coulomb &c) { j[c.name]["lB"] = c.lB; }
         void from_json(const json &j, Coulomb &c) {
             c.lB = pc::lB( j.at(c.name).at("epsr").get<double>() );
         }
@@ -150,7 +147,7 @@ namespace Faunus {
                     return (r2.squaredNorm()<d*d) ? pc::infty : 0;
                 }
         };
-        void to_json(json &j, const HardSphere &hs) { j[hs.name] = "N/A"; }
+        void to_json(json &j, const HardSphere &hs) { j[hs.name]["comment"] = "N/A"; }
         void from_json(const json &j, HardSphere &hs) {}
     }//end of namespace Potential
 }//end of namespace Faunus

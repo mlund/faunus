@@ -204,8 +204,7 @@ namespace Faunus {
                 struct state {
                     Tspace spc;
                     Energy::Hamiltonian<Tspace> pot;
-                    state(const json &j) : spc(j) {}
-                    state() {}
+                    state(const json &j) : spc(j), pot(spc,j) {}
                 }; //!< Contains everything to describe a state
 
                 state old, trial;
@@ -227,13 +226,13 @@ namespace Faunus {
                 const auto& geo() { return old.spc.geo; }
                 Move::Propagator<Tspace> moves;
 
-                MCSimulation(const json &j) : old(j), moves(j, old.spc) {
+                MCSimulation(const json &j) : old(j), trial(j), moves(j, old.spc) {
                     Change c;
                     c.dV=1;
                     trial.spc.sync(old.spc, c);
                     assert(old.spc.p.size() == trial.spc.p.size());
 
-                    old.pot.template push_back<Energy::Nonbonded<Tspace, Potential::HardSphere>>(old.spc, j);
+                    //old.pot.template push_back<Energy::Nonbonded<Tspace, Tpairpot>>(old.spc, j.at("energy"));
                     trial.pot = old.pot;
                 }
 
@@ -242,6 +241,7 @@ namespace Faunus {
                     json j;
                     j["moves"] = json(moves);
                     j["particles"] = json(old.spc.p);
+                    j["energy"] = json(old.pot);
                     if (f) {
                         f << std::setw(4) << j << endl;
                         f.close();

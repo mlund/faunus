@@ -45,8 +45,9 @@
     "energy": [
         {
             "nonbonded": {
-                "cutoff": 14.8,
-                "epsr": 78.5
+                "coulomb": {
+                    "epsr": 78.5
+                }
             }
         }
     ],

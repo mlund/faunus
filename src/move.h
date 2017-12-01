@@ -208,6 +208,7 @@ namespace Faunus {
                 }; //!< Contains everything to describe a state
 
                 state old, trial;
+                double uinit=0;
 
             private:
                 bool metropolis(double du) {
@@ -226,21 +227,38 @@ namespace Faunus {
                 const auto& geo() { return old.spc.geo; }
                 Move::Propagator<Tspace> moves;
 
-                MCSimulation(const json &j) : old(j), trial(j), moves(j, old.spc) {
-                    Change c;
-                    c.dV=1;
-                    trial.spc.sync(old.spc, c);
-                    assert(old.spc.p.size() == trial.spc.p.size());
+                MCSimulation(const json &j) : old(j), trial(j), moves(j, trial.spc) {
+                    assert( old.spc.groups.front().begin() == old.spc.p.begin());
+                    assert( trial.spc.groups.front().begin() == trial.spc.p.begin());
 
-                    //old.pot.template push_back<Energy::Nonbonded<Tspace, Tpairpot>>(old.spc, j.at("energy"));
-                    trial.pot = old.pot;
+                    Change c;
+                    c.all=true;
+                    trial.spc.sync(old.spc, c);
+                    assert(old.spc.p.begin() != trial.spc.p.begin());
+                    assert( old.spc.groups.front().begin() == old.spc.p.begin());
+                    assert( trial.spc.groups.front().begin() == trial.spc.p.begin());
+
+                    //trial.pot = old.pot;
+
+                    cout << "old\n";
+                    cout << std::setw(4) << json(old.spc.p) << endl;
+                    cout << "trial\n";
+                    cout << std::setw(4) << json(trial.spc.p) << endl;
+
+                    c.all=true;
+                    uinit = old.pot.energy(c);
+
+                    cout << "uinit         = " << uinit << endl;
+                    cout << "uinit (trial) = " << trial.pot.energy(c) << endl;
+
+
                 }
 
                 ~MCSimulation() {
                     std::ofstream f("out.json");
                     json j;
                     j["moves"] = json(moves);
-                    j["particles"] = json(old.spc.p);
+                    j["space"] = old.spc;
                     j["energy"] = json(old.pot);
                     if (f) {
                         f << std::setw(4) << j << endl;
@@ -264,7 +282,7 @@ namespace Faunus {
                             double du = trial.pot.energy(change)
                                 - old.pot.energy(change);
 
-                            cout << du << " ";
+                            //cout << du << " ";
 
                             if (metropolis(du) ) // accept
                             {

@@ -159,8 +159,8 @@ namespace Faunus {
                     // WARNING: Only iterators are copied!
                 } //!< Constructor from range. WARNING: Only iterators are copied
 
-            Group(Group &o) : base(o.begin(), o.trueend()) { *this = o; }
-            Group(const Group &o) : base(o.begin(), o.trueend()) { *this = o; }
+            Group(Group &o) : base(o.begin(), o.trueend()) { *this = operator=(o); }
+            Group(const Group &o) : base(o.begin(), o.trueend()) { *this = operator=(o); }
             Group(iter begin, iter end) : base(begin,end) {} //!< Constructor
 
             Group& operator=(const Group &o) {
@@ -190,7 +190,6 @@ namespace Faunus {
                     return ranges::view::indirect(
                             ranges::view::transform(index, [this](int i){return this->begin()+i;}) );
                 } //!< Group subset matching given `index` (Complexity: linear with index size)
-
 
             auto positions() const {
                 return ranges::view::transform(*this, [](auto &i) -> Point& {return i.pos;});

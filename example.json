@@ -14,22 +14,24 @@
     ],
     "atomlist": [
         {
-            "Na": {
-                "eps": 0.5,
-                "q": 1.0
+            "A": {
+                "eps": 0.15,
+                "sigma": 4.0,
+                "dp": 40
             }
         },
         {
-            "Cl": {
-                "eps": 0.5,
-                "q": -1.0
+            "B": {
+                "eps": 0.2,
+                "sigma": 10.0,
+                "dp": 10
             }
         },
         {
             "HW": {
-                "eps": 0.0,
+                "eps": 0.6,
                 "q": 0.4238,
-                "sigma": 0.0,
+                "sigma": 1.0,
                 "r": 1.0
             }
         },
@@ -48,24 +50,28 @@
                 "coulomb": {
                     "epsr": 78.5
                 },
-                "hardsphere": {}
+                "lennardjones": {
+                    "mixing": "LB"
+                }
             }
         }
     ],
     "moleculelist": [
         {
-            "salt": {
-                "Ninit": 0,
-                "atoms": [
-                    "Na",
-                    "Cl"
-                ],
-                "atomic": true
+            "A": {
+                "Ninit": 1,
+                "structure": "A.xyz"
+            }
+        },
+        {
+            "B": {
+                "Ninit": 1,
+                "structure": "B.xyz"
             }
         },
         {
             "water": {
-                "Ninit": 10,
+                "Ninit": 0,
                 "insdir": [
                     1,
                     1,
@@ -78,23 +84,28 @@
     "moves": [
         {
             "moltransrot": {
-                "group": "water",
+                "group": "A",
+                "dp": 40,
+                "dprot": 0
+            }
+        },
+        {
+            "moltransrot": {
+                "group": "B",
                 "dp": 10,
-                "dprot": 1.0,
-                "permol": true,
-                "prob": 1.0
+                "dprot": 0
             }
         }
     ],
     "system": {
         "geometry": {
-            "length": 10.0
+            "length": 50
         },
         "mcloop": {
             "macro": 10,
             "micro": 50
         },
-        "temperature": 300
+        "temperature": 298.15
     }
 }
 

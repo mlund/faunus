@@ -35,6 +35,9 @@ namespace Faunus {
 
                 template<typename T>
                     inline double i2i(const T &a, const T &b) {
+                        //cout << "pos1=" << a.pos << endl;
+                        //cout << "pos2=" << b.pos << endl;
+                        //cout << "d=" << a.pos << spc.geo.sqdist(a.pos, b.pos) << endl;
                         return pairpot(a, b, spc.geo.vdist(a.pos, b.pos));
                     }
 
@@ -57,9 +60,21 @@ namespace Faunus {
                     }
 
                 double energy(Change &change) override {
+                    using namespace ranges;
                     double u=0;
                     if (!change.empty()) {
-                        using namespace ranges;
+
+                        // did everything change?
+                        if (change.all) {
+                            // all groups<->all groups
+                            for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i ) {
+                                for ( auto j=i; ++j != spc.groups.end(); ) {
+                                    u += g2g( *i, *j );
+                                }
+                            }
+                            return u;
+                        }
+
                         auto moved = change.touchedGroupIndex(); // index of moved groups
                         auto fixed = view::ints( 0, int(spc.groups.size()) )
                             | view::remove_if(
@@ -89,9 +104,11 @@ namespace Faunus {
         template<typename Tspace>
             class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
                 public:
+                    typedef typename Tspace::Tparticle Tparticle;
+
                     Hamiltonian(Tspace &spc, const json &j) {
                         using namespace Potential;
-                        typedef CombinedPairPotential<Coulomb,HardSphere> Tpairpot;
+                        typedef CombinedPairPotential<Coulomb,LennardJones<Tparticle>> Tpairpot;
 
                         Energybase::name="Hamiltonian";
                         for (auto &m : j.at("energy")) {// loop over move list

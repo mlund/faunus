@@ -19,8 +19,8 @@ int main() {
 
     MCSimulation<Tspace> sim(j);
 
-    for (int i=0; i<1000; i++)
-        sim.move();
+    //for (int i=0; i<100000; i++)
+    //    sim.move();
 
     FormatPQR::save("confout.pqr", sim.p(), sim.geo().getLength());
 }

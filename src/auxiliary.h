@@ -1881,6 +1881,11 @@ namespace Faunus
             auto end() const noexcept { return vec.end(); }
             auto empty() const { return vec.empty(); }
 
+            // Disable copy operators since we don't wan't to override our pointers
+            inline BasePointerVector() {};
+            BasePointerVector(const BasePointerVector&) = delete;
+            BasePointerVector& operator=(const BasePointerVector&) = delete;
+
             template<typename Tderived, class... Args, class = std::enable_if_t<std::is_base_of<T,Tderived>::value>>
                 void push_back(Args&... args) {
                     vec.push_back( std::make_shared<Tderived>(args...) );

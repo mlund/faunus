@@ -28,10 +28,15 @@ namespace Faunus {
 
             std::string name;
 
-            GeometryBase& operator=(const GeometryBase &other) {
+            inline GeometryBase& operator=(const GeometryBase &other) {
                 if (this!=&other)
                     name = other.name;
                 return *this;
+            } //!< Required since we *do not* want to overwrite functors (distance, boundary)
+
+            inline GeometryBase(const GeometryBase &other) {
+                if (this!=&other)
+                    name = other.name;
             } //!< Required since we *do not* want to overwrite functors (distance, boundary)
 
             GeometryBase() {
@@ -85,6 +90,10 @@ namespace Faunus {
                     m.z() = (rand()-0.5) * this->len.z();
                 }
         };
+
+        void to_json(json &j, const Box &b) {
+            j["length"] = b.getLength();
+        }
 
         void from_json(const json& j, Box &b) {
             try {

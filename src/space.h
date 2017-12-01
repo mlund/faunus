@@ -14,6 +14,7 @@ namespace Faunus {
      */
     struct Change {
         double dV = 0;     //!< Volume change (in different directions)
+        double all = false; //!< Set to true if *everything* has changed
 
         struct data {
             int index; //!< Touched group index
@@ -31,15 +32,17 @@ namespace Faunus {
         void clear()
         {
             dV=0;
+            all=false;
             groups.clear();
             assert(empty());
         } //!< Clear all change data
 
         bool empty() const
         {
-            if ( groups.empty())
-                if ( dV==0 )
-                    return true;
+            if (all==false)
+                if ( groups.empty())
+                    if ( dV==0 )
+                        return true;
             return false;
         } //!< Check if change object is empty
 
@@ -109,41 +112,44 @@ namespace Faunus {
                 return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
             } //!< Range with all atoms of type `atomid` (complexity: order N)
 
-            void sync(Tspace &o, const Tchange &change) {
+            void sync(Tspace &other, const Tchange &change) {
 
-                assert(&o != this);
+                assert(&other != this);
+                assert( p.begin() != other.p.begin());
 
                 if (std::fabs(change.dV)>1e-9)
-                    geo = o.geo;
+                    geo = other.geo;
 
-                // if mismatch do a deep copy of everything
-                if ( (p.size()!=o.p.size()) || (groups.size()!=o.groups.size())) {
-                    p = o.p;
-                    assert( p.begin() != o.p.begin() && "deep copy problem");
-                    groups = o.groups;
+                // deep copy *everything*
+                if (change.all) {
+                    p = other.p; // copy all positions
+                    assert( p.begin() != other.p.begin() && "deep copy problem");
+                    groups = other.groups;
+
                     for (auto &i : groups)
-                        i.relocate( o.p.begin(), p.begin() );
-                } else
-                {
-                    assert( p.begin() != o.p.begin());
-
+                        if (i.begin() != p.begin())
+                            i.relocate( other.p.begin(), p.begin() );
+                }
+                else {
                     for (auto &m : change.groups) {
 
                         // bad use of "o" = other or old?
-                        auto &go = groups.at(m.index);  // old group
-                        auto &gn = o.groups.at(m.index);// new group
+                        auto &g = groups.at(m.index);  // old group
+                        auto &gother = other.groups.at(m.index);// new group
 
                         //go = gn; // deep copy group
                         //assert( gn.size() == go.size() );
-                        assert( gn.capacity() == go.capacity() );
+                        assert( g.capacity() == gother.capacity() );
 
                         if (m.all) // all atoms have moved
-                            std::copy( gn.begin(), gn.end(), go.begin() );
+                            std::copy( gother.begin(), gother.end(), g.begin() );
                         else // only some atoms have moved
                             for (auto i : m.atoms)
-                                *(go.begin()+i) = *(gn.begin()+i);
+                                *(g.begin()+i) = *(gother.begin()+i);
                     }
                 }
+                assert( p.size() == other.p.size() );
+                assert( p.begin() != other.p.begin());
             } //!< Copy differing data from other (o) Space using Change object
 
             void applyChange(const Tchange &change) {
@@ -151,6 +157,27 @@ namespace Faunus {
                     f(*this, change);
             }
         };
+
+    template<class Tgeometry, class Tparticle>
+        void to_json(json &j, Space<Tgeometry,Tparticle> &spc) {
+            j["number of particles"] = spc.p.size();
+            j["number of groups"] = spc.groups.size();
+            j["geometry"] = spc.geo;
+            auto& _j = j["groups"];
+            for (auto &i : spc.groups) {
+                auto name = molecules<decltype(spc.p)>.at(i.id).name;
+                json tmp, d=i;
+                d.erase("cm");
+                d.erase("id");
+                d.erase("atomic");
+                d["capacity"] = i.capacity();
+                auto ndx = i.to_index(spc.p.begin());
+                d["index"] = std::to_string(ndx.first)+"-"+std::to_string(ndx.second);
+                tmp[name] = d;
+                _j.push_back( tmp );
+            }
+            //j["particles"] = spc.p;
+        }
 
     template<class Tgeometry, class Tparticletype>
         void from_json(const json &j, Space<Tgeometry,Tparticletype> &p) {
@@ -193,6 +220,7 @@ namespace Faunus {
 
         // sync groups
         Change c;
+        c.all=true;
         c.groups.resize(1);
         c.groups[0].index=0;
         c.groups[0].all=true;
@@ -206,6 +234,7 @@ namespace Faunus {
 
         // nothing should be synched (all==false)
         spc2.p.back().pos.z()=-0.1;
+        c.all=false;
         c.groups[0].all=false;
         spc1.sync(spc2, c);
         CHECK( spc1.p.back().pos.z() != -0.1 );

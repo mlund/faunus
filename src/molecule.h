@@ -29,7 +29,6 @@ namespace Faunus {
         bool rotate=true;       //!< Set to true to randomly rotate molecule when inserted. Default: true
         bool keeppos=false;     //!< Set to true to keep original positions (default: false)
         int maxtrials=2e3;      //!< Maximum number of overlap checks if `checkOverlap==true`
-        Random slump;           //!< Temporarily here!
 
         RandomInserter() : name("random") {}
 
@@ -54,10 +53,10 @@ namespace Faunus {
                         QuaternionRotate rot;
                         if ( rotate )
                         {
-                            rot.set(2*pc::pi*slump(), ranunit(slump));
+                            rot.set(2*pc::pi*random(), ranunit(random));
                             i.rotate(rot.first, rot.second);
                         }
-                        geo.randompos(i.pos, slump);
+                        geo.randompos(i.pos, random);
                         i.pos = i.pos.cwiseProduct(dir) + offset;
                         geo.boundary(i.pos);
                     }
@@ -73,11 +72,11 @@ namespace Faunus {
                     else
                     {
                         Point cm;                      // new mass center position
-                        geo.randompos(cm, slump);      // random point in container
+                        geo.randompos(cm, random);      // random point in container
                         cm = cm.cwiseProduct(dir);     // apply user defined directions (default: 1,1,1)
                         Geometry::cm2origo(v.begin(), v.end());// translate to origin
                         QuaternionRotate rot;
-                        rot.set(slump()*2*pc::pi, ranunit(slump)); // random rot around random vector
+                        rot.set(random()*2*pc::pi, ranunit(random)); // random rot around random vector
                         for ( auto &i : v )
                         {            // apply rotation to all points
                             if ( rotate ) {
@@ -115,7 +114,6 @@ namespace Faunus {
             private:
                 int _id=-1;
                 int _confid=-1;
-                Random slump;
             public:
                 typedef Tpvec TParticleVector;
 
@@ -181,7 +179,7 @@ namespace Faunus {
                     assert(size_t(confDist.max()) == conformations.size() - 1);
                     assert(atoms.size() == conformations.front().size());
 
-                    _confid = confDist(slump.engine); // store the index of the conformation
+                    _confid = confDist(random.engine); // store the index of the conformation
                     return conformations.at( _confid );
                 }
 

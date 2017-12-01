@@ -707,6 +707,7 @@ namespace Faunus {
             _j["dprot"] = a.dprot / 1.0_rad;
             _j["eps"] = a.eps / 1.0_kJmol;
             _j["mw"] = a.mw;
+            _j["sigma"] = a.sigma / 1.0_angstrom;
         }
 
     template<class T>
@@ -722,6 +723,7 @@ namespace Faunus {
                 a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
                 a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
                 a.mw       = val.value("mw", a.mw);
+                a.sigma    = val.value("sigma", a.sigma) * 1.0_angstrom;
             }
         }
 

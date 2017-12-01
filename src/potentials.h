@@ -10,7 +10,7 @@ namespace Faunus {
             std::string name;
             virtual void to_json(json&) const=0;
             virtual void from_json(const json&)=0;
-        }; //!< Base for pair-potentials
+        }; //!< Base for all pair-potentials
 
         void to_json(json &j, const PairPotentialBase &base) {
             base.name.empty() ? base.to_json(j) : base.to_json(j[base.name]);
@@ -59,14 +59,13 @@ namespace Faunus {
                 enum Mixers {LB};
                 Mixers mixer = LB;
                 PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and 4*eps_ij
-                //decltype(atoms<Tparticle>)&  = atoms<Tparticle>;
             }; //!< Table of sigma and epsilons
 
         template<typename Tparticle>
             void from_json(const json &j, SigmaEpsilonTable<Tparticle> &m) {
                 std::function<std::pair<double,double>(double,double,double,double)> mixerFunc;
 
-                std::string mixer = j.value("mixer", std::string("LB"));
+                std::string mixer = j.value("mixing", std::string("LB"));
                 if (mixer=="LB")
                     m.mixer=SigmaEpsilonTable<Tparticle>::LB;
                 switch(m.mixer) {
@@ -90,19 +89,34 @@ namespace Faunus {
                     }
 
                 // custom eps/sigma for specific pairs
-                auto &_j = j["ljcustom"];
-                if (_j.is_object()) {
-                    for (auto it=_j.begin(); it!=_j.end(); ++it) {
-                        auto v = words2vec<std::string>( it.key() );
-                        if (v.size()==2) {
-                            int id1 = (*findName( atoms<Tparticle>, v[0])).id();
-                            int id2 = (*findName( atoms<Tparticle>, v[1])).id();
-                            m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
-                            m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
-                        } else
-                            std::runtime_error("custom LJ parameters require exactly two atoms");
+                if (j.count("ljcustom")==1) {
+                    auto &_j = j.at("ljcustom");
+                    if (_j.is_object()) {
+                        for (auto it=_j.begin(); it!=_j.end(); ++it) {
+                            auto v = words2vec<std::string>( it.key() );
+                            if (v.size()==2) {
+                                int id1 = (*findName( atoms<Tparticle>, v[0])).id();
+                                int id2 = (*findName( atoms<Tparticle>, v[1])).id();
+                                m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
+                                m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
+                            } else
+                            std::runtime_error("custom LJ parameters require exactly two space-separated atoms");
+                        }
                     }
                 }
+            }
+
+        template<typename Tparticle>
+            void to_json(json &j, const SigmaEpsilonTable<Tparticle> &m) {
+                j["mixing"] = "LB = Lorentz-Berthelot";
+                j["epsilon unit"] = "kJ/mol";
+                auto& _j = j["combinations"];
+                for (size_t i=0; i<m.eps.size(); i++)
+                    for (size_t j=0; j<m.eps.size(); j++)
+                        if (i>=j) {
+                            auto str = atoms<Tparticle>[i].name+" "+atoms<Tparticle>[j].name;
+                            _j[str] = { {"eps", m.eps(i,j)/4.0_kJmol}, {"sigma", std::sqrt(m.s2(i,j))}  };
+                        }
             }
 
         /**
@@ -128,7 +142,7 @@ namespace Faunus {
                         return m.eps(a.id,b.id) * (x*x - x);
                     }
 
-                void to_json(json &j) const override { j["comment"] = "todo"; }
+                void to_json(json &j) const override { j = m; }
                 void from_json(const json &j) override { m = j; }
             };
 

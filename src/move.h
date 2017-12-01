@@ -34,15 +34,15 @@ namespace Faunus {
                     auto& _j = j[name];
                     _to_json(_j);
                     _j["acceptance"] = double(accepted)/cnt;
-                    _j["cnt"] = accepted;
+                    _j["cnt"] = cnt;
                     _j["accepted"] = accepted;
                     _j["rejected"] = cnt-accepted;
                 } //!< JSON report w. statistics, output etc.
 
                 inline void move(Change &change) {
+                    cnt++;
                     change.clear();
                     _move(change);
-                    cnt++;
                 } //!< Perform move and modify given change object
 
                 inline void accept(Change &c) {
@@ -73,7 +73,6 @@ namespace Faunus {
             class TranslateRotate : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
-
                     Tspace& spc; // Space to operate on
                     int molid=-1;
                     double dptrans=0;
@@ -110,19 +109,15 @@ namespace Faunus {
                         }
                     } //!< Configure via json object
 
-
                     void _move(Change &change) override {
                         assert(molid>=0);
                         assert(!spc.groups.empty());
                         assert(spc.geo.getVolume()>0);
 
-                        //cout << std::setw(4) << json(*this) << endl;
-                        //cout << std::setw(4) << json(newspc->groups) << endl;
-
                         // pick random group from the system matching molecule type
                         auto mollist = spc.findMolecules( molid ); // list of molecules w. 'molid'
                         if (size(mollist)>0) {
-                            auto it  = (mollist | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
+                            auto it  = (mollist | ranges::view::sample(1, slump.engine) ).begin();
                             assert(it->id==molid);
 
                             // translate group
@@ -182,14 +177,16 @@ namespace Faunus {
             public:
                 using BasePointerVector<Movebase>::vec;
                 inline Propagator() {}
-
                 inline Propagator(const json &j, Tspace &spc) {
-                    for (auto &m : j.at("moves")) // loop over all moves
-                        for (auto it=m.begin(); it!=m.end(); ++it)
+                    for (auto &m : j.at("moves")) {// loop over move list
+                        for (auto it=m.begin(); it!=m.end(); ++it) {
                             if (it.key()=="moltransrot") {
                                 this->template push_back<Move::TranslateRotate<Tspace>>(spc);
                                 vec.back()->from_json( it.value() );
                             }
+                            // additional moves go here...
+                        }
+                    }
                 }
         };
 
@@ -215,6 +212,8 @@ namespace Faunus {
 
             private:
                 bool metropolis(double du) {
+                    if (std::isnan(du))
+                        return false;
                     if (du<0)
                         return true;
                     return ( Move::Movebase::slump() > std::exp(-du)) ? false : true;
@@ -234,7 +233,7 @@ namespace Faunus {
                     trial.spc.sync(old.spc, c);
                     assert(old.spc.p.size() == trial.spc.p.size());
 
-                    old.pot.template push_back<Energy::Nonbonded<Tspace, Potential::HardSphere>>(old.spc);
+                    old.pot.template push_back<Energy::Nonbonded<Tspace, Potential::HardSphere>>(old.spc, j);
                     trial.pot = old.pot;
                 }
 
@@ -264,6 +263,8 @@ namespace Faunus {
 
                             double du = trial.pot.energy(change)
                                 - old.pot.energy(change);
+
+                            cout << du << " ";
 
                             if (metropolis(du) ) // accept
                             {

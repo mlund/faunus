@@ -11,13 +11,7 @@ namespace Faunus {
         class Energybase {
             public:
                 std::string name;
-                //!< Update energy to reflect `newspc`
-                virtual void update(Change&) {
-                } //!< Update to reflect changes made in other space
-
-                virtual double energy(Change&) {
-                    return 0;
-                } //!< Return energy due to change
+                virtual double energy(Change&)=0; //!< Return energy due to change
         };
 
         /**
@@ -25,11 +19,12 @@ namespace Faunus {
          */
         template<typename Tspace, typename Tpairpot>
             struct Nonbonded : public Energybase {
-                Tspace& spc;   //!< Ref. to original space
-                Tpairpot pairpot;
+                Tspace& spc;   //!< Space to operate on
+                Tpairpot pairpot; //!< Pair potential
 
-                Nonbonded(Tspace &spc) : spc(spc) {
+                Nonbonded(Tspace &spc, const json &j) : spc(spc) {
                     name="nonbonded";
+                    pairpot = j;
                 }
 
                 template<typename T>
@@ -72,8 +67,9 @@ namespace Faunus {
 
                         // moved<->static
                         for ( auto i : moved)
-                            for ( auto j : fixed)
+                            for ( auto j : fixed) {
                                 u += g2g(spc.groups[i], spc.groups[j]);
+                            }
 
                         // more todo!
                     }
@@ -81,13 +77,14 @@ namespace Faunus {
                 }
             }; // Nonbonded energy before and after change (returns pair w. uold and unew)
 
+        template<class T1, class T2>
+            void to_json(json &j, const Nonbonded<T1,T2> &nb) {
+                j[nb.name] = json(nb.pairpot);
+            }
+
         template<typename Tspace>
             class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
                 public:
-                    void update(Change &change) override {
-                        for (auto i : this->vec)
-                            i->update(change);
-                    }
                     double energy(Change &change) override {
                         double du=0;
                         for (auto i : this->vec)
@@ -97,9 +94,9 @@ namespace Faunus {
             };
 
         template<typename Tspace>
-            inline void to_json(json &j, const Hamiltonian<Tspace> &pot) {
+            void to_json(json &j, const Hamiltonian<Tspace> &h) {
                 auto& _j = j["energy"];
-                for (auto i : pot.vec)
+                for (auto i : h.vec)
                     i->to_json(_j);
             }
 

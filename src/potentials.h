@@ -8,14 +8,7 @@ namespace Faunus {
 
         struct PairPotentialBase {
             std::string name;
-            PairPotentialBase() {}
-            PairPotentialBase(const std::string &name) : name(name) {}
-            virtual void from_json(const json&)=0;
         }; //!< Base for pair-potentials
-
-        void from_json(const json &j, PairPotentialBase &pairpot) {
-            pairpot.from_json(j);
-        } //!< Configure via json
 
         template<class T1, class T2>
             struct CombinedPairPotential : public PairPotentialBase {
@@ -28,12 +21,19 @@ namespace Faunus {
                     double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                         return first(a, b, r) + second(a, b, r);
                     }
-
-                void from_json(const json &j) override {
-                    first = j;
-                    second = j;
-                }
             };
+
+        template<class T1, class T2>
+            void from_json(const json &j, CombinedPairPotential<T1,T2> &a) {
+                a.first = j;
+                a.second = j;
+            }
+
+        template<class T1, class T2>
+            void to_json(json &j, const CombinedPairPotential<T1,T2> &a) {
+                j.push_back(a.first);
+                j.push_back(a.second);
+            }
 
         template<class T1, class T2,
             class = typename std::enable_if<std::is_base_of<PairPotentialBase, T1>::value>::type,
@@ -47,7 +47,7 @@ namespace Faunus {
                 double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                     return 0;
                 }
-            void from_json(const json &) override {}
+            void from_json(const json &) {}
         }; //!< A dummy pair potential that always returns zero
 
         template<typename Tparticle>
@@ -123,9 +123,11 @@ namespace Faunus {
                         x=x*x*x; // s6/r6
                         return m.eps(a.id,b.id) * (x*x - x);
                     }
-
-                void from_json(const json &j) override { m = j.at(name); }
             };
+        template<typename T>
+            void to_json(json &j, const LennardJones<T> &lj) { j[lj.name] = "todo"; }
+        template<typename T>
+            void from_json(const json &j, LennardJones<T> &lj) { lj.m = j.at(lj.name); }
 
         struct Coulomb : public PairPotentialBase {
             Coulomb() { name="coulomb"; }
@@ -134,21 +136,21 @@ namespace Faunus {
                 double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                     return lB * a.charge * b.charge / r.norm();
                 }
-            void from_json(const json &j) override {
-                lB = pc::lB( j.at(name).at("epsr").get<double>() );
-            }
-            void to_json(json &j) {
-                j[name] = {"lB", lB};
-            }
         };
+        void to_json(json &j, const Coulomb &c) { j[c.name] = {"lB", c.lB}; }
+        void from_json(const json &j, Coulomb &c) {
+            c.lB = pc::lB( j.at(c.name).at("epsr").get<double>() );
+        }
 
         struct HardSphere : public PairPotentialBase {
+            HardSphere() { name="hardsphere"; }
             template<typename... T>
                 double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r2) const {
                     auto d=a.radius+b.radius;
                     return (r2.squaredNorm()<d*d) ? pc::infty : 0;
                 }
-            void from_json(const json &j) override {}
         };
+        void to_json(json &j, const HardSphere &hs) { j[hs.name] = "N/A"; }
+        void from_json(const json &j, HardSphere &hs) {}
     }//end of namespace Potential
 }//end of namespace Faunus

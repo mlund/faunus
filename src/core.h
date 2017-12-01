@@ -47,6 +47,11 @@ namespace Faunus {
             return std::distance( &(*first), &(*last) );
         } //!< Distance between two arbitrary contiguous iterators
 
+    template<class T>
+        int size(T &rng) {
+            return distance(rng.begin(), rng.end());
+        } //!< Size of arbitrary range
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] distance")
     {

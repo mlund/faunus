@@ -72,7 +72,10 @@ namespace Faunus {
             Space(const json &j) {
                 atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
                 molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+                Point a;
+                geo.boundaryFunc(a);
                 geo = j.at("system").at("geometry");
+                geo.boundaryFunc(a);
                 insertMolecules(*this);
             }
 

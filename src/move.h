@@ -72,7 +72,7 @@ namespace Faunus {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
 
-                    Tspace& spc;
+                    Tspace& spc; // Space to operate on
                     int molid=-1;
                     double dptrans=0;
                     double dprot=0;
@@ -118,16 +118,14 @@ namespace Faunus {
 
                         // pick random group from the system matching molecule type
                         auto mollist = spc.findMolecules( molid ); // list of molecules w. 'molid'
-                        if (std::distance(mollist.begin(), mollist.end())>0) {
+                        if (size(mollist)>0) {
                             auto it  = (mollist | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
                             assert(it->id==molid);
 
                             // translate group
                             Point dp = ranunit(slump).cwiseProduct(dir) * dptrans;
-                            //it->translate( dp, [&](Point &i){newspc->geo.boundary(i);});
-                            spc.geo.boundaryFunc = [&](Point &i){spc.geo.boundary(i); };
-                            //spc.geo.boundaryFunc(dp);
                             it->translate( dp, spc.geo.boundaryFunc );
+
                             // add rotation here...
 
                             Change::data d; // object that describes what was moved in a single group
@@ -174,11 +172,11 @@ namespace Faunus {
         template<typename Tspace>
         class Propagator : public BasePointerVector<Movebase> {
             public:
-                inline Propagator(const json &j, Tspace &spc1, Tspace &spc2) {
+                inline Propagator(const json &j, Tspace &spc) {
                     for (auto &m : j.at("moves")) // loop over all moves
                         for (auto it=m.begin(); it!=m.end(); ++it)
                             if (it.key()=="moltransrot") {
-                                this->template push_back<Move::TranslateRotate<Tspace>>(spc1);
+                                this->template push_back<Move::TranslateRotate<Tspace>>(spc);
                                 this->vec.back()->from_json( it.value() );
                             }
                 }
@@ -228,16 +226,11 @@ namespace Faunus {
                 const auto& geo() { return old.spc.geo; }
                 Move::Propagator<Tspace> moves;
 
-                MCSimulation(const json &j) : old(j), moves(j, old.spc, trial.spc) {
-                    //atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
-                    //molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
-                    //old.spc.geo = j.at("system").at("geometry");
-                    //insertMolecules(old.spc);
+                MCSimulation(const json &j) : old(j), moves(j, old.spc) {
                     Change c;
                     c.dV=1;
                     trial.spc.sync(old.spc, c);
                     assert(old.spc.p.size() == trial.spc.p.size());
-                    //addMoves(j);
 
                     old.pot.template push_back<Energy::Nonbonded<Tspace, Potential::HardSphere>>(old.spc);
                     trial.pot = old.pot;

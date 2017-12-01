@@ -24,6 +24,12 @@ namespace Faunus {
 
             std::string name;
 
+            GeometryBase& operator=(const GeometryBase &other) {
+                if (this!=&other)
+                    name = other.name;
+                return *this;
+            } //!< Required since we *do not* want to overwrite functors (distance, boundary)
+
             GeometryBase() {
                 using namespace std::placeholders;
                 boundaryFunc = nullptr;//std::bind( &GeometryBase::boundary, this, _1);
@@ -174,6 +180,13 @@ namespace Faunus {
             Point b = a;
             geo.boundary(b);
             CHECK( a == b );
+
+            // check copying, in particular functors
+            auto g1 = new Cuboid();
+            g1->boundaryFunc(a);
+            geo = *g1; // functors should *not be copied*
+            delete g1;
+            geo.boundaryFunc(a);
         }
 #endif
 

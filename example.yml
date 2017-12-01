@@ -11,8 +11,8 @@ energy:
         coulomb: {epsr: 78.5}
         lennardjones: {mixing: LB}
 moleculelist:
-    - A:  {Ninit: 1, structure: A.xyz}
-    - B:  {Ninit: 1, structure: B.xyz}
+    - A:  {Ninit: 50, structure: A.xyz}
+    - B:  {Ninit: 50, structure: B.xyz}
     - water: {Ninit: 0, insdir: [1,1,1], structure: water.pqr}
 moves:
     - moltransrot: { group: A, dp: 40, dprot: 0 }

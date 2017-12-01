@@ -204,11 +204,12 @@ namespace Faunus {
                 struct state {
                     Tspace spc;
                     Energy::Hamiltonian<Tspace> pot;
-                    state(const json &j) : spc(j), pot(spc,j) {}
+                    state(const json &j) : spc(j), pot(spc,j) {
+                    }
                 }; //!< Contains everything to describe a state
 
                 state old, trial;
-                double uinit=0;
+                double uinit=0, dusum=0;
 
             private:
                 bool metropolis(double du) {
@@ -235,26 +236,27 @@ namespace Faunus {
                     c.all=true;
                     trial.spc.sync(old.spc, c);
                     assert(old.spc.p.begin() != trial.spc.p.begin());
-                    assert( old.spc.groups.front().begin() == old.spc.p.begin());
-                    assert( trial.spc.groups.front().begin() == trial.spc.p.begin());
-
-                    //trial.pot = old.pot;
-
-                    cout << "old\n";
-                    cout << std::setw(4) << json(old.spc.p) << endl;
-                    cout << "trial\n";
-                    cout << std::setw(4) << json(trial.spc.p) << endl;
+                    assert(old.spc.groups.front().begin() == old.spc.p.begin());
+                    assert(trial.spc.groups.front().begin() == trial.spc.p.begin());
 
                     c.all=true;
-                    uinit = old.pot.energy(c);
+                    double uinit1 = old.pot.energy(c);
+                    double uinit2 = trial.pot.energy(c);
+                    uinit = uinit1;
 
-                    cout << "uinit         = " << uinit << endl;
-                    cout << "uinit (trial) = " << trial.pot.energy(c) << endl;
-
-
+                    cout << "uinit         = " << uinit1 << endl;
+                    cout << "uinit (trial) = " << uinit2 << endl;
                 }
 
                 ~MCSimulation() {
+                    Change c;
+                    c.all=true;
+                    double ufinal = old.pot.energy(c);
+
+                    cout << "initial energy = " << uinit << endl;
+                    cout << "final energy   = " << ufinal << endl;
+                    cout << "sum of changes = " << dusum << endl;
+                    cout << "drift          = " << ufinal-(uinit+dusum) << endl;
                     std::ofstream f("out.json");
                     json j;
                     j["moves"] = json(moves);
@@ -293,7 +295,9 @@ namespace Faunus {
                             {
                                 trial.spc.sync( old.spc, change ); // copy oldspc -> newspc
                                 (**mv).reject(change);
+                                du=0;
                             }
+                            dusum+=du;
                         }
                     }
                 }

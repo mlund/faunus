@@ -35,9 +35,6 @@ namespace Faunus {
 
                 template<typename T>
                     inline double i2i(const T &a, const T &b) {
-                        //cout << "pos1=" << a.pos << endl;
-                        //cout << "pos2=" << b.pos << endl;
-                        //cout << "d=" << a.pos << spc.geo.sqdist(a.pos, b.pos) << endl;
                         return pairpot(a, b, spc.geo.vdist(a.pos, b.pos));
                     }
 
@@ -62,11 +59,16 @@ namespace Faunus {
                 double energy(Change &change) override {
                     using namespace ranges;
                     double u=0;
+
                     if (!change.empty()) {
 
                         // did everything change?
                         if (change.all) {
                             // all groups<->all groups
+                            //for (size_t i=0; i<spc.groups.size()-1; i++)
+                            //    for (size_t j=i+1; j<spc.groups.size(); j++) {
+                            //        u+= g2g(spc.groups.at(i), spc.groups.at(j));
+                            //    }
                             for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i ) {
                                 for ( auto j=i; ++j != spc.groups.end(); ) {
                                     u += g2g( *i, *j );

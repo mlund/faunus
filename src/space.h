@@ -126,9 +126,10 @@ namespace Faunus {
                     assert( p.begin() != other.p.begin() && "deep copy problem");
                     groups = other.groups;
 
-                    for (auto &i : groups)
-                        if (i.begin() != p.begin())
-                            i.relocate( other.p.begin(), p.begin() );
+                    if (!groups.empty())
+                        if (groups.front().begin() == other.p.begin())
+                            for (auto &i : groups)
+                                i.relocate( other.p.begin(), p.begin() );
                 }
                 else {
                     for (auto &m : change.groups) {

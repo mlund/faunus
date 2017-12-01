@@ -59,13 +59,13 @@
     "moleculelist": [
         {
             "A": {
-                "Ninit": 1,
+                "Ninit": 50,
                 "structure": "A.xyz"
             }
         },
         {
             "B": {
-                "Ninit": 1,
+                "Ninit": 50,
                 "structure": "B.xyz"
             }
         },

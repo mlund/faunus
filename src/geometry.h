@@ -26,8 +26,8 @@ namespace Faunus {
 
             GeometryBase() {
                 using namespace std::placeholders;
-                boundaryFunc = std::bind( &GeometryBase::boundary, this, _1);
-                distanceFunc = std::bind( &GeometryBase::vdist, this, _1, _2);
+                boundaryFunc = nullptr;//std::bind( &GeometryBase::boundary, this, _1);
+                distanceFunc = nullptr;//std::bind( &GeometryBase::vdist, this, _1, _2);
             }
 
         }; //!< Base class for all geometries
@@ -105,6 +105,7 @@ namespace Faunus {
                     using namespace std::placeholders;
                     boundaryFunc = std::bind( &PBC<X,Y,Z>::boundary, this, _1);
                     distanceFunc = std::bind( &PBC<X,Y,Z>::vdist, this, _1, _2);
+                    boundaryFunc = [this](Point &i){this->boundary(i);};
                 }
 
                 Point vdist( const Point &a, const Point &b ) const override

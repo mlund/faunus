@@ -71,9 +71,8 @@ namespace Faunus {
             class TranslateRotate : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
-                    Tspace* oldspc = nullptr;  // pointer to old space
-                    Tspace* newspc = nullptr;  // pointer to new (trial) space
 
+                    Tspace& spc;
                     int molid=-1;
                     double dptrans=0;
                     double dprot=0;
@@ -89,8 +88,6 @@ namespace Faunus {
                     }
 
                     void _from_json(const json &j) override {
-                        assert(oldspc!=nullptr);
-                        assert(newspc!=nullptr);
                         assert(!molecules<Tpvec>.empty());
                         try {
                             std::string molname = j.at("group");
@@ -113,25 +110,28 @@ namespace Faunus {
 
                     void _move(Change &change) override {
                         assert(molid>=0);
-                        assert(newspc!=nullptr);
-                        assert(!newspc->groups.empty());
+                        assert(!spc.groups.empty());
+                        assert(spc.geo.getVolume()>0);
 
                         //cout << std::setw(4) << json(*this) << endl;
                         //cout << std::setw(4) << json(newspc->groups) << endl;
 
                         // pick random group from the system matching molecule type
-                        auto mollist = newspc->findMolecules( molid ); // list of molecules w. 'molid'
+                        auto mollist = spc.findMolecules( molid ); // list of molecules w. 'molid'
                         if (std::distance(mollist.begin(), mollist.end())>0) {
-                            auto g_iter  = (mollist | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
-                            assert(g_iter->id==molid);
+                            auto it  = (mollist | ranges::view::sample(1, slump.engine) ).begin(); // iterator to random group
+                            assert(it->id==molid);
 
                             // translate group
                             Point dp = ranunit(slump).cwiseProduct(dir) * dptrans;
-                            g_iter->translate( dp, newspc->geo.boundaryFunc );
+                            //it->translate( dp, [&](Point &i){newspc->geo.boundary(i);});
+                            spc.geo.boundaryFunc = [&](Point &i){spc.geo.boundary(i); };
+                            //spc.geo.boundaryFunc(dp);
+                            it->translate( dp, spc.geo.boundaryFunc );
                             // add rotation here...
 
                             Change::data d; // object that describes what was moved in a single group
-                            d.index = Faunus::distance( newspc->groups.begin(), g_iter ); // integer *index* of moved group
+                            d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
                             d.all = true; // *all* atoms in group were moved
                             change.groups.push_back( d ); // add to list of moved groups
                         }
@@ -139,7 +139,7 @@ namespace Faunus {
                     }
 
                 public:
-                    TranslateRotate(Tspace &oldspc, Tspace &newspc) : oldspc(&oldspc), newspc(&newspc) {
+                    TranslateRotate(Tspace &spc) : spc(spc) {
                         name = "Molecular Translation and Rotation";
                     }
             };
@@ -150,13 +150,12 @@ namespace Faunus {
             typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
             typedef Space<Geometry::Cuboid, Tparticle> Tspace;
             typedef typename Tspace::Tpvec Tpvec;
-            Tspace spc, trial;
 
             CHECK( !atoms<Tparticle>.empty() ); // set in a previous test
             CHECK( !molecules<Tpvec>.empty() ); // set in a previous test
 
-            Tspace oldspc, newspc;
-            TranslateRotate<Tspace> mv(oldspc, newspc);
+            Tspace spc;
+            TranslateRotate<Tspace> mv(spc);
             json j = R"( {"group":"B", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "prob":0.2 })"_json;
             mv.from_json(j);
 
@@ -172,8 +171,18 @@ namespace Faunus {
         }
 #endif
 
+        template<typename Tspace>
         class Propagator : public BasePointerVector<Movebase> {
             public:
+                inline Propagator(const json &j, Tspace &spc1, Tspace &spc2) {
+                    for (auto &m : j.at("moves")) // loop over all moves
+                        for (auto it=m.begin(); it!=m.end(); ++it)
+                            if (it.key()=="moltransrot") {
+                                this->template push_back<Move::TranslateRotate<Tspace>>(spc1);
+                                this->vec.back()->from_json( it.value() );
+                            }
+                }
+
                 inline double move(Change &change) {
                     for (auto i : this->vec)
                         i->move(change);
@@ -181,7 +190,8 @@ namespace Faunus {
                 }
         };
 
-        inline void to_json(json &j, const Propagator &m) {
+        template<typename Tspace>
+        inline void to_json(json &j, const Propagator<Tspace> &m) {
             for (auto i : m.vec)
                 j = *i;
         }
@@ -194,6 +204,8 @@ namespace Faunus {
                 struct state {
                     Tspace spc;
                     Energy::Hamiltonian<Tspace> pot;
+                    state(const json &j) : spc(j) {}
+                    state() {}
                 }; //!< Contains everything to describe a state
 
                 state old, trial;
@@ -208,37 +220,24 @@ namespace Faunus {
                     return ( slump() > std::exp(-du)) ? false : true;
                 } //!< Metropolis criterion (true=accept)
 
-                void addMoves(const json &j) {
-                    for (auto &m : j.at("moves")) // loop over all moves
-                        for (auto it=m.begin(); it!=m.end(); ++it)
-                            if (it.key()=="moltransrot") {
-                                moves.push_back<Move::TranslateRotate<Tspace>>(old.spc, trial.spc);
-                                moves.vec.back()->from_json( it.value() );
-                            }
-                } // add MC moves
-
             public:
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
 
                 const Tpvec& p() { return old.spc.p; }
                 const auto& geo() { return old.spc.geo; }
-                Move::Propagator moves;
+                Move::Propagator<Tspace> moves;
 
-                MCSimulation(const json &j) {
-                    atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
-                    molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
-                    old.spc.geo = j.at("system").at("geometry");
-                    insertMolecules(old.spc);
+                MCSimulation(const json &j) : old(j), moves(j, old.spc, trial.spc) {
+                    //atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
+                    //molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+                    //old.spc.geo = j.at("system").at("geometry");
+                    //insertMolecules(old.spc);
                     Change c;
                     c.dV=1;
-                    cout << "sizes:" << old.spc.groups.size() << " " << trial.spc.groups.size() << endl;
                     trial.spc.sync(old.spc, c);
-                    cout << "sizes:" << old.spc.groups.size() << " " << trial.spc.groups.size() << endl;
-                    cout << std::setw(4) << json(old.spc.groups.front()) << endl;
-                    cout << std::setw(4) << json(trial.spc.groups.front()) << endl;
                     assert(old.spc.p.size() == trial.spc.p.size());
-                    addMoves(j);
+                    //addMoves(j);
 
                     old.pot.template push_back<Energy::Nonbonded<Tspace, Potential::HardSphere>>(old.spc);
                     trial.pot = old.pot;

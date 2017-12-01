@@ -67,6 +67,15 @@ namespace Faunus {
 
             //std::vector<MoleculeData<Tpvec>>& molecules; //!< Reference to global molecule list
 
+            Space() {}
+
+            Space(const json &j) {
+                atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
+                molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+                geo = j.at("system").at("geometry");
+                insertMolecules(*this);
+            }
+
             void clear() {
                 p.clear();
                 groups.clear();
@@ -109,8 +118,6 @@ namespace Faunus {
                     p = o.p;
                     assert( p.begin() != o.p.begin() && "deep copy problem");
                     groups = o.groups;
-                    if (!groups.empty() && !o.groups.empty())
-                        cout << groups.front().id << " " << o.groups.front().id << endl;
                     for (auto &i : groups)
                         i.relocate( o.p.begin(), p.begin() );
                 } else
@@ -119,6 +126,7 @@ namespace Faunus {
 
                     for (auto &m : change.groups) {
 
+                        // bad use of "o" = other or old?
                         auto &go = groups.at(m.index);  // old group
                         auto &gn = o.groups.at(m.index);// new group
 
@@ -163,7 +171,7 @@ namespace Faunus {
     {
         typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
         typedef Space<Geometry::Cuboid, Tparticle> Tspace;
-        Tspace spc1, spc2;
+        Tspace spc1;
 
         // check molecule insertion
         atoms<typename Tspace::Tpvec>.resize(2);
@@ -185,9 +193,11 @@ namespace Faunus {
         c.groups.resize(1);
         c.groups[0].index=0;
         c.groups[0].all=true;
+        Tspace spc2;
         spc2.sync(spc1, c);
         CHECK( spc2.p.size()==2 );
         CHECK( spc2.groups.size()==1 );
+        CHECK( spc2.groups.front().id==1);
         CHECK( spc2.groups.front().begin() != spc1.groups.front().begin());
         CHECK( spc2.p.front().pos.x()==doctest::Approx(2));
 

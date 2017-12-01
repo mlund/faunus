@@ -209,8 +209,8 @@ namespace Faunus {
                         boundary(i.pos);
                 } //!< Apply periodic boundaries (Order N complexity).
 
-            template<typename Tboundary>
-                void translate(const Point &d, const Tboundary &boundary=[](Point&){}) {
+                void translate(const Point &d, Geometry::BoundaryFunction boundary=[](Point&){}) {
+                    assert(boundary!=nullptr);
                     cm += d;
                     boundary(cm);
                     for (auto &i : *this) {

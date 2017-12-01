@@ -47,7 +47,8 @@
             "nonbonded": {
                 "coulomb": {
                     "epsr": 78.5
-                }
+                },
+                "hardsphere": {}
             }
         }
     ],

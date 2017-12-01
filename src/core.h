@@ -287,10 +287,15 @@ namespace Faunus {
         }
     } //!< json to Random conversion
 
+    static Random random; // global instance of Random
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Random")
     {
-        Random slump;
+        Random slump; // local instance
+
+        CHECK( slump() == random() );
+
         int min=10, max=0, N=1e6;
         double x=0;
         for (int i=0; i<N; i++) {

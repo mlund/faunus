@@ -146,7 +146,7 @@ namespace Faunus {
             template<typename... T>
                 double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r2) const {
                     auto d=a.radius+b.radius;
-                    return (d*d<r2.squaredNorm()) ? pc::infty : 0;
+                    return (r2.squaredNorm()<d*d) ? pc::infty : 0;
                 }
             void from_json(const json &j) override {}
         };

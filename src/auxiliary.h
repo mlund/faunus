@@ -163,8 +163,8 @@ namespace Faunus
 
     /**
      * @brief Approximation of erfc-function
-     * @param x Value for which erfc should be calculated 
-     * @details Reference for this approximation is found in Abramowitz and Stegun, 
+     * @param x Value for which erfc should be calculated
+     * @details Reference for this approximation is found in Abramowitz and Stegun,
      *          Handbook of mathematical functions, eq. 7.1.26
      *
      * @f[
@@ -176,7 +176,7 @@ namespace Faunus
      * @f[
      *     |\epsilon(x)| \le 1.5\times 10^{-7}
      * @f]
-     * 
+     *
      * @warning Needs modification if x < 0
      */
     template<typename T>
@@ -195,7 +195,7 @@ namespace Faunus
 
     /**
      * @brief Approximate 1 - erfc_x
-     * @param x Value for which erf should be calculated 
+     * @param x Value for which erf should be calculated
      */
     template<typename T>
         T erf_x( T x ) { return (1 - erfc_x(x)); }
@@ -414,7 +414,7 @@ namespace Faunus
      * Quantize<double> Q(0.5, -0.5);
      * Q = 0.61;
      * double x = Q;      // --> 0.5
-     * int bin = Q;       // --> 2 
+     * int bin = Q;       // --> 2
      * bin = Q(-0.5);     // --> 0
      * x = Q.frombin(2);  // --> 0.5
      *
@@ -1867,13 +1867,19 @@ namespace Faunus
     /** @brief Uppercase first letter in string */
     inline std::string toupper_first( std::string s ) {
         if (!s.empty())
-            s[0] = std::toupper( s[0] ); 
+            s[0] = std::toupper( s[0] );
         return s;
     }
 
     template<typename T>
         struct BasePointerVector {
             std::vector<std::shared_ptr<T>> vec; //!< Vector of shared pointers to base class
+
+            auto begin() noexcept { return vec.begin(); }
+            auto begin() const noexcept { return vec.begin(); }
+            auto end() noexcept { return vec.end(); }
+            auto end() const noexcept { return vec.end(); }
+            auto empty() const { return vec.empty(); }
 
             template<typename Tderived, class... Args, class = std::enable_if_t<std::is_base_of<T,Tderived>::value>>
                 void push_back(Args&... args) {

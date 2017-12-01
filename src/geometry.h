@@ -19,6 +19,10 @@ namespace Faunus {
             virtual void boundary( Point& ) const=0; //!< Apply boundary conditions
             virtual bool collision( const Point&, double=0) const=0; //!< Check if position lies within
 
+            inline double sqdist( const Point &a, const Point &b ) const {
+                return vdist(a,b).squaredNorm();
+            } //!< Squared (minimum) distance between two points
+
             BoundaryFunction boundaryFunc; //!< Functor for boundary()
             DistanceFunction distanceFunc; //!< Functor for vdist()
 

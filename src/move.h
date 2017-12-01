@@ -15,12 +15,12 @@ namespace Faunus {
             protected:
                 virtual void _to_json(json &j) const=0; //!< Extra info for report if needed
                 virtual void _from_json(const json &j)=0; //!< Extra info for report if needed
-                Random slump;     //!< Temporarily here
                 double prob=1;
                 unsigned long cnt=0;
                 unsigned long accepted=0;
                 unsigned long rejected=0;
             public:
+                static Random slump;   //!< Shared for all moves
                 std::string name;      //!< Name of move
                 unsigned int repeat=1; //!< How many times the move should be repeated
                 bool permol=true;
@@ -56,6 +56,8 @@ namespace Faunus {
                 }
         };
 
+        Random Movebase::slump; // static instance of Random (shared for all moves)
+
         inline void from_json(const json &j, Movebase &m) {
             m.from_json(j);
         } //!< Configure any move via json
@@ -77,12 +79,13 @@ namespace Faunus {
                     double dptrans=0;
                     double dprot=0;
                     Point dir={1,1,1};
-                    Average<double> msd; // mean square displacement
+                    Average<double> msqd; // mean squared displacement
+                    double _sqd; // squared displament
 
                     void _to_json(json &j) const override {
                         j = {
                             {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
-                            {"molid", molid}, {"prob", prob},
+                            {"molid", molid}, {"prob", prob}, {"msqd", msqd.avg()},
                             {"group", molecules<Tpvec>[molid].name}
                         };
                     }
@@ -123,8 +126,10 @@ namespace Faunus {
                             assert(it->id==molid);
 
                             // translate group
+                            Point oldcm = it->cm;
                             Point dp = ranunit(slump).cwiseProduct(dir) * dptrans;
                             it->translate( dp, spc.geo.boundaryFunc );
+                            _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
 
                             // add rotation here...
 
@@ -135,6 +140,9 @@ namespace Faunus {
                         }
                         else std::cerr << name << ": no molecules found" << std::endl;
                     }
+
+                    void _accept(Change &change) override { msqd += _sqd; }
+                    void _reject(Change &change) override { msqd += 0; }
 
                 public:
                     TranslateRotate(Tspace &spc) : spc(spc) {
@@ -172,26 +180,23 @@ namespace Faunus {
         template<typename Tspace>
         class Propagator : public BasePointerVector<Movebase> {
             public:
+                using BasePointerVector<Movebase>::vec;
+                inline Propagator() {}
+
                 inline Propagator(const json &j, Tspace &spc) {
                     for (auto &m : j.at("moves")) // loop over all moves
                         for (auto it=m.begin(); it!=m.end(); ++it)
                             if (it.key()=="moltransrot") {
                                 this->template push_back<Move::TranslateRotate<Tspace>>(spc);
-                                this->vec.back()->from_json( it.value() );
+                                vec.back()->from_json( it.value() );
                             }
-                }
-
-                inline double move(Change &change) {
-                    for (auto i : this->vec)
-                        i->move(change);
-                    return 0;
                 }
         };
 
         template<typename Tspace>
-        inline void to_json(json &j, const Propagator<Tspace> &m) {
+        void to_json(json &j, const Propagator<Tspace> &m) {
             for (auto i : m.vec)
-                j = *i;
+                j.push_back(*i);
         }
 
     }//Move namespace
@@ -209,13 +214,10 @@ namespace Faunus {
                 state old, trial;
 
             private:
-                Random slump;
-                //Energy::Nonbonded<Tspace, Potential::Dummy> pot;
-
                 bool metropolis(double du) {
                     if (du<0)
                         return true;
-                    return ( slump() > std::exp(-du)) ? false : true;
+                    return ( Move::Movebase::slump() > std::exp(-du)) ? false : true;
                 } //!< Metropolis criterion (true=accept)
 
             public:
@@ -238,44 +240,40 @@ namespace Faunus {
 
                 ~MCSimulation() {
                     std::ofstream f("out.json");
-                    json j0, j1, j2;
-                    moves.vec.front()->to_json(j0);
+                    json j;
+                    j["moves"] = json(moves);
+                    j["particles"] = json(old.spc.p);
                     if (f) {
-                        f << std::setw(4) << j0 << endl;
-                        //f << std::setw(4) << moves.front()->to_json() << endl;
-                        //f << std::setw(4) << j1 << endl;
-                        //f << std::setw(4) << j2 << endl;
+                        f << std::setw(4) << j << endl;
                         f.close();
                     }
                 }
 
                 void move() {
-                    auto it = slump.sample( moves.vec.begin(), moves.vec.end() ); // pick random move
-                    if (it==moves.vec.end()) {
+
+                    Change change;
+
+                    // pick move
+                    auto mv = Move::Movebase::slump.sample( moves.begin(), moves.end() );
+                    if (mv == moves.end() ) {
                         std::cerr << "no mc moves found" << endl;
                     } else {
-                        auto mv = *it;
-                        Change change;
-                        mv->move(change);
+                        (**mv).move(change);
 
                         if (!change.empty()) {
 
-                            //trial.pot.update(change); // update trial potential
-                            double unew = trial.pot.energy(change); // new energy
-                            double uold = old.pot.energy(change); // old energy
-                            double du = unew - uold;
+                            double du = trial.pot.energy(change)
+                                - old.pot.energy(change);
 
                             if (metropolis(du) ) // accept
                             {
                                 old.spc.sync( trial.spc, change ); // sync newspc -> oldspc
-                                // todo: sync hamiltonian
-                                mv->accept(change);
+                                (**mv).accept(change);
                             }
                             else // reject
                             {
                                 trial.spc.sync( old.spc, change ); // copy oldspc -> newspc
-                                // todo: sync hamiltonian
-                                mv->reject(change);
+                                (**mv).reject(change);
                             }
                         }
                     }

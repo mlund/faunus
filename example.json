@@ -29,14 +29,16 @@
             "HW": {
                 "eps": 0.0,
                 "q": 0.4238,
-                "sigma": 0.0
+                "sigma": 0.0,
+                "r": 1.0
             }
         },
         {
             "OW": {
                 "eps": 0.65029930595116,
                 "q": -0.8476,
-                "sigma": 3.165491652452016
+                "sigma": 3.165491652452016,
+                "r": 1.0
             }
         }
     ],
@@ -75,30 +77,16 @@
         {
             "moltransrot": {
                 "group": "water",
-                "dir": [
-                    1,
-                    1,
-                    1
-                ],
-                "dp": 0.8,
-                "dprot": 1.0,
-                "permol": true,
-                "prob": 1.0
-            }
-        },
-        {
-            "moltransrot": {
-                "group": "water",
                 "dp": 10,
                 "dprot": 1.0,
                 "permol": true,
-                "prob": 0.1
+                "prob": 1.0
             }
         }
     ],
     "system": {
         "geometry": {
-            "length": 32.0
+            "length": 10.0
         },
         "mcloop": {
             "macro": 10,

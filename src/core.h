@@ -171,6 +171,36 @@ namespace Faunus {
     }
 #endif
 
+    namespace u8 {
+        const std::string angstrom = "\u00c5";   //!< Angstrom symbol
+        const std::string beta = "\u03b2";       //!< Greek beta
+        const std::string cubed = "\u00b3";      //!< Superscript 3
+        const std::string cuberoot = "\u221b";   //!< Cubic root
+        const std::string degrees = "\u00b0";    //!< Degrees
+        const std::string epsilon = "\u03f5";    //!< Greek epsilon
+        const std::string epsilon_m = "\u03b5";  //!< Greek epsilon (minuscule)
+        const std::string gamma = "\u0263";      //!< Greek gamma
+        const std::string Gamma = "\u0393";      //!< Greek capital gamma
+        const std::string infinity="\u221E";     //!< Infinity
+        const std::string kappa = "\u03ba";      //!< Greek kappa
+        const std::string mu = "\u03bc";         //!< Greek mu
+        const std::string partial = "\u2202";    //!< Partial derivative
+        const std::string percent = "\ufe6a";    //!< Percent sign
+        const std::string pm = "\u00b1";         //!< Plus minus sign
+        const std::string rho = "\u03C1";        //!< Greek rho
+        const std::string rootof = "\u221a";     //!< Square root sign
+        const std::string squared = "\u00b2";    //!< Superscript 2
+        const std::string sigma = "\u03c3";      //!< Greek sigma
+        const std::string superminus = "\u207b"; //!< Superscript minus (-)
+        const std::string subr = "\u1D63";       //!< Subscript "r"
+        const std::string theta = "\u03b8";      //!< Greek theta
+
+        inline std::string bracket( const std::string &s )
+        {
+            return "\u27e8" + s + "\u27e9";
+        }
+    } //!< Unicode
+
     struct Tensor : public Eigen::Matrix3d {
         typedef Eigen::Matrix3d base;
 

@@ -84,7 +84,8 @@ namespace Faunus {
                     void _to_json(json &j) const override {
                         j = {
                             {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
-                            {"molid", molid}, {"prob", prob}, {"msqd", msqd.avg()},
+                            {"molid", molid}, {"prob", prob},
+                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
                             {"group", molecules<Tpvec>[molid].name}
                         };
                     }
@@ -122,7 +123,7 @@ namespace Faunus {
 
                             // translate group
                             Point oldcm = it->cm;
-                            Point dp = ranunit(slump).cwiseProduct(dir) * dptrans;
+                            Point dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
                             it->translate( dp, spc.geo.boundaryFunc );
                             _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
 
@@ -198,19 +199,8 @@ namespace Faunus {
 
     }//Move namespace
 
-    template<class Tspace>
+    template<class Tgeometry, class Tparticle>
         class MCSimulation {
-            public:
-                struct state {
-                    Tspace spc;
-                    Energy::Hamiltonian<Tspace> pot;
-                    state(const json &j) : spc(j), pot(spc,j) {
-                    }
-                }; //!< Contains everything to describe a state
-
-                state old, trial;
-                double uinit=0, dusum=0;
-
             private:
                 bool metropolis(double du) {
                     if (std::isnan(du))
@@ -221,12 +211,22 @@ namespace Faunus {
                 } //!< Metropolis criterion (true=accept)
 
             public:
-                typedef typename Tspace::Tparticle Tparticle;
+                typedef Space<Tgeometry, Tparticle> Tspace;
                 typedef typename Tspace::Tpvec Tpvec;
 
-                const Tpvec& p() { return old.spc.p; }
-                const auto& geo() { return old.spc.geo; }
+                struct state {
+                    Tspace spc;
+                    Energy::Hamiltonian<Tspace> pot;
+                    state(const json &j) : spc(j), pot(spc,j) {
+                    }
+                }; //!< Contains everything to describe a state
+
+                state old, trial;
                 Move::Propagator<Tspace> moves;
+                double uinit=0, dusum=0;
+
+                const auto& geo() { return old.spc.geo; }
+                const Tpvec& p() { return old.spc.p; }
 
                 MCSimulation(const json &j) : old(j), trial(j), moves(j, trial.spc) {
                     assert( old.spc.groups.front().begin() == old.spc.p.begin());

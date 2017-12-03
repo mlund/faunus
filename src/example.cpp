@@ -4,8 +4,8 @@
 using namespace Faunus;
 using namespace std;
 
+typedef Geometry::Cuboid Tgeometry;
 typedef Particle<Radius, Charge> Tparticle;
-typedef Space<Geometry::Cuboid, Tparticle> Tspace;
 
 int main() {
 
@@ -17,7 +17,7 @@ int main() {
     json j = openjson("example.json");
 
 
-    MCSimulation<Tspace> sim(j);
+    MCSimulation<Tgeometry,Tparticle> sim(j);
 
     for (int i=0; i<10000; i++)
         sim.move();

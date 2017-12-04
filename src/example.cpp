@@ -19,8 +19,9 @@ int main() {
 
     MCSimulation<Tgeometry,Tparticle> sim(j);
 
-    for (int i=0; i<10000; i++)
+    for (int i=0; i<10000; i++) {
         sim.move();
+    }
 
     FormatPQR::save("confout.pqr", sim.p(), sim.geo().getLength());
 }

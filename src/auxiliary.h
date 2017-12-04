@@ -1890,6 +1890,18 @@ namespace Faunus
                 void push_back(Args&... args) {
                     vec.push_back( std::make_shared<Tderived>(args...) );
                 } //!< Add (derived) pointer to vector
+
+            template<typename Tderived, class = std::enable_if_t<std::is_base_of<T,Tderived>::value>>
+                auto find() {
+                    std::vector<std::shared_ptr<Tderived>> _v;
+                    for (auto base : vec) {
+                        auto derived = std::dynamic_pointer_cast<Tderived>(base);
+                        if (derived)
+                            _v.push_back(derived);
+                    }
+                    return _v;
+                } //!< Pointer list to all matching type
+
         }; //!< Helper class for storing vectors of base pointers
 
 }//namespace

@@ -3,6 +3,7 @@
 #include "core.h"
 #include "energy.h"
 #include "average.h"
+#include "analysis.h"
 
 namespace Faunus {
     namespace Move {
@@ -34,9 +35,9 @@ namespace Faunus {
                     auto& _j = j[name];
                     _to_json(_j);
                     _j["acceptance"] = double(accepted)/cnt;
-                    _j["cnt"] = cnt;
-                    _j["accepted"] = accepted;
-                    _j["rejected"] = cnt-accepted;
+                    _j["N attempted"] = cnt;
+                    _j["N accepted"] = accepted;
+                    _j["N rejected"] = cnt-accepted;
                 } //!< JSON report w. statistics, output etc.
 
                 inline void move(Change &change) {
@@ -86,14 +87,14 @@ namespace Faunus {
                             {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
                             {"molid", molid}, {"prob", prob},
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"group", molecules<Tpvec>[molid].name}
+                            {"mol", molecules<Tpvec>[molid].name}
                         };
                     }
 
                     void _from_json(const json &j) override {
                         assert(!molecules<Tpvec>.empty());
                         try {
-                            std::string molname = j.at("group");
+                            std::string molname = j.at("mol");
                             auto it = findName(molecules<Tpvec>, molname);
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
@@ -144,6 +145,9 @@ namespace Faunus {
                     TranslateRotate(Tspace &spc) : spc(spc) {
                         name = "Molecular Translation and Rotation";
                     }
+                    void dummy() {
+                        std::cout << "dummy\n";
+                    }
             };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -158,11 +162,11 @@ namespace Faunus {
 
             Tspace spc;
             TranslateRotate<Tspace> mv(spc);
-            json j = R"( {"group":"B", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "prob":0.2 })"_json;
+            json j = R"( {"mol":"B", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "prob":0.2 })"_json;
             mv.from_json(j);
 
             j = json(mv).at(mv.name);
-            CHECK( j.at("group") == "B");
+            CHECK( j.at("mol")   == "B");
             CHECK( j.at("dir")   == Point(0,1,0) );
             CHECK( j.at("dp")    == 1.0 );
             CHECK( j.at("prob")  == 0.2 );
@@ -224,11 +228,12 @@ namespace Faunus {
                 state old, trial;
                 Move::Propagator<Tspace> moves;
                 double uinit=0, dusum=0;
+                Analysis::SystemEnergy Usys;
 
                 const auto& geo() { return old.spc.geo; }
                 const Tpvec& p() { return old.spc.p; }
 
-                MCSimulation(const json &j) : old(j), trial(j), moves(j, trial.spc) {
+                MCSimulation(const json &j) : old(j), trial(j), moves(j, trial.spc), Usys(j.at("analysis"), old.pot) {
                     assert( old.spc.groups.front().begin() == old.spc.p.begin());
                     assert( trial.spc.groups.front().begin() == trial.spc.p.begin());
 
@@ -300,6 +305,7 @@ namespace Faunus {
                             dusum+=du;
                         }
                     }
+                    Usys.sample();
                 }
 
         };

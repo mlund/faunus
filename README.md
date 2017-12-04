@@ -1,33 +1,146 @@
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+[![Documentation](https://codedocs.xyz/mlund/faunus.svg)](https://codedocs.xyz/mlund/faunus/)
+[![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
+[![Faunus](doc/images/animation.gif)](https://github.com/mlund/faunus)
 
-<script src="https://gist.githubusercontent.com/allejo/a83bcef99a9e0a6f481fce01e492efff/raw/6f163b8f9f8e3cc06d1d9f6d95dd908c7c6c610e/toc_pure_liquid.html" type="text/html"></script>
+Welcome to Faunus
+=================
+
+Faunus is a C++ framework for Metropolis Monte Carlo simulations of
+molecular systems. Below is a brief overview of features:
+
+- Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
+- General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
+- **Anisotropic** atoms (multipoles, sphero-cylinders, capped particles)
+- Ion titration moves (pKa prediction, Hofmeister effects etc.)
+- Highy modular
+- Free and open source (**MIT** license)
+
+Detailed information and support:
+
+- Support: <http://github.com/mlund/faunus/issues>
+- Source code: <http://github.com/mlund/faunus>
+- Code documentation: <https://codedocs.xyz/mlund/faunus>
+
+Requirements
+============
+
+- C/C++11 compiler (clang3.5+, gcc4.9+, intel15+, ...)
+- CMake 3.1+
+
+Optional:
+
+- ruamel_yaml (for yaml<->json conversion)
+- Doxygen (for code manual)
+- MPI (for parallelisation)
+- Python (for python module, experimental)
+
+Developed and tested on Linux and MacOS X.
+
+Getting the Source Code
+=======================
+
+Download the [latest release](https://github.com/mlund/faunus/releases/latest) or, if you're feeling adventurous, clone the development version directly from github,
+
+    git clone https://github.com/mlund/faunus.git
+    cd faunus
+
+Compiling
+=========
+
+    $ cmake . [options]
+    $ make [help]
+    $ make test (or use 'ctest -V' for verbose test output)
+
+Build options
+-------------
+
+Option                             | Description
+:--------------------------------- | :----------------------------------------
+`-DENABLE_MPI=OFF`                 | Build MPI programs (parallel tempering etc.)
+`-DENABLE_OPENMP=OFF`              | Enable OpenMP support
+`-DENABLE_PYTHON=ON`               | Build python bindings (experimental)
+`-DENABLE_POWERSASA=OFF`           | Enable SASA routines (external download)
+`-DCMAKE_BUILD_TYPE=RelWithDebInfo`| Alternatives: `Debug` or `Release` (faster)
+`-DCMAKE_CXX_FLAGS_RELEASE="..."`  | Compiler options for Release mode
+`-DCMAKE_CXX_FLAGS_DEBUG="..."`    | Compiler options for Debug mode
+`-DMYPLAYGROUND="absolute path"`   | Add additional source directory
+
+Example: Intel's C++ compiler
+-----------------------------
+
+    $ CXX=icpc CC=icc cmake . -DCMAKE_BUILD_TYPE=Release
+    $ make
+
+Example: Libraries in odd locations
+-----------------------------------
+
+    $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include cmake .
+
+Examples: Python support
+------------------------
+for examples.
+If several python distributions are installed, the build system may be guided to specific
+libraries using i.e.:
+
+    $ cmake . -DPYTHON_INCLUDE_DIR=$HOME/miniconda/include/python2.7 -DPYTHON_LIBRARY=$HOME/minoconda/lib/libpython2.7.dylib
+    $ make pyfaunus
+
+On OSX the linked python library can be probed and, if needed, renamed like this:
+
+    $ otool -L pyfaunus.so
+    $ install_name_tool -change libpython2.7.dylib $HOME/miniconda/lib/libpython2.7.dylib pyfaunus.so
+
+Resetting the build system
+--------------------------
+
+    $ make clean
+    $ rm -fR CMakeCache.txt CMakeFiles
+
+Contributors
+============
+
+In chronological order:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  Mikael Lund         Bjorn Persson       Martin Trulsson    
+Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
+  Anil Kurut           Chris Evers         Magnus Ullner      
+ Robert Vacha         Axel Thuresson      Bjorn Stenqvist
+ Joao Henriques     Alexei Abrikossov      Giulio Tesei
+ Lukas Sukenik      Niels Kouwenhoven
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Citing Faunus
+=============
+
+- Stenqvist et al.
+  _Molecular Simulation 2013, 39:1233_
+
+  [![DOI](https://img.shields.io/badge/DOI-10%2Fnvn-orange.svg)](http://dx.doi.org/10/nvn)
+
+- Lund, M., Persson, B., Trulsson, M.
+  _Source Code Biol. Med., 2008, 3:1_
+
+  [![DOI](https://img.shields.io/badge/DOI-10%2Fdfqgch-orange.svg)](http://dx.doi.org/10/dfqgch)
 
 
-* TOC
-{:toc}
+Licence
+=======
 
+ Faunus - A Framework for Molecular Modelling 
+ Copyright (C) 2002-2017 Mikael Lund
 
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or 
+ (at your option) any later version.
 
-# Faunus
-Sketch for new version of Faunus
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-## Getting started
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc.,
+ 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Here is a code block
-
-``` cpp
-int main() {
-double x;
-for (int i=0; i<3; i++)
-  std::cout << i << "\n";
-}
-```
-
-
-Here's some math $$\pi$$. And a math block
-
-$$
-\frac{1}{2}
-$$
-
-A variable \$\$ hej $$

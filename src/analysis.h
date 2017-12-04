@@ -5,7 +5,7 @@ namespace Faunus {
 
     namespace Analysis {
 
-        class AnalysisBase {
+        class Analysisbase {
             private:
                 inline virtual void _to_json(json &j) const {};
                 inline virtual void _from_json(const json &j) {};
@@ -22,23 +22,20 @@ namespace Faunus {
                 std::string cite; //!< reference, url, doi etc. describing the analysis
 
                 inline void to_json(json &j) const {
-                    assert( !name.empty() );
-                    auto& _j = j[name];
-                    _to_json(_j);
-                    _j["nstep"] = steps;
-                    _j["samples"] = cnt;
+                    j["relative time"] = timer.result();
+                    j["nstep"] = steps;
+                    j["samples"] = cnt;
                     if (!cite.empty())
-                        _j["citations"] = cite;
-                    _j["relative time"] = timer.result();
+                        j["citation"] = cite;
+                    _to_json(j);
                 } //!< JSON report w. statistics, output etc.
 
                 inline void from_json(const json &j) {
-                    auto &_j = j.at(name);
-                    steps = _j.value("nstep", 0);
-                    _from_json(_j);
+                    steps = j.value("nstep", 0);
+                    _from_json(j);
                 } //!< configure from json object
 
-                inline void sample()
+                inline virtual void sample()
                 {
                     stepcnt++;
                     if ( stepcnt == steps )
@@ -53,15 +50,25 @@ namespace Faunus {
 
         };
 
-        inline void to_json(json &j, const AnalysisBase &b) { b.to_json(j); }
-        inline void from_json(const json &j, AnalysisBase &b) { b.from_json(j); }
+        inline void to_json(json &j, const Analysisbase &base) {
+            assert( !base.name.empty() );
+            base.to_json( j[base.name] );
+        }
 
-        class SystemEnergy : public AnalysisBase {
+        class SystemEnergy : public Analysisbase {
             private:
                 std::string file;
                 std::ofstream f;
                 std::function<double()> energyFunc;
-                inline void _sample() override { f << cnt*steps << " " << energyFunc() << "\n"; }
+
+                inline void _sample() override {
+                    f << cnt*steps << " " << energyFunc() << "\n";
+                }
+
+                inline void _to_json(json &j) const override {
+                    j["file"] = file;
+                }
+
                 inline void _from_json(const json &j) override {
                     file = j.at("file");
                     if (f)
@@ -77,12 +84,31 @@ namespace Faunus {
                         name = "systemenergy";
                         from_json(j);
                         energyFunc = [&pot]() {
-                            Change c;
-                            c.all=true;
-                            return pot.energy(c);
+                            Change change;
+                            change.all = true;
+                            return pot.energy(change);
                         };
                     }
         }; //!< Save system energy to disk. Keywords: `nstep`, `file`.
+
+        class CombinedAnalysis : public BasePointerVector<Analysisbase> {
+            public:
+                template<class Tspace, class Tenergy>
+                    CombinedAnalysis(const json &j, Tspace &spc, Tenergy &pot) {
+                        for (auto &m : j.at("analysis")) // loop over move list
+                            for (auto it=m.begin(); it!=m.end(); ++it) {
+                                if (it.key()=="systemenergy")
+                                    push_back<SystemEnergy>(it.value(), pot);
+                                // additional analysis go here...
+                            }
+                    }
+
+                inline void sample() {
+                    for (auto i : this->vec)
+                        i->sample();
+                }
+
+        }; //!< Aggregates analysis
 
         /** @brief Example analysis */
         template<class T, class Enable = void>

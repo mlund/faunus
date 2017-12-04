@@ -1904,4 +1904,10 @@ namespace Faunus
 
         }; //!< Helper class for storing vectors of base pointers
 
+    template<typename T>
+        void to_json(json &j, const BasePointerVector<T> &b) {
+            for (auto i : b.vec)
+                j.push_back(*i);
+        }
+
 }//namespace

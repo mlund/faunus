@@ -115,9 +115,8 @@ namespace Faunus {
                         Energybase::name="Hamiltonian";
                         for (auto &m : j.at("energy")) {// loop over move list
                             for (auto it=m.begin(); it!=m.end(); ++it) {
-                                if (it.key()=="nonbonded_lj") {
-                                    this->template push_back<Energy::Nonbonded<Tspace,LennardJones<Tparticle>>>(spc, it.value());
-                                }
+                                if (it.key()=="nonbonded_lj")
+                                    push_back<Energy::Nonbonded<Tspace,LennardJones<Tparticle>>>(spc, it.value());
                                 // additional energies go here...
                             }
                         }

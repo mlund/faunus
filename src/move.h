@@ -195,17 +195,14 @@ namespace Faunus {
                     }
             };
 
-        template<typename Tspace>
-            void to_json(json &j, const Propagator<Tspace> &m) {
-                for (auto i : m.vec)
-                    j.push_back(*i);
-            }
-
     }//Move namespace
 
     template<class Tgeometry, class Tparticle>
         class MCSimulation {
             private:
+                typedef Space<Tgeometry, Tparticle> Tspace;
+                typedef typename Tspace::Tpvec Tpvec;
+
                 bool metropolis(double du) {
                     if (std::isnan(du))
                         return false;
@@ -213,10 +210,6 @@ namespace Faunus {
                         return true;
                     return ( Move::Movebase::slump() > std::exp(-du)) ? false : true;
                 } //!< Metropolis criterion (true=accept)
-
-            public:
-                typedef Space<Tgeometry, Tparticle> Tspace;
-                typedef typename Tspace::Tpvec Tpvec;
 
                 struct State {
                     Tspace spc;
@@ -226,23 +219,21 @@ namespace Faunus {
                 }; //!< Contains everything to describe a state
 
                 State state1, state2;
-                Move::Propagator<Tspace> moves;
                 double uinit=0, dusum=0;
-                Analysis::SystemEnergy Usys;
 
-                const auto& geo() { return state1.spc.geo; }
-                const Tpvec& p() { return state1.spc.p; }
+            public:
+                Move::Propagator<Tspace> moves;
 
-                MCSimulation(const json &j) : state1(j), state2(j), moves(j, state2.spc), Usys(j.at("analysis"), state1.pot) {
-                    assert( state1.spc.groups.front().begin() == state1.spc.p.begin());
-                    assert( state2.spc.groups.front().begin() == state2.spc.p.begin());
+                auto& pot() { return state1.pot; }
+                const auto& pot() const { return state1.pot; }
 
+                Tspace& space() { return state1.spc; }
+                const Tspace& space() const { return state1.spc; }
+
+                MCSimulation(const json &j) : state1(j), state2(j), moves(j, state2.spc) {
                     Change c;
                     c.all=true;
                     state2.spc.sync(state1.spc, c);
-                    assert(state1.spc.p.begin() != state2.spc.p.begin());
-                    assert(state1.spc.groups.front().begin() == state1.spc.p.begin());
-                    assert(state2.spc.groups.front().begin() == state2.spc.p.begin());
 
                     c.all=true;
                     double uinit1 = state1.pot.energy(c);
@@ -257,39 +248,24 @@ namespace Faunus {
                     Change c;
                     c.all=true;
                     double ufinal = state1.pot.energy(c);
-
                     cout << "initial energy = " << uinit << endl;
                     cout << "final energy   = " << ufinal << endl;
                     cout << "sum of changes = " << dusum << endl;
                     cout << "drift          = " << ufinal-(uinit+dusum) << endl;
-                    std::ofstream f("out.json");
-                    json j;
-                    j["moves"] = json(moves);
-                    j["space"] = state1.spc;
-                    j["energy"] = json(state1.pot);
-                    if (f) {
-                        f << std::setw(4) << j << endl;
-                        f.close();
-                    }
                 }
 
                 void move() {
-
                     Change change;
 
-                    // pick move
                     auto mv = Move::Movebase::slump.sample( moves.begin(), moves.end() );
-                    if (mv == moves.end() ) {
+                    if (mv == moves.end() )
                         std::cerr << "no mc moves found" << endl;
-                    } else {
+                    else {
                         (**mv).move(change);
-
                         if (!change.empty()) {
-
                             double unew = state2.pot.energy(change),
                                    uold = state1.pot.energy(change),
                                    du = unew - uold;
-
                             if (metropolis(du) ) // accept
                             {
                                 state1.spc.sync( state2.spc, change ); // sync newspc -> state1.pc
@@ -304,9 +280,16 @@ namespace Faunus {
                             dusum+=du;
                         }
                     }
-                    Usys.sample();
                 }
 
+                void to_json(json &j) {
+                    j["moves"] = moves;
+                    j["space"] = state1.spc;
+                    j["energy"] = state1.pot;
+                }
         };
+
+    template<class Tgeometry, class Tparticle>
+        void to_json(json &j, MCSimulation<Tgeometry,Tparticle> &mc) { mc.to_json(j); }
 
 }//namespace

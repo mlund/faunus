@@ -17,5 +17,5 @@ fi
 
 if [ -f example ]; then
     ./example
-    python yason.py < out.json -c
+    python yason.py < out.json
 fi

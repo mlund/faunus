@@ -178,28 +178,28 @@ namespace Faunus {
 #endif
 
         template<typename Tspace>
-        class Propagator : public BasePointerVector<Movebase> {
-            public:
-                using BasePointerVector<Movebase>::vec;
-                inline Propagator() {}
-                inline Propagator(const json &j, Tspace &spc) {
-                    for (auto &m : j.at("moves")) {// loop over move list
-                        for (auto it=m.begin(); it!=m.end(); ++it) {
-                            if (it.key()=="moltransrot") {
-                                this->template push_back<Move::TranslateRotate<Tspace>>(spc);
-                                vec.back()->from_json( it.value() );
+            class Propagator : public BasePointerVector<Movebase> {
+                public:
+                    using BasePointerVector<Movebase>::vec;
+                    inline Propagator() {}
+                    inline Propagator(const json &j, Tspace &spc) {
+                        for (auto &m : j.at("moves")) {// loop over move list
+                            for (auto it=m.begin(); it!=m.end(); ++it) {
+                                if (it.key()=="moltransrot") {
+                                    this->template push_back<Move::TranslateRotate<Tspace>>(spc);
+                                    vec.back()->from_json( it.value() );
+                                }
+                                // additional moves go here...
                             }
-                            // additional moves go here...
                         }
                     }
-                }
-        };
+            };
 
         template<typename Tspace>
-        void to_json(json &j, const Propagator<Tspace> &m) {
-            for (auto i : m.vec)
-                j.push_back(*i);
-        }
+            void to_json(json &j, const Propagator<Tspace> &m) {
+                for (auto i : m.vec)
+                    j.push_back(*i);
+            }
 
     }//Move namespace
 
@@ -218,45 +218,45 @@ namespace Faunus {
                 typedef Space<Tgeometry, Tparticle> Tspace;
                 typedef typename Tspace::Tpvec Tpvec;
 
-                struct state {
+                struct State {
                     Tspace spc;
                     Energy::Hamiltonian<Tspace> pot;
-                    state(const json &j) : spc(j), pot(spc,j) {
+                    State(const json &j) : spc(j), pot(spc,j) {
                     }
                 }; //!< Contains everything to describe a state
 
-                state old, trial;
+                State state1, state2;
                 Move::Propagator<Tspace> moves;
                 double uinit=0, dusum=0;
                 Analysis::SystemEnergy Usys;
 
-                const auto& geo() { return old.spc.geo; }
-                const Tpvec& p() { return old.spc.p; }
+                const auto& geo() { return state1.spc.geo; }
+                const Tpvec& p() { return state1.spc.p; }
 
-                MCSimulation(const json &j) : old(j), trial(j), moves(j, trial.spc), Usys(j.at("analysis"), old.pot) {
-                    assert( old.spc.groups.front().begin() == old.spc.p.begin());
-                    assert( trial.spc.groups.front().begin() == trial.spc.p.begin());
+                MCSimulation(const json &j) : state1(j), state2(j), moves(j, state2.spc), Usys(j.at("analysis"), state1.pot) {
+                    assert( state1.spc.groups.front().begin() == state1.spc.p.begin());
+                    assert( state2.spc.groups.front().begin() == state2.spc.p.begin());
 
                     Change c;
                     c.all=true;
-                    trial.spc.sync(old.spc, c);
-                    assert(old.spc.p.begin() != trial.spc.p.begin());
-                    assert(old.spc.groups.front().begin() == old.spc.p.begin());
-                    assert(trial.spc.groups.front().begin() == trial.spc.p.begin());
+                    state2.spc.sync(state1.spc, c);
+                    assert(state1.spc.p.begin() != state2.spc.p.begin());
+                    assert(state1.spc.groups.front().begin() == state1.spc.p.begin());
+                    assert(state2.spc.groups.front().begin() == state2.spc.p.begin());
 
                     c.all=true;
-                    double uinit1 = old.pot.energy(c);
-                    double uinit2 = trial.pot.energy(c);
+                    double uinit1 = state1.pot.energy(c);
+                    double uinit2 = state2.pot.energy(c);
                     uinit = uinit1;
 
                     cout << "uinit         = " << uinit1 << endl;
-                    cout << "uinit (trial) = " << uinit2 << endl;
+                    cout << "uinit (state2) = " << uinit2 << endl;
                 }
 
                 ~MCSimulation() {
                     Change c;
                     c.all=true;
-                    double ufinal = old.pot.energy(c);
+                    double ufinal = state1.pot.energy(c);
 
                     cout << "initial energy = " << uinit << endl;
                     cout << "final energy   = " << ufinal << endl;
@@ -265,8 +265,8 @@ namespace Faunus {
                     std::ofstream f("out.json");
                     json j;
                     j["moves"] = json(moves);
-                    j["space"] = old.spc;
-                    j["energy"] = json(old.pot);
+                    j["space"] = state1.spc;
+                    j["energy"] = json(state1.pot);
                     if (f) {
                         f << std::setw(4) << j << endl;
                         f.close();
@@ -286,19 +286,18 @@ namespace Faunus {
 
                         if (!change.empty()) {
 
-                            double du = trial.pot.energy(change)
-                                - old.pot.energy(change);
-
-                            //cout << du << " ";
+                            double unew = state2.pot.energy(change),
+                                   uold = state1.pot.energy(change),
+                                   du = unew - uold;
 
                             if (metropolis(du) ) // accept
                             {
-                                old.spc.sync( trial.spc, change ); // sync newspc -> oldspc
+                                state1.spc.sync( state2.spc, change ); // sync newspc -> state1.pc
                                 (**mv).accept(change);
                             }
                             else // reject
                             {
-                                trial.spc.sync( old.spc, change ); // copy oldspc -> newspc
+                                state2.spc.sync( state1.spc, change ); // copy state1.pc -> newspc
                                 (**mv).reject(change);
                                 du=0;
                             }

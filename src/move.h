@@ -13,6 +13,7 @@ namespace Faunus {
                 virtual void _move(Change&)=0; //!< Perform move and modify change object
                 virtual void _accept(Change&) {}; //!< Call after move is accepted
                 virtual void _reject(Change&) {}; //!< Call after move is rejected
+                TimeRelativeOfTotal<std::chrono::microseconds> timer;
             protected:
                 virtual void _to_json(json &j) const=0; //!< Extra info for report if needed
                 virtual void _from_json(const json &j)=0; //!< Extra info for report if needed
@@ -31,19 +32,20 @@ namespace Faunus {
                 }
 
                 inline void to_json(json &j) const {
-                    assert( !name.empty() );
-                    auto& _j = j[name];
-                    _to_json(_j);
-                    _j["acceptance"] = double(accepted)/cnt;
-                    _j["N attempted"] = cnt;
-                    _j["N accepted"] = accepted;
-                    _j["N rejected"] = cnt-accepted;
+                    _to_json(j);
+                    j["relative time"] = timer.result();
+                    j["acceptance"] = double(accepted)/cnt;
+                    j["N attempted"] = cnt;
+                    j["N accepted"] = accepted;
+                    j["N rejected"] = cnt-accepted;
                 } //!< JSON report w. statistics, output etc.
 
                 inline void move(Change &change) {
                     cnt++;
                     change.clear();
+                    timer.start();
                     _move(change);
+                    timer.stop();
                 } //!< Perform move and modify given change object
 
                 inline void accept(Change &c) {
@@ -60,11 +62,12 @@ namespace Faunus {
         Random Movebase::slump; // static instance of Random (shared for all moves)
 
         inline void from_json(const json &j, Movebase &m) {
-            m.from_json(j);
+            m.from_json( j );
         } //!< Configure any move via json
 
         inline void to_json(json &j, const Movebase &m) {
-            m.to_json(j);
+            assert( !m.name.empty() );
+            m.to_json(j[m.name]);
         }
 
         /**
@@ -145,9 +148,6 @@ namespace Faunus {
                     TranslateRotate(Tspace &spc) : spc(spc) {
                         name = "Molecular Translation and Rotation";
                     }
-                    void dummy() {
-                        std::cout << "dummy\n";
-                    }
             };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -220,6 +220,7 @@ namespace Faunus {
 
                 State state1, state2;
                 double uinit=0, dusum=0;
+                Average<double> uavg;
 
             public:
                 Move::Propagator<Tspace> moves;
@@ -230,28 +231,18 @@ namespace Faunus {
                 Tspace& space() { return state1.spc; }
                 const Tspace& space() const { return state1.spc; }
 
+                double drift() {
+                    Change c;
+                    c.all=true;
+                    double ufinal = state1.pot.energy(c);
+                    return ufinal-(uinit+dusum); 
+                } //!< Calculates energy drift from initial configuration
+
                 MCSimulation(const json &j) : state1(j), state2(j), moves(j, state2.spc) {
                     Change c;
                     c.all=true;
                     state2.spc.sync(state1.spc, c);
-
-                    c.all=true;
-                    double uinit1 = state1.pot.energy(c);
-                    double uinit2 = state2.pot.energy(c);
-                    uinit = uinit1;
-
-                    cout << "uinit         = " << uinit1 << endl;
-                    cout << "uinit (state2) = " << uinit2 << endl;
-                }
-
-                ~MCSimulation() {
-                    Change c;
-                    c.all=true;
-                    double ufinal = state1.pot.energy(c);
-                    cout << "initial energy = " << uinit << endl;
-                    cout << "final energy   = " << ufinal << endl;
-                    cout << "sum of changes = " << dusum << endl;
-                    cout << "drift          = " << ufinal-(uinit+dusum) << endl;
+                    double uinit = state1.pot.energy(c);
                 }
 
                 void move() {

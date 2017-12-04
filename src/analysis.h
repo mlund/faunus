@@ -60,13 +60,21 @@ namespace Faunus {
                 std::string file;
                 std::ofstream f;
                 std::function<double()> energyFunc;
+                Average<double> uavg; //!< mean energy
+                double uinit;
 
                 inline void _sample() override {
-                    f << cnt*steps << " " << energyFunc() << "\n";
+                    double u = energyFunc();
+                    uavg+=u;
+                    f << cnt*steps << " " << u << "\n";
                 }
 
                 inline void _to_json(json &j) const override {
                     j["file"] = file;
+                    j["init"] = uinit;
+                    j["final"] = energyFunc();
+                    if (cnt>0)
+                        j["mean"] = uavg.avg();
                 }
 
                 inline void _from_json(const json &j) override {
@@ -88,6 +96,7 @@ namespace Faunus {
                             change.all = true;
                             return pot.energy(change);
                         };
+                        uinit = energyFunc(); // initial energy
                     }
         }; //!< Save system energy to disk. Keywords: `nstep`, `file`.
 

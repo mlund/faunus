@@ -4,8 +4,10 @@ atomlist: # define all atom types below
     - A: {eps: 0.15, sigma: 4.0, dp: 40} 
     - B: {eps: 0.20, sigma: 10.0, dp: 10} 
 energy:
-    - nonbonded_lj:
+    - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
+        coulomb: {type: plain, epsr: 80, cutoff: 10}
+        
 moleculelist:
     - A:  {Ninit: 50, structure: A.xyz}
     - B:  {Ninit: 50, structure: B.xyz}

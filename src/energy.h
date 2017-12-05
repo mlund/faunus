@@ -4,6 +4,7 @@
 #include "geometry.h"
 #include "space.h"
 #include "potentials.h"
+#include "multipole.h"
 
 namespace Faunus {
     namespace Energy {
@@ -104,13 +105,13 @@ namespace Faunus {
 
                     Hamiltonian(Tspace &spc, const json &j) {
                         using namespace Potential;
-                        typedef CombinedPairPotential<Coulomb,LennardJones<Tparticle>> Tpairpot;
+                        typedef CombinedPairPotential<CoulombGalore,LennardJones<Tparticle>> CoulombLJ;
 
                         Energybase::name="Hamiltonian";
                         for (auto &m : j.at("energy")) {// loop over move list
                             for (auto it=m.begin(); it!=m.end(); ++it) {
-                                if (it.key()=="nonbonded_lj")
-                                    push_back<Energy::Nonbonded<Tspace,LennardJones<Tparticle>>>(spc, it.value());
+                                if (it.key()=="nonbonded_coulomblj")
+                                    push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(spc, it.value());
                                 // additional energies go here...
                             }
                         }

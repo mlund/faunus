@@ -1,5 +1,6 @@
 #include "core.h"
 #include "move.h"
+#include "multipole.h"
 
 using namespace Faunus;
 using namespace std;

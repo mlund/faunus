@@ -64,16 +64,10 @@ namespace Faunus {
 
                         // did everything change?
                         if (change.all) {
-                            // all groups<->all groups
-                            //for (size_t i=0; i<spc.groups.size()-1; i++)
-                            //    for (size_t j=i+1; j<spc.groups.size(); j++) {
-                            //        u+= g2g(spc.groups.at(i), spc.groups.at(j));
-                            //    }
-                            for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i ) {
-                                for ( auto j=i; ++j != spc.groups.end(); ) {
+                            for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i )
+                                for ( auto j=i; ++j != spc.groups.end(); )
                                     u += g2g( *i, *j );
-                                }
-                            }
+                            // more todo here...
                             return u;
                         }
 

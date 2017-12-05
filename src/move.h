@@ -203,7 +203,7 @@ namespace Faunus {
                 typedef Space<Tgeometry, Tparticle> Tspace;
                 typedef typename Tspace::Tpvec Tpvec;
 
-                bool metropolis(double du) {
+                bool metropolis(double du) const {
                     if (std::isnan(du))
                         return false;
                     if (du<0)
@@ -226,10 +226,11 @@ namespace Faunus {
                 Move::Propagator<Tspace> moves;
 
                 auto& pot() { return state1.pot; }
+                auto& space() { return state1.spc; }
                 const auto& pot() const { return state1.pot; }
-
-                Tspace& space() { return state1.spc; }
-                const Tspace& space() const { return state1.spc; }
+                const auto& space() const { return state1.spc; }
+                const auto& geometry() const { return state1.spc.geo; }
+                const auto& particles() const { return state1.spc.p; }
 
                 double drift() {
                     Change c;
@@ -242,33 +243,32 @@ namespace Faunus {
                     Change c;
                     c.all=true;
                     state2.spc.sync(state1.spc, c);
-                    double uinit = state1.pot.energy(c);
+                    uinit = state1.pot.energy(c);
                 }
 
                 void move() {
-                    Change change;
-
                     auto mv = Move::Movebase::slump.sample( moves.begin(), moves.end() );
                     if (mv == moves.end() )
-                        std::cerr << "no mc moves found" << endl;
+                        std::cerr << "Warning: No MC moves defined" << endl;
                     else {
+                        Change change;
                         (**mv).move(change);
                         if (!change.empty()) {
                             double unew = state2.pot.energy(change),
                                    uold = state1.pot.energy(change),
                                    du = unew - uold;
-                            if (metropolis(du) ) // accept
-                            {
-                                state1.spc.sync( state2.spc, change ); // sync newspc -> state1.pc
+                            if ( metropolis(du) )
+                            { // accept move
+                                state1.spc.sync( state2.spc, change );
                                 (**mv).accept(change);
                             }
-                            else // reject
-                            {
-                                state2.spc.sync( state1.spc, change ); // copy state1.pc -> newspc
+                            else
+                            { // reject move
+                                state2.spc.sync( state1.spc, change );
                                 (**mv).reject(change);
                                 du=0;
                             }
-                            dusum+=du;
+                            dusum+=du; // sum of all energy changes
                         }
                     }
                 }
@@ -276,7 +276,7 @@ namespace Faunus {
                 void to_json(json &j) {
                     j["moves"] = moves;
                     j["space"] = state1.spc;
-                    j["energy"] = state1.pot;
+                    j["energy"].push_back(state1.pot);
                 }
         };
 

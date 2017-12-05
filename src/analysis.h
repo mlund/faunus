@@ -22,12 +22,16 @@ namespace Faunus {
                 std::string cite; //!< reference, url, doi etc. describing the analysis
 
                 inline void to_json(json &j) const {
-                    j["relative time"] = timer.result();
-                    j["nstep"] = steps;
-                    j["samples"] = cnt;
+                    assert( !name.empty() );
+                    auto &_j = j[name];
+                    if (cnt>0) {
+                        _j["relative time"] = timer.result();
+                        _j["nstep"] = steps;
+                        _j["samples"] = cnt;
+                    }
                     if (!cite.empty())
-                        j["citation"] = cite;
-                    _to_json(j);
+                        _j["citation"] = cite;
+                    _to_json(_j);
                 } //!< JSON report w. statistics, output etc.
 
                 inline void from_json(const json &j) {
@@ -47,12 +51,10 @@ namespace Faunus {
                         timer.stop();
                     }
                 }
-
         };
 
         inline void to_json(json &j, const Analysisbase &base) {
-            assert( !base.name.empty() );
-            base.to_json( j[base.name] );
+            base.to_json( j );
         }
 
         class SystemEnergy : public Analysisbase {
@@ -99,6 +101,41 @@ namespace Faunus {
                         uinit = energyFunc(); // initial energy
                     }
         }; //!< Save system energy to disk. Keywords: `nstep`, `file`.
+
+        class DumpConfiguration : public Analysisbase {
+            private:
+                std::function<void(std::string)> writeFunc = nullptr;
+                std::string file;
+                inline void _to_json(json &j) const override {
+                    j["file"] = file;
+                }
+            public:
+                template<class Tspace>
+                    DumpConfiguration(const json &j, Tspace &spc) {
+                        using std::ref;
+                        using std::placeholders::_1;
+
+                        name = "dump";
+                        from_json(j);
+                        steps = j.value("nstep", -1);
+                        file = j.at("file");
+                        std::string suffix = file.substr(file.find_last_of(".") + 1);
+                        if ( suffix == "aam" )
+                            writeFunc = std::bind(
+                                    []( std::string file, Tspace &s ) { FormatPQR::save(file, s.p, s.geo.getLength()); },
+                                    _1, std::ref(spc));
+                    }
+
+                ~DumpConfiguration() {
+                    if (steps==-1)
+                        _sample();
+                }
+
+                void _sample() override {
+                    writeFunc(file);
+                }
+
+        };
 
         class CombinedAnalysis : public BasePointerVector<Analysisbase> {
             public:

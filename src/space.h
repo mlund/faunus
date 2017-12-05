@@ -13,7 +13,7 @@ namespace Faunus {
      *   empty, it is assumed that *all* particles in the group are affected.
      */
     struct Change {
-        double dV = 0;     //!< Volume change (in different directions)
+        bool dV = false;    //!< Set to true if there's a volume change
         double all = false; //!< Set to true if *everything* has changed
 
         struct data {
@@ -31,7 +31,7 @@ namespace Faunus {
 
         void clear()
         {
-            dV=0;
+            dV=false;;
             all=false;
             groups.clear();
             assert(empty());
@@ -40,8 +40,8 @@ namespace Faunus {
         bool empty() const
         {
             if (all==false)
-                if ( groups.empty())
-                    if ( dV==0 )
+                if (dV==false)
+                    if (groups.empty())
                         return true;
             return false;
         } //!< Check if change object is empty
@@ -117,7 +117,7 @@ namespace Faunus {
                 assert(&other != this);
                 assert( p.begin() != other.p.begin());
 
-                if (std::fabs(change.dV)>1e-9)
+                if (change.dV)
                     geo = other.geo;
 
                 // deep copy *everything*

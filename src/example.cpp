@@ -31,5 +31,5 @@ int main() {
         f << std::setw(4) << j << endl;
     }
 
-    FormatPQR::save("confout.pqr", sim.space().p, sim.space().geo.getLength());
+    FormatPQR::save("confout.pqr", sim.particles(), sim.geometry().getLength());
 }

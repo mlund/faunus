@@ -131,7 +131,11 @@ namespace Faunus {
                             it->translate( dp, spc.geo.boundaryFunc );
                             _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
 
-                            // add rotation here...
+                            // rotate group
+                            Point u = ranunit(slump);
+                            double angle = dprot * (slump()-0.5);
+                            Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
+                            it->rotate(Q, spc.geo.boundaryFunc);
 
                             Change::data d; // object that describes what was moved in a single group
                             d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group

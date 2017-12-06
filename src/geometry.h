@@ -283,18 +283,22 @@ namespace Faunus {
 
         enum class weight { MASS, CHARGE, GEOMETRIC };
 
-        template<typename Titer, typename Tparticle=typename Titer::value_type, typename weightFunc, typename boundaryFunc>
-            Point anyCenter( Titer begin, Titer end, const boundaryFunc &boundary, const weightFunc &weight)
+        template<typename Titer, typename Tparticle=typename Titer::value_type, typename weightFunc>
+            Point anyCenter( Titer begin, Titer end, BoundaryFunction boundary, const weightFunc &weight,
+                    const Point &shift={0,0,0})
             {
                 double sum=0;
                 Point c(0,0,0);
                 try {
                     for (auto &i=begin; i!=end; ++i) {
+                        Point t = i->pos + shift;       // translate to origo
+                        boundary(t);
                         double w = weight(*i);
-                        c += w * i->pos;
+                        c += w * t;
                         sum += w;
                     }
-                    c /= sum;
+                    c = c/sum - shift;
+                    boundary(c);
                     if (std::isnan(c[0]))
                         throw std::runtime_error("sum of weights is zero");
                 }
@@ -305,9 +309,9 @@ namespace Faunus {
             } //!< Mass, charge, or geometric center of a collection of particles
 
         template<typename Titer, typename Tparticle=typename Titer::value_type>
-            Point massCenter(Titer begin, Titer end, const BoundaryFunction &boundary=[](Point&){}) {
+            Point massCenter(Titer begin, Titer end, BoundaryFunction boundary=[](Point&){}, const Point &shift={0,0,0}) {
                 return anyCenter(begin, end, boundary,
-                        []( const Tparticle &p ){ return atoms<Tparticle>.at(p.id).mw; } );
+                        []( const Tparticle &p ){ return atoms<Tparticle>.at(p.id).mw; }, shift );
             } // Mass center
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -355,7 +359,7 @@ namespace Faunus {
                     Titer begin,
                     Titer end,
                     const Eigen::Quaterniond &q,
-                    const BoundaryFunction &boundary=[](Point&){} ,
+                    BoundaryFunction boundary=[](Point&){},
                     const Point &shift=Point(0,0,0) )
             {
                 auto m = q.toRotationMatrix(); // rotation matrix

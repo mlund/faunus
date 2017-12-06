@@ -218,9 +218,8 @@ namespace Faunus {
                     }
                 } //!< Translate particle positions and mass center
 
-            template<typename Tboundary>
-                void rotate(const Eigen::Quaterniond &q, Tboundary boundary) {
-                    Geometry::rotate(begin(), end(), q, boundary, -cm);
+                void rotate(const Eigen::Quaterniond &Q, Geometry::BoundaryFunction boundary=[](Point&){}) {
+                    Geometry::rotate(begin(), end(), Q, boundary, -cm);
                 } //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
 
         }; //!< Groups of particles

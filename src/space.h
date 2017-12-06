@@ -98,7 +98,7 @@ namespace Faunus {
                     }
                     Tgroup g( p.end()-in.size(), p.end() );
                     g.id = molid;
-                    g.cm = Geometry::massCenter(in.begin(), in.end(), geo.boundaryFunc);
+                    g.cm = Geometry::massCenter(in.begin(), in.end());
                     groups.push_back(g);
                     assert( in.size() == groups.back().size() );
                 }

@@ -158,17 +158,23 @@ namespace Faunus {
             void from_json(const json &j) override { lB = pc::lB( j.at("epsr") ); }
         };
 
-        struct HardSphere : public PairPotentialBase {
-            HardSphere() { name="hardsphere"; }
-            template<typename... T>
-                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r2) const {
-                    auto d=a.radius+b.radius;
-                    return (r2.squaredNorm()<d*d) ? pc::infty : 0;
+        template<class Tparticle>
+            struct HardSphere : public PairPotentialBase {
+                PairMatrix<double> d2; // matrix of (r1+r2)^2
+                HardSphere() {
+                    name="hardsphere";
+                    for (auto &i : atoms<Tparticle>)
+                        for (auto &j : atoms<Tparticle>)
+                            d2.set( i.id(), j.id(), std::pow((i.sigma+j.sigma)/2,2));
                 }
+                template<typename... T>
+                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r2) const {
+                        return (r2.squaredNorm()<d2(a.id,b.id)) ? pc::infty : 0;
+                    }
 
-            void to_json(json &j) const override { j["comment"] = "N/A"; }
-            void from_json(const json&) override {}
-        };
+                void to_json(json &j) const override { j["comment"] = "N/A"; }
+                void from_json(const json&) override {}
+            }; //!< Hardsphere potential
 
     }//end of namespace Potential
 }//end of namespace Faunus

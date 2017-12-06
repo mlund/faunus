@@ -107,6 +107,7 @@ namespace Faunus {
                         using namespace Potential;
 
                         typedef CombinedPairPotential<CoulombGalore,LennardJones<Tparticle>> CoulombLJ;
+                        typedef CombinedPairPotential<CoulombGalore,HardSphere<Tparticle>> CoulombHS;
 
                         Energybase::name="Hamiltonian";
                         for (auto &m : j.at("energy")) {// loop over move list
@@ -114,6 +115,8 @@ namespace Faunus {
                                 try {
                                     if (it.key()=="nonbonded_coulomblj")
                                         push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(spc, it.value());
+                                    if (it.key()=="nonbonded_coulombhs")
+                                        push_back<Energy::Nonbonded<Tspace,CoulombHS>>(spc, it.value());
                                     // additional energies go here...
                                 } catch (std::exception &e) {
                                     throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what());

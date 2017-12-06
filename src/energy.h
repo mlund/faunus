@@ -105,6 +105,7 @@ namespace Faunus {
 
                     Hamiltonian(Tspace &spc, const json &j) {
                         using namespace Potential;
+
                         typedef CombinedPairPotential<CoulombGalore,LennardJones<Tparticle>> CoulombLJ;
 
                         Energybase::name="Hamiltonian";

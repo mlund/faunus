@@ -1,5 +1,5 @@
 analysis:
-    - systemenergy: {file: energy.dat, nstep: 500}
+    - systemenergy: {file: energy.dat, nstep: 0}
 atomlist: # define all atom types below
     - A: {eps: 0.15, sigma: 4.0, dp: 40} 
     - B: {eps: 0.20, sigma: 10.0, dp: 10} 
@@ -15,7 +15,7 @@ moves:
     - moltransrot: { mol: A, dp: 40, dprot: 0 }
     - moltransrot: { mol: B, dp: 10, dprot: 0 }
 system:
-    geometry: {length: 50} # cuboid length can be a scalar of an array of sidelengths
     mcloop: {macro: 10, micro: 50}
     temperature: 298.15 # in Kelvin
+geometry: {length: 50} # cuboid length can be a scalar of an array of sidelengths
 

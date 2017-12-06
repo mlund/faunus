@@ -73,13 +73,8 @@ namespace Faunus {
             Space() {}
 
             Space(const json &j) {
-                atoms<Tparticle> = j.at("atomlist").get<decltype(atoms<Tparticle>)>();
-                molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
-                Point a;
-                geo.boundaryFunc(a);
-                geo = j.at("system").at("geometry");
-                geo.boundaryFunc(a);
-                insertMolecules(*this);
+                new_from_json(j, *this);
+                return;
             }
 
             void clear() {
@@ -150,37 +145,73 @@ namespace Faunus {
                 assert( p.begin() != other.p.begin());
             } //!< Copy differing data from other (o) Space using Change object
 
-            void applyChange(const Tchange &change) {
-                for (auto& f : changeTriggers)
-                    f(*this, change);
+            //void applyChange(const Tchange &change) {
+            //    for (auto& f : changeTriggers)
+            //        f(*this, change);
+            //}
+
+            json info() {
+                json j;
+                j["number of particles"] = p.size();
+                j["number of groups"] = groups.size();
+                j["geometry"] = geo;
+                auto& _j = j["groups"];
+                for (auto &i : groups) {
+                    auto name = molecules<decltype(p)>.at(i.id).name;
+                    json tmp, d=i;
+                    d.erase("cm");
+                    d.erase("id");
+                    d.erase("atomic");
+                    auto ndx = i.to_index(p.begin());
+                    d["index"] = std::to_string(ndx.first)+"-"+std::to_string(ndx.second);
+                    tmp[name] = d;
+                    _j.push_back( tmp );
+                }
+                return j;
             }
+
         };
 
     template<class Tgeometry, class Tparticle>
         void to_json(json &j, Space<Tgeometry,Tparticle> &spc) {
-            j["number of particles"] = spc.p.size();
-            j["number of groups"] = spc.groups.size();
+            j["atomlist"] = atoms<Tparticle>;
+            j["moleculelist"] = molecules<decltype(spc.p)>;
             j["geometry"] = spc.geo;
-            auto& _j = j["groups"];
-            for (auto &i : spc.groups) {
-                auto name = molecules<decltype(spc.p)>.at(i.id).name;
-                json tmp, d=i;
-                d.erase("cm");
-                d.erase("id");
-                d.erase("atomic");
-                d["capacity"] = i.capacity();
-                auto ndx = i.to_index(spc.p.begin());
-                d["index"] = std::to_string(ndx.first)+"-"+std::to_string(ndx.second);
-                tmp[name] = d;
-                _j.push_back( tmp );
-            }
-            //j["particles"] = spc.p;
-        }
+            j["groups"] = spc.groups;
+            j["particles"] = spc.p;
+        } //!< Serialize Space to json object
 
     template<class Tgeometry, class Tparticletype>
-        void from_json(const json &j, Space<Tgeometry,Tparticletype> &p) {
-            assert(1==2 && "to be implemented");
-        }
+        void new_from_json(const json &j, Space<Tgeometry,Tparticletype> &spc) {
+            typedef typename Space<Tgeometry,Tparticletype>::Tpvec Tpvec;
+            spc.clear();
+
+            spc.geo = j.at("geometry");
+            atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
+            molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+
+            if ( j.count("groups")==0 )
+            {
+                insertMolecules( spc );
+            }
+            else
+            {
+                spc.p = j.at("particles").get<Tpvec>();
+
+                if (!spc.p.empty()) {
+                    auto begin = spc.p.begin();
+                    Group<Tparticletype> g(begin,begin);
+                    for (auto &i : j.at("groups")) {
+                        g.begin() = begin;
+                        from_json(i, g);
+                        spc.groups.push_back(g);
+                        begin = g.trueend();
+                    }
+                    if (begin != spc.p.end())
+                        throw std::runtime_error("json->space load error");
+                }
+            }
+        } //!< Deserialize json object to Space
 
     template<typename Tspace>
         void insertMolecules(Tspace &spc) {

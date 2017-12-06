@@ -289,7 +289,7 @@ namespace Faunus {
 
                 void to_json(json &j) {
                     j["moves"] = moves;
-                    j["space"] = state1.spc;
+                    j["space"] = state1.spc.info();
                     j["energy"].push_back(state1.pot);
                 }
         };

@@ -20,7 +20,7 @@ int main() {
     MCSimulation<Tgeometry,Tparticle> sim(j);
     Analysis::CombinedAnalysis analysis(j, sim.space(), sim.pot());
 
-    for (int i=0; i<10000; i++) {
+    for (int i=0; i<1e3; i++) {
         sim.move();
         analysis.sample();
     }

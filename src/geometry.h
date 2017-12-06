@@ -337,7 +337,7 @@ namespace Faunus {
 
         template<class Titer=typename std::vector<T>::iterator>
             void translate( Titer begin, Titer end, const Point &d,
-                    const BoundaryFunction &boundary=[](Point &i){}  )
+                    BoundaryFunction boundary=[](Point &i){}  )
             {
                 for ( auto i=begin; i!=end; ++i )
                 {
@@ -347,12 +347,11 @@ namespace Faunus {
             } //!< Vector displacement of a range of particles
 
         template<typename Titer>
-            void cm2origo( Titer begin, Titer end, const BoundaryFunction &boundary=[](Point&){} )
+            void cm2origo( Titer begin, Titer end, BoundaryFunction boundary=[](Point&){} )
             {
                 Point cm = massCenter(begin, end, boundary);
                 translate(begin, end, -cm, boundary);
             } //!< Translate to that mass center is in (0,0,0)
-
 
         template<typename Titer>
             void rotate(
@@ -363,7 +362,7 @@ namespace Faunus {
                     const Point &shift=Point(0,0,0) )
             {
                 auto m = q.toRotationMatrix(); // rotation matrix
-                for (auto &i=begin; i!=end; ++i) {
+                for (auto i=begin; i!=end; ++i) {
                     i->rotate(q,m); // rotate internal coordinates
                     i->pos += shift;
                     boundary(i->pos);

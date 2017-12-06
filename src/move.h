@@ -126,21 +126,29 @@ namespace Faunus {
                             assert(it->id==molid);
 
                             // translate group
-                            Point oldcm = it->cm;
-                            Point dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
-                            it->translate( dp, spc.geo.boundaryFunc );
-                            _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
+                            if (dptrans>0) {
+                                Point oldcm = it->cm;
+                                Point dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
+                                it->translate( dp, spc.geo.boundaryFunc );
+                                _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
+                            }
 
                             // rotate group
-                            Point u = ranunit(slump);
-                            double angle = dprot * (slump()-0.5);
-                            Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
-                            it->rotate(Q, spc.geo.boundaryFunc);
+                            if (dprot>0) {
+                                Point u = ranunit(slump);
+                                double angle = dprot * (slump()-0.5);
+                                Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
+                                it->rotate(Q, spc.geo.boundaryFunc);
+                            }
 
-                            Change::data d; // object that describes what was moved in a single group
-                            d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
-                            d.all = true; // *all* atoms in group were moved
-                            change.groups.push_back( d ); // add to list of moved groups
+                            // specify changes
+                            if (dptrans>0 || dprot>0) {
+                                Change::data d; // object that describes what was moved in a single group
+                                d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
+                                d.all = true; // *all* atoms in group were moved
+                                change.groups.push_back( d ); // add to list of moved groups
+                            }
+                            assert( spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-6 );
                         }
                         else std::cerr << name << ": no molecules found" << std::endl;
                     }
@@ -256,7 +264,9 @@ namespace Faunus {
                         std::cerr << "Warning: No MC moves defined" << endl;
                     else {
                         Change change;
+
                         (**mv).move(change);
+
                         if (!change.empty()) {
                             double unew = state2.pot.energy(change),
                                    uold = state1.pot.energy(change),

@@ -156,6 +156,7 @@ namespace Faunus {
 
             template<class Trange>
                 Group(Trange &rng) : base(rng.begin(), rng.end()) {
+                    assert(1==2);
                     // WARNING: Only iterators are copied!
                 } //!< Constructor from range. WARNING: Only iterators are copied
 
@@ -166,15 +167,22 @@ namespace Faunus {
             Group& operator=(const Group &o) {
                 if (&o == this)
                     return *this;
+                shallowcopy(o);
+                std::copy(o.begin(), o.end(), begin()); // copy all particle data
+                return *this;
+            } //!< Deep copy contents from another Group
+
+            Group& shallowcopy(const Group &o) {
+                if (&o == this)
+                    return *this;
                 if (this->capacity() != o.capacity())
                     throw std::runtime_error("capacity mismatch");
                 this->resize(o.size());
-                std::copy(o.begin(), o.end(), begin());
                 id = o.id;
                 atomic = o.atomic;
                 cm = o.cm;
                 return *this;
-            } //!< Deep copy contents from another Group
+            } //!< copy group data from `other` but *not* particle data
 
             template<class UnaryPredicate>
                 auto filter( UnaryPredicate f ) const {
@@ -201,30 +209,28 @@ namespace Faunus {
                         i.pos = cm + vdist( i.pos, cm );
                 } //!< Remove periodic boundaries with respect to mass center (Order N complexity).
 
-            template<typename TboundaryFunc>
-                void wrap(const TboundaryFunc &boundary) {
-                    boundary(cm);
-                    for (auto &i : *this)
-                        boundary(i.pos);
-                } //!< Apply periodic boundaries (Order N complexity).
+            void wrap(Geometry::BoundaryFunction boundary) {
+                boundary(cm);
+                for (auto &i : *this)
+                    boundary(i.pos);
+            } //!< Apply periodic boundaries (Order N complexity).
 
-                void translate(const Point &d, Geometry::BoundaryFunction boundary=[](Point&){}) {
-                    assert(boundary!=nullptr);
-                    cm += d;
-                    boundary(cm);
-                    for (auto &i : *this) {
-                        i.pos += d;
-                        boundary(i.pos);
-                    }
-                } //!< Translate particle positions and mass center
+            void translate(const Point &d, Geometry::BoundaryFunction boundary=[](Point&){}) {
+                cm += d;
+                boundary(cm);
+                for (auto &i : *this) {
+                    i.pos += d;
+                    boundary(i.pos);
+                }
+            } //!< Translate particle positions and mass center
 
-                void rotate(const Eigen::Quaterniond &Q, Geometry::BoundaryFunction boundary=[](Point&){}) {
-                    Geometry::rotate(begin(), end(), Q, boundary, -cm);
-                } //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
+            void rotate(const Eigen::Quaterniond &Q, Geometry::BoundaryFunction boundary) {
+                Geometry::rotate(begin(), end(), Q, boundary, -cm);
+            } //!< Rotate all particles in group incl. internal coordinates (dipole moment etc.)
 
         }; //!< Groups of particles
 
-        template<class T /** Particle type */>
+    template<class T /** Particle type */>
         void to_json(json &j, const Group<T> &g) {
             j = {{"id", g.id}, {"cm",g.cm}, {"atomic",g.atomic}, {"size",g.size()}};
         }

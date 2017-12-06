@@ -98,7 +98,7 @@ namespace Faunus {
                     }
                     Tgroup g( p.end()-in.size(), p.end() );
                     g.id = molid;
-                    g.cm = Geometry::massCenter(in.begin(), in.end());
+                    g.cm = Geometry::massCenter(in.begin(), in.end(), geo.boundaryFunc);
                     groups.push_back(g);
                     assert( in.size() == groups.back().size() );
                 }
@@ -134,17 +134,14 @@ namespace Faunus {
                 else {
                     for (auto &m : change.groups) {
 
-                        // bad use of "o" = other or old?
                         auto &g = groups.at(m.index);  // old group
                         auto &gother = other.groups.at(m.index);// new group
 
-                        //go = gn; // deep copy group
-                        //assert( gn.size() == go.size() );
-                        assert( g.capacity() == gother.capacity() );
+                        g.shallowcopy(gother); // copy group data but *not* particles
 
-                        if (m.all) // all atoms have moved
+                        if (m.all) // copy all particles 
                             std::copy( gother.begin(), gother.end(), g.begin() );
-                        else // only some atoms have moved
+                        else // copy only a subset
                             for (auto i : m.atoms)
                                 *(g.begin()+i) = *(gother.begin()+i);
                     }

@@ -1,5 +1,7 @@
 analysis:
     - systemenergy: {file: energy.dat, nstep: 0}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: confout.state}
 atomlist: # define all atom types below
     - A: {eps: 0.15, sigma: 4.0, dp: 40} 
     - B: {eps: 0.20, sigma: 10.0, dp: 10} 

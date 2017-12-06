@@ -102,7 +102,7 @@ namespace Faunus {
                     }
         }; //!< Save system energy to disk. Keywords: `nstep`, `file`.
 
-        class DumpConfiguration : public Analysisbase {
+        class SaveState : public Analysisbase {
             private:
                 std::function<void(std::string)> writeFunc = nullptr;
                 std::string file;
@@ -111,22 +111,32 @@ namespace Faunus {
                 }
             public:
                 template<class Tspace>
-                    DumpConfiguration(const json &j, Tspace &spc) {
+                    SaveState(const json &j, Tspace &spc) {
                         using std::ref;
                         using std::placeholders::_1;
 
-                        name = "dump";
+                        name = "savestate";
                         from_json(j);
                         steps = j.value("nstep", -1);
                         file = j.at("file");
                         std::string suffix = file.substr(file.find_last_of(".") + 1);
                         if ( suffix == "aam" )
                             writeFunc = std::bind(
+                                    []( std::string file, Tspace &s ) { FormatAAM::save(file, s.p); },
+                                    _1, std::ref(spc));
+                        if ( suffix == "pqr" )
+                            writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatPQR::save(file, s.p, s.geo.getLength()); },
                                     _1, std::ref(spc));
+                        if ( suffix == "state" )
+                            writeFunc = [&spc](const std::string &file) {
+                                std::ofstream f(file);
+                                if (f)
+                                    f << std::setw(4) << json(spc);
+                            };
                     }
 
-                ~DumpConfiguration() {
+                ~SaveState() {
                     if (steps==-1)
                         _sample();
                 }
@@ -145,6 +155,8 @@ namespace Faunus {
                             for (auto it=m.begin(); it!=m.end(); ++it) {
                                 if (it.key()=="systemenergy")
                                     push_back<SystemEnergy>(it.value(), pot);
+                                if (it.key()=="savestate")
+                                    push_back<SaveState>(it.value(), spc);
                                 // additional analysis go here...
                             }
                     }

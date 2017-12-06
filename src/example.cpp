@@ -33,6 +33,4 @@ int main() {
     }
 
     cout << "absolute drift (kT) = " << sim.drift() << endl;
-
-    FormatPQR::save("confout.pqr", sim.particles(), sim.geometry().getLength());
 }

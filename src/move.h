@@ -37,7 +37,7 @@ namespace Faunus {
                     }
                     _from_json(j);
                     if (repeat<0)
-                        repeat=1;
+                        repeat=0;
                 }
 
                 inline void to_json(json &j) const {
@@ -169,6 +169,7 @@ namespace Faunus {
                 public:
                     TranslateRotate(Tspace &spc) : spc(spc) {
                         name = "Molecular Translation and Rotation";
+                        repeat = -1; // meaning repeat N times
                     }
             };
 
@@ -218,12 +219,16 @@ namespace Faunus {
                     inline Propagator(const json &j, Tspace &spc) {
                         for (auto &m : j.at("moves")) {// loop over move list
                             for (auto it=m.begin(); it!=m.end(); ++it) {
-                                if (it.key()=="moltransrot") {
-                                    this->template push_back<Move::TranslateRotate<Tspace>>(spc);
-                                    vec.back()->from_json( it.value() );
-                                    addWeight(vec.back()->repeat);
+                                try {
+                                    if (it.key()=="moltransrot") {
+                                        this->template push_back<Move::TranslateRotate<Tspace>>(spc);
+                                        vec.back()->from_json( it.value() );
+                                        addWeight(vec.back()->repeat);
+                                    }
+                                    // additional moves go here...
+                                } catch (std::exception &e) {
+                                    throw std::runtime_error("Error adding move '" + it.key() + "': " + e.what());
                                 }
-                                // additional moves go here...
                             }
                         }
                     }
@@ -292,8 +297,7 @@ namespace Faunus {
 
                 void move() {
                     for (int i=0; i<moves.repeat(); i++) {
-                        auto mv = moves.sample();
-
+                        auto mv = moves.sample(); // pick random move
                         if (mv != moves.end() ) {
 
                             Change change;
@@ -303,13 +307,11 @@ namespace Faunus {
                                 double unew = state2.pot.energy(change),
                                        uold = state1.pot.energy(change),
                                        du = unew - uold;
-                                if ( metropolis(du) )
-                                { // accept move
+                                if ( metropolis(du) ) { // accept move
                                     state1.spc.sync( state2.spc, change );
                                     (**mv).accept(change);
                                 }
-                                else
-                                { // reject move
+                                else { // reject move
                                     state2.spc.sync( state1.spc, change );
                                     (**mv).reject(change);
                                     du=0;

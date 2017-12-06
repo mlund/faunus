@@ -9,13 +9,12 @@ energy:
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
         coulomb: {type: plain, epsr: 80, cutoff: 10}
-        
 moleculelist:
     - A:  {Ninit: 50, structure: A.xyz}
     - B:  {Ninit: 50, structure: B.xyz}
 moves:
-    - moltransrot: { mol: A, dp: 40, dprot: 0, repeat: 1 }
-    - moltransrot: { mol: B, dp: 10, dprot: 0, repeat: 1 }
+    - moltransrot: { mol: A, dp: 40, dprot: 0 }
+    - moltransrot: { mol: B, dp: 10, dprot: 0 }
 system:
     mcloop: {macro: 10, micro: 50}
     temperature: 298.15 # in Kelvin

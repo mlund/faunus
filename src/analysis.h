@@ -153,11 +153,15 @@ namespace Faunus {
                     CombinedAnalysis(const json &j, Tspace &spc, Tenergy &pot) {
                         for (auto &m : j.at("analysis")) // loop over move list
                             for (auto it=m.begin(); it!=m.end(); ++it) {
-                                if (it.key()=="systemenergy")
-                                    push_back<SystemEnergy>(it.value(), pot);
-                                if (it.key()=="savestate")
-                                    push_back<SaveState>(it.value(), spc);
-                                // additional analysis go here...
+                                try {
+                                    if (it.key()=="systemenergy")
+                                        push_back<SystemEnergy>(it.value(), pot);
+                                    if (it.key()=="savestate")
+                                        push_back<SaveState>(it.value(), spc);
+                                    // additional analysis go here...
+                                } catch (std::exception &e) {
+                                    throw std::runtime_error("Error adding analysis '" + it.key() + "': " + e.what());
+                                }
                             }
                     }
 

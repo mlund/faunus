@@ -1,6 +1,7 @@
 #include "core.h"
 #include "move.h"
 #include "multipole.h"
+#include <cstdlib>
 
 using namespace Faunus;
 using namespace std;
@@ -15,22 +16,28 @@ int main() {
     //json j;
     //std::cin >> j;
 
-    json j = openjson("example.json");
+    try {
+        json j = openjson("example.json");
+        MCSimulation<Tgeometry,Tparticle> sim(j);
+        Analysis::CombinedAnalysis analysis(j, sim.space(), sim.pot());
 
-    MCSimulation<Tgeometry,Tparticle> sim(j);
-    Analysis::CombinedAnalysis analysis(j, sim.space(), sim.pot());
+        for (int i=0; i<1e3; i++) {
+            sim.move();
+            analysis.sample();
+        }
 
-    for (int i=0; i<1e3; i++) {
-        sim.move();
-        analysis.sample();
+        std::ofstream f("out.json");
+        if (f) {
+            json j = sim;
+            j["analysis"] = analysis;
+            f << std::setw(4) << j << endl;
+        }
+
+        cout << "absolute drift (kT) = " << sim.drift() << endl;
+
+    } catch (std::exception &e) {
+        std::cerr << e.what() << endl;
+        return EXIT_FAILURE;
     }
-
-    std::ofstream f("out.json");
-    if (f) {
-        json j = sim;
-        j["analysis"] = analysis;
-        f << std::setw(4) << j << endl;
-    }
-
-    cout << "absolute drift (kT) = " << sim.drift() << endl;
+    return EXIT_SUCCESS;
 }

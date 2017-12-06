@@ -473,6 +473,7 @@ namespace Faunus {
             a = first * a + shift;
             boundary(a);
             return a;
+            // https://www.cc.gatech.edu/classes/AY2015/cs4496_spring/Eigen.html
         } //!< Rotate point w. optional PBC boundaries
 
         auto operator()( const Eigen::Matrix3d &a ) const
@@ -489,11 +490,21 @@ namespace Faunus {
         Point a = {1,0,0};
         qrot.set( pc::pi/2, {0,1,0} ); // rotate around y-axis
         CHECK( qrot.angle == Approx(pc::pi/2) );
-        a = qrot(a); // rot. 90 deg.
-        CHECK( a.x() == Approx(0) );
-        a = qrot(a); // rot. 90 deg.
-        CHECK( a.x() == Approx(-1) );
-    }
+
+        SUBCASE("rotate using quaternion") {
+            a = qrot(a); // rot. 90 deg.
+            CHECK( a.x() == Approx(0) );
+            a = qrot(a); // rot. 90 deg.
+            CHECK( a.x() == Approx(-1) );
+        }
+
+        SUBCASE("rotate using rotation matrix") {
+            a = qrot.second * a;
+            CHECK( a.x() == Approx(0) );
+            a = qrot.second * a;
+            CHECK( a.x() == Approx(-1) );
+        }
+     }
 #endif
 
     /** @brief Base class for particle properties */

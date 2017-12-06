@@ -111,9 +111,13 @@ namespace Faunus {
                         Energybase::name="Hamiltonian";
                         for (auto &m : j.at("energy")) {// loop over move list
                             for (auto it=m.begin(); it!=m.end(); ++it) {
-                                if (it.key()=="nonbonded_coulomblj")
-                                    push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(spc, it.value());
-                                // additional energies go here...
+                                try {
+                                    if (it.key()=="nonbonded_coulomblj")
+                                        push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(spc, it.value());
+                                    // additional energies go here...
+                                } catch (std::exception &e) {
+                                    throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what());
+                                }
                             }
                         }
                     }

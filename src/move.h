@@ -17,24 +17,34 @@ namespace Faunus {
             protected:
                 virtual void _to_json(json &j) const=0; //!< Extra info for report if needed
                 virtual void _from_json(const json &j)=0; //!< Extra info for report if needed
-                double prob=1;
                 unsigned long cnt=0;
                 unsigned long accepted=0;
                 unsigned long rejected=0;
             public:
                 static Random slump;   //!< Shared for all moves
                 std::string name;      //!< Name of move
-                unsigned int repeat=1; //!< How many times the move should be repeated
-                bool permol=true;
+                int repeat=1;          //!< How many times the move should be repeated per sweep
 
                 inline void from_json(const json &j) {
+                    auto it = j.find("repeat");
+                    if (it!=j.end()) {
+                        if (it->is_number())
+                            repeat = it->get<double>();
+                        else
+                            if (it->is_string())
+                                if (it->get<std::string>()=="N")
+                                    repeat = -1;
+                    }
                     _from_json(j);
+                    if (repeat<0)
+                        repeat=1;
                 }
 
                 inline void to_json(json &j) const {
                     _to_json(j);
                     j["relative time"] = timer.result();
                     j["acceptance"] = double(accepted)/cnt;
+                    j["repeat"] = repeat;
                     j["N attempted"] = cnt;
                     j["N accepted"] = accepted;
                     j["N rejected"] = cnt-accepted;
@@ -88,7 +98,7 @@ namespace Faunus {
                     void _to_json(json &j) const override {
                         j = {
                             {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
-                            {"molid", molid}, {"prob", prob},
+                            {"molid", molid},
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
                             {"mol", molecules<Tpvec>[molid].name}
                         };
@@ -102,11 +112,13 @@ namespace Faunus {
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
                             molid = it->id();
-                            prob = j.value("prob", 1.0);
                             dir = j.value("dir", Point(1,1,1));
                             dprot = j.at("dprot");
                             dptrans = j.at("dp");
-                            permol = j.value("permol", true);
+                            if (repeat<0) {
+                                auto v = spc.findMolecules(molid);
+                                repeat = std::distance(v.begin(), v.end());
+                            }
                         }
                         catch (std::exception &e) {
                             std::cerr << name << ": " << e.what();
@@ -125,30 +137,28 @@ namespace Faunus {
                             auto it  = (mollist | ranges::view::sample(1, slump.engine) ).begin();
                             assert(it->id==molid);
 
-                            // translate group
-                            if (dptrans>0) {
+                            if (dptrans>0) { // translate
                                 Point oldcm = it->cm;
                                 Point dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
                                 it->translate( dp, spc.geo.boundaryFunc );
                                 _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
                             }
 
-                            // rotate group
-                            if (dprot>0) {
+                            if (dprot>0) { // rotate
                                 Point u = ranunit(slump);
                                 double angle = dprot * (slump()-0.5);
                                 Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
                                 it->rotate(Q, spc.geo.boundaryFunc);
                             }
 
-                            // specify changes
-                            if (dptrans>0 || dprot>0) {
-                                Change::data d; // object that describes what was moved in a single group
+                            if (dptrans>0 || dprot>0) { // define changes
+                                Change::data d;
                                 d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
                                 d.all = true; // *all* atoms in group were moved
                                 change.groups.push_back( d ); // add to list of moved groups
                             }
-                            assert( spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-6 );
+                            assert( spc.geo.sqdist( it->cm,
+                                        Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-6 );
                         }
                         else std::cerr << name << ": no molecules found" << std::endl;
                     }
@@ -174,14 +184,14 @@ namespace Faunus {
 
             Tspace spc;
             TranslateRotate<Tspace> mv(spc);
-            json j = R"( {"mol":"B", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "prob":0.2 })"_json;
+            json j = R"( {"mol":"B", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "repeat":2 })"_json;
             mv.from_json(j);
 
             j = json(mv).at(mv.name);
             CHECK( j.at("mol")   == "B");
             CHECK( j.at("dir")   == Point(0,1,0) );
             CHECK( j.at("dp")    == 1.0 );
-            CHECK( j.at("prob")  == 0.2 );
+            CHECK( j.at("repeat")  == 2 );
             CHECK( j.at("dprot") == 0.5 );
             //CHECK( j.at("molid") == 1 );
             //CHECK( j["B"].at("accepted") == 0 );
@@ -191,6 +201,17 @@ namespace Faunus {
 
         template<typename Tspace>
             class Propagator : public BasePointerVector<Movebase> {
+                private:
+                    int _repeat;
+                    std::discrete_distribution<> dist;
+                    std::vector<double> w; // list of weights for each move
+
+                    void addWeight(double weight=1) {
+                        w.push_back(weight);
+                        dist = std::discrete_distribution<>(w.begin(), w.end());
+                        _repeat = int(std::accumulate(w.begin(), w.end(), 0.0));
+                    }
+
                 public:
                     using BasePointerVector<Movebase>::vec;
                     inline Propagator() {}
@@ -200,11 +221,22 @@ namespace Faunus {
                                 if (it.key()=="moltransrot") {
                                     this->template push_back<Move::TranslateRotate<Tspace>>(spc);
                                     vec.back()->from_json( it.value() );
+                                    addWeight(vec.back()->repeat);
                                 }
                                 // additional moves go here...
                             }
                         }
                     }
+
+                    int repeat() { return _repeat; }
+
+                    auto sample() {
+                        if (!vec.empty()) {
+                            assert(w.size() == vec.size());
+                            return vec.begin() + dist( Move::Movebase::slump.engine );
+                        }
+                        return vec.end();
+                    } //!< Pick move from a weighted, random distribution
             };
 
     }//Move namespace
@@ -259,30 +291,31 @@ namespace Faunus {
                 }
 
                 void move() {
-                    auto mv = Move::Movebase::slump.sample( moves.begin(), moves.end() );
-                    if (mv == moves.end() )
-                        std::cerr << "Warning: No MC moves defined" << endl;
-                    else {
-                        Change change;
+                    for (int i=0; i<moves.repeat(); i++) {
+                        auto mv = moves.sample();
 
-                        (**mv).move(change);
+                        if (mv != moves.end() ) {
 
-                        if (!change.empty()) {
-                            double unew = state2.pot.energy(change),
-                                   uold = state1.pot.energy(change),
-                                   du = unew - uold;
-                            if ( metropolis(du) )
-                            { // accept move
-                                state1.spc.sync( state2.spc, change );
-                                (**mv).accept(change);
+                            Change change;
+                            (**mv).move(change);
+
+                            if (!change.empty()) {
+                                double unew = state2.pot.energy(change),
+                                       uold = state1.pot.energy(change),
+                                       du = unew - uold;
+                                if ( metropolis(du) )
+                                { // accept move
+                                    state1.spc.sync( state2.spc, change );
+                                    (**mv).accept(change);
+                                }
+                                else
+                                { // reject move
+                                    state2.spc.sync( state1.spc, change );
+                                    (**mv).reject(change);
+                                    du=0;
+                                }
+                                dusum+=du; // sum of all energy changes
                             }
-                            else
-                            { // reject move
-                                state2.spc.sync( state1.spc, change );
-                                (**mv).reject(change);
-                                du=0;
-                            }
-                            dusum+=du; // sum of all energy changes
                         }
                     }
                 }

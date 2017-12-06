@@ -273,7 +273,7 @@ namespace Faunus {
         // check rotation
         Eigen::Quaterniond q;
         q = Eigen::AngleAxisd(pc::pi/2, Point(1,0,0));
-        p[0].pos = p[0].mu = p[0].scdir = {0,1,0};
+        p.at(0).pos = p.at(0).mu = p.at(0).scdir = {0,1,0};
 
         Geometry::Cuboid geo = R"({"length": [2,2,2]})"_json;
         g.rotate(q, geo.boundaryFunc);

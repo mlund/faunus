@@ -32,9 +32,9 @@ namespace Faunus {
                     double Rc2_g2g=1e20;
                     void to_json(json &j) const override {
                         j = pairpot;
-                        j.push_back( {"group-group cutoff", {
-                                {"fraction", g2gskip/g2gcnt},
-                                {"cutoff", std::sqrt(Rc2_g2g)}}} );
+                        json t = json::object();
+                        t["g2g"] = { {"cutoff", std::sqrt(Rc2_g2g)} };
+                        j.push_back(t);
                     }
 
                     template<typename T>
@@ -93,7 +93,7 @@ namespace Faunus {
                     Nonbonded(Tspace &spc, const json &j) : spc(spc) {
                         name="nonbonded";
                         pairpot = j;
-                        Rc2_g2g = std::pow( j.value("cutoff_g2g", 0.0), 2);
+                        Rc2_g2g = std::pow( j.value("cutoff_g2g", 1e20), 2);
                     }
 
                     double energy(Change &change) override {

@@ -1,5 +1,5 @@
 analysis:
-    - systemenergy: {file: energy.dat, nstep: 0}
+    - systemenergy: {file: energy.dat}
     - savestate: {file: confout.pqr}
     - savestate: {file: confout.state}
 atomlist: # define all atom types below
@@ -8,7 +8,7 @@ atomlist: # define all atom types below
 energy:
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: plain, epsr: 80, cutoff: 10}
+        coulomb: {type: none, epsr: 80, cutoff: 10}
 moleculelist:
     - A:  {Ninit: 50, structure: A.xyz}
     - B:  {Ninit: 50, structure: B.xyz}
@@ -16,7 +16,7 @@ moves:
     - moltransrot: { mol: A, dp: 40, dprot: 0 }
     - moltransrot: { mol: B, dp: 10, dprot: 0 }
 
-mcloop: {macro: 10, micro: 50}
+mcloop: {macro: 10, micro: 100}
 temperature: 298.15 # in Kelvin
 geometry: {length: 50} # cuboid length can be a scalar of an array of sidelengths
 

@@ -44,7 +44,7 @@ namespace Faunus {
                                 return false;
                             g2gskip++;
                             return true;
-                        }
+                        } //!< true if group<->group interaction can be skipped
 
                     template<typename T>
                         inline double i2i(const T &a, const T &b) {
@@ -52,28 +52,12 @@ namespace Faunus {
                         }
 
                     template<typename T>
-                        double g2g_test(const T &g1, const T &g2) {
-                            double u = 0;
-                            if (!cut(g1,g2)) {
-                                size_t beg1 = std::distance(spc.p.begin(), g1.begin());
-                                size_t end1 = std::distance(spc.p.begin(), g1.end());
-                                size_t beg2 = std::distance(spc.p.begin(), g2.begin());
-                                size_t end2 = std::distance(spc.p.begin(), g2.end());
-                                for (size_t i=beg1; i<end1; i++)
-                                    for (size_t j=beg2; j<end2; j++)
-                                        u += pairpot(spc.p[i], spc.p[j], spc.geo.sqdist(spc.p[i].pos, spc.p[j].pos));
-                            }
-                            return u;
-                        }
-
-
-                    template<typename T>
                         double g2g(const T &g1, const T &g2) {
                             double u = 0;
                             if (!cut(g1,g2))
                                 for (auto &i : g1)
                                     for (auto &j : g2)
-                                        u += pairpot(i, j, spc.geo.sqdist(i.pos, j.pos));
+                                        u += i2i(i,j);
                             return u;
                         }
 
@@ -111,6 +95,7 @@ namespace Faunus {
                                 return u;
                             }
 
+                            // this is a common scenario we can quickly check for
                             if (change.groups.size()==1) {
                                 auto& d = change.groups[0];
                                 if (d.all) {

@@ -237,7 +237,7 @@ namespace Faunus {
                 template<class Tparticle>
                     double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
                         if (r2 < rc2) {
-                            double r = sqrt(r2);
+                            double r = std::sqrt(r2);
                             return lB * a.charge * b.charge / r * sf.eval( table, r*rc1i );
                         }
                         return 0;

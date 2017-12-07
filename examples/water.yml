@@ -15,7 +15,7 @@ moleculelist:
 moves:
     - moltransrot: {mol: water, dp: 0.4, dprot: 0.4, repeat: N}
 
-mcloop: {macro: 1, micro: 20} #30
+mcloop: {macro: 2, micro: 30} #30
 temperature: 300 # in Kelvin
 geometry: {length: 31.1361}
 

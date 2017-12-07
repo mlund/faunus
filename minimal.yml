@@ -15,8 +15,8 @@ moleculelist:
 moves:
     - moltransrot: { mol: A, dp: 40, dprot: 0 }
     - moltransrot: { mol: B, dp: 10, dprot: 0 }
-system:
-    mcloop: {macro: 10, micro: 50}
-    temperature: 298.15 # in Kelvin
+
+mcloop: {macro: 10, micro: 50}
+temperature: 298.15 # in Kelvin
 geometry: {length: 50} # cuboid length can be a scalar of an array of sidelengths
 

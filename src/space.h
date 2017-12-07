@@ -74,7 +74,11 @@ namespace Faunus {
 
             Space(const json &j) {
                 new_from_json(j, *this);
-                return;
+
+                for (auto &i : groups)
+                    if (geo.sqdist( i.cm,
+                            Geometry::massCenter(i.begin(), i.end(), geo.boundaryFunc, -i.cm) ) > 1e-9 )
+                        throw std::runtime_error("space construction error: mass center mismatch");
             }
 
             void clear() {
@@ -93,9 +97,10 @@ namespace Faunus {
                     }
                     Tgroup g( p.end()-in.size(), p.end() );
                     g.id = molid;
-                    g.cm = Geometry::massCenter(in.begin(), in.end(), geo.boundaryFunc);
+                    g.cm = Geometry::massCenter(in.begin(), in.end(), geo.boundaryFunc, -in.begin()->pos);
                     groups.push_back(g);
                     assert( in.size() == groups.back().size() );
+                    assert( geo.sqdist( g.cm, Geometry::massCenter(g.begin(), g.end(), geo.boundaryFunc, -g.cm) )<1e-9 );
                 }
             } //!< Safely add particles and corresponding group to back
 
@@ -215,8 +220,8 @@ namespace Faunus {
 
     template<typename Tspace>
         void insertMolecules(Tspace &spc) {
-            assert(spc.geo.getVolume()>0);
             spc.clear();
+            assert(spc.geo.getVolume()>0);
             for ( auto& mol : molecules<typename Tspace::Tpvec> ) {
                 int n = mol.Ninit;
                 while ( n-- > 0 ) {

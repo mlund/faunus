@@ -25,8 +25,13 @@ namespace Faunus {
                 T1 first;  //!< First pair potential of type T1
                 T2 second; //!< Second pair potential of type T2
                 template<typename... T>
-                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                    inline double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                         return first(a, b, r) + second(a, b, r);
+                    }
+
+                template<typename... T>
+                    inline double operator()(const Particle<T...> &a, const Particle<T...> &b, double r2) const {
+                        return first(a, b, r2) + second(a, b, r2);
                     }
 
                 void from_json(const json &j) override {
@@ -136,10 +141,15 @@ namespace Faunus {
                     }
 
                 template<typename... T>
-                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
-                        double x=m.s2(a.id,b.id)/r.squaredNorm(); //s2/r2
+                    double operator()(const Particle<T...> &a, const Particle<T...> &b, double r2) const {
+                        double x=m.s2(a.id,b.id)/r2; //s2/r2
                         x=x*x*x; // s6/r6
                         return m.eps(a.id,b.id) * (x*x - x);
+                    }
+
+                template<typename... T>
+                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                        return operator()(a,b,r.squaredNorm());
                     }
 
                 void to_json(json &j) const override { j = m; }
@@ -168,9 +178,15 @@ namespace Faunus {
                             d2.set( i.id(), j.id(), std::pow((i.sigma+j.sigma)/2,2));
                 }
                 template<typename... T>
-                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r2) const {
-                        return (r2.squaredNorm()<d2(a.id,b.id)) ? pc::infty : 0;
+                    double operator()(const Particle<T...> &a, const Particle<T...> &b, double r2) const {
+                        return r2<d2(a.id,b.id) ? pc::infty : 0;
                     }
+
+                template<typename... T>
+                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                        return operator()(a,b,r.squaredNorm());
+                    }
+
 
                 void to_json(json &j) const override { j["comment"] = "N/A"; }
                 void from_json(const json&) override {}

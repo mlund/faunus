@@ -8,7 +8,7 @@ A      0.000   0.000  0.000
 EOF
 cat A.xyz | tr "A" "B" > B.xyz
 
-python yason.py < example.yml > example.json # yml -> json
+python yason.py < minimal.yml > minimal.json # yml -> json
 rc=$?
 if [[ $rc != 0 ]]; then
     echo "error parsing yaml file"
@@ -16,7 +16,7 @@ if [[ $rc != 0 ]]; then
 fi
 
 if [ -f example ]; then
-    ./example
+    ./example < minimal.json 
     if [[ $? == 0 ]]; then
         python yason.py < out.json
     fi

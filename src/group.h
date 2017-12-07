@@ -176,7 +176,7 @@ namespace Faunus {
                 if (&o == this)
                     return *this;
                 if (this->capacity() != o.capacity())
-                    throw std::runtime_error("capacity mismatch");
+                    throw std::runtime_error("Group::shallowcopy: capacity mismatch");
                 this->resize(o.size());
                 id = o.id;
                 atomic = o.atomic;

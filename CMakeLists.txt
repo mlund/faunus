@@ -8,6 +8,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 enable_testing()
 
+if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
+    string(REPLACE "NDEBUG" "_ndebug" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"
+        CACHE STRING "Flags used by the compiler during Release with Debug Info builds" FORCE)
+endif()
+
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 
 # Download external header files (Eigen, JSON for Modern C++, Doctest, Range-V3)

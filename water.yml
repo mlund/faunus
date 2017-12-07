@@ -1,0 +1,21 @@
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: confout.state}
+atomlist: # define all atom types below
+    - OW: {q: -0.8476, eps: 0.650299305951160, sigma: 3.165491652452016, mw: 15.9994} 
+    - HW: {q: 0.4238, eps: 0.0, sigma: 0.0, mw: 1} 
+energy:
+    - nonbonded_coulomblj:
+        lennardjones: {mixing: LB}
+        coulomb: {type: fanourgakis, epsr: 1, cutoff: 14.8}
+        cutoff_g2g: 15
+moleculelist:
+    - water:  {Ninit: 1000, structure: water.xyz}
+moves:
+    - moltransrot: {mol: water, dp: 0.4, dprot: 0.4, repeat: N}
+
+mcloop: {macro: 10, micro: 30} #30
+temperature: 300 # in Kelvin
+geometry: {length: 31.1361}
+

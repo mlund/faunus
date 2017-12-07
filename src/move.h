@@ -51,21 +51,24 @@ namespace Faunus {
                 } //!< JSON report w. statistics, output etc.
 
                 inline void move(Change &change) {
+                    timer.start();
                     cnt++;
                     change.clear();
-                    timer.start();
                     _move(change);
-                    timer.stop();
+                    if (change.empty())
+                        timer.stop();
                 } //!< Perform move and modify given change object
 
                 inline void accept(Change &c) {
                     accepted++;
                     _accept(c);
+                    timer.stop();
                 }
 
                 inline void reject(Change &c) {
                     rejected++;
                     _reject(c);
+                    timer.stop();
                 }
         };
 
@@ -132,9 +135,11 @@ namespace Faunus {
                         assert(spc.geo.getVolume()>0);
 
                         // pick random group from the system matching molecule type
+                        // TODO: This is slow -- implement look-up-table in Space
                         auto mollist = spc.findMolecules( molid ); // list of molecules w. 'molid'
                         if (size(mollist)>0) {
-                            auto it  = (mollist | ranges::view::sample(1, slump.engine) ).begin();
+                            auto it = slump.sample( mollist.begin(), mollist.end() );
+                            //auto it  = (mollist | ranges::view::sample(1, slump.engine) ).begin(); // why so slow?!
                             assert(it->id==molid);
 
                             if (dptrans>0) { // translate
@@ -151,14 +156,14 @@ namespace Faunus {
                                 it->rotate(Q, spc.geo.boundaryFunc);
                             }
 
-                            if (dptrans>0 || dprot>0) { // define changes
+                            if (dptrans>0|| dprot>0) { // define changes
                                 Change::data d;
                                 d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
                                 d.all = true; // *all* atoms in group were moved
                                 change.groups.push_back( d ); // add to list of moved groups
                             }
                             assert( spc.geo.sqdist( it->cm,
-                                        Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-6 );
+                                        Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-9 );
                         }
                         else std::cerr << name << ": no molecules found" << std::endl;
                     }
@@ -285,15 +290,33 @@ namespace Faunus {
                     Change c;
                     c.all=true;
                     double ufinal = state1.pot.energy(c);
-                    return ufinal-(uinit+dusum); 
-                } //!< Calculates energy drift from initial configuration
+                    return ( ufinal-(uinit+dusum) ) / uinit; 
+                } //!< Calculates the relative energy drift from initial configuration
 
                 MCSimulation(const json &j) : state1(j), state2(j), moves(j, state2.spc) {
                     Change c;
                     c.all=true;
                     state2.spc.sync(state1.spc, c);
                     uinit = state1.pot.energy(c);
+
+                    std::ifstream f("confout.state");
+                    if (f) {
+                        cout << "Restoring old state." << endl;
+                        json j;
+                        j << f;
+                        restore(j);
+                    }
                 }
+
+                void restore(const json &j) {
+                    new_from_json(j, state1.spc);
+                    Change c;
+                    c.all=true;
+                    state2.spc.sync(state1.spc, c);
+                    uinit = state1.pot.energy(c);
+                    dusum=0;
+                    assert(uinit == state2.pot.energy(c));
+                } //!< restore system from previously saved state
 
                 void move() {
                     for (int i=0; i<moves.repeat(); i++) {

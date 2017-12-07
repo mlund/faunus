@@ -7,104 +7,104 @@
 namespace Faunus {
 
     /**
-    * @brief Random position and orientation - typical for rigid bodies
-    *
-    * Molecule inserters take care of generating molecules
-    * for insertion into space and can be used in Grand Canonical moves,
-    * Widom analysis, and for generating initial configurations.
-    * Inserters will not actually insert anything, but rather
-    * return a particle vector with proposed coordinates.
-    *
-    * All inserters are function objects, expecting
-    * a geometry, particle vector, and molecule data.
-    */
+     * @brief Random position and orientation - typical for rigid bodies
+     *
+     * Molecule inserters take care of generating molecules
+     * for insertion into space and can be used in Grand Canonical moves,
+     * Widom analysis, and for generating initial configurations.
+     * Inserters will not actually insert anything, but rather
+     * return a particle vector with proposed coordinates.
+     *
+     * All inserters are function objects, expecting
+     * a geometry, particle vector, and molecule data.
+     */
     template<typename TMoleculeData>
-    struct RandomInserter
-    {
-        typedef typename TMoleculeData::TParticleVector Tpvec;
-        std::string name;
-        Point dir={1,1,1};      //!< Scalars for random mass center position. Default (1,1,1)
-        Point offset={0,0,0};   //!< Added to random position. Default (0,0,0)
-        bool checkOverlap=true; //!< Set to true to enable container overlap check
-        bool rotate=true;       //!< Set to true to randomly rotate molecule when inserted. Default: true
-        bool keeppos=false;     //!< Set to true to keep original positions (default: false)
-        int maxtrials=2e3;      //!< Maximum number of overlap checks if `checkOverlap==true`
-
-        RandomInserter() : name("random") {}
-
-        Tpvec operator()( Geometry::GeometryBase &geo, const Tpvec &p, TMoleculeData &mol )
+        struct RandomInserter
         {
-            if (std::fabs(geo.getVolume())<1e-20)
-                throw std::runtime_error("geometry has zero volume");
-            bool _overlap = true;
-            Tpvec v;
-            int cnt = 0;
-            do
+            typedef typename TMoleculeData::TParticleVector Tpvec;
+            std::string name;
+            Point dir={1,1,1};      //!< Scalars for random mass center position. Default (1,1,1)
+            Point offset={0,0,0};   //!< Added to random position. Default (0,0,0)
+            bool checkOverlap=true; //!< Set to true to enable container overlap check
+            bool rotate=true;       //!< Set to true to randomly rotate molecule when inserted. Default: true
+            bool keeppos=false;     //!< Set to true to keep original positions (default: false)
+            int maxtrials=2e3;      //!< Maximum number of overlap checks if `checkOverlap==true`
+
+            RandomInserter() : name("random") {}
+
+            Tpvec operator()( Geometry::GeometryBase &geo, const Tpvec &p, TMoleculeData &mol )
             {
-                if ( cnt++ > maxtrials )
-                    throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
+                if (std::fabs(geo.getVolume())<1e-20)
+                    throw std::runtime_error("geometry has zero volume");
+                bool _overlap = true;
+                Tpvec v;
+                int cnt = 0;
+                do
+                {
+                    if ( cnt++ > maxtrials )
+                        throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
 
-                v = mol.getRandomConformation();
+                    v = mol.getRandomConformation();
 
-                if ( mol.atomic )
-                { // insert atomic species
-                    for ( auto &i : v )
-                    { // for each atom type id
-                        QuaternionRotate rot;
-                        if ( rotate )
-                        {
-                            rot.set(2*pc::pi*random(), ranunit(random));
-                            i.rotate(rot.first, rot.second);
+                    if ( mol.atomic )
+                    { // insert atomic species
+                        for ( auto &i : v )
+                        { // for each atom type id
+                            QuaternionRotate rot;
+                            if ( rotate )
+                            {
+                                rot.set(2*pc::pi*random(), ranunit(random));
+                                i.rotate(rot.first, rot.second);
+                            }
+                            geo.randompos(i.pos, random);
+                            i.pos = i.pos.cwiseProduct(dir) + offset;
+                            geo.boundary(i.pos);
                         }
-                        geo.randompos(i.pos, random);
-                        i.pos = i.pos.cwiseProduct(dir) + offset;
-                        geo.boundary(i.pos);
-                    }
-                }
-                else
-                { // insert molecule
-                    if ( keeppos )
-                    {                   // keep original positions (no rotation/trans)
-                        for ( auto &i : v )              // ...but let's make sure it fits
-                            if ( geo.collision(i.pos, 0))
-                                throw std::runtime_error("Error: Inserted molecule does not fit in container");
                     }
                     else
-                    {
-                        Point cm;                      // new mass center position
-                        geo.randompos(cm, random);      // random point in container
-                        cm = cm.cwiseProduct(dir);     // apply user defined directions (default: 1,1,1)
-                        Geometry::cm2origo(v.begin(), v.end());// translate to origin
-                        QuaternionRotate rot;
-                        rot.set(random()*2*pc::pi, ranunit(random)); // random rot around random vector
-                        for ( auto &i : v )
-                        {            // apply rotation to all points
-                            if ( rotate ) {
-                                i.rotate(rot.first, rot.second);    // internal atom rotation
-                                i.pos = rot(i.pos) + cm + offset;   // ...and translate
+                    { // insert molecule
+                        if ( keeppos )
+                        {                   // keep original positions (no rotation/trans)
+                            for ( auto &i : v )              // ...but let's make sure it fits
+                                if ( geo.collision(i.pos, 0))
+                                    throw std::runtime_error("Error: Inserted molecule does not fit in container");
+                        }
+                        else
+                        {
+                            Point cm;                      // new mass center position
+                            geo.randompos(cm, random);      // random point in container
+                            cm = cm.cwiseProduct(dir);     // apply user defined directions (default: 1,1,1)
+                            Geometry::cm2origo(v.begin(), v.end());// translate to origin
+                            QuaternionRotate rot;
+                            rot.set(random()*2*pc::pi, ranunit(random)); // random rot around random vector
+                            for ( auto &i : v )
+                            {            // apply rotation to all points
+                                if ( rotate ) {
+                                    i.rotate(rot.first, rot.second);    // internal atom rotation
+                                    i.pos = rot(i.pos) + cm + offset;   // ...and translate
+                                }
+                                else
+                                    i.pos += cm + offset;
+                                geo.boundary(i.pos);             // ...and obey boundaries
                             }
-                            else
-                                i.pos += cm + offset;
-                            geo.boundary(i.pos);             // ...and obey boundaries
                         }
                     }
-                }
 
-                assert(!v.empty());
+                    assert(!v.empty());
 
-                _overlap = false;
-                if ( checkOverlap )              // check for container overlap
-                for ( auto &i : v )
-                if ( geo.collision(i.pos, i.radius))
-                {
-                    _overlap = true;
-                    break;
+                    _overlap = false;
+                    if ( checkOverlap )              // check for container overlap
+                        for ( auto &i : v )
+                            if ( geo.collision(i.pos, i.radius))
+                            {
+                                _overlap = true;
+                                break;
+                            }
                 }
+                while ( _overlap == true );
+                return v;
             }
-            while ( _overlap == true );
-            return v;
-        }
-    };
+        };
 
     /**
      * @brief General properties for molecules
@@ -155,26 +155,26 @@ namespace Faunus {
                 } //!< Store a single conformation
 
                 /** @brief Specify function to be used when inserting into space.
-                *
-                * By default a random position and orientation is generator and overlap
-                * with container is avoided.
-                */
+                 *
+                 * By default a random position and orientation is generator and overlap
+                 * with container is avoided.
+                 */
                 void setInserter( const TinserterFunc &ifunc ) { inserterFunctor = ifunc; };
 
                 /**
-                * @brief Get a random conformation
-                *
-                * This will return the raw coordinates of a random conformation
-                * as loaded from a directory file. The propability of a certain
-                * conformation is dictated by the weight which, by default,
-                * is set to unity. Specify a custom distribution using the
-                * `weight` keyword.
-                */
+                 * @brief Get a random conformation
+                 *
+                 * This will return the raw coordinates of a random conformation
+                 * as loaded from a directory file. The propability of a certain
+                 * conformation is dictated by the weight which, by default,
+                 * is set to unity. Specify a custom distribution using the
+                 * `weight` keyword.
+                 */
                 Tpvec getRandomConformation()
                 {
                     if ( conformations.empty())
-                    throw std::runtime_error("No configurations for molecule '" + name +
-                    "'. Perhaps you forgot to specity the 'atomic' keyword?");
+                        throw std::runtime_error("No configurations for molecule '" + name +
+                                "'. Perhaps you forgot to specity the 'atomic' keyword?");
 
                     assert(size_t(confDist.max()) == conformations.size() - 1);
                     assert(atoms.size() == conformations.front().size());
@@ -184,14 +184,14 @@ namespace Faunus {
                 }
 
                 /**
-                * @brief Get random conformation that fits in container
-                * @param geo Geometry
-                * @param otherparticles Typically `spc.p` is insertion depends on other particle
-                *
-                * By default the molecule is placed at a random position and orientation with
-                * no container overlap using the `RandomInserter` class. This behavior can
-                * be changed by specifying another inserter using `setInserter()`.
-                */
+                 * @brief Get random conformation that fits in container
+                 * @param geo Geometry
+                 * @param otherparticles Typically `spc.p` is insertion depends on other particle
+                 *
+                 * By default the molecule is placed at a random position and orientation with
+                 * no container overlap using the `RandomInserter` class. This behavior can
+                 * be changed by specifying another inserter using `setInserter()`.
+                 */
                 Tpvec getRandomConformation(Geometry::GeometryBase &geo, Tpvec otherparticles = Tpvec())
                 {
                     assert(inserterFunctor!=nullptr);
@@ -199,10 +199,10 @@ namespace Faunus {
                 }
 
                 /**
-                * @brief Store a single conformation
-                * @param vec Vector of particles
-                * @param weight Relative weight of conformation (default: 1)
-                */
+                 * @brief Store a single conformation
+                 * @param vec Vector of particles
+                 * @param weight Relative weight of conformation (default: 1)
+                 */
                 void pushConformation( const Tpvec &vec, double weight = 1 )
                 {
                     if ( !conformations.empty())

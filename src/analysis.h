@@ -147,6 +147,212 @@ namespace Faunus {
 
         };
 
+        /**
+         * @brief Base class for distribution functions etc.
+         */
+        class PairFunctionBase : public Analysisbase {
+
+            protected:
+                struct data {
+                    int dim;
+                    double dr;
+                    Table2D<double,double> hist;
+                    Table2D<double,Average<double>> hist2;
+                    std::string name1, name2, file, file2;
+                    double Rhypersphere; // Radius of 2D hypersphere
+                };
+                std::vector<data> datavec;        // vector of data sets
+                Average<double> V;                // average volume (angstrom^3)
+                virtual void normalize(data &);
+            private:
+                virtual void update(data &d)=0;   // called on each defined data set
+                void sample() override;
+                json _json();
+
+            public:
+                PairFunctionBase(json, std::string);
+                //virtual ~PairFunctionBase();
+        };
+
+        void PairFunctionBase::sample()
+        {
+            for (auto &d : datavec)
+                update(d);
+        }
+
+        json PairFunctionBase::_json()
+        {
+            json j;
+            auto &_j = j[name];
+            for (auto &d : datavec)
+                _j[ d.name1+"-"+d.name2 ] = {
+                    { "dr", d.dr },
+                    { "file", d.file },
+                    { "file2", d.file2 },
+                    { "dim", d.dim },
+                    { "Rhyper", d.Rhypersphere }
+                };
+            return j;
+        }
+
+        PairFunctionBase::PairFunctionBase( json j, std::string name ) {
+            try {
+                for (auto &i : j.at("pairs"))
+                    if (i.is_object())
+                    {
+                        data d;
+                        d.file = i.at("file");
+                        d.file2 = i.value("file2",d.file+".avg");
+                        d.name1 = i.at("name1");
+                        d.name2 = i.at("name2");
+                        d.dim = i.value("dim", 3);
+                        d.dr = i.value("dr", 0.1);
+                        d.hist.setResolution(d.dr);
+                        d.hist2.setResolution(d.dr);
+                        d.Rhypersphere = i.value("Rhyper", -1.0);
+                        datavec.push_back( d );
+                    }
+            }
+            catch(std::exception& e) {
+                throw std::runtime_error(name + ": " + e.what());
+            }
+
+            if (datavec.empty())
+                std::cerr << name + ": no sample sets defined for analysis\n";
+        }
+
+        void PairFunctionBase::normalize(data &d)
+        {
+            assert(V.cnt>0);
+            double Vr=1, sum = d.hist.sumy();
+            for (auto &i : d.hist.getMap()) {
+                if (d.dim==3)
+                    Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
+                if (d.dim==2) {
+                    Vr = 2 * pc::pi * i.first * d.dr;
+                    if (d.Rhypersphere > 0)
+                        Vr = 2.0*pc::pi*d.Rhypersphere*sin(i.first/d.Rhypersphere) * d.dr;
+                }
+                if (d.dim==1)
+                    Vr = d.dr;
+                i.second = i.second/sum * V/Vr;
+            }
+        }
+
+        /**
+         * @brief Atomic radial distribution function, g(r)
+         *
+         * We sample the pair correlation function between atom id's _i_ and _j_,
+         * \f[
+         * g_{ij}(r) = \frac{ N_{ij}(r) }{ \sum_{r=0}^{\infty} N_{ij}(r) } \cdot \frac{ \langle V \rangle }{ V(r) }
+         * \f]
+         *
+         * where \f$ N_{ij}(r) \f$ is the number of observed pairs, accumulated over the
+         * entire ensemble,  in the separation
+         * interval \f$[r, r+dr] \f$ and \f$ V(r) \f$ is the corresponding volume element
+         * which depends on dimensionality:
+         *
+         * \f$ V(r) \f$               | Dimensions (`dim`)
+         * :------------------------- | :----------------------------------------
+         * \f$ 4\pi r^2 dr \f$        | 3 (for particles in free space, default)
+         * \f$ 2\pi r dr \f$          | 2 (for particles confined on a plane)
+         * \f$ 2\pi R sin(r/R) dr \f$ | 2 (for particles confined on a 2D hypersphere surface, also needs input `Rhypersphere`)
+         * \f$ dr \f$                 | 1 (for particles confined on a line)
+         *
+         * Example JSON input:
+         *
+         *     { "nstep":20, "pairs":
+         *        [
+         *          { "name1":"Na", "name2":"Cl", "dim":3, "dr":0.1, "file":"rdf-nacl.dat"},
+         *          { "name1":"Na", "name2":"Na", "dim":3, "dr":0.1, "file":"rdf-nana.dat"}
+         *        ]
+         *     }
+         */
+        template<class Tspace>
+            class AtomRDF : public PairFunctionBase {
+                private:
+                    Tspace &spc;
+                    typedef typename Tspace::Tparticle Tparticle;
+
+                    void update(data &d) override
+                    {
+                        V += spc.geo.getVolume( d.dim );
+                        int N = spc.p.size();
+
+                        auto it = findName( atoms<Tparticle>, d.name1 ).id;
+                        if (it == atoms<Tparticle>.end())
+                            throw std::runtime_error("unknown atom '" + d.name1 + "'");
+                        int id1 = it->id();
+
+                        it = findName( atoms<Tparticle>, d.name2 ).id;
+                        if (it == atoms<Tparticle>.end())
+                            throw std::runtime_error("unknown atom '" + d.name2 + "'");
+                        int id2 = it->id();
+
+                        for (int i=0; i<N-1; i++)
+                            for (int j=i+1; j<N; j++)
+                                if (
+                                        ( spc.p[i].id==id1 && spc.p[j].id==id2 ) ||
+                                        ( spc.p[i].id==id2 && spc.p[j].id==id1 )
+                                   )
+                                {
+                                    double r = spc.geo.dist( spc.p[i], spc.p[j] );
+                                    d.hist(r)++;
+                                }
+                    }
+
+                public:
+                    AtomRDF( json j, Tspace &spc ) : PairFunctionBase(j,
+                            "Atomic Pair Distribution Function"), spc(spc) {}
+
+                    ~AtomRDF()
+                    {
+                        for (auto &d : datavec) {
+                            normalize(d);
+                            d.hist.save( d.file );
+                        }
+                    }
+            };
+
+        /** @brief Same as `AtomRDF` but for molecules. Identical input. */
+        template<class Tspace>
+            class MoleculeRDF : public PairFunctionBase {
+                private:
+                    Tspace &spc;
+                    void update(data &d) override
+                    {
+                        V += spc.geo.getVolume( d.dim );
+                        auto g1 = spc.findMolecules( d.name1 );
+                        auto g2 = spc.findMolecules( d.name2 );
+
+                        if (d.name1!=d.name2)
+                            for (auto i : g1)
+                                for (auto j : g2) {
+                                    double r = spc.geo.dist( i->cm, j->cm );
+                                    d.hist(r)++;
+                                }
+                        else {
+                            for (int i=0; i<(int)g1.size()-1; i++)
+                                for (int j=i+1; j<(int)g1.size(); j++) {
+                                    double r = spc.geo.dist( g1[i]->cm, g1[j]->cm );
+                                    d.hist(r)++;
+                                }
+                        }
+                    }
+
+                public:
+                    MoleculeRDF( json j, Tspace &spc ) : PairFunctionBase(j,
+                            "Molecular Pair Distribution Function"), spc(spc) {}
+
+                    ~MoleculeRDF()
+                    {
+                        for (auto &d : datavec) {
+                            normalize(d);
+                            d.hist.save( d.file );
+                        }
+                    }
+            };
+
         class CombinedAnalysis : public BasePointerVector<Analysisbase> {
             public:
                 template<class Tspace, class Tenergy>

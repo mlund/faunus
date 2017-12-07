@@ -9,8 +9,8 @@ using namespace std;
 typedef Geometry::Cuboid Tgeometry;
 typedef Particle<Radius, Charge> Tparticle;
 
-int main() {
-
+int main( int argc, char **argv )
+{
     try {
         json j;
         std::cin >> j;
@@ -27,7 +27,7 @@ int main() {
                 sim.move();
                 analysis.sample();
             }
-            cout << "absolute drift (kT) = " << sim.drift() << endl;
+            cout << "relative drift = " << sim.drift() << endl;
         }
 
         std::ofstream f("out.json");

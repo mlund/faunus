@@ -1,24 +1,10 @@
 #!/bin/bash
 
-# Generate two single atom molecules, A.xyz and B.xyz
-cat > A.xyz << EOF
-1
+echo -e "1\n\nA 0.0 0.0 0.0" > A.xyz
+echo -e "1\n\nB 0.0 0.0 0.0" > B.xyz
 
-A      0.000   0.000  0.000
-EOF
-cat A.xyz | tr "A" "B" > B.xyz
-
-python ../yason.py < minimal.yml > minimal.json # yml -> json
-rc=$?
-if [[ $rc != 0 ]]; then
-    echo "error parsing yaml file"
-    exit $rc
-fi
-
-if [ -f ../example ]; then
-    ../example < minimal.json 
-    if [[ $? == 0 ]]; then
-        python ../yason.py < out.json > out.yml
-        rm -f out.json
-    fi
+../yason.py minimal.yml | ../faunus
+if [[ $? == 0 ]]; then
+    python ../yason.py < out.json > out.yml
+    rm -f out.json
 fi

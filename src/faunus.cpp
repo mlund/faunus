@@ -1,6 +1,7 @@
 #include "core.h"
 #include "move.h"
 #include "multipole.h"
+#include "docopt.h"
 #include <cstdlib>
 
 using namespace Faunus;
@@ -9,9 +10,33 @@ using namespace std;
 typedef Geometry::Cuboid Tgeometry;
 typedef Particle<Radius, Charge> Tparticle;
 
+static const char USAGE[] =
+R"(Faunus - A Framework for Molecular Simulation.
+
+    http://github.com/mlund/faunus
+
+    Usage:
+      faunus [-q] [--rerun=TRAJ] [--state=FILE] [-]
+      faunus (-h | --help)
+      faunus --version
+
+    Options:
+      --rerun=TRAJ               Rerun w. trajectory file (.xtc).
+      -s FILE, --state=FILE      Initialize using state file.
+      -q, --quiet                Less verbose output.
+      -h --help                  Show this screen.
+      --version                  Show version.
+)";
+
 int main( int argc, char **argv )
 {
     try {
+        auto args = docopt::docopt( USAGE,
+                { argv + 1, argv + argc }, true, "Faunus 2.0.0");
+
+        if ( args["--quiet"].asBool() )
+            cout.setstate( std::ios_base::failbit ); // hold kæft!
+
         json j;
         std::cin >> j;
 

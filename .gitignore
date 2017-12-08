@@ -7,8 +7,10 @@ install_manifest.txt
 DartConfiguration.tcl
 Testing
 CTestTestfile.cmake
-src/examples/
+examples/
 3rdparty/
+.ipynb_checkpoints/
+.swp
 
 # Compiled Object files
 *.slo

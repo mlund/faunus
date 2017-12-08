@@ -34,6 +34,7 @@ namespace Faunus {
                         j = pairpot;
                         json t = json::object();
                         t["g2g"] = { {"cutoff", std::sqrt(Rc2_g2g)} };
+                        //t["cutoff_g2g"] = std::sqrt(Rc2_g2g);
                         j.push_back(t);
                     }
 

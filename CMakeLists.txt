@@ -8,6 +8,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 enable_testing()
 
+# Default build is "RelWithDebInfo"
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo
+            CACHE STRING "Build type: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif ()
+
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
     string(REPLACE "NDEBUG" "_ndebug" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"
@@ -32,6 +38,13 @@ ExternalProject_Add( range-v3
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(range-v3 source_dir)
 set(RangeV3IncludeDir ${source_dir}/include)
+
+ExternalProject_Add( docoptcpp
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    URL "https://github.com/docopt/docopt.cpp/archive/v0.6.2.tar.gz"
+    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
+ExternalProject_Get_Property(docoptcpp source_dir)
+set(DocoptcppIncludeDir ${source_dir})
 
 ExternalProject_Add( pybind11
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
@@ -64,18 +77,9 @@ ExternalProject_Add( doctest
 ExternalProject_Get_Property(doctest source_dir)
 set(DocTestIncludeDir ${source_dir}/../../src/)
 
-ExternalProject_Add( catch
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/philsquared/Catch/releases/download/v1.9.6/catch.hpp"
-    DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
-    CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-ExternalProject_Get_Property(catch source_dir)
-set(CatchIncludeDir ${source_dir}/../../src/)
-
-set_target_properties(catch PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
 add_definitions(-DDOCTEST_CONFIG_DISABLE)
-include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir} ${XDRIncludeDir} ${Pybind11IncludeDir})
+include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir}
+    ${XDRIncludeDir} ${Pybind11IncludeDir} ${DocoptcppIncludeDir})
 
 set(hdrs
         ${CMAKE_SOURCE_DIR}/src/average.h
@@ -90,8 +94,8 @@ add_executable(tests src/tests.cpp ${hdrs})
 add_dependencies(tests modernjson doctest eigen range-v3 libxdrfile pybind11)
 add_test(NAME tests COMMAND tests)
 
-add_executable(example src/example.cpp ${hdrs})
-add_dependencies(example modernjson doctest eigen range-v3)
+add_executable(faunus src/faunus.cpp ${hdrs} ${DocoptcppIncludeDir}/docopt.cpp)
+add_dependencies(faunus modernjson doctest eigen range-v3 docoptcpp)
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
@@ -109,3 +113,27 @@ if (ENABLE_PYTHON)
     endif ()
 
 endif ()
+
+if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
+    string(REPLACE "NDEBUG" "_ndebug" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"
+            CACHE STRING "Flags used by the compiler during Release with Debug Info builds" FORCE)
+
+    message(
+            "...............................................................\n"
+            "  Faunus is compiled in Debug mode to enable checks and\n"
+            "  assertions highly recommended when developing and testing.\n"
+            "  For production, switch to Release for optimal performance:\n\n"
+            "  -DCMAKE_BUILD_TYPE=Release\n"
+            "***************************************************************\n")
+endif ()
+if (CMAKE_BUILD_TYPE MATCHES "Release")
+    message(
+            "......................................................................\n"
+            "  Faunus is running in Release mode recommended for production runs.\n"
+            "  For setting up simulations it is HIGHLY recommended to use Debug\n"
+            "  mode to enable run-time checks and assertions:\n\n"
+            "  -DCMAKE_BUILD_TYPE=RelWithDebInfo\n"
+            "**********************************************************************\n")
+endif ()
+

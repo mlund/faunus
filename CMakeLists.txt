@@ -11,7 +11,7 @@ enable_testing()
 # Default build is "RelWithDebInfo"
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo
-            CACHE STRING "Build type: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+        CACHE STRING "Build type: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif ()
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
@@ -22,15 +22,20 @@ endif()
 
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 
-# Download external header files (Eigen, JSON for Modern C++, Doctest, Range-V3)
 include(ExternalProject)
+
+# MODERN JSON
+
 ExternalProject_Add( modernjson
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/nlohmann/json/releases/download/v2.1.1/json.hpp"
+    URL_MD5 871e326cf493d17bce4578656759283d
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(modernjson source_dir)
 set(JSONIncludeDir ${source_dir}/../../src/)
+
+# RANGE-V3
 
 ExternalProject_Add( range-v3
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
@@ -39,18 +44,22 @@ ExternalProject_Add( range-v3
 ExternalProject_Get_Property(range-v3 source_dir)
 set(RangeV3IncludeDir ${source_dir}/include)
 
+# DOCOPT.CPP
+
 ExternalProject_Add(project_docopt
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     BUILD_COMMAND make docopt_s
-    INSTALL_COMMAND ""
+    INSTALL_COMMAND "" LOG_DOWNLOAD ON
     URL "https://github.com/docopt/docopt.cpp/archive/v0.6.2.tar.gz")
+
 ExternalProject_Get_Property(project_docopt binary_dir)
 ExternalProject_Get_Property(project_docopt source_dir)
 set(DocoptIncludeDir ${source_dir})
-message(${binary_dir})
 add_library(docopt STATIC IMPORTED)
 set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 add_dependencies(docopt project_docopt)
+
+# PYBIND11
 
 ExternalProject_Add( pybind11
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
@@ -58,6 +67,8 @@ ExternalProject_Add( pybind11
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(pybind11 source_dir)
 set(Pybind11IncludeDir ${source_dir}/include)
+
+# EIGEN
 
 ExternalProject_Add( eigen
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
@@ -67,42 +78,55 @@ ExternalProject_Add( eigen
 ExternalProject_Get_Property(eigen source_dir)
 set(EigenIncludeDir ${source_dir})
 
-ExternalProject_Add( libxdrfile
+# XRDFILE
+
+ExternalProject_Add( project_xdrfile
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/wesbarnett/libxdrfile/archive/2.1.2.tar.gz"
-    CMAKE_ARGS "-Wno-dev -DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty"
-    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-ExternalProject_Get_Property(libxdrfile source_dir)
-set(XDRIncludeDir "${CMAKE_SOURCE_DIR}/3rdparty/include")
+    URL_MD5 ee114404b4a01613b2f0167a2ad92536
+    PATCH_COMMAND echo "add_library(xdrfile-static STATIC \${SRCS})" >> CMakeLists.txt
+    BUILD_COMMAND make xdrfile-static
+    CMAKE_ARGS "-Wno-dev" LOG_DOWNLOAD ON INSTALL_COMMAND "")
+
+ExternalProject_Get_Property(project_xdrfile source_dir)
+ExternalProject_Get_Property(project_xdrfile binary_dir)
+set(XdrfileIncludeDir ${source_dir}/include)
+add_library(xdrfile STATIC IMPORTED)
+set_property(TARGET xdrfile PROPERTY IMPORTED_LOCATION ${binary_dir}/libxdrfile-static.a)
+add_dependencies(xdrfile project_xdrfile)
+
+# DOCTEST
 
 ExternalProject_Add( doctest
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.6/doctest/doctest.h"
+    URL_MD5 ca614f61d53a34a672c9cb378e14acf0
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
+
 ExternalProject_Get_Property(doctest source_dir)
 set(DocTestIncludeDir ${source_dir}/../../src/)
 
 add_definitions(-DDOCTEST_CONFIG_DISABLE)
 include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir}
-    ${XDRIncludeDir} ${Pybind11IncludeDir} ${DocoptIncludeDir})
+    ${XdrfileIncludeDir} ${Pybind11IncludeDir} ${DocoptIncludeDir})
 
 set(hdrs
-        ${CMAKE_SOURCE_DIR}/src/average.h
-        ${CMAKE_SOURCE_DIR}/src/auxiliary.h
-        ${CMAKE_SOURCE_DIR}/src/core.h
-        ${CMAKE_SOURCE_DIR}/src/energy.h
-        ${CMAKE_SOURCE_DIR}/src/move.h
-        ${CMAKE_SOURCE_DIR}/src/potentials.h
-        )
+    ${CMAKE_SOURCE_DIR}/src/average.h
+    ${CMAKE_SOURCE_DIR}/src/auxiliary.h
+    ${CMAKE_SOURCE_DIR}/src/core.h
+    ${CMAKE_SOURCE_DIR}/src/energy.h
+    ${CMAKE_SOURCE_DIR}/src/move.h
+    ${CMAKE_SOURCE_DIR}/src/potentials.h
+    )
 
 add_executable(tests src/tests.cpp ${hdrs})
-add_dependencies(tests modernjson doctest eigen range-v3 libxdrfile pybind11)
+add_dependencies(tests modernjson doctest eigen range-v3 xdrfile pybind11)
 add_test(NAME tests COMMAND tests)
 
 add_executable(faunus src/faunus.cpp ${hdrs})
-add_dependencies(faunus modernjson doctest eigen range-v3 docopt)
-target_link_libraries(faunus docopt)
+add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile)
+target_link_libraries(faunus docopt xdrfile)
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
@@ -115,8 +139,9 @@ if (ENABLE_PYTHON)
         add_library(pyfaunus SHARED src/pyfaunus.cpp)
         set_target_properties(pyfaunus PROPERTIES PREFIX "")
         set_target_properties(pyfaunus PROPERTIES SUFFIX ".so")
-        target_link_libraries(pyfaunus ${PYTHON_LIBRARY})
+        target_link_libraries(pyfaunus ${PYTHON_LIBRARY} xdrfile)
         INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
+        add_dependencies(pyfaunus modernjson eigen range-v3 xdrfile pybind11)
     endif ()
 
 endif ()
@@ -124,23 +149,23 @@ endif ()
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
     string(REPLACE "NDEBUG" "_ndebug" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"
-            CACHE STRING "Flags used by the compiler during Release with Debug Info builds" FORCE)
+        CACHE STRING "Flags used by the compiler during Release with Debug Info builds" FORCE)
 
     message(
-            "...............................................................\n"
-            "  Faunus is compiled in Debug mode to enable checks and\n"
-            "  assertions highly recommended when developing and testing.\n"
-            "  For production, switch to Release for optimal performance:\n\n"
-            "  -DCMAKE_BUILD_TYPE=Release\n"
-            "***************************************************************\n")
+        "...............................................................\n"
+        "  Faunus is compiled in Debug mode to enable checks and\n"
+        "  assertions highly recommended when developing and testing.\n"
+        "  For production, switch to Release for optimal performance:\n\n"
+        "  -DCMAKE_BUILD_TYPE=Release\n"
+        "***************************************************************\n")
 endif ()
 if (CMAKE_BUILD_TYPE MATCHES "Release")
     message(
-            "......................................................................\n"
-            "  Faunus is running in Release mode recommended for production runs.\n"
-            "  For setting up simulations it is HIGHLY recommended to use Debug\n"
-            "  mode to enable run-time checks and assertions:\n\n"
-            "  -DCMAKE_BUILD_TYPE=RelWithDebInfo\n"
-            "**********************************************************************\n")
+        "......................................................................\n"
+        "  Faunus is running in Release mode recommended for production runs.\n"
+        "  For setting up simulations it is HIGHLY recommended to use Debug\n"
+        "  mode to enable run-time checks and assertions:\n\n"
+        "  -DCMAKE_BUILD_TYPE=RelWithDebInfo\n"
+        "**********************************************************************\n")
 endif ()
 

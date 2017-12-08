@@ -39,12 +39,18 @@ ExternalProject_Add( range-v3
 ExternalProject_Get_Property(range-v3 source_dir)
 set(RangeV3IncludeDir ${source_dir}/include)
 
-ExternalProject_Add( docoptcpp
+ExternalProject_Add(project_docopt
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/docopt/docopt.cpp/archive/v0.6.2.tar.gz"
-    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-ExternalProject_Get_Property(docoptcpp source_dir)
-set(DocoptcppIncludeDir ${source_dir})
+    BUILD_COMMAND make docopt_s
+    INSTALL_COMMAND ""
+    URL "https://github.com/docopt/docopt.cpp/archive/v0.6.2.tar.gz")
+ExternalProject_Get_Property(project_docopt binary_dir)
+ExternalProject_Get_Property(project_docopt source_dir)
+set(DocoptIncludeDir ${source_dir})
+message(${binary_dir})
+add_library(docopt STATIC IMPORTED)
+set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
+add_dependencies(docopt project_docopt)
 
 ExternalProject_Add( pybind11
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
@@ -79,7 +85,7 @@ set(DocTestIncludeDir ${source_dir}/../../src/)
 
 add_definitions(-DDOCTEST_CONFIG_DISABLE)
 include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir}
-    ${XDRIncludeDir} ${Pybind11IncludeDir} ${DocoptcppIncludeDir})
+    ${XDRIncludeDir} ${Pybind11IncludeDir} ${DocoptIncludeDir})
 
 set(hdrs
         ${CMAKE_SOURCE_DIR}/src/average.h
@@ -94,8 +100,9 @@ add_executable(tests src/tests.cpp ${hdrs})
 add_dependencies(tests modernjson doctest eigen range-v3 libxdrfile pybind11)
 add_test(NAME tests COMMAND tests)
 
-add_executable(faunus src/faunus.cpp ${hdrs} ${DocoptcppIncludeDir}/docopt.cpp)
-add_dependencies(faunus modernjson doctest eigen range-v3 docoptcpp)
+add_executable(faunus src/faunus.cpp ${hdrs})
+add_dependencies(faunus modernjson doctest eigen range-v3 docopt)
+target_link_libraries(faunus docopt)
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)

@@ -2,11 +2,19 @@
 
 #include "core.h"
 
+namespace Faunus {
+
+//    namespace Xtc {
+#ifndef __cplusplus
+#define __cplusplus
+#endif
+#ifndef CPLUSPLUS
+#define CPLUSPLUS
+#endif
 #include "xdrfile_trr.h"
 #include "xdrfile_xtc.h"
 
-
-namespace Faunus {
+//    }
 
     namespace IO {
 
@@ -86,27 +94,27 @@ namespace Faunus {
         private:
 
             template<class Tparticle>
-            static std::string p2s(const Tparticle &a, int i) {
-                std::ostringstream o;
-                o.precision(5);
-                o << atoms<Tparticle>[a.id].name << " " << i+1 << " "
-                << a.pos.transpose() << " "
-                << a.charge << " " << a.mw << " " << a.radius << endl;
-                return o.str();
-            }
+                static std::string p2s(const Tparticle &a, int i) {
+                    std::ostringstream o;
+                    o.precision(5);
+                    o << atoms<Tparticle>[a.id].name << " " << i+1 << " "
+                        << a.pos.transpose() << " "
+                        << a.charge << " " << a.mw << " " << a.radius << endl;
+                    return o.str();
+                }
 
             template<class Tparticle>
-            static Tparticle& s2p(const std::string &s, Tparticle &a) {
-                std::stringstream o;
-                std::string name, num;
-                o << s;
-                o >> name;
-                //a = atoms<Tparticle>[name];
-                o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> a.mw >> a.radius;
-                if (a.id==0)
-                std::cerr << "Warning: Atom name " << name << " is not in the atom list.\n";
-                return a;
-            }
+                static Tparticle& s2p(const std::string &s, Tparticle &a) {
+                    std::stringstream o;
+                    std::string name, num;
+                    o << s;
+                    o >> name;
+                    //a = atoms<Tparticle>[name];
+                    o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> a.mw >> a.radius;
+                    if (a.id==0)
+                        std::cerr << "Warning: Atom name " << name << " is not in the atom list.\n";
+                    return a;
+                }
 
         public:
             template<class Tpvec>
@@ -493,10 +501,10 @@ namespace Faunus {
      */
     class FormatXTC {
         private:
-            XDRFILE *xd;        //!< file handle
+            XDRFILE *xd=NULL;        //!< file handle
             matrix xdbox;       //!< box dimensions
             rvec *x_xtc;        //!< vector of particle coordinates
-            float time_xtc, prec_xtc;
+            float time_xtc, prec_xtc=1000, prec_tol=1e-3;
             int natoms_xtc, step_xtc;
         public:
             inline int getNumAtoms() { return natoms_xtc; }
@@ -561,7 +569,7 @@ namespace Faunus {
              * set by the `ioxtc::setbox()` function before calling this.
              */
             template<class Tgroup, class Tparticle, class Talloc>
-                bool save(const std::string &file, const std::vector<Tparticle,Talloc> &p, Tgroup g = Tgroup() ) {
+                bool save(const std::string &file, const std::vector<Tparticle,Talloc> &p, Tgroup g) {
                     if (!g.empty()) {
                         if ( xd == NULL )
                             xd = xdrfile_open(&file[0], "w");

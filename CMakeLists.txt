@@ -109,7 +109,7 @@ set(DocTestIncludeDir ${source_dir}/../../src/)
 
 add_definitions(-DDOCTEST_CONFIG_DISABLE)
 include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir}
-    ${XdrfileIncludeDir} ${Pybind11IncludeDir} ${DocoptIncludeDir})
+    ${Pybind11IncludeDir} ${DocoptIncludeDir})
 
 set(hdrs
     ${CMAKE_SOURCE_DIR}/src/average.h

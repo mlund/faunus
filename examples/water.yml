@@ -1,5 +1,6 @@
 analysis:
     - systemenergy: {file: energy.dat, nstep: 100}
+    - xtcfile: {file: traj.xtc, nstep: 10 }
     - savestate: {file: confout.pqr}
     - savestate: {file: confout.state}
 atomlist: # define all atom types below
@@ -8,14 +9,14 @@ atomlist: # define all atom types below
 energy:
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: fanourgakis, epsr: 1, cutoff: 14.8}
-        cutoff_g2g: 15
+        coulomb: {type: fanourgakis, epsr: 1, cutoff: 9}
+        cutoff_g2g: 10
 moleculelist:
-    - water:  {Ninit: 1000, structure: water.xyz}
+    - water:  {Ninit: 100, structure: water.xyz}
 moves:
     - moltransrot: {mol: water, dp: 0.4, dprot: 0.4, repeat: N}
 
-mcloop: {macro: 2, micro: 30} #30
+mcloop: {macro: 10, micro: 50} #30
 temperature: 300 # in Kelvin
-geometry: {length: 31.1361}
+geometry: {length: 14.452}
 

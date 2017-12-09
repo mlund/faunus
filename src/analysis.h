@@ -1,5 +1,7 @@
 #pragma once
+
 #include "space.h"
+#include "io.h"
 
 namespace Faunus {
 
@@ -91,8 +93,8 @@ namespace Faunus {
             public:
                 template<class Tenergy>
                     SystemEnergy( const json &j, Tenergy &pot ) {
-                        name = "systemenergy";
                         from_json(j);
+                        name = "systemenergy";
                         energyFunc = [&pot]() {
                             Change change;
                             change.all = true;
@@ -115,8 +117,8 @@ namespace Faunus {
                         using std::ref;
                         using std::placeholders::_1;
 
-                        name = "savestate";
                         from_json(j);
+                        name = "savestate";
                         steps = j.value("nstep", -1);
                         file = j.at("file");
                         std::string suffix = file.substr(file.find_last_of(".") + 1);
@@ -353,6 +355,46 @@ namespace Faunus {
                     }
             };
 
+        /**
+         * @brief Write XTC trajectory file
+         *
+         * JSON keywords: `nstep`, `file`
+         */
+        template<class Tspace>
+            class XTCtraj : public Analysisbase
+        {
+            private:
+                typedef typename Tspace::Tparticle Tparticle;
+                void _to_json(json &j) const override {
+                    j["file"] = file;
+                }
+                void _from_json(const json &j) override {
+                    file = j.at("file");
+                }
+
+                FormatXTC xtc;
+                Tspace &spc;
+                std::string file;
+
+                void _sample() override
+                {
+                    xtc.setbox( spc.geo.getLength() );
+                    bool rc = xtc.save(file, spc.p, Group<Tparticle>(spc.p.begin(), spc.p.end()));
+                    if (rc==false)
+                        std::cerr << "error saving xtc\n";
+                }
+
+            public:
+
+                XTCtraj( const json &j, Tspace &s ) : xtc(1e6), spc(s)
+            {
+                from_json(j);
+                name = "xtcfile";
+                cite = "http://bit.ly/2A8lzpa";
+            }
+        };
+
+
         class CombinedAnalysis : public BasePointerVector<Analysisbase> {
             public:
                 template<class Tspace, class Tenergy>
@@ -360,10 +402,16 @@ namespace Faunus {
                         for (auto &m : j.at("analysis")) // loop over move list
                             for (auto it=m.begin(); it!=m.end(); ++it) {
                                 try {
+
                                     if (it.key()=="systemenergy")
                                         push_back<SystemEnergy>(it.value(), pot);
+
                                     if (it.key()=="savestate")
                                         push_back<SaveState>(it.value(), spc);
+
+                                    if ( it.key()=="xtcfile")
+                                        push_back<XTCtraj<Tspace>>(it.value(), spc);
+
                                     // additional analysis go here...
                                 } catch (std::exception &e) {
                                     throw std::runtime_error("Error adding analysis '" + it.key() + "': " + e.what());

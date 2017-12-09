@@ -26,6 +26,7 @@ namespace Faunus {
                 inline void to_json(json &j) const {
                     assert( !name.empty() );
                     auto &_j = j[name];
+                    _to_json(_j);
                     if (cnt>0) {
                         _j["relative time"] = timer.result();
                         _j["nstep"] = steps;
@@ -33,7 +34,6 @@ namespace Faunus {
                     }
                     if (!cite.empty())
                         _j["citation"] = cite;
-                    _to_json(_j);
                 } //!< JSON report w. statistics, output etc.
 
                 inline void from_json(const json &j) {
@@ -146,97 +146,75 @@ namespace Faunus {
                 void _sample() override {
                     writeFunc(file);
                 }
-
         };
 
         /**
          * @brief Base class for distribution functions etc.
          */
         class PairFunctionBase : public Analysisbase {
-
             protected:
-                struct data {
-                    int dim;
-                    double dr;
-                    Table2D<double,double> hist;
-                    Table2D<double,Average<double>> hist2;
-                    std::string name1, name2, file, file2;
-                    double Rhypersphere; // Radius of 2D hypersphere
-                };
-                std::vector<data> datavec;        // vector of data sets
-                Average<double> V;                // average volume (angstrom^3)
-                virtual void normalize(data &);
+                int dim;
+                int id1=-1, id2=-1; // particle id (mol or atom)
+                double dr;
+                Table2D<double,double> hist;
+                Table2D<double,Average<double>> hist2;
+                std::string name1, name2, file, file2;
+                double Rhypersphere; // Radius of 2D hypersphere
+                Average<double> V;   // average volume (angstrom^3)
+                virtual void normalize();
             private:
-                virtual void update(data &d)=0;   // called on each defined data set
-                void sample() override;
-                json _json();
+
+                inline void _from_json(const json &j) override {
+                    file = j.at("file");
+                    file2 = j.value("file2", file+".avg");
+                    name1 = j.at("name1");
+                    name2 = j.at("name2");
+                    dim = j.value("dim", 3);
+                    dr = j.value("dr", 0.1);
+                    hist.setResolution(dr);
+                    hist2.setResolution(dr);
+                    Rhypersphere = j.value("Rhyper", -1.0);
+                }
+
+                inline void _to_json(json &j) const override {
+                    j = {
+                        { "dr", dr },
+                        { "name1", name1 },
+                        { "name2", name2 },
+                        { "file", file },
+                        { "file2", file2 },
+                        { "dim", dim },
+                        { "Rhyper", Rhypersphere }
+                    };
+                }
 
             public:
-                PairFunctionBase(json, std::string);
-                //virtual ~PairFunctionBase();
+                inline PairFunctionBase(const json &j) {
+                    from_json(j);
+                }
+
+                inline virtual ~PairFunctionBase()
+                {
+                    cout << hist.getMap().size() << endl;
+                    normalize();
+                    hist.save( file );
+                }
         };
 
-        void PairFunctionBase::sample()
+        inline void PairFunctionBase::normalize()
         {
-            for (auto &d : datavec)
-                update(d);
-        }
-
-        json PairFunctionBase::_json()
-        {
-            json j;
-            auto &_j = j[name];
-            for (auto &d : datavec)
-                _j[ d.name1+"-"+d.name2 ] = {
-                    { "dr", d.dr },
-                    { "file", d.file },
-                    { "file2", d.file2 },
-                    { "dim", d.dim },
-                    { "Rhyper", d.Rhypersphere }
-                };
-            return j;
-        }
-
-        PairFunctionBase::PairFunctionBase( json j, std::string name ) {
-            try {
-                for (auto &i : j.at("pairs"))
-                    if (i.is_object())
-                    {
-                        data d;
-                        d.file = i.at("file");
-                        d.file2 = i.value("file2",d.file+".avg");
-                        d.name1 = i.at("name1");
-                        d.name2 = i.at("name2");
-                        d.dim = i.value("dim", 3);
-                        d.dr = i.value("dr", 0.1);
-                        d.hist.setResolution(d.dr);
-                        d.hist2.setResolution(d.dr);
-                        d.Rhypersphere = i.value("Rhyper", -1.0);
-                        datavec.push_back( d );
-                    }
-            }
-            catch(std::exception& e) {
-                throw std::runtime_error(name + ": " + e.what());
-            }
-
-            if (datavec.empty())
-                std::cerr << name + ": no sample sets defined for analysis\n";
-        }
-
-        void PairFunctionBase::normalize(data &d)
-        {
-            assert(V.cnt>0);
-            double Vr=1, sum = d.hist.sumy();
-            for (auto &i : d.hist.getMap()) {
-                if (d.dim==3)
-                    Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
-                if (d.dim==2) {
-                    Vr = 2 * pc::pi * i.first * d.dr;
-                    if (d.Rhypersphere > 0)
-                        Vr = 2.0*pc::pi*d.Rhypersphere*sin(i.first/d.Rhypersphere) * d.dr;
+            //assert(V.cnt>0);
+            double Vr=1, sum = hist.sumy();
+            for (auto &i : hist.getMap()) {
+                if (dim==3)
+                    Vr = 4 * pc::pi * std::pow(i.first,2) * dr;
+                if (dim==2) {
+                    Vr = 2 * pc::pi * i.first * dr;
+                    if ( Rhypersphere > 0)
+                        Vr = 2.0*pc::pi*Rhypersphere*std::sin(i.first/Rhypersphere) * dr;
                 }
-                if (d.dim==1)
-                    Vr = d.dr;
+                if (dim==1)
+                    Vr = dr;
                 i.second = i.second/sum * V/Vr;
             }
         }
@@ -274,45 +252,36 @@ namespace Faunus {
             class AtomRDF : public PairFunctionBase {
                 private:
                     Tspace &spc;
-                    typedef typename Tspace::Tparticle Tparticle;
 
-                    void update(data &d) override
+                    void _sample() override
                     {
-                        V += spc.geo.getVolume( d.dim );
-                        int N = spc.p.size();
-
-                        auto it = findName( atoms<Tparticle>, d.name1 ).id;
-                        if (it == atoms<Tparticle>.end())
-                            throw std::runtime_error("unknown atom '" + d.name1 + "'");
-                        int id1 = it->id();
-
-                        it = findName( atoms<Tparticle>, d.name2 ).id;
-                        if (it == atoms<Tparticle>.end())
-                            throw std::runtime_error("unknown atom '" + d.name2 + "'");
-                        int id2 = it->id();
-
-                        for (int i=0; i<N-1; i++)
-                            for (int j=i+1; j<N; j++)
+                        V += spc.geo.getVolume( dim );
+                        for ( auto i = spc.p.begin(); i != spc.p.end(); ++i )
+                            for ( auto j=i; ++j != spc.p.end(); )
                                 if (
-                                        ( spc.p[i].id==id1 && spc.p[j].id==id2 ) ||
-                                        ( spc.p[i].id==id2 && spc.p[j].id==id1 )
+                                        ( i->id==id1 && j->id==id2 ) ||
+                                        ( i->id==id2 && j->id==id1 )
                                    )
                                 {
-                                    double r = spc.geo.dist( spc.p[i], spc.p[j] );
-                                    d.hist(r)++;
+                                    double r = std::sqrt( spc.geo.sqdist( i->pos, j->pos ) );
+                                    hist(r)++;
                                 }
                     }
 
                 public:
-                    AtomRDF( json j, Tspace &spc ) : PairFunctionBase(j,
-                            "Atomic Pair Distribution Function"), spc(spc) {}
+                    AtomRDF( const json &j, Tspace &spc ) : PairFunctionBase(j), spc(spc) {
+                        typedef typename Tspace::Tparticle Tparticle;
+                        name = "atomrdf";
 
-                    ~AtomRDF()
-                    {
-                        for (auto &d : datavec) {
-                            normalize(d);
-                            d.hist.save( d.file );
-                        }
+                        auto it = findName( atoms<Tparticle>, name1 );
+                        if ( it == atoms<Tparticle>.end() )
+                            throw std::runtime_error("unknown atom '" + name1 + "'");
+                        id1 = it->id();
+
+                        it = findName( atoms<Tparticle>, name2 );
+                        if ( it == atoms<Tparticle>.end() )
+                            throw std::runtime_error("unknown atom '" + name2 + "'");
+                        id2 = it->id();
                     }
             };
 
@@ -320,38 +289,38 @@ namespace Faunus {
         template<class Tspace>
             class MoleculeRDF : public PairFunctionBase {
                 private:
+                    typedef typename Tspace::Tpvec Tpvec;
                     Tspace &spc;
-                    void update(data &d) override
-                    {
-                        V += spc.geo.getVolume( d.dim );
-                        auto g1 = spc.findMolecules( d.name1 );
-                        auto g2 = spc.findMolecules( d.name2 );
 
-                        if (d.name1!=d.name2)
-                            for (auto i : g1)
-                                for (auto j : g2) {
-                                    double r = spc.geo.dist( i->cm, j->cm );
-                                    d.hist(r)++;
+                    void _sample() override
+                    {
+                        V += spc.geo.getVolume( dim );
+                        for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i )
+                            for ( auto j=i; ++j != spc.groups.end(); )
+                                if (
+                                        ( i->id==id1 && j->id==id2 ) ||
+                                        ( i->id==id2 && j->id==id1 )
+                                   )
+                                {
+                                    double r = std::sqrt( spc.geo.sqdist( i->cm, j->cm ) );
+                                    hist(r)++;
                                 }
-                        else {
-                            for (int i=0; i<(int)g1.size()-1; i++)
-                                for (int j=i+1; j<(int)g1.size(); j++) {
-                                    double r = spc.geo.dist( g1[i]->cm, g1[j]->cm );
-                                    d.hist(r)++;
-                                }
-                        }
                     }
 
                 public:
-                    MoleculeRDF( json j, Tspace &spc ) : PairFunctionBase(j,
-                            "Molecular Pair Distribution Function"), spc(spc) {}
+                    MoleculeRDF( const json &j, Tspace &spc ) : PairFunctionBase(j), spc(spc) {
+                        name = "molrdf";
 
-                    ~MoleculeRDF()
-                    {
-                        for (auto &d : datavec) {
-                            normalize(d);
-                            d.hist.save( d.file );
-                        }
+                        auto it = findName( molecules<Tpvec>, name1 );
+                        if (it == molecules<Tpvec>.end())
+                            throw std::runtime_error(name + ": unknown molecule '" + name1 + "'\n");
+                        id1 = it->id();
+
+                        it = findName( molecules<Tpvec>, name2 );
+                        if (it == molecules<Tpvec>.end())
+                            throw std::runtime_error(name + ": unknown molecule '" + name2 + "'\n");
+                        id2 = it->id();
+                        assert(id1>=0 && id2>=0);
                     }
             };
 
@@ -412,9 +381,16 @@ namespace Faunus {
                                     if ( it.key()=="xtcfile")
                                         push_back<XTCtraj<Tspace>>(it.value(), spc);
 
+                                    if ( it.key()=="aromrdf")
+                                        push_back<AtomRDF<Tspace>>(it.value(), spc);
+
+                                    if ( it.key()=="molrdf")
+                                        push_back<MoleculeRDF<Tspace>>(it.value(), spc);
+
                                     // additional analysis go here...
                                 } catch (std::exception &e) {
-                                    throw std::runtime_error("Error adding analysis '" + it.key() + "': " + e.what());
+                                    throw std::runtime_error("Error adding analysis '"
+                                            + it.key() + "': " + e.what() + "\n");
                                 }
                             }
                     }

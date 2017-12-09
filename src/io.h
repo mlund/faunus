@@ -2,6 +2,10 @@
 
 #include "core.h"
 
+#include "xdrfile_trr.h"
+#include "xdrfile_xtc.h"
+
+
 namespace Faunus {
 
     namespace IO {
@@ -476,36 +480,192 @@ namespace Faunus {
                 }
     };
 
+    /** 
+     * @brief GROMACS xtc compressed trajectory file format
+     *
+     * Saves simulation frames to a Gromacs xtc trajectory file including
+     * box information if applicable. Molecules with periodic boundaries
+     * can be saved as "whole" by adding their groups to the public g-vector.
+     *
+     * @date June 2007-2011, Prague / Malmo
+     * @note Alternative pure C++ version(?):
+     * http://loos.sourceforge.net/xtc_8hpp_source.html
+     */
+    class FormatXTC {
+        private:
+            XDRFILE *xd;        //!< file handle
+            matrix xdbox;       //!< box dimensions
+            rvec *x_xtc;        //!< vector of particle coordinates
+            float time_xtc, prec_xtc;
+            int natoms_xtc, step_xtc;
+        public:
+            inline int getNumAtoms() { return natoms_xtc; }
+
+            /**
+             * @brief Load a single frame into cuboid
+             *
+             * This will read a single frame from the xtc file (must be open) into
+             * a Cuboid container. The box dimensions are retrieved for the frame and transfered
+             * to the container. Coordinates are copied into both the particle vector "p" and the
+             * "trial" vector. In doing so, positions are converted from nm to angstroms and the
+             * coordinate system is shifted so that origin is on the middle of the box. As a safefy
+             * measure we do a container collision check to see if all particles are within
+             * the Cuboid boundaries.
+             *
+             * @note The container particle vector *must* match the number of particles
+             *       in the xtc file. If not
+             *       an error message will be issued and the function will abort.
+             *       You may want to transfer the new box size to the pair potential if
+             *       periodic boundaries are used.
+             */
+            template<class Tspace>
+                bool loadnextframe(Tspace &c, bool setbox=true, bool applypbc=false) {
+                    if (xd!=NULL)
+                    {
+                        if (natoms_xtc==(int)c.p.size())
+                        { 
+                            int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
+                            if (rc==0)
+                            {
+                                Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
+                                if (geo==nullptr)
+                                    throw std::runtime_error("Cuboid-like geometry required");
+                                Point len_half = 0.5*geo->getLength();
+                                if (setbox)
+                                    geo->setLength( Point( 10.0*xdbox[0][0], 10.0*xdbox[1][1], 10.0*xdbox[2][2] ) );
+                                for (size_t i=0; i<c.p.size(); i++) {
+                                    c.p[i].pos.x() = 10.0*x_xtc[i][0];
+                                    c.p[i].pos.y() = 10.0*x_xtc[i][1];
+                                    c.p[i].pos.z() = 10.0*x_xtc[i][2];
+                                    c.p[i].pos -= len_half;
+                                    if (applypbc)
+                                        geo->boundary( c.p[i].pos );
+                                    if ( geo->collision(c.p[i].pos, 0) )
+                                        throw std::runtime_error("particle-container collision");
+                                } 
+                                return true;
+                            }
+                        } else
+                            throw std::runtime_error("xtcfile<->container particle mismatch");
+                    } else
+                        throw std::runtime_error("xtc file cannot be read");
+                    return false; // end of file or not opened
+                }
+
+            /**
+             * This will take an arbitrary particle vector and add it
+             * to an xtc file. If the file is already open, coordinates will
+             * be added, while a new file is created if not.
+             * Coordinates are shiftet and converted to nanometers.
+             * Box dimensions for the frame must be manually
+             * set by the `ioxtc::setbox()` function before calling this.
+             */
+            template<class Tgroup, class Tparticle, class Talloc>
+                bool save(const std::string &file, const std::vector<Tparticle,Talloc> &p, Tgroup g = Tgroup() ) {
+                    if (!g.empty()) {
+                        if ( xd == NULL )
+                            xd = xdrfile_open(&file[0], "w");
+                        if ( xd != NULL ) {
+                            rvec *x = new rvec[ g.size() ];
+                            unsigned int i=0;
+                            for ( auto &j : g ) {
+                                x[i][0] = j.pos.x()*0.1 + xdbox[0][0]*0.5; // AA->nm
+                                x[i][1] = j.pos.y()*0.1 + xdbox[1][1]*0.5; // move inside sim. box
+                                x[i][2] = j.pos.z()*0.1 + xdbox[2][2]*0.5; //
+                                i++;
+                            }
+                            write_xtc( xd, g.size(), step_xtc++, time_xtc++, xdbox, x, prec_xtc );
+                            delete[] x;
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+            /**
+             * This will open an xtc file for reading. The number of atoms in each frame
+             * is saved and memory for the coordinate array is allocated.
+             */
+            inline bool open(std::string s) {
+                if (xd!=NULL)
+                    close();
+                xd = xdrfile_open(&s[0], "r");
+                if (xd!=NULL) {
+                    int rc = read_xtc_natoms(&s[0], &natoms_xtc); // get number of atoms
+                    if (rc==exdrOK) {
+                        x_xtc = new rvec [natoms_xtc]; // resize coordinate array
+                        return true;
+                    }
+                } else
+                    std::cerr << "# ioxtc error: xtc file could not be opened." << endl;
+                return false;
+            }
+
+            inline void close() {
+                xdrfile_close(xd);
+                xd=NULL;
+                delete[] x_xtc;
+            }
+
+            FormatXTC(double len) {
+                prec_xtc = 1000.;
+                time_xtc=step_xtc=0;
+                setbox(len);
+                xd=NULL;
+                x_xtc=NULL;
+            }
+
+            ~FormatXTC()
+            {
+                close();
+            }
+
+            inline void setbox(double x, double y, double z) {
+                assert(x>0 && y>0 && z>0);
+                for (int i=0; i<3; i++)
+                    for (int j=0; j<3; j++)
+                        xdbox[i][j]=0;
+                xdbox[0][0]=0.1*x; // corners of the
+                xdbox[1][1]=0.1*y; // rectangular box
+                xdbox[2][2]=0.1*z; // in nanometers!
+            }
+
+            inline void setbox(double len) { setbox(len,len,len); }
+
+            inline void setbox(const Point &p) { setbox(p.x(), p.y(), p.z()); }
+
+    };
+
     template<class Tpvec, class Enable = void>
-    struct loadStructure {
-        bool operator()(const std::string &file, Tpvec &dst, bool append) {
-            if (append==false)
-            dst.clear();
-            std::string suffix = file.substr(file.find_last_of(".") + 1);
-            if ( suffix == "xyz" )
-            FormatXYZ::load(file, dst);
-            if ( !dst.empty() ) return true;
-            return false;
-        }
-    }; //!< XYZ file into given particle vector (fallback if charges not available)
+        struct loadStructure {
+            bool operator()(const std::string &file, Tpvec &dst, bool append) {
+                if (append==false)
+                    dst.clear();
+                std::string suffix = file.substr(file.find_last_of(".") + 1);
+                if ( suffix == "xyz" )
+                    FormatXYZ::load(file, dst);
+                if ( !dst.empty() ) return true;
+                return false;
+            }
+        }; //!< XYZ file into given particle vector (fallback if charges not available)
 
     template<class Tpvec>
-    struct loadStructure<Tpvec, std::enable_if_t<std::is_base_of<Charge,typename Tpvec::value_type>::value>> {
-        bool operator()(const std::string &file, Tpvec &dst, bool append)
-        {
-            if (append==false)
-            dst.clear();
-            std::string suffix = file.substr(file.find_last_of(".") + 1);
-            if ( suffix == "aam" )
-            FormatAAM::load(file, dst);
-            if ( suffix == "pqr" )
-            FormatPQR::load(file, dst);
-            if ( suffix == "xyz" )
-            FormatXYZ::load(file, dst);
-            if ( !dst.empty() ) return true;
-            return false;
-        }
-    }; //!< Load AAM/PQR/XYZ file into given particle vector
+        struct loadStructure<Tpvec, std::enable_if_t<std::is_base_of<Charge,typename Tpvec::value_type>::value>> {
+            bool operator()(const std::string &file, Tpvec &dst, bool append)
+            {
+                if (append==false)
+                    dst.clear();
+                std::string suffix = file.substr(file.find_last_of(".") + 1);
+                if ( suffix == "aam" )
+                    FormatAAM::load(file, dst);
+                if ( suffix == "pqr" )
+                    FormatPQR::load(file, dst);
+                if ( suffix == "xyz" )
+                    FormatXYZ::load(file, dst);
+                if ( !dst.empty() ) return true;
+                return false;
+            }
+        }; //!< Load AAM/PQR/XYZ file into given particle vector
 
 
 }//namespace

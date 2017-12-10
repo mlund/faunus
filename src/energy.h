@@ -53,6 +53,15 @@ namespace Faunus {
                         }
 
                     template<typename T>
+                        double g_internal(const T &g) {
+                            double u=0;
+                            for ( auto i = g.begin(); i != g.end(); ++i )
+                                for ( auto j=i; ++j != g.end(); )
+                                    u += i2i(*i, *j);
+                            return u;
+                         }
+ 
+                    template<typename T>
                         double g2g(const T &g1, const T &g2) {
                             double u = 0;
                             if (!cut(g1,g2))
@@ -89,16 +98,30 @@ namespace Faunus {
 
                             // did everything change?
                             if (change.all) {
-                                for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i )
+                                for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i ) {
                                     for ( auto j=i; ++j != spc.groups.end(); )
                                         u += g2g( *i, *j );
+
+                                    u += g_internal(*i);
+                                }
                                 // more todo here...
                                 return u;
                             }
 
-                            // this is a common scenario we can quickly check for
+                            // if exactly ONE molecule is changed
                             if (change.groups.size()==1) {
                                 auto& d = change.groups[0];
+
+                                // exactly ONE atom is changed
+                                if (d.atoms.size()==1) {
+                                    auto i = spc.groups[d.index].begin() + d.atoms[0];
+                                    for (auto j=spc.p.begin(); j!=spc.p.end(); ++j)
+                                        if (i!=j)
+                                            u += i2i(*i, *j);
+                                    return u;
+                                }
+
+                                // everything changed
                                 if (d.all) {
                                     for (int i=0; i<int(spc.groups.size()); i++)
                                         if (i!=d.index)

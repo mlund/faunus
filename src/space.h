@@ -76,9 +76,10 @@ namespace Faunus {
                 new_from_json(j, *this);
 
                 for (auto &i : groups)
-                    if (geo.sqdist( i.cm,
-                            Geometry::massCenter(i.begin(), i.end(), geo.boundaryFunc, -i.cm) ) > 1e-9 )
-                        throw std::runtime_error("space construction error: mass center mismatch");
+                    if (!i.atomic)
+                        if (geo.sqdist( i.cm,
+                                    Geometry::massCenter(i.begin(), i.end(), geo.boundaryFunc, -i.cm) ) > 1e-9 )
+                            throw std::runtime_error("space construction error: mass center mismatch");
             }
 
             void clear() {
@@ -97,10 +98,15 @@ namespace Faunus {
                     }
                     Tgroup g( p.end()-in.size(), p.end() );
                     g.id = molid;
+                    g.atomic = molecules<Tpvec>.at(molid).atomic;
                     g.cm = Geometry::massCenter(in.begin(), in.end(), geo.boundaryFunc, -in.begin()->pos);
                     groups.push_back(g);
+                    if (g.atomic==false) {
+                        Point cm = Geometry::massCenter(g.begin(), g.end(), geo.boundaryFunc, -g.cm);
+                        if (geo.sqdist(g.cm, cm)>1e-9)
+                            throw std::runtime_error("space: mass center error upon insertion. Molecule too large?\n");
+                    }
                     assert( in.size() == groups.back().size() );
-                    assert( geo.sqdist( g.cm, Geometry::massCenter(g.begin(), g.end(), geo.boundaryFunc, -g.cm) )<1e-9 );
                 }
             } //!< Safely add particles and corresponding group to back
 
@@ -223,9 +229,13 @@ namespace Faunus {
             spc.clear();
             assert(spc.geo.getVolume()>0);
             for ( auto& mol : molecules<typename Tspace::Tpvec> ) {
-                int n = mol.Ninit;
-                while ( n-- > 0 ) {
+                if (mol.atomic)
                     spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
+                else {
+                    int n = mol.Ninit;
+                    while ( n-- > 0 ) {
+                        spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
+                    }
                 }
             }
         } //!< Insert `Ninit` molecules into space as defined in `molecules`

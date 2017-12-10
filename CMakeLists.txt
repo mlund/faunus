@@ -30,6 +30,7 @@ ExternalProject_Add( modernjson
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/nlohmann/json/releases/download/v2.1.1/json.hpp"
     URL_MD5 871e326cf493d17bce4578656759283d
+    UPDATE_DISCONNECTED ON
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(modernjson source_dir)
@@ -40,6 +41,8 @@ set(JSONIncludeDir ${source_dir}/../../src/)
 ExternalProject_Add( range-v3
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/ericniebler/range-v3/archive/0.3.0.tar.gz"
+    URL_MD5 7fb74afbddec3e166739e635f5b365f2
+    UPDATE_DISCONNECTED ON
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(range-v3 source_dir)
 set(RangeV3IncludeDir ${source_dir}/include)
@@ -50,6 +53,8 @@ ExternalProject_Add(project_docopt
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     BUILD_COMMAND make docopt_s
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
+    UPDATE_DISCONNECTED ON
+    URL_MD5 79cfe2f0f057d8e2231ce6969e42d760
     URL "https://github.com/docopt/docopt.cpp/archive/v0.6.2.tar.gz")
 
 ExternalProject_Get_Property(project_docopt binary_dir)
@@ -64,6 +69,8 @@ add_dependencies(docopt project_docopt)
 ExternalProject_Add( pybind11
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/pybind/pybind11/archive/v2.2.1.tar.gz"
+    URL_MD5 bab1d46bbc465af5af3a4129b12bfa3b
+    UPDATE_DISCONNECTED ON
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(pybind11 source_dir)
 set(Pybind11IncludeDir ${source_dir}/include)
@@ -74,6 +81,7 @@ ExternalProject_Add( eigen
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "http://bitbucket.org/eigen/eigen/get/3.3.4.tar.gz"
     URL_MD5 1a47e78efe365a97de0c022d127607c3
+    UPDATE_DISCONNECTED ON
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(eigen source_dir)
 set(EigenIncludeDir ${source_dir})
@@ -86,6 +94,7 @@ ExternalProject_Add( project_xdrfile
     URL_MD5 ee114404b4a01613b2f0167a2ad92536
     PATCH_COMMAND echo "add_library(xdrfile-static STATIC \${SRCS})" >> CMakeLists.txt
     BUILD_COMMAND make xdrfile-static
+    UPDATE_DISCONNECTED ON
     CMAKE_ARGS "-Wno-dev" LOG_DOWNLOAD ON INSTALL_COMMAND "")
 
 ExternalProject_Get_Property(project_xdrfile source_dir)
@@ -101,6 +110,7 @@ ExternalProject_Add( doctest
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.6/doctest/doctest.h"
     URL_MD5 ca614f61d53a34a672c9cb378e14acf0
+    UPDATE_DISCONNECTED ON
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 
@@ -112,12 +122,14 @@ include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${
     ${Pybind11IncludeDir} ${DocoptIncludeDir})
 
 set(hdrs
+    ${CMAKE_SOURCE_DIR}/src/analysis.h
     ${CMAKE_SOURCE_DIR}/src/average.h
     ${CMAKE_SOURCE_DIR}/src/auxiliary.h
     ${CMAKE_SOURCE_DIR}/src/core.h
     ${CMAKE_SOURCE_DIR}/src/energy.h
     ${CMAKE_SOURCE_DIR}/src/move.h
     ${CMAKE_SOURCE_DIR}/src/potentials.h
+    ${CMAKE_SOURCE_DIR}/src/space.h
     )
 
 add_executable(tests src/tests.cpp ${hdrs})

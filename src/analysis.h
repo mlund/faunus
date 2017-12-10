@@ -111,6 +111,9 @@ namespace Faunus {
                 inline void _to_json(json &j) const override {
                     j["file"] = file;
                 }
+                void _sample() override {
+                    writeFunc(file);
+                }
             public:
                 template<class Tspace>
                     SaveState(const json &j, Tspace &spc) {
@@ -141,10 +144,6 @@ namespace Faunus {
                 ~SaveState() {
                     if (steps==-1)
                         _sample();
-                }
-
-                void _sample() override {
-                    writeFunc(file);
                 }
         };
 

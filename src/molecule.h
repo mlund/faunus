@@ -116,6 +116,7 @@ namespace Faunus {
                 int _confid=-1;
             public:
                 typedef Tpvec TParticleVector;
+                typedef typename Tpvec::value_type Tparticle;
 
                 /** @brief Signature for inserted function */
                 typedef std::function<Tpvec( Geometry::GeometryBase &, const Tpvec &, MoleculeData<Tpvec> & )> TinserterFunc;
@@ -177,7 +178,7 @@ namespace Faunus {
                                 "'. Perhaps you forgot to specity the 'atomic' keyword?");
 
                     assert(size_t(confDist.max()) == conformations.size() - 1);
-                    assert(atoms.size() == conformations.front().size());
+                    //assert(atoms.size() == conformations.front().size());
 
                     _confid = confDist(random.engine); // store the index of the conformation
                     return conformations.at( _confid );
@@ -205,14 +206,17 @@ namespace Faunus {
                  */
                 void pushConformation( const Tpvec &vec, double weight = 1 )
                 {
-                    if ( !conformations.empty())
-                    {     // resize weights
-                        auto w = confDist.probabilities();// (defaults to 1)
-                        w.push_back(weight);
-                        confDist = std::discrete_distribution<>(w.begin(), w.end());
-                    }
-                    conformations.push_back(vec);
-                    assert(confDist.probabilities().size() == conformations.size());
+                    if (!vec.empty()) {
+                        if ( !conformations.empty())
+                        {     // resize weights
+                            auto w = confDist.probabilities();// (defaults to 1)
+                            w.push_back(weight);
+                            confDist = std::discrete_distribution<>(w.begin(), w.end());
+                        }
+                        conformations.push_back(vec);
+                        assert(confDist.probabilities().size() == conformations.size());
+                    } else
+                        std::cerr << "MoleculeData: attempt to insert empty configuration\n";
                 }
 
                 /** @brief Nunber of conformations stored for molecule */
@@ -237,14 +241,17 @@ namespace Faunus {
                 }
         }; // end of class
 
-    template<class Tpvec>
-        void to_json(json& j, const MoleculeData<Tpvec> &a) {
-            //auto& _j = j[a.name];
+    template<class Tparticle, class Talloc>
+        void to_json(json& j, const MoleculeData<std::vector<Tparticle,Talloc>> &a) {
             j[a.name] = {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
                 {"keeppos", a.keeppos}, {"Ninit", a.Ninit}
             };
+            j[a.name]["atoms"] = json::array();
+            for (auto id : a.atoms)
+                j[a.name]["atoms"].push_back( atoms<Tparticle>.at(id).name );
+
             //_j["activity"] = a.activity / 1.0_molar;
             //_j["atomic"] = a.atomic;
             //_j["id"] = a.id();
@@ -253,28 +260,51 @@ namespace Faunus {
             //_j["keeppos"] = a.keeppos;
         }
 
-    template<class Tpvec>
-        void from_json(const json& j, MoleculeData<Tpvec> &a) {
+    template<class Tparticle, class Talloc>
+        void from_json(const json& j, MoleculeData<std::vector<Tparticle,Talloc>> &a) {
+            typedef typename std::vector<Tparticle,Talloc> Tpvec;
+
             if (j.is_object()==false || j.size()!=1)
                 throw std::runtime_error("Invalid JSON data for MoleculeData");
             for (auto it=j.begin(); it!=j.end(); ++it) {
                 a.name = it.key();
                 auto& val = it.value();
                 a.activity = val.value("activity", a.activity) * 1.0_molar;
-                a.atomic = val.value("atomic", a.atomic);
+                a.Ninit = val.value("Ninit", a.Ninit);
                 a.id() = val.value("id", a.id());
                 a.insdir = val.value("insdir", a.insdir);
                 a.insoffset = val.value("insoffset", a.insoffset);
                 a.keeppos = val.value("keeppos", a.keeppos);
-                a.Ninit = val.value("Ninit", a.Ninit);
+                a.atomic = val.value("atomic", a.atomic);
+
+                if (a.atomic) {
+
+                    // read `atoms` list of atom names and convert to atom id's
+                    for (auto &i : val.at("atoms").get<std::vector<std::string>>()) {
+                        auto it = findName( atoms<Tparticle>, i );
+                        if (it == atoms<Tparticle>.end() )
+                            throw std::runtime_error("unknown atoms in `atoms` list\n");
+                        a.atoms.push_back(it->id());
+                    }
+                    assert(!a.atoms.empty());
+
+                    // generate config w. Ninit atoms of each atom type
+                    Tpvec v;
+                    v.reserve( a.atoms.size() * a.Ninit );
+                    for (int n=0; n<a.Ninit; n++)
+                        for ( auto id : a.atoms )
+                            v.push_back( atoms<Tparticle>.at(id).p );
+                    a.pushConformation( v );
+                } 
+
                 a.structure = val.value("structure", a.structure);
                 if (!a.structure.empty())
                     a.loadConformation(a.structure);
             }
         }
 
-    template<class T>
-        void from_json(const json& j, std::vector<MoleculeData<T>> &v) {
+    template<class Tparticle, class Talloc>
+        void from_json(const json& j, std::vector<MoleculeData<std::vector<Tparticle,Talloc>>> &v) {
             v.reserve( v.size() + j.size());
             for (auto &i : j) {
                 v.push_back(i);

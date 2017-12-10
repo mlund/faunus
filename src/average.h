@@ -11,7 +11,7 @@ namespace Faunus
       T sum=0;                      //!< Sum
 
       double avg() const {
-          return empty() ? 0 : static_cast<double>(sum)/cnt;
+          return sum / static_cast<double>(cnt);
       } //!< Average
 
       double rms() const {
@@ -19,7 +19,7 @@ namespace Faunus
       } //!< Root-mean-square
 
       double stdev() const {
-          return empty() ? 0 : std::sqrt(static_cast<double>(sqsum)/cnt - avg()*avg() );
+          return std::sqrt( cnt / static_cast<double>(sqsum) - avg()*avg() );
       } //!< Standard deviation
 
       void add(T x) {

@@ -1,22 +1,18 @@
-analysis:
-    - systemenergy: {file: energy.dat}
-    - savestate: {file: confout.pqr}
-    - savestate: {file: confout.state}
-atomlist: # define all atom types below
-    - A: {eps: 0.15, sigma: 4.0, dp: 40} 
-    - B: {eps: 0.20, sigma: 10.0, dp: 10} 
 energy:
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
         coulomb: {type: none, epsr: 80, cutoff: 10}
+atomlist: # define all atom types below
+    - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40} 
+    - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10} 
 moleculelist:
-    - A:  {Ninit: 50, structure: A.xyz}
-    - B:  {Ninit: 50, structure: B.xyz}
+    - salt: {Ninit: 50, atoms: [Na, Cl], atomic: true }
 moves:
-    - moltransrot: { mol: A, dp: 40, dprot: 0 }
-    - moltransrot: { mol: B, dp: 10, dprot: 0 }
-
+    - transrot: { mol: salt, dp: 40, dprot: 0 }
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: confout.state}
 mcloop: {macro: 10, micro: 100}
-temperature: 298.15 # in Kelvin
-geometry: {length: 50} # cuboid length can be a scalar of an array of sidelengths
+geometry: {length: 50} # sidelength(s): number OR array
 

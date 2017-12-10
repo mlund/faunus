@@ -87,6 +87,102 @@ namespace Faunus {
          * @brief Translate and rotate a molecular group
          */
         template<typename Tspace>
+            class AtomicTranslateRotate : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    typedef typename Tspace::Tparticle Tparticle;
+                    Tspace& spc; // Space to operate on
+                    int molid=-1;
+                    Point dir={1,1,1};
+                    Average<double> msqd; // mean squared displacement
+                    double _sqd; // squared displament
+                    std::string molname; // name of molecule to operate on
+
+                    void _to_json(json &j) const override {
+                        j = {
+                            {"dir", dir},
+                            {"molid", molid},
+                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+                            {"mol", molname}
+                        };
+                    }
+
+                    void _from_json(const json &j) override {
+                        assert(!molecules<Tpvec>.empty());
+                        try {
+                            molname = j.at("mol");
+                            auto it = findName(molecules<Tpvec>, molname);
+                            if (it == molecules<Tpvec>.end())
+                                throw std::runtime_error("unknown molecule '" + molname + "'");
+                            molid = it->id();
+                            dir = j.value("dir", Point(1,1,1));
+                            if (repeat<0) {
+                                auto v = spc.findMolecules(molid);
+                                repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
+                                if (repeat>0)
+                                    repeat = repeat * v.front().size();     // ...and for each atom
+                            }
+                        }
+                        catch (std::exception &e) {
+                            std::cerr << name << ": " << e.what();
+                            throw;
+                        }
+                    } //!< Configure via json object
+
+                    void _move(Change &change) override {
+                        assert(molid>=0);
+                        assert(!spc.groups.empty());
+                        assert(spc.geo.getVolume()>0);
+
+                        auto mollist = spc.findMolecules( molid ); // all `molid` groups
+                        if (size(mollist)>0) {
+                            auto g = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
+                            if (!g->empty()) {
+                                auto p = slump.sample( g->begin(), g->end() ); // random particle iterator 
+
+                                double dp = atoms<Tparticle>.at(p->id).dp;
+                                double dprot = atoms<Tparticle>.at(p->id).dprot;
+
+                                if (dp>0) { // translate
+                                    Point oldpos = p->pos;
+                                    p->pos +=  0.5 * dp * ranunit(slump).cwiseProduct(dir);
+                                    spc.geo.boundaryFunc(p->pos);
+                                    _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
+                                }
+
+                                if (dprot>0) { // rotate
+                                    Point u = ranunit(slump);
+                                    double angle = dprot * (slump()-0.5);
+                                    Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
+                                    p->rotate(Q, Q.toRotationMatrix());
+                                }
+
+                                if (dp>0 || dprot>0) {
+                                    Change::data d;
+                                    d.index = Faunus::distance( spc.groups.begin(), g ); // integer *index* of moved group
+                                    d.atoms.push_back( std::distance(g->begin(), p)  );  // index of particle rel. to group
+                                    change.groups.push_back( d ); // add to list of moved groups
+                                }
+                                return;
+                            }
+                        }
+                        std::cerr << name << ": no molecules found" << std::endl;
+                    }
+
+                    void _accept(Change &change) override { msqd += _sqd; }
+                    void _reject(Change &change) override { msqd += 0; }
+
+                public:
+                    AtomicTranslateRotate(Tspace &spc) : spc(spc) {
+                        name = "Atomic Translation and Rotation";
+                        repeat = -1; // meaning repeat N times
+                    }
+            };
+
+        /**
+         * @brief Translate and rotate a molecular group
+         */
+        template<typename Tspace>
             class TranslateRotate : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
@@ -225,12 +321,20 @@ namespace Faunus {
                         for (auto &m : j.at("moves")) {// loop over move list
                             for (auto it=m.begin(); it!=m.end(); ++it) {
                                 try {
+
                                     if (it.key()=="moltransrot") {
                                         this->template push_back<Move::TranslateRotate<Tspace>>(spc);
                                         vec.back()->from_json( it.value() );
-                                        addWeight(vec.back()->repeat);
                                     }
+
+                                    if (it.key()=="transrot") {
+                                        this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
+                                        vec.back()->from_json( it.value() );
+                                    }
+
                                     // additional moves go here...
+
+                                    addWeight(vec.back()->repeat);
                                 } catch (std::exception &e) {
                                     throw std::runtime_error("Error adding move '" + it.key() + "': " + e.what());
                                 }

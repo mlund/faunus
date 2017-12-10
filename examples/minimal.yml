@@ -9,6 +9,7 @@ moleculelist:
     - salt: {Ninit: 50, atoms: [Na, Cl], atomic: true }
 moves:
     - transrot: { mol: salt, dp: 40, dprot: 0 }
+    - volume: {dV: 0.1}
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - savestate: {file: confout.pqr}

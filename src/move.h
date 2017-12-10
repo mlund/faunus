@@ -45,9 +45,7 @@ namespace Faunus {
                     j["relative time"] = timer.result();
                     j["acceptance"] = double(accepted)/cnt;
                     j["repeat"] = repeat;
-                    j["N attempted"] = cnt;
-                    j["N accepted"] = accepted;
-                    j["N rejected"] = cnt-accepted;
+                    j["moves"] = cnt;
                 } //!< JSON report w. statistics, output etc.
 
                 inline void move(Change &change) {
@@ -302,6 +300,72 @@ namespace Faunus {
 #endif
 
         template<typename Tspace>
+            class VolumeMove : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    Tspace& spc;
+                    Average<double> msqd; // mean squared displacement
+                    double dV=0, deltaV=0;
+
+                    void _to_json(json &j) const override {
+                        using namespace u8;
+                        j = {
+                            {"dV", dV},
+                            {rootof + bracket(Delta + "V" + squared), std::sqrt(msqd.avg())},
+                            {cuberoot + rootof + bracket(Delta + "V" + squared),
+                                std::cbrt(std::sqrt(msqd.avg()))}
+                        };
+                    }
+
+                    void _from_json(const json &j) override {
+                        dV = j.at("dV");
+                    } //!< Configure via json object
+
+                    void _move(Change &change) override {
+                        if (dV>0) {
+                            double Vold = spc.geo.getVolume();
+                            double Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
+                            double scale = std::cbrt(Vnew/Vold);
+                            deltaV = Vold-Vnew;
+
+                            // removed periodic boundaries. Does this work??
+                            for (auto &g: spc.groups)
+                                if (!g.atomic)
+                                    g.unwrap(spc.geo.distanceFunc);
+
+                            spc.geo.setVolume(Vnew);
+
+                            for (auto& g : spc.groups) {
+                                if (g.atomic) { // scale all atoms
+                                    g.cm *= scale;
+                                    for (auto& i : g)
+                                        i.pos *= scale;
+                                } else { // scale mass center
+                                    Point delta = g.cm * scale - g.cm;
+                                    g.cm *= scale;
+                                    for (auto &i : g) {
+                                        i.pos += delta;
+                                        spc.geo.boundary(i.pos);
+                                    }
+                                }
+                            }
+                            change.dV=true;
+                            change.all=true;
+                        }
+                    }
+
+                    void _accept(Change &change) override { msqd += deltaV*deltaV; }
+                    void _reject(Change &change) override { msqd += 0; }
+
+                public:
+                    VolumeMove(Tspace &spc) : spc(spc) {
+                        name = "Volume Move";
+                        repeat = 1;
+                    }
+            };
+
+
+        template<typename Tspace>
             class Propagator : public BasePointerVector<Movebase> {
                 private:
                     int _repeat;
@@ -329,6 +393,11 @@ namespace Faunus {
 
                                     if (it.key()=="transrot") {
                                         this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
+                                        vec.back()->from_json( it.value() );
+                                    }
+
+                                    if (it.key()=="volume") {
+                                        this->template push_back<Move::VolumeMove<Tspace>>(spc);
                                         vec.back()->from_json( it.value() );
                                     }
 
@@ -372,7 +441,10 @@ namespace Faunus {
                 struct State {
                     Tspace spc;
                     Energy::Hamiltonian<Tspace> pot;
-                    State(const json &j) : spc(j), pot(spc,j) {
+                    State(const json &j) : spc(j), pot(spc,j) {}
+                    void sync(const State &other, const Change &change) {
+                        spc.sync( other.spc, change );
+                        // sync energy here...
                     }
                 }; //!< Contains everything to describe a state
 

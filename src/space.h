@@ -123,7 +123,7 @@ namespace Faunus {
                 assert(&other != this);
                 assert( p.begin() != other.p.begin());
 
-                if (change.dV)
+                if (change.dV || change.all)
                     geo = other.geo;
 
                 // deep copy *everything*
@@ -265,6 +265,7 @@ namespace Faunus {
         // sync groups
         Change c;
         c.all=true;
+        c.dV=true;
         c.groups.resize(1);
         c.groups[0].index=0;
         c.groups[0].all=true;

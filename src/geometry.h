@@ -9,7 +9,7 @@ namespace Faunus {
     namespace Geometry {
 
         typedef std::function<void(Point&)> BoundaryFunction;
-        typedef std::function<void(const Point&, const Point&)> DistanceFunction;
+        typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
 
         struct GeometryBase {
             virtual void setVolume(double, const std::vector<double>&)=0; //!< Set volume

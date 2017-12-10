@@ -16,6 +16,7 @@ moleculelist:
     - water:  {Ninit: 100, structure: water.xyz}
 moves:
     - moltransrot: {mol: water, dp: 0.4, dprot: 0.4, repeat: N}
+    - volume: {dV: 0.2}
 
 mcloop: {macro: 10, micro: 50} #30
 temperature: 300 # in Kelvin

@@ -177,6 +177,7 @@ namespace Faunus {
         const std::string cubed = "\u00b3";      //!< Superscript 3
         const std::string cuberoot = "\u221b";   //!< Cubic root
         const std::string degrees = "\u00b0";    //!< Degrees
+        const std::string Delta = "\u0394";      //!< Greek Delta
         const std::string epsilon = "\u03f5";    //!< Greek epsilon
         const std::string epsilon_m = "\u03b5";  //!< Greek epsilon (minuscule)
         const std::string gamma = "\u0263";      //!< Greek gamma

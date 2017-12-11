@@ -59,6 +59,57 @@ namespace Faunus {
             base.to_json( j );
         }
 
+        /**
+         * @brief Analysis of particle densities
+         */
+        template<class Tspace>
+        class Density : public Analysisbase {
+            private:
+                Tspace& spc;
+                typedef typename Tspace::Tparticle Tparticle;
+                typedef typename Tspace::Tpvec Tpvec;
+
+                std::map<int, Average<double>> rho_mol, rho_atom;
+                std::map<int,int> Nmol, Natom;
+
+                inline void _sample() override {
+                    // count atom and groups of individual id's
+                    Nmol.clear();
+                    Natom.clear();
+                    for (auto &g : spc.groups)
+                        if (g.atomic)
+                            for (auto &p : g)
+                                Natom[p.id]++;
+                        else
+                            if (!g.empty())
+                                Nmol[g.id]++;
+
+                    double V = spc.geo.getVolume();
+
+                    for (auto &i : Nmol)
+                        rho_mol[i.first] += i.second/V;
+
+                    for (auto &i : Natom)
+                        rho_atom[i.first] += i.second/V;
+                }
+
+                inline void _to_json(json &j) const override {
+                    auto &_j = j["atomic"];
+                    for (auto &i : rho_atom)
+                        _j[ atoms<Tparticle>.at(i.first).name ] = json({{ "c/M", i.second.avg() / 1.0_molar }});
+
+                    auto &_jj = j["molecular"];
+                    for (auto &i : rho_mol)
+                        _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", i.second.avg() / 1.0_molar }});
+                }
+
+            public:
+                    Density( const json &j, Tspace &spc ) : spc(spc) {
+                        from_json(j);
+                        name = "density";
+                    }
+        };
+
         class SystemEnergy : public Analysisbase {
             private:
                 std::string file;
@@ -382,6 +433,9 @@ namespace Faunus {
 
                                     if ( it.key()=="aromrdf")
                                         push_back<AtomRDF<Tspace>>(it.value(), spc);
+
+                                    if ( it.key()=="density")
+                                        push_back<Density<Tspace>>(it.value(), spc);
 
                                     if ( it.key()=="molrdf")
                                         push_back<MoleculeRDF<Tspace>>(it.value(), spc);

@@ -87,6 +87,19 @@ namespace Faunus {
         return js;
     } //!< Read json file into json object (w. syntax check)
 
+    double _round(double x, int n=3) {
+        std::stringstream o;
+        o << std::setprecision(n) << x;
+        return std::stod(o.str());
+    } //!< Round to n number of significant digits
+
+    void _roundjson(json &j, int n=3) {
+        if (j.is_object())
+            for (auto &i : j)
+                if (i.is_number_float())
+                    i = _round(i,n);
+    } // round float objects to n number of significant digits
+
     /** @brief Physical constants */
     namespace PhysicalConstants {
         typedef double T; //!< Float size
@@ -98,7 +111,7 @@ namespace Faunus {
                   Nav = 6.022137e23, //!< Avogadro's number [1/mol]
                   c = 299792458.0,   //!< Speed of light [m/s]
                   R = kB * Nav;      //!< Molar gas constant [J/(K*mol)]
-        static T temperature=298.15; //!< Temperature (Kelvin)
+        static T temperature=300; //!< Temperature (Kelvin)
         static inline T kT() { return temperature*kB; } //!< Thermal energy (Joule)
         static inline T lB( T epsilon_r ) {
             return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
@@ -505,7 +518,7 @@ namespace Faunus {
             a = qrot.second * a;
             CHECK( a.x() == Approx(-1) );
         }
-     }
+    }
 #endif
 
     /** @brief Base class for particle properties */

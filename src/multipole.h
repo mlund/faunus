@@ -93,7 +93,7 @@ namespace Faunus {
          *  --------------- | ---------------------------------------- | -------------------- | ----------------------
          *  `plain`         | \f$ 1 \f$                                | none                 | http://doi.org/ctnnsj
          *  `none`          | \f$ 0 \f$                                | none                 | For convenience, only.
-         *  `wolf`          | \f$ erfc(\alpha R_c q)-erfc(\alpha R_c)q \f$ | `alpha`          | http://doi.org/cfcxdk
+         *  `wolf`          | \f$ \text{erfc}(\alpha R_c q)-erfc(\alpha R_c)q \f$ | `alpha`          | http://doi.org/cfcxdk
          *  `fennel`        | \f$ erfc(\alpha R_c q)-erfc(\alpha R_c)q + ( q -1 ) q \left( erfc(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right) \f$ | `alpha`| http://doi.org/bqgmv2
          *  `yonezawa`      | \f$ 1 + erfc(\alpha R_c)q + q^2 \f$      | `alpha`              | http://dx.doi.org/10/j97
          *  `fanourgakis`   | \f$ 1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7\f$| none | http://doi.org/f639q5
@@ -293,6 +293,7 @@ namespace Faunus {
                         else
                             j[epsilon_m+"_rf"] = epsrf;
                     }
+                    _roundjson(j, 5);
                 }
         };
 

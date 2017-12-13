@@ -116,6 +116,7 @@ namespace Faunus {
                         if (i>=j) {
                             auto str = atoms<Tparticle>[i].name+" "+atoms<Tparticle>[j].name;
                             _j[str] = { {"eps", m.eps(i,j)/4.0_kJmol}, {"sigma", std::sqrt(m.s2(i,j))}  };
+                            _roundjson(_j[str], 5);
                         }
             }
 

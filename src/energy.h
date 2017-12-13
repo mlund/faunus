@@ -12,14 +12,55 @@ namespace Faunus {
         class Energybase {
             public:
                 std::string name;
+                std::string cite;
                 virtual double energy(Change&)=0; //!< energy due to change
                 inline virtual void to_json(json &j) const {}; //!< json output
         };
 
         void to_json(json &j, const Energybase &base) {
             assert(!base.name.empty());
+            if (!base.cite.empty())
+                j[base.name]["reference"] = base.cite;
             base.to_json( j[base.name] );
         } //!< Converts any energy class to json object
+
+        template<typename Tspace>
+            class Isobaric : public Energybase {
+                private:
+                    Tspace spc;
+                    double P; // P/kT
+                public:
+                    Isobaric(const json &j, Tspace &spc) : spc(spc) {
+                        name = "isobaric";
+                        cite = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
+                        P = j.value("P/mM", 0.0) * 1.0_mM;
+                        if (P<1e-10) {
+                            P = j.value("P/Pa", 0.0) * 1.0_Pa;
+                            if (P<1e-10)
+                                P = j.at("P/atm").get<double>() * 1.0_atm;
+                        }
+                    }
+                    double energy(Change &change) override {
+                        if (change.dV || change.all) {
+                            double V = spc.geo.getVolume();
+                            size_t N=0;
+                            for (auto &g : spc.groups)
+                                if (!g.empty()) {
+                                    if (g.atomic)
+                                        N += g.size();
+                                    else
+                                        N++;
+                                }
+                            return P*V-(N+1)*std::log(V);
+                        } else return 0; 
+                    }
+                    void to_json(json &j) const override {
+                        j["P/atm"] = P / 1.0_atm;
+                        j["P/mM"] = P / 1.0_mM;
+                        j["P/Pa"] = P / 1.0_Pa;
+                        _roundjson(j,5);
+                    }
+            };
 
         /**
          * @brief Nonbonded energy using a pair-potential
@@ -59,8 +100,8 @@ namespace Faunus {
                                 for ( auto j=i; ++j != g.end(); )
                                     u += i2i(*i, *j);
                             return u;
-                         }
- 
+                        }
+
                     template<typename T>
                         double g2g(const T &g1, const T &g2) {
                             double u = 0;
@@ -84,7 +125,7 @@ namespace Faunus {
                     Tspace& spc;   //!< Space to operate on
                     Tpairpot pairpot; //!< Pair potential
 
-                    Nonbonded(Tspace &spc, const json &j) : spc(spc) {
+                    Nonbonded(const json &j, Tspace &spc) : spc(spc) {
                         name="nonbonded";
                         pairpot = j;
                         Rc2_g2g = std::pow( j.value("cutoff_g2g", 1e20), 2);
@@ -181,13 +222,23 @@ namespace Faunus {
 
                         Energybase::name="Hamiltonian";
                         for (auto &m : j.at("energy")) {// loop over move list
+                            size_t oldsize = vec.size();
                             for (auto it=m.begin(); it!=m.end(); ++it) {
                                 try {
                                     if (it.key()=="nonbonded_coulomblj")
-                                        push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(spc, it.value());
+                                        push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(it.value(), spc);
+
                                     if (it.key()=="nonbonded_coulombhs")
-                                        push_back<Energy::Nonbonded<Tspace,CoulombHS>>(spc, it.value());
+                                        push_back<Energy::Nonbonded<Tspace,CoulombHS>>(it.value(), spc);
+
+                                    if (it.key()=="isobaric")
+                                        push_back<Energy::Isobaric<Tspace>>(it.value(), spc);
+
                                     // additional energies go here...
+
+                                    if (vec.size()==oldsize)
+                                        std::cerr << "warning: ignoring unknown energy '" << it.key() << "'" << endl;
+
                                 } catch (std::exception &e) {
                                     throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what());
                                 }

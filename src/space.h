@@ -185,6 +185,7 @@ namespace Faunus {
 
     template<class Tgeometry, class Tparticle>
         void to_json(json &j, Space<Tgeometry,Tparticle> &spc) {
+            j["temperature"] = pc::temperature;
             j["atomlist"] = atoms<Tparticle>;
             j["moleculelist"] = molecules<decltype(spc.p)>;
             j["geometry"] = spc.geo;
@@ -197,6 +198,7 @@ namespace Faunus {
             typedef typename Space<Tgeometry,Tparticletype>::Tpvec Tpvec;
             spc.clear();
 
+            pc::temperature = j.at("temperature").get<double>() * 1.0_K;
             spc.geo = j.at("geometry");
             atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
             molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();

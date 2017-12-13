@@ -1,29 +1,25 @@
 analysis:
-    - systemenergy: {file: energy.dat, nstep: 100}
+    - systemenergy: {file: energy.dat, nstep: 1000}
     - xtcfile: {file: traj.xtc, nstep: 10 }
     - savestate: {file: confout.pqr}
     - savestate: {file: confout.state}
-    - molrdf: {name1: water, name2: water, nstep: 100, dr: 0.1, dim: 3, file: rdf.dat}
-    - density: {nstep: 10}
-
+    - atomrdf: {name1: OW, name2: OW, nstep: 10, dr: 0.05, file: rdf.dat}
+    - density: {nstep: 1}
 atomlist: # define all atom types below
-    - OW: {q: -0.8476, eps: 0.650299305951160, sigma: 3.165491652452016, mw: 15.9994} 
-    - HW: {q: 0.4238, eps: 0.0, sigma: 0.0, mw: 1} 
-
+    - OW: {q: -0.8476, eps: 0.650299305951160, sigma: 3.165491652452016, mw: 15.99940} 
+    - HW: {q: 0.4238, eps: 0.0, sigma: 0.0, mw: 1.008} 
 energy:
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: fanourgakis, epsr: 1, cutoff: 9}
-        cutoff_g2g: 10
-
+        coulomb: {type: none, epsr: 1, cutoff: 14.8}
+        cutoff_g2g: 15
+    - isobaric: {P/mM: 40.0906}
 moleculelist:
-    - water:  {Ninit: 100, structure: water.xyz}
-
+    - water:  {Ninit: 200, structure: water.xyz}
 moves:
     - moltransrot: {mol: water, dp: 0.4, dprot: 0.4, repeat: N}
-    - volume: {dV: 0.2}
-
-mcloop: {macro: 10, micro: 50} #30
-temperature: 300 # in Kelvin
-geometry: {length: 14.452}
+    - volume: {dV: 0.03}
+mcloop: {macro: 10, micro: 100}
+temperature: 300 # [K]
+geometry: {length: 32.00} # [angstrom]
 

@@ -124,6 +124,7 @@ namespace Faunus {
                     using namespace std::placeholders;
                     boundaryFunc = std::bind( &PBC<X,Y,Z>::boundary, this, _1);
                     distanceFunc = std::bind( &PBC<X,Y,Z>::vdist, this, _1, _2);
+                    distanceFunc = [this](const Point &i, const Point &j){return this->vdist(i,j);};
                     boundaryFunc = [this](Point &i){this->boundary(i);};
                 }
 

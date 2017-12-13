@@ -1,0 +1,23 @@
+energy:
+    - nonbonded_coulomblj:
+        lennardjones: {mixing: LB}
+        coulomb: {type: fennel, epsr: 1, cutoff: 14, alpha: 0}
+    - isobaric: {P/mM: 11}
+atomlist: # define all atom types below
+    - Na: {q:  1.0, sigma: 3.33, eps: 0.01158968, dp: 1.0} 
+    - Cl: {q: -1.0, sigma: 4.4, eps: 0.4184, dp: 1.0} 
+moleculelist:
+    - salt: {Ninit: 1152, atoms: [Na, Cl], atomic: true }
+moves:
+    - transrot: { mol: salt, dp: 40, dprot: 0 }
+    - volume: {dV: 0.03}
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: confout.state}
+    - atomrdf: {file: rdf.dat, nstep: 10, dr: 0.05, name1: Na, name2: Cl}
+    - density: {nstep: 100}
+temperature: 1100
+mcloop: {macro: 10, micro: 25}
+geometry: {length: 42.5} # sidelength(s): number OR array
+

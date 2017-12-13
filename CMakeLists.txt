@@ -147,6 +147,17 @@ if (ENABLE_PYTHON)
     find_package(PythonLibs)
     find_package(PythonInterp)
 
+    if (PYTHONINTERP_FOUND)
+        execute_process(
+            COMMAND ${PYTHON_EXECUTABLE} yason.py -h
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            ERROR_QUIET OUTPUT_QUIET
+            RESULT_VARIABLE yasontest)
+        if (${yasontest} EQUAL 1)
+            message(FATAL_ERROR "missing required python modules 'yaml' or 'ruamel_yaml'")
+        endif()
+    endif()
+
     if (PYTHONLIBS_FOUND)
         add_library(pyfaunus SHARED src/pyfaunus.cpp)
         set_target_properties(pyfaunus PROPERTIES PREFIX "")

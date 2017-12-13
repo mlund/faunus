@@ -46,6 +46,7 @@ namespace Faunus {
                     j["acceptance"] = double(accepted)/cnt;
                     j["repeat"] = repeat;
                     j["moves"] = cnt;
+                    _roundjson(j, 3);
                 } //!< JSON report w. statistics, output etc.
 
                 inline void move(Change &change) {
@@ -103,6 +104,7 @@ namespace Faunus {
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
                             {"mol", molname}
                         };
+                        _roundjson(j,3);
                     }
 
                     void _from_json(const json &j) override {
@@ -199,6 +201,7 @@ namespace Faunus {
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
                             {"mol", molecules<Tpvec>[molid].name}
                         };
+                        _roundjson(j,3);
                     }
 
                     void _from_json(const json &j) override {
@@ -315,6 +318,7 @@ namespace Faunus {
                             {cuberoot + rootof + bracket(Delta + "V" + squared),
                                 std::cbrt(std::sqrt(msqd.avg()))}
                         };
+                        _roundjson(j,3);
                     }
 
                     void _from_json(const json &j) override {
@@ -326,9 +330,9 @@ namespace Faunus {
                             double Vold = spc.geo.getVolume();
                             double Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
                             double scale = std::cbrt(Vnew/Vold);
-                            deltaV = Vold-Vnew;
+                            deltaV = Vnew-Vold;
 
-                            // removed periodic boundaries. Does this work??
+                            // remove periodic boundaries. Does this work??
                             for (auto &g: spc.groups)
                                 if (!g.atomic)
                                     g.unwrap(spc.geo.distanceFunc);
@@ -336,16 +340,22 @@ namespace Faunus {
                             spc.geo.setVolume(Vnew);
 
                             for (auto& g : spc.groups) {
-                                if (g.atomic) { // scale all atoms
-                                    g.cm *= scale;
-                                    for (auto& i : g)
-                                        i.pos *= scale;
-                                } else { // scale mass center
-                                    Point delta = g.cm * scale - g.cm;
-                                    g.cm *= scale;
-                                    for (auto &i : g) {
-                                        i.pos += delta;
-                                        spc.geo.boundary(i.pos);
+                                if (!g.empty()) {
+                                    if (g.atomic) // scale all atoms
+                                        for (auto& i : g)
+                                            i.pos *= scale;
+                                    else { // scale mass center and translate
+                                        Point delta = g.cm * scale - g.cm;
+                                        g.cm *= scale;
+                                        for (auto &i : g) {
+                                            i.pos += delta;
+                                            spc.geo.boundary(i.pos);
+                                        }
+                                        assert( ( Geometry::massCenter(
+                                                        g.begin(),
+                                                        g.end(),
+                                                        spc.geo.boundaryFunc,
+                                                        -g.cm) - g.cm ).squaredNorm() < 1e-10 );
                                     }
                                 }
                             }
@@ -363,7 +373,6 @@ namespace Faunus {
                         repeat = 1;
                     }
             };
-
 
         template<typename Tspace>
             class Propagator : public BasePointerVector<Movebase> {
@@ -383,6 +392,7 @@ namespace Faunus {
                     inline Propagator() {}
                     inline Propagator(const json &j, Tspace &spc) {
                         for (auto &m : j.at("moves")) {// loop over move list
+                            size_t oldsize = vec.size();
                             for (auto it=m.begin(); it!=m.end(); ++it) {
                                 try {
 
@@ -403,7 +413,10 @@ namespace Faunus {
 
                                     // additional moves go here...
 
-                                    addWeight(vec.back()->repeat);
+                                    if (vec.size()==oldsize+1)
+                                        addWeight(vec.back()->repeat);
+                                    else
+                                        std::cerr << "warning: ignoring unknown move '" << it.key() << "'" << endl;
                                 } catch (std::exception &e) {
                                     throw std::runtime_error("Error adding move '" + it.key() + "': " + e.what());
                                 }
@@ -442,7 +455,7 @@ namespace Faunus {
                     Tspace spc;
                     Energy::Hamiltonian<Tspace> pot;
                     State(const json &j) : spc(j), pot(spc,j) {}
-                    void sync(const State &other, const Change &change) {
+                    void sync(State &other, Change &change) {
                         spc.sync( other.spc, change );
                         // sync energy here...
                     }
@@ -472,7 +485,7 @@ namespace Faunus {
                 MCSimulation(const json &j) : state1(j), state2(j), moves(j, state2.spc) {
                     Change c;
                     c.all=true;
-                    state2.spc.sync(state1.spc, c);
+                    state2.sync(state1, c);
                     uinit = state1.pot.energy(c);
 
                     std::ifstream f("confout.state");
@@ -495,11 +508,12 @@ namespace Faunus {
                 } //!< restore system from previously saved state
 
                 void move() {
+                    Change change;
                     for (int i=0; i<moves.repeat(); i++) {
                         auto mv = moves.sample(); // pick random move
                         if (mv != moves.end() ) {
 
-                            Change change;
+                            change.clear();
                             (**mv).move(change);
 
                             if (!change.empty()) {
@@ -507,11 +521,11 @@ namespace Faunus {
                                        uold = state1.pot.energy(change),
                                        du = unew - uold;
                                 if ( metropolis(du) ) { // accept move
-                                    state1.spc.sync( state2.spc, change );
+                                    state1.sync( state2, change );
                                     (**mv).accept(change);
                                 }
                                 else { // reject move
-                                    state2.spc.sync( state1.spc, change );
+                                    state2.sync( state1, change );
                                     (**mv).reject(change);
                                     du=0;
                                 }

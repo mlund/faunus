@@ -28,12 +28,12 @@ namespace Faunus {
                     auto &_j = j[name];
                     _to_json(_j);
                     if (cnt>0) {
-                        _j["relative time"] = timer.result();
+                        _j["relative time"] = _round( timer.result() );
                         _j["nstep"] = steps;
                         _j["samples"] = cnt;
                     }
                     if (!cite.empty())
-                        _j["citation"] = cite;
+                        _j["reference"] = cite;
                 } //!< JSON report w. statistics, output etc.
 
                 inline void from_json(const json &j) {
@@ -71,6 +71,7 @@ namespace Faunus {
 
                 std::map<int, Average<double>> rho_mol, rho_atom;
                 std::map<int,int> Nmol, Natom;
+                Average<double> Lavg, Vavg, invVavg;
 
                 inline void _sample() override {
                     // count atom and groups of individual id's
@@ -85,6 +86,9 @@ namespace Faunus {
                                 Nmol[g.id]++;
 
                     double V = spc.geo.getVolume();
+                    Vavg += V;
+                    Lavg += std::cbrt(V);
+                    invVavg += 1/V;
 
                     for (auto &i : Nmol)
                         rho_mol[i.first] += i.second/V;
@@ -94,13 +98,20 @@ namespace Faunus {
                 }
 
                 inline void _to_json(json &j) const override {
+                    using namespace u8;
+                    j[ bracket( "V" ) ] = Vavg.avg();
+                    j[ bracket( "1/V" ) ] = invVavg.avg();
+                    j[ bracket( cuberoot + "V" ) ] = Lavg.avg();
+                    j[ cuberoot + bracket("V") ] = std::cbrt(Vavg.avg());
+
                     auto &_j = j["atomic"];
                     for (auto &i : rho_atom)
-                        _j[ atoms<Tparticle>.at(i.first).name ] = json({{ "c/M", i.second.avg() / 1.0_molar }});
+                        _j[ atoms<Tparticle>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
 
                     auto &_jj = j["molecular"];
                     for (auto &i : rho_mol)
-                        _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", i.second.avg() / 1.0_molar }});
+                        _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+                    _roundjson(j,4);
                 }
 
             public:
@@ -130,6 +141,7 @@ namespace Faunus {
                     j["final"] = energyFunc();
                     if (cnt>0)
                         j["mean"] = uavg.avg();
+                    _roundjson(j,5);
                 }
 
                 inline void _from_json(const json &j) override {
@@ -431,7 +443,7 @@ namespace Faunus {
                                     if ( it.key()=="xtcfile")
                                         push_back<XTCtraj<Tspace>>(it.value(), spc);
 
-                                    if ( it.key()=="aromrdf")
+                                    if ( it.key()=="atomrdf")
                                         push_back<AtomRDF<Tspace>>(it.value(), spc);
 
                                     if ( it.key()=="density")

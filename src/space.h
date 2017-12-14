@@ -107,6 +107,10 @@ namespace Faunus {
                             throw std::runtime_error("space: mass center error upon insertion. Molecule too large?\n");
                     }
                     assert( in.size() == groups.back().size() );
+
+                    // inserted particles can be inactive upon insertion
+                    if (molecules<Tpvec>.at(molid).inactive)
+                        g.resize(0);
                 }
             } //!< Safely add particles and corresponding group to back
 

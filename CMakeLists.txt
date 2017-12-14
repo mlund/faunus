@@ -22,6 +22,14 @@ endif()
 
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 
+option(ENABLE_OPENMP "Try to use OpenMP parallization" off)
+if (ENABLE_OPENMP)
+  find_package(OpenMP)
+  if (OPENMP_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  endif()
+endif()
+
 include(ExternalProject)
 
 # MODERN JSON
@@ -61,8 +69,8 @@ ExternalProject_Get_Property(project_docopt binary_dir)
 ExternalProject_Get_Property(project_docopt source_dir)
 set(DocoptIncludeDir ${source_dir})
 add_library(docopt STATIC IMPORTED)
-set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 add_dependencies(docopt project_docopt)
+set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 
 # PYBIND11
 
@@ -119,7 +127,7 @@ set(DocTestIncludeDir ${source_dir}/../../src/)
 
 add_definitions(-DDOCTEST_CONFIG_DISABLE)
 include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir}
-    ${Pybind11IncludeDir} ${DocoptIncludeDir})
+    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir})
 
 set(hdrs
     ${CMAKE_SOURCE_DIR}/src/analysis.h

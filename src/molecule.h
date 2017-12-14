@@ -131,6 +131,7 @@ namespace Faunus {
                 bool atomic=false;         //!< True if atomic group (salt etc.)
                 bool rotate=true;          //!< True if molecule should be rotated upon insertion
                 bool keeppos=false;        //!< Keep original positions of `structure`
+                bool inactive=false;       //!< Set to true if the group should initially be inactive
                 double activity=0;         //!< Chemical activity (mol/l)
                 Point insdir = {1,1,1};    //!< Insertion directions
                 Point insoffset = {0,0,0}; //!< Insertion offset

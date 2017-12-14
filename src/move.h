@@ -236,31 +236,32 @@ namespace Faunus {
                         auto mollist = spc.findMolecules( molid ); // list of molecules w. 'molid'
                         if (size(mollist)>0) {
                             auto it = slump.sample( mollist.begin(), mollist.end() );
-                            //auto it  = (mollist | ranges::view::sample(1, slump.engine) ).begin(); // why so slow?!
-                            assert(it->id==molid);
+                            if (!it->empty()) {
+                                assert(it->id==molid);
 
-                            if (dptrans>0) { // translate
-                                Point oldcm = it->cm;
-                                Point dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
-                                it->translate( dp, spc.geo.boundaryFunc );
-                                _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
-                            }
+                                if (dptrans>0) { // translate
+                                    Point oldcm = it->cm;
+                                    Point dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
+                                    it->translate( dp, spc.geo.boundaryFunc );
+                                    _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
+                                }
 
-                            if (dprot>0) { // rotate
-                                Point u = ranunit(slump);
-                                double angle = dprot * (slump()-0.5);
-                                Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
-                                it->rotate(Q, spc.geo.boundaryFunc);
-                            }
+                                if (dprot>0) { // rotate
+                                    Point u = ranunit(slump);
+                                    double angle = dprot * (slump()-0.5);
+                                    Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
+                                    it->rotate(Q, spc.geo.boundaryFunc);
+                                }
 
-                            if (dptrans>0|| dprot>0) { // define changes
-                                Change::data d;
-                                d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
-                                d.all = true; // *all* atoms in group were moved
-                                change.groups.push_back( d ); // add to list of moved groups
+                                if (dptrans>0|| dprot>0) { // define changes
+                                    Change::data d;
+                                    d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
+                                    d.all = true; // *all* atoms in group were moved
+                                    change.groups.push_back( d ); // add to list of moved groups
+                                }
+                                assert( spc.geo.sqdist( it->cm,
+                                            Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-9 );
                             }
-                            assert( spc.geo.sqdist( it->cm,
-                                        Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-9 );
                         }
                         else std::cerr << name << ": no molecules found" << std::endl;
                     }

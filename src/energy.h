@@ -172,7 +172,7 @@ namespace Faunus {
                                     return u;
                                 }
 
-                                // everything changed
+                                // everything in group changed
                                 if (d.all) {
                                     for (int i=0; i<int(spc.groups.size()); i++)
                                         if (i!=d.index)

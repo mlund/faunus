@@ -173,14 +173,14 @@ namespace Faunus {
             } //!< Deep copy contents from another Group
 
             Group& shallowcopy(const Group &o) {
-                if (&o == this)
-                    return *this;
-                if (this->capacity() != o.capacity())
-                    throw std::runtime_error("Group::shallowcopy: capacity mismatch");
-                this->resize(o.size());
-                id = o.id;
-                atomic = o.atomic;
-                cm = o.cm;
+                if (&o != this) {
+                    if (this->capacity() != o.capacity())
+                        throw std::runtime_error("Group::shallowcopy: capacity mismatch");
+                    this->resize(o.size());
+                    id = o.id;
+                    atomic = o.atomic;
+                    cm = o.cm;
+                }
                 return *this;
             } //!< copy group data from `other` but *not* particle data
 

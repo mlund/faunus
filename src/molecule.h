@@ -95,7 +95,7 @@ namespace Faunus {
                     _overlap = false;
                     if ( checkOverlap )              // check for container overlap
                         for ( auto &i : v )
-                            if ( geo.collision(i.pos, i.radius))
+                            if ( geo.collision(i.pos))
                             {
                                 _overlap = true;
                                 break;

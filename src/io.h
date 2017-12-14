@@ -98,9 +98,10 @@ namespace Faunus {
                 static std::string p2s(const Tparticle &a, int i) {
                     std::ostringstream o;
                     o.precision(5);
+                    double radius = atoms<Tparticle>.at(a.id).sigma/2;
                     o << atoms<Tparticle>.at(a.id).name << " " << i+1 << " "
                         << a.pos.transpose() << " "
-                        << a.charge << " " << a.mw << " " << a.radius << endl;
+                        << a.charge << " " << a.mw << " " << radius << endl;
                     return o.str();
                 }
 
@@ -108,10 +109,10 @@ namespace Faunus {
                 static Tparticle& s2p(const std::string &s, Tparticle &a) {
                     std::stringstream o;
                     std::string name, num;
+                    double radius;
                     o << s;
                     o >> name;
-                    //a = atoms<Tparticle>[name];
-                    o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> a.mw >> a.radius;
+                    o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> a.mw >> radius;
                     if (a.id==0)
                         std::cerr << "Warning: Atom name " << name << " is not in the atom list.\n";
                     return a;
@@ -191,10 +192,11 @@ namespace Faunus {
                             std::stringstream o(line);
                             while (o >> key)
                                 if (key=="ATOM" || key=="HETATM") {
+                                    double radius;
                                     o >> iatom >> aname;
                                     a = findName( atoms<Tparticle>, aname)->p;
                                     o >> rname >> ires
-                                        >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> a.radius;
+                                        >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
                                     p.push_back(a);
                                 } else if (key=="CRYST1")
                                     o >> len.x() >> len.y() >> len.z();
@@ -224,9 +226,10 @@ namespace Faunus {
                             while ( o >> key )
                                 if ( key == "ATOM" || key == "HETATM" )
                                 {
+                                    double radius;
                                     o >> iatom >> aname;
                                     a = atoms<Tparticle>[aname];
-                                    o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> a.radius;
+                                    o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> radius;
                                     p.push_back(a);
                                     if ( a.id == 0 )
                                         std::cerr << "Warning: Atom name " << aname << " is not in the atom list.\n";
@@ -258,10 +261,12 @@ namespace Faunus {
                     if (len.norm()>1e-6)
                         o << writeCryst1(len);
                     for (auto &p_i : p) {
-                        std::string name=atoms<Tparticle>.at(p_i.id).name;
+                        auto& prop = atoms<Tparticle>.at(p_i.id);
+                        std::string name=prop.name;
+                        double radius = prop.sigma/2;
                         sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
                                 natom++, name.c_str(), name.c_str(), nres,
-                                (p_i.pos+len/2).x(), (p_i.pos+len/2).y(), (p_i.pos+len/2).z(), p_i.charge, p_i.radius); // move particles inside the sim. box
+                                (p_i.pos+len/2).x(), (p_i.pos+len/2).y(), (p_i.pos+len/2).z(), p_i.charge, radius); // move particles inside the sim. box
                         o << buf;
                         if ( atoms<Tparticle>.at(p_i.id).name=="CTR" )
                             nres++;

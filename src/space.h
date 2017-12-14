@@ -123,8 +123,9 @@ namespace Faunus {
                 assert(&other != this);
                 assert( p.begin() != other.p.begin());
 
-                if (change.dV || change.all)
+                if (change.dV || change.all) {
                     geo = other.geo;
+                }
 
                 // deep copy *everything*
                 if (change.all) {
@@ -155,11 +156,6 @@ namespace Faunus {
                 assert( p.size() == other.p.size() );
                 assert( p.begin() != other.p.begin());
             } //!< Copy differing data from other (o) Space using Change object
-
-            //void applyChange(const Tchange &change) {
-            //    for (auto& f : changeTriggers)
-            //        f(*this, change);
-            //}
 
             json info() {
                 json j;

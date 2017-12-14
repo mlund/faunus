@@ -351,11 +351,10 @@ namespace Faunus {
                                             i.pos += delta;
                                             spc.geo.boundary(i.pos);
                                         }
-                                        assert( ( Geometry::massCenter(
-                                                        g.begin(),
-                                                        g.end(),
-                                                        spc.geo.boundaryFunc,
-                                                        -g.cm) - g.cm ).squaredNorm() < 1e-10 );
+                                        assert( spc.geo.sqdist( g.cm,
+                                                    Geometry::massCenter(
+                                                        g.begin(), g.end(),
+                                                        spc.geo.boundaryFunc, -g.cm)) < 1e-10 );
                                     }
                                 }
                             }

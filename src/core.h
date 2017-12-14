@@ -778,7 +778,8 @@ namespace Faunus {
                 a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
                 a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
                 a.mw       = val.value("mw", a.mw);
-                a.sigma    = val.value("sigma", a.sigma) * 1.0_angstrom;
+                a.sigma    = val.value("sigma", 0.0) * 1.0_angstrom;
+                a.sigma    = 2*val.value("r", 0.5*a.sigma) * 1.0_angstrom;
             }
         }
 
@@ -811,7 +812,7 @@ namespace Faunus {
         CHECK(v.size()==2);
         CHECK(v.front().id()==0);
         CHECK(v.front().name=="A"); // alphabetic order in std::map
-        CHECK(v.front().p.radius==1.1);
+        CHECK(v.front().sigma==Approx(2*1.1e-10_m));
 
         AtomData<T> a = json(v.back()); // AtomData -> JSON -> AtomData
 

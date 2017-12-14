@@ -8,7 +8,7 @@ using namespace Faunus;
 using namespace std;
 
 typedef Geometry::Cuboid Tgeometry;
-typedef Particle<Radius, Charge> Tparticle;
+typedef Particle<Charge> Tparticle;
 
 static const char USAGE[] =
 R"(Faunus - A Framework for Molecular Simulation.

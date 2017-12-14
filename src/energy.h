@@ -27,7 +27,7 @@ namespace Faunus {
         template<typename Tspace>
             class Isobaric : public Energybase {
                 private:
-                    Tspace spc;
+                    Tspace& spc;
                     double P; // P/kT
                 public:
                     Isobaric(const json &j, Tspace &spc) : spc(spc) {

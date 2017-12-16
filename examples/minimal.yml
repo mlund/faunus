@@ -8,7 +8,7 @@ atomlist: # define all atom types below
 moleculelist:
     - salt: {Ninit: 50, atoms: [Na, Cl], atomic: true }
 moves:
-    - transrot: { mol: salt, dp: 40, dprot: 0 }
+    - transrot: { molecule: salt, dp: 40, dprot: 0 }
     - volume: {dV: 0.1}
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
@@ -17,4 +17,5 @@ analysis:
     - density: {nstep: 100}
 mcloop: {macro: 10, micro: 100}
 geometry: {length: 50} # sidelength(s): number OR array
+temperature: 300
 

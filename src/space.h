@@ -20,7 +20,7 @@ namespace Faunus {
             int index; //!< Touched group index
             bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
-            std::vector<std::pair<int,int>> activated, deactivated; //!< Range of (de)activated particles
+            std::vector<int> activated, deactivated; //!< (de)activated particles w. respect to `Group::begin()`
         }; //!< Properties of changed groups
 
         std::vector<data> groups; //!< Touched groups by index in group vector
@@ -76,10 +76,11 @@ namespace Faunus {
                 new_from_json(j, *this);
 
                 for (auto &i : groups)
-                    if (!i.atomic)
-                        if (geo.sqdist( i.cm,
-                                    Geometry::massCenter(i.begin(), i.end(), geo.boundaryFunc, -i.cm) ) > 1e-9 )
-                            throw std::runtime_error("space construction error: mass center mismatch");
+                    if (!i.empty())
+                        if (!i.atomic)
+                            if (geo.sqdist( i.cm,
+                                        Geometry::massCenter(i.begin(), i.end(), geo.boundaryFunc, -i.cm) ) > 1e-9 )
+                                throw std::runtime_error("space construction error: mass center mismatch");
             }
 
             void clear() {
@@ -100,23 +101,29 @@ namespace Faunus {
                     g.id = molid;
                     g.atomic = molecules<Tpvec>.at(molid).atomic;
                     g.cm = Geometry::massCenter(in.begin(), in.end(), geo.boundaryFunc, -in.begin()->pos);
-                    groups.push_back(g);
+
                     if (g.atomic==false) {
                         Point cm = Geometry::massCenter(g.begin(), g.end(), geo.boundaryFunc, -g.cm);
                         if (geo.sqdist(g.cm, cm)>1e-9)
                             throw std::runtime_error("space: mass center error upon insertion. Molecule too large?\n");
                     }
-                    assert( in.size() == groups.back().size() );
 
                     // inserted particles can be inactive upon insertion
                     if (molecules<Tpvec>.at(molid).inactive)
                         g.resize(0);
+
+                    groups.push_back(g);
+                    assert( in.size() == groups.back().capacity() );
                 }
             } //!< Safely add particles and corresponding group to back
 
             auto findMolecules(int molid) {
                 return groups | ranges::view::filter( [molid](auto &i){ return i.id==molid; } );
             } //!< Range with all groups of type `molid` (complexity: order N)
+
+            auto findInactiveMolecules(int molid) {
+                return groups | ranges::view::filter( [molid](auto &i){ return (i.id==molid) && (i.size()!=i.capacity()); } );
+            } //!< Range with all (partially) inactive groups of type `molid` (complexity: order N)
 
             auto findAtoms(int atomid) const {
                 return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );

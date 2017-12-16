@@ -8,7 +8,7 @@ atomlist: # define all atom types below
 moleculelist:
     - salt: {Ninit: 1000, atoms: [Na,Cl], atomic: true }
 moves:
-    - transrot: { mol: salt, dp: 40, dprot: 0 }
+    - transrot: { molecule: salt, dp: 40, dprot: 0 }
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - savestate: {file: confout.pqr}

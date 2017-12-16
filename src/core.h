@@ -833,4 +833,13 @@ namespace Faunus {
     }
 #endif
 
+    struct json_io_base {
+        std::string name;
+        std::string cite;
+
+        inline void _to_json(json&) const {};
+        inline void _from_json(const json&) {};
+
+
+    };
 }//end of faunus namespace

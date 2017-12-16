@@ -60,66 +60,183 @@ namespace Faunus {
         }
 
         /**
-         * @brief Analysis of particle densities
+         * @brief Excess chemical potential of molecules
+         *
+         * This will insert a non-perturbing ghost molecule into
+         * the system and calculate a Widom average to measure
+         * the free energy of the insertion process. The position
+         * and molecular rotation is random.
+         * For use with rod-like particles on surfaces, the `absz`
+         * keyword may be used to ensure orientations on only one
+         * half-sphere.
+         *
+         * JSON input:
+         *
+         * Keyword       | Description
+         * :------------ | :-----------------------------------------
+         * `dir`         | Inserting direction array. Default `[1,1,1]`
+         * `molecule`    | Name of molecule to insert
+         * `ninsert`     | Number of insertions per sample event
+         * `absz`        | Apply `std::fabs` on all z-coordinates of inserted molecule (default: `false`)
          */
-        template<class Tspace>
-        class Density : public Analysisbase {
+        template<typename Tspace>
+            class WidomInsertion : public Analysisbase
+        {
             private:
-                Tspace& spc;
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
+                typedef MoleculeData<Tpvec> TMoleculeData;
 
-                std::map<int, Average<double>> rho_mol, rho_atom;
-                std::map<int,int> Nmol, Natom;
-                Average<double> Lavg, Vavg, invVavg;
+                Tspace& spc;
+                Energy::Energybase* pot;
+                RandomInserter<TMoleculeData> rins;
+                std::string molname; // molecule name
+                int ninsert;
+                int molid;        // molecule id
+                bool absolute_z=false;
+                Average<double> expu;
+                Change change;
 
-                inline void _sample() override {
-                    // count atom and groups of individual id's
-                    Nmol.clear();
-                    Natom.clear();
-                    for (auto &g : spc.groups)
-                        if (g.atomic)
-                            for (auto &p : g)
-                                Natom[p.id]++;
-                        else
-                            if (!g.empty())
-                                Nmol[g.id]++;
-
-                    double V = spc.geo.getVolume();
-                    Vavg += V;
-                    Lavg += std::cbrt(V);
-                    invVavg += 1/V;
-
-                    for (auto &i : Nmol)
-                        rho_mol[i.first] += i.second/V;
-
-                    for (auto &i : Natom)
-                        rho_atom[i.first] += i.second/V;
+                void _sample() override
+                {
+                    if (!change.empty()) {
+                        Tpvec pin;
+                        auto &g = spc.groups.at( change.groups.at(0).index );
+                        assert(g.empty());
+                        g.resize(g.capacity());
+                        for ( int i = 0; i < ninsert; ++i )
+                        {
+                            pin = rins(spc.geo, spc.p, molecules<Tpvec>.at(molid));
+                            if (!pin.empty()) {
+                                if (absolute_z)
+                                    for (auto &p : pin)
+                                        p.pos.z() = std::fabs(p.pos.z());
+                                double du = pot->energy(change);
+                                expu += exp(-du); // widom average
+                            }
+                        }
+                        g.resize(0);
+                    }
                 }
 
-                inline void _to_json(json &j) const override {
+                void _to_json(json &j) const override
+                {
                     using namespace u8;
-                    j[ bracket( "V" ) ] = Vavg.avg();
-                    j[ bracket( "1/V" ) ] = invVavg.avg();
-                    j[ bracket( cuberoot + "V" ) ] = Lavg.avg();
-                    j[ cuberoot + bracket("V") ] = std::cbrt(Vavg.avg());
+                    double excess = -std::log(expu.avg());
+                    j = {
+                        { name,
+                            {
+                                { "dir", rins.dir }, { "molecule", molname },
+                                { "insertions", expu.cnt }, { "absz", absolute_z },
+                                { mu+"/kT",
+                                    {
+                                        { "excess", excess }
+                                    }
+                                }
+                            }
+                        }
+                    };
+                }
 
-                    auto &_j = j["atomic"];
-                    for (auto &i : rho_atom)
-                        _j[ atoms<Tparticle>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+                void _from_json(const json &j) override {
+                    ninsert = j.at("ninsert");
+                    molname = j.at("molecule");
+                    absolute_z = j.value("absz", false);
+                    rins.dir = j.value("dir", Point({1,1,1}) );
 
-                    auto &_jj = j["molecular"];
-                    for (auto &i : rho_mol)
-                        _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
-                    _roundjson(j,4);
+                    auto it = findName( molecules<Tpvec>, molname); // loop for molecule in topology
+                    if (it!=molecules<Tpvec>.end()) {
+                        if (it->inactive) {  // found! it must also be inactive
+                            molid = it->id();
+                            auto m = spc.findInactiveMolecules(molid); // look for molecules in space
+                            if (size(m)>0) { // did we find any?
+                                if (m.begin()->size()==0) { // pick the first and check if it's really inactive
+                                    change.clear();
+                                    Change::data d; // construct change object
+                                    d.index = distance(spc.groups.begin(), m.begin()); // group index
+                                    d.all = true;
+                                    //d.activated.resize( m.begin()->capacity() ); // specify which atoms we activate upon insertion
+                                    //std::iota( d.activated.begin(), d.activated.end(), 0);
+                                    change.groups.push_back(d); // add to change object
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    throw std::runtime_error(name+": no inactive '" + molname + "' groups found");
                 }
 
             public:
+
+                template<class Tenergy>
+                    WidomInsertion( const json &j, Tspace &spc, Tenergy &pot ) : spc(spc), pot(&pot) {
+                        from_json(j);
+                        name = "molwidom";
+                        rins.checkOverlap = false;
+                    }
+        };
+
+        /**
+         * @brief Analysis of particle densities
+         */
+        template<class Tspace>
+            class Density : public Analysisbase {
+                private:
+                    Tspace& spc;
+                    typedef typename Tspace::Tparticle Tparticle;
+                    typedef typename Tspace::Tpvec Tpvec;
+
+                    std::map<int, Average<double>> rho_mol, rho_atom;
+                    std::map<int,int> Nmol, Natom;
+                    Average<double> Lavg, Vavg, invVavg;
+
+                    inline void _sample() override {
+                        // count atom and groups of individual id's
+                        Nmol.clear();
+                        Natom.clear();
+                        for (auto &g : spc.groups)
+                            if (g.atomic)
+                                for (auto &p : g)
+                                    Natom[p.id]++;
+                            else
+                                if (!g.empty())
+                                    Nmol[g.id]++;
+
+                        double V = spc.geo.getVolume();
+                        Vavg += V;
+                        Lavg += std::cbrt(V);
+                        invVavg += 1/V;
+
+                        for (auto &i : Nmol)
+                            rho_mol[i.first] += i.second/V;
+
+                        for (auto &i : Natom)
+                            rho_atom[i.first] += i.second/V;
+                    }
+
+                    inline void _to_json(json &j) const override {
+                        using namespace u8;
+                        j[ bracket( "V" ) ] = Vavg.avg();
+                        j[ bracket( "1/V" ) ] = invVavg.avg();
+                        j[ bracket( cuberoot + "V" ) ] = Lavg.avg();
+                        j[ cuberoot + bracket("V") ] = std::cbrt(Vavg.avg());
+
+                        auto &_j = j["atomic"];
+                        for (auto &i : rho_atom)
+                            _j[ atoms<Tparticle>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+
+                        auto &_jj = j["molecular"];
+                        for (auto &i : rho_mol)
+                            _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+                        _roundjson(j,4);
+                    }
+
+                public:
                     Density( const json &j, Tspace &spc ) : spc(spc) {
                         from_json(j);
                         name = "density";
                     }
-        };
+            };
 
         class SystemEnergy : public Analysisbase {
             private:
@@ -257,7 +374,6 @@ namespace Faunus {
 
                 inline virtual ~PairFunctionBase()
                 {
-                    cout << hist.getMap().size() << endl;
                     normalize();
                     hist.save( file );
                 }
@@ -451,6 +567,9 @@ namespace Faunus {
 
                                     if ( it.key()=="molrdf")
                                         push_back<MoleculeRDF<Tspace>>(it.value(), spc);
+
+                                    if ( it.key()=="widom")
+                                        push_back<WidomInsertion<Tspace>>(it.value(), spc, pot);
 
                                     // additional analysis go here...
                                 } catch (std::exception &e) {

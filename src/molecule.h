@@ -247,7 +247,7 @@ namespace Faunus {
             j[a.name] = {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
-                {"keeppos", a.keeppos}, {"Ninit", a.Ninit}
+                {"keeppos", a.keeppos}, {"Ninit", a.Ninit}, {"inactive", a.inactive}
             };
             j[a.name]["atoms"] = json::array();
             for (auto id : a.atoms)
@@ -271,12 +271,13 @@ namespace Faunus {
                 a.name = it.key();
                 auto& val = it.value();
                 a.activity = val.value("activity", a.activity) * 1.0_molar;
-                a.Ninit = val.value("Ninit", a.Ninit);
+                a.atomic = val.value("atomic", a.atomic);
                 a.id() = val.value("id", a.id());
+                a.inactive = val.value("inactive", a.inactive);
                 a.insdir = val.value("insdir", a.insdir);
                 a.insoffset = val.value("insoffset", a.insoffset);
                 a.keeppos = val.value("keeppos", a.keeppos);
-                a.atomic = val.value("atomic", a.atomic);
+                a.Ninit = val.value("Ninit", a.Ninit);
 
                 if (a.atomic) {
 

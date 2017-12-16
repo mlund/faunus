@@ -113,6 +113,16 @@ namespace Faunus {
                         }
 
                     template<typename T>
+                        double g2all(const T &g1) {
+                            double u = 0;
+                            for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i ) {
+                                for ( auto j=i; ++j != spc.groups.end(); )
+                                    u += g2g( *i, *j );
+                                return u;
+                            }
+                        }
+
+                    template<typename T>
                         double index2index(const T &index1, const T &index2) {
                             double u = 0;
                             for (auto i : index1)

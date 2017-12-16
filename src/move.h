@@ -110,7 +110,7 @@ namespace Faunus {
                     void _from_json(const json &j) override {
                         assert(!molecules<Tpvec>.empty());
                         try {
-                            molname = j.at("mol");
+                            molname = j.at("molecule");
                             auto it = findName(molecules<Tpvec>, molname);
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
@@ -207,7 +207,7 @@ namespace Faunus {
                     void _from_json(const json &j) override {
                         assert(!molecules<Tpvec>.empty());
                         try {
-                            std::string molname = j.at("mol");
+                            std::string molname = j.at("molecule");
                             auto it = findName(molecules<Tpvec>, molname);
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
@@ -288,11 +288,11 @@ namespace Faunus {
 
             Tspace spc;
             TranslateRotate<Tspace> mv(spc);
-            json j = R"( {"mol":"B", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "repeat":2 })"_json;
+            json j = R"( {"molecule":"B", "dp":1.0, "dprot":0.5, "dir":[0,1,0], "repeat":2 })"_json;
             mv.from_json(j);
 
             j = json(mv).at(mv.name);
-            CHECK( j.at("mol")   == "B");
+            CHECK( j.at("molecule")   == "B");
             CHECK( j.at("dir")   == Point(0,1,0) );
             CHECK( j.at("dp")    == 1.0 );
             CHECK( j.at("repeat")  == 2 );

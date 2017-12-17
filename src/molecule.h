@@ -126,12 +126,12 @@ namespace Faunus {
                 const int& id() const { return _id; } //!< Type id
 
                 int Ninit = 0;             //!< Number of initial molecules
+                int Ninactive=0;           //!< Number of initial molecules to be defined as inactive
                 std::string name;          //!< Molecule name
                 std::string structure;     //!< Structure file (pqr|aam|xyz)
                 bool atomic=false;         //!< True if atomic group (salt etc.)
                 bool rotate=true;          //!< True if molecule should be rotated upon insertion
                 bool keeppos=false;        //!< Keep original positions of `structure`
-                bool inactive=false;       //!< Set to true if the group should initially be inactive
                 double activity=0;         //!< Chemical activity (mol/l)
                 Point insdir = {1,1,1};    //!< Insertion directions
                 Point insoffset = {0,0,0}; //!< Insertion offset
@@ -247,7 +247,7 @@ namespace Faunus {
             j[a.name] = {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
-                {"keeppos", a.keeppos}, {"Ninit", a.Ninit}, {"inactive", a.inactive}
+                {"keeppos", a.keeppos}, {"Ninit", a.Ninit}, {"Ninactive", a.Ninactive}
             };
             j[a.name]["atoms"] = json::array();
             for (auto id : a.atoms)
@@ -273,11 +273,14 @@ namespace Faunus {
                 a.activity = val.value("activity", a.activity) * 1.0_molar;
                 a.atomic = val.value("atomic", a.atomic);
                 a.id() = val.value("id", a.id());
-                a.inactive = val.value("inactive", a.inactive);
+                a.Ninactive = val.value("Ninactive", a.Ninactive);
                 a.insdir = val.value("insdir", a.insdir);
                 a.insoffset = val.value("insoffset", a.insoffset);
                 a.keeppos = val.value("keeppos", a.keeppos);
                 a.Ninit = val.value("Ninit", a.Ninit);
+
+                if (a.Ninactive > a.Ninit)
+                    throw std::runtime_error("Ninactive cannot be larger than Ninit");
 
                 if (a.atomic) {
 

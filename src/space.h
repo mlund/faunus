@@ -20,7 +20,6 @@ namespace Faunus {
             int index; //!< Touched group index
             bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
-            std::vector<int> activated, deactivated; //!< (de)activated particles w. respect to `Group::begin()`
         }; //!< Properties of changed groups
 
         std::vector<data> groups; //!< Touched groups by index in group vector
@@ -108,8 +107,9 @@ namespace Faunus {
                             throw std::runtime_error("space: mass center error upon insertion. Molecule too large?\n");
                     }
 
-                    // inserted particles can be inactive upon insertion
-                    if (molecules<Tpvec>.at(molid).inactive)
+                    // inactivate group before insertion?
+                    auto molvec = findInactiveMolecules(molid);
+                    if (size(molvec) < molecules<Tpvec>.at(molid).Ninactive)
                         g.resize(0);
 
                     groups.push_back(g);

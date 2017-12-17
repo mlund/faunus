@@ -62,22 +62,27 @@ namespace Faunus {
         /**
          * @brief Excess chemical potential of molecules
          *
+         * `widom`       | Description
+         * :------------ | :-----------------------------------------
+         * `molecule`    | Name of molecule to insert
+         * `ninsert`     | Number of insertions per sample event
+         * `dir=[1,1,1]` | Inserting directions
+         * `absz=false`  | Apply `std::fabs` on all z-coordinates of inserted molecule
+         *
          * This will insert a non-perturbing ghost molecule into
          * the system and calculate a Widom average to measure
-         * the free energy of the insertion process. The position
-         * and molecular rotation is random.
+         * the free energy of the insertion process, _i.e._ the
+         * excess chemical potential:
+         *
+         * $$ \mu^{excess} = -k_BT\ln \langle e^{-\delta u/k_BT} \rangle_0 $$
+         *
+         * where $$delta u$$ is the energy change of the perturbation and the
+         * average runs over the _unperturbed_ ensemble.
+         *
+         * The position and molecular rotation is random.
          * For use with rod-like particles on surfaces, the `absz`
          * keyword may be used to ensure orientations on only one
          * half-sphere.
-         *
-         * JSON input:
-         *
-         * Keyword       | Description
-         * :------------ | :-----------------------------------------
-         * `dir`         | Inserting direction array. Default `[1,1,1]`
-         * `molecule`    | Name of molecule to insert
-         * `ninsert`     | Number of insertions per sample event
-         * `absz`        | Apply `std::fabs` on all z-coordinates of inserted molecule (default: `false`)
          */
         template<typename Tspace>
             class WidomInsertion : public Analysisbase
@@ -146,20 +151,16 @@ namespace Faunus {
 
                     auto it = findName( molecules<Tpvec>, molname); // loop for molecule in topology
                     if (it!=molecules<Tpvec>.end()) {
-                        if (it->inactive) {  // found! it must also be inactive
-                            molid = it->id();
-                            auto m = spc.findInactiveMolecules(molid); // look for molecules in space
-                            if (size(m)>0) { // did we find any?
-                                if (m.begin()->size()==0) { // pick the first and check if it's really inactive
-                                    change.clear();
-                                    Change::data d; // construct change object
-                                    d.index = distance(spc.groups.begin(), m.begin()); // group index
-                                    d.all = true;
-                                    //d.activated.resize( m.begin()->capacity() ); // specify which atoms we activate upon insertion
-                                    //std::iota( d.activated.begin(), d.activated.end(), 0);
-                                    change.groups.push_back(d); // add to change object
-                                    return;
-                                }
+                        molid = it->id();
+                        auto m = spc.findInactiveMolecules(molid); // look for molecules in space
+                        if (size(m)>0) { // did we find any?
+                            if (m.begin()->size()==0) { // pick the first and check if it's really inactive
+                                change.clear();
+                                Change::data d; // construct change object
+                                d.index = distance(spc.groups.begin(), m.begin()); // group index
+                                d.all = true;
+                                change.groups.push_back(d); // add to change object
+                                return;
                             }
                         }
                     }
@@ -172,6 +173,7 @@ namespace Faunus {
                     WidomInsertion( const json &j, Tspace &spc, Tenergy &pot ) : spc(spc), pot(&pot) {
                         from_json(j);
                         name = "molwidom";
+                        cite = "doi:10/dkv4s6";
                         rins.checkOverlap = false;
                     }
         };

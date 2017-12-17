@@ -1,4 +1,4 @@
-[![Documentation](https://codedocs.xyz/mlund/faunus.svg)](https://codedocs.xyz/mlund/faunus/)
+[![Documentation](https://codedocs.xyz/mlund/faunus.svg)](https://mlund.github.io/webtest)
 [![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
 [![Faunus](doc/images/animation.gif)](https://github.com/mlund/faunus)
 

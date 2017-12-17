@@ -252,13 +252,6 @@ namespace Faunus {
             j[a.name]["atoms"] = json::array();
             for (auto id : a.atoms)
                 j[a.name]["atoms"].push_back( atoms<Tparticle>.at(id).name );
-
-            //_j["activity"] = a.activity / 1.0_molar;
-            //_j["atomic"] = a.atomic;
-            //_j["id"] = a.id();
-            //_j["insdir"] = a.insdir;
-            //_j["insoffset"] = a.insoffset;
-            //_j["keeppos"] = a.keeppos;
         }
 
     template<class Tparticle, class Talloc>
@@ -270,20 +263,19 @@ namespace Faunus {
             for (auto it=j.begin(); it!=j.end(); ++it) {
                 a.name = it.key();
                 auto& val = it.value();
-                a.activity = val.value("activity", a.activity) * 1.0_molar;
-                a.atomic = val.value("atomic", a.atomic);
-                a.id() = val.value("id", a.id());
                 a.Ninactive = val.value("Ninactive", a.Ninactive);
-                a.insdir = val.value("insdir", a.insdir);
                 a.insoffset = val.value("insoffset", a.insoffset);
+                a.activity = val.value("activity", a.activity) * 1.0_molar;
                 a.keeppos = val.value("keeppos", a.keeppos);
+                a.atomic = val.value("atomic", a.atomic);
+                a.insdir = val.value("insdir", a.insdir);
                 a.Ninit = val.value("Ninit", a.Ninit);
+                a.id() = val.value("id", a.id());
 
                 if (a.Ninactive > a.Ninit)
                     throw std::runtime_error("Ninactive cannot be larger than Ninit");
 
                 if (a.atomic) {
-
                     // read `atoms` list of atom names and convert to atom id's
                     for (auto &i : val.at("atoms").get<std::vector<std::string>>()) {
                         auto it = findName( atoms<Tparticle>, i );
@@ -326,7 +318,7 @@ namespace Faunus {
 
         json j = R"(
             { "moleculelist": [
-                { "B": {"activity":0.2, "atomic":true, "insdir": [0.5,0,0], "insoffset": [-1.1, 0.5, 10] } },
+                { "B": {"activity":0.2, "atomic":true, "insdir": [0.5,0,0], "insoffset": [-1.1, 0.5, 10], "atoms":["A"] } },
                 { "A": { "atomic":false } }
             ]})"_json;
 

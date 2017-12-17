@@ -148,7 +148,8 @@ namespace Faunus {
                         if (!change.empty()) {
 
                             if (change.dV) {
-                                for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i ) {
+#pragma omp parallel for reduction (+:u) schedule (dynamic) 
+                                for ( auto i = spc.groups.begin(); i < spc.groups.end(); ++i ) {
                                     for ( auto j=i; ++j != spc.groups.end(); )
                                         u += g2g( *i, *j );
                                     if (i->atomic)
@@ -159,10 +160,10 @@ namespace Faunus {
 
                             // did everything change?
                             if (change.all) {
-                                for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i ) {
+#pragma omp parallel for reduction (+:u) schedule (dynamic) 
+                                for ( auto i = spc.groups.begin(); i < spc.groups.end(); ++i ) {
                                     for ( auto j=i; ++j != spc.groups.end(); )
                                         u += g2g( *i, *j );
-
                                     u += g_internal(*i);
                                 }
                                 // more todo here...
@@ -184,6 +185,7 @@ namespace Faunus {
 
                                 // everything in group changed
                                 if (d.all) {
+#pragma omp parallel for reduction (+:u) 
                                     for (int i=0; i<int(spc.groups.size()); i++)
                                         if (i!=d.index)
                                             u+=g2g(spc.groups[i], spc.groups[d.index]);
@@ -230,7 +232,7 @@ namespace Faunus {
                         typedef CombinedPairPotential<CoulombGalore,LennardJones<Tparticle>> CoulombLJ;
                         typedef CombinedPairPotential<CoulombGalore,HardSphere<Tparticle>> CoulombHS;
 
-                        Energybase::name="Hamiltonian";
+                        Energybase::name="hamiltonian";
                         for (auto &m : j.at("energy")) {// loop over move list
                             size_t oldsize = vec.size();
                             for (auto it=m.begin(); it!=m.end(); ++it) {

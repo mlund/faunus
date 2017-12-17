@@ -4,7 +4,7 @@ project(neofaunus)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 enable_testing()
 
@@ -144,9 +144,9 @@ add_executable(tests src/tests.cpp ${hdrs})
 add_dependencies(tests modernjson doctest eigen range-v3 xdrfile pybind11)
 add_test(NAME tests COMMAND tests)
 
-add_executable(faunus src/faunus.cpp ${hdrs})
+add_executable(faunus src/faunus.cpp ${DocoptIncludeDir}/docopt.cpp ${hdrs})
 add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile)
-target_link_libraries(faunus docopt xdrfile)
+target_link_libraries(faunus xdrfile) # docopt)
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)

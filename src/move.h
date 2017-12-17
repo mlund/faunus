@@ -102,7 +102,7 @@ namespace Faunus {
                             {"dir", dir},
                             {"molid", molid},
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"mol", molname}
+                            {"molecule", molname}
                         };
                         _roundjson(j,3);
                     }
@@ -174,7 +174,7 @@ namespace Faunus {
 
                 public:
                     AtomicTranslateRotate(Tspace &spc) : spc(spc) {
-                        name = "Atomic Translation and Rotation";
+                        name = "transrot";
                         repeat = -1; // meaning repeat N times
                     }
             };
@@ -199,7 +199,7 @@ namespace Faunus {
                             {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
                             {"molid", molid},
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"mol", molecules<Tpvec>[molid].name}
+                            {"molecule", molecules<Tpvec>[molid].name}
                         };
                         _roundjson(j,3);
                     }
@@ -271,7 +271,7 @@ namespace Faunus {
 
                 public:
                     TranslateRotate(Tspace &spc) : spc(spc) {
-                        name = "Molecular Translation and Rotation";
+                        name = "moltransrot";
                         repeat = -1; // meaning repeat N times
                     }
             };

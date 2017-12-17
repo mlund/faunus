@@ -129,15 +129,11 @@ namespace Faunus {
                     using namespace u8;
                     double excess = -std::log(expu.avg());
                     j = {
-                        { name,
+                        { "dir", rins.dir }, { "molecule", molname },
+                        { "insertions", expu.cnt }, { "absz", absolute_z },
+                        { mu+"/kT",
                             {
-                                { "dir", rins.dir }, { "molecule", molname },
-                                { "insertions", expu.cnt }, { "absz", absolute_z },
-                                { mu+"/kT",
-                                    {
-                                        { "excess", excess }
-                                    }
-                                }
+                                { "excess", excess }
                             }
                         }
                     };
@@ -172,7 +168,7 @@ namespace Faunus {
                 template<class Tenergy>
                     WidomInsertion( const json &j, Tspace &spc, Tenergy &pot ) : spc(spc), pot(&pot) {
                         from_json(j);
-                        name = "molwidom";
+                        name = "widom";
                         cite = "doi:10/dkv4s6";
                         rins.checkOverlap = false;
                     }

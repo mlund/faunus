@@ -369,7 +369,7 @@ namespace Faunus {
 
                 public:
                     VolumeMove(Tspace &spc) : spc(spc) {
-                        name = "Volume Move";
+                        name = "volume";
                         repeat = 1;
                     }
             };
@@ -517,9 +517,15 @@ namespace Faunus {
                             (**mv).move(change);
 
                             if (!change.empty()) {
-                                double unew = state2.pot.energy(change),
-                                       uold = state1.pot.energy(change),
-                                       du = unew - uold;
+                                double unew, uold, du;
+#pragma omp parallel sections
+                                {
+#pragma omp section
+                                    { unew = state2.pot.energy(change); }
+#pragma omp section
+                                    { uold = state1.pot.energy(change); }
+                                }
+                                du = unew - uold;
                                 if ( metropolis(du) ) { // accept move
                                     state1.sync( state2, change );
                                     (**mv).accept(change);

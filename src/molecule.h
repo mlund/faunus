@@ -247,7 +247,8 @@ namespace Faunus {
             j[a.name] = {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
-                {"keeppos", a.keeppos}, {"Ninit", a.Ninit}, {"Ninactive", a.Ninactive}
+                {"keeppos", a.keeppos}, {"Ninit", a.Ninit}, {"Ninactive", a.Ninactive},
+                {"structure", a.structure}
             };
             j[a.name]["atoms"] = json::array();
             for (auto id : a.atoms)

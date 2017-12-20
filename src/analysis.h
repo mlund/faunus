@@ -539,6 +539,54 @@ namespace Faunus {
             }
         };
 
+        class VirtualVolume : public Analysisbase {
+            private:
+                double dV;
+                Change c;
+                Energy::Energybase& pot;
+                std::function<double()> getVolume;
+                std::function<void(double)> scaleVolume;
+                Average<double> duexp; // < exp(-du/kT) >
+
+                void _sample() override {
+                    if (dV>0) {
+                        double Vold = getVolume(),
+                               Uold = pot.energy(c);
+                        scaleVolume(Vold + dV);
+                        double Unew = pot.energy(c);
+                        scaleVolume(Vold);
+                        duexp += std::exp(-(Uold - Unew));
+                        assert(std::fabs(Uold - pot.energy(c)) < 1e-7);
+                    }
+                }
+
+                void _from_json(const json &j) override { dV = j.at("dV"); }
+
+                void _to_json(json &j) const override {
+                    double pex = -std::log(duexp.avg()) / dV;
+                    j["dV"] = dV;
+                    j["Pex/mM"] = pex / 1.0_mM;
+                    j["Pex/Pa"] = pex / 1.0_Pa;
+                    j["Pex/kT/"+u8::angstrom+u8::cubed] = pex;
+                    _roundjson(j,5);
+                }
+
+                void init(const json &j) {
+                    from_json(j);
+                    c.dV=true;
+                    c.all=true;
+                    name = "virtualvolume";
+                    cite = "doi:10.1063/1.472721";
+                }
+
+            public:
+                template<class Tspace>
+                    VirtualVolume(const json &j, Tspace &spc, Energy::Energybase &pot) : pot(pot) {
+                        init(j);
+                        getVolume = [&spc](){ return spc.geo.getVolume(); };
+                        scaleVolume = [&spc](double Vnew) { spc.scaleVolume(Vnew); };
+                    }
+        }; //!< Calculate excess pressure using virtual volume move
 
         class CombinedAnalysis : public BasePointerVector<Analysisbase> {
             public:
@@ -565,6 +613,9 @@ namespace Faunus {
 
                                     if ( it.key()=="molrdf")
                                         push_back<MoleculeRDF<Tspace>>(it.value(), spc);
+
+                                    if ( it.key()=="virtualvolume")
+                                        push_back<VirtualVolume>(it.value(), spc, pot);
 
                                     if ( it.key()=="widom")
                                         push_back<WidomInsertion<Tspace>>(it.value(), spc, pot);

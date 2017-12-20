@@ -168,6 +168,38 @@ namespace Faunus {
                 assert( p.begin() != other.p.begin());
             } //!< Copy differing data from other (o) Space using Change object
 
+            void scaleVolume(double Vnew) {
+                double Vold = geo.getVolume();
+                double scale = std::cbrt(Vnew/Vold);
+
+                // remove periodic boundaries.
+                for (auto &g: groups)
+                    if (!g.atomic)
+                        g.unwrap(geo.distanceFunc);
+
+                geo.setVolume(Vnew);
+
+                for (auto& g : groups) {
+                    if (!g.empty()) {
+                        if (g.atomic) // scale all atoms
+                            for (auto& i : g)
+                                i.pos *= scale;
+                        else { // scale mass center and translate
+                            Point delta = g.cm * scale - g.cm;
+                            g.cm *= scale;
+                            for (auto &i : g) {
+                                i.pos += delta;
+                                geo.boundary(i.pos);
+                            }
+                            assert( geo.sqdist( g.cm,
+                                        Geometry::massCenter(
+                                            g.begin(), g.end(),
+                                            geo.boundaryFunc, -g.cm)) < 1e-10 );
+                        }
+                    }
+                }
+            } // scale space to new volume
+
             json info() {
                 json j;
                 j["number of particles"] = p.size();

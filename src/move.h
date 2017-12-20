@@ -328,39 +328,13 @@ namespace Faunus {
 
                     void _move(Change &change) override {
                         if (dV>0) {
+                            change.dV=true;
+                            change.all=true;
                             double Vold = spc.geo.getVolume();
                             double Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
                             double scale = std::cbrt(Vnew/Vold);
                             deltaV = Vnew-Vold;
-
-                            // remove periodic boundaries. Does this work??
-                            for (auto &g: spc.groups)
-                                if (!g.atomic)
-                                    g.unwrap(spc.geo.distanceFunc);
-
-                            spc.geo.setVolume(Vnew);
-
-                            for (auto& g : spc.groups) {
-                                if (!g.empty()) {
-                                    if (g.atomic) // scale all atoms
-                                        for (auto& i : g)
-                                            i.pos *= scale;
-                                    else { // scale mass center and translate
-                                        Point delta = g.cm * scale - g.cm;
-                                        g.cm *= scale;
-                                        for (auto &i : g) {
-                                            i.pos += delta;
-                                            spc.geo.boundary(i.pos);
-                                        }
-                                        assert( spc.geo.sqdist( g.cm,
-                                                    Geometry::massCenter(
-                                                        g.begin(), g.end(),
-                                                        spc.geo.boundaryFunc, -g.cm)) < 1e-10 );
-                                    }
-                                }
-                            }
-                            change.dV=true;
-                            change.all=true;
+                            spc.scaleVolume(Vnew);
                         }
                     }
 

@@ -466,7 +466,7 @@ namespace Faunus {
                     if (f) {
                         cout << "Restoring old state." << endl;
                         json j;
-                        j << f;
+                        f >> j;
                         restore(j);
                     }
                 }

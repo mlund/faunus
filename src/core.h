@@ -76,7 +76,7 @@ namespace Faunus {
         std::ifstream f (file );
         if ( f ) {
             try {
-                js << f;
+                f >> js;
             }
             catch(std::exception& e) {
                 throw std::runtime_error("Syntax error in JSON file " + file + ": " + e.what());

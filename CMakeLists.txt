@@ -36,8 +36,8 @@ include(ExternalProject)
 
 ExternalProject_Add( modernjson
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/nlohmann/json/releases/download/v2.1.1/json.hpp"
-    URL_MD5 871e326cf493d17bce4578656759283d
+    URL "https://github.com/nlohmann/json/releases/download/v3.0.0/json.hpp"
+    URL_MD5 513357d232a0185a3d8d0f3c665744fb
     UPDATE_DISCONNECTED ON
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )

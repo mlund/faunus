@@ -208,11 +208,10 @@ namespace Faunus {
                         rc1i = 1/rc;
                         epsr = j.at("epsr");
                         lB = pc::lB( epsr );
-                        depsdt = j.value("depsdt", -0.368*pc::T()/epsr);
-
+                        depsdt = j.value("depsdt", -0.368*pc::temperature/epsr);
                         sf.setRange(0, 1);
                         sf.setTolerance(
-                                j.value("tab_utol",1e-9),j.value("tab_ftol",1e-2) );
+                                j.value("utol",1e-9),j.value("ftol",1e-2) );
 
                         if (type=="reactionfield") sfReactionField(j);
                         if (type=="fanourgakis") sfFanourgakis(j);
@@ -275,7 +274,7 @@ namespace Faunus {
                 void to_json(json &j) const override {
                     using namespace u8;
                     j["epsr"] = epsr;
-                    j[partial+epsilon_m + "/" + partial + "T"] = depsdt;
+                    j["T"+partial+epsilon_m + "/" + partial + "T"] = depsdt;
                     j["lB"] = lB;
                     j["cutoff"] = rc;
                     j["type"] = type;

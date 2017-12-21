@@ -70,7 +70,7 @@ namespace Faunus {
                 private:
                     double g2gcnt=0, g2gskip=0;
                 protected:
-                    double Rc2_g2g=1e20;
+                    double Rc2_g2g=pc::infty;
                     void to_json(json &j) const override {
                         j = pairpot;
                         json t = json::object();
@@ -138,7 +138,7 @@ namespace Faunus {
                     Nonbonded(const json &j, Tspace &spc) : spc(spc) {
                         name="nonbonded";
                         pairpot = j;
-                        Rc2_g2g = std::pow( j.value("cutoff_g2g", 1e20), 2);
+                        Rc2_g2g = std::pow( j.value("cutoff_g2g", pc::infty), 2);
                     }
 
                     double energy(Change &change) override {
@@ -175,6 +175,8 @@ namespace Faunus {
                                 auto& d = change.groups[0];
 
                                 // exactly ONE atom is changed
+                                // WARNING! This does not respect inactive particles!
+                                // TODO: Loop over groups instead
                                 if (d.atoms.size()==1) {
                                     auto i = spc.groups[d.index].begin() + d.atoms[0];
                                     for (auto j=spc.p.begin(); j!=spc.p.end(); ++j)

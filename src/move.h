@@ -96,6 +96,7 @@ namespace Faunus {
                     Average<double> msqd; // mean squared displacement
                     double _sqd; // squared displament
                     std::string molname; // name of molecule to operate on
+                    Change::data cdata;
 
                     void _to_json(json &j) const override {
                         j = {
@@ -129,44 +130,52 @@ namespace Faunus {
                         }
                     } //!< Configure via json object
 
-                    void _move(Change &change) override {
-                        assert(molid>=0);
-                        assert(!spc.groups.empty());
-                        assert(spc.geo.getVolume()>0);
+                    typename Tpvec::iterator randomAtom() {
+                        //auto p = spc.p.begin();
+                        //auto g = spc.groups.begin();
+                        //cdata.index = Faunus::distance( spc.groups.begin(), g ); // integer *index* of moved group
+                        //cdata.atoms[0] = std::distance(g->begin(), p);  // index of particle rel. to group
+                        //return p; 
 
+                        assert(molid>=0);
                         auto mollist = spc.findMolecules( molid ); // all `molid` groups
                         if (size(mollist)>0) {
                             auto g = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
                             if (!g->empty()) {
-                                auto p = slump.sample( g->begin(), g->end() ); // random particle iterator 
-
-                                double dp = atoms<Tparticle>.at(p->id).dp;
-                                double dprot = atoms<Tparticle>.at(p->id).dprot;
-
-                                if (dp>0) { // translate
-                                    Point oldpos = p->pos;
-                                    p->pos +=  0.5 * dp * ranunit(slump).cwiseProduct(dir);
-                                    spc.geo.boundaryFunc(p->pos);
-                                    _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
-                                }
-
-                                if (dprot>0) { // rotate
-                                    Point u = ranunit(slump);
-                                    double angle = dprot * (slump()-0.5);
-                                    Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
-                                    p->rotate(Q, Q.toRotationMatrix());
-                                }
-
-                                if (dp>0 || dprot>0) {
-                                    Change::data d;
-                                    d.index = Faunus::distance( spc.groups.begin(), g ); // integer *index* of moved group
-                                    d.atoms.push_back( std::distance(g->begin(), p)  );  // index of particle rel. to group
-                                    change.groups.push_back( d ); // add to list of moved groups
-                                }
-                                return;
+                                auto p = slump.sample( g->begin(), g->end() ); // random particle iterator  
+                                cdata.index = Faunus::distance( spc.groups.begin(), g ); // integer *index* of moved group
+                                cdata.atoms[0] = std::distance(g->begin(), p);  // index of particle rel. to group
+                                return p; 
                             }
                         }
-                        std::cerr << name << ": no molecules found" << std::endl;
+                        return spc.p.end();
+                    }
+
+                    void _move(Change &change) override {
+                        auto p = randomAtom();
+                        if (p!=spc.p.end()) {
+                            double dp = atoms<Tparticle>.at(p->id).dp;
+                            double dprot = atoms<Tparticle>.at(p->id).dprot;
+
+                            if (dp>0) { // translate
+                                Point oldpos = p->pos;
+                                p->pos +=  0.5 * dp * ranunit(slump).cwiseProduct(dir);
+                                spc.geo.boundaryFunc(p->pos);
+                                _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
+                            }
+
+                            if (dprot>0) { // rotate
+                                Point u = ranunit(slump);
+                                double angle = dprot * (slump()-0.5);
+                                Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
+                                p->rotate(Q, Q.toRotationMatrix());
+                            }
+
+                            if (dp>0 || dprot>0)
+                                change.groups.push_back( cdata ); // add to list of moved groups
+                        }
+                        else
+                            std::cerr << name << ": no atoms found" << std::endl;
                     }
 
                     void _accept(Change &change) override { msqd += _sqd; }
@@ -176,6 +185,7 @@ namespace Faunus {
                     AtomicTranslateRotate(Tspace &spc) : spc(spc) {
                         name = "transrot";
                         repeat = -1; // meaning repeat N times
+                        cdata.atoms.resize(1);
                     }
             };
 

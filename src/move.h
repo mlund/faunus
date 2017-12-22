@@ -140,11 +140,11 @@ namespace Faunus {
                         assert(molid>=0);
                         auto mollist = spc.findMolecules( molid ); // all `molid` groups
                         if (size(mollist)>0) {
-                            auto g = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
-                            if (!g->empty()) {
-                                auto p = slump.sample( g->begin(), g->end() ); // random particle iterator  
-                                cdata.index = Faunus::distance( spc.groups.begin(), g ); // integer *index* of moved group
-                                cdata.atoms[0] = std::distance(g->begin(), p);  // index of particle rel. to group
+                            auto git = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
+                            if (!git->empty()) {
+                                auto p = slump.sample( git->begin(), git->end() ); // random particle iterator  
+                                cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
+                                cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
                                 return p; 
                             }
                         }
@@ -156,12 +156,15 @@ namespace Faunus {
                         if (p!=spc.p.end()) {
                             double dp = atoms<Tparticle>.at(p->id).dp;
                             double dprot = atoms<Tparticle>.at(p->id).dprot;
+                            auto& g = spc.groups[cdata.index];
 
                             if (dp>0) { // translate
                                 Point oldpos = p->pos;
                                 p->pos +=  0.5 * dp * ranunit(slump).cwiseProduct(dir);
                                 spc.geo.boundaryFunc(p->pos);
                                 _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
+                                if (!g.atomic)
+                                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.boundaryFunc);
                             }
 
                             if (dprot>0) { // rotate
@@ -472,7 +475,7 @@ namespace Faunus {
                     state2.sync(state1, c);
                     uinit = state1.pot.energy(c);
 
-                    std::ifstream f("confout.state");
+                    std::ifstream f("state");
                     if (f) {
                         cout << "Restoring old state." << endl;
                         json j;

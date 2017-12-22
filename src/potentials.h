@@ -72,6 +72,23 @@ namespace Faunus {
             throw std::runtime_error("error parsing json to bond");
         }
 
+        template<class Tpvec>
+        double bondEnergy(const Tpvec &p, const BondData &b, Geometry::DistanceFunction dist) {
+            double d;
+            switch (b.type) {
+                case BondData::harmonic:
+                    d = b.k[1] - dist(p[b.index[0]].pos, p[b.index[1]].pos).norm();
+                    return 0.5 * b.k[0] * d * d;
+                case BondData::fene:
+                    assert(!"not implemented");
+                    return 0;
+                default:
+                    return 0;
+            }
+            assert(!"not implemented");
+            return 0;
+        } 
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] BondData")
     {

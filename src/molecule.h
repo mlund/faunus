@@ -3,6 +3,7 @@
 #include "core.h"
 #include "io.h"
 #include "geometry.h"
+#include "potentials.h"
 
 namespace Faunus {
 
@@ -136,6 +137,7 @@ namespace Faunus {
                 Point insdir = {1,1,1};    //!< Insertion directions
                 Point insoffset = {0,0,0}; //!< Insertion offset
 
+                std::vector<Potential::BondData> bonds;
                 std::vector<int> atoms;    //!< Sequence of atoms in molecule (atom id's)
                 std::vector<Tpvec> conformations;           //!< Conformations of molecule
                 std::discrete_distribution<> confDist;      //!< Weight of conformations
@@ -248,7 +250,7 @@ namespace Faunus {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
                 {"keeppos", a.keeppos}, {"Ninit", a.Ninit}, {"Ninactive", a.Ninactive},
-                {"structure", a.structure}
+                {"structure", a.structure}, {"bondlist", a.bonds}
             };
             j[a.name]["atoms"] = json::array();
             for (auto id : a.atoms)
@@ -270,6 +272,7 @@ namespace Faunus {
                 a.keeppos = val.value("keeppos", a.keeppos);
                 a.atomic = val.value("atomic", a.atomic);
                 a.insdir = val.value("insdir", a.insdir);
+                a.bonds = val.value("bondlist", a.bonds);
                 a.Ninit = val.value("Ninit", a.Ninit);
                 a.id() = val.value("id", a.id());
 

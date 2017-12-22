@@ -72,6 +72,7 @@ namespace Faunus {
             Space() {}
 
             Space(const json &j) {
+                pc::temperature = j.at("temperature").get<double>() * 1.0_K;
                 new_from_json(j, *this);
 
                 for (auto &i : groups)
@@ -224,9 +225,9 @@ namespace Faunus {
 
     template<class Tgeometry, class Tparticle>
         void to_json(json &j, Space<Tgeometry,Tparticle> &spc) {
-            j["temperature"] = pc::temperature;
-            j["atomlist"] = atoms<Tparticle>;
-            j["moleculelist"] = molecules<decltype(spc.p)>;
+            //j["temperature"] = pc::temperature;
+            //j["atomlist"] = atoms<Tparticle>;
+            //j["moleculelist"] = molecules<decltype(spc.p)>;
             j["geometry"] = spc.geo;
             j["groups"] = spc.groups;
             j["particles"] = spc.p;
@@ -237,19 +238,16 @@ namespace Faunus {
             typedef typename Space<Tgeometry,Tparticletype>::Tpvec Tpvec;
             spc.clear();
 
-            pc::temperature = j.at("temperature").get<double>() * 1.0_K;
             spc.geo = j.at("geometry");
-            atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
-            molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+            if (atoms<Tparticletype>.empty())
+                atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
+            if (molecules<Tpvec>.empty())
+                molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
 
             if ( j.count("groups")==0 )
-            {
                 insertMolecules( spc );
-            }
-            else
-            {
+            else {
                 spc.p = j.at("particles").get<Tpvec>();
-
                 if (!spc.p.empty()) {
                     auto begin = spc.p.begin();
                     Group<Tparticletype> g(begin,begin);

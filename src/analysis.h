@@ -1,7 +1,9 @@
 #pragma once
 
+#include <numeric>
 #include "space.h"
 #include "io.h"
+#include "energy.h"
 
 namespace Faunus {
 
@@ -238,16 +240,21 @@ namespace Faunus {
 
         class SystemEnergy : public Analysisbase {
             private:
-                std::string file;
+                std::string file, sep=" ";
                 std::ofstream f;
-                std::function<double()> energyFunc;
+                std::function<std::vector<double>()> energyFunc;
                 Average<double> uavg; //!< mean energy
+                std::vector<std::string> names;
                 double uinit;
 
                 inline void _sample() override {
-                    double u = energyFunc();
-                    uavg+=u;
-                    f << cnt*steps << " " << u << "\n";
+                    auto ulist = energyFunc();
+                    double tot = std::accumulate(ulist.begin(), ulist.end(), 0.0);
+                    uavg+=tot;
+                    f << cnt*steps << sep << tot;
+                    for (auto u : ulist)
+                        f << sep << u;
+                    f << "\n";
                 }
 
                 inline void _to_json(json &j) const override {
@@ -266,19 +273,38 @@ namespace Faunus {
                     f.open(file);
                     if (!f)
                         throw std::runtime_error(name + ": cannot open output file " + file);
+                    assert(!names.empty());
+                    std::string suffix = file.substr(file.find_last_of(".") + 1);
+                    if (suffix=="csv")
+                        sep=",";
+                    else {
+                        sep=" ";
+                        f << "#";
+                    }
+                    f << "total";
+                    for (auto &n : names)
+                        f << sep << n;
+                    f << "\n";
                 }
 
             public:
-                template<class Tenergy>
-                    SystemEnergy( const json &j, Tenergy &pot ) {
+                template<class Tspace>
+                    SystemEnergy( const json &j, Energy::Hamiltonian<Tspace> &pot ) {
+                        for (auto i : pot.vec)
+                            names.push_back(i->name);
                         from_json(j);
                         name = "systemenergy";
                         energyFunc = [&pot]() {
                             Change change;
                             change.all = true;
-                            return pot.energy(change);
+                            std::vector<double> u;
+                            u.reserve(pot.vec.size());
+                            for (auto i : pot.vec)
+                                u.push_back( i->energy(change) );
+                            return u;
                         };
-                        uinit = energyFunc(); // initial energy
+                        auto u = energyFunc();
+                        uinit = std::accumulate(u.begin(), u.end(), 0.0); // initial energy
                     }
         }; //!< Save system energy to disk. Keywords: `nstep`, `file`.
 

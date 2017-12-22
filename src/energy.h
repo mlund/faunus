@@ -62,6 +62,66 @@ namespace Faunus {
                     }
             };
 
+        template<typename Tspace>
+            class Bonded : public Energybase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    Tspace& spc;
+                    typedef std::vector<Potential::BondData> BondVector;
+                    BondVector inter;  // inter-molecular bonds
+                    std::map<int,BondVector> intra; // intra-molecular bonds
+
+                    void update() {
+                        for (size_t i=0; i<spc.groups.size(); i++) {
+                            auto &g = spc.groups[i];
+                            intra[i] = molecules<Tpvec>.at(g.id).bonds;
+                            for (auto &b : intra[i])
+                                b.shift( std::distance(spc.p.begin(), g.begin()) );
+                        }
+                    }
+
+                    double sum( const BondVector &v ) const {
+                        double u=0;
+                        for (auto &b : v)
+                            u += Potential::bondEnergy(spc.p, b, spc.geo.distanceFunc);
+                        return u;
+                    }
+
+                public:
+                    Bonded(const json &j, Tspace &spc) : spc(spc) {
+                        name = "bonded";
+                        update();
+                        if (j.is_object())
+                            if (j.count("bondlist")==1)
+                                inter = j["bondlist"].get<BondVector>();
+                    }
+                    void to_json(json &j) const override {
+                        if (!inter.empty())
+                            j["bondlist"] = inter;
+                        if (!intra.empty()) {
+                            json& _j = j["bondlist-intramolecular"];
+                            _j = json::array();
+                            for (auto &i : intra)
+                                for (auto &b : i.second)
+                                    _j.push_back(b);
+                        }
+                    }
+
+                    double energy(Change &c) override {
+                        double u=0;
+                        if ( !c.empty() ) {
+                            u = sum(inter);
+                            if ( c.all || c.dV )
+                                for (auto& i : intra)
+                                    u += sum(i.second);
+                            else
+                                for (auto &d : c.groups)
+                                    u += sum( intra[d.index] );
+                        }
+                        return u;
+                    }; // brute force -- refine this!
+            };
+
         /**
          * @brief Nonbonded energy using a pair-potential
          */
@@ -247,6 +307,9 @@ namespace Faunus {
 
                                     if (it.key()=="isobaric")
                                         push_back<Energy::Isobaric<Tspace>>(it.value(), spc);
+
+                                    if (it.key()=="bonded")
+                                        push_back<Energy::Bonded<Tspace>>(it.value(), spc);
 
                                     // additional energies go here...
 

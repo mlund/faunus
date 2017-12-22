@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
 project(neofaunus)
 
@@ -144,9 +144,9 @@ add_executable(tests src/tests.cpp ${hdrs})
 add_dependencies(tests modernjson doctest eigen range-v3 xdrfile pybind11)
 add_test(NAME tests COMMAND tests)
 
-add_executable(faunus src/faunus.cpp ${DocoptIncludeDir}/docopt.cpp ${hdrs})
+add_executable(faunus src/faunus.cpp ${hdrs})
 add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile)
-target_link_libraries(faunus xdrfile) # docopt)
+target_link_libraries(faunus xdrfile docopt)
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
@@ -162,7 +162,7 @@ if (ENABLE_PYTHON)
             ERROR_QUIET OUTPUT_QUIET
             RESULT_VARIABLE yasontest)
         if (${yasontest} EQUAL 1)
-            message(FATAL_ERROR "missing required python modules 'yaml' or 'ruamel_yaml'")
+            message("missing required python modules 'yaml' or 'ruamel_yaml'")
         endif()
     endif()
 

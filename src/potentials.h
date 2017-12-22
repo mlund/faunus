@@ -75,21 +75,27 @@ namespace Faunus {
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] BondData")
     {
-        json j1 = R"( {"harmonic" : { "index":[2,3], "k":0.5, "req":2.1} } )"_json;
-        BondData b = j1;
-        CHECK( j1 == json(b) );
+        BondData b;
+
+        // test harmonic
+        json j = R"( {"harmonic" : { "index":[2,3], "k":0.5, "req":2.1} } )"_json;
+        b = j;
+        CHECK( j == json(b) );
         CHECK_THROWS( b = R"( {"harmonic" : { "index":[2], "k":0.5, "req":2.1} } )"_json );
         CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "req":2.1} } )"_json );
         CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "k":2.1} } )"_json );
 
-        json j2 = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1} } )"_json;
-        b = j2;
-        CHECK( j2 == json(b) );
-        CHECK_THROWS( b = R"( {"fene" : { "index":[2], "k":0.5, "rmax":2.1} } )"_json );
+        // test fene
+        j = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1} } )"_json;
+        b = j;
+        CHECK( j == json(b) );
+        CHECK_THROWS( b = R"( {"fene" : { "index":[2,3,4], "k":1, "rmax":2.1} } )"_json );
         CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "rmax":2.1} } )"_json );
-        CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":2.1} } )"_json );
+        CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1} } )"_json );
 
         CHECK_THROWS( b = R"( {"unknown" : { "index":[2,3], "k":2.1, "req":1.0} } )"_json );
+        j = json::object();
+        CHECK_THROWS( b = j );
      }
 #endif
 

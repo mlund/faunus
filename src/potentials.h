@@ -46,8 +46,8 @@ namespace Faunus {
                         if (b.index.size()!=2)
                             throw std::runtime_error("harmonic bond requires exactly two index");
                         b.k.resize(2);
-                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
-                        b.k[1] = val.at("req").get<double>() * 1.0_angstrom;
+                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
+                        b.k[1] = val.at("req").get<double>() * 1.0_angstrom; // req
                         return;
                     }
                     if (t=="fene") {
@@ -56,8 +56,8 @@ namespace Faunus {
                         if (b.index.size()!=2)
                             throw std::runtime_error("FENE bond requires exactly two index");
                         b.k.resize(2);
-                        b.k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
-                        b.k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
+                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
+                        b.k[1] = std::pow( val.at("rmax").get<double>() * 1.0_angstrom, 2); // rm^2
                         return;
                     }
                     if (t=="dihedral") {
@@ -71,6 +71,27 @@ namespace Faunus {
                 }
             throw std::runtime_error("error parsing json to bond");
         }
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] BondData")
+    {
+        json j1 = R"( {"harmonic" : { "index":[2,3], "k":0.5, "req":2.1} } )"_json;
+        BondData b = j1;
+        CHECK( j1 == json(b) );
+        CHECK_THROWS( b = R"( {"harmonic" : { "index":[2], "k":0.5, "req":2.1} } )"_json );
+        CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "req":2.1} } )"_json );
+        CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "k":2.1} } )"_json );
+
+        json j2 = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1} } )"_json;
+        b = j2;
+        CHECK( j2 == json(b) );
+        CHECK_THROWS( b = R"( {"fene" : { "index":[2], "k":0.5, "rmax":2.1} } )"_json );
+        CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "rmax":2.1} } )"_json );
+        CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":2.1} } )"_json );
+
+        CHECK_THROWS( b = R"( {"unknown" : { "index":[2,3], "k":2.1, "req":1.0} } )"_json );
+     }
+#endif
 
         struct PairPotentialBase {
             std::string name;

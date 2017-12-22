@@ -6,6 +6,72 @@
 namespace Faunus {
     namespace Potential {
 
+        struct BondData {
+            enum Variant {harmonic, fene, dihedral, none};
+            Variant type=none;
+            std::vector<int> index;
+            std::vector<double> k;
+            void shift( int offset ) {
+                for ( auto &i : index )
+                    i += offset;
+            } // shift index
+        }; //!< Harmonic and angular potentials for bonded interactions
+
+        void to_json(json &j, const BondData &b) {
+            switch(b.type) {
+                case BondData::harmonic:
+                    j["harmonic"] = {
+                        { "index", b.index },
+                        { "k", b.k[0] / 1.0_kJmol * std::pow(1.0_angstrom, 2) },
+                        { "req", b.k[1] / 1.0_angstrom } };
+                    break;
+                case BondData::fene:
+                    j["fene"] = {
+                        { "index", b.index },
+                        { "k", b.k[0] / 1.0_kJmol * std::pow(1.0_angstrom, 2) },
+                        { "rmax", std::sqrt(b.k[1]) / 1.0_angstrom } };
+                    break;
+                default: break;
+            }
+        }
+
+        void from_json(const json &j, BondData &b) {
+            if (j.is_object())
+                if (j.size()==1) {
+                    std::string t = j.begin().key();
+                    auto& val = j.begin().value();
+                    if (t=="harmonic") {
+                        b.type = BondData::harmonic;
+                        b.index = val.at("index").get<decltype(b.index)>();
+                        if (b.index.size()!=2)
+                            throw std::runtime_error("harmonic bond requires exactly two index");
+                        b.k.resize(2);
+                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
+                        b.k[1] = val.at("req").get<double>() * 1.0_angstrom;
+                        return;
+                    }
+                    if (t=="fene") {
+                        b.type = BondData::fene;
+                        b.index = val.at("index").get<decltype(b.index)>();
+                        if (b.index.size()!=2)
+                            throw std::runtime_error("FENE bond requires exactly two index");
+                        b.k.resize(2);
+                        b.k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
+                        b.k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
+                        return;
+                    }
+                    if (t=="dihedral") {
+                        b.type = BondData::dihedral;
+                        assert(!"to be implemented");
+                        return;
+                    }
+                    if (b.type==BondData::none)
+                        throw std::runtime_error("unknown bondtype: " + t);
+                    else return;
+                }
+            throw std::runtime_error("error parsing json to bond");
+        }
+
         struct PairPotentialBase {
             std::string name;
             virtual void to_json(json&) const=0;
@@ -100,7 +166,7 @@ namespace Faunus {
                                 m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
                                 m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
                             } else
-                            std::runtime_error("custom LJ parameters require exactly two space-separated atoms");
+                                std::runtime_error("custom LJ parameters require exactly two space-separated atoms");
                         }
                     }
                 }

@@ -1855,7 +1855,18 @@ namespace Faunus
                 s >> v[i++];
             }
             return v;
-        }
+        } // space separated string to vector
+
+    template<class T>
+        std::string vec2words( const std::vector<T> &v ) {
+            std::ostringstream o;
+            if (!v.empty()) {
+                o << v.front();
+                for (size_t i=1; i<v.size(); i++)
+                    o << " " << v[i];
+            }
+            return o.str();
+        } // vector to space separated string w values
 
     /** @brief Convert string to lower case */
     inline std::string lowercase( std::string s )

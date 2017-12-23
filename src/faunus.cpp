@@ -55,7 +55,7 @@ int main( int argc, char **argv )
                 ++progressBar;
                 sim.move();
                 analysis.sample();
-                if (i*j % 10 == 0)
+                if (j % 10 == 0)
                     progressBar.display();
             }
         }

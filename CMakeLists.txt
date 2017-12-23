@@ -32,6 +32,18 @@ endif()
 
 include(ExternalProject)
 
+# PROGRESS BAR
+
+ExternalProject_Add( progressbar
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    URL "https://raw.githubusercontent.com/prakhar1989/progress-cpp/master/ProgressBar.hpp"
+    URL_MD5 0cdfc175b8a19e38a8b27c9e6ab81785
+    UPDATE_DISCONNECTED ON
+    DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
+    CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
+ExternalProject_Get_Property(progressbar source_dir)
+set(ProgressIncludeDir ${source_dir}/../../src/)
+
 # MODERN JSON
 
 ExternalProject_Add( modernjson
@@ -127,7 +139,7 @@ set(DocTestIncludeDir ${source_dir}/../../src/)
 
 add_definitions(-DDOCTEST_CONFIG_DISABLE)
 include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir}
-    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir})
+    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir} ${ProgressIncludeDir})
 
 set(hdrs
     ${CMAKE_SOURCE_DIR}/src/analysis.h
@@ -145,7 +157,7 @@ add_dependencies(tests modernjson doctest eigen range-v3 xdrfile pybind11)
 add_test(NAME tests COMMAND tests)
 
 add_executable(faunus src/faunus.cpp ${hdrs})
-add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile)
+add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar)
 target_link_libraries(faunus xdrfile docopt)
 
 if (ENABLE_PYTHON)

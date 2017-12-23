@@ -23,12 +23,25 @@ namespace Faunus
     template<typename Tit, typename Tfunc, typename T=double, typename Top>
         T for_each_pair( const Tit &begin, const Tit &end, Tfunc f, Top operation = std::plus<T>())
         {
-            T x;
+            T x = T();
             for ( auto i = begin; i != end; ++i )
                 for ( auto j = i; ++j != end; )
                     x = operation(x, f(*i, *j));
             return x;
         }
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] for_each_pair")
+    {
+        int x;
+        std::vector<int> a = {1,2,3};
+        x = for_each_pair(a.begin(), a.end(), [](int i, int j){ return i*j;}, std::plus<int>());
+        CHECK(x==2+3+6);
+        a.resize(1);
+        x = for_each_pair(a.begin(), a.end(), [](int i, int j){ return i*j;}, std::plus<int>());
+        CHECK(x==0);
+    }
+#endif
+
 
     /** @brief Erase from container `a` all values found in container `b` */
     template<typename T>
@@ -76,27 +89,20 @@ namespace Faunus
             return true;
         }
     };
-}//namespace
 
-/*
- * The following is an extension to `std::hash` in order to
- * construct hash tables (`std::unordered_map`), using `opair<T>` as keys.
- * See more at:
- * <http://en.wikipedia.org/wiki/Unordered_associative_containers_(C%2B%2B)#Usage_example>
- */
-#ifdef FAU_HASHTABLE
-namespace std {
-    template<typename T>
-        struct hash< Faunus::opair<T> > {
-            size_t operator()(const Faunus::opair<T> &x) const {
-                return hash<T>()(x.first) ^ hash<T>()(x.second);
-            }
-        };
-}//namespace
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] opair")
+    {
+        opair<int> a = {1,2}, b = {2,1};
+        CHECK( a.first == 1 && a.second == 2);
+        CHECK( b.first == 1 && b.second == 2);
+        CHECK( a == b );
+        CHECK( a.find(1) );
+        CHECK( a.find(2) );
+        CHECK( a.find(3)==false );
+    }
 #endif
 
-namespace Faunus
-{
     /**
      * @brief Store data for pairs
      */
@@ -193,6 +199,19 @@ namespace Faunus
             return t * (a1 + t * (a2 + t * (a3 + t * (a4 + t * a5)))) * std::exp(-x * x);
         }
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] erfc_x")
+    {
+        double infty = std::numeric_limits<double>::infinity();
+        using doctest::Approx;
+        CHECK( erfc_x(infty) == Approx(0));
+        CHECK( std::erfc(-infty) == Approx(2-erfc_x(infty)));
+        CHECK( erfc_x(0.0) == Approx(1.0) );
+        CHECK( 2-erfc_x(0.2) == Approx(std::erfc(-0.2)));
+        CHECK( erfc_x(0.2) == Approx( std::erfc(0.2) ));
+    }
+#endif
+
     /**
      * @brief Approximate 1 - erfc_x
      * @param x Value for which erf should be calculated
@@ -275,6 +294,18 @@ namespace Faunus
             *((Tint *) (&d) + 1) = (Tint) (1512775 * y + 1072632447);
             return d;
         }
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] exp_cawley")
+    {
+        double infty = std::numeric_limits<double>::infinity();
+        using doctest::Approx;
+        CHECK( exp_cawley(-infty) == Approx(0));
+        CHECK( exp_cawley(0) == Approx(0.9710078239));
+        CHECK( exp_cawley(2) == Approx(7.3096199036));
+        CHECK( exp_cawley(-2) == Approx(0.13207829));
+    }
+#endif
 
 #pragma GCC diagnostic pop
 
@@ -373,10 +404,23 @@ namespace Faunus
                     {
                         P[1] = x;
                         for ( int i = 1; i < n; ++i )
-                            P[i + 1] = (2 * i + 1) / (i + 1) * x * P[i] - i / (i + 1) * P[i - 1];
+                            P[i+1] = (2*i+1) * x / (i+1) * P[i] - i * P[i-1] / (i+1);
                     }
                 }
         };
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] legendre")
+    {
+        using doctest::Approx;
+        legendre<double> l(3);
+        double x=2.2;
+        l.eval(x);
+        CHECK( l.P[0] == Approx(1));
+        CHECK( l.P[1] == Approx(x));
+        CHECK( l.P[2] == Approx(0.5*(3*x*x-1)));
+        CHECK( l.P[3] == Approx(0.5*(5*x*x*x-3*x)));
+    }
+#endif
 
     /**
      * @brief Round a floating point to integer for use with histogram binning.
@@ -588,6 +632,17 @@ namespace Faunus
                     m[i][j] = m[j][i] = val;
                 }
         };
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] PairMatrix")
+    {
+        int i=2,j=3; // particle type, for example
+        PairMatrix<double> m;
+        m.set(i,j,12.1);
+        CHECK(m.size()==4);
+        CHECK(m(i,j)==12.1);
+        CHECK(m(i,j)==m(j,i));
+    }
+#endif
 
     template<typename Tcoeff=double, typename base=Eigen::Matrix<Tcoeff, Eigen::Dynamic, Eigen::Dynamic>>
         class Table : public base
@@ -1733,65 +1788,6 @@ namespace Faunus
     };
 
     /**
-     * @brief Finds pointer to element in tuple with specified type. `nullptr` if not found.
-     *
-     * Example:
-     *
-     *     std::tuple<int,float,bool> t( 1, 2.1, false );
-     *     std::cout << *TupleFindType::get<float>( t ); // -> 2.1
-     */
-    class TupleFindType
-    {
-        private:
-            template<class T>
-                struct findtype
-                {
-                    T *ptr;
-
-                    findtype() : ptr(nullptr) {}
-
-                    template<class E>
-                        void operator()( E &t, typename std::enable_if<std::is_same<T, E>::value>::type * = 0 ) { ptr = &t; }
-
-                    template<class E>
-                        void operator()( E &t, typename std::enable_if<!std::is_same<T, E>::value>::type * = 0 ) {}
-                };
-
-            template<class Tuple, std::size_t N>
-                struct TuplePrinter
-                {
-                    template<class Tfunc>
-                        static void print( Tuple &t, Tfunc &f )
-                        {
-                            TuplePrinter<Tuple, N - 1>::print(t, f);
-                            f(std::get<N - 1>(t));
-                        }
-                };
-
-            template<class Tuple>
-                struct TuplePrinter<Tuple, 1>
-                {
-                    template<class Tfunc>
-                        static void print( Tuple &t, Tfunc &f ) { f(std::get<0>(t)); }
-                };
-
-            template<class... Args, class Tfunc>
-                static void for_each( std::tuple<Args...> &t, Tfunc &f )
-                {
-                    TuplePrinter<decltype(t), sizeof...(Args)>::print(t, f);
-                }
-
-        public:
-            template<class T, class... Args>
-                static T *get( std::tuple<Args...> &t )
-                {
-                    findtype<T> func;   // apply function object `func` ...
-                    for_each(t, func);  // ... on all elements
-                    return func.ptr;
-                }
-    };
-
-    /**
      * @brief Timer for measuring relative time consumption
      *
      * Time t=0 is set upon construction whereafter combined `start()`/
@@ -1882,6 +1878,17 @@ namespace Faunus
         return s;
     }
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] Text manipulation")
+    {
+        CHECK( numWords("a b c") == 3 );
+        CHECK( vec2words<double>({1.0, -1.2, 0}) == "1 -1.2 0" );
+        CHECK( words2vec<double>("1 -1.2 0") == std::vector<double>({1.0, -1.2, 0}) );
+        CHECK( lowercase("aBc") == "abc" );
+        CHECK( toupper_first("abc") == "Abc" );
+    }
+#endif
+
     template<typename T>
         struct BasePointerVector {
             std::vector<std::shared_ptr<T>> vec; //!< Vector of shared pointers to base class
@@ -1920,5 +1927,4 @@ namespace Faunus
             for (auto i : b.vec)
                 j.push_back(*i);
         }
-
 }//namespace

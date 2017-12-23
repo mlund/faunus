@@ -748,7 +748,6 @@ namespace Faunus {
                 double mw=1;       //!< Weight
                 double charge=0;   //!< Partial charge [e]
                 double sigma=0;    //!< Diamater for e.g Lennard-Jones etc. [angstrom]
-
                 int& id() { return p.id; } //!< Type id
                 const int& id() const { return p.id; } //!< Type id
         };

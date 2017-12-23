@@ -442,6 +442,7 @@ namespace Faunus {
                     Tspace spc;
                     Energy::Hamiltonian<Tspace> pot;
                     State(const json &j) : spc(j), pot(spc,j) {}
+
                     void sync(State &other, Change &change) {
                         spc.sync( other.spc, change );
                         // sync energy here...
@@ -473,21 +474,20 @@ namespace Faunus {
                     Change c;
                     c.all=true;
                     state2.sync(state1, c);
-                    uinit = state1.pot.energy(c);
-
                     std::ifstream f("state");
                     if (f) {
-                        cout << "Restoring old state." << endl;
+                        cout << "Restoring from 'state'\n";
                         json j;
                         f >> j;
                         restore(j);
                     }
+                    uinit = state1.pot.energy(c);
                 }
 
                 void restore(const json &j) {
-                    new_from_json(j, state1.spc);
                     Change c;
                     c.all=true;
+                    state1.spc = j;
                     state2.spc.sync(state1.spc, c);
                     uinit = state1.pot.energy(c);
                     dusum=0;
@@ -529,8 +529,9 @@ namespace Faunus {
                 }
 
                 void to_json(json &j) {
+                    j = state1.spc.info();
+                    j["temperature"] = pc::temperature / 1.0_K;
                     j["moves"] = moves;
-                    j["space"] = state1.spc.info();
                     j["energy"].push_back(state1.pot);
                 }
         };

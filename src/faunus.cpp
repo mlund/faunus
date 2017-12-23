@@ -3,6 +3,7 @@
 #include "multipole.h"
 #include "docopt.h"
 #include <cstdlib>
+#include "ProgressBar.hpp"
 
 using namespace Faunus;
 using namespace std;
@@ -40,6 +41,7 @@ int main( int argc, char **argv )
         json j;
         std::cin >> j;
 
+        pc::temperature = j.at("temperature").get<double>() * 1.0_K;
         MCSimulation<Tgeometry,Tparticle> sim(j);
         Analysis::CombinedAnalysis analysis(j, sim.space(), sim.pot());
 
@@ -47,13 +49,18 @@ int main( int argc, char **argv )
         int macro = loop.at("macro");
         int micro = loop.at("micro");
 
+        ProgressBar progressBar(macro*micro, 70);
         for (int i=0; i<macro; i++) {
             for (int j=0; j<micro; j++) {
+                ++progressBar;
                 sim.move();
                 analysis.sample();
+                if (i*j % 10 == 0)
+                    progressBar.display();
             }
-            cout << "relative drift = " << sim.drift() << endl;
         }
+        progressBar.done();
+        cout << "relative drift = " << sim.drift() << endl;
 
         std::ofstream f("out.json");
         if (f) {

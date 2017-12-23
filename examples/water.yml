@@ -1,9 +1,9 @@
 temperature: 300
 geometry: {length: 20.00}
-mcloop: {macro: 10, micro: 100}
+mcloop: {macro: 10, micro: 50}
 atomlist:
-    - OW: {q: -0.8476, eps: 0.650299305951160, sigma: 3.165491652452016, mw: 15.99940, dp: 0.4} 
-    - HW: {q: 0.4238, eps: 0.0, sigma: 2.0, mw: 1, dp: 0.4 } 
+    - OW: {q: -0.8476, eps: 0.650299305951160, sigma: 3.165491652452016, mw: 15.9994} 
+    - HW: {q: 0.4238, eps: 0.0, sigma: 2.0, mw: 1} 
 moleculelist:
     - water: { Ninit: 256, Ninactive: 1, structure: water.xyz }
 energy:
@@ -16,7 +16,7 @@ moves:
     - moltransrot: {molecule: water, dp: 0.4, dprot: 0.4, repeat: N}
     - volume: {dV: 0.03}
 analysis:
-    - systemenergy: {file: energy.csv, nstep: 10}
+    - systemenergy: {file: energy.dat, nstep: 10}
     - xtcfile: {file: traj.xtc, nstep: 10 }
     - savestate: {file: confout.pqr}
     - savestate: {file: state}

@@ -11,10 +11,26 @@ namespace Faunus {
             Variant type=none;
             std::vector<int> index;
             std::vector<double> k;
+
             void shift( int offset ) {
                 for ( auto &i : index )
                     i += offset;
             } // shift index
+
+            template<class Tpvec>
+                double energy(const Tpvec &p, Geometry::DistanceFunction dist) const {
+                    double d;
+                    switch (type) {
+                        case BondData::harmonic:
+                            d = k[1] - dist(p[index[0]].pos, p[index[1]].pos).norm();
+                            return 0.5 * k[0]*d*d;
+                        case BondData::fene:
+                            break;
+                        default: break;
+                    }
+                    assert(!"not implemented");
+                    return 0;
+                } 
         }; //!< Harmonic and angular potentials for bonded interactions
 
         void to_json(json &j, const BondData &b) {
@@ -72,48 +88,31 @@ namespace Faunus {
             throw std::runtime_error("error parsing json to bond");
         }
 
-        template<class Tpvec>
-        double bondEnergy(const Tpvec &p, const BondData &b, Geometry::DistanceFunction dist) {
-            double d;
-            switch (b.type) {
-                case BondData::harmonic:
-                    d = b.k[1] - dist(p[b.index[0]].pos, p[b.index[1]].pos).norm();
-                    return 0.5 * b.k[0] * d * d;
-                case BondData::fene:
-                    assert(!"not implemented");
-                    return 0;
-                default:
-                    return 0;
-            }
-            assert(!"not implemented");
-            return 0;
-        } 
-
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] BondData")
-    {
-        BondData b;
+        TEST_CASE("[Faunus] BondData")
+        {
+            BondData b;
 
-        // test harmonic
-        json j = R"( {"harmonic" : { "index":[2,3], "k":0.5, "req":2.1} } )"_json;
-        b = j;
-        CHECK( j == json(b) );
-        CHECK_THROWS( b = R"( {"harmonic" : { "index":[2], "k":0.5, "req":2.1} } )"_json );
-        CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "req":2.1} } )"_json );
-        CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "k":2.1} } )"_json );
+            // test harmonic
+            json j = R"( {"harmonic" : { "index":[2,3], "k":0.5, "req":2.1} } )"_json;
+            b = j;
+            CHECK( j == json(b) );
+            CHECK_THROWS( b = R"( {"harmonic" : { "index":[2], "k":0.5, "req":2.1} } )"_json );
+            CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "req":2.1} } )"_json );
+            CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "k":2.1} } )"_json );
 
-        // test fene
-        j = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1} } )"_json;
-        b = j;
-        CHECK( j == json(b) );
-        CHECK_THROWS( b = R"( {"fene" : { "index":[2,3,4], "k":1, "rmax":2.1} } )"_json );
-        CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "rmax":2.1} } )"_json );
-        CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1} } )"_json );
+            // test fene
+            j = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1} } )"_json;
+            b = j;
+            CHECK( j == json(b) );
+            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3,4], "k":1, "rmax":2.1} } )"_json );
+            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "rmax":2.1} } )"_json );
+            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1} } )"_json );
 
-        CHECK_THROWS( b = R"( {"unknown" : { "index":[2,3], "k":2.1, "req":1.0} } )"_json );
-        j = json::object();
-        CHECK_THROWS( b = j );
-     }
+            CHECK_THROWS( b = R"( {"unknown" : { "index":[2,3], "k":2.1, "req":1.0} } )"_json );
+            j = json::object();
+            CHECK_THROWS( b = j );
+        }
 #endif
 
         struct PairPotentialBase {

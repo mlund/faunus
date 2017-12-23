@@ -83,7 +83,7 @@ namespace Faunus {
                     double sum( const BondVector &v ) const {
                         double u=0;
                         for (auto &b : v)
-                            u += Potential::bondEnergy(spc.p, b, spc.geo.distanceFunc);
+                            u += b.energy(spc.p, spc.geo.distanceFunc);
                         return u;
                     }
 

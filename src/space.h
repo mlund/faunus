@@ -67,22 +67,6 @@ namespace Faunus {
             Tgvec groups;  //!< Group vector
             Tgeometry geo; //!< Container geometry
 
-            //std::vector<MoleculeData<Tpvec>>& molecules; //!< Reference to global molecule list
-
-            Space() {}
-
-            Space(const json &j) {
-                pc::temperature = j.at("temperature").get<double>() * 1.0_K;
-                new_from_json(j, *this);
-
-                for (auto &i : groups)
-                    if (!i.empty())
-                        if (!i.atomic)
-                            if (geo.sqdist( i.cm,
-                                        Geometry::massCenter(i.begin(), i.end(), geo.boundaryFunc, -i.cm) ) > 1e-9 )
-                                throw std::runtime_error("space construction error: mass center mismatch");
-            }
-
             void clear() {
                 p.clear();
                 groups.clear();
@@ -199,7 +183,7 @@ namespace Faunus {
                         }
                     }
                 }
-            } // scale space to new volume
+            } //!< scale space to new volume
 
             json info() {
                 json j;
@@ -221,28 +205,25 @@ namespace Faunus {
                 return j;
             }
 
-        };
+        }; //!< Space for particles, groups, geometry
 
     template<class Tgeometry, class Tparticle>
         void to_json(json &j, Space<Tgeometry,Tparticle> &spc) {
-            //j["temperature"] = pc::temperature;
-            //j["atomlist"] = atoms<Tparticle>;
-            //j["moleculelist"] = molecules<decltype(spc.p)>;
             j["geometry"] = spc.geo;
             j["groups"] = spc.groups;
             j["particles"] = spc.p;
         } //!< Serialize Space to json object
 
     template<class Tgeometry, class Tparticletype>
-        void new_from_json(const json &j, Space<Tgeometry,Tparticletype> &spc) {
+        void from_json(const json &j, Space<Tgeometry,Tparticletype> &spc) {
             typedef typename Space<Tgeometry,Tparticletype>::Tpvec Tpvec;
-            spc.clear();
-
-            spc.geo = j.at("geometry");
             if (atoms<Tparticletype>.empty())
                 atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
             if (molecules<Tpvec>.empty())
                 molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+
+            spc.clear();
+            spc.geo = j.at("geometry");
 
             if ( j.count("groups")==0 )
                 insertMolecules( spc );
@@ -261,6 +242,13 @@ namespace Faunus {
                         throw std::runtime_error("json->space load error");
                 }
             }
+            // check correctness of molecular mass centers
+            for (auto &i : spc.groups)
+                if (!i.empty())
+                    if (!i.atomic)
+                        if (spc.geo.sqdist( i.cm,
+                                    Geometry::massCenter(i.begin(), i.end(), spc.geo.boundaryFunc, -i.cm) ) > 1e-9 )
+                            throw std::runtime_error("space construction error: mass center mismatch");
         } //!< Deserialize json object to Space
 
     template<typename Tspace>
@@ -272,9 +260,8 @@ namespace Faunus {
                     spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
                 else {
                     int n = mol.Ninit;
-                    while ( n-- > 0 ) {
+                    while ( n-- > 0 )
                         spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
-                    }
                 }
             }
         } //!< Insert `Ninit` molecules into space as defined in `molecules`

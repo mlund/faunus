@@ -30,17 +30,17 @@ namespace Faunus
             class TabulatorBase
             {
                 protected:
-                    T utol=0.01, ftol=-1, umaxtol=-1, fmaxtol=-1, rmin, rmax;
+                    T utol=1e-5, ftol=-1, umaxtol=-1, fmaxtol=-1;
                     T numdr=0.0001; // dr for derivative evaluation
 
                     // First derivative with respect to x
-                    T f1( std::function<T( T )> &f, T x ) const
+                    T f1( std::function<T(T)> f, T x ) const
                     {
                         return (f(x + numdr * 0.5) - f(x - numdr * 0.5)) / (numdr);
                     }
 
                     // Second derivative with respect to x
-                    T f2( std::function<T( T )> &f, T x ) const
+                    T f2( std::function<T(T)> f, T x ) const
                     {
                         return (f1(f, x + numdr * 0.5) - f1(f, x - numdr * 0.5)) / (numdr);
                     }
@@ -87,12 +87,6 @@ namespace Faunus
                         ftol = _ftol;
                         umaxtol = _umaxtol;
                         fmaxtol = _fmaxtol;
-                    }
-
-                    void setRange( T _rmin, T _rmax )
-                    {
-                        rmin = _rmin;
-                        rmax = _rmax;
                     }
 
                     void setNumdr( T _numdr )

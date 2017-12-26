@@ -214,10 +214,9 @@ namespace Faunus
                 {
                     auto low = std::lower_bound(d.r2.begin(), d.r2.end(), r2);
                     size_t pos = (low - d.r2.begin() - 1);
-                    T min = d.r2[pos];
-                    T dz = r2 - min;
-                    int pos6 = 6 * pos;
-                    T usum = d.c[pos6 + 0] +
+                    size_t pos6 = 6 * pos;
+                    T dz = r2 - d.r2[pos];
+                    T usum = d.c[pos6] +
                         dz * (d.c[pos6 + 1] +
                                 dz * (d.c[pos6 + 2] +
                                     dz * (d.c[pos6 + 3] +

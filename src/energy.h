@@ -293,6 +293,7 @@ namespace Faunus {
 
                         typedef CombinedPairPotential<CoulombGalore,LennardJones<Tparticle>> CoulombLJ;
                         typedef CombinedPairPotential<CoulombGalore,HardSphere<Tparticle>> CoulombHS;
+                        typedef CombinedPairPotential<CoulombGalore,WeeksChandlerAndersen<Tparticle>> CoulombWCA;
 
                         Energybase::name="hamiltonian";
                         for (auto &m : j.at("energy")) {// loop over move list
@@ -304,6 +305,9 @@ namespace Faunus {
 
                                     if (it.key()=="nonbonded_coulombhs")
                                         push_back<Energy::Nonbonded<Tspace,CoulombHS>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded_coulombwca")
+                                        push_back<Energy::Nonbonded<Tspace,CoulombWCA>>(it.value(), spc);
 
                                     if (it.key()=="isobaric")
                                         push_back<Energy::Isobaric<Tspace>>(it.value(), spc);

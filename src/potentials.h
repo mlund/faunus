@@ -117,6 +117,7 @@ namespace Faunus {
 
         struct PairPotentialBase {
             std::string name;
+            std::string cite;
             virtual void to_json(json&) const=0;
             virtual void from_json(const json&)=0;
         }; //!< Base for all pair-potentials
@@ -255,6 +256,56 @@ namespace Faunus {
                 void to_json(json &j) const override { j = m; }
                 void from_json(const json &j) override { m = j; }
             };
+
+        /**
+         * @brief Weeks-Chandler-Andersen pair potential
+         * @details This is a Lennard-Jones type potential, cut and shifted to zero
+         * at @f$r_c=2^{1/6}\sigma@f$. More info can be found in at
+         * <http://doi.org/ct4kh9> and the functional form is:
+         * @f[
+         * \beta u = 4 \beta \epsilon \left ( (b/r)^{12} - (b/r)^6 + \frac{1}{4} \right )
+         * @f]
+         * where sigma, epsilon per default are set
+         * using Lorentz-Berthelot mixing rules.
+         */
+        template<class Tparticle>
+            class WeeksChandlerAndersen : public LennardJones<Tparticle> {
+                private:
+                    typedef LennardJones<Tparticle> base;
+                    using base::m;
+                    double onefourth, twototwosixth;
+                public:
+                    inline WeeksChandlerAndersen() : onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
+                        base::name="wca";
+                        base::cite="doi:ct4kh9";
+                    }
+
+                    template<typename... T>
+                        inline double operator() (const Particle<T...> &a, const Particle<T...> &b, double r2) const {
+                            double x=m.s2(a.id,b.id); // s^2
+                            if (r2>x*twototwosixth)
+                                return 0;
+                            x=x/r2;  // (s/r)^2
+                            x=x*x*x;// (s/r)^6
+                            return m.eps(a.id,b.id)*(x*x - x + onefourth);
+                        }
+
+                    template<typename... T>
+                        double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                            return operator()(a,b,r.squaredNorm());
+                        }
+
+                    template<typename... T>
+                        Point force(const Particle<T...> &a, const Particle<T...> &b, double r2, const Point &p) const {
+                            double x=m.s2(a.id,b.id); // s^2
+                            if (r2>x*twototwosixth)
+                                return Point(0,0,0);
+                            x=x/r2;  // (s/r)^2
+                            x=x*x*x;// (s/r)^6
+                            return m.eps(a.id,b.id)*6*(2*x*x - x)/r2*p;
+                        }
+            }; // Weeks-Chandler-Andersen potential
+
 
         struct Coulomb : public PairPotentialBase {
             Coulomb() { name="coulomb"; }

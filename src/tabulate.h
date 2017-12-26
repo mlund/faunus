@@ -47,7 +47,6 @@ namespace Faunus
 
                     void check() const
                     {
-                        assert(utol >= 0.0000000000001);
                         if ( ftol != -1 && ftol <= 0.0 )
                         {
                             std::cerr << "ftol=" << ftol << " too small\n" << std::endl;
@@ -202,7 +201,7 @@ namespace Faunus
                                         dz * (4 * ubuft.at(5) +
                                             dz * (5 * ubuft.at(6)))));
 
-                        if ( std::abs(usum - u0) > base::utol )
+                        if ( std::fabs(usum - u0) > base::utol )
                             return vb;
                         if ( base::ftol != -1 && std::fabs(fsum - u1) > base::ftol )
                             return vb;
@@ -319,8 +318,6 @@ namespace Faunus
                             throw std::runtime_error("Andrea spline: try to increase utol/ftol");
                         if ( ubuft.size() != 7 )
                             throw std::runtime_error("Andrea spline: wrong size of ubuft, minvalue + 6 coefficients");
-                        assert(j < ndr && "Try to increase utol/ftol");
-                        assert(ubuft.size() == 7 && "Wrong size of ubuft, minvalue + 6 coefficients");
 
                         td.r2.push_back(zlow);
                         for ( size_t k = 1; k < ubuft.size(); k++ )
@@ -338,7 +335,6 @@ namespace Faunus
 
                     if (i >=mngrid)
                         throw std::runtime_error("Andrea spline: try to increase utol/ftol");
-                    assert(i < mngrid && "Try to increase utol/ftol");
 
                     // Sort td
                     typename base::data tdsort;

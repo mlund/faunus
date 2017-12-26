@@ -2,10 +2,8 @@
 
 #include <iostream>
 #include <cstdlib>
-#include <fstream>
 #include <vector>
 #include <functional>
-#include <map>
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -74,19 +72,12 @@ namespace Faunus
                         std::vector<T> c;   // c for coefficents
                         T rmin2, rmax2;     // useful to save these with table
 
-                        void setRange( T rmin, T rmax )
-                        {
+                        void setRange( T rmin, T rmax ) {
                             rmin2 = rmin*rmin;
                             rmax2 = rmax*rmax;
                         }
 
-                        bool empty() const
-                        {
-                            if ( r2.empty())
-                                if ( c.empty())
-                                    return true;
-                            return false;
-                        }
+                        bool empty() const { return r2.empty() && c.empty(); }
 
                     };
 
@@ -275,15 +266,15 @@ namespace Faunus
                 /**
                  * @brief Tabulate f(x)
                  */
-                typename base::data generate( std::function<T( T )> f )
+                typename base::data generate( std::function<T( T )> f, double rmin, double rmax )
                 {
                     base::check();
                     typename base::data td;
-                    td.rmax2 = base::rmax * base::rmax;
-                    td.rmin2 = base::rmin * base::rmin;
+                    td.rmin2 = rmin*rmin;
+                    td.rmax2 = rmax*rmax;
 
-                    T minv = base::rmin;
-                    T maxv = base::rmax;
+                    T minv = rmin;
+                    T maxv = rmax;
                     T rumin = minv;
                     T maxv2 = maxv * maxv;
                     T dr = maxv - minv;
@@ -400,16 +391,26 @@ namespace Faunus
                     // Assume zero at from zero to "infinity"
                     tg.rmin2 = 0.0;
                     tg.rmax2 = 1e10;
-                    tg.r2.push_back(0);
-                    tg.r2.push_back(1e10);
-                    tg.c.push_back(0);
-                    tg.c.push_back(0);
-                    tg.c.push_back(0);
-                    tg.c.push_back(0);
-                    tg.c.push_back(0);
-                    tg.c.push_back(0);
+                    tg.r2 = {0,1e10};
+                    tg.c.resize(6, 0);
                     return tg;
                 }
         };
+#ifdef DOCTEST_LIBRARY_INCLUDED
+        TEST_CASE("[Faunus] Andrea")
+        {
+            using doctest::Approx;
+            auto f = [](double x){return 0.5*x*std::sin(x)+2;};
+            Andrea<double> spline;
+            spline.setTolerance(1e-6, 1e-2);
+            auto d = spline.generate(f, 0, 10);
+            double x=5 + 1/3.;
+            CHECK( spline.eval(d,x) == Approx(f(x)) );
+            CHECK( spline.eval(d,3*x) == Approx(f(3*x)) );
+            cout << spline.eval(d,x) << endl;
+            cout << f(x) << endl;
+        }
+#endif
+
     } //Tabulate namespace
 }//Faunus namespace

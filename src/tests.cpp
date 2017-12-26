@@ -11,6 +11,7 @@
 #include "space.h"
 //#include "potentials.h"
 #include "average.h"
+#include "tabulate.h"
 //#include "energy.h"
 #include "move.h"
 

@@ -94,8 +94,8 @@ namespace Faunus
     TEST_CASE("[Faunus] opair")
     {
         opair<int> a = {1,2}, b = {2,1};
-        CHECK( a.first == 1 && a.second == 2);
-        CHECK( b.first == 1 && b.second == 2);
+        CHECK( (a.first == 1 && a.second == 2) );
+        CHECK( (b.first == 1 && b.second == 2) );
         CHECK( a == b );
         CHECK( a.find(1) );
         CHECK( a.find(2) );

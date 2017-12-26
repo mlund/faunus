@@ -70,14 +70,7 @@ namespace Faunus
                         std::vector<T> r2;  // r2 for intervals
                         std::vector<T> c;   // c for coefficents
                         T rmin2, rmax2;     // useful to save these with table
-
-                        void setRange( T rmin, T rmax ) {
-                            rmin2 = rmin*rmin;
-                            rmax2 = rmax*rmax;
-                        }
-
                         bool empty() const { return r2.empty() && c.empty(); }
-
                     };
 
                     void setTolerance( T _utol, T _ftol = -1, T _umaxtol = -1, T _fmaxtol = -1 )
@@ -102,7 +95,7 @@ namespace Faunus
          * Reference: doi:10/frzp4d
          *
          * @note Slow on Intel compiler
-         * @todo Hide data and functions
+         * @todo Hide data and functions; clean up r vs r2 mess.
          */
         template<typename T=double>
             class Andrea : public TabulatorBase<T>
@@ -171,10 +164,7 @@ namespace Faunus
                  * - `[1]==true` Repulsive part is found.
                  */
                 std::vector<bool> CheckUBuffer( std::vector<T> &ubuft,
-                        T rlow,
-                        T rupp,
-                        std::function<T( T )> f ) const
-                {
+                        T rlow, T rupp, std::function<T(T)> f ) const {
 
                     // Number of points to control
                     int ncheck = 11;
@@ -257,10 +247,12 @@ namespace Faunus
                 }
 
                 /**
-                 * @brief Tabulate f(x)
+                 * @brief Tabulate f(x) in interval ]min,max]
                  */
                 typename base::data generate( std::function<T( T )> f, double rmin, double rmax )
                 {
+                    rmin = std::sqrt(rmin);
+                    rmax = std::sqrt(rmax);
                     base::check();
                     typename base::data td;
                     td.rmin2 = rmin*rmin;
@@ -349,56 +341,23 @@ namespace Faunus
                     }
                     return tdsort;
                 }
-
-                /**
-                 * @brief ...
-                 */
-                typename base::data generate_full( std::function<T( T )> f )
-                {
-                    typename base::data tg = generate(f);
-
-                    // Assume zero at from max to "infinity"
-                    tg.rmax2 = 1e9;
-                    tg.r2.push_back(pc::infty);
-                    tg.c.resize(tg.c.size() + 6, 0);
-
-                    // Assume infinity from min to zero
-                    tg.rmin2 = 0;
-                    tg.r2.insert(tg.r2.begin(), 0);
-                    std::vector<T> c(6, 0);
-                    c[0] = 100000;
-                    tg.c.insert(tg.c.begin(), c.begin(), c.end());
-
-                    return tg;
-                }
-
-                /**
-                 * @brief ...
-                 */
-                typename base::data generate_empty()
-                {
-                    typename base::data tg;
-                    // Assume zero at from zero to "infinity"
-                    tg.rmin2 = 0.0;
-                    tg.rmax2 = 1e10;
-                    tg.r2 = {0,1e10};
-                    tg.c.resize(6, 0);
-                    return tg;
-                }
         };
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] Andrea")
         {
             using doctest::Approx;
+
             auto f = [](double x){return 0.5*x*std::sin(x)+2;};
             Andrea<double> spline;
-            spline.setTolerance(1e-6, 1e-2);
+            spline.setTolerance(1e-5, 1e-2);
             auto d = spline.generate(f, 0, 10);
-            double x=5 + 1/3.;
-            CHECK( spline.eval(d,x) == Approx(f(x)) );
-            CHECK( spline.eval(d,3*x) == Approx(f(3*x)) );
-            cout << spline.eval(d,x) << endl;
-            cout << f(x) << endl;
+
+            CHECK( spline.eval(d,0) != Approx(f(0)) );
+            CHECK( spline.eval(d,1e-9) == Approx(f(1e-9)) );
+            CHECK( spline.eval(d,5) == Approx(f(5)) );
+            CHECK( spline.eval(d,10) == Approx(f(10)) );
+            CHECK( spline.eval(d,10+1e-9) != Approx(10+1e-9));
         }
 #endif
 

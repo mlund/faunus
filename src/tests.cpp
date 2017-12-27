@@ -14,4 +14,5 @@
 #include "tabulate.h"
 //#include "energy.h"
 #include "move.h"
+#include "penalty.h"
 

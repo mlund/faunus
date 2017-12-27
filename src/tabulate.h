@@ -257,13 +257,11 @@ namespace Faunus
                     td.rmin2 = rmin*rmin;
                     td.rmax2 = rmax*rmax;
 
-                    T minv = rmin;
-                    T maxv = rmax;
-                    T rumin = minv;
-                    T maxv2 = maxv * maxv;
-                    T dr = maxv - minv;
-                    T rupp = maxv;
-                    T zupp = maxv2;
+                    T rumin = rmin;
+                    T rmax2 = rmax * rmax;
+                    T dr = rmax - rmin;
+                    T rupp = rmax;
+                    T zupp = rmax2;
                     bool repul = false; // Stop tabulation if repul is true
 
                     td.r2.push_back(zupp);
@@ -276,7 +274,7 @@ namespace Faunus
                         std::vector<T> ubuft;
                         int j;
 
-                        dr = (rupp - minv);
+                        dr = (rupp - rmin);
 
                         for ( j = 0; j < ndr; j++ )
                         {
@@ -308,7 +306,7 @@ namespace Faunus
                         if ( j>=ndr )
                             throw std::runtime_error("Andrea spline: try to increase utol/ftol");
                         if ( ubuft.size() != 7 )
-                            throw std::runtime_error("Andrea spline: wrong size of ubuft, minvalue + 6 coefficients");
+                            throw std::runtime_error("Andrea spline: wrong size of ubuft, min value + 6 coefficients");
 
                         td.r2.push_back(zlow);
                         for ( size_t k = 1; k < ubuft.size(); k++ )
@@ -332,10 +330,10 @@ namespace Faunus
                     tdsort.rmax2 = td.rmax2;
                     tdsort.rmin2 = td.rmin2;
                     tdsort.r2.push_back(td.r2.at(td.r2.size() - 1));
-                    for ( int i = td.r2.size() - 2; i >= 0; i-- )
+                    for ( int i = (int)td.r2.size() - 2; i >= 0; i-- )
                     {
                         tdsort.r2.push_back(td.r2.at(i));
-                        for ( int j = 0; j < 6; j++ )
+                        for ( size_t j = 0; j < 6; j++ )
                             tdsort.c.push_back(td.c.at(6 * i + j));
                     }
                     return tdsort;
@@ -349,7 +347,7 @@ namespace Faunus
 
             auto f = [](double x){return 0.5*x*std::sin(x)+2;};
             Andrea<double> spline;
-            spline.setTolerance(1e-5, 1e-2);
+            spline.setTolerance(2e-3, 1e-2);
             auto d = spline.generate(f, 0, 10);
 
             CHECK( spline.eval(d,0) != Approx(f(0)) );

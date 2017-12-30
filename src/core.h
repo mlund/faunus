@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <vector>
 #include <map>
 #include <tuple>
@@ -732,6 +733,20 @@ namespace Faunus {
         auto findName(Trange &rng, const std::string &name) {
             return std::find_if( rng.begin(), rng.end(), [&name](auto &i){ return i.name==name; });
         } //!< Returns iterator to first element with member `name` matching input
+
+    template<class Trange>
+        std::vector<int> names2ids(Trange &rng, const std::vector<std::string> &names) {
+            std::vector<int> index;
+            index.reserve(names.size());
+            for (auto &n : names) {
+                auto it = findName(rng, n);
+                if (it!=rng.end())
+                    index.push_back(it->id());
+                else
+                    throw std::runtime_error("name '" + n + "' not found");
+            }
+            return index;
+        } //!< Convert vector of names into vector in id's from Trange (exception if not found)
 
     /**
      * @brief General properties for atoms

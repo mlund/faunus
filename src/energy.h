@@ -5,6 +5,7 @@
 #include "space.h"
 #include "potentials.h"
 #include "multipole.h"
+#include <set>
 
 namespace Faunus {
     namespace Energy {
@@ -61,6 +62,84 @@ namespace Faunus {
                         _roundjson(j,5);
                     }
             };
+
+        template<typename Tspace>
+            class Confine : public Energybase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    Tspace& spc;
+                    Point origo={0,0,0};
+                    std::set<int> molids; // molecules to act upon
+                    double Uin=0; // energy if inside
+                    double Uout=pc::infty; // energy if outside
+                    double radius=0;
+
+                    bool outside(const Point &p) const {
+                        switch(type) {
+                            case sphere:
+                                return (origo-p).squaredNorm()>radius*radius;
+                                break;
+                            default: break;
+                        }
+                        assert(false);
+                        return false;
+                    } //!< Determines if a particle is outside the region
+
+                    template<class T>
+                        bool outside(const Group<T> &g) const {
+                            if (molids.find(g.id)!=molids.end())
+                                for (auto &p : g)
+                                    if (outside(p.pos))
+                                        return true;
+                            return false;
+                        } //!< Determine if a group is outside the region
+                public:
+                    enum Variant {sphere, cylinder, cuboid, none};
+                    Variant type=none;
+
+                    Confine(const json &j, Tspace &spc) : spc(spc) {
+                        name = "confine";
+
+                        std::vector<std::string> _names = j.at("molecules"); // molecule names
+                        auto _ids = names2ids(molecules<Tpvec>, _names);     // names --> molids
+                        molids = std::set<int>(_ids.begin(), _ids.end());    // vector --> set
+                        if (molids.empty() || molids.size()!=_names.size() )
+                            throw std::runtime_error(name + ": molecule list is empty");
+
+                        origo = j.value("center", Point(0,0,0));
+                        std::string t = j.at("type"); 
+                        if (t=="sphere") {
+                            type=sphere;
+                            radius = j.at("radius");
+                            return;
+                        }
+                        if (type==none)
+                            throw std::runtime_error(name + ": unknown type '" + t + "'");
+                    }
+
+                    double energy(Change &change) override {
+                        if (change.dV || change.all) {
+                            for (auto &g : spc.groups) // check all groups
+                                if (outside(g))        // and all their atoms
+                                    return Uout;
+                        } else
+                            for (auto &d : change.groups) {
+                                auto &g = spc.groups[d.index]; // check specified groups
+                                if (d.all) { // check all atoms in group
+                                    if (outside(g))
+                                        return Uout;
+                                } else       // check only specified atoms in group
+                                    for (auto i : d.atoms)
+                                        if (outside( (g.begin()+i)->pos ))
+                                            return Uout;
+                            }
+                        return Uin;
+                    }
+
+                    void to_json(json &j) const override {
+                        _roundjson(j,5);
+                    }
+            }; //!< Confine particles to a sub-region of the simulation container
 
         template<typename Tspace>
             class Bonded : public Energybase {
@@ -311,6 +390,9 @@ namespace Faunus {
 
                                     if (it.key()=="isobaric")
                                         push_back<Energy::Isobaric<Tspace>>(it.value(), spc);
+
+                                    if (it.key()=="confine")
+                                        push_back<Energy::Confine<Tspace>>(it.value(), spc);
 
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);

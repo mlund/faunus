@@ -15,6 +15,7 @@ namespace Faunus {
          *
          * Keyword  | Description
          * :------- | :----------------
+         * `dim`    | Number of dimensions
          * `min`    | minumum coordinate values (array)
          * `max`    | maximum coordinate values (array)
          * `scale`  | penalty scaling (array)
@@ -48,22 +49,26 @@ namespace Faunus {
         };
 
         void from_json(const json &j, ReactionCoordinateBase &r) {
-            r.min = j.at("min").get<ReactionCoordinateBase::Tvec>();
-            r.max = j.at("max").get<ReactionCoordinateBase::Tvec>();
-            r.scale.resize(r.max.size(), 0);
+            size_t d = j.value("dim", 1);
+            r.min.resize(d, -pc::infty);
+            r.min = j.value("min", r.min);
+            r.max.resize(d, pc::infty);
+            r.max = j.value("max", r.max);
+            r.scale.resize(d, 1);
             r.scale = j.value("scale", r.scale);
             r.nstep = j.value("nstep", 0);
 
-            if ( (r.min.size()!=r.max.size() ) || r.min.size()!=r.scale.size() || r.min.size()<1 )
+            if ( (r.min.size()!=r.max.size() ) || r.min.size()!=r.scale.size()
+                    || r.min.size()<1 || d!=r.dim())
                 throw std::runtime_error(
-                        "Reaction coordinate error: min, max, scale must have same length >=1");
+                        "Reaction coordinate error: min, max, scale must have equal length >=1");
         }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] ReactionCoordinateBase")
         {
             using doctest::Approx;
-            ReactionCoordinateBase c = R"({"min":[0,-1.5], "max":[8.5,7], "nstep":10})"_json;
+            ReactionCoordinateBase c = R"({"dim":2, "min":[0,-1.5], "max":[8.5,7], "nstep":10})"_json;
             CHECK( c.dim() == 2 );
             CHECK( c.min.size() == 2 );
             CHECK( c.max.size() == 2 );
@@ -126,10 +131,10 @@ namespace Faunus {
             using doctest::Approx;
             typedef Space<Geometry::Cuboid, Particle<>> Tspace;
             Tspace spc;
-            MassCenterSeparation c( R"({"min":[0], "max":[10], "dir":[1,1,0]})"_json, spc);
+            MassCenterSeparation c( R"({"dir":[1,1,0]})"_json, spc);
             CHECK( c.dim() == 1 );
-            CHECK( c.min[0] == 0 );
-            CHECK( c.max[0] == 10 );
+            CHECK( c.min[0] == -pc::infty );
+            CHECK( c.max[0] == pc::infty );
             CHECK( c.nstep == 0 );
             CHECK( c.dir.x() == 1 );
             CHECK( c.dir.y() == 1 );

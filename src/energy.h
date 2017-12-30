@@ -70,29 +70,33 @@ namespace Faunus {
                     Tspace& spc;
                     Point origo={0,0,0};
                     std::set<int> molids; // molecules to act upon
-                    double Uin=0; // energy if inside
-                    double Uout=pc::infty; // energy if outside
                     double radius=0;
+                    double k=1000.0_kJmol;
 
-                    bool outside(const Point &p) const {
+                    double _energy(const Point &p) const {
+                        double d2;
                         switch(type) {
                             case sphere:
-                                return (origo-p).squaredNorm()>radius*radius;
+                                d2 = (origo-p).squaredNorm() - radius*radius;
+                                if (d2>0)
+                                    return k*d2;
                                 break;
                             default: break;
                         }
-                        assert(false);
-                        return false;
-                    } //!< Determines if a particle is outside the region
+                        return 0;
+                    }
 
                     template<class T>
-                        bool outside(const Group<T> &g) const {
+                        double _energy(const Group<T> &g) const {
+                            double u=0;
                             if (molids.find(g.id)!=molids.end())
-                                for (auto &p : g)
-                                    if (outside(p.pos))
-                                        return true;
-                            return false;
-                        } //!< Determine if a group is outside the region
+                                for (auto &p : g) {
+                                    u += _energy(p.pos);
+                                    if (std::isnan(u))
+                                        break;
+                                }
+                            return u;
+                        }
                 public:
                     enum Variant {sphere, cylinder, cuboid, none};
                     Variant type=none;
@@ -106,6 +110,15 @@ namespace Faunus {
                         if (molids.empty() || molids.size()!=_names.size() )
                             throw std::runtime_error(name + ": molecule list is empty");
 
+                        auto it = j.find("k");
+                        if (it!=j.end()) {
+                            if (it->is_string()) {
+                                if (*it=="inf")
+                                    k = pc::infty;
+                                else throw std::runtime_error(name +": k must be a number or 'inf'");
+                            } else k = double(*it) * 1.0_kJmol;
+                        }
+
                         origo = j.value("center", Point(0,0,0));
                         std::string t = j.at("type"); 
                         if (t=="sphere") {
@@ -118,22 +131,20 @@ namespace Faunus {
                     }
 
                     double energy(Change &change) override {
+                        double u=0;
                         if (change.dV || change.all) {
                             for (auto &g : spc.groups) // check all groups
-                                if (outside(g))        // and all their atoms
-                                    return Uout;
+                                u += _energy(g);
                         } else
                             for (auto &d : change.groups) {
                                 auto &g = spc.groups[d.index]; // check specified groups
                                 if (d.all) { // check all atoms in group
-                                    if (outside(g))
-                                        return Uout;
+                                    u += _energy(g);
                                 } else       // check only specified atoms in group
                                     for (auto i : d.atoms)
-                                        if (outside( (g.begin()+i)->pos ))
-                                            return Uout;
+                                        u += _energy( (g.begin()+i)->pos );
                             }
-                        return Uin;
+                        return u;
                     }
 
                     void to_json(json &j) const override {

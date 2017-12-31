@@ -79,7 +79,7 @@ namespace Faunus {
                             case sphere:
                                 d2 = (origo-p).squaredNorm() - radius*radius;
                                 if (d2>0)
-                                    return k*d2;
+                                    return 0.5*k*d2;
                                 break;
                             default: break;
                         }
@@ -133,16 +133,21 @@ namespace Faunus {
                     double energy(Change &change) override {
                         double u=0;
                         if (change.dV || change.all) {
-                            for (auto &g : spc.groups) // check all groups
+                            for (auto &g : spc.groups) { // check all groups
                                 u += _energy(g);
+                                if (std::isnan(u))
+                                    break;
+                            }
                         } else
                             for (auto &d : change.groups) {
                                 auto &g = spc.groups[d.index]; // check specified groups
-                                if (d.all) { // check all atoms in group
+                                if (d.all)  // check all atoms in group
                                     u += _energy(g);
-                                } else       // check only specified atoms in group
+                                else       // check only specified atoms in group
                                     for (auto i : d.atoms)
                                         u += _energy( (g.begin()+i)->pos );
+                                if (std::isnan(u))
+                                    break;
                             }
                         return u;
                     }

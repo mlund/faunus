@@ -64,73 +64,38 @@ namespace Faunus {
             };
 
         template<typename Tspace>
-            class Confine : public Energybase {
-                private:
+            class ExternalPotential : public Energybase {
+                protected:
                     typedef typename Tspace::Tpvec Tpvec;
+                    typedef typename Tspace::Tparticle Tparticle;
                     Tspace& spc;
-                    Point origo={0,0,0};
                     std::set<int> molids; // molecules to act upon
-                    double radius=0;
-                    double k=1000.0_kJmol;
+                    std::function<double(const Tparticle&)> func=nullptr; // energy of single particle
 
-                    double _energy(const Point &p) const {
-                        double d2;
-                        switch(type) {
-                            case sphere:
-                                d2 = (origo-p).squaredNorm() - radius*radius;
-                                if (d2>0)
-                                    return 0.5*k*d2;
-                                break;
-                            default: break;
-                        }
-                        return 0;
-                    }
-
-                    template<class T>
-                        double _energy(const Group<T> &g) const {
+                    template<class Tparticle>
+                        double _energy(const Group<Tparticle> &g) const {
                             double u=0;
                             if (molids.find(g.id)!=molids.end())
                                 for (auto &p : g) {
-                                    u += _energy(p.pos);
+                                    u += func(p);
                                     if (std::isnan(u))
                                         break;
                                 }
                             return u;
-                        }
+                        } //!< External potential on a single particle
                 public:
-                    enum Variant {sphere, cylinder, cuboid, none};
-                    Variant type=none;
-
-                    Confine(const json &j, Tspace &spc) : spc(spc) {
-                        name = "confine";
-
+                    ExternalPotential(const json &j, Tspace &spc) : spc(spc) {
+                        name="external";
                         std::vector<std::string> _names = j.at("molecules"); // molecule names
                         auto _ids = names2ids(molecules<Tpvec>, _names);     // names --> molids
                         molids = std::set<int>(_ids.begin(), _ids.end());    // vector --> set
                         if (molids.empty() || molids.size()!=_names.size() )
                             throw std::runtime_error(name + ": molecule list is empty");
 
-                        auto it = j.find("k");
-                        if (it!=j.end()) {
-                            if (it->is_string()) {
-                                if (*it=="inf")
-                                    k = pc::infty;
-                                else throw std::runtime_error(name +": k must be a number or 'inf'");
-                            } else k = double(*it) * 1.0_kJmol;
-                        }
-
-                        origo = j.value("center", Point(0,0,0));
-                        std::string t = j.at("type"); 
-                        if (t=="sphere") {
-                            type=sphere;
-                            radius = j.at("radius");
-                            return;
-                        }
-                        if (type==none)
-                            throw std::runtime_error(name + ": unknown type '" + t + "'");
                     }
 
                     double energy(Change &change) override {
+                        assert(func!=nullptr);
                         double u=0;
                         if (change.dV || change.all) {
                             for (auto &g : spc.groups) { // check all groups
@@ -140,12 +105,12 @@ namespace Faunus {
                             }
                         } else
                             for (auto &d : change.groups) {
-                                auto &g = spc.groups[d.index]; // check specified groups
+                                auto &g = spc.groups.at(d.index); // check specified groups
                                 if (d.all)  // check all atoms in group
                                     u += _energy(g);
                                 else       // check only specified atoms in group
                                     for (auto i : d.atoms)
-                                        u += _energy( (g.begin()+i)->pos );
+                                        u += func( *(g.begin()+i) );
                                 if (std::isnan(u))
                                     break;
                             }
@@ -154,6 +119,40 @@ namespace Faunus {
 
                     void to_json(json &j) const override {
                         _roundjson(j,5);
+                    }
+            }; //!< Base class for external potentials, acting on particles
+
+        template<typename Tspace, typename base=ExternalPotential<Tspace>>
+            class Confine : public base {
+                public:
+                    enum Variant {sphere, cylinder, cuboid, none};
+                    Variant type=none;
+
+                private:
+                    Point origo={0,0,0}, dir={1,1,1};
+                    double radius, k;
+                    std::map<std::string, Variant> m = {
+                        {"sphere", sphere}, {"cylinder", cylinder}
+                    };
+
+                public:
+                    Confine(const json &j, Tspace &spc) : base(j,spc) {
+                        base::name = "confine";
+                        k = value_inf(j, "k") * 1.0_kJmol; // get floating point; allow inf/-inf
+                        type = m.at( j.at("type") );
+
+                        if (type==sphere || type==cylinder) {
+                            radius = j.at("radius");
+                            origo = j.value("origo", origo);
+                            if (type==cylinder)
+                                dir = {1,1,0};
+                            base::func = [radius=radius, origo=origo, k=k, dir=dir](const typename base::Tparticle &p) {
+                                double d2 = (origo-p.pos).cwiseProduct(dir).squaredNorm() - radius*radius;
+                                if (d2>0)
+                                    return 0.5*k*d2;
+                                return 0.0;
+                            };
+                        }
                     }
             }; //!< Confine particles to a sub-region of the simulation container
 

@@ -2,7 +2,7 @@ energy:
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
         coulomb: {type: fanourgakis, epsr: 80, cutoff: 10}
-    - confine: {type: sphere, radius: 20, k: inf, molecules: [salt]}
+    - confine: {type: sphere, radius: 20, k: 1000, molecules: [salt]}
 atomlist:
     - Na: {q:  1.0, sigma: 3.33, eps: 0.01158968, dp: 100.0} 
     - Cl: {q: -1.0, sigma: 4.4, eps: 0.4184, dp: 100.0} 

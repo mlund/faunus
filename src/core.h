@@ -101,6 +101,21 @@ namespace Faunus {
                     i = _round(i,n);
     } // round float objects to n number of significant digits
 
+    double value_inf(const json &j, const std::string &key) {
+        auto it = j.find(key);
+        if (it==j.end())
+            throw std::runtime_error("unknown json key '" + key + "'");
+        else
+            if (it->is_string()) {
+                if (*it=="inf")
+                    return std::numeric_limits<double>::infinity();
+                if (*it=="-inf")
+                    return -std::numeric_limits<double>::infinity();
+                throw std::runtime_error("value must be number or 'inf'");
+            }
+        return double(*it);
+    } //!< Extract floating point from json and allow for 'inf' and '-inf'
+
     /** @brief Physical constants */
     namespace PhysicalConstants {
         typedef double T; //!< Float size

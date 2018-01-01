@@ -130,9 +130,10 @@ namespace Faunus {
 
                 private:
                     Point origo={0,0,0}, dir={1,1,1};
+                    Point low, high;
                     double radius, k;
                     std::map<std::string, Variant> m = {
-                        {"sphere", sphere}, {"cylinder", cylinder}
+                        {"sphere", sphere}, {"cylinder", cylinder}, {"cuboid", cuboid}
                     };
 
                 public:
@@ -151,6 +152,21 @@ namespace Faunus {
                                 if (d2>0)
                                     return 0.5*k*d2;
                                 return 0.0;
+                            };
+                        }
+
+                        if (type==cuboid) {
+                            low = j.at("low").get<Point>();
+                            high = j.at("high").get<Point>();
+                            base::func = [low=low, high=high, k=k](const typename base::Tparticle &p) {
+                                double u=0;
+                                Point d = low-p.pos;
+                                for (int i=0; i<3; ++i)
+                                    if (d[i]>0) u+=d[i];
+                                d = p.pos-high;
+                                for (int i=0; i<3; ++i)
+                                    if (d[i]>0) u+=d[i];
+                                return 0.5*k*u;
                             };
                         }
                     }

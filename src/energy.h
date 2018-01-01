@@ -71,6 +71,7 @@ namespace Faunus {
                     Tspace& spc;
                     std::set<int> molids; // molecules to act upon
                     std::function<double(const Tparticle&)> func=nullptr; // energy of single particle
+                    std::vector<std::string> _names;
 
                     template<class Tparticle>
                         double _energy(const Group<Tparticle> &g) const {
@@ -86,12 +87,11 @@ namespace Faunus {
                 public:
                     ExternalPotential(const json &j, Tspace &spc) : spc(spc) {
                         name="external";
-                        std::vector<std::string> _names = j.at("molecules"); // molecule names
+                        _names = j.at("molecules").get<decltype(_names)>(); // molecule names
                         auto _ids = names2ids(molecules<Tpvec>, _names);     // names --> molids
                         molids = std::set<int>(_ids.begin(), _ids.end());    // vector --> set
                         if (molids.empty() || molids.size()!=_names.size() )
                             throw std::runtime_error(name + ": molecule list is empty");
-
                     }
 
                     double energy(Change &change) override {
@@ -118,7 +118,7 @@ namespace Faunus {
                     }
 
                     void to_json(json &j) const override {
-                        _roundjson(j,5);
+                        j["molecules"] = _names;
                     }
             }; //!< Base class for external potentials, acting on particles
 
@@ -169,6 +169,21 @@ namespace Faunus {
                                 return 0.5*k*u;
                             };
                         }
+                    }
+
+                    void to_json(json &j) const override {
+                        if (type==cuboid)
+                            j = {{"low", low}, {"high", high}};
+                        if (type==sphere || type==cylinder)
+                            j = {{"radius", radius}};
+                        if (type==sphere)
+                            j["origo"] = origo;
+                        for (auto &i : m)
+                            if (i.second==type)
+                                j["type"] = i.first;
+                        j["k"] = k/1.0_kJmol;
+                        base::to_json(j);
+                        _roundjson(j,5);
                     }
             }; //!< Confine particles to a sub-region of the simulation container
 

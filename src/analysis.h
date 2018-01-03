@@ -150,7 +150,7 @@ namespace Faunus {
                     auto it = findName( molecules<Tpvec>, molname); // loop for molecule in topology
                     if (it!=molecules<Tpvec>.end()) {
                         molid = it->id();
-                        auto m = spc.findInactiveMolecules(molid); // look for molecules in space
+                        auto m = spc.findMolecules(molid, Tspace::INACTIVE); // look for molecules in space
                         if (size(m)>0) { // did we find any?
                             if (m.begin()->size()==0) { // pick the first and check if it's really inactive
                                 change.clear();

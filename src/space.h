@@ -67,6 +67,8 @@ namespace Faunus {
             Tgvec groups;  //!< Group vector
             Tgeometry geo; //!< Container geometry
 
+            enum Selection {ALL, ACTIVE, INACTIVE};
+
             void clear() {
                 p.clear();
                 groups.clear();
@@ -93,7 +95,7 @@ namespace Faunus {
                     }
 
                     // inactivate group before insertion?
-                    auto molvec = findInactiveMolecules(molid);
+                    auto molvec = findMolecules(molid, INACTIVE);
                     if (size(molvec) < molecules<Tpvec>.at(molid).Ninactive)
                         g.resize(0);
 
@@ -102,13 +104,14 @@ namespace Faunus {
                 }
             } //!< Safely add particles and corresponding group to back
 
-            auto findMolecules(int molid) {
-                return groups | ranges::view::filter( [molid](auto &i){ return i.id==molid; } );
+            auto findMolecules(int molid, Selection sel=ALL) {
+                std::function<bool(Tgroup&)> f = [molid](Tgroup &i){ return i.id==molid; };
+                if (sel==INACTIVE)
+                    f = [molid](Tgroup &i){ return (i.id==molid) && (i.size()!=i.capacity()); };
+                if (sel==ACTIVE)
+                    f = [molid](Tgroup &i){ return (i.id==molid) && (i.size()==i.capacity()); };
+                return groups | ranges::view::filter(f);
             } //!< Range with all groups of type `molid` (complexity: order N)
-
-            auto findInactiveMolecules(int molid) {
-                return groups | ranges::view::filter( [molid](auto &i){ return (i.id==molid) && (i.size()!=i.capacity()); } );
-            } //!< Range with all (partially) inactive groups of type `molid` (complexity: order N)
 
             auto findAtoms(int atomid) const {
                 return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );

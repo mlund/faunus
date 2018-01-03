@@ -162,10 +162,10 @@ namespace Faunus {
                                 double u=0;
                                 Point d = low-p.pos;
                                 for (int i=0; i<3; ++i)
-                                    if (d[i]>0) u+=d[i];
+                                    if (d[i]>0) u+=d[i]*d[i];
                                 d = p.pos-high;
                                 for (int i=0; i<3; ++i)
-                                    if (d[i]>0) u+=d[i];
+                                    if (d[i]>0) u+=d[i]*d[i];
                                 return 0.5*k*u;
                             };
                         }

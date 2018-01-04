@@ -21,6 +21,7 @@ if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
 endif()
 
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
+option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" off)
 
 option(ENABLE_OPENMP "Try to use OpenMP parallization" off)
 if (ENABLE_OPENMP)
@@ -140,6 +141,20 @@ set(DocTestIncludeDir ${source_dir}/../../src/)
 add_definitions(-DDOCTEST_CONFIG_DISABLE)
 include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir}
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir} ${ProgressIncludeDir})
+
+# POWERSASA
+
+if (ENABLE_POWERSASA)
+    foreach (powf array.hpp power_diagram.h power_sasa.h LICENSE)
+        if (NOT EXISTS "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}")
+            file(DOWNLOAD
+                    "https://raw.githubusercontent.com/yesint/pteros/49ab75b/thirdparty/sasa/${powf}"
+                    "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}" STATUS status)
+        endif ()
+    endforeach ()
+    add_definitions("-DFAU_POWERSASA")
+    include_directories("${CMAKE_SOURCE_DIR}/include/faunus/sasa")
+endif ()
 
 set(hdrs
     ${CMAKE_SOURCE_DIR}/src/analysis.h

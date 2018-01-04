@@ -778,6 +778,7 @@ namespace Faunus {
                 double mw=1;       //!< Weight
                 double charge=0;   //!< Partial charge [e]
                 double sigma=0;    //!< Diamater for e.g Lennard-Jones etc. [angstrom]
+                double tfe=0;      //!< Transfer free energy [J/mol/angstrom^2/M] (default: 0.0)
                 int& id() { return p.id; } //!< Type id
                 const int& id() const { return p.id; } //!< Type id
         };
@@ -792,6 +793,7 @@ namespace Faunus {
             _j["eps"] = a.eps / 1.0_kJmol;
             _j["mw"] = a.mw;
             _j["sigma"] = a.sigma / 1.0_angstrom;
+            _j["tfe"] = a.tfe;
         }
 
     template<class T>
@@ -809,6 +811,7 @@ namespace Faunus {
                 a.mw       = val.value("mw", a.mw);
                 a.sigma    = val.value("sigma", 0.0) * 1.0_angstrom;
                 a.sigma    = 2*val.value("r", 0.5*a.sigma) * 1.0_angstrom;
+                a.tfe      = val.value("tfe", a.tfe);
             }
         }
 

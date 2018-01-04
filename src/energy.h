@@ -7,6 +7,10 @@
 #include "multipole.h"
 #include <set>
 
+#ifdef FAU_POWERSASA
+#include <power_sasa.h>
+#endif
+
 namespace Faunus {
     namespace Energy {
 
@@ -404,6 +408,85 @@ namespace Faunus {
 
             }; //!< Nonbonded, pair-wise additive energy term
 
+#ifdef FAU_POWERSASA
+        /**
+         * @brief SASA energy from transfer free energies
+         *
+         * This energy term calculates the change in solvent accessible
+         * surface area (SASA) for each atom and use transfer free energies
+         * to estimate the free energy change. This can be used to capture
+         * salting-out effects caused by co-solutes.
+         * Transfer free energies are defined on a per atom basis via the `tfe`
+         * keyword in `AtomData`.
+         *
+         *  Keyword       | Description
+         *  :------------ | :------------------------------------------------
+         *  `radius` | Radius of probe (default: 1.4 angstrom)
+         *  `molarity`    | Molar concentration of co-solute
+         *
+         * For more information see: http://dx.doi.org/10.1002/jcc.21844
+         */
+        template<class Tspace>
+            class SASAEnergy : public Energybase {
+                private:
+                    typedef typename Tspace::Tparticle Tparticle;
+                    typedef typename Tspace::Tpvec Tpvec;
+                    Tspace& spc;
+                    std::vector<double> tfe; // transfer free energies (1/angstrom^2)
+                    std::vector<double> sasa; // transfer free energies (1/angstrom^2)
+                    std::vector<double> sasaWeights;
+                    std::vector<Point> sasaCoords;
+                    double probe; // sasa probe radius (angstrom)
+                    double conc;  // co-solute concentration (mol/l)
+                    Average<double> avgArea; // average surface area
+
+                    void updateSASA(const Tpvec &p) {
+                        size_t n=p.size(); // number of particles
+                        sasa.resize(n);
+                        sasaCoords.resize(n);
+                        sasaWeights.resize(n);
+                        for (size_t i=0; i<n; ++i) {
+                            sasaCoords[i]  = p[i].pos;
+                            sasaWeights[i] = atoms<Tparticle>[p[i].id].sigma*0.5 + probe;
+                        }
+
+                        // generate powersasa object and calc. sasa for all particles
+                        POWERSASA::PowerSasa<double,Point> ps(sasaCoords, sasaWeights, 1, 1, 1, 1);
+                        ps.calc_sasa_all();
+                        for (size_t i=0; i<n; ++i)
+                            sasa[i] = ps.getSasa()[i];
+                    }
+
+                public:
+                    SASAEnergy(const json &j, Tspace &spc) : spc(spc) {
+                        name = "tfe";
+                        cite = "doi:10.1002/jcc.21844";
+                        probe = j.value("radius", 1.4) * 1.0_angstrom;
+                        conc = j.at("molarity").get<double>();
+                    }
+
+                    double energy(Change &change) override {
+                        // if first run, resize and fill tfe vector
+                        if (tfe.size()!=spc.p.size()) {
+                            tfe.resize(spc.p.size());
+                            for (size_t i=0; i<spc.p.size(); ++i)
+                                tfe[i] = atoms<Tparticle>[ spc.p[i].id ].tfe / (pc::kT() * pc::Nav); // -> kT
+                        }
+
+                        // calc. sasa and energy
+                        updateSASA(spc.p);
+                        assert(sasa.size() == spc.p.size());
+                        double u=0, A=0;
+                        for (size_t i=0; i<sasa.size(); ++i) {
+                            u += sasa[i] * tfe[i]; // a^2 * kT/a^2/M -> kT/M
+                            A+=sasa[i];
+                        }
+                        avgArea+=A; // sample average area for accepted confs. only
+                        return u * conc; // -> kT
+                    }
+            };
+#endif
+
         template<typename Tspace>
             class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
                 protected:
@@ -442,6 +525,9 @@ namespace Faunus {
 
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);
+
+                                    if (it.key()=="tfe")
+                                        push_back<Energy::SASAEnergy<Tspace>>(it.value(), spc);
 
                                     // additional energies go here...
 

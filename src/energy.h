@@ -409,82 +409,73 @@ namespace Faunus {
             }; //!< Nonbonded, pair-wise additive energy term
 
 #ifdef FAU_POWERSASA
-        /**
-         * @brief SASA energy from transfer free energies
-         *
-         * This energy term calculates the change in solvent accessible
-         * surface area (SASA) for each atom and use transfer free energies
-         * to estimate the free energy change. This can be used to capture
-         * salting-out effects caused by co-solutes.
-         * Transfer free energies are defined on a per atom basis via the `tfe`
-         * keyword in `AtomData`.
-         *
-         *  Keyword       | Description
-         *  :------------ | :------------------------------------------------
-         *  `radius` | Radius of probe (default: 1.4 angstrom)
-         *  `molarity`    | Molar concentration of co-solute
-         *
-         * For more information see: http://dx.doi.org/10.1002/jcc.21844
-         */
         template<class Tspace>
             class SASAEnergy : public Energybase {
                 private:
                     typedef typename Tspace::Tparticle Tparticle;
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc;
-                    std::vector<double> tfe; // transfer free energies (1/angstrom^2)
-                    std::vector<double> sasa; // transfer free energies (1/angstrom^2)
-                    std::vector<double> sasaWeights;
-                    std::vector<Point> sasaCoords;
+                    std::vector<float> sasa, radii; 
+                    std::vector<Point> coords;
                     double probe; // sasa probe radius (angstrom)
-                    double conc;  // co-solute concentration (mol/l)
+                    double conc=0;// co-solute concentration (mol/l)
                     Average<double> avgArea; // average surface area
+                    std::shared_ptr<POWERSASA::PowerSasa<float,Point>> ps;
 
                     void updateSASA(const Tpvec &p) {
-                        size_t n=p.size(); // number of particles
-                        sasa.resize(n);
-                        sasaCoords.resize(n);
-                        sasaWeights.resize(n);
-                        for (size_t i=0; i<n; ++i) {
-                            sasaCoords[i]  = p[i].pos;
-                            sasaWeights[i] = atoms<Tparticle>[p[i].id].sigma*0.5 + probe;
-                        }
+                        radii.resize(p.size());
+                        coords.resize(p.size());
+                        std::transform(p.begin(), p.end(), coords.begin(), [](auto &a){ return a.pos;});
+                        std::transform(p.begin(), p.end(), radii.begin(),
+                                [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
 
-                        // generate powersasa object and calc. sasa for all particles
-                        POWERSASA::PowerSasa<double,Point> ps(sasaCoords, sasaWeights, 1, 1, 1, 1);
-                        ps.calc_sasa_all();
-                        for (size_t i=0; i<n; ++i)
-                            sasa[i] = ps.getSasa()[i];
+                        ps->update_coords(coords, radii); // slowest step!
+
+                        for (size_t i=0; i<p.size(); i++) {
+                            auto &a = atoms<Tparticle>[p[i].id];
+                            if (std::fabs(a.tfe)>1e-9 || std::fabs(a.tension)>1e-9)
+                                ps->calc_sasa_single(i);
+                        }
+                        sasa = ps->getSasa();
+                        assert(sasa.size()==p.size());
+                    }
+
+                    void to_json(json &j) const override {
+                        using namespace u8;
+                        j["molarity"] = conc / 1.0_molar;
+                        j["radius"] = probe / 1.0_angstrom;
+                        j[bracket("SASA")+"/"+angstrom+squared] = avgArea.avg() / 1.0_angstrom;
+                        _roundjson(j,5);
                     }
 
                 public:
                     SASAEnergy(const json &j, Tspace &spc) : spc(spc) {
-                        name = "tfe";
+                        name = "sasa";
                         cite = "doi:10.1002/jcc.21844";
                         probe = j.value("radius", 1.4) * 1.0_angstrom;
-                        conc = j.at("molarity").get<double>();
+                        conc = j.value("molarity", conc) * 1.0_molar;
+
+                        radii.resize(spc.p.size());
+                        coords.resize(spc.p.size());
+                        std::transform(spc.p.begin(), spc.p.end(), coords.begin(), [](auto &a){ return a.pos;});
+                        std::transform(spc.p.begin(), spc.p.end(), radii.begin(),
+                                [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
+
+                        ps = std::make_shared<POWERSASA::PowerSasa<float,Point>>(coords,radii);
                     }
 
                     double energy(Change &change) override {
-                        // if first run, resize and fill tfe vector
-                        if (tfe.size()!=spc.p.size()) {
-                            tfe.resize(spc.p.size());
-                            for (size_t i=0; i<spc.p.size(); ++i)
-                                tfe[i] = atoms<Tparticle>[ spc.p[i].id ].tfe / (pc::kT() * pc::Nav); // -> kT
-                        }
-
-                        // calc. sasa and energy
-                        updateSASA(spc.p);
-                        assert(sasa.size() == spc.p.size());
                         double u=0, A=0;
+                        updateSASA(spc.p);
                         for (size_t i=0; i<sasa.size(); ++i) {
-                            u += sasa[i] * tfe[i]; // a^2 * kT/a^2/M -> kT/M
-                            A+=sasa[i];
+                            auto &a = atoms<Tparticle>[ spc.p[i].id ];
+                            u += sasa[i] * (a.tension + conc * a.tfe);
+                            A += sasa[i];
                         }
                         avgArea+=A; // sample average area for accepted confs. only
-                        return u * conc; // -> kT
+                        return u;
                     }
-            };
+            }; //!< SASA energy from transfer free energies
 #endif
 
         template<typename Tspace>
@@ -517,16 +508,16 @@ namespace Faunus {
                                     if (it.key()=="nonbonded_coulombwca")
                                         push_back<Energy::Nonbonded<Tspace,CoulombWCA>>(it.value(), spc);
 
-                                    if (it.key()=="isobaric")
-                                        push_back<Energy::Isobaric<Tspace>>(it.value(), spc);
+                                    if (it.key()=="bonded")
+                                        push_back<Energy::Bonded<Tspace>>(it.value(), spc);
 
                                     if (it.key()=="confine")
                                         push_back<Energy::Confine<Tspace>>(it.value(), spc);
 
-                                    if (it.key()=="bonded")
-                                        push_back<Energy::Bonded<Tspace>>(it.value(), spc);
+                                    if (it.key()=="isobaric")
+                                        push_back<Energy::Isobaric<Tspace>>(it.value(), spc);
 
-                                    if (it.key()=="tfe")
+                                    if (it.key()=="sasa")
                                         push_back<Energy::SASAEnergy<Tspace>>(it.value(), spc);
 
                                     // additional energies go here...

@@ -778,7 +778,8 @@ namespace Faunus {
                 double mw=1;       //!< Weight
                 double charge=0;   //!< Partial charge [e]
                 double sigma=0;    //!< Diamater for e.g Lennard-Jones etc. [angstrom]
-                double tfe=0;      //!< Transfer free energy [J/mol/angstrom^2/M] (default: 0.0)
+                double tension=0;  //!< Surface tension [kT/Å^2]
+                double tfe=0;      //!< Transfer free energy [J/mol/angstrom^2/M]
                 int& id() { return p.id; } //!< Type id
                 const int& id() const { return p.id; } //!< Type id
         };
@@ -793,7 +794,8 @@ namespace Faunus {
             _j["eps"] = a.eps / 1.0_kJmol;
             _j["mw"] = a.mw;
             _j["sigma"] = a.sigma / 1.0_angstrom;
-            _j["tfe"] = a.tfe;
+            _j["tension"] = a.tension * 1.0_angstrom*1.0_angstrom / 1.0_kJmol;
+            _j["tfe"] = a.tfe * 1.0_angstrom*1.0_angstrom * 1.0_molar / 1.0_kJmol;
         }
 
     template<class T>
@@ -811,7 +813,8 @@ namespace Faunus {
                 a.mw       = val.value("mw", a.mw);
                 a.sigma    = val.value("sigma", 0.0) * 1.0_angstrom;
                 a.sigma    = 2*val.value("r", 0.5*a.sigma) * 1.0_angstrom;
-                a.tfe      = val.value("tfe", a.tfe);
+                a.tension  = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom);
+                a.tfe      = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom*1.0_molar);
             }
         }
 
@@ -833,7 +836,7 @@ namespace Faunus {
 
         json j = R"({ "atomlist" : [
              { "A": { "r":1.1 } },
-             { "B": { "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "mw":1.1 } }
+             { "B": { "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "mw":1.1, "tfe":0.98, "tension":0.023 } }
              ]})"_json; // non-deterministic seed
 
         typedef Particle<Radius, Charge, Dipole, Cigar> T;
@@ -857,6 +860,8 @@ namespace Faunus {
         CHECK(a.dp==Approx(9.8));
         CHECK(a.dprot==Approx(3.14));
         CHECK(a.mw==Approx(1.1));
+        CHECK(a.tfe==Approx(0.98_kJmol/1.0_angstrom/1.0_angstrom/1.0_molar));
+        CHECK(a.tension==Approx(0.023_kJmol/1.0_angstrom/1.0_angstrom));
 
         auto it = findName(v, "B");
         CHECK( it->id() == 1 );

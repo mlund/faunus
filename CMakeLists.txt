@@ -191,7 +191,7 @@ add_test(NAME tests COMMAND tests)
 
 add_executable(faunus src/faunus.cpp ${hdrs})
 add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar)
-target_link_libraries(faunus xdrfile docopt)
+target_link_libraries(faunus xdrfile docopt ${LINKLIBS})
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)

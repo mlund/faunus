@@ -614,7 +614,7 @@ namespace Faunus {
                                     { uold = state1.pot.energy(change); }
                                 }
                                 du = unew - uold;
-                                if ( metropolis(du) ) { // accept move
+                                if ( metropolis(du+change.du) ) { // accept move
                                     state1.sync( state2, change );
                                     (**mv).accept(change);
                                 }

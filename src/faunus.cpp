@@ -39,6 +39,8 @@ int main( int argc, char **argv )
         if ( args["--quiet"].asBool() )
             cout.setstate( std::ios_base::failbit ); // hold kæft!
 
+        Faunus::MPI::MPIController mpi; // allowed even if MPI is unavailable
+
         json j;
         std::cin >> j;
 
@@ -53,17 +55,24 @@ int main( int argc, char **argv )
         ProgressBar progressBar(macro*micro, 70);
         for (int i=0; i<macro; i++) {
             for (int j=0; j<micro; j++) {
-                ++progressBar;
+
+                if (mpi.isMaster()) {
+                    ++progressBar;
+                    if (j % 10 == 0)
+                        progressBar.display();
+                }
+
                 sim.move();
                 analysis.sample();
-                if (j % 10 == 0)
-                    progressBar.display();
             }
         }
         progressBar.done();
-        cout << "relative drift = " << sim.drift() << endl;
 
-        std::ofstream f("out.json");
+        mpi.cout << "relative drift = " << sim.drift() << endl;
+
+        mpi.cout << json(mpi) << endl;
+
+        std::ofstream f(mpi.prefix + "out.json");
         if (f) {
             json j = sim;
             j["analysis"] = analysis;

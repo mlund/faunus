@@ -517,8 +517,10 @@ namespace Faunus {
                                     if (it.key()=="isobaric")
                                         push_back<Energy::Isobaric<Tspace>>(it.value(), spc);
 
+#ifdef ENABLE_POWERSASA
                                     if (it.key()=="sasa")
                                         push_back<Energy::SASAEnergy<Tspace>>(it.value(), spc);
+#endif
 
                                     // additional energies go here...
 

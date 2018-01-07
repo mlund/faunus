@@ -15,6 +15,7 @@ namespace Faunus {
     struct Change {
         bool dV = false;    //!< Set to true if there's a volume change
         double all = false; //!< Set to true if *everything* has changed
+        double du=0;        //!< Additional energy change not captured by Hamiltonian
 
         struct data {
             int index; //!< Touched group index
@@ -30,7 +31,8 @@ namespace Faunus {
 
         void clear()
         {
-            dV=false;;
+            du=0;
+            dV=false;
             all=false;
             groups.clear();
             assert(empty());
@@ -38,10 +40,11 @@ namespace Faunus {
 
         bool empty() const
         {
-            if (all==false)
+            if (du==0)
                 if (dV==false)
-                    if (groups.empty())
-                        return true;
+                    if (all==false)
+                        if (groups.empty())
+                            return true;
             return false;
         } //!< Check if change object is empty
 

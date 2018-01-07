@@ -1,11 +1,16 @@
 #pragma once
-#ifdef ENABLE_MPI
 
 #include <vector>
 #include <string>
 #include <fstream>
 #include <iostream>
+#include "json.hpp"
+
+#ifdef ENABLE_MPI
 #include <mpi.h>
+#endif
+
+#define COUT if (isMaster()) std::cout
 
 /**
  * @todo:
@@ -43,30 +48,69 @@ namespace Faunus {
          */
         class MPIController {
             public:
-                MPIController(MPI_Comm=MPI_COMM_WORLD); //!< Constructor
+                MPIController(); //!< Constructor
                 ~MPIController(); //!< End of all MPI calls!
-                MPI_Comm comm;    //!< Communicator (Default: MPI_COMM_WORLD)
+#ifdef ENABLE_MPI
+                MPI_Comm comm=MPI_COMM_WORLD;    //!< Communicator (Default: MPI_COMM_WORLD)
+                std::ofstream cout; //!< Redirect stdout to here for rank-based file output
+#else
+                std::ostream& cout = std::cout;
+#endif
                 int nproc() const;      //!< Number of processors in communicator
                 int rank() const;       //!< Rank of process
                 int rankMaster() const; //!< Rank number of the master
                 bool isMaster() const;  //!< Test if current process is master
                 Random random; //!< Random number generator for MPI calls
                 std::string id;        //!< Unique name associated with current rank
-                std::ofstream cout; //!< Redirect stdout to here for rank-based file output
+                std::string prefix;
 
             private:
-                int _nproc;        //!< Number of processors in communicator
-                int _rank;         //!< Rank of process
-                int _master;       //!< Rank number of the master
+                int _nproc=1;      //!< Number of processors in communicator
+                int _rank=0;       //!< Rank of process
+                int _master=0;     //!< Rank number of the master
         };
+
+        /*!
+         * Besides initiating MPI, the current rank will be added to the global
+         * file I/O prefix, textio::prefix which is useful for saving rank specific
+         * data (parallel tempering, for example). The prefix format is
+         * \li \c "prefix + mpi%r." where \c \%r is the rank number.
+         */
+        //inline MPIController::MPIController(MPI_Comm c) : comm(MPI_COMM_WORLD), _master(0) {
+        inline MPIController::MPIController() {
+#ifdef ENABLE_MPI
+            MPI_Init(NULL,NULL);
+            MPI_Comm_size(comm, &_nproc);
+            MPI_Comm_rank(comm, &_rank);
+#endif
+            id=std::to_string(_rank);
+            if (_nproc>1)
+                prefix = "mpi" + id + ".";
+#ifdef ENABLE_MPI
+            cout.open(prefix+"stdout");
+#endif
+        }
+
+        inline MPIController::~MPIController() {
+#ifdef ENABLE_MPI
+            MPI_Finalize();
+#endif
+        }
+
+        inline int MPIController::nproc() const { return _nproc; }
+        inline int MPIController::rank() const { return _rank; }
+        inline int MPIController::rankMaster() const { return _master; }
+        inline bool MPIController::isMaster() const { return (_rank==_master); }
 
         void to_json(json &j, const MPIController &m) {
             j = {
-                {"master", m.rankMaster()},
                 {"rank", m.rank()},
-                {"nproc", m.nproc()}
+                {"nproc", m.nproc()},
+                {"master", m.rankMaster()}
             };
         }
+
+#ifdef ENABLE_MPI
 
         /**
          * @brief Split N items into nproc parts
@@ -167,34 +211,6 @@ namespace Faunus {
                     void pvec2buf(const Tpvec&); //!< Copy source particle vector to send buffer
                     void buf2pvec(Tpvec&);       //!< Copy receive buffer to target particle vector
             };
-
-        /*!
-         * Besides initiating MPI, the current rank will be added to the global
-         * file I/O prefix, textio::prefix which is useful for saving rank specific
-         * data (parallel tempering, for example). The prefix format is
-         * \li \c "prefix + mpi%r." where \c \%r is the rank number.
-         */
-        inline MPIController::MPIController(MPI_Comm c) : comm(c), _master(0) {
-            MPI_Init(NULL,NULL);
-            MPI_Comm_size(comm, &_nproc);
-            MPI_Comm_rank(comm, &_rank);
-            id=std::to_string(_rank);
-            std::string prefix = "mpi" + id + ".";
-            cout.open(prefix+"stdout");
-        }
-
-        inline MPIController::~MPIController() {
-            MPI_Finalize();
-            cout.close();
-        }
-
-        inline int MPIController::nproc() const { return _nproc; }
-
-        inline int MPIController::rank() const { return _rank; }
-
-        inline int MPIController::rankMaster() const { return _master; }
-
-        inline bool MPIController::isMaster() const { return (_rank==_master); }
 
         inline FloatTransmitter::FloatTransmitter() {
             tag=0;
@@ -367,8 +383,7 @@ namespace Faunus {
                     }
                 }
             }
-
+#endif
     } //end of mpi namespace
 }//end of faunus namespace
 
-#endif

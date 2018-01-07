@@ -239,9 +239,9 @@ namespace Faunus {
                     double energy(Change &c) override {
                         double u=0;
                         if ( !c.empty() ) {
-                            u = sum(inter);
+                            u = sum(inter); // energy of inter-molecular bonds
                             if ( c.all || c.dV )
-                                for (auto& i : intra)
+                                for (auto& i : intra) // energy of intra-molecular bonds
                                     u += sum(i.second);
                             else
                                 for (auto &d : c.groups)

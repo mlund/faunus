@@ -104,7 +104,7 @@ namespace Faunus {
                 }
             } //!< Safely add particles and corresponding group to back
 
-            auto findMolecules(int molid, Selection sel=ALL) {
+            auto findMolecules(int molid, Selection sel=ACTIVE) {
                 std::function<bool(Tgroup&)> f = [molid](Tgroup &i){ return i.id==molid; };
                 if (sel==INACTIVE)
                     f = [molid](Tgroup &i){ return (i.id==molid) && (i.size()!=i.capacity()); };
@@ -112,6 +112,13 @@ namespace Faunus {
                     f = [molid](Tgroup &i){ return (i.id==molid) && (i.size()==i.capacity()); };
                 return groups | ranges::view::filter(f);
             } //!< Range with all groups of type `molid` (complexity: order N)
+
+            typename decltype(groups)::iterator randomMolecule(int molid, Random &rand, Selection sel=ACTIVE) {
+                auto m = findMolecules(molid, sel);
+                if (size(m)>0)
+                    return groups.begin() + (&*rand.sample( m.begin(), m.end() ) - &*groups.begin());
+                return groups.end();
+            } //!< Random group; groups.end() if not found
 
             auto findAtoms(int atomid) const {
                 return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );

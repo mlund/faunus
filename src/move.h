@@ -4,6 +4,7 @@
 #include "energy.h"
 #include "average.h"
 #include "analysis.h"
+#include "potentials.h"
 
 namespace Faunus {
     namespace Move {
@@ -245,7 +246,7 @@ namespace Faunus {
                         assert(spc.geo.getVolume()>0);
 
                         // pick random group from the system matching molecule type
-                        // TODO: This is slow -- implement look-up-table in Space
+                        // TODO: This can be slow -- implement look-up-table in Space
                         auto mollist = spc.findMolecules( molid ); // list of molecules w. 'molid'
                         if (size(mollist)>0) {
                             auto it = slump.sample( mollist.begin(), mollist.end() );
@@ -310,9 +311,6 @@ namespace Faunus {
             CHECK( j.at("dp")    == 1.0 );
             CHECK( j.at("repeat")  == 2 );
             CHECK( j.at("dprot") == 0.5 );
-            //CHECK( j.at("molid") == 1 );
-            //CHECK( j["B"].at("accepted") == 0 );
-            //CHECK( j["B"].at("rejected") == 0 );
         }
 #endif
 
@@ -362,6 +360,104 @@ namespace Faunus {
             };
 
         template<typename Tspace>
+            class Pivot : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    std::vector<std::reference_wrapper<const Potential::BondData>> bonds;
+                    std::vector<int> index; // atom index to rotate
+                    Tspace& spc;
+                    std::string molname;
+                    int molid;
+                    double dprot;
+                    double d2; // cm movement, squared
+                    Average<double> msqd; // cm mean squared displacement
+
+                    void _to_json(json &j) const override {
+                        using namespace u8;
+                        j = {
+                            {"molecule", molname}, {"dprot", dprot},
+                            {u8::rootof + u8::bracket("r_cm" + u8::squared), std::sqrt(msqd.avg())}
+                        };
+                        _roundjson(j,3);
+                    }
+
+                    void _from_json(const json &j) override {
+                        dprot = j.at("dprot");
+                        molname = j.at("molecule");
+                        auto it = findName(molecules<Tpvec>, molname);
+                        if (it == molecules<Tpvec>.end())
+                            throw std::runtime_error("unknown molecule '" + molname + "'");
+                        molid = it->id();
+                        bonds = Potential::filterBonds(
+                                molecules<Tpvec>[molid].bonds, Potential::BondData::harmonic);
+                        if (repeat<0) {
+                            auto v = spc.findMolecules(molid);
+                            repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
+                            if (repeat>0)
+                                repeat *= bonds.size();
+                        }
+                    }
+
+                    void _move(Change &change) override {
+                        d2=0;
+                        if (std::fabs(dprot)>1e-9) {
+                            auto it = spc.randomMolecule(molid, slump);
+                            if (it!=spc.groups.end())
+                                if (it->size()>2) {
+                                    auto b = slump.sample(bonds.begin(), bonds.end()); // random harmonic bond
+                                    if (b != bonds.end()) {
+                                        int i1 = b->get().index.at(0);
+                                        int i2 = b->get().index.at(1);
+                                        int offset = std::distance( spc.p.begin(), it->begin() );
+
+                                        index.clear();
+                                        if (slump()>0.0)
+                                            for (size_t i=i2+1; i<it->size(); i++)
+                                                index.push_back(i+offset);
+                                        else
+                                            for (size_t i=0; i<i1; i++)
+                                                index.push_back(i+offset);
+                                        i1+=offset;
+                                        i2+=offset;
+
+                                        if (!index.empty()) {
+                                            Point oldcm = it->cm;
+                                            it->unwrap(spc.geo.distanceFunc); // remove pbc
+                                            Point u = (spc.p[i1].pos - spc.p[i2].pos).normalized();
+                                            double angle = dprot * (slump()-0.5);
+                                            Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
+                                            auto M = Q.toRotationMatrix();
+                                            for (auto i : index) {
+                                                spc.p[i].rotate(Q, M); // internal rot.
+                                                spc.p[i].pos = Q * ( spc.p[i].pos - spc.p[i1].pos)
+                                                    + spc.p[i1].pos; // positional rot.
+                                            }
+                                            it->cm = Geometry::massCenter(it->begin(), it->end());
+                                            it->wrap(spc.geo.boundaryFunc); // re-apply pbc
+
+                                            d2 = spc.geo.sqdist(it->cm, oldcm); // CM movement
+
+                                            Change::data d;
+                                            d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
+                                            d.all = true; // *all* atoms in group were moved
+                                            change.groups.push_back( d ); // add to list of moved groups
+                                        }
+                                    }
+                                }
+                        }
+                    }
+
+                    void _accept(Change &change) override { msqd += d2; }
+                    void _reject(Change &change) override { msqd += 0; }
+
+                public:
+                    Pivot(Tspace &spc) : spc(spc) {
+                        name = "pivot";
+                        repeat = -1; // --> repeat=N
+                    }
+            }; //!< Pivot move around random harmonic bond axis
+
+        template<typename Tspace>
             class Propagator : public BasePointerVector<Movebase> {
                 private:
                     int _repeat;
@@ -390,6 +486,11 @@ namespace Faunus {
 
                                     if (it.key()=="transrot") {
                                         this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
+                                        vec.back()->from_json( it.value() );
+                                    }
+
+                                    if (it.key()=="pivot") {
+                                        this->template push_back<Move::Pivot<Tspace>>(spc);
                                         vec.back()->from_json( it.value() );
                                     }
 

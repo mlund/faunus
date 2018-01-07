@@ -25,6 +25,7 @@ namespace Faunus {
                             d = k[1] - dist(p[index[0]].pos, p[index[1]].pos).norm();
                             return 0.5 * k[0]*d*d;
                         case BondData::fene:
+                            assert(!"unimplemented");
                             break;
                         default: break;
                     }
@@ -88,6 +89,14 @@ namespace Faunus {
             throw std::runtime_error("error parsing json to bond");
         }
 
+        inline auto filterBonds(const std::vector<BondData> &bonds, BondData::Variant bondtype) {
+            std::vector<std::reference_wrapper<const BondData>> filt;
+            filt.reserve(bonds.size());
+            std::copy_if(bonds.begin(), bonds.end(), std::back_inserter(filt),
+                    [bondtype](const auto &d){return d.type==bondtype;} );
+            return filt;
+        } //!< Filter bond container for matching bond type and return _reference_ to original
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] BondData")
         {
@@ -112,6 +121,13 @@ namespace Faunus {
             CHECK_THROWS( b = R"( {"unknown" : { "index":[2,3], "k":2.1, "req":1.0} } )"_json );
             j = json::object();
             CHECK_THROWS( b = j );
+
+            BondData b2 = R"( {"harmonic" : { "index":[2,3], "k":0.5, "req":2.1} } )"_json;
+            std::vector<BondData> bonds = {b,b2};
+            auto filt = filterBonds(bonds, BondData::harmonic);
+            CHECK( filt.size() == 1 ); 
+            CHECK( filt[0].get().type == BondData::harmonic);
+            CHECK( &filt[0].get() == &bonds[1] ); // filt should contain references to bonds
         }
 #endif
 

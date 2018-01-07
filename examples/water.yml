@@ -1,27 +1,30 @@
 temperature: 300
-geometry: {length: 20.00}
-mcloop: {macro: 10, micro: 50}
+geometry: {length: 40.00}
+mcloop: {macro: 10, micro: 500}
 atomlist:
-    - OW: {q: -0.8476, eps: 0.650299305951160, sigma: 3.165491652452016, mw: 15.9994} 
-    - HW: {q: 0.4238, eps: 0.0, sigma: 2.0, mw: 1} 
+    - MM: {eps: 0.2, sigma: 2.0} 
+    - NN: {eps: 0.2, sigma: 2.0, mw: 0} 
 moleculelist:
-    - water: { Ninit: 256, Ninactive: 1, structure: water.xyz }
+    - water:
+        Ninit: 2
+        structure: polymer.xyz
+        bondlist:
+            - harmonic: { index: [0,1], k: 10, req: 1.0 }
+            - harmonic: { index: [1,2], k: 10, req: 1.0 }
+            - harmonic: { index: [2,3], k: 10, req: 1.0 }
 energy:
-    - isobaric: {P/atm: 1}
-    - nonbonded_coulomblj:
+    - confine: {type: sphere, radius: 10, k: 100, molecules: [water]}
+    - _bonded: {}
+    - _nonbonded_coulomblj:
         lennardjones: {mixing: LB}
         coulomb: {type: fanourgakis, epsr: 1, cutoff: 9}
         cutoff_g2g: 10
 moves:
-    - moltransrot: {molecule: water, dp: 0.4, dprot: 0.4, repeat: N}
-    - volume: {dV: 0.03}
+    - moltransrot: {molecule: water, dp: 1, dprot: 0, repeat: N}
+    - pivot: {dprot: 1, molecule: water}
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - xtcfile: {file: traj.xtc, nstep: 10 }
     - savestate: {file: confout.pqr}
     - savestate: {file: state}
-    - atomrdf: {name1: OW, name2: OW, nstep: 50, dr: 0.05, file: rdf.dat}
-    - density: {nstep: 10}
-    - widom: {nstep: 10, molecule: water, ninsert: 10 }
-    - virtualvolume: {nstep: 10, dV: 0.002}
 

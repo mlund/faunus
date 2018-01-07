@@ -20,8 +20,8 @@ if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
         CACHE STRING "Flags used by the compiler during Release with Debug Info builds" FORCE)
 endif()
 
-option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" off)
+option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 
 option(ENABLE_OPENMP "Try to use OpenMP parallization" off)
 if (ENABLE_OPENMP)
@@ -30,6 +30,24 @@ if (ENABLE_OPENMP)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   endif()
 endif()
+
+# MPI
+
+option(ENABLE_MPI "Enable MPI code" off)
+if (ENABLE_MPI)
+    find_package(MPI)
+    if (MPI_CXX_FOUND)
+        set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
+        if (APPLE)
+            set(CMAKE_CXX_LINK_FLAGS ${MPI_CXX_LINK_FLAGS})
+        else ()
+            set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
+        endif ()
+        set(LINKLIBS ${LINKLIBS} ${MPI_CXX_LIBRARIES})
+        include_directories(${MPI_CXX_INCLUDE_PATH})
+        add_definitions(-DENABLE_MPI)
+    endif ()
+endif ()
 
 include(ExternalProject)
 
@@ -148,8 +166,8 @@ if (ENABLE_POWERSASA)
     foreach (powf array.hpp power_diagram.h power_sasa.h LICENSE)
         if (NOT EXISTS "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}")
             file(DOWNLOAD
-                    "https://raw.githubusercontent.com/yesint/pteros/49ab75b/thirdparty/sasa/${powf}"
-                    "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}" STATUS status)
+                "https://raw.githubusercontent.com/yesint/pteros/49ab75b/thirdparty/sasa/${powf}"
+                "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}" STATUS status)
         endif ()
     endforeach ()
     add_definitions("-DFAU_POWERSASA")

@@ -13,7 +13,7 @@ typedef Geometry::Cuboid Tgeometry;
 typedef Particle<Charge> Tparticle;
 
 static const char USAGE[] =
-R"(Hoth - the Monte Carlo code you're looking for!
+R"(Hoth - the Monte Carlo game you're looking for!
 
     http://github.com/mlund/faunus
 
@@ -44,16 +44,16 @@ int main( int argc, char **argv )
 
         bool quiet = args["--quiet"].asBool();
         if (quiet) {
-            cout.setstate( std::ios_base::failbit ); // hold kæft!
+            cout.setstate( std::ios_base::failbit ); // hold kæft
             showProgress = false;
         }
 
         json j;
-        auto inputFile = args["--input"].asString();
-        if (inputFile=="/dev/stdin")
+        auto input = args["--input"].asString();
+        if (input=="/dev/stdin")
             std::cin >> j;
         else
-            j = openjson(mpi.prefix + inputFile);
+            j = openjson(mpi.prefix + input);
 
         pc::temperature = j.at("temperature").get<double>() * 1.0_K;
         MCSimulation<Tgeometry,Tparticle> sim(j);
@@ -79,15 +79,15 @@ int main( int argc, char **argv )
         }
         progressBar.done();
 
-        if (!quiet) {
+        if (!quiet)
             mpi.cout << "relative drift = " << sim.drift() << endl;
-            mpi.cout << json(mpi) << endl;
-        }
 
         std::ofstream f(mpi.prefix + args["--output"].asString());
         if (f) {
             json j = sim;
             j["analysis"] = analysis;
+            if (mpi.nproc()>1)
+                j["mpi"] = mpi;
             f << std::setw(4) << j << endl;
         }
 

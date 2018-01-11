@@ -1,0 +1,28 @@
+# main links
+main:
+  - title: "Docs"
+    url: /docs
+  - title: "Gallery"
+    url: /gallery/
+  - title: "Support"
+    url: http://github.com/mlund/faunus/issues
+
+docs:
+ - title: Getting Started
+   children:
+       - title: Installation
+         url: /start/
+       - title: Input and Output
+         url: /start/#input-output
+       - title: Running Simulations
+         url: /start/#running
+ - title: Input Parameters
+   children:
+       - title: Topology
+         url: /topology/
+       - title: Energy
+         url: /energy/
+       - title: Moves
+         url: /moves/
+       - title: Analysis
+         url: /analysis/

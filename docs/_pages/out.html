@@ -1,0 +1,496 @@
+<hr />
+<p>permalink: /energy/
+sidebar:
+    nav: “docs”
+—
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script></p>
+
+<h1 id="energy-a-nameenergya">Energy <a name="energy"></a></h1>
+
+<p>The system energy is described by a Hamiltonian where an arbitrary number of potential energy terms can be added,</p>
+
+<script type="math/tex; mode=display">\mathcal{H}_{sys} = U_1 + U_2 + ...</script>
+
+<p>The energy terms are specified in <code>energy</code> at the top level input.
+For example:</p>
+
+<pre><code class="language-yaml">energy:
+    - isobaric: { P/atm: 1 }
+    - sasa: { molarity: 0.2, radius: 1.4 }
+    - confine: { type: sphere, radius: 10,
+                 molecules: ["water"] }
+    - nonbonded_coulomblj:
+        lennardjones: { mixing: LB }
+        coulomb: { type: plain, epsr: 80, cutoff: 10 }
+    - ...
+</code></pre>
+
+<h2 id="external-pressure-a-nameisobarica">External Pressure <a name="isobaric"></a></h2>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>isobaric</code></th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>P/unit</code></td>
+      <td>External pressure where unit can be <code>mM</code>, <code>atm</code>, or <code>Pa</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>This adds the following pressure term<sup id="fnref:frenkel"><a href="#fn:frenkel" class="footnote">1</a></sup> to the Hamiltonian, appropriate for
+MC moves in <script type="math/tex">\ln V</script>:</p>
+
+<script type="math/tex; mode=display">U = PV - k_BT\left ( N + 1 \right ) \ln V</script>
+
+<p>where <script type="math/tex">N</script> is the total number of molecules and atomic species.</p>
+
+<h2 id="nonbonded-interactions-a-namenonbondeda">Nonbonded Interactions <a name="nonbonded"></a></h2>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>energy</code></th>
+      <th><script type="math/tex">u_{ij}</script></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>nonbonded_coulomblj</code></td>
+      <td><code>coulomb</code>+<code>lennardjones</code></td>
+    </tr>
+    <tr>
+      <td><code>nonbonded_coulombhs</code></td>
+      <td><code>coulomb</code>+<code>hardsphere</code></td>
+    </tr>
+    <tr>
+      <td><code>nonbonded_coulombwca</code></td>
+      <td><code>coulomb</code>+<code>wca</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>This term loops over pairs of atoms, <script type="math/tex">i</script>, and <script type="math/tex">j</script>, summing a given pair-wise additive potential, <script type="math/tex">u_{ij}</script>,</p>
+
+<script type="math/tex; mode=display">U_{NB} = \sum_i\sum_j u_{ij}(\textbf{r}_j-\textbf{r}_i)</script>
+
+<p class="notice--info"><strong>Note:</strong> the pair-potential can be a combination of several potentials, but this must currently be defined at <em>compile
+time</em> and cannot be arbitrarily selected from input. It is straight forward to add more by editing the class
+<code>Energy::Hamiltonian</code> found in <code>src/energy.h</code> and then re-compile.</p>
+
+<p>Below is a description of possible pair-potentials and their configuration.</p>
+
+<h3 id="coulomb">Coulomb</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>coulomb</code></th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>type</code></td>
+      <td>Coulomb type, see below</td>
+    </tr>
+    <tr>
+      <td><code>cutoff</code></td>
+      <td>Spherical cutoff, <script type="math/tex">R_c</script> after which the potential is zero</td>
+    </tr>
+    <tr>
+      <td><code>epsr</code></td>
+      <td>Relative dielectric constant of the medium</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>This is a multipurpose pair potential that handles several variants of electrostatic
+pair-potentials. Beyond a spherical cutoff, <script type="math/tex">R_c</script>, the potential is zero while if
+below,</p>
+
+<script type="math/tex; mode=display">u_{ij} = \frac{e^2 z_i z_j }{ 4\pi\epsilon_0\epsilon_r r_{ij} }\mathcal{S}(q)</script>
+
+<p>where <script type="math/tex">\mathcal{S}(q=r/R_c)</script> is a splitting function:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>type</code></th>
+      <th><script type="math/tex">\mathcal{S}(q)</script></th>
+      <th>Additional keywords</th>
+      <th>Ref.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>plain</code></td>
+      <td><script type="math/tex">1</script></td>
+      <td> </td>
+      <td><a href="http://doi.org/ctnnsj">doi</a></td>
+    </tr>
+    <tr>
+      <td><code>none</code></td>
+      <td><script type="math/tex">0</script></td>
+      <td> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><code>wolf</code></td>
+      <td><script type="math/tex">\text{erfc}(\alpha R_c q)-\text{erfc}(\alpha R_c)q</script></td>
+      <td><code>alpha</code></td>
+      <td><a href="http://doi.org/cfcxdk">doi</a></td>
+    </tr>
+    <tr>
+      <td><code>fennel</code></td>
+      <td><script type="math/tex">\scriptstyle \text{erfc}(\alpha R_c q)-\text{erfc}(\alpha R_c)q + ( q -1 ) q \left( \text{erfc}(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right)</script></td>
+      <td><code>alpha</code></td>
+      <td><a href="http://doi.org/bqgmv2">doi</a></td>
+    </tr>
+    <tr>
+      <td><code>yonezawa</code></td>
+      <td><script type="math/tex">1 + \text{erfc}(\alpha R_c)q + q^2</script></td>
+      <td><code>alpha</code></td>
+      <td><a href="http://dx.doi.org/10/j97">doi</a></td>
+    </tr>
+    <tr>
+      <td><code>fanourgakis</code></td>
+      <td><script type="math/tex">1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7</script></td>
+      <td> </td>
+      <td><a href="http://doi.org/f639q5">doi</a></td>
+    </tr>
+    <tr>
+      <td><code>qpotential</code></td>
+      <td><script type="math/tex">\prod_{n=1}^{order}(1-q^n)</script></td>
+      <td><code>order=300</code></td>
+      <td><a href="http://goo.gl/hynRTS">ISBN</a> (Paper V)</td>
+    </tr>
+    <tr>
+      <td><code>reactionfield</code></td>
+      <td><script type="math/tex">1 + \frac{\epsilon_{RF}-\epsilon_{r}}{2\epsilon_{RF}+\epsilon_{r}} q^3  - 3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_{r}}q</script></td>
+      <td><code>epsrf</code></td>
+      <td><a href="http://doi.org/dbs99w">doi</a></td>
+    </tr>
+    <tr>
+      <td><code>yukawa</code></td>
+      <td><script type="math/tex">e^{-\kappa R_c q}-e^{-\kappa R_c}</script></td>
+      <td><code>debyelength</code></td>
+      <td><a href="https://isbnsearch.org/isbn/0486652424">ISBN</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="notice--info"><strong>Note:</strong> Internally <script type="math/tex">\mathcal{S}(q)</script> is <em>splined</em> whereby all types evaluate at similar speed.</p>
+
+<p>Additional information regarding electrostatics:</p>
+
+<ul>
+  <li><a href="http://dx.doi.org/10.1080/00268978300102721">On the dielectric constant</a></li>
+  <li><a href="http://dx.doi.org/10.1063/1.469273">Generalized reaction field using ionic strength</a></li>
+</ul>
+
+<h3 id="hard-sphere">Hard Sphere</h3>
+<p><code>hardsphere</code></p>
+
+<p>The hard sphere potential does not take any input. Radii are read from the atomlist at the beginning of the simulation.</p>
+
+<h3 id="lennard-jones">Lennard-Jones</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>lennardjones</code></th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>mixing=LB</code></td>
+      <td>Mixing rule. <code>LB</code></td>
+    </tr>
+    <tr>
+      <td><code>ljcustom</code></td>
+      <td>Custom <script type="math/tex">\epsilon</script> and <script type="math/tex">\sigma</script> combinations</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The Lennard-Jones potential has the form:</p>
+
+<script type="math/tex; mode=display">u_{ij} = 4\epsilon_{ij} \left (
+    \left ( \frac{\sigma_{ij}} {r_{ij})} \right )^{12} - \left ( \frac{\sigma_{ij}}{r_{ij})}\right )^6 \right )</script>
+
+<p>where the default mixing rule is Lorentz-Berthelot (<code>LB</code>):</p>
+
+<script type="math/tex; mode=display">\sigma_{ij} = \frac{\sigma_i+\sigma_j}{2} \quad \textrm{and} \quad
+\epsilon_{ij} = \sqrt{\epsilon_i \epsilon_j}</script>
+
+<h3 id="weeks-chandler-andersen">Weeks-Chandler-Andersen</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>wca</code></th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>mixing=LB</code></td>
+      <td>Mixing rule; only <code>LB</code> available.</td>
+    </tr>
+    <tr>
+      <td><code>ljcustom</code></td>
+      <td>Custom <script type="math/tex">\epsilon</script> and <script type="math/tex">\sigma</script> combinations</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Like Lennard-Jones but cut and shifted to zero at the minimum, forming a
+<a href="http://dx.doi.org/ct4kh9">purely repulsive potential</a>,</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+u_{ij} = u_{ij}^{\text{LJ}} + \epsilon_{ij} \quad \textrm{for} \quad r<2^{1/6}\sigma_{ij} %]]></script>
+
+<h2 id="bonded-interactions">Bonded Interactions</h2>
+
+<p>Bonds and angular potentials are added via the keyword <code>bondlist</code> either directly
+in a molecule definition (topology) or in energy/bonded where the latter can be
+used to add inter-molecular bonds:</p>
+
+<pre><code class="language-yaml">moleculelist:
+    - water:
+        structure: water.xyz
+        bondlist: # index relative to molecule
+            - harmonic: { index: [0,1], k: 100, req: 1.0 }  
+            - harmonic: { index: [0,2], k: 100, req: 1.0 }
+energy:
+    - bonded:
+        bondlist: # absolute index
+           - harmonic: { index: [56,921], k: 10, req: 15 }
+</code></pre>
+
+<p>Bonded potential types:</p>
+
+<p class="notice--info"><strong>Note:</strong>
+<script type="math/tex">\mu V T</script> ensembles and Widom insertion are currently unsupported for molecules with bonds.</p>
+
+<h3 id="harmonic">Harmonic</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>harmonic</code></th>
+      <th>Harmonic bond</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>k</code></td>
+      <td>Harmonic spring constant (kJ/mol/Å<script type="math/tex">^2</script>)</td>
+    </tr>
+    <tr>
+      <td><code>req</code></td>
+      <td>Equilibrium distance (Å)</td>
+    </tr>
+    <tr>
+      <td><code>index</code></td>
+      <td>array with <em>exactly two</em> index (relative to molecule)</td>
+    </tr>
+  </tbody>
+</table>
+
+<script type="math/tex; mode=display">u(r) = \frac{1}{2}k(r-r_{eq})^2</script>
+
+<h3 id="finite-extensible-nonlinear-elastic">Finite Extensible Nonlinear Elastic</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>fene</code></th>
+      <th><a href="http://dx.doi.org/10.1103/PhysRevE.59.4248">Finite Extensible Nonlinear Elastic Potential</a></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>k</code></td>
+      <td>Bond stiffness (kJ/mol/Å<script type="math/tex">^2</script>)</td>
+    </tr>
+    <tr>
+      <td><code>rmax</code></td>
+      <td>Maximum separation, <script type="math/tex">r_m</script> (Å)</td>
+    </tr>
+    <tr>
+      <td><code>index</code></td>
+      <td>array with <em>exactly two</em> index (relative to molecule)</td>
+    </tr>
+  </tbody>
+</table>
+
+<script type="math/tex; mode=display">u(r) = -\frac{1}{2} k r_m^2 \ln \left [ 1-(r/r_m)^2 \right ]</script>
+
+<p>for <script type="math/tex">% <![CDATA[
+r < r_m %]]></script>; infinity otherwise.</p>
+
+<h2 id="geometrical-confinement">Geometrical Confinement</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>confine</code></th>
+      <th>Confine molecules to a sub-region</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>type</code></td>
+      <td>Confinement geometry: <code>sphere</code>, <code>cylinder</code>, or <code>cuboid</code></td>
+    </tr>
+    <tr>
+      <td><code>molecules</code></td>
+      <td>List of molecules to confine (names)</td>
+    </tr>
+    <tr>
+      <td><code>k</code></td>
+      <td>Harmonic spring constant in kJ/mol or <code>inf</code> for infinity</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Confines <code>molecules</code> in a given region of the simulation container by applying a harmonic potential on
+exterior atom positions, <script type="math/tex">\mathbf{r}_i</script>:</p>
+
+<script type="math/tex; mode=display">U = \frac{1}{2} k \sum^{exterior} f_i</script>
+
+<p>where <script type="math/tex">f_i</script> is a function that depends on the confinement <code>type</code>,
+and <script type="math/tex">k</script> is a spring constant. The latter
+may be <em>infinite</em> which renders the exterior region strictly inaccessible and may evaluate faster than for finite values.
+During equilibration it is advised to use a <em>finite</em> spring constant to drive exterior particles inside the region.</p>
+
+<p class="notice--danger"><strong>Note:</strong>
+Should you insist on equilibrating with <script type="math/tex">k=\infty</script>, ensure that displacement parameters are large enough to transport molecules inside the allowed region, or all moves may be rejected. Further, some analysis routines have undefined behavior for configurations with infinite energies.</p>
+
+<p>Available values for <code>type</code> and their additional keywords:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>sphere</code></th>
+      <th>Confine in sphere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>radius</code></td>
+      <td>Radius (<script type="math/tex">a</script>)</td>
+    </tr>
+    <tr>
+      <td><code>origo=[0,0,0]</code></td>
+      <td>Center of sphere (<script type="math/tex">\mathbf{O}</script>)</td>
+    </tr>
+    <tr>
+      <td><script type="math/tex">f_i</script></td>
+      <td><script type="math/tex">\vert\mathbf{r}_i-\mathbf{O}\vert^2-a^2</script></td>
+    </tr>
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>cylinder</code></th>
+      <th>Confine in cylinder along <script type="math/tex">z</script>-axis</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>radius</code></td>
+      <td>Radius (<script type="math/tex">a</script>)</td>
+    </tr>
+    <tr>
+      <td><code>origo=[0,0,*]</code></td>
+      <td>Center of cylinder (<script type="math/tex">\mathbf{O}</script>, <script type="math/tex">z</script>-value ignored)</td>
+    </tr>
+    <tr>
+      <td><script type="math/tex">f_i</script></td>
+      <td><script type="math/tex">\vert (\mathbf{r}_i-\mathbf{O})\circ \mathbf{d}\vert^2 - a^2</script></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>where <script type="math/tex">\mathbf{d}=(1,1,0)</script> and <script type="math/tex">\circ</script> is the entrywise (Hadamard) product.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>cuboid</code></th>
+      <th>Confine in cuboid</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>low</code></td>
+      <td>Lower corner <script type="math/tex">[x,y,z]</script></td>
+    </tr>
+    <tr>
+      <td><code>high</code></td>
+      <td>Higher corner <script type="math/tex">[x,y,z]</script></td>
+    </tr>
+    <tr>
+      <td><script type="math/tex">f_i</script></td>
+      <td><script type="math/tex">\sum_{\alpha\in \{x,y,z\} } (\delta r_{i,\alpha})^2</script></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>where <script type="math/tex">\delta r</script> are distances to the confining, cuboidal faces.
+Note that the elements of <code>low</code> must be smaller than or equal to the corresponding
+elements of <code>high</code>.</p>
+
+<h2 id="solvent-accessible-surface-area">Solvent Accessible Surface Area</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th><code>sasa</code></th>
+      <th>SASA Transfer Free Energy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>radius=1.4</code></td>
+      <td>Probe radius for SASA calculation (angstrom)</td>
+    </tr>
+    <tr>
+      <td><code>molarity=0</code></td>
+      <td>Molar concentration of co-solute</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Calculates the free energy contribution due to</p>
+
+<ol>
+  <li>atomic surface tension</li>
+  <li>co-solute concentration (typically electrolytes)</li>
+</ol>
+
+<p>via a <a href="http://dx.doi.org/10.1002/jcc.21844">SASA calculation</a> for each atom.
+The energy term is:</p>
+
+<script type="math/tex; mode=display">U = \sum_i^N A_{\text{sasa},i} \left ( \gamma_i + c \cdot \varepsilon_{\text{tfe},i} \right )</script>
+
+<p>where <script type="math/tex">c</script> is the molar concentration of the co-solute;
+<script type="math/tex">\gamma_i</script> is the atomic surface tension; and <script type="math/tex">\varepsilon_{\text{tfe},i}</script> the atomic transfer free energy,
+both specified in the atom topology with <code>tension</code> and <code>tfe</code>, respectively.</p>
+<div class="footnotes">
+  <ol>
+    <li id="fn:frenkel">
+      <p><em>Frenkel and Smith, 2nd Ed., Chapter 5.4</em>. <a href="#fnref:frenkel" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>

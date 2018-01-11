@@ -18,7 +18,7 @@ R"(Hoth - the Monte Carlo game you're looking for!
     http://github.com/mlund/faunus
 
     Usage:
-      faunus [-q] [--nobar] [--input=<file>] [--output=<file>]
+      faunus [-q] [--nobar] [--state=<file>] [--input=<file>] [--output=<file>]
       faunus (-h | --help)
       faunus --version
 
@@ -26,9 +26,10 @@ R"(Hoth - the Monte Carlo game you're looking for!
       
       -i <file> --input <file>   Input file [default: /dev/stdin].
       -o <file> --output <file>  Output file [default: out.json].
-      --nobar                    No progress bar.
+      -s <file> --state <file>   State file to start from.
       -q --quiet                 Less verbose output.
       -h --help                  Show this screen.
+      --nobar                    No progress bar.
       --version                  Show version.
 )";
 
@@ -40,14 +41,17 @@ int main( int argc, char **argv )
         auto args = docopt::docopt( USAGE,
                 { argv + 1, argv + argc }, true, "Faunus 2.0.0");
 
+        // --nobar
         bool showProgress = !args["--nobar"].asBool();
 
+        // --quiet
         bool quiet = args["--quiet"].asBool();
         if (quiet) {
             cout.setstate( std::ios_base::failbit ); // hold kæft
             showProgress = false;
         }
 
+        // --input
         json j;
         auto input = args["--input"].asString();
         if (input=="/dev/stdin")
@@ -57,6 +61,21 @@ int main( int argc, char **argv )
 
         pc::temperature = j.at("temperature").get<double>() * 1.0_K;
         MCSimulation<Tgeometry,Tparticle> sim(j);
+
+        // --state
+        if (args["--state"]) {
+            std::string state = mpi.prefix + args["--state"].asString();
+            std::ifstream f(state);
+            if (f) {
+                if (!quiet)
+                    mpi.cout << "Loading state file '" << state << "'" << endl;
+                json j;
+                f >> j;
+                sim.restore(j);
+            } else
+                throw std::runtime_error("Error loading state file '" + state + "'");
+        }
+
         Analysis::CombinedAnalysis analysis(j, sim.space(), sim.pot());
 
         auto& loop = j.at("mcloop");
@@ -77,11 +96,13 @@ int main( int argc, char **argv )
                 analysis.sample();
             }
         }
-        progressBar.done();
+        if (mpi.isMaster())
+            progressBar.done();
 
         if (!quiet)
             mpi.cout << "relative drift = " << sim.drift() << endl;
 
+        // --output
         std::ofstream f(mpi.prefix + args["--output"].asString());
         if (f) {
             json j = sim;

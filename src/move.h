@@ -575,23 +575,15 @@ namespace Faunus {
                     Change c;
                     c.all=true;
                     state2.sync(state1, c);
-                    std::ifstream f("state");
-                    if (f) {
-                        cout << "Restoring from 'state'\n";
-                        json j;
-                        f >> j;
-                        restore(j);
-                    }
-                    uinit = state1.pot.energy(c);
                 }
 
                 void restore(const json &j) {
+                    dusum=0;
                     Change c;
                     c.all=true;
                     state1.spc = j;
                     state2.spc.sync(state1.spc, c);
                     uinit = state1.pot.energy(c);
-                    dusum=0;
                     assert(uinit == state2.pot.energy(c));
                 } //!< restore system from previously saved state
 

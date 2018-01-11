@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <cstdio>
 #include "json.hpp"
 
 #ifdef ENABLE_MPI
@@ -84,8 +85,10 @@ namespace Faunus {
             MPI_Comm_rank(comm, &_rank);
 #endif
             id=std::to_string(_rank);
-            if (_nproc>1)
+            if (_nproc>1) {
                 prefix = "mpi" + id + ".";
+                std::freopen((prefix+"stdout").c_str(), "w", stdout);
+            }
 #ifdef ENABLE_MPI
             cout.open(prefix+"stdout");
 #endif
@@ -94,6 +97,7 @@ namespace Faunus {
         inline MPIController::~MPIController() {
 #ifdef ENABLE_MPI
             MPI_Finalize();
+            std::fclose(stdout);
 #endif
         }
 

@@ -8,9 +8,14 @@ main:
     url: http://github.com/mlund/faunus/issues
 
 docs:
- - title: Input Parameters
+ - title: Introduction
+ - title: Installing
+ - title: Running simulations 
+ - title: Configuration
    children:
        - title: Energy
          url: /docs/energy/
        - title: Moves
          url: /docs/moves/
+       - title: Analysis
+         url: /docs/analysis/

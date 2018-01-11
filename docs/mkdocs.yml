@@ -1,0 +1,4 @@
+site_name: neofaunus
+theme: readthedocs
+pages:
+    - Home: README.md

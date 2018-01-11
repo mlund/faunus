@@ -6,5 +6,4 @@ test 1
 
 test 2
 
-$\frac{1}{2}$
 

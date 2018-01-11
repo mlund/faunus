@@ -1,6 +1,5 @@
 ---
-sidebar:
-    nav: "docs"
+permalink: /docs/index.html
 ---
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({

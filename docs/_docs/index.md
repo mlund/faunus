@@ -1,5 +1,5 @@
 ---
-permalink: /docs/index.html
+permalink: /docs/
 ---
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({

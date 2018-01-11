@@ -12,3 +12,5 @@ docs:
    children:
        - title: Energy
          url: /docs/energy/
+       - title: Moves
+         url: /docs/moves/

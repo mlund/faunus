@@ -1,4 +1,4 @@
-site_name: neofaunus
+site_name: hoth
 repo_url: https://github.com/mlund/neofaunus
 docs_dir: _docs/
 theme: readthedocs

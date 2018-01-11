@@ -1,4 +1,6 @@
 site_name: neofaunus
 theme: readthedocs
+markdown_extensions: [math]
+extra_javascript: ['https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML','mathjaxhelper.js']
 pages:
     - Home: README.md

@@ -91,13 +91,13 @@ where $\mathcal{S}(q=r/R_c)$ is a splitting function:
  --------------- | -------------------------------------- | ------------------- | ----------------------
  `plain`         | $ 1 $                                |                     | [doi](http://doi.org/ctnnsj)
  `none`          | $ 0 $                                |                     |
- `wolf`          | $ \text{erfc}(\alpha R_c q)-\text{erfc}(\alpha R_c)q $ | `alpha`         | [doi](http://doi.org/cfcxdk)
- `fennel`        | $ \scriptstyle \text{erfc}(\alpha R_c q)-\text{erfc}(\alpha R_c)q + ( q -1 ) q \left( \text{erfc}(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right) $$ | `alpha`| [doi](http://doi.org/bqgmv2)
- `yonezawa`      | $ 1 + \text{erfc}(\alpha R_c)q + q^2 $      | `alpha`             | [doi](http://dx.doi.org/10/j97)
- `fanourgakis`   | $ 1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$|     | [doi](http://doi.org/f639q5)
- `qpotential`    | $ \prod_{n=1}^{order}(1-q^n) $       | `order=300`         | [ISBN](http://goo.gl/hynRTS) (Paper V)
- `reactionfield` | $ 1 + \frac{\epsilon_{RF}-\epsilon_{r}}{2\epsilon_{RF}+\epsilon_{r}} q^3  - 3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_{r}}q $      | `epsrf`     | [doi](http://doi.org/dbs99w)
- `yukawa`        | $ e^{-\kappa R_c q}-e^{-\kappa R_c}$  | `debyelength`      | [ISBN](https://isbnsearch.org/isbn/0486652424)
+ `wolf`          | $\text{erfc}(\alpha R_c q)-\text{erfc}(\alpha R_c)q$ | `alpha`         | [doi](http://doi.org/cfcxdk)
+ `fennel`        | $\scriptstyle \text{erfc}(\alpha R_c q)-\text{erfc}(\alpha R_c)q + ( q -1 ) q \left( \text{erfc}(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right)$ | `alpha`| [doi](http://doi.org/bqgmv2)
+ `yonezawa`      | $1 + \text{erfc}(\alpha R_c)q + q^2$      | `alpha`             | [doi](http://dx.doi.org/10/j97)
+ `fanourgakis`   | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$|     | [doi](http://doi.org/f639q5)
+ `qpotential`    | $\prod_{n=1}^{order}(1-q^n)$       | `order=300`         | [ISBN](http://goo.gl/hynRTS) (Paper V)
+ `reactionfield` | $1 + \frac{\epsilon_{RF}-\epsilon_{r}}{2\epsilon_{RF}+\epsilon_{r}} q^3  - 3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_{r}}q$      | `epsrf`     | [doi](http://doi.org/dbs99w)
+ `yukawa`        | $e^{-\kappa R_c q}-e^{-\kappa R_c}$  | `debyelength`      | [ISBN](https://isbnsearch.org/isbn/0486652424)
 
 **Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
 {: .notice--info}
@@ -228,14 +228,14 @@ Available values for `type` and their additional keywords:
 
 `sphere`        | Confine in sphere
 --------------- | -----------------------------
-`radius`        | Radius ($$a$$)
-`origo=[0,0,0]` | Center of sphere ($$\mathbf{O}$$)
+`radius`        | Radius ($a$)
+`origo=[0,0,0]` | Center of sphere ($\mathbf{O}$)
 $f_i$         | $\vert\mathbf{r}_i-\mathbf{O}\vert^2-a^2$
 
 `cylinder`      | Confine in cylinder along $z$-axis
 --------------- | ----------------------------------------
 `radius`        | Radius ($$a$$)
-`origo=[0,0,*]` | Center of cylinder ($$\mathbf{O}$$, $$z$$-value ignored)
+`origo=[0,0,*]` | Center of cylinder ($\mathbf{O}$, $z$-value ignored)
 $f_i$         | $\vert (\mathbf{r}_i-\mathbf{O})\circ \mathbf{d}\vert^2 - a^2$
 
 where $\mathbf{d}=(1,1,0)$ and $\circ$ is the entrywise (Hadamard) product.
@@ -244,7 +244,7 @@ where $\mathbf{d}=(1,1,0)$ and $\circ$ is the entrywise (Hadamard) product.
 --------------- | --------------------------
 `low`           | Lower corner $[x,y,z]$
 `high`          | Higher corner $[x,y,z]$
-$f_i$         | $$\sum_{\alpha\in \{x,y,z\} } (\delta r_{i,\alpha})^2$
+$f_i$         | $\sum_{\alpha\in \{x,y,z\} } (\delta r_{i,\alpha})^2$
 
 where $\delta r$ are distances to the confining, cuboidal faces.
 Note that the elements of `low` must be smaller than or equal to the corresponding

@@ -8,7 +8,9 @@ test 1
 
 test 2
 
-$\frac{1}{\pi}$
+some inline math $$\frac{1}{\pi}$$ may be possible?
+
+Math block:
 
 $$
 u = 10

@@ -1,6 +1,6 @@
 site_name: neofaunus
 repo_url: https://github.com/mlund/neofaunus
-docs_dir: docs/_docs/
+docs_dir: _docs/
 theme: readthedocs
 pages:
     - 'Homer': 'energy.md'

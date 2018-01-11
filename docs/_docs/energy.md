@@ -1,5 +1,5 @@
 ---
-permalink: /energy/
+title: ""
 sidebar:
     nav: "docs"
 ---

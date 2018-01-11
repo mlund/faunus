@@ -1,7 +1,4 @@
 ---
-title: ""
-sidebar:
-    nav: "docs"
 ---
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({

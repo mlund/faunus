@@ -1,8 +1,10 @@
 ---
-permalink: /analysis/
-sidebar:
-    nav: "docs"
 ---
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+});
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
 
 # Analysis
@@ -32,7 +34,7 @@ points, and the relative run-time spent on the analysis.
 ---------------- |  -------------------------------------------
 `nstep=0`        |  Interval between samples
 
-This will calculate the average density, $$\langle N_i/V \rangle$$ of molecules and atoms
+This will calculate the average density, $\langle N_i/V \rangle$ of molecules and atoms
 which fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
 For atomic groups, densities of individual atom types are reported.
 
@@ -46,7 +48,7 @@ For atomic groups, densities of individual atom types are reported.
 `file`         |  Output file, two column
 `name1`        |  Atom name 1
 `name2`        |  Atom name 2
-`dr=0.1`       |  $$g(r)$$ resolution
+`dr=0.1`       |  $g(r)$ resolution
 `dim=3`        |  Dimensions for volume element
 
 We sample the pair correlation function between atom id's _i_ and _j_,
@@ -56,17 +58,17 @@ g_{ij}(r) = \frac{ N_{ij}(r) }{ \sum_{r=0}^{\infty} N_{ij}(r) }
 \cdot \frac{ \langle V \rangle }{ V(r) }
 $$
 
-where $$N_{ij}(r)$$ is the number of observed pairs, accumulated over the
+where $N_{ij}(r)$ is the number of observed pairs, accumulated over the
 entire ensemble, in the separation
-interval $$[r, r+dr]$$ and $$V(r)$$ is the corresponding volume element
+interval $[r, r+dr]$ and $V(r)$ is the corresponding volume element
 which depends on dimensionality:
 
-$$ V(r) $$                 | Dimensions (`dim`)
-:------------------------- | :----------------------------------------
-$$ 4\pi r^2 dr $$          | 3 (for particles in free space, default)
-$$ 2\pi r dr $$            | 2 (for particles confined on a plane)
-$$ 2\pi R sin(r/R) dr $$   | 2 (for particles confined on a 2D hypersphere surface, also needs input `Rhypersphere`)
-$$ dr $$                   | 1 (for particles confined on a line)
+$ V(r) $                 | Dimensions (`dim`)
+:----------------------- | :----------------------------------------
+$ 4\pi r^2 dr $          | 3 (for particles in free space, default)
+$ 2\pi r dr $            | 2 (for particles confined on a plane)
+$ 2\pi R sin(r/R) dr $   | 2 (for particles confined on a 2D hypersphere surface, also needs input `Rhypersphere`)
+$ dr $                   | 1 (for particles confined on a line)
 
 ### Molecular
 
@@ -75,7 +77,7 @@ $$ dr $$                   | 1 (for particles confined on a line)
 `file`         |  Output file, two column
 `name1`        |  Molecule name 1
 `name2`        |  Molecule name 2
-`dr=0.1`       |  $$g(r)$$ resolution
+`dr=0.1`       |  $g(r)$ resolution
 `dim=3`        |  Dimensions for volume element
 `nstep=0`      |  Interval between samples.
 
@@ -103,7 +105,7 @@ Calculates the energy contributions from all terms in the Hamiltonian and
 outputs to a file.
 If filename ends with `.csv`, a comma separated value file will be saved,
 otherwise a simple space separeted file with a single hash commented header line.
-All units in $$k_BT$$.
+All units in $k_BT$.
 
 ## Virtual Volume Move
 
@@ -113,7 +115,7 @@ All units in $$k_BT$$.
 `nstep`         | Interval between samples
 
 Performs a [virtual volume move](http://dx.doi.org/10.1063/1.472721) by
-scaling the simulation volume to $$V+\Delta V$$ along with
+scaling the simulation volume to $V+\Delta V$ along with
 molecular mass centers and atomic positions. The excess pressure is evatuated
 as a Widom average:
 
@@ -144,7 +146,7 @@ $$
 \mu^{ex} = -k_BT \ln \langle e^{-\delta u/k_BT} \rangle_0
 $$
 
-where $$\delta u$$ is the energy change of the perturbation and the
+where $\delta u$ is the energy change of the perturbation and the
 average runs over the _unperturbed_ ensemble.
 
 **Note:**

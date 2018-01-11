@@ -1,5 +1,5 @@
 site_name: neofaunus
-docs_dir: _docs
+docs_dir: docs/_docs
 theme: readthedocs
 pages:
     - Home: energy.md

@@ -121,7 +121,6 @@ author:
 # Reading Files
 include:
   - .htaccess
-  - _pages
 exclude:
   - "*.sublime-project"
   - "*.sublime-workspace"
@@ -271,7 +270,7 @@ defaults:
   # collections
   - scope:
       path: ""
-      type: docss
+      type: docs
     values:
       layout: single
       toc: true

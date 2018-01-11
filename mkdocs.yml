@@ -3,6 +3,6 @@ repo_url: https://github.com/mlund/neofaunus
 docs_dir: _docs/
 theme: readthedocs
 pages:
-    - Home: energy.md
+    - Home: "energy.md"
     - Subgroup:
-        - Test: energy.md
+        - Test: "hej.md"

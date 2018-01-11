@@ -1,6 +1,8 @@
 site_name: hoth
 repo_url: https://github.com/mlund/neofaunus
-docs_dir: _docs/
+docs_dir: docs/_docs/
 theme: readthedocs
 pages:
     - Home: energy.md
+    - Subgroup:
+        - Test: energy.md

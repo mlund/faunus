@@ -30,7 +30,6 @@ Requirements
 Optional:
 
 - ruamel_yaml (for yaml<->json conversion)
-- Doxygen (for code manual)
 - MPI (for parallelisation)
 - Python (for python module, experimental)
 

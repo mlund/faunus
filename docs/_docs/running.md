@@ -4,16 +4,22 @@
 
 # Running Simulations
 
-Once compiled, faunus is run from a terminal, taking input either
-from `stdin` or a file and can JSON formatted or, via `yason.py` see below,
-also YAML formatted:
+Input is read either from `stdin` or from a JSON formatted file. Some examples:
 
 ~~~ bash
-faunus < input.json # from json
-yason.py minimal.yml | faunus # from yaml
+faunus -h                        # print help and exit
+faunus < input.json              # input from stdin
+faunus -i in.json -o out.json -q # file input/output and be quiet
 ~~~
 
-## Input/Output
+Via the script `yason.py`, see below, [YAML](http://www.yaml.org)
+formatted input can be passed:
+
+~~~ bash
+yason.py in.yml | faunus # from yaml
+~~~
+
+## Input and Output
 
 Natively, input and output are [JSON formatted](http://json.org/example.html):
 
@@ -50,4 +56,10 @@ import json
 with open('out.json') as f:
     d = json.load(f) # --> dict
     print( d['atomlist'][0]["Na+"]["mw"] ) # --> 22.99
+~~~
+
+## Restarting
+
+~~~ bash
+faunus --input in.json --state state
 ~~~

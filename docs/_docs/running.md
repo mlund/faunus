@@ -13,9 +13,9 @@ faunus < input.json # from json
 yason.py minimal.yml | faunus # from yaml
 ~~~
 
-## Input/Output 
+## Input/Output
 
-Natively, Faunus input and output are [JSON formatted](http://json.org/example.html):
+Natively, input and output are [JSON formatted](http://json.org/example.html):
 
 ~~~ json
 { "atomlist": [
@@ -24,7 +24,7 @@ Natively, Faunus input and output are [JSON formatted](http://json.org/example.h
 }
 ~~~
 
-However, via the small helper script `yason.py`, JSON can be converted to/from
+However, via the helper script `yason.py`, JSON can be converted to/from
 [YAML](http://www.yaml.org) which is less verbose, more readable and therefore
 used throughout the documentation:
 
@@ -33,9 +33,9 @@ atomlist:
     - Na+: { q: 1.0, mw: 22.99 }
 ~~~
 
-### Post-Processing 
+### Post-Processing
 
-Output (JSON) can be conveniently converted to
+JSON formatted output can conveniently be converted to
 syntax highlighted YAML for better readability:
 
 ~~~ bash
@@ -51,4 +51,3 @@ with open('out.json') as f:
     d = json.load(f) # --> dict
     print( d['atomlist'][0]["Na+"]["mw"] ) # --> 22.99
 ~~~
-

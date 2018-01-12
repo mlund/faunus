@@ -1,7 +1,5 @@
 ---
 ---
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
-
 # Installation
 
 Faunus has been tested developed on MacOS/Linux, but should work
@@ -75,4 +73,40 @@ If you need to change the compiler or for another reason want to reset the build
 make clean
 rm -fR CMakeCache.txt CMakeFiles
 ~~~
+
+## Linking an external program
+
+Start by making a new directory (anywhere you want), put your .cpp source file there,
+and make a `CMakeLists.txt` file telling CMake about the new executable.
+For example:
+
+~~~ bash
+$ cd $HOME/newproject
+$ cat hello.cpp
+
+#include "faunus.h"
+int main() {
+  Faunus::Point a(0,0,0);
+}
+
+$ echo 'fau_example(hello "./" hello.cpp)' > CMakeLists.txt
+~~~
+
+Return to the main faunus directory and rerun `cmake` with the following command:
+
+~~~ bash
+cd $HOME/faunus
+cmake . -DMYPLAYGROUND=$HOME/newproject  # absolute path!
+~~~
+
+That's it! A `Makefile` for your new target, `hello`, has been generated and you can compile
+directly from the `newproject` directory:
+
+~~~ bash
+cd $HOME/newproject
+make
+~~~
+
+Note that all options selected when configuring faunus will be applied to `hello` as well,
+and any changes to the faunus code base will trigger re-compilation upon running `make`.
 

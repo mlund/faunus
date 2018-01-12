@@ -132,12 +132,6 @@ namespace Faunus {
                     } //!< Configure via json object
 
                     typename Tpvec::iterator randomAtom() {
-                        //auto p = spc.p.begin();
-                        //auto g = spc.groups.begin();
-                        //cdata.index = Faunus::distance( spc.groups.begin(), g ); // integer *index* of moved group
-                        //cdata.atoms[0] = std::distance(g->begin(), p);  // index of particle rel. to group
-                        //return p; 
-
                         assert(molid>=0);
                         auto mollist = spc.findMolecules( molid ); // all `molid` groups
                         if (size(mollist)>0) {
@@ -165,7 +159,7 @@ namespace Faunus {
                                 spc.geo.boundaryFunc(p->pos);
                                 _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
                                 if (!g.atomic)
-                                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.boundaryFunc);
+                                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.boundaryFunc, -g.cm);
                             }
 
                             if (dprot>0) { // rotate
@@ -177,7 +171,7 @@ namespace Faunus {
 
                             if (dp>0 || dprot>0)
                                 change.groups.push_back( cdata ); // add to list of moved groups
-                        }
+                         }
                         else
                             std::cerr << name << ": no atoms found" << std::endl;
                     }
@@ -574,7 +568,9 @@ namespace Faunus {
                 MCSimulation(const json &j) : state1(j), state2(j), moves(j, state2.spc) {
                     Change c;
                     c.all=true;
+                    uinit = state1.pot.energy(c);
                     state2.sync(state1, c);
+                    assert(uinit == state2.pot.energy(c));
                 }
 
                 void restore(const json &j) {

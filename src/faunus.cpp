@@ -68,7 +68,7 @@ int main( int argc, char **argv )
             std::ifstream f(state);
             if (f) {
                 if (!quiet)
-                    mpi.cout << "Loading state file '" << state << "'" << endl;
+                    mpi.cout() << "Loading state file '" << state << "'" << endl;
                 json j;
                 f >> j;
                 sim.restore(j);
@@ -100,7 +100,7 @@ int main( int argc, char **argv )
             progressBar.done();
 
         if (!quiet)
-            mpi.cout << "relative drift = " << sim.drift() << endl;
+            mpi.cout() << "relative drift = " << sim.drift() << endl;
 
         // --output
         std::ofstream f(mpi.prefix + args["--output"].asString());

@@ -1,12 +1,12 @@
 temperature: 300
-geometry: {length: 40.00}
-mcloop: {macro: 10, micro: 500}
+geometry: {length: 20.00}
+mcloop: {macro: 10, micro: 1000}
 atomlist:
-    - MM: {eps: 0.2, sigma: 2.0} 
-    - NN: {eps: 0.2, sigma: 2.0, mw: 0} 
+    - MM: {eps: 0.2, sigma: 2.0, dp: 1}
+    - NN: {eps: 0.2, sigma: 2.0, mw: 0, dp: 1} 
 moleculelist:
     - water:
-        Ninit: 2
+        Ninit: 3
         structure: polymer.xyz
         bondlist:
             - harmonic: { index: [0,1], k: 10, req: 1.0 }
@@ -14,13 +14,14 @@ moleculelist:
             - harmonic: { index: [2,3], k: 10, req: 1.0 }
 energy:
     - confine: {type: sphere, radius: 10, k: 100, molecules: [water]}
-    - _bonded: {}
-    - _nonbonded_coulomblj:
+    - bonded: {}
+    - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
         coulomb: {type: fanourgakis, epsr: 1, cutoff: 9}
-        cutoff_g2g: 10
+        cutoff_g2g: 100
 moves:
     - moltransrot: {molecule: water, dp: 1, dprot: 0, repeat: N}
+    - transrot: {molecule: water, repeat: N}
     - pivot: {dprot: 1, molecule: water}
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}

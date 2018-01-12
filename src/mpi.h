@@ -51,21 +51,19 @@ namespace Faunus {
             public:
                 MPIController(); //!< Constructor
                 ~MPIController(); //!< End of all MPI calls!
-#ifdef ENABLE_MPI
-                MPI_Comm comm=MPI_COMM_WORLD;    //!< Communicator (Default: MPI_COMM_WORLD)
-                std::ofstream cout; //!< Redirect stdout to here for rank-based file output
-#else
-                std::ostream& cout = std::cout;
-#endif
                 int nproc() const;      //!< Number of processors in communicator
                 int rank() const;       //!< Rank of process
                 int rankMaster() const; //!< Rank number of the master
                 bool isMaster() const;  //!< Test if current process is master
+                std::ostream& cout();
                 Random random; //!< Random number generator for MPI calls
                 std::string id;        //!< Unique name associated with current rank
                 std::string prefix;
-
+#ifdef ENABLE_MPI
+                MPI_Comm comm=MPI_COMM_WORLD;    //!< Communicator (Default: MPI_COMM_WORLD)
+#endif
             private:
+                std::ofstream f; //!< Redirect stdout to here for rank-based file output
                 int _nproc=1;      //!< Number of processors in communicator
                 int _rank=0;       //!< Rank of process
                 int _master=0;     //!< Rank number of the master
@@ -87,18 +85,23 @@ namespace Faunus {
             id=std::to_string(_rank);
             if (_nproc>1) {
                 prefix = "mpi" + id + ".";
-                std::freopen((prefix+"stdout").c_str(), "w", stdout);
+                f.open((prefix+"stdout").c_str());
             }
-#ifdef ENABLE_MPI
-            cout.open(prefix+"stdout");
-#endif
         }
 
         inline MPIController::~MPIController() {
+            f.close();
 #ifdef ENABLE_MPI
             MPI_Finalize();
-            std::fclose(stdout);
 #endif
+        }
+
+        inline std::ostream& MPIController::cout() {
+#ifdef ENABLE_MPI
+            if (_nproc>1)
+                return f;
+#endif
+            return std::cout;
         }
 
         inline int MPIController::nproc() const { return _nproc; }
@@ -110,6 +113,7 @@ namespace Faunus {
             j = {
                 {"rank", m.rank()},
                 {"nproc", m.nproc()},
+                {"prefix", m.prefix},
                 {"master", m.rankMaster()}
             };
         }
@@ -389,5 +393,5 @@ namespace Faunus {
             }
 #endif
     } //end of mpi namespace
-}//end of faunus namespace
+    }//end of faunus namespace
 

@@ -30,9 +30,9 @@ points, and the relative run-time spent on the analysis.
 
 ## Density
 
-`density     `   |  Description
----------------- |  -------------------------------------------
-`nstep=0`        |  Interval between samples
+`density`   |  Description
+----------- |  -------------------------------------------
+`nstep=0`   |  Interval between samples
 
 This will calculate the average density, $\langle N_i/V \rangle$ of molecules and atoms
 which fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.

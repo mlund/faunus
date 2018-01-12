@@ -1,39 +1,18 @@
 ---
-permalink: /start/
-sidebar:
-    nav: "docs"
 ---
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
 
-# Getting Started
+# Running Simulations
 
-## Installation
-
-### Requirements
-
-- CMake 3.6 or higher
-- C++14 compiler (clang, gcc etc.)
-- Python 3.6 or higher with `ruamel_yaml` or `yaml`
-
-### Compiling
-
-Download the [latest release](https://github.com/mlund/faunus/releases/latest)
-and perform the following steps in a terminal.
-A set of dependencies will automatically be downloaded.
+Once compiled, faunus is run from a terminal, taking input either
+from `stdin` or a file and can JSON formatted or, via `yason.py` see below,
+also YAML formatted:
 
 ~~~ bash
-cd faunus
-cmake . [OPTIONS]
-make faunus
+faunus < input.json # from json
+yason.py minimal.yml | faunus # from yaml
 ~~~
 
-Should you have multiple compilers or python distributions, be specific:
-
-~~~ bash
-CXX=clang++ cmake . -DPYTHON_INCLUDE_DIR=/opt/include/python3.6 -DPYTHON_LIBRARY=/opt/lib/libpython3.6.dylib
-~~~
-
-<a name="input-output"></a>
 ## Input/Output 
 
 Natively, Faunus input and output are [JSON formatted](http://json.org/example.html):
@@ -71,16 +50,5 @@ import json
 with open('out.json') as f:
     d = json.load(f) # --> dict
     print( d['atomlist'][0]["Na+"]["mw"] ) # --> 22.99
-~~~
-
-<a name="running"></a>
-## Running Faunus
-
-Input is read from `stdin` and can either be JSON or,
-via `yason.py`, also YAML:
-
-~~~ bash
-faunus < input.json # from json
-yason.py minimal.yml | faunus # from yaml
 ~~~
 

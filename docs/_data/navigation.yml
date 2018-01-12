@@ -10,9 +10,13 @@ main:
 docs:
  - title: Introduction
  - title: Installing
- - title: Running simulations 
+   url: /docs/install/
+ - title: Running simulations
+   url: /docs/running/
  - title: Configuration
    children:
+       - title: Topology
+         url: /docs/topology/
        - title: Energy
          url: /docs/energy/
        - title: Moves

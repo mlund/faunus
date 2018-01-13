@@ -10,28 +10,29 @@ MathJax.Hub.Config({
 # Monte Carlo Moves
 
 A simulation can have an arbitrary number of MC moves operating on molecules, atoms, the volume, or
-any other parameter affecting the system energy. The list of moves are defined by the `moves` section
+any other parameter affecting the system energy. Moves are specified in the `moves` section
 at the top level input. For example:
 
 ~~~ yaml
 moves:
-    - moltransrot: {molecule: water, dp: 2.0, repeat: N
-                    dprot: 1.0, dir: [1,1,0]}
-    - volume: {dV: 0.01}
+    - moltransrot: { molecule: water, dp: 2.0, repeat: N
+                    dprot: 1.0, dir: [1,1,0] }
+    - volume: { dV: 0.01 }
     - ...
 
-random: {seed: default}
+random:
+    seed: hardware
 ~~~
 
 The pseudo-random number engine used for MC moves can be seeded in three ways,
 
 `seed`       | Description
------------  | ----------------------------------------
-`default`    | Deterministic (pre-determined)
+-----------  | ----------------------------------------------
+`default`    | Deterministic (default if `random` is absent)
 `hardware`   | [Non-deterministric seed](http://en.cppreference.com/w/cpp/numeric/random/random_device)
 engine state | [A previously saved stae](http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine/operator_ltltgtgt)
 
-The last option can be used to restore the state of the engine and is saved along with normal simulation
+The last option is used to restore the state of the engine as saved along with normal simulation
 output as a string containing a lenghty list of numbers.
 
 ## Translation and Rotation
@@ -83,6 +84,14 @@ Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 
 Performs a rotation around a random, harmonic bond vector in `molecule`, moving all atoms
 either before _or_ after the bond with equal probability.
+
+## Parallel Tempering
+
+`temper`         | Description
+---------------- | --------------------------------------------
+`format=XYZQI`   | Particle properties to copy between replicas
+
+General Hamiltonian parallel tempering.
 
 ## Volume Move <a name="volumemove"></a>
 

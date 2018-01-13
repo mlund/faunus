@@ -91,7 +91,24 @@ either before _or_ after the bond with equal probability.
 ---------------- | --------------------------------------------
 `format=XYZQI`   | Particle properties to copy between replicas
 
-General Hamiltonian parallel tempering.
+Here we consider an extended ensemble, consisting of a _n_
+sub-systems (replicas), each in a different thermodynamic state (different
+Hamiltonians) and with a total energy
+
+$$
+U = \sum_i^n\mathcal{H}_i(\mathcal{R_i})
+$$
+
+The parallel tempering move performs a swap move where the coordinate
+space, $\mathcal{R}$, between two sub-systems is exchanged and
+$\Delta U_{i\leftrightarrow j}$ is the resulting trial energy.
+
+**Note:**
+Parallel tempering require compilation with MPI and the number
+of replicas, _n_, exactly match the number of processes. Each
+replica will prefix input and output files with `mpi0.`, `mpi1.`,
+etc.
+{: .notice--info}
 
 ## Volume Move <a name="volumemove"></a>
 

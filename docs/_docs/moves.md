@@ -19,7 +19,20 @@ moves:
                     dprot: 1.0, dir: [1,1,0]}
     - volume: {dV: 0.01}
     - ...
+
+random: {seed: default}
 ~~~
+
+The pseudo-random number engine used for MC moves can be seeded in three ways,
+
+`seed`       | Description
+-----------  | ----------------------------------------
+`default`    | Deterministic (pre-determined)
+`hardware`   | [Non-deterministric seed](http://en.cppreference.com/w/cpp/numeric/random/random_device)
+engine state | [A previously saved stae](http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine/operator_ltltgtgt)
+
+The last option can be used to restore the state of the engine and is saved along with normal simulation
+output as a string containing a lenghty list of numbers.
 
 ## Translation and Rotation
 

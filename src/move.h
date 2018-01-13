@@ -531,8 +531,8 @@ namespace Faunus {
                        }*/
                     void _to_json(json &j) const override {
                         j = {
-                            { "replicas", "hej" },
-                            { "dataformat", "hej" }
+                            { "replicas", mpi.nproc() },
+                            { "datasize", pt.getFormat() }
                         };
                     }
 
@@ -622,6 +622,10 @@ namespace Faunus {
                     using BasePointerVector<Movebase>::vec;
                     inline Propagator() {}
                     inline Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi) {
+
+                        if (j.count("random")==1)
+                            Movebase::slump = j["random"]; // slump is static --> shared for all moves
+
                         for (auto &m : j.at("moves")) {// loop over move list
                             size_t oldsize = vec.size();
                             for (auto it=m.begin(); it!=m.end(); ++it) {
@@ -762,8 +766,8 @@ namespace Faunus {
                                     { uold = state1.pot.energy(change); }
                                 }
                                 du = unew - uold;
-                                if ( metropolis(du + change.du
-                                            + (**mv).bias(change, uold, unew) ) ) { // accept move
+                                double bias = (**mv).bias(change, uold, unew);
+                                if ( metropolis(du + bias) ) { // accept move
                                     state1.sync( state2, change );
                                     (**mv).accept(change);
                                 }
@@ -780,6 +784,7 @@ namespace Faunus {
 
                 void to_json(json &j) {
                     j = state1.spc.info();
+                    j["random"] = Move::Movebase::slump;
                     j["temperature"] = pc::temperature / 1.0_K;
                     j["moves"] = moves;
                     j["energy"].push_back(state1.pot);

@@ -29,7 +29,7 @@ namespace Faunus {
                 f.close();
                 return true;
             }
-            std::cout << "# WARNING! FILE " << file << " NOT READ!\n";
+            std::cerr << "# WARNING! FILE " << file << " NOT READ!\n";
             return false;
         }
 
@@ -41,15 +41,11 @@ namespace Faunus {
          */
         inline bool writeFile(const std::string &file, const std::string &s,
                 std::ios_base::openmode mode=std::ios_base::out) {
-            std::ofstream f(file.c_str(), mode);
-            cout << "Writing to file '" << file << "'. ";
+            std::ofstream f(file, mode);
             if (f) {
                 f << s;
-                f.close();
-                cout << "OK!\n";
                 return true;
             }
-            cout << "FAILED!\n";
             return false;
         }
 

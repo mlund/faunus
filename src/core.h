@@ -291,10 +291,10 @@ namespace Faunus {
      * Example code:
      *
      * ```{.cpp}
-     *     Random r1;                                           // default deterministic seed
-     *     Random r2 = json(r1);                               // copy engine state
-     *     Random r3 = R"( {"randomseed" : "hardware"} )"_json; // non-deterministic seed
-     *     Random r1.seed();                                    // non-deterministic seed
+     *     Random r1;                                     // default deterministic seed
+     *     Random r2 = json(r1);                          // copy engine state
+     *     Random r3 = R"( {"seed" : "hardware"} )"_json; // non-deterministic seed
+     *     Random r1.seed();                              // non-deterministic seed
      * ```
      */
     struct Random {
@@ -325,13 +325,15 @@ namespace Faunus {
     void to_json(json &j, const Random &r) {
         std::ostringstream o;
         o << r.engine;
-        j["randomseed"] = o.str();
+        j["seed"] = o.str();
     } //!< Random to json conversion
 
     void from_json(const json &j, Random &r) {
         if (j.is_object()) {
-            auto seed = j.value("randomseed", std::string());
+            auto seed = j.value("seed", std::string());
             try {
+                if (seed=="default")
+                    return;
                 if (seed=="hardware")
                     r.engine = decltype(r.engine)(std::random_device()());
                 else if (!seed.empty()) {
@@ -368,7 +370,7 @@ namespace Faunus {
         CHECK( max==9 );
         CHECK( std::fabs(x/N) == doctest::Approx(4.5).epsilon(0.01) );
 
-        Random r1 = R"( {"randomseed" : "hardware"} )"_json; // non-deterministic seed
+        Random r1 = R"( {"seed" : "hardware"} )"_json; // non-deterministic seed
         Random r2; // default is a deterministic seed
         CHECK( r1() != r2() );
         Random r3 = json(r1); // r1 --> json --> r3

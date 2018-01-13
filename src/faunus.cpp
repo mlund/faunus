@@ -18,7 +18,7 @@ R"(Hoth - the Monte Carlo game you're looking for!
     http://github.com/mlund/faunus
 
     Usage:
-      faunus [-q] [--nobar] [--state=<file>] [--input=<file>] [--output=<file>]
+      faunus [-q] [--nobar] [--nopfx] [--state=<file>] [--input=<file>] [--output=<file>]
       faunus (-h | --help)
       faunus --version
 
@@ -30,14 +30,15 @@ R"(Hoth - the Monte Carlo game you're looking for!
       -q --quiet                 Less verbose output.
       -h --help                  Show this screen.
       --nobar                    No progress bar.
+      --nopfx                    Do not prefix input file with MPI rank.
       --version                  Show version.
 )";
 
 int main( int argc, char **argv )
 {
-    Faunus::MPI::MPIController mpi; // OK also if MPI is unavailable
-
     try {
+        Faunus::MPI::MPIController mpi; // OK also if MPI is unavailable
+
         auto args = docopt::docopt( USAGE,
                 { argv + 1, argv + argc }, true, "Faunus 2.0.0");
 
@@ -51,13 +52,19 @@ int main( int argc, char **argv )
             showProgress = false;
         }
 
+        // --nopfx
+        bool prefix = !args["--nopfx"].asBool();
+
         // --input
         json j;
         auto input = args["--input"].asString();
         if (input=="/dev/stdin")
             std::cin >> j;
-        else
-            j = openjson(mpi.prefix + input);
+        else {
+            if (prefix)
+                input = mpi.prefix + input;
+            j = openjson(input);
+        }
 
         pc::temperature = j.at("temperature").get<double>() * 1.0_K;
         MCSimulation<Tgeometry,Tparticle> sim(j, mpi);

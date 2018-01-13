@@ -49,8 +49,8 @@ namespace Faunus {
          */
         class MPIController {
             public:
-                MPIController(); //!< Constructor
-                ~MPIController(); //!< End of all MPI calls!
+                MPIController();        //!< Constructor
+                ~MPIController();       //!< End of all MPI calls!
                 int nproc() const;      //!< Number of processors in communicator
                 int rank() const;       //!< Rank of process
                 int rankMaster() const; //!< Rank number of the master
@@ -210,7 +210,7 @@ namespace Faunus {
                     void waitrecv();
                     void setFormat(dataformat);
                     void setFormat(const std::string&);
-                    dataformat getFormat();
+                    dataformat getFormat() const;
 
                 private:
                     dataformat format;                             //!< Data format to send/receive - default is XYZQ
@@ -277,7 +277,7 @@ namespace Faunus {
 
         template<typename Tpvec>
             typename ParticleTransmitter<Tpvec>::dataformat
-            ParticleTransmitter<Tpvec>::getFormat() { return format; }
+            ParticleTransmitter<Tpvec>::getFormat() const { return format; }
 
         /*!
          * \param mpi MPI controller to use

@@ -107,6 +107,6 @@ cd $HOME/newproject
 make
 ~~~
 
-Note that all options selected when configuring faunus will be applied to `hello` as well,
-and any changes to the faunus code base will trigger re-compilation upon running `make`.
+All options selected when configuring faunus will be applied to `hello` as well,
+and changes to the faunus code base will trigger re-compilation upon running `make`.
 

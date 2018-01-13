@@ -56,8 +56,8 @@ namespace Faunus {
                 int rankMaster() const; //!< Rank number of the master
                 bool isMaster() const;  //!< Test if current process is master
                 std::ostream& cout();
-                Random random; //!< Random number generator for MPI calls
-                std::string id;        //!< Unique name associated with current rank
+                Random random;          //!< Random number generator for MPI calls
+                std::string id;         //!< Unique name associated with current rank
                 std::string prefix;
 #ifdef ENABLE_MPI
                 MPI_Comm comm=MPI_COMM_WORLD;    //!< Communicator (Default: MPI_COMM_WORLD)
@@ -295,9 +295,9 @@ namespace Faunus {
             void ParticleTransmitter<Tpvec>::pvec2buf(const Tpvec &src) {
                 sendBuf.clear();
                 for (auto &p : src) {
-                    sendBuf.push_back(p.x());
-                    sendBuf.push_back(p.y());
-                    sendBuf.push_back(p.z());
+                    sendBuf.push_back(p.pos.x());
+                    sendBuf.push_back(p.pos.y());
+                    sendBuf.push_back(p.pos.z());
                     if (format==XYZQ)
                         sendBuf.push_back(p.charge);
                     if (format==XYZQI) {
@@ -342,14 +342,14 @@ namespace Faunus {
             void ParticleTransmitter<Tpvec>::buf2pvec(Tpvec &dst) {
                 int i=0;
                 for (auto &p : dst) {
-                    p.x()=recvBuf[i++];
-                    p.y()=recvBuf[i++];
-                    p.z()=recvBuf[i++];
+                    p.pos.x()=recvBuf[i++];
+                    p.pos.y()=recvBuf[i++];
+                    p.pos.z()=recvBuf[i++];
                     if (format==XYZQ)
                         p.charge=recvBuf[i++];
                     if (format==XYZQI) {
                         p.charge=recvBuf[i++];
-                        p.id=(typename particle::Tid)recvBuf[i++];
+                        p.id=(int)recvBuf[i++];
                     }
                 }
                 for (auto &x : recvExtra)

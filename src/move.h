@@ -5,6 +5,7 @@
 #include "average.h"
 #include "analysis.h"
 #include "potentials.h"
+#include "mpi.h"
 
 namespace Faunus {
     namespace Move {
@@ -70,6 +71,10 @@ namespace Faunus {
                     _reject(c);
                     timer.stop();
                 }
+
+                inline virtual double bias(Change &c, double uold, double unew) {
+                    return 0; // du
+                } //!< adds extra energy change not captured by the Hamiltonian
         };
 
         Random Movebase::slump; // static instance of Random (shared for all moves)
@@ -451,6 +456,155 @@ namespace Faunus {
                     }
             }; //!< Pivot move around random harmonic bond axis
 
+#ifdef ENABLE_MPI
+        /**
+         * @brief Class for parallel tempering (aka replica exchange) using MPI
+         *
+         * This will perform replica exchange moves by the following steps:
+         *
+         * -# Randomly find an exchange partner with rank above/under current rank
+         * -# Exchange full particle configuration with partner
+         * -# Calculate energy change using Energy::systemEnergy. Note that this
+         *    energy function can be replaced by setting the `ParallelTempering::usys`
+         *    variable to another function with the same signature (functor wrapper).
+         * -# Send/receive energy change to/from partner
+         * -# Accept or reject based on *total* energy change
+         *
+         * Although not completely correct, the recommended way of performing a temper move
+         * is to do `N` Monte Carlo passes with regular moves and then do a tempering move.
+         * This is because the MPI nodes must be in sync and if you have a system where
+         * the random number generator calls are influenced by the Hamiltonian we could
+         * end up in a deadlock.
+         *
+         * @date Lund 2012
+         */
+        template<class Tspace>
+            class ParallelTempering : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    typedef typename Tspace::Tparticle Tparticle;
+
+                    Tspace& spc; // Space to operate on
+                    MPI::MPIController& mpi;
+
+                    int partner;                  //!< Exchange replica (partner)
+                    enum extradata {VOLUME=0};    //!< Structure of extra data to send
+                    std::map<std::string, Average<double>> accmap;
+
+                    MPI::FloatTransmitter ft;   //!< Class for transmitting floats over MPI
+                    MPI::ParticleTransmitter<Tpvec> pt;//!< Class for transmitting particles over MPI
+
+                    void findPartner() {
+                        int dr=0;
+                        partner = mpi.rank();
+                        (mpi.random()>0.5) ? dr++ : dr--;
+                        (mpi.rank() % 2 == 0) ? partner+=dr : partner-=dr;
+                    } //!< Find replica to exchange with
+
+                    bool goodPartner() {
+                        assert(partner!=mpi.rank() && "Selfpartner! This is not supposed to happen.");
+                        if (partner>=0)
+                            if ( partner<mpi.nproc() )
+                                if ( partner!=mpi.rank() )
+                                    return true;
+                        return false;
+                    } //!< Is partner valid?
+
+                    /*
+                       template<class Tspace>
+                       string ParallelTempering<Tspace>::_info() {
+                       using namespace textio;
+                       std::ostringstream o;
+                       o << pad(SUB,w,"Process rank") << mpi.rank() << endl
+                       << pad(SUB,w,"Number of replicas") << mpi.nproc() << endl
+                       << pad(SUB,w,"Data size format") << short(pt.getFormat()) << endl
+                       << indent(SUB) << "Acceptance:"
+                       << endl;
+                       if (this->cnt>0) {
+                       o.precision(3);
+                       for (auto &m : accmap)
+                       o << indent(SUBSUB) << std::left << setw(12)
+                       << m.first << setw(8) << m.second.cnt << m.second.avg()*100
+                       << percent << endl;
+                       }
+                       return o.str();
+                       }*/
+                    void _to_json(json &j) const override {
+                        j = {
+                            { "replicas", "hej" },
+                            { "dataformat", "hej" }
+                        };
+                    }
+
+                    void _move(Change &change) override {
+                        findPartner();
+                        Tpvec p;
+                        p.resize(spc.p.size());
+                        if (goodPartner()) {
+                            change.all=true;
+                            pt.sendExtra[VOLUME]=spc.geo.getVolume();  // copy current volume for sending
+                            pt.recv(mpi, partner, p); // receive particles
+                            pt.send(mpi, spc.p, partner);     // send everything
+                            pt.waitrecv();
+                            pt.waitsend();
+
+                            if (pt.recvExtra[VOLUME]<1e-6 || spc.p.size() != p.size())
+                                MPI_Abort(mpi.comm, 1);
+
+                            spc.p = p;
+
+                            // update mass centers
+                            for (auto& g : spc.groups)
+                                if (g.atomic==false)
+                                    g.cm = Geometry::massCenter(g.begin(), g.end(),
+                                            spc.geo.boundaryFunc, g.begin()->pos);
+                        }
+                    }
+
+                    double exchangeEnergy(double mydu) {
+                        std::vector<MPI::FloatTransmitter::floatp> duSelf(1), duPartner;
+                        duSelf[0]=mydu;
+                        duPartner = ft.swapf(mpi, duSelf, partner);
+                        return duPartner.at(0);               // return partner energy change
+                    } //!< Exchange energy with partner
+
+                    double bias(Change &change, double uold, double unew) override {
+                        return exchangeEnergy(unew-uold); // Exchange dU with partner (MPI) 
+                    }
+
+                    std::string id() {
+                        std::ostringstream o;
+                        if (mpi.rank() < partner)
+                            o << mpi.rank() << " <-> " << partner;
+                        else
+                            o << partner << " <-> " << mpi.rank();
+                        return o.str();
+                    } //!< Unique string to identify set of partners
+
+                    void _accept(Change &change) override {
+                        if ( goodPartner() )
+                            accmap[ id() ] += 1;
+                    }
+
+                    void _reject(Change &change) override {
+                        if ( goodPartner() )
+                            accmap[ id() ] += 0;
+                    }
+
+                    void _from_json(const json &j) override {
+                        pt.setFormat( j.value("format", std::string("XYZQI") ) );
+                    }
+
+                public:
+                    ParallelTempering(Tspace &spc, MPI::MPIController &mpi ) : spc(spc), mpi(mpi) {
+                        name="temper";
+                        partner=-1;
+                        pt.recvExtra.resize(1);
+                        pt.sendExtra.resize(1);
+                    }
+            };
+#endif
+
         template<typename Tspace>
             class Propagator : public BasePointerVector<Movebase> {
                 private:
@@ -467,7 +621,7 @@ namespace Faunus {
                 public:
                     using BasePointerVector<Movebase>::vec;
                     inline Propagator() {}
-                    inline Propagator(const json &j, Tspace &spc) {
+                    inline Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi) {
                         for (auto &m : j.at("moves")) {// loop over move list
                             size_t oldsize = vec.size();
                             for (auto it=m.begin(); it!=m.end(); ++it) {
@@ -482,7 +636,12 @@ namespace Faunus {
                                         this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
                                         vec.back()->from_json( it.value() );
                                     }
-
+#ifdef ENABLE_MPI
+                                    if (it.key()=="temper") {
+                                        this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
+                                        vec.back()->from_json( it.value() );
+                                    }
+#endif
                                     if (it.key()=="pivot") {
                                         this->template push_back<Move::Pivot<Tspace>>(spc);
                                         vec.back()->from_json( it.value() );
@@ -565,7 +724,8 @@ namespace Faunus {
                     return ( ufinal-(uinit+dusum) ) / uinit; 
                 } //!< Calculates the relative energy drift from initial configuration
 
-                MCSimulation(const json &j) : state1(j), state2(j), moves(j, state2.spc) {
+                MCSimulation(const json &j, MPI::MPIController &mpi) : state1(j), state2(j),
+                moves(j, state2.spc, mpi) {
                     Change c;
                     c.all=true;
                     uinit = state1.pot.energy(c);
@@ -602,7 +762,8 @@ namespace Faunus {
                                     { uold = state1.pot.energy(change); }
                                 }
                                 du = unew - uold;
-                                if ( metropolis(du+change.du) ) { // accept move
+                                if ( metropolis(du + change.du
+                                            + (**mv).bias(change, uold, unew) ) ) { // accept move
                                     state1.sync( state2, change );
                                     (**mv).accept(change);
                                 }

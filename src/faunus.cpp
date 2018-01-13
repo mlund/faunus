@@ -60,7 +60,7 @@ int main( int argc, char **argv )
             j = openjson(mpi.prefix + input);
 
         pc::temperature = j.at("temperature").get<double>() * 1.0_K;
-        MCSimulation<Tgeometry,Tparticle> sim(j);
+        MCSimulation<Tgeometry,Tparticle> sim(j, mpi);
 
         // --state
         if (args["--state"]) {

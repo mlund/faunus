@@ -92,27 +92,27 @@ either before _or_ after the bond with equal probability.
 `format=XYZQI`   | Particle properties to copy between replicas
 
 We consider an extended ensemble, consisting of _n_
-sub-systems or replicas, each in a different thermodynamic state (different
+sub-systems or replicas, each in a distinct thermodynamic state (different
 Hamiltonians) and with the total energy
-
 $$
 U = \sum_i^n\mathcal{H}_i(\mathcal{R_i})
 $$
-
 The parallel tempering move performs a swap move where coordinate
-spaces between two sub-systems are exchanged,
+spaces (positions, volume) between random, neighboring sub-systems, _i_ and _j_, are exchanged,
+$$
+\mathcal{R}_i^{\prime} = \mathcal{R}_j \quad \text{and} \quad \mathcal{R}_j^{\prime} = \mathcal{R}_i
+$$
+and the energy change of the _extended ensemble_, $\Delta U_{i\leftrightarrow j}$, is used in the
+Metropolis acceptance criteria.
 
-$$
-\mathcal{R_i^{\prime}} = R_j \quad \text{and} \quad \mathcal{R_j^{\prime}} = R_i
-$$
+Parallel tempering requires compilation with MPI and the number
+of replicas, _n_, exactly matches the number of processes. Each
+replica prefixes input and output files with `mpi0.`, `mpi1.`,
+etc. and only exchange between neighboring processes is performed.
 
 **Note:**
-Parallel tempering requires compilation with MPI and the number
-of replicas, _n_, exactly match the number of processes. Each
-replica will prefix input and output files with `mpi0.`, `mpi1.`,
-etc. and only exchange between neighbors is performed.
 Parallel tempering is currently limited to systems with
-constant number of particle, $N$.
+constant number of particles, $N$.
 {: .notice--info}
 
 ## Volume Move <a name="volumemove"></a>

@@ -63,3 +63,26 @@ with open('out.json') as f:
 ~~~ bash
 faunus --input in.json --state state
 ~~~
+
+## Message Passing Interface
+
+Running with MPI spawns `nproc` processes that may or may not communicate
+with each other. If `nproc>1`, input and output files are prefixed with
+`mpi{rank}.` where `{rank}` is the rank or process number.
+
+The following starts two processes, reading input from `mpi0.in.json` and
+`mpi1.in.json`. All output files, including those from any analysis are
+prefixed with `mpi0.` and `mpi1.`.
+
+~~~
+mpirun -np 2 ./faunus -i in.json 
+~~~
+
+If all processes take the same input:
+
+~~~
+mpirun -np 2 ./faunus --nopfx --input in.json
+mpirun -np 2 --stdin all ./faunus < in.json
+~~~
+
+

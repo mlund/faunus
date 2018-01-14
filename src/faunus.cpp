@@ -32,6 +32,13 @@ R"(Hoth - the Monte Carlo game you're looking for!
       --nobar                    No progress bar.
       --nopfx                    Do not prefix input file with MPI rank.
       --version                  Show version.
+
+    If running with MPI and the number of processes is larger than 1:
+
+    1. input/output will be prefixed with "mpi{rank}."
+    2. standard output will be redirected to "mpi{rank}.stdout"
+    3. Input prefixing can be suppressed with --nopfx,
+       useful for embarrassingly parallel runs.
 )";
 
 int main( int argc, char **argv )

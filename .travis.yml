@@ -1,17 +1,76 @@
-sudo:
-  - false
-dist:
-  - trusty
-language:
-  - c++
-addons:
-  apt:
-    sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
-    packages: ['g++-7', 'clang-5.0']
-  env:
-    - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
-compiler:
-  - clang
+language: cpp
+dist: trusty
+sudo: required
+group: edge
+
+matrix:
+  include:
+
+  # OSX / Clang
+
+  - os: osx
+    osx_image: xcode8.3
+
+  - os: osx
+    osx_image: xcode9
+
+  - os: osx
+    osx_image: xcode9.1
+
+  - os: osx
+    osx_image: xcode9.2
+
+  # Linux / GCC
+
+  - os: linux
+    compiler: gcc
+    env: COMPILER=g++-5
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test']
+        packages: ['g++-5', 'ninja-build']
+
+  - os: linux
+    compiler: gcc
+    env: COMPILER=g++-6
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test']
+        packages: ['g++-6', 'ninja-build']
+
+  - os: linux
+    compiler: gcc
+    env: COMPILER=g++-7
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test']
+        packages: ['g++-7', 'ninja-build']
+
+  # Linux / Clang
+
+  - os: linux
+    compiler: clang
+    env: COMPILER=clang++-3.9
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test']
+        packages: ['g++-6', 'clang-3.9', 'ninja-build']
+
+  - os: linux
+    compiler: clang
+    env: COMPILER=clang++-4.0
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0']
+        packages: ['g++-6', 'clang-4.0', 'ninja-build']
+
+  - os: linux
+    compiler: clang
+    env: COMPILER=clang++-5.0
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
+        packages: ['g++-6', 'clang-5.0', 'ninja-build']
 
 install:
   - |
@@ -19,9 +78,19 @@ install:
       CMAKE_URL="https://cmake.org/files/v3.9/cmake-3.9.6-Linux-x86_64.tar.gz"
       mkdir cmake && travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
       export PATH=${DEPS_DIR}/cmake/bin:${PATH}
+    else
+      brew upgrade cmake || brew install cmake
     fi
   - cmake --version # https://github.com/boostorg/hana/blob/master/.travis.yml
 
 script:
-  - CXX=clang++-5.0 CC=clang-5.0 cmake . -DENABLE_PYTHON=off
-  - make faunus
+  # make sure CXX is correctly set
+  - if [[ "${COMPILER}" != "" ]]; then export CXX=${COMPILER}; fi
+  - $CXX --version
+
+  # show OS/compiler version
+  - uname -a
+
+  - cmake . -DENABLE_PYTHON=off
+  - make faunus tests
+  - ctest --output-on-failure -j1

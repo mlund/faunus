@@ -22,7 +22,7 @@ install:
       mkdir cmake && travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
       export PATH=${DEPS_DIR}/cmake/bin:${PATH}
     fi
-    - cmake --version # https://github.com/boostorg/hana/blob/master/.travis.yml
+  - cmake --version # https://github.com/boostorg/hana/blob/master/.travis.yml
 
 script:
   - CXX=clang++-5.0 CC=clang-5.0 cmake . -DENABLE_PYTHON=off

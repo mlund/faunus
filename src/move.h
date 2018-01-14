@@ -510,30 +510,18 @@ namespace Faunus {
                         return false;
                     } //!< Is partner valid?
 
-                    /*
-                       template<class Tspace>
-                       string ParallelTempering<Tspace>::_info() {
-                       using namespace textio;
-                       std::ostringstream o;
-                       o << pad(SUB,w,"Process rank") << mpi.rank() << endl
-                       << pad(SUB,w,"Number of replicas") << mpi.nproc() << endl
-                       << pad(SUB,w,"Data size format") << short(pt.getFormat()) << endl
-                       << indent(SUB) << "Acceptance:"
-                       << endl;
-                       if (this->cnt>0) {
-                       o.precision(3);
-                       for (auto &m : accmap)
-                       o << indent(SUBSUB) << std::left << setw(12)
-                       << m.first << setw(8) << m.second.cnt << m.second.avg()*100
-                       << percent << endl;
-                       }
-                       return o.str();
-                       }*/
                     void _to_json(json &j) const override {
                         j = {
                             { "replicas", mpi.nproc() },
                             { "datasize", pt.getFormat() }
                         };
+                        json &_j = j["exchange"];
+                        _j = json::object();
+                        for (auto &m : accmap)
+                            _j[m.first] = {
+                                {"attempts", m.second.cnt},
+                                {"acceptance", m.second.avg()}
+                            };
                     }
 
                     void _move(Change &change) override {
@@ -557,7 +545,7 @@ namespace Faunus {
                             for (auto& g : spc.groups)
                                 if (g.atomic==false)
                                     g.cm = Geometry::massCenter(g.begin(), g.end(),
-                                            spc.geo.boundaryFunc, g.begin()->pos);
+                                            spc.geo.boundaryFunc, -g.begin()->pos);
                         }
                     }
 
@@ -784,7 +772,6 @@ namespace Faunus {
 
                 void to_json(json &j) {
                     j = state1.spc.info();
-                    j["random"] = Move::Movebase::slump;
                     j["temperature"] = pc::temperature / 1.0_K;
                     j["moves"] = moves;
                     j["energy"].push_back(state1.pot);

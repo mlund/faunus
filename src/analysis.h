@@ -340,8 +340,9 @@ namespace Faunus {
                         if ( suffix == "state" )
                             writeFunc = [&spc](const std::string &file) {
                                 std::ofstream f(file);
-                                if (f)
+                                if (f) {
                                     f << std::setw(4) << json(spc);
+                                }
                             };
                     }
 

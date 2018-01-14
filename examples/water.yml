@@ -1,4 +1,4 @@
-random: {seed: hardware}
+random: {seed: default}
 temperature: 300
 geometry: {length: 20.00}
 mcloop: {macro: 10, micro: 1000}
@@ -24,6 +24,7 @@ moves:
     - moltransrot: {molecule: water, dp: 1, dprot: 0, repeat: N}
     - transrot: {molecule: water, repeat: N}
     - pivot: {dprot: 1, molecule: water}
+    - temper: {}
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - xtcfile: {file: traj.xtc, nstep: 10 }

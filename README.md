@@ -1,6 +1,4 @@
-[![Documentation](https://codedocs.xyz/mlund/faunus.svg)](https://mlund.github.io/webtest)
 [![Build Status](https://travis-ci.org/mlund/neofaunus.svg?branch=master)](https://travis-ci.org/mlund/neofaunus)
-[![Faunus](doc/images/animation.gif)](https://github.com/mlund/faunus)
 
 Welcome to Faunus
 =================

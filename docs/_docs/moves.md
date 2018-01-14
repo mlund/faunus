@@ -94,14 +94,18 @@ either before _or_ after the bond with equal probability.
 We consider an extended ensemble, consisting of _n_
 sub-systems or replicas, each in a distinct thermodynamic state (different
 Hamiltonians) and with the total energy
+
 $$
 U = \sum_i^n\mathcal{H}_i(\mathcal{R_i})
 $$
+
 The parallel tempering move performs a swap move where coordinate
 spaces (positions, volume) between random, neighboring sub-systems, _i_ and _j_, are exchanged,
+
 $$
 \mathcal{R}_i^{\prime} = \mathcal{R}_j \quad \text{and} \quad \mathcal{R}_j^{\prime} = \mathcal{R}_i
 $$
+
 and the energy change of the _extended ensemble_, $\Delta U_{i\leftrightarrow j}$, is used in the
 Metropolis acceptance criteria.
 

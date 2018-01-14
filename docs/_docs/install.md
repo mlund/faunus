@@ -13,7 +13,7 @@ on any unix operating systems and _possibly_ under Cygwin (Windows).
 Optional packages:
 
 - Python 3.6 or higher with `ruamel_yaml` or `yaml`
-- Message Parsing Interface (MPI)
+- Message Passing Interface (MPI)
 
 ## Compiling
 
@@ -32,7 +32,7 @@ The following options are available:
 Option                             | Description
 ---------------------------------  | ---------------------------------------
 `-DENABLE_MPI=OFF`                 | Enable MPI
-`-DENABLE_OPENMP=ON`               | Enable OpenMP support
+`-DENABLE_OPENMP=OFF`              | Enable OpenMP support
 `-DENABLE_PYTHON=ON`               | Build python bindings (experimental)
 `-DENABLE_POWERSASA=ON`            | Enable SASA routines (external download)
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`| Alternatives: `Debug` or `Release` (faster)

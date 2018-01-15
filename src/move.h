@@ -460,23 +460,13 @@ namespace Faunus {
         /**
          * @brief Class for parallel tempering (aka replica exchange) using MPI
          *
-         * This will perform replica exchange moves by the following steps:
-         *
-         * -# Randomly find an exchange partner with rank above/under current rank
-         * -# Exchange full particle configuration with partner
-         * -# Calculate energy change using Energy::systemEnergy. Note that this
-         *    energy function can be replaced by setting the `ParallelTempering::usys`
-         *    variable to another function with the same signature (functor wrapper).
-         * -# Send/receive energy change to/from partner
-         * -# Accept or reject based on *total* energy change
-         *
          * Although not completely correct, the recommended way of performing a temper move
          * is to do `N` Monte Carlo passes with regular moves and then do a tempering move.
          * This is because the MPI nodes must be in sync and if you have a system where
          * the random number generator calls are influenced by the Hamiltonian we could
          * end up in a deadlock.
          *
-         * @date Lund 2012
+         * @date Lund 2012, 2018
          */
         template<class Tspace>
             class ParallelTempering : public Movebase {
@@ -525,21 +515,27 @@ namespace Faunus {
                     }
 
                     void _move(Change &change) override {
+                        double Vold = spc.geo.getVolume();
                         findPartner();
-                        Tpvec p;
+                        Tpvec p; // temperary storage
                         p.resize(spc.p.size());
                         if (goodPartner()) {
                             change.all=true;
-                            pt.sendExtra[VOLUME]=spc.geo.getVolume();  // copy current volume for sending
+                            pt.sendExtra[VOLUME]=Vold;  // copy current volume for sending
                             pt.recv(mpi, partner, p); // receive particles
                             pt.send(mpi, spc.p, partner);     // send everything
                             pt.waitrecv();
                             pt.waitsend();
 
-                            if (pt.recvExtra[VOLUME]<1e-6 || spc.p.size() != p.size())
+                            double Vnew = pt.recvExtra[VOLUME];
+                            if (Vnew<1e-9 || spc.p.size() != p.size())
                                 MPI_Abort(mpi.comm, 1);
 
+                            if (std::fabs(Vnew-Vold)>1e-9)
+                               change.dV=true; 
+
                             spc.p = p;
+                            spc.geo.setVolume(Vnew);
 
                             // update mass centers
                             for (auto& g : spc.groups)

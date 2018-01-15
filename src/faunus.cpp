@@ -18,13 +18,11 @@ R"(Hoth - the Monte Carlo code you're looking for!
     http://github.com/mlund/faunus
 
     Usage:
-
       faunus [-q] [--nobar] [--nopfx] [--state=<file>] [--input=<file>] [--output=<file>]
       faunus (-h | --help)
       faunus --version
 
     Options:
-
       -i <file> --input <file>   Input file [default: /dev/stdin].
       -o <file> --output <file>  Output file [default: out.json].
       -s <file> --state <file>   State file to start from.

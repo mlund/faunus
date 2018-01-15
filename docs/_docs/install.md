@@ -62,7 +62,8 @@ if needed, renamed:
 
 ~~~ bash
 otool -L pyfaunus.so
-install_name_tool -change libpython3.6.dylib $HOME/miniconda/lib/libpython3.6.dylib pyfaunus.so
+install_name_tool -change libpython3.6.dylib \
+  $HOME/miniconda/lib/libpython3.6.dylib pyfaunus.so
 ~~~
 
 ## Resetting the build system

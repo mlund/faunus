@@ -477,11 +477,13 @@ namespace Faunus {
     struct QuaternionRotate : public std::pair<Eigen::Quaterniond, Eigen::Matrix3d> {
 
         typedef std::pair<Eigen::Quaterniond, Eigen::Matrix3d> base;
-        using base::pair;
+        //using base::pair;
         using base::first;
         using base::second;
 
         double angle=0; //!< Rotation angle
+
+        QuaternionRotate() {};
 
         QuaternionRotate(double angle, Point u) { set(angle,u); };
 

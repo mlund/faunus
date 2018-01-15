@@ -222,6 +222,22 @@ if (ENABLE_PYTHON)
 
 endif ()
 
+add_custom_target(
+    manual
+    COMMENT "Building PDF manual"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/_docs
+    COMMAND pandoc -s -S --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
+    --highlight-style=tango
+    index.md
+    install.md
+    running.md
+    topology.md
+    energy.md
+    moves.md
+    analysis.md 
+)
+set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
     string(REPLACE "NDEBUG" "_ndebug" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"

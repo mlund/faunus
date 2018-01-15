@@ -13,17 +13,18 @@ typedef Geometry::Cuboid Tgeometry;
 typedef Particle<Charge> Tparticle;
 
 static const char USAGE[] =
-R"(Hoth - the Monte Carlo game you're looking for!
+R"(Hoth - the Monte Carlo code you're looking for!
 
     http://github.com/mlund/faunus
 
     Usage:
+
       faunus [-q] [--nobar] [--nopfx] [--state=<file>] [--input=<file>] [--output=<file>]
       faunus (-h | --help)
       faunus --version
 
     Options:
-      
+
       -i <file> --input <file>   Input file [default: /dev/stdin].
       -o <file> --output <file>  Output file [default: out.json].
       -s <file> --state <file>   State file to start from.
@@ -33,10 +34,10 @@ R"(Hoth - the Monte Carlo game you're looking for!
       --nopfx                    Do not prefix input file with MPI rank.
       --version                  Show version.
 
-    If running with MPI and the number of processes is larger than 1:
+    Multiple processes using MPI:
 
-    1. input/output will be prefixed with "mpi{rank}."
-    2. standard output will be redirected to "mpi{rank}.stdout"
+    1. input/output/state/analysis files are prefixed with "mpi{rank}."
+    2. standard output is redirected to "mpi{rank}.stdout"
     3. Input prefixing can be suppressed with --nopfx,
        useful for embarrassingly parallel runs.
 )";
@@ -69,7 +70,7 @@ int main( int argc, char **argv )
             std::cin >> j;
         else {
             if (prefix)
-                input = mpi.prefix + input;
+                input = Faunus::MPI::prefix + input;
             j = openjson(input);
         }
 
@@ -78,7 +79,7 @@ int main( int argc, char **argv )
 
         // --state
         if (args["--state"]) {
-            std::string state = mpi.prefix + args["--state"].asString();
+            std::string state = Faunus::MPI::prefix + args["--state"].asString();
             std::ifstream f(state);
             if (f) {
                 if (!quiet)
@@ -117,7 +118,7 @@ int main( int argc, char **argv )
             mpi.cout() << "relative drift = " << sim.drift() << endl;
 
         // --output
-        std::ofstream f(mpi.prefix + args["--output"].asString());
+        std::ofstream f(Faunus::MPI::prefix + args["--output"].asString());
         if (f) {
             json j = sim;
             j["analysis"] = analysis;

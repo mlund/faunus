@@ -4,6 +4,7 @@
 #include "space.h"
 #include "io.h"
 #include "energy.h"
+#include "mpi.h"
 
 namespace Faunus {
 
@@ -267,7 +268,7 @@ namespace Faunus {
                 }
 
                 inline void _from_json(const json &j) override {
-                    file = j.at("file");
+                    file = MPI::prefix + j.at("file").get<std::string>();
                     if (f)
                         f.close();
                     f.open(file);
@@ -329,6 +330,7 @@ namespace Faunus {
                         steps = j.value("nstep", -1);
                         file = j.at("file");
                         std::string suffix = file.substr(file.find_last_of(".") + 1);
+                        file = MPI::prefix + file;
                         if ( suffix == "aam" )
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatAAM::save(file, s.p); },
@@ -541,7 +543,7 @@ namespace Faunus {
                     j["file"] = file;
                 }
                 void _from_json(const json &j) override {
-                    file = j.at("file");
+                    file = MPI::prefix + j.at("file").get<std::string>();
                 }
 
                 FormatXTC xtc;

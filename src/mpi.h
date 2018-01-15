@@ -29,6 +29,8 @@ namespace Faunus {
      */
     namespace MPI {
 
+        static std::string prefix;
+
         /**
          * @brief Main controller for MPI calls
          *
@@ -58,7 +60,6 @@ namespace Faunus {
                 std::ostream& cout();
                 Random random;          //!< Random number generator for MPI calls
                 std::string id;         //!< Unique name associated with current rank
-                std::string prefix;
 #ifdef ENABLE_MPI
                 MPI_Comm comm=MPI_COMM_WORLD;    //!< Communicator (Default: MPI_COMM_WORLD)
 #endif
@@ -84,8 +85,8 @@ namespace Faunus {
 #endif
             id=std::to_string(_rank);
             if (_nproc>1) {
-                prefix = "mpi" + id + ".";
-                f.open((prefix+"stdout").c_str());
+                MPI::prefix = "mpi" + id + ".";
+                f.open((MPI::prefix+"stdout").c_str());
             }
         }
 
@@ -113,7 +114,7 @@ namespace Faunus {
             j = {
                 {"rank", m.rank()},
                 {"nproc", m.nproc()},
-                {"prefix", m.prefix},
+                {"prefix", MPI::prefix},
                 {"master", m.rankMaster()}
             };
         }

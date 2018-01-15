@@ -50,7 +50,7 @@ namespace Faunus {
 
     template<class T>
         int size(T &rng) {
-            return std::distance(rng.begin(), rng.end());
+            return ranges::distance(rng.begin(), rng.end());
         } //!< Size of arbitrary range
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

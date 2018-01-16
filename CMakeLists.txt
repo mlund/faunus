@@ -20,7 +20,7 @@ if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
         CACHE STRING "Flags used by the compiler during Release with Debug Info builds" FORCE)
 endif()
 
-option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" off)
+option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" on)
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 
 option(ENABLE_OPENMP "Try to use OpenMP parallization" off)
@@ -228,7 +228,7 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/_docs
     COMMAND pandoc -s -S --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
     --highlight-style=tango
-    index.md
+    docs.md
     install.md
     running.md
     topology.md

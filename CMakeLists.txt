@@ -67,8 +67,8 @@ set(ProgressIncludeDir ${source_dir}/../../src/)
 
 ExternalProject_Add( modernjson
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/nlohmann/json/releases/download/v3.0.0/json.hpp"
-    URL_MD5 513357d232a0185a3d8d0f3c665744fb
+    URL "https://github.com/nlohmann/json/releases/download/v3.0.1/json.hpp"
+    URL_MD5 d00f62b5574bf20251b13d2ed0fd26db
     UPDATE_DISCONNECTED ON
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
@@ -99,7 +99,7 @@ ExternalProject_Add(project_docopt
 ExternalProject_Get_Property(project_docopt binary_dir)
 ExternalProject_Get_Property(project_docopt source_dir)
 set(DocoptIncludeDir ${source_dir})
-add_library(docopt STATIC IMPORTED)
+add_library(docopt STATIC IMPORTED GLOBAL)
 add_dependencies(docopt project_docopt)
 set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 

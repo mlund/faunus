@@ -2,18 +2,28 @@
 ---
 # Installation
 
-Faunus has been tested developed on MacOS/Linux, but should work
-on any unix operating systems and _possibly_ under Cygwin (Windows).
+Faunus is [continuously tested on macOS/Linux](https://travis-ci.org/mlund/neofaunus),
+but should work on most unix operating systems and _possibly_ under Cygwin (Windows).
 
-## Requirements
+## Prerequisite
 
-- CMake 3.9 or higher
-- C/C++14 compiler (clang, gcc etc.)
+### Required
 
-Optional packages:
+- CMake 3.9+
+- C/C++14 compiler (Clang 3.9+, GCC 6+, etc.)
+
+### Optional
 
 - Python 3.6 or higher with `ruamel_yaml` or `yaml`
 - Message Passing Interface (MPI)
+
+### Notes for macOS
+
+Apple's free develope tools Xcode 9+, is an easy way to install
+the Clang C++ compiler. CMake can be installed with a
+[pre-compiled binary](https://cmake.org/download) directly from Kitware, or using
+[MacPorts](http://www.macports.org), or
+[Homebrew](https://brew.sh).
 
 ## Compiling
 
@@ -110,4 +120,3 @@ make
 
 All options selected when configuring faunus will be applied to `hello` as well,
 and changes to the faunus code base will trigger re-compilation upon running `make`.
-

@@ -41,7 +41,7 @@ Table below.
 `mu=[0,0,0]`  | Dipole moment vector [Debye]
 `Ninit=0`     | Initial number of atoms (used by `MoleculeData` to insert atoms
 `mw=1`        | Molecular weight [g/mol]
-`q=0`         | Valency / partial charge number [$$e$$]
+`q=0`         | Valency / partial charge number [$e$]
 `r=0`         | Radius = `sigma/2` [Å]
 `sigma=0`     | `2r` [Å] (overrides radius)
 `tension=0`   | Surface tension [kJ/mol/Å$^2$]
@@ -74,7 +74,7 @@ Properties of molecules and their default values:
 `keeppos=false`     | Keep original positions of `structure`
 `Ninactive=0`       | Deactivates `Ninactive` of the inserted molecules
 `Ninit=0`           | How many molecules to insert
-`structure`         | Structure file (`.pqr|.aam|.xyz`) - required is `atomic=false`
+`structure`         | Structure file (`.pqr|.aam|.xyz`) - required if `atomic=false`
 `bondlist`          | List of _internal_ bonds (harmonic, dihedrals etc.)
 
 ## Processes

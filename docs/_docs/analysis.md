@@ -54,8 +54,7 @@ For atomic groups, densities of individual atom types are reported.
 We sample the pair correlation function between atom id's _i_ and _j_,
 
 $$
-g_{ij}(r) = \frac{ N_{ij}(r) }{ \sum_{r=0}^{\infty} N_{ij}(r) }
-\cdot \frac{ \langle V \rangle }{ V(r) }
+g_{ij}(r) = \frac{ N_{ij}(r) }{ \sum_{r=0}^{\infty} N_{ij}(r) } \cdot \frac{ \langle V \rangle }{ V(r) }
 $$
 
 where $N_{ij}(r)$ is the number of observed pairs, accumulated over the
@@ -120,8 +119,7 @@ molecular mass centers and atomic positions. The excess pressure is evatuated
 as a Widom average:
 
 $$
-p^{ex} = -\frac{k_BT}{\Delta V} \ln
-    \langle e^{-\delta u / k_BT} \rangle_{NVT}
+p^{ex} = -\frac{k_BT}{\Delta V} \ln \langle e^{-\delta u / k_BT} \rangle_{NVT}
 $$
 
 For more advanced applications of volume perturbations (pressure tensors, surface tension etc.)

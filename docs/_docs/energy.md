@@ -6,6 +6,7 @@ MathJax.Hub.Config({
 });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+[Improve this page]({{site.github.repository_url}}/blob/master/docs/{{page.path}}){: .btn .btn--primary .btn--small}
 
 # Energy <a name="energy"></a>
 

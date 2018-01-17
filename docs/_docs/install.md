@@ -1,5 +1,7 @@
 ---
 ---
+[![Edit](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
+
 # Installation
 
 Faunus is continuously [tested](https://travis-ci.org/mlund/neofaunus) on macOS/Linux,

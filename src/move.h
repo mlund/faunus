@@ -687,13 +687,24 @@ namespace Faunus {
 
                     void sync(State &other, Change &change) {
                         spc.sync( other.spc, change );
-                        // sync energy here...
+                        pot.sync( other.pot, change );
                     }
                 }; //!< Contains everything to describe a state
 
-                State state1, state2;
+                State state1, // old state
+                      state2; // new state (trial);
                 double uinit=0, dusum=0;
                 Average<double> uavg;
+
+                void init() {
+                    state1.pot.key = Energy::Energybase::OLD; // this is the old energy
+                    state2.pot.key = Energy::Energybase::NEW; // this is the new energy (trial)
+                    dusum=0;
+                    Change c; c.all=true;
+                    uinit = state2.pot.energy(c);
+                    state1.sync(state2, c); // do this AFTER energy eval. on state2!
+                    assert(uinit == state1.pot.energy(c));
+                }
 
             public:
                 Move::Propagator<Tspace> moves;
@@ -706,29 +717,18 @@ namespace Faunus {
                 const auto& particles() const { return state1.spc.p; }
 
                 double drift() {
-                    Change c;
-                    c.all=true;
+                    Change c; c.all=true;
                     double ufinal = state1.pot.energy(c);
                     return ( ufinal-(uinit+dusum) ) / uinit; 
                 } //!< Calculates the relative energy drift from initial configuration
 
-                MCSimulation(const json &j, MPI::MPIController &mpi) : state1(j), state2(j),
-                moves(j, state2.spc, mpi) {
-                    Change c;
-                    c.all=true;
-                    uinit = state1.pot.energy(c);
-                    state2.sync(state1, c);
-                    assert(uinit == state2.pot.energy(c));
+                MCSimulation(const json &j, MPI::MPIController &mpi) : state1(j), state2(j), moves(j, state2.spc, mpi) {
+                    init();
                 }
 
                 void restore(const json &j) {
-                    dusum=0;
-                    Change c;
-                    c.all=true;
                     state1.spc = j;
-                    state2.spc.sync(state1.spc, c);
-                    uinit = state1.pot.energy(c);
-                    assert(uinit == state2.pot.energy(c));
+                    init();
                 } //!< restore system from previously saved state
 
                 void move() {

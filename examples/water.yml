@@ -18,13 +18,13 @@ energy:
     - bonded: {}
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: fanourgakis, epsr: 1, cutoff: 9}
+        coulomb: {type: fanourgakis, epsr: 1, cutoff: 50}
         cutoff_g2g: 100
 moves:
-    - moltransrot: {molecule: water, dp: 1, dprot: 0, repeat: N}
-    - transrot: {molecule: water, repeat: N}
-    - pivot: {dprot: 1, molecule: water}
-    - temper: {}
+    - moltransrot: {molecule: water, dp: 1, dprot: 1, repeat: N}
+    - _transrot: {molecule: water, repeat: N}
+    - _pivot: {dprot: 1, molecule: water}
+    - _temper: {}
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - xtcfile: {file: traj.xtc, nstep: 10 }

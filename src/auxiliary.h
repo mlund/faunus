@@ -610,11 +610,11 @@ namespace Faunus
      * cout << m(i,j)==m(j,i); // -> true
      * ~~~
      */
-    template<class T=double>
+    template<class T>
         class PairMatrix
         {
             public:
-                std::vector <std::vector<T>> m; // symmetric matrix (mem.wasteful - fast access)
+                std::vector<std::vector<T>> m; // symmetric matrix (mem.wasteful - fast access)
                 void resize( size_t n )
                 {
                     m.resize(n);
@@ -624,13 +624,12 @@ namespace Faunus
 
                 PairMatrix( size_t n = 0 ) { resize(n); }
 
-                size_t size() const { return m.size(); }
+                auto size() const { return m.size(); }
 
-                const T &operator()( size_t i, size_t j ) const
+                const T& operator()( size_t i, size_t j ) const
                 {
                     assert(i < m.size());
                     assert(j < m[i].size());
-                    //assert( m[i][j]==m[j][i] );
                     return m[i][j];
                 }
 
@@ -1907,7 +1906,8 @@ namespace Faunus
             auto begin() const noexcept { return vec.begin(); }
             auto end() noexcept { return vec.end(); }
             auto end() const noexcept { return vec.end(); }
-            auto empty() const { return vec.empty(); }
+            auto empty() const noexcept { return vec.empty(); }
+            auto size() const noexcept { return vec.size(); }
 
             // Disable copy operators since we don't wan't to override our pointers
             inline BasePointerVector() {};

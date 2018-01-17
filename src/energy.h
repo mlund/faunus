@@ -14,12 +14,16 @@
 namespace Faunus {
     namespace Energy {
 
+
         class Energybase {
             public:
+                enum keys {OLD, NEW, NONE};
+                keys key=NONE;
                 std::string name;
                 std::string cite;
                 virtual double energy(Change&)=0; //!< energy due to change
                 inline virtual void to_json(json &j) const {}; //!< json output
+                inline virtual void sync(Energybase*, Change&) {}
         };
 
         void to_json(json &j, const Energybase &base) {
@@ -259,7 +263,9 @@ namespace Faunus {
                 private:
                     double g2gcnt=0, g2gskip=0;
                 protected:
+                    typedef typename Tspace::Tgroup Tgroup;
                     double Rc2_g2g=pc::infty;
+
                     void to_json(json &j) const override {
                         j = pairpot;
                         json t = json::object();
@@ -291,15 +297,14 @@ namespace Faunus {
                             return u;
                         }
 
-                    template<typename T>
-                        double g2g(const T &g1, const T &g2) {
-                            double u = 0;
-                            if (!cut(g1,g2))
-                                for (auto &i : g1)
-                                    for (auto &j : g2)
-                                        u += i2i(i,j);
-                            return u;
-                        }
+                    virtual double g2g(const Tgroup &g1, const Tgroup &g2) {
+                        double u = 0;
+                        if (!cut(g1,g2))
+                            for (auto &i : g1)
+                                for (auto &j : g2)
+                                    u += i2i(i,j);
+                        return u;
+                    }
 
                     template<typename T>
                         double g2all(const T &g1) {
@@ -309,15 +314,6 @@ namespace Faunus {
                                     u += g2g( *i, *j );
                                 return u;
                             }
-                        }
-
-                    template<typename T>
-                        double index2index(const T &index1, const T &index2) {
-                            double u = 0;
-                            for (auto i : index1)
-                                for (auto j : index2)
-                                    u += i2i(spc.p[i], spc.p[j]);
-                            return u;
                         }
 
                 public:
@@ -407,6 +403,34 @@ namespace Faunus {
                     }
 
             }; //!< Nonbonded, pair-wise additive energy term
+
+        template<typename Tspace, typename Tpairpot>
+            class NonbondedCached : public Nonbonded<Tspace,Tpairpot> {
+                private:
+                    typedef Nonbonded<Tspace,Tpairpot> base;
+                    typedef typename Tspace::Tgroup Tgroup;
+
+                    double g2g(const Tgroup &g1, const Tgroup &g2) override {
+                        int i = &g1 - &base::spc.groups.front();
+                        int j = &g2 - &base::spc.groups.front();
+                        if (base::key==Energybase::NEW)        // if this is from the trial system,
+                            cache.set(i, j, base::g2g(g1,g2)); // then update cache
+                        return cache(i,j);                     // return (cached) value
+                    }
+
+                public:
+                    PairMatrix<double> cache;
+                    NonbondedCached(const json &j, Tspace &spc) : base(j,spc) {
+                        base::name += "EM";
+                        cache.resize( spc.groups.size() );
+                    }
+
+                    void sync(Energybase *basePtr, Change &change) override {
+                        auto other = dynamic_cast<decltype(this)>(basePtr);
+                        assert(other);
+                        cache = other->cache;
+                    } //!< Copy energy matrix from other
+            }; //!< Nonbonded with cached energies (Energy Matrix)
 
 #ifdef FAU_POWERSASA
         template<class Tspace>
@@ -540,6 +564,12 @@ namespace Faunus {
                             du += i->energy(change);
                         return du;
                     } //!< Energy due to changes
+
+                    void sync(Hamiltonian &other, Change &change) {
+                        assert(other.size()==size());
+                        for (size_t i=0; i<size(); i++)
+                            this->vec[i]->sync( other.vec[i].get(), change);
+                    }
 
             }; //!< Aggregates and sum energy terms
 

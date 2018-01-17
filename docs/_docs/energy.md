@@ -16,6 +16,11 @@ $$
 \mathcal{H}_{sys} = U_1 + U_2 + ...
 $$
 
+Be aware that energies in Monte Carlo may well contain implicit degrees of freedom, i.e. have the
+character of free energies and thus be temperature dependent. This is of no consequence for sampling
+density of states, but must be taken care of when evaluating derived functions such as energies, entropies,
+pressure etc.
+
 The energy terms are specified in `energy` at the top level input.
 For example:
 

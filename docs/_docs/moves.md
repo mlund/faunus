@@ -97,7 +97,7 @@ sub-systems or replicas, each in a distinct thermodynamic state (different
 Hamiltonians) and with the total energy
 
 $$
-U = \sum_i^n\mathcal{H}_i(\mathcal{R_i})
+U = \sum_i^n\mathcal{H}_i(\mathcal{R}_i)
 $$
 
 The parallel tempering move performs a swap move where coordinate

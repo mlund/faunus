@@ -228,6 +228,7 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/_docs
     COMMAND pandoc -s -S --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
     --highlight-style=tango
+    header.md
     docs.md
     install.md
     running.md

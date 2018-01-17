@@ -67,7 +67,6 @@ $V(r)$                 | Dimensions (`dim`)
 :----------------------- | :----------------------------------------
 $4\pi r^2 dr$          | 3 (for particles in free space, default)
 $2\pi r dr$            | 2 (for particles confined on a plane)
-$2\pi R sin(r/R) dr$   | 2 (for particles confined on a 2D hypersphere surface, also needs input `Rhypersphere`)
 $dr$                   | 1 (for particles confined on a line)
 
 ### Molecular

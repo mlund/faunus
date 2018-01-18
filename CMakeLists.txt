@@ -226,8 +226,10 @@ add_custom_target(
     manual
     COMMENT "Building PDF manual"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/_docs
-    COMMAND pandoc -s -S --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
+    COMMAND pandoc
+    --self-contained
     --highlight-style=tango
+    --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
     header.md
     docs.md
     install.md

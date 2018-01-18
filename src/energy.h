@@ -116,9 +116,11 @@ namespace Faunus {
                                 auto &g = spc.groups.at(d.index); // check specified groups
                                 if (d.all)  // check all atoms in group
                                     u += _energy(g);
-                                else       // check only specified atoms in group
-                                    for (auto i : d.atoms)
-                                        u += func( *(g.begin()+i) );
+                                else {       // check only specified atoms in group
+                                    if (molids.find(g.id)!=molids.end())
+                                        for (auto i : d.atoms)
+                                            u += func( *(g.begin()+i) );
+                                }
                                 if (std::isnan(u))
                                     break;
                             }

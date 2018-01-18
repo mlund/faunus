@@ -6,7 +6,7 @@ MathJax.Hub.Config({
 });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
-[![Edit](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
+[![](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
 
 # Energy <a name="energy"></a>
 
@@ -15,11 +15,6 @@ The system energy is described by a Hamiltonian where an arbitrary number of pot
 $$
 \mathcal{H}_{sys} = U_1 + U_2 + ...
 $$
-
-Be aware that energies in Monte Carlo may well contain implicit degrees of freedom, i.e. have the
-character of free energies and thus be temperature dependent. This is of no consequence for sampling
-density of states, but must be taken care of when evaluating derived functions such as energies, entropies,
-pressure etc.
 
 The energy terms are specified in `energy` at the top level input.
 For example:
@@ -35,6 +30,13 @@ energy:
         coulomb: { type: plain, epsr: 80, cutoff: 10 }
     - ...
 ~~~
+
+**Note:**
+_Energies_ in MC may contain _implicit_ degrees of freedom, _i.e._ be temperature-dependent,
+effective potentials. This is inconsequential for sampling
+density of states, but care should be taken when sampling derived functions such as
+energy, entropies, pressure etc.
+{: .notice--info}
 
 ## External Pressure <a name="isobaric"></a>
 

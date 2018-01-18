@@ -302,6 +302,13 @@ namespace Faunus {
                 if (!a.structure.empty())
                     a.loadConformation(a.structure);
             }
+
+            // pass information to inserter
+            auto ins = RandomInserter<MoleculeData<std::vector<Tparticle,Talloc>>>();
+            ins.dir = a.insdir;
+            ins.offset = a.insoffset;
+            ins.keeppos = a.keeppos;
+            a.setInserter(ins);
         }
 
     template<class Tparticle, class Talloc>

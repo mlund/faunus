@@ -5,6 +5,7 @@
 #include "space.h"
 #include "potentials.h"
 #include "multipole.h"
+#include "penalty.h"
 #include <set>
 
 #ifdef FAU_POWERSASA
@@ -434,6 +435,47 @@ namespace Faunus {
                     } //!< Copy energy matrix from other
             }; //!< Nonbonded with cached energies (Energy Matrix)
 
+        template<typename Tspace>
+            class Penalty : public Energybase {
+                private:
+                    typedef typename Tspace::Tparticle Tparticle;
+                    typedef typename Tspace::Tgroup Tgroup;
+                    typedef typename Tspace::Tpvec Tpvec;
+
+                    Tspace &spc;
+                    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rcPtr=nullptr;
+
+                    Table<int> histo;
+                    Table<double> penalty;
+
+                public:
+                    Penalty(const json &j, Tspace &spc) : spc(spc) {
+                        using namespace ReactionCoordinate;
+                        name = "penalty";
+                        std::string type = j.at("type");
+                        if (type=="cm")
+                            rcPtr = std::make_shared<MassCenterSeparation>(j, spc);
+                        if (rcPtr==nullptr)
+                            throw std::runtime_error(name + ": unknown type'" + type + "'");
+                        rcPtr->name = type;
+
+                        std::vector<double> bw = {1.0, 1.0};
+                        histo.reInitializer(bw, rcPtr->min, rcPtr->max);
+                        penalty.reInitializer(bw, rcPtr->min, rcPtr->max);
+                    }
+
+                    void to_json(json &j) const override {
+                        j = *rcPtr;
+                        j["type"] = rcPtr->name;
+                    }
+
+                    double energy(Change &change) override {
+                        std::vector<double> coord = rcPtr->operator()(); // obtain reaction coordinate
+                        return 0;
+                    }
+
+            };
+
 #ifdef FAU_POWERSASA
         template<class Tspace>
             class SASAEnergy : public Energybase {
@@ -542,6 +584,9 @@ namespace Faunus {
 
                                     if (it.key()=="isobaric")
                                         push_back<Energy::Isobaric<Tspace>>(it.value(), spc);
+
+                                    if (it.key()=="penalty")
+                                        push_back<Energy::Penalty<Tspace>>(it.value(), spc);
 
 #ifdef ENABLE_POWERSASA
                                     if (it.key()=="sasa")

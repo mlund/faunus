@@ -16,9 +16,10 @@ The following are optional:
 
 - Python 3.6 or higher with `ruamel_yaml` or `yaml`
 - Message Passing Interface (MPI)
+- Pandoc (for building documentation)
 
 **macOS tip:**
-Apple's developer tools, Xcode 9+, is an easy way obtain
+Apple's developer tools, Xcode 9, is an easy way obtain
 clang on macOS. CMake can be installed with an
 [Installer package](https://cmake.org/download) from Kitware, or using
 [MacPorts](http://www.macports.org), or

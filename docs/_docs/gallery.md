@@ -20,6 +20,18 @@ row1:
 ---
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
 
+# Examples
+
+## Hello Monte Carlo
+
+## Pressure Coupled Water
+
+## Activity Coefficients in Electrolytes
+
+## Enhanced Sampling: Parallel Tempering
+
+## Osmotic Pressure from Three Methods
+
 # Gallery
 
 This is a display of systems Faunus can be used to simulate. Hover the mouse over an

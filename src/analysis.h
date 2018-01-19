@@ -177,6 +177,59 @@ namespace Faunus {
                     }
         };
 
+        template<class Tspace>
+            class AtomProfile : public Analysisbase {
+                private:
+                    Tspace &spc;
+                    typedef typename Tspace::Tparticle Tparticle;
+                    Table2D<double,unsigned int> tbl;
+                    std::vector<std::string> names;
+                    std::vector<int> ids;
+                    std::string file;
+                    Point ref={0,0,0};
+                    double dr=0.5;
+
+                    void _from_json(const json &j) override {
+                        ref = j.value("origo", Point(0,0,0));
+                        file = j.at("file").get<std::string>();
+                        names = j.at("atoms").get<decltype(names)>(); // molecule names
+                        ids = names2ids(atoms<Tparticle>, names);     // names --> molids
+                        dr = j.value("dr", 0.5);
+                        tbl.setResolution(dr);
+                    }
+
+                    void _to_json(json &j) const override {
+                        j = {{"origo", ref}, {"atoms", names}, {"file", file}, {"dr", dr}};
+                    }
+
+                    void _sample() override {
+                        for (auto &g : spc.groups)
+                            for (auto &p : g)
+                                if (std::find(ids.begin(), ids.end(), p.id)!=ids.end()) {
+                                    double r = spc.geo.vdist(p.pos, ref).norm();
+                                    tbl(r)++;
+                                }
+                    }
+
+                public:
+
+                    AtomProfile(const json &j, Tspace &spc) : spc(spc) {
+                        name = "atomprofile";
+                        from_json(j);
+                    }
+
+                    ~AtomProfile() {
+                        std::ofstream f(file);
+                        if (f)
+                            f << "# r N rho/M\n";
+                            for (auto &m : tbl.getMap()) {
+                                double r = m.first;
+                                double N = m.second/double(cnt);
+                                f << r << " " << N << " " << N/(4*pc::pi*r*r*dr)*1e27/pc::Nav << "\n";
+                            }
+                    }
+            };
+
         /**
          * @brief Analysis of particle densities
          */
@@ -633,6 +686,9 @@ namespace Faunus {
 
                                     if ( it.key()=="xtcfile")
                                         push_back<XTCtraj<Tspace>>(it.value(), spc);
+
+                                    if ( it.key()=="atomprofile")
+                                        push_back<AtomProfile<Tspace>>(it.value(), spc);
 
                                     if ( it.key()=="atomrdf")
                                         push_back<AtomRDF<Tspace>>(it.value(), spc);

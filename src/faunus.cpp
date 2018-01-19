@@ -109,7 +109,7 @@ int main( int argc, char **argv )
                 analysis.sample();
             }
         }
-        if (mpi.isMaster())
+        if (showProgress && mpi.isMaster())
             progressBar.done();
 
         if (!quiet)

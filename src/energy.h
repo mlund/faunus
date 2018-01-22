@@ -443,7 +443,7 @@ namespace Faunus {
                     typedef typename Tspace::Tpvec Tpvec;
 
                     Tspace &spc;
-                    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rcPtr=nullptr;
+                    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
 
                     Table<int> histo;
                     Table<double> penalty;
@@ -454,26 +454,44 @@ namespace Faunus {
                         name = "penalty";
                         std::string type = j.at("type");
                         if (type=="cm")
-                            rcPtr = std::make_shared<MassCenterSeparation>(j, spc);
-                        if (rcPtr==nullptr)
+                            rc = std::make_shared<MassCenterSeparation>(j, spc);
+                        if (rc==nullptr)
                             throw std::runtime_error(name + ": unknown type'" + type + "'");
-                        rcPtr->name = type;
+                        rc->name = type;
 
-                        std::vector<double> bw = {1.0, 1.0};
-                        histo.reInitializer(bw, rcPtr->min, rcPtr->max);
-                        penalty.reInitializer(bw, rcPtr->min, rcPtr->max);
+                        auto bw = j.value("binwidth", std::vector<double>({1.0, 1.0})); 
+
+                        histo.reInitializer(bw, rc->min, rc->max);
+                        penalty.reInitializer(bw, rc->min, rc->max);
                     }
 
                     void to_json(json &j) const override {
-                        j = *rcPtr;
-                        j["type"] = rcPtr->name;
+                        j = *rc;
+                        j["type"] = rc->name;
                     }
 
                     double energy(Change &change) override {
-                        std::vector<double> coord = rcPtr->operator()(); // obtain reaction coordinate
-                        return 0;
+                        double u=0;
+                        if (!change.empty()) {
+                            std::vector<double> coord = rc->operator()(); // obtain reaction coordinate
+                            if (key==NEW)
+                                cout << "trial state";
+                            if (key==OLD)
+                                cout << "old state";
+                        }
+                        return u;
                     }
 
+                    void sync(Energybase *basePtr, Change &change) override {
+                        // this is called upon rejection/acceptance and can be
+                        // used to sync properties, if needed.
+                        auto other = dynamic_cast<decltype(this)>(basePtr);
+                        assert(other);
+                        if (other->key==OLD)
+                            cout << "move was rejected";
+                        if (other->key==NEW)
+                            cout << "move was accepted";
+                    }
             };
 
 #ifdef FAU_POWERSASA

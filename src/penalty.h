@@ -92,31 +92,14 @@ namespace Faunus {
 
         /**
          * @brief Reaction coordinate: molecule-molecule mass-center separation
-         *
-         * In addition to the keywords from `ReactionCoordinateBaseCandidate`:
-         *
-         * Keyword    | Description
-         * :--------- | :--------------
-         * `first`    | name of first molecule
-         * `second`   | name of second molecule
-         * `index`    | molecule index to select in case of multiple molecules (default "0 0").
-         * `dir`      | which dimensions to use when calc. mass center
-         *
-         * Example:
-         *
-         *     {
-         *        "first":"water", "second":"sodium", "index":"0 0", "dir":[1,1,1],
-         *        "min":[0], "max":[50]
-         *     }
          */
         class MassCenterSeparation : public ReactionCoordinateBase {
-            private:
+            public:
                 Point dir={1,1,1};
                 int id1, id2;
                 void _to_json(json &j) const override {
                     j["dir"] = dir;
                 }
-            public:
                 template<class Tspace>
                     MassCenterSeparation( const json &j, Tspace &spc ) {
                         from_json(j, *this);

@@ -187,14 +187,14 @@ namespace Faunus {
                     std::vector<int> ids;
                     std::string file;
                     Point ref={0,0,0};
-                    double dr=0.5;
+                    double dr=0.1;
 
                     void _from_json(const json &j) override {
                         ref = j.value("origo", Point(0,0,0));
                         file = j.at("file").get<std::string>();
                         names = j.at("atoms").get<decltype(names)>(); // molecule names
                         ids = names2ids(atoms<Tparticle>, names);     // names --> molids
-                        dr = j.value("dr", 0.5);
+                        dr = j.value("dr", 0.1);
                         tbl.setResolution(dr);
                     }
 

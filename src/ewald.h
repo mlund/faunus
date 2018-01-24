@@ -86,7 +86,7 @@ namespace Faunus {
             int N;   //!< is this needed?
             Point L; //!< Box dimensions
 
-            void kVectorChange(const Point &box) {
+            void update(const Point &box) {
                 L = box;
                 int kVectorsLength = (2*kcc + 1)*(2*kcc + 1)*(2*kcc + 1) - 1;
                 if (kVectorsLength == 0) {
@@ -170,6 +170,13 @@ namespace Faunus {
                 double surfaceEnergy(EwaldData &data) {
                     return 0;
                 }
+
+                double reciprocalEnergy(EwaldData &data) {
+                    double E = 0;
+                    for (size_t k=0; k<data.Qion.size(); k++)
+                        E += data.Aks[k] * std::norm( data.Qion[k]);
+                    return 2 * pc::pi / spc.geo.getVolume() * E * data.lB;
+                }
             }; // recipe or policies for ion-ion ewald
 
         /**
@@ -183,27 +190,6 @@ namespace Faunus {
                     EwaldData data;
                     Policy policy;
 
-                    double selfEnergy() const { return policy.selfEnergy(data); }
-
-                    double surfaceEnergy() const { return policy.surfaceEnergy(data); }
-
-                    double reciprocalEnergy() const {
-                        assert(data.Qion.size() == data.Qdip.size());
-                        double E = 0;
-                        for (size_t k=0; k<data.Qion.size(); k++) {
-                            double Q2 = 0;
-                            if (data.ionion) Q2 += std::norm( data.Qion[k]);
-                            if (data.iondipole) Q2 += 2.0*std::real( data.Qion[k]*data.Qdip[k] );
-                            if (data.dipoledipole) Q2 += std::norm(data.Qdip[k]);
-                            E += data.Aks[k] * Q2;
-                        }
-                        return 2 * pc::pi / spc.geo.getVolume() * E * data.lB;
-                    } // this is fast and we do not care to implement this as a policy
-
-                    void updateComplex() {
-                        policy.updateComplex(data);
-                    } // can be replaced by using another policy
-
                 public:
                     MeanValue<double> selfEnergyAverage, surfaceEnergyAverage, reciprocalEnergyAverage;
 
@@ -213,7 +199,7 @@ namespace Faunus {
                             if (key==NEW) { // we belong to a trial state
                                 policy.updateComplex(data); // brute force. todo: be selective
                             }
-                            u = selfEnergy() + surfaceEnergy() + reciprocalEnergy(); 
+                            u = policy.selfEnergy(data) + policy.surfaceEnergy(data) + policy.reciprocalEnergy(data); 
                         }
                         return u;
                     }
@@ -231,13 +217,9 @@ namespace Faunus {
                     Ewald(const json &j, Tspace &spc) : spc(spc), selfEnergyAverage(100), surfaceEnergyAverage(100), reciprocalEnergyAverage(100) {
                         name = "ewald";
                         data = j;
-                        data.kVectorChange( spc.geo.getLength() );
+                        data.update( spc.geo.getLength() );
                         policy.updateComplex(data); // brute force. todo: be selective
-                        //update_frequency = ( j.value("update_frequency",-1) );
-                        //Tbase::pairpot.first.updateRcut(parameters.rc);
-                        //Tbase::pairpot.first.updateAlpha(parameters.alpha);
                     }
-
             };
 
     }//namespace

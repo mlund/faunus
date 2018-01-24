@@ -190,7 +190,10 @@ namespace Faunus {
                                 if (key=="ATOM" || key=="HETATM") {
                                     double radius;
                                     o >> iatom >> aname;
-                                    a = findName( atoms<Tparticle>, aname)->p;
+                                    auto it = findName( atoms<Tparticle>, aname );
+                                    if (it==atoms<Tparticle>.end())
+                                        throw std::runtime_error("PQR load error: unknown atom name '" + aname + "'.");
+                                    a = it->p;
                                     o >> rname >> ires
                                         >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
                                     p.push_back(a);
@@ -322,7 +325,7 @@ namespace Faunus {
                         f >> name;
                         auto it = findName( atoms<Tparticle>, name );
                         if (it==atoms<Tparticle>.end())
-                            throw std::runtime_error("FormatXYZ: unknown atom name '" + name + "'.");
+                            throw std::runtime_error("XYZ load error: unknown atom name '" + name + "'.");
                         a = it->p;
                         f >> a.pos.x() >> a.pos.y() >> a.pos.z();
                         p.push_back(a);

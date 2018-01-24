@@ -304,7 +304,7 @@ namespace Faunus {
                         throw std::runtime_error("sum of weights is zero");
                 }
                 catch(std::exception& e) {
-                    throw std::runtime_error("anyCenter: " + std::string(e.what()));
+                    throw std::runtime_error("anyCenter error: " + std::string(e.what()));
                 }
                 return c;
             } //!< Mass, charge, or geometric center of a collection of particles

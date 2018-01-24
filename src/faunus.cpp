@@ -5,7 +5,6 @@
 #include "docopt.h"
 #include <cstdlib>
 #include "ProgressBar.hpp"
-#include "ewald.h"
 
 using namespace Faunus;
 using namespace std;

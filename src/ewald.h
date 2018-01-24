@@ -6,66 +6,6 @@
 namespace Faunus {
     namespace Energy {
         /**
-         * @brief Creates a number of vectors containing average values. Thus this function takes the mean of the mean.
-         */
-        template<class T=double>
-            class MeanValue {
-                private:
-                    int size_of_block, counter;
-                    T total_value;
-                    std::vector<T> values;
-                    std::string name;
-                public:
-
-                    MeanValue (int size_of_block_in, std::string name_in="") {
-                        name = name_in;
-                        size_of_block = size_of_block_in;
-                        counter = 0;
-                        total_value = 0.0;
-                    }
-
-                    void operator+=(T input) {
-                        total_value += input;
-                        counter++;
-                        if(counter >= size_of_block) {
-                            values.push_back( total_value / T(counter) );
-                            total_value = 0.0;
-                            counter = 0;
-                        }
-                    }
-
-                    void clear() {
-                        size_of_block = 1e9;
-                        counter = 0;
-                        total_value = 0.0;
-                        values.clear();
-                        name = "";
-                    }
-
-                    int cnt() {
-                        return counter;
-                    }
-
-                    T avg() {
-                        T meanValue = 0.0;
-                        for(unsigned int i = 0; i < values.size(); i++)
-                            meanValue += values.at(i);
-                        meanValue /= T(values.size());
-                        return meanValue;
-                    }
-
-                    T std() {
-                        T varValue = 0.0;
-                        T meanValue = avg();
-                        for(unsigned int i = 0; i < values.size(); i++) {
-                            T temp = values.at(i) - meanValue;
-                            varValue += temp*temp;
-                        }
-                        return std::sqrt(varValue);
-                    }
-            };
-
-        /**
          * This holds Ewald setup and must *not* depend on particle type, nor depend on Space
          */
         struct EwaldData {
@@ -191,7 +131,12 @@ namespace Faunus {
                     Policy policy;
 
                 public:
-                    MeanValue<double> selfEnergyAverage, surfaceEnergyAverage, reciprocalEnergyAverage;
+                    Ewald(const json &j, Tspace &spc) : spc(spc) {
+                        name = "ewald";
+                        data = j;
+                        data.update( spc.geo.getLength() );
+                        policy.updateComplex(data); // brute force. todo: be selective
+                    }
 
                     double energy(Change &change) override {
                         double u=0;
@@ -214,12 +159,6 @@ namespace Faunus {
 
                     } //!< Called after a move is rejected/accepted
 
-                    Ewald(const json &j, Tspace &spc) : spc(spc), selfEnergyAverage(100), surfaceEnergyAverage(100), reciprocalEnergyAverage(100) {
-                        name = "ewald";
-                        data = j;
-                        data.update( spc.geo.getLength() );
-                        policy.updateComplex(data); // brute force. todo: be selective
-                    }
             };
 
     }//namespace

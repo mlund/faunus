@@ -162,7 +162,7 @@ $$
 `alpha`       | -
 `cutoff`      | -
 `epsr`        | Dielectric constant
-`epss`        | Boundary dielectric constant (0=tinfoil)
+`epss`        | Dielectric constant of boundary (0=tinfoil)
 
 This calculates the reciprocal space; surface; and self energy contributions due to Ewald summation.
 The real-space part must be manually added as a Nonbonded potential using the type `ewald` (see above).
@@ -177,18 +177,15 @@ energy:
         ...
 ~~~
 
-Three energy terms are added:
+The following is added to the Hamiltonian:
 
 $$
-U_{\text{reciprocal}} = \frac{2\pi}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\vert Q^{q\mu}\vert^2
-$$
-
-$$
-U_{\text{self}} = -\sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2   \right)
-$$
-
-$$
-U_{\text{surface}} = \frac{2\pi}{(2\varepsilon_{surf} + 1)V}\left(  \vert \sum_{j}q_j{\bf r}_j   \vert^2 + 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j + \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )
+\small
+\begin{eqnarray}
+  U & = & \overbrace{\frac{2\pi}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\vert Q^{q\mu} \vert^2}^{\text{reciprocal}}
+  - \overbrace{\sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2   \right)}^{\text{self}}\\
+   & & + \underbrace{\frac{2\pi}{(2\varepsilon_{surf} + 1)V}\left(  \vert \sum_{j}q_j{\bf r}_j   \vert^2 + 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j + \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )}_{\text{surface}}
+\end{eqnarray}
 $$
 
 where
@@ -204,12 +201,6 @@ $$
 $$
 {\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
 $$
-
-**Warning:**
-Under construction.
-{: .notice--warning}
-
-
 
 ## Bonded Interactions
 

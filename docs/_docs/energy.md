@@ -161,6 +161,8 @@ $$
 ------------- | --------------------------------------
 `alpha`       | -
 `cutoff`      | -
+`epsr`        | Dielectric constant
+`epss`        | Boundary dielectric constant (0=tinfoil)
 
 This calculates the reciprocal space; surface; and self energy contributions due to Ewald summation.
 The real-space part must be manually added as a Nonbonded potential using the type `ewald` (see above).
@@ -175,30 +177,32 @@ energy:
         ...
 ~~~
 
-The energies added are
+Three energy terms are added:
 
 $$
-U = U_{\text{reciprocal}} + U_{\text{self}} + U_{\text{surface}}
+U_{\text{reciprocal}} = \frac{2\pi}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\vert Q^{q\mu}\vert^2
+$$
+
+$$
+U_{\text{self}} = -\sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2   \right)
+$$
+
+$$
+U_{\text{surface}} = \frac{2\pi}{(2\varepsilon_{surf} + 1)V}\left(  \vert \sum_{j}q_j{\bf r}_j   \vert^2 + 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j + \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )
 $$
 
 where
 
 $$
-U_{\text{reciprocal}} = \frac{2\pi}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\left|Q^{q\mu}\right|^2 \;\;,\;\; A_k = \frac{e^{-k^2/4\alpha^2}}{k^2} \;\;,\;\; Q^{q\mu} = \sum_{j}\left(q_j + i({\boldsymbol{\mu}}_j\cdot {\bf k})  \right)e^{i({\bf k}\cdot {\bf r}_j)}
+A_k = \frac{e^{-k^2/4\alpha^2}}{k^2}
 $$
 
 $$
-U_{\text{self}} = -\sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}|{\boldsymbol{\mu}}_j|^2   \right)
+Q^{q\mu} = \sum_{j}q_j + i({\boldsymbol{\mu}}_j\cdot {\bf k})  e^{i({\bf k}\cdot {\bf r}_j)}
 $$
 
 $$
-U_{\text{surface}} = \frac{2\pi}{(2\varepsilon_{sur} + 1)V}\left[  \left| \sum_{j}q_j{\bf r}_j   \right|^2 + 2\left(\sum_{j}q_i{\bf r}_j \right)\cdot\left(\sum_{j}{\boldsymbol{\mu}}_j \right) + \left|\sum_{j}{\boldsymbol{\mu}}_j \right|^2   \right]
-$$
-
-and
-
-$$
-{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right)  \;\;,\;\; {\bf n} \in \mathbb{Z}^3
+{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
 $$
 
 **Warning:**

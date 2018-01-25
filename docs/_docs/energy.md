@@ -108,10 +108,49 @@ where $\mathcal{S}(q=r/R_c)$ is a splitting function:
 **Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
 {: .notice--info}
 
-Additional information regarding electrostatics:
+#### Ewald Summation
 
- - [On the dielectric constant](http://dx.doi.org/10.1080/00268978300102721)
- - [Generalized reaction field using ionic strength](http://dx.doi.org/10.1063/1.469273)
+If type is `ewald`, terms from reciprocal space; surface energies; and
+self energies are automatically added to the Hamiltonian, activating additional keywords:
+
+`type=ewald`         | Description
+-------------------- | --------------------------------------
+`cutoffK`            | Reciprocal-space cutoff
+`epss=0`             | Dielectric constant of surroundings, $\varepsilon_{surf}$ (0=tinfoil)
+`ipbc=false`         | Use isotropic periodic boundary conditions, IPBC.
+`spherical_sum=true` | Spherical/ellipsoidal summation in reciprocal space; cubic if `false`.
+
+The energy terms are:
+
+$$
+\small
+\begin{aligned}
+  \beta U =& \overbrace{\frac{2\pi\lambda_B}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\vert Q^{q\mu} \vert^2}^{\text{reciprocal}}
+  - \overbrace{\lambda_B\sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2   \right)}^{\text{self}}\\
+   &+ \underbrace{\frac{2\pi\lambda_B}{(2\varepsilon_{surf} + 1)V}\left(  \vert \sum_{j}q_j{\bf r}_j   \vert^2 + 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j + \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )}_{\text{surface}}\\
+\end{aligned}
+$$
+
+where
+
+$$
+\lambda_B = \frac{e^2}{4\pi\varepsilon_0\varepsilon_rk_BT}
+$$
+
+$$
+A_k = \frac{e^{-k^2/4\alpha^2}}{k^2}
+$$
+
+$$
+Q^{q\mu} = \sum_{j}q_j + i({\boldsymbol{\mu}}_j\cdot {\bf k})  e^{i({\bf k}\cdot {\bf r}_j)}
+$$
+
+$$
+{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
+$$
+
+and $V=L_xL_yL_z$ is the cuboid volume, $\beta=1/k_BT$ the inverse thermal energy.
+
 
 
 ### Hard Sphere
@@ -153,53 +192,6 @@ purely repulsive potential [[doi](http://dx.doi.org/ct4kh9)],
 
 $$
 u_{ij} = u_{ij}^{\text{LJ}} + \epsilon_{ij} \quad \textrm{for} \quad r<2^{1/6}\sigma_{ij}
-$$
-
-## Ewald Summation
-
-`ewald`       | Description
-------------- | --------------------------------------
-`alpha`       | -
-`cutoff`      | -
-`epsr`        | Dielectric constant
-`epss`        | Dielectric constant of boundary (0=tinfoil)
-
-This calculates the reciprocal space; surface; and self energy contributions due to Ewald summation.
-The real-space part must be manually added as a Nonbonded potential using the type `ewald` (see above).
-For example:
-
-~~~ yaml
-energy:
-    - nonbonded_coulomblj:
-        lennardjones: { mixing: LB }
-        coulomb: { type: ewald, epsr: 1, cutoff: 10, alpha: 0.5 }
-    - ewald:
-        ...
-~~~
-
-The energy terms are:
-
-$$
-\small
-\begin{aligned}
-  U =& \overbrace{\frac{2\pi}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\vert Q^{q\mu} \vert^2}^{\text{reciprocal}}
-  - \overbrace{\sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2   \right)}^{\text{self}}\\
-   &+ \underbrace{\frac{2\pi}{(2\varepsilon_{surf} + 1)V}\left(  \vert \sum_{j}q_j{\bf r}_j   \vert^2 + 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j + \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )}_{\text{surface}}\\
-\end{aligned}
-$$
-
-where
-
-$$
-A_k = \frac{e^{-k^2/4\alpha^2}}{k^2}
-$$
-
-$$
-Q^{q\mu} = \sum_{j}q_j + i({\boldsymbol{\mu}}_j\cdot {\bf k})  e^{i({\bf k}\cdot {\bf r}_j)}
-$$
-
-$$
-{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
 $$
 
 ## Bonded Interactions

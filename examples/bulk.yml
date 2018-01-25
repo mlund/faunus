@@ -1,12 +1,11 @@
 energy:
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: fanourgakis, epsr: 80, cutoff: 10}
-    - _confine: {type: cylinder, radius: 20, k: 100, molecules: [salt]}
-    - confine: {type: cuboid, low: [-5,-5,-5], high: [5,5,5],  k: 1000, molecules: [salt]}
+        _coulomb: {type: fanourgakis, epsr: 1, cutoff: 9}
+        coulomb: {type: ewald, epsr: 1, cutoff: 9, cutoffK: 7, alpha: 0.2}
 atomlist:
-    - Na: {q:  1.0, sigma: 3.33, eps: 0.01158968, dp: 100.0, tfe: 2} 
-    - Cl: {q: -1.0, sigma: 4.4, eps: 0.4184, dp: 100.0} 
+    - Na: {q:  1.0, sigma: 3.33, eps: 0.01158968, dp: 1} 
+    - Cl: {q: -1.0, sigma: 4.4, eps: 0.4184, dp: 1} 
 moleculelist:
     - salt: {Ninit: 152, atoms: [Na,Cl], atomic: true }
 moves:
@@ -20,5 +19,5 @@ analysis:
     - density: {nstep: 10}
 temperature: 1100
 mcloop: {macro: 10, micro: 10}
-geometry: {length: 42.5} # sidelength(s): number OR array
+geometry: {length: 19.73}
 

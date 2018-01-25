@@ -3,7 +3,7 @@ temperature: 300
 geometry: {length: 20.00}
 mcloop: {macro: 10, micro: 1000}
 atomlist:
-    - MM: {eps: 0.2, sigma: 2.0, dp: 1}
+    - MM: {eps: 0.2, sigma: 2.0, dp: 1, q: 1}
     - NN: {eps: 0.2, sigma: 2.0, mw: 0, dp: 1} 
 moleculelist:
     - water:
@@ -18,7 +18,7 @@ energy:
     - bonded: {}
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: fanourgakis, epsr: 1, cutoff: 50}
+        coulomb: {type: ewald, epsr: 1, cutoff: 50, alpha: 0.5, cutoffK: 1, epss: 0}
         cutoff_g2g: 100
 moves:
     - moltransrot: {molecule: water, dp: 1, dprot: 1, repeat: N}

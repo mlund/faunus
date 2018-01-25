@@ -161,7 +161,7 @@ namespace Faunus {
                 void sfYonezawa(const json &j)
                 {
                     alpha = j.at("alpha");
-                    table = sf.generate( [&](double q) { return 1 - erfc(alpha*rc)*q + q*q; }, 0, 1 );
+                    table = sf.generate( [&](double q) { return 1 - std::erfc(alpha*rc)*q + q*q; }, 0, 1 );
                     calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
                     selfenergy_prefactor = erf(alpha*rc);
                 }
@@ -174,8 +174,8 @@ namespace Faunus {
 
                 void sfFennel(const json &j) {
                     alpha = j.at("alpha");
-                    table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q + (q-1.0)*q*(erfc(alpha*rc)
-                                    + 2 * alpha * rc / sqrt(pc::pi) * exp(-alpha*alpha*rc*rc))); }, 0, 1 );
+                    table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - std::erfc(alpha*rc)*q + (q-1.0)*q*(std::erfc(alpha*rc)
+                                    + 2 * alpha * rc / std::sqrt(pc::pi) * std::exp(-alpha*alpha*rc*rc))); }, 0, 1 );
                     calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi)))
                         * exp(-alpha*alpha*rc*rc) * (alpha*alpha*rc*rc * alpha*alpha*rc*rc + 2.0 * alpha*alpha*rc*rc + 3.0);
                         return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0)); };
@@ -295,7 +295,7 @@ namespace Faunus {
                     }
                     if (type=="qpotential")
                         j["order"] = order;
-                    if (type=="yonezawa" || type=="fennel" || type=="wolf")
+                    if (type=="yonezawa" || type=="fennel" || type=="wolf" || type=="ewald")
                         j["alpha"] = alpha;
                     if (type=="reactionfield") {
                         if(epsrf > 1e10)

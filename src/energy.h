@@ -111,7 +111,7 @@ namespace Faunus {
             d.ipbc = j.value("ipbc", false);
             d.spherical_sum = j.value("spherical_sum", true);
             d.lB = pc::lB( j.at("epsr") );
-	    d.eps_surf = j.at("epss");
+	    d.eps_surf = j.value("epss", 0.0);
             d.const_inf = (d.eps_surf < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium
         }
 
@@ -122,7 +122,9 @@ namespace Faunus {
             j["alpha"] = d.alpha;
             j["cutoff"] = d.rc;
             j["cutoffk"] = d.kc;
-            // todo
+            j["wavefunctions"] = d.kVectorsInUse;
+            j["spherical_sum"] = d.spherical_sum;
+            // more: number of k-vectors etc.
         }
 
         /** @brief recipe or policies for ion-ion ewald */
@@ -745,6 +747,13 @@ namespace Faunus {
                         for (auto i : this->vec)
                             j.push_back(*i);
                     }
+
+                    void addEwald(const json &j, Tspace &spc) {
+                        if (j.count("coulomb")==1)
+                            if (j["coulomb"].at("type")=="ewald")
+                                push_back<Energy::Ewald<Tspace>>(j["coulomb"], spc);
+                    } //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
+
                 public:
                     Hamiltonian(Tspace &spc, const json &j) {
                         using namespace Potential;
@@ -773,21 +782,19 @@ namespace Faunus {
                                     if (it.key()=="confine")
                                         push_back<Energy::Confine<Tspace>>(it.value(), spc);
 
-                                    if (it.key()=="ewald")
-                                        push_back<Energy::Ewald<Tspace>>(it.value(), spc);
-
                                     if (it.key()=="isobaric")
                                         push_back<Energy::Isobaric<Tspace>>(it.value(), spc);
 
                                     if (it.key()=="penalty")
                                         push_back<Energy::Penalty<Tspace>>(it.value(), spc);
-
 #ifdef ENABLE_POWERSASA
                                     if (it.key()=="sasa")
                                         push_back<Energy::SASAEnergy<Tspace>>(it.value(), spc);
 #endif
 
                                     // additional energies go here...
+                                    
+                                    addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
 
                                     if (vec.size()==oldsize)
                                         std::cerr << "warning: ignoring unknown energy '" << it.key() << "'" << endl;
@@ -801,8 +808,10 @@ namespace Faunus {
 
                     double energy(Change &change) override {
                         double du=0;
-                        for (auto i : this->vec)
+                        for (auto i : this->vec) {
+                            i->key=key;
                             du += i->energy(change);
+                        }
                         return du;
                     } //!< Energy due to changes
 

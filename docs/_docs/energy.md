@@ -120,7 +120,7 @@ self energies are automatically added to the Hamiltonian, activating additional 
 `ipbc=false`         | Use isotropic periodic boundary conditions, IPBC.
 `spherical_sum=true` | Spherical/ellipsoidal summation in reciprocal space; cubic if `false`.
 
-The energy terms are:
+The added energy terms are:
 
 $$
 \small
@@ -134,23 +134,20 @@ $$
 where
 
 $$
-\lambda_B = \frac{e^2}{4\pi\varepsilon_0\varepsilon_rk_BT}
+\lambda_B = \frac{e^2}{4\pi\varepsilon_0\varepsilon_rk_BT} \quad\quad V=L_xL_yL_z
 $$
 
 $$
 A_k = \frac{e^{-k^2/4\alpha^2}}{k^2}
-$$
-
-$$
+\quad\quad
 Q^{q\mu} = \sum_{j}q_j + i({\boldsymbol{\mu}}_j\cdot {\bf k})  e^{i({\bf k}\cdot {\bf r}_j)}
 $$
 
 $$
 {\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
+\quad\quad
+\beta=1/k_BT
 $$
-
-and $V=L_xL_yL_z$ is the cuboid volume, $\beta=1/k_BT$ the inverse thermal energy.
-
 
 
 ### Hard Sphere

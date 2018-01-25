@@ -10,7 +10,7 @@ MathJax.Hub.Config({
 
 # Energy <a name="energy"></a>
 
-The system energy is described by a Hamiltonian where an arbitrary number of potential energy terms can be added,
+The system energy, or Hamiltonian, consists of a sum of potential energy terms,
 
 $$
 \mathcal{H}_{sys} = U_1 + U_2 + ...
@@ -32,10 +32,10 @@ energy:
 ~~~
 
 **Note:**
-_Energies_ in MC may contain _implicit_ degrees of freedom, _i.e._ be temperature-dependent,
+_Energies_ in MC may contain implicit degrees of freedom, _i.e._ be temperature-dependent,
 effective potentials. This is inconsequential for sampling
-density of states, but care should be taken when sampling derived functions such as
-energy, entropies, pressure etc.
+density of states, but care should be taken when interpreting derived functions such as
+energies, entropies, pressure etc.
 {: .notice--info}
 
 ## External Pressure <a name="isobaric"></a>
@@ -58,14 +58,14 @@ where $N$ is the total number of molecules and atomic species.
 ## Nonbonded Interactions <a name="nonbonded"></a>
 
 `energy`               | $u_{ij}$
------------------------|---------------------------
+---------------------- | --------------------------
 `nonbonded_coulomblj`  | `coulomb`+`lennardjones`
 `nonbonded_coulombhs`  | `coulomb`+`hardsphere`
-`nonbonded_coulombwca`  | `coulomb`+`wca`
+`nonbonded_coulombwca` | `coulomb`+`wca`
 
 This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise additive potential, $u_{ij}$,
 
-$$ U_{NB} = \sum_i\sum_j u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
+$$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
 
 **Note:** the pair-potential can be a combination of several potentials, but this must currently be defined at _compile
 time_ and cannot be arbitrarily selected from input. It is straight forward to add more by editing the class
@@ -92,17 +92,18 @@ $$
 
 where $\mathcal{S}(q=r/R_c)$ is a splitting function:
 
- `type`          | $\mathcal{S}(q)$                     | Additional keywords | Ref.
- --------------- | -------------------------------------- | ------------------- | ----------------------
- `plain`         | $ 1 $                                |                     | [doi](http://doi.org/ctnnsj)
- `none`          | $ 0 $                                |                     |
- `wolf`          | $\text{erfc}(\alpha R_c q)-\text{erfc}(\alpha R_c)q$ | `alpha`         | [doi](http://doi.org/cfcxdk)
- `fennel`        | $\scriptstyle \text{erfc}(\alpha R_c q)-\text{erfc}(\alpha R_c)q + ( q -1 ) q \left( \text{erfc}(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right)$ | `alpha`| [doi](http://doi.org/bqgmv2)
- `yonezawa`      | $1 + \text{erfc}(\alpha R_c)q + q^2$      | `alpha`             | [doi](http://dx.doi.org/10/j97)
- `fanourgakis`   | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$|     | [doi](http://doi.org/f639q5)
- `qpotential`    | $\prod_{n=1}^{order}(1-q^n)$       | `order=300`         | [ISBN](http://goo.gl/hynRTS) (Paper V)
- `reactionfield` | $1 + \frac{\epsilon_{RF}-\epsilon_{r}}{2\epsilon_{RF}+\epsilon_{r}} q^3  - 3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_{r}}q$      | `epsrf`     | [doi](http://doi.org/dbs99w)
- `yukawa`        | $e^{-\kappa R_c q}-e^{-\kappa R_c}$  | `debyelength`      | [ISBN](https://isbnsearch.org/isbn/0486652424)
+ `type`         | $\mathcal{S}(q)$                                    | Keywords      | Ref.
+ -------------- | --------------------------------------------------- | ------------- | ----------------------
+ `none`         | $0$                                                 |               |
+ `plain`        | $1$                                                 |               | [doi](http://doi.org/ctnnsj)
+ `ewald`        | $\text{erfc}(\alpha R_cq)$                          | `alpha`       | [doi](http://dx.doi.org/10.1063/1.481216)
+ `wolf`         | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$ | `alpha`       | [doi](http://doi.org/cfcxdk)
+ `yukawa`       | $e^{-\kappa R_c q}-e^{-\kappa R_c}$                 | `debyelength` | [ISBN](https://isbnsearch.org/isbn/0486652424)
+ `yonezawa`     | $1+\text{erfc}(\alpha R_c)q+q^2$                    | `alpha`       | [doi](http://dx.doi.org/10/j97)
+ `qpotential`   | $\prod_{n=1}^{order}(1-q^n)$                        | `order=300`   | [ISBN](http://goo.gl/hynRTS) (Paper V)
+ `fanourgakis`  | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$|               | [doi](http://doi.org/f639q5)
+ `fennel`       | $\scriptstyle \text{erfc}(\alpha R_c q)-\text{erfc}(\alpha R_c)q + ( q -1 ) q \left( \text{erfc}(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right)$ | `alpha`| [doi](http://doi.org/bqgmv2)
+ `reactionfield`| $1+\frac{\epsilon_{RF}-\epsilon_{r}}{2\epsilon_{RF}+\epsilon_{r}}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_{r}}q$ | `epsrf` | [doi](http://doi.org/dbs99w)
 
 **Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
 {: .notice--info}
@@ -129,7 +130,7 @@ The hard sphere potential does not take any input. Radii are read from the atoml
 The Lennard-Jones potential has the form:
 
 $$
-u_{ij} = 4\epsilon_{ij} \left (
+u_{ij}^{\text{LJ}} = 4\epsilon_{ij} \left (
     \left ( \frac{\sigma_{ij}} {r_{ij})} \right )^{12} - \left ( \frac{\sigma_{ij}}{r_{ij})}\right )^6 \right )
 $$
 
@@ -148,11 +149,63 @@ $$
 `ljcustom`     |  Custom $\epsilon$ and $\sigma$ combinations
 
 Like Lennard-Jones but cut and shifted to zero at the minimum, forming a
-[purely repulsive potential](http://dx.doi.org/ct4kh9),
+purely repulsive potential [[doi](http://dx.doi.org/ct4kh9)],
 
 $$
 u_{ij} = u_{ij}^{\text{LJ}} + \epsilon_{ij} \quad \textrm{for} \quad r<2^{1/6}\sigma_{ij}
 $$
+
+## Ewald Summation
+
+`ewald`       | Description
+------------- | --------------------------------------
+`alpha`       | -
+`cutoff`      | -
+
+This calculates the reciprocal space; surface; and self energy contributions due to Ewald summation.
+The real-space part must be manually added as a Nonbonded potential using the type `ewald` (see above).
+For example:
+
+~~~ yaml
+energy:
+    - nonbonded_coulomblj:
+        lennardjones: { mixing: LB }
+        coulomb: { type: ewald, epsr: 1, cutoff: 10, alpha: 0.5 }
+    - ewald:
+        ...
+~~~
+
+The energies added are
+
+$$
+U = U_{\text{reciprocal}} + U_{\text{self}} + U_{\text{surface}}
+$$
+
+where
+
+$$
+U_{\text{reciprocal}} = \frac{2\pi}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\left|Q^{q\mu}\right|^2 \;\;,\;\; A_k = \frac{e^{-k^2/4\alpha^2}}{k^2} \;\;,\;\; Q^{q\mu} = \sum_{j}\left(q_j + i({\boldsymbol \mu}_j\cdot {\bf k})  \right)e^{i({\bf k}\cdot {\bf r}_j)}
+$$
+
+$$
+U_{\text{self}} = -\sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}|{\boldsymbol \mu}_j|^2   \right)
+$$
+
+$$
+U_{\text{surface}} = \frac{2\pi}{(2\varepsilon_{sur} + 1)V}\left[  \left| \sum_{j}q_j{\boldsymbol r}_j   \right|^2 + 2\left(\sum_{j}q_i{\boldsymbol r}_j \right)\cdot\left(\sum_{j}{\boldsymbol \mu}_j \right) + \left|\sum_{j}{\boldsymbol \mu}_j \right|^2   \right]
+$$
+
+and
+
+$$
+{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right)  \;\;,\;\; {\bf n} \in \mathbb{Z}^3
+$$
+
+**Warning:**
+Under construction.
+{: .notice--warning}
+
+
 
 ## Bonded Interactions
 

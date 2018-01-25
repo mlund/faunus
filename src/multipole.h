@@ -182,6 +182,17 @@ namespace Faunus {
                     selfenergy_prefactor = ( erfc(alpha*rc)/2.0 + alpha*rc/sqrt(pc::pi) );
                 }
 
+                void sfEwald(const json &j) {
+                    alpha = j.at("alpha");
+                    table = sf.generate( [&](double q) { return std::erfc(alpha*rc*q); }, 0, 1 );
+                    calcDielectric = [&](double M2V) {
+                        double T = std::erf(alpha*rc) - (2 / (3 * sqrt(pc::pi)))
+                            * std::exp(-alpha*alpha*rc*rc) * ( 2*alpha*alpha*rc*rc + 3);
+                        return ((T + 2.0) * M2V + 1)/ ((T - 1) * M2V + 1);
+                    };
+                    selfenergy_prefactor = ( erfc(alpha*rc) + alpha*rc/sqrt(pc::pi)*(1.0 + std::exp(-alpha*alpha*rc2)) );
+                }
+
                 void sfWolf(const json &j) {
                     alpha = j.at("alpha");
                     table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q); }, 0, 1 );
@@ -199,7 +210,7 @@ namespace Faunus {
 
             public:
                 CoulombGalore() { name="coulomb"; }
-                
+
                 void from_json(const json &j) override {
                     try {
                         type = j.at("type");
@@ -219,6 +230,7 @@ namespace Faunus {
                         if (type=="yukawa") sfYukawa(j);
                         if (type=="fennel") sfFennel(j);
                         if (type=="plain") sfPlain(j,1);
+                        if (type=="ewald") sfEwald(j);
                         if (type=="none") sfPlain(j,0);
                         if (type=="wolf") sfWolf(j);
                         if ( table.empty() )

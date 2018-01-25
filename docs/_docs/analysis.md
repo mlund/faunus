@@ -19,7 +19,6 @@ analysis:
     - systemenergy: {file: energy.dat, nstep: 500}
     - xtcfile: {file: traj.xtc, nstep: 1000}
     - widom:  {molecule: water, ninsert: 20, nstep: 50}
-    - atomprofile: {names: [Na,Cl], file: rho.dat, nstep: 10}
     - molrdf: {name1: water, name2: water, nstep: 100,
                dr: 0.1, dim: 3, file: rdf.dat}
     - ...
@@ -54,7 +53,7 @@ Calculates the summed density of `atoms` in spherical shells around
 `origo` which by default is the center of the simulation box:
 
 $$
-\rho(r) = \frac{\langle N(r) \rangle}{4\pi\r^2dr}
+\rho(r) = \frac{\langle N(r) \rangle}{4\pi r^2dr}
 $$
 
 This can be used to obtain charge profiles, measure excess pressure

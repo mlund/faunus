@@ -15,7 +15,6 @@
 namespace Faunus {
     namespace Energy {
 
-
         class Energybase {
             public:
                 enum keys {OLD, NEW, NONE};
@@ -45,29 +44,31 @@ namespace Faunus {
             Eigen::MatrixXd kVectors; // Matrices with k-vectors
             Eigen::VectorXd Aks;      // values based on k-vectors to minimize computational effort (Eq.24,DOI:10.1063/1.481216)
             double alpha, alpha2, rc, kc, kc2, minL, maxL, check_k2_zero, lB;
+            double const_inf, eps_surf;
             bool ionion;
             bool iondipole;
             bool dipoledipole;
             bool spherical_sum;
             bool ipbc;
             int kcc;
-            int kVectorsInUse;
-            int N;   //!< is this needed?
+            int kVectorsInUse=0;
             Point L; //!< Box dimensions
 
             void update(const Point &box) {
                 L = box;
-                int kVectorsLength = (2*kcc + 1)*(2*kcc + 1)*(2*kcc + 1) - 1;
+                int kVectorsLength = (2*kcc+1) * (2*kcc+1) * (2*kcc+1) - 1;
                 if (kVectorsLength == 0) {
                     kVectors.resize(3, 1); 
                     Aks.resize(1);
                     kVectors.col(0) = Point(1,0,0); // Just so it is not the zero-vector
-                    Aks[0] = 0.0;
+                    Aks[0] = 0;
+                    kVectorsInUse = 1;
                     Qion.resize(1);
                     Qdip.resize(1);
                 } else {
                     kVectors.resize(3, kVectorsLength); 
                     Aks.resize(kVectorsLength);
+                    kVectorsInUse = 0;
                     kVectors.setZero();
                     Aks.setZero();
                     int startValue = 1 - int(ipbc);
@@ -84,11 +85,11 @@ namespace Faunus {
                                 double k2 = kv.dot(kv);
                                 if (k2 < check_k2_zero) // Check if k2 != 0
                                     continue;
-                                if(spherical_sum)
-                                    if( (dkx2/kc2) + (dky2/kc2) + (dkz2/kc2) > 1.0)
+                                if (spherical_sum)
+                                    if( (dkx2/kc2) + (dky2/kc2) + (dkz2/kc2) > 1)
                                         continue;
                                 kVectors.col(kVectorsInUse) = kv; 
-                                Aks[kVectorsInUse] = factor*std::exp(-k2/(4.0*alpha2))/k2;
+                                Aks[kVectorsInUse] = factor*std::exp(-k2/(4*alpha2))/k2;
                                 kVectorsInUse++;
                             }
                         }
@@ -109,17 +110,22 @@ namespace Faunus {
             d.kcc = std::ceil(d.kc);
             d.ipbc = j.value("ipbc", false);
             d.spherical_sum = j.value("spherical_sum", true);
-            d.lB = pc::lB( j.value("epsr", 1.0) );
+            d.lB = pc::lB( j.at("epsr") );
+	    d.eps_surf = j.at("epss");
+            d.const_inf = (d.eps_surf < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium
         }
 
         void to_json(json &j, const EwaldData &d) {
+            j["lB"] = d.lB;
             j["ipbc"] = d.ipbc;
+            j["epss"] = d.eps_surf;
             j["alpha"] = d.alpha;
             j["cutoff"] = d.rc;
             j["cutoffk"] = d.kc;
             // todo
         }
 
+        /** @brief recipe or policies for ion-ion ewald */
         template<class Tspace>
             struct PolicyIonIon  {
                 Tspace &spc;
@@ -135,26 +141,31 @@ namespace Faunus {
                         data.Qion.at(k) = Q;
                     }
                 }
-                double selfEnergy(EwaldData &data) {
+                double selfEnergy(const EwaldData &d) {
                     double E = 0;
                     for (auto& i : spc.p)
                         E += i.charge * i.charge;
-                    return -data.alpha*E / std::sqrt(pc::pi) * data.lB;
+                    return -d.alpha*E / std::sqrt(pc::pi) * d.lB;
                 }
 
-                double surfaceEnergy(EwaldData &data) {
-                    // todo
-                    return 0;
+                double surfaceEnergy(const EwaldData &d) {
+                    if (d.const_inf < 0.5)
+                        return 0;
+                    Point qr(0,0,0);
+                    for (auto &i : spc.p)
+                        qr += i.charge*i.pos;
+                    return d.const_inf * 2 * pc::pi / ( (2*d.eps_surf+1) * spc.geo.getVolume() ) * qr.dot(qr) * d.lB;
                 }
 
-                double reciprocalEnergy(EwaldData &data) {
+                double reciprocalEnergy(const EwaldData &d) {
                     double E = 0;
-                    for (size_t k=0; k<data.Qion.size(); k++)
-                        E += data.Aks[k] * std::norm( data.Qion[k]);
-                    return 2 * pc::pi / spc.geo.getVolume() * E * data.lB;
+                    for (size_t k=0; k<d.Qion.size(); k++)
+                        E += d.Aks[k] * std::norm( d.Qion[k]);
+                    return 2 * pc::pi / spc.geo.getVolume() * E * d.lB;
                 }
-            }; // recipe or policies for ion-ion ewald
+            };
 
+        /** @brief Ewald summation reciprocal energy */
         template<class Tspace, class Policy=PolicyIonIon<Tspace>>
             class Ewald : public Energybase {
                 private:
@@ -195,7 +206,6 @@ namespace Faunus {
                         j = data;
                     }
             };
-
 
         template<typename Tspace>
             class Isobaric : public Energybase {

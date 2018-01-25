@@ -10,7 +10,7 @@ MathJax.Hub.Config({
 
 # Topology
 
-The topology describes atomic and molecular properties and is defines at the top-level input:
+The topology describes atomic and molecular properties and is defined at the top-level input:
 
 ~~~ yaml
 atomlist:
@@ -30,8 +30,7 @@ moleculelist:
 
 ## Atom Properties
 
-Atoms are the smallest possible particle entities and their properties are defined in the
-Table below.
+Atoms are the smallest possible particle entities with properties defined below.
 
 `atomlist`    | Description
 ------------- | ------------------------------------------------------
@@ -51,7 +50,7 @@ Table below.
 ## Molecule Properties
 
 A molecule is a collection of atoms, but they need not be associated
-as real molecules. Two particular modes can be specified.
+as real molecules. Two particular modes can be specified:
 
 1. If `atomic=true` the atoms in the molecule are unassociated and is
    typically used to defined salt particles or any other non-aggregated
@@ -68,7 +67,7 @@ Properties of molecules and their default values:
 ------------------- | -------------------------------------------------
 `activity=0`        | Chemical activity for grand canonical MC [mol/l]
 `atomic=false`      | True if collection of atomic species, salt etc.
-`atoms=[]`          | Array of atom names - required if `atomic==true`
+`atoms=[]`          | Array of atom names - required if `atomic=true`
 `implicit=false`    | If this species is implicit in GCMC schemes
 `insdir=[1,1,1]`    | Insert directions are scaled by this
 `insoffset=[0,0,0]` | Shifts mass center after insertion

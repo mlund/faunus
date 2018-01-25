@@ -1,5 +1,6 @@
 ---
 ---
+[![Edit](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
 
 # Running Simulations
@@ -75,7 +76,7 @@ The following starts two processes, reading input from `mpi0.in.json` and
 prefixed with `mpi0.` and `mpi1.`.
 
 ~~~
-mpirun -np 2 ./faunus -i in.json 
+mpirun -np 2 ./faunus -i in.json
 ~~~
 
 If all processes take the same input:
@@ -84,5 +85,3 @@ If all processes take the same input:
 mpirun -np 2 ./faunus --nopfx --input in.json
 mpirun -np 2 --stdin all ./faunus < in.json
 ~~~
-
-

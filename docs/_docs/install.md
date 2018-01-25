@@ -19,7 +19,7 @@ The following are optional:
 - Pandoc (for building documentation)
 
 **macOS tip:**
-Apple's developer tools, Xcode 9, is an easy way obtain
+Apple's developer tools, Xcode, is an easy way obtain
 clang on macOS. CMake can be installed with an
 [Installer package](https://cmake.org/download) from Kitware, or using
 [MacPorts](http://www.macports.org), or
@@ -35,7 +35,7 @@ A set of dependencies will automatically be downloaded.
 ~~~ bash
 cd faunus
 cmake . [OPTIONS]
-make faunus
+make
 ~~~
 
 The following options are available:
@@ -65,10 +65,9 @@ Another example for compiling with Intel C++ in _Release_ mode (faster, less ass
 
 ~~~ bash
 CXX=icpc CC=icc cmake . -DCMAKE_BUILD_TYPE=Release
-make
 ~~~
 
-If you experience python issues on macOS, the linked python library can be probed and,
+For solving python issues on macOS, the linked python library can be probed and,
 if needed, renamed:
 
 ~~~ bash
@@ -86,9 +85,9 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles
 ~~~
 
-## Linking an external program
+## Linking an custom program
 
-Start by making a new directory (anywhere you want), put your .cpp source file there,
+Create a new directory (anywhere you want), put your `.cpp` source file there,
 and make a `CMakeLists.txt` file telling CMake about the new executable.
 For example:
 
@@ -96,7 +95,7 @@ For example:
 $ cd $HOME/newproject
 $ cat hello.cpp
 
-#include "faunus.h"
+#include "core.h"
 int main() {
   Faunus::Point a(0,0,0);
 }

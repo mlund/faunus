@@ -249,6 +249,7 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/examples/README.md
     ${CMAKE_SOURCE_DIR}/examples/bulk.yml
     ${CMAKE_SOURCE_DIR}/examples/water.yml
+    ${CMAKE_SOURCE_DIR}/examples/water.xyz
     DESTINATION share/faunus/examples)
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")

@@ -185,15 +185,13 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/space.h
     )
 
-add_executable(tests src/tests.cpp ${hdrs})
+add_executable(tests EXCLUDE_FROM_ALL src/tests.cpp ${hdrs})
 add_dependencies(tests modernjson doctest eigen range-v3 xdrfile pybind11)
 add_test(NAME tests COMMAND tests)
 
 add_executable(faunus src/faunus.cpp ${hdrs})
 add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar)
 target_link_libraries(faunus xdrfile docopt ${LINKLIBS})
-
-install (TARGETS faunus DESTINATION bin)
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
@@ -214,7 +212,7 @@ if (ENABLE_PYTHON)
     endif()
 
     if (PYTHONLIBS_FOUND)
-        add_library(pyfaunus SHARED src/pyfaunus.cpp)
+        add_library(pyfaunus SHARED EXCLUDE_FROM_ALL src/pyfaunus.cpp)
         set_target_properties(pyfaunus PROPERTIES PREFIX "")
         set_target_properties(pyfaunus PROPERTIES SUFFIX ".so")
         target_link_libraries(pyfaunus ${PYTHON_LIBRARY} xdrfile)
@@ -242,6 +240,15 @@ add_custom_target(
     analysis.md 
 )
 set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+install(TARGETS faunus DESTINATION bin)
+install(FILES ${CMAKE_SOURCE_DIR}/scripts/yason.py DESTINATION bin PERMISSIONS WORLD_EXECUTE)
+install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus)
+install(FILES
+    ${CMAKE_SOURCE_DIR}/examples/README.md
+    ${CMAKE_SOURCE_DIR}/examples/bulk.yml
+    ${CMAKE_SOURCE_DIR}/examples/water.yml
+    DESTINATION share/faunus/examples)
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
     string(REPLACE "NDEBUG" "_ndebug" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})

@@ -202,7 +202,7 @@ if (ENABLE_PYTHON)
 
     if (PYTHONINTERP_FOUND)
         execute_process(
-            COMMAND ${PYTHON_EXECUTABLE} yason.py -h
+            COMMAND ${PYTHON_EXECUTABLE} scripts/yason.py -h
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             ERROR_QUIET OUTPUT_QUIET
             RESULT_VARIABLE yasontest)

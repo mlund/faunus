@@ -125,16 +125,16 @@ The added energy terms are:
 $$
 \small
 \begin{aligned}
-  \beta U =& \overbrace{\frac{2\pi\lambda_B}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\vert Q^{q\mu} \vert^2}^{\text{reciprocal}}
-  - \overbrace{\lambda_B\sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2   \right)}^{\text{self}}\\
-   &+ \underbrace{\frac{2\pi\lambda_B}{(2\varepsilon_{surf} + 1)V}\left(  \vert \sum_{j}q_j{\bf r}_j   \vert^2 + 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j + \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )}_{\text{surface}}\\
+  U =& \overbrace{\frac{2\pi f}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\vert Q^{q\mu} \vert^2}^{\text{reciprocal}}
+  - \overbrace{ f \sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2   \right)}^{\text{self}}\\
+   &+ \underbrace{\frac{2\pi f}{(2\varepsilon_{surf} + 1)V}\left(  \vert \sum_{j}q_j{\bf r}_j   \vert^2 + 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j + \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )}_{\text{surface}}\\
 \end{aligned}
 $$
 
 where
 
 $$
-\lambda_B = \frac{e^2}{4\pi\varepsilon_0\varepsilon_rk_BT} \quad\quad V=L_xL_yL_z
+f = \frac{1}{4\pi\varepsilon_0\varepsilon_r} \quad\quad V=L_xL_yL_z
 $$
 
 $$
@@ -145,8 +145,6 @@ $$
 
 $$
 {\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
-\quad\quad
-\beta=1/k_BT
 $$
 
 

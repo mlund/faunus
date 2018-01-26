@@ -1,0 +1,24 @@
+package:
+  name: faunus
+  version: "beta1"
+
+source:
+  #git_rev: 1.1.0
+  git_url: https://github.com/mlund/neofaunus.git
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - openmpi
+    - ruamel_yaml
+    - pandoc
+  run:
+    - openmpi
+    - ruamel_yaml
+    - pygments
+
+about:
+  home: http://mlund.github.io/neofaunus
+  license: MIT

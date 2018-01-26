@@ -2,7 +2,7 @@
 title: Faunus User Manual
 papersize: a4
 fontsize: 10pt
-geometry: margin=2.5cm
+geometry: margin=3cm
 header-includes: |
     \usepackage{fancyhdr}
     \pagestyle{fancy}

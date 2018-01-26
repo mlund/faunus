@@ -14,6 +14,7 @@ requirements:
     - openmpi
     - ruamel_yaml
     - pandoc
+    - cmake
   run:
     - openmpi
     - ruamel_yaml

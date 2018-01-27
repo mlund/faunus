@@ -11,10 +11,12 @@ build:
 
 requirements:
   build:
+    - librsvg
     - openmpi
     - ruamel_yaml
     - pandoc
     - cmake
+    - clangdev
   run:
     - openmpi
     - ruamel_yaml

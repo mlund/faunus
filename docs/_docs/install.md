@@ -7,12 +7,13 @@
 Faunus is continuously [tested](https://travis-ci.org/mlund/neofaunus) on macOS/Linux,
 but should work on most unix operating systems and _possibly_ under Cygwin (Windows).
 
-## Precompiled packages
+## Using Conda
 
 Install via Anaconda/Miniconda:
 
 ~~~ bash
-conda install -c mikaellund faunus
+conda --add channels conda-forge
+conda install -c teokem faunus
 ~~~
 
 (macOS or Linux x64 architectures)
@@ -48,6 +49,8 @@ A set of dependencies will automatically be downloaded.
 cd faunus
 cmake . [OPTIONS]
 make
+make tests
+make install
 ~~~
 
 The following options are available:
@@ -97,7 +100,7 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles
 ~~~
 
-### Linking an custom program
+### Linking a custom program
 
 Create a new directory (anywhere you want), put your `.cpp` source file there,
 and make a `CMakeLists.txt` file telling CMake about the new executable.
@@ -133,14 +136,23 @@ make
 All options selected when configuring faunus will be applied to `hello` as well,
 and changes to the faunus code base will trigger re-compilation upon running `make`.
 
-## Creating a conda package (expert)
+## Creating a conda package (expert usage)
 
 To create a precompiled package for Anaconda, do the following steps:
 
-1. `conda install conda-build anaconda-client`
-2. cd to the `scripts` folder
-3. run `conda-build .`
-4. Log in to your conda account with `anaconda login`
-5. Submit your package with `anaconda upload ...` (see output from 3.) 
-6. Instead of 4-5, install locally with `conda install -c USERNAME faunus --use-local`
+~~~ bash
+conda config --add channels conda-forge
+conda install conda-build anaconda-client
+cd scripts/
+conda-build .
+anaconda login
+anaconda upload ... # see output from build step
+~~~
+
+Alternatively, instead of uploading to anaconda.org you
+can install a local copy directly after the build step above:
+
+~~~ bash
+conda install -c USERNAME faunus --use-local`
+~~~
 

@@ -219,7 +219,7 @@ namespace Faunus {
                     }
 
                     ~AtomProfile() {
-                        std::ofstream f(file);
+                        std::ofstream f(MPI::prefix + file);
                         if (f)
                             f << "# r N rho/M\n";
                             for (auto &m : tbl.getMap()) {
@@ -455,7 +455,7 @@ namespace Faunus {
                 inline virtual ~PairFunctionBase()
                 {
                     normalize();
-                    hist.save( file );
+                    hist.save( MPI::prefix + file );
                 }
         };
 

@@ -186,7 +186,7 @@ set(hdrs
     )
 
 add_executable(tests EXCLUDE_FROM_ALL src/tests.cpp ${hdrs})
-add_dependencies(tests modernjson doctest eigen range-v3 xdrfile pybind11)
+add_dependencies(tests modernjson doctest eigen range-v3 xdrfile)
 add_test(NAME tests COMMAND tests)
 
 add_executable(faunus src/faunus.cpp ${hdrs})
@@ -212,6 +212,8 @@ if (ENABLE_PYTHON)
     endif()
 
     if (PYTHONLIBS_FOUND)
+        #add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/src/pybind11)
+        #pybind11_add_module(pyfaunus src/pyfaunus.cpp)
         add_library(pyfaunus SHARED EXCLUDE_FROM_ALL src/pyfaunus.cpp)
         set_target_properties(pyfaunus PROPERTIES PREFIX "")
         set_target_properties(pyfaunus PROPERTIES SUFFIX ".so")

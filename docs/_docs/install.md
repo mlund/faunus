@@ -7,7 +7,19 @@
 Faunus is continuously [tested](https://travis-ci.org/mlund/neofaunus) on macOS/Linux,
 but should work on most unix operating systems and _possibly_ under Cygwin (Windows).
 
-## Requirements
+## Precompiled packages
+
+Install via Anaconda/Miniconda:
+
+~~~ bash
+conda install -c mikaellund faunus
+~~~
+
+(macOS or Linux x64 architectures)
+
+## Building from source code
+
+### Requirements
 
 - CMake 3.9+
 - C/C++14 compiler (Clang 3.9+, GCC 6+, etc.)
@@ -26,7 +38,7 @@ clang on macOS. CMake can be installed with an
 [Homebrew](https://brew.sh).
 {: .notice--info}
 
-## Compiling
+### Compiling
 
 Download the [latest release](https://github.com/mlund/faunus/releases/latest)
 and perform the following steps in a terminal.
@@ -51,7 +63,7 @@ Option                             | Description
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`    | Compiler options for Debug mode
 `-DMYPLAYGROUND="absolute path"`   | Add additional source directory
 
-## Libraries in odd locations
+### Libraries in odd locations
 
 Should you have multiple compilers or python distributions, be specific:
 
@@ -76,7 +88,7 @@ install_name_tool -change libpython3.6.dylib \
   $HOME/miniconda/lib/libpython3.6.dylib pyfaunus.so
 ~~~
 
-## Resetting the build system
+### Resetting the build system
 
 If you need to change the compiler or for another reason want to reset the build system, do:
 
@@ -85,7 +97,7 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles
 ~~~
 
-## Linking an custom program
+### Linking an custom program
 
 Create a new directory (anywhere you want), put your `.cpp` source file there,
 and make a `CMakeLists.txt` file telling CMake about the new executable.
@@ -120,3 +132,15 @@ make
 
 All options selected when configuring faunus will be applied to `hello` as well,
 and changes to the faunus code base will trigger re-compilation upon running `make`.
+
+## Creating a conda package (expert)
+
+To create a precompiled package for Anaconda, do the following steps:
+
+1. `conda install conda-build anaconda-client`
+2. cd to the `scripts` folder
+3. run `conda-build .`
+4. Log in to your conda account with `anaconda login`
+5. Submit your package with `anaconda upload ...` (see output from 3.) 
+6. Instead of 4-5, install locally with `conda install -c USERNAME faunus --use-local`
+

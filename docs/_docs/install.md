@@ -2,23 +2,25 @@
 ---
 [![Edit](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
 
-# Installation
-
-Faunus is continuously [tested](https://travis-ci.org/mlund/neofaunus) on macOS/Linux,
-but should work on most unix operating systems and _possibly_ under Cygwin (Windows).
+# Installing
 
 ## Using Conda
 
-Install via Anaconda/Miniconda:
+For macOS and linux x64, precompiled binary packages are available
+via [Anaconda or Miniconda](https://conda.io/docs/user-guide/install/index.html):
 
 ~~~ bash
-conda --add channels conda-forge
+conda config --add channels conda-forge
 conda install -c teokem faunus
 ~~~
 
-(macOS or Linux x64 architectures)
+In addition to the `faunus` executable, this installs a pdf manual and
+examples in `share/faunus`.
 
 ## Building from source code
+
+Faunus is continuously [tested](https://travis-ci.org/mlund/neofaunus) on macOS/Linux,
+but should compilie on most unix operating systems and possibly under Cygwin (Windows).
 
 ### Requirements
 
@@ -155,4 +157,10 @@ can install a local copy directly after the build step above:
 ~~~ bash
 conda install -c USERNAME faunus --use-local`
 ~~~
+
+**Note:**
+The created Anaconda package includes a PDF manual
+which require that you must have LaTeX installed.
+{: .notice--info}
+
 

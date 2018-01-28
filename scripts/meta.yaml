@@ -12,13 +12,13 @@ build:
 requirements:
   build:
     - librsvg
-    - openmpi
+    - openmpi=2.1
     - ruamel_yaml
-    - pandoc
-    - cmake
-    - clangdev # [not osx]
+    - pandoc>=1.19
+    - cmake>=3.9
+    - clangdev>=5 # [not osx]
   run:
-    - openmpi
+    - openmpi=2.1
     - ruamel_yaml
     - pygments
 

@@ -1,5 +1,5 @@
 ---
-title: "Hoth Simulator"
+title: "Faunus"
 layout: splash
 header:
   overlay_color: "#000"

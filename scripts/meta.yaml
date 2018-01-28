@@ -16,7 +16,7 @@ requirements:
     - ruamel_yaml
     - pandoc
     - cmake
-    - clangdev
+    - clangdev # [not osx]
   run:
     - openmpi
     - ruamel_yaml

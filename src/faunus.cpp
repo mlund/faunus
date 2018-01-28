@@ -13,9 +13,9 @@ typedef Geometry::Cuboid Tgeometry;
 typedef Particle<Charge> Tparticle;
 
 static const char USAGE[] =
-R"(Hoth - the Monte Carlo code you're looking for!
+R"(Faunus - the Monte Carlo code you're looking for!
 
-    http://github.com/mlund/faunus
+    http://github.com/mlund/neofaunus
 
     Usage:
       faunus [-q] [--nobar] [--nopfx] [--state=<file>] [--input=<file>] [--output=<file>]

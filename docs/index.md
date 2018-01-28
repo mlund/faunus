@@ -1,5 +1,5 @@
 ---
-title: "Faunus"
+title: "Faunus Mk3"
 layout: splash
 header:
   overlay_color: "#000"
@@ -20,7 +20,7 @@ feature_row:
     excerpt: "Spheres, Sphero-cylinders, Death Star Particles, Dipoles, Quadrupoles, or define your own anisotropic particle."
   - image_path: https://www.dropbox.com/s/r126un7q577ugxw/opensource-400.png?raw=1
     title: "Open Source"
-    excerpt: "Hoth is public, open source software and freely available through Github."
+    excerpt: "Faunus is public, open source software and freely available through Github."
 ---
 [![GitHub release](https://img.shields.io/github/release/mlund/faunus.svg)](https://github.com/mlund/faunus/releases/latest)
 [![DOI](https://img.shields.io/badge/DOI-10%2Fnvn-orange.svg)](http://dx.doi.org/10/nvn)

@@ -6,21 +6,21 @@
 
 ## Using Conda
 
-For macOS and linux x64, precompiled binary packages are available
-via [Anaconda or Miniconda](https://conda.io/docs/user-guide/install/index.html):
+For macOS and Linux x86_64, precompiled binary packages are available
+via [(mini)conda](https://conda.io/docs/user-guide/install/index.html):
 
 ~~~ bash
 conda config --add channels conda-forge
 conda install -c teokem faunus
 ~~~
 
-In addition to the `faunus` executable, this installs a pdf manual and
+In addition to the `faunus` program, this installs a pdf manual and
 examples in `share/faunus`.
 
 ## Building from source code
 
 Faunus is continuously [tested](https://travis-ci.org/mlund/neofaunus) on macOS/Linux,
-but should compilie on most unix operating systems and possibly under Cygwin (Windows).
+but should compile on most unix operating systems and possibly under Cygwin (Windows).
 
 ### Requirements
 
@@ -29,7 +29,7 @@ but should compilie on most unix operating systems and possibly under Cygwin (Wi
 
 The following are optional:
 
-- Python 3.6 or higher with `ruamel_yaml` or `yaml`
+- Python 3.6+ with `ruamel_yaml` or `yaml`
 - Message Passing Interface (MPI)
 - Pandoc (for building documentation)
 
@@ -57,16 +57,17 @@ make install
 
 The following options are available:
 
-Option                             | Description
----------------------------------  | ---------------------------------------
-`-DENABLE_MPI=OFF`                 | Enable MPI
-`-DENABLE_OPENMP=OFF`              | Enable OpenMP support
-`-DENABLE_PYTHON=ON`               | Build python bindings (experimental)
-`-DENABLE_POWERSASA=ON`            | Enable SASA routines (external download)
-`-DCMAKE_BUILD_TYPE=RelWithDebInfo`| Alternatives: `Debug` or `Release` (faster)
-`-DCMAKE_CXX_FLAGS_RELEASE="..."`  | Compiler options for Release mode
-`-DCMAKE_CXX_FLAGS_DEBUG="..."`    | Compiler options for Debug mode
-`-DMYPLAYGROUND="absolute path"`   | Add additional source directory
+Option                               | Description
+------------------------------------ | ---------------------------------------
+`-DENABLE_MPI=OFF`                   | Enable MPI
+`-DENABLE_OPENMP=OFF`                | Enable OpenMP support
+`-DENABLE_PYTHON=ON`                 | Build python bindings (experimental)
+`-DENABLE_POWERSASA=ON`              | Enable SASA routines (external download)
+`-DCMAKE_BUILD_TYPE=RelWithDebInfo`  | Alternatives: `Debug` or `Release` (faster)
+`-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
+`-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
+`-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: /usr/local)
+`-DMYPLAYGROUND="absolute path"`     | Add additional source directory
 
 ### Libraries in odd locations
 

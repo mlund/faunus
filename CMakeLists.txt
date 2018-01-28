@@ -228,10 +228,7 @@ add_custom_target(
     manual
     COMMENT "Building PDF manual"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/_docs
-    COMMAND pandoc
-    --self-contained
-    --highlight-style=tango
-    --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
+    COMMAND cat
     header.md
     docs.md
     install.md
@@ -239,14 +236,22 @@ add_custom_target(
     topology.md
     energy.md
     moves.md
-    analysis.md 
+    analysis.md |
+    grep -v ".notice--" |
+    grep -v "Github-Improve_this_page" |
+    pandoc --self-contained --highlight-style=tango --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
 )
 set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
+# Install targets
+
 install(TARGETS faunus DESTINATION bin)
+
+install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
+
 install(FILES ${CMAKE_SOURCE_DIR}/scripts/yason.py DESTINATION bin
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus)
+
 install(FILES
     ${CMAKE_SOURCE_DIR}/examples/README.md
     ${CMAKE_SOURCE_DIR}/examples/bulk.yml

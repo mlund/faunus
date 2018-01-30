@@ -49,7 +49,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 
 ## Molecule Properties
 
-A molecule is a collection of atoms, but they need not be associated
+A molecule is a collection of atoms, but need not be associated
 as real molecules. Two particular modes can be specified:
 
 1. If `atomic=true` the atoms in the molecule are unassociated and is
@@ -74,7 +74,7 @@ Properties of molecules and their default values:
 `keeppos=false`     | Keep original positions of `structure`
 `Ninactive=0`       | Deactivates `Ninactive` of the inserted molecules
 `Ninit=0`           | How many molecules to insert
-`structure`         | Structure file (`.pqr|.aam|.xyz`) - required if `atomic=false`
+`structure`         | Structure file (`.pqr, .aam, .xyz`) - required if `atomic=false`
 `bondlist`          | List of _internal_ bonds (harmonic, dihedrals etc.)
 
 ## Processes
@@ -94,3 +94,4 @@ been defined in `moleculelist`:
 processlist:
     - { process: "HA = H~ + A", pK=4.8 }
 ~~~
+

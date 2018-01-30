@@ -138,4 +138,6 @@ and scales:
 1. molecular mass centers
 2. positions of free atoms (groups with `atomic=true`)
 
-by $(V^{\prime}/V)^{1/3}$. This is typically used for the $NPT$ ensemble, and for this an additional pressure term should be added to the Hamiltonian.
+by $(V^{\prime}/V)^{1/3}$.
+This is typically used for the $NPT$ ensemble, and for this an additional pressure term should be added to the Hamiltonian.
+

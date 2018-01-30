@@ -186,3 +186,4 @@ half-sphere.
 `nstep=0`      |  Interval between samples.
 
 Save configurations to a Gromacs XTC trajectory file.
+

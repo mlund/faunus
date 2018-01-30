@@ -174,6 +174,21 @@ if (ENABLE_POWERSASA)
     include_directories("${CMAKE_SOURCE_DIR}/include/faunus/sasa")
 endif ()
 
+# GIT
+
+find_package(Git)
+if (GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} log -1 --format="%h\ \(%cd\)" --date short
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+    if (GIT_COMMIT_HASH)
+        add_definitions("-DGIT_COMMIT_HASH=${GIT_COMMIT_HASH}")
+    endif ()
+endif ()
+
 set(hdrs
     ${CMAKE_SOURCE_DIR}/src/analysis.h
     ${CMAKE_SOURCE_DIR}/src/average.h
@@ -239,8 +254,10 @@ add_custom_target(
     analysis.md |
     grep -v ".notice--" |
     grep -v "Github-Improve_this_page" |
-    pandoc --self-contained --highlight-style=tango --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
-)
+    pandoc --self-contained --highlight-style=tango --template ../pandoc.tex
+    -V thanks:"Based on git revision "${GIT_COMMIT_HASH}
+    -N --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
+    )
 set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 # Install targets

@@ -85,3 +85,4 @@ If all processes take the same input:
 mpirun -np 2 ./faunus --nopfx --input in.json
 mpirun -np 2 --stdin all ./faunus < in.json
 ~~~
+

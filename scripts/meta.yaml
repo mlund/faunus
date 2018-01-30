@@ -23,6 +23,7 @@ requirements:
     - openmpi 2.1.* # [linux64]
     - ruamel_yaml
     - pygments
+    - python >=3
 
 about:
   home: http://mlund.github.io/neofaunus

@@ -45,8 +45,12 @@ int main( int argc, char **argv )
     try {
         Faunus::MPI::MPIController mpi; // OK also if MPI is unavailable
 
+        std::string version="Faunus Mk2";
+#ifdef GIT_COMMIT_HASH
+        version += " (git revision " + std::string(GIT_COMMIT_HASH) + ")";
+#endif
         auto args = docopt::docopt( USAGE,
-                { argv + 1, argv + argc }, true, "Faunus 2.0.0");
+                { argv + 1, argv + argc }, true, version);
 
         // --nobar
         bool showProgress = !args["--nobar"].asBool();
@@ -122,6 +126,9 @@ int main( int argc, char **argv )
             j["analysis"] = analysis;
             if (mpi.nproc()>1)
                 j["mpi"] = mpi;
+#ifdef GIT_COMMIT_HASH
+            j["git revisioN"] = GIT_COMMIT_HASH;
+#endif
             f << std::setw(4) << j << endl;
         }
 

@@ -34,10 +34,9 @@ R"(Faunus - the Monte Carlo code you're looking for!
 
     Multiple processes using MPI:
 
-    1. input/output/state/analysis files are prefixed with "mpi{rank}."
+    1. input and output files are prefixed with "mpi{rank}."
     2. standard output is redirected to "mpi{rank}.stdout"
-    3. Input prefixing can be suppressed with --nopfx,
-       useful for embarrassingly parallel runs.
+    3. Input prefixing can be suppressed with --nopfx
 )";
 
 int main( int argc, char **argv )
@@ -47,7 +46,7 @@ int main( int argc, char **argv )
 
         std::string version="Faunus Mk2";
 #ifdef GIT_COMMIT_HASH
-        version += " (git revision " + std::string(GIT_COMMIT_HASH) + ")";
+        version += " git " + std::string(GIT_COMMIT_HASH);
 #endif
         auto args = docopt::docopt( USAGE,
                 { argv + 1, argv + argc }, true, version);

@@ -11,7 +11,6 @@ urlcolor: Maroon
 fontfamily: mathdesign
 fontfamilyoptions: urw-garamond
 links-as-notes: true
-date: \today
 header-includes: |
     \usepackage{fancyhdr}
     \pagestyle{fancy}

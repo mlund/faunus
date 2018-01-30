@@ -149,19 +149,25 @@ conda install conda-build anaconda-client
 cd scripts/
 conda-build .
 anaconda login
-anaconda upload ... # see output from build step
+anaconda upload -u USER ... # see output from build step
 ~~~
 
 Alternatively, instead of uploading to anaconda.org you
 can install a local copy directly after the build step above:
 
 ~~~ bash
-conda install -c USERNAME faunus --use-local`
+conda install -c USER faunus --use-local
 ~~~
 
-**Note:**
-The created Anaconda package includes a PDF manual
-which require that you must have LaTeX installed.
-{: .notice--info}
+### Requirements
+
+Building a conda package require a full LaTeX installation in order to create
+the PDF manual. Do ensure that the Garamond fonts are available:
+
+~~~ bash
+wget https://tug.org/fonts/getnonfreefonts/install-getnonfreefonts
+sudo texlua install-getnonfreefonts --sys
+sudo getnonfreefonts garamond
+~~~
 
 

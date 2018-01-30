@@ -255,6 +255,7 @@ add_custom_target(
     grep -v ".notice--" |
     grep -v "Github-Improve_this_page" |
     pandoc --self-contained --highlight-style=tango --template ../pandoc.tex
+    -V date:"\\today"
     -V thanks:"Based on git revision "${GIT_COMMIT_HASH}
     -N --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
     )

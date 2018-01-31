@@ -36,7 +36,8 @@ install:
     conda install conda-build anaconda-client
 
 script:
-  - if [[ "${COMPILER}" != "" ]]; then export CXX=${COMPILER}; fi
+  - export CXX=clang++
+  - export CC=clang
   - $CXX --version
   - uname -a
   - cd scripts/

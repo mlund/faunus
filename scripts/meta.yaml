@@ -17,7 +17,7 @@ requirements:
     - ruamel_yaml
     - pandoc >=1.19
     - cmake >=3.9
-    - clangdev >=5  # [not osx]
+    - python >=3
   run:
     - openmpi 1.6.3 # [osx]
     - openmpi 2.1.* # [linux64]

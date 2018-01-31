@@ -166,8 +166,8 @@ the PDF manual. Do ensure that the Garamond fonts are available:
 
 ~~~ bash
 wget https://tug.org/fonts/getnonfreefonts/install-getnonfreefonts
-sudo texlua install-getnonfreefonts --sys
-sudo getnonfreefonts garamond
+sudo texlua install-getnonfreefonts
+sudo getnonfreefonts garamond --sys
 ~~~
 
 

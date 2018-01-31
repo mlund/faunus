@@ -697,13 +697,13 @@ namespace Faunus {
                 Average<double> uavg;
 
                 void init() {
-                    state1.pot.key = Energy::Energybase::OLD; // this is the old energy
+                    state1.pot.key = Energy::Energybase::OLD; // this is the old energy (current)
                     state2.pot.key = Energy::Energybase::NEW; // this is the new energy (trial)
                     dusum=0;
                     Change c; c.all=true;
-                    uinit = state2.pot.energy(c);
-                    state1.sync(state2, c); // do this AFTER energy eval. on state2!
-                    assert(uinit == state1.pot.energy(c));
+                    uinit = state1.pot.energy(c);
+                    state2.sync(state1, c);
+                    assert(uinit == state2.pot.energy(c));
                 }
 
             public:

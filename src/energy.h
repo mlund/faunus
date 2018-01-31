@@ -43,7 +43,7 @@ namespace Faunus {
             Tvecx Qdip;
             Eigen::MatrixXd kVectors; // Matrices with k-vectors
             Eigen::VectorXd Aks;      // values based on k-vectors to minimize computational effort (Eq.24,DOI:10.1063/1.481216)
-            double alpha, alpha2, rc, kc, kc2, minL, maxL, check_k2_zero, lB;
+            double alpha, alpha2, rc, kc, kc2, check_k2_zero, lB;
             double const_inf, eps_surf;
             bool ionion;
             bool iondipole;
@@ -56,6 +56,7 @@ namespace Faunus {
 
             void update(const Point &box) {
                 L = box;
+                check_k2_zero = 0.1*std::pow(2*pc::pi/L.maxCoeff(), 2);
                 int kVectorsLength = (2*kcc+1) * (2*kcc+1) * (2*kcc+1) - 1;
                 if (kVectorsLength == 0) {
                     kVectors.resize(3, 1); 
@@ -98,7 +99,6 @@ namespace Faunus {
                     Qdip.resize(kVectorsInUse);
                 }
             }
-
         };
 
         void from_json(const json &j, EwaldData &d) {
@@ -130,22 +130,44 @@ namespace Faunus {
         /** @brief recipe or policies for ion-ion ewald */
         template<class Tspace>
             struct PolicyIonIon  {
-                Tspace &spc;
-                PolicyIonIon(Tspace &spc) : spc(spc) {}
+                typedef typename Tspace::Tpvec::iterator iter;
+                Tspace *spc;
+                Tspace *old=nullptr; // set only if key==NEW at first call to `sync()`
+
+                PolicyIonIon(Tspace &spc) : spc(&spc) {}
+
                 void updateComplex(EwaldData &data) const {
                     for (int k=0; k<data.kVectorsInUse; k++) {
                         const Point& kv = data.kVectors.col(k);
                         EwaldData::Tcomplex Q(0,0);
-                        for (auto &i : spc.p) {
+                        for (auto &i : spc->p) {
                             double dot = kv.dot(i.pos);
-                            Q += i.charge * EwaldData::Tcomplex(std::cos(dot),std::sin(dot));
+                            Q += i.charge * EwaldData::Tcomplex( std::cos(dot), std::sin(dot) );
                         }
                         data.Qion.at(k) = Q;
                     }
-                }
+                } //!< Update all k vectors
+
+                void updateComplex(EwaldData &data, iter begin, iter end) const {
+                    assert(old!=nullptr);
+                    assert(spc->p.size() == old->p.size());
+                    size_t ibeg = std::distance(spc->p.begin(), begin); // it->index
+                    size_t iend = std::distance(spc->p.begin(), end);   // it->index
+                    for (int k=0; k<data.kVectorsInUse; k++) {
+                        auto& Q = data.Qion.at(k);
+                        Point q = data.kVectors.col(k);
+                        for (size_t i=ibeg; i<=iend; i++) {
+                            double _new = q.dot(spc->p[i].pos);
+                            double _old = q.dot(old->p[i].pos);
+                            Q += spc->p[i].charge * EwaldData::Tcomplex( std::cos(_new), std::sin(_new) );
+                            Q -= old->p[i].charge * EwaldData::Tcomplex( std::cos(_old), std::sin(_old) );
+                        }
+                    }
+                } //!< Optimized update of k subset. Require access to old positions through `old` pointer
+
                 double selfEnergy(const EwaldData &d) {
                     double E = 0;
-                    for (auto& i : spc.p)
+                    for (auto& i : spc->p)
                         E += i.charge * i.charge;
                     return -d.alpha*E / std::sqrt(pc::pi) * d.lB;
                 }
@@ -154,16 +176,16 @@ namespace Faunus {
                     if (d.const_inf < 0.5)
                         return 0;
                     Point qr(0,0,0);
-                    for (auto &i : spc.p)
+                    for (auto &i : spc->p)
                         qr += i.charge*i.pos;
-                    return d.const_inf * 2 * pc::pi / ( (2*d.eps_surf+1) * spc.geo.getVolume() ) * qr.dot(qr) * d.lB;
+                    return d.const_inf * 2 * pc::pi / ( (2*d.eps_surf+1) * spc->geo.getVolume() ) * qr.dot(qr) * d.lB;
                 }
 
                 double reciprocalEnergy(const EwaldData &d) {
                     double E = 0;
                     for (size_t k=0; k<d.Qion.size(); k++)
-                        E += d.Aks[k] * std::norm( d.Qion[k]);
-                    return 2 * pc::pi / spc.geo.getVolume() * E * d.lB;
+                        E += d.Aks[k] * std::norm( d.Qion[k] );
+                    return 2 * pc::pi / spc->geo.getVolume() * E * d.lB;
                 }
             };
 
@@ -171,11 +193,11 @@ namespace Faunus {
         template<class Tspace, class Policy=PolicyIonIon<Tspace>>
             class Ewald : public Energybase {
                 private:
-                    Tspace& spc;
                     EwaldData data;
                     Policy policy;
-
                 public:
+                    Tspace& spc;
+
                     Ewald(const json &j, Tspace &spc) : spc(spc), policy(spc) {
                         name = "ewald";
                         data = j;
@@ -186,8 +208,21 @@ namespace Faunus {
                     double energy(Change &change) override {
                         double u=0;
                         if (!change.empty()) {
-                            if (key==NEW) { // we belong to a trial state
-                                policy.updateComplex(data); // brute force. todo: be selective
+                            // If the state is NEW (trial state), then update all k-vectors
+                            if (key==NEW) {
+                                if (change.all || change.dV)       // everything changes
+                                    policy.updateComplex(data);    // update all (expensive!)
+                                else {
+                                    if (change.groups.size()==1) { // exactly one group is moved
+                                        auto& d = change.groups[0];
+                                        auto& g = spc.groups[d.index];
+                                        if (d.atoms.size()==1)     // exactly one atom is moved
+                                            policy.updateComplex(data, g.begin()+d.atoms[0], g.begin()+d.atoms[0]);
+                                        else
+                                            policy.updateComplex(data, g.begin(), g.end());
+                                    } else
+                                        policy.updateComplex(data);
+                                }
                             }
                             u = policy.selfEnergy(data) + policy.surfaceEnergy(data) + policy.reciprocalEnergy(data); 
                         }
@@ -197,12 +232,11 @@ namespace Faunus {
                     void sync(Energybase *basePtr, Change &change) override {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         assert(other);
-                        if (other->key==OLD) {} // do specific things if move rejected
-                        if (other->key==NEW) {} // do specific things if move accepted
-
+                        if (other->key==OLD)
+                            policy.old = &(other->spc); // give NEW access to OLD space for optimized updates
                         data = other->data; // copy everything!
 
-                    } //!< Called after a move is rejected/accepted
+                    } //!< Called after a move is rejected/accepted as well as before simulation
 
                     void to_json(json &j) const override {
                         j = data;
@@ -793,7 +827,7 @@ namespace Faunus {
 #endif
 
                                     // additional energies go here...
-                                    
+
                                     addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
 
                                     if (vec.size()==oldsize)

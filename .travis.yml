@@ -13,11 +13,11 @@ matrix:
   # Linux / Clang
   - os: linux
     compiler: clang
-    env: COMPILER=clang++-5.0
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
-        packages: ['g++-6', 'clang-5.0']
+    #env: COMPILER=clang++-5.0
+    #addons:
+    #  apt:
+    #    sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
+    #    packages: ['g++-6', 'clang-5.0']
 
 install:
   - |
@@ -36,10 +36,6 @@ install:
     conda install conda-build anaconda-client
 
 script:
-  - export CXX=clang++
-  - export CC=clang
-  - $CXX --version
-  - uname -a
   - cd scripts/
   - conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
 

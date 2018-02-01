@@ -9,15 +9,22 @@ matrix:
   # OSX / Clang
   - os: osx
     osx_image: xcode9.2
+    env:
+      - COMPILER=clang++
+      - CXX=clang++
+      - CC=clang
 
   # Linux / Clang
   - os: linux
     compiler: clang
-    #env: COMPILER=clang++-5.0
-    #addons:
-    #  apt:
-    #    sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
-    #    packages: ['g++-6', 'clang-5.0']
+    env:
+      - COMPILER=clang++-5.0
+      - CXX=clang++
+      - CC=clang
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
+        packages: ['g++-6', 'clang-5.0']
 
 install:
   - |
@@ -31,7 +38,7 @@ install:
     export PATH="$HOME/miniconda/bin:$PATH"
     hash -r
     conda config --set always_yes yes --set changeps1 no
-    conda update -q conda
+    #conda update -q conda
     conda config --add channels conda-forge
     conda install conda-build anaconda-client
 

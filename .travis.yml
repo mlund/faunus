@@ -8,7 +8,7 @@ matrix:
 
   # OSX / Clang
   - os: osx
-    osx_image: xcode9.2
+    osx_image: xcode9.1
     env:
       - COMPILER=clang++
       - CXX=clang++
@@ -38,9 +38,10 @@ install:
     export PATH="$HOME/miniconda/bin:$PATH"
     hash -r
     conda config --set always_yes yes --set changeps1 no
-    #conda update -q conda
     conda config --add channels conda-forge
+    conda update -q conda
     conda install conda-build anaconda-client
+    conda update -q conda-build
 
 script:
   - env

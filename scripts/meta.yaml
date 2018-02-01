@@ -16,7 +16,7 @@ requirements:
     - openmpi 2.1.* # [linux64]
     - ruamel_yaml
     - pandoc >=1.19
-    - cmake >=3.9   # [linux64]
+    - cmake >=3.9
     - python >=3    # [linux64]
   run:
     - openmpi 1.6.3 # [osx]

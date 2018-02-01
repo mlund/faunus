@@ -1,3 +1,6 @@
+#export PATH="$HOME/miniconda/bin:$PATH"
+which cmake
+which clang++
 export CC=clang
 export CXX=clang++
 env

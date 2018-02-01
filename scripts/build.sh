@@ -1,10 +1,4 @@
-#export PATH="$HOME/miniconda/bin:$PATH"
-which cmake
-which clang++
-export CC=clang
-export CXX=clang++
-env
-CXX=clang++ CC=clang cmake -DENABLE_MPI=off -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX
+cmake -DENABLE_MPI=off -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX
 make faunus
 make pyfaunus
 make tests

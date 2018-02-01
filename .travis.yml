@@ -36,6 +36,7 @@ install:
     conda install conda-build anaconda-client
 
 script:
+  - env
   - cd scripts/
   - conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
 

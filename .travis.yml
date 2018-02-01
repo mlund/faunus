@@ -16,7 +16,7 @@ matrix:
   # Linux / Clang
   - os: linux
     compiler: clang
-    env: [COMPILER=clang++, CXX=clang++, CC=clang]
+    env: [COMPILER=clang++-5.0, CXX=clang++, CC=clang]
     addons:
       apt:
         sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
@@ -33,10 +33,11 @@ install:
     bash miniconda.sh -b -p $HOME/miniconda
     export PATH="$HOME/miniconda/bin:$PATH"
     hash -r
-    conda config --set always_yes yes --set changeps1 no --add channels conda-forge
+    conda config --set always_yes yes --set changeps1 no
+    conda config --add channels conda-forge
     conda update -q conda
     conda install conda-build anaconda-client
-    conda update conda-build
+    conda update -q conda-build
 
 script:
   - cd scripts/

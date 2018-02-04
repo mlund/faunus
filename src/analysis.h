@@ -631,21 +631,21 @@ namespace Faunus {
                 Average<double> duexp; // < exp(-du/kT) >
 
                 void _sample() override {
-                    if (dV>0) {
+                    if (fabs(dV)>1e-10) {
                         double Vold = getVolume(),
                                Uold = pot.energy(c);
                         scaleVolume(Vold + dV);
                         double Unew = pot.energy(c);
                         scaleVolume(Vold);
-                        duexp += std::exp(-(Uold - Unew));
-                        assert(std::fabs(Uold - pot.energy(c)) < 1e-7);
+                        duexp += exp(-(Uold - Unew));
+                        assert(fabs(Uold - pot.energy(c)) < 1e-7);
                     }
                 }
 
                 void _from_json(const json &j) override { dV = j.at("dV"); }
 
                 void _to_json(json &j) const override {
-                    double pex = -std::log(duexp.avg()) / dV;
+                    double pex = -log(duexp.avg()) / dV;
                     j["dV"] = dV;
                     j["Pex/mM"] = pex / 1.0_mM;
                     j["Pex/Pa"] = pex / 1.0_Pa;

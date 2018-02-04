@@ -40,8 +40,13 @@ namespace Faunus {
 
     typedef Eigen::Vector3d Point; //!< 3d vector
     typedef nlohmann::json json;  //!< Json object
+
     using std::cout;
     using std::endl;
+    using std::fabs;
+    using std::exp;
+    using std::sqrt;
+    using std::log;
 
     template<class T1, class T2>
         int distance(T1 first, T2 last) {

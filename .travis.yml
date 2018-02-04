@@ -38,6 +38,15 @@ install:
     conda update -q conda-build
 
 script:
-  - cd scripts/
-  - conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      conda install cmake openmpi=1.6.3 python=3
+      cmake . -DENABLE_MPI=on
+      make faunus
+      make tests
+      make test
+    else
+      cd scripts/
+      conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+    fi
 

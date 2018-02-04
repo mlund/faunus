@@ -33,8 +33,8 @@ install:
     hash -r
     conda config --set always_yes yes --set changeps1 no
     conda config --add channels conda-forge
-    conda update -q conda
     conda install conda-build=3 anaconda-client
+    conda update -q conda
     conda update -q conda-build
 
 script:
@@ -45,8 +45,9 @@ script:
       make faunus
       make tests
       make test
+      cd scripts/
+      conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
     else
       cd scripts/
       conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
     fi
-

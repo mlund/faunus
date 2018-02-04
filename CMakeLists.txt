@@ -81,7 +81,6 @@ ExternalProject_Add( range-v3
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/ericniebler/range-v3/archive/0.3.0.tar.gz"
     URL_MD5 7fb74afbddec3e166739e635f5b365f2
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     UPDATE_DISCONNECTED ON
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(range-v3 source_dir)

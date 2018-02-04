@@ -81,6 +81,7 @@ ExternalProject_Add( range-v3
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/ericniebler/range-v3/archive/0.3.0.tar.gz"
     URL_MD5 7fb74afbddec3e166739e635f5b365f2
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     UPDATE_DISCONNECTED ON
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(range-v3 source_dir)
@@ -90,6 +91,7 @@ set(RangeV3IncludeDir ${source_dir}/include)
 
 ExternalProject_Add(project_docopt
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     BUILD_COMMAND make docopt_s
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
@@ -134,7 +136,8 @@ ExternalProject_Add( project_xdrfile
     PATCH_COMMAND echo "add_library(xdrfile-static STATIC \${SRCS})" >> CMakeLists.txt
     BUILD_COMMAND make xdrfile-static
     UPDATE_DISCONNECTED ON
-    CMAKE_ARGS "-Wno-dev" LOG_DOWNLOAD ON INSTALL_COMMAND "")
+    CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    LOG_DOWNLOAD ON INSTALL_COMMAND "")
 
 ExternalProject_Get_Property(project_xdrfile source_dir)
 ExternalProject_Get_Property(project_xdrfile binary_dir)

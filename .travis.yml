@@ -33,7 +33,7 @@ install:
     hash -r
     conda config --set always_yes yes --set changeps1 no
     conda config --add channels conda-forge
-    conda install conda-build anaconda-client
+    conda install conda-build=3 anaconda-client
     conda update -q conda
     conda update -q conda-build
 
@@ -41,7 +41,7 @@ script:
   - |
     if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
       conda install cmake openmpi=1.6.3 python=3
-      cmake . -DENABLE_MPI=on
+      CXX=clang++ CC=clang cmake . -DENABLE_MPI=on
       make faunus
       make tests
       make test
@@ -49,5 +49,5 @@ script:
       conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
     else
       cd scripts/
-      conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+      CXX=clang++ CC=clang conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
     fi

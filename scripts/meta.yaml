@@ -12,12 +12,14 @@ build:
 requirements:
   build:
     - librsvg
-    - openmpi 1.6.3 # [osx]
-    - openmpi 2.1.* # [linux64]
-    - pandoc >=1.19 # [linux64]
     - cmake >=3.9
-    - python >=3    # [linux64]
-    - ruamel_yaml   # [linux64]
+    - python >=3
+    - ruamel_yaml
+    - openmpi 1.6.3      # [osx]
+    - clangxx_osx-64 >=4 # [osx]
+    - openmpi 2.1.*      # [linux64]
+    - clangdev >=5       # [linux64]
+    #- pandoc >=1.19 # [linux64]
   run:
     - openmpi 1.6.3 # [osx]
     - openmpi 2.1.* # [linux64]

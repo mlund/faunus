@@ -29,4 +29,5 @@ requirements:
 
 about:
   home: http://mlund.github.io/neofaunus
+  summary: A Framework for Molecular Monte Carlo Simulations
   license: MIT

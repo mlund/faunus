@@ -25,6 +25,7 @@ namespace Faunus {
             public:
                 static Random slump;   //!< Shared for all moves
                 std::string name;      //!< Name of move
+                std::string cite;      //!< Reference
                 int repeat=1;          //!< How many times the move should be repeated per sweep
 
                 inline void from_json(const json &j) {
@@ -48,6 +49,8 @@ namespace Faunus {
                     j["acceptance"] = double(accepted)/cnt;
                     j["repeat"] = repeat;
                     j["moves"] = cnt;
+                    if (!cite.empty())
+                        j["cite"] = cite;
                     _roundjson(j, 3);
                 } //!< JSON report w. statistics, output etc.
 
@@ -359,6 +362,126 @@ namespace Faunus {
             };
 
         template<typename Tspace>
+            class Cluster : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    Tspace& spc;
+                    Average<double> msqd, msqd_angle, N;
+                    double thresholdsq=0, dptrans=0, dprot=0, angle=0, _bias=0;
+                    Point dir={1,1,1}, dp;
+                    std::vector<std::string> names;
+                    std::vector<int> ids;
+                    std::vector<size_t> index; // all possible molecules to move
+
+                    void _to_json(json &j) const override {
+                        using namespace u8;
+                        j = {
+                            {"threshold", std::sqrt(thresholdsq)}, {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
+                            {rootof + bracket("r" + squared), std::sqrt(msqd.avg())},
+                            {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
+                            {bracket("N"), N.avg()}
+                        };
+                        _roundjson(j,3);
+                    }
+
+                    void _from_json(const json &j) override {
+                        dptrans = j.at("dp");
+                        dir = j.value("dir", Point(1,1,1));
+                        dprot = j.at("dprot");
+                        thresholdsq = std::pow(j.at("threshold").get<double>(), 2);
+                        names = j.at("molecules").get<decltype(names)>(); // molecule names
+                        ids = names2ids(molecules<Tpvec>, names);     // names --> molids
+                        index.clear();
+                        for (auto &g : spc.groups)
+                            if (!g.atomic)
+                                if (std::find(ids.begin(), ids.end(), g.id)!=ids.end() )
+                                    index.push_back( &g-&spc.groups.front() );
+                        if (repeat<0)
+                            repeat = index.size();
+                    }
+
+                    void _move(Change &change) override {
+                        if (thresholdsq>0 && !index.empty()) {
+                            std::set<size_t> cluster; // index of all groups in cluster
+                            std::set<size_t> pool(index.begin(), index.end());
+                            size_t first = *slump.sample(index.begin(), index.end()); // random molecule
+                            cluster.insert(first);
+                            pool.erase(first);
+                            size_t n;
+                            do { // find cluster (not very clever...)
+                                n = cluster.size();
+                                for (size_t i : cluster)
+                                    if (!spc.groups[i].empty()) // check if group is inactive
+                                        for (size_t j : pool)
+                                            if (!spc.groups[j].empty()) // check if group is inactive
+                                                if (i!=j)
+                                                    if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)<=thresholdsq) {
+                                                        cluster.insert(j);
+                                                        pool.erase(j);
+                                                    }
+                            } while (cluster.size()!=n);
+
+                            // check if cluster is too large
+                            double max = spc.geo.getLength().minCoeff()/2;
+                            for (auto i : cluster)
+                                for (auto j : cluster)
+                                    if (j>i)
+                                        if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)>=max*max)
+                                            throw std::runtime_error(name+": cluster larger than half box length");
+
+                            N += cluster.size(); // average cluster size
+                            Change::data d;
+                            d.all=true;
+                            dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
+                            angle = dprot * (slump()-0.5);
+
+                            Point COM = Geometry::trigoCom(spc, cluster); // cluster center
+                            Eigen::Quaterniond Q;
+                            Q = Eigen::AngleAxisd(angle, ranunit(slump)); // quaternion
+
+                            for (auto i : cluster) { // loop over molecules in cluster
+                                auto &g = spc.groups[i];
+
+                                Geometry::rotate(g.begin(), g.end(), Q, spc.geo.boundaryFunc, -COM);
+                                g.cm = g.cm-COM;
+                                spc.geo.boundary(g.cm);
+                                g.cm = Q*g.cm+COM;
+                                spc.geo.boundary(g.cm);
+ 
+                                g.translate( dp, spc.geo.boundaryFunc );
+                                d.index=i;
+                                change.groups.push_back(d);
+                            }
+                            _bias += 0; // one may add bias here...
+#ifndef NDEBUG
+                            Point newCOM = Geometry::trigoCom(spc, cluster);
+                            double _zero = std::sqrt( spc.geo.sqdist(COM,newCOM) ) - dp.norm();
+                            if (fabs(_zero)>1)
+                                std::cerr << _zero << " ";
+#endif
+                        }
+                    }
+
+                    double bias(Change &change, double uold, double unew) override {
+                        return _bias;
+                    } //!< adds extra energy change not captured by the Hamiltonian
+
+                    void _reject(Change &change) override { msqd += 0; msqd_angle += 0; }
+
+                    void _accept(Change &change) override {
+                        msqd += dp.squaredNorm();
+                        msqd_angle += angle*angle;
+                    }
+
+                public:
+                    Cluster(Tspace &spc) : spc(spc) {
+                        cite = "doi:10/cj9gnn";
+                        name = "cluster";
+                        repeat = -1; // meaning repeat N times
+                    }
+            };
+
+        template<typename Tspace>
             class Pivot : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
@@ -532,7 +655,7 @@ namespace Faunus {
                                 MPI_Abort(mpi.comm, 1);
 
                             if (std::fabs(Vnew-Vold)>1e-9)
-                               change.dV=true; 
+                                change.dV=true; 
 
                             spc.p = p;
                             spc.geo.setVolume(Vnew);
@@ -637,6 +760,11 @@ namespace Faunus {
 
                                     if (it.key()=="volume") {
                                         this->template push_back<Move::VolumeMove<Tspace>>(spc);
+                                        vec.back()->from_json( it.value() );
+                                    }
+
+                                    if (it.key()=="cluster") {
+                                        this->template push_back<Move::Cluster<Tspace>>(spc);
                                         vec.back()->from_json( it.value() );
                                     }
 

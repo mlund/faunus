@@ -367,10 +367,39 @@ namespace Faunus {
                     i->rotate(q,m); // rotate internal coordinates
                     i->pos += shift;
                     boundary(i->pos);
-                    i->pos = q*i->pos - shift;
+                    i->pos = q*i->pos;
+                    boundary(i->pos);
+                    i->pos -= shift;
                     boundary(i->pos);
                 }
             } //!< Rotate particle pos and internal coordinates
+
+        /* 
+         * @brief Calculate mass center of cluster of particles in unbounded environment 
+         *
+         * [More info](http://dx.doi.org/10.1080/2151237X.2008.10129266)
+         */
+        template<class Tspace, class GroupIndex>
+            Point trigoCom( const Tspace &spc, const GroupIndex &groups, const std::vector<int> &dir = {0, 1, 2} )
+            {
+                assert(!dir.empty() && dir.size() <= 3);
+                Point xhi(0, 0, 0), zeta(0, 0, 0), theta(0, 0, 0), com(0, 0, 0);
+                for ( auto k : dir ) {
+                    double q = 2 * pc::pi / spc.geo.getLength()[k];
+                    size_t N=0;
+                    for (auto i : groups)
+                        for (auto &particle : spc.groups[i]) {
+                            theta[k] = particle.pos[k] * q;
+                            zeta[k] += std::sin(theta[k]);
+                            xhi[k] += std::cos(theta[k]);
+                            N++;
+                        }
+                    theta[k] = std::atan2(-zeta[k] / N, -xhi[k] / N) + pc::pi;
+                    com[k] = spc.geo.getLength()[k] * theta[k] / (2 * pc::pi);
+                }
+                spc.geo.boundary(com); // is this really needed?
+                return com;
+            }
 
     } //geometry namespace
 }//end of faunus namespace

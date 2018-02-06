@@ -400,34 +400,39 @@ namespace Faunus {
                             repeat = index.size();
                     }
 
+                    void findCluster(Tspace &spc, size_t first, std::set<size_t>& cluster) {
+                        std::set<size_t> pool(index.begin(), index.end());
+                        cluster.clear();
+                        cluster.insert(first);
+                        pool.erase(first);
+                        size_t n;
+                        do { // find cluster (not very clever...)
+                            n = cluster.size();
+                            for (size_t i : cluster)
+                                if (!spc.groups[i].empty()) // check if group is inactive
+                                    for (size_t j : pool)
+                                        if (!spc.groups[j].empty()) // check if group is inactive
+                                            if (i!=j)
+                                                if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)<=thresholdsq) {
+                                                    cluster.insert(j);
+                                                    pool.erase(j);
+                                                }
+                        } while (cluster.size()!=n);
+
+                        // check if cluster is too large
+                        double max = spc.geo.getLength().minCoeff()/2;
+                        for (auto i : cluster)
+                            for (auto j : cluster)
+                                if (j>i)
+                                    if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)>=max*max)
+                                        throw std::runtime_error(name+": cluster larger than half box length");
+                    }
+
                     void _move(Change &change) override {
                         if (thresholdsq>0 && !index.empty()) {
-                            std::set<size_t> cluster; // index of all groups in cluster
-                            std::set<size_t> pool(index.begin(), index.end());
-                            size_t first = *slump.sample(index.begin(), index.end()); // random molecule
-                            cluster.insert(first);
-                            pool.erase(first);
-                            size_t n;
-                            do { // find cluster (not very clever...)
-                                n = cluster.size();
-                                for (size_t i : cluster)
-                                    if (!spc.groups[i].empty()) // check if group is inactive
-                                        for (size_t j : pool)
-                                            if (!spc.groups[j].empty()) // check if group is inactive
-                                                if (i!=j)
-                                                    if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)<=thresholdsq) {
-                                                        cluster.insert(j);
-                                                        pool.erase(j);
-                                                    }
-                            } while (cluster.size()!=n);
-
-                            // check if cluster is too large
-                            double max = spc.geo.getLength().minCoeff()/2;
-                            for (auto i : cluster)
-                                for (auto j : cluster)
-                                    if (j>i)
-                                        if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)>=max*max)
-                                            throw std::runtime_error(name+": cluster larger than half box length");
+                            std::set<size_t> cluster; // all group index in cluster
+                            size_t first = *slump.sample(index.begin(), index.end()); // random molecule (nuclei)
+                            findCluster(spc, first, cluster); // find cluster around first
 
                             N += cluster.size(); // average cluster size
                             Change::data d;
@@ -447,7 +452,7 @@ namespace Faunus {
                                 spc.geo.boundary(g.cm);
                                 g.cm = Q*g.cm+COM;
                                 spc.geo.boundary(g.cm);
- 
+
                                 g.translate( dp, spc.geo.boundaryFunc );
                                 d.index=i;
                                 change.groups.push_back(d);

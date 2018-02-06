@@ -569,7 +569,7 @@ namespace Faunus {
              * This will take an arbitrary particle vector and add it
              * to an xtc file. If the file is already open, coordinates will
              * be added, while a new file is created if not.
-             * Coordinates are shiftet and converted to nanometers.
+             * Coordinates are shifted and converted to nanometers.
              * Box dimensions for the frame must be manually
              * set by the `ioxtc::setbox()` function before calling this.
              */

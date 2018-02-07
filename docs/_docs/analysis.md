@@ -106,7 +106,7 @@ Same as `atomrdf` but for molecular mass-centers.
 
 `savestate`    |  Description
 -------------- | ---------------------------------------------------------
-`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `state`
+`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `state`
 `nstep=-1`     |  Interval between samples. If -1, save at end of simulation
 
 Saves the current configuration and potentially the system state to a file.
@@ -139,7 +139,7 @@ molecular mass centers and atomic positions. The excess pressure is evatuated
 as a Widom average:
 
 $$
-p^{ex} = -\frac{k_BT}{\Delta V} \ln \langle e^{-\delta u / k_BT} \rangle_{NVT}
+p^{ex} = \frac{k_BT}{\Delta V} \ln \langle e^{-\delta u / k_BT} \rangle_{NVT}
 $$
 
 For more advanced applications of volume perturbations (pressure tensors, surface tension etc.)

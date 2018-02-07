@@ -270,7 +270,12 @@ Available values for `type` and their additional keywords:
 --------------- | -----------------------------
 `radius`        | Radius ($a$)
 `origo=[0,0,0]` | Center of sphere ($\mathbf{O}$)
+`scale=false`   | Scale radius with volume change, $a^{\prime} = a\sqrt[3]{V^{\prime}/V}$
 $f_i$           | $\vert\mathbf{r}_i-\mathbf{O}\vert^2-a^2$
+
+The `scale` option will ensure that the confining radius is scaled whenever the simulation
+volume is scaled. This could for example be during a virtual volume move (analysis) or
+a volume move in the $NPT$ ensemble.
 
 `cylinder`      | Confine in cylinder along $z$-axis
 --------------- | ----------------------------------------

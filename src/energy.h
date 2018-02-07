@@ -352,6 +352,7 @@ namespace Faunus {
                     Point origo={0,0,0}, dir={1,1,1};
                     Point low, high;
                     double radius, k;
+                    bool scale=false;
                     std::map<std::string, Variant> m = {
                         {"sphere", sphere}, {"cylinder", cylinder}, {"cuboid", cuboid}
                     };
@@ -365,14 +366,21 @@ namespace Faunus {
                         if (type==sphere || type==cylinder) {
                             radius = j.at("radius");
                             origo = j.value("origo", origo);
+                            scale = j.value("scale", scale);
                             if (type==cylinder)
                                 dir = {1,1,0};
-                            base::func = [radius=radius, origo=origo, k=k, dir=dir](const typename base::Tparticle &p) {
+                            base::func = [&radius=radius, origo=origo, k=k, dir=dir](const typename base::Tparticle &p) {
                                 double d2 = (origo-p.pos).cwiseProduct(dir).squaredNorm() - radius*radius;
                                 if (d2>0)
                                     return 0.5*k*d2;
                                 return 0.0;
                             };
+
+                            // If volume is scaled, also scale the confining radius by adding a trigger
+                            // to `Space::scaleVolume()`
+                            if (scale)
+                                spc.scaleVolumeTriggers.push_back( [&radius=radius](Tspace &spc, double Vold, double Vnew) {
+                                        radius *= std::cbrt(Vnew/Vold); } );
                         }
 
                         if (type==cuboid) {
@@ -396,8 +404,10 @@ namespace Faunus {
                             j = {{"low", low}, {"high", high}};
                         if (type==sphere || type==cylinder)
                             j = {{"radius", radius}};
-                        if (type==sphere)
+                        if (type==sphere) {
                             j["origo"] = origo;
+                            j["scale"] = scale;
+                        }
                         for (auto &i : m)
                             if (i.second==type)
                                 j["type"] = i.first;

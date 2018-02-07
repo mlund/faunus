@@ -388,9 +388,17 @@ namespace Faunus {
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatAAM::save(file, s.p); },
                                     _1, std::ref(spc));
+                        if ( suffix == "gro" )
+                            writeFunc = std::bind(
+                                    []( std::string file, Tspace &s ) { FormatGRO::save(file, s); },
+                                    _1, std::ref(spc));
                         if ( suffix == "pqr" )
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatPQR::save(file, s.p, s.geo.getLength()); },
+                                    _1, std::ref(spc));
+                        if ( suffix == "xyz" )
+                            writeFunc = std::bind(
+                                    []( std::string file, Tspace &s ) { FormatXYZ::save(file, s.p, s.geo.getLength()); },
                                     _1, std::ref(spc));
                         if ( suffix == "state" )
                             writeFunc = [&spc](const std::string &file) {
@@ -645,7 +653,7 @@ namespace Faunus {
                 void _from_json(const json &j) override { dV = j.at("dV"); }
 
                 void _to_json(json &j) const override {
-                    double pex = -log(duexp.avg()) / dV;
+                    double pex = log(duexp.avg()) / dV;
                     j["dV"] = dV;
                     j["Pex/mM"] = pex / 1.0_mM;
                     j["Pex/Pa"] = pex / 1.0_Pa;

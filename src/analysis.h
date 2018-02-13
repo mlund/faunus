@@ -292,6 +292,37 @@ namespace Faunus {
                     }
             };
 
+        /**
+         * @brief Electric Multipoles (unfinished!)
+         */
+        template<class Tspace>
+            class Multipole : public Analysisbase {
+                private:
+                    const Tspace& spc;
+                    Average<double> Z, Z2; // system charge
+
+                    void _sample() override {
+                        double sum=0;
+                        for (auto &g : spc.groups)
+                            for (auto &p : g)
+                                sum += p.charge;
+                        Z += sum;
+                        Z2+= sum*sum;
+                    }
+
+                    void _to_json(json &j) const override {
+                        using namespace u8;
+                        j[ bracket( "Z" ) ] = Z.avg();
+                        j[ bracket( "Z"+squared ) ] = Z2.avg();
+                    }
+
+                public:
+                    Multipole( const json &j, const Tspace &spc ) : spc(spc) {
+                        from_json(j);
+                        name = "multipole";
+                    }
+            };
+
         class SystemEnergy : public Analysisbase {
             private:
                 std::string file, sep=" ";
@@ -706,6 +737,9 @@ namespace Faunus {
 
                                     if ( it.key()=="molrdf")
                                         push_back<MoleculeRDF<Tspace>>(it.value(), spc);
+
+                                    if ( it.key()=="multipole")
+                                        push_back<Multipole<Tspace>>(it.value(), spc);
 
                                     if ( it.key()=="virtualvolume")
                                         push_back<VirtualVolume>(it.value(), spc, pot);

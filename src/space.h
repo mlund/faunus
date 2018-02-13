@@ -273,7 +273,7 @@ namespace Faunus {
             spc.clear();
             assert(spc.geo.getVolume()>0);
             for ( auto& mol : molecules<typename Tspace::Tpvec> ) {
-                if (mol.atomic)
+                if (mol.atomic && mol.Ninit>0)
                     spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
                 else {
                     int n = mol.Ninit;

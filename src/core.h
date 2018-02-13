@@ -337,7 +337,7 @@ namespace Faunus {
         if (j.is_object()) {
             auto seed = j.value("seed", std::string());
             try {
-                if (seed=="default")
+                if (seed=="default" || seed=="fixed")
                     return;
                 if (seed=="hardware")
                     r.engine = decltype(r.engine)(std::random_device()());

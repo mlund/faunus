@@ -5,10 +5,16 @@
 
 # Running Simulations
 
+The main program for running simulations is `faunus` and should be available
+from the command line after installation. For general usage, type:
+
+~~~ bash
+faunus --help
+~~~
+
 Input is read either from `stdin` or from a JSON formatted file. Some examples:
 
 ~~~ bash
-faunus -h                        # print help and exit
 faunus < input.json              # input from stdin
 faunus -i in.json -o out.json -q # file input/output and be quiet
 ~~~
@@ -85,4 +91,3 @@ If all processes take the same input:
 mpirun -np 2 ./faunus --nopfx --input in.json
 mpirun -np 2 --stdin all ./faunus < in.json
 ~~~
-

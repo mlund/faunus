@@ -21,15 +21,14 @@ moves:
     - volume: { dV: 0.01 }
     - ...
 
-random:
-    seed: hardware
+random: { seed: hardware }
 ~~~
 
 The pseudo-random number engine used for MC moves can be seeded in three ways,
 
 `seed`       | Description
 -----------  | ----------------------------------------------
-`default`    | Deterministic (default if `random` is absent)
+`fixed`      | Deterministic (default if `random` is absent)
 `hardware`   | [Non-deterministric seed](http://en.cppreference.com/w/cpp/numeric/random/random_device)
 engine state | [A previously saved stae](http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine/operator_ltltgtgt)
 
@@ -86,7 +85,7 @@ atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 `dp`           | Translational displacement
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
-between their mass centers. The move is associated with the following [bias](http://dx.doi.org/doi:10/cj9gnn),
+between their mass centers. The move is associated with the following [bias](http://dx.doi.org/10/cj9gnn),
 accounted for in the acceptance criterion:
 
 ## Pivot

@@ -676,7 +676,7 @@ namespace Faunus {
                         scaleVolume(Vold + dV);
                         double Unew = pot.energy(c);
                         scaleVolume(Vold);
-                        duexp += exp(-(Uold - Unew));
+                        duexp += exp(-(Unew - Uold));
                         assert(fabs(Uold - pot.energy(c)) < 1e-7);
                     }
                 }
@@ -707,7 +707,7 @@ namespace Faunus {
                         getVolume = [&spc](){ return spc.geo.getVolume(); };
                         scaleVolume = [&spc](double Vnew) { spc.scaleVolume(Vnew); };
                     }
-        }; //!< Calculate excess pressure using virtual volume move
+        }; //!< Excess pressure using virtual volume move
 
         class CombinedAnalysis : public BasePointerVector<Analysisbase> {
             public:

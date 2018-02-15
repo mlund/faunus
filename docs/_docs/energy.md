@@ -62,6 +62,7 @@ where $N$ is the total number of molecules and atomic species.
 `nonbonded_coulomblj`  | `coulomb`+`lennardjones`
 `nonbonded_coulombhs`  | `coulomb`+`hardsphere`
 `nonbonded_coulombwca` | `coulomb`+`wca`
+`nonbonded_pmwca`      | `coulomb`+`wca` (`type=plain`, `cutoff`$=\infty$)
 
 This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise additive potential, $u_{ij}$,
 
@@ -158,7 +159,7 @@ The hard sphere potential does not take any input. Radii are read from the atoml
 `lennardjones` | Description
 -------------- | -------------------------------------------
 `mixing=LB`    | Mixing rule. `LB`
-`ljcustom`     | Custom $\epsilon$ and $\sigma$ combinations
+`custom`       | Custom $\epsilon$ and $\sigma$ combinations
 
 The Lennard-Jones potential has the form:
 
@@ -174,12 +175,21 @@ $$
 \epsilon_{ij} = \sqrt{\epsilon_i \epsilon_j}
 $$
 
+The mixing rule can be overridden for specific pairs of atoms:
+
+~~~ yaml
+lennardjones:
+    custom:
+        "Na Cl": {eps: 0.2, sigma: 2}
+        "K Cl": {eps: 0.1, sigma: 3}
+~~~
+
 ### Weeks-Chandler-Andersen
 
 `wca`        | Description
 ------------ | -------------------------------------------
 `mixing=LB`  | Mixing rule; only `LB` available.
-`ljcustom`   | Custom $\epsilon$ and $\sigma$ combinations
+`custom`     | Custom $\epsilon$ and $\sigma$ combinations
 
 Like Lennard-Jones but cut and shifted to zero at the minimum, forming a
 purely [repulsive potential](http://dx.doi.org/ct4kh9),

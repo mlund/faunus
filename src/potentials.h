@@ -215,8 +215,8 @@ namespace Faunus {
                     }
 
                 // custom eps/sigma for specific pairs
-                if (j.count("ljcustom")==1) {
-                    auto &_j = j.at("ljcustom");
+                if (j.count("custom")==1) {
+                    auto &_j = j.at("custom");
                     if (_j.is_object()) {
                         for (auto it=_j.begin(); it!=_j.end(); ++it) {
                             auto v = words2vec<std::string>( it.key() );
@@ -226,7 +226,7 @@ namespace Faunus {
                                 m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
                                 m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
                             } else
-                                std::runtime_error("custom LJ parameters require exactly two space-separated atoms");
+                                std::runtime_error("custom epsilon/sigma parameters require exactly two space-separated atoms");
                         }
                     }
                 }
@@ -236,7 +236,7 @@ namespace Faunus {
             void to_json(json &j, const SigmaEpsilonTable<Tparticle> &m) {
                 j["mixing"] = "LB = Lorentz-Berthelot";
                 j["epsilon unit"] = "kJ/mol";
-                auto& _j = j["combinations"];
+                auto& _j = j["custom"];
                 for (size_t i=0; i<m.eps.size(); i++)
                     for (size_t j=0; j<m.eps.size(); j++)
                         if (i>=j) {

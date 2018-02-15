@@ -1710,7 +1710,7 @@ namespace Faunus
                         double uold = energy(spc->p);
                         scale(Vold, Vnew);
                         double unew = energy(spc->trial);
-                        duexp += exp(-(uold - unew));
+                        duexp += exp(-(unew-uold));
 
                         // restore old configuration
                         for ( auto g : spc->groupList())
@@ -1725,7 +1725,7 @@ namespace Faunus
                     string _info() override
                     {
                         char w = 30;
-                        double pex = -log(duexp.avg()) / dV;
+                        double pex = log(duexp.avg()) / dV;
                         using namespace Faunus::textio;
                         std::ostringstream o;
                         if ( cnt > 0 )
@@ -1739,9 +1739,18 @@ namespace Faunus
                         return o.str();
                     }
 
+                    Tmjson _json() override
+                    {
+                        return {
+                            { name,
+                                    {{ "P/mM", log(duexp.avg()) / dV / 1.0_mM }}
+                            }
+                        };
+                    }
+
                     void _test( UnitTest &test ) override
                     {
-                        double pex = -log(duexp.avg()) / dV;
+                        double pex = log(duexp.avg()) / dV;
                         test("virtualvolume_pressure_mM", pex / 1.0_mM, 0.2);
                     }
 
@@ -2025,7 +2034,7 @@ namespace Faunus
                     f << "confid ";
                     //for (auto &i : mol)
                     //{
-                        //v.push_back( [&spc]() { return spc.molecule[i].getConformationIndex(); } );
+                    //v.push_back( [&spc]() { return spc.molecule[i].getConformationIndex(); } );
                     //}
                 }
             }
@@ -2309,8 +2318,8 @@ namespace Faunus
                 vector<Average<double>> Q, Q_box, mu_abs, M, M_box;
                 int atomsize;
                 double rc, rc2, const_Diel, alpha, eps_rf;
-		string type;
-		std::function<double(double)> calcDielectric; // function for dielectric const. calc.
+                string type;
+                std::function<double(double)> calcDielectric; // function for dielectric const. calc.
 
                 void _sample() override
                 {
@@ -2437,25 +2446,25 @@ namespace Faunus
                     rc2 = rc*rc;
                     type = j.at("dielectric");
                     if ( type =="tinfoil") {
-			calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+                        calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
                     } else if ( type =="reactionfield") {
                         eps_rf = j.at("eps_rf");
-			calcDielectric = [&](double M2V) { if(eps_rf < 0.0)
-							      return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
-							   return (6*M2V*eps_rf + 2*eps_rf + 1.0)/(1.0 + 2*eps_rf - 3*M2V); };
+                        calcDielectric = [&](double M2V) { if(eps_rf < 0.0)
+                            return ( 2.25*M2V + 0.25 + 0.75*sqrt(9.0*M2V*M2V + 2.0*M2V + 1.0) );
+                            return (6*M2V*eps_rf + 2*eps_rf + 1.0)/(1.0 + 2*eps_rf - 3*M2V); };
                     } else if ( type =="wolf") {
-			calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi))) * exp(-alpha*alpha*rc*rc) * ( 2.0 * alpha*alpha*rc*rc + 3.0);
-						       return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0));};
+                        calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi))) * exp(-alpha*alpha*rc*rc) * ( 2.0 * alpha*alpha*rc*rc + 3.0);
+                            return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0));};
                     } else if ( type =="fennel") {
-			calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi))) * exp(-alpha*alpha*rc*rc) * (alpha*alpha*rc*rc * alpha*alpha*rc*rc + 2.0 * alpha*alpha*rc*rc + 3.0);
-						       return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0)); };
+                        calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi))) * exp(-alpha*alpha*rc*rc) * (alpha*alpha*rc*rc * alpha*alpha*rc*rc + 2.0 * alpha*alpha*rc*rc + 3.0);
+                            return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0)); };
                     } else if( type == "fanourgakis") {
-			calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
-		    } else if( type == "yonezawa") {
-			calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
-		    } else if( type == "plain") {
-			calcDielectric = [&](double M2V) { return (2.0*M2V + 1.0)/(1.0 - M2V); };
-		    } else {
+                        calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+                    } else if( type == "yonezawa") {
+                        calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+                    } else if( type == "plain") {
+                        calcDielectric = [&](double M2V) { return (2.0*M2V + 1.0)/(1.0 - M2V); };
+                    } else {
                         throw std::runtime_error(name + " error: invalid dielectric type");
                     }
                     const_Diel = pc::e * pc::e * 1e10 / (9.0 * pc::kT() * pc::e0);
@@ -2487,8 +2496,8 @@ namespace Faunus
                 }
 
                 double getDielectricConstant() {
-		  double M2V = M2_box.avg() * const_Diel / V_t.avg();
-		  return calcDielectric(M2V);
+                    double M2V = M2_box.avg() * const_Diel / V_t.avg();
+                    return calcDielectric(M2V);
                 }
 
                 Tmjson _json() override

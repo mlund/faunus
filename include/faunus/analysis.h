@@ -2708,6 +2708,7 @@ namespace Faunus
          * `xtctraj`               |  `Analysis::XTCtraj`
          * `pqrfile`               |  Save PQR file at end of simulation, i.e. `"pqrfile" : {"file":"conf.pqr"}`
          * `aamfile`               |  Save AAM file at end of simulation, i.e. `"aamfile" : {"file":"conf.aam"}`
+         * `grofile`               |  Save GRO file at end of simulation, i.e. `"grofile" : {"file":"conf.gro"}`
          * `statefile`             |  Save state file at end of simulation, i.e. `"statefile" : {"file":"state"}`
          * `_jsonfile`             |  Ouput json file w. collected results (default: analysis_out.json)
          */
@@ -2751,6 +2752,14 @@ namespace Faunus
                                 {
                                     auto writer = std::bind(
                                             []( string file, Tspace &s ) { FormatAAM::save(file, s.p); },
+                                            _1, ref(spc));
+                                    v.push_back(Tptr(new WriteOnceFileAnalysis(val, writer)));
+                                }
+
+                                if ( i.key() == "grofile" )
+                                {
+                                    auto writer = std::bind(
+                                            []( string file, Tspace &s ) { FormatGRO::save(file, s.p, s.geo.inscribe().len); },
                                             _1, ref(spc));
                                     v.push_back(Tptr(new WriteOnceFileAnalysis(val, writer)));
                                 }

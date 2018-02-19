@@ -33,7 +33,7 @@ namespace Faunus
       bool keeppos;      //!< Set to true to keep original positions (default: false)
       int maxtrials;     //!< Maximum number of overlap checks if `checkOverlap==true`
 
-      RandomInserter() : dir(1, 1, 1), offset(0, 0, 0), checkOverlap(true), keeppos(false), maxtrials(2e3)
+      RandomInserter() : dir(1, 1, 1), offset(0, 0, 0), checkOverlap(true), keeppos(false), maxtrials(2e6)
       {
           name = "random";
       }

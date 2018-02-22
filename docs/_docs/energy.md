@@ -82,6 +82,7 @@ Below is a description of possible pair-potentials and their configuration.
  `type`      |  Coulomb type, see below
  `cutoff`    |  Spherical cutoff, $R_c$ after which the potential is zero
  `epsr`      |  Relative dielectric constant of the medium
+ `utol=1e-5` |  Error tolerence for splining
 
 This is a multipurpose pair potential that handles several variants of electrostatic
 pair-potentials. Beyond a spherical cutoff, $R_c$, the potential is zero while if

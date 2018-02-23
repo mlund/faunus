@@ -2552,7 +2552,7 @@ namespace Faunus
             {
                 bool b = histo.minCoeff() >= _samplings;
 #ifdef ENABLE_MPI
-                b = reduceDouble(*mpiPtr,histo.minCoeff()) >= _samplings;
+                b = reduceDouble(*mpiPtr,histo.minCoeff())*mpiPtr->nproc() >= _samplings;
 #endif
                 if ( b )
                 {
@@ -2569,8 +2569,10 @@ namespace Faunus
                     _du = penalty[v] - _du;
                     _f = _scale * _f;
                     _samplings = ceil(_samplings / _scale);
-                    double dh = log(double(histo.maxCoeff())/histo.minCoeff());
-                    cout << "Energy barrier: " << max - min << ", delta histo: " << dh << endl;
+                    if ( histo.maxCoeff() != 0 ) {
+                        double dh = log(double(histo.maxCoeff())/histo.minCoeff());
+                        cout << "Energy barrier: " << max - min << ", delta histo: " << dh << endl;
+                    }
                     histo.clear();
                 }
             }

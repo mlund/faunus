@@ -79,8 +79,8 @@ set(JSONIncludeDir ${source_dir}/../../src/)
 
 ExternalProject_Add( range-v3
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/ericniebler/range-v3/archive/0.3.0.tar.gz"
-    URL_MD5 7fb74afbddec3e166739e635f5b365f2
+    URL "https://github.com/ericniebler/range-v3/archive/0.3.5.tar.gz"
+    URL_MD5 22f34c74f37a32cb9f2e76869cba27f5
     UPDATE_DISCONNECTED ON
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(range-v3 source_dir)
@@ -149,8 +149,8 @@ add_dependencies(xdrfile project_xdrfile)
 
 ExternalProject_Add( doctest
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.6/doctest/doctest.h"
-    URL_MD5 ca614f61d53a34a672c9cb378e14acf0
+    URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.7/doctest/doctest.h"
+    URL_MD5 c521af6a674b3f507fd70b75510c0690
     UPDATE_DISCONNECTED ON
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )

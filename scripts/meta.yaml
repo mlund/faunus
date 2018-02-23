@@ -1,6 +1,6 @@
 package:
   name: faunus
-  version: "nightly"
+  version: "latest"
 
 source:
   #git_rev: 1.1.0

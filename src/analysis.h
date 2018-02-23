@@ -652,12 +652,11 @@ namespace Faunus {
 
             public:
 
-                XTCtraj( const json &j, Tspace &s ) : xtc(1e6), spc(s)
-            {
-                from_json(j);
-                name = "xtcfile";
-                cite = "http://bit.ly/2A8lzpa";
-            }
+                XTCtraj( const json &j, Tspace &s ) : xtc(1e6), spc(s) {
+                    from_json(j);
+                    name = "xtcfile";
+                    cite = "http://bit.ly/2A8lzpa";
+                }
         };
 
         class VirtualVolume : public Analysisbase {

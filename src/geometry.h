@@ -18,6 +18,7 @@ namespace Faunus {
             virtual Point vdist( const Point&, const Point& ) const=0; //!< (Minimum) distance between two points
             virtual void boundary( Point& ) const=0; //!< Apply boundary conditions
             virtual bool collision( const Point&, double=0) const=0; //!< Check if position lies within
+            virtual const Point& getLength() const=0; //!< Side lengths
 
             inline double sqdist( const Point &a, const Point &b ) const {
                 return vdist(a,b).squaredNorm();
@@ -72,7 +73,7 @@ namespace Faunus {
                     return len.x() * len.y() * len.z();
                 }
 
-                const Point& getLength() const { return len; } //!< Side lengths
+                const Point& getLength() const override { return len; } //!< Side lengths
 
                 bool collision(const Point &a, double r=0) const override {
                     if ( std::fabs(a.z()+r) > len_half.z())
@@ -245,11 +246,11 @@ namespace Faunus {
 
                 bool collision(const Point &a, double r=0) const override {
                     if ( a.z() < -0.5*len )
-                    return true;
+                        return true;
                     if ( a.z() > 0.5*len )
-                    return true;
+                        return true;
                     if ( a.x()*a.x() + a.y()*a.y() > r2 )
-                    return true;
+                        return true;
                     return false;
                 }
         };
@@ -274,13 +275,59 @@ namespace Faunus {
             private:
                 double r, r2;
             public:
+                void set(double radius) {
+                    r = radius;
+                    r2 = r*r;
+                    Box::setLength( {2*r,2*r,2*r} );
+                } //!< Set radius
 
-                bool collision(const Point &a, double r) const override
-                {
-                    return (a.squaredNorm() > r2) ? true : false;
+                double getRadius() const { return r; }
+
+                void setVolume(double V, const std::vector<double> &s={}) override {
+                    set( std::cbrt(3*V/(4*pc::pi)) );
+                } //!< Adjust radius to match volume; length is conserved.
+
+                double getVolume(int dim=3) const override {
+                    if (dim==1)
+                        return 2*r;
+                    if (dim==2)
+                        return pc::pi * r2;
+                    return 4*pc::pi*r*r2/3;
+                } //<! Return volume
+
+                void randompos( Point &a, Random &rand ) const override {
+                    double diameter = 2*r;
+                    do {
+                        a.x() = (rand() - 0.5) * diameter;
+                        a.y() = (rand() - 0.5) * diameter;
+                        a.z() = (rand() - 0.5) * diameter;
+                    } while ( a.squaredNorm() > r2 );
                 }
 
+                bool collision(const Point &a, double r=0) const override {
+                    return (a.squaredNorm()>r2) ? true : false;
+                }
         };
+
+        void from_json(const json& j, Sphere &g) {
+            g.set( j.at("radius") );
+        }
+
+        void to_json(json &j, const Sphere &g) {
+            j["radius"] = g.getRadius();
+        }
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+        TEST_CASE("[Faunus] Sphere") {
+            Sphere c = R"( { "radius" : 2 } )"_json;
+            CHECK( c.getVolume() == doctest::Approx( 4*pc::pi*8/3.0 ) );
+            CHECK( c.collision( { 2.01, 0, 0 } ) == true );
+            CHECK( c.collision( { 1.99, 0, 0 } ) == false );
+            CHECK( c.getLength().squaredNorm() == doctest::Approx(48) );
+            c.setVolume(123.4);
+            CHECK( c.getVolume() == doctest::Approx(123.4) );
+        }
+#endif
 
         enum class weight { MASS, CHARGE, GEOMETRIC };
 

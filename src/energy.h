@@ -140,10 +140,14 @@ namespace Faunus {
                     for (int k=0; k<data.kVectorsInUse; k++) {
                         const Point& kv = data.kVectors.col(k);
                         EwaldData::Tcomplex Q(0,0);
-                        for (auto &i : spc->p) {
-                            double dot = kv.dot(i.pos);
-                            Q += i.charge * EwaldData::Tcomplex( std::cos(dot), std::sin(dot) );
-                        }
+                        if (data.ipbc)
+                            for (auto &i : spc->p)
+                                Q += kv.cwiseProduct(i.pos).array().cos().prod() * i.charge;
+                        else
+                            for (auto &i : spc->p) {
+                                double dot = kv.dot(i.pos);
+                                Q += i.charge * EwaldData::Tcomplex( std::cos(dot), std::sin(dot) );
+                            }
                         data.Qion.at(k) = Q;
                     }
                 } //!< Update all k vectors
@@ -156,12 +160,18 @@ namespace Faunus {
                     for (int k=0; k<data.kVectorsInUse; k++) {
                         auto& Q = data.Qion.at(k);
                         Point q = data.kVectors.col(k);
-                        for (size_t i=ibeg; i<=iend; i++) {
-                            double _new = q.dot(spc->p[i].pos);
-                            double _old = q.dot(old->p[i].pos);
-                            Q += spc->p[i].charge * EwaldData::Tcomplex( std::cos(_new), std::sin(_new) );
-                            Q -= old->p[i].charge * EwaldData::Tcomplex( std::cos(_old), std::sin(_old) );
-                        }
+                        if (data.ipbc)
+                            for (size_t i=ibeg; i<=iend; i++) {
+                                Q +=  q.cwiseProduct( spc->p[i].pos ).array().cos().prod() * spc->p[i].charge;
+                                Q -=  q.cwiseProduct( old->p[i].pos ).array().cos().prod() * old->p[i].charge;
+                            }
+                        else
+                            for (size_t i=ibeg; i<=iend; i++) {
+                                double _new = q.dot(spc->p[i].pos);
+                                double _old = q.dot(old->p[i].pos);
+                                Q += spc->p[i].charge * EwaldData::Tcomplex( std::cos(_new), std::sin(_new) );
+                                Q -= old->p[i].charge * EwaldData::Tcomplex( std::cos(_old), std::sin(_old) );
+                            }
                     }
                 } //!< Optimized update of k subset. Require access to old positions through `old` pointer
 

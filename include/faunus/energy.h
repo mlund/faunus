@@ -2552,7 +2552,7 @@ namespace Faunus
             {
                 bool b = histo.minCoeff() >= _samplings;
 #ifdef ENABLE_MPI
-                b = reduceDouble(*mpiPtr,histo.minCoeff())*mpiPtr->nproc() >= _samplings;
+                b = reduceDouble(*mpiPtr,histo.minCoeff()) >= _samplings;
 #endif
                 if ( b )
                 {

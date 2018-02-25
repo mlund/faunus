@@ -574,12 +574,14 @@ namespace Faunus {
         double radius=0; //!< Particle radius
         void to_json(json &j) const override { j["r"] = radius; }
         void from_json(const json& j) override { radius = j.value("r", 0.0); }
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     }; //!< Radius property
 
     struct Charge : public ParticlePropertyBase {
         double charge=0; //!< Particle radius
         void to_json(json &j) const override { j["q"] = charge; }
         void from_json(const json& j) override { charge = j.value("q", 0.0); }
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     }; //!< Charge (monopole) property
 
     /** @brief Dipole properties
@@ -752,6 +754,74 @@ namespace Faunus {
         CHECK( p1.Q(2,2) == Approx(1) );
     }
 #endif
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    template<class particle_iter>
+        auto toPositionMatrix(particle_iter begin, particle_iter end) {
+            using namespace Eigen;
+            typedef typename std::iterator_traits<particle_iter>::value_type T;
+            const size_t s = sizeof(T)/sizeof(double);
+            const size_t offset = offsetof(T, pos)/sizeof(double);
+            return Map<MatrixXd, 0, Stride<1,s>>( (double*)&(*begin)+offset, std::distance(begin,end), 3);
+        } //!< Take a particle range and return Eigen matrix facade
+#pragma GCC diagnostic pop
+
+    /**
+     * @brief Eigen::Map facade to data members in STL container
+     *
+     * No data is copied and modifications of the Eigen object
+     * modifies the original container and vice versa.
+     *
+     * Example:
+     *
+     *    std::vector<Tparticle> v(10);
+     *    auto m1 = asEigenVector(v.begin, v.end(), &Tparticle::pos);    --> 3x10 maxtix view
+     *    auto m2 = asEigenMatrix(v.begin, v.end(), &Tparticle::charge); --> 1x10 vector view
+     *
+     * @warning Be careful that objects are properly aligned and divisible with `sizeof<double>`
+     */
+    template<typename matrix=Eigen::MatrixXd, typename dbl=typename matrix::Scalar, class iter, class memberptr>
+        auto asEigenMatrix(iter begin, iter end, memberptr m) {
+            typedef typename std::iterator_traits<iter>::value_type T;
+            static_assert( sizeof(T) % sizeof(dbl) == 0, "value_type size must multiples of double");
+            const size_t s = sizeof(T) / sizeof(dbl);
+            const size_t cols = sizeof(((T *) 0)->*m) / sizeof(dbl);
+            return Eigen::Map<matrix, 0, Eigen::Stride<1,s>>((dbl*)&(*begin.*m), end-begin, cols).array();
+        }
+
+    template<typename matrix=Eigen::MatrixXd, typename dbl=typename matrix::Scalar, class iter, class memberptr>
+        auto asEigenVector(iter begin, iter end, memberptr m) {
+            typedef typename std::iterator_traits<iter>::value_type T;
+            static_assert( std::is_same<dbl&, decltype(((T *) 0)->*m)>::value, "member must be a scalar");
+            return asEigenMatrix<matrix>(begin, end, m).col(0);
+        }
+
+    TEST_CASE("[Faunus] asEigenMatrix") {
+        using doctest::Approx;
+        typedef Particle<Radius, Charge, Dipole, Cigar> T;
+        std::vector<T> v(4);
+        v[0].pos.x()=5;
+        v[1].pos.y()=10;
+        v[2].pos.z()=2;
+        auto m = asEigenMatrix(v.begin(), v.end(), &T::pos);
+
+        CHECK( m.cols()==3 );
+        CHECK( m.rows()==4 );
+        CHECK( m.row(0).x() == 5 );
+        CHECK( m.row(1).y() == 10 );
+        CHECK( m.row(2).z() == 2 );
+        CHECK( m.sum() == 17);
+        m.row(0).z()+=0.5;
+        CHECK( v[0].pos.z() == Approx(0.5) );
+
+        v[2].charge = 2;
+        v[3].charge = -12;
+        auto m2 = asEigenVector(v.begin()+1, v.end(), &T::charge);
+        CHECK( m2.cols()==1 );
+        CHECK( m2.rows()==3 );
+        CHECK( m2.col(0).sum() == Approx(-10) );
+    }
 
     template<class Trange>
         auto findName(Trange &rng, const std::string &name) {

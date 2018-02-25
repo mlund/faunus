@@ -84,8 +84,8 @@ Below is a description of possible pair-potentials and their configuration.
  `epsr`      |  Relative dielectric constant of the medium
  `utol=1e-5` |  Error tolerence for splining
 
-This is a multipurpose pair potential that handles several variants of electrostatic
-pair-potentials. Beyond a spherical cutoff, $R_c$, the potential is zero while if
+This is a multipurpose potential that handles several electrostatic methods.
+Beyond a spherical cutoff, $R_c$, the potential is zero while if
 below,
 
 $$
@@ -148,6 +148,9 @@ $$
 {\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
 $$
 
+**Limitations:** Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles
+and Widom insertion are currently unsupported.
+{: .notice--info}
 
 ### Hard Sphere
 `hardsphere`

@@ -97,6 +97,8 @@ namespace Faunus {
                     }
                     Qion.resize(kVectorsInUse);
                     Qdip.resize(kVectorsInUse);
+                    Aks.conservativeResize(kVectorsInUse);
+                    kVectors.conservativeResize(3,kVectorsInUse);
                 }
             }
         };
@@ -124,7 +126,6 @@ namespace Faunus {
             j["cutoffk"] = d.kc;
             j["wavefunctions"] = d.kVectorsInUse;
             j["spherical_sum"] = d.spherical_sum;
-            // more: number of k-vectors etc.
         }
 
         /** @brief recipe or policies for ion-ion ewald */
@@ -137,7 +138,16 @@ namespace Faunus {
                 PolicyIonIon(Tspace &spc) : spc(&spc) {}
 
                 void updateComplex(EwaldData &data) const {
-                    for (int k=0; k<data.kVectorsInUse; k++) {
+                    /* UNDER CONSTRUCTION: Implement using Eigen matrix ops.
+                    auto pos = asEigenMatrix(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::pos);
+                    Eigen::VectorXd kr;
+                    for (int k=0; k<data.kVectors.cols(); k++) {
+                        kr = pos.matrix() * data.kVectors.col(k);
+                        kr = kr.array().cos();
+                    }
+                    */
+
+                    for (int k=0; k<data.kVectors.cols(); k++) {
                         const Point& kv = data.kVectors.col(k);
                         EwaldData::Tcomplex Q(0,0);
                         if (data.ipbc)
@@ -157,7 +167,7 @@ namespace Faunus {
                     assert(spc->p.size() == old->p.size());
                     size_t ibeg = std::distance(spc->p.begin(), begin); // it->index
                     size_t iend = std::distance(spc->p.begin(), end);   // it->index
-                    for (int k=0; k<data.kVectorsInUse; k++) {
+                    for (int k=0; k<data.kVectors.cols(); k++) {
                         auto& Q = data.Qion.at(k);
                         Point q = data.kVectors.col(k);
                         if (data.ipbc)

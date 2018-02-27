@@ -755,18 +755,6 @@ namespace Faunus {
     }
 #endif
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-    template<class particle_iter>
-        auto toPositionMatrix(particle_iter begin, particle_iter end) {
-            using namespace Eigen;
-            typedef typename std::iterator_traits<particle_iter>::value_type T;
-            const size_t s = sizeof(T)/sizeof(double);
-            const size_t offset = offsetof(T, pos)/sizeof(double);
-            return Map<MatrixXd, 0, Stride<1,s>>( (double*)&(*begin)+offset, std::distance(begin,end), 3);
-        } //!< Take a particle range and return Eigen matrix facade
-#pragma GCC diagnostic pop
-
     /**
      * @brief Eigen::Map facade to data members in STL container
      *
@@ -797,6 +785,7 @@ namespace Faunus {
             return asEigenMatrix<matrix>(begin, end, m).col(0);
         }
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] asEigenMatrix") {
         using doctest::Approx;
         typedef Particle<Radius, Charge, Dipole, Cigar> T;
@@ -822,6 +811,7 @@ namespace Faunus {
         CHECK( m2.rows()==3 );
         CHECK( m2.col(0).sum() == Approx(-10) );
     }
+#endif
 
     template<class Trange>
         auto findName(Trange &rng, const std::string &name) {

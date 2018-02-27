@@ -50,12 +50,14 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("pos", &Tparticle::pos, "Particle position");
 
     // Particle vector and it's iterator
-    py::class_<typename Tpvec::iterator>(m, "PartileVectorIterator")
+    py::class_<typename Tpvec::iterator>(m, "ParticleVectorIterator")
         .def("__add__", [](typename Tpvec::iterator it, int i){ return it+i; } )
         .def("__sub__", [](typename Tpvec::iterator it, int i){ return it-i; } );
 
     auto _pvec = py::bind_vector<Tpvec>(m, "ParticleVector");
     _pvec
+        .def("positions", [](Tpvec &p){ return asEigenMatrix(p.begin(), p.end(), &Tparticle::pos); })
+        .def("charges", [](Tpvec &p){ return asEigenVector(p.begin(), p.end(), &Tparticle::charge); })
         .def("begin", [](Tpvec &p){ return p.begin(); })
         .def("end", [](Tpvec &p){ return p.end(); });
 

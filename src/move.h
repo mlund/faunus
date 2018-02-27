@@ -142,10 +142,10 @@ namespace Faunus {
                         if (size(mollist)>0) {
                             auto git = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
                             if (!git->empty()) {
-                                auto p = slump.sample( git->begin(), git->end() ); // random particle iterator  
+                                auto p = slump.sample( git->begin(), git->end() ); // random particle iterator
                                 cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                 cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
-                                return p; 
+                                return p;
                             }
                         }
                         return spc.p.end();
@@ -342,7 +342,7 @@ namespace Faunus {
                             change.all=true;
                             double Vold = spc.geo.getVolume();
                             double Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
-                            double scale = std::cbrt(Vnew/Vold);
+                            //double scale = std::cbrt(Vnew/Vold); unused?
                             deltaV = Vnew-Vold;
                             spc.scaleVolume(Vnew);
                         }
@@ -355,6 +355,77 @@ namespace Faunus {
                     VolumeMove(Tspace &spc) : spc(spc) {
                         name = "volume";
                         repeat = 1;
+                    }
+            };
+
+        template<typename Tspace>
+            class SpeciationMove : public Movebase {
+                /*
+                 * @brief Establishes equilibrium of matter
+                 *  Establishes equilibrium of matter between all species
+                 *
+                 * Consider the dissociation process AX=A+X. This class will locate
+                 * all species of type AX and A and make a MC swap move between them.
+                 * X is implicit, meaning that it enters only with its chemical potential
+                 * (activity). The titrating species, their dissociation constants
+                 * and the chemical potential of the titrant are read from a
+                 * `processes` JSON object.
+                 * For example, for proton titration of phosphate one would
+                 * use the following JSON input (pH 7.0):
+                 *
+                 *     {
+                 *       "reaction" :
+                 *       {
+                 *         "R1" : { "log_k": 1.7, "reactants":"H2PO4", "products": "HPO4-2" },
+                 *         "R2" : { "log_k": 3.8, "free":"HPO4",  "pKd":7.21,  "pX":7.0 },
+                 *         "R3" : { "log_k": -7.2,  "free":"PO4",   "pKd":12.67, "pX":7.0 }
+                 *       }
+                 *     }
+                 */
+                private:
+                    // Implement classification of reactions to group weight in
+                    // mc sweep {refrerence : prob(reference)}
+                    Tspace& spc;
+                    void _to_json(json &j) const override {
+
+                    }
+                    void _from_json(const json &j) override {
+
+                    }
+                public:
+                    SpeciationMove(Tspace &spc) :spc(spc) {
+                        name = "speciation";
+                        repeat = 1;
+                    }
+                    class reactiondata
+                        /*
+                         * @brief Class for describing chemical reaction of arbitrary sort
+                         *
+                         *  Flags for different reactions
+                         *  - no flag, explicit
+                         *  - trailing ~ implicit species with defined chemical potential
+                         *  - trailing *[int]
+                         *
+                         */
+                    {
+                    public:
+                        typedef int Tid;                 //!< Particle type id
+                        std::map<Tid, int> reactants;   //!< Soichiomteric coefficents of reactants mapped by molecule index
+                        std::map<Tid, int> products;    //!< Soichiometric coefficients of products mapped by molecule index
+
+                        std::string _reac, _prod;
+                        bool canonic;                   //!< Finite reservoir
+                        int N_res;                      //!< Number of molecules in finite reservoir
+                        double log_k;                   //!< log K
+                        std::string name;               //!< Name of reaction
+                        std::string formula;            //!< Chemical formula
+
+                    //public:
+                        double energy(); //!< Returns intrinsic energy of the process
+                    };
+
+                    void _move(Change &change) override {
+
                     }
             };
 
@@ -532,7 +603,7 @@ namespace Faunus {
                                 MPI_Abort(mpi.comm, 1);
 
                             if (std::fabs(Vnew-Vold)>1e-9)
-                               change.dV=true; 
+                               change.dV=true;
 
                             spc.p = p;
                             spc.geo.setVolume(Vnew);
@@ -553,7 +624,7 @@ namespace Faunus {
                     } //!< Exchange energy with partner
 
                     double bias(Change &change, double uold, double unew) override {
-                        return exchangeEnergy(unew-uold); // Exchange dU with partner (MPI) 
+                        return exchangeEnergy(unew-uold); // Exchange dU with partner (MPI)
                     }
 
                     std::string id() {
@@ -640,6 +711,11 @@ namespace Faunus {
                                         vec.back()->from_json( it.value() );
                                     }
 
+                                    if (it.key()=="speciation") {
+                                        this->template push_back<Move::SpeciationMove<Tspace>>(spc);
+                                        vec.back()->from_json( it.value() );
+                                    }
+
                                     // additional moves go here...
 
                                     if (vec.size()==oldsize+1)
@@ -719,7 +795,7 @@ namespace Faunus {
                 double drift() {
                     Change c; c.all=true;
                     double ufinal = state1.pot.energy(c);
-                    return ( ufinal-(uinit+dusum) ) / uinit; 
+                    return ( ufinal-(uinit+dusum) ) / uinit;
                 } //!< Calculates the relative energy drift from initial configuration
 
                 MCSimulation(const json &j, MPI::MPIController &mpi) : state1(j), state2(j), moves(j, state2.spc, mpi) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include "core.h"
 #include "io.h"
 #include "geometry.h"
@@ -296,7 +297,7 @@ namespace Faunus {
                         for ( auto id : a.atoms )
                             v.push_back( atoms<Tparticle>.at(id).p );
                     a.pushConformation( v );
-                } 
+                }
 
                 a.structure = val.value("structure", a.structure);
                 if (!a.structure.empty())
@@ -355,5 +356,71 @@ namespace Faunus {
         CHECK(m.insoffset==Point(-1.1,0.5,10));
     }
 #endif
+
+    /*
+     * @brief General properties of reactions
+     */
+    template<class Tpvec>
+        class ReactionData {
+        private:
+            int _id=-1;
+        public:
+            typedef Tpvec TParticleVector;
+            typedef typename Tpvec::value_type Tparticle;
+
+            std::string _reac, _prod;
+            std::string _reac_sub, _prod_sub;
+            std::vector<int> _reacid_m;
+            std::vector<int> _reacid_a;
+
+            std::multiset<int> _Reac, _Prod;
+            bool canonic;                   //!< Finite reservoir
+            int N_reservoir;                //!< Number of molecules in finite reservoir
+            double log_k;                   //!< log K
+            std::string name;               //!< Name of reaction
+            std::string formula;            //!< Chemical formula
+
+            ReactionData() {
+            }
+        }; //!< End of class
+
+        template<class Tparticle, class Talloc>
+            void from_json(const json& j, ReactionData<std::vector<Tparticle,Talloc>> &a) {
+                //typedef typename Tpvec::value_type Tparticle;
+
+
+                if (j.is_object()==false || j.size()!=1)
+                    throw std::runtime_error("Invalid JSON data for ReactionData");
+                for (auto it=j.begin(); it!=j.end(); ++it) {
+                    a.name = it.key();
+                    auto& val = it.value();
+                    a.canonic = val.value("canonic", a.canonic);
+                    a.N_resevoir = val.value("N_res", a.N_reservoir);
+                    a._reac = val.value("reactants", a._reac);
+                    for (auto &i : val.at("reactants").get<std::vector<std::string>>()) {
+                        auto it = findName( molecules<MoleculeData<std::vector<Tparticle,Talloc>>>, i );
+                        if (it == molecules<MoleculeData<std::vector<Tparticle>>>.end() ) {
+                            auto it = findName( atoms<Tparticle>, i );
+                            if (it == atoms<Tparticle>.end())
+                            throw std::runtime_error("unknown constituent in `reactions` list\n");
+                        }
+                        else a._reacid_m.push_back(it->id());
+                    }
+                    assert(!a.atoms.empty());
+
+                    //auto _rids = names2ids(val.value("products", ))
+                    //a._Reac = std::set<int>()
+
+                    // _names = j.at("").get<decltype(_names)>(); // molecule names
+                    // auto _ids = names2ids(molecules<Tpvec>, _names);     // names --> molids
+                    // molids = std::set<int>(_ids.begin(), _ids.end());    // vector --> set
+                    // if (molids.empty() || molids.size()!=_names.size() )
+                    //     throw std::runtime_error(name + ": molecule list is empty");
+                }
+
+            }
+        template<typename Tpvec>
+            static std::vector<ReactionData<Tpvec>> reactions = {}; //!< Global instance of reaction list
+
 
 }//namespace

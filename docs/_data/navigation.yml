@@ -9,6 +9,7 @@ main:
 
 docs:
  - title: Introduction
+   url: /docs
  - title: Installing
    url: /docs/install/
  - title: Running simulations

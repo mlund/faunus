@@ -296,9 +296,9 @@ namespace Faunus {
                     for (int n=0; n<a.Ninit; n++)
                         for ( auto id : a.atoms )
                             v.push_back( atoms<Tparticle>.at(id).p );
-                    a.pushConformation( v );
-                }
-
+                    if (!v.empty())
+                        a.pushConformation( v );
+                } 
                 a.structure = val.value("structure", a.structure);
                 if (!a.structure.empty())
                     a.loadConformation(a.structure);

@@ -103,42 +103,6 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles
 ~~~
 
-### Linking a custom program
-
-Create a new directory (anywhere you want), put your `.cpp` source file there,
-and make a `CMakeLists.txt` file telling CMake about the new executable.
-For example:
-
-~~~ bash
-$ cd $HOME/newproject
-$ cat hello.cpp
-
-#include "core.h"
-int main() {
-  Faunus::Point a(0,0,0);
-}
-
-$ echo 'fau_example(hello "./" hello.cpp)' > CMakeLists.txt
-~~~
-
-Return to the main faunus directory and rerun `cmake` with the following command:
-
-~~~ bash
-cd $HOME/faunus
-cmake . -DMYPLAYGROUND=$HOME/newproject  # absolute path!
-~~~
-
-That's it! A `Makefile` for your new target, `hello`, has been generated and you can compile
-directly from the `newproject` directory:
-
-~~~ bash
-cd $HOME/newproject
-make
-~~~
-
-All options selected when configuring faunus will be applied to `hello` as well,
-and changes to the faunus code base will trigger re-compilation upon running `make`.
-
 ## Creating a conda package (expert usage)
 
 To create a precompiled package for Anaconda, do the following steps:
@@ -169,5 +133,3 @@ wget https://tug.org/fonts/getnonfreefonts/install-getnonfreefonts
 sudo texlua install-getnonfreefonts
 sudo getnonfreefonts garamond --sys
 ~~~
-
-

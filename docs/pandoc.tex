@@ -222,6 +222,14 @@ $if(institute)$
 $endif$
 \date{$date$}
 
+% remove the definition of \textasteriskcentered for TS1 encoding
+\UndeclareTextCommand{\textasteriskcentered}{TS1}
+% reinstate a default encoding
+\DeclareTextSymbolDefault{\textasteriskcentered}{OT1}
+% suitably define the command
+\DeclareTextCommand{\textasteriskcentered}{OT1}{\raisebox{-.7ex}[1ex][0pt]{*}}
+
+
 \begin{document}
 $if(title)$
 \maketitle

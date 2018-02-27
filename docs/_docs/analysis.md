@@ -35,8 +35,8 @@ points, and the relative run-time spent on the analysis.
 ----------- |  -------------------------------------------
 `nstep=0`   |  Interval between samples
 
-This will calculate the average density, $\langle N_i/V \rangle$ of molecules and atoms
-which fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
+This calculates the average density, $\langle N_i/V \rangle$ of molecules and atoms
+which may fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
 For atomic groups, densities of individual atom types are reported.
 
 ## Density Profile
@@ -61,18 +61,18 @@ etc.
 
 ## Radial Distribution Function
 
-### Atomic
+### Atomic $g(r)$
 
 `atomrdf`      |  Description
 -------------- | ---------------------------------------------------------
-`nstep=0`      |  Interval between samples
 `file`         |  Output file, two column
 `name1`        |  Atom name 1
 `name2`        |  Atom name 2
 `dr=0.1`       |  $g(r)$ resolution
 `dim=3`        |  Dimensions for volume element
+`nstep=0`      |  Interval between samples
 
-We sample the pair correlation function between atom id's _i_ and _j_,
+Samples the pair correlation function between atom id's _i_ and _j_,
 
 $$
 g_{ij}(r) = \frac{ N_{ij}(r) }{ \sum_{r=0}^{\infty} N_{ij}(r) } \cdot \frac{ \langle V \rangle }{ V(r) }
@@ -89,7 +89,7 @@ $4\pi r^2 dr$          | 3 (for particles in free space, default)
 $2\pi r dr$            | 2 (for particles confined on a plane)
 $dr$                   | 1 (for particles confined on a line)
 
-### Molecular
+### Molecular $g(r)$
 
 `molrdf`       |  Description
 -------------- | ---------------------------------------------------------
@@ -102,16 +102,29 @@ $dr$                   | 1 (for particles confined on a line)
 
 Same as `atomrdf` but for molecular mass-centers.
 
+## Electric Multipoles
+
+`multipole`    | Description
+-------------- | ----------------------
+`nstep`        |  Interval between samples.
+
+Reports on the system net charge, $\langle Z \rangle$, higher order multipoles,
+and their fluctuations, _i.e._ $\langle Z^2 \rangle$ etc.
+
+**Note:**
+Under construction.
+{: .notice--info}
+
 ## Save State
 
 `savestate`    |  Description
 -------------- | ---------------------------------------------------------
-`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `state`
+`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `state`
 `nstep=-1`     |  Interval between samples. If -1, save at end of simulation
 
-Saves the current configuration and potentially the system state to a file.
-If a `.state` file is specified, the complete system state is saved to a single
-json file that can be used to restore the state.
+Saves the current configuration or the system state to file.
+If the suffix is `state`, the system state is saved to a single
+JSON file that can be used to restore the state.
 
 ## System Energy
 
@@ -121,7 +134,7 @@ json file that can be used to restore the state.
 `nstep=0`        |  Interval between samples
 
 Calculates the energy contributions from all terms in the Hamiltonian and
-outputs to a file.
+outputs to a file as a function of steps.
 If filename ends with `.csv`, a comma separated value file will be saved,
 otherwise a simple space separeted file with a single hash commented header line.
 All units in $k_BT$.
@@ -133,17 +146,17 @@ All units in $k_BT$.
 `dV`            | Volume perturbation (angstrom cubed)
 `nstep`         | Interval between samples
 
-Performs a [virtual volume move](http://dx.doi.org/10.1063/1.472721) by
+Performs a [virtual volume move](http://doi.org/cppxt6) by
 scaling the simulation volume to $V+\Delta V$ along with
-molecular mass centers and atomic positions. The excess pressure is evatuated
+molecular mass centers and atomic positions. The excess pressure is evaluated
 as a Widom average:
 
 $$
-p^{ex} = -\frac{k_BT}{\Delta V} \ln \langle e^{-\delta u / k_BT} \rangle_{NVT}
+p^{ex} = \frac{k_BT}{\Delta V} \ln \langle e^{-\delta u / k_BT} \rangle_{NVT}
 $$
 
-For more advanced applications of volume perturbations (pressure tensors, surface tension etc.)
-see [here](http://dx.doi.org/10.1063/1.4767375).
+For more advanced applications of volume perturbations - pressure tensors,
+surface tension etc. - see [here](http://doi.org/ckfh).
 
 ## Widom Insertion
 
@@ -156,7 +169,7 @@ see [here](http://dx.doi.org/10.1063/1.4767375).
 `nstep=0`      |  Interval between samples
 
 This will insert a non-perturbing ghost molecule into
-the system and calculate a [Widom average](https://doi.org/10.1063/1.1734110)
+the system and calculate a [Widom average](http://doi.org/dkv4s6)
 to measure the free energy of the insertion process, _i.e._ the
 excess chemical potential:
 
@@ -185,5 +198,6 @@ half-sphere.
 `file`         |  Filename of output xtc file
 `nstep=0`      |  Interval between samples.
 
-Save configurations to a Gromacs XTC trajectory file.
+Generates a Gromacs XTC trajectory file with particle positions and box
+dimensions as a function of steps.
 

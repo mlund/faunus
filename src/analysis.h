@@ -292,6 +292,37 @@ namespace Faunus {
                     }
             };
 
+        /**
+         * @brief Electric Multipoles (unfinished!)
+         */
+        template<class Tspace>
+            class Multipole : public Analysisbase {
+                private:
+                    const Tspace& spc;
+                    Average<double> Z, Z2; // system charge
+
+                    void _sample() override {
+                        double sum=0;
+                        for (auto &g : spc.groups)
+                            for (auto &p : g)
+                                sum += p.charge;
+                        Z += sum;
+                        Z2+= sum*sum;
+                    }
+
+                    void _to_json(json &j) const override {
+                        using namespace u8;
+                        j[ bracket( "Z" ) ] = Z.avg();
+                        j[ bracket( "Z"+squared ) ] = Z2.avg();
+                    }
+
+                public:
+                    Multipole( const json &j, const Tspace &spc ) : spc(spc) {
+                        from_json(j);
+                        name = "multipole";
+                    }
+            };
+
         class SystemEnergy : public Analysisbase {
             private:
                 std::string file, sep=" ";
@@ -388,9 +419,17 @@ namespace Faunus {
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatAAM::save(file, s.p); },
                                     _1, std::ref(spc));
+                        if ( suffix == "gro" )
+                            writeFunc = std::bind(
+                                    []( std::string file, Tspace &s ) { FormatGRO::save(file, s); },
+                                    _1, std::ref(spc));
                         if ( suffix == "pqr" )
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatPQR::save(file, s.p, s.geo.getLength()); },
+                                    _1, std::ref(spc));
+                        if ( suffix == "xyz" )
+                            writeFunc = std::bind(
+                                    []( std::string file, Tspace &s ) { FormatXYZ::save(file, s.p, s.geo.getLength()); },
                                     _1, std::ref(spc));
                         if ( suffix == "state" )
                             writeFunc = [&spc](const std::string &file) {
@@ -613,12 +652,11 @@ namespace Faunus {
 
             public:
 
-                XTCtraj( const json &j, Tspace &s ) : xtc(1e6), spc(s)
-            {
-                from_json(j);
-                name = "xtcfile";
-                cite = "http://bit.ly/2A8lzpa";
-            }
+                XTCtraj( const json &j, Tspace &s ) : xtc(1e6), spc(s) {
+                    from_json(j);
+                    name = "xtcfile";
+                    cite = "http://bit.ly/2A8lzpa";
+                }
         };
 
         class VirtualVolume : public Analysisbase {
@@ -631,21 +669,21 @@ namespace Faunus {
                 Average<double> duexp; // < exp(-du/kT) >
 
                 void _sample() override {
-                    if (dV>0) {
+                    if (fabs(dV)>1e-10) {
                         double Vold = getVolume(),
                                Uold = pot.energy(c);
                         scaleVolume(Vold + dV);
                         double Unew = pot.energy(c);
                         scaleVolume(Vold);
-                        duexp += std::exp(-(Uold - Unew));
-                        assert(std::fabs(Uold - pot.energy(c)) < 1e-7);
+                        duexp += exp(-(Unew - Uold));
+                        assert(fabs(Uold - pot.energy(c)) < 1e-7);
                     }
                 }
 
                 void _from_json(const json &j) override { dV = j.at("dV"); }
 
                 void _to_json(json &j) const override {
-                    double pex = -std::log(duexp.avg()) / dV;
+                    double pex = log(duexp.avg()) / dV;
                     j["dV"] = dV;
                     j["Pex/mM"] = pex / 1.0_mM;
                     j["Pex/Pa"] = pex / 1.0_Pa;
@@ -668,7 +706,7 @@ namespace Faunus {
                         getVolume = [&spc](){ return spc.geo.getVolume(); };
                         scaleVolume = [&spc](double Vnew) { spc.scaleVolume(Vnew); };
                     }
-        }; //!< Calculate excess pressure using virtual volume move
+        }; //!< Excess pressure using virtual volume move
 
         class CombinedAnalysis : public BasePointerVector<Analysisbase> {
             public:
@@ -698,6 +736,9 @@ namespace Faunus {
 
                                     if ( it.key()=="molrdf")
                                         push_back<MoleculeRDF<Tspace>>(it.value(), spc);
+
+                                    if ( it.key()=="multipole")
+                                        push_back<Multipole<Tspace>>(it.value(), spc);
 
                                     if ( it.key()=="virtualvolume")
                                         push_back<VirtualVolume>(it.value(), spc, pot);

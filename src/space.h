@@ -60,9 +60,11 @@ namespace Faunus {
             typedef std::vector<Tgroup> Tgvec;
             typedef Change Tchange;
 
+            typedef std::function<void(Tspace&, double, double)> ScaleVolumeTrigger;
             typedef std::function<void(Tspace&, const Tchange&)> ChangeTrigger;
             typedef std::function<void(Tspace&, const Tspace&, const Tchange&)> SyncTrigger;
 
+            std::vector<ScaleVolumeTrigger> scaleVolumeTriggers; //!< Call when volume is scaled
             std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied
             std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched
 
@@ -196,6 +198,8 @@ namespace Faunus {
                         }
                     }
                 }
+                for (auto f : scaleVolumeTriggers)
+                    f(*this, Vold, Vnew);
             } //!< scale space to new volume
 
             json info() {
@@ -271,7 +275,7 @@ namespace Faunus {
             spc.clear();
             assert(spc.geo.getVolume()>0);
             for ( auto& mol : molecules<typename Tspace::Tpvec> ) {
-                if (mol.atomic)
+                if (mol.atomic && mol.Ninit>0)
                     spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
                 else {
                     int n = mol.Ninit;

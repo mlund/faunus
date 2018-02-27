@@ -2,78 +2,52 @@ language: cpp
 dist: trusty
 sudo: required
 group: edge
+compiler: clang
 
 matrix:
   include:
 
   # OSX / Clang
-
   - os: osx
     osx_image: xcode9.2
-
-  # Linux / GCC
-
-  - os: linux
-    compiler: gcc
-    env: COMPILER=g++-6
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test']
-        packages: ['g++-6']
-
-  - os: linux
-    compiler: gcc
-    env: COMPILER=g++-7
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test']
-        packages: ['g++-7']
+    env: [COMPILER=clang++, CXX=clang++, CC=clang]
 
   # Linux / Clang
-
   - os: linux
-    compiler: clang
-    env: COMPILER=clang++-3.9
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test']
-        packages: ['g++-6', 'clang-3.9']
-
-  - os: linux
-    compiler: clang
-    env: COMPILER=clang++-4.0
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0']
-        packages: ['g++-6', 'clang-4.0']
-
-  - os: linux
-    compiler: clang
-    env: COMPILER=clang++-5.0
+    env: [COMPILER=clang++-5.0, CXX=clang++, CC=clang]
     addons:
       apt:
         sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
-        packages: ['g++-6', 'clang-5.0']
+        packages: ['g++-7', 'clang-5.0']
 
 install:
   - |
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      CMAKE_URL="https://cmake.org/files/v3.9/cmake-3.9.6-Linux-x86_64.tar.gz"
-      mkdir cmake && travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
-      export PATH=${DEPS_DIR}/cmake/bin:${PATH}
-    #else
-    #  brew upgrade cmake || brew install cmake
+    # conda
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
+    else
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     fi
-  - cmake --version # https://github.com/boostorg/hana/blob/master/.travis.yml
+    bash miniconda.sh -b -p $HOME/miniconda
+    export PATH="$HOME/miniconda/bin:$PATH"
+    hash -r
+    conda config --set always_yes yes --set changeps1 no
+    conda config --add channels conda-forge
+    conda update -q conda
+    conda install conda-build=2 anaconda-client
+    conda update -q conda-build
 
 script:
-  # make sure CXX is correctly set
-  - if [[ "${COMPILER}" != "" ]]; then export CXX=${COMPILER}; fi
-  - $CXX --version
-
-  # show OS/compiler version
-  - uname -a
-
-  - cmake . -DENABLE_PYTHON=off
-  - make faunus tests
-  - ctest --output-on-failure -j1
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      #conda install cmake openmpi=1.6.3 python=3
+      #  CXX=clang++ CC=clang cmake . -DENABLE_MPI=on
+      #  make faunus
+      #  make tests
+      #  make test
+      cd scripts/
+      conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+    else
+      cd scripts/
+      conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+    fi

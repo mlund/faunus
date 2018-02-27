@@ -21,15 +21,14 @@ moves:
     - volume: { dV: 0.01 }
     - ...
 
-random:
-    seed: hardware
+random: { seed: hardware }
 ~~~
 
 The pseudo-random number engine used for MC moves can be seeded in three ways,
 
 `seed`       | Description
 -----------  | ----------------------------------------------
-`default`    | Deterministic (default if `random` is absent)
+`fixed`      | Deterministic (default if `random` is absent)
 `hardware`   | [Non-deterministric seed](http://en.cppreference.com/w/cpp/numeric/random/random_device)
 engine state | [A previously saved stae](http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine/operator_ltltgtgt)
 
@@ -71,9 +70,23 @@ will be tracked.
 As `moltransrot` but instead of operating on the molecular mass center, this translates
 and rotates individual atoms in the group. The repeat is set to the number of atoms in the specified group and the displacement parameters `dp` and `dprot` for the individual atoms are taken from the atom properties defined in the [topology](../topology).
 
-**Note:**
-Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
+**note:**
+atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
 {: .notice--info}
+
+### Cluster Move
+
+`cluster`      | Description
+-------------- | -----------------------
+`molecules`    | List of molecules
+`threshold`    | Mass-center threshold for forming a cluster
+`dim=[1,1,1]`  | Directions to translate
+`dprot`        | Rotational displacement
+`dp`           | Translational displacement
+
+This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
+between their mass centers. The move is associated with the following [bias](http://dx.doi.org/10/cj9gnn),
+accounted for in the acceptance criterion:
 
 ## Pivot
 

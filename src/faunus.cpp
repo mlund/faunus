@@ -18,7 +18,7 @@ R"(Faunus - the Monte Carlo code you're looking for!
     http://github.com/mlund/neofaunus
 
     Usage:
-      faunus [-q] [--nobar] [--nopfx] [--state=<file>] [--input=<file>] [--output=<file>]
+      faunus [-q] [--nobar] [--nopfx] [--state=<file>] [--input=<file>] [--output=<file>] [--rerun=<traj>]
       faunus (-h | --help)
       faunus --version
 
@@ -26,6 +26,7 @@ R"(Faunus - the Monte Carlo code you're looking for!
       -i <file> --input <file>   Input file [default: /dev/stdin].
       -o <file> --output <file>  Output file [default: out.json].
       -s <file> --state <file>   State file to start from.
+      --rerun <traj>             Rerun from trajectory (.xtc)
       -q --quiet                 Less verbose output.
       -h --help                  Show this screen.
       --nobar                    No progress bar.
@@ -126,7 +127,7 @@ int main( int argc, char **argv )
             if (mpi.nproc()>1)
                 j["mpi"] = mpi;
 #ifdef GIT_COMMIT_HASH
-            j["git revisioN"] = GIT_COMMIT_HASH;
+            j["git revision"] = GIT_COMMIT_HASH;
 #endif
             f << std::setw(4) << j << endl;
         }

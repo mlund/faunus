@@ -39,18 +39,15 @@ namespace Faunus {
         struct EwaldData {
             typedef std::complex<double> Tcomplex;
             typedef std::vector<Tcomplex> Tvecx;
-            Tvecx Qion;
-            Tvecx Qdip;
+            Eigen::VectorXcd Qion, Qdip;
             Eigen::MatrixXd kVectors; // Matrices with k-vectors
             Eigen::VectorXd Aks;      // values based on k-vectors to minimize computational effort (Eq.24,DOI:10.1063/1.481216)
             double alpha, alpha2, rc, kc, kc2, check_k2_zero, lB;
             double const_inf, eps_surf;
-            bool ionion;
-            bool iondipole;
-            bool dipoledipole;
+            bool ionion, iondipole, dipoledipole;
             bool spherical_sum;
             bool ipbc;
-            int kcc;
+            int kcc=0;
             int kVectorsInUse=0;
             Point L; //!< Box dimensions
 
@@ -182,7 +179,7 @@ namespace Faunus {
                                 double dot = kv.dot(i.pos);
                                 Q += i.charge * EwaldData::Tcomplex( std::cos(dot), std::sin(dot) );
                             }
-                        data.Qion.at(k) = Q;
+                        data.Qion[k] = Q;
                     }
                 } //!< Update all k vectors
 
@@ -192,7 +189,7 @@ namespace Faunus {
                     size_t ibeg = std::distance(spc->p.begin(), begin); // it->index
                     size_t iend = std::distance(spc->p.begin(), end);   // it->index
                     for (int k=0; k<data.kVectors.cols(); k++) {
-                        auto& Q = data.Qion.at(k);
+                        auto& Q = data.Qion[k];
                         Point q = data.kVectors.col(k);
                         if (data.ipbc)
                             for (size_t i=ibeg; i<=iend; i++) {

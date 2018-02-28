@@ -124,10 +124,34 @@ namespace Faunus {
             j["alpha"] = d.alpha;
             j["cutoff"] = d.rc;
             j["cutoffk"] = d.kc;
-            j["wavefunctions"] = d.kVectorsInUse;
+            j["wavefunctions"] = d.kVectors.cols();
             j["spherical_sum"] = d.spherical_sum;
         }
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
+        TEST_CASE("[Faunus] Ewald - EwaldData") 
+        {
+            using doctest::Approx;
+
+            EwaldData data = R"({
+                "ipbc": false, "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
+                "cutoffK": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
+
+            data.update( Point(10,10,10) );
+
+            CHECK(data.ipbc == false);
+            CHECK(data.const_inf == 1);
+            CHECK(data.alpha == 0.894427190999916);
+            CHECK(data.kVectors.cols() == 2975); 
+            CHECK(data.Qion.size() == data.kVectors.cols());
+
+            data.ipbc=true;
+            data.update( Point(10,10,10) );
+            CHECK(data.kVectors.cols() == 846); 
+            CHECK(data.Qion.size() == data.kVectors.cols());
+        }
+#endif
+ 
         /** @brief recipe or policies for ion-ion ewald */
         template<class Tspace>
             struct PolicyIonIon  {
@@ -208,6 +232,39 @@ namespace Faunus {
                     return 2 * pc::pi / spc->geo.getVolume() * E * d.lB;
                 }
             };
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+        TEST_CASE("[Faunus] Ewald - IonIonPolicy") 
+        {
+            using doctest::Approx;
+            typedef Space<Geometry::Cuboid, Particle<Charge,Dipole>> Tspace;
+
+            Tspace spc;
+            spc.p.resize(2);
+            spc.geo  = R"( {"length": 10} )"_json;
+            spc.p[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
+            spc.p[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
+  
+            PolicyIonIon<Tspace> ionion(spc);
+            EwaldData data = R"({
+                "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
+                "cutoffK": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
+
+            data.ipbc = false; // PBC Ewald (http://dx.doi.org/10.1063/1.481216)
+            data.update( spc.geo.getLength() );
+            ionion.updateComplex( data );
+            CHECK( ionion.selfEnergy(data) == Approx(-1.0092530088080642*data.lB) );
+            CHECK( ionion.surfaceEnergy(data) == Approx(0.0020943951023931952*data.lB) );
+            CHECK( ionion.reciprocalEnergy(data) == Approx(0.21303063979675319*data.lB) );
+
+            data.ipbc = true; // IPBC Ewald
+            data.update( spc.geo.getLength() );
+            ionion.updateComplex( data );
+            CHECK( ionion.selfEnergy(data) == Approx(-1.0092530088080642*data.lB) );
+            CHECK( ionion.surfaceEnergy(data) == Approx(0.0020943951023931952*data.lB) );
+            CHECK( ionion.reciprocalEnergy(data) == Approx(0.0346327211*data.lB) );
+        }
+#endif
 
         /** @brief Ewald summation reciprocal energy */
         template<class Tspace, class Policy=PolicyIonIon<Tspace>>

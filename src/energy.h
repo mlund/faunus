@@ -71,12 +71,17 @@ namespace Faunus {
                     int startValue = 1 - int(ipbc);
                     double factor = 1;
                     for (int kx = 0; kx <= kcc; kx++) {
-                        if(kx > 0)
-                            factor = 2;
                         double dkx2 = double(kx*kx);
                         for (int ky = -kcc*startValue; ky <= kcc; ky++) {
                             double dky2 = double(ky*ky);
                             for (int kz = -kcc*startValue; kz <= kcc; kz++) {
+                                double factor = 1.0;
+                                if(kx > 0)
+                                    factor *= 2;
+                                if(ky > 0 && ipbc)
+                                    factor *= 2;
+                                if(kz > 0 && ipbc)
+                                    factor *= 2;
                                 double dkz2 = double(kz*kz);
                                 Point kv = 2*pc::pi*Point(kx/L.x(),ky/L.y(),kz/L.z());
                                 double k2 = kv.dot(kv);
@@ -123,7 +128,7 @@ namespace Faunus {
 
             EwaldData data = R"({
                 "ipbc": false, "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "cutoffK": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
+                "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
 
             data.update( Point(10,10,10) );
 
@@ -141,7 +146,7 @@ namespace Faunus {
 #endif
  
         /** @brief recipe or policies for ion-ion ewald */
-        template<class Tspace, bool eigenopt=true /** use Eigen matrix ops where possible */>
+        template<class Tspace, bool eigenopt=false /** use Eigen matrix ops where possible */>
             struct PolicyIonIon  {
                 typedef typename Tspace::Tpvec::iterator iter;
                 Tspace *spc;
@@ -150,15 +155,18 @@ namespace Faunus {
                 PolicyIonIon(Tspace &spc) : spc(&spc) {}
 
                 void updateComplex(EwaldData &data) const {
-                    /* UNDER CONSTRUCTION: Implement using Eigen matrix ops.
-                    auto pos = asEigenMatrix(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::pos);
-                    Eigen::VectorXd kr;
-                    for (int k=0; k<data.kVectors.cols(); k++) {
-                        kr = pos.matrix() * data.kVectors.col(k);
-                        kr = kr.array().cos();
-                    }
-                    */
-
+                    if (eigenopt)
+                        if (data.ipbc==false) {
+                            auto pos = asEigenMatrix(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::pos);
+                            auto charge = asEigenVector(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::charge);
+                            Eigen::MatrixXd kr = pos.matrix() * data.kVectors.matrix();
+                            Eigen::MatrixXcd q( kr.rows(), kr.cols() );
+                            q.real() = kr.array().cos();
+                            q.imag() = kr.array().sin();
+                            q.array().colwise() *= charge;
+                            data.Qion = q.colwise().sum();
+                            return;
+                        }
                     for (int k=0; k<data.kVectors.cols(); k++) {
                         const Point& kv = data.kVectors.col(k);
                         EwaldData::Tcomplex Q(0,0);
@@ -253,7 +261,7 @@ namespace Faunus {
             ionion.updateComplex( data );
             CHECK( ionion.selfEnergy(data) == Approx(-1.0092530088080642*data.lB) );
             CHECK( ionion.surfaceEnergy(data) == Approx(0.0020943951023931952*data.lB) );
-            CHECK( ionion.reciprocalEnergy(data) == Approx(0.0346327211*data.lB) );
+            CHECK( ionion.reciprocalEnergy(data) == Approx(0.0865107467*data.lB) );
         }
 #endif
 
@@ -278,8 +286,10 @@ namespace Faunus {
                         if (!change.empty()) {
                             // If the state is NEW (trial state), then update all k-vectors
                             if (key==NEW) {
-                                if (change.all || change.dV)       // everything changes
+                                if (change.all || change.dV) {       // everything changes
+                                    data.update( spc.geo.getLength() );
                                     policy.updateComplex(data);    // update all (expensive!)
+                                }
                                 else {
                                     if (change.groups.size()==1) { // exactly one group is moved
                                         auto& d = change.groups[0];

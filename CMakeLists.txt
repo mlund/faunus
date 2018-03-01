@@ -111,9 +111,9 @@ ExternalProject_Add( pybind11
     URL "https://github.com/pybind/pybind11/archive/v2.2.1.tar.gz"
     URL_MD5 bab1d46bbc465af5af3a4129b12bfa3b
     UPDATE_DISCONNECTED ON
-    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-ExternalProject_Get_Property(pybind11 source_dir)
-set(Pybind11IncludeDir ${source_dir}/include)
+    INSTALL_DIR "${CMAKE_SOURCE_DIR}/3rdparty"
+    CMAKE_ARGS -DPYBIND11_TEST=OFF -DPYBIND11_INSTALL=ON -DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty/
+    LOG_DOWNLOAD ON)
 
 # EIGEN
 
@@ -207,7 +207,7 @@ add_dependencies(tests modernjson doctest eigen range-v3 xdrfile)
 add_test(NAME tests COMMAND tests)
 
 add_executable(faunus src/faunus.cpp ${hdrs})
-add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar)
+add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
 target_link_libraries(faunus xdrfile docopt ${LINKLIBS})
 
 if (ENABLE_PYTHON)
@@ -229,14 +229,11 @@ if (ENABLE_PYTHON)
     endif()
 
     if (PYTHONLIBS_FOUND)
-        #add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/src/pybind11)
-        #pybind11_add_module(pyfaunus src/pyfaunus.cpp)
-        add_library(pyfaunus SHARED EXCLUDE_FROM_ALL src/pyfaunus.cpp)
-        set_target_properties(pyfaunus PROPERTIES PREFIX "")
-        set_target_properties(pyfaunus PROPERTIES SUFFIX ".so")
-        target_link_libraries(pyfaunus ${PYTHON_LIBRARY} xdrfile)
-        INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
-        add_dependencies(pyfaunus modernjson eigen range-v3 xdrfile pybind11)
+        find_package(pybind11 PATHS ${CMAKE_SOURCE_DIR}/3rdparty/share/cmake/pybind11/)
+        if (pybind11_FOUND)
+            message("Adding pyfaunus target.")
+            pybind11_add_module(pyfaunus src/pyfaunus.cpp)
+        endif()
     endif ()
 
 endif ()

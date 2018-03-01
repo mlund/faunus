@@ -4,7 +4,7 @@ geometry: {length: 19.73}
 energy:
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: ewald, epsr: 1, cutoff: 9, cutoffK: 7, alpha: 0.2}
+        coulomb: {type: ewald, epsr: 1, cutoff: 9, kcutoff: 7, alpha: 0.2}
 atomlist:
     - Na: {q:  1.0, sigma: 3.33, eps: 0.01158968, dp: 1} 
     - Cl: {q: -1.0, sigma: 4.4, eps: 0.4184, dp: 1} 

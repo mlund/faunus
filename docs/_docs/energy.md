@@ -75,7 +75,7 @@ time_ and cannot be arbitrarily selected from input. It is straight forward to a
 
 Below is a description of possible pair-potentials and their configuration.
 
-### Coulomb
+### Electrostatics
 
  `coulomb`   |  Description
  ----------- |  -------------------------------------------------
@@ -85,7 +85,7 @@ Below is a description of possible pair-potentials and their configuration.
  `utol=1e-5` |  Error tolerence for splining
 
 This is a multipurpose potential that handles several electrostatic methods.
-Beyond a spherical cutoff, $R_c$, the potential is zero while if
+Beyond a spherical real-space cutoff, $R_c$, the potential is zero while if
 below,
 
 $$
@@ -117,7 +117,7 @@ self energies are automatically added to the Hamiltonian, activating additional 
 
 `type=ewald`         | Description
 -------------------- | ---------------------------------------------------------------------
-`cutoffK`            | Reciprocal-space cutoff
+`kcutoff`            | Reciprocal-space cutoff
 `epss=0`             | Dielectric constant of surroundings, $\varepsilon_{surf}$ (0=tinfoil)
 `ipbc=false`         | Use isotropic periodic boundary conditions, IPBC.
 `spherical_sum=true` | Spherical/ellipsoidal summation in reciprocal space; cubic if `false`.
@@ -146,6 +146,21 @@ $$
 
 $$
 {\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
+$$
+
+In the case of isotropic periodic boundaries (`ipbc=true`), the orientational degeneracy of the
+periodic unit cell is exploited to mimic an isotropic environment, reducing the number
+of wave-vectors by one fourth compared with PBC Ewald.
+For point charges, IPBC introduce the modification,
+
+$$
+Q^q = \sum_jq_j\prod_{\alpha\in\{x,y,z\}}\cos\left(\frac{2\pi}{L_{\alpha}}n_{\alpha} r_{\alpha,j}\right)
+$$
+
+while for point dipoles,
+
+$$
+Q^{\mu} = \sum_j\boldsymbol{\mu}_j\cdot\nabla_j\left(\prod_{\alpha \in\{x,y,z\}}\cos\left(\frac{2\pi}{L_{\alpha}}n_{\alpha}r_{\alpha,j}\right)\right).
 $$
 
 **Limitations:** Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles

@@ -38,25 +38,23 @@ namespace Faunus {
          */
         struct EwaldData {
             typedef std::complex<double> Tcomplex;
-            typedef std::vector<Tcomplex> Tvecx;
+            Eigen::Matrix3Xd kVectors; // Matrices with k-vectors
+            Eigen::VectorXd Aks;       // values based on k-vectors to minimize computational effort (Eq.24,DOI:10.1063/1.481216)
             Eigen::VectorXcd Qion, Qdip;
-            Eigen::MatrixXd kVectors; // Matrices with k-vectors
-            Eigen::VectorXd Aks;      // values based on k-vectors to minimize computational effort (Eq.24,DOI:10.1063/1.481216)
-            double alpha, alpha2, rc, kc, kc2, check_k2_zero, lB;
+            double alpha, rc, kc, check_k2_zero, lB;
             double const_inf, eps_surf;
-            bool ionion, iondipole, dipoledipole;
-            bool spherical_sum;
-            bool ipbc;
-            int kcc=0;
+            bool spherical_sum=true;
+            bool ipbc=false;
             int kVectorsInUse=0;
             Point L; //!< Box dimensions
 
             void update(const Point &box) {
                 L = box;
+                int kcc = std::ceil(kc);
                 check_k2_zero = 0.1*std::pow(2*pc::pi/L.maxCoeff(), 2);
                 int kVectorsLength = (2*kcc+1) * (2*kcc+1) * (2*kcc+1) - 1;
                 if (kVectorsLength == 0) {
-                    kVectors.resize(3, 1); 
+                    kVectors.resize(3,1); 
                     Aks.resize(1);
                     kVectors.col(0) = Point(1,0,0); // Just so it is not the zero-vector
                     Aks[0] = 0;
@@ -64,6 +62,7 @@ namespace Faunus {
                     Qion.resize(1);
                     Qdip.resize(1);
                 } else {
+                    double kc2 = kc*kc;
                     kVectors.resize(3, kVectorsLength); 
                     Aks.resize(kVectorsLength);
                     kVectorsInUse = 0;
@@ -87,7 +86,7 @@ namespace Faunus {
                                     if( (dkx2/kc2) + (dky2/kc2) + (dkz2/kc2) > 1)
                                         continue;
                                 kVectors.col(kVectorsInUse) = kv; 
-                                Aks[kVectorsInUse] = factor*std::exp(-k2/(4*alpha2))/k2;
+                                Aks[kVectorsInUse] = factor*std::exp(-k2/(4*alpha*alpha))/k2;
                                 kVectorsInUse++;
                             }
                         }
@@ -102,11 +101,8 @@ namespace Faunus {
 
         void from_json(const json &j, EwaldData &d) {
             d.alpha = j.at("alpha");
-            d.alpha2 = d.alpha*d.alpha;
             d.rc = j.at("cutoff");
-            d.kc = j.at("cutoffK");
-            d.kc2 = d.kc*d.kc;
-            d.kcc = std::ceil(d.kc);
+            d.kc = j.at("kcutoff");
             d.ipbc = j.value("ipbc", false);
             d.spherical_sum = j.value("spherical_sum", true);
             d.lB = pc::lB( j.at("epsr") );
@@ -115,14 +111,9 @@ namespace Faunus {
         }
 
         void to_json(json &j, const EwaldData &d) {
-            j["lB"] = d.lB;
-            j["ipbc"] = d.ipbc;
-            j["epss"] = d.eps_surf;
-            j["alpha"] = d.alpha;
-            j["cutoff"] = d.rc;
-            j["cutoffk"] = d.kc;
-            j["wavefunctions"] = d.kVectors.cols();
-            j["spherical_sum"] = d.spherical_sum;
+            j = {{"lB", d.lB}, {"ipbc", d.ipbc}, {"epss", d.eps_surf},
+                {"alpha", d.alpha}, {"cutoff", d.rc}, {"kcutoff", d.kc},
+                {"wavefunctions", d.kVectors.cols()}, {"spherical_sum", d.spherical_sum}};
         }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -150,7 +141,7 @@ namespace Faunus {
 #endif
  
         /** @brief recipe or policies for ion-ion ewald */
-        template<class Tspace>
+        template<class Tspace, bool eigenopt=true /** use Eigen matrix ops where possible */>
             struct PolicyIonIon  {
                 typedef typename Tspace::Tpvec::iterator iter;
                 Tspace *spc;
@@ -224,8 +215,11 @@ namespace Faunus {
 
                 double reciprocalEnergy(const EwaldData &d) {
                     double E = 0;
-                    for (size_t k=0; k<d.Qion.size(); k++)
-                        E += d.Aks[k] * std::norm( d.Qion[k] );
+                    if (eigenopt) // known at compile time
+                        E = d.Aks.cwiseProduct( d.Qion.cwiseAbs2() ).sum();
+                    else
+                        for (size_t k=0; k<d.Qion.size(); k++)
+                            E += d.Aks[k] * std::norm( d.Qion[k] );
                     return 2 * pc::pi / spc->geo.getVolume() * E * d.lB;
                 }
             };
@@ -245,7 +239,7 @@ namespace Faunus {
             PolicyIonIon<Tspace> ionion(spc);
             EwaldData data = R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "cutoffK": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
+                "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
 
             data.ipbc = false; // PBC Ewald (http://dx.doi.org/10.1063/1.481216)
             data.update( spc.geo.getLength() );

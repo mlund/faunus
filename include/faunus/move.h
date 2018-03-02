@@ -2849,6 +2849,7 @@
             using base::newlen;
             using base::msd;
             using base::val;
+            using base::change;
             void _trialMove();
             string _info();
         public:
@@ -2905,8 +2906,30 @@
             newlen.scale(spc->geo, s);
             for ( auto g : spc->groupList())
             {
+                g->setMassCenter(*spc);
                 g->scale(*spc, s); // scale trial coordinates to new coordinates
             }
+
+            spc->geo_trial.setlen(newlen);
+
+            // register all moved groups in change object
+            int i = 0;
+            for ( auto gPtr : spc->groupList())
+            {
+                if (gPtr->isAtomic())
+                {
+                    change.mvGroup[i].resize(gPtr->size());
+                    std::iota( change.mvGroup[i].begin(), change.mvGroup[i].end(), gPtr->front());
+                    assert(gPtr->size() == int(change.mvGroup[i].size()));
+                    assert(gPtr->front() == change.mvGroup[i].front());
+                    assert(gPtr->back() == change.mvGroup[i].back());
+                }
+                else
+                    change.mvGroup[i].clear();
+                i++;
+            }
+            change.geometryChange = true;
+            change.dV = newval - oldval;
         }
 
         /**

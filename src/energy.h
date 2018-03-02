@@ -38,9 +38,9 @@ namespace Faunus {
          */
         struct EwaldData {
             typedef std::complex<double> Tcomplex;
-            Eigen::Matrix3Xd kVectors; // Matrices with k-vectors
-            Eigen::VectorXd Aks;       // values based on k-vectors to minimize computational effort (Eq.24,DOI:10.1063/1.481216)
-            Eigen::VectorXcd Qion, Qdip;
+            Eigen::Matrix3Xd kVectors; // k-vectors, 3xK
+            Eigen::VectorXd Aks;       // 1xK, to minimize computational effort (Eq.24,DOI:10.1063/1.481216)
+            Eigen::VectorXcd Qion, Qdip; // 1xK
             double alpha, rc, kc, check_k2_zero, lB;
             double const_inf, eps_surf;
             bool spherical_sum=true;
@@ -157,14 +157,13 @@ namespace Faunus {
                 void updateComplex(EwaldData &data) const {
                     if (eigenopt)
                         if (data.ipbc==false) {
-                            auto pos = asEigenMatrix(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::pos);
-                            auto charge = asEigenVector(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::charge);
-                            Eigen::MatrixXd kr = pos.matrix() * data.kVectors.matrix();
-                            Eigen::MatrixXcd q( kr.rows(), kr.cols() );
-                            q.real() = kr.array().cos();
+                            auto pos = asEigenMatrix(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::pos); //  Nx3
+                            auto charge = asEigenVector(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::charge); // Nx1
+                            Eigen::MatrixXd kr = pos.matrix() * data.kVectors.matrix(); // Nx3 * 3xK = NxK
+                            Eigen::MatrixXcd q( kr.rows(), kr.cols() ); // NxK
+                            q.real() = kr.array().cos().colwise()*charge;
                             q.imag() = kr.array().sin();
-                            q.array().colwise() *= charge;
-                            data.Qion = q.colwise().sum();
+                            data.Qion = q.colwise().sum(); // Kx1
                             return;
                         }
                     for (int k=0; k<data.kVectors.cols(); k++) {

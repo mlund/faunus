@@ -764,25 +764,26 @@ namespace Faunus {
      * Example:
      *
      *    std::vector<Tparticle> v(10);
-     *    auto m1 = asEigenVector(v.begin, v.end(), &Tparticle::pos);    --> 3x10 maxtix view
-     *    auto m2 = asEigenMatrix(v.begin, v.end(), &Tparticle::charge); --> 1x10 vector view
+     *    auto m1 = asEigenVector(v.begin, v.end(), &Tparticle::pos);    --> 10x3 maxtix view
+     *    auto m2 = asEigenMatrix(v.begin, v.end(), &Tparticle::charge); --> 10x1 vector view
      *
      * @warning Be careful that objects are properly aligned and divisible with `sizeof<double>`
      */
-    template<typename matrix=Eigen::MatrixXd, typename dbl=typename matrix::Scalar, class iter, class memberptr>
+    template<typename dbl=double, class iter, class memberptr>
         auto asEigenMatrix(iter begin, iter end, memberptr m) {
             typedef typename std::iterator_traits<iter>::value_type T;
             static_assert( sizeof(T) % sizeof(dbl) == 0, "value_type size must multiples of double");
             const size_t s = sizeof(T) / sizeof(dbl);
             const size_t cols = sizeof(((T *) 0)->*m) / sizeof(dbl);
-            return Eigen::Map<matrix, 0, Eigen::Stride<1,s>>((dbl*)&(*begin.*m), end-begin, cols).array();
+            typedef Eigen::Matrix<dbl, Eigen::Dynamic, cols> Tmatrix;
+            return Eigen::Map<Tmatrix, 0, Eigen::Stride<1,s>>((dbl*)&(*begin.*m), end-begin, cols).array();
         }
 
-    template<typename matrix=Eigen::MatrixXd, typename dbl=typename matrix::Scalar, class iter, class memberptr>
+    template<typename dbl=double, class iter, class memberptr>
         auto asEigenVector(iter begin, iter end, memberptr m) {
             typedef typename std::iterator_traits<iter>::value_type T;
             static_assert( std::is_same<dbl&, decltype(((T *) 0)->*m)>::value, "member must be a scalar");
-            return asEigenMatrix<matrix>(begin, end, m).col(0);
+            return asEigenMatrix<dbl>(begin, end, m).col(0);
         }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

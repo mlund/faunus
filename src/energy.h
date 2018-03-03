@@ -159,11 +159,9 @@ namespace Faunus {
                         if (data.ipbc==false) {
                             auto pos = asEigenMatrix(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::pos); //  Nx3
                             auto charge = asEigenVector(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::charge); // Nx1
-                            Eigen::MatrixXd kr = pos.matrix() * data.kVectors.matrix(); // Nx3 * 3xK = NxK
-                            Eigen::MatrixXcd q( kr.rows(), kr.cols() ); // NxK
-                            q.real() = kr.array().cos().colwise()*charge;
-                            q.imag() = kr.array().sin();
-                            data.Qion = q.colwise().sum(); // Kx1
+                            Eigen::MatrixXd kr = pos.matrix() * data.kVectors; // Nx3 * 3xK = NxK
+                            data.Qion.real() = (kr.array().cos().colwise()*charge).colwise().sum();
+                            data.Qion.imag() = kr.array().sin().colwise().sum();
                             return;
                         }
                     for (int k=0; k<data.kVectors.cols(); k++) {

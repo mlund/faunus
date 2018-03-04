@@ -673,7 +673,9 @@ namespace Faunus {
                                     for (int i=0; i<int(spc.groups.size()); i++)
                                         if (i!=d.index)
                                             u+=g2g(spc.groups[i], spc.groups[d.index]);
-                                    return u + g_internal(spc.groups[d.index]);
+                                    if (d.internal)
+                                        u += g_internal(spc.groups[d.index]);
+                                    return u;
                                 }
                             }
 

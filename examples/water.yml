@@ -8,7 +8,10 @@ atomlist:
     - HW: {q: 0.4238,  sigma: 2, eps: 0, mw: 1.007}
 
 moleculelist:
-    - water: {Ninit: 256, structure: water.xyz}
+    - water: {structure: water.xyz}
+
+insertmolecules:
+    - water: {N: 256}
 
 energy:
     - isobaric: {P/atm: 1}

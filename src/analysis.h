@@ -64,28 +64,6 @@ namespace Faunus {
 
         /**
          * @brief Excess chemical potential of molecules
-         *
-         * `widom`       | Description
-         * :------------ | :-----------------------------------------
-         * `molecule`    | Name of molecule to insert
-         * `ninsert`     | Number of insertions per sample event
-         * `dir=[1,1,1]` | Inserting directions
-         * `absz=false`  | Apply `std::fabs` on all z-coordinates of inserted molecule
-         *
-         * This will insert a non-perturbing ghost molecule into
-         * the system and calculate a Widom average to measure
-         * the free energy of the insertion process, _i.e._ the
-         * excess chemical potential:
-         *
-         * $$ \mu^{excess} = -k_BT\ln \langle e^{-\delta u/k_BT} \rangle_0 $$
-         *
-         * where $$delta u$$ is the energy change of the perturbation and the
-         * average runs over the _unperturbed_ ensemble.
-         *
-         * The position and molecular rotation is random.
-         * For use with rod-like particles on surfaces, the `absz`
-         * keyword may be used to ensure orientations on only one
-         * half-sphere.
          */
         template<typename Tspace>
             class WidomInsertion : public Analysisbase
@@ -111,7 +89,7 @@ namespace Faunus {
                         Tpvec pin;
                         auto &g = spc.groups.at( change.groups.at(0).index );
                         assert(g.empty());
-                        g.resize(g.capacity());
+                        g.resize(g.capacity()); // active group
                         for ( int i = 0; i < ninsert; ++i )
                         {
                             pin = rins(spc.geo, spc.p, molecules<Tpvec>.at(molid));
@@ -119,11 +97,18 @@ namespace Faunus {
                                 if (absolute_z)
                                     for (auto &p : pin)
                                         p.pos.z() = std::fabs(p.pos.z());
-                                double du = pot->energy(change);
-                                expu += exp(-du); // widom average
+
+                                assert(pin.size() == g.size());
+
+                                std::copy(pin.begin(), pin.end(), g.begin()); // copy into ghost group
+                                if (!g.atomic) // update molecular mass-center
+                                    g.cm = Geometry::massCenter(g.begin(), g.end(),
+                                            spc.geo.boundaryFunc, -g.begin()->pos);
+
+                                expu += exp( -pot->energy(change) ); // widom average
                             }
                         }
-                        g.resize(0);
+                        g.resize(0); // deactive molecule
                     }
                 }
 
@@ -158,6 +143,7 @@ namespace Faunus {
                                 Change::data d; // construct change object
                                 d.index = distance(spc.groups.begin(), m.begin()); // group index
                                 d.all = true;
+                                d.internal = m.begin()->atomic;
                                 change.groups.push_back(d); // add to change object
                                 return;
                             }

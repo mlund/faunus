@@ -126,8 +126,6 @@ namespace Faunus {
                 int& id() { return _id; } //!< Type id
                 const int& id() const { return _id; } //!< Type id
 
-                int Ninit = 0;             //!< Number of initial molecules
-                int Ninactive=0;           //!< Number of initial molecules to be defined as inactive
                 std::string name;          //!< Molecule name
                 std::string structure;     //!< Structure file (pqr|aam|xyz)
                 bool atomic=false;         //!< True if atomic group (salt etc.)
@@ -249,8 +247,7 @@ namespace Faunus {
             j[a.name] = {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
-                {"keeppos", a.keeppos}, {"Ninit", a.Ninit}, {"Ninactive", a.Ninactive},
-                {"structure", a.structure}, {"bondlist", a.bonds}
+                {"keeppos", a.keeppos}, {"structure", a.structure}, {"bondlist", a.bonds}
             };
             j[a.name]["atoms"] = json::array();
             for (auto id : a.atoms)
@@ -266,18 +263,13 @@ namespace Faunus {
             for (auto it=j.begin(); it!=j.end(); ++it) {
                 a.name = it.key();
                 auto& val = it.value();
-                a.Ninactive = val.value("Ninactive", a.Ninactive);
                 a.insoffset = val.value("insoffset", a.insoffset);
                 a.activity = val.value("activity", a.activity) * 1.0_molar;
                 a.keeppos = val.value("keeppos", a.keeppos);
                 a.atomic = val.value("atomic", a.atomic);
                 a.insdir = val.value("insdir", a.insdir);
                 a.bonds = val.value("bondlist", a.bonds);
-                a.Ninit = val.value("Ninit", a.Ninit);
                 a.id() = val.value("id", a.id());
-
-                if (a.Ninactive > a.Ninit)
-                    throw std::runtime_error("Ninactive cannot be larger than Ninit");
 
                 if (a.atomic) {
                     // read `atoms` list of atom names and convert to atom id's
@@ -289,12 +281,11 @@ namespace Faunus {
                     }
                     assert(!a.atoms.empty());
 
-                    // generate config w. Ninit atoms of each atom type
+                    // generate config
                     Tpvec v;
-                    v.reserve( a.atoms.size() * a.Ninit );
-                    for (int n=0; n<a.Ninit; n++)
-                        for ( auto id : a.atoms )
-                            v.push_back( atoms<Tparticle>.at(id).p );
+                    v.reserve( a.atoms.size() );
+                    for ( auto id : a.atoms )
+                        v.push_back( atoms<Tparticle>.at(id).p );
                     if (!v.empty())
                         a.pushConformation( v );
                 } 

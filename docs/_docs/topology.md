@@ -19,9 +19,8 @@ atomlist:
     - my-external-atomlist.json
     - ...
 moleculelist:
-    - salt: {Ninit: 10, atoms: [Na,Cl], atomic: true}
+    - salt: {atoms: [Na,Cl], atomic: true}
     - water:
-        Ninit: 256
         structure: water.xyz
         bondlist:
             - harmonic: {index: [0,1], k=100; req=1.5}
@@ -40,7 +39,6 @@ Atoms are the smallest possible particle entities with properties defined below.
 `dprot=0`     | Rotational displacement parameter [degrees] (will be converted to radians)
 `eps=0`       | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol]
 `mu=[0,0,0]`  | Dipole moment vector [Debye]
-`Ninit=0`     | Initial number of atoms
 `mw=1`        | Molecular weight [g/mol]
 `q=0`         | Valency / partial charge number [$e$]
 `r=0`         | Radius = `sigma/2` [Å]
@@ -60,11 +58,10 @@ as real molecules. Two particular modes can be specified:
 1. If `atomic=true` the atoms in the molecule are unassociated and is
    typically used to defined salt particles or any other non-aggregated
    species. No structure is required, and the molecular center of mass (COM) is
-   unspecified. `Ninit` is used to insert _N_-times the number of
-   atoms defined in `atoms`.
+   unspecified.
 
 2. If `atomic=false` the molecule resembles a real molecule and a structure
-   is _required_. `Ninit` is used to insert _N_ molecules.
+   is _required_.
 
 Properties of molecules and their default values:
 
@@ -77,10 +74,32 @@ Properties of molecules and their default values:
 `insdir=[1,1,1]`    | Insert directions are scaled by this
 `insoffset=[0,0,0]` | Shifts mass center after insertion
 `keeppos=false`     | Keep original positions of `structure`
-`Ninactive=0`       | Deactivates `Ninactive` of the inserted molecules
-`Ninit=0`           | How many molecules to insert
 `structure`         | Structure file (`.pqr, .aam, .xyz`) - required if `atomic=false`
 `bondlist`          | List of _internal_ bonds (harmonic, dihedrals etc.)
+
+### Initial Configuration
+
+Upon starting a simulation, an initial configuration is required and must be
+specified in the section `insertmolecules` as a list of valid molecule names.
+Molecules are inserted in the given order and may be `inactive`
+which is used by some analysis and ensembles.
+If a group is marked `atomic`, all its `atoms` will be inserted `N` times.
+
+For example:
+
+~~~ yaml
+insertmolecules:
+    - salt: { N: 10 }
+    - water: { N: 256 }
+    - water: { N: 1, inactive: true }
+~~~
+
+The following keywords are available:
+
+Keyword             | Description
+------------------- | -------------------------------------------------
+`N`                 | Number of molecules to insert
+`inactive=false`    | Deactivates inserted molecules
 
 ## Processes
 

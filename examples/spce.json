@@ -6,7 +6,7 @@
 
     "moleculelist": [
         {
-            "water": {
+            "SPCE": {
                 "structure" : [
                     { "OW" : [2.30, 6.28, 1.13] },
                     { "HW" : [1.37, 6.26, 1.50] },

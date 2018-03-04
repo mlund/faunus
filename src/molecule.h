@@ -258,49 +258,71 @@ namespace Faunus {
         void from_json(const json& j, MoleculeData<std::vector<Tparticle,Talloc>> &a) {
             typedef typename std::vector<Tparticle,Talloc> Tpvec;
 
-            if (j.is_object()==false || j.size()!=1)
-                throw std::runtime_error("Invalid JSON data for MoleculeData");
-            for (auto it=j.begin(); it!=j.end(); ++it) {
-                a.name = it.key();
-                auto& val = it.value();
-                a.insoffset = val.value("insoffset", a.insoffset);
-                a.activity = val.value("activity", a.activity) * 1.0_molar;
-                a.keeppos = val.value("keeppos", a.keeppos);
-                a.atomic = val.value("atomic", a.atomic);
-                a.insdir = val.value("insdir", a.insdir);
-                a.bonds = val.value("bondlist", a.bonds);
-                a.id() = val.value("id", a.id());
+            try {
+                if (j.is_object()==false || j.size()!=1)
+                    throw std::runtime_error("invalid json");
+                for (auto it=j.begin(); it!=j.end(); ++it) {
+                    a.name = it.key();
+                    auto& val = it.value();
+                    a.insoffset = val.value("insoffset", a.insoffset);
+                    a.activity = val.value("activity", a.activity) * 1.0_molar;
+                    a.keeppos = val.value("keeppos", a.keeppos);
+                    a.atomic = val.value("atomic", a.atomic);
+                    a.insdir = val.value("insdir", a.insdir);
+                    a.bonds = val.value("bondlist", a.bonds);
+                    a.id() = val.value("id", a.id());
 
-                if (a.atomic) {
-                    // read `atoms` list of atom names and convert to atom id's
-                    for (auto &i : val.at("atoms").get<std::vector<std::string>>()) {
-                        auto it = findName( atoms<Tparticle>, i );
-                        if (it == atoms<Tparticle>.end() )
-                            throw std::runtime_error("unknown atoms in `atoms` list\n");
-                        a.atoms.push_back(it->id());
-                    }
-                    assert(!a.atoms.empty());
+                    if (a.atomic) {
+                        // read `atoms` list of atom names and convert to atom id's
+                        for (auto &i : val.at("atoms").get<std::vector<std::string>>()) {
+                            auto it = findName( atoms<Tparticle>, i );
+                            if (it == atoms<Tparticle>.end() )
+                                throw std::runtime_error("unknown atoms in 'atoms'\n");
+                            a.atoms.push_back(it->id());
+                        }
+                        assert(!a.atoms.empty());
 
-                    // generate config
-                    Tpvec v;
-                    v.reserve( a.atoms.size() );
-                    for ( auto id : a.atoms )
-                        v.push_back( atoms<Tparticle>.at(id).p );
-                    if (!v.empty())
-                        a.pushConformation( v );
-                } 
+                        // generate config
+                        Tpvec v;
+                        v.reserve( a.atoms.size() );
+                        for ( auto id : a.atoms )
+                            v.push_back( atoms<Tparticle>.at(id).p );
+                        if (!v.empty())
+                            a.pushConformation( v );
+                    } else 
+                        if (val.count("structure")>0) {
+                            json _struct = val["structure"];
+                            if (_struct.is_string()) // structure from file
+                                a.loadConformation( val.value("structure", a.structure) );
+                            else
+                                if (_struct.is_array()) { // structure is defined inside json
+                                    Tpvec v; // temporary particle vector
+                                    v.reserve( _struct.size() );
+                                    for (auto &m : _struct)
+                                        for (auto i=m.begin(); i!=m.end(); ++i)
+                                            if (i->is_object() && i->size()==1) {
+                                                auto it = findName( atoms<Tparticle>, i.key() );
+                                                if (it == atoms<Tparticle>.end() )
+                                                    throw std::runtime_error("unknown atoms in 'structure'");
+                                                v.push_back( it->p );     // set properties from atomlist
+                                                v.back().pos = i.value(); // set position
+                                            }
+                                    if (v.empty())
+                                        throw std::runtime_error("invalid 'structure' format");
+                                    a.pushConformation( v );
+                                }
+                        }
 
-                a.structure = val.value("structure", a.structure);
-                if (!a.structure.empty())
-                    a.loadConformation(a.structure);
+                    // pass information to inserter
+                    auto ins = RandomInserter<MoleculeData<std::vector<Tparticle,Talloc>>>();
+                    ins.dir = a.insdir;
+                    ins.offset = a.insoffset;
+                    ins.keeppos = a.keeppos;
+                    a.setInserter(ins);
+                }
+            } catch(std::exception& e) {
+                throw std::runtime_error("JSON->molecule: " + a.name + ": " + e.what());
             }
-
-            // pass information to inserter
-            auto ins = RandomInserter<MoleculeData<std::vector<Tparticle,Talloc>>>();
-            ins.dir = a.insdir;
-            ins.offset = a.insoffset;
-            ins.keeppos = a.keeppos;
-            a.setInserter(ins);
         }
 
     template<class Tparticle, class Talloc>

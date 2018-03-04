@@ -93,7 +93,7 @@ int main( int argc, char **argv )
                 throw std::runtime_error("Error loading state file '" + state + "'");
         }
 
-        Analysis::CombinedAnalysis analysis(j, sim.space(), sim.pot());
+        Analysis::CombinedAnalysis analysis(j.at("analysis"), sim.space(), sim.pot());
 
         auto& loop = j.at("mcloop");
         int macro = loop.at("macro");

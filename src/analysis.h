@@ -708,56 +708,34 @@ namespace Faunus {
                     }
         }; //!< Excess pressure using virtual volume move
 
-        class CombinedAnalysis : public BasePointerVector<Analysisbase> {
-            public:
-                template<class Tspace, class Tenergy>
-                    CombinedAnalysis(const json &j, Tspace &spc, Tenergy &pot) {
-                        for (auto &m : j.at("analysis")) // loop over move list
-                            for (auto it=m.begin(); it!=m.end(); ++it) {
-                                try {
-
-                                    if (it.key()=="systemenergy")
-                                        push_back<SystemEnergy>(it.value(), pot);
-
-                                    if (it.key()=="savestate")
-                                        push_back<SaveState>(it.value(), spc);
-
-                                    if ( it.key()=="xtcfile")
-                                        push_back<XTCtraj<Tspace>>(it.value(), spc);
-
-                                    if ( it.key()=="atomprofile")
-                                        push_back<AtomProfile<Tspace>>(it.value(), spc);
-
-                                    if ( it.key()=="atomrdf")
-                                        push_back<AtomRDF<Tspace>>(it.value(), spc);
-
-                                    if ( it.key()=="density")
-                                        push_back<Density<Tspace>>(it.value(), spc);
-
-                                    if ( it.key()=="molrdf")
-                                        push_back<MoleculeRDF<Tspace>>(it.value(), spc);
-
-                                    if ( it.key()=="multipole")
-                                        push_back<Multipole<Tspace>>(it.value(), spc);
-
-                                    if ( it.key()=="virtualvolume")
-                                        push_back<VirtualVolume>(it.value(), spc, pot);
-
-                                    if ( it.key()=="widom")
-                                        push_back<WidomInsertion<Tspace>>(it.value(), spc, pot);
-
-                                    // additional analysis go here...
-                                } catch (std::exception &e) {
-                                    throw std::runtime_error("Error adding analysis '"
-                                            + it.key() + "': " + e.what() + "\n");
-                                }
-                            }
-                    }
-
-                inline void sample() {
-                    for (auto i : this->vec)
-                        i->sample();
+        struct CombinedAnalysis : public BasePointerVector<Analysisbase> {
+            template<class Tspace, class Tenergy>
+                CombinedAnalysis(const json &j, Tspace &spc, Tenergy &pot) {
+                    if (j.is_array())
+                        for (auto &m : j)
+                            for (auto it=m.begin(); it!=m.end(); ++it)
+                                if (it->is_object()) 
+                                    try {
+                                        if (it.key()=="atomprofile") push_back<AtomProfile<Tspace>>(it.value(), spc);
+                                        if (it.key()=="atomrdf") push_back<AtomRDF<Tspace>>(it.value(), spc);
+                                        if (it.key()=="density") push_back<Density<Tspace>>(it.value(), spc);
+                                        if (it.key()=="molrdf") push_back<MoleculeRDF<Tspace>>(it.value(), spc);
+                                        if (it.key()=="multipole") push_back<Multipole<Tspace>>(it.value(), spc);
+                                        if (it.key()=="savestate") push_back<SaveState>(it.value(), spc);
+                                        if (it.key()=="systemenergy") push_back<SystemEnergy>(it.value(), pot);
+                                        if (it.key()=="virtualvolume") push_back<VirtualVolume>(it.value(), spc, pot);
+                                        if (it.key()=="widom") push_back<WidomInsertion<Tspace>>(it.value(), spc, pot);
+                                        if (it.key()=="xtcfile") push_back<XTCtraj<Tspace>>(it.value(), spc);
+                                        // additional analysis go here...
+                                    } catch (std::exception &e) {
+                                        throw std::runtime_error("Error adding analysis,\n\n\"" + it.key() + "\": "
+                                                + it->dump() + "\n\n: " + e.what() + "\n");
+                                    }
                 }
+
+            inline void sample() {
+                for (auto i : this->vec) i->sample();
+            }
 
         }; //!< Aggregates analysis
 

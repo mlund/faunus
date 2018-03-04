@@ -888,13 +888,32 @@ namespace Faunus {
             }
         }
 
+    /**
+     * @brief Construct vector of atoms from json array
+     *
+     * Items are added to existing items while if an item
+     * already exists, it will be overwritten.
+     */
     template<class T>
         void from_json(const json& j, std::vector<AtomData<T>> &v) {
-            v.reserve( v.size() + j.size());
-            for (auto &i : j) {
-                v.push_back(i);
-                v.back().id() = v.size()-1; // id always match vector index
+            auto it = j.find("atomlist");
+            json _j = ( it==j.end() ) ? j : *it;
+            v.reserve( v.size() + _j.size() );
+
+            for ( auto &i : _j ) {
+                if ( i.is_string() ) // treat ax external file to load
+                    from_json( openjson(i.get<std::string>()), v );
+                else if ( i.is_object() ) {
+                    AtomData<T> a = i;
+                    auto it = findName( v, a.name );
+                    if ( it==v.end() ) 
+                        v.push_back( a ); // add new atom
+                    else
+                        *it = a;
+                }
             }
+            for (size_t i=0; i<v.size(); i++)
+                v[i].id() = i; // id must match position in vector
         }
 
     template<typename Tparticle>
@@ -946,7 +965,5 @@ namespace Faunus {
 
         inline void _to_json(json&) const {};
         inline void _from_json(const json&) {};
-
-
     };
 }//end of faunus namespace

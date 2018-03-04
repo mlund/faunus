@@ -742,42 +742,19 @@ namespace Faunus {
                             size_t oldsize = vec.size();
                             for (auto it=m.begin(); it!=m.end(); ++it) {
                                 try {
-
-                                    if (it.key()=="moltransrot") {
-                                        this->template push_back<Move::TranslateRotate<Tspace>>(spc);
-                                        vec.back()->from_json( it.value() );
-                                    }
-
-                                    if (it.key()=="transrot") {
-                                        this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
-                                        vec.back()->from_json( it.value() );
-                                    }
 #ifdef ENABLE_MPI
-                                    if (it.key()=="temper") {
-                                        this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
-                                        vec.back()->from_json( it.value() );
-                                    }
+                                    if (it.key()=="temper") this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
 #endif
-                                    if (it.key()=="pivot") {
-                                        this->template push_back<Move::Pivot<Tspace>>(spc);
+                                    if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc);
+                                    if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
+                                    if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);
+                                    if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
+                                    if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);
+
+                                    if (vec.size()==oldsize+1) {
                                         vec.back()->from_json( it.value() );
-                                    }
-
-                                    if (it.key()=="volume") {
-                                        this->template push_back<Move::VolumeMove<Tspace>>(spc);
-                                        vec.back()->from_json( it.value() );
-                                    }
-
-                                    if (it.key()=="cluster") {
-                                        this->template push_back<Move::Cluster<Tspace>>(spc);
-                                        vec.back()->from_json( it.value() );
-                                    }
-
-                                    // additional moves go here...
-
-                                    if (vec.size()==oldsize+1)
                                         addWeight(vec.back()->repeat);
-                                    else
+                                    } else
                                         std::cerr << "warning: ignoring unknown move '" << it.key() << "'" << endl;
                                 } catch (std::exception &e) {
                                     throw std::runtime_error("Error adding move '" + it.key() + "': " + e.what());

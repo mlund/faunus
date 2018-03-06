@@ -106,7 +106,7 @@ Same as `atomrdf` but for molecular mass-centers.
 
 `multipole`    | Description
 -------------- | ----------------------
-`nstep`        |  Interval between samples.
+`nstep`        | Interval between samples.
 
 Reports on the system net charge, $\langle Z \rangle$, higher order multipoles,
 and their fluctuations, _i.e._ $\langle Z^2 \rangle$ etc.
@@ -114,6 +114,67 @@ and their fluctuations, _i.e._ $\langle Z^2 \rangle$ etc.
 **Note:**
 Under construction.
 {: .notice--info}
+
+## Electric Multipole Distribution
+
+This will analyse the electrostatic energy between two groups as
+a function of their mass center separation. Sampling consists of
+the following:
+
+1. The exact electrostatic energy is calculated by explicitly summing
+   Coulomb interactions between charged particles
+2. Each group - assumed to be a molecule - is translated into a
+   multipole (monopole, dipole, quadrupole)
+3. Multipolar interaction energies are calculated, summed, and tabulated
+   together with the exact electrostatic interaction energy. Ideally
+   (infinite number of terms) the multipoles should capture full
+   electrostatics
+
+The points 1-3 above will be done as a function of group-to-group
+mass center separation, $R$ and moments
+on molecule $a$ and $b$ with charges $q_i$ in position $\boldsymbol{r}_i$
+with respect to the mass center are calculated according to:
+
+$$
+q_{a/b} = \sum_i q_i \quad \quad \boldsymbol{\mu}_{a/b} = \sum_i q_i\mathbf{r_i}
+$$
+
+$$
+\boldsymbol{Q}_{a/b} = \frac{1}{2} \sum_i q_i\mathbf{r_i} \mathbf{r_i}^T
+$$
+
+And, omitting prefactors here, the energy between molecule $a$ and $b$ at $R$ is:
+
+$$
+\small
+\begin{aligned}
+   u_{\text{ion-ion}}  = & \frac{q_aq_b}{R} \\
+   u_{\text{ion-dip}}  = & \frac{q_a \boldsymbol{\mu}_b \boldsymbol{R}}{R^3} + ... \\
+   u_{\text{dip-dip}}  = & \frac{\boldsymbol{\mu_a}\boldsymbol{\mu_b}   }{ R^3  }
+        - \frac{3 (\boldsymbol{\mu_a} \cdot \boldsymbol{R}) ( \boldsymbol{\mu_b}\cdot\boldsymbol{R})  }{R^5}   \\
+   u_{\text{ion-quad}} = & \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}
+        - \frac{  q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3} + ... \\
+   u_{\text{total}}    = & u_{\text{ion-ion}} + u_{\text{ion-dip}} + u_{\text{dip-dip}} + u_{\text{ion-quad}}\\
+   u_{\text{exact}}    = & \sum_i^a\sum_j^b \frac{q_iq_j}{ | \boldsymbol{r_i} - \boldsymbol{r_j}  |    }
+\end{aligned}
+$$
+
+During simulation, the above terms are thermally averaged over angles, co-solute degrees of freedom etc.
+Note also that the moments are defined with respect to the *mass* center, not *charge* center.
+While for most macromolecules there is only a minor difference between the two,
+the latter is more appropriate and is planned for a future update.
+A simply way to mimic this, is to assign zero mass to all neutral
+atoms in the molecule.
+
+The input keywords are:
+
+`multipoledist`  | Description
+---------------- | ----------------------------------------------------
+`nstep`          | Interval between samples
+`file`           | Output file name
+`molecules`      | Array with exactly two molecule names, $a$ and $b$
+`dr=0.2`         | Distance resolution (Å) along $R$.
+ 
 
 ## Save State
 

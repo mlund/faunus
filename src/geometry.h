@@ -448,5 +448,37 @@ namespace Faunus {
                 return com;
             }
 
+        template<class Titer>
+            double monopoleMoment( Titer begin, Titer end ) {
+                double z=0;
+                for (auto it=begin; it!=end; ++it)
+                    z += it->charge;
+                return z;
+            } //!< Calculates dipole moment vector
+
+        template<class Titer>
+            Point dipoleMoment( Titer begin, Titer end, BoundaryFunction boundary=[](const Point&){}, double cutoff=1e9) {
+                Point mu(0,0,0);
+                for (auto it=begin; it!=end; ++it) {
+                    Point t = it->pos - begin->pos;
+                    boundary(t);
+                    if ( t.squaredNorm() < cutoff * cutoff )
+                        mu += t * it->charge;
+                }
+                return mu;
+            } //!< Calculates dipole moment vector
+
+        template<class Titer>
+            Tensor quadrupoleMoment( Titer begin, Titer end, BoundaryFunction boundary=[](const Point&){} ) {
+                Tensor theta;
+                theta.setZero();
+                for (auto it=begin; it!=end; ++it) {
+                    Point t = it->pos - begin->pos;
+                    boundary(t);
+                    theta = theta + t * t.transpose() * it->charge;
+                }
+                return 0.5 * theta;
+            } //!< Calculates quadrupole moment tensor (with trace)
+
     } //geometry namespace
 }//end of faunus namespace

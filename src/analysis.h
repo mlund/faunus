@@ -694,6 +694,108 @@ namespace Faunus {
                     }
         }; //!< Excess pressure using virtual volume move
 
+        /**
+         * @brief Multipolar decomposition between groups as a function of separation
+         * @date Malmo 2014
+         * @todo Add option to use charge center instead of mass center
+         */
+        template<class Tspace>
+            class MultipoleDistribution : public Analysisbase {
+                private:
+                    typedef typename Tspace::Tgroup Tgroup;
+                    typedef typename Tspace::Tparticle Tparticle;
+
+                    struct data {
+                        Average<double> tot, ii, id, iq, dd, mucorr;
+                    };
+
+                    std::vector<std::string> names; //!< Molecule names (len=2)
+                    std::vector<int> ids;           //!< Molecule ids (len=2)
+                    std::string filename;           //!< output file name
+                    int id1, id2;                   //!< pair of molecular id's to analyse
+                    double dr;                      //!< distance resolution
+                    std::map<int, data> m;          //!< Energy distributions
+                    Tspace &spc;
+
+                    auto toMultipole(const Tgroup &g) const {
+                        Particle<Charge,Dipole,Quadrupole> m;
+                        m.pos = g.cm;
+                        m.charge = Geometry::monopoleMoment(g.begin(), g.end());                   // monopole
+                        m.mu = Geometry::dipoleMoment(g.begin(), g.end(), spc.geo.boundaryFunc);   // dipole
+                        m.Q = Geometry::quadrupoleMoment(g.begin(), g.end(), spc.geo.boundaryFunc);// quadrupole
+                        m.mulen = m.mu.norm();
+                        if (m.mulen>1e-9)
+                            m.mu.normalize();
+                        return m;
+                    } //<! Group --> Multipole
+
+                    double g2g(const Tgroup &g1, const Tgroup &g2) {
+                        double u = 0;
+                        for ( auto &i : g1 )
+                            for ( auto &j : g2 )
+                                u += i.charge * j.charge / spc.geo.vdist(i.pos, j.pos).norm();
+                        return u;
+                    } //<! exact ion-ion energy between particles
+
+                    void save() const {
+                        using std::setw;
+                        if (cnt>0) {
+                            std::ofstream f(MPI::prefix + filename.c_str());
+                            if (f) {
+                                char w = 12;
+                                f.precision(4);
+                                f << "# Multipolar energies (kT/lB)\n"
+                                    << std::left << setw(w) << "# R/AA" << std::right << setw(w) << "exact"
+                                    << setw(w) << "total" << setw(w) << "ionion" << setw(w) << "iondip"
+                                    << setw(w) << "dipdip" << setw(w) << "ionquad" << setw(w) << "mucorr\n";
+                                for (auto &i : m)
+                                    f << std::left << setw(w) << i.first * dr << std::right
+                                        << setw(w) << i.second.tot << setw(w)
+                                        << i.second.ii.avg()+i.second.id.avg()+i.second.dd.avg()+i.second.iq.avg()
+                                        << setw(w) << i.second.ii << setw(w) << i.second.id
+                                        << setw(w) << i.second.dd << setw(w) << i.second.iq
+                                        << setw(w) << i.second.mucorr << "\n";
+                            }
+                        }
+                    } //!< save to disk
+
+                    void _sample() override {
+                        for (auto &gi : spc.findMolecules(ids[0]))
+                            for (auto &gj : spc.findMolecules(ids[1]))
+                                if (gi!=gj) {
+                                    auto a = toMultipole(gi);
+                                    auto b = toMultipole(gj);
+                                    Point R = spc.geo.vdist(gi.cm, gj.cm);
+                                    auto &d = m[ to_bin(R.norm(), dr) ];
+                                    d.tot += g2g(gi, gj);
+                                    d.ii  += a.charge * b.charge / R.norm();
+                                    d.id  += q2mu( a.charge * b.mulen, b.mu, b.charge * a.mulen, a.mu, R);
+                                    d.dd  += mu2mu( a.mu, b.mu, a.mulen * b.mulen, R );
+                                    d.iq  += q2quad( a.charge, b.Q, b.charge, a.Q, R );
+                                    d.mucorr += a.mu.dot(b.mu);
+                                }
+                    }
+
+                    void _to_json(json &j) const override {
+                        j = {{"molecules", names}, {"file", filename}, {"dr", dr}};
+                    }
+
+                public:
+                    MultipoleDistribution(const json &j, Tspace &spc) : spc(spc) {
+                        name = "Multipole Distribution";
+                        from_json(j);
+                        dr = j.value("dr", 0.2);
+                        filename = j.at("file").get<std::string>();
+                        names = j.at("molecules").get<decltype(names)>(); // molecule names
+                        ids = names2ids(molecules<typename Tspace::Tpvec>, names);// names --> molids
+                        if (ids.size()!=2)
+                            throw std::runtime_error("specify exactly two molecules");
+                    }
+
+                    ~MultipoleDistribution() { save(); }
+
+            }; // end of multipole distribution
+
         struct CombinedAnalysis : public BasePointerVector<Analysisbase> {
             template<class Tspace, class Tenergy>
                 CombinedAnalysis(const json &j, Tspace &spc, Tenergy &pot) {
@@ -707,6 +809,7 @@ namespace Faunus {
                                         if (it.key()=="density") push_back<Density<Tspace>>(it.value(), spc);
                                         if (it.key()=="molrdf") push_back<MoleculeRDF<Tspace>>(it.value(), spc);
                                         if (it.key()=="multipole") push_back<Multipole<Tspace>>(it.value(), spc);
+                                        if (it.key()=="multipoledist") push_back<MultipoleDistribution<Tspace>>(it.value(), spc);
                                         if (it.key()=="savestate") push_back<SaveState>(it.value(), spc);
                                         if (it.key()=="systemenergy") push_back<SystemEnergy>(it.value(), pot);
                                         if (it.key()=="virtualvolume") push_back<VirtualVolume>(it.value(), spc, pot);

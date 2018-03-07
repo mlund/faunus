@@ -770,6 +770,80 @@ namespace Faunus {
                 }
             };
 
+        /**
+         * @brief Analysis of polymer shape - radius of gyration, shape factor etc.
+         * @date November, 2011
+         *
+         * This will analyse polymer groups and calculate Rg, Re and the shape factor. If
+         * sample() is called with different groups these will be distinguished by their
+         * *name* and sampled individually.
+         */
+        template<class Tspace>
+            class PolymerShape : public Analysisbase {
+                Tspace &spc;
+                std::map<int, Average<double>> Rg2, Rg, Re2, Rs, Rs2, Rg2x, Rg2y, Rg2z;
+                std::vector<int> ids; // molecule id's to analyse
+
+                void _to_json(json &j) const override {
+                    using namespace u8;
+                    json &k = j["molecules"];
+                    for (int i : ids)
+                        k[ molecules<typename Tspace::Tpvec>[i].name ] = {
+                            { bracket("Rg" + squared), Rg2.at(i).avg() }, 
+                            { bracket("Rg" + squared) + "-" + bracket("Rg") + squared, Rg2.at(i).avg() - std::pow(Rg.at(i).avg(), 2.0) },
+                            { bracket("Re" + squared) + "/" + bracket("Rg" + squared), Re2.at(i).avg() / Rg2.at(i).avg() },
+                            { rootof + bracket("Rg"  + squared), sqrt( Rg2.at(i).avg() ) }, 
+                            { rootof + bracket("Re"  + squared), sqrt( Re2.at(i).avg() )  },
+                            { rootof + bracket("Rgx" + squared), sqrt( Rg2x.at(i).avg() ) }, 
+                            { rootof + bracket("Rgy" + squared), sqrt( Rg2y.at(i).avg() ) },
+                            { rootof + bracket("Rgz" + squared), sqrt( Rg2z.at(i).avg() ) }
+                        };
+                }
+
+                Point vectorgyrationRadiusSquared(typename Tspace::Tgroup &g) const {
+                    double sum = 0;
+                    Point t, r2(0, 0, 0);
+                    for (auto &i : g) {
+                        t = i.pos - g.cm;
+                        spc.geo.boundary(t);
+                        r2.x() += i.mw * t.x() * t.x();
+                        r2.y() += i.mw * t.y() * t.y();
+                        r2.z() += i.mw * t.z() * t.z();
+                        sum += i.mw;
+                    }
+                    assert(sum > 0 && "Zero molecular weight not allowed.");
+                    return r2 * (1. / sum);
+                }
+
+                void _sample() override {
+                    for (int i : ids)
+                        for (auto &g : spc.findMolecules(i))
+                            if (g.size()>1) {
+                                Point r2 = vectorgyrationRadiusSquared(g);
+                                double rg2 = r2.sum();
+                                double re2 = spc.geo.sqdist( g.begin()->pos, g.end()->pos );
+                                Rg[i] += sqrt(rg2);
+                                Rg2[i] += rg2;
+                                Re2[i] += re2; //end-2-end squared
+                                Rg2x[i] += r2.x();
+                                Rg2y[i] += r2.y();
+                                Rg2z[i] += r2.z();
+                                double rs = Re2[i].avg() / Rg2[i].avg(); // fluctuations in shape factor
+                                Rs[i] += rs;
+                                Rs2[i] += rs * rs;
+                            }
+                }
+
+                public:
+
+                PolymerShape(const json &j, Tspace &spc) : spc(spc) {
+                    from_json(j);
+                    name = "Polymer Shape";
+                    auto names = j.at("molecules").get<std::vector<std::string>>(); // molecule names
+                    ids = names2ids(molecules<typename Tspace::Tpvec>, names);// names --> molids
+                }
+
+            };
 
         struct CombinedAnalysis : public BasePointerVector<Analysisbase> {
             template<class Tspace, class Tenergy>
@@ -786,6 +860,7 @@ namespace Faunus {
                                         if (it.key()=="molrdf") push_back<MoleculeRDF<Tspace>>(it.value(), spc);
                                         if (it.key()=="multipole") push_back<Multipole<Tspace>>(it.value(), spc);
                                         if (it.key()=="multipoledist") push_back<MultipoleDistribution<Tspace>>(it.value(), spc);
+                                        if (it.key()=="polymershape") push_back<PolymerShape<Tspace>>(it.value(), spc);
                                         if (it.key()=="savestate") push_back<SaveState>(it.value(), spc);
                                         if (it.key()=="systemenergy") push_back<SystemEnergy>(it.value(), pot);
                                         if (it.key()=="virtualvolume") push_back<VirtualVolume>(it.value(), spc, pot);

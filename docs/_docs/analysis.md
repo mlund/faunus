@@ -129,6 +129,17 @@ form factor of unity.
 `com=true`  | Treat molecular mass centers as single point scatterers
 
 
+## Radius of Gyration
+
+This calculate the radius of gyration, end-to-end distance, and related
+fluctuations for all groups defined in `molecules`.
+
+`polymershape`   | Description
+---------------- | ----------------------------------------
+`nstep`          | Interval with which to sample
+`molecules`      | List of molecule names to sample (array)
+
+
 ## Molecular Multipoles
 
 Calculates average molecular multipolar moments and their fluctuations.

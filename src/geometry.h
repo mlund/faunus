@@ -457,28 +457,42 @@ namespace Faunus {
             } //!< Calculates dipole moment vector
 
         template<class Titer>
-            Point dipoleMoment( Titer begin, Titer end, BoundaryFunction boundary=[](const Point&){}, double cutoff=1e9) {
+            Point dipoleMoment( Titer begin, Titer end, BoundaryFunction boundary=[](const Point&){}, double cutoff=pc::infty) {
                 Point mu(0,0,0);
                 for (auto it=begin; it!=end; ++it) {
                     Point t = it->pos - begin->pos;
                     boundary(t);
-                    if ( t.squaredNorm() < cutoff * cutoff )
+                    if (t.squaredNorm() < cutoff*cutoff)
                         mu += t * it->charge;
                 }
                 return mu;
             } //!< Calculates dipole moment vector
 
         template<class Titer>
-            Tensor quadrupoleMoment( Titer begin, Titer end, BoundaryFunction boundary=[](const Point&){} ) {
+            Tensor quadrupoleMoment( Titer begin, Titer end, BoundaryFunction boundary=[](const Point&){}, double cutoff=pc::infty) {
                 Tensor theta;
                 theta.setZero();
                 for (auto it=begin; it!=end; ++it) {
                     Point t = it->pos - begin->pos;
                     boundary(t);
-                    theta = theta + t * t.transpose() * it->charge;
+                    if (t.squaredNorm() < cutoff*cutoff)
+                        theta += t * t.transpose() * it->charge;
                 }
                 return 0.5 * theta;
             } //!< Calculates quadrupole moment tensor (with trace)
+
+        template<class Tgroup>
+            auto toMultipole(const Tgroup &g, BoundaryFunction boundary=[](const Point&){}, double cutoff=pc::infty) {
+                Particle<Charge,Dipole,Quadrupole> m;
+                m.pos = g.cm;
+                m.charge = Geometry::monopoleMoment(g.begin(), g.end());                   // monopole
+                m.mu = Geometry::dipoleMoment(g.begin(), g.end(), boundary, cutoff);   // dipole
+                m.Q = Geometry::quadrupoleMoment(g.begin(), g.end(), boundary, cutoff);// quadrupole
+                m.mulen = m.mu.norm();
+                if (m.mulen>1e-9)
+                    m.mu.normalize();
+                return m;
+            } //<! Group --> Multipole
 
     } //geometry namespace
 }//end of faunus namespace

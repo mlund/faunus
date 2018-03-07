@@ -10,23 +10,7 @@ MathJax.Hub.Config({
 
 # Topology
 
-The topology describes atomic and molecular properties and is defined at the top-level input:
-
-~~~ yaml
-atomlist:
-    - Na: {q:  1.0, sigma: 4, eps: 0.05, dp: 0.4}
-    - Ow: {q: -0.8476, eps: 0.65, sigma: 3.165, mw: 16}
-    - my-external-atomlist.json
-    - ...
-moleculelist:
-    - salt: {atoms: [Na,Cl], atomic: true}
-    - water:
-        structure: water.xyz
-        bondlist:
-            - harmonic: {index: [0,1], k=100; req=1.5}
-            - ...
-    - ...
-~~~
+The topology describes atomic and molecular properties as well as processes and reactions.
 
 ## Atom Properties
 
@@ -47,8 +31,18 @@ Atoms are the smallest possible particle entities with properties defined below.
 `tfe=0`       | Transfer free energy [kJ/mol/Å$^2$/M]
 
 A filename (`.json`) may be given instead of an atom definition to load
-from an external atom list. Atoms are loaded in the given order and if an atom occurs
+from an external atom list. Atoms are loaded in the given order, and if it occurs
 more than once, the latest entry is used. 
+
+Example:
+
+~~~ yaml
+atomlist:
+    - Na: {q:  1.0, sigma: 4, eps: 0.05, dp: 0.4}
+    - Ow: {q: -0.8476, eps: 0.65, sigma: 3.165, mw: 16}
+    - my-external-atomlist.json
+    - ...
+~~~
 
 ## Molecule Properties
 
@@ -77,15 +71,28 @@ Properties of molecules and their default values:
 `structure`         | Structure file (`.pqr, .aam, .xyz`) - required if `atomic=false`
 `bondlist`          | List of _internal_ bonds (harmonic, dihedrals etc.)
 
+Example:
+
+~~~ yaml
+moleculelist:
+    - salt: {atoms: [Na,Cl], atomic: true}
+    - water:
+        structure: water.xyz
+        bondlist:
+            - harmonic: {index: [0,1], k=100; req=1.5}
+            - ...
+    - ...
+~~~
+
 ### Initial Configuration
 
 Upon starting a simulation, an initial configuration is required and must be
 specified in the section `insertmolecules` as a list of valid molecule names.
 Molecules are inserted in the given order and may be `inactive`
 which is used by some analysis and ensembles.
-If a group is marked `atomic`, all its `atoms` will be inserted `N` times.
+If a group is marked `atomic`, its `atoms` will be inserted `N` times.
 
-For example:
+Example:
 
 ~~~ yaml
 insertmolecules:

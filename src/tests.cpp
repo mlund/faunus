@@ -15,4 +15,5 @@
 //#include "energy.h"
 #include "move.h"
 #include "penalty.h"
+#include "celllist.h"
 

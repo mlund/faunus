@@ -926,7 +926,7 @@ namespace Faunus {
         json j = R"({ "atomlist" : [
              { "A": { "r":1.1 } },
              { "B": { "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "mw":1.1, "tfe":0.98, "tension":0.023 } }
-             ]})"_json; // non-deterministic seed
+             ]})"_json;
 
         typedef Particle<Radius, Charge, Dipole, Cigar> T;
 

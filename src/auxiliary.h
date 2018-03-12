@@ -610,35 +610,40 @@ namespace Faunus
      * cout << m(i,j)==m(j,i); // -> true
      * ~~~
      */
-    template<class T>
+    template<class T, bool triangular=false>
         class PairMatrix
         {
             public:
                 std::vector<std::vector<T>> m; // symmetric matrix (mem.wasteful - fast access)
-                void resize( size_t n )
-                {
+                void resize( size_t n, T val=T() ) {
                     m.resize(n);
-                    for ( auto &i : m )
-                        i.resize(n, T());
+                    for (size_t i=0; i<m.size(); i++)
+                        (triangular) ? m[i].resize(i, val) : m[i].resize(n, val);
                 }
 
-                PairMatrix( size_t n = 0 ) { resize(n); }
+                PairMatrix( size_t n = 0, T val=T() ) { resize(n, val); }
 
                 auto size() const { return m.size(); }
 
-                const T& operator()( size_t i, size_t j ) const
-                {
+                const T& operator()( size_t i, size_t j ) const {
+                    if (triangular)
+                        if (j>i) std::swap(i, j);
                     assert(i < m.size());
                     assert(j < m[i].size());
                     return m[i][j];
                 }
 
-                void set( size_t i, size_t j, T val )
-                {
+                void set( size_t i, size_t j, T val, T resizeval=T() ) {
                     size_t n = std::max(i, j);
                     if ( n >= m.size())
-                        resize(n + 1);
-                    m[i][j] = m[j][i] = val;
+                        resize(n + 1, resizeval);
+
+                    if (triangular) {
+                        if (j>i) std::swap(i, j);
+                        m[i][j] = val;
+                    }
+                    else
+                        m[i][j] = m[j][i] = val;
                 }
         };
 #ifdef DOCTEST_LIBRARY_INCLUDED

@@ -58,7 +58,8 @@ where $N$ is the total number of molecules and atomic species.
 ## Nonbonded Interactions <a name="nonbonded"></a>
 
 `energy`               | $u_{ij}$
----------------------- | --------------------------
+---------------------- | ----------------------------------
+`nonbonded`            | Any combination of pair potentials
 `nonbonded_coulomblj`  | `coulomb`+`lennardjones`
 `nonbonded_coulombhs`  | `coulomb`+`hardsphere`
 `nonbonded_coulombwca` | `coulomb`+`wca`
@@ -68,8 +69,9 @@ This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise add
 
 $$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
 
-**Note:** the pair-potential can be a combination of several potentials, but this must currently be defined at _compile
-time_ and cannot be arbitrarily selected from input. It is straight forward to add more by editing the class
+**Note:** the pair-potential can be a combination of several potentials defined at runtime. However, for
+optimal performance we include certain hard-coded combinations, defined at _compile time_.
+It is straight forward to add more by editing the class
 `Energy::Hamiltonian` found in `src/energy.h` and then re-compile.
 {: .notice--info}
 
@@ -136,7 +138,7 @@ $$
 where
 
 $$
-f = \frac{1}{4\pi\varepsilon_0\varepsilon_r} \quad\quad V=L_xL_yL_z
+    f = \frac{1}{4\pi\varepsilon_0\varepsilon_r} \quad\quad V=L_xL_yL_z
 $$
 
 $$
@@ -167,6 +169,22 @@ $$
 and Widom insertion are currently unsupported.
 {: .notice--info}
 
+### Cosine Attraction
+An attractive potential used for [coarse grained lipids](http://dx.doi.org/10/chqzjk) and with the form,
+
+$$
+    \beta u(r) = -\epsilon \cos^2 [ \pi(r-r_c)/2w_c ]
+$$
+
+for $r_c\leq r \leq r_c+w_c$. For $r<r_c$, $\beta u=-\epsilon$,
+while zero for $r>r_c+w_c$.
+
+`cos2` | Description
+------ | --------------------------
+`eps`  | Depth, $\epsilon$ (kJ/mol)
+`rc`   | Width, $r_c$ (Å)
+`wc`   | Decay range, $w_c$ (Å)
+ 
 ### Hard Sphere
 `hardsphere`
 

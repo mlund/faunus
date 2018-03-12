@@ -492,30 +492,41 @@ namespace Faunus {
                     }
             }; //!< Confine particles to a sub-region of the simulation container
 
+        /*
+         * The keys of the `intra` map are group index and the values
+         * is a vector of `BondData`. For bonds between groups, fill
+         * in `inter` which is evaluated for every update of call to
+         * `energy`.
+         *
+         * @todo Optimize.
+         */
         template<typename Tspace>
             class Bonded : public Energybase {
                 private:
-                    typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc;
+                    typedef typename Tspace::Tpvec Tpvec;
                     typedef std::vector<Potential::BondData> BondVector;
                     BondVector inter;  // inter-molecular bonds
                     std::map<int,BondVector> intra; // intra-molecular bonds
 
                     void update() {
+                        intra.clear();
                         for (size_t i=0; i<spc.groups.size(); i++) {
-                            auto &g = spc.groups[i];
-                            intra[i] = molecules<Tpvec>.at(g.id).bonds;
-                            for (auto &b : intra[i])
-                                b.shift( std::distance(spc.p.begin(), g.begin()) );
+                            if (!spc.groups.empty()) {
+                                auto &g = spc.groups[i];
+                                intra[i] = molecules<Tpvec>.at(g.id).bonds;
+                                for (auto &b : intra[i])
+                                    b.shift( std::distance(spc.p.begin(), g.begin()) );
+                            }
                         }
-                    }
+                    } // finds and adds all intra-molecular bonds of active molecules 
 
                     double sum( const BondVector &v ) const {
                         double u=0;
                         for (auto &b : v)
                             u += b.energy(spc.p, spc.geo.distanceFunc);
                         return u;
-                    }
+                    } // sum energy in vector of BondData
 
                 public:
                     Bonded(const json &j, Tspace &spc) : spc(spc) {
@@ -525,6 +536,7 @@ namespace Faunus {
                             if (j.count("bondlist")==1)
                                 inter = j["bondlist"].get<BondVector>();
                     }
+
                     void to_json(json &j) const override {
                         if (!inter.empty())
                             j["bondlist"] = inter;
@@ -541,10 +553,11 @@ namespace Faunus {
                         double u=0;
                         if ( !c.empty() ) {
                             u = sum(inter); // energy of inter-molecular bonds
-                            if ( c.all || c.dV )
+                            if ( c.all || c.dV ) {
                                 for (auto& i : intra) // energy of intra-molecular bonds
-                                    u += sum(i.second);
-                            else
+                                    if (!spc.groups[i.first].empty()) // add only if group is active
+                                        u += sum(i.second);
+                            } else
                                 for (auto &d : c.groups)
                                     u += sum( intra[d.index] );
                         }
@@ -891,6 +904,9 @@ namespace Faunus {
                                 try {
                                     if (it.key()=="nonbonded_coulomblj")
                                         push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded")
+                                        push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded_coulombhs")
                                         push_back<Energy::Nonbonded<Tspace,CoulombHS>>(it.value(), spc);

@@ -1,0 +1,44 @@
+comment: |
+    Three-bead membrane model ala Deserno.
+    More information: doi:10/chqzjk
+
+temperature: 300
+random: {seed: default}
+geometry: {length: 18.6}
+mcloop: {macro: 10, micro: 10}
+
+atomlist:
+    - TL: {sigma: 1.0, eps: 1.0}
+    - HD: {sigma: 1.0, eps: 1.0}
+
+moleculelist:
+    - lipid:
+        structure: "lipid.xyz"
+        bondlist:
+            - fene:     {index: [0,1], k: 30, rmax: 1.5}
+            - fene:     {index: [1,2], k: 30, rmax: 1.5}
+            - harmonic: {index: [0,2], k: 10, req: 4}
+
+insertmolecules:
+    - lipid: {N: 256}
+
+energy:
+    - isobaric: {P/atm: 1}
+    - nonbonded:
+        default:
+            - coulomb: {type: yukawa, epsr: 80, cutoff: 50, debyelength: 10}
+            - wca: {mixing: LB}
+        TL TL:
+            - cos2: {rc: 1.0, eps: 1, wc: 2}
+
+moves:
+    - moltransrot: {molecule: lipid, dp: 0.4, dprot: 0.4, repeat: N}
+    - volume: {dV: 0.03}
+
+analysis:
+    - atomrdf: {file: rdf.dat, nstep: 10, dr: 0.1, name1: HD, name2: HD}
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - xtcfile: {file: traj.xtc, nstep: 10}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state}
+

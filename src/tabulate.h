@@ -107,27 +107,13 @@ namespace Faunus
                 T drfrac=0.9;   // Multiplicative factor to decr dr
 
                 std::vector<T> SetUBuffer( T rlow,
-                        T zlow,
-                        T rupp,
-                        T zupp,
-                        T u0low,
-                        T u1low,
-                        T u2low,
-                        T u0upp,
-                        T u1upp,
-                        T u2upp )
-                {
-
-                    std::vector<T> ubuft;
-                    ubuft.reserve(7);
-                    ubuft.push_back(zlow);
+                        T zlow, T rupp, T zupp, T u0low, T u1low,
+                        T u2low, T u0upp, T u1upp, T u2upp ) {
 
                     // Zero potential and force return no coefficients
-                    if ( std::fabs(u0low) < 1e-9 && std::fabs(u1low) < 1e-9 )
-                    {
-                        ubuft.resize(7, 0);
-                        return ubuft;
-                    }
+                    if ( std::fabs(u0low) < 1e-9 )
+                        if (std::fabs(u1low) < 1e-9 )
+                            return {0,0,0,0,0,0,0};
 
                     T dz1 = zupp - zlow;
                     T dz2 = dz1 * dz1;
@@ -148,14 +134,7 @@ namespace Faunus
                     T c4 = (-15 * a + 21 * b - 6 * c) / (6 * dz1);
                     T c5 = (2 * a - 3 * b + c) / (2 * dz2);
 
-                    ubuft.push_back(c0);
-                    ubuft.push_back(c1);
-                    ubuft.push_back(c2);
-                    ubuft.push_back(c3);
-                    ubuft.push_back(c4);
-                    ubuft.push_back(c5);
-
-                    return ubuft;
+                    return {zlow, c0, c1, c2, c3, c4, c5};
                 }
 
                 /**

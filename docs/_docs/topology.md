@@ -79,7 +79,7 @@ moleculelist:
     - water:
         structure: water.xyz
         bondlist:
-            - harmonic: {index: [0,1], k=100; req=1.5}
+            - harmonic: {index: [0,1], k: 100, req: 1.5}
             - ...
     - ...
 ~~~

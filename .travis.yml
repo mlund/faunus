@@ -52,5 +52,4 @@ script:
       cd scripts/
       conda config --set anaconda_upload yes
       conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
-      anaconda --token "${CONDA_UPLOAD_TOKEN}" upload --user teokem
     fi

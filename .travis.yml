@@ -46,8 +46,8 @@ script:
       #  make tests
       #  make test
       cd scripts/
-      conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+      conda-build --force --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
     else
       cd scripts/
-      conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+      conda-build --force --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
     fi

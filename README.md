@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/mlund/neofaunus.svg?branch=master)](https://travis-ci.org/mlund/neofaunus)
+[![Anaconda-Server Badge](https://anaconda.org/teokem/faunus/badges/installer/conda.svg)](https://conda.anaconda.org/teokem/faunus)
 
 Welcome to Faunus
 =================

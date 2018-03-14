@@ -759,8 +759,7 @@ namespace Faunus {
                         using namespace ReactionCoordinate;
                         name = "penalty";
                         std::string type = j.at("type");
-                        if (type=="cm")
-                            rc = std::make_shared<MassCenterSeparation>(j, spc);
+                        if (type=="cmcm") rc = std::make_shared<MassCenterSeparation>(j, spc);
                         if (rc==nullptr)
                             throw std::runtime_error(name + ": unknown type'" + type + "'");
                         rc->name = type;

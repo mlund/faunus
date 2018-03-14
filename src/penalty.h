@@ -96,28 +96,22 @@ namespace Faunus {
         class MassCenterSeparation : public ReactionCoordinateBase {
             public:
                 Point dir={1,1,1};
-                int id1, id2;
+                std::vector<int> index;
                 void _to_json(json &j) const override {
                     j["dir"] = dir;
                 }
                 template<class Tspace>
                     MassCenterSeparation( const json &j, Tspace &spc ) {
+                        name = "cmcm";
                         from_json(j, *this);
                         dir = j.value("dir", dir);
-                        auto i = j.value("index", std::vector<int>({0,0}) );
-                        if (i.size()!=2 || dir.size()!=3)
-                            throw std::runtime_error("CM reaction coordinate error");
+                        index = j.value("index", index);
+                        if (index.size()!=2 || dim()!=1)
+                            throw std::runtime_error(name + ": invalid input");
 
-                        //string name1 = j.at("first");
-                        //string name2 = j.at("second");
-                        //g1 = s.findMolecules(name1, true).at(i[0]);
-                        //g2 = s.findMolecules(name2, true).at(i[1]);
-
-                        //assert(!g1->empty());
-                        //assert(!g2->empty());
-                        f = [&spc, dir=dir]() {
-                            Point cm1;// = massCenter(s.geo, p, *g1);
-                            Point cm2;// = massCenter(s.geo, p, *g2);
+                        f = [&spc, dir=dir, i=index[0], j=index[1]]() {
+                            auto &cm1 = spc.groups[i].cm;
+                            auto &cm2 = spc.groups[j].cm;
                             return Tvec({spc.geo.vdist(cm1, cm2).cwiseProduct(dir).norm()});
                         };
                     }
@@ -128,7 +122,7 @@ namespace Faunus {
             using doctest::Approx;
             typedef Space<Geometry::Cuboid, Particle<>> Tspace;
             Tspace spc;
-            MassCenterSeparation c( R"({"dir":[1,1,0]})"_json, spc);
+            MassCenterSeparation c( R"({"dir":[1,1,0], "index":[0,1]})"_json, spc);
             CHECK( c.dim() == 1 );
             CHECK( c.min[0] == -pc::infty );
             CHECK( c.max[0] == pc::infty );

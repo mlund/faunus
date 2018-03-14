@@ -137,6 +137,9 @@ namespace Faunus {
         static inline T lB( T epsilon_r ) {
             return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
         } //!< Bjerrum length (angstrom)
+        static inline T lB2epsr( T bjerrumlength ) {
+            return lB(bjerrumlength);
+        } //!< lB --> relative dielectric constant
     }
 
     namespace pc = PhysicalConstants;
@@ -166,6 +169,7 @@ namespace Faunus {
         constexpr T operator "" _eA( T mu ) { return mu; } //!< eA to eA
         constexpr T operator "" _Cm( T mu ) { return mu * 1.0_Debye / 3.335640951981520e-30; } //!< Cm to eA
         constexpr T operator "" _angstrom( T l ) { return l; } //!< Angstrom to Angstrom
+        constexpr T operator "" _angstrom3( T l ) { return l; } //!< Angstrom^3 to Angstrom^3
         constexpr T operator "" _m( T l ) { return l * 1e10; } //!< Meter to angstrom
         constexpr T operator "" _bohr( T l ) { return l * 0.52917721092; } //!< Bohr to angstrom
         constexpr T operator "" _nm( T l ) { return l * 10; } //!< nanometers to angstrom
@@ -843,6 +847,7 @@ namespace Faunus {
                 std::string name;  //!< Name
                 double eps=0;      //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
                 double activity=0; //!< Chemical activity [mol/l]
+                double alphax=0;   //!< Excess polarisability (unit-less)
                 double dp=0;       //!< Translational displacement parameter [angstrom]
                 double dprot=0;    //!< Rotational displacement parameter [degrees]
                 double mw=1;       //!< Weight
@@ -859,6 +864,7 @@ namespace Faunus {
             auto& _j = j[a.name];
             _j = a.p;
             _j["activity"] = a.activity / 1.0_molar;
+            _j["alphax"] = a.alphax;
             _j["dp"] = a.dp / 1.0_angstrom;
             _j["dprot"] = a.dprot / 1.0_rad;
             _j["eps"] = a.eps / 1.0_kJmol;
@@ -877,6 +883,7 @@ namespace Faunus {
                 auto& val = it.value();
                 a.p = val;
                 a.activity = val.value("activity", a.activity) * 1.0_molar;
+                a.alphax   = val.value("alphax", a.alphax);
                 a.dp       = val.value("dp", a.dp) * 1.0_angstrom;
                 a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
                 a.eps      = val.value("eps", a.eps) * 1.0_kJmol;

@@ -118,7 +118,7 @@ namespace Faunus {
 
         template<typename Tparticle>
             void to_json(json &j, const SigmaEpsilonTable<Tparticle> &m) {
-                j["mixing"] = "LB = Lorentz-Berthelot";
+                j["mixing"] = "LB";
                 j["epsilon unit"] = "kJ/mol";
                 auto& _j = j["custom"];
                 for (size_t i=0; i<m.eps.size(); i++)
@@ -173,9 +173,9 @@ namespace Faunus {
                 private:
                     typedef LennardJones<Tparticle> base;
                     using base::m;
-                    double onefourth, twototwosixth;
+                    static constexpr double onefourth=0.25, twototwosixth=1.2599210498948732;
                 public:
-                    inline WeeksChandlerAndersen(const std::string &name="wca") : onefourth(1/4.), twototwosixth(std::pow(2,2/6.))  {
+                    inline WeeksChandlerAndersen(const std::string &name="wca") {
                         base::name=name;
                         base::cite="doi:ct4kh9";
                     }
@@ -214,8 +214,7 @@ namespace Faunus {
                 double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                     return lB * a.charge * b.charge / r.norm();
                 }
-
-            void to_json(json &j) const override { j["lB"] = lB; }
+            void to_json(json &j) const override { j["epsr"] = pc::lB(lB); }
             void from_json(const json &j) override { lB = pc::lB( j.at("epsr") ); }
         };
 
@@ -228,14 +227,10 @@ namespace Faunus {
                         for (auto &j : atoms<Tparticle>)
                             d2.set( i.id(), j.id(), std::pow((i.sigma+j.sigma)/2,2));
                 }
-
-                template<typename... T>
-                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
-                        return r.squaredNorm() < d2(a.id,b.id) ? pc::infty : 0;
-                    }
-
-
-                void to_json(json &j) const override { j["comment"] = "N/A"; }
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                    return r.squaredNorm() < d2(a.id,b.id) ? pc::infty : 0;
+                }
+                void to_json(json &j) const override {}
                 void from_json(const json&) override {}
             }; //!< Hardsphere potential
 
@@ -363,6 +358,58 @@ namespace Faunus {
                     return (r2>r02) ? -pc::infty*p : -k * r02 / (r02-r2) * p;
                 }
         };
+
+        /**
+         * @brief Charge-nonpolar pair interaction
+         */
+        template<class Tparticle>
+            class ChargeNonpolar : public Coulomb {
+                private:
+                    double epsr;
+                    static bool alphaneutral;    // static to save memory as we may have
+                    static PairMatrix<double> m; // many instances
+
+                public:
+                    ChargeNonpolar(const std::string &name="ionalpha") { PairPotentialBase::name=name; }
+
+                    inline void from_json(const json &j) override {
+                        bool _old = alphaneutral;
+                        alphaneutral = j.value("alphaneutral", alphaneutral);
+                        if (alphaneutral!=_old && m.size()>0)
+                            throw std::runtime_error("`alphaneutral` must be the same for all instances.");
+                        epsr = j.at("epsr").get<double>();
+                        double lB = pc::lB(epsr);
+                        for (auto &i : atoms<Tparticle>)
+                            for (auto &j : atoms<Tparticle>)
+                                if (!alphaneutral)
+                                    m.set(i.id, j.id, -lB/2 *
+                                            ( i.charge*i.charge*j.alphax*pow(0.5*j.sigma,3) +
+                                              j.charge*j.charge*i.alphax*pow(0.5*i.sigma,3) ) );
+                                else {
+                                    m.set(i.id, j.id, 0);
+                                    if (fabs(i.charge)>1e-9)
+                                        m.set(i.id, j.id, -lB/2*i.charge*i.charge*j.alphax*pow(0.5*j.sigma,3));
+                                    else if (fabs(j.charge)>1e-9)
+                                        m.set(i.id, j.id, -lB/2*j.charge*j.charge*i.alphax*pow(0.5*i.sigma,3));
+                                }
+                    }
+
+                    inline void to_json(json &j) const override {
+                        j = { {"epsr",epsr}, {"alphaneutral",alphaneutral}  };
+                    }
+
+                    double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+                        double r2=r.squaredNorm();
+                        return m[a.id,b.id]/(r2*r2);
+                    }
+
+                    Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+                        return 4*m[a.id,b.id]/(r2*r2*r2)*p;
+                    }
+            };
+
+        template<class Tparticle>
+            bool ChargeNonpolar<Tparticle>::alphaneutral=false;
 
         /** @brief Coulomb type potentials with spherical cutoff */
         class CoulombGalore : public PairPotentialBase {
@@ -539,7 +586,7 @@ namespace Faunus {
                 j["cutoff"] = rc;
                 j["type"] = type;
                 if (type=="yukawa") {
-                    j["debye length"] = 1.0/kappa;
+                    j["debyelength"] = 1.0/kappa;
                     j["ionic strength"] = I;
                 }
                 if (type=="qpotential")
@@ -548,7 +595,7 @@ namespace Faunus {
                     j["alpha"] = alpha;
                 if (type=="reactionfield") {
                     if(epsrf > 1e10)
-                        j[epsilon_m+"_rf"] = pc::infty;
+                        j[epsilon_m+"_rf"] = 2e10;
                     else
                         j[epsilon_m+"_rf"] = epsrf;
                 }
@@ -567,9 +614,11 @@ namespace Faunus {
                 typedef std::function<double(const T&, const T&, const Point&)> uFunc;
                 uFunc u_zero = [](const T&a, const T&b, const Point &r){return 0.0;};
                 PairMatrix<uFunc> umatrix;
-                json _saved_input;
 
-                FunctorPotential(const std::string &name="") { PairPotentialBase::name = name; }
+                FunctorPotential(const std::string &name="FunctorPotential") {
+                    PairPotentialBase::name = name;
+                    //_j = json::object();
+                }
 
                 uFunc combineFunc(const json &j) const {
                     uFunc u = u_zero;
@@ -583,8 +632,9 @@ namespace Faunus {
                                     if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
                                     if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
                                     if (it.key()=="wca") _u = WeeksChandlerAndersen<T>() = i;
-                                    if (_u!=nullptr)
+                                    if (_u!=nullptr) {
                                         u = [u,_u](const T&a, const T&b, const Point &r){return u(a,b,r)+_u(a,b,r);};
+                                    }
                                     else
                                         throw std::runtime_error("unknown pair-potential: " + it.key());
                                 }
@@ -597,11 +647,11 @@ namespace Faunus {
                     return umatrix(a.id, b.id)(a, b, r);
                 }
 
-                void to_json(json &j) const override {}
+                void to_json(json &j) const override {
+                }
 
                 void from_json(const json &j) override {
-                    _saved_input = j;
-                    umatrix.resize(0);
+                    umatrix.resize(0); // needed before resizing w. value
                     umatrix.resize( atoms<T>.size(), combineFunc(j.at("default")) );
                     for (auto it=j.begin(); it!=j.end(); ++it) {
                         auto atompair = words2vec<std::string>(it.key()); // is this for a pair of atoms?

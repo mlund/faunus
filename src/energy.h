@@ -577,11 +577,8 @@ namespace Faunus {
                     double Rc2_g2g=pc::infty;
 
                     void to_json(json &j) const override {
-                        j = pairpot;
-                        json t = json::object();
-                        t["g2g"] = { {"cutoff", std::sqrt(Rc2_g2g)} };
-                        //t["cutoff_g2g"] = std::sqrt(Rc2_g2g);
-                        j.push_back(t);
+                        j["pairpot"] = pairpot;
+                        j["cutoff_g2g"] = std::sqrt(Rc2_g2g);
                     }
 
                     template<typename T>

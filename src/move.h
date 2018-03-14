@@ -837,6 +837,7 @@ namespace Faunus {
                 }
 
                 void restore(const json &j) {
+                    state1.spc = j;
                     state2.spc = j;
                     init();
                 } //!< restore system from previously saved state

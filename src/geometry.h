@@ -11,6 +11,11 @@ namespace Faunus {
         typedef std::function<void(Point&)> BoundaryFunction;
         typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
 
+        struct VolumeChangeRecipe {
+            enum keys {ISOTROPIC, ISOCHORIC, XY, Z};
+            keys type=ISOTROPIC;
+        };
+
         struct GeometryBase {
             virtual void setVolume(double, const std::vector<double>&)=0; //!< Set volume
             virtual double getVolume(int=3) const=0; //!< Get volume

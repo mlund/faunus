@@ -21,13 +21,17 @@ For example:
 
 ~~~ yaml
 energy:
-    - isobaric: { P/atm: 1 }
-    - sasa: { molarity: 0.2, radius: 1.4 }
-    - confine: { type: sphere, radius: 10,
-                 molecules: ["water"] }
-    - nonbonded_coulomblj:
-        lennardjones: { mixing: LB }
-        coulomb: { type: plain, epsr: 80, cutoff: 10 }
+    - isobaric: {P/atm: 1}
+    - sasa: {molarity: 0.2, radius: 1.4 }
+    - confine: {type: sphere, radius: 10,
+                 molecules: [water]}
+    - nonbonded:
+        default: # applied to all atoms
+        - lennardjones: {mixing: LB}
+        - coulomb: {type: plain, epsr: 1, cutoff: 12}
+        Na CH:
+          - wca: { mixing: LB } # custom atoms
+
     - ...
 ~~~
 
@@ -40,22 +44,35 @@ energies, entropies, pressure etc.
 
 ## External Pressure <a name="isobaric"></a>
 
-`isobaric`   | Description
--------------|-------------------------------------------------------
-`P/unit`     | External pressure where unit can be `mM`, `atm`, or `Pa`.
-
 This adds the following pressure term[^frenkel] to the Hamiltonian, appropriate for
 MC moves in $\ln V$:
 
 $$
-U = PV - k_BT\left ( N + 1 \right ) \ln V
+    U = PV - k_BT\left ( N + 1 \right ) \ln V
 $$
 
 where $N$ is the total number of molecules and atomic species.
 
 [^frenkel]: _Frenkel and Smith, 2nd Ed., Chapter 5.4_.
 
+`isobaric`   | Description
+-------------|-------------------------------------------------------
+`P/unit`     | External pressure where unit can be `mM`, `atm`, or `Pa`.
+
+
 ## Nonbonded Interactions <a name="nonbonded"></a>
+
+This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise additive potential, $u_{ij}$,
+
+$$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
+
+**Note:** the pair-potential can be a combination of several potentials defined at runtime.
+However, for optimal performance we include certain hard-coded combinations, defined at _compile time_.
+It is straight forward to add more by editing the class
+`Energy::Hamiltonian` found in `src/energy.h` and then re-compile.
+{: .notice--info}
+
+Below is a description of possible pair-potentials and their configuration.
 
 `energy`               | $u_{ij}$
 ---------------------- | ----------------------------------
@@ -65,17 +82,6 @@ where $N$ is the total number of molecules and atomic species.
 `nonbonded_coulombwca` | `coulomb`+`wca`
 `nonbonded_pmwca`      | `coulomb`+`wca` (`type=plain`, `cutoff`$=\infty$)
 
-This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise additive potential, $u_{ij}$,
-
-$$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
-
-**Note:** the pair-potential can be a combination of several potentials defined at runtime. However, for
-optimal performance we include certain hard-coded combinations, defined at _compile time_.
-It is straight forward to add more by editing the class
-`Energy::Hamiltonian` found in `src/energy.h` and then re-compile.
-{: .notice--info}
-
-Below is a description of possible pair-potentials and their configuration.
 
 ### Electrostatics
 
@@ -169,6 +175,34 @@ $$
 and Widom insertion are currently unsupported.
 {: .notice--info}
 
+### Charge-Nonpolar
+
+The energy when the field from a point charge, $z_i$, induces a dipole in a polarizable particle of unit-less excess polarizability, $\alpha_j=\left ( \frac{\epsilon_j-\epsilon_r}{\epsilon_r+2\epsilon_r}\right ) a^3$, is
+
+$$
+    \beta u_{ij} = -\frac{\lambda_B z_i^2 \alpha_j}{2r_{ij}^4}
+$$
+
+where $a_j$ is the radius of the non-polar particle and $\alpha_j$ is set in
+the atom topology, `alphax`.
+If `alphaneutral=true` it is required that one of the particles
+is charged, while the other is neutral.
+For non-polar particles in a polar medium, $\alpha_i$ is a negative number.
+For more information, see
+[J. Israelachvili's book, Chapter 5.](https://www.sciencedirect.com/science/book/9780123751829)
+
+`ionalpha`           | Description
+-------------------- | ---------------------------------------
+`epsr`               | Relative dielectric constant of medium
+`alphaneutral=false` | Do not polarize charged particle
+
+**Limitations:**
+Charge-polarizability products for each pair of species is evaluated once during
+construction and based on the defined atom types.
+Also, `alphaneutral` must be the same for all instances of the potential.
+{: .notice--info}
+
+
 ### Cosine Attraction
 An attractive potential used for [coarse grained lipids](http://dx.doi.org/10/chqzjk) and with the form,
 
@@ -184,7 +218,7 @@ while zero for $r>r_c+w_c$.
 `eps`  | Depth, $\epsilon$ (kJ/mol)
 `rc`   | Width, $r_c$ (Å)
 `wc`   | Decay range, $w_c$ (Å)
- 
+
 ### Hard Sphere
 `hardsphere`
 
@@ -198,7 +232,7 @@ The hard sphere potential does not take any input. Radii are read from the atoml
 `mixing=LB`    | Mixing rule. `LB`
 `custom`       | Custom $\epsilon$ and $\sigma$ combinations
 
-The Lennard-Jones potential has the form:
+The Lennard-Jones potential consists of a repulsive and attractive term,
 
 $$
 u_{ij}^{\text{LJ}} = 4\epsilon_{ij} \left (
@@ -223,17 +257,18 @@ lennardjones:
 
 ### Weeks-Chandler-Andersen
 
+Like Lennard-Jones but cut and shifted to zero at the minimum, forming a
+purely [repulsive potential](http://dx.doi.org/ct4kh9),
+
+$$
+    u_{ij} = u_{ij}^{\text{LJ}} + \epsilon_{ij} \quad \textrm{for} \quad r<2^{1/6}\sigma_{ij}
+$$
+
 `wca`        | Description
 ------------ | -------------------------------------------
 `mixing=LB`  | Mixing rule; only `LB` available.
 `custom`     | Custom $\epsilon$ and $\sigma$ combinations
 
-Like Lennard-Jones but cut and shifted to zero at the minimum, forming a
-purely [repulsive potential](http://dx.doi.org/ct4kh9),
-
-$$
-u_{ij} = u_{ij}^{\text{LJ}} + \epsilon_{ij} \quad \textrm{for} \quad r<2^{1/6}\sigma_{ij}
-$$
 
 ## Bonded Interactions
 
@@ -242,16 +277,16 @@ in a molecule definition (topology) or in energy/bonded where the latter can be
 used to add inter-molecular bonds:
 
 ~~~ yaml
+energy:
+    - bonded:
+        bondlist: # absolute index
+           - harmonic: { index: [56,921], k: 10, req: 15 }
 moleculelist:
     - water:
         structure: water.xyz
         bondlist: # index relative to molecule
             - harmonic: { index: [0,1], k: 100, req: 1.0 }  
             - harmonic: { index: [0,2], k: 100, req: 1.0 }
-energy:
-    - bonded:
-        bondlist: # absolute index
-           - harmonic: { index: [56,921], k: 10, req: 15 }
 ~~~
 
 Bonded potential types:
@@ -357,7 +392,7 @@ via a [SASA calculation](http://doi.org/dws4qm) for each atom.
 The energy term is:
 
 $$
-U = \sum_i^N A_{\text{sasa},i} \left ( \gamma_i + c_s \varepsilon_{\text{tfe},i} \right )
+    U = \sum_i^N A_{\text{sasa},i} \left ( \gamma_i + c_s \varepsilon_{\text{tfe},i} \right )
 $$
 
 where $c_s$ is the molar concentration of the co-solute;

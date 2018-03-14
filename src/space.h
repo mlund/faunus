@@ -165,11 +165,11 @@ namespace Faunus {
             } //!< Copy differing data from other (o) Space using Change object
 
             void scaleVolume(double Vnew) {
+                Point scale;
                 double Vold = geo.getVolume();
-                double scale = std::cbrt(Vnew/Vold);
+                scale.setConstant( std::cbrt(Vnew/Vold) );
 
-                // remove periodic boundaries.
-                for (auto &g: groups)
+                for (auto &g: groups) // remove periodic boundaries
                     if (!g.atomic)
                         g.unwrap(geo.distanceFunc);
 
@@ -179,10 +179,10 @@ namespace Faunus {
                     if (!g.empty()) {
                         if (g.atomic) // scale all atoms
                             for (auto& i : g)
-                                i.pos *= scale;
+                                i.pos = i.pos.cwiseProduct(scale);
                         else { // scale mass center and translate
-                            Point delta = g.cm * scale - g.cm;
-                            g.cm *= scale;
+                            Point delta = g.cm.cwiseProduct(scale) - g.cm;
+                            g.cm = g.cm.cwiseProduct(scale);
                             for (auto &i : g) {
                                 i.pos += delta;
                                 geo.boundary(i.pos);
@@ -241,9 +241,9 @@ namespace Faunus {
                 spc.clear();
                 spc.geo = j.at("geometry");
 
-                if ( j.count("groups")==0 )
+                if ( j.count("groups")==0 ) {
                     insertMolecules( j.at("insertmolecules"), spc );
-                else {
+                } else {
                     spc.p = j.at("particles").get<Tpvec>();
                     if (!spc.p.empty()) {
                         auto begin = spc.p.begin();

@@ -19,6 +19,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 `atomlist`    | Description
 ------------- | ------------------------------------------------------
 `activity=0`  | Chemical activity for grand canonical MC [mol/l]
+`alphax=0`    | Excess polarizability (unit-less)
 `dp=0`        | Translational displacement parameter [Å]
 `dprot=0`     | Rotational displacement parameter [degrees] (will be converted to radians)
 `eps=0`       | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol]
@@ -32,7 +33,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 
 A filename (`.json`) may be given instead of an atom definition to load
 from an external atom list. Atoms are loaded in the given order, and if it occurs
-more than once, the latest entry is used. 
+more than once, the latest entry is used.
 
 Example:
 
@@ -125,4 +126,3 @@ been defined in `moleculelist`:
 processlist:
     - { process: "HA = H~ + A", pK=4.8 }
 ~~~
-

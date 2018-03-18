@@ -608,22 +608,22 @@ namespace Faunus {
          *
          * This maintains a species x species matrix with function pointers (`std::function`)
          * that wraps pair potentials. Flexibility over performance.
+         *
+         * @todo `to_json` should retrive info from potentials instead of merely passing input
+         * @warning Each atom pair will be assigned an instance of a pair-potential. This may be
+         *          problematic is these have large memory requirements (Lennard-Jones for instance
+         *          keep a pair-matrix with sigma/epsilon values. Make these static?)
          */
-        template<class T>
-            struct FunctorPotential : public PairPotentialBase {
+        template<class T /** particle type */>
+            class FunctorPotential : public PairPotentialBase {
                 typedef std::function<double(const T&, const T&, const Point&)> uFunc;
-                uFunc u_zero = [](const T&a, const T&b, const Point &r){return 0.0;};
-                PairMatrix<uFunc> umatrix;
-
-                FunctorPotential(const std::string &name="FunctorPotential") {
-                    PairPotentialBase::name = name;
-                    //_j = json::object();
-                }
+                PairMatrix<uFunc,true> umatrix; // matrix with potential for each atom pair
+                json _j; // storage for input json
 
                 uFunc combineFunc(const json &j) const {
-                    uFunc u = u_zero;
+                    uFunc u = [](const T&a, const T&b, const Point &r){return 0.0;};
                     if (j.is_array()) {
-                        for (auto &i : j)
+                        for (auto &i : j) // loop over all defined potentials in array
                             if (i.is_object() && (i.size()==1))
                                 for (auto it=i.begin(); it!=i.end(); ++it) {
                                     uFunc _u = nullptr;
@@ -632,9 +632,8 @@ namespace Faunus {
                                     if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
                                     if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
                                     if (it.key()=="wca") _u = WeeksChandlerAndersen<T>() = i;
-                                    if (_u!=nullptr) {
+                                    if (_u!=nullptr) // if found, sum them into new function object
                                         u = [u,_u](const T&a, const T&b, const Point &r){return u(a,b,r)+_u(a,b,r);};
-                                    }
                                     else
                                         throw std::runtime_error("unknown pair-potential: " + it.key());
                                 }
@@ -643,16 +642,21 @@ namespace Faunus {
                     return u;
                 } // parse json array of potentials to a single potential function object
 
+                public:
+
+                FunctorPotential(const std::string &name="") {
+                    PairPotentialBase::name = name;
+                }
+
                 double operator()(const T &a, const T &b, const Point &r) const {
                     return umatrix(a.id, b.id)(a, b, r);
                 }
 
-                void to_json(json &j) const override {
-                }
+                void to_json(json &j) const override { j = _j; }
 
                 void from_json(const json &j) override {
-                    umatrix.resize(0); // needed before resizing w. value
-                    umatrix.resize( atoms<T>.size(), combineFunc(j.at("default")) );
+                    _j = j;
+                    umatrix = decltype(umatrix)( atoms<T>.size(), combineFunc(j.at("default")) );
                     for (auto it=j.begin(); it!=j.end(); ++it) {
                         auto atompair = words2vec<std::string>(it.key()); // is this for a pair of atoms?
                         if (atompair.size()==2) {

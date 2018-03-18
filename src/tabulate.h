@@ -326,7 +326,7 @@ namespace Faunus
 
             auto f = [](double x){return 0.5*x*std::sin(x)+2;};
             Andrea<double> spline;
-            spline.setTolerance(2e-3, 1e-2);
+            spline.setTolerance(2e-4, 1e-2);
             auto d = spline.generate(f, 0, 10);
 
             CHECK( spline.eval(d,0) != Approx(f(0)) );

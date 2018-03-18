@@ -29,8 +29,8 @@ energy:
         default: # applied to all atoms
         - lennardjones: {mixing: LB}
         - coulomb: {type: plain, epsr: 1, cutoff: 12}
-        Na CH:
-          - wca: { mixing: LB } # custom atoms
+        Na CH:   # overwrite specific atom pairs
+        - wca: { mixing: LB }
 
     - ...
 ~~~
@@ -207,7 +207,7 @@ Also, `alphaneutral` must be the same for all instances of the potential.
 An attractive potential used for [coarse grained lipids](http://dx.doi.org/10/chqzjk) and with the form,
 
 $$
-    \beta u(r) = -\epsilon \cos^2 [ \pi(r-r_c)/2w_c ]
+    \beta u(r) = -\epsilon \cos^2 \left ( \frac{\pi(r-r_c)}{2w_c} \right )
 $$
 
 for $r_c\leq r \leq r_c+w_c$. For $r<r_c$, $\beta u=-\epsilon$,
@@ -398,3 +398,51 @@ $$
 where $c_s$ is the molar concentration of the co-solute;
 $\gamma_i$ is the atomic surface tension; and $\varepsilon_{\text{tfe},i}$ the atomic transfer free energy,
 both specified in the atom topology with `tension` and `tfe`, respectively.
+
+## Penalty Function
+
+This term iteratively applies bias along a reaction coordinate, $\mathcal{X}$, to automatically flatten the
+free energy landscape, akin meta-dynamics in MD.
+The free energy along the given coordinate is simply the negative
+of the final bias function, $P(\mathcal{X})$,  saved to disk at the end of the simulation.
+
+`penalty`     |  Description
+------------- | --------------------
+`f0`          |  Penalty energy increment ($kT$)
+`update`      |  Interval between scaling of `f0` 
+`scale=0.8`   |  Scaling factor for `f0`
+`file`        |  File name of penalty function
+`nodrift=true`|  Suppress energy drift
+`coords`      |  Array of _one or two_ coordinates
+
+The reaction coordinate, $\mathcal{X}$,
+can be one or two dimensional, and composed freely via `coord` from
+one or two of the types below:
+
+`atom`        | Single atom properties
+------------- | ----------------------------------
+`index`       | Atom index
+`property`    | `x`, `y`, `z`, `charge`
+`range`       | Array w. [min:max] value
+`resolution`  | Resolution along coordinate
+
+`cmcm`        | Mass-center separation
+------------- | -----------------------------------
+`index`       | Array w. exactly two molecule index
+`range`       | Array w. [min:max] separation
+`resolution`  | Resolution along coordinate
+`dir=[1,1,1]` | Directions for distance calc.
+
+### Multiple Walkers with MPI
+
+If Faunus is compiled with MPI, the master process collects the bias function from all nodes
+upon penalty function `update`.
+The _average_ is then re-distributed, offering [linear parallellizing](http://dx.doi.org/10/b5pc4m)
+of the free energy sampling. It is crucial that the walk in coordinate space differs on the different
+nodes, i.e. by specifying a different random number seed; start configuration; or displacement parameters.
+
+**Notes:**
+Still under construction.
+{: .notice--danger}
+
+

@@ -6,6 +6,7 @@
 #include "potentials.h"
 #include "multipole.h"
 #include "penalty.h"
+#include "mpi.h"
 #include <set>
 
 #ifdef FAU_POWERSASA
@@ -741,15 +742,33 @@ namespace Faunus {
                     } //!< Copy energy matrix from other
             }; //!< Nonbonded with cached energies (Energy Matrix)
 
+        /**
+         * `udelta` is the total change of updating the energy function. If
+         * not handled this will appear as an energy drift (which is is!). To
+         * avoid this, this term is added to the energy but since it's the
+         * same in both the trial and old state energies it will not affect
+         * MC move acceptance.
+         */
         template<typename Tspace>
             class Penalty : public Energybase {
                 private:
                     typedef typename Tspace::Tparticle Tparticle;
                     typedef typename Tspace::Tgroup Tgroup;
                     typedef typename Tspace::Tpvec Tpvec;
+                    typedef typename std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> Tcoord;
 
                     Tspace &spc;
-                    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
+                    bool nodrift=true;
+                    size_t dim=0;
+                    size_t cnt=0;       // number of calls to `sync()`
+                    size_t nupdate;     // update frequency [steps]
+                    size_t samplings=1;
+                    double udelta=0;    // total energy change of updating penalty function
+                    double scale;       // scaling factor for f0
+                    double f0;          // penalty increment
+                    std::string file;
+                    std::vector<Tcoord> rcvec; // vector of reaction coordinate functions
+                    std::vector<double> coord; // latest reaction coordinate
 
                     Table<int> histo;
                     Table<double> penalty;
@@ -758,116 +777,191 @@ namespace Faunus {
                     Penalty(const json &j, Tspace &spc) : spc(spc) {
                         using namespace ReactionCoordinate;
                         name = "penalty";
-                        std::string type = j.at("type");
-                        if (type=="cmcm") rc = std::make_shared<MassCenterSeparation>(j, spc);
-                        if (rc==nullptr)
-                            throw std::runtime_error(name + ": unknown type'" + type + "'");
-                        rc->name = type;
+                        f0 = j.value("f0", 0.5);
+                        scale = j.value("scale", 0.8);
+                        nupdate = j.value("update", 0);
+                        nodrift = j.value("nodrift", true);
+                        file = MPI::prefix + j.at("file").get<std::string>();
+                        std::vector<double> binwidth, min, max;
 
-                        auto bw = j.value("binwidth", std::vector<double>({1.0, 1.0})); 
+                        for (auto &i : j.at("coords"))
+                            if (i.is_object())
+                                if (i.size()==1) {
+                                    std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
+                                    for (auto it=i.begin(); it!=i.end(); ++it) {
+                                        if (it.key()=="atom")
+                                            rc = std::make_shared<AtomProperty>(it.value(), spc);
+                                        if (rc!=nullptr) {
+                                            if (rc->min>=rc->max || rc->binwidth<=0)
+                                                throw std::runtime_error("min<max and binwidth>0 required for '" + it.key() + "'");
+                                            rcvec.push_back(rc);
+                                            binwidth.push_back( rc->binwidth );
+                                            min.push_back( rc->min );
+                                            max.push_back( rc->max );
+                                        } else
+                                            throw std::runtime_error("unknown coordinate type '" + it.key() + "'");
+                                    }
+                                }
+                        dim = binwidth.size();
+                        if (dim<1 || dim>2)
+                            throw std::runtime_error("minimum one maximum two coordinates required");
 
-                        histo.reInitializer(bw, rc->min, rc->max);
-                        penalty.reInitializer(bw, rc->min, rc->max);
+                        coord.resize(dim,0);
+                        histo.reInitializer(binwidth, min, max);
+                        penalty.reInitializer(binwidth, min, max);
+                    }
+
+                    ~Penalty() {
+                        // save to disk here
                     }
 
                     void to_json(json &j) const override {
-                        j = *rc;
-                        j["type"] = rc->name;
-                    }
+                        j["file"] = file;
+                        j["scale"] = scale;
+                        j["update"] = nupdate;
+                        j["nodrift"] = nodrift;
+                        j["f0_final"] = f0;
+                        auto& _j = j["coords"] = json::array();
+                        for (auto rc : rcvec) {
+                            json t;
+                            t[rc->name] = *rc;
+                            _j.push_back(t);
+                        }
+                     }
 
                     double energy(Change &change) override {
+                        assert(coord.size() == rcvec.size());
                         double u=0;
                         if (!change.empty()) {
-                            std::vector<double> coord = rc->operator()(); // obtain reaction coordinate
-                            if (key==NEW)
-                                cout << "trial state";
-                            if (key==OLD)
-                                cout << "old state";
+                            for (size_t i=0; i<rcvec.size(); i++) {
+                                coord.at(i) = rcvec[i]->operator()();
+                                if (!rcvec[i]->inRange(coord[i]))
+                                    return pc::infty;
+                            }
+                            //u = penalty[coord];
                         }
-                        return u;
+                        return (nodrift) ? u + udelta : u;
+                    }
+
+                    /*
+                     * Consider making this into a 'policy`, i.e. external class/function that can
+                     * be injected. Useful for having MPI and non-MPI versions as well as
+                     * different update schemes.
+                     */
+                    void update(const std::vector<double> &c) {
+                        return;
+                        cnt++;
+                        if (cnt % nupdate == 0) {
+                            bool b = histo.minCoeff() >= samplings;
+                            if (b) {
+                                double max = penalty.maxCoeff();
+                                double min = penalty.minCoeff();
+                                penalty.translate(-min); // place min energy at 0. Why?
+                                f0 = f0 * scale;
+                                samplings = std::ceil( samplings / scale );
+                                double dh = std::log( double(histo.maxCoeff()) / histo.minCoeff() );
+                                cout << "Energy barrier: " << max - min << ", delta histo: " << dh << endl;
+                                histo.clear();
+                                udelta -= min;
+                            }
+                        }
+                        udelta += f0; // sum energy added to the system
+                        coord = c;
+                        histo[coord]++;
+                        penalty[coord] += f0;
                     }
 
                     void sync(Energybase *basePtr, Change &change) override {
-                        // this is called upon rejection/acceptance and can be
-                        // used to sync properties, if needed.
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         assert(other);
-                        if (other->key==OLD)
-                            cout << "move was rejected";
-                        if (other->key==NEW)
-                            cout << "move was accepted";
+                        update(other->coord);
+                        other->update(other->coord);
                     }
             };
 
 #ifdef FAU_POWERSASA
         template<class Tspace>
             class SASAEnergy : public Energybase {
-                private:
-                    typedef typename Tspace::Tparticle Tparticle;
-                    typedef typename Tspace::Tpvec Tpvec;
-                    Tspace& spc;
-                    std::vector<float> sasa, radii; 
-                    std::vector<Point> coords;
-                    double probe; // sasa probe radius (angstrom)
-                    double conc=0;// co-solute concentration (mol/l)
-                    Average<double> avgArea; // average surface area
-                    std::shared_ptr<POWERSASA::PowerSasa<float,Point>> ps;
+                typedef typename Tspace::Tparticle Tparticle;
+                typedef typename Tspace::Tpvec Tpvec;
+                Tspace& spc;
+                std::vector<float> sasa, radii; 
+                std::vector<Point> coords;
+                double probe; // sasa probe radius (angstrom)
+                double conc=0;// co-solute concentration (mol/l)
+                Average<double> avgArea; // average surface area
+                std::shared_ptr<POWERSASA::PowerSasa<float,Point>> ps;
 
-                    void updateSASA(const Tpvec &p) {
-                        radii.resize(p.size());
-                        coords.resize(p.size());
-                        std::transform(p.begin(), p.end(), coords.begin(), [](auto &a){ return a.pos;});
-                        std::transform(p.begin(), p.end(), radii.begin(),
-                                [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
+                void updateSASA(const Tpvec &p) {
+                    radii.resize(p.size());
+                    coords.resize(p.size());
+                    std::transform(p.begin(), p.end(), coords.begin(), [](auto &a){ return a.pos;});
+                    std::transform(p.begin(), p.end(), radii.begin(),
+                            [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
 
-                        ps->update_coords(coords, radii); // slowest step!
+                    ps->update_coords(coords, radii); // slowest step!
 
-                        for (size_t i=0; i<p.size(); i++) {
-                            auto &a = atoms<Tparticle>[p[i].id];
-                            if (std::fabs(a.tfe)>1e-9 || std::fabs(a.tension)>1e-9)
-                                ps->calc_sasa_single(i);
-                        }
-                        sasa = ps->getSasa();
-                        assert(sasa.size()==p.size());
+                    for (size_t i=0; i<p.size(); i++) {
+                        auto &a = atoms<Tparticle>[p[i].id];
+                        if (std::fabs(a.tfe)>1e-9 || std::fabs(a.tension)>1e-9)
+                            ps->calc_sasa_single(i);
                     }
+                    sasa = ps->getSasa();
+                    assert(sasa.size()==p.size());
+                }
 
-                    void to_json(json &j) const override {
-                        using namespace u8;
-                        j["molarity"] = conc / 1.0_molar;
-                        j["radius"] = probe / 1.0_angstrom;
-                        j[bracket("SASA")+"/"+angstrom+squared] = avgArea.avg() / 1.0_angstrom;
-                        _roundjson(j,5);
-                    }
+                void to_json(json &j) const override {
+                    using namespace u8;
+                    j["molarity"] = conc / 1.0_molar;
+                    j["radius"] = probe / 1.0_angstrom;
+                    j[bracket("SASA")+"/"+angstrom+squared] = avgArea.avg() / 1.0_angstrom;
+                    _roundjson(j,5);
+                }
 
                 public:
-                    SASAEnergy(const json &j, Tspace &spc) : spc(spc) {
-                        name = "sasa";
-                        cite = "doi:10.1002/jcc.21844";
-                        probe = j.value("radius", 1.4) * 1.0_angstrom;
-                        conc = j.value("molarity", conc) * 1.0_molar;
+                SASAEnergy(const json &j, Tspace &spc) : spc(spc) {
+                    name = "sasa";
+                    cite = "doi:10.1002/jcc.21844";
+                    probe = j.value("radius", 1.4) * 1.0_angstrom;
+                    conc = j.value("molarity", conc) * 1.0_molar;
 
-                        radii.resize(spc.p.size());
-                        coords.resize(spc.p.size());
-                        std::transform(spc.p.begin(), spc.p.end(), coords.begin(), [](auto &a){ return a.pos;});
-                        std::transform(spc.p.begin(), spc.p.end(), radii.begin(),
-                                [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
+                    radii.resize(spc.p.size());
+                    coords.resize(spc.p.size());
+                    std::transform(spc.p.begin(), spc.p.end(), coords.begin(), [](auto &a){ return a.pos;});
+                    std::transform(spc.p.begin(), spc.p.end(), radii.begin(),
+                            [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
 
-                        ps = std::make_shared<POWERSASA::PowerSasa<float,Point>>(coords,radii);
+                    ps = std::make_shared<POWERSASA::PowerSasa<float,Point>>(coords,radii);
+                }
+
+                double energy(Change &change) override {
+                    double u=0, A=0;
+                    updateSASA(spc.p);
+                    for (size_t i=0; i<sasa.size(); ++i) {
+                        auto &a = atoms<Tparticle>[ spc.p[i].id ];
+                        u += sasa[i] * (a.tension + conc * a.tfe);
+                        A += sasa[i];
                     }
-
-                    double energy(Change &change) override {
-                        double u=0, A=0;
-                        updateSASA(spc.p);
-                        for (size_t i=0; i<sasa.size(); ++i) {
-                            auto &a = atoms<Tparticle>[ spc.p[i].id ];
-                            u += sasa[i] * (a.tension + conc * a.tfe);
-                            A += sasa[i];
-                        }
-                        avgArea+=A; // sample average area for accepted confs. only
-                        return u;
-                    }
+                    avgArea+=A; // sample average area for accepted confs. only
+                    return u;
+                }
             }; //!< SASA energy from transfer free energies
 #endif
+
+        struct Example2D : public Energybase {
+            Point& i; // reference to 1st particle in the system
+            template<typename Tspace>
+                Example2D(const json &j, Tspace &spc): i(spc.p.at(0).pos) { name = "Example2D"; }
+            double energy(Change &change) override {
+                double s = 1 + std::sin(2 * pc::pi * i.x()) + std::cos(2 * pc::pi * i.y());
+                if ( i.x() >= -2.00 && i.x() <= -1.25 ) return 1 * s;
+                if ( i.x() >= -1.25 && i.x() <= -0.25 ) return 2 * s;
+                if ( i.x() >= -0.25 && i.x() <= 0.75 ) return 3 * s;
+                if ( i.x() >= 0.75 && i.x() <= 1.75 ) return 4 * s;
+                if ( i.x() >= 1.75 && i.x() <= 2.00 ) return 5 * s;
+                return 1e10;
+            }
+        };
 
         template<typename Tspace>
             class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
@@ -919,6 +1013,9 @@ namespace Faunus {
                                     if (it.key()=="confine")
                                         push_back<Energy::Confine<Tspace>>(it.value(), spc);
 
+                                    if (it.key()=="example2d")
+                                        push_back<Energy::Example2D>(it.value(), spc);
+
                                     if (it.key()=="isobaric")
                                         push_back<Energy::Isobaric<Tspace>>(it.value(), spc);
 
@@ -928,7 +1025,6 @@ namespace Faunus {
                                     if (it.key()=="sasa")
                                         push_back<Energy::SASAEnergy<Tspace>>(it.value(), spc);
 #endif
-
                                     // additional energies go here...
 
                                     addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate

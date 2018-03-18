@@ -10,111 +10,101 @@ namespace Faunus {
 
         /**
          * @brief Base class for reaction coordinates
-         *
-         * Derived classes must implement the function operator.
-         *
-         * Keyword  | Description
-         * :------- | :----------------
-         * `dim`    | Number of dimensions
-         * `min`    | minumum coordinate values (array)
-         * `max`    | maximum coordinate values (array)
-         * `scale`  | penalty scaling (array)
-         * `nstep`  | update frequency for penalty updates, sampling etc. (steps)
          */
-        class ReactionCoordinateBase {
-            public:
-                typedef std::vector<double> Tvec;
-            protected:
-                std::function<Tvec()> f=nullptr; // returns reaction coordinate
-            public:
-                inline virtual void _to_json(json &j) const {};
-                size_t nstep;     // update frequency [steps]
-                Tvec min, max, scale;
-                std::string name;
+        struct ReactionCoordinateBase {
+            std::function<double()> f=nullptr; // returns reaction coordinate
+            inline virtual void _to_json(json &j) const {};
+            double binwidth=0, min=0, max=0;
+            std::string name;
 
-                size_t dim() const { return min.size(); }   //!< dimension of coordinate
+            double operator()() {
+                assert(f!=nullptr);
+                return f();
+            } //!< Calculates reaction coordinate
 
-                Tvec operator()() {
-                    assert(f!=nullptr);
-                    return f();
-                }
-
-                bool inrange( const Tvec &coord ) const
-                {
-                    for ( size_t i = 0; i < coord.size(); ++i )
-                        if ( coord[i] < min[i] || coord[i] > max[i] )
-                            return false;
-                    return true;
-                } //!< Determines if coordinate is within [min,max]
+            bool inRange(double c) const {
+                return (c>=min && c<=max);
+            } //!< Determines if coordinate is within [min,max]
         };
 
         void to_json(json &j, const ReactionCoordinateBase &r) {
-            j = {{"dim", r.dim()}, {"min", r.min}, {"max", r.max}};
-            if (r.nstep>0) {
-                j["nstep"] = r.nstep;
-                j["scale"] = r.scale;
-            }
+            j = { {"range",{r.min,r.max}}, {"resolution",r.binwidth} };
             r._to_json(j);
         }
 
         void from_json(const json &j, ReactionCoordinateBase &r) {
-            size_t d = j.value("dim", 1);
-            r.min.resize(d, -pc::infty);
-            r.min = j.value("min", r.min);
-            r.max.resize(d, pc::infty);
-            r.max = j.value("max", r.max);
-            r.scale.resize(d, 1);
-            r.scale = j.value("scale", r.scale);
-            r.nstep = j.value("nstep", 0);
-
-            if ( (r.min.size()!=r.max.size() ) || r.min.size()!=r.scale.size()
-                    || r.min.size()<1 || d!=r.dim())
-                throw std::runtime_error(
-                        "Reaction coordinate error: min, max, scale must have equal length >=1");
+            r.binwidth = j.value("resolution", 0.0);
+            auto range = j.value("range", std::vector<double>({0,0}));
+            if (range.size()!=2)
+                throw std::runtime_error(r.name + ": 'range' must be of length zero or two");
+            r.min = range[0];
+            r.max = range[1];
+            assert(r.min<=r.max);
         }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] ReactionCoordinateBase")
         {
             using doctest::Approx;
-            ReactionCoordinateBase c = R"({"dim":2, "min":[0,-1.5], "max":[8.5,7], "nstep":10})"_json;
-            CHECK( c.dim() == 2 );
-            CHECK( c.min.size() == 2 );
-            CHECK( c.max.size() == 2 );
-            CHECK( c.scale.size() == 2 );
-            CHECK( c.min[0] == 0 );
-            CHECK( c.min[1] == -1.5 );
-            CHECK( c.max[0] == 8.5 );
-            CHECK( c.max[1] == 7 );
-            CHECK( c.nstep == 10) ;
+            ReactionCoordinateBase c = R"({"range":[-1.5, 2.1], "resolution":0.2})"_json;
+            CHECK( c.min == Approx(-1.5) );
+            CHECK( c.max == Approx( 2.1) );
+            CHECK( c.binwidth == Approx(0.2) );
+            CHECK( c.inRange(-1.5)  == true );
+            CHECK( c.inRange(-1.51) == false );
+            CHECK( c.inRange( 2.11) == false );
+            CHECK( c.inRange( 2.1)  == true );
         }
 #endif
+
+        class AtomProperty : public ReactionCoordinateBase {
+            protected:
+                std::string property;
+                size_t index; // atom index
+            public:
+                template<class Tspace>
+                    AtomProperty(const json &j, Tspace &spc) {
+                        name = "atom";
+                        from_json(j, *this);
+                        index = j.at("index");
+                        property = j.at("property").get<std::string>();
+                        if (property=="x") f = [&i=spc.p.at(index).pos]() { return i.x(); };
+                        if (property=="y") f = [&i=spc.p.at(index).pos]() { return i.y(); };
+                        if (property=="z") f = [&i=spc.p.at(index).pos]() { return i.z(); };
+                        if (property=="R") f = [&i=spc.p.at(index).pos]() { return i.norm(); };
+                        if (f==nullptr)
+                            throw std::runtime_error(name + ": unknown property '" + property + "'");
+                    }
+                void _to_json(json &j) const override {
+                    j["property"] = property;
+                    j["index"] = index;
+                }
+        };
 
         /**
          * @brief Reaction coordinate: molecule-molecule mass-center separation
          */
-        class MassCenterSeparation : public ReactionCoordinateBase {
-            public:
-                Point dir={1,1,1};
-                std::vector<int> index;
-                void _to_json(json &j) const override {
-                    j["dir"] = dir;
+        struct MassCenterSeparation : public ReactionCoordinateBase {
+            Point dir={1,1,1};
+            std::vector<size_t> index;
+            template<class Tspace>
+                MassCenterSeparation(const json &j, Tspace &spc) {
+                    name = "cmcm";
+                    from_json(j, *this);
+                    dir = j.value("dir", dir);
+                    index = j.at("index").get<decltype(index)>();
+                    if (index.size()!=2)
+                        throw std::runtime_error(name + ": specify exactly two molecule index");
+                    f = [&spc, dir=dir, i=index[0], j=index[1]]() {
+                        auto &cm1 = spc.groups[i].cm;
+                        auto &cm2 = spc.groups[j].cm;
+                        return spc.geo.vdist(cm1, cm2).cwiseProduct(dir).norm();
+                    };
                 }
-                template<class Tspace>
-                    MassCenterSeparation( const json &j, Tspace &spc ) {
-                        name = "cmcm";
-                        from_json(j, *this);
-                        dir = j.value("dir", dir);
-                        index = j.value("index", index);
-                        if (index.size()!=2 || dim()!=1)
-                            throw std::runtime_error(name + ": invalid input");
-
-                        f = [&spc, dir=dir, i=index[0], j=index[1]]() {
-                            auto &cm1 = spc.groups[i].cm;
-                            auto &cm2 = spc.groups[j].cm;
-                            return Tvec({spc.geo.vdist(cm1, cm2).cwiseProduct(dir).norm()});
-                        };
-                    }
+            void _to_json(json &j) const override {
+                j["dir"] = dir;
+                j["index"] = index;
+            }
         };
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] MassCenterSeparation")
@@ -122,14 +112,11 @@ namespace Faunus {
             using doctest::Approx;
             typedef Space<Geometry::Cuboid, Particle<>> Tspace;
             Tspace spc;
-            MassCenterSeparation c( R"({"dir":[1,1,0], "index":[0,1]})"_json, spc);
-            CHECK( c.dim() == 1 );
-            CHECK( c.min[0] == -pc::infty );
-            CHECK( c.max[0] == pc::infty );
-            CHECK( c.nstep == 0 );
+            MassCenterSeparation c( R"({"dir":[1,1,0], "index":[7,8] })"_json, spc);
             CHECK( c.dir.x() == 1 );
             CHECK( c.dir.y() == 1 );
             CHECK( c.dir.z() == 0 );
+            CHECK( c.index == decltype(c.index)({7,8}) );
         }
 #endif
 

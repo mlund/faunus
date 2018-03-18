@@ -597,64 +597,97 @@ namespace Faunus
     /**
      * @brief Container for data between pairs
      *
-     * This will maintain a symmetric, dynamic NxN matrix for storing data
-     * about pairs.
-     * Use the `set()` function for setting values and the function
-     * operator for access:
+     * Symmetric, dynamic NxN matrix for storing data
+     * about pairs. Set values with `set()`. If `triangular==true`
+     * the memory usage is reduced but introduces an `if`-statement
+     * upon access.
      *
-     * ~~~{.cpp}
-     * int i=2,j=3; // particle type, for example
-     * PairMatrix<double> m;
-     * m.set(i,j,12.0);
-     * cout << m(i,j);         // -> 12.0
-     * cout << m(i,j)==m(j,i); // -> true
+     * ~~~ cpp
+     *     int i=2,j=3; // particle type, for example
+     *     PairMatrix<double> m;
+     *     m.set(i,j,12.0);
+     *     cout << m(i,j);         // -> 12.0
+     *     cout << m(i,j)==m(j,i); // -> true
      * ~~~
      */
     template<class T, bool triangular=false>
-        class PairMatrix
-        {
+        class PairMatrix {
+            private:
+                T __val; // default value when resizing
+                std::vector<std::vector<T>> m;
             public:
-                std::vector<std::vector<T>> m; // symmetric matrix (mem.wasteful - fast access)
-                void resize( size_t n, T val=T() ) {
+                void resize(size_t n) {
                     m.resize(n);
                     for (size_t i=0; i<m.size(); i++)
-                        (triangular) ? m[i].resize(i, val) : m[i].resize(n, val);
+                        if (triangular==true)
+                            m[i].resize(i+1, __val);
+                        else
+                            m[i].resize(n, __val);
                 }
 
-                PairMatrix( size_t n = 0, T val=T() ) { resize(n, val); }
+                PairMatrix(size_t n=0, T val=T()) : __val(val) {
+                    resize(n);
+                }
 
                 auto size() const { return m.size(); }
 
-                const T& operator()( size_t i, size_t j ) const {
-                    if (triangular)
-                        if (j>i) std::swap(i, j);
+                const T& operator()(size_t i, size_t j) const {
+                    if (triangular==true)
+                        if (j>i)
+                            std::swap(i,j);
                     assert(i < m.size());
                     assert(j < m[i].size());
                     return m[i][j];
                 }
 
-                void set( size_t i, size_t j, T val, T resizeval=T() ) {
-                    size_t n = std::max(i, j);
-                    if ( n >= m.size())
-                        resize(n + 1, resizeval);
-
-                    if (triangular) {
-                        if (j>i) std::swap(i, j);
-                        m[i][j] = val;
-                    }
-                    else
-                        m[i][j] = m[j][i] = val;
+                void set(size_t i, size_t j, T val) {
+                    if (j>i)
+                        std::swap(i, j);
+                    if (i>=m.size())
+                        resize(i+1);
+                    if (triangular==false)
+                        m[j][i] = val;
+                    m[i][j] = val;
                 }
         };
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] PairMatrix")
     {
         int i=2,j=3; // particle type, for example
-        PairMatrix<double> m;
-        m.set(i,j,12.1);
-        CHECK(m.size()==4);
-        CHECK(m(i,j)==12.1);
-        CHECK(m(i,j)==m(j,i));
+
+        SUBCASE("full matrix") {
+            PairMatrix<double,false> m;
+            m.set(i,j,12.1);
+            CHECK(m.size()==4);
+            CHECK(m(i,j)==12.1);
+            CHECK(m(i,j)==m(j,i));
+            CHECK(m(0,2)==0);
+            CHECK(m(2,0)==0);
+        }
+
+        SUBCASE("full matrix - default value") {
+            PairMatrix<double,false> m(5,3.1);
+            for (size_t i=0; i<5; i++)
+                for (size_t j=0; j<5; j++)
+                    CHECK(m(i,j)==3.1);
+        }
+
+        SUBCASE("triangular matrix - default value") {
+            PairMatrix<double,true> m(5,3.1);
+            for (size_t i=0; i<5; i++)
+                for (size_t j=0; j<5; j++)
+                    CHECK(m(i,j)==3.1);
+        }
+
+        SUBCASE("triangular matrix") {
+            PairMatrix<double,true> m;
+            m.set(i,j,12.1);
+            CHECK(m.size()==4);
+            CHECK(m(i,j)==12.1);
+            CHECK(m(i,j)==m(j,i));
+            CHECK(m(0,2)==0);
+            CHECK(m(2,0)==0);
+        }
     }
 #endif
 
@@ -666,19 +699,11 @@ namespace Faunus
             Tvec _bw, _lo, _hi;
             int _rows, _cols;
         public:
-            Table( const Tvec &bw = {1, 1}, const Tvec &lo = {0, 0}, const Tvec &hi = {2, 2} )
-            {
-                _bw = bw;
-                _lo = lo;
-                _hi = hi;
-                _rows = (_hi[0] - _lo[0]) / _bw[0] + 1.;
-                _cols = (_hi[1] - _lo[1]) / _bw[1] + 1.;
-                base::resize(_rows, _cols);
-                base::setZero();
+            Table( const Tvec &bw = {1, 1}, const Tvec &lo = {0, 0}, const Tvec &hi = {2, 2} ) {
+                reInitializer(bw, lo, hi);
             }
 
-            void reInitializer( Tvec &bw, Tvec &lo, Tvec &hi )
-            {
+            void reInitializer( const Tvec &bw, const Tvec &lo, const Tvec &hi ) {
                 _bw = bw;
                 _lo = lo;
                 _hi = hi;

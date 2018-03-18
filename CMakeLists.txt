@@ -274,6 +274,10 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/examples/bulk.yml
     ${CMAKE_SOURCE_DIR}/examples/water.yml
     ${CMAKE_SOURCE_DIR}/examples/water.xyz
+    ${CMAKE_SOURCE_DIR}/examples/membrane.yml
+    ${CMAKE_SOURCE_DIR}/examples/membrane.state
+    ${CMAKE_SOURCE_DIR}/examples/lipid.xyz
+    ${CMAKE_SOURCE_DIR}/examples/penalty.yml
     DESTINATION share/faunus/examples)
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")

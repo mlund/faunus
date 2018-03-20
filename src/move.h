@@ -813,7 +813,7 @@ namespace Faunus {
                     Change c; c.all=true;
                     uinit = state1.pot.energy(c);
                     state2.sync(state1, c);
-                    assert(uinit == state2.pot.energy(c));
+                    assert(state1.pot.energy(c) == state2.pot.energy(c));
                 }
 
             public:

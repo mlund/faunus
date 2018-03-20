@@ -721,10 +721,8 @@ namespace Faunus
                     v[i] = (v[i] >= 0) ? int(v[i] / _bw[i] + 0.5) * _bw[i] : int(v[i] / _bw[i] - 0.5) * _bw[i];
             }
 
-            void to_index( Tvec &v )
-            {
-                for ( Tvec::size_type i = 0; i != v.size(); ++i )
-                {
+            void to_index(Tvec &v) const {
+                for (Tvec::size_type i = 0; i != v.size(); ++i) {
                     v[i] = (v[i] >= 0) ? int(v[i] / _bw[i] + 0.5) : int(v[i] / _bw[i] - 0.5);
                     v[i] = v[i] - _lo[i] / _bw[i];
                 }

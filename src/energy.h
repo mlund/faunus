@@ -759,6 +759,7 @@ namespace Faunus {
 
                     Tspace &spc;
                     bool nodrift=true;
+                    bool converted=false;
                     size_t dim=0;
                     size_t cnt=0;       // number of calls to `sync()`
                     size_t nupdate;     // update frequency [steps]
@@ -806,7 +807,7 @@ namespace Faunus {
                         if (dim<1 || dim>2)
                             throw std::runtime_error("minimum one maximum two coordinates required");
 
-                        coord.resize(dim,0);
+                        coord.resize(2);
                         histo.reInitializer(binwidth, min, max);
                         penalty.reInitializer(binwidth, min, max);
                     }
@@ -830,17 +831,19 @@ namespace Faunus {
                      }
 
                     double energy(Change &change) override {
-                        assert(coord.size() == rcvec.size());
+                        assert(rcvec.size()<=coord.size());
                         double u=0;
+                        coord.resize( rcvec.size() );
                         if (!change.empty()) {
                             for (size_t i=0; i<rcvec.size(); i++) {
                                 coord.at(i) = rcvec[i]->operator()();
                                 if (!rcvec[i]->inRange(coord[i]))
                                     return pc::infty;
                             }
-                            //u = penalty[coord];
+                            penalty.to_index(coord);
+                            u = penalty[coord];
                         }
-                        return (nodrift) ? u + udelta : u;
+                        return (nodrift) ? u - udelta : u;
                     }
 
                     /*
@@ -849,7 +852,6 @@ namespace Faunus {
                      * different update schemes.
                      */
                     void update(const std::vector<double> &c) {
-                        return;
                         cnt++;
                         if (cnt % nupdate == 0) {
                             bool b = histo.minCoeff() >= samplings;

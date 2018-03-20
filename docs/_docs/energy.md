@@ -399,25 +399,56 @@ where $c_s$ is the molar concentration of the co-solute;
 $\gamma_i$ is the atomic surface tension; and $\varepsilon_{\text{tfe},i}$ the atomic transfer free energy,
 both specified in the atom topology with `tension` and `tfe`, respectively.
 
-## Penalty Function
+## Penalty Function / Wang-Landau Sampling
 
-This term iteratively applies bias along a reaction coordinate, $\mathcal{X}$, to automatically flatten the
-free energy landscape, akin meta-dynamics in MD.
-The free energy along the given coordinate is simply the negative
-of the final bias function, $P(\mathcal{X})$,  saved to disk at the end of the simulation.
+An automatically generated bias or penalty function, $f(\mathcal{X^d})$,
+is applied to the system along a one dimensional ($d=1$)
+or two dimensional ($d=2$) reaction coordinate, $\mathcal{X^d}$, so that the configurational integral reads,
+
+$$
+    Z(\mathcal{X^d}) = e^{-\beta f(\mathcal{X^d})} \int e^{-\beta \mathcal{H}(\mathcal{R}, \mathcal{X^d})} d \mathcal{R}.
+$$
+
+where $\mathcal{R}$ denotes configurational space at a given $\mathcal{X^d}$.
+For every visit to a state along the coordinate, a small penalty energy, $f_0$, is
+added to $f(\mathcal{X^d})$ until $Z$ is equal for all $\mathcal{X^d}$.
+Thus, during simulation the free energy landscape is flattened, while the
+true free energy is simply the negative of the generated bias function,
+
+$$
+    \beta A(\mathcal{X^d}) = -\beta f(\mathcal{X^d}) = -\ln\int e^{-\beta \mathcal{H}(\mathcal{R}, \mathcal{X^d})}  d \mathcal{R}.
+$$
+
+To reduce fluctuations, $f_0$ can be periodically reduced (`update`, `scale`) as $f$ converges.
+At the end of simulation, the penalty function is saved as an array ($d=1$) or matrix ($d=2$).
+
+Example setup where the $x$ and $y$ positions of atom 0 are penalized to achieve uniform sampling:
+
+~~~ yaml
+energy:
+- penalty:
+    index: 0
+    f0: 0.1
+    scale: 0.8
+    file: penalty.dat
+    coords:
+    - atom: {index: 0, property: "x", range: [-2.0,2.0], resolution: 0.1}
+    - atom: {index: 0, property: "y", range: [-2.0,2.0], resolution: 0.1}
+~~~
+
+Options:
 
 `penalty`     |  Description
 ------------- | --------------------
 `f0`          |  Penalty energy increment ($kT$)
-`update`      |  Interval between scaling of `f0` 
+`update`      |  Interval between scaling of `f0`
 `scale=0.8`   |  Scaling factor for `f0`
 `file`        |  File name of penalty function
 `nodrift=true`|  Suppress energy drift
 `coords`      |  Array of _one or two_ coordinates
 
-The reaction coordinate, $\mathcal{X}$,
-can be one or two dimensional, and composed freely via `coord` from
-one or two of the types below:
+The coordinate, $\mathcal{X}$, can be freely composed by one or two
+of the following types (via `coord`):
 
 `atom`        | Single atom properties
 ------------- | ----------------------------------
@@ -444,5 +475,3 @@ nodes, i.e. by specifying a different random number seed; start configuration; o
 **Notes:**
 Still under construction.
 {: .notice--danger}
-
-

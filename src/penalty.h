@@ -14,6 +14,7 @@ namespace Faunus {
         struct ReactionCoordinateBase {
             std::function<double()> f=nullptr; // returns reaction coordinate
             inline virtual void _to_json(json &j) const {};
+            inline virtual double normalize(double) const { return 1.; }
             double binwidth=0, min=0, max=0;
             std::string name;
 
@@ -22,8 +23,8 @@ namespace Faunus {
                 return f();
             } //!< Calculates reaction coordinate
 
-            bool inRange(double c) const {
-                return (c>=min && c<=max);
+            bool inRange(double coord) const {
+                return (coord>=min && coord<=max);
             } //!< Determines if coordinate is within [min,max]
         };
 
@@ -33,13 +34,15 @@ namespace Faunus {
         }
 
         void from_json(const json &j, ReactionCoordinateBase &r) {
-            r.binwidth = j.value("resolution", 0.0);
+            r.binwidth = j.value("resolution", 0.5);
             auto range = j.value("range", std::vector<double>({0,0}));
-            if (range.size()!=2)
-                throw std::runtime_error(r.name + ": 'range' must be of length zero or two");
-            r.min = range[0];
-            r.max = range[1];
-            assert(r.min<=r.max);
+            if (range.size()==2)
+                if (range[0]<=range[1]) {
+                    r.min = range[0];
+                    r.max = range[1];
+                    return;
+                 }
+            throw std::runtime_error(r.name + ": 'range' require two numbers: [min, max>=min]");
         }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -85,7 +88,7 @@ namespace Faunus {
          * @brief Reaction coordinate: molecule-molecule mass-center separation
          */
         struct MassCenterSeparation : public ReactionCoordinateBase {
-            Point dir={1,1,1};
+            Eigen::Vector3i dir={1,1,1};
             std::vector<size_t> index;
             template<class Tspace>
                 MassCenterSeparation(const json &j, Tspace &spc) {
@@ -98,9 +101,17 @@ namespace Faunus {
                     f = [&spc, dir=dir, i=index[0], j=index[1]]() {
                         auto &cm1 = spc.groups[i].cm;
                         auto &cm2 = spc.groups[j].cm;
-                        return spc.geo.vdist(cm1, cm2).cwiseProduct(dir).norm();
+                        return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
                     };
                 }
+
+            double normalize(double coord) const override {
+                int dim=dir.sum();
+                if (dim==2) return 1/(2*pc::pi*coord);
+                if (dim==3) return 1/(4*pc::pi*coord*coord);
+                return 1.0;
+            } // normalize by volume element
+
             void _to_json(json &j) const override {
                 j["dir"] = dir;
                 j["index"] = index;

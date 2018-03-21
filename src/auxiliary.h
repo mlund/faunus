@@ -450,8 +450,7 @@ namespace Faunus
      *
      */
     template<class T, class Tint=int>
-        Tint to_bin( T x, T dx = 1 )
-        {
+        Tint to_bin( T x, T dx = 1 ) {
             return (x < 0) ? Tint(x / dx - 0.5) : Tint(x / dx + 0.5);
         }
 
@@ -703,6 +702,22 @@ namespace Faunus
                 reInitializer(bw, lo, hi);
             }
 
+            // required for assignment from Eigen::Matrix and Eigen::Array objects
+            template<typename OtherDerived>
+                Table(const Eigen::MatrixBase<OtherDerived>& other) : base(other) {}
+            template<typename OtherDerived>
+                Table& operator=(const Eigen::MatrixBase<OtherDerived>& other) {
+                    this->base::operator=(other);
+                    return *this;
+                }
+            template<typename OtherDerived>
+                Table(const Eigen::ArrayBase<OtherDerived>& other) : base(other) {}
+            template<typename OtherDerived>
+                Table& operator=(const Eigen::ArrayBase<OtherDerived>& other) {
+                    this->base::operator=(other);
+                    return *this;
+                }
+
             void reInitializer( const Tvec &bw, const Tvec &lo, const Tvec &hi ) {
                 _bw = bw;
                 _lo = lo;
@@ -713,10 +728,7 @@ namespace Faunus
                 base::setZero();
             }
 
-            void clear() { base::setZero(); }
-
-            void round( Tvec &v )
-            {
+            void round( Tvec &v ) const {
                 for ( Tvec::size_type i = 0; i != v.size(); ++i )
                     v[i] = (v[i] >= 0) ? int(v[i] / _bw[i] + 0.5) * _bw[i] : int(v[i] / _bw[i] - 0.5) * _bw[i];
             }
@@ -729,21 +741,18 @@ namespace Faunus
                 v.resize(2, 0);
             }
 
-            Tcoeff &operator[]( const Tvec &v )
-            {
+            Tcoeff &operator[](const Tvec &v) {
                 return base::operator()(v[0], v[1]);
             }
 
-            bool isInRange( const Tvec &v )
-            {
+            bool isInRange(const Tvec &v) const {
                 bool b = true;
                 for ( Tvec::size_type i = 0; i != v.size(); ++i )
                     b = b && v[i] >= _lo[i] && v[i] <= _hi[i];
                 return b;
             }
 
-            Tvec hist2buf( int &size )
-            {
+            Tvec hist2buf( int &size ) const {
                 Tvec sendBuf;
                 for ( int i = 0; i < _cols; ++i )
                     for ( int j = 0; j < _rows; ++j )
@@ -751,8 +760,7 @@ namespace Faunus
                 return sendBuf;
             }
 
-            void buf2hist( Tvec &v )
-            {
+            void buf2hist(const Tvec &v) {
                 assert(!v.empty());
                 base::setZero();
                 int p = v.size() / this->size(), n = 0;
@@ -768,11 +776,9 @@ namespace Faunus
                 }
             }
 
-            base getBlock( const Tvec &v )
-            { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
-                Tvec w = {0, 0, 0, 0};
-                switch (v.size())
-                {
+            base getBlock( const Tvec &v ) { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
+                Tvec w(4,0);
+                switch (v.size()) {
                     case (1):w[0] = w[1] = (v[0] - _lo[0]) / _bw[0];
                              w[3] = _cols - 1;
                              break;
@@ -790,18 +796,11 @@ namespace Faunus
                 return this->block(w[0], w[2], w[1] - w[0] + 1, w[3] - w[2] + 1); // xmin,ymin,rows,cols
             }
 
-            Tcoeff avg( const Tvec &v )
-            {
+            Tcoeff avg( const Tvec &v ) const {
                 return this->getBlock(v).mean();
             }
 
-            void translate( Tcoeff s )
-            {
-                *this += base::Constant(_rows, _cols, s);
-            }
-
-            void save( const std::string &filename, Tcoeff scale = 1, Tcoeff translate = 0 )
-            {
+            void save( const std::string &filename, Tcoeff scale = 1, Tcoeff translate = 0 ) const {
                 Eigen::VectorXd v1(_cols + 1), v2(_rows + 1);
                 v1(0) = v2(0) = base::size();
                 for ( int i = 1; i != _cols + 1; ++i )

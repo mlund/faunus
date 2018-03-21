@@ -767,13 +767,12 @@ namespace Faunus {
                     double udelta=0;    // total energy change of updating penalty function
                     double scale;       // scaling factor for f0
                     double f0;          // penalty increment
-                    std::string file;
+                    std::string file, hisfile;
                     std::vector<Tcoord> rcvec; // vector of reaction coordinate functions
                     std::vector<double> coord; // latest reaction coordinate
 
                     Table<int> histo;
                     Table<double> penalty;
-
                 public:
                     Penalty(const json &j, Tspace &spc) : spc(spc) {
                         using namespace ReactionCoordinate;
@@ -783,6 +782,7 @@ namespace Faunus {
                         nupdate = j.value("update", 0);
                         nodrift = j.value("nodrift", true);
                         file = MPI::prefix + j.at("file").get<std::string>();
+                        hisfile = MPI::prefix + j.value("histogram", "penalty-histogram.dat");
                         std::vector<double> binwidth, min, max;
 
                         for (auto &i : j.at("coords"))
@@ -813,7 +813,9 @@ namespace Faunus {
                     }
 
                     ~Penalty() {
-                        // save to disk here
+                        std::ofstream f1(file), f2(hisfile);
+                        if (f1) f1 << penalty << endl;
+                        if (f2) f2 << histo << endl;
                     }
 
                     void to_json(json &j) const override {
@@ -856,14 +858,15 @@ namespace Faunus {
                         if (cnt % nupdate == 0) {
                             bool b = histo.minCoeff() >= samplings;
                             if (b) {
-                                double max = penalty.maxCoeff();
                                 double min = penalty.minCoeff();
-                                penalty.translate(-min); // place min energy at 0. Why?
-                                f0 = f0 * scale;
+                                penalty = penalty.array() - min;
+                                //penalty.translate(-min); // place min energy at 0. Why?
+                                cout << "Max. barriers (kT): Penalty = " << penalty.maxCoeff()
+                                    << "  Histogram = " << std::log(double(histo.maxCoeff())/histo.minCoeff())
+                                    << endl;
+                                f0 = f0 * scale; // reduce penalty energy
                                 samplings = std::ceil( samplings / scale );
-                                double dh = std::log( double(histo.maxCoeff()) / histo.minCoeff() );
-                                cout << "Energy barrier: " << max - min << ", delta histo: " << dh << endl;
-                                histo.clear();
+                                histo.setZero();
                                 udelta -= min;
                             }
                         }

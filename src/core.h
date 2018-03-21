@@ -24,15 +24,16 @@ namespace Eigen {
             for (size_t i = 0; i<p.size(); ++i)
                 j.push_back( d[i] );
         }
-    void from_json(const nlohmann::json& j, Vector3d &p) {
-        if ( j.size()==3 ) {
-            int i=0;
-            for (auto d : j.get<std::vector<double>>())
-                p[i++] = d;
-            return;
+    template<class T>
+        void from_json(const nlohmann::json& j, Eigen::Matrix<T,3,1> &p) {
+            if ( j.size()==3 ) {
+                int i=0;
+                for (auto d : j.get<std::vector<T>>())
+                    p[i++] = d;
+                return;
+            }
+            throw std::runtime_error("JSON->Eigen conversion error");
         }
-        throw std::runtime_error("JSON->Eigen conversion error");
-    }
 };
 
 /** @brief Faunus main namespace */

@@ -1,5 +1,5 @@
 temperature: 300
-mcloop: {macro: 10, micro: 10000}
+mcloop: {macro: 10, micro: 1000000}
 geometry: {length: [4,4,4]}
 atomlist:
     - A: {dp: 0.5} 
@@ -11,12 +11,12 @@ energy:
     - example2d: {}
     - penalty:
         file: penalty.dat
-        f0: 1.0
-        scale: 0.8
+        f0: 0.2
+        scale: 0.9
         update: 1000
         coords: # minimum one, maximum two coordinates
-            - atom: {index: 0, property: "x", range: [-3.0, 3.0], resolution: 0.1}
-            - atom: {index: 0, property: "y", range: [-3.0, 3.0], resolution: 0.1}
+            - atom: {index: 0, property: "x", range: [-2.0, 2.0], resolution: 0.2}
+            - atom: {index: 0, property: "y", range: [-2.0, 2.0], resolution: 0.2}
 moves:
     - transrot: {molecule: mygroup, dir: [1,1,0]}
 analysis:

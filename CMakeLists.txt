@@ -204,6 +204,7 @@ set(hdrs
 
 add_executable(tests EXCLUDE_FROM_ALL src/tests.cpp ${hdrs})
 add_dependencies(tests modernjson doctest eigen range-v3 xdrfile)
+target_link_libraries(tests ${LINKLIBS})
 add_test(NAME tests COMMAND tests)
 
 add_executable(faunus src/faunus.cpp ${hdrs})

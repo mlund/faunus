@@ -70,6 +70,8 @@ namespace Faunus {
                 int _master=0;     //!< Rank number of the master
         };
 
+        static MPIController mpi;
+
         /*!
          * Besides initiating MPI, the current rank will be added to the global
          * file I/O prefix, textio::prefix which is useful for saving rank specific

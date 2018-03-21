@@ -420,7 +420,9 @@ $$
 $$
 
 To reduce fluctuations, $f_0$ can be periodically reduced (`update`, `scale`) as $f$ converges.
-At the end of simulation, the penalty function is saved as an array ($d=1$) or matrix ($d=2$).
+At the end of simulation, the penalty function is saved to disk as an array ($d=1$) or matrix ($d=2$).
+If the penalty function file is available when starting a new simulations, it is automatically loaded
+and used as an initial guess. This can also be used to run simulation with a fixed bias by setting `f_0=0`.
 
 Example setup where the $x$ and $y$ positions of atom 0 are penalized to achieve uniform sampling:
 
@@ -445,6 +447,8 @@ Options:
 `scale=0.8`   |  Scaling factor for `f0`
 `file`        |  File name of penalty function
 `nodrift=true`|  Suppress energy drift
+`file`        |  Name of saved/loaded penalty function
+`histogram`   |  Name of saved histogram (not required)
 `coords`      |  Array of _one or two_ coordinates
 
 The coordinate, $\mathcal{X}$, can be freely composed by one or two

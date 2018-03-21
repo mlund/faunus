@@ -751,15 +751,15 @@ namespace Faunus {
          */
         template<typename Tspace>
             class Penalty : public Energybase {
-                private:
+                protected:
                     typedef typename Tspace::Tparticle Tparticle;
                     typedef typename Tspace::Tgroup Tgroup;
                     typedef typename Tspace::Tpvec Tpvec;
                     typedef typename std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> Tcoord;
 
                     Tspace &spc;
-                    bool nodrift=true;
-                    bool converted=false;
+                    bool nodrift;
+                    bool quiet;
                     size_t dim=0;
                     size_t cnt=0;       // number of calls to `sync()`
                     size_t nupdate;     // update frequency [steps]
@@ -779,11 +779,15 @@ namespace Faunus {
                         name = "penalty";
                         f0 = j.value("f0", 0.5);
                         scale = j.value("scale", 0.8);
+                        quiet = j.value("quiet", true);
                         nupdate = j.value("update", 0);
                         nodrift = j.value("nodrift", true);
-                        file = MPI::prefix + j.at("file").get<std::string>();
-                        hisfile = MPI::prefix + j.value("histogram", "penalty-histogram.dat");
+                        file = j.at("file").get<std::string>();
+                        hisfile = j.value("histogram", "penalty-histogram.dat");
                         std::vector<double> binwidth, min, max;
+
+                        if (scale<0 || scale>1)
+                            throw std::runtime_error("`scale` must be in the interval [0:1]");
 
                         for (auto &i : j.at("coords"))
                             if (i.is_object())
@@ -810,12 +814,24 @@ namespace Faunus {
                         coord.resize(2);
                         histo.reInitializer(binwidth, min, max);
                         penalty.reInitializer(binwidth, min, max);
-                    }
+
+                        std::ifstream f(MPI::prefix+file);
+                        if (f) {
+                            cout << "Loading penalty function '" << MPI::prefix+file << "'" << endl;
+                            for (int row=0; row<penalty.rows(); row++)
+                                for (int col=0; col<penalty.cols(); col++)
+                                    if (!f.eof())
+                                        f >> penalty(row,col);
+                                    else
+                                        throw std::runtime_error("penalty file dimension mismatch");
+                        }
+                     }
 
                     ~Penalty() {
-                        std::ofstream f1(file), f2(hisfile);
+                        std::ofstream f1(MPI::prefix + file), f2(MPI::prefix + hisfile);
                         if (f1) f1 << penalty << endl;
                         if (f2) f2 << histo << endl;
+                        // add function to save to numpy-friendly file...
                     }
 
                     void to_json(json &j) const override {
@@ -823,6 +839,7 @@ namespace Faunus {
                         j["scale"] = scale;
                         j["update"] = nupdate;
                         j["nodrift"] = nodrift;
+                        j["histogram"] = hisfile;
                         j["f0_final"] = f0;
                         auto& _j = j["coords"] = json::array();
                         for (auto rc : rcvec) {
@@ -848,22 +865,17 @@ namespace Faunus {
                         return (nodrift) ? u - udelta : u;
                     }
 
-                    /*
-                     * Consider making this into a 'policy`, i.e. external class/function that can
-                     * be injected. Useful for having MPI and non-MPI versions as well as
-                     * different update schemes.
-                     */
-                    void update(const std::vector<double> &c) {
+                    virtual void update(const std::vector<double> &c) {
                         cnt++;
                         if (cnt % nupdate == 0) {
                             bool b = histo.minCoeff() >= samplings;
-                            if (b) {
+                            if (b && f0>0) {
                                 double min = penalty.minCoeff();
                                 penalty = penalty.array() - min;
-                                //penalty.translate(-min); // place min energy at 0. Why?
-                                cout << "Max. barriers (kT): Penalty = " << penalty.maxCoeff()
-                                    << "  Histogram = " << std::log(double(histo.maxCoeff())/histo.minCoeff())
-                                    << endl;
+                                if (!quiet)
+                                    cout  << "Barriers/kT. Penalty=" << penalty.maxCoeff()
+                                        << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff())
+                                        << endl;
                                 f0 = f0 * scale; // reduce penalty energy
                                 samplings = std::ceil( samplings / scale );
                                 histo.setZero();
@@ -883,6 +895,38 @@ namespace Faunus {
                         other->update(other->coord);
                     }
             };
+
+#ifdef ENABLE_MPI
+        template<typename Tspace, typename Base=Penalty<Tspace>>
+            struct PenaltyMPI : public Base {
+                using Base::penalty;
+
+                PenaltyMPI(const json &j, Tspace &spc) : Base(j,spc) {}
+
+                void update(const std::vector<double> &c) override {
+                    using namespace Faunus::MPI;
+
+                    Base::update(c);
+
+                    if (Base::f0>0 && (Base::cnt % Base::nupdate == 0)) {
+                        double uold = penalty[c];
+                        if (mpi.isMaster()) { // todo: replace w. MPI_Gather?
+                            Eigen::MatrixXd tmp = penalty;
+                            for (int rank=1; rank<mpi.nproc(); rank++) {
+                                MPI_Recv(tmp.data(), tmp.size(), MPI_DOUBLE, rank, 0, mpi.comm, MPI_STATUS_IGNORE);
+                                penalty += tmp;
+                            }
+                            penalty = penalty / mpi.nproc();
+                        } else
+                            MPI_Send(penalty.data(), penalty.size(), MPI_DOUBLE, 0, 0, mpi.comm);
+
+                        MPI_Barrier(mpi.comm);
+                        MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
+                        Base::udelta -= uold - penalty[c];
+                    }
+                } //!< Average penalty function across all nodes
+            }; //!< Penalty function with MPI exchange
+#endif
 
 #ifdef FAU_POWERSASA
         template<class Tspace>
@@ -1025,7 +1069,11 @@ namespace Faunus {
                                         push_back<Energy::Isobaric<Tspace>>(it.value(), spc);
 
                                     if (it.key()=="penalty")
+#ifdef ENABLE_MPI
+                                        push_back<Energy::PenaltyMPI<Tspace>>(it.value(), spc);
+#else
                                         push_back<Energy::Penalty<Tspace>>(it.value(), spc);
+#endif
 #ifdef ENABLE_POWERSASA
                                     if (it.key()=="sasa")
                                         push_back<Energy::SASAEnergy<Tspace>>(it.value(), spc);

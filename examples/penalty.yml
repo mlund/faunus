@@ -1,5 +1,10 @@
+# Run with:
+#
+#   $ yason.py penalty.yml | mpirun --np 4 --stdin all faunus --nopfx
+#
 temperature: 300
-mcloop: {macro: 10, micro: 1000000}
+random: { seed: hardware }
+mcloop: { macro: 10, micro: 100000 }
 geometry: {length: [4,4,4]}
 atomlist:
     - A: {dp: 0.5} 
@@ -11,8 +16,9 @@ energy:
     - example2d: {}
     - penalty:
         file: penalty.dat
-        f0: 0.2
+        f0: 1.0
         scale: 0.9
+        quiet: false
         update: 1000
         coords: # minimum one, maximum two coordinates
             - atom: {index: 0, property: "x", range: [-2.0, 2.0], resolution: 0.2}

@@ -42,9 +42,8 @@ R"(Faunus - the Monte Carlo code you're looking for!
 
 int main( int argc, char **argv )
 {
+    using namespace Faunus::MPI;
     try {
-        Faunus::MPI::MPIController mpi; // OK also if MPI is unavailable
-
         std::string version="Faunus Mk2";
 #ifdef GIT_COMMIT_HASH
         version += " git " + std::string(GIT_COMMIT_HASH);

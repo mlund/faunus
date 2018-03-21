@@ -4,6 +4,7 @@
 
 #include "doctest.h"
 #include "core.h"
+#include "mpi.h"
 #include "auxiliary.h"
 #include "molecule.h"
 #include "group.h"

@@ -818,6 +818,7 @@ namespace Faunus {
                         std::ifstream f(MPI::prefix+file);
                         if (f) {
                             cout << "Loading penalty function '" << MPI::prefix+file << "'" << endl;
+                            f >> f0 >> samplings;
                             for (int row=0; row<penalty.rows(); row++)
                                 for (int col=0; col<penalty.cols(); col++)
                                     if (!f.eof())
@@ -829,7 +830,7 @@ namespace Faunus {
 
                     ~Penalty() {
                         std::ofstream f1(MPI::prefix + file), f2(MPI::prefix + hisfile);
-                        if (f1) f1 << penalty << endl;
+                        if (f1) f1 << f0 << " " << samplings << "\n" << penalty << endl;
                         if (f2) f2 << histo << endl;
                         // add function to save to numpy-friendly file...
                     }
@@ -911,7 +912,8 @@ namespace Faunus {
                     if (Base::f0>0 && (Base::cnt % Base::nupdate == 0)) {
                         double uold = penalty[c];
                         if (mpi.isMaster()) { // todo: replace w. MPI_Gather?
-                            Eigen::MatrixXd tmp = penalty;
+                            //Eigen::MatrixXd tmp = penalty;
+                            Eigen::MatrixXd tmp(penalty.rows(), penalty.cols());
                             for (int rank=1; rank<mpi.nproc(); rank++) {
                                 MPI_Recv(tmp.data(), tmp.size(), MPI_DOUBLE, rank, 0, mpi.comm, MPI_STATUS_IGNORE);
                                 penalty += tmp;
@@ -1002,12 +1004,12 @@ namespace Faunus {
             template<typename Tspace>
                 Example2D(const json &j, Tspace &spc): i(spc.p.at(0).pos) { name = "Example2D"; }
             double energy(Change &change) override {
-                double s = 1 + std::sin(2 * pc::pi * i.x()) + std::cos(2 * pc::pi * i.y());
-                if ( i.x() >= -2.00 && i.x() <= -1.25 ) return 1 * s;
-                if ( i.x() >= -1.25 && i.x() <= -0.25 ) return 2 * s;
-                if ( i.x() >= -0.25 && i.x() <= 0.75 ) return 3 * s;
-                if ( i.x() >= 0.75 && i.x() <= 1.75 ) return 4 * s;
-                if ( i.x() >= 1.75 && i.x() <= 2.00 ) return 5 * s;
+                double s=1+std::sin(2*pc::pi*i.x())+std::cos(2*pc::pi*i.y());
+                if (i.x()>=-2.00 && i.x()<=-1.25) return 1*s;
+                if (i.x()>=-1.25 && i.x()<=-0.25) return 2*s;
+                if (i.x()>=-0.25 && i.x()<= 0.75) return 3*s;
+                if (i.x()>= 0.75 && i.x()<= 1.75) return 4*s;
+                if (i.x()>= 1.75 && i.x()<= 2.00) return 5*s;
                 return 1e10;
             }
         };

@@ -181,13 +181,11 @@ $$
 And, omitting prefactors here, the energy between molecule $a$ and $b$ at $R$ is:
 
 $$
-\small
     u_{\text{ion-ion}} = \frac{q_aq_b}{R} \quad \quad
     u_{\text{ion-dip}} = \frac{q_a \boldsymbol{\mu}_b \boldsymbol{R}}{R^3} + ...
 $$
 
 $$
-\small
 \begin{aligned}
     u_{\text{dip-dip}}  = & \frac{\boldsymbol{\mu_a}\boldsymbol{\mu_b}   }{ R^3  }
         - \frac{3 (\boldsymbol{\mu_a} \cdot \boldsymbol{R}) ( \boldsymbol{\mu_b}\cdot\boldsymbol{R})  }{R^5}   \\

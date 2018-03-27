@@ -399,39 +399,41 @@ where $c_s$ is the molar concentration of the co-solute;
 $\gamma_i$ is the atomic surface tension; and $\varepsilon_{\text{tfe},i}$ the atomic transfer free energy,
 both specified in the atom topology with `tension` and `tfe`, respectively.
 
-## Penalty Function / Wang-Landau Sampling
+## Penalty Function
 
-An automatically generated bias or penalty function, $f(\mathcal{X^d})$,
+This is a version of the flat histogram or Wang-Landau sampling method where
+an automatically generated bias or penalty function, $f(\mathcal{X}^d)$,
 is applied to the system along a one dimensional ($d=1$)
-or two dimensional ($d=2$) reaction coordinate, $\mathcal{X^d}$, so that the configurational integral reads,
+or two dimensional ($d=2$) reaction coordinate, $\mathcal{X}^d$, so that the configurational integral reads,
 
 $$
-    Z(\mathcal{X^d}) = e^{-\beta f(\mathcal{X^d})} \int e^{-\beta \mathcal{H}(\mathcal{R}, \mathcal{X^d})} d \mathcal{R}.
+    Z(\mathcal{X}^d) = e^{-\beta f(\mathcal{X}^d)} \int e^{-\beta \mathcal{H}(\mathcal{R}, \mathcal{X}^d)} d \mathcal{R}.
 $$
 
-where $\mathcal{R}$ denotes configurational space at a given $\mathcal{X^d}$.
+where $\mathcal{R}$ denotes configurational space at a given $\mathcal{X}$.
 For every visit to a state along the coordinate, a small penalty energy, $f_0$, is
-added to $f(\mathcal{X^d})$ until $Z$ is equal for all $\mathcal{X^d}$.
+added to $f(\mathcal{X}^d)$ until $Z$ is equal for all $\mathcal{X}$.
 Thus, during simulation the free energy landscape is flattened, while the
 true free energy is simply the negative of the generated bias function,
 
 $$
-    \beta A(\mathcal{X^d}) = -\beta f(\mathcal{X^d}) = -\ln\int e^{-\beta \mathcal{H}(\mathcal{R}, \mathcal{X^d})}  d \mathcal{R}.
+    \beta A(\mathcal{X}^d) = -\beta f(\mathcal{X}^d) = -\ln\int e^{-\beta \mathcal{H}(\mathcal{R}, \mathcal{X}^d)}  d \mathcal{R}.
 $$
 
 To reduce fluctuations, $f_0$ can be periodically reduced (`update`, `scale`) as $f$ converges.
 At the end of simulation, the penalty function is saved to disk as an array ($d=1$) or matrix ($d=2$).
-If the penalty function file is available when starting a new simulations, it is automatically loaded
-and used as an initial guess. This can also be used to run simulation with a fixed bias by setting `f_0=0`.
+Should the penalty function file be available when starting a new simulation, it is automatically loaded
+and used as an initial guess.
+This can also be used to run simulations with a _constant bias_ by setting $f_0=0$.
 
 Example setup where the $x$ and $y$ positions of atom 0 are penalized to achieve uniform sampling:
 
 ~~~ yaml
 energy:
 - penalty:
-    index: 0
-    f0: 0.1
-    scale: 0.8
+    f0: 0.5
+    scale: 0.9
+    update: 1000
     file: penalty.dat
     coords:
     - atom: {index: 0, property: "x", range: [-2.0,2.0], resolution: 0.1}
@@ -445,8 +447,8 @@ Options:
 `f0`          |  Penalty energy increment ($kT$)
 `update`      |  Interval between scaling of `f0`
 `scale=0.8`   |  Scaling factor for `f0`
-`file`        |  File name of penalty function
 `nodrift=true`|  Suppress energy drift
+`quiet=false` |  Set to true to get verbose output
 `file`        |  Name of saved/loaded penalty function
 `histogram`   |  Name of saved histogram (not required)
 `coords`      |  Array of _one or two_ coordinates
@@ -470,12 +472,16 @@ of the following types (via `coord`):
 
 ### Multiple Walkers with MPI
 
-If Faunus is compiled with MPI, the master process collects the bias function from all nodes
+If compiled with MPI, the master process collects the bias function from all nodes
 upon penalty function `update`.
 The _average_ is then re-distributed, offering [linear parallellizing](http://dx.doi.org/10/b5pc4m)
 of the free energy sampling. It is crucial that the walk in coordinate space differs on the different
-nodes, i.e. by specifying a different random number seed; start configuration; or displacement parameters.
+nodes, i.e. by specifying a different random number seed; start configuration; or displacement parameter.
+File output and input are prefixed with `mpi{rank}.`
 
-**Notes:**
-Still under construction.
-{: .notice--danger}
+**Information:**
+Flat histogram methods are commonly attributed to [Wang and Landau (2001)](http://dx.doi.org/10/bbdg7j)
+but the idea has been applied in early works, for example by
+[Hunter and Reinhardt (1995)](http://dx.doi.org/10/fns6dq) and
+[Engkvist and Karlström (1996)](http://dx.doi.org/10/djjk8z).
+

@@ -164,16 +164,18 @@ namespace Faunus {
                 assert( p.begin() != other.p.begin());
             } //!< Copy differing data from other (o) Space using Change object
 
-            void scaleVolume(double Vnew) {
-                Point scale;
-                double Vold = geo.getVolume();
-                scale.setConstant( std::cbrt(Vnew/Vold) );
-
+            /*
+             * Scales:
+             * - positions of free atoms
+             * - positions of molecular masscenters
+             * - simulation container
+             */
+            void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC) {
                 for (auto &g: groups) // remove periodic boundaries
                     if (!g.atomic)
                         g.unwrap(geo.distanceFunc);
 
-                geo.setVolume(Vnew);
+                Point scale = geo.setVolume(Vnew, method);
 
                 for (auto& g : groups) {
                     if (!g.empty()) {
@@ -194,6 +196,11 @@ namespace Faunus {
                         }
                     }
                 }
+                double Vold = geo.getVolume();
+                // if isochoric, volumes are treated as areas
+                if (method==Geometry::ISOCHORIC)
+                    Vold = std::pow(Vold,2./3.);
+
                 for (auto f : scaleVolumeTriggers)
                     f(*this, Vold, Vnew);
             } //!< scale space to new volume

@@ -319,15 +319,21 @@ namespace Faunus {
         template<typename Tspace>
             class VolumeMove : public Movebase {
                 private:
+                    const std::map<std::string, Geometry::VolumeMethod> methods = {
+                        {"xy", Geometry::XY},
+                        {"isotropic", Geometry::ISOTROPIC},
+                        {"isochoric", Geometry::ISOCHORIC}
+                    };
+                    decltype(methods)::const_iterator method;
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc;
                     Average<double> msqd; // mean squared displacement
-                    double dV=0, deltaV=0;
+                    double dV=0, deltaV=0, Vnew=0, Vold=0;
 
                     void _to_json(json &j) const override {
                         using namespace u8;
                         j = {
-                            {"dV", dV},
+                            {"dV", dV}, {"method", method->first},
                             {rootof + bracket(Delta + "V" + squared), std::sqrt(msqd.avg())},
                             {cuberoot + rootof + bracket(Delta + "V" + squared),
                                 std::cbrt(std::sqrt(msqd.avg()))}
@@ -336,19 +342,23 @@ namespace Faunus {
                     }
 
                     void _from_json(const json &j) override {
+                        method = methods.find( j.value("method", "isotropic") );
+                        if (method==methods.end())
+                            std::runtime_error("unknown volume change method");
                         dV = j.at("dV");
-                    } //!< Configure via json object
+                    }
 
                     void _move(Change &change) override {
                         if (dV>0) {
                             change.dV=true;
                             change.all=true;
-                            double Vold = spc.geo.getVolume();
-                            double Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
-                            double scale = std::cbrt(Vnew/Vold);
+                            Vold = spc.geo.getVolume();
+                            if (method->second == Geometry::ISOCHORIC)
+                                Vold = std::pow(Vold,2.0/3.0); // Volume is treated as Area
+                            Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
                             deltaV = Vnew-Vold;
-                            spc.scaleVolume(Vnew);
-                        }
+                            spc.scaleVolume(Vnew, method->second);
+                        } else deltaV=0;
                     }
 
                     void _accept(Change &change) override { msqd += deltaV*deltaV; }

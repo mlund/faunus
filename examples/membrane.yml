@@ -26,6 +26,7 @@ energy:
     - isobaric: {P/atm: 0}
     - bonded: {}
     - nonbonded:
+        cutoff_g2g: 42
         default:
             - wca: {mixing: LB}
         TL TL:
@@ -35,7 +36,7 @@ energy:
 moves:
     - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: N}
     - transrot: {molecule: lipid, repeat: 10}
-    - volume: {dV: 0.03} # why do we get zero acceptance?
+    - volume: {dV: 0.03, method: isochoric}
 
 analysis:
     - atomrdf: {file: rdf.dat, nstep: 10, dr: 0.1, name1: HD, name2: HD}

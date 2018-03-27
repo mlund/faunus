@@ -135,10 +135,11 @@ constant number of particles, $N$.
 
 ## Volume Move <a name="volumemove"></a>
 
-`volume`         |  Description
----------------- |  ---------------------------------
-`dV`             |  Volume displacement parameter
-`repeat=1`       |  Number of repeats per MC sweep.
+`volume`          |  Description
+----------------- |  ----------------------------------------------
+`dV`              |  Volume displacement parameter
+`repeat=1`        |  Number of repeats per MC sweep.
+`method=isotropic`|  Scaling method: `xy`, `isotropic`, `isochoric`
 
 Performs a random walk in logarithmic volume,
 
@@ -152,5 +153,15 @@ and scales:
 2. positions of free atoms (groups with `atomic=true`)
 
 by $(V^{\prime}/V)^{1/3}$.
-This is typically used for the $NPT$ ensemble, and for this an additional pressure term should be added to the Hamiltonian.
+This is typically used for the $NPT$ ensemble, and for this an additional pressure term should be added to the Hamiltonian. In the case of `isochoric` scaling, the total volume is kept constant and `dV` refers to an area change and reported output statistics on _volume_ should be regarded as _area_.
+The table below explains the scaling behavior in different geometries:
+
+`method`     |  Geometry    | Description
+------------ | ------------ | ----------------------------
+`isotropic`  |  `cuboid`    | Scales x, y, z
+`isotropic`  |  `cylinder`  | Scales radius
+`isotropic`  |  `sphere`    | Scales radius
+`xy`         |  `cuboid`    | Scales xy, z untouched.
+`isochoric`  |  `cuboid`    | Scales xy/z, const. volume
+
 

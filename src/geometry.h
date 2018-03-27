@@ -11,13 +11,10 @@ namespace Faunus {
         typedef std::function<void(Point&)> BoundaryFunction;
         typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
 
-        struct VolumeChangeRecipe {
-            enum keys {ISOTROPIC, ISOCHORIC, XY, Z};
-            keys type=ISOTROPIC;
-        };
+        enum VolumeMethod {ISOTROPIC, ISOCHORIC, XY, Z};
 
         struct GeometryBase {
-            virtual void setVolume(double, const std::vector<double>&)=0; //!< Set volume
+            virtual Point setVolume(double, VolumeMethod=ISOTROPIC)=0; //!< Set volume
             virtual double getVolume(int=3) const=0; //!< Get volume
             virtual void randompos( Point&, Random& ) const=0; //!< Generate random position
             virtual Point vdist( const Point&, const Point& ) const=0; //!< (Minimum) distance between two points
@@ -59,6 +56,7 @@ namespace Faunus {
                 Point len, //!< side length
                       len_half, //!< half side length
                       len_inv; //!< inverse side length
+                double c1, c2;
 
             public:
 
@@ -66,11 +64,35 @@ namespace Faunus {
                     len = l;
                     len_half = l*0.5;
                     len_inv = l.cwiseInverse();
+                    c1 = l.y()/l.x();
+                    c2 = l.z()/l.x();
                 } //!< Set cuboid side length
 
-                void setVolume(double V, const std::vector<double> &s={1,1,1}) override {
-                    double l = std::cbrt(V);
-                    setLength( {l,l,l} );
+                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override {
+                    double x, alpha; 
+                    Point s;
+                    switch (method) {
+                        case ISOTROPIC:
+                            x = std::cbrt( V / (c1*c2) ); // keep aspect ratio
+                            s = { x, c1*x, c2*x };
+                            setLength(s);
+                            break;
+                        case XY:
+                            x = std::sqrt( V / (c1*len.z()) ); // keep xy aspect ratio
+                            s = { x, c1*x, len.z() };
+                            setLength(s);  // z is untouched
+                            break;
+                        case ISOCHORIC:
+                            // V is actually an area
+                            alpha = sqrt( V / pow(getVolume(), 2./3.) );
+                            s = { alpha, alpha*c1, 1/(alpha*alpha) };
+                            setLength( len.cwiseProduct(s) );
+                            return s;
+                        default:
+                            throw std::runtime_error("unknown volume scaling method");
+                    }
+                    assert( fabs(getVolume()-V)<1e-9 );
+                    return s.cwiseQuotient(len); // this will scale any point to new volume
                 }
 
                 double getVolume(int dim=3) const override {
@@ -224,9 +246,12 @@ namespace Faunus {
                     Box::setLength( { diameter, diameter, len } );
                 } //!< Set radius
 
-                void setVolume(double V, const std::vector<double> &s={}) override {
+                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override {
+                    assert(method==ISOTROPIC);
+                    double rold = r;
                     r = std::sqrt( V / (pc::pi * len) );
                     set( r, len );
+                    return Point(r/rold, r/rold, 1);
                 } //!< Adjust radius to match volume; length is conserved.
 
                 double getVolume(int dim=3) const override {
@@ -288,8 +313,12 @@ namespace Faunus {
 
                 double getRadius() const { return r; }
 
-                void setVolume(double V, const std::vector<double> &s={}) override {
-                    set( std::cbrt(3*V/(4*pc::pi)) );
+                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override {
+                    assert(method==ISOTROPIC);
+                    double rold = r;
+                    double r = std::cbrt(3*V/(4*pc::pi));
+                    set(r);
+                    return Point().setConstant(r/rold);
                 } //!< Adjust radius to match volume; length is conserved.
 
                 double getVolume(int dim=3) const override {

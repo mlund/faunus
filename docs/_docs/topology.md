@@ -108,6 +108,13 @@ Keyword             | Description
 ------------------- | -------------------------------------------------
 `N`                 | Number of molecules to insert
 `inactive=false`    | Deactivates inserted molecules
+`positions`         | Load positions from file (`aam`, `pqr`, `xyz`)
+`translate=[0,0,0]` | Displace loaded `positions` with vector
+
+A filename with positions for the N molecules can be given with `positions`.
+The file must contain exactly N-times molecular
+positions that must all fit within the simulation box. Only positions from
+the file are copied while all other information is ignored.
 
 ## Processes
 

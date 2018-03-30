@@ -796,6 +796,8 @@ namespace Faunus {
                                     for (auto it=i.begin(); it!=i.end(); ++it) {
                                         if (it.key()=="atom")
                                             rc = std::make_shared<AtomProperty>(it.value(), spc);
+                                        if (it.key()=="system")
+                                            rc = std::make_shared<SystemProperty>(it.value(), spc);
                                         if (rc!=nullptr) {
                                             if (rc->min>=rc->max || rc->binwidth<=0)
                                                 throw std::runtime_error("min<max and binwidth>0 required for '" + it.key() + "'");
@@ -811,14 +813,15 @@ namespace Faunus {
                         if (dim<1 || dim>2)
                             throw std::runtime_error("minimum one maximum two coordinates required");
 
-                        coord.resize(2);
+                        coord.resize(2,0);
                         histo.reInitializer(binwidth, min, max);
                         penalty.reInitializer(binwidth, min, max);
 
                         std::ifstream f(MPI::prefix+file);
                         if (f) {
                             cout << "Loading penalty function '" << MPI::prefix+file << "'" << endl;
-                            f >> f0 >> samplings;
+                            std::string hash;
+                            f >> hash >> f0 >> samplings;
                             for (int row=0; row<penalty.rows(); row++)
                                 for (int col=0; col<penalty.cols(); col++)
                                     if (!f.eof())
@@ -830,7 +833,7 @@ namespace Faunus {
 
                     ~Penalty() {
                         std::ofstream f1(MPI::prefix + file), f2(MPI::prefix + hisfile);
-                        if (f1) f1 << f0 << " " << samplings << "\n" << penalty << endl;
+                        if (f1) f1 << "# " << f0 << " " << samplings << "\n" << penalty.array() - penalty.minCoeff() << endl;
                         if (f2) f2 << histo << endl;
                         // add function to save to numpy-friendly file...
                     }
@@ -874,7 +877,7 @@ namespace Faunus {
                                 double min = penalty.minCoeff();
                                 penalty = penalty.array() - min;
                                 if (!quiet)
-                                    cout  << "Barriers/kT. Penalty=" << penalty.maxCoeff()
+                                    cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                         << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff())
                                         << endl;
                                 f0 = f0 * scale; // reduce penalty energy
@@ -892,8 +895,10 @@ namespace Faunus {
                     void sync(Energybase *basePtr, Change &change) override {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         assert(other);
-                        update(other->coord);
-                        other->update(other->coord);
+                        if (other->coord != coord) {
+                            update(other->coord);
+                            other->update(other->coord);
+                        }
                     }
             };
 
@@ -912,7 +917,6 @@ namespace Faunus {
                     if (Base::f0>0 && (Base::cnt % Base::nupdate == 0)) {
                         double uold = penalty[c];
                         if (mpi.isMaster()) { // todo: replace w. MPI_Gather?
-                            //Eigen::MatrixXd tmp = penalty;
                             Eigen::MatrixXd tmp(penalty.rows(), penalty.cols());
                             for (int rank=1; rank<mpi.nproc(); rank++) {
                                 MPI_Recv(tmp.data(), tmp.size(), MPI_DOUBLE, rank, 0, mpi.comm, MPI_STATUS_IGNORE);

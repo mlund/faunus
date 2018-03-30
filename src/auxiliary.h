@@ -719,11 +719,16 @@ namespace Faunus
                 }
 
             void reInitializer( const Tvec &bw, const Tvec &lo, const Tvec &hi ) {
+                assert( bw.size()==1 || bw.size()==2 );
+                assert( bw.size()==lo.size() && lo.size()==hi.size() );
                 _bw = bw;
                 _lo = lo;
                 _hi = hi;
                 _rows = (_hi[0] - _lo[0]) / _bw[0] + 1.;
-                _cols = (_hi[1] - _lo[1]) / _bw[1] + 1.;
+                if (bw.size()==2)
+                    _cols = (_hi[1] - _lo[1]) / _bw[1] + 1;
+                else
+                    _cols = 1;
                 base::resize(_rows, _cols);
                 base::setZero();
             }

@@ -280,9 +280,10 @@ namespace Faunus {
 
     template<typename Tspace>
         void insertMolecules(const json &j, Tspace &spc) {
+            typedef typename Tspace::Tpvec Tpvec;
             spc.clear();
             assert(spc.geo.getVolume()>0);
-            auto &molvec = molecules<typename Tspace::Tpvec>;
+            auto &molvec = molecules<Tpvec>;
             if (j.is_array()) {
                 for (auto &m : j) { // loop over entries in 'insert'
                     if (m.is_object() && m.size()==1)
@@ -291,12 +292,13 @@ namespace Faunus {
                             if (mol!=molvec.end()) {
 
                                 int N = it.value().at("N").get<int>();  // number of molecules to insert
+                                int cnt=N;
                                 bool inactive = it.value().value("inactive", false);
 
                                 if (mol->atomic) {
                                     typename Tspace::Tpvec p;
                                     p.reserve( N * mol->atoms.size() );
-                                    while ( N-- > 0 ) {
+                                    while ( cnt-- > 0 ) {
                                         auto _t = mol->getRandomConformation(spc.geo, spc.p);
                                         p.insert(p.end(), _t.begin(), _t.end());
                                     }
@@ -304,12 +306,38 @@ namespace Faunus {
                                     spc.push_back(mol->id(), p);
                                     if (inactive)
                                         spc.groups.back().resize(0);
-                                } else
-                                    while ( N-- > 0 ) { // insert molecules
+                                } else {
+                                    while ( cnt-- > 0 ) { // insert molecules
                                         spc.push_back(mol->id(), mol->getRandomConformation(spc.geo, spc.p));
                                         if (inactive)
                                             spc.groups.back().resize(0);
                                     }
+                                    // load specific positions for the N added molecules
+                                    bool success=false;
+                                    std::string file = it.value().value("positions", "");
+                                    if (!file.empty()) {
+                                        Tpvec p;
+                                        if (loadStructure<Tpvec>()(file, p, false)) {
+                                            if (p.size() == N*mol->atoms.size()) {
+                                                Point offset = it.value().value("translate", Point(0,0,0));
+                                                size_t j = spc.p.size() - p.size();
+                                                for (auto &i : p) {
+                                                    i.pos = i.pos + offset;
+                                                    if (spc.geo.collision(i.pos)==false)
+                                                        spc.p.at(j++).pos = i.pos;
+                                                    else std::cerr << "position outside box" << endl;
+                                                }
+                                                if (j==p.size()) {
+                                                    success=true;
+                                                    for (auto g=spc.groups.end()-N; g!=spc.groups.end(); ++g)
+                                                        g->cm = Geometry::massCenter(g->begin(), g->end(), spc.geo.boundaryFunc, -g->begin()->pos);
+                                                }
+                                            } else std::cerr << file + ": wrong number of atoms" << endl;
+                                        } else std::cerr << "error opening file '" + file + "'" << endl;
+                                        if (success==false)
+                                            throw std::runtime_error("error loading positions from '" + file + "'");
+                                    }
+                                }
                             } else
                                 throw std::runtime_error("cannot insert undefined molecule '" + it.key() + "'");
                         }

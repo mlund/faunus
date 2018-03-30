@@ -60,6 +60,25 @@ namespace Faunus {
         }
 #endif
 
+        class SystemProperty : public ReactionCoordinateBase {
+            protected:
+                std::string property;
+            public:
+                template<class Tspace>
+                    SystemProperty(const json &j, Tspace &spc) {
+                        name = "system";
+                        from_json(j, *this);
+                        property = j.at("property").get<std::string>();
+                        if (property=="V") f = [&g=spc.geo]() { return g.getVolume();};
+                        if (property=="height") f = [&g=spc.geo]() { return g.getLength().z(); };
+                        if (f==nullptr)
+                            throw std::runtime_error(name + ": unknown property '" + property + "'");
+                    }
+                void _to_json(json &j) const override {
+                    j["property"] = property;
+                }
+        };
+
         class AtomProperty : public ReactionCoordinateBase {
             protected:
                 std::string property;

@@ -153,7 +153,8 @@ and scales:
 2. positions of free atoms (groups with `atomic=true`)
 
 by $(V^{\prime}/V)^{1/3}$.
-This is typically used for the $NPT$ ensemble, and for this an additional pressure term should be added to the Hamiltonian. In the case of `isochoric` scaling, the total volume is kept constant and `dV` refers to an area change and reported output statistics on _volume_ should be regarded as _area_.
+This is typically used for the $NPT$ ensemble, and for this an additional pressure term should be added to the Hamiltonian.
+In the case of `isochoric` scaling, the total volume is kept constant and `dV` refers to an area change and reported output statistics on _volume_ should be regarded as _area_.
 The table below explains the scaling behavior in different geometries:
 
 `method`     |  Geometry    | Description

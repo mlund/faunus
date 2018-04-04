@@ -362,6 +362,7 @@ namespace Faunus {
                 protected:
                     typedef typename Tspace::Tpvec Tpvec;
                     typedef typename Tspace::Tparticle Tparticle;
+                    bool COM=false; // apply on center-of-mass
                     Tspace& spc;
                     std::set<int> molids; // molecules to act upon
                     std::function<double(const Tparticle&)> func=nullptr; // energy of single particle
@@ -370,17 +371,25 @@ namespace Faunus {
                     template<class Tparticle>
                         double _energy(const Group<Tparticle> &g) const {
                             double u=0;
-                            if (molids.find(g.id)!=molids.end())
-                                for (auto &p : g) {
-                                    u += func(p);
-                                    if (std::isnan(u))
-                                        break;
+                            if (molids.find(g.id)!=molids.end()) {
+                                if (COM) { // apply only to center of mass
+                                    Tparticle dummy;
+                                    dummy.pos = g.cm;
+                                    u = func(dummy);
+                                } else {
+                                    for (auto &p : g) {
+                                        u += func(p);
+                                        if (std::isnan(u))
+                                            break;
+                                    }
                                 }
+                            }
                             return u;
                         } //!< External potential on a single particle
                 public:
                     ExternalPotential(const json &j, Tspace &spc) : spc(spc) {
                         name="external";
+                        COM = j.value("com", false);
                         _names = j.at("molecules").get<decltype(_names)>(); // molecule names
                         auto _ids = names2ids(molecules<Tpvec>, _names);     // names --> molids
                         molids = std::set<int>(_ids.begin(), _ids.end());    // vector --> set
@@ -400,7 +409,7 @@ namespace Faunus {
                         } else
                             for (auto &d : change.groups) {
                                 auto &g = spc.groups.at(d.index); // check specified groups
-                                if (d.all)  // check all atoms in group
+                                if (d.all || COM)  // check all atoms in group
                                     u += _energy(g);
                                 else {       // check only specified atoms in group
                                     if (molids.find(g.id)!=molids.end())
@@ -415,6 +424,7 @@ namespace Faunus {
 
                     void to_json(json &j) const override {
                         j["molecules"] = _names;
+                        j["com"] = COM;
                     }
             }; //!< Base class for external potentials, acting on particles
 

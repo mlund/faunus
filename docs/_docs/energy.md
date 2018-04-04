@@ -327,6 +327,7 @@ for $r < r_m$; infinity otherwise.
 ------------ | -------------------------------------------
 `type`       | Confinement geometry: `sphere`, `cylinder`, or `cuboid`
 `molecules`  | List of molecules to confine (names)
+`com=false`  | Apply to molecular mass center
 `k`          | Harmonic spring constant in kJ/mol or `inf` for infinity
 
 Confines `molecules` in a given region of the simulation container by applying a harmonic potential on
@@ -470,6 +471,11 @@ of the following types (via `coord`):
 `resolution`  | Resolution along coordinate
 `dir=[1,1,1]` | Directions for distance calc.
 
+`system`      | System property
+------------- | -----------------------------------
+`property`    | 
+`volume`      | System volume
+
 ### Multiple Walkers with MPI
 
 If compiled with MPI, the master process collects the bias function from all nodes
@@ -481,7 +487,7 @@ File output and input are prefixed with `mpi{rank}.`
 
 **Information:**
 Flat histogram methods are commonly attributed to [Wang and Landau (2001)](http://dx.doi.org/10/bbdg7j)
-but the idea has been applied in early works, for example by
+but the idea appears in earlier works, for example by
 [Hunter and Reinhardt (1995)](http://dx.doi.org/10/fns6dq) and
 [Engkvist and Karlström (1996)](http://dx.doi.org/10/djjk8z).
 

@@ -34,6 +34,9 @@ namespace Faunus {
             struct CombinedPairPotential : public PairPotentialBase {
                 T1 first;  //!< First pair potential of type T1
                 T2 second; //!< Second pair potential of type T2
+                CombinedPairPotential(const std::string &name="") {
+                    this->name = name;
+                }
                 template<typename... T>
                     inline double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                         return first(a, b, r) + second(a, b, r);
@@ -51,7 +54,7 @@ namespace Faunus {
             class = typename std::enable_if<std::is_base_of<PairPotentialBase, T1>::value>::type,
             class = typename std::enable_if<std::is_base_of<PairPotentialBase, T2>::value>::type>
                 CombinedPairPotential<T1, T2> &operator+(const T1 &pot1, const T2 &pot2) {
-                    return *(new CombinedPairPotential<T1, T2>(pot1, pot2));
+                    return *(new CombinedPairPotential<T1, T2>(pot1.name));
                 } //!< Add two pair potentials
 
         struct Dummy : public PairPotentialBase {
@@ -632,6 +635,8 @@ namespace Faunus {
                                     if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
                                     if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
                                     if (it.key()=="wca") _u = WeeksChandlerAndersen<T>() = i;
+                                    if (it.key()=="pm") _u = Coulomb() + HardSphere<T>() = it.value();
+                                    if (it.key()=="pmwca") _u = Coulomb() + WeeksChandlerAndersen<T>() = it.value();
                                     if (_u!=nullptr) // if found, sum them into new function object
                                         u = [u,_u](const T&a, const T&b, const Point &r){return u(a,b,r)+_u(a,b,r);};
                                     else

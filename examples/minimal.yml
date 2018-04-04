@@ -1,7 +1,8 @@
 energy:
-    - nonbonded_coulomblj:
-        lennardjones: {mixing: LB}
-        coulomb: {type: none, epsr: 80, cutoff: 10}
+    - nonbonded:
+        default:
+            - lennardjones: {mixing: LB}
+            - coulomb: {type: plain, epsr: 80, cutoff: 50}
 atomlist: # define all atom types below
     - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40} 
     - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10} 
@@ -11,13 +12,11 @@ insertmolecules:
     - salt: {N: 50}
 moves:
     - transrot: { molecule: salt, dp: 40, dprot: 0 }
-    - volume: {dV: 0.1}
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - savestate: {file: confout.pqr}
     - savestate: {file: confout.state}
-    - density: {nstep: 100}
-mcloop: {macro: 10, micro: 100}
+mcloop: {macro: 10, micro: 1000}
 geometry: {length: 50} # sidelength(s): number OR array
 temperature: 300
 

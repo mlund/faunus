@@ -14,8 +14,7 @@ conda config --add channels conda-forge
 conda install -c teokem faunus
 ~~~
 
-In addition to the `faunus` program, this installs a pdf manual and
-examples in `share/faunus`.
+In addition to the `faunus` program, this installs a set of examples in `share/faunus`.
 
 ## Building from source code
 

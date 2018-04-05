@@ -1,7 +1,7 @@
 #include "core.h"
+#include "mpi.h"
 #include "move.h"
 #include "multipole.h"
-#include "mpi.h"
 #include "docopt.h"
 #include <cstdlib>
 #include "ProgressBar.hpp"

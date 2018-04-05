@@ -841,7 +841,7 @@ namespace Faunus {
                         }
                      }
 
-                    ~Penalty() {
+                    virtual ~Penalty() {
                         std::ofstream f1(MPI::prefix + file), f2(MPI::prefix + hisfile);
                         if (f1) f1 << "# " << f0 << " " << samplings << "\n" << penalty.array() - penalty.minCoeff() << endl;
                         if (f2) f2 << histo << endl;
@@ -880,8 +880,7 @@ namespace Faunus {
                     }
 
                     virtual void update(const std::vector<double> &c) {
-                        cnt++;
-                        if (cnt % nupdate == 0) {
+                        if (++cnt % nupdate == 0 && f0>0) {
                             bool b = histo.minCoeff() >= samplings;
                             if (b && f0>0) {
                                 double min = penalty.minCoeff();
@@ -893,55 +892,82 @@ namespace Faunus {
                                 f0 = f0 * scale; // reduce penalty energy
                                 samplings = std::ceil( samplings / scale );
                                 histo.setZero();
-                                udelta -= min;
+                                udelta += -min;
                             }
                         }
-                        udelta += f0; // sum energy added to the system
-                        coord = c;
-                        histo[coord]++;
-                        penalty[coord] += f0;
+                        if (c != coord) {
+                            coord = c;
+                            histo[coord]++;
+                            penalty[coord] += f0;
+                            udelta += f0; 
+                        }
                     }
 
                     void sync(Energybase *basePtr, Change &change) override {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         assert(other);
-                        if (other->coord != coord) {
-                            update(other->coord);
-                            other->update(other->coord);
-                        }
-                    }
+                        update(other->coord);
+                        other->update(other->coord);
+                    } // @todo: this double the MPI communication
             };
 
 #ifdef ENABLE_MPI
         template<typename Tspace, typename Base=Penalty<Tspace>>
             struct PenaltyMPI : public Base {
+                using Base::samplings;
                 using Base::penalty;
+                using Base::udelta;
+                using Base::scale;
+                using Base::histo;
+                using Base::coord;
+                using Base::cnt;
+                using Base::f0;
 
-                PenaltyMPI(const json &j, Tspace &spc) : Base(j,spc) {}
+                Eigen::VectorXi weights;// array w. mininum histogram counts
+                Eigen::VectorXd buffer; // receive buffer for penalty functions
+
+                PenaltyMPI(const json &j, Tspace &spc) : Base(j,spc) {
+                    weights.resize( MPI::mpi.nproc() );
+                    buffer.resize( penalty.size()*MPI::mpi.nproc() );
+                }
 
                 void update(const std::vector<double> &c) override {
                     using namespace Faunus::MPI;
-
-                    Base::update(c);
-
-                    if (Base::f0>0 && (Base::cnt % Base::nupdate == 0)) {
-                        double uold = penalty[c];
-                        if (mpi.isMaster()) { // todo: replace w. MPI_Gather?
-                            Eigen::MatrixXd tmp(penalty.rows(), penalty.cols());
-                            for (int rank=1; rank<mpi.nproc(); rank++) {
-                                MPI_Recv(tmp.data(), tmp.size(), MPI_DOUBLE, rank, 0, mpi.comm, MPI_STATUS_IGNORE);
-                                penalty += tmp;
-                            }
-                            penalty = penalty / mpi.nproc();
-                        } else
-                            MPI_Send(penalty.data(), penalty.size(), MPI_DOUBLE, 0, 0, mpi.comm);
-
+                    double uold = penalty[c];
+                    if (++cnt % this->nupdate == 0 && f0>0) {
+                        int min = histo.minCoeff();
                         MPI_Barrier(mpi.comm);
-                        MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
-                        Base::udelta -= uold - penalty[c];
+                        MPI_Allgather(&min, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
+
+                        if ( weights.maxCoeff() >= samplings ) {
+                            MPI_Gather(penalty.data(), penalty.size(), MPI_DOUBLE, buffer.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
+
+                            if (mpi.isMaster()) {
+                                penalty.setZero();
+                                for (int i=0; i<mpi.nproc(); i++)
+                                    penalty += double(weights[i]) * Eigen::Map<Eigen::MatrixXd>(
+                                            buffer.data()+i*penalty.size(), penalty.rows(), penalty.cols() );
+                                penalty = ( penalty.array() - penalty.minCoeff() ) / double(weights.sum());
+                            }
+
+                            MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
+                            if (min>0 && !this->quiet)
+                                cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
+                                    << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;
+
+                            histo.setZero();
+                            f0 = f0 * scale; // reduce penalty energy
+                            samplings = std::ceil( samplings / scale );
+                        }
+                    }
+                    if (c != coord) {
+                        coord = c;
+                        histo[coord]++;
+                        penalty[coord] += f0;
+                        udelta += penalty[coord] - uold;
                     }
                 } //!< Average penalty function across all nodes
-            }; //!< Penalty function with MPI exchange
+    }; //!< Penalty function with MPI exchange
 #endif
 
 #ifdef FAU_POWERSASA
@@ -1061,6 +1087,9 @@ namespace Faunus {
                                         push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded")
+                                        push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded_cached")
                                         push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded_coulombhs")

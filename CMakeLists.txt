@@ -211,6 +211,11 @@ add_executable(faunus src/faunus.cpp ${hdrs})
 add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
 target_link_libraries(faunus xdrfile docopt ${LINKLIBS})
 
+add_executable(faunus_nopbc src/faunus.cpp ${hdrs})
+add_dependencies(faunus_nopbc modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
+target_link_libraries(faunus_nopbc xdrfile docopt ${LINKLIBS})
+set_target_properties(faunus_nopbc PROPERTIES COMPILE_DEFINITIONS "CUBOID_NOPBC")
+
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
     INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
@@ -264,6 +269,7 @@ set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
 # Install targets
 
 install(TARGETS faunus DESTINATION bin)
+install(TARGETS faunus_nopbc DESTINATION bin)
 
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
 

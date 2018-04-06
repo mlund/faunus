@@ -895,12 +895,10 @@ namespace Faunus {
                                 udelta += -min;
                             }
                         }
-                        if (c != coord) {
-                            coord = c;
-                            histo[coord]++;
-                            penalty[coord] += f0;
-                            udelta += f0; 
-                        }
+                        coord = c;
+                        histo[coord]++;
+                        penalty[coord] += f0;
+                        udelta += f0; 
                     }
 
                     void sync(Energybase *basePtr, Change &change) override {
@@ -940,7 +938,8 @@ namespace Faunus {
                         MPI_Allgather(&min, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
 
                         if ( weights.maxCoeff() >= samplings ) {
-                            MPI_Gather(penalty.data(), penalty.size(), MPI_DOUBLE, buffer.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
+                            MPI_Gather(penalty.data(), penalty.size(), MPI_DOUBLE,
+                                    buffer.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
 
                             if (mpi.isMaster()) {
                                 penalty.setZero();
@@ -960,12 +959,10 @@ namespace Faunus {
                             samplings = std::ceil( samplings / scale );
                         }
                     }
-                    if (c != coord) {
-                        coord = c;
-                        histo[coord]++;
-                        penalty[coord] += f0;
-                        udelta += penalty[coord] - uold;
-                    }
+                    coord = c;
+                    histo[coord]++;
+                    penalty[coord] += f0;
+                    udelta += penalty[coord] - uold;
                 } //!< Average penalty function across all nodes
     }; //!< Penalty function with MPI exchange
 #endif

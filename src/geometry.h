@@ -207,6 +207,7 @@ namespace Faunus {
 
         using Cuboid = PBC<true,true,true>; //!< Cuboid w. PBC in all directions
         using Cuboidslit = PBC<true,true,false>; //!< Cuboidal slit w. PBC in XY directions
+        using CuboidNoPBC = PBC<false,false,false>; //!< Hard cuboid - no PBC
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] PBC/Cuboid") {

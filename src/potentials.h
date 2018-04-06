@@ -237,6 +237,26 @@ namespace Faunus {
                 void from_json(const json&) override {}
             }; //!< Hardsphere potential
 
+        struct RepulsionR3 : public PairPotentialBase {
+            double f=0, s=0, e=0;
+            inline RepulsionR3(const std::string &name="repulsionr3") {
+                PairPotentialBase::name = name;
+            }
+            void from_json(const json &j) override {
+                f = j.value("prefactor", 1.0);
+                e = j.value("lj-prefactor", 1.0);
+                s = j.value("sigma", 1.0);
+            }
+            void to_json(json &j) const override {
+                j = {{"prefactor",f}, {"lj-prefactor", e},{"sigma",s}};
+            }
+            template<class Tparticle>
+                double operator() (const Tparticle &a, const Tparticle &b, const Point &_r) const {
+                    double r2 = _r.squaredNorm(), r = sqrt(r2);
+                    return f / (r*r2) + e * std::pow( s/r, 12 );
+                }
+        };
+
         /**
          * @brief Cosine attraction
          * @details This is an attractive potential used for coarse grained lipids
@@ -634,6 +654,7 @@ namespace Faunus {
                                     if (it.key()=="cos2") _u = CosAttract() = i;
                                     if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
                                     if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
+                                    if (it.key()=="repulsionr3") _u = RepulsionR3() = i;
                                     if (it.key()=="wca") _u = WeeksChandlerAndersen<T>() = i;
                                     if (it.key()=="pm") _u = Coulomb() + HardSphere<T>() = it.value();
                                     if (it.key()=="pmwca") _u = Coulomb() + WeeksChandlerAndersen<T>() = it.value();

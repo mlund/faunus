@@ -1,6 +1,6 @@
 #include "core.h"
-#include "mpi.h"
 #include "move.h"
+#include "mpi.h"
 #include "multipole.h"
 #include "docopt.h"
 #include <cstdlib>
@@ -9,7 +9,11 @@
 using namespace Faunus;
 using namespace std;
 
+#ifdef CUBOID_NOPBC
+typedef Geometry::CuboidNoPBC Tgeometry;
+#else
 typedef Geometry::Cuboid Tgeometry;
+#endif
 typedef Particle<Charge> Tparticle;
 
 static const char USAGE[] =

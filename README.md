@@ -2,6 +2,11 @@
 [![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
 [![Faunus](doc/images/animation.gif)](https://github.com/mlund/faunus)
 
+Note
+====
+
+We are working of a new version of Faunus -- see more [here](http://github.com/mlund/neofaunus).
+
 Welcome to Faunus
 =================
 

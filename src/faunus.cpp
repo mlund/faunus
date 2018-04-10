@@ -11,6 +11,8 @@ using namespace std;
 
 #ifdef CUBOID_NOPBC
 typedef Geometry::CuboidNoPBC Tgeometry;
+#elif SPHERE
+typedef Geometry::Sphere Tgeometry;
 #else
 typedef Geometry::Cuboid Tgeometry;
 #endif

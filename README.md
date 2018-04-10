@@ -14,6 +14,13 @@ molecular systems. Below is a brief overview of features:
 - Highy modular
 - Free and open source
 
+Installing
+===========
+
+On mac or linux, install using [conda](https://conda.io/miniconda.html):
+
+    $ conda install -c teokem faunus
+
 Documentation
 =============
 

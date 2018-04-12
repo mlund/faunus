@@ -219,6 +219,13 @@ namespace Faunus {
                     tmp[name] = d;
                     _j.push_back( tmp );
                 }
+                auto& _j2 = j["reactionlist"];
+                for (auto &i : reactions<decltype(p)>) {
+                    // auto name = i.name;
+                    json tmp, d = i;
+                    // tmp[name] = d;
+                    _j2.push_back( i );
+                }
                 return j;
             }
 

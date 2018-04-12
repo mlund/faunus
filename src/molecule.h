@@ -1,8 +1,8 @@
-#pragma once
-
-#include <set>
-#include "core.h"
-#include "io.h"
+// #pragma once
+//
+// #include <set>
+// #include "core.h"
+// #include "io.h"
 #include "geometry.h"
 #include "potentials.h"
 
@@ -138,7 +138,7 @@ namespace Faunus {
                 Point insdir = {1,1,1};    //!< Insertion directions
                 Point insoffset = {0,0,0}; //!< Insertion offset
 
-                std::vector<Potential::BondData> bonds;
+                std::vector<Pofential::BondData> bonds;
                 std::vector<int> atoms;    //!< Sequence of atoms in molecule (atom id's)
                 std::vector<Tpvec> conformations;           //!< Conformations of molecule
                 std::discrete_distribution<> confDist;      //!< Weight of conformations
@@ -298,7 +298,7 @@ namespace Faunus {
                             v.push_back( atoms<Tparticle>.at(id).p );
                     if (!v.empty())
                         a.pushConformation( v );
-                } 
+                }
                 a.structure = val.value("structure", a.structure);
                 if (!a.structure.empty())
                     a.loadConformation(a.structure);
@@ -370,10 +370,12 @@ namespace Faunus {
 
             std::string _reac, _prod;
             std::string _reac_sub, _prod_sub;
-            std::vector<int> _reacid_m;
-            std::vector<int> _reacid_a;
+            std::map<int,int> _reacid_m;     // Molecular change, groups. Atomic as Groupwise
+            std::map<int,int> _reacid_a;     // Atomic change, equivalent of swap/titration
+            std::map<int,int> _prodid_m;
+            std::map<int,int> _prodid_a;
 
-            std::multiset<int> _Reac, _Prod;
+            std::map<int,int> _Reac, _Prod;
             bool canonic;                   //!< Finite reservoir
             int N_reservoir;                //!< Number of molecules in finite reservoir
             double log_k;                   //!< log K
@@ -382,6 +384,26 @@ namespace Faunus {
 
             ReactionData() {
             }
+            bool Empty() {
+                if (canonic && N_reservoir== 0)
+                    return true;
+                return false;
+            }
+
+            std::map<int,int> Molecules2Add(bool fwd) {
+                if (fwd == true)
+                    return _prodid_m;
+                return _reacid_m;
+            } //!< Returns the map for addition depending on direction, used for the negation by
+              //!< supplying !fwd
+            std::map<int,int> Atoms2Add(bool fwd) {
+                if (fwd == true)
+                    return _prodid_a;
+                return _reacid_a;
+            } //!< Returns the map for addition depending on direction, used for the negation by
+              //!< supplying !fwd
+              // TODO protect the maps after construction, they are accesible by functions
+
         }; //!< End of class
 
         template<class Tparticle, class Talloc>
@@ -391,33 +413,56 @@ namespace Faunus {
 
                 if (j.is_object()==false || j.size()!=1)
                     throw std::runtime_error("Invalid JSON data for ReactionData");
+
+                for (auto &m: molecules<std::vector<Tparticle,Talloc>>)
+                    for (auto &a: atoms<std::vector<Tparticle>>)
+                        if (m.name == a.name)
+                            throw std::runtime_error("Baptise your children properly!");
+                            // Atoms can not share name with molecules
                 for (auto it=j.begin(); it!=j.end(); ++it) {
                     a.name = it.key();
                     auto& val = it.value();
                     a.canonic = val.value("canonic", a.canonic);
-                    a.N_resevoir = val.value("N_res", a.N_reservoir);
-                    a._reac = val.value("reactants", a._reac);
+                    a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
+                    std::cout << a.name << endl;
                     for (auto &i : val.at("reactants").get<std::vector<std::string>>()) {
-                        auto it = findName( molecules<MoleculeData<std::vector<Tparticle,Talloc>>>, i );
-                        if (it == molecules<MoleculeData<std::vector<Tparticle>>>.end() ) {
+                        auto it = findName( molecules<std::vector<Tparticle>>, i );
+                        if (it == molecules<std::vector<Tparticle>>.end() ) {
                             auto it = findName( atoms<Tparticle>, i );
                             if (it == atoms<Tparticle>.end())
-                            throw std::runtime_error("unknown constituent in `reactions` list\n");
+                                throw std::runtime_error("unknown constituent in `reactions` list\n");
+                            else {
+                                a._reacid_a[it->id()]++;
+                            }
+                        } else {
+                            a._reacid_m[it->id()]++;
                         }
-                        else a._reacid_m.push_back(it->id());
+                    }
+                    for (auto &i : val.at("products").get<std::vector<std::string>>()) {
+                        auto it = findName( molecules<std::vector<Tparticle>>, i );
+                        if (it == molecules<std::vector<Tparticle>>.end() ) {
+                            auto it = findName( atoms<Tparticle>, i );
+                            if (it == atoms<Tparticle>.end())
+                                throw std::runtime_error("unknown constituent in `reactions` list\n");
+                            else
+                                a._prodid_a[it->id()]++;
+                        }
+                        else a._prodid_m[it->id()]++;
                     }
                     assert(!a.atoms.empty());
-
-                    //auto _rids = names2ids(val.value("products", ))
-                    //a._Reac = std::set<int>()
-
-                    // _names = j.at("").get<decltype(_names)>(); // molecule names
-                    // auto _ids = names2ids(molecules<Tpvec>, _names);     // names --> molids
-                    // molids = std::set<int>(_ids.begin(), _ids.end());    // vector --> set
-                    // if (molids.empty() || molids.size()!=_names.size() )
-                    //     throw std::runtime_error(name + ": molecule list is empty");
                 }
 
+            }
+
+        template<class Tparticle, class Talloc>
+            void to_json(json& j, const ReactionData<std::vector<Tparticle,Talloc>> &a) {
+                j[a.name] = {
+                    {"log_k", a.log_k}, {"canonic", a.canonic}, {"N_reservoir", a.N_reservoir},
+                    {"molecular products", a._prodid_m } ,
+                    {"exchange products", a._prodid_a  },
+                    {"molecular reactants", a._reacid_m } ,
+                    {"exchange reactants", a._reacid_a  }
+                };
             }
         template<typename Tpvec>
             static std::vector<ReactionData<Tpvec>> reactions = {}; //!< Global instance of reaction list

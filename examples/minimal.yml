@@ -3,24 +3,25 @@ energy:
         lennardjones: {mixing: LB}
         coulomb: {type: none, epsr: 80, cutoff: 10}
 atomlist: # define all atom types below
-    - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40} 
-    - K: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40} 
-    - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10} 
+    - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}
+    - K: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}
+    - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10}
 moleculelist:
-    - Na_m: {Ninit: 50, atoms: [Na], atomic: true }
+    - Na_m: {Ninit: 100, atoms: [Na], atomic: true, Ninactive: 50 }
     - Cl_m: {Ninit: 100, atoms: [Cl], atomic: true }
-    - K_m: {Ninit: 50, atoms: [K], atomic: true }
+    - K_m: {Ninit: 100, atoms: [K], atomic: true, Ninactive: 50 }
 reactionlist:
-    - R1: {log_k: 0.0, reactants: [Na_m], products: [K_m], canonic: false, N: 100}
+    - R1: {log_k: 0.0, reactants: [Na_m], products: [K_m], canonic: false, N: 100,
+            N_reservoir: 100}
 moves:
-    - transrot: {molecule: Cl_m, dp: 40, dprot: 0 }
-    - volume: {dV: 0.1}
+#    - transrot: {molecule: Cl_m, dp: 40, dprot: 0 }
+#    - volume: {dV: 0.1}
+    - speciation: {repeat: 1}
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - savestate: {file: confout.pqr}
     - savestate: {file: confout.state}
     - density: {nstep: 100}
-mcloop: {macro: 10, micro: 100}
+mcloop: {macro: 1, micro: 0}
 geometry: {length: 50} # sidelength(s): number OR array
 temperature: 300
-

@@ -1,5 +1,5 @@
 temperature: 1100
-mcloop: {macro: 10, micro: 10}
+mcloop: {macro: 10, micro: 100}
 geometry: {length: 19.73}
 energy:
     - nonbonded_coulomblj:

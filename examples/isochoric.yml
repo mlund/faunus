@@ -3,7 +3,7 @@ comment: |
     More information: doi:10/chqzjk
 
 temperature: 300
-random: {seed: hardware}
+random: {seed: default}
 geometry: {length: [1000, 1000, 100]}
 mcloop: {macro: 10, micro: 100}
 
@@ -25,13 +25,10 @@ insertmolecules:
 energy:
     - isobaric: {P/atm: 0}
     - bonded: {}
-    - nonbonded:
+    - nonbonded_deserno:
         cutoff_g2g: 42
-        default:
-            - wca: {mixing: LB}
-        TL TL:
-            - wca: {mixing: LB}
-            - cos2: {rc: 11.2246, eps: 2.48, wc: 16}
+        wca: {mixing: LB}
+        cos2: {rc: 11.2246, eps: 2.48, wc: 16}
     - penalty:
         file: penalty.dat
         f0: 0.5

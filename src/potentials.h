@@ -343,7 +343,7 @@ namespace Faunus {
             class DesernoMembrane : public PairPotentialBase {
 
                 WeeksChandlerAndersen<Tparticle> wca;
-                CosAttract cosattract;
+                CosAttract cos2;
                 int tail;
 
                 public:
@@ -354,7 +354,7 @@ namespace Faunus {
 
                 inline void from_json(const json &j) override {
                     wca = j;
-                    cosattract = j;
+                    cos2 = j;
                     auto it = findName(atoms<Tparticle>, "TL");
                     if ( it!=atoms<Tparticle>.end() )
                         tail = it->id();
@@ -362,14 +362,17 @@ namespace Faunus {
                         throw std::runtime_error("Atom type 'TL' is not defined.");
                 }
                 void to_json(json &j) const override {
+                    json _j;
                     wca.to_json(j);
+                    cos2.to_json(_j);
+                    j = merge(j,_j);
                 }
 
                 double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
                     double u=wca(a,b,r);
                     if (a.id==tail)
                         if (b.id==tail)
-                            u+=cosattract(a,b,r);
+                            u+=cos2(a,b,r);
                     return u;
                 }
             };

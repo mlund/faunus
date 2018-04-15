@@ -19,7 +19,7 @@ namespace Faunus {
 
         struct data {
             int index; //!< Touched group index
-            bool internal=true; //!< True is the internal energy/config has changed
+            bool internal=false; //!< True is the internal energy/config has changed
             bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
         }; //!< Properties of changed groups

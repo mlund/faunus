@@ -192,6 +192,7 @@ namespace Faunus {
                         name = "transrot";
                         repeat = -1; // meaning repeat N times
                         cdata.atoms.resize(1);
+                        cdata.internal=true;
                     }
             };
 

@@ -7,6 +7,7 @@
 #include "multipole.h"
 #include "penalty.h"
 #include "mpi.h"
+#include <Eigen/Dense>
 #include <set>
 
 #ifdef FAU_POWERSASA
@@ -570,7 +571,8 @@ namespace Faunus {
                                         u += sum(i.second);
                             } else
                                 for (auto &d : c.groups)
-                                    u += sum( intra[d.index] );
+                                    if (d.internal) 
+                                        u += sum( intra[d.index] );
                         }
                         return u;
                     }; // brute force -- refine this!
@@ -676,13 +678,12 @@ namespace Faunus {
                                 auto& d = change.groups[0];
 
                                 // exactly ONE atom is changed
-                                // WARNING! This does not respect inactive particles!
-                                // TODO: Loop over groups instead
                                 if (d.atoms.size()==1) {
-                                    auto i = spc.groups[d.index].begin() + d.atoms[0];
-                                    for (auto j=spc.p.begin(); j!=spc.p.end(); ++j)
-                                        if (i!=j)
-                                            u += i2i(*i, *j);
+                                    auto i = spc.groups.at(d.index).begin() + d.atoms[0];
+                                    for (auto &g : spc.groups)
+                                        for (auto j=g.begin(); j!=g.end(); j++)
+                                            if (i!=j)
+                                                u += i2i(*i, *j);
                                     return u;
                                 }
 
@@ -724,32 +725,37 @@ namespace Faunus {
                 private:
                     typedef Nonbonded<Tspace,Tpairpot> base;
                     typedef typename Tspace::Tgroup Tgroup;
+                    Eigen::MatrixXf cache;
 
                     double g2g(const Tgroup &g1, const Tgroup &g2) override {
                         int i = &g1 - &base::spc.groups.front();
                         int j = &g2 - &base::spc.groups.front();
+                        if (j<i)
+                            std::swap(i,j);
                         if (base::key==Energybase::NEW)        // if this is from the trial system,
-                            cache.set(i, j, base::g2g(g1,g2)); // then update cache
+                            cache(i,j) = base::g2g(g1,g2); // then update cache
                         return cache(i,j);                     // return (cached) value
                     }
 
                 public:
-                    PairMatrix<double,true> cache;
                     NonbondedCached(const json &j, Tspace &spc) : base(j,spc) {
                         base::name += "EM";
-                        cache.resize( spc.groups.size() );
+                        cache.resize( spc.groups.size(), spc.groups.size() );
+                        cache.setZero();
                     }
 
                     void sync(Energybase *basePtr, Change &change) override {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         assert(other);
                         if (change.all || change.dV)
-                            cache = other->cache;
+                            cache.triangularView<Eigen::Upper>() = (other->cache).template triangularView<Eigen::Upper>();
                         else
-                            for (auto &d : change.groups)
-                                for (size_t i=0; i<base::spc.groups.size(); i++)
-                                    if (i!=d.index)
-                                        cache.set(i, d.index, other->cache(i,d.index));
+                            for (auto &d : change.groups) {
+                                for (size_t i=0; i<d.index; i++)
+                                    cache(i,d.index) = other->cache(i,d.index);
+                                for (size_t i=d.index+1; i<base::spc.groups.size(); i++)
+                                    cache(d.index,i) = other->cache(d.index,i);
+                            }
                     } //!< Copy energy matrix from other
             }; //!< Nonbonded with cached energies (Energy Matrix)
 
@@ -1082,13 +1088,10 @@ namespace Faunus {
                             for (auto it=m.begin(); it!=m.end(); ++it) {
                                 try {
                                     if (it.key()=="nonbonded_coulomblj")
-                                        push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(it.value(), spc);
+                                        push_back<Energy::NonbondedCached<Tspace,CoulombLJ>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded")
-                                        push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
-
-                                    if (it.key()=="nonbonded_cached")
-                                        push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+                                        push_back<Energy::NonbondedCached<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded_coulombhs")
                                         push_back<Energy::Nonbonded<Tspace,CoulombHS>>(it.value(), spc);

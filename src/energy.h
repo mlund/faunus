@@ -624,15 +624,13 @@ namespace Faunus {
                         return u;
                     }
 
-                    template<typename T>
-                        double g2all(const T &g1) {
-                            double u = 0;
-                            for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i ) {
-                                for ( auto j=i; ++j != spc.groups.end(); )
-                                    u += g2g( *i, *j );
-                                return u;
-                            }
-                        }
+                    virtual double g2all(const Tgroup &g1) {
+                        double u = 0;
+                        for (auto &g2 : spc.groups)
+                            if (&g1!=&g2)
+                                u += g2g(g1, g2);
+                        return u;
+                    }
 
                 public:
                     Tspace& spc;   //!< Space to operate on
@@ -690,10 +688,7 @@ namespace Faunus {
 
                                 // everything in group changed
                                 if (d.all) {
-#pragma omp parallel for reduction (+:u) 
-                                    for (int i=0; i<int(spc.groups.size()); i++)
-                                        if (i!=d.index)
-                                            u+=g2g(spc.groups[i], spc.groups[d.index]);
+                                    u += g2all(spc.groups[d.index]);
                                     if (d.internal)
                                         u += g_internal(spc.groups[d.index]);
                                     return u;
@@ -739,7 +734,7 @@ namespace Faunus {
                     }
 
                 public:
-                    PairMatrix<double> cache;
+                    PairMatrix<double,true> cache;
                     NonbondedCached(const json &j, Tspace &spc) : base(j,spc) {
                         base::name += "EM";
                         cache.resize( spc.groups.size() );
@@ -748,7 +743,13 @@ namespace Faunus {
                     void sync(Energybase *basePtr, Change &change) override {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         assert(other);
-                        cache = other->cache;
+                        if (change.all || change.dV)
+                            cache = other->cache;
+                        else
+                            for (auto &d : change.groups)
+                                for (size_t i=0; i<base::spc.groups.size(); i++)
+                                    if (i!=d.index)
+                                        cache.set(i, d.index, other->cache(i,d.index));
                     } //!< Copy energy matrix from other
             }; //!< Nonbonded with cached energies (Energy Matrix)
 
@@ -1097,6 +1098,9 @@ namespace Faunus {
 
                                     if (it.key()=="nonbonded_pmwca")
                                         push_back<Energy::Nonbonded<Tspace,PrimitiveModelWCA>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded_deserno")
+                                        push_back<Energy::NonbondedCached<Tspace,DesernoMembrane<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);

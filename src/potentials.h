@@ -339,6 +339,41 @@ namespace Faunus {
             }
         };
 
+        template<class Tparticle>
+            class DesernoMembrane : public PairPotentialBase {
+
+                WeeksChandlerAndersen<Tparticle> wca;
+                CosAttract cosattract;
+                int tail;
+
+                public:
+                DesernoMembrane(const std::string &name="dmembrane") {
+                    PairPotentialBase::name=name;
+                    PairPotentialBase::name.clear();
+                }
+
+                inline void from_json(const json &j) override {
+                    wca = j;
+                    cosattract = j;
+                    auto it = findName(atoms<Tparticle>, "TL");
+                    if ( it!=atoms<Tparticle>.end() )
+                        tail = it->id();
+                    else
+                        throw std::runtime_error("Atom type 'TL' is not defined.");
+                }
+                void to_json(json &j) const override {
+                    wca.to_json(j);
+                }
+
+                double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
+                    double u=wca(a,b,r);
+                    if (a.id==tail)
+                        if (b.id==tail)
+                            u+=cosattract(a,b,r);
+                    return u;
+                }
+            };
+
         /**
          * @brief Finite Extensible Nonlinear Elastic (FENE) potential
          *

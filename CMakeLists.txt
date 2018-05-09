@@ -23,6 +23,11 @@ endif()
 option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" on)
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 
+option(ENABLE_APPROXMATH "Use approximate math" off)
+if (ENABLE_APPROXMATH)
+    add_definitions(-DFAU_APPROXMATH)
+endif ()
+
 option(ENABLE_OPENMP "Try to use OpenMP parallization" off)
 if (ENABLE_OPENMP)
   find_package(OpenMP)

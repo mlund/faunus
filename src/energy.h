@@ -597,6 +597,8 @@ namespace Faunus {
                     template<typename T>
                         inline bool cut(const T &g1, const T &g2) {
                             g2gcnt++;
+                            if (g1.atomic || g2.atomic)
+                                return false;
                             if ( spc.geo.sqdist(g1.cm, g2.cm)<Rc2_g2g )
                                 return false;
                             g2gskip++;
@@ -608,29 +610,74 @@ namespace Faunus {
                             return pairpot(a, b, spc.geo.vdist(a.pos, b.pos));
                         }
 
-                    template<typename T>
-                        double g_internal(const T &g) {
-                            double u=0;
+                    /*
+                     * Internal energy in group, calculating all with all or, if `index`
+                     * is given, only a subset. Index specifies the internal index (starting
+                     * at zero) of changed particles within the group.
+                     */
+                    double g_internal(const Tgroup &g, const std::vector<int> &index=std::vector<int>()) {
+                        using namespace ranges;
+                        double u=0;
+                        if (index.empty()) // assume that all atoms have changed
                             for ( auto i = g.begin(); i != g.end(); ++i )
                                 for ( auto j=i; ++j != g.end(); )
                                     u += i2i(*i, *j);
-                            return u;
+                        else { // only a subset have changed
+                            auto fixed = view::ints( 0, int(g.size()) )
+                                | view::remove_if(
+                                        [&index](int i){return std::binary_search(index.begin(), index.end(), i);});
+                            for (int i : index) // moved<->static
+                                for (int j : fixed)
+                                    u += i2i( *(g.begin()+i), *(g.begin()+j));
+                            for (int i : index) // moved<->moved
+                                for (int j : index)
+                                    if (j>i)
+                                        u += i2i( *(g.begin()+i), *(g.begin()+j));
                         }
+                        return u;
+                    }
 
-                    virtual double g2g(const Tgroup &g1, const Tgroup &g2) {
-                        double u = 0;
-                        if (!cut(g1,g2))
-                            for (auto &i : g1)
-                                for (auto &j : g2)
+
+                    /*
+                     * Calculates the interaction energy of a particle, `i`,
+                     * and checks (1) if it is already part of Space, or (2)
+                     * external to space.
+                     */
+                    double i2all(const typename Tspace::Tparticle &i) {
+                        double u=0;
+                        auto it = spc.findGroupContaining(i); // iterator to group
+                        if (it!=spc.groups.end()) {    // check if i belongs to group in space
+                            for (auto &g : spc.groups) // i with all other particles
+                                if (&g!=&(*it))        // avoid self-interaction
+                                    if (!cut(g, *it))  // check g2g cut-off
+                                        for (auto &j : g) // loop over particles in other group
+                                            u += i2i(i,j);
+                            for (auto &j : *it)        // i with all particles in own group
+                                if (&j!=&i)
+                                    u += i2i(i,j);
+                        } else // particle does not belong to any group
+                            for (auto &j : spc.p)
+                                if (&j!=&i)
                                     u += i2i(i,j);
                         return u;
                     }
 
-                    virtual double g2all(const Tgroup &g1) {
+                    /*
+                     * Group-to-group energy. A subset of `g1` can be given with `index` which refers
+                     * to the internal index (starting at zero) of the first group, `g1`.
+                     */
+                    virtual double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index=std::vector<int>()) {
                         double u = 0;
-                        for (auto &g2 : spc.groups)
-                            if (&g1!=&g2)
-                                u += g2g(g1, g2);
+                        if (!cut(g1,g2)) {
+                            if (index.empty()) // if index is empty, assume all in g1 have changed
+                                for (auto &i : g1)
+                                    for (auto &j : g2)
+                                        u += i2i(i,j);
+                            else // only a subset of g1
+                                for (auto i : index)
+                                    for (auto &j : g2)
+                                        u += i2i( *(g1.begin()+i), j);
+                        }
                         return u;
                     }
 
@@ -676,24 +723,15 @@ namespace Faunus {
                             // if exactly ONE molecule is changed
                             if (change.groups.size()==1) {
                                 auto& d = change.groups[0];
-
-                                // exactly ONE atom is changed
-                                if (d.atoms.size()==1) {
-                                    auto i = spc.groups.at(d.index).begin() + d.atoms[0];
-                                    for (auto &g : spc.groups)
-                                        for (auto j=g.begin(); j!=g.end(); j++)
-                                            if (i!=j)
-                                                u += i2i(*i, *j);
-                                    return u;
-                                }
-
-                                // everything in group changed
-                                if (d.all) {
-                                    u += g2all(spc.groups[d.index]);
-                                    if (d.internal)
-                                        u += g_internal(spc.groups[d.index]);
-                                    return u;
-                                }
+                                if (d.atoms.size()==1) // exactly one atom is moved
+                                    return i2all(spc.p.at(d.atoms[0]));
+                                auto& g1 = spc.groups.at(d.index);
+                                for (auto &g2 : spc.groups)
+                                    if (&g1 != &g2)
+                                        u += g2g(g1, g2, d.atoms); 
+                                if (d.internal)
+                                    u += g_internal(g1, d.atoms);
+                                return u;
                             }
 
                             auto moved = change.touchedGroupIndex(); // index of moved groups
@@ -709,9 +747,8 @@ namespace Faunus {
 
                             // moved<->static
                             for ( auto i : moved)
-                                for ( auto j : fixed) {
+                                for ( auto j : fixed)
                                     u += g2g(spc.groups[i], spc.groups[j]);
-                                }
 
                             // more todo!
                         }
@@ -727,13 +764,17 @@ namespace Faunus {
                     typedef typename Tspace::Tgroup Tgroup;
                     Eigen::MatrixXf cache;
 
-                    double g2g(const Tgroup &g1, const Tgroup &g2) override {
+                    double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index=std::vector<int>()) override {
                         int i = &g1 - &base::spc.groups.front();
                         int j = &g2 - &base::spc.groups.front();
                         if (j<i)
                             std::swap(i,j);
-                        if (base::key==Energybase::NEW)        // if this is from the trial system,
-                            cache(i,j) = base::g2g(g1,g2); // then update cache
+                        if (base::key==Energybase::NEW) {        // if this is from the trial system,
+                            if (index.empty())
+                                cache(i,j) = base::g2g(g1,g2,index); // then update cache
+                            else 
+                                cache(i,j) += base::g2g(g1,g2,index); // then update cache
+                        }
                         return cache(i,j);                     // return (cached) value
                     }
 
@@ -1088,10 +1129,10 @@ namespace Faunus {
                             for (auto it=m.begin(); it!=m.end(); ++it) {
                                 try {
                                     if (it.key()=="nonbonded_coulomblj")
-                                        push_back<Energy::NonbondedCached<Tspace,CoulombLJ>>(it.value(), spc);
+                                        push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded")
-                                        push_back<Energy::NonbondedCached<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+                                        push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded_coulombhs")
                                         push_back<Energy::Nonbonded<Tspace,CoulombHS>>(it.value(), spc);

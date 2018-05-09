@@ -346,35 +346,6 @@ namespace Faunus
         }
 
     /**
-     * @brief Fast sine calculation in range (-pi:pi)
-     * @warning Invalid beyond boundaries!
-     * @note <http://devmaster.net/forums/topic/4648-fast-and-accurate-sinecosine>
-     */
-    template<class T>
-        T sinApprox( T x )
-        {
-            const T B = 4 / std::acos(-1);
-            const T C = -B / std::acos(-1);
-
-            T y = B * x + C * x * abs(x);
-
-#ifdef EXTRA_PRECISION
-            //  const float Q = 0.775;
-            const T P = 0.225;
-
-            y = P * (y * abs(y) - y) + y;   // Q * y + P * y * abs(y)
-#endif
-            return y;
-        }
-
-    template<class T>
-        T cosApprox( T x )
-        {
-            const T shift = 0.5 * std::acos(-1);
-            return sinApprox(x + shift);
-        }
-
-    /**
      * @brief Evaluate n'th degree Legendre polynomium
      *
      * Example:

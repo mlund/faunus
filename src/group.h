@@ -184,6 +184,14 @@ namespace Faunus {
                 return *this;
             } //!< copy group data from `other` but *not* particle data
 
+            bool contains(const T &a) const {
+                int d = &a - &(*(this->begin()));
+                if (d>=0)
+                    if (d<this->size())
+                        return true;
+                return false;
+            } //!< Determines if particle belongs to (active part) of group
+
             template<class UnaryPredicate>
                 auto filter( UnaryPredicate f ) const {
                     return ranges::view::filter(*this,f);

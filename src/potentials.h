@@ -302,11 +302,7 @@ namespace Faunus {
                         return -eps;
                     if (r2>rcwc2)
                         return 0;
-#ifdef FAU_APPROXMATH
-                    double x=cosApprox( c*( sqrt(r2)-rc ) );
-#else
                     double x=std::cos( c*( sqrt(r2)-rc ) );
-#endif
                     return -eps*x*x;
                 }
 
@@ -315,13 +311,8 @@ namespace Faunus {
                     if (r2<rc2 || r2>rcwc2)
                         return Point(0,0,0);
                     double r=sqrt(r2);
-#ifdef FAU_APPROXMATH
-                    double x1=cosApprox( c*( r-rc ) );
-                    double x2=sinApprox( c*( r-rc ) );
-#else
                     double x1=std::cos( c*( r-rc ) );
                     double x2=std::sin( c*( r-rc ) );
-#endif
                     return -2*c*eps*x1*x2/r*p;
                 }
 

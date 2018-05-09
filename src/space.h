@@ -125,6 +125,10 @@ namespace Faunus {
                 return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
             } //!< Range with all atoms of type `atomid` (complexity: order N)
 
+            auto findGroupContaining(const Tparticle &i) {
+                return std::find_if( groups.begin(), groups.end(), [&i](auto &g){ return g.contains(i); });
+            } //!< Finds the groups containing the given atom
+
             void sync(Tspace &other, const Tchange &change) {
 
                 assert(&other != this);

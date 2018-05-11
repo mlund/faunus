@@ -856,6 +856,8 @@ namespace Faunus {
                                             rc = std::make_shared<AtomProperty>(it.value(), spc);
                                         if (it.key()=="system")
                                             rc = std::make_shared<SystemProperty>(it.value(), spc);
+                                        if (it.key()=="cmcm")
+                                            rc = std::make_shared<MassCenterSeparation>(it.value(), spc);
                                         if (rc!=nullptr) {
                                             if (rc->min>=rc->max || rc->binwidth<=0)
                                                 throw std::runtime_error("min<max and binwidth>0 required for '" + it.key() + "'");
@@ -1145,6 +1147,9 @@ namespace Faunus {
 
                                     if (it.key()=="nonbonded_deserno")
                                         push_back<Energy::NonbondedCached<Tspace,DesernoMembrane<typename Tspace::Tparticle>>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded_desernoAA")
+                                        push_back<Energy::NonbondedCached<Tspace,DesernoMembraneAA<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);

@@ -120,7 +120,8 @@ namespace Faunus {
                     f = [&spc, dir=dir, i=index[0], j=index[1]]() {
                         auto &cm1 = spc.groups[i].cm;
                         auto &cm2 = spc.groups[j].cm;
-                        return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+                        //return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+                        return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum();
                     };
                 }
 

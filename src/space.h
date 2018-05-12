@@ -201,9 +201,9 @@ namespace Faunus {
                     }
                 }
                 double Vold = geo.getVolume();
-                // if isochoric, volumes are treated as areas
+                // if isochoric, the volume is constant
                 if (method==Geometry::ISOCHORIC)
-                    Vold = std::pow(Vold,2./3.);
+                    Vold = std::pow(Vold,1./3.);
 
                 for (auto f : scaleVolumeTriggers)
                     f(*this, Vold, Vnew);

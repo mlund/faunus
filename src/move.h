@@ -355,7 +355,7 @@ namespace Faunus {
                             change.all=true;
                             Vold = spc.geo.getVolume();
                             if (method->second == Geometry::ISOCHORIC)
-                                Vold = std::pow(Vold,2.0/3.0); // Volume is treated as Area
+                                Vold = std::pow(Vold,1.0/3.0); // volume is constant
                             Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
                             deltaV = Vnew-Vold;
                             spc.scaleVolume(Vnew, method->second);

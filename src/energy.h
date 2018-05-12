@@ -802,7 +802,7 @@ namespace Faunus {
 
         /**
          * `udelta` is the total change of updating the energy function. If
-         * not handled this will appear as an energy drift (which is is!). To
+         * not handled this will appear as an energy drift (which it is!). To
          * avoid this, this term is added to the energy but since it's the
          * same in both the trial and old state energies it will not affect
          * MC move acceptance.

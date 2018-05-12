@@ -109,20 +109,34 @@ namespace Faunus {
         struct MassCenterSeparation : public ReactionCoordinateBase {
             Eigen::Vector3i dir={1,1,1};
             std::vector<size_t> index;
+            std::vector<std::string> type;
             template<class Tspace>
                 MassCenterSeparation(const json &j, Tspace &spc) {
+                    typedef typename Tspace::Tparticle Tparticle;
                     name = "cmcm";
                     from_json(j, *this);
                     dir = j.value("dir", dir);
                     index = j.at("index").get<decltype(index)>();
-                    if (index.size()!=2)
-                        throw std::runtime_error(name + ": specify exactly two molecule index");
-                    f = [&spc, dir=dir, i=index[0], j=index[1]]() {
-                        auto &cm1 = spc.groups[i].cm;
-                        auto &cm2 = spc.groups[j].cm;
-                        //return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
-                        return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum();
-                    };
+                    type = j.at("type").get<decltype(type)>();
+                    if (index.size()==2) {
+                        f = [&spc, dir=dir, i=index[0], j=index[1]]() {
+                            auto &cm1 = spc.groups[i].cm;
+                            auto &cm2 = spc.groups[j].cm;
+                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm(); 
+                        };
+                    }
+                    if (type.size()==2) {
+                        f = [&spc, dir=dir, type1=type[0], type2=type[1]]() {
+                            Group<Tparticle> g(spc.p.begin(), spc.p.end());
+                            auto slice1 = g.find_id(findName(atoms<Tparticle>, type1)->id());
+                            auto slice2 = g.find_id(findName(atoms<Tparticle>, type2)->id());
+                            auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.boundaryFunc);
+                            auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.boundaryFunc);
+                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+                        };
+                    }
+                    else
+                        throw std::runtime_error(name + ": specify exactly two molecule indeces or two atom types");
                 }
 
             double normalize(double coord) const override {

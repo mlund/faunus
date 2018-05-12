@@ -83,9 +83,9 @@ namespace Faunus {
                             setLength(s);  // z is untouched
                             break;
                         case ISOCHORIC:
-                            // V is actually an area
-                            alpha = sqrt( V / pow(getVolume(), 2./3.) );
-                            s = { alpha, alpha*c1, 1/(alpha*alpha) };
+                            // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
+                            alpha = sqrt( V / pow(getVolume(), 1./3.) );
+                            s = { alpha, alpha, 1/(alpha*alpha) };
                             setLength( len.cwiseProduct(s) );
                             return s;
                         default:

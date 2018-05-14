@@ -653,7 +653,7 @@ namespace Faunus {
                                         for (auto &j : g) // loop over particles in other group
                                             u += i2i(i,j);
                             for (auto &j : *it)        // i with all particles in own group
-                                if (&j!=&i)
+                                if (&j!=&i) 
                                     u += i2i(i,j);
                         } else // particle does not belong to any group
                             for (auto &j : spc.p)
@@ -721,14 +721,15 @@ namespace Faunus {
                             }
 
                             // if exactly ONE molecule is changed
-                            if (change.groups.size()==1) {
+                            if (change.groups.size()==1) { 
                                 auto& d = change.groups[0];
-                                if (d.atoms.size()==1) // exactly one atom is moved
-                                    return i2all(spc.p.at(d.atoms[0]));
+                                auto gindex = spc.groups.at(d.index).to_index(spc.p.begin()).first;
+                                if (d.atoms.size()==1) // exactly one atom has moved
+                                    return i2all(spc.p.at(gindex+d.atoms[0]));
                                 auto& g1 = spc.groups.at(d.index);
                                 for (auto &g2 : spc.groups)
                                     if (&g1 != &g2)
-                                        u += g2g(g1, g2, d.atoms); 
+                                        u += g2g(g1, g2, d.atoms);
                                 if (d.internal)
                                     u += g_internal(g1, d.atoms);
                                 return u;

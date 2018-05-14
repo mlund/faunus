@@ -607,6 +607,7 @@ namespace Faunus {
 
                     template<typename T>
                         inline double i2i(const T &a, const T &b) {
+                            assert(&a!=&b && "a and b cannot be the same particle");
                             return pairpot(a, b, spc.geo.vdist(a.pos, b.pos));
                         }
 
@@ -637,11 +638,12 @@ namespace Faunus {
                         return u;
                     }
 
-
                     /*
                      * Calculates the interaction energy of a particle, `i`,
                      * and checks (1) if it is already part of Space, or (2)
                      * external to space.
+                     *
+                     * @todo: why is this not working?
                      */
                     double i2all(const typename Tspace::Tparticle &i) {
                         double u=0;
@@ -656,8 +658,8 @@ namespace Faunus {
                                 if (&j!=&i)
                                     u += i2i(i,j);
                         } else // particle does not belong to any group
-                            for (auto &j : spc.p)
-                                if (&j!=&i)
+                            for (auto &g : spc.groups) // i with all other *active* particles
+                                for (auto &j : g)      // (this will include only active particles)
                                     u += i2i(i,j);
                         return u;
                     }
@@ -723,8 +725,8 @@ namespace Faunus {
                             // if exactly ONE molecule is changed
                             if (change.groups.size()==1) {
                                 auto& d = change.groups[0];
-                                if (d.atoms.size()==1) // exactly one atom is moved
-                                    return i2all(spc.p.at(d.atoms[0]));
+                                //if (d.atoms.size()==1) // exactly one atom is moved
+                                //    return i2all( spc.p.at( d.atoms[0] ) );
                                 auto& g1 = spc.groups.at(d.index);
                                 for (auto &g2 : spc.groups)
                                     if (&g1 != &g2)

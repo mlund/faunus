@@ -827,14 +827,21 @@ namespace Faunus {
 
             template<class Tpvec>
                 double energy(const Tpvec &p, Geometry::DistanceFunction dist) const {
-                    double d;
+                    double d, wca, x;
                     switch (type) {
                         case BondData::harmonic:
                             d = k[1] - dist(p[index[0]].pos, p[index[1]].pos).norm();
                             return 0.5 * k[0]*d*d;
                         case BondData::fene:
                             d = dist( p[index[0]].pos, p[index[1]].pos ).squaredNorm();
-                            return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]);
+                            wca = 0;
+                            x = k[3];
+                            if (d<=x*1.2599210498948732) {
+                                x = x/d;
+                                x = x*x*x;
+                                wca = k[2]*(x*x - x + 0.25);
+                            }
+                            return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
                         default: break;
                     }
                     assert(!"not implemented");
@@ -854,7 +861,9 @@ namespace Faunus {
                     j["fene"] = {
                         { "index", b.index },
                         { "k", b.k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
-                        { "rmax", std::sqrt(b.k[1]) / 1.0_angstrom } };
+                        { "rmax", std::sqrt(b.k[1]) / 1.0_angstrom },
+                        { "eps", b.k[2] / 1.0_kJmol },
+                        { "sigma", std::sqrt(b.k[3]) / 1.0_angstrom } };
                     break;
                 default: break;
             }
@@ -880,9 +889,11 @@ namespace Faunus {
                         b.index = val.at("index").get<decltype(b.index)>();
                         if (b.index.size()!=2)
                             throw std::runtime_error("FENE bond requires exactly two index");
-                        b.k.resize(2);
+                        b.k.resize(4);
                         b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
                         b.k[1] = std::pow( val.at("rmax").get<double>() * 1.0_angstrom, 2); // rm^2
+                        b.k[2] = val.at("eps").get<double>() * 1.0_kJmol; // epsilon wca
+                        b.k[3] = std::pow( val.at("sigma").get<double>() * 1.0_angstrom, 2); // sigma^2 wca
                         return;
                     }
                     if (t=="dihedral") {

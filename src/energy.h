@@ -774,9 +774,9 @@ namespace Faunus {
                         if (base::key==Energybase::NEW) {        // if this is from the trial system,
                             double u = 0;
                             if (!base::cut(g1,g2)) {
-                                for (auto &k : g1)
-                                    for (auto &l : g2)
-                                        u += base::i2i(k,l);
+                                for (auto &i : g1)
+                                    for (auto &j : g2)
+                                        u += base::i2i(i,j);
                             }
                             cache(i,j) = u;
                         }
@@ -788,6 +788,21 @@ namespace Faunus {
                         base::name += "EM";
                         cache.resize( spc.groups.size(), spc.groups.size() );
                         cache.setZero();
+                        for ( auto i = base::spc.groups.begin(); i < base::spc.groups.end(); ++i ) {
+                            for ( auto j=i; ++j != base::spc.groups.end(); ) {
+                                int k = &(*i) - &base::spc.groups.front();
+                                int l = &(*j) - &base::spc.groups.front();
+                                if (l<k)
+                                    std::swap(k,l);
+                                double u = 0;
+                                if (!base::cut(*i,*j)) {
+                                    for (auto &k : *i)
+                                        for (auto &l : *j)
+                                            u += base::i2i(k,l);
+                                }
+                                cache(k,l) = u;
+                            }
+                        }
                     }
 
                     double energy(Change &change) override {

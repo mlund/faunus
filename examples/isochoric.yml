@@ -9,7 +9,7 @@ mcloop: {macro: 10, micro: 100}
 
 atomlist:
     - TL: {sigma: 10, eps: 2.2147, dp: 2}
-    - HD: {sigma: 10, eps: 2.2147, dp: 2}
+    - HD: {sigma: 9.5, eps: 2.2147, dp: 2}
 
 moleculelist:
     - lipid:
@@ -39,8 +39,8 @@ energy:
             - system: {property: "height", range: [86,117], resolution: 0.1}
 
 moves:
-    - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: N}
-    - transrot: {molecule: lipid, repeat: 10}
+    - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: 100}
+    - transrot: {molecule: lipid, repeat: 100}
     - volume: {dV: 0.03, method: isochoric, repeat: 1}
 
 analysis:

@@ -147,7 +147,7 @@ namespace Faunus {
                             if (!git->empty()) {
                                 auto p = slump.sample( git->begin(), git->end() ); // random particle iterator  
                                 cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
-                                cdata.atoms.at(0) = std::distance(git->begin(), p);  // index of particle rel. to group
+                                cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
                                 return p; 
                             }
                         }

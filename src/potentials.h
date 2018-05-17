@@ -271,7 +271,7 @@ namespace Faunus {
          *
          * Key     | Description
          * :-------| :---------------------------
-         * `eps`   | Depth, \f$\epsilon\f$ [kT]
+         * `eps`   | Depth, \f$\epsilon\f$ [kJ/mol]
          * `rc`    | Width, r_c [angstrom]
          * `wc`    | Decay range, w_c [angstrom] 
          *
@@ -317,13 +317,13 @@ namespace Faunus {
                 }
 
             void to_json(json &j) const override {
-                j = {{"eps",eps}, {"rc",rc}, {"wc", wc}};
+                j = {{"eps",eps / 1.0_kJmol}, {"rc",rc / 1.0_angstrom }, {"wc", wc / 1.0_angstrom }};
             }
 
             void from_json(const json &j) override {
-                eps = j.at("eps");
-                rc = j.at("rc");
-                wc = j.at("wc");
+                eps = j.at("eps").get<double>() * 1.0_kJmol;
+                rc = j.at("rc").get<double>() * 1.0_angstrom ;
+                wc = j.at("wc").get<double>() * 1.0_angstrom ;
                 rc2 = rc * rc;
                 c = pc::pi / 2 / wc;
                 rcwc2 = pow((rc + wc), 2);
@@ -454,6 +454,7 @@ namespace Faunus {
                     json _j;
                     wca.to_json(j);
                     cos2.to_json(_j);
+                    j = merge(j,_j);
                     ionalpha.to_json(_j);
                     j = merge(j,_j);
                 }

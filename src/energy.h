@@ -607,6 +607,7 @@ namespace Faunus {
 
                     template<typename T>
                         inline double i2i(const T &a, const T &b) {
+                            assert(&a!=&b && "a and b cannot be the same particle");
                             return pairpot(a, b, spc.geo.vdist(a.pos, b.pos));
                         }
 
@@ -656,8 +657,8 @@ namespace Faunus {
                                 if (&j!=&i) 
                                     u += i2i(i,j);
                         } else // particle does not belong to any group
-                            for (auto &j : spc.p)
-                                if (&j!=&i)
+                            for (auto &g : spc.groups) // i with all other *active* particles
+                                for (auto &j : g)      // (this will include only active particles)
                                     u += i2i(i,j);
                         return u;
                     }

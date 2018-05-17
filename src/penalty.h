@@ -125,7 +125,7 @@ namespace Faunus {
                             return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm(); 
                         };
                     }
-                    if (type.size()==2) {
+                    else if (type.size()==2) {
                         f = [&spc, dir=dir, type1=type[0], type2=type[1]]() {
                             Group<Tparticle> g(spc.p.begin(), spc.p.end());
                             auto slice1 = g.find_id(findName(atoms<Tparticle>, type1)->id());
@@ -150,6 +150,7 @@ namespace Faunus {
             void _to_json(json &j) const override {
                 j["dir"] = dir;
                 j["index"] = index;
+                j["type"] = type;
             }
         };
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -158,7 +159,7 @@ namespace Faunus {
             using doctest::Approx;
             typedef Space<Geometry::Cuboid, Particle<>> Tspace;
             Tspace spc;
-            MassCenterSeparation c( R"({"dir":[1,1,0], "index":[7,8] })"_json, spc);
+            MassCenterSeparation c( R"({"dir":[1,1,0], "index":[7,8], "type":[] })"_json, spc);
             CHECK( c.dir.x() == 1 );
             CHECK( c.dir.y() == 1 );
             CHECK( c.dir.z() == 0 );

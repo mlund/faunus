@@ -931,12 +931,14 @@ namespace Faunus {
             CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "k":2.1} } )"_json );
 
             // test fene
-            j = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1} } )"_json;
+            j = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 } } )"_json;
             b = j;
             CHECK( j == json(b) );
             CHECK_THROWS( b = R"( {"fene" : { "index":[2,3,4], "k":1, "rmax":2.1} } )"_json );
             CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "rmax":2.1} } )"_json );
             CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1} } )"_json );
+            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48} } )"_json );
+            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1, "sigma":2} } )"_json );
 
             CHECK_THROWS( b = R"( {"unknown" : { "index":[2,3], "k":2.1, "req":1.0} } )"_json );
             j = json::object();

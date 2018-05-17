@@ -31,9 +31,9 @@ energy:
         cos2: {rc: 11.2246, eps: 2.2147, wc: 16}
 
 moves:
-    - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: N}
-    - transrot: {molecule: lipid, repeat: 10}
-    - volume: {dV: 0.03, method: isochoric}
+    - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: 100}
+    - transrot: {molecule: lipid, repeat: 100}
+    - volume: {dV: 0.03, method: isochoric, repeat: 1}
 
 analysis:
     - atomrdf: {file: rdf.dat, nstep: 10, dr: 0.1, name1: HD, name2: HD}

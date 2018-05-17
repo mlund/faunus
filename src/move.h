@@ -147,7 +147,7 @@ namespace Faunus {
                             if (!git->empty()) {
                                 auto p = slump.sample( git->begin(), git->end() ); // random particle iterator  
                                 cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
-                                cdata.atoms.at(0) = std::distance(git->begin(), p);  // index of particle rel. to group
+                                cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
                                 return p; 
                             }
                         }
@@ -355,7 +355,7 @@ namespace Faunus {
                             change.all=true;
                             Vold = spc.geo.getVolume();
                             if (method->second == Geometry::ISOCHORIC)
-                                Vold = std::pow(Vold,2.0/3.0); // Volume is treated as Area
+                                Vold = std::pow(Vold,1.0/3.0); // volume is constant
                             Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
                             deltaV = Vnew-Vold;
                             spc.scaleVolume(Vnew, method->second);

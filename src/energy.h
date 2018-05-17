@@ -638,12 +638,11 @@ namespace Faunus {
                         return u;
                     }
 
+
                     /*
                      * Calculates the interaction energy of a particle, `i`,
                      * and checks (1) if it is already part of Space, or (2)
                      * external to space.
-                     *
-                     * @todo: why is this not working?
                      */
                     double i2all(const typename Tspace::Tparticle &i) {
                         double u=0;
@@ -655,7 +654,7 @@ namespace Faunus {
                                         for (auto &j : g) // loop over particles in other group
                                             u += i2i(i,j);
                             for (auto &j : *it)        // i with all particles in own group
-                                if (&j!=&i)
+                                if (&j!=&i) 
                                     u += i2i(i,j);
                         } else // particle does not belong to any group
                             for (auto &g : spc.groups) // i with all other *active* particles
@@ -723,14 +722,15 @@ namespace Faunus {
                             }
 
                             // if exactly ONE molecule is changed
-                            if (change.groups.size()==1) {
+                            if (change.groups.size()==1) { 
                                 auto& d = change.groups[0];
-                                //if (d.atoms.size()==1) // exactly one atom is moved
-                                //    return i2all( spc.p.at( d.atoms[0] ) );
+                                auto gindex = spc.groups.at(d.index).to_index(spc.p.begin()).first;
+                                if (d.atoms.size()==1) // exactly one atom has moved
+                                    return i2all(spc.p.at(gindex+d.atoms[0]));
                                 auto& g1 = spc.groups.at(d.index);
                                 for (auto &g2 : spc.groups)
                                     if (&g1 != &g2)
-                                        u += g2g(g1, g2, d.atoms); 
+                                        u += g2g(g1, g2, d.atoms);
                                 if (d.internal)
                                     u += g_internal(g1, d.atoms);
                                 return u;
@@ -772,10 +772,13 @@ namespace Faunus {
                         if (j<i)
                             std::swap(i,j);
                         if (base::key==Energybase::NEW) {        // if this is from the trial system,
-                            if (index.empty())
-                                cache(i,j) = base::g2g(g1,g2,index); // then update cache
-                            else 
-                                cache(i,j) += base::g2g(g1,g2,index); // then update cache
+                            double u = 0;
+                            if (!base::cut(g1,g2)) {
+                                for (auto &k : g1)
+                                    for (auto &l : g2)
+                                        u += base::i2i(k,l);
+                            }
+                            cache(i,j) = u;
                         }
                         return cache(i,j);                     // return (cached) value
                     }
@@ -787,11 +790,58 @@ namespace Faunus {
                         cache.setZero();
                     }
 
+                    double energy(Change &change) override {
+                        using namespace ranges;
+                        double u=0;
+
+                        if (!change.empty()) {
+
+                            if (change.all || change.dV) {
+#pragma omp parallel for reduction (+:u) schedule (dynamic) 
+                                for ( auto i = base::spc.groups.begin(); i < base::spc.groups.end(); ++i ) {
+                                    for ( auto j=i; ++j != base::spc.groups.end(); )
+                                        u += g2g( *i, *j );
+                                }
+                                return u;
+                            }
+
+                            // if exactly ONE molecule is changed
+                            if (change.groups.size()==1) { 
+                                auto& d = change.groups[0];
+                                auto& g1 = base::spc.groups.at(d.index);
+                                for (auto &g2 : base::spc.groups) {
+                                    if (&g1 != &g2)
+                                        u += g2g(g1, g2, d.atoms);
+                                }
+                                return u;
+                            }
+
+                            auto moved = change.touchedGroupIndex(); // index of moved groups
+                            auto fixed = view::ints( 0, int(base::spc.groups.size()) )
+                                | view::remove_if(
+                                        [&moved](int i){return std::binary_search(moved.begin(), moved.end(), i);}
+                                        ); // index of static groups
+
+                            // moved<->moved
+                            for ( auto i = moved.begin(); i != moved.end(); ++i )
+                                for ( auto j=i; ++j != moved.end(); ) {
+                                    u += g2g( base::spc.groups[*i], base::spc.groups[*j] );
+                            }
+                            // moved<->static
+                            for ( auto i : moved)
+                                for ( auto j : fixed)
+                                    u += g2g(base::spc.groups[i], base::spc.groups[j]);
+
+                            // more todo!
+                        }
+                        return u;
+                    }
+
                     void sync(Energybase *basePtr, Change &change) override {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         assert(other);
                         if (change.all || change.dV)
-                            cache.triangularView<Eigen::Upper>() = (other->cache).template triangularView<Eigen::Upper>();
+                            cache.triangularView<Eigen::StrictlyUpper>() = (other->cache).template triangularView<Eigen::StrictlyUpper>();
                         else
                             for (auto &d : change.groups) {
                                 for (size_t i=0; i<d.index; i++)
@@ -804,7 +854,7 @@ namespace Faunus {
 
         /**
          * `udelta` is the total change of updating the energy function. If
-         * not handled this will appear as an energy drift (which is is!). To
+         * not handled this will appear as an energy drift (which it is!). To
          * avoid this, this term is added to the energy but since it's the
          * same in both the trial and old state energies it will not affect
          * MC move acceptance.
@@ -858,6 +908,8 @@ namespace Faunus {
                                             rc = std::make_shared<AtomProperty>(it.value(), spc);
                                         if (it.key()=="system")
                                             rc = std::make_shared<SystemProperty>(it.value(), spc);
+                                        if (it.key()=="cmcm")
+                                            rc = std::make_shared<MassCenterSeparation>(it.value(), spc);
                                         if (rc!=nullptr) {
                                             if (rc->min>=rc->max || rc->binwidth<=0)
                                                 throw std::runtime_error("min<max and binwidth>0 required for '" + it.key() + "'");
@@ -1147,6 +1199,9 @@ namespace Faunus {
 
                                     if (it.key()=="nonbonded_deserno")
                                         push_back<Energy::NonbondedCached<Tspace,DesernoMembrane<typename Tspace::Tparticle>>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded_desernoAA")
+                                        push_back<Energy::NonbondedCached<Tspace,DesernoMembraneAA<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);

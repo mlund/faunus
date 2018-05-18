@@ -852,7 +852,6 @@ namespace Faunus {
                 double dp=0;       //!< Translational displacement parameter [angstrom]
                 double dprot=0;    //!< Rotational displacement parameter [degrees]
                 double mw=1;       //!< Weight
-                double charge=0;   //!< Partial charge [e]
                 double sigma=0;    //!< Diamater for e.g Lennard-Jones etc. [angstrom]
                 double tension=0;  //!< Surface tension [kT/Å^2]
                 double tfe=0;      //!< Transfer free energy [J/mol/angstrom^2/M]

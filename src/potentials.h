@@ -334,53 +334,49 @@ namespace Faunus {
          * @brief Charge-nonpolar pair interaction
          */
         template<class Tparticle>
-            class ChargeNonpolar : public Coulomb {
+            class Polarizability : public Coulomb {
                 private:
                     double epsr;
-                    static bool alphaneutral;    // static to save memory as we may have
-                    PairMatrix<double> m; // many instances
+                    PairMatrix<double> m; 
 
                 public:
-                    ChargeNonpolar(const std::string &name="ionalpha") { PairPotentialBase::name=name; }
+                    Polarizability (const std::string &name="polar") { PairPotentialBase::name=name; }
 
                     inline void from_json(const json &j) override {
-                        bool _old = alphaneutral;
-                        alphaneutral = j.value("alphaneutral", alphaneutral);
-                        if (alphaneutral!=_old && m.size()>0)
-                            throw std::runtime_error("`alphaneutral` must be the same for all instances.");
                         epsr = j.at("epsr").get<double>();
                         double lB = pc::lB(epsr);
-                        for (auto &i : atoms<Tparticle>)
-                            for (auto &j : atoms<Tparticle>)
-                                if (!alphaneutral)
+                        for (auto &i : atoms<Tparticle>) 
+                            for (auto &j : atoms<Tparticle>) 
+                                if (fabs(i.p.charge)>1e-9 || fabs(j.p.charge)>1e-9) {
                                     m.set(i.id(), j.id(), -lB/2 *
-                                            ( i.charge*i.charge*j.alphax*pow(0.5*j.sigma,3) +
-                                              j.charge*j.charge*i.alphax*pow(0.5*i.sigma,3) ) );
+                                            ( i.p.charge*i.p.charge*j.alphax*pow(0.5*j.sigma,3) +
+                                              j.p.charge*j.p.charge*i.alphax*pow(0.5*i.sigma,3) ) );
+                                }
                                 else {
-                                    m.set(i.id(), j.id(), 0);
-                                    if (fabs(i.charge)>1e-9)
-                                        m.set(i.id(), j.id(), -lB/2*i.charge*i.charge*j.alphax*pow(0.5*j.sigma,3));
-                                    else if (fabs(j.charge)>1e-9)
-                                        m.set(i.id(), j.id(), -lB/2*j.charge*j.charge*i.alphax*pow(0.5*i.sigma,3));
+                                    m.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*
+                                            j.alphax*pow(0.5*j.sigma,3) );
                                 }
                     }
 
                     inline void to_json(json &j) const override {
-                        j = { {"epsr",epsr}, {"alphaneutral",alphaneutral}  };
+                        j = { {"epsr",epsr} };
                     }
 
                     double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2=r.squaredNorm();
-                        return m(a.id,b.id)/(r2*r2);
+                        if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9) 
+                            return m(a.id,b.id)/(r2*r2);
+                        else 
+                            return m(a.id,b.id)/(r2*r2*r2);
                     }
 
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-                        return 4*m(a.id,b.id)/(r2*r2*r2)*p;
+                        if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9) 
+                            return 4*m(a.id,b.id)/(r2*r2*r2)*p;
+                        else 
+                            return 6*m(a.id,b.id)/(r2*r2*r2*r2)*p;
                     }
             };
-
-        template<class Tparticle>
-            bool ChargeNonpolar<Tparticle>::alphaneutral=false;
 
         template<class Tparticle>
             class DesernoMembrane : public PairPotentialBase {
@@ -424,7 +420,7 @@ namespace Faunus {
 
                 WeeksChandlerAndersen<Tparticle> wca;
                 CosAttract cos2;
-                ChargeNonpolar<Tparticle> ionalpha;
+                Polarizability<Tparticle> polar;
                 int tail;
                 int aa;
 
@@ -437,7 +433,7 @@ namespace Faunus {
                 inline void from_json(const json &j) override {
                     wca = j;
                     cos2 = j;
-                    ionalpha = j;
+                    polar = j;
                     auto it = findName(atoms<Tparticle>, "TL");
                     if ( it!=atoms<Tparticle>.end() )
                         tail = it->id();
@@ -455,7 +451,7 @@ namespace Faunus {
                     wca.to_json(j);
                     cos2.to_json(_j);
                     j = merge(j,_j);
-                    ionalpha.to_json(_j);
+                    polar.to_json(_j);
                     j = merge(j,_j);
                 }
 
@@ -463,8 +459,9 @@ namespace Faunus {
                     double u=wca(a,b,r);
                     if (a.id==tail and b.id==tail)
                         u+=cos2(a,b,r);
-                    if (a.id==aa or b.id==aa)
-                        u+=ionalpha(a,b,r);
+                    if (a.id==aa or b.id==aa) {
+                        u+=polar(a,b,r);
+                    }
                     return u;
                 }
             };
@@ -730,7 +727,7 @@ namespace Faunus {
                                     uFunc _u = nullptr;
                                     if (it.key()=="coulomb") _u = CoulombGalore() = i;
                                     if (it.key()=="cos2") _u = CosAttract() = i;
-                                    if (it.key()=="ionalpha") _u = ChargeNonpolar<T>() = i;
+                                    if (it.key()=="polarizability") _u = Polarizability<T>() = i;
                                     if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
                                     if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
                                     if (it.key()=="repulsionr3") _u = RepulsionR3() = i;

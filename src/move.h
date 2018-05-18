@@ -325,7 +325,7 @@ namespace Faunus {
                         {"isotropic", Geometry::ISOTROPIC},
                         {"isochoric", Geometry::ISOCHORIC}
                     };
-                    decltype(methods)::const_iterator method;
+                    typename decltype(methods)::const_iterator method;
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc;
                     Average<double> msqd; // mean squared displacement

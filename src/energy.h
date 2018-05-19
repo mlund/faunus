@@ -1054,16 +1054,16 @@ namespace Faunus {
                         MPI_Barrier(mpi.comm);
                         MPI_Allgather(&min, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
 
-                        if ( weights.maxCoeff() >= samplings ) {
+                        if ( weights.mean() >= samplings ) {
                             MPI_Gather(penalty.data(), penalty.size(), MPI_DOUBLE,
                                     buffer.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
 
                             if (mpi.isMaster()) {
                                 penalty.setZero();
                                 for (int i=0; i<mpi.nproc(); i++)
-                                    penalty += double(weights[i]) * Eigen::Map<Eigen::MatrixXd>(
+                                    penalty += Eigen::Map<Eigen::MatrixXd>(
                                             buffer.data()+i*penalty.size(), penalty.rows(), penalty.cols() );
-                                penalty = ( penalty.array() - penalty.minCoeff() ) / double(weights.sum());
+                                penalty = penalty.array() - penalty.minCoeff();
                             }
 
                             MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);

@@ -1062,7 +1062,8 @@ namespace Faunus {
                                 penalty.setZero();
                                 for (int i=0; i<mpi.nproc(); i++)
                                     penalty += Eigen::Map<Eigen::MatrixXd>(
-                                            buffer.data()+i*penalty.size(), penalty.rows(), penalty.cols() );
+                                            buffer.data()+i*penalty.size(), penalty.rows(), penalty.cols() ) 
+                                            / (double)mpi.nproc();
                                 penalty = penalty.array() - penalty.minCoeff();
                             }
 

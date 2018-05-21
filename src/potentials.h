@@ -337,8 +337,7 @@ namespace Faunus {
             class Polarizability : public Coulomb {
                 private:
                     double epsr;
-                    PairMatrix<double> m_charged;
-                    PairMatrix<double> m_neutral; 
+                    PairMatrix<double> m; 
 
                 public:
                     Polarizability (const std::string &name="polar") { PairPotentialBase::name=name; }
@@ -348,8 +347,7 @@ namespace Faunus {
                         double lB = pc::lB(epsr);
                         for (auto &i : atoms<Tparticle>) {
                             for (auto &j : atoms<Tparticle>) { 
-                                m_charged.set(i.id(), j.id(), -lB/2 * i.alphax*pow(0.5*i.sigma,3) );
-                                m_neutral.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*
+                                m.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*
                                         j.alphax*pow(0.5*j.sigma,3) );
                             }
                         }
@@ -362,11 +360,11 @@ namespace Faunus {
                     double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2=r.squaredNorm();
                         double r4inv=1/(r2*r2);
-                        double u = m_neutral(a.id,b.id)/r2;
+                        double u = m(a.id,b.id)/r2;
                         if (fabs(a.charge)>1e-9)
-                            u += a.charge*a.charge*m_charged(b.id,a.id);
+                            u += -lB/2*b.alphax*pow(0.5*b.sigma,3)*a.charge*a.charge;
                         else if (fabs(b.charge)>1e-9) 
-                            u += b.charge*b.charge*m_charged(a.id,b.id);
+                            u += -lB/2*a.alphax*pow(0.5*a.sigma,3)*b.charge*b.charge;
                         return u*r4inv;
                     }
 
@@ -374,9 +372,9 @@ namespace Faunus {
                         double r6inv=1/(r2*r2*r2);
                         double f = 6*m_neutral(a.id,b.id)/r2;
                         if (fabs(a.charge)>1e-9)
-                            f += 4*a.charge*a.charge*m_charged(b.id,a.id);
+                            f += -2*lB*b.alphax*pow(0.5*b.sigma,3)*a.charge*a.charge;
                         else if (fabs(b.charge)>1e-9) 
-                            f += 4*b.charge*b.charge*m_charged(a.id,b.id);
+                            f += -2*lB*a.alphax*pow(0.5*a.sigma,3)*b.charge*b.charge;
                         return f*r6inv*p;
                     }
             };

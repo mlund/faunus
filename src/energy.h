@@ -1037,6 +1037,7 @@ namespace Faunus {
                 using Base::coord;
                 using Base::cnt;
                 using Base::f0;
+                using Base::file;
 
                 Eigen::VectorXi weights;// array w. mininum histogram counts
                 Eigen::VectorXd buffer; // receive buffer for penalty functions

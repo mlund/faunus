@@ -1068,6 +1068,8 @@ namespace Faunus {
                             }
 
                             MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
+                            std::ofstream f1(MPI::prefix + file);
+                            if (f1) f1 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
                             if (min>0 && !this->quiet)
                                 cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                     << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;

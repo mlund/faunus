@@ -337,7 +337,8 @@ namespace Faunus {
             class Polarizability : public Coulomb {
                 private:
                     double epsr;
-                    PairMatrix<double> m; 
+                    PairMatrix<double> m_charged;
+                    PairMatrix<double> m_neutral; 
 
                 public:
                     Polarizability (const std::string &name="polar") { PairPotentialBase::name=name; }
@@ -347,15 +348,9 @@ namespace Faunus {
                         double lB = pc::lB(epsr);
                         for (auto &i : atoms<Tparticle>) 
                             for (auto &j : atoms<Tparticle>) 
-                                if (fabs(i.p.charge)>1e-9 || fabs(j.p.charge)>1e-9) {
-                                    m.set(i.id(), j.id(), -lB/2 *
-                                            ( i.p.charge*i.p.charge*j.alphax*pow(0.5*j.sigma,3) +
-                                              j.p.charge*j.p.charge*i.alphax*pow(0.5*i.sigma,3) ) );
-                                }
-                                else {
-                                    m.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*
-                                            j.alphax*pow(0.5*j.sigma,3) );
-                                }
+                                m_charged.set(i.id(), j.id(), -lB/2 * i.alphax*pow(0.5*i.sigma,3) );
+                                m_neutral.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*
+                                        j.alphax*pow(0.5*j.sigma,3) );
                     }
 
                     inline void to_json(json &j) const override {
@@ -364,17 +359,23 @@ namespace Faunus {
 
                     double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2=r.squaredNorm();
-                        double u = m(a.id,b.id)/(r2*r2*r2);
-                        if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9) 
-                            u += m(a.id,b.id)/(r2*r2);
-                        return u;
+                        double r4inv=1/(r2*r2);
+                        double u = m_neutral(a.id,b.id)/r2;
+                        if (fabs(a.charge)>1e-9)
+                            u += a.charge*a.charge*m_charged(b.id,a.id);
+                        else if (fabs(b.charge)>1e-9) 
+                            u += b.charge*b.charge*m_charged(a.id,b.id);
+                        return u*r4inv;
                     }
 
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-                        double f = 6*m(a.id,b.id)/(r2*r2*r2*r2)*p;
-                        if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9) 
-                            return f += 4*m(a.id,b.id)/(r2*r2*r2)*p;
-                        return f;
+                        double r6inv=1/(r2*r2*r2);
+                        double f = 6*m_neutral(a.id,b.id)/r2;
+                        if (fabs(a.charge)>1e-9)
+                            f += 4*a.charge*a.charge*m_charged(b.id,a.id);
+                        else if (fabs(b.charge)>1e-9) 
+                            f += 4*b.charge*b.charge*m_charged(a.id,b.id);
+                        return f*r6inv*p;
                     }
             };
 

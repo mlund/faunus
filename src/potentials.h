@@ -346,11 +346,13 @@ namespace Faunus {
                     inline void from_json(const json &j) override {
                         epsr = j.at("epsr").get<double>();
                         double lB = pc::lB(epsr);
-                        for (auto &i : atoms<Tparticle>) 
-                            for (auto &j : atoms<Tparticle>) 
+                        for (auto &i : atoms<Tparticle>) {
+                            for (auto &j : atoms<Tparticle>) { 
                                 m_charged.set(i.id(), j.id(), -lB/2 * i.alphax*pow(0.5*i.sigma,3) );
                                 m_neutral.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*
                                         j.alphax*pow(0.5*j.sigma,3) );
+                            }
+                        }
                     }
 
                     inline void to_json(json &j) const override {

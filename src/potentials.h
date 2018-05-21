@@ -348,7 +348,7 @@ namespace Faunus {
                         for (auto &i : atoms<Tparticle>) {
                             for (auto &j : atoms<Tparticle>) { 
                                 m_neutral.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
-                                // titrating particles must be charged at the beginning
+                                // titrating particles must be charged in the beginning
                                 m_charged.set(i.id(), j.id(), -lB/2 * ( pow(i.p.charge,2)*j.alphax*pow(0.5*j.sigma,3)
                                         + pow(j.p.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
                             }
@@ -363,16 +363,18 @@ namespace Faunus {
                         double r2=r.squaredNorm();
                         double r4inv=1/(r2*r2);
                         double u = m_neutral(a.id,b.id)/r2;
-                        if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9)
+                        if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9) {
                             u += m_charged(a.id,b.id);
+                        }
                         return u*r4inv;
                     }
 
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
                         double r6inv=1/(r2*r2*r2);
                         double f = 6*m_neutral(a.id,b.id)/r2;
-                        if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9)
+                        if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9) {
                             f += 4*m_charged(a.id,b.id);
+                        }
                         return f*r6inv*p;
                     }
             };

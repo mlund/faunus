@@ -364,17 +364,17 @@ namespace Faunus {
 
                     double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2=r.squaredNorm();
+                        double u = m(a.id,b.id)/(r2*r2*r2);
                         if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9) 
-                            return m(a.id,b.id)/(r2*r2);
-                        else 
-                            return m(a.id,b.id)/(r2*r2*r2);
+                            u += m(a.id,b.id)/(r2*r2);
+                        return u;
                     }
 
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+                        double f = 6*m(a.id,b.id)/(r2*r2*r2*r2)*p;
                         if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9) 
-                            return 4*m(a.id,b.id)/(r2*r2*r2)*p;
-                        else 
-                            return 6*m(a.id,b.id)/(r2*r2*r2*r2)*p;
+                            return f += 4*m(a.id,b.id)/(r2*r2*r2)*p;
+                        return f;
                     }
             };
 

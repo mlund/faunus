@@ -92,7 +92,104 @@ namespace Faunus {
         }
 
         /**
-         * @brief Translate and rotate a molecular group
+         * @brief Swap the charge of a single atom
+         */
+        template<typename Tspace>
+            class AtomicSwapCharge : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    typedef typename Tspace::Tparticle Tparticle;
+                    Tspace& spc; // Space to operate on
+                    int molid=-1;
+                    double ln10 = log(10);
+                    double pKa, pH;
+                    Average<double> msqd; // mean squared displacement
+                    double _sqd, _bias; // squared displament
+                    std::string molname; // name of molecule to operate on
+                    Change::data cdata;
+
+                    void _to_json(json &j) const override {
+                        j = {
+                            {"pH", pH},
+                            {"pka", pKa},
+                            {"molid", molid},
+                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+                            {"molecule", molname}
+                        };
+                        _roundjson(j,3);
+                    }
+
+                    void _from_json(const json &j) override {
+                        assert(!molecules<Tpvec>.empty());
+                        try {
+                            molname = j.at("molecule");
+                            auto it = findName(molecules<Tpvec>, molname);
+                            if (it == molecules<Tpvec>.end())
+                                throw std::runtime_error("unknown molecule '" + molname + "'");
+                            molid = it->id();
+                            pH = j.value("pH", 7);
+                            pKa = j.value("pKa", 7);
+                            if (repeat<0) {
+                                auto v = spc.findMolecules(molid);
+                                repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
+                                if (repeat>0)
+                                    repeat = repeat * v.front().size();     // ...and for each atom
+                            }
+                        }
+                        catch (std::exception &e) {
+                            std::cerr << name << ": " << e.what();
+                            throw;
+                        }
+                    } //!< Configure via json object
+
+                    typename Tpvec::iterator randomAtom() {
+                        assert(molid>=0);
+                        auto mollist = spc.findMolecules( molid ); // all `molid` groups
+                        if (size(mollist)>0) {
+                            auto git = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
+                            if (!git->empty()) {
+                                auto p = slump.sample( git->begin(), git->end() ); // random particle iterator  
+                                cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
+                                cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
+                                return p; 
+                            }
+                        }
+                        return spc.p.end();
+                    }
+
+                    void _move(Change &change) override {
+                        auto p = randomAtom();
+                        if (p!=spc.p.end()) {
+                            auto& g = spc.groups[cdata.index];
+                            double oldcharge = p->charge;
+                            p->charge = fabs(oldcharge-1);
+                            _sqd = fabs(oldcharge-1) - oldcharge;
+                            change.groups.push_back( cdata ); // add to list of moved groups
+                            _bias = _sqd*(pH-pKa)*ln10; // one may add bias here...
+                        }
+                        else
+                            std::cerr << name << ": no atoms found" << std::endl;
+                    }
+
+                    double bias(Change &change, double uold, double unew) override {
+                        return _bias;
+                    } //!< adds extra energy change not captured by the Hamiltonian
+
+                    void _accept(Change &change) override { msqd += _sqd; }
+                    void _reject(Change &change) override { msqd += 0; }
+
+                public:
+                    AtomicSwapCharge(Tspace &spc) : spc(spc) {
+                        name = "swapcharge";
+                        repeat = -1; // meaning repeat N times
+                        cdata.atoms.resize(1);
+                        cdata.internal=true;
+                    }
+            };
+
+
+        /**
+         * @brief Translate and rotate a single atom
          */
         template<typename Tspace>
             class AtomicTranslateRotate : public Movebase {
@@ -756,6 +853,7 @@ namespace Faunus {
 #ifdef ENABLE_MPI
                                     if (it.key()=="temper") this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
 #endif
+                                    if (it.key()=="swapcharge") this->template push_back<Move::AtomicSwapCharge<Tspace>>(spc);
                                     if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc);
                                     if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
                                     if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);

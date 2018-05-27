@@ -947,8 +947,9 @@ namespace Faunus {
                         std::ifstream f(MPI::prefix+file);
                         if (f) {
                             cout << "Loading penalty function '" << MPI::prefix+file << "'" << endl;
+                            int oldf0, oldsamplings;
                             std::string hash;
-                            f >> hash >> f0 >> samplings;
+                            f >> hash >> oldf0 >> oldsamplings;
                             for (int row=0; row<penalty.rows(); row++)
                                 for (int col=0; col<penalty.cols(); col++)
                                     if (!f.eof())
@@ -1069,8 +1070,8 @@ namespace Faunus {
                             }
 
                             MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
-                            std::ofstream f1(MPI::prefix + file);
-                            if (f1) f1 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
+                            std::ofstream f3(MPI::prefix + "-" + file);
+                            if (f3) f3 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
                             if (min>0 && !this->quiet)
                                 cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                     << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;

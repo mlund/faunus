@@ -951,6 +951,7 @@ namespace Faunus {
                             int oldf0, oldsamplings;
                             std::string hash;
                             f >> hash >> oldf0 >> oldsamplings;
+                            cout << "rows " << penalty.rows() << " cols " << penalty.cols() << endl; 
                             for (int row=0; row<penalty.rows(); row++)
                                 for (int col=0; col<penalty.cols(); col++)
                                     if (!f.eof())

@@ -888,7 +888,7 @@ namespace Faunus {
                     size_t dim=0;
                     size_t cnt=0;       // number of calls to `sync()`
                     size_t nupdate;     // update frequency [steps]
-                    size_t samplings=1;
+                    size_t samplings;
                     double udelta=0;    // total energy change of updating penalty function
                     double scale;       // scaling factor for f0
                     double f0;          // penalty increment
@@ -906,6 +906,7 @@ namespace Faunus {
                         scale = j.value("scale", 0.8);
                         quiet = j.value("quiet", true);
                         nupdate = j.value("update", 0);
+                        samplings = j.value("samplings", 1);
                         nodrift = j.value("nodrift", true);
                         file = j.at("file").get<std::string>();
                         hisfile = j.value("histogram", "penalty-histogram.dat");

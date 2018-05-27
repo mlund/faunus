@@ -889,6 +889,7 @@ namespace Faunus {
                     size_t cnt=0;       // number of calls to `sync()`
                     size_t nupdate;     // update frequency [steps]
                     size_t samplings;
+                    size_t nconv=0;
                     double udelta=0;    // total energy change of updating penalty function
                     double scale;       // scaling factor for f0
                     double f0;          // penalty increment
@@ -967,6 +968,7 @@ namespace Faunus {
                         std::ofstream f1(MPI::prefix + file), f2(MPI::prefix + hisfile);
                         if (f1) f1 << "# " << f0 << " " << samplings << "\n" << penalty.array() - penalty.minCoeff() << endl;
                         if (f2) f2 << histo << endl;
+                        cout << "nconv is " << nconv << endl;
                         // add function to save to numpy-friendly file...
                     }
 
@@ -1015,6 +1017,7 @@ namespace Faunus {
                                 samplings = std::ceil( samplings / scale );
                                 histo.setZero();
                                 udelta += -min;
+                                nconv += 1;
                             }
                         }
                         coord = c;
@@ -1043,6 +1046,7 @@ namespace Faunus {
                 using Base::cnt;
                 using Base::f0;
                 using Base::file;
+                using Base::nconv;
 
                 Eigen::VectorXi weights;// array w. mininum histogram counts
                 Eigen::VectorXd buffer; // receive buffer for penalty functions
@@ -1074,7 +1078,8 @@ namespace Faunus {
                             }
 
                             MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
-                            std::ofstream f3(MPI::prefix + "-" + file);
+                            nconv += 1;
+                            std::ofstream f3(MPI::prefix + std::to_string(nconv) + file);
                             if (f3) f3 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
                             if (min>0 && !this->quiet)
                                 cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()

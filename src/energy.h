@@ -949,11 +949,9 @@ namespace Faunus {
                         std::ifstream f(MPI::prefix+file);
                         if (f) {
                             cout << "Loading penalty function '" << MPI::prefix+file << "'" << endl;
-                            double oldf0;
-                            int oldsamplings;
                             std::string hash;
-                            f >> hash >> oldf0 >> oldsamplings;
-                            cout << "f0 " << oldf0 << " samplings " << oldsamplings << endl;
+                            f >> hash >> f0 >> samplings;
+                            cout << "f0 " << f0 << " samplings " << samplings << endl;
                             for (int row=0; row<penalty.rows(); row++)
                                 for (int col=0; col<penalty.cols(); col++)
                                     if (!f.eof()) 
@@ -979,6 +977,7 @@ namespace Faunus {
                         j["nodrift"] = nodrift;
                         j["histogram"] = hisfile;
                         j["f0_final"] = f0;
+                        j["nconv"] = nconv;
                         auto& _j = j["coords"] = json::array();
                         for (auto rc : rcvec) {
                             json t;

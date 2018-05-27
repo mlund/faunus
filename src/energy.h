@@ -948,14 +948,18 @@ namespace Faunus {
                         std::ifstream f(MPI::prefix+file);
                         if (f) {
                             cout << "Loading penalty function '" << MPI::prefix+file << "'" << endl;
-                            int oldf0, oldsamplings;
+                            double oldf0;
+                            int oldsamplings;
                             std::string hash;
                             f >> hash >> oldf0 >> oldsamplings;
+                            cout << "f0 " << oldf0 << " samplings " << oldsamplings << endl;
                             cout << "rows " << penalty.rows() << " cols " << penalty.cols() << endl; 
                             for (int row=0; row<penalty.rows(); row++)
                                 for (int col=0; col<penalty.cols(); col++)
-                                    if (!f.eof())
+                                    if (!f.eof()) {
                                         f >> penalty(row,col);
+                                        cout <<  penalty(row,col) << endl;
+                                    }
                                     else
                                         throw std::runtime_error("penalty file dimension mismatch");
                             cout << "maxCoeff " << penalty.maxCoeff() << endl;

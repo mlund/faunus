@@ -957,6 +957,7 @@ namespace Faunus {
                                         f >> penalty(row,col);
                                     else
                                         throw std::runtime_error("penalty file dimension mismatch");
+                            cout << "maxCoeff " << penalty.maxCoeff() << endl;
                         }
                      }
 
@@ -1050,6 +1051,7 @@ namespace Faunus {
                 }
 
                 void update(const std::vector<double> &c) override {
+                    cout << "maxCoeff " << penalty.maxCoeff() << endl;
                     using namespace Faunus::MPI;
                     double uold = penalty[c];
                     if (++cnt % this->nupdate == 0 && f0>0) {

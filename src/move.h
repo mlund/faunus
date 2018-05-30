@@ -553,7 +553,7 @@ namespace Faunus {
                                             for (size_t i=i2+1; i<it->size(); i++)
                                                 index.push_back(i+offset);
                                         else
-                                            for (size_t i=0; i<i1; i++)
+                                            for (int i=0; i<i1; i++)
                                                 index.push_back(i+offset);
                                         i1+=offset;
                                         i2+=offset;
@@ -808,7 +808,7 @@ namespace Faunus {
 
                     void sync(State &other, Change &change) {
                         spc.sync( other.spc, change );
-                        pot.sync( other.pot, change );
+                        pot.sync( &other.pot, change );
                     }
                 }; //!< Contains everything to describe a state
 

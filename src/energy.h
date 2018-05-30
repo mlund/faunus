@@ -71,7 +71,6 @@ namespace Faunus {
                     kVectors.setZero();
                     Aks.setZero();
                     int startValue = 1 - int(ipbc);
-                    double factor = 1;
                     for (int kx = 0; kx <= kcc; kx++) {
                         double dkx2 = double(kx*kx);
                         for (int ky = -kcc*startValue; ky <= kcc; ky++) {
@@ -225,7 +224,7 @@ namespace Faunus {
                     if (eigenopt) // known at compile time
                         E = d.Aks.cwiseProduct( d.Qion.cwiseAbs2() ).sum();
                     else
-                        for (size_t k=0; k<d.Qion.size(); k++)
+                        for (int k=0; k<d.Qion.size(); k++)
                             E += d.Aks[k] * std::norm( d.Qion[k] );
                     return 2 * pc::pi / spc->geo.getVolume() * E * d.lB;
                 }
@@ -273,7 +272,7 @@ namespace Faunus {
                 public:
                     Tspace& spc;
 
-                    Ewald(const json &j, Tspace &spc) : spc(spc), policy(spc) {
+                    Ewald(const json &j, Tspace &spc) : policy(spc), spc(spc) {
                         name = "ewald";
                         data = j;
                         data.update( spc.geo.getLength() );
@@ -859,7 +858,7 @@ namespace Faunus {
                             cache.triangularView<Eigen::StrictlyUpper>() = (other->cache).template triangularView<Eigen::StrictlyUpper>();
                         else
                             for (auto &d : change.groups) {
-                                for (size_t i=0; i<d.index; i++)
+                                for (int i=0; i<d.index; i++)
                                     cache(i,d.index) = other->cache(i,d.index);
                                 for (size_t i=d.index+1; i<base::spc.groups.size(); i++)
                                     cache(d.index,i) = other->cache(d.index,i);
@@ -998,7 +997,7 @@ namespace Faunus {
 
                     virtual void update(const std::vector<double> &c) {
                         if (++cnt % nupdate == 0 && f0>0) {
-                            bool b = histo.minCoeff() >= samplings;
+                            bool b = histo.minCoeff() >= (int)samplings;
                             if (b && f0>0) {
                                 double min = penalty.minCoeff();
                                 penalty = penalty.array() - min;
@@ -1263,10 +1262,14 @@ namespace Faunus {
                         return du;
                     } //!< Energy due to changes
 
-                    void sync(Hamiltonian &other, Change &change) {
-                        assert(other.size()==size());
-                        for (size_t i=0; i<size(); i++)
-                            this->vec[i]->sync( other.vec[i].get(), change);
+                    void sync(Energybase* basePtr, Change &change) override {
+                        auto other = dynamic_cast<decltype(this)>(basePtr);
+                        if (other!=NULL) {
+                            if (other->size()==size())
+                                for (size_t i=0; i<size(); i++)
+                                    this->vec[i]->sync( other->vec[i].get(), change);
+                        } else
+                            throw std::runtime_error("hamiltonian mismatch");
                     }
 
             }; //!< Aggregates and sum energy terms

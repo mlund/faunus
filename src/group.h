@@ -187,7 +187,7 @@ namespace Faunus {
             bool contains(const T &a) const {
                 int d = &a - &(*(this->begin()));
                 if (d>=0)
-                    if (d<this->size())
+                    if ((size_t)d<this->size())
                         return true;
                 return false;
             } //!< Determines if particle belongs to (active part) of group

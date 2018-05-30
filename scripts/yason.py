@@ -4,6 +4,8 @@ import sys
 import json, sys, argparse
 try:
     import ruamel_yaml as yaml
+    import warnings
+    warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
 except:
     import yaml
 

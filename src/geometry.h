@@ -48,6 +48,8 @@ namespace Faunus {
                 distanceFunc = nullptr;//std::bind( &GeometryBase::vdist, this, _1, _2);
             }
 
+            virtual ~GeometryBase() {}
+
         }; //!< Base class for all geometries
 
         /** @brief Cuboidal box */

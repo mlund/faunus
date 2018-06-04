@@ -1,7 +1,7 @@
 #include "core.h"
 #include "move.h"
-#include "multipole.h"
 #include "mpi.h"
+#include "multipole.h"
 #include "docopt.h"
 #include <cstdlib>
 #include "ProgressBar.hpp"
@@ -9,7 +9,13 @@
 using namespace Faunus;
 using namespace std;
 
+#ifdef CUBOID_NOPBC
+typedef Geometry::CuboidNoPBC Tgeometry;
+#elif SPHERE
+typedef Geometry::Sphere Tgeometry;
+#else
 typedef Geometry::Cuboid Tgeometry;
+#endif
 typedef Particle<Charge> Tparticle;
 
 static const char USAGE[] =
@@ -42,9 +48,8 @@ R"(Faunus - the Monte Carlo code you're looking for!
 
 int main( int argc, char **argv )
 {
+    using namespace Faunus::MPI;
     try {
-        Faunus::MPI::MPIController mpi; // OK also if MPI is unavailable
-
         std::string version="Faunus Mk2";
 #ifdef GIT_COMMIT_HASH
         version += " git " + std::string(GIT_COMMIT_HASH);
@@ -93,7 +98,7 @@ int main( int argc, char **argv )
                 throw std::runtime_error("Error loading state file '" + state + "'");
         }
 
-        Analysis::CombinedAnalysis analysis(j, sim.space(), sim.pot());
+        Analysis::CombinedAnalysis analysis(j.at("analysis"), sim.space(), sim.pot());
 
         auto& loop = j.at("mcloop");
         int macro = loop.at("macro");

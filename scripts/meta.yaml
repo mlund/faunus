@@ -1,13 +1,13 @@
 package:
   name: faunus
-  version: "latest"
+  version: {{ GIT_BUILD_STR }}
 
 source:
   #git_rev: 1.1.0
   git_url: https://github.com/mlund/neofaunus.git
 
 build:
-  number: 0
+  number: {{ GIT_DESCRIBE_NUMBER }}
 
 requirements:
   build:
@@ -27,9 +27,8 @@ requirements:
     - python >=3
 
 build:
-    script_env:
-        - PATH
-
+  script_env:
+    - PATH
 
 about:
   home: http://mlund.github.io/neofaunus

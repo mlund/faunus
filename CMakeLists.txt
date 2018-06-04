@@ -111,9 +111,9 @@ ExternalProject_Add( pybind11
     URL "https://github.com/pybind/pybind11/archive/v2.2.1.tar.gz"
     URL_MD5 bab1d46bbc465af5af3a4129b12bfa3b
     UPDATE_DISCONNECTED ON
-    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-ExternalProject_Get_Property(pybind11 source_dir)
-set(Pybind11IncludeDir ${source_dir}/include)
+    INSTALL_DIR "${CMAKE_SOURCE_DIR}/3rdparty"
+    CMAKE_ARGS -DPYBIND11_TEST=OFF -DPYBIND11_INSTALL=ON -DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty/
+    LOG_DOWNLOAD ON)
 
 # EIGEN
 
@@ -204,11 +204,22 @@ set(hdrs
 
 add_executable(tests EXCLUDE_FROM_ALL src/tests.cpp ${hdrs})
 add_dependencies(tests modernjson doctest eigen range-v3 xdrfile)
+target_link_libraries(tests ${LINKLIBS})
 add_test(NAME tests COMMAND tests)
 
 add_executable(faunus src/faunus.cpp ${hdrs})
-add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar)
+add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
 target_link_libraries(faunus xdrfile docopt ${LINKLIBS})
+
+add_executable(faunus_nopbc src/faunus.cpp ${hdrs})
+add_dependencies(faunus_nopbc modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
+target_link_libraries(faunus_nopbc xdrfile docopt ${LINKLIBS})
+set_target_properties(faunus_nopbc PROPERTIES COMPILE_DEFINITIONS "CUBOID_NOPBC")
+
+add_executable(faunus_sphere src/faunus.cpp ${hdrs})
+add_dependencies(faunus_sphere modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
+target_link_libraries(faunus_sphere xdrfile docopt ${LINKLIBS})
+set_target_properties(faunus_sphere PROPERTIES COMPILE_DEFINITIONS "SPHERE")
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
@@ -229,14 +240,11 @@ if (ENABLE_PYTHON)
     endif()
 
     if (PYTHONLIBS_FOUND)
-        #add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/src/pybind11)
-        #pybind11_add_module(pyfaunus src/pyfaunus.cpp)
-        add_library(pyfaunus SHARED EXCLUDE_FROM_ALL src/pyfaunus.cpp)
-        set_target_properties(pyfaunus PROPERTIES PREFIX "")
-        set_target_properties(pyfaunus PROPERTIES SUFFIX ".so")
-        target_link_libraries(pyfaunus ${PYTHON_LIBRARY} xdrfile)
-        INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
-        add_dependencies(pyfaunus modernjson eigen range-v3 xdrfile pybind11)
+        find_package(pybind11 PATHS ${CMAKE_SOURCE_DIR}/3rdparty/share/cmake/pybind11/)
+        if (pybind11_FOUND)
+            message("Adding pyfaunus target.")
+            pybind11_add_module(pyfaunus src/pyfaunus.cpp)
+        endif()
     endif ()
 
 endif ()
@@ -266,6 +274,8 @@ set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
 # Install targets
 
 install(TARGETS faunus DESTINATION bin)
+install(TARGETS faunus_nopbc DESTINATION bin)
+install(TARGETS faunus_sphere DESTINATION bin)
 
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
 
@@ -277,6 +287,12 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/examples/bulk.yml
     ${CMAKE_SOURCE_DIR}/examples/water.yml
     ${CMAKE_SOURCE_DIR}/examples/water.xyz
+    ${CMAKE_SOURCE_DIR}/examples/membrane.yml
+    ${CMAKE_SOURCE_DIR}/examples/membrane.state
+    ${CMAKE_SOURCE_DIR}/examples/lipid.xyz
+    ${CMAKE_SOURCE_DIR}/examples/penalty.yml
+    ${CMAKE_SOURCE_DIR}/examples/isochoric.yml
+    ${CMAKE_SOURCE_DIR}/examples/isochoric.xyz
     DESTINATION share/faunus/examples)
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")

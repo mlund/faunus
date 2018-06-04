@@ -21,13 +21,17 @@ For example:
 
 ~~~ yaml
 energy:
-    - isobaric: { P/atm: 1 }
-    - sasa: { molarity: 0.2, radius: 1.4 }
-    - confine: { type: sphere, radius: 10,
-                 molecules: ["water"] }
-    - nonbonded_coulomblj:
-        lennardjones: { mixing: LB }
-        coulomb: { type: plain, epsr: 80, cutoff: 10 }
+    - isobaric: {P/atm: 1}
+    - sasa: {molarity: 0.2, radius: 1.4 }
+    - confine: {type: sphere, radius: 10,
+                 molecules: [water]}
+    - nonbonded:
+        default: # applied to all atoms
+        - lennardjones: {mixing: LB}
+        - coulomb: {type: plain, epsr: 1, cutoff: 12}
+        Na CH:   # overwrite specific atom pairs
+        - wca: { mixing: LB }
+
     - ...
 ~~~
 
@@ -40,42 +44,46 @@ energies, entropies, pressure etc.
 
 ## External Pressure <a name="isobaric"></a>
 
-`isobaric`   | Description
--------------|-------------------------------------------------------
-`P/unit`     | External pressure where unit can be `mM`, `atm`, or `Pa`.
-
 This adds the following pressure term[^frenkel] to the Hamiltonian, appropriate for
 MC moves in $\ln V$:
 
 $$
-U = PV - k_BT\left ( N + 1 \right ) \ln V
+    U = PV - k_BT\left ( N + 1 \right ) \ln V
 $$
 
 where $N$ is the total number of molecules and atomic species.
 
 [^frenkel]: _Frenkel and Smith, 2nd Ed., Chapter 5.4_.
 
-## Nonbonded Interactions <a name="nonbonded"></a>
+`isobaric`   | Description
+-------------|-------------------------------------------------------
+`P/unit`     | External pressure where unit can be `mM`, `atm`, or `Pa`.
 
-`energy`               | $u_{ij}$
----------------------- | --------------------------
-`nonbonded_coulomblj`  | `coulomb`+`lennardjones`
-`nonbonded_coulombhs`  | `coulomb`+`hardsphere`
-`nonbonded_coulombwca` | `coulomb`+`wca`
-`nonbonded_pmwca`      | `coulomb`+`wca` (`type=plain`, `cutoff`$=\infty$)
+
+## Nonbonded Interactions <a name="nonbonded"></a>
 
 This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise additive potential, $u_{ij}$,
 
 $$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
 
-**Note:** the pair-potential can be a combination of several potentials, but this must currently be defined at _compile
-time_ and cannot be arbitrarily selected from input. It is straight forward to add more by editing the class
+**Note:** the pair-potential can be a combination of several potentials defined at runtime.
+However, for optimal performance we include certain hard-coded combinations, defined at _compile time_.
+It is straight forward to add more by editing the class
 `Energy::Hamiltonian` found in `src/energy.h` and then re-compile.
 {: .notice--info}
 
 Below is a description of possible pair-potentials and their configuration.
 
-### Coulomb
+`energy`               | $u_{ij}$
+---------------------- | ----------------------------------
+`nonbonded`            | Any combination of pair potentials
+`nonbonded_coulomblj`  | `coulomb`+`lennardjones`
+`nonbonded_coulombhs`  | `coulomb`+`hardsphere`
+`nonbonded_coulombwca` | `coulomb`+`wca`
+`nonbonded_pmwca`      | `coulomb`+`wca` (`type=plain`, `cutoff`$=\infty$)
+
+
+### Electrostatics
 
  `coulomb`   |  Description
  ----------- |  -------------------------------------------------
@@ -85,7 +93,7 @@ Below is a description of possible pair-potentials and their configuration.
  `utol=1e-5` |  Error tolerence for splining
 
 This is a multipurpose potential that handles several electrostatic methods.
-Beyond a spherical cutoff, $R_c$, the potential is zero while if
+Beyond a spherical real-space cutoff, $R_c$, the potential is zero while if
 below,
 
 $$
@@ -117,7 +125,7 @@ self energies are automatically added to the Hamiltonian, activating additional 
 
 `type=ewald`         | Description
 -------------------- | ---------------------------------------------------------------------
-`cutoffK`            | Reciprocal-space cutoff
+`kcutoff`            | Reciprocal-space cutoff
 `epss=0`             | Dielectric constant of surroundings, $\varepsilon_{surf}$ (0=tinfoil)
 `ipbc=false`         | Use isotropic periodic boundary conditions, IPBC.
 `spherical_sum=true` | Spherical/ellipsoidal summation in reciprocal space; cubic if `false`.
@@ -136,7 +144,7 @@ $$
 where
 
 $$
-f = \frac{1}{4\pi\varepsilon_0\varepsilon_r} \quad\quad V=L_xL_yL_z
+    f = \frac{1}{4\pi\varepsilon_0\varepsilon_r} \quad\quad V=L_xL_yL_z
 $$
 
 $$
@@ -148,9 +156,68 @@ $$
 {\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
 $$
 
+In the case of isotropic periodic boundaries (`ipbc=true`), the orientational degeneracy of the
+periodic unit cell is exploited to mimic an isotropic environment, reducing the number
+of wave-vectors by one fourth compared with PBC Ewald.
+For point charges, IPBC introduce the modification,
+
+$$
+Q^q = \sum_jq_j\prod_{\alpha\in\{x,y,z\}}\cos\left(\frac{2\pi}{L_{\alpha}}n_{\alpha} r_{\alpha,j}\right)
+$$
+
+while for point dipoles,
+
+$$
+Q^{\mu} = \sum_j\boldsymbol{\mu}_j\cdot\nabla_j\left(\prod_{\alpha \in\{x,y,z\}}\cos\left(\frac{2\pi}{L_{\alpha}}n_{\alpha}r_{\alpha,j}\right)\right).
+$$
+
 **Limitations:** Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles
 and Widom insertion are currently unsupported.
 {: .notice--info}
+
+### Charge-Nonpolar
+
+The energy when the field from a point charge, $z_i$, induces a dipole in a polarizable particle of unit-less excess polarizability, $\alpha_j=\left ( \frac{\epsilon_j-\epsilon_r}{\epsilon_r+2\epsilon_r}\right ) a^3$, is
+
+$$
+    \beta u_{ij} = -\frac{\lambda_B z_i^2 \alpha_j}{2r_{ij}^4}
+$$
+
+where $a_j$ is the radius of the non-polar particle and $\alpha_j$ is set in
+the atom topology, `alphax`.
+If `alphaneutral=true` it is required that one of the particles
+is charged, while the other is neutral.
+For non-polar particles in a polar medium, $\alpha_i$ is a negative number.
+For more information, see
+[J. Israelachvili's book, Chapter 5.](https://www.sciencedirect.com/science/book/9780123751829)
+
+`ionalpha`           | Description
+-------------------- | ---------------------------------------
+`epsr`               | Relative dielectric constant of medium
+`alphaneutral=false` | Do not polarize charged particle
+
+**Limitations:**
+Charge-polarizability products for each pair of species is evaluated once during
+construction and based on the defined atom types.
+Also, `alphaneutral` must be the same for all instances of the potential.
+{: .notice--info}
+
+
+### Cosine Attraction
+An attractive potential used for [coarse grained lipids](http://dx.doi.org/10/chqzjk) and with the form,
+
+$$
+    \beta u(r) = -\epsilon \cos^2 \left ( \frac{\pi(r-r_c)}{2w_c} \right )
+$$
+
+for $r_c\leq r \leq r_c+w_c$. For $r<r_c$, $\beta u=-\epsilon$,
+while zero for $r>r_c+w_c$.
+
+`cos2` | Description
+------ | --------------------------
+`eps`  | Depth, $\epsilon$ (kJ/mol)
+`rc`   | Width, $r_c$ (Å)
+`wc`   | Decay range, $w_c$ (Å)
 
 ### Hard Sphere
 `hardsphere`
@@ -165,7 +232,7 @@ The hard sphere potential does not take any input. Radii are read from the atoml
 `mixing=LB`    | Mixing rule. `LB`
 `custom`       | Custom $\epsilon$ and $\sigma$ combinations
 
-The Lennard-Jones potential has the form:
+The Lennard-Jones potential consists of a repulsive and attractive term,
 
 $$
 u_{ij}^{\text{LJ}} = 4\epsilon_{ij} \left (
@@ -190,17 +257,18 @@ lennardjones:
 
 ### Weeks-Chandler-Andersen
 
+Like Lennard-Jones but cut and shifted to zero at the minimum, forming a
+purely [repulsive potential](http://dx.doi.org/ct4kh9),
+
+$$
+    u_{ij} = u_{ij}^{\text{LJ}} + \epsilon_{ij} \quad \textrm{for} \quad r<2^{1/6}\sigma_{ij}
+$$
+
 `wca`        | Description
 ------------ | -------------------------------------------
 `mixing=LB`  | Mixing rule; only `LB` available.
 `custom`     | Custom $\epsilon$ and $\sigma$ combinations
 
-Like Lennard-Jones but cut and shifted to zero at the minimum, forming a
-purely [repulsive potential](http://dx.doi.org/ct4kh9),
-
-$$
-u_{ij} = u_{ij}^{\text{LJ}} + \epsilon_{ij} \quad \textrm{for} \quad r<2^{1/6}\sigma_{ij}
-$$
 
 ## Bonded Interactions
 
@@ -209,16 +277,16 @@ in a molecule definition (topology) or in energy/bonded where the latter can be
 used to add inter-molecular bonds:
 
 ~~~ yaml
+energy:
+    - bonded:
+        bondlist: # absolute index
+           - harmonic: { index: [56,921], k: 10, req: 15 }
 moleculelist:
     - water:
         structure: water.xyz
         bondlist: # index relative to molecule
             - harmonic: { index: [0,1], k: 100, req: 1.0 }  
             - harmonic: { index: [0,2], k: 100, req: 1.0 }
-energy:
-    - bonded:
-        bondlist: # absolute index
-           - harmonic: { index: [56,921], k: 10, req: 15 }
 ~~~
 
 Bonded potential types:
@@ -259,6 +327,7 @@ for $r < r_m$; infinity otherwise.
 ------------ | -------------------------------------------
 `type`       | Confinement geometry: `sphere`, `cylinder`, or `cuboid`
 `molecules`  | List of molecules to confine (names)
+`com=false`  | Apply to molecular mass center
 `k`          | Harmonic spring constant in kJ/mol or `inf` for infinity
 
 Confines `molecules` in a given region of the simulation container by applying a harmonic potential on
@@ -324,9 +393,101 @@ via a [SASA calculation](http://doi.org/dws4qm) for each atom.
 The energy term is:
 
 $$
-U = \sum_i^N A_{\text{sasa},i} \left ( \gamma_i + c_s \varepsilon_{\text{tfe},i} \right )
+    U = \sum_i^N A_{\text{sasa},i} \left ( \gamma_i + c_s \varepsilon_{\text{tfe},i} \right )
 $$
 
 where $c_s$ is the molar concentration of the co-solute;
 $\gamma_i$ is the atomic surface tension; and $\varepsilon_{\text{tfe},i}$ the atomic transfer free energy,
 both specified in the atom topology with `tension` and `tfe`, respectively.
+
+## Penalty Function
+
+This is a version of the flat histogram or Wang-Landau sampling method where
+an automatically generated bias or penalty function, $f(\mathcal{X}^d)$,
+is applied to the system along a one dimensional ($d=1$)
+or two dimensional ($d=2$) reaction coordinate, $\mathcal{X}^d$, so that the configurational integral reads,
+
+$$
+    Z(\mathcal{X}^d) = e^{-\beta f(\mathcal{X}^d)} \int e^{-\beta \mathcal{H}(\mathcal{R}, \mathcal{X}^d)} d \mathcal{R}.
+$$
+
+where $\mathcal{R}$ denotes configurational space at a given $\mathcal{X}$.
+For every visit to a state along the coordinate, a small penalty energy, $f_0$, is
+added to $f(\mathcal{X}^d)$ until $Z$ is equal for all $\mathcal{X}$.
+Thus, during simulation the free energy landscape is flattened, while the
+true free energy is simply the negative of the generated bias function,
+
+$$
+    \beta A(\mathcal{X}^d) = -\beta f(\mathcal{X}^d) = -\ln\int e^{-\beta \mathcal{H}(\mathcal{R}, \mathcal{X}^d)}  d \mathcal{R}.
+$$
+
+To reduce fluctuations, $f_0$ can be periodically reduced (`update`, `scale`) as $f$ converges.
+At the end of simulation, the penalty function is saved to disk as an array ($d=1$) or matrix ($d=2$).
+Should the penalty function file be available when starting a new simulation, it is automatically loaded
+and used as an initial guess.
+This can also be used to run simulations with a _constant bias_ by setting $f_0=0$.
+
+Example setup where the $x$ and $y$ positions of atom 0 are penalized to achieve uniform sampling:
+
+~~~ yaml
+energy:
+- penalty:
+    f0: 0.5
+    scale: 0.9
+    update: 1000
+    file: penalty.dat
+    coords:
+    - atom: {index: 0, property: "x", range: [-2.0,2.0], resolution: 0.1}
+    - atom: {index: 0, property: "y", range: [-2.0,2.0], resolution: 0.1}
+~~~
+
+Options:
+
+`penalty`     |  Description
+------------- | --------------------
+`f0`          |  Penalty energy increment ($kT$)
+`update`      |  Interval between scaling of `f0`
+`scale=0.8`   |  Scaling factor for `f0`
+`nodrift=true`|  Suppress energy drift
+`quiet=false` |  Set to true to get verbose output
+`file`        |  Name of saved/loaded penalty function
+`histogram`   |  Name of saved histogram (not required)
+`coords`      |  Array of _one or two_ coordinates
+
+The coordinate, $\mathcal{X}$, can be freely composed by one or two
+of the following types (via `coord`):
+
+`atom`        | Single atom properties
+------------- | ----------------------------------
+`index`       | Atom index
+`property`    | `x`, `y`, `z`, `charge`
+`range`       | Array w. [min:max] value
+`resolution`  | Resolution along coordinate
+
+`cmcm`        | Mass-center separation
+------------- | -----------------------------------
+`index`       | Array w. exactly two molecule index
+`range`       | Array w. [min:max] separation
+`resolution`  | Resolution along coordinate
+`dir=[1,1,1]` | Directions for distance calc.
+
+`system`      | System property
+------------- | -----------------------------------
+`property`    | 
+`volume`      | System volume
+
+### Multiple Walkers with MPI
+
+If compiled with MPI, the master process collects the bias function from all nodes
+upon penalty function `update`.
+The _average_ is then re-distributed, offering [linear parallellizing](http://dx.doi.org/10/b5pc4m)
+of the free energy sampling. It is crucial that the walk in coordinate space differs on the different
+nodes, i.e. by specifying a different random number seed; start configuration; or displacement parameter.
+File output and input are prefixed with `mpi{rank}.`
+
+**Information:**
+Flat histogram methods are commonly attributed to [Wang and Landau (2001)](http://dx.doi.org/10/bbdg7j)
+but the idea appears in earlier works, for example by
+[Hunter and Reinhardt (1995)](http://dx.doi.org/10/fns6dq) and
+[Engkvist and Karlström (1996)](http://dx.doi.org/10/djjk8z).
+

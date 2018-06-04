@@ -449,8 +449,7 @@ namespace Faunus
      *
      */
     template<class T, class Tint=int>
-        Tint to_bin( T x, T dx = 1 )
-        {
+        Tint to_bin( T x, T dx = 1 ) {
             return (x < 0) ? Tint(x / dx - 0.5) : Tint(x / dx + 0.5);
         }
 
@@ -596,59 +595,97 @@ namespace Faunus
     /**
      * @brief Container for data between pairs
      *
-     * This will maintain a symmetric, dynamic NxN matrix for storing data
-     * about pairs.
-     * Use the `set()` function for setting values and the function
-     * operator for access:
+     * Symmetric, dynamic NxN matrix for storing data
+     * about pairs. Set values with `set()`. If `triangular==true`
+     * the memory usage is reduced but introduces an `if`-statement
+     * upon access.
      *
-     * ~~~{.cpp}
-     * int i=2,j=3; // particle type, for example
-     * PairMatrix<double> m;
-     * m.set(i,j,12.0);
-     * cout << m(i,j);         // -> 12.0
-     * cout << m(i,j)==m(j,i); // -> true
+     * ~~~ cpp
+     *     int i=2,j=3; // particle type, for example
+     *     PairMatrix<double> m;
+     *     m.set(i,j,12.0);
+     *     cout << m(i,j);         // -> 12.0
+     *     cout << m(i,j)==m(j,i); // -> true
      * ~~~
      */
-    template<class T>
-        class PairMatrix
-        {
+    template<class T, bool triangular=false>
+        class PairMatrix {
+            private:
+                T __val; // default value when resizing
+                std::vector<std::vector<T>> m;
             public:
-                std::vector<std::vector<T>> m; // symmetric matrix (mem.wasteful - fast access)
-                void resize( size_t n )
-                {
+                void resize(size_t n) {
                     m.resize(n);
-                    for ( auto &i : m )
-                        i.resize(n, T());
+                    for (size_t i=0; i<m.size(); i++)
+                        if (triangular==true)
+                            m[i].resize(i+1, __val);
+                        else
+                            m[i].resize(n, __val);
                 }
 
-                PairMatrix( size_t n = 0 ) { resize(n); }
+                PairMatrix(size_t n=0, T val=T()) : __val(val) {
+                    resize(n);
+                }
 
                 auto size() const { return m.size(); }
 
-                const T& operator()( size_t i, size_t j ) const
-                {
+                const T& operator()(size_t i, size_t j) const {
+                    if (triangular==true)
+                        if (j>i)
+                            std::swap(i,j);
                     assert(i < m.size());
                     assert(j < m[i].size());
                     return m[i][j];
                 }
 
-                void set( size_t i, size_t j, T val )
-                {
-                    size_t n = std::max(i, j);
-                    if ( n >= m.size())
-                        resize(n + 1);
-                    m[i][j] = m[j][i] = val;
+                void set(size_t i, size_t j, T val) {
+                    if (j>i)
+                        std::swap(i, j);
+                    if (i>=m.size())
+                        resize(i+1);
+                    if (triangular==false)
+                        m[j][i] = val;
+                    m[i][j] = val;
                 }
         };
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] PairMatrix")
     {
         int i=2,j=3; // particle type, for example
-        PairMatrix<double> m;
-        m.set(i,j,12.1);
-        CHECK(m.size()==4);
-        CHECK(m(i,j)==12.1);
-        CHECK(m(i,j)==m(j,i));
+
+        SUBCASE("full matrix") {
+            PairMatrix<double,false> m;
+            m.set(i,j,12.1);
+            CHECK(m.size()==4);
+            CHECK(m(i,j)==12.1);
+            CHECK(m(i,j)==m(j,i));
+            CHECK(m(0,2)==0);
+            CHECK(m(2,0)==0);
+        }
+
+        SUBCASE("full matrix - default value") {
+            PairMatrix<double,false> m(5,3.1);
+            for (size_t i=0; i<5; i++)
+                for (size_t j=0; j<5; j++)
+                    CHECK(m(i,j)==3.1);
+        }
+
+        SUBCASE("triangular matrix - default value") {
+            PairMatrix<double,true> m(5,3.1);
+            for (size_t i=0; i<5; i++)
+                for (size_t j=0; j<5; j++)
+                    CHECK(m(i,j)==3.1);
+        }
+
+        SUBCASE("triangular matrix") {
+            PairMatrix<double,true> m;
+            m.set(i,j,12.1);
+            CHECK(m.size()==4);
+            CHECK(m(i,j)==12.1);
+            CHECK(m(i,j)==m(j,i));
+            CHECK(m(0,2)==0);
+            CHECK(m(2,0)==0);
+        }
     }
 #endif
 
@@ -660,61 +697,66 @@ namespace Faunus
             Tvec _bw, _lo, _hi;
             int _rows, _cols;
         public:
-            Table( const Tvec &bw = {1, 1}, const Tvec &lo = {0, 0}, const Tvec &hi = {2, 2} )
-            {
+            Table( const Tvec &bw = {1, 1}, const Tvec &lo = {0, 0}, const Tvec &hi = {2, 2} ) {
+                reInitializer(bw, lo, hi);
+            }
+
+            // required for assignment from Eigen::Matrix and Eigen::Array objects
+            template<typename OtherDerived>
+                Table(const Eigen::MatrixBase<OtherDerived>& other) : base(other) {}
+            template<typename OtherDerived>
+                Table& operator=(const Eigen::MatrixBase<OtherDerived>& other) {
+                    this->base::operator=(other);
+                    return *this;
+                }
+            template<typename OtherDerived>
+                Table(const Eigen::ArrayBase<OtherDerived>& other) : base(other) {}
+            template<typename OtherDerived>
+                Table& operator=(const Eigen::ArrayBase<OtherDerived>& other) {
+                    this->base::operator=(other);
+                    return *this;
+                }
+
+            void reInitializer( const Tvec &bw, const Tvec &lo, const Tvec &hi ) {
+                assert( bw.size()==1 || bw.size()==2 );
+                assert( bw.size()==lo.size() && lo.size()==hi.size() );
                 _bw = bw;
                 _lo = lo;
                 _hi = hi;
                 _rows = (_hi[0] - _lo[0]) / _bw[0] + 1.;
-                _cols = (_hi[1] - _lo[1]) / _bw[1] + 1.;
+                if (bw.size()==2)
+                    _cols = (_hi[1] - _lo[1]) / _bw[1] + 1;
+                else
+                    _cols = 1;
                 base::resize(_rows, _cols);
                 base::setZero();
             }
 
-            void reInitializer( Tvec &bw, Tvec &lo, Tvec &hi )
-            {
-                _bw = bw;
-                _lo = lo;
-                _hi = hi;
-                _rows = (_hi[0] - _lo[0]) / _bw[0] + 1.;
-                _cols = (_hi[1] - _lo[1]) / _bw[1] + 1.;
-                base::resize(_rows, _cols);
-                base::setZero();
-            }
-
-            void clear() { base::setZero(); }
-
-            void round( Tvec &v )
-            {
+            void round( Tvec &v ) const {
                 for ( Tvec::size_type i = 0; i != v.size(); ++i )
                     v[i] = (v[i] >= 0) ? int(v[i] / _bw[i] + 0.5) * _bw[i] : int(v[i] / _bw[i] - 0.5) * _bw[i];
             }
 
-            void to_index( Tvec &v )
-            {
-                for ( Tvec::size_type i = 0; i != v.size(); ++i )
-                {
+            void to_index(Tvec &v) const {
+                for (Tvec::size_type i = 0; i != v.size(); ++i) {
                     v[i] = (v[i] >= 0) ? int(v[i] / _bw[i] + 0.5) : int(v[i] / _bw[i] - 0.5);
                     v[i] = v[i] - _lo[i] / _bw[i];
                 }
                 v.resize(2, 0);
             }
 
-            Tcoeff &operator[]( const Tvec &v )
-            {
+            Tcoeff &operator[](const Tvec &v) {
                 return base::operator()(v[0], v[1]);
             }
 
-            bool isInRange( const Tvec &v )
-            {
+            bool isInRange(const Tvec &v) const {
                 bool b = true;
                 for ( Tvec::size_type i = 0; i != v.size(); ++i )
                     b = b && v[i] >= _lo[i] && v[i] <= _hi[i];
                 return b;
             }
 
-            Tvec hist2buf( int &size )
-            {
+            Tvec hist2buf( int &size ) const {
                 Tvec sendBuf;
                 for ( int i = 0; i < _cols; ++i )
                     for ( int j = 0; j < _rows; ++j )
@@ -722,8 +764,7 @@ namespace Faunus
                 return sendBuf;
             }
 
-            void buf2hist( Tvec &v )
-            {
+            void buf2hist(const Tvec &v) {
                 assert(!v.empty());
                 base::setZero();
                 int p = v.size() / this->size(), n = 0;
@@ -739,11 +780,9 @@ namespace Faunus
                 }
             }
 
-            base getBlock( const Tvec &v )
-            { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
-                Tvec w = {0, 0, 0, 0};
-                switch (v.size())
-                {
+            base getBlock( const Tvec &v ) { // {xmin,xmax} or {xmin,xmax,ymin,ymax}
+                Tvec w(4,0);
+                switch (v.size()) {
                     case (1):w[0] = w[1] = (v[0] - _lo[0]) / _bw[0];
                              w[3] = _cols - 1;
                              break;
@@ -761,18 +800,11 @@ namespace Faunus
                 return this->block(w[0], w[2], w[1] - w[0] + 1, w[3] - w[2] + 1); // xmin,ymin,rows,cols
             }
 
-            Tcoeff avg( const Tvec &v )
-            {
+            Tcoeff avg( const Tvec &v ) const {
                 return this->getBlock(v).mean();
             }
 
-            void translate( Tcoeff s )
-            {
-                *this += base::Constant(_rows, _cols, s);
-            }
-
-            void save( const std::string &filename, Tcoeff scale = 1, Tcoeff translate = 0 )
-            {
+            void save( const std::string &filename, Tcoeff scale = 1, Tcoeff translate = 0 ) const {
                 Eigen::VectorXd v1(_cols + 1), v2(_rows + 1);
                 v1(0) = v2(0) = base::size();
                 for ( int i = 1; i != _cols + 1; ++i )

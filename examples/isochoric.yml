@@ -1,0 +1,54 @@
+comment: |
+    Three-bead membrane model ala Deserno.
+    More information: doi:10/chqzjk
+
+temperature: 300
+random: {seed: hardware}
+geometry: {length: [1000, 1000, 100]}
+mcloop: {macro: 10, micro: 100}
+
+atomlist:
+    - TL: {sigma: 10, eps: 2.48, dp: 2}
+    - HD: {sigma: 10, eps: 2.48, dp: 2}
+
+moleculelist:
+    - lipid:
+        structure: "lipid.xyz"
+        bondlist:
+            - fene:     {index: [0,1], k: 0.744, rmax: 15}
+            - fene:     {index: [1,2], k: 0.744, rmax: 15}
+            - harmonic: {index: [0,2], k: 0.124, req: 40}
+
+insertmolecules:
+    - lipid: {N: 510, positions: isochoric.xyz }
+
+energy:
+    - isobaric: {P/atm: 0}
+    - bonded: {}
+    - nonbonded:
+        cutoff_g2g: 42
+        default:
+            - wca: {mixing: LB}
+        TL TL:
+            - wca: {mixing: LB}
+            - cos2: {rc: 11.2246, eps: 2.48, wc: 16}
+    - penalty:
+        file: penalty.dat
+        f0: 0.5
+        scale: 0.9
+        quiet: false
+        update: 100
+        coords:
+            - system: {property: "height", range: [86,117], resolution: 0.1}
+
+moves:
+    - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: N}
+    - transrot: {molecule: lipid, repeat: 10}
+    - volume: {dV: 0.03, method: isochoric, repeat: 1}
+
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - xtcfile: {file: traj.xtc, nstep: 20}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state}
+

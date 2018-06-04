@@ -14,7 +14,7 @@ MathJax.Hub.Config({
 ## About
 
 Faunus is a general Monte Carlo simulation code, designed to be flexible, easy
-to use and to modify. The code is written in C++14 and (limited) Python bindings
+to use and to modify. The code is written in C++ and (limited) Python bindings
 are available.
 The development is a **team effort** with, in chronological order,
 many valiant contributions from:
@@ -26,7 +26,7 @@ Robert Vacha, Axel Thuresson, Bjorn Stenqvist,
 Joao Henriques, Alexei Abrikossov, Giulio Tesei,
 Lukas Sukenik, Coralie Pasquier, Niels Kouwenhoven_
 
-### Supporting Us
+### Supporting Faunus
 
 Should you find Faunus useful, do consider supporting us by crediting:
 
@@ -45,22 +45,30 @@ yason.py input.yml | faunus
 produces an output file, `out.json`, with move statistics, system properties etc.
 The script `yason.py` merely converts from YAML to JSON as the former, easier to read,
 is used in all examples.
+For more examples, check out the `examples/` folder.
 
 ---
 
 ~~~ yaml
+geometry: {length: 50}
 temperature: 300
-geometry: { length: 100 }
-mcloop: { macro: 10, micro: 1000 }
 energy:
-    - nonbonded_coulomblj:
-        lennardjones: { mixing: LB }
-        coulomb: { type: plain, epsr: 80, cutoff: 50 }
+    - nonbonded:
+        default:
+            - lennardjones: {mixing: LB}
+            - coulomb: {type: plain, epsr: 80, cutoff: 50}
 atomlist:
-    - Na: { q:  1, r: 2, eps: 0.1, dp: 20 }
-    - Cl: { q: -1, r: 2, eps: 0.1, dp: 20 }
+    - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40} 
+    - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10} 
 moleculelist:
-    - salt: { Ninit: 50, atoms: [Na,Cl], atomic: yes }
+    - salt: {atoms: [Na, Cl], atomic: true }
+insertmolecules:
+    - salt: {N: 50}
 moves:
-    - transrot: { molecule: salt }
+    - transrot: { molecule: salt, dp: 40, dprot: 0 }
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: confout.state}
+mcloop: {macro: 10, micro: 1000}
 ~~~

@@ -1,0 +1,30 @@
+# Run with:
+#
+#   $ yason.py penalty.yml | mpirun --np 4 --stdin all faunus --nopfx
+#
+temperature: 300
+random: { seed: hardware }
+mcloop: { macro: 10, micro: 200000 }
+geometry: {length: [4,4,4]}
+atomlist:
+    - A: {dp: 0.5} 
+moleculelist:
+    - mygroup: {atoms: [A], atomic: true, insdir: [1,1,0]}
+insertmolecules:
+    - mygroup: {N: 1}
+energy:
+    - example2d: {}
+    - penalty:
+        file: penalty.dat
+        f0: 0.5
+        scale: 0.9
+        quiet: false
+        update: 1000
+        coords:
+            - atom: {index: 0, property: "x", range: [-2.0, 2.0], resolution: 0.1}
+            - atom: {index: 0, property: "y", range: [-2.0, 2.0], resolution: 0.1}
+moves:
+    - transrot: {molecule: mygroup, dir: [1,1,0]}
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - savestate: {file: state}

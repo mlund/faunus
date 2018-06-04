@@ -1,8 +1,8 @@
-// #pragma once
-//
-// #include <set>
-// #include "core.h"
-// #include "io.h"
+#pragma once
+
+#include <set>
+#include "core.h"
+#include "io.h"
 #include "geometry.h"
 #include "potentials.h"
 
@@ -127,8 +127,6 @@ namespace Faunus {
                 int& id() { return _id; } //!< Type id
                 const int& id() const { return _id; } //!< Type id
 
-                int Ninit = 0;             //!< Number of initial molecules
-                int Ninactive=0;           //!< Number of initial molecules to be defined as inactive
                 std::string name;          //!< Molecule name
                 std::string structure;     //!< Structure file (pqr|aam|xyz)
                 bool atomic=false;         //!< True if atomic group (salt etc.)
@@ -138,7 +136,7 @@ namespace Faunus {
                 Point insdir = {1,1,1};    //!< Insertion directions
                 Point insoffset = {0,0,0}; //!< Insertion offset
 
-                std::vector<Pofential::BondData> bonds;
+                std::vector<Potential::BondData> bonds;
                 std::vector<int> atoms;    //!< Sequence of atoms in molecule (atom id's)
                 std::vector<Tpvec> conformations;           //!< Conformations of molecule
                 std::discrete_distribution<> confDist;      //!< Weight of conformations
@@ -250,8 +248,7 @@ namespace Faunus {
             j[a.name] = {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
-                {"keeppos", a.keeppos}, {"Ninit", a.Ninit}, {"Ninactive", a.Ninactive},
-                {"structure", a.structure}, {"bondlist", a.bonds}
+                {"keeppos", a.keeppos}, {"structure", a.structure}, {"bondlist", a.bonds}
             };
             j[a.name]["atoms"] = json::array();
             for (auto id : a.atoms)
@@ -262,54 +259,71 @@ namespace Faunus {
         void from_json(const json& j, MoleculeData<std::vector<Tparticle,Talloc>> &a) {
             typedef typename std::vector<Tparticle,Talloc> Tpvec;
 
-            if (j.is_object()==false || j.size()!=1)
-                throw std::runtime_error("Invalid JSON data for MoleculeData");
-            for (auto it=j.begin(); it!=j.end(); ++it) {
-                a.name = it.key();
-                auto& val = it.value();
-                a.Ninactive = val.value("Ninactive", a.Ninactive);
-                a.insoffset = val.value("insoffset", a.insoffset);
-                a.activity = val.value("activity", a.activity) * 1.0_molar;
-                a.keeppos = val.value("keeppos", a.keeppos);
-                a.atomic = val.value("atomic", a.atomic);
-                a.insdir = val.value("insdir", a.insdir);
-                a.bonds = val.value("bondlist", a.bonds);
-                a.Ninit = val.value("Ninit", a.Ninit);
-                a.id() = val.value("id", a.id());
+            try {
+                if (j.is_object()==false || j.size()!=1)
+                    throw std::runtime_error("invalid json");
+                for (auto it=j.begin(); it!=j.end(); ++it) {
+                    a.name = it.key();
+                    auto& val = it.value();
+                    a.insoffset = val.value("insoffset", a.insoffset);
+                    a.activity = val.value("activity", a.activity) * 1.0_molar;
+                    a.keeppos = val.value("keeppos", a.keeppos);
+                    a.atomic = val.value("atomic", a.atomic);
+                    a.insdir = val.value("insdir", a.insdir);
+                    a.bonds = val.value("bondlist", a.bonds);
+                    a.id() = val.value("id", a.id());
 
-                if (a.Ninactive > a.Ninit)
-                    throw std::runtime_error("Ninactive cannot be larger than Ninit");
+                    if (a.atomic) {
+                        // read `atoms` list of atom names and convert to atom id's
+                        for (auto &i : val.at("atoms").get<std::vector<std::string>>()) {
+                            auto it = findName( atoms<Tparticle>, i );
+                            if (it == atoms<Tparticle>.end() )
+                                throw std::runtime_error("unknown atoms in 'atoms'\n");
+                            a.atoms.push_back(it->id());
+                        }
+                        assert(!a.atoms.empty());
 
-                if (a.atomic) {
-                    // read `atoms` list of atom names and convert to atom id's
-                    for (auto &i : val.at("atoms").get<std::vector<std::string>>()) {
-                        auto it = findName( atoms<Tparticle>, i );
-                        if (it == atoms<Tparticle>.end() )
-                            throw std::runtime_error("unknown atoms in `atoms` list\n");
-                        a.atoms.push_back(it->id());
-                    }
-                    assert(!a.atoms.empty());
-
-                    // generate config w. Ninit atoms of each atom type
-                    Tpvec v;
-                    v.reserve( a.atoms.size() * a.Ninit );
-                    for (int n=0; n<a.Ninit; n++)
+                        // generate config
+                        Tpvec v;
+                        v.reserve( a.atoms.size() );
                         for ( auto id : a.atoms )
                             v.push_back( atoms<Tparticle>.at(id).p );
-                    if (!v.empty())
-                        a.pushConformation( v );
-                }
-                a.structure = val.value("structure", a.structure);
-                if (!a.structure.empty())
-                    a.loadConformation(a.structure);
-            }
+                        if (!v.empty())
+                            a.pushConformation( v );
+                    } else
+                        if (val.count("structure")>0) {
+                            json _struct = val["structure"];
+                            if (_struct.is_string()) // structure from file
+                                a.loadConformation( val.value("structure", a.structure) );
+                            else
+                                if (_struct.is_array()) { // structure is defined inside json
+                                    Tpvec v; // temporary particle vector
+                                    v.reserve( _struct.size() );
+                                    for (auto &m : _struct)
+                                        for (auto i=m.begin(); i!=m.end(); ++i)
+                                            if (i->is_object() && i->size()==1) {
+                                                auto it = findName( atoms<Tparticle>, i.key() );
+                                                if (it == atoms<Tparticle>.end() )
+                                                    throw std::runtime_error("unknown atoms in 'structure'");
+                                                v.push_back( it->p );     // set properties from atomlist
+                                                v.back().pos = i.value(); // set position
+                                            }
+                                    if (v.empty())
+                                        throw std::runtime_error("invalid 'structure' format");
+                                    a.pushConformation( v );
+                                }
+                        }
 
-            // pass information to inserter
-            auto ins = RandomInserter<MoleculeData<std::vector<Tparticle,Talloc>>>();
-            ins.dir = a.insdir;
-            ins.offset = a.insoffset;
-            ins.keeppos = a.keeppos;
-            a.setInserter(ins);
+                    // pass information to inserter
+                    auto ins = RandomInserter<MoleculeData<std::vector<Tparticle,Talloc>>>();
+                    ins.dir = a.insdir;
+                    ins.offset = a.insoffset;
+                    ins.keeppos = a.keeppos;
+                    a.setInserter(ins);
+                }
+            } catch(std::exception& e) {
+                throw std::runtime_error("JSON->molecule: " + a.name + ": " + e.what());
+            }
         }
 
     template<class Tparticle, class Talloc>
@@ -368,7 +382,7 @@ namespace Faunus {
             typedef Tpvec TParticleVector;
             typedef typename Tpvec::value_type Tparticle;
 
-            std::string _reac, _prod;
+            std::vector<std::string> _reac, _prod;
             std::string _reac_sub, _prod_sub;
             std::map<int,int> _reacid_m;     // Molecular change, groups. Atomic as Groupwise
             std::map<int,int> _reacid_a;     // Atomic change, equivalent of swap/titration
@@ -384,8 +398,8 @@ namespace Faunus {
 
             ReactionData() {
             }
-            bool Empty() {
-                if (canonic && N_reservoir== 0)
+            bool Empty( bool forward ) {
+                if (canonic && forward && N_reservoir== 0)
                     return true;
                 return false;
             }
@@ -423,6 +437,9 @@ namespace Faunus {
                     a.name = it.key();
                     auto& val = it.value();
                     a.canonic = val.value("canonic", a.canonic);
+                    a.log_k = val.value("log_k", a.log_k); // -> e-base
+                    a._prod = val.at("products").get<std::vector<std::string>>();
+                    a._reac = val.at("reactants").get<std::vector<std::string>>();
                     a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
                     std::cout << a.name << endl;
                     for (auto &i : val.at("reactants").get<std::vector<std::string>>()) {
@@ -458,9 +475,9 @@ namespace Faunus {
             void to_json(json& j, const ReactionData<std::vector<Tparticle,Talloc>> &a) {
                 j[a.name] = {
                     {"log_k", a.log_k}, {"canonic", a.canonic}, {"N_reservoir", a.N_reservoir},
-                    {"molecular products", a._prodid_m } ,
+                    {"products", a._prod} ,
                     {"exchange products", a._prodid_a  },
-                    {"molecular reactants", a._reacid_m } ,
+                    {"reactants", a._reac } ,
                     {"exchange reactants", a._reacid_a  }
                 };
             }

@@ -195,6 +195,7 @@ namespace Faunus {
                         name = "transrot";
                         repeat = -1; // meaning repeat N times
                         cdata.atoms.resize(1);
+                        cdata.internal=true;
                     }
             };
 
@@ -327,7 +328,7 @@ namespace Faunus {
                         {"isotropic", Geometry::ISOTROPIC},
                         {"isochoric", Geometry::ISOCHORIC}
                     };
-                    decltype(methods)::const_iterator method;
+                    typename decltype(methods)::const_iterator method;
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc;
                     Average<double> msqd; // mean squared displacement
@@ -357,7 +358,7 @@ namespace Faunus {
                             change.all=true;
                             Vold = spc.geo.getVolume();
                             if (method->second == Geometry::ISOCHORIC)
-                                Vold = std::pow(Vold,2.0/3.0); // Volume is treated as Area
+                                Vold = std::pow(Vold,1.0/3.0); // volume is constant
                             Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
                             deltaV = Vnew-Vold;
                             spc.scaleVolume(Vnew, method->second);
@@ -757,7 +758,7 @@ namespace Faunus {
                                             for (size_t i=i2+1; i<it->size(); i++)
                                                 index.push_back(i+offset);
                                         else
-                                            for (size_t i=0; i<i1; i++)
+                                            for (int i=0; i<i1; i++)
                                                 index.push_back(i+offset);
                                         i1+=offset;
                                         i2+=offset;
@@ -1014,7 +1015,7 @@ namespace Faunus {
 
                     void sync(State &other, Change &change) {
                         spc.sync( other.spc, change );
-                        pot.sync( other.pot, change );
+                        pot.sync( &other.pot, change );
                     }
                 }; //!< Contains everything to describe a state
 

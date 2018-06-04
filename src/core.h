@@ -21,7 +21,7 @@ namespace Eigen {
     template<typename T>
         void to_json(nlohmann::json& j, const T &p) {
             auto d = p.data();
-            for (size_t i = 0; i<p.size(); ++i)
+            for (int i=0; i<(int)p.size(); ++i)
                 j.push_back( d[i] );
         }
     template<class T>
@@ -852,7 +852,6 @@ namespace Faunus {
                 double dp=0;       //!< Translational displacement parameter [angstrom]
                 double dprot=0;    //!< Rotational displacement parameter [degrees]
                 double mw=1;       //!< Weight
-                double charge=0;   //!< Partial charge [e]
                 double sigma=0;    //!< Diamater for e.g Lennard-Jones etc. [angstrom]
                 double tension=0;  //!< Surface tension [kT/Å^2]
                 double tfe=0;      //!< Transfer free energy [J/mol/angstrom^2/M]

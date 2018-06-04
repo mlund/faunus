@@ -91,8 +91,10 @@ namespace Faunus {
                 if (clear)
                     index.clear();
                 int cnt=0;
-                std::array<int,3> k = { c[0]-1, c[0], c[0]+1 },
-                    l = { c[1]-1, c[1], c[1]+1 }, m = { c[2]-1, c[2], c[2]+1 };
+                std::array<int,3>
+                    k = {{ c[0]-1, c[0], c[0]+1 }},
+                    l = {{ c[1]-1, c[1], c[1]+1 }},
+                    m = {{ c[2]-1, c[2], c[2]+1 }};
                 if (k[0]<0) k[0]=KLM[0]; else if (k[2]>KLM[0]) k[2]=0;
                 if (l[0]<0) l[0]=KLM[1]; else if (l[2]>KLM[1]) l[2]=0;
                 if (m[0]<0) m[0]=KLM[2]; else if (m[2]>KLM[2]) m[2]=0;

@@ -271,7 +271,7 @@ namespace Faunus {
          *
          * Key     | Description
          * :-------| :---------------------------
-         * `eps`   | Depth, \f$\epsilon\f$ [kT]
+         * `eps`   | Depth, \f$\epsilon\f$ [kJ/mol]
          * `rc`    | Width, r_c [angstrom]
          * `wc`    | Decay range, w_c [angstrom] 
          *
@@ -302,11 +302,7 @@ namespace Faunus {
                         return -eps;
                     if (r2>rcwc2)
                         return 0;
-#ifdef FAU_APPROXMATH
-                    double x=cosApprox( c*( sqrt(r2)-rc ) );
-#else
                     double x=std::cos( c*( sqrt(r2)-rc ) );
-#endif
                     return -eps*x*x;
                 }
 
@@ -315,29 +311,160 @@ namespace Faunus {
                     if (r2<rc2 || r2>rcwc2)
                         return Point(0,0,0);
                     double r=sqrt(r2);
-#ifdef FAU_APPROXMATH
-                    double x1=cosApprox( c*( r-rc ) );
-                    double x2=sinApprox( c*( r-rc ) );
-#else
                     double x1=std::cos( c*( r-rc ) );
                     double x2=std::sin( c*( r-rc ) );
-#endif
                     return -2*c*eps*x1*x2/r*p;
                 }
 
             void to_json(json &j) const override {
-                j = {{"eps",eps}, {"rc",rc}, {"wc", wc}};
+                j = {{"eps",eps / 1.0_kJmol}, {"rc",rc / 1.0_angstrom }, {"wc", wc / 1.0_angstrom }};
             }
 
             void from_json(const json &j) override {
-                eps = j.at("eps");
-                rc = j.at("rc");
-                wc = j.at("wc");
+                eps = j.at("eps").get<double>() * 1.0_kJmol;
+                rc = j.at("rc").get<double>() * 1.0_angstrom ;
+                wc = j.at("wc").get<double>() * 1.0_angstrom ;
                 rc2 = rc * rc;
                 c = pc::pi / 2 / wc;
                 rcwc2 = pow((rc + wc), 2);
             }
         };
+
+        /**
+         * @brief Charge-nonpolar pair interaction
+         */
+        template<class Tparticle>
+            class Polarizability : public Coulomb {
+                private:
+                    double epsr;
+                    PairMatrix<double> m; 
+
+                public:
+                    Polarizability (const std::string &name="polar") { PairPotentialBase::name=name; }
+
+                    inline void from_json(const json &j) override {
+                        epsr = j.at("epsr").get<double>();
+                        double lB = pc::lB(epsr);
+                        for (auto &i : atoms<Tparticle>) 
+                            for (auto &j : atoms<Tparticle>) 
+                                if (fabs(i.p.charge)>1e-9 || fabs(j.p.charge)>1e-9) {
+                                    m.set(i.id(), j.id(), -lB/2 *
+                                            ( i.p.charge*i.p.charge*j.alphax*pow(0.5*j.sigma,3) +
+                                              j.p.charge*j.p.charge*i.alphax*pow(0.5*i.sigma,3) ) );
+                                }
+                                else {
+                                    m.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*
+                                            j.alphax*pow(0.5*j.sigma,3) );
+                                }
+                    }
+
+                    inline void to_json(json &j) const override {
+                        j = { {"epsr",epsr} };
+                    }
+
+                    double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        double r2=r.squaredNorm();
+                        if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9) 
+                            return m(a.id,b.id)/(r2*r2);
+                        else 
+                            return m(a.id,b.id)/(r2*r2*r2);
+                    }
+
+                    Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+                        if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9) 
+                            return 4*m(a.id,b.id)/(r2*r2*r2)*p;
+                        else 
+                            return 6*m(a.id,b.id)/(r2*r2*r2*r2)*p;
+                    }
+            };
+
+        template<class Tparticle>
+            class DesernoMembrane : public PairPotentialBase {
+
+                WeeksChandlerAndersen<Tparticle> wca;
+                CosAttract cos2;
+                int tail;
+
+                public:
+                DesernoMembrane(const std::string &name="dmembrane") {
+                    PairPotentialBase::name=name;
+                    PairPotentialBase::name.clear();
+                }
+
+                inline void from_json(const json &j) override {
+                    wca = j;
+                    cos2 = j;
+                    auto it = findName(atoms<Tparticle>, "TL");
+                    if ( it!=atoms<Tparticle>.end() )
+                        tail = it->id();
+                    else
+                        throw std::runtime_error("Atom type 'TL' is not defined.");
+                }
+                void to_json(json &j) const override {
+                    json _j;
+                    wca.to_json(j);
+                    cos2.to_json(_j);
+                    j = merge(j,_j);
+                }
+
+                double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
+                    double u=wca(a,b,r);
+                    if (a.id==tail and b.id==tail) 
+                        u+=cos2(a,b,r);
+                    return u;
+                }
+            };
+
+        template<class Tparticle>
+            class DesernoMembraneAA : public PairPotentialBase {
+
+                WeeksChandlerAndersen<Tparticle> wca;
+                CosAttract cos2;
+                Polarizability<Tparticle> polar;
+                int tail;
+                int aa;
+
+                public:
+                DesernoMembraneAA(const std::string &name="dmembraneAA") {
+                    PairPotentialBase::name=name;
+                    PairPotentialBase::name.clear();
+                }
+
+                inline void from_json(const json &j) override {
+                    wca = j;
+                    cos2 = j;
+                    polar = j;
+                    auto it = findName(atoms<Tparticle>, "TL");
+                    if ( it!=atoms<Tparticle>.end() )
+                        tail = it->id();
+                    else
+                        throw std::runtime_error("Atom type 'TL' is not defined.");
+                    it = findName(atoms<Tparticle>, "AA");
+                    if ( it!=atoms<Tparticle>.end() )
+                        aa = it->id();
+                    else
+                        throw std::runtime_error("Atom type 'AA' is not defined.");
+
+                }
+                void to_json(json &j) const override {
+                    json _j;
+                    wca.to_json(j);
+                    cos2.to_json(_j);
+                    j = merge(j,_j);
+                    polar.to_json(_j);
+                    j = merge(j,_j);
+                }
+
+                double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
+                    double u=wca(a,b,r);
+                    if (a.id==tail and b.id==tail)
+                        u+=cos2(a,b,r);
+                    if (a.id==aa or b.id==aa) {
+                        u+=polar(a,b,r);
+                    }
+                    return u;
+                }
+            };
 
         /**
          * @brief Finite Extensible Nonlinear Elastic (FENE) potential
@@ -381,58 +508,6 @@ namespace Faunus {
                     return (r2>r02) ? -pc::infty*p : -k * r02 / (r02-r2) * p;
                 }
         };
-
-        /**
-         * @brief Charge-nonpolar pair interaction
-         */
-        template<class Tparticle>
-            class ChargeNonpolar : public Coulomb {
-                private:
-                    double epsr;
-                    static bool alphaneutral;    // static to save memory as we may have
-                    static PairMatrix<double> m; // many instances
-
-                public:
-                    ChargeNonpolar(const std::string &name="ionalpha") { PairPotentialBase::name=name; }
-
-                    inline void from_json(const json &j) override {
-                        bool _old = alphaneutral;
-                        alphaneutral = j.value("alphaneutral", alphaneutral);
-                        if (alphaneutral!=_old && m.size()>0)
-                            throw std::runtime_error("`alphaneutral` must be the same for all instances.");
-                        epsr = j.at("epsr").get<double>();
-                        double lB = pc::lB(epsr);
-                        for (auto &i : atoms<Tparticle>)
-                            for (auto &j : atoms<Tparticle>)
-                                if (!alphaneutral)
-                                    m.set(i.id, j.id, -lB/2 *
-                                            ( i.charge*i.charge*j.alphax*pow(0.5*j.sigma,3) +
-                                              j.charge*j.charge*i.alphax*pow(0.5*i.sigma,3) ) );
-                                else {
-                                    m.set(i.id, j.id, 0);
-                                    if (fabs(i.charge)>1e-9)
-                                        m.set(i.id, j.id, -lB/2*i.charge*i.charge*j.alphax*pow(0.5*j.sigma,3));
-                                    else if (fabs(j.charge)>1e-9)
-                                        m.set(i.id, j.id, -lB/2*j.charge*j.charge*i.alphax*pow(0.5*i.sigma,3));
-                                }
-                    }
-
-                    inline void to_json(json &j) const override {
-                        j = { {"epsr",epsr}, {"alphaneutral",alphaneutral}  };
-                    }
-
-                    double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
-                        double r2=r.squaredNorm();
-                        return m[a.id,b.id]/(r2*r2);
-                    }
-
-                    Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-                        return 4*m[a.id,b.id]/(r2*r2*r2)*p;
-                    }
-            };
-
-        template<class Tparticle>
-            bool ChargeNonpolar<Tparticle>::alphaneutral=false;
 
         /** @brief Coulomb type potentials with spherical cutoff */
         class CoulombGalore : public PairPotentialBase {
@@ -652,6 +727,7 @@ namespace Faunus {
                                     uFunc _u = nullptr;
                                     if (it.key()=="coulomb") _u = CoulombGalore() = i;
                                     if (it.key()=="cos2") _u = CosAttract() = i;
+                                    if (it.key()=="polarizability") _u = Polarizability<T>() = i;
                                     if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
                                     if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
                                     if (it.key()=="repulsionr3") _u = RepulsionR3() = i;
@@ -749,14 +825,21 @@ namespace Faunus {
 
             template<class Tpvec>
                 double energy(const Tpvec &p, Geometry::DistanceFunction dist) const {
-                    double d;
+                    double d, wca, x;
                     switch (type) {
                         case BondData::harmonic:
                             d = k[1] - dist(p[index[0]].pos, p[index[1]].pos).norm();
                             return 0.5 * k[0]*d*d;
                         case BondData::fene:
                             d = dist( p[index[0]].pos, p[index[1]].pos ).squaredNorm();
-                            return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]);
+                            wca = 0;
+                            x = k[3];
+                            if (d<=x*1.2599210498948732) {
+                                x = x/d;
+                                x = x*x*x;
+                                wca = k[2]*(x*x - x + 0.25);
+                            }
+                            return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
                         default: break;
                     }
                     assert(!"not implemented");
@@ -776,7 +859,9 @@ namespace Faunus {
                     j["fene"] = {
                         { "index", b.index },
                         { "k", b.k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
-                        { "rmax", std::sqrt(b.k[1]) / 1.0_angstrom } };
+                        { "rmax", std::sqrt(b.k[1]) / 1.0_angstrom },
+                        { "eps", b.k[2] / 1.0_kJmol },
+                        { "sigma", std::sqrt(b.k[3]) / 1.0_angstrom } };
                     break;
                 default: break;
             }
@@ -802,9 +887,11 @@ namespace Faunus {
                         b.index = val.at("index").get<decltype(b.index)>();
                         if (b.index.size()!=2)
                             throw std::runtime_error("FENE bond requires exactly two index");
-                        b.k.resize(2);
+                        b.k.resize(4);
                         b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
                         b.k[1] = std::pow( val.at("rmax").get<double>() * 1.0_angstrom, 2); // rm^2
+                        b.k[2] = val.at("eps").get<double>() * 1.0_kJmol; // epsilon wca
+                        b.k[3] = std::pow( val.at("sigma").get<double>() * 1.0_angstrom, 2); // sigma^2 wca
                         return;
                     }
                     if (t=="dihedral") {
@@ -841,12 +928,14 @@ namespace Faunus {
             CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "k":2.1} } )"_json );
 
             // test fene
-            j = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1} } )"_json;
+            j = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 } } )"_json;
             b = j;
             CHECK( j == json(b) );
             CHECK_THROWS( b = R"( {"fene" : { "index":[2,3,4], "k":1, "rmax":2.1} } )"_json );
             CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "rmax":2.1} } )"_json );
             CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1} } )"_json );
+            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48} } )"_json );
+            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1, "sigma":2} } )"_json );
 
             CHECK_THROWS( b = R"( {"unknown" : { "index":[2,3], "k":2.1, "req":1.0} } )"_json );
             j = json::object();

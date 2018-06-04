@@ -19,7 +19,7 @@ namespace Faunus {
 
         struct data {
             int index; //!< Touched group index
-            bool internal=true; //!< True is the internal energy/config has changed
+            bool internal=false; //!< True is the internal energy/config has changed
             bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
         }; //!< Properties of changed groups
@@ -125,6 +125,10 @@ namespace Faunus {
                 return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
             } //!< Range with all atoms of type `atomid` (complexity: order N)
 
+            auto findGroupContaining(const Tparticle &i) {
+                return std::find_if( groups.begin(), groups.end(), [&i](auto &g){ return g.contains(i); });
+            } //!< Finds the groups containing the given atom
+
             void sync(Tspace &other, const Tchange &change) {
 
                 assert(&other != this);
@@ -197,9 +201,9 @@ namespace Faunus {
                     }
                 }
                 double Vold = geo.getVolume();
-                // if isochoric, volumes are treated as areas
+                // if isochoric, the volume is constant
                 if (method==Geometry::ISOCHORIC)
-                    Vold = std::pow(Vold,2./3.);
+                    Vold = std::pow(Vold,1./3.);
 
                 for (auto f : scaleVolumeTriggers)
                     f(*this, Vold, Vnew);

@@ -726,7 +726,7 @@ namespace Faunus {
                                     uFunc _u = nullptr;
                                     if (it.key()=="coulomb") _u = CoulombGalore() = i;
                                     if (it.key()=="cos2") _u = CosAttract() = i;
-                                    if (it.key()=="polarizability") _u = Polarizability<T>() = i;
+                                    if (it.key()=="polar") _u = Polarizability<T>() = i;
                                     if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
                                     if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
                                     if (it.key()=="repulsionr3") _u = RepulsionR3() = i;

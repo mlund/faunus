@@ -824,7 +824,7 @@ namespace Faunus {
 
             template<class Tpvec>
                 double energy(const Tpvec &p, Geometry::DistanceFunction dist) const {
-                    double d, wca, x;
+                    double d, wca, x, zz;
                     switch (type) {
                         case BondData::harmonic:
                             d = k[1] - dist(p[index[0]].pos, p[index[1]].pos).norm();
@@ -841,14 +841,11 @@ namespace Faunus {
                             return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
                         case BondData::yukawa:
                             d = dist( p[index[0]].pos, p[index[1]].pos ).norm();
-                            double z1 = p[index[0]].charge;
-                            double z2 = p[index[1]].charge;
-                            double lB = pc::lB(k[0]);
-                            if (z1*z2>1e-5) {
-                                return z1*z2*lB*exp(-d/k[1])/d;
+                            zz = p[index[0]].charge*p[index[1]].charge;
+                            if (zz>1e-5) 
+                                return zz*k[0]*exp(-d/k[1])/d;
                             else
                                 return 0;
-
                         default: break;
                     }
                     assert(!"not implemented");
@@ -875,7 +872,7 @@ namespace Faunus {
                 case BondData::yukawa:
                     j["yukawa"] = {
                         { "index", b.index },
-                        { "epsr", b.k[0] },
+                        { "bjerrumlength", b.k[0] / 1.0_angstrom },
                         { "debyelength", b.k[1] / 1.0_angstrom } };
                     break;
 
@@ -916,7 +913,7 @@ namespace Faunus {
                         if (b.index.size()!=2)
                             throw std::runtime_error("FENE bond requires exactly two index");
                         b.k.resize(2);
-                        b.k[0] = val.at("epsr").get<double>(); // epsr
+                        b.k[0] = pc::lB(val.at("epsr").get<double>()) * 1.0_angstrom; // bjerrum length
                         b.k[1] = val.at("debyelength").get<double>() * 1.0_angstrom; // debye length
                         return;
                     }

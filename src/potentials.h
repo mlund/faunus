@@ -889,7 +889,7 @@ namespace Faunus {
                         b.type = BondData::harmonic;
                         b.index = val.at("index").get<decltype(b.index)>();
                         if (b.index.size()!=2)
-                            throw std::runtime_error("harmonic bond requires exactly two index");
+                            throw std::runtime_error("harmonic bond requires exactly two indeces");
                         b.k.resize(2);
                         b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
                         b.k[1] = val.at("req").get<double>() * 1.0_angstrom; // req
@@ -899,7 +899,7 @@ namespace Faunus {
                         b.type = BondData::fene;
                         b.index = val.at("index").get<decltype(b.index)>();
                         if (b.index.size()!=2)
-                            throw std::runtime_error("FENE bond requires exactly two index");
+                            throw std::runtime_error("FENE bond requires exactly two indeces");
                         b.k.resize(4);
                         b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
                         b.k[1] = std::pow( val.at("rmax").get<double>() * 1.0_angstrom, 2); // rmax^2
@@ -911,7 +911,7 @@ namespace Faunus {
                         b.type = BondData::yukawa;
                         b.index = val.at("index").get<decltype(b.index)>();
                         if (b.index.size()!=2)
-                            throw std::runtime_error("FENE bond requires exactly two index");
+                            throw std::runtime_error("yukawa requires exactly two indeces");
                         b.k.resize(2);
                         b.k[0] = pc::lB(val.at("epsr").get<double>()) * 1.0_angstrom; // bjerrum length
                         b.k[1] = val.at("debyelength").get<double>() * 1.0_angstrom; // debye length

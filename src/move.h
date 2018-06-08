@@ -127,8 +127,8 @@ namespace Faunus {
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
                             molid = it->id();
-                            pH = j.value("pH", 7);
-                            pKa = j.value("pKa", 7);
+                            pH = j.at("pH").get<double>();
+                            pKa = j.at("pKa").get<double>();
                             if (repeat<0) {
                                 auto v = spc.findMolecules(molid);
                                 repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...

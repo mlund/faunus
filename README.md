@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/mlund/neofaunus.svg?branch=master)](https://travis-ci.org/mlund/neofaunus)
+[![Anaconda-Server Badge](https://anaconda.org/teokem/faunus/badges/installer/conda.svg)](https://conda.anaconda.org/teokem/)
 
 Welcome to Faunus
 =================
@@ -12,6 +13,13 @@ molecular systems. Below is a brief overview of features:
 - Ion titration moves (pKa prediction, Hofmeister effects etc.)
 - Highy modular
 - Free and open source
+
+Installing
+===========
+
+On mac or linux, install using [conda](https://conda.io/miniconda.html):
+
+    $ conda install -c teokem faunus
 
 Documentation
 =============

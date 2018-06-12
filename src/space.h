@@ -19,6 +19,7 @@ namespace Faunus {
 
         struct data {
             int index; //!< Touched group index
+            bool internal=false; //!< True is the internal energy/config has changed
             bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
         }; //!< Properties of changed groups
@@ -77,7 +78,7 @@ namespace Faunus {
             void clear() {
                 p.clear();
                 groups.clear();
-            }
+            } //!< Clears particle and molecule list
 
             void push_back(int molid, const Tpvec &in) {
                 if (!in.empty()) {
@@ -98,11 +99,6 @@ namespace Faunus {
                         if (geo.sqdist(g.cm, cm)>1e-9)
                             throw std::runtime_error("space: mass center error upon insertion. Molecule too large?\n");
                     }
-
-                    // inactivate group before insertion?
-                    auto molvec = findMolecules(molid, INACTIVE);
-                    if (size(molvec) < molecules<Tpvec>.at(molid).Ninactive)
-                        g.resize(0);
 
                     groups.push_back(g);
                     assert( in.size() == groups.back().capacity() );
@@ -128,6 +124,10 @@ namespace Faunus {
             auto findAtoms(int atomid) const {
                 return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
             } //!< Range with all atoms of type `atomid` (complexity: order N)
+
+            auto findGroupContaining(const Tparticle &i) {
+                return std::find_if( groups.begin(), groups.end(), [&i](auto &g){ return g.contains(i); });
+            } //!< Finds the groups containing the given atom
 
             void sync(Tspace &other, const Tchange &change) {
 
@@ -168,25 +168,27 @@ namespace Faunus {
                 assert( p.begin() != other.p.begin());
             } //!< Copy differing data from other (o) Space using Change object
 
-            void scaleVolume(double Vnew) {
-                double Vold = geo.getVolume();
-                double scale = std::cbrt(Vnew/Vold);
-
-                // remove periodic boundaries.
-                for (auto &g: groups)
+            /*
+             * Scales:
+             * - positions of free atoms
+             * - positions of molecular masscenters
+             * - simulation container
+             */
+            void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC) {
+                for (auto &g: groups) // remove periodic boundaries
                     if (!g.atomic)
                         g.unwrap(geo.distanceFunc);
 
-                geo.setVolume(Vnew);
+                Point scale = geo.setVolume(Vnew, method);
 
                 for (auto& g : groups) {
                     if (!g.empty()) {
                         if (g.atomic) // scale all atoms
                             for (auto& i : g)
-                                i.pos *= scale;
+                                i.pos = i.pos.cwiseProduct(scale);
                         else { // scale mass center and translate
-                            Point delta = g.cm * scale - g.cm;
-                            g.cm *= scale;
+                            Point delta = g.cm.cwiseProduct(scale) - g.cm;
+                            g.cm = g.cm.cwiseProduct(scale);
                             for (auto &i : g) {
                                 i.pos += delta;
                                 geo.boundary(i.pos);
@@ -198,6 +200,11 @@ namespace Faunus {
                         }
                     }
                 }
+                double Vold = geo.getVolume();
+                // if isochoric, the volume is constant
+                if (method==Geometry::ISOCHORIC)
+                    Vold = std::pow(Vold,1./3.);
+
                 for (auto f : scaleVolumeTriggers)
                     f(*this, Vold, Vnew);
             } //!< scale space to new volume
@@ -234,56 +241,115 @@ namespace Faunus {
     template<class Tgeometry, class Tparticletype>
         void from_json(const json &j, Space<Tgeometry,Tparticletype> &spc) {
             typedef typename Space<Tgeometry,Tparticletype>::Tpvec Tpvec;
-            if (atoms<Tparticletype>.empty())
-                atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
-            if (molecules<Tpvec>.empty())
-                molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
-            if (reactions<Tpvec>.empty())
-                reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
+            using namespace std::string_literals;
+<<<<<<< HEAD
+            try {
+                if (atoms<Tparticletype>.empty())
+                    atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
+                if (molecules<Tpvec>.empty())
+                    molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+                if (reactions<Tpvec>.empty())
+                    reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
 
-            spc.clear();
-            spc.geo = j.at("geometry");
+                spc.clear();
+                spc.geo = j.at("geometry");
 
-            if ( j.count("groups")==0 )
-                insertMolecules( spc );
-            else {
-                spc.p = j.at("particles").get<Tpvec>();
-                if (!spc.p.empty()) {
-                    auto begin = spc.p.begin();
-                    Group<Tparticletype> g(begin,begin);
-                    for (auto &i : j.at("groups")) {
-                        g.begin() = begin;
-                        from_json(i, g);
-                        spc.groups.push_back(g);
-                        begin = g.trueend();
+                if ( j.count("groups")==0 )
+                    insertMolecules( spc );
+                else {
+                    spc.p = j.at("particles").get<Tpvec>();
+                    if (!spc.p.empty()) {
+                        auto begin = spc.p.begin();
+                        Group<Tparticletype> g(begin,begin);
+                        for (auto &i : j.at("groups")) {
+                            g.begin() = begin;
+                            from_json(i, g);
+                            spc.groups.push_back(g);
+                            begin = g.trueend();
+                        }
+                        if (begin != spc.p.end())
+                            throw std::runtime_error("load error");
                     }
-                    if (begin != spc.p.end())
-                        throw std::runtime_error("json->space load error");
                 }
+                // check correctness of molecular mass centers
+                for (auto &i : spc.groups)
+                    if (!i.empty())
+                        if (!i.atomic)
+                            if (spc.geo.sqdist( i.cm,
+                                        Geometry::massCenter(i.begin(), i.end(), spc.geo.boundaryFunc, -i.cm) ) > 1e-9 )
+                                throw std::runtime_error("mass center mismatch");
+            } catch(std::exception& e) {
+                throw std::runtime_error("Space construction from json error: "s + e.what());
             }
-            // check correctness of molecular mass centers
-            for (auto &i : spc.groups)
-                if (!i.empty())
-                    if (!i.atomic)
-                        if (spc.geo.sqdist( i.cm,
-                                    Geometry::massCenter(i.begin(), i.end(), spc.geo.boundaryFunc, -i.cm) ) > 1e-9 )
-                            throw std::runtime_error("space construction error: mass center mismatch");
+
         } //!< Deserialize json object to Space
 
     template<typename Tspace>
-        void insertMolecules(Tspace &spc) {
+        void insertMolecules(const json &j, Tspace &spc) {
+            typedef typename Tspace::Tpvec Tpvec;
             spc.clear();
             assert(spc.geo.getVolume()>0);
-            for ( auto& mol : molecules<typename Tspace::Tpvec> ) {
-                if (mol.atomic && mol.Ninit>0)
-                    spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
-                else {
-                    int n = mol.Ninit;
-                    while ( n-- > 0 )
-                        spc.push_back(mol.id(), mol.getRandomConformation(spc.geo, spc.p));
+            auto &molvec = molecules<Tpvec>;
+            if (j.is_array()) {
+                for (auto &m : j) { // loop over entries in 'insert'
+                    if (m.is_object() && m.size()==1)
+                        for (auto it=m.begin(); it!=m.end(); ++it) {
+                            auto mol = findName(molvec, it.key()); // is the molecule defined?
+                            if (mol!=molvec.end()) {
+
+                                int N = it.value().at("N").get<int>();  // number of molecules to insert
+                                int cnt=N;
+                                bool inactive = it.value().value("inactive", false);
+
+                                if (mol->atomic) {
+                                    typename Tspace::Tpvec p;
+                                    p.reserve( N * mol->atoms.size() );
+                                    while ( cnt-- > 0 ) {
+                                        auto _t = mol->getRandomConformation(spc.geo, spc.p);
+                                        p.insert(p.end(), _t.begin(), _t.end());
+                                    }
+                                    assert(!p.empty());
+                                    spc.push_back(mol->id(), p);
+                                    if (inactive)
+                                        spc.groups.back().resize(0);
+                                } else {
+                                    while ( cnt-- > 0 ) { // insert molecules
+                                        spc.push_back(mol->id(), mol->getRandomConformation(spc.geo, spc.p));
+                                        if (inactive)
+                                            spc.groups.back().resize(0);
+                                    }
+                                    // load specific positions for the N added molecules
+                                    bool success=false;
+                                    std::string file = it.value().value("positions", "");
+                                    if (!file.empty()) {
+                                        Tpvec p;
+                                        if (loadStructure<Tpvec>()(file, p, false)) {
+                                            if (p.size() == N*mol->atoms.size()) {
+                                                Point offset = it.value().value("translate", Point(0,0,0));
+                                                size_t j = spc.p.size() - p.size();
+                                                for (auto &i : p) {
+                                                    i.pos = i.pos + offset;
+                                                    if (spc.geo.collision(i.pos)==false)
+                                                        spc.p.at(j++).pos = i.pos;
+                                                    else std::cerr << "position outside box" << endl;
+                                                }
+                                                if (j==p.size()) {
+                                                    success=true;
+                                                    for (auto g=spc.groups.end()-N; g!=spc.groups.end(); ++g)
+                                                        g->cm = Geometry::massCenter(g->begin(), g->end(), spc.geo.boundaryFunc, -g->begin()->pos);
+                                                }
+                                            } else std::cerr << file + ": wrong number of atoms" << endl;
+                                        } else std::cerr << "error opening file '" + file + "'" << endl;
+                                        if (success==false)
+                                            throw std::runtime_error("error loading positions from '" + file + "'");
+                                    }
+                                }
+                            } else
+                                throw std::runtime_error("cannot insert undefined molecule '" + it.key() + "'");
+                        }
                 }
-            }
-        } //!< Insert `Ninit` molecules into space as defined in `molecules`
+            } else throw std::runtime_error("'insert' json entry must be of array type");
+        } //!< Insert `N` molecules into space as defined in `insert`
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Space")

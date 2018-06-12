@@ -46,8 +46,10 @@ script:
       #  make tests
       #  make test
       cd scripts/
+      conda config --set anaconda_upload yes
       conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
     else
       cd scripts/
+      conda config --set anaconda_upload yes
       conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
     fi

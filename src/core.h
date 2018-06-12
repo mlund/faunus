@@ -24,15 +24,16 @@ namespace Eigen {
             for (size_t i = 0; i<p.size(); ++i)
                 j.push_back( d[i] );
         }
-    void from_json(const nlohmann::json& j, Vector3d &p) {
-        if ( j.size()==3 ) {
-            int i=0;
-            for (auto d : j.get<std::vector<double>>())
-                p[i++] = d;
-            return;
+    template<class T>
+        void from_json(const nlohmann::json& j, Eigen::Matrix<T,3,1> &p) {
+            if ( j.size()==3 ) {
+                int i=0;
+                for (auto d : j.get<std::vector<T>>())
+                    p[i++] = d;
+                return;
+            }
+            throw std::runtime_error("JSON->Eigen conversion error");
         }
-        throw std::runtime_error("JSON->Eigen conversion error");
-    }
 };
 
 /** @brief Faunus main namespace */
@@ -137,6 +138,9 @@ namespace Faunus {
         static inline T lB( T epsilon_r ) {
             return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
         } //!< Bjerrum length (angstrom)
+        static inline T lB2epsr( T bjerrumlength ) {
+            return lB(bjerrumlength);
+        } //!< lB --> relative dielectric constant
     }
 
     namespace pc = PhysicalConstants;
@@ -166,6 +170,7 @@ namespace Faunus {
         constexpr T operator "" _eA( T mu ) { return mu; } //!< eA to eA
         constexpr T operator "" _Cm( T mu ) { return mu * 1.0_Debye / 3.335640951981520e-30; } //!< Cm to eA
         constexpr T operator "" _angstrom( T l ) { return l; } //!< Angstrom to Angstrom
+        constexpr T operator "" _angstrom3( T l ) { return l; } //!< Angstrom^3 to Angstrom^3
         constexpr T operator "" _m( T l ) { return l * 1e10; } //!< Meter to angstrom
         constexpr T operator "" _bohr( T l ) { return l * 0.52917721092; } //!< Bohr to angstrom
         constexpr T operator "" _nm( T l ) { return l * 10; } //!< nanometers to angstrom
@@ -764,25 +769,26 @@ namespace Faunus {
      * Example:
      *
      *    std::vector<Tparticle> v(10);
-     *    auto m1 = asEigenVector(v.begin, v.end(), &Tparticle::pos);    --> 3x10 maxtix view
-     *    auto m2 = asEigenMatrix(v.begin, v.end(), &Tparticle::charge); --> 1x10 vector view
+     *    auto m1 = asEigenVector(v.begin, v.end(), &Tparticle::pos);    --> 10x3 maxtix view
+     *    auto m2 = asEigenMatrix(v.begin, v.end(), &Tparticle::charge); --> 10x1 vector view
      *
      * @warning Be careful that objects are properly aligned and divisible with `sizeof<double>`
      */
-    template<typename matrix=Eigen::MatrixXd, typename dbl=typename matrix::Scalar, class iter, class memberptr>
+    template<typename dbl=double, class iter, class memberptr>
         auto asEigenMatrix(iter begin, iter end, memberptr m) {
             typedef typename std::iterator_traits<iter>::value_type T;
             static_assert( sizeof(T) % sizeof(dbl) == 0, "value_type size must multiples of double");
             const size_t s = sizeof(T) / sizeof(dbl);
             const size_t cols = sizeof(((T *) 0)->*m) / sizeof(dbl);
-            return Eigen::Map<matrix, 0, Eigen::Stride<1,s>>((dbl*)&(*begin.*m), end-begin, cols).array();
+            typedef Eigen::Matrix<dbl, Eigen::Dynamic, cols> Tmatrix;
+            return Eigen::Map<Tmatrix, 0, Eigen::Stride<1,s>>((dbl*)&(*begin.*m), end-begin, cols).array();
         }
 
-    template<typename matrix=Eigen::MatrixXd, typename dbl=typename matrix::Scalar, class iter, class memberptr>
+    template<typename dbl=double, class iter, class memberptr>
         auto asEigenVector(iter begin, iter end, memberptr m) {
             typedef typename std::iterator_traits<iter>::value_type T;
             static_assert( std::is_same<dbl&, decltype(((T *) 0)->*m)>::value, "member must be a scalar");
-            return asEigenMatrix<matrix>(begin, end, m).col(0);
+            return asEigenMatrix<dbl>(begin, end, m).col(0);
         }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -842,10 +848,10 @@ namespace Faunus {
                 std::string name;  //!< Name
                 double eps=0;      //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
                 double activity=0; //!< Chemical activity [mol/l]
+                double alphax=0;   //!< Excess polarisability (unit-less)
                 double dp=0;       //!< Translational displacement parameter [angstrom]
                 double dprot=0;    //!< Rotational displacement parameter [degrees]
                 double mw=1;       //!< Weight
-                double charge=0;   //!< Partial charge [e]
                 double sigma=0;    //!< Diamater for e.g Lennard-Jones etc. [angstrom]
                 double tension=0;  //!< Surface tension [kT/Å^2]
                 double tfe=0;      //!< Transfer free energy [J/mol/angstrom^2/M]
@@ -858,6 +864,7 @@ namespace Faunus {
             auto& _j = j[a.name];
             _j = a.p;
             _j["activity"] = a.activity / 1.0_molar;
+            _j["alphax"] = a.alphax;
             _j["dp"] = a.dp / 1.0_angstrom;
             _j["dprot"] = a.dprot / 1.0_rad;
             _j["eps"] = a.eps / 1.0_kJmol;
@@ -876,6 +883,7 @@ namespace Faunus {
                 auto& val = it.value();
                 a.p = val;
                 a.activity = val.value("activity", a.activity) * 1.0_molar;
+                a.alphax   = val.value("alphax", a.alphax);
                 a.dp       = val.value("dp", a.dp) * 1.0_angstrom;
                 a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
                 a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
@@ -887,13 +895,32 @@ namespace Faunus {
             }
         }
 
+    /**
+     * @brief Construct vector of atoms from json array
+     *
+     * Items are added to existing items while if an item
+     * already exists, it will be overwritten.
+     */
     template<class T>
         void from_json(const json& j, std::vector<AtomData<T>> &v) {
-            v.reserve( v.size() + j.size());
-            for (auto &i : j) {
-                v.push_back(i);
-                v.back().id() = v.size()-1; // id always match vector index
+            auto it = j.find("atomlist");
+            json _j = ( it==j.end() ) ? j : *it;
+            v.reserve( v.size() + _j.size() );
+
+            for ( auto &i : _j ) {
+                if ( i.is_string() ) // treat ax external file to load
+                    from_json( openjson(i.get<std::string>()), v );
+                else if ( i.is_object() ) {
+                    AtomData<T> a = i;
+                    auto it = findName( v, a.name );
+                    if ( it==v.end() ) 
+                        v.push_back( a ); // add new atom
+                    else
+                        *it = a;
+                }
             }
+            for (size_t i=0; i<v.size(); i++)
+                v[i].id() = i; // id must match position in vector
         }
 
     template<typename Tparticle>
@@ -906,7 +933,7 @@ namespace Faunus {
         json j = R"({ "atomlist" : [
              { "A": { "r":1.1 } },
              { "B": { "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "mw":1.1, "tfe":0.98, "tension":0.023 } }
-             ]})"_json; // non-deterministic seed
+             ]})"_json;
 
         typedef Particle<Radius, Charge, Dipole, Cigar> T;
 
@@ -945,7 +972,5 @@ namespace Faunus {
 
         inline void _to_json(json&) const {};
         inline void _from_json(const json&) {};
-
-
     };
 }//end of faunus namespace

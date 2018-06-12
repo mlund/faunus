@@ -92,7 +92,104 @@ namespace Faunus {
         }
 
         /**
-         * @brief Translate and rotate a molecular group
+         * @brief Swap the charge of a single atom
+         */
+        template<typename Tspace>
+            class AtomicSwapCharge : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    typedef typename Tspace::Tparticle Tparticle;
+                    Tspace& spc; // Space to operate on
+                    int molid=-1;
+                    double ln10 = log(10);
+                    double pKa, pH;
+                    Average<double> msqd; // mean squared displacement
+                    double _sqd, _bias; // squared displament
+                    std::string molname; // name of molecule to operate on
+                    Change::data cdata;
+
+                    void _to_json(json &j) const override {
+                        j = {
+                            {"pH", pH},
+                            {"pka", pKa},
+                            {"molid", molid},
+                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+                            {"molecule", molname}
+                        };
+                        _roundjson(j,3);
+                    }
+
+                    void _from_json(const json &j) override {
+                        assert(!molecules<Tpvec>.empty());
+                        try {
+                            molname = j.at("molecule");
+                            auto it = findName(molecules<Tpvec>, molname);
+                            if (it == molecules<Tpvec>.end())
+                                throw std::runtime_error("unknown molecule '" + molname + "'");
+                            molid = it->id();
+                            pH = j.at("pH").get<double>();
+                            pKa = j.at("pKa").get<double>();
+                            if (repeat<0) {
+                                auto v = spc.findMolecules(molid);
+                                repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
+                                if (repeat>0)
+                                    repeat = repeat * v.front().size();     // ...and for each atom
+                            }
+                        }
+                        catch (std::exception &e) {
+                            std::cerr << name << ": " << e.what();
+                            throw;
+                        }
+                    } //!< Configure via json object
+
+                    typename Tpvec::iterator randomAtom() {
+                        assert(molid>=0);
+                        auto mollist = spc.findMolecules( molid ); // all `molid` groups
+                        if (size(mollist)>0) {
+                            auto git = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
+                            if (!git->empty()) {
+                                auto p = slump.sample( git->begin(), git->end() ); // random particle iterator
+                                cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
+                                cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
+                                return p;
+                            }
+                        }
+                        return spc.p.end();
+                    }
+
+                    void _move(Change &change) override {
+                        auto p = randomAtom();
+                        if (p!=spc.p.end()) {
+                            auto& g = spc.groups[cdata.index];
+                            double oldcharge = p->charge;
+                            p->charge = fabs(oldcharge-1);
+                            _sqd = fabs(oldcharge-1) - oldcharge;
+                            change.groups.push_back( cdata ); // add to list of moved groups
+                            _bias = _sqd*(pH-pKa)*ln10; // one may add bias here...
+                        }
+                        else
+                            std::cerr << name << ": no atoms found" << std::endl;
+                    }
+
+                    double bias(Change &change, double uold, double unew) override {
+                        return _bias;
+                    } //!< adds extra energy change not captured by the Hamiltonian
+
+                    void _accept(Change &change) override { msqd += _sqd; }
+                    void _reject(Change &change) override { msqd += 0; }
+
+                public:
+                    AtomicSwapCharge(Tspace &spc) : spc(spc) {
+                        name = "swapcharge";
+                        repeat = -1; // meaning repeat N times
+                        cdata.atoms.resize(1);
+                        cdata.internal=true;
+                    }
+            };
+
+
+        /**
+         * @brief Translate and rotate a single atom
          */
         template<typename Tspace>
             class AtomicTranslateRotate : public Movebase {
@@ -192,6 +289,7 @@ namespace Faunus {
                         name = "transrot";
                         repeat = -1; // meaning repeat N times
                         cdata.atoms.resize(1);
+                        cdata.internal=true;
                     }
             };
 
@@ -319,15 +417,21 @@ namespace Faunus {
         template<typename Tspace>
             class VolumeMove : public Movebase {
                 private:
+                    const std::map<std::string, Geometry::VolumeMethod> methods = {
+                        {"xy", Geometry::XY},
+                        {"isotropic", Geometry::ISOTROPIC},
+                        {"isochoric", Geometry::ISOCHORIC}
+                    };
+                    typename decltype(methods)::const_iterator method;
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc;
                     Average<double> msqd; // mean squared displacement
-                    double dV=0, deltaV=0;
+                    double dV=0, deltaV=0, Vnew=0, Vold=0;
 
                     void _to_json(json &j) const override {
                         using namespace u8;
                         j = {
-                            {"dV", dV},
+                            {"dV", dV}, {"method", method->first},
                             {rootof + bracket(Delta + "V" + squared), std::sqrt(msqd.avg())},
                             {cuberoot + rootof + bracket(Delta + "V" + squared),
                                 std::cbrt(std::sqrt(msqd.avg()))}
@@ -336,19 +440,23 @@ namespace Faunus {
                     }
 
                     void _from_json(const json &j) override {
+                        method = methods.find( j.value("method", "isotropic") );
+                        if (method==methods.end())
+                            std::runtime_error("unknown volume change method");
                         dV = j.at("dV");
-                    } //!< Configure via json object
+                    }
 
                     void _move(Change &change) override {
                         if (dV>0) {
                             change.dV=true;
                             change.all=true;
-                            double Vold = spc.geo.getVolume();
-                            double Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
-                            //double scale = std::cbrt(Vnew/Vold); unused?
+                            Vold = spc.geo.getVolume();
+                            if (method->second == Geometry::ISOCHORIC)
+                                Vold = std::pow(Vold,1.0/3.0); // volume is constant
+                            Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
                             deltaV = Vnew-Vold;
-                            spc.scaleVolume(Vnew);
-                        }
+                            spc.scaleVolume(Vnew, method->second);
+                        } else deltaV=0;
                     }
 
                     void _accept(Change &change) override { msqd += deltaV*deltaV; }
@@ -362,7 +470,6 @@ namespace Faunus {
             };
 
         template<typename Tspace>
-<<<<<<< HEAD
             class SpeciationMove : public Movebase {
                 /*
                  * @brief Establishes equilibrium of matter
@@ -430,129 +537,6 @@ namespace Faunus {
 
                     void _move(Change &change) override {
 
-=======
-            class Cluster : public Movebase {
-                private:
-                    typedef typename Tspace::Tpvec Tpvec;
-                    Tspace& spc;
-                    Average<double> msqd, msqd_angle, N;
-                    double thresholdsq=0, dptrans=0, dprot=0, angle=0, _bias=0;
-                    Point dir={1,1,1}, dp;
-                    std::vector<std::string> names;
-                    std::vector<int> ids;
-                    std::vector<size_t> index; // all possible molecules to move
-
-                    void _to_json(json &j) const override {
-                        using namespace u8;
-                        j = {
-                            {"threshold", std::sqrt(thresholdsq)}, {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
-                            {rootof + bracket("r" + squared), std::sqrt(msqd.avg())},
-                            {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
-                            {bracket("N"), N.avg()}
-                        };
-                        _roundjson(j,3);
-                    }
-
-                    void _from_json(const json &j) override {
-                        dptrans = j.at("dp");
-                        dir = j.value("dir", Point(1,1,1));
-                        dprot = j.at("dprot");
-                        thresholdsq = std::pow(j.at("threshold").get<double>(), 2);
-                        names = j.at("molecules").get<decltype(names)>(); // molecule names
-                        ids = names2ids(molecules<Tpvec>, names);     // names --> molids
-                        index.clear();
-                        for (auto &g : spc.groups)
-                            if (!g.atomic)
-                                if (std::find(ids.begin(), ids.end(), g.id)!=ids.end() )
-                                    index.push_back( &g-&spc.groups.front() );
-                        if (repeat<0)
-                            repeat = index.size();
-                    }
-
-                    void findCluster(Tspace &spc, size_t first, std::set<size_t>& cluster) {
-                        std::set<size_t> pool(index.begin(), index.end());
-                        cluster.clear();
-                        cluster.insert(first);
-                        pool.erase(first);
-                        size_t n;
-                        do { // find cluster (not very clever...)
-                            n = cluster.size();
-                            for (size_t i : cluster)
-                                if (!spc.groups[i].empty()) // check if group is inactive
-                                    for (size_t j : pool)
-                                        if (!spc.groups[j].empty()) // check if group is inactive
-                                            if (i!=j)
-                                                if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)<=thresholdsq) {
-                                                    cluster.insert(j);
-                                                    pool.erase(j);
-                                                }
-                        } while (cluster.size()!=n);
-
-                        // check if cluster is too large
-                        double max = spc.geo.getLength().minCoeff()/2;
-                        for (auto i : cluster)
-                            for (auto j : cluster)
-                                if (j>i)
-                                    if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)>=max*max)
-                                        throw std::runtime_error(name+": cluster larger than half box length");
-                    }
-
-                    void _move(Change &change) override {
-                        if (thresholdsq>0 && !index.empty()) {
-                            std::set<size_t> cluster; // all group index in cluster
-                            size_t first = *slump.sample(index.begin(), index.end()); // random molecule (nuclei)
-                            findCluster(spc, first, cluster); // find cluster around first
-
-                            N += cluster.size(); // average cluster size
-                            Change::data d;
-                            d.all=true;
-                            dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
-                            angle = dprot * (slump()-0.5);
-
-                            Point COM = Geometry::trigoCom(spc, cluster); // cluster center
-                            Eigen::Quaterniond Q;
-                            Q = Eigen::AngleAxisd(angle, ranunit(slump)); // quaternion
-
-                            for (auto i : cluster) { // loop over molecules in cluster
-                                auto &g = spc.groups[i];
-
-                                Geometry::rotate(g.begin(), g.end(), Q, spc.geo.boundaryFunc, -COM);
-                                g.cm = g.cm-COM;
-                                spc.geo.boundary(g.cm);
-                                g.cm = Q*g.cm+COM;
-                                spc.geo.boundary(g.cm);
-
-                                g.translate( dp, spc.geo.boundaryFunc );
-                                d.index=i;
-                                change.groups.push_back(d);
-                            }
-                            _bias += 0; // one may add bias here...
-#ifndef NDEBUG
-                            Point newCOM = Geometry::trigoCom(spc, cluster);
-                            double _zero = std::sqrt( spc.geo.sqdist(COM,newCOM) ) - dp.norm();
-                            if (fabs(_zero)>1)
-                                std::cerr << _zero << " ";
-#endif
-                        }
-                    }
-
-                    double bias(Change &change, double uold, double unew) override {
-                        return _bias;
-                    } //!< adds extra energy change not captured by the Hamiltonian
-
-                    void _reject(Change &change) override { msqd += 0; msqd_angle += 0; }
-
-                    void _accept(Change &change) override {
-                        msqd += dp.squaredNorm();
-                        msqd_angle += angle*angle;
-                    }
-
-                public:
-                    Cluster(Tspace &spc) : spc(spc) {
-                        cite = "doi:10/cj9gnn";
-                        name = "cluster";
-                        repeat = -1; // meaning repeat N times
->>>>>>> b267fe6ecbd93e01cd626284ffe344033aa05db1
                     }
             };
 
@@ -730,11 +714,7 @@ namespace Faunus {
                                 MPI_Abort(mpi.comm, 1);
 
                             if (std::fabs(Vnew-Vold)>1e-9)
-<<<<<<< HEAD
-                               change.dV=true;
-=======
-                                change.dV=true; 
->>>>>>> b267fe6ecbd93e01cd626284ffe344033aa05db1
+                                change.dV=true;
 
                             spc.p = p;
                             spc.geo.setVolume(Vnew);
@@ -816,47 +796,31 @@ namespace Faunus {
                             size_t oldsize = vec.size();
                             for (auto it=m.begin(); it!=m.end(); ++it) {
                                 try {
-
-                                    if (it.key()=="moltransrot") {
-                                        this->template push_back<Move::TranslateRotate<Tspace>>(spc);
-                                        vec.back()->from_json( it.value() );
-                                    }
-
-                                    if (it.key()=="transrot") {
-                                        this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
-                                        vec.back()->from_json( it.value() );
-                                    }
 #ifdef ENABLE_MPI
-                                    if (it.key()=="temper") {
-                                        this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
-                                        vec.back()->from_json( it.value() );
-                                    }
+                                    if (it.key()=="temper") this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
 #endif
-                                    if (it.key()=="pivot") {
-                                        this->template push_back<Move::Pivot<Tspace>>(spc);
-                                        vec.back()->from_json( it.value() );
-                                    }
-
-                                    if (it.key()=="volume") {
-                                        this->template push_back<Move::VolumeMove<Tspace>>(spc);
-                                        vec.back()->from_json( it.value() );
-                                    }
-
-<<<<<<< HEAD
+                                    if (it.key()=="swapcharge") this->template push_back<Move::AtomicSwapCharge<Tspace>>(spc);
+                                    if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc);
+                                    if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
+                                    if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);
+                                    if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
+                                    if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);
                                     if (it.key()=="speciation") {
                                         this->template push_back<Move::SpeciationMove<Tspace>>(spc);
-=======
-                                    if (it.key()=="cluster") {
-                                        this->template push_back<Move::Cluster<Tspace>>(spc);
->>>>>>> b267fe6ecbd93e01cd626284ffe344033aa05db1
                                         vec.back()->from_json( it.value() );
                                     }
+                                    if (vec.size()==oldsize+1) {
+                                        vec.back()->from_json( it.value() );
+                                    }
+
+
 
                                     // additional moves go here...
 
                                     if (vec.size()==oldsize+1)
+
                                         addWeight(vec.back()->repeat);
-                                    else
+                                    } else
                                         std::cerr << "warning: ignoring unknown move '" << it.key() << "'" << endl;
                                 } catch (std::exception &e) {
                                     throw std::runtime_error("Error adding move '" + it.key() + "': " + e.what());
@@ -915,7 +879,7 @@ namespace Faunus {
                     Change c; c.all=true;
                     uinit = state1.pot.energy(c);
                     state2.sync(state1, c);
-                    assert(uinit == state2.pot.energy(c));
+                    assert(state1.pot.energy(c) == state2.pot.energy(c));
                 }
 
             public:
@@ -939,6 +903,7 @@ namespace Faunus {
                 }
 
                 void restore(const json &j) {
+                    state1.spc = j;
                     state2.spc = j;
                     init();
                 } //!< restore system from previously saved state

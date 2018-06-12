@@ -1,0 +1,69 @@
+energy:
+    - nonbonded:
+        default:
+            - wca: {mixing: LB}
+            - coulomb: {type: plain, epsr: 80, cutoff: 100}
+atomlist: # define all atom types below
+    - Na: {q:  0.0, eps: 1.0, sigma: 2.0, dp: 40}
+    - Ca: {q:  2.0, eps: 1.0, sigma: 2.0, dp: 40}
+    - K: {q:  0.0, eps: 1.0, sigma: 2.0, dp: 40}
+    - OH: {q: -1.0, eps: 1.0, sigma: 2.0, dp: 10}
+    - H4SiO4: {q: 0.0, eps: 1.0, sigma: 2.0, dp: 40}
+    - H3SiO4: {q: -1.0, eps: 1.0, sigma: 2.0, dp: 40}
+    - H2SiO4: {q: -2.0, eps: 1.0, sigma: 2.0, dp: 40}
+    - ID1 : {q: 0.0, eps: 1.0, sigma: 2.0, dp: 20}
+    - ID2 : {q: 0.0, eps: 1.0, sigma: 2.0, dp: 20}
+moleculelist:
+#    - OH_m: {atoms: [OH], atomic: true}
+#    - Ca_m: {atoms: [Ca], atomic: true}
+#    - H4SiO4_m: {atoms: [H4SiO4], atomic: true}
+#    - H3SiO4_m: {atoms: [H3SiO4], atomic: true}
+#    - H2SiO4_m: {atoms: [H2SiO4], atomic: true}
+#    - CaOH2: {atoms: [Ca, OH, OH], atomic: true}
+#    - CSH1_m: {atoms: [ID1], atomic: true}
+#    - CSH08_m: {atoms: [ID2], atomic: true}
+#    - K_m: {atoms: [K], atomic: true}
+#    - N_sol: {atoms: [Natm], atomic: true}
+#    - NaCl: {Ninit: 100, atoms: [Na,Cl], atomic: true, Ninactive: 0}
+    - ID1_m: {atoms: [ID1], atomic: true}
+    - ID2_m: {atoms: [ID2], atomic: true}
+insertmolecules:
+#    - OH_m: {N: 800 }
+#    - Ca_m: {N: 400, inactive: false }
+#    - H4SiO4_m: {N: 400, inactive: false }
+#    - H3SiO4_m: {N: 400, inactive: true }
+#    - H2SiO4_m: {N: 400, inactive: true }
+#    - CaOH2: {N: 1, inactive: true}
+#    - CSH1_m: {N: 200, inactive: true}
+#    - CSH08_m: {N: 200, inactive: true}
+#    - Cl_m: {N: 100, inactive: false }
+#    - N_sol: {N: 100 }
+    - ID1_m: {N: 60}
+    - ID2_m: {N: 30}
+reactionlist:
+#    - R1: {log_k: 0.0, reactants: [Na_m], products: [K_m], canonic: false, N: 100, N_reservoir: 100}
+#    - R2: {log_k: -1.0, reactants: [], products: [N_sol], canonic: true, N: 1000, N_reservoir: 0}
+#    - R3: {log_k: 0.0, reactants: [Na_m, Na_m], products: [Ca_m], canonic: false}
+#    - R4: {log_k: 0.0, products: [Na_m, Na_m], reactants: [Ca_m], canonic: false}
+#    - T1 :  {log_k: -4.16, reactants: [H4SiO4_m, OH_m], products: [H3SiO4_m]}
+#    - T2 :  {log_k: -0.8, reactants: [H3SiO4_m, OH_m], products: [H2SiO4_m]}
+#    - CS1: {log_k: -13.078, reactants: [], products: [Ca_m, OH_m, OH_m, H4SiO4_m], canonic: true, N_reservoir: 0}
+#    - CS08: {log_k: -57.595, reactants: [], products: [Ca_m, Ca_m, Ca_m, Ca_m, OH_m, OH_m, OH_m, OH_m, OH_m, OH_m, OH_m, OH_m,
+#             H4SiO4_m, H4SiO4_m, H4SiO4_m, H4SiO4_m, H4SiO4_m], canonic: true, N_reservoir: 0}
+    - Test: {log_k: -3.734, reactants: [], products: [ID1_m, ID1_m, ID2_m], N_reservoir: 0, canonic: false}
+moves:
+#    - transrot: {molecule: Ca_m, dp: 40, dprot: 0, repeat: 3, dir: [1,1,1] }
+#    - transrot: {molecule: H4SiO4_m, dp: 40, dprot: 0, repeat: 3 }
+#    - transrot: {molecule: OH_m, dp: 40, dprot: 0, repeat: 3 }
+#    - volume: {dV: 0.1}
+    - speciation: {repeat: 1}
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: confout.state}
+    - density: {nstep: 10}
+#    - widom: {molecule: CaOH2, nstep: 50, ninsert: 10}
+mcloop: {macro: 10, micro: 100000}
+geometry: {length: 100} # sidelength(s): number OR array
+temperature: 300
+random: {seed: hardware }

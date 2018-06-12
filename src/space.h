@@ -1,6 +1,6 @@
 #pragma once
 #include "core.h"
-#include "molecule.h"
+//#include "molecule.h"
 #include "geometry.h"
 #include "group.h"
 
@@ -16,12 +16,15 @@ namespace Faunus {
         bool dV = false;    //!< Set to true if there's a volume change
         double all = false; //!< Set to true if *everything* has changed
         double du=0;        //!< Additional energy change not captured by Hamiltonian
+        bool dNpart=false;      //!< Is the size of groups partially changed
 
         struct data {
+            bool dNpart=false;      //!< Is the size of groups partially changed
             int index; //!< Touched group index
             bool internal=false; //!< True is the internal energy/config has changed
             bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
+
         }; //!< Properties of changed groups
 
         std::vector<data> groups; //!< Touched groups by index in group vector
@@ -35,6 +38,7 @@ namespace Faunus {
             du=0;
             dV=false;
             all=false;
+            dNpart=false;
             groups.clear();
             assert(empty());
         } //!< Clear all change data
@@ -45,7 +49,8 @@ namespace Faunus {
                 if (dV==false)
                     if (all==false)
                         if (groups.empty())
-                            return true;
+                            if (dNpart==false)
+                                return true;
             return false;
         } //!< Check if change object is empty
 
@@ -226,6 +231,13 @@ namespace Faunus {
                     tmp[name] = d;
                     _j.push_back( tmp );
                 }
+                auto& _j2 = j["reactionlist"];
+                for (auto &i : reactions<decltype(p)>) {
+                    // auto name = i.name;
+                    json tmp, d = i;
+                    // tmp[name] = d;
+                    _j2.push_back( i );
+                }
                 return j;
             }
 
@@ -236,13 +248,14 @@ namespace Faunus {
             j["geometry"] = spc.geo;
             j["groups"] = spc.groups;
             j["particles"] = spc.p;
+            j["reactionlist"] = reactions<std::vector<Tparticle>>;
         } //!< Serialize Space to json object
 
     template<class Tgeometry, class Tparticletype>
         void from_json(const json &j, Space<Tgeometry,Tparticletype> &spc) {
             typedef typename Space<Tgeometry,Tparticletype>::Tpvec Tpvec;
             using namespace std::string_literals;
-<<<<<<< HEAD
+
             try {
                 if (atoms<Tparticletype>.empty())
                     atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
@@ -254,9 +267,9 @@ namespace Faunus {
                 spc.clear();
                 spc.geo = j.at("geometry");
 
-                if ( j.count("groups")==0 )
-                    insertMolecules( spc );
-                else {
+                if ( j.count("groups")==0 ) {
+                    insertMolecules( j.at("insertmolecules"), spc );
+                } else {
                     spc.p = j.at("particles").get<Tpvec>();
                     if (!spc.p.empty()) {
                         auto begin = spc.p.begin();

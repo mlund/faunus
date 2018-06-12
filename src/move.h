@@ -92,104 +92,7 @@ namespace Faunus {
         }
 
         /**
-         * @brief Swap the charge of a single atom
-         */
-        template<typename Tspace>
-            class AtomicSwapCharge : public Movebase {
-                private:
-                    typedef typename Tspace::Tpvec Tpvec;
-                    typedef typename Tspace::Tparticle Tparticle;
-                    Tspace& spc; // Space to operate on
-                    int molid=-1;
-                    double ln10 = log(10);
-                    double pKa, pH;
-                    Average<double> msqd; // mean squared displacement
-                    double _sqd, _bias; // squared displament
-                    std::string molname; // name of molecule to operate on
-                    Change::data cdata;
-
-                    void _to_json(json &j) const override {
-                        j = {
-                            {"pH", pH},
-                            {"pka", pKa},
-                            {"molid", molid},
-                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"molecule", molname}
-                        };
-                        _roundjson(j,3);
-                    }
-
-                    void _from_json(const json &j) override {
-                        assert(!molecules<Tpvec>.empty());
-                        try {
-                            molname = j.at("molecule");
-                            auto it = findName(molecules<Tpvec>, molname);
-                            if (it == molecules<Tpvec>.end())
-                                throw std::runtime_error("unknown molecule '" + molname + "'");
-                            molid = it->id();
-                            pH = j.at("pH").get<double>();
-                            pKa = j.at("pKa").get<double>();
-                            if (repeat<0) {
-                                auto v = spc.findMolecules(molid);
-                                repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
-                                if (repeat>0)
-                                    repeat = repeat * v.front().size();     // ...and for each atom
-                            }
-                        }
-                        catch (std::exception &e) {
-                            std::cerr << name << ": " << e.what();
-                            throw;
-                        }
-                    } //!< Configure via json object
-
-                    typename Tpvec::iterator randomAtom() {
-                        assert(molid>=0);
-                        auto mollist = spc.findMolecules( molid ); // all `molid` groups
-                        if (size(mollist)>0) {
-                            auto git = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
-                            if (!git->empty()) {
-                                auto p = slump.sample( git->begin(), git->end() ); // random particle iterator
-                                cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
-                                cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
-                                return p;
-                            }
-                        }
-                        return spc.p.end();
-                    }
-
-                    void _move(Change &change) override {
-                        auto p = randomAtom();
-                        if (p!=spc.p.end()) {
-                            auto& g = spc.groups[cdata.index];
-                            double oldcharge = p->charge;
-                            p->charge = fabs(oldcharge-1);
-                            _sqd = fabs(oldcharge-1) - oldcharge;
-                            change.groups.push_back( cdata ); // add to list of moved groups
-                            _bias = _sqd*(pH-pKa)*ln10; // one may add bias here...
-                        }
-                        else
-                            std::cerr << name << ": no atoms found" << std::endl;
-                    }
-
-                    double bias(Change &change, double uold, double unew) override {
-                        return _bias;
-                    } //!< adds extra energy change not captured by the Hamiltonian
-
-                    void _accept(Change &change) override { msqd += _sqd; }
-                    void _reject(Change &change) override { msqd += 0; }
-
-                public:
-                    AtomicSwapCharge(Tspace &spc) : spc(spc) {
-                        name = "swapcharge";
-                        repeat = -1; // meaning repeat N times
-                        cdata.atoms.resize(1);
-                        cdata.internal=true;
-                    }
-            };
-
-
-        /**
-         * @brief Translate and rotate a single atom
+         * @brief Translate and rotate a molecular group
          */
         template<typename Tspace>
             class AtomicTranslateRotate : public Movebase {
@@ -224,7 +127,7 @@ namespace Faunus {
                             molid = it->id();
                             dir = j.value("dir", Point(1,1,1));
                             if (repeat<0) {
-                                auto v = spc.findMolecules(molid);
+                                auto v = spc.findMolecules(molid, spc.Selection::ALL );
                                 repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
                                 if (repeat>0)
                                     repeat = repeat * v.front().size();     // ...and for each atom
@@ -238,10 +141,13 @@ namespace Faunus {
 
                     typename Tpvec::iterator randomAtom() {
                         assert(molid>=0);
-                        auto mollist = spc.findMolecules( molid ); // all `molid` groups
+                        //std::cout<<"molid "<<molid<<std::endl;
+                        auto mollist = spc.findMolecules( molid, spc.Selection::ALL  ); // all `molid` groups
                         if (size(mollist)>0) {
+                            //std::cout<<"looking for atoms"<<std::endl;
                             auto git = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
                             if (!git->empty()) {
+                                //std::cout<<"found molecule"<<std::endl;
                                 auto p = slump.sample( git->begin(), git->end() ); // random particle iterator
                                 cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                 cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
@@ -347,7 +253,7 @@ namespace Faunus {
 
                         // pick random group from the system matching molecule type
                         // TODO: This can be slow -- implement look-up-table in Space
-                        auto mollist = spc.findMolecules( molid ); // list of molecules w. 'molid'
+                        auto mollist = spc.findMolecules( molid, spc.Selection::ACTIVE ); // list of molecules w. 'molid'
                         if (size(mollist)>0) {
                             auto it = slump.sample( mollist.begin(), mollist.end() );
                             if (!it->empty()) {
@@ -471,6 +377,8 @@ namespace Faunus {
 
         template<typename Tspace>
             class SpeciationMove : public Movebase {
+                typedef typename Tspace::Tpvec Tpvec;
+
                 /*
                  * @brief Establishes equilibrium of matter
                  *  Establishes equilibrium of matter between all species
@@ -484,59 +392,360 @@ namespace Faunus {
                  * For example, for proton titration of phosphate one would
                  * use the following JSON input (pH 7.0):
                  *
-                 *     {
-                 *       "reaction" :
-                 *       {
-                 *         "R1" : { "log_k": 1.7, "reactants":"H2PO4", "products": "HPO4-2" },
-                 *         "R2" : { "log_k": 3.8, "free":"HPO4",  "pKd":7.21,  "pX":7.0 },
-                 *         "R3" : { "log_k": -7.2,  "free":"PO4",   "pKd":12.67, "pX":7.0 }
-                 *       }
-                 *     }
                  */
                 private:
                     // Implement classification of reactions to group weight in
                     // mc sweep {refrerence : prob(reference)}
                     Tspace& spc;
+                    Tspace *otherspc;
+                    ReactionData<Tpvec> *trialprocess;
+
+                    double log_k;
+                    bool forward;
+                    //std::vector<Group *> molDel;               // groups to delete
+                    std::vector<int> molDel;                  // index of groups to delete
+                    std::vector<int> atomDel;                 // atom index to delete
+                    std::map<int, int> molcnt_ins, atomcnt_ins,
+                                       molcnt_del, atomcnt_del,
+                                       molcnt, atomcnt;   // id's and number of inserted/deleted mols and atoms
+                    std::multimap<int, Tpvec> pmap;      // coordinates of mols and atoms to be inserted
+                    unsigned int Ndeleted, Ninserted;    // Number of accepted deletions and insertions
+                    //bool insertBool, forward;                     // current status - either insert or delete
+
                     void _to_json(json &j) const override {
 
                     }
                     void _from_json(const json &j) override {
-
+                        //j["speciation"] = "spectiation";
                     }
                 public:
                     SpeciationMove(Tspace &spc) :spc(spc) {
                         name = "speciation";
                         repeat = 1;
+
+
                     }
-                    class reactiondata
-                        /*
-                         * @brief Class for describing chemical reaction of arbitrary sort
-                         *
-                         *  Flags for different reactions
-                         *  - no flag, explicit
-                         *  - trailing ~ implicit species with defined chemical potential
-                         *  - trailing *[int]
-                         *
-                         */
-                    {
-                    public:
-                        typedef int Tid;                 //!< Particle type id
-                        std::map<Tid, int> reactants;   //!< Soichiomteric coefficents of reactants mapped by molecule index
-                        std::map<Tid, int> products;    //!< Soichiometric coefficients of products mapped by molecule index
 
-                        std::string _reac, _prod;
-                        bool canonic;                   //!< Finite reservoir
-                        int N_res;                      //!< Number of molecules in finite reservoir
-                        double log_k;                   //!< log K
-                        std::string name;               //!< Name of reaction
-                        std::string formula;            //!< Chemical formula
+                    void setOther(Tspace &ospc) {
+                        otherspc = &ospc;
+                    }
 
-                    //public:
-                        double energy(); //!< Returns intrinsic energy of the process
-                    };
+                    double energy(); //!< Returns intrinsic energy of the process
 
                     void _move(Change &change) override {
+                        //std::cout << "entered move::spec \n"<<std::endl;
+                        //d.atoms.clear();
+                        if ( reactions<Tpvec>.size()>0 ) {
+                            auto rit = slump.sample( reactions<Tpvec>.begin(), reactions<Tpvec>.end() );
+                            //std::cout << "Picked " << rit->name <<endl;
+                            log_k = rit->log_k;
+                            forward = (bool)slump.range(0,1);
+                            //std::cout << forward << "forward"<<std::endl;
+                            trialprocess = &(*rit);
+                            if ( rit->Empty(forward) )  // Enforce canonic constraint if invoked
+                                return; //Out of material, slip out the back door
 
+                            for (auto &m : rit->Molecules2Add( !forward )) { // Delete checks
+                                auto mollist = spc.findMolecules( m.first, spc.Selection::ALL);
+                                if ( molecules<Tpvec>[m.first].atomic ) {
+                                    if( size(mollist)!=1 ) // There can be only one
+                                        throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                                    auto git = mollist.begin();
+                                    if ( git->size() < m.second )  // assure that there are atoms enough in the group
+                                        return;
+                                } else {
+                                    mollist = spc.findMolecules( m.first, spc.Selection::ACTIVE);
+                                    if ( size(mollist) <  m.second )
+                                        return; // Not possible to perform change, escape through the back door
+                                    }
+                            }
+                            for (auto &m : rit->Molecules2Add( forward )) { // Addition checks
+                                auto mollist = spc.findMolecules( m.first, spc.Selection::ALL);
+                                if ( molecules<Tpvec>[m.first].atomic ) {
+                                    if( size(mollist)!=1 ) // There can be only one
+                                        throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                                    auto git = mollist.begin();
+                                    if ( (git->size() + m.second) > git->capacity() )  // assure that there are atoms enough in the group
+                                        return;  // if not slip out the back door
+                                } else {
+                                    mollist = spc.findMolecules( m.first, spc.Selection::INACTIVE);
+                                    if ( size(mollist) <  m.second )
+                                        return; // Not possible to perform change, escape through the back door
+                                    }
+                            }
+                            //The move is doable, raise flag
+                            change.dNpart=true;
+
+                            for (auto &m : rit->Molecules2Add( !forward )) { // Delete
+                                auto mollist = spc.findMolecules( m.first, spc.Selection::ALL);
+                                if ( molecules<Tpvec>[m.first].atomic ) {
+                                    if( size(mollist)!=1 ) // There can be only one
+                                        throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                                    Change::data d;
+                                    auto git = mollist.begin();
+                                    auto othermollist = otherspc->findMolecules(m.first, spc.Selection::ALL);  // implies that new and old are in sync
+                                    auto othergit=othermollist.begin();
+                                    d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
+                                    d.internal = true;
+                                    d.dNpart = true;
+                                    // if ( git->size() < m.second )  // assure that there are atoms enough in the group
+                                    //     return;  // if not slip out the back door
+                                    for ( int N=0; N<m.second; N++ ) {  // deactivate m.second m.first atoms
+                                        auto ait = slump.sample( git->begin(), git->end()); // iterator to random atom
+                                        int dist = Faunus::distance( ait, git->end() ); // distance to random atom from end
+                                        //std::cout << "Distance from ait to end "<< dist<<std::endl;
+                                        // Shuffle back to end, both in trial and new
+                                        auto nait = git->end()-1; //iterator to last atom
+                                        //std::cout << "Distance from anit to end "<< Faunus::distance( nait, git->end() )<<std::endl;
+                                        //std::cout << "aitn is dist from begin " <<Faunus::distance( git->begin(), nait );
+                                        //std::cout << "ait is dist from begin " <<Faunus::distance( git->begin(), ait );
+                                        //std::cout << " group has size "<<git->size()<<std::endl;
+
+                                        //for (auto p: spc.p)
+                                        //    std::cout << p.pos <<std::endl<<std::endl;
+                                        //std::cout << "New above and old below"<<std::endl;
+                                        //for (auto p: otherspc->p)
+                                        //    std::cout << p.pos <<std::endl<<std::endl;
+                                        if ( Faunus::distance( ait, nait) > 1 ) {
+                                            std::iter_swap(ait, nait);
+                                            //std::cout << (othergit->end()
+                                            std::iter_swap(othergit->end()-dist-N, othergit->end() - (1+N) );
+                                        }    //d.atoms.push_back (  std::distance(git->begin(), ait) );  // index of particle rel. to group
+                                        // Temporatily add nait, remove when done
+                                        //std::cout << "after iter_swap "<<std::endl;
+                                        //for (auto p: spc.p)
+                                        //    std::cout << p.pos <<std::endl<<std::endl;
+                                        //std::cout << "New above and old below"<<std::endl;
+                                        //for (auto p: otherspc->p)
+                                        //    std::cout << p.pos <<std::endl<<std::endl;
+                                        // Change D; D.groups.push_back(D);
+                                        // otherspc->sync(spc, d);
+                                        d.atoms.push_back ( Faunus::distance(git->begin(), nait) );
+                                        //std::cout << "Internal index is "<< Faunus::distance(git->begin(), nait) <<std::endl;
+                                        //std::cout << "Distance from swaped ait to end " <<Faunus::distance( ait, git->end() ) <<std::endl;
+                                        //std::cout << "Distance from swaped nait to end " <<Faunus::distance(  nait, git->end() ) <<std::endl;
+                                        //std::cout << "Distance to begin to end " <<Faunus::distance( git->begin(), git->end() ) <<std::endl;
+                        //                git->shallowcopy( )
+                                        git->deactivate( nait, git->end());
+                                        //std::cout << "Distance to begin to end after deactivation " <<Faunus::distance( git->begin(), git->end() ) <<std::endl<<std::endl;
+
+                                        // Is this really so smart? implement deactivateatom just using swap instead?
+                                    }
+                                    //d.all=true;
+                                    change.groups.push_back( d ); // add to list of moved groups
+                                    //std::cout << "deletion 4 move::spec \n"<<std::endl;
+
+                                    //std::cout << git->size()<<std::endl;
+                                } else {
+                                    mollist = spc.findMolecules( m.first, spc.Selection::ACTIVE);
+                                    // if ( size(mollist) <  m.second )
+                                    //     return; // Not possible to perform change, escape through the back door
+                                    for ( int N=0; N <m.second; N++ ) {
+                                        Change::data d;
+                                        auto git = slump.sample(mollist.begin(), mollist.end());
+                                        git->deactivate( git->begin(), git->end());
+                                        d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
+                                        d.all = true; // *all* atoms in group were moved
+                                        change.groups.push_back( d ); // add to list of moved groups
+                                        mollist = spc.findMolecules( m.first , spc.Selection::ACTIVE);
+                                        // Activate/deactivate all? simply move end to front?
+                                    }
+                                }
+                            }
+
+                            for (auto &m : rit->Molecules2Add( forward )) { // Add
+                                auto mollist = spc.findMolecules( m.first, spc.Selection::ALL);
+                                if ( molecules<Tpvec>[m.first].atomic ) {
+                                    Change::data d;
+                                    auto git = mollist.begin();
+                                    d.index = Faunus::distance( spc.groups.begin(), git);
+                                    d.internal = true;
+                                    d.dNpart = true;
+                                    for ( int N=0; N<m.second; N++ ) {  // activate m.second m.first atoms
+                                        git->activate( git->end(), git->end() + 1);
+                                        auto ait = git->end()-1;
+                                        spc.geo.randompos(ait->pos, slump);
+                                        spc.geo.boundaryFunc(ait->pos);
+                                        //if rotat
+                                        // Point u = ranunit(slump);
+                                        // Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), u) );
+                                        // p->rotate(Q, Q.toRotationMatrix());
+
+
+
+
+                                        //spc.geo.boundary(ait->pos);
+                                        d.atoms.push_back( std::distance(git->begin(), ait) );  // index of particle rel. to group
+
+
+                                    }
+                                    change.groups.push_back( d ); // add to list of moved groups
+                                } else {
+                                    mollist = spc.findMolecules( m.first, spc.Selection::INACTIVE);
+                                    if ( size(mollist) <  m.second ) {
+                                        change.dNpart=false;
+                                        return; // Not possible to perform change, escape through the back door
+                                    }
+                                    for ( int N=0; N <m.second; N++ ) {
+                                        Change::data d;
+
+                                        auto git = slump.sample(mollist.begin(), mollist.end());
+                                        git->activate( git->inactive().begin(), git->inactive().end());
+                                        Point oldcm = git->cm;
+                                        spc.geo.randompos(oldcm, random);
+                                        git->translate( oldcm, spc.geo.boundaryFunc );
+                                        oldcm = ranunit(slump);
+                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), oldcm) );
+                                        git->rotate(Q, spc.geo.boundaryFunc);
+
+                                        d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
+                                        d.all = true; // *all* atoms in group were moved
+                                        change.groups.push_back( d ); // add to list of moved groups
+                                        mollist = spc.findMolecules( m.first , spc.Selection::INACTIVE);
+                                    }
+                                }
+                            }
+                        } else {
+                        throw std::runtime_error("No reactions in list, disable speciation or add reactions");
+                        }
+                    }
+                    double bias(Change &change, double uold, double unew) override {
+                        if (forward)
+                            return -log_k*log(10);
+                        return log_k*log(10);
+                    } //!< adds extra energy change not captured by the Hamiltonian                    }
+                    // void _reject(Change &change) override {  }
+                    //
+                    void _accept(Change &change) override {
+                        trialprocess->N_reservoir += (forward == true) ? -1 : 1;
+                        if( trialprocess->N_reservoir < 0 && trialprocess->canonic == true ) //
+                            throw std::runtime_error("There are no negative number of molecules");
+                    }
+                }; // End of class SpeciationMove
+
+
+        template<typename Tspace>
+            class Cluster : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    Tspace& spc;
+                    Average<double> msqd, msqd_angle, N;
+                    double thresholdsq=0, dptrans=0, dprot=0, angle=0, _bias=0;
+                    Point dir={1,1,1}, dp;
+                    std::vector<std::string> names;
+                    std::vector<int> ids;
+                    std::vector<size_t> index; // all possible molecules to move
+
+                    void _to_json(json &j) const override {
+                        using namespace u8;
+                        j = {
+                            {"threshold", std::sqrt(thresholdsq)}, {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
+                            {rootof + bracket("r" + squared), std::sqrt(msqd.avg())},
+                            {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
+                            {bracket("N"), N.avg()}
+                        };
+                        _roundjson(j,3);
+                    }
+
+                    void _from_json(const json &j) override {
+                        dptrans = j.at("dp");
+                        dir = j.value("dir", Point(1,1,1));
+                        dprot = j.at("dprot");
+                        thresholdsq = std::pow(j.at("threshold").get<double>(), 2);
+                        names = j.at("molecules").get<decltype(names)>(); // molecule names
+                        ids = names2ids(molecules<Tpvec>, names);     // names --> molids
+                        index.clear();
+                        for (auto &g : spc.groups)
+                            if (!g.atomic)
+                                if (std::find(ids.begin(), ids.end(), g.id)!=ids.end() )
+                                    index.push_back( &g-&spc.groups.front() );
+                        if (repeat<0)
+                            repeat = index.size();
+                    }
+
+                    void findCluster(Tspace &spc, size_t first, std::set<size_t>& cluster) {
+                        std::set<size_t> pool(index.begin(), index.end());
+                        cluster.clear();
+                        cluster.insert(first);
+                        pool.erase(first);
+                        size_t n;
+                        do { // find cluster (not very clever...)
+                            n = cluster.size();
+                            for (size_t i : cluster)
+                                if (!spc.groups[i].empty()) // check if group is inactive
+                                    for (size_t j : pool)
+                                        if (!spc.groups[j].empty()) // check if group is inactive
+                                            if (i!=j)
+                                                if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)<=thresholdsq) {
+                                                    cluster.insert(j);
+                                                    pool.erase(j);
+                                                }
+                        } while (cluster.size()!=n);
+
+                        // check if cluster is too large
+                        double max = spc.geo.getLength().minCoeff()/2;
+                        for (auto i : cluster)
+                            for (auto j : cluster)
+                                if (j>i)
+                                    if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)>=max*max)
+                                        throw std::runtime_error(name+": cluster larger than half box length");
+                    }
+
+                    void _move(Change &change) override {
+                        if (thresholdsq>0 && !index.empty()) {
+                            std::set<size_t> cluster; // all group index in cluster
+                            size_t first = *slump.sample(index.begin(), index.end()); // random molecule (nuclei)
+                            findCluster(spc, first, cluster); // find cluster around first
+
+                            N += cluster.size(); // average cluster size
+                            Change::data d;
+                            d.all=true;
+                            dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
+                            angle = dprot * (slump()-0.5);
+
+                            Point COM = Geometry::trigoCom(spc, cluster); // cluster center
+                            Eigen::Quaterniond Q;
+                            Q = Eigen::AngleAxisd(angle, ranunit(slump)); // quaternion
+
+                            for (auto i : cluster) { // loop over molecules in cluster
+                                auto &g = spc.groups[i];
+
+                                Geometry::rotate(g.begin(), g.end(), Q, spc.geo.boundaryFunc, -COM);
+                                g.cm = g.cm-COM;
+                                spc.geo.boundary(g.cm);
+                                g.cm = Q*g.cm+COM;
+                                spc.geo.boundary(g.cm);
+
+                                g.translate( dp, spc.geo.boundaryFunc );
+                                d.index=i;
+                                change.groups.push_back(d);
+                            }
+                            _bias += 0; // one may add bias here...
+#ifndef NDEBUG
+                            Point newCOM = Geometry::trigoCom(spc, cluster);
+                            double _zero = std::sqrt( spc.geo.sqdist(COM,newCOM) ) - dp.norm();
+                            if (fabs(_zero)>1)
+                                std::cerr << _zero << " ";
+#endif
+                        }
+                    }
+
+                    double bias(Change &change, double uold, double unew) override {
+                        return _bias;
+                    } //!< adds extra energy change not captured by the Hamiltonian
+
+                    void _reject(Change &change) override { msqd += 0; msqd_angle += 0; }
+
+                    void _accept(Change &change) override {
+                        msqd += dp.squaredNorm();
+                        msqd_angle += angle*angle;
+                    }
+
+                public:
+                    Cluster(Tspace &spc) : spc(spc) {
+                        cite = "doi:10/cj9gnn";
+                        name = "cluster";
+                        repeat = -1; // meaning repeat N times
                     }
             };
 
@@ -596,7 +805,7 @@ namespace Faunus {
                                             for (size_t i=i2+1; i<it->size(); i++)
                                                 index.push_back(i+offset);
                                         else
-                                            for (size_t i=0; i<i1; i++)
+                                            for (int i=0; i<i1; i++)
                                                 index.push_back(i+offset);
                                         i1+=offset;
                                         i2+=offset;
@@ -716,6 +925,7 @@ namespace Faunus {
                             if (std::fabs(Vnew-Vold)>1e-9)
                                 change.dV=true;
 
+
                             spc.p = p;
                             spc.geo.setVolume(Vnew);
 
@@ -799,26 +1009,15 @@ namespace Faunus {
 #ifdef ENABLE_MPI
                                     if (it.key()=="temper") this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
 #endif
-                                    if (it.key()=="swapcharge") this->template push_back<Move::AtomicSwapCharge<Tspace>>(spc);
                                     if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc);
                                     if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
                                     if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);
                                     if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
+                                    if (it.key()=="speciation") this->template push_back<Move::SpeciationMove<Tspace>>(spc);
                                     if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);
-                                    if (it.key()=="speciation") {
-                                        this->template push_back<Move::SpeciationMove<Tspace>>(spc);
-                                        vec.back()->from_json( it.value() );
-                                    }
+
                                     if (vec.size()==oldsize+1) {
                                         vec.back()->from_json( it.value() );
-                                    }
-
-
-
-                                    // additional moves go here...
-
-                                    if (vec.size()==oldsize+1)
-
                                         addWeight(vec.back()->repeat);
                                     } else
                                         std::cerr << "warning: ignoring unknown move '" << it.key() << "'" << endl;
@@ -863,7 +1062,7 @@ namespace Faunus {
 
                     void sync(State &other, Change &change) {
                         spc.sync( other.spc, change );
-                        pot.sync( other.pot, change );
+                        pot.sync( &other.pot, change );
                     }
                 }; //!< Contains everything to describe a state
 
@@ -878,7 +1077,29 @@ namespace Faunus {
                     dusum=0;
                     Change c; c.all=true;
                     uinit = state1.pot.energy(c);
+                    //std::cout<<uinit<<std::endl;
+//                    std::cout<<state2.pot.energy(c)<<std::endl;
                     state2.sync(state1, c);
+                    // std::cout<<state2.pot.energy(c)<<std::endl;
+                    // std::cout << state1.spc.info()<< std::endl;
+                    // for (auto p: state1.spc.p) {
+                    //     std::cout << p.pos <<std::endl<<std::endl;
+                    // }
+                    // std::cout << state2.spc.info()<< std::endl;
+                    // for (auto p: state2.spc.p) {
+                    //     std::cout << p.pos <<std::endl<<std::endl;
+                    // }
+
+                    // Hack in reference to state1 in speciation
+                    for (auto &spec: moves.vec) {
+                        if (spec->name == "speciation") {
+                            auto specp = std::dynamic_pointer_cast<Move::SpeciationMove<Tspace>>(spec);
+                            specp->setOther(state1.spc);
+                            //std::cout<< "Hello speciation"<<std::endl;
+                        }
+                    }
+                    //auto moves->vec.find
+
                     assert(state1.pot.energy(c) == state2.pot.energy(c));
                 }
 
@@ -903,8 +1124,17 @@ namespace Faunus {
                 }
 
                 void restore(const json &j) {
+                    //std::cout << state1.spc.info()<< std::endl;;
+                    //std::cout << state2.spc.info()<< std::endl;;
                     state1.spc = j;
                     state2.spc = j;
+                    reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
+                    //std::cout << j["reactionlist"]<< std::endl;
+                    //for ( auto &r: reactions<Tpvec> ) {
+                    //    json j; Faunus::to_json(j, r);
+                    //    std::cout << state1.spc.info()<< std::endl;
+                    //}
+                    //std::cout << state2.spc.info()<< std::endl;;
                     init();
                 } //!< restore system from previously saved state
 
@@ -914,21 +1144,65 @@ namespace Faunus {
                         auto mv = moves.sample(); // pick random move
                         if (mv != moves.end() ) {
 
+                            //for (auto p: state2.spc.p) {
+                                //json j;
+                                //p.to_json(j);
+                                //std::cout<<p.pos<<std::endl<<std::endl;
+                            //}
                             change.clear();
                             (**mv).move(change);
 
                             if (!change.empty()) {
                                 double unew, uold, du;
+                                    //std::cout << state2.spc.info()<< std::endl;
+                                    //for (auto p: state2.spc.p) {
+                                    //json j;
+                                    //p.to_json(j);
+                                    //std::cout << p.pos <<std::endl<<std::endl;
+                                    //}
+                                    //std::cout << state1.spc.info()<< std::endl;
+                                    //for (auto p: state1.spc.p) {
+                                    //json j;
+                                    //p.to_json(j);
+                                    //std::cout << p.pos <<std::endl<<std::endl;
+                                    //}
 #pragma omp parallel sections
                                 {
 #pragma omp section
                                     { unew = state2.pot.energy(change); }
 #pragma omp section
+                                    //std::cout <<"new above old below"<<std::endl;
                                     { uold = state1.pot.energy(change); }
                                 }
+                                // Change hcc; hcc.all=true;
+                                // double hcdu = state2.pot.energy(hcc) - state1.pot.energy(hcc);
+
                                 du = unew - uold;
-                                double bias = (**mv).bias(change, uold, unew);
+                                double bias = (**mv).bias(change, uold, unew) + Nchem( state2.spc, state1.spc );
+                                //std::cout << bias <<std::endl;
                                 if ( metropolis(du + bias) ) { // accept move
+
+                                    // if ( abs( du - hcdu) > 0.0001) {
+                                    //     for (auto c: change.groups ) {
+                                    //         std::cout << c.index<<std::endl;
+                                    //         for (auto i: c.atoms )
+                                    //         std::cout << i <<std::endl;
+                                    //     }
+                                    //     std::cout << state1.spc.info()<< std::endl;
+                                    //     for (auto p: state1.spc.p) {
+                                    //         std::cout << p.pos <<std::endl<<std::endl;
+                                    //     }
+                                    //     std::cout << state2.spc.info()<< std::endl;
+                                    //     for (auto p: state2.spc.p) {
+                                    //         std::cout << p.pos <<std::endl<<std::endl;
+                                    //     }
+                                    //     std::cout << "du "<<du;
+                                    //     std::cout << "  duhc "<<hcdu<<std::endl;
+                                    //     std::cout << "Unew "<<unew<<std::endl;
+                                    //     std::cout << "Uold "<<uold<<std::endl;
+                                    //     std::cout <<"bias = "<<bias<<std::endl;
+                                    //
+                                    // }
                                     state1.sync( state2, change );
                                     (**mv).accept(change);
                                 }
@@ -953,5 +1227,58 @@ namespace Faunus {
 
     template<class Tgeometry, class Tparticle>
         void to_json(json &j, MCSimulation<Tgeometry,Tparticle> &mc) { mc.to_json(j); }
+
+        template<typename Tspace>
+            double Nchem( Tspace &spc_n, Tspace &spc_o ) {
+                double NoverO=0; //  ln ( sum of N_o!/N_n! exp([N_n - N_o]beta mu) V^(N_n - N_o) )
+                int N_o, N_n;
+                double V_n = spc_n.geo.getVolume();
+                double V_o = spc_o.geo.getVolume();
+                for ( auto &m : molecules<std::vector<typename Tspace::Tparticle>> ) {
+                    //if ( m.name.find( "~" ) != std::string::npos ) {// If the molecule is not implicit
+                        if ( m.atomic == 0 ) { // Molecular species
+                              auto mollist_n = spc_n.findMolecules(m.id(), spc_n.Selection::ACTIVE);
+                              auto mollist_o = spc_o.findMolecules(m.id(), spc_o.Selection::ACTIVE);
+                              N_n=size(mollist_n);
+                              N_o=size(mollist_o);
+                        } else {
+
+                            auto mollist_n = spc_n.findMolecules(m.id(), spc_n.Selection::ALL);
+                            if ( size(mollist_n) > 1 ) {
+                                throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                            }
+                            auto mollist_o = spc_o.findMolecules(m.id(), spc_o.Selection::ALL);
+                            if ( size(mollist_o) > 1 ) {
+                                throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                            }
+                            // Below is safe due to the catches above
+                            N_n =  mollist_n.begin()->size();
+                            N_o =  mollist_o.begin()->size();
+                        }
+                        int dN=0;
+
+                        double betamu = findName(molecules<std::vector<typename Tspace::Tparticle>>, m.name)->activity;
+                        if (betamu != 0)
+                            betamu = std::log( betamu / 1.0_molar );
+                        dN= N_n - N_o;
+                            //std::cout << dN << std::endl;
+                        if (dN > 0) {
+                            for (int n=0; n < dN; n++)
+                                NoverO += -std::log( (N_o + 1 + n ) / ( V_n * 1.0_molar )) + betamu;
+                            }
+                        if (dN < 0) {
+                            for (int n=0; n < (-dN); n++) {
+                                NoverO += std::log( (N_o - n ) / ( V_n * 1.0_molar )) - betamu;
+                            }
+                        }
+                    //}
+                }
+                return -NoverO;
+            }
+
+
+
+
+
 
 }//namespace

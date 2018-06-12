@@ -187,7 +187,7 @@ namespace Faunus {
             bool contains(const T &a) const {
                 int d = &a - &(*(this->begin()));
                 if (d>=0)
-                    if (d<this->size())
+                    if ((size_t)d<this->size())
                         return true;
                 return false;
             } //!< Determines if particle belongs to (active part) of group
@@ -248,7 +248,7 @@ namespace Faunus {
 
     template<class T /** Particle type */>
         void from_json(const json &j, Group<T> &g) {
-            g.trueend() = g.begin() + j.at("capacity"); 
+            g.trueend() = g.begin() + j.at("capacity");
             g.resize( j.at("size") );
             g.id = j.at("id").get<unsigned int>();
             g.cm = j.at("cm").get<Point>();
@@ -302,7 +302,7 @@ namespace Faunus {
         CHECK( p[1].pos.y() == doctest::Approx(10) );
         CHECK( p[1].pos.z() == doctest::Approx(12) );
 
-#pragma OPTIMIZE OFF 
+#pragma OPTIMIZE OFF
         SUBCASE("test find_index") {
             CHECK( p.begin() == g.begin() );
             CHECK( p.end() == g.end() );

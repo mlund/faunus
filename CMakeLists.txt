@@ -154,8 +154,8 @@ add_dependencies(xdrfile project_xdrfile)
 
 ExternalProject_Add( doctest
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.7/doctest/doctest.h"
-    URL_MD5 c521af6a674b3f507fd70b75510c0690
+    URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.9/doctest/doctest.h"
+    URL_MD5 0547af07d93f8f60ad1988199a877ab6
     UPDATE_DISCONNECTED ON
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
@@ -173,7 +173,7 @@ if (ENABLE_POWERSASA)
     foreach (powf array.hpp power_diagram.h power_sasa.h LICENSE)
         if (NOT EXISTS "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}")
             file(DOWNLOAD
-                "https://raw.githubusercontent.com/yesint/pteros/49ab75b/thirdparty/sasa/${powf}"
+                "https://raw.githubusercontent.com/yesint/pteros/d0b65b7/thirdparty/powersasa/${powf}"
                 "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}" STATUS status)
         endif ()
     endforeach ()

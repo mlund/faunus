@@ -21,7 +21,7 @@ namespace Eigen {
     template<typename T>
         void to_json(nlohmann::json& j, const T &p) {
             auto d = p.data();
-            for (size_t i = 0; i<p.size(); ++i)
+            for (int i=0; i<(int)p.size(); ++i)
                 j.push_back( d[i] );
         }
     template<class T>

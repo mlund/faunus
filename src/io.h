@@ -504,7 +504,7 @@ namespace Faunus {
             XDRFILE *xd=NULL;        //!< file handle
             matrix xdbox;       //!< box dimensions
             rvec *x_xtc;        //!< vector of particle coordinates
-            float time_xtc, prec_xtc=1000, prec_tol=1e-3;
+            float time_xtc, prec_xtc=1000;
             int natoms_xtc, step_xtc;
         public:
             inline int getNumAtoms() { return natoms_xtc; }

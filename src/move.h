@@ -1204,7 +1204,9 @@ namespace Faunus {
                                     //
                                     // }
                                     state1.sync( state2, change );
+                                    //std::cout <<"accepting"<<std::endl;
                                     (**mv).accept(change);
+                                    std::cout << "Accepted"<<endl;
                                 }
                                 else { // reject move
                                     state2.sync( state1, change );

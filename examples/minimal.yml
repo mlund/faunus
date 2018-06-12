@@ -1,8 +1,8 @@
 energy:
     - nonbonded:
         default:
-            - lennardjones: {mixing: LB}
-            - coulomb: {type: plain, epsr: 80, cutoff: 50}
+            - wca: {mixing: LB}
+            - coulomb: {type: none, epsr: 80, cutoff: 100}
 atomlist: # define all atom types below
     - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}
     - K: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}
@@ -10,13 +10,35 @@ atomlist: # define all atom types below
 moleculelist:
     - salt: {atoms: [Na, Cl], atomic: true }
 insertmolecules:
-    - salt: {N: 50}
+    - OH_m: {N: 800 }
+    - Ca_m: {N: 400, inactive: false }
+    - H4SiO4_m: {N: 400, inactive: false }
+    - H3SiO4_m: {N: 400, inactive: true }
+    - H2SiO4_m: {N: 400, inactive: true }
+    - CaOH2: {N: 1, inactive: true}
+#    - CSH1_m: {N: 200, inactive: true}
+#    - CSH08_m: {N: 200, inactive: true}
+#    - Cl_m: {N: 100, inactive: false }
+#    - N_sol: {N: 100 }
+reactionlist:
+#    - R1: {log_k: 0.0, reactants: [Na_m], products: [K_m], canonic: false, N: 100, N_reservoir: 100}
+#    - R2: {log_k: -1.0, reactants: [], products: [N_sol], canonic: true, N: 1000, N_reservoir: 0}
+#    - R3: {log_k: 0.0, reactants: [Na_m, Na_m], products: [Ca_m], canonic: false}
+#    - R4: {log_k: 0.0, products: [Na_m, Na_m], reactants: [Ca_m], canonic: false}
+#    - T1 :  {log_k: -4.16, reactants: [H4SiO4_m, OH_m], products: [H3SiO4_m]}
+#    - T2 :  {log_k: -0.8, reactants: [H3SiO4_m, OH_m], products: [H2SiO4_m]}
+    - CS1: {log_k: -13.078, reactants: [], products: [Ca_m, OH_m, OH_m, H4SiO4_m], canonic: false, N_reservoir: 0}
+#    - CS08: {log_k: -57.595, reactants: [], products: [Ca_m, Ca_m, Ca_m, Ca_m, OH_m, OH_m, OH_m, OH_m, OH_m, OH_m, OH_m, OH_m,
+#             H4SiO4_m, H4SiO4_m, H4SiO4_m, H4SiO4_m, H4SiO4_m], canonic: true, N_reservoir: 0}
+#    - CScomb: {log_k}
 moves:
     - transrot: { molecule: salt, dp: 40, dprot: 0 }
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - savestate: {file: confout.pqr}
     - savestate: {file: confout.state}
-mcloop: {macro: 10, micro: 1000}
-geometry: {length: 50} # sidelength(s): number OR array
+    - density: {nstep: 10}
+    - widom: {molecule: CaOH2, nstep: 50, ninsert: 10}
+mcloop: {macro: 10, micro: 100}
+geometry: {length: 1000} # sidelength(s): number OR array
 temperature: 300

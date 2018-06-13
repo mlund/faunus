@@ -1239,17 +1239,17 @@ namespace Faunus {
                 for ( auto &m : molecules<std::vector<typename Tspace::Tparticle>> ) {
                     //if ( m.name.find( "~" ) != std::string::npos ) {// If the molecule is not implicit
                         if ( m.atomic == 0 ) { // Molecular species
-                              auto mollist_n = spc_n.findMolecules(m.id(), spc_n.Selection::ACTIVE);
-                              auto mollist_o = spc_o.findMolecules(m.id(), spc_o.Selection::ACTIVE);
+                              auto mollist_n = spc_n.findMolecules(m.id(), Tspace::ACTIVE);
+                              auto mollist_o = spc_o.findMolecules(m.id(), Tspace::ACTIVE);
                               N_n=size(mollist_n);
                               N_o=size(mollist_o);
                         } else {
 
-                            auto mollist_n = spc_n.findMolecules(m.id(), spc_n.Selection::ALL);
+                            auto mollist_n = spc_n.findMolecules(m.id(), Tspace::ALL);
                             if ( size(mollist_n) > 1 ) {
                                 throw std::runtime_error("Bad definition: One group per atomic molecule!");
                             }
-                            auto mollist_o = spc_o.findMolecules(m.id(), spc_o.Selection::ALL);
+                            auto mollist_o = spc_o.findMolecules(m.id(), Tspace::ALL);
                             if ( size(mollist_o) > 1 ) {
                                 throw std::runtime_error("Bad definition: One group per atomic molecule!");
                             }

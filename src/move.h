@@ -127,7 +127,7 @@ namespace Faunus {
                             molid = it->id();
                             dir = j.value("dir", Point(1,1,1));
                             if (repeat<0) {
-                                auto v = spc.findMolecules(molid, spc.Selection::ALL );
+                                auto v = spc.findMolecules(molid, Tspace::ALL );
                                 repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
                                 if (repeat>0)
                                     repeat = repeat * v.front().size();     // ...and for each atom
@@ -142,7 +142,7 @@ namespace Faunus {
                     typename Tpvec::iterator randomAtom() {
                         assert(molid>=0);
                         //std::cout<<"molid "<<molid<<std::endl;
-                        auto mollist = spc.findMolecules( molid, spc.Selection::ALL  ); // all `molid` groups
+                        auto mollist = spc.findMolecules( molid, Tspace::ALL  ); // all `molid` groups
                         if (size(mollist)>0) {
                             //std::cout<<"looking for atoms"<<std::endl;
                             auto git = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
@@ -446,7 +446,7 @@ namespace Faunus {
                                 return; //Out of material, slip out the back door
 
                             for (auto &m : rit->Molecules2Add( !forward )) { // Delete checks
-                                auto mollist = spc.findMolecules( m.first, spc.Selection::ALL);
+                                auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
                                     if( size(mollist)!=1 ) // There can be only one
                                         throw std::runtime_error("Bad definition: One group per atomic molecule!");
@@ -460,7 +460,7 @@ namespace Faunus {
                                     }
                             }
                             for (auto &m : rit->Molecules2Add( forward )) { // Addition checks
-                                auto mollist = spc.findMolecules( m.first, spc.Selection::ALL);
+                                auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
                                     if( size(mollist)!=1 ) // There can be only one
                                         throw std::runtime_error("Bad definition: One group per atomic molecule!");
@@ -477,13 +477,13 @@ namespace Faunus {
                             change.dNpart=true;
 
                             for (auto &m : rit->Molecules2Add( !forward )) { // Delete
-                                auto mollist = spc.findMolecules( m.first, spc.Selection::ALL);
+                                auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
                                     if( size(mollist)!=1 ) // There can be only one
                                         throw std::runtime_error("Bad definition: One group per atomic molecule!");
                                     Change::data d;
                                     auto git = mollist.begin();
-                                    auto othermollist = otherspc->findMolecules(m.first, spc.Selection::ALL);  // implies that new and old are in sync
+                                    auto othermollist = otherspc->findMolecules(m.first, Tspace::ALL);  // implies that new and old are in sync
                                     auto othergit=othermollist.begin();
                                     d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                     d.internal = true;
@@ -554,7 +554,7 @@ namespace Faunus {
                             }
 
                             for (auto &m : rit->Molecules2Add( forward )) { // Add
-                                auto mollist = spc.findMolecules( m.first, spc.Selection::ALL);
+                                auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
                                     Change::data d;
                                     auto git = mollist.begin();

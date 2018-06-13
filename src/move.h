@@ -253,7 +253,7 @@ namespace Faunus {
 
                         // pick random group from the system matching molecule type
                         // TODO: This can be slow -- implement look-up-table in Space
-                        auto mollist = spc.findMolecules( molid, spc.Selection::ACTIVE ); // list of molecules w. 'molid'
+                        auto mollist = spc.findMolecules( molid, Tspace::ACTIVE ); // list of molecules w. 'molid'
                         if (size(mollist)>0) {
                             auto it = slump.sample( mollist.begin(), mollist.end() );
                             if (!it->empty()) {
@@ -454,7 +454,7 @@ namespace Faunus {
                                     if ( git->size() < m.second )  // assure that there are atoms enough in the group
                                         return;
                                 } else {
-                                    mollist = spc.findMolecules( m.first, spc.Selection::ACTIVE);
+                                    mollist = spc.findMolecules( m.first, Tspace::ACTIVE);
                                     if ( size(mollist) <  m.second )
                                         return; // Not possible to perform change, escape through the back door
                                     }
@@ -468,7 +468,7 @@ namespace Faunus {
                                     if ( (git->size() + m.second) > git->capacity() )  // assure that there are atoms enough in the group
                                         return;  // if not slip out the back door
                                 } else {
-                                    mollist = spc.findMolecules( m.first, spc.Selection::INACTIVE);
+                                    mollist = spc.findMolecules( m.first, Tspace::INACTIVE);
                                     if ( size(mollist) <  m.second )
                                         return; // Not possible to perform change, escape through the back door
                                     }
@@ -537,7 +537,7 @@ namespace Faunus {
 
                                     //std::cout << git->size()<<std::endl;
                                 } else {
-                                    mollist = spc.findMolecules( m.first, spc.Selection::ACTIVE);
+                                    mollist = spc.findMolecules( m.first, Tspace::ACTIVE);
                                     // if ( size(mollist) <  m.second )
                                     //     return; // Not possible to perform change, escape through the back door
                                     for ( int N=0; N <m.second; N++ ) {
@@ -547,7 +547,7 @@ namespace Faunus {
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                         d.all = true; // *all* atoms in group were moved
                                         change.groups.push_back( d ); // add to list of moved groups
-                                        mollist = spc.findMolecules( m.first , spc.Selection::ACTIVE);
+                                        mollist = spc.findMolecules( m.first , Tspace::ACTIVE);
                                         // Activate/deactivate all? simply move end to front?
                                     }
                                 }
@@ -581,7 +581,7 @@ namespace Faunus {
                                     }
                                     change.groups.push_back( d ); // add to list of moved groups
                                 } else {
-                                    mollist = spc.findMolecules( m.first, spc.Selection::INACTIVE);
+                                    mollist = spc.findMolecules( m.first, Tspace::INACTIVE);
                                     if ( size(mollist) <  m.second ) {
                                         change.dNpart=false;
                                         return; // Not possible to perform change, escape through the back door
@@ -601,7 +601,7 @@ namespace Faunus {
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                         d.all = true; // *all* atoms in group were moved
                                         change.groups.push_back( d ); // add to list of moved groups
-                                        mollist = spc.findMolecules( m.first , spc.Selection::INACTIVE);
+                                        mollist = spc.findMolecules( m.first , Tspace::INACTIVE);
                                     }
                                 }
                             }

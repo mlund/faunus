@@ -169,11 +169,11 @@ namespace Faunus {
                     f = [&spc, dir=dir, i=index]() {
                         auto &cm = spc.groups[i].cm;
                         cout << std::distance(spc.groups[i].begin(), spc.groups[i].end()) << endl;
-                        S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
+                        auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
                         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
-                        Point pa = esf.eigenvectors().col(3).real();
+                        Point vec = esf.eigenvectors().col(3).real();
                         cout << esf.eigenvalues()[0] << " " << esf.eigenvalues()[1] << " " << esf.eigenvalues()[2] << endl;
-                        double cosine = pa.dot(dir);
+                        double cosine = vec.dot(dir);
                         double angle = acos(cosine) * 180. / pc::pi;
                         return angle; 
                     };

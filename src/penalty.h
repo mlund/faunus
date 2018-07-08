@@ -168,7 +168,10 @@ namespace Faunus {
                     index = j.at("index").get<decltype(index)>();
                     f = [&spc, dir=dir, i=index]() {
                         auto &cm = spc.groups[i].cm;
-                        cout << atoms<Tparticle>.at(spc.groups[i].id).name << endl;
+                        auto gindex = spc.groups.at(spc.groups[i].index).to_index(spc.p.begin()).first;
+                        cout << "1. " << atoms<Tparticle>.at(spc.p.at(gindex).id).name << endl;
+                        cout << "2. " << atoms<Tparticle>.at(spc.p.at(gindex+1).id).name << endl;
+                        cout << "3. " << atoms<Tparticle>.at(spc.p.at(gindex+2).id).name << endl;
                         auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
                         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                         Point vec = esf.eigenvectors().col(3).real();

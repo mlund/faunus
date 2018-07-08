@@ -168,7 +168,9 @@ namespace Faunus {
                     index = j.at("index").get<decltype(index)>();
                     f = [&spc, dir=dir, i=index]() {
                         auto &cm = spc.groups[i].cm;
-                        auto gindex = spc.groups.at(spc.groups[i].index).to_index(spc.p.begin()).first;
+                        auto gindex = spc.groups[i].to_index(spc.p.begin()).first;
+                        auto name = molecules<decltype(spc.p)>.at(spc.groups[i].id).name;
+                        cout << "Molecule name " << name << endl;
                         cout << "1. " << atoms<Tparticle>.at(spc.p.at(gindex).id).name << endl;
                         cout << "2. " << atoms<Tparticle>.at(spc.p.at(gindex+1).id).name << endl;
                         cout << "3. " << atoms<Tparticle>.at(spc.p.at(gindex+2).id).name << endl;

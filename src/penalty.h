@@ -166,16 +166,13 @@ namespace Faunus {
                     from_json(j, *this);
                     dir = j.value("dir", dir);
                     index = j.at("index").get<decltype(index)>();
-                    auto name = molecules<decltype(spc.p)>.at(spc.groups[i].id).name;
-                    cout << "Molecule Name " << name << endl;
+                    auto name = molecules<decltype(spc.p)>.at(spc.groups[index].id).name;
+                    cout << "Molecule Name: " << name << endl;
                     f = [&spc, dir=dir, i=index]() {
                         auto &cm = spc.groups[i].cm;
-                        auto name = molecules<decltype(spc.p)>.at(spc.groups[i].id).name;
-                        cout << "Molecule name " << name << endl;
                         auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
                         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                         Point vec = esf.eigenvectors().col(3).real();
-                        cout << esf.eigenvalues()[0] << " " << esf.eigenvalues()[1] << " " << esf.eigenvalues()[2] << endl;
                         double cosine = vec.dot(dir);
                         double angle = acos(abs(cosine)) * 180. / pc::pi;
                         return angle; 

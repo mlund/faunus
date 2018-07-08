@@ -178,17 +178,9 @@ namespace Faunus {
                     };
                 }
 
-            double normalize(double coord) const override {
-                int dim=dir.sum();
-                if (dim==2) return 1/(2*pc::pi*coord);
-                if (dim==3) return 1/(4*pc::pi*coord*coord);
-                return 1.0;
-            } // normalize by volume element
-
             void _to_json(json &j) const override {
                 j["dir"] = dir;
                 j["index"] = index;
-                j["type"] = type;
             }
         };
 

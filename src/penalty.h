@@ -157,7 +157,7 @@ namespace Faunus {
          * @brief Reaction coordinate: angle between principal axis and cartesian axis
          */
         struct PrincipalAxisAngle : public ReactionCoordinateBase {
-            Eigen::Vector3i dir={0,0,1};
+            Eigen::Vector3d dir={0,0,1};
             size_t index;
             template<class Tspace>
                 PrincipalAxisAngle(const json &j, Tspace &spc) {

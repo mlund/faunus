@@ -497,7 +497,8 @@ namespace Faunus {
                     for (auto it=begin; it!=end; ++it) {
                         Point t = it->pos - shift;
                         boundary(t);
-                        S += t * t.transpose();
+                        // S += t * t.transpose();
+                        S += t.squaredNorm() * Eigen::Matrix<double, 3, 3>::Identity() - t * t.transpose();
                     }
                     return S*(1.0/n);
                 }

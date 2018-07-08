@@ -132,8 +132,7 @@ namespace Faunus {
                             auto slice2 = g.find_id(findName(atoms<Tparticle>, type2)->id());
                             auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.boundaryFunc);
                             auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.boundaryFunc);
-                            //return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
-                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum();
+                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
                         };
                     }
                     else
@@ -153,6 +152,46 @@ namespace Faunus {
                 j["type"] = type;
             }
         };
+        /**
+         * @brief Reaction coordinate: angle between principal axis and cartesian axis
+         */
+        struct PrincipalAxisAngle : public ReactionCoordinateBase {
+            Eigen::Vector3i dir={0,0,1};
+            size_t index;
+            template<class Tspace>
+                PrincipalAxisAngle(const json &j, Tspace &spc) {
+                    typedef typename Tspace::Tparticle Tparticle;
+                    name = "P.A.angle";
+                    from_json(j, *this);
+                    dir = j.value("dir", dir);
+                    index = j.at("index").get<decltype(index)>();
+                    f = [&spc, dir=dir, i=index]() {
+                        auto &cm = spc.groups[i].cm;
+                        cout << std::distance(spc.groups[i].begin(), spc.groups[i].end()) << endl;
+                        S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
+                        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+                        Point pa = esf.eigenvectors().col(3).real();
+                        cout << esf.eigenvalues()[0] << " " << esf.eigenvalues()[1] << " " << esf.eigenvalues()[2] << endl;
+                        double cosine = pa.dot(dir);
+                        double angle = acos(cosine) * 180. / pc::pi;
+                        return angle; 
+                    };
+                }
+
+            double normalize(double coord) const override {
+                int dim=dir.sum();
+                if (dim==2) return 1/(2*pc::pi*coord);
+                if (dim==3) return 1/(4*pc::pi*coord*coord);
+                return 1.0;
+            } // normalize by volume element
+
+            void _to_json(json &j) const override {
+                j["dir"] = dir;
+                j["index"] = index;
+                j["type"] = type;
+            }
+        };
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] MassCenterSeparation")
         {

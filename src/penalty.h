@@ -162,7 +162,7 @@ namespace Faunus {
             template<class Tspace>
                 PrincipalAxisAngle(const json &j, Tspace &spc) {
                     typedef typename Tspace::Tparticle Tparticle;
-                    name = "P.A.angle";
+                    name = "angle";
                     from_json(j, *this);
                     dir = j.value("dir", dir);
                     index = j.at("index").get<decltype(index)>();
@@ -174,7 +174,7 @@ namespace Faunus {
                         Point vec = esf.eigenvectors().col(3).real();
                         cout << esf.eigenvalues()[0] << " " << esf.eigenvalues()[1] << " " << esf.eigenvalues()[2] << endl;
                         double cosine = vec.dot(dir);
-                        double angle = acos(cosine) * 180. / pc::pi;
+                        double angle = acos(abs(cosine)) * 180. / pc::pi;
                         return angle; 
                     };
                 }

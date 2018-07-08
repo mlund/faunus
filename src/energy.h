@@ -927,6 +927,8 @@ namespace Faunus {
                                             rc = std::make_shared<SystemProperty>(it.value(), spc);
                                         if (it.key()=="cmcm")
                                             rc = std::make_shared<MassCenterSeparation>(it.value(), spc);
+                                        if (it.key()=="angle")
+                                            rc = std::make_shared<PrincipalAxisAngle>(it.value(), spc);
                                         if (rc!=nullptr) {
                                             if (rc->min>=rc->max || rc->binwidth<=0)
                                                 throw std::runtime_error("min<max and binwidth>0 required for '" + it.key() + "'");

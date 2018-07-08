@@ -3,6 +3,7 @@
 #include "core.h"
 #include "group.h"
 #include "space.h"
+#include <Eigen/Dense>
 
 namespace Faunus {
 

@@ -168,7 +168,7 @@ namespace Faunus {
                     index = j.at("index").get<decltype(index)>();
                     f = [&spc, dir=dir, i=index]() {
                         auto &cm = spc.groups[i].cm;
-                        cout << std::distance(spc.groups[i].begin(), spc.groups[i].end()) << endl;
+                        cout << atoms<Tparticle>.at(spc.groups[i].id).name << endl;
                         auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
                         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                         Point vec = esf.eigenvectors().col(3).real();

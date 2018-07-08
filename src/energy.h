@@ -888,7 +888,8 @@ namespace Faunus {
                     size_t dim=0;
                     size_t cnt=0;       // number of calls to `sync()`
                     size_t nupdate;     // update frequency [steps]
-                    size_t samplings=1;
+                    size_t samplings;
+                    size_t nconv=0;
                     double udelta=0;    // total energy change of updating penalty function
                     double scale;       // scaling factor for f0
                     double f0;          // penalty increment
@@ -906,6 +907,7 @@ namespace Faunus {
                         scale = j.value("scale", 0.8);
                         quiet = j.value("quiet", true);
                         nupdate = j.value("update", 0);
+                        samplings = j.value("samplings", 1);
                         nodrift = j.value("nodrift", true);
                         file = j.at("file").get<std::string>();
                         hisfile = j.value("histogram", "penalty-histogram.dat");
@@ -949,12 +951,14 @@ namespace Faunus {
                             cout << "Loading penalty function '" << MPI::prefix+file << "'" << endl;
                             std::string hash;
                             f >> hash >> f0 >> samplings;
+                            cout << "f0 " << f0 << " samplings " << samplings << endl;
                             for (int row=0; row<penalty.rows(); row++)
                                 for (int col=0; col<penalty.cols(); col++)
-                                    if (!f.eof())
+                                    if (!f.eof()) 
                                         f >> penalty(row,col);
                                     else
                                         throw std::runtime_error("penalty file dimension mismatch");
+                            cout << "maxCoeff " << penalty.maxCoeff() << endl;
                         }
                      }
 
@@ -962,6 +966,7 @@ namespace Faunus {
                         std::ofstream f1(MPI::prefix + file), f2(MPI::prefix + hisfile);
                         if (f1) f1 << "# " << f0 << " " << samplings << "\n" << penalty.array() - penalty.minCoeff() << endl;
                         if (f2) f2 << histo << endl;
+                        cout << "nconv is " << nconv << endl;
                         // add function to save to numpy-friendly file...
                     }
 
@@ -972,6 +977,7 @@ namespace Faunus {
                         j["nodrift"] = nodrift;
                         j["histogram"] = hisfile;
                         j["f0_final"] = f0;
+                        j["nconv"] = nconv;
                         auto& _j = j["coords"] = json::array();
                         for (auto rc : rcvec) {
                             json t;
@@ -1010,6 +1016,7 @@ namespace Faunus {
                                 samplings = std::ceil( samplings / scale );
                                 histo.setZero();
                                 udelta += -min;
+                                nconv += 1;
                             }
                         }
                         coord = c;
@@ -1037,6 +1044,8 @@ namespace Faunus {
                 using Base::coord;
                 using Base::cnt;
                 using Base::f0;
+                using Base::file;
+                using Base::nconv;
 
                 Eigen::VectorXi weights;// array w. mininum histogram counts
                 Eigen::VectorXd buffer; // receive buffer for penalty functions
@@ -1061,12 +1070,16 @@ namespace Faunus {
                             if (mpi.isMaster()) {
                                 penalty.setZero();
                                 for (int i=0; i<mpi.nproc(); i++)
-                                    penalty += double(weights[i]) * Eigen::Map<Eigen::MatrixXd>(
-                                            buffer.data()+i*penalty.size(), penalty.rows(), penalty.cols() );
-                                penalty = ( penalty.array() - penalty.minCoeff() ) / double(weights.sum());
+                                    penalty += Eigen::Map<Eigen::MatrixXd>(
+                                            buffer.data()+i*penalty.size(), penalty.rows(), penalty.cols() ) 
+                                            / double(mpi.nproc());
+                                penalty = penalty.array() - penalty.minCoeff();
                             }
 
                             MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
+                            nconv += 1;
+                            std::ofstream f3(MPI::prefix + std::to_string(nconv) + file);
+                            if (f3) f3 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
                             if (min>0 && !this->quiet)
                                 cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                     << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;

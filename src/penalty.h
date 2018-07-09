@@ -175,6 +175,7 @@ namespace Faunus {
                         Point vec = esf.eigenvectors().col(3).real();
                         double cosine = vec.dot(dir);
                         double angle = acos(abs(cosine)) * 180. / pc::pi;
+                        cout << angle << endl;
                         return angle; 
                     };
                 }

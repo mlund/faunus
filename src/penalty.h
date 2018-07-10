@@ -133,7 +133,7 @@ namespace Faunus {
                             auto slice2 = g.find_id(findName(atoms<Tparticle>, type2)->id());
                             auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.boundaryFunc);
                             auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.boundaryFunc);
-                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum();
                         };
                     }
                     else

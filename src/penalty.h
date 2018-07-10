@@ -172,17 +172,30 @@ namespace Faunus {
                         auto &cm = spc.groups[i].cm;
                         Point ete = spc.geo.vdist(spc.groups[i].begin()->pos,(spc.groups[i].begin()+2)->pos);
                         Point ete_norm = ete / ete.norm();
-                        auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
-                        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
-                        Point vec = esf.eigenvectors().col(2);
-                        double cosine1 = vec.dot(dir);
-                        double angle1 = acos(abs(cosine1)) * 180. / pc::pi;
+
                         cout << "P1 " << atoms<Tparticle>[spc.groups[i].begin()->id].name << endl;
                         cout << "P2 " << atoms<Tparticle>[(spc.groups[i].begin()+2)->id].name << endl;
-                        cout << "angle from S " << angle1 << endl;
+
+                        auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
+                        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+                        Point vec = esf.eigenvectors().col(0).real();
+                        double cosine1 = vec.dot(dir);
+                        double angle1 = acos(abs(cosine1)) * 180. / pc::pi;
+                        cout << "angle from S0 " << angle1 << " norm " << vec.norm() << endl;
+
+                        vec = esf.eigenvectors().col(1);
+                        cosine1 = vec.dot(dir);
+                        angle1 = acos(abs(cosine1)) * 180. / pc::pi;
+                        cout << "angle from S1 " << angle1 << " norm " << vec.norm() << endl;
+
+                        vec = esf.eigenvectors().col(2);
+                        cosine1 = vec.dot(dir);
+                        angle1 = acos(abs(cosine1)) * 180. / pc::pi;
+                        cout << "angle from S2 " << angle1 << " norm " << vec.norm() << endl;
+
                         double cosine = ete_norm.dot(dir);
                         double angle = acos(abs(cosine)) * 180. / pc::pi;
-                        cout << "angle from ete " << angle << endl;
+                        cout << "angle from ete " << angle << " norm " << ete.norm() << endl;
                         return angle; 
                     };
                 }

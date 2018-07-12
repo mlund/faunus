@@ -178,7 +178,7 @@ namespace Faunus {
                         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                         Point eivals = esf.eigenvalues();
                         std::ptrdiff_t i;
-                        double maxOfeivals = eivals.maxCoeff(&i);
+                        double minOfeivals = eivals.minCoeff(&i);
                         Point vec = esf.eigenvectors().col(i).real();
                         double cosine = vec.dot(dir);
                         double angle = acos(abs(cosine)) * 180. / pc::pi;

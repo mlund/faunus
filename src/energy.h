@@ -1047,6 +1047,7 @@ namespace Faunus {
                 using Base::cnt;
                 using Base::f0;
                 using Base::file;
+                using Base::hisfile;
                 using Base::nconv;
 
                 Eigen::VectorXi weights;// array w. mininum histogram counts
@@ -1082,6 +1083,8 @@ namespace Faunus {
                             nconv += 1;
                             std::ofstream f3(MPI::prefix + std::to_string(nconv) + file);
                             if (f3) f3 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
+                            std::ofstream f4(MPI::prefix + std::to_string(nconv) + hisfile);
+                            if (f4) f4 << histo << endl;
                             if (min>0 && !this->quiet)
                                 cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                     << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;

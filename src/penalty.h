@@ -170,16 +170,16 @@ namespace Faunus {
                     cout << "Molecule Name: " << name << endl;
                     f = [&spc, dir=dir, i=index]() {
                         auto &cm = spc.groups[i].cm;
-                        //Point vec = spc.geo.vdist(spc.groups[i].begin()->pos,(spc.groups[i].begin()+2)->pos);
+                        //Point vec = spc.geo.vdist(spc.groups[i].begin()->pos,(spc.groups[i].end()-1)->pos);
                         //vec = vec / vec.norm();
                         //cout << "P1 " << atoms<Tparticle>[spc.groups[i].begin()->id].name << endl;
-                        //cout << "P2 " << atoms<Tparticle>[(spc.groups[i].begin()+2)->id].name << endl;
+                        //cout << "P2 " << atoms<Tparticle>[(spc.groups[i].end()-1)->id].name << endl;
                         auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
                         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                         Point eivals = esf.eigenvalues();
-                        std::ptrdiff_t i;
-                        double minOfeivals = eivals.minCoeff(&i);
-                        Point vec = esf.eigenvectors().col(i).real();
+                        std::ptrdiff_t i_eival;
+                        double minOfeivals = eivals.minCoeff(&i_eival);
+                        Point vec = esf.eigenvectors().col(i_eival).real();
                         double cosine = vec.dot(dir);
                         double angle = acos(abs(cosine)) * 180. / pc::pi;
                         return angle; 

@@ -1050,7 +1050,7 @@ namespace Faunus {
                 using Base::hisfile;
                 using Base::nconv;
 
-                Eigen::VectorXi weights;// array w. mininum histogram counts
+                Eigen::VectorXi weights; // array w. mininum histogram counts
                 Eigen::VectorXd buffer; // receive buffer for penalty functions
 
                 PenaltyMPI(const json &j, Tspace &spc) : Base(j,spc) {
@@ -1066,7 +1066,7 @@ namespace Faunus {
                         MPI_Barrier(mpi.comm);
                         MPI_Allgather(&min, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
 
-                        if ( weights.maxCoeff() >= samplings ) {
+                        if ( weights.maxCoeff() > samplings ) {
                             MPI_Gather(penalty.data(), penalty.size(), MPI_DOUBLE,
                                     buffer.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
 

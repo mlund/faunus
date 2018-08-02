@@ -618,6 +618,7 @@ namespace Faunus {
                     double g_internal(const Tgroup &g, const std::vector<int> &index=std::vector<int>()) {
                         using namespace ranges;
                         double u=0;
+                        //std::cout << "internal"<<std::endl;
                         if (index.empty()) // assume that all atoms have changed
                             for ( auto i = g.begin(); i != g.end(); ++i )
                                 for ( auto j=i; ++j != g.end(); )
@@ -626,14 +627,18 @@ namespace Faunus {
                             auto fixed = view::ints( 0, int(g.size()) )
                                 | view::remove_if(
                                         [&index](int i){return std::binary_search(index.begin(), index.end(), i);});
-                            for (int i : index) // moved<->static
+                            for (int i : index) {// moved<->static
+                                // std::cout<<"i is "<<i<<std::endl;
                                 for (int j : fixed ) {
+                                    //std::cout<<"g is of size "<<g.size()<<std::endl;
                                     u += i2i( *(g.begin()+i), *(g.begin()+j));
-                                    //std::cout <<"i and j in jndex on index-fix"<< i<< " "<<j<<std::endl;
+                                     //std::cout <<"i and j in index on fixed"<< i<< " "<<j<<std::endl;
                                 }
+                            }
                             for (int i : index) // moved<->moved
                                 for (int j : index)
                                     if (j>i) {
+                                        //std::cout <<"i and j in index on index-internal"<< i<< " "<<j<<std::endl;
                                         u += i2i( *(g.begin()+i), *(g.begin()+j));
                                         //std::cout <<"i and j in jndex on index-fix"<< i<< " "<<j<<std::endl;
                                     }
@@ -678,24 +683,27 @@ namespace Faunus {
                     using namespace ranges;
                     double u = 0;
                         if (!cut(g1,g2)) {
-                            if (index.empty()) // if index is empty, assume all in g1 have changed
+                            if ( index.empty() && jndex.empty() ) // if index is empty, assume all in g1 have changed
                                 for (auto &i : g1)
-                                    for (auto &j : g2)
+                                    for (auto &j : g2) {
+                                        //std::cout <<"i and j () in index on g2 "<< i<< " "<<Faunus::distance( g2.begin(), &j)<<std::endl;
+                                        //std::cout << (i).pos<<std::endl;
                                         u += i2i(i,j);
+                                    }
                             else {// only a subset of g1
                                 for (auto i : index)
-                                    for (auto &j : g2) {
-                                        u += i2i( *(g1.begin()+i), j);
-                                        //std::cout <<"i and j in jndex on index-fix"<< i<< " "<<Faunus::distance( g2.begin(), &j)<<std::endl;
+                                    for (auto j=g2.begin(); j!=g2.end(); ++j) {
+                                        // std::cout <<"i and j (693) in index on g2 "<< i<< " "<<"j"<<std::endl;
+                                         //std::cout << (g1.begin()+i)->pos<<std::endl;
+                                        u += i2i( *(g1.begin()+i), *j);
                                     }
                                 if ( !jndex.empty() ) {
                                     auto fixed = view::ints( 0, int(g1.size()) )
                                         | view::remove_if(
                                             [&index](int i){return std::binary_search(index.begin(), index.end(), i);});
-                                    for (int i : jndex) // moved2        <-|
-                                        for (int j : fixed) {// static1   <-|
+                                    for (auto i : jndex) // moved2        <-|
+                                        for (auto j : fixed) {// static1   <-|
                                             u += i2i( *(g2.begin()+i), *(g1.begin()+j));
-                                            //std::cout <<"i and j in jndex on index-fix"<< i<< " "<<j<<std::endl;
                                         }
                                 }
                             }
@@ -743,7 +751,7 @@ namespace Faunus {
                             }
 
                             // if exactly ONE molecule is changed
-                            if (change.groups.size()==1) {
+                            if (change.groups.size()==1 && !change.dNpart) {
                                 auto& d = change.groups[0];
                                 auto gindex = spc.groups.at(d.index).to_index(spc.p.begin()).first;
                                 if (d.atoms.size()==1) // exactly one atom has moved
@@ -760,72 +768,35 @@ namespace Faunus {
                             //
                             if (change.dNpart) {
                                 auto moved = change.touchedGroupIndex(); // index of moved groups
+                                std::vector<int> Moved;
+                                for (auto i: moved)
+                                    Moved.push_back(i);
+                                std::sort( Moved.begin(), Moved.end() );
                                 auto fixed = view::ints( 0, int(spc.groups.size()) )
                                     | view::remove_if(
-                                            [&moved](int i){return std::binary_search(moved.begin(), moved.end(), i);}
+                                            [&Moved](int i){return std::binary_search(Moved.begin(), Moved.end(), i);}
                                             ); // index of static groups
-                                //std::cout <<"dNpart energy calculation"<<std::endl;
                                 for ( auto cg1 = change.groups.begin(); cg1 < change.groups.end() ; ++cg1 ) { // Loop over all changed groups
-                                    //std::cout << "Group index is "<<cg1->index << std::endl;
-                                    if ( ( cg1->all || cg1->atoms.size() == 0 ) && cg1->internal==false ) { // Fliter out 'rigidly' perturbed groups
-                                        // rigid with all fixed
-                                        for ( auto j : fixed) {
-                                            u += g2g( spc.groups.at(cg1->index), spc.groups[j]);
-                                        }
-                                        // rigid with rigid without self avoiding
-                                        for ( auto cg2 = cg1; ++cg2 != change.groups.end();  )
-                                            if (!cg2->dNpart)
-                                                u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index));
-                                    } else { // here i assum that d.dNpart == true ...
-
-                                        std::vector<int> ifiltered;
-                                        std::sort( cg1->atoms.begin(), cg1->atoms.end() ); // Make sure the index to atoms is sorted
-                                        //std::cout << "group is of size "<<spc.groups.at(cg1->index).size()<<std::endl;
-                                        for (auto i: cg1->atoms) {
-                                            //std::cout << i << " are marked for change in index"<< std::endl;
-                                            if ( i < spc.groups.at(cg1->index).size() )
-                                                ifiltered.push_back(i);
-                                        }
-
-                                        //for (auto i: ifiltered)
-                                             //std::cout << i << " are marked for change after filtering"<< std::endl;
-                                        if ( ifiltered.size()>0 ) {
-                                            // with all fixed
-                                            for ( auto j : fixed ) {
-                                                u += g2g( spc.groups.at(cg1->index), spc.groups[j], ifiltered);
-                                                std::cout << "with fixed molecules"<<std::endl;
-                                            }
-                                            // with all rigidly removed
-                                            for ( auto cg2 = change.groups.begin(); cg2 != change.groups.end(); ++cg2 )
-                                                if (!cg2->dNpart){
-                                                    u += g2g( spc.groups.at(cg1->index), spc.groups.at(cg2->index), ifiltered );
-                                                    std::cout << "with rigid molecules"<<std::endl;
-                                                }
-                                            // all internally moved internally and other internally moved without doulbe counting 1<j
-                                            for ( auto cg2=cg1; ++cg2 != change.groups.end() ; ) {
-                                                if (cg2->dNpart) {
-                                                    //std::cout << "Group index is "<<cg2->index<< std::endl;
-
-                                                    //if (ifiltered.size() > 0)
-                                                    //    u += g2g( spc.groups.at( cg1->index), spc.groups.at( cg2->index), ifiltered );
-
-                                                    std::vector<int> jfiltered;
-                                                    std::sort( cg2->atoms.begin(), cg2->atoms.end() ); // Make sure the index to atoms is sorted
-                                                    for (auto i: cg2->atoms) {
-                                                        //std::cout << i << " are marked for change in jindex"<< std::endl;
-                                                        if ( i < spc.groups.at(cg2->index).size() ) {
-                                                            //std::cout << i << " are marked for change after filtering"<< std::endl;
-                                                            jfiltered.push_back(i);
-                                                        }
-                                                    }
-                                                    u += g2g( spc.groups.at( cg1->index), spc.groups.at( cg2->index), ifiltered, jfiltered );
-                                                }
-                                            }
-                                            u += g_internal( spc.groups.at( cg1->index ), ifiltered );
-                                        }
+                                    std::vector<int> ifiltered, jfiltered;
+                                    for (auto i: cg1->atoms) {
+                                        if ( i < spc.groups.at(cg1->index).size() )
+                                            ifiltered.push_back(i);
                                     }
+                                    if ( !( cg1->dNpart && ifiltered.empty() ) ) // Skip if particles are removed
+                                        for ( auto j : fixed) {
+                                            u += g2g( spc.groups.at(cg1->index), spc.groups[j], ifiltered, jfiltered );
+                                    }
+                                    for ( auto cg2 = cg1; ++cg2 != change.groups.end(); ) {
+                                        for (auto i: cg2->atoms)
+                                            if ( i < spc.groups.at(cg2->index).size() )
+                                                jfiltered.push_back(i);
+                                        if ( !( (cg1->dNpart && ifiltered.empty()) && (cg2->dNpart && jfiltered.empty()) ) ) //Skip if particles are removed from both
+                                            u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
+                                        jfiltered.clear();
+                                    }
+                                    if ( ifiltered.size() != 0 )
+                                        u += g_internal( spc.groups.at( cg1->index ), ifiltered );
                                 }
-                                //std::cout<< "done dNpart"<<std::endl<<std::endl;
                                 return u;
                             }
 

@@ -41,6 +41,7 @@ namespace Faunus {
                 bool _overlap = true;
                 Tpvec v;
                 int cnt = 0;
+                int _ntry = 1000000;
                 do
                 {
                     if ( cnt++ > maxtrials )
@@ -58,9 +59,13 @@ namespace Faunus {
                                 rot.set(2*pc::pi*random(), ranunit(random));
                                 i.rotate(rot.first, rot.second);
                             }
-                            geo.randompos(i.pos, random);
-                            i.pos = i.pos.cwiseProduct(dir) + offset;
-                            geo.boundary(i.pos);
+                            // int _try=0;
+                            // do {
+                                geo.randompos(i.pos, random);
+                                i.pos = i.pos.cwiseProduct(dir) + offset;
+                                geo.boundary(i.pos);
+                            //     _try++;
+                            // } while ( _ntry > _try && )
                         }
                     }
                     else
@@ -394,12 +399,13 @@ namespace Faunus {
             double log_k;                   //!< log K
             std::string name;               //!< Name of reaction
             std::string formula;            //!< Chemical formula
+            double weight;                  //!< Statistical weight to be given to reaction in speciation
 
             ReactionData() {
             }
-            bool Empty( bool forward ) {
-                if (canonic && forward && N_reservoir== 0)
-                    return true;
+            bool Empty( bool &forward ) {
+                if (canonic && (N_reservoir <= 0) && forward)
+                     return true;
                 return false;
             }
 
@@ -421,9 +427,6 @@ namespace Faunus {
 
         template<class Tparticle, class Talloc>
             void from_json(const json& j, ReactionData<std::vector<Tparticle,Talloc>> &a) {
-                //typedef typename Tpvec::value_type Tparticle;
-
-
                 if (j.is_object()==false || j.size()!=1)
                     throw std::runtime_error("Invalid JSON data for ReactionData");
 
@@ -440,7 +443,6 @@ namespace Faunus {
                     a._prod = val.at("products").get<std::vector<std::string>>();
                     a._reac = val.at("reactants").get<std::vector<std::string>>();
                     a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
-                    std::cout << a.name << endl;
                     for (auto &i : val.at("reactants").get<std::vector<std::string>>()) {
                         auto it = findName( molecules<std::vector<Tparticle>>, i );
                         if (it == molecules<std::vector<Tparticle>>.end() ) {
@@ -465,9 +467,7 @@ namespace Faunus {
                         }
                         else a._prodid_m[it->id()]++;
                     }
-    //                assert(!a.atoms.empty());
                 }
-
             }
 
         template<class Tparticle, class Talloc>

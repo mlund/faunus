@@ -25,11 +25,15 @@ namespace Faunus {
             bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
 
+            bool operator<( const data & a ) const{
+                return index < a.index;
+            }
         }; //!< Properties of changed groups
 
         std::vector<data> groups; //!< Touched groups by index in group vector
 
         auto touchedGroupIndex() {
+            // skitfunktion
             return ranges::view::transform(groups, [](data &i) -> int {return i.index;});
         } //!< List of moved groups (index)
 

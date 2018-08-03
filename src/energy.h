@@ -618,7 +618,6 @@ namespace Faunus {
                     double g_internal(const Tgroup &g, const std::vector<int> &index=std::vector<int>()) {
                         using namespace ranges;
                         double u=0;
-                        //std::cout << "internal"<<std::endl;
                         if (index.empty()) // assume that all atoms have changed
                             for ( auto i = g.begin(); i != g.end(); ++i )
                                 for ( auto j=i; ++j != g.end(); )
@@ -628,19 +627,14 @@ namespace Faunus {
                                 | view::remove_if(
                                         [&index](int i){return std::binary_search(index.begin(), index.end(), i);});
                             for (int i : index) {// moved<->static
-                                // std::cout<<"i is "<<i<<std::endl;
                                 for (int j : fixed ) {
-                                    //std::cout<<"g is of size "<<g.size()<<std::endl;
                                     u += i2i( *(g.begin()+i), *(g.begin()+j));
-                                     //std::cout <<"i and j in index on fixed"<< i<< " "<<j<<std::endl;
                                 }
                             }
                             for (int i : index) // moved<->moved
                                 for (int j : index)
                                     if (j>i) {
-                                        //std::cout <<"i and j in index on index-internal"<< i<< " "<<j<<std::endl;
                                         u += i2i( *(g.begin()+i), *(g.begin()+j));
-                                        //std::cout <<"i and j in jndex on index-fix"<< i<< " "<<j<<std::endl;
                                     }
                         }
                         return u;
@@ -686,15 +680,11 @@ namespace Faunus {
                             if ( index.empty() && jndex.empty() ) // if index is empty, assume all in g1 have changed
                                 for (auto &i : g1)
                                     for (auto &j : g2) {
-                                        //std::cout <<"i and j () in index on g2 "<< i<< " "<<Faunus::distance( g2.begin(), &j)<<std::endl;
-                                        //std::cout << (i).pos<<std::endl;
                                         u += i2i(i,j);
                                     }
                             else {// only a subset of g1
                                 for (auto i : index)
                                     for (auto j=g2.begin(); j!=g2.end(); ++j) {
-                                        // std::cout <<"i and j (693) in index on g2 "<< i<< " "<<"j"<<std::endl;
-                                         //std::cout << (g1.begin()+i)->pos<<std::endl;
                                         u += i2i( *(g1.begin()+i), *j);
                                     }
                                 if ( !jndex.empty() ) {
@@ -990,6 +980,8 @@ namespace Faunus {
                                             rc = std::make_shared<SystemProperty>(it.value(), spc);
                                         if (it.key()=="cmcm")
                                             rc = std::make_shared<MassCenterSeparation>(it.value(), spc);
+                                        if (it.key()=="angle")
+                                            rc = std::make_shared<PrincipalAxisAngle>(it.value(), spc);
                                         if (rc!=nullptr) {
                                             if (rc->min>=rc->max || rc->binwidth<=0)
                                                 throw std::runtime_error("min<max and binwidth>0 required for '" + it.key() + "'");
@@ -1102,8 +1094,14 @@ namespace Faunus {
                 using Base::coord;
                 using Base::cnt;
                 using Base::f0;
+<<<<<<< HEAD
+=======
+                using Base::file;
+                using Base::hisfile;
+                using Base::nconv;
+>>>>>>> 8219a493e8ed78fc5d7c0d314b9d3550f55713e6
 
-                Eigen::VectorXi weights;// array w. mininum histogram counts
+                Eigen::VectorXi weights; // array w. mininum histogram counts
                 Eigen::VectorXd buffer; // receive buffer for penalty functions
 
                 PenaltyMPI(const json &j, Tspace &spc) : Base(j,spc) {
@@ -1119,7 +1117,7 @@ namespace Faunus {
                         MPI_Barrier(mpi.comm);
                         MPI_Allgather(&min, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
 
-                        if ( weights.maxCoeff() >= samplings ) {
+                        if ( weights.maxCoeff() > samplings ) {
                             MPI_Gather(penalty.data(), penalty.size(), MPI_DOUBLE,
                                     buffer.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
 
@@ -1132,6 +1130,14 @@ namespace Faunus {
                             }
 
                             MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
+<<<<<<< HEAD
+=======
+                            nconv += 1;
+                            std::ofstream f3(MPI::prefix + std::to_string(nconv) + file);
+                            if (f3) f3 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
+                            std::ofstream f4(MPI::prefix + std::to_string(nconv) + hisfile);
+                            if (f4) f4 << histo << endl;
+>>>>>>> 8219a493e8ed78fc5d7c0d314b9d3550f55713e6
                             if (min>0 && !this->quiet)
                                 cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                     << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;

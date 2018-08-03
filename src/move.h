@@ -403,7 +403,6 @@ namespace Faunus {
 
                     double log_k;
                     bool forward;
-                    //std::vector<Group *> molDel;               // groups to delete
                     std::vector<int> molDel;                  // index of groups to delete
                     std::vector<int> atomDel;                 // atom index to delete
                     std::map<int, int> molcnt_ins, atomcnt_ins,
@@ -411,11 +410,7 @@ namespace Faunus {
                                        molcnt, atomcnt;   // id's and number of inserted/deleted mols and atoms
                     std::multimap<int, Tpvec> pmap;      // coordinates of mols and atoms to be inserted
                     unsigned int Ndeleted, Ninserted;    // Number of accepted deletions and insertions
-                    //bool insertBool, forward;                     // current status - either insert or delete
 
-                    // void _to_json(json &j) const override {
-                    //
-                    // }
                     void _to_json(json &j) const override {
                         j = {
                             // { "replicas", mpi.nproc() },
@@ -448,8 +443,6 @@ namespace Faunus {
                     double energy(); //!< Returns intrinsic energy of the process
 
                     void _move(Change &change) override {
-                        //std::cout << "entered move::spec \n"<<std::endl;
-                        //d.atoms.clear();
                         if ( reactions<Tpvec>.size()>0 ) {
                             auto rit = slump.sample( reactions<Tpvec>.begin(), reactions<Tpvec>.end() );
                             log_k = rit->log_k;
@@ -508,7 +501,7 @@ namespace Faunus {
                                         if ( Faunus::distance( ait, nait) > 1 ) {
                                             std::iter_swap(ait, nait);
                                             std::iter_swap(othergit->end()-dist-N, othergit->end() - (1+N) );
-                                        }    //d.atoms.push_back (  std::distance(git->begin(), ait) );  // index of particle rel. to group
+                                        }
                                         d.atoms.push_back ( Faunus::distance(git->begin(), nait) );
                                         git->deactivate( nait, git->end());
                                     }
@@ -1047,18 +1040,7 @@ namespace Faunus {
                     dusum=0;
                     Change c; c.all=true;
                     uinit = state1.pot.energy(c);
-                    //std::cout<<uinit<<std::endl;
-//                    std::cout<<state2.pot.energy(c)<<std::endl;
                     state2.sync(state1, c);
-                    // std::cout<<state2.pot.energy(c)<<std::endl;
-                    // std::cout << state1.spc.info()<< std::endl;
-                    // for (auto p: state1.spc.p) {
-                    //     std::cout << p.pos <<std::endl<<std::endl;
-                    // }
-                    // std::cout << state2.spc.info()<< std::endl;
-                    // for (auto p: state2.spc.p) {
-                    //     std::cout << p.pos <<std::endl<<std::endl;
-                    // }
 
                     // Hack in reference to state1 in speciation
                     for (auto &spec: moves.vec) {
@@ -1068,8 +1050,6 @@ namespace Faunus {
                             //std::cout<< "Hello speciation"<<std::endl;
                         }
                     }
-                    //auto moves->vec.find
-
                     assert(state1.pot.energy(c) == state2.pot.energy(c));
                 }
 
@@ -1094,17 +1074,9 @@ namespace Faunus {
                 }
 
                 void restore(const json &j) {
-                    //std::cout << state1.spc.info()<< std::endl;;
-                    //std::cout << state2.spc.info()<< std::endl;;
                     state1.spc = j;
                     state2.spc = j;
                     reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
-                    //std::cout << j["reactionlist"]<< std::endl;
-                    //for ( auto &r: reactions<Tpvec> ) {
-                    //    json j; Faunus::to_json(j, r);
-                    //    std::cout << state1.spc.info()<< std::endl;
-                    //}
-                    //std::cout << state2.spc.info()<< std::endl;;
                     init();
                 } //!< restore system from previously saved state
 
@@ -1113,74 +1085,24 @@ namespace Faunus {
                     for (int i=0; i<moves.repeat(); i++) {
                         auto mv = moves.sample(); // pick random move
                         if (mv != moves.end() ) {
-
-                            //for (auto p: state2.spc.p) {
-                                //json j;
-                                //p.to_json(j);
-                                //std::cout<<p.pos<<std::endl<<std::endl;
-                            //}
                             change.clear();
                             (**mv).move(change);
 
                             if (!change.empty()) {
                                 double unew, uold, du;
-                                    //std::cout << state2.spc.info()<< std::endl;
-                                    //for (auto p: state2.spc.p) {
-                                    //json j;
-                                    //p.to_json(j);
-                                    //std::cout << p.pos <<std::endl<<std::endl;
-                                    //}
-                                    //std::cout << state1.spc.info()<< std::endl;
-                                    //for (auto p: state1.spc.p) {
-                                    //json j;
-                                    //p.to_json(j);
-                                    //std::cout << p.pos <<std::endl<<std::endl;
-                                    //}
 #pragma omp parallel sections
                                 {
 #pragma omp section
                                     { unew = state2.pot.energy(change); }
 #pragma omp section
-                                    //std::cout <<"new above old below"<<std::endl;
                                     { uold = state1.pot.energy(change); }
                                 }
-                                // Change hcc; hcc.all=true;
-                                // double hcdu = state2.pot.energy(hcc) - state1.pot.energy(hcc);
-
                                 du = unew - uold;
                                 double bias = (**mv).bias(change, uold, unew) + Nchem( state2.spc, state1.spc , change);
-                                //std::cout << "just bias "<<(**mv).bias(change, uold, unew)<<std::endl;
-                                //std::cout << "just Nchem "<<Nchem( state2.spc, state1.spc , change)<<" after Nchem"<<std::endl;
-                                //std::cout << " total bias" <<bias<<std::endl;
-                                //std::cout << "du "<<du<<std::endl;
 
                                 if ( metropolis(du + bias) ) { // accept move
-
-                                    // if ( abs( du - hcdu) > 0.0001) {
-                                    //     for (auto c: change.groups ) {
-                                    //         std::cout << c.index<<std::endl;
-                                    //         for (auto i: c.atoms )
-                                    //         std::cout << i <<std::endl;
-                                    //     }
-                                    //     std::cout << state1.spc.info()<< std::endl;
-                                    //     for (auto p: state1.spc.p) {
-                                    //         std::cout << p.pos <<std::endl<<std::endl;
-                                    //     }
-                                    //     std::cout << state2.spc.info()<< std::endl;
-                                    //     for (auto p: state2.spc.p) {
-                                    //         std::cout << p.pos <<std::endl<<std::endl;
-                                    //     }
-                                    //     std::cout << "du "<<du;
-                                    //     std::cout << "  duhc "<<hcdu<<std::endl;
-                                    //     std::cout << "Unew "<<unew<<std::endl;
-                                    //     std::cout << "Uold "<<uold<<std::endl;
-                                    //     std::cout <<"bias = "<<bias<<std::endl;
-                                    //
-                                    // }
                                     state1.sync( state2, change );
-                                    //std::cout <<"accepting"<<std::endl;
                                     (**mv).accept(change);
-                                    //std::cout << "Accepted"<<endl;
                                 }
                                 else { // reject move
                                     state2.sync( state1, change );
@@ -1213,7 +1135,6 @@ namespace Faunus {
                     for ( auto &m : change.groups ) {
                         int N_o = 0;
                         int N_n = 0;
-                              //molecules<std::vector<typename Tspace::Tparticle>> ) {
                         if ( !m.dNpart && !molecules<std::vector<typename Tspace::Tparticle>>[ spc_n.groups[m.index].id ].atomic) { // Molecular species
                               auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
                               auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
@@ -1241,7 +1162,6 @@ namespace Faunus {
                         if (betamu != 0)
                             betamu = std::log( betamu / 1.0_molar );
                         dN= N_n - N_o;
-                            //std::cout << "No "<<N_o<<" Nn "<< N_n<< " dN"<< dN << std::endl;
                         if (dN > 0) {
                             for (int n=0; n < dN; n++)
                                 NoverO += -log( (N_o + 1 + n ) / ( V_n * 1.0_molar )) + betamu;
@@ -1249,7 +1169,6 @@ namespace Faunus {
                         if (dN < 0) {
                             for (int n=0; n < (-dN); n++) {
                                 NoverO += log( (N_o - n ) / ( V_n * 1.0_molar )) - betamu;
-                                //idfactor *= (spc->atomTrack[idb].size() - Nb + 1 + n) / V;
 
                             }
                         }

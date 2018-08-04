@@ -1,6 +1,6 @@
 #pragma once
 #include "core.h"
-#include "molecule.h"
+//#include "molecule.h"
 #include "geometry.h"
 #include "group.h"
 
@@ -16,17 +16,24 @@ namespace Faunus {
         bool dV = false;    //!< Set to true if there's a volume change
         double all = false; //!< Set to true if *everything* has changed
         double du=0;        //!< Additional energy change not captured by Hamiltonian
+        bool dNpart=false;      //!< Is the size of groups partially changed
 
         struct data {
+            bool dNpart=false;      //!< Is the size of groups partially changed
             int index; //!< Touched group index
             bool internal=false; //!< True is the internal energy/config has changed
             bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
+
+            bool operator<( const data & a ) const{
+                return index < a.index;
+            }
         }; //!< Properties of changed groups
 
         std::vector<data> groups; //!< Touched groups by index in group vector
 
         auto touchedGroupIndex() {
+            // skitfunktion
             return ranges::view::transform(groups, [](data &i) -> int {return i.index;});
         } //!< List of moved groups (index)
 
@@ -35,6 +42,7 @@ namespace Faunus {
             du=0;
             dV=false;
             all=false;
+            dNpart=false;
             groups.clear();
             assert(empty());
         } //!< Clear all change data
@@ -45,7 +53,8 @@ namespace Faunus {
                 if (dV==false)
                     if (all==false)
                         if (groups.empty())
-                            return true;
+                            if (dNpart==false)
+                                return true;
             return false;
         } //!< Check if change object is empty
 
@@ -157,7 +166,7 @@ namespace Faunus {
 
                         g.shallowcopy(gother); // copy group data but *not* particles
 
-                        if (m.all) // copy all particles 
+                        if (m.all) // copy all particles
                             std::copy( gother.begin(), gother.end(), g.begin() );
                         else // copy only a subset
                             for (auto i : m.atoms)
@@ -226,6 +235,13 @@ namespace Faunus {
                     tmp[name] = d;
                     _j.push_back( tmp );
                 }
+                auto& _j2 = j["reactionlist"];
+                for (auto &i : reactions<decltype(p)>) {
+                    // auto name = i.name;
+                    json tmp, d = i;
+                    // tmp[name] = d;
+                    _j2.push_back( i );
+                }
                 return j;
             }
 
@@ -236,6 +252,7 @@ namespace Faunus {
             j["geometry"] = spc.geo;
             j["groups"] = spc.groups;
             j["particles"] = spc.p;
+            j["reactionlist"] = reactions<std::vector<Tparticle>>;
         } //!< Serialize Space to json object
 
     template<class Tgeometry, class Tparticletype>
@@ -248,6 +265,8 @@ namespace Faunus {
                     atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
                 if (molecules<Tpvec>.empty())
                     molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+                if (reactions<Tpvec>.empty())
+                    reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
 
                 spc.clear();
                 spc.geo = j.at("geometry");

@@ -56,7 +56,7 @@ namespace Faunus {
                 check_k2_zero = 0.1*std::pow(2*pc::pi/L.maxCoeff(), 2);
                 int kVectorsLength = (2*kcc+1) * (2*kcc+1) * (2*kcc+1) - 1;
                 if (kVectorsLength == 0) {
-                    kVectors.resize(3,1); 
+                    kVectors.resize(3,1);
                     Aks.resize(1);
                     kVectors.col(0) = Point(1,0,0); // Just so it is not the zero-vector
                     Aks[0] = 0;
@@ -65,7 +65,7 @@ namespace Faunus {
                     Qdip.resize(1);
                 } else {
                     double kc2 = kc*kc;
-                    kVectors.resize(3, kVectorsLength); 
+                    kVectors.resize(3, kVectorsLength);
                     Aks.resize(kVectorsLength);
                     kVectorsInUse = 0;
                     kVectors.setZero();
@@ -91,7 +91,7 @@ namespace Faunus {
                                 if (spherical_sum)
                                     if( (dkx2/kc2) + (dky2/kc2) + (dkz2/kc2) > 1)
                                         continue;
-                                kVectors.col(kVectorsInUse) = kv; 
+                                kVectors.col(kVectorsInUse) = kv;
                                 Aks[kVectorsInUse] = factor*std::exp(-k2/(4*alpha*alpha))/k2;
                                 kVectorsInUse++;
                             }
@@ -123,7 +123,7 @@ namespace Faunus {
         }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-        TEST_CASE("[Faunus] Ewald - EwaldData") 
+        TEST_CASE("[Faunus] Ewald - EwaldData")
         {
             using doctest::Approx;
 
@@ -136,16 +136,16 @@ namespace Faunus {
             CHECK(data.ipbc == false);
             CHECK(data.const_inf == 1);
             CHECK(data.alpha == 0.894427190999916);
-            CHECK(data.kVectors.cols() == 2975); 
+            CHECK(data.kVectors.cols() == 2975);
             CHECK(data.Qion.size() == data.kVectors.cols());
 
             data.ipbc=true;
             data.update( Point(10,10,10) );
-            CHECK(data.kVectors.cols() == 846); 
+            CHECK(data.kVectors.cols() == 846);
             CHECK(data.Qion.size() == data.kVectors.cols());
         }
 #endif
- 
+
         /** @brief recipe or policies for ion-ion ewald */
         template<class Tspace, bool eigenopt=false /** use Eigen matrix ops where possible */>
             struct PolicyIonIon  {
@@ -231,7 +231,7 @@ namespace Faunus {
             };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-        TEST_CASE("[Faunus] Ewald - IonIonPolicy") 
+        TEST_CASE("[Faunus] Ewald - IonIonPolicy")
         {
             using doctest::Approx;
             typedef Space<Geometry::Cuboid, Particle<Charge,Dipole>> Tspace;
@@ -241,7 +241,7 @@ namespace Faunus {
             spc.geo  = R"( {"length": 10} )"_json;
             spc.p[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
             spc.p[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
-  
+
             PolicyIonIon<Tspace> ionion(spc);
             EwaldData data = R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
@@ -300,7 +300,7 @@ namespace Faunus {
                                         policy.updateComplex(data);
                                 }
                             }
-                            u = policy.selfEnergy(data) + policy.surfaceEnergy(data) + policy.reciprocalEnergy(data); 
+                            u = policy.selfEnergy(data) + policy.surfaceEnergy(data) + policy.reciprocalEnergy(data);
                         }
                         return u;
                     }
@@ -347,7 +347,7 @@ namespace Faunus {
                                         N++;
                                 }
                             return P*V-(N+1)*std::log(V);
-                        } else return 0; 
+                        } else return 0;
                     }
                     void to_json(json &j) const override {
                         j["P/atm"] = P / 1.0_atm;
@@ -530,7 +530,7 @@ namespace Faunus {
                                     b.shift( std::distance(spc.p.begin(), g.begin()) );
                             }
                         }
-                    } // finds and adds all intra-molecular bonds of active molecules 
+                    } // finds and adds all intra-molecular bonds of active molecules
 
                     double sum( const BondVector &v ) const {
                         double u=0;
@@ -570,7 +570,7 @@ namespace Faunus {
                                         u += sum(i.second);
                             } else
                                 for (auto &d : c.groups)
-                                    if (d.internal) 
+                                    if (d.internal)
                                         u += sum( intra[d.index] );
                         }
                         return u;
@@ -626,13 +626,16 @@ namespace Faunus {
                             auto fixed = view::ints( 0, int(g.size()) )
                                 | view::remove_if(
                                         [&index](int i){return std::binary_search(index.begin(), index.end(), i);});
-                            for (int i : index) // moved<->static
-                                for (int j : fixed)
+                            for (int i : index) {// moved<->static
+                                for (int j : fixed ) {
                                     u += i2i( *(g.begin()+i), *(g.begin()+j));
+                                }
+                            }
                             for (int i : index) // moved<->moved
                                 for (int j : index)
-                                    if (j>i)
+                                    if (j>i) {
                                         u += i2i( *(g.begin()+i), *(g.begin()+j));
+                                    }
                         }
                         return u;
                     }
@@ -653,7 +656,7 @@ namespace Faunus {
                                         for (auto &j : g) // loop over particles in other group
                                             u += i2i(i,j);
                             for (auto &j : *it)        // i with all particles in own group
-                                if (&j!=&i) 
+                                if (&j!=&i)
                                     u += i2i(i,j);
                         } else // particle does not belong to any group
                             for (auto &g : spc.groups) // i with all other *active* particles
@@ -664,19 +667,36 @@ namespace Faunus {
 
                     /*
                      * Group-to-group energy. A subset of `g1` can be given with `index` which refers
-                     * to the internal index (starting at zero) of the first group, `g1`.
+                     * to the internal index (starting at zero) of the first group, `g1
+                     * NOTE: the interpretation of this function is extended to also consider the mutual interactions
+                     * of a subset of each group and in such case returns sub1 <-> 2 and !sub1<->sub2,
+                     * hence excluding !sub1 <-> !sub2 in comparision to calling onconstrained g2g. In absence
+                     * of sub1 any sub2 is ignored.
                      */
-                    virtual double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index=std::vector<int>()) {
-                        double u = 0;
+                    virtual double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index=std::vector<int>(), const std::vector<int> &jndex=std::vector<int>()) {
+                    using namespace ranges;
+                    double u = 0;
                         if (!cut(g1,g2)) {
-                            if (index.empty()) // if index is empty, assume all in g1 have changed
+                            if ( index.empty() && jndex.empty() ) // if index is empty, assume all in g1 have changed
                                 for (auto &i : g1)
-                                    for (auto &j : g2)
+                                    for (auto &j : g2) {
                                         u += i2i(i,j);
-                            else // only a subset of g1
+                                    }
+                            else {// only a subset of g1
                                 for (auto i : index)
-                                    for (auto &j : g2)
-                                        u += i2i( *(g1.begin()+i), j);
+                                    for (auto j=g2.begin(); j!=g2.end(); ++j) {
+                                        u += i2i( *(g1.begin()+i), *j);
+                                    }
+                                if ( !jndex.empty() ) {
+                                    auto fixed = view::ints( 0, int(g1.size()) )
+                                        | view::remove_if(
+                                            [&index](int i){return std::binary_search(index.begin(), index.end(), i);});
+                                    for (auto i : jndex) // moved2        <-|
+                                        for (auto j : fixed) {// static1   <-|
+                                            u += i2i( *(g2.begin()+i), *(g1.begin()+j));
+                                        }
+                                }
+                            }
                         }
                         return u;
                     }
@@ -698,7 +718,7 @@ namespace Faunus {
                         if (!change.empty()) {
 
                             if (change.dV) {
-#pragma omp parallel for reduction (+:u) schedule (dynamic) 
+#pragma omp parallel for reduction (+:u) schedule (dynamic)
                                 for ( auto i = spc.groups.begin(); i < spc.groups.end(); ++i ) {
                                     for ( auto j=i; ++j != spc.groups.end(); )
                                         u += g2g( *i, *j );
@@ -710,7 +730,7 @@ namespace Faunus {
 
                             // did everything change?
                             if (change.all) {
-#pragma omp parallel for reduction (+:u) schedule (dynamic) 
+#pragma omp parallel for reduction (+:u) schedule (dynamic)
                                 for ( auto i = spc.groups.begin(); i < spc.groups.end(); ++i ) {
                                     for ( auto j=i; ++j != spc.groups.end(); )
                                         u += g2g( *i, *j );
@@ -721,7 +741,7 @@ namespace Faunus {
                             }
 
                             // if exactly ONE molecule is changed
-                            if (change.groups.size()==1) { 
+                            if (change.groups.size()==1 && !change.dNpart) {
                                 auto& d = change.groups[0];
                                 auto gindex = spc.groups.at(d.index).to_index(spc.p.begin()).first;
                                 if (d.atoms.size()==1) // exactly one atom has moved
@@ -735,6 +755,41 @@ namespace Faunus {
                                 return u;
                             }
 
+                            //
+                            if (change.dNpart) {
+                                auto moved = change.touchedGroupIndex(); // index of moved groups
+                                std::vector<int> Moved;
+                                for (auto i: moved)
+                                    Moved.push_back(i);
+                                std::sort( Moved.begin(), Moved.end() );
+                                auto fixed = view::ints( 0, int(spc.groups.size()) )
+                                    | view::remove_if(
+                                            [&Moved](int i){return std::binary_search(Moved.begin(), Moved.end(), i);}
+                                            ); // index of static groups
+                                for ( auto cg1 = change.groups.begin(); cg1 < change.groups.end() ; ++cg1 ) { // Loop over all changed groups
+                                    std::vector<int> ifiltered, jfiltered;
+                                    for (auto i: cg1->atoms) {
+                                        if ( i < spc.groups.at(cg1->index).size() )
+                                            ifiltered.push_back(i);
+                                    }
+                                    if ( !( cg1->dNpart && ifiltered.empty() ) ) // Skip if particles are removed
+                                        for ( auto j : fixed) {
+                                            u += g2g( spc.groups.at(cg1->index), spc.groups[j], ifiltered, jfiltered );
+                                    }
+                                    for ( auto cg2 = cg1; ++cg2 != change.groups.end(); ) {
+                                        for (auto i: cg2->atoms)
+                                            if ( i < spc.groups.at(cg2->index).size() )
+                                                jfiltered.push_back(i);
+                                        if ( !( (cg1->dNpart && ifiltered.empty()) && (cg2->dNpart && jfiltered.empty()) ) ) //Skip if particles are removed from both
+                                            u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
+                                        jfiltered.clear();
+                                    }
+                                    if ( ifiltered.size() != 0 )
+                                        u += g_internal( spc.groups.at( cg1->index ), ifiltered );
+                                }
+                                return u;
+                            }
+
                             auto moved = change.touchedGroupIndex(); // index of moved groups
                             auto fixed = view::ints( 0, int(spc.groups.size()) )
                                 | view::remove_if(
@@ -742,9 +797,10 @@ namespace Faunus {
                                         ); // index of static groups
 
                             // moved<->moved
-                            for ( auto i = moved.begin(); i != moved.end(); ++i )
+                            for ( auto i = moved.begin(); i != moved.end(); ++i ) {
                                 for ( auto j=i; ++j != moved.end(); )
                                     u += g2g( spc.groups[*i], spc.groups[*j] );
+                            }
 
                             // moved<->static
                             for ( auto i : moved)
@@ -765,7 +821,7 @@ namespace Faunus {
                     typedef typename Tspace::Tgroup Tgroup;
                     Eigen::MatrixXf cache;
 
-                    double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index=std::vector<int>()) override {
+                    double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index=std::vector<int>(), const std::vector<int> &jndex=std::vector<int>()) override {
                         int i = &g1 - &base::spc.groups.front();
                         int j = &g2 - &base::spc.groups.front();
                         if (j<i)
@@ -811,7 +867,7 @@ namespace Faunus {
                         if (!change.empty()) {
 
                             if (change.all || change.dV) {
-#pragma omp parallel for reduction (+:u) schedule (dynamic) 
+#pragma omp parallel for reduction (+:u) schedule (dynamic)
                                 for ( auto i = base::spc.groups.begin(); i < base::spc.groups.end(); ++i ) {
                                     for ( auto j=i; ++j != base::spc.groups.end(); )
                                         u += g2g( *i, *j );
@@ -820,7 +876,7 @@ namespace Faunus {
                             }
 
                             // if exactly ONE molecule is changed
-                            if (change.groups.size()==1) { 
+                            if (change.groups.size()==1) {
                                 auto& d = change.groups[0];
                                 auto& g1 = base::spc.groups.at(d.index);
                                 for (auto &g2 : base::spc.groups) {
@@ -924,6 +980,8 @@ namespace Faunus {
                                             rc = std::make_shared<SystemProperty>(it.value(), spc);
                                         if (it.key()=="cmcm")
                                             rc = std::make_shared<MassCenterSeparation>(it.value(), spc);
+                                        if (it.key()=="angle")
+                                            rc = std::make_shared<PrincipalAxisAngle>(it.value(), spc);
                                         if (rc!=nullptr) {
                                             if (rc->min>=rc->max || rc->binwidth<=0)
                                                 throw std::runtime_error("min<max and binwidth>0 required for '" + it.key() + "'");
@@ -1014,7 +1072,7 @@ namespace Faunus {
                         coord = c;
                         histo[coord]++;
                         penalty[coord] += f0;
-                        udelta += f0; 
+                        udelta += f0;
                     }
 
                     void sync(Energybase *basePtr, Change &change) override {
@@ -1036,8 +1094,14 @@ namespace Faunus {
                 using Base::coord;
                 using Base::cnt;
                 using Base::f0;
+<<<<<<< HEAD
+=======
+                using Base::file;
+                using Base::hisfile;
+                using Base::nconv;
+>>>>>>> 8219a493e8ed78fc5d7c0d314b9d3550f55713e6
 
-                Eigen::VectorXi weights;// array w. mininum histogram counts
+                Eigen::VectorXi weights; // array w. mininum histogram counts
                 Eigen::VectorXd buffer; // receive buffer for penalty functions
 
                 PenaltyMPI(const json &j, Tspace &spc) : Base(j,spc) {
@@ -1053,7 +1117,7 @@ namespace Faunus {
                         MPI_Barrier(mpi.comm);
                         MPI_Allgather(&min, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
 
-                        if ( weights.maxCoeff() >= samplings ) {
+                        if ( weights.maxCoeff() > samplings ) {
                             MPI_Gather(penalty.data(), penalty.size(), MPI_DOUBLE,
                                     buffer.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
 
@@ -1066,6 +1130,14 @@ namespace Faunus {
                             }
 
                             MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
+<<<<<<< HEAD
+=======
+                            nconv += 1;
+                            std::ofstream f3(MPI::prefix + std::to_string(nconv) + file);
+                            if (f3) f3 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
+                            std::ofstream f4(MPI::prefix + std::to_string(nconv) + hisfile);
+                            if (f4) f4 << histo << endl;
+>>>>>>> 8219a493e8ed78fc5d7c0d314b9d3550f55713e6
                             if (min>0 && !this->quiet)
                                 cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                     << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;
@@ -1089,7 +1161,7 @@ namespace Faunus {
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
                 Tspace& spc;
-                std::vector<float> sasa, radii; 
+                std::vector<float> sasa, radii;
                 std::vector<Point> coords;
                 double probe; // sasa probe radius (angstrom)
                 double conc=0;// co-solute concentration (mol/l)

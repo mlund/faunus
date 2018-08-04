@@ -337,7 +337,7 @@ namespace Faunus {
             class Polarizability : public Coulomb {
                 private:
                     double epsr;
-                    PairMatrix<double> m; 
+                    PairMatrix<double> m_neutral, m_charged; 
 
                 public:
                     Polarizability (const std::string &name="polar") { PairPotentialBase::name=name; }
@@ -345,17 +345,14 @@ namespace Faunus {
                     inline void from_json(const json &j) override {
                         epsr = j.at("epsr").get<double>();
                         double lB = pc::lB(epsr);
-                        for (auto &i : atoms<Tparticle>) 
-                            for (auto &j : atoms<Tparticle>) 
-                                if (fabs(i.p.charge)>1e-9 || fabs(j.p.charge)>1e-9) {
-                                    m.set(i.id(), j.id(), -lB/2 *
-                                            ( i.p.charge*i.p.charge*j.alphax*pow(0.5*j.sigma,3) +
-                                              j.p.charge*j.p.charge*i.alphax*pow(0.5*i.sigma,3) ) );
-                                }
-                                else {
-                                    m.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*
-                                            j.alphax*pow(0.5*j.sigma,3) );
-                                }
+                        for (auto &i : atoms<Tparticle>) {
+                            for (auto &j : atoms<Tparticle>) { 
+                                m_neutral.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
+                                // titrating particles must be charged in the beginning
+                                m_charged.set(i.id(), j.id(), -lB/2 * ( pow(i.p.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
+                                        pow(j.p.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
+                            }
+                        }
                     }
 
                     inline void to_json(json &j) const override {
@@ -364,17 +361,19 @@ namespace Faunus {
 
                     double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2=r.squaredNorm();
-                        if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9) 
-                            return m(a.id,b.id)/(r2*r2);
-                        else 
-                            return m(a.id,b.id)/(r2*r2*r2);
+                        double r4inv=1/(r2*r2);
+                        if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9) 
+                            return m_charged(a.id,b.id)*r4inv;
+                        else
+                            return m_neutral(a.id,b.id)/r2*r4inv;
                     }
 
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-                        if (fabs(a.charge)>1e-9 || fabs(b.charge)>1e-9) 
-                            return 4*m(a.id,b.id)/(r2*r2*r2)*p;
-                        else 
-                            return 6*m(a.id,b.id)/(r2*r2*r2*r2)*p;
+                        double r6inv=1/(r2*r2*r2);
+                        if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9) 
+                            return 4*m_charged(a.id,b.id)*r6inv*p;
+                        else
+                            return 6*m_neutral(a.id,b.id)/r2*r6inv*p;
                     }
             };
 
@@ -727,7 +726,7 @@ namespace Faunus {
                                     uFunc _u = nullptr;
                                     if (it.key()=="coulomb") _u = CoulombGalore() = i;
                                     if (it.key()=="cos2") _u = CosAttract() = i;
-                                    if (it.key()=="polarizability") _u = Polarizability<T>() = i;
+                                    if (it.key()=="polar") _u = Polarizability<T>() = i;
                                     if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
                                     if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
                                     if (it.key()=="repulsionr3") _u = RepulsionR3() = i;
@@ -813,7 +812,7 @@ namespace Faunus {
 #endif
 
         struct BondData {
-            enum Variant {harmonic, fene, dihedral, none};
+            enum Variant {harmonic, fene, yukawa, dihedral, none};
             Variant type=none;
             std::vector<int> index;
             std::vector<double> k;
@@ -825,7 +824,7 @@ namespace Faunus {
 
             template<class Tpvec>
                 double energy(const Tpvec &p, Geometry::DistanceFunction dist) const {
-                    double d, wca, x;
+                    double d, wca, x, zz;
                     switch (type) {
                         case BondData::harmonic:
                             d = k[1] - dist(p[index[0]].pos, p[index[1]].pos).norm();
@@ -840,6 +839,13 @@ namespace Faunus {
                                 wca = k[2]*(x*x - x + 0.25);
                             }
                             return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
+                        case BondData::yukawa:
+                            d = dist( p[index[0]].pos, p[index[1]].pos ).norm();
+                            zz = p[index[0]].charge*p[index[1]].charge;
+                            if (zz>1e-5) 
+                                return zz*k[0]*exp(-d/k[1])/d;
+                            else
+                                return 0;
                         default: break;
                     }
                     assert(!"not implemented");
@@ -863,6 +869,13 @@ namespace Faunus {
                         { "eps", b.k[2] / 1.0_kJmol },
                         { "sigma", std::sqrt(b.k[3]) / 1.0_angstrom } };
                     break;
+                case BondData::yukawa:
+                    j["yukawa"] = {
+                        { "index", b.index },
+                        { "bjerrumlength", b.k[0] / 1.0_angstrom },
+                        { "debyelength", b.k[1] / 1.0_angstrom } };
+                    break;
+
                 default: break;
             }
         }
@@ -876,7 +889,7 @@ namespace Faunus {
                         b.type = BondData::harmonic;
                         b.index = val.at("index").get<decltype(b.index)>();
                         if (b.index.size()!=2)
-                            throw std::runtime_error("harmonic bond requires exactly two index");
+                            throw std::runtime_error("harmonic bond requires exactly two indeces");
                         b.k.resize(2);
                         b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
                         b.k[1] = val.at("req").get<double>() * 1.0_angstrom; // req
@@ -886,14 +899,25 @@ namespace Faunus {
                         b.type = BondData::fene;
                         b.index = val.at("index").get<decltype(b.index)>();
                         if (b.index.size()!=2)
-                            throw std::runtime_error("FENE bond requires exactly two index");
+                            throw std::runtime_error("FENE bond requires exactly two indeces");
                         b.k.resize(4);
                         b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
-                        b.k[1] = std::pow( val.at("rmax").get<double>() * 1.0_angstrom, 2); // rm^2
+                        b.k[1] = std::pow( val.at("rmax").get<double>() * 1.0_angstrom, 2); // rmax^2
                         b.k[2] = val.at("eps").get<double>() * 1.0_kJmol; // epsilon wca
                         b.k[3] = std::pow( val.at("sigma").get<double>() * 1.0_angstrom, 2); // sigma^2 wca
                         return;
                     }
+                    if (t=="yukawa") {
+                        b.type = BondData::yukawa;
+                        b.index = val.at("index").get<decltype(b.index)>();
+                        if (b.index.size()!=2)
+                            throw std::runtime_error("yukawa requires exactly two indeces");
+                        b.k.resize(2);
+                        b.k[0] = pc::lB(val.at("epsr").get<double>()) * 1.0_angstrom; // bjerrum length
+                        b.k[1] = val.at("debyelength").get<double>() * 1.0_angstrom; // debye length
+                        return;
+                    }
+
                     if (t=="dihedral") {
                         b.type = BondData::dihedral;
                         assert(!"to be implemented");

@@ -158,6 +158,270 @@ namespace Faunus {
                     }
             };
 
+            /**
+             * @brief Single particle hard sphere Widom insertion with charge scaling
+             *
+             * This will calculate excess chemical potentials for single particles
+             * in the primitive model of electrolytes. Use the `add()` functions
+             * to add test or *ghost* particles and call `sample()` to perform single
+             * particle insertions.
+             * Inserted particles are *non-perturbing* and thus removed again after
+             * sampling. Electroneutrality for insertions of charged species is
+             * maintaing by charge re-scaling according to
+             *
+             * - [Svensson and Woodward, Mol. Phys. 1988, 64:247]
+             *   (http://doi.org/ft9bv9)
+             *
+             * Currently this works **only** for the primitive model of electrolytes, i.e.
+             * hard, charged spheres interacting with a Coulomb potential.
+             *
+             * JSON input:
+             *
+             *  Keyword    | Description
+             *  ---------- | ---------------------------------------
+             *  `lB`       | Bjerrum length (angstrom)
+             *  `ninsert`  | Number of intertions per sampling event
+             *  `nstep`    | Sample every n'th step
+             *
+             * @warning Works only for the primitive model
+             * @note This is a conversion of the Widom routine found in the `bulk.f`
+             *       fortran program by Bolhuis/Jonsson/Akesson at Lund University.
+             * @author Martin Trulsson and Mikael Lund
+             * @date Lund / Prague 2007-2008.
+             */
+            // template<class Tspace>
+            //     class WidomScaled : public AnalysisBase
+            // {
+            //
+            //     private:
+            //
+                    // typedef typename Tspace::Tparticle Tparticle;
+                    // typedef typename Tspace::Tpvec Tpvec;
+                    // typedef MoleculeData<Tpvec> TMoleculeData;
+            //
+            //         Tspace &spc;
+            //         Energy::Energybase* pot;
+            //         RandomInserter<TMoleculeData> rins;
+            //
+            //         Tvec chel;          //!< electrostatic
+            //         Tvec chhc;          //!< hard collision
+            //         Tvec chex;          //!< excess
+            //         Tvec chexw;         //!< excess
+            //         Tvec chtot;         //!< total
+            //         vector <Tvec> ewden; //!< charging denominator
+            //         vector <Tvec> ewnom; //!< charging nominator
+            //         vector <Tvec> chint; //!< charging integrand
+            //         Tvec chid;          //!< ideal term
+            //         Tvec expuw;
+            //         vector<int> ihc, irej;
+            //         int ghostin;        //< ghost insertions
+            //         double lB;          //!< Bjerrum length
+            //
+            //         void init()
+            //         {
+            //             int gspec = g.size();
+            //             chel.resize(gspec);
+            //             chhc.resize(gspec);
+            //             chex.resize(gspec);
+            //             chtot.resize(gspec);
+            //             ewden.resize(gspec);
+            //             ewnom.resize(gspec);
+            //             chint.resize(gspec);
+            //             expuw.resize(gspec);
+            //             chexw.resize(gspec);
+            //             ihc.resize(gspec);
+            //             irej.resize(gspec);
+            //
+            //             for ( int i = 0; i < gspec; i++ )
+            //             {
+            //                 chel[i] = 0;
+            //                 chhc[i] = 0;
+            //                 chex[i] = 0;
+            //                 chtot[i] = 0;
+            //                 ihc[i] = 0;
+            //                 ewden[i].resize(11);
+            //                 ewnom[i].resize(11);
+            //                 chint[i].resize(11);
+            //                 for ( int j = 0; j < 11; j++ )
+            //                     ewden[i][j] = ewnom[i][j] = chint[i][j] = 0;
+            //             }
+            //         }
+            //
+            //         template<class Tgeo>
+            //             bool overlap( const Tparticle &a, const Tparticle &b, const Tgeo &geo )
+            //             {
+            //                 double s = a.radius + b.radius;
+            //                 return (geo.sqdist(a, b) < s * s) ? true : false;
+            //             }
+            //
+            //         string _info() override
+            //         {
+            //             using namespace textio;
+            //             std::ostringstream o;
+            //             double aint4, aint2, aint1;
+            //             for ( size_t i = 0; i < g.size(); i++ )
+            //             {
+            //                 for ( int cint = 0; cint < 11; cint++ )
+            //                 {
+            //                     if ( ewden[i][cint] == 0 )
+            //                         std::cerr << "# WARNING: Widom denominator equals zero" << endl;
+            //                     else
+            //                         chint[i][cint] = ewnom[i][cint] / ewden[i][cint];
+            //                 }
+            //                 aint4 = chint[i][1] + chint[i][3] + chint[i][5] + chint[i][7] + chint[i][9];
+            //                 aint2 = chint[i][2] + chint[i][4] + chint[i][6] + chint[i][8];
+            //                 aint1 = chint[i][0] + chint[i][10];
+            //                 chel[i] = 1. / 30. * (aint1 + 2 * aint2 + 4 * aint4);
+            //             }
+            //
+            //             int cnttot = cnt * ghostin;
+            //             o << pad(SUB, w, "Number of insertions") << cnttot << endl
+            //                 << pad(SUB, w, "Excess chemical potentials (kT)") << endl
+            //                 << "             total    elec.   hs             z        r" << endl;
+            //             char w = 10;
+            //             for ( size_t i = 0; i < g.size(); i++ )
+            //             {
+            //                 chhc[i] = -log(double(cnttot - ihc[i]) / cnttot);
+            //                 chexw[i] = -log(expuw[i]);
+            //                 chex[i] = chhc[i] + chel[i];
+            //                 o.unsetf(std::ios_base::floatfield);
+            //                 o << "    [" << i << "] "
+            //                     << std::setprecision(4)
+            //                     << std::setw(w) << chex[i]
+            //                     << std::setw(w) << chel[i]
+            //                     << std::setw(w) << chhc[i]
+            //                     << std::setprecision(2) << std::fixed
+            //                     << std::setw(w) << g[i].charge
+            //                     << std::setw(w) << g[i].radius << endl;
+            //             }
+            //             return o.str();
+            //         }
+            //
+            //         Tmjson _json() override
+            //         {
+            //             if ( cnt * ghostin>0 )
+            //                 return {
+            //                     { name,
+            //                         {
+            //                             { "number of insertions", cnt*ghostin },
+            //                             { "ninsert", ghostin },
+            //                             { "lB", lB }
+            //                         }
+            //                     }
+            //                 };
+            //             return Tmjson();
+            //         }
+            //
+            //
+            //         void _sample() override
+            //         {
+            //             auto &geo = spc.geo;
+            //             auto &p = spc.p;
+            //             if ( !g.empty())
+            //                 if ( !p.empty())
+            //                 {
+            //                     Tparticle ghost;
+            //                     double u, cu;
+            //                     for ( int i = 0; i < ghostin; i++ )
+            //                     {
+            //                         geo.randompos(ghost);
+            //                         int goverlap = 0;
+            //                         for ( size_t k = 0; k < g.size(); k++ )
+            //                         {
+            //                             ghost.radius = g[k].radius;
+            //                             irej[k] = 0;
+            //                             int j = 0;
+            //                             while ( !overlap(ghost, p[j], geo) && j < (int) p.size())
+            //                                 j++;
+            //                             if ( j != (int) p.size())
+            //                             {
+            //                                 ihc[k]++;
+            //                                 irej[k] = 1;
+            //                                 goverlap++;
+            //                             }
+            //                         }
+            //
+            //                         if ( goverlap != (int) g.size())
+            //                         {
+            //                             cu = 0;
+            //                             u = 0;  //elelectric potential (Coulomb only!)
+            //                             for ( auto &i : p )
+            //                             {
+            //                                 double invdi = 1 / geo.dist(ghost, i);
+            //                                 cu += invdi;
+            //                                 u += invdi * i.charge;
+            //                             }
+            //                             cu = cu * lB;
+            //                             u = u * lB;
+            //                             double ew, ewla, ewd;
+            //                             for ( size_t k = 0; k < g.size(); k++ )
+            //                             {
+            //                                 if ( irej[k] == 0 )
+            //                                 {
+            //                                     expuw[k] += exp(-u * g[k].charge);
+            //                                     for ( int cint = 0; cint < 11; cint++ )
+            //                                     {
+            //                                         ew = g[k].charge *
+            //                                             (u - double(cint) * 0.1 * g[k].charge * cu / double(p.size()));
+            //                                         ewla = ew * double(cint) * 0.1;
+            //                                         ewd = exp(-ewla);
+            //                                         ewden[k][cint] += ewd;
+            //                                         ewnom[k][cint] += ew * ewd;
+            //                                     }
+            //                                 }
+            //                             }
+            //                         }
+            //                     }
+            //                 }
+            //         }
+            //
+            //     public:
+            //
+            //         WidomScaled( Tmjson &j, Tspace &spc ) : spc(spc), AnalysisBase(j)
+            //     {
+            //         lB = j.value("lB", 7.0);
+            //         ghostin = j.value("ninsert", 10);
+            //         name = "Single particle Widom insertion w. charge scaling";
+            //         cite = "doi:10/ft9bv9 + doi:10/dkv4s6";
+            //
+            //         add(spc.p);
+            //     }
+            //
+            //         /**
+            //          * @brief Add ghost particle
+            //          *
+            //          * This will add particle `p` to the list of ghost particles
+            //          * to insert.
+            //          */
+            //         void add( const Tparticle &p )
+            //         {
+            //             g.push_back(p);
+            //             init();
+            //         }
+            //
+            //         /**
+            //          * @brief Add ghost particles
+            //          *
+            //          * This will scan the particle vector for particles and each unique type
+            //          * will be added to the list a ghost particles to insert.
+            //          */
+            //         template<class Tpvec>
+            //             void add( const Tpvec &p )
+            //             {
+            //                 std::set<typename Tparticle::Tid> ids;
+            //                 for ( auto &i : p )
+            //                     ids.insert(i.id);
+            //                 for ( auto i : ids )
+            //                 {
+            //                     Tparticle a;
+            //                     a = atom[i];
+            //                     add(a);
+            //                 }
+            //             }
+            //
+            // }; // end of WidomScaled
+
+
         template<class Tspace>
             class AtomProfile : public Analysisbase {
                 Tspace &spc;
@@ -219,26 +483,30 @@ namespace Faunus {
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
 
+                std::map<int, Table2D<double,double>> dhist;  //Density histograms
                 std::map<int, Average<double>> rho_mol, rho_atom;
                 std::map<int,int> Nmol, Natom;
                 Average<double> Lavg, Vavg, invVavg;
-
+                //inline void normalize();
                 inline void _sample() override {
                     // count atom and groups of individual id's
                     Nmol.clear();
                     Natom.clear();
-                    for (auto &g : spc.groups)
-                        if (g.atomic)
-                            for (auto &p : g)
-                                Natom[p.id]++;
-                        else
-                            if (!g.empty())
-                                Nmol[g.id]++;
 
                     double V = spc.geo.getVolume();
                     Vavg += V;
                     Lavg += std::cbrt(V);
                     invVavg += 1/V;
+
+                    for (auto &g : spc.groups)
+                        if (g.atomic) {
+                            for (auto &p : g)
+                                Natom[p.id]++;
+                            dhist[g.id]( g.size() )++;
+                            }
+                        else
+                            if (!g.empty())
+                                Nmol[g.id]++;
 
                     for (auto &i : Nmol)
                         rho_mol[i.first] += i.second/V;
@@ -269,7 +537,24 @@ namespace Faunus {
                     from_json(j);
                     name = "density";
                 }
+                inline virtual ~Density() {
+                    normalize();
+                    for ( auto &m: dhist) {
+                        m.second.save( molecules<Tpvec>.at(m.first).name + "density.dat" );
+                    }
+                }
+                inline void normalize() {
+                    //assert(V.cnt>0);
+                    for (auto &hist: dhist) {
+                        double Vr=1, sum = hist.second.sumy();
+                        for (auto &i : hist.second.getMap()) {
+                            i.second = i.second/sum ;
+                        }
+                    }
+                }
             };
+
+
 
         template<class Tspace>
             class Multipole : public Analysisbase {
@@ -312,7 +597,23 @@ namespace Faunus {
             std::function<std::vector<double>()> energyFunc;
             Average<double> uavg; //!< mean energy
             std::vector<std::string> names;
+            Table2D<double,double> ehist;  //Density histograms
+
             double uinit;
+
+            inline void normalize() {
+                //assert(V.cnt>0);
+                    double Vr=1, sum = ehist.sumy();
+                    for (auto &i : ehist.getMap()) {
+                        i.second = i.second/sum ;
+                    }
+            }
+
+            // inline virtual ~SystemEnergy() {
+            //     normalize();
+            //     ehist.save( "distofstates.dat" );
+            //
+            // }
 
             inline void _sample() override {
                 auto ulist = energyFunc();
@@ -322,6 +623,7 @@ namespace Faunus {
                 for (auto u : ulist)
                     f << sep << u;
                 f << "\n";
+                //ehist(tot)++;
             }
 
             inline void _to_json(json &j) const override {
@@ -329,6 +631,9 @@ namespace Faunus {
                 if (cnt>0)
                     j["mean"] = uavg.avg();
                 _roundjson(j,5);
+                //normalize();
+                //ehist.save( "distofstates.dat" );
+
             }
 
             inline void _from_json(const json &j) override {
@@ -368,6 +673,7 @@ namespace Faunus {
                             u.push_back( i->energy(change) );
                         return u;
                     };
+                    ehist.setResolution(0.25);
                     auto u = energyFunc();
                     uinit = std::accumulate(u.begin(), u.end(), 0.0); // initial energy
                 }
@@ -789,12 +1095,12 @@ namespace Faunus {
                     json &k = j["molecules"];
                     for (int i : ids)
                         k[ molecules<typename Tspace::Tpvec>[i].name ] = {
-                            { bracket("Rg" + squared), Rg2.at(i).avg() }, 
+                            { bracket("Rg" + squared), Rg2.at(i).avg() },
                             { bracket("Rg" + squared) + "-" + bracket("Rg") + squared, Rg2.at(i).avg() - std::pow(Rg.at(i).avg(), 2.0) },
                             { bracket("Re" + squared) + "/" + bracket("Rg" + squared), Re2.at(i).avg() / Rg2.at(i).avg() },
-                            { rootof + bracket("Rg"  + squared), sqrt( Rg2.at(i).avg() ) }, 
+                            { rootof + bracket("Rg"  + squared), sqrt( Rg2.at(i).avg() ) },
                             { rootof + bracket("Re"  + squared), sqrt( Re2.at(i).avg() )  },
-                            { rootof + bracket("Rgx" + squared), sqrt( Rg2x.at(i).avg() ) }, 
+                            { rootof + bracket("Rgx" + squared), sqrt( Rg2x.at(i).avg() ) },
                             { rootof + bracket("Rgy" + squared), sqrt( Rg2y.at(i).avg() ) },
                             { rootof + bracket("Rgz" + squared), sqrt( Rg2z.at(i).avg() ) }
                         };
@@ -851,7 +1157,7 @@ namespace Faunus {
                     if (j.is_array())
                         for (auto &m : j)
                             for (auto it=m.begin(); it!=m.end(); ++it)
-                                if (it->is_object()) 
+                                if (it->is_object())
                                     try {
                                         if (it.key()=="atomprofile") push_back<AtomProfile<Tspace>>(it.value(), spc);
                                         if (it.key()=="atomrdf") push_back<AtomRDF<Tspace>>(it.value(), spc);

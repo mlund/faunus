@@ -3,6 +3,7 @@
 #include "core.h"
 #include "group.h"
 #include "space.h"
+#include <Eigen/Dense>
 
 namespace Faunus {
 
@@ -132,7 +133,6 @@ namespace Faunus {
                             auto slice2 = g.find_id(findName(atoms<Tparticle>, type2)->id());
                             auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.boundaryFunc);
                             auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.boundaryFunc);
-                            //return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
                             return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum();
                         };
                     }
@@ -153,6 +153,45 @@ namespace Faunus {
                 j["type"] = type;
             }
         };
+        /**
+         * @brief Reaction coordinate: angle between principal axis and cartesian axis
+         */
+        struct PrincipalAxisAngle : public ReactionCoordinateBase {
+            Eigen::Vector3d dir={0,0,1};
+            size_t index;
+            template<class Tspace>
+                PrincipalAxisAngle(const json &j, Tspace &spc) {
+                    typedef typename Tspace::Tparticle Tparticle;
+                    name = "angle";
+                    from_json(j, *this);
+                    dir = j.value("dir", dir);
+                    index = j.at("index").get<decltype(index)>();
+                    auto name = molecules<decltype(spc.p)>.at(spc.groups[index].id).name;
+                    cout << "Molecule Name: " << name << endl;
+                    f = [&spc, dir=dir, i=index]() {
+                        auto &cm = spc.groups[i].cm;
+                        //Point vec = spc.geo.vdist(spc.groups[i].begin()->pos,(spc.groups[i].end()-1)->pos);
+                        //vec = vec / vec.norm();
+                        //cout << "P1 " << atoms<Tparticle>[spc.groups[i].begin()->id].name << endl;
+                        //cout << "P2 " << atoms<Tparticle>[(spc.groups[i].end()-1)->id].name << endl;
+                        auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
+                        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+                        Point eivals = esf.eigenvalues();
+                        std::ptrdiff_t i_eival;
+                        double minOfeivals = eivals.minCoeff(&i_eival);
+                        Point vec = esf.eigenvectors().col(i_eival).real();
+                        double cosine = vec.dot(dir);
+                        double angle = acos(abs(cosine)) * 180. / pc::pi;
+                        return angle; 
+                    };
+                }
+
+            void _to_json(json &j) const override {
+                j["dir"] = dir;
+                j["index"] = index;
+            }
+        };
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] MassCenterSeparation")
         {

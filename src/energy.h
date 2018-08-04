@@ -944,6 +944,7 @@ namespace Faunus {
                     size_t cnt=0;       // number of calls to `sync()`
                     size_t nupdate;     // update frequency [steps]
                     size_t samplings=1;
+                    size_t nconv=0;
                     double udelta=0;    // total energy change of updating penalty function
                     double scale;       // scaling factor for f0
                     double f0;          // penalty increment
@@ -1094,12 +1095,9 @@ namespace Faunus {
                 using Base::coord;
                 using Base::cnt;
                 using Base::f0;
-<<<<<<< HEAD
-=======
                 using Base::file;
                 using Base::hisfile;
                 using Base::nconv;
->>>>>>> 8219a493e8ed78fc5d7c0d314b9d3550f55713e6
 
                 Eigen::VectorXi weights; // array w. mininum histogram counts
                 Eigen::VectorXd buffer; // receive buffer for penalty functions
@@ -1130,14 +1128,11 @@ namespace Faunus {
                             }
 
                             MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
-<<<<<<< HEAD
-=======
                             nconv += 1;
                             std::ofstream f3(MPI::prefix + std::to_string(nconv) + file);
                             if (f3) f3 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
                             std::ofstream f4(MPI::prefix + std::to_string(nconv) + hisfile);
                             if (f4) f4 << histo << endl;
->>>>>>> 8219a493e8ed78fc5d7c0d314b9d3550f55713e6
                             if (min>0 && !this->quiet)
                                 cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                     << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;

@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
 project(neofaunus)
 
+if (POLICY CMP0042)
+    cmake_policy(SET CMP0075 OLD)
+endif ()
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)

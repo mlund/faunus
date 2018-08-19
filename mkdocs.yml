@@ -1,6 +1,13 @@
 site_name: neofaunus
 repo_url: https://github.com/mlund/neofaunus
 theme: readthedocs
+
+nav:
+    - 'Topology': './_docs/topology.md'
+    - 'Topology2': ./_docs/topology.md
+    - 'Topology3': ./docs/_docs/topology.md
+
 pages:
-    - 'Home': _docs/docs.md
+    - 'Home': ./_docs/docs.md
+    - 'Home2': ./docs/_docs/docs.md
 

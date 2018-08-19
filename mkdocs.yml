@@ -9,5 +9,5 @@ nav:
 
 pages:
     - 'Home': ./_docs/docs.md
-    - 'Home2': ./docs/_docs/docs.md
+    - 'Topology': ./_docs/topology.md
 

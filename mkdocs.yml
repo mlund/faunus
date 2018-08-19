@@ -1,7 +1,6 @@
 site_name: neofaunus
 repo_url: https://github.com/mlund/neofaunus
-docs_dir: docs/_docs/
 theme: readthedocs
 pages:
-    - 'Home': 'docs.md'
+    - 'Home': _docs/docs.md
 

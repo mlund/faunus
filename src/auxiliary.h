@@ -3,6 +3,10 @@
 #include <functional>
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <string>
+#include <map>
+#include <regex>
 
 #include "average.h"
 

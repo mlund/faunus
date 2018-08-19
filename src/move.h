@@ -375,24 +375,23 @@ namespace Faunus {
                     }
             };
 
-        template<typename Tspace>
+            /*
+             * @brief Establishes equilibrium of matter
+             *  Establishes equilibrium of matter between all species
+             *
+             * Consider the dissociation process AX=A+X. This class will locate
+             * all species of type AX and A and make a MC swap move between them.
+             * X is implicit, meaning that it enters only with its chemical potential
+             * (activity). The titrating species, their dissociation constants
+             * and the chemical potential of the titrant are read from a
+             * `processes` JSON object.
+             * For example, for proton titration of phosphate one would
+             * use the following JSON input (pH 7.0):
+             *
+             */
+            template<typename Tspace>
             class SpeciationMove : public Movebase {
                 typedef typename Tspace::Tpvec Tpvec;
-
-                /*
-                 * @brief Establishes equilibrium of matter
-                 *  Establishes equilibrium of matter between all species
-                 *
-                 * Consider the dissociation process AX=A+X. This class will locate
-                 * all species of type AX and A and make a MC swap move between them.
-                 * X is implicit, meaning that it enters only with its chemical potential
-                 * (activity). The titrating species, their dissociation constants
-                 * and the chemical potential of the titrant are read from a
-                 * `processes` JSON object.
-                 * For example, for proton titration of phosphate one would
-                 * use the following JSON input (pH 7.0):
-                 *
-                 */
                 private:
                     // Implement classification of reactions to group weight in
                     // mc sweep {refrerence : prob(reference)}
@@ -428,12 +427,11 @@ namespace Faunus {
                     void _from_json(const json &j) override {
                         //j["speciation"] = "spectiation";
                     }
+
                 public:
                     SpeciationMove(Tspace &spc) :spc(spc) {
                         name = "speciation";
                         repeat = 1;
-
-
                     }
 
                     void setOther(Tspace &ospc) {
@@ -448,7 +446,7 @@ namespace Faunus {
                             log_k = rit->log_k;
                             forward = (bool)slump.range(0,1);
                             trialprocess = &(*rit);
-                            if ( rit->Empty(forward) )  // Enforce canonic constraint if invoked
+                            if ( rit->empty(forward) )  // Enforce canonic constraint if invoked
                                 return; //Out of material, slip out the back door
 
                             for (auto &m : rit->Molecules2Add( !forward )) { // Delete checks
@@ -463,7 +461,7 @@ namespace Faunus {
                                     mollist = spc.findMolecules( m.first, Tspace::ACTIVE);
                                     if ( size(mollist) <  m.second )
                                         return; // Not possible to perform change, escape through the back door
-                                    }
+                                }
                             }
                             for (auto &m : rit->Molecules2Add( forward )) { // Addition checks
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
@@ -476,8 +474,8 @@ namespace Faunus {
                                 } else {
                                     mollist = spc.findMolecules( m.first, Tspace::INACTIVE);
                                     if ( size(mollist) <  m.second )
-                                        return; // Not possible to perform change, escape through the back door
-                                    }
+                                      return; // Not possible to perform change, escape through the back door
+                                }
                             }
                             //The move is doable, raise flag
                             change.dNpart=true;
@@ -563,15 +561,15 @@ namespace Faunus {
                                 }
                             }
                             std::sort(change.groups.begin(), change.groups.end() );
-                        } else {
-                        throw std::runtime_error("No reactions in list, disable speciation or add reactions");
-                        }
+                        } else
+                            throw std::runtime_error("No reactions in list, disable speciation or add reactions");
                     }
                     double bias(Change &change, double uold, double unew) override {
                         if (forward)
                             return -log_k*log(10);
                         return log_k*log(10);
                     } //!< adds extra energy change not captured by the Hamiltonian                    }
+
                     void _accept(Change &change) override {
                         accmap[ trialprocess->name ] += 1;
                         trialprocess->N_reservoir += (forward == true) ? -1 : 1;
@@ -583,9 +581,7 @@ namespace Faunus {
                         accmap[ trialprocess->name ] += 0;
                     }
 
-
                 }; // End of class SpeciationMove
-
 
         template<typename Tspace>
             class Cluster : public Movebase {

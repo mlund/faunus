@@ -97,7 +97,7 @@ Example:
 
 ~~~ yaml
 insertmolecules:
-    - salt: { N: 10 }
+    - salt:  { N: 10 }
     - water: { N: 256 }
     - water: { N: 1, inactive: true }
 ~~~
@@ -116,20 +116,33 @@ The file must contain exactly N-times molecular
 positions that must all fit within the simulation box. Only positions from
 the file are copied while all other information is ignored.
 
-## Processes
+## Equilibrium Reactions
 
-`processlist`   | Description
---------------- | ----------------------------------------------
-`process`       | Process involving molecular groups (string)
-`K`/`pK`        | Molar equilibrium constant or minus log thereof
-
-The `process` string describes a transformation of molecular reactants (left of =)
-into molecular products (right of =). A trailing tilde (~) denotes that
-the species is to be treated _implicitly_.
-In the example below we assume that `HA`, `H`, and `A` have
-been defined in `moleculelist`:
+Faunus supports density fluctuations, coupled to chemical equilibria with
+explicit and/or implicit particles via their chemical potentials as
+defined in the `reactionlist` detailed below, as well as in `atomlist` and
+`moleculelist`.
 
 ~~~ yaml
-processlist:
-    - { process: "HA = H~ + A", pK=4.8 }
+reactionlist:
+    - "AH = A + H": { pK: 4.8, canonic: true }
+    - "Mg(OH)2 = Mg + OH + OH": { lnK: -25.9 }
 ~~~
+
+The initial string describes a transformation of reactants (left of `=`)
+into products (right of `=`) that may be a mix of atomic and molecular species.
+
+Note that:
+
+- all species, `+`, and `=` must be surrounded by white-space
+- atom and molecule names cannot overlap
+- you may repeat species to match desired stoichiometry
+
+Available keywords:
+
+`reactionlist`  | Description
+--------------- | ---------------------------------------------------------------
+`lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log_{10}(K)$
+`canonic`       |
+`N`             |
+

@@ -4,6 +4,6 @@ site_name: neofaunus
 repo_url: https://github.com/mlund/neofaunus
 
 pages:
-    - 'Home': ./_docs/docs.md
-    - 'Topology': ./_docs/topology.md
+- Introduction:
+  - Topology: ./_docs/topology.md
 

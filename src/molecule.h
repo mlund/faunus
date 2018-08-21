@@ -472,7 +472,7 @@ namespace Faunus {
                     a._prod = process.second;
 
                     for (auto &name : a._reac) { // loop over reactants
-                        auto pair = a.findAtomOrMolecule( name );
+                        auto pair = a.findAtomOrMolecule( name );  // {iterator to atom, iterator to mol.}
                         if ( pair.first != atoms<Tparticle>.end())
                             a._reacid_a[ pair.first->id() ]++;
                         else

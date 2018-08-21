@@ -76,8 +76,8 @@ set(ProgressIncludeDir ${source_dir}/../../src/)
 
 ExternalProject_Add( modernjson
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/nlohmann/json/releases/download/v3.0.1/json.hpp"
-    URL_MD5 d00f62b5574bf20251b13d2ed0fd26db
+    URL "https://github.com/nlohmann/json/releases/download/v3.2.0/json.hpp"
+    URL_MD5 d7e8c50249635575d3271e41dda4e7c7
     UPDATE_DISCONNECTED ON
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
@@ -88,8 +88,8 @@ set(JSONIncludeDir ${source_dir}/../../src/)
 
 ExternalProject_Add( range-v3
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/ericniebler/range-v3/archive/0.3.5.tar.gz"
-    URL_MD5 22f34c74f37a32cb9f2e76869cba27f5
+    URL "https://github.com/ericniebler/range-v3/archive/0.3.6.tar.gz"
+    URL_MD5 1a781c28acba501e76a4b04da62645ab
     UPDATE_DISCONNECTED ON
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(range-v3 source_dir)
@@ -117,8 +117,8 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 
 ExternalProject_Add( pybind11
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/pybind/pybind11/archive/v2.2.1.tar.gz"
-    URL_MD5 bab1d46bbc465af5af3a4129b12bfa3b
+    URL "https://github.com/pybind/pybind11/archive/v2.2.3.tar.gz"
+    URL_MD5 55b637945bbf47d99d2c906bf0c13f49
     UPDATE_DISCONNECTED ON
     INSTALL_DIR "${CMAKE_SOURCE_DIR}/3rdparty"
     CMAKE_ARGS -DPYBIND11_TEST=OFF -DPYBIND11_INSTALL=ON -DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty/
@@ -128,8 +128,8 @@ ExternalProject_Add( pybind11
 
 ExternalProject_Add( eigen
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "http://bitbucket.org/eigen/eigen/get/3.3.4.tar.gz"
-    URL_MD5 1a47e78efe365a97de0c022d127607c3
+    URL "http://bitbucket.org/eigen/eigen/get/3.3.5.tar.gz"
+    URL_MD5 ee48cafede2f51fe33984ff5c9f48026
     UPDATE_DISCONNECTED ON
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(eigen source_dir)

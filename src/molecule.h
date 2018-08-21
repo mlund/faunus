@@ -418,6 +418,15 @@ namespace Faunus {
                 return (forward) ? _prodid_a : _reacid_a;
             } //!< Map for addition depending on direction
 
+            auto findAtomOrMolecule(const std::string &name) const {
+                auto it_a = findName(atoms<Tparticle>, name);
+                auto it_m = findName(molecules<Tpvec>, name);
+                if (it_m == molecules<Tpvec>.end())
+                    if (it_a == atoms<Tparticle>.end())
+                        throw std::runtime_error("unknown species '" + name + "'");
+                return std::make_pair(it_a, it_m);
+            } //!< Returns pair of iterators to atomlist and moleculelist. One of them points to end().
+
         }; //!< End of class
 
         inline auto parseProcess(const std::string &process) {
@@ -457,33 +466,25 @@ namespace Faunus {
                         a.log_k = -std::log(10) * val.at("pK").get<double>();
                     a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
 
-                    // get list of reactant and product species
+                    // get pair of vector containing reactant and product species
                     auto process = parseProcess(a.name);
                     a._reac = process.first;
                     a._prod = process.second;
 
                     for (auto &name : a._reac) { // loop over reactants
-                        auto it_m = findName(molecules<Tpvec>, name);
-                        if (it_m == molecules<Tpvec>.end()) {
-                            auto it_a = findName(atoms<Tparticle>, name);
-                            if (it_a == atoms<Tparticle>.end())
-                                throw std::runtime_error("unknown reactant: " + name);
-                            else
-                                a._reacid_a[ it_a->id() ]++;
-                        } else
-                            a._reacid_m[ it_m->id() ]++;
+                        auto pair = a.findAtomOrMolecule( name );
+                        if ( pair.first != atoms<Tparticle>.end())
+                            a._reacid_a[ pair.first->id() ]++;
+                        else
+                            a._reacid_m[ pair.second->id() ]++;
                     }
 
                     for (auto &name : a._prod) { // loop over products
-                        auto it_m = findName(molecules<Tpvec>, name);
-                        if (it_m == molecules<Tpvec>.end()) {
-                            auto it_a = findName(atoms<Tparticle>, name);
-                            if (it_a == atoms<Tparticle>.end())
-                                throw std::runtime_error("unknown product: " + name);
-                            else
-                                a._prodid_a[ it_a->id() ]++;
-                        } else
-                            a._prodid_m[ it_m->id() ]++;
+                        auto pair = a.findAtomOrMolecule( name );
+                        if ( pair.first != atoms<Tparticle>.end())
+                            a._prodid_a[ pair.first->id() ]++;
+                        else
+                            a._prodid_m[ pair.second->id() ]++;
                     }
                 }
             }

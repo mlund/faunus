@@ -265,8 +265,9 @@ namespace Faunus {
                     atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
                 if (molecules<Tpvec>.empty())
                     molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
-                if (reactions<Tpvec>.empty())
-                    reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
+                if (j.count("reactionlist")>0)
+                    if (reactions<Tpvec>.empty())
+                        reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
 
                 spc.clear();
                 spc.geo = j.at("geometry");

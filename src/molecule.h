@@ -499,7 +499,8 @@ namespace Faunus {
                     //{"reactants", a._reac } ,
                     {"exchange reactants", a._reacid_a  }
                 };
-            }
+            } //!< Serialize to JSON object
+
         template<typename Tpvec>
             static std::vector<ReactionData<Tpvec>> reactions = {}; //!< Global instance of reaction list
 

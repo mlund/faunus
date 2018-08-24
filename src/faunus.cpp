@@ -1,5 +1,6 @@
 #include "core.h"
 #include "move.h"
+#include "analysis.h"
 #include "mpi.h"
 #include "multipole.h"
 #include "docopt.h"
@@ -86,13 +87,26 @@ int main( int argc, char **argv )
 
         // --state
         if (args["--state"]) {
+            std::ifstream f;
             std::string state = Faunus::MPI::prefix + args["--state"].asString();
-            std::ifstream f(state);
+            std::string suffix = state.substr(state.find_last_of(".") + 1);
+            bool binary = (suffix=="ubj");
+            auto mode = std::ios::in;
+            if (binary)
+                mode = std::ifstream::ate | std::ios::binary;
+            f.open(state, mode);
             if (f) {
+                json j;
                 if (!quiet)
                     mpi.cout() << "Loading state file '" << state << "'" << endl;
-                json j;
-                f >> j;
+                if (binary) {
+                    size_t size = f.tellg(); // get file size (ion::ate above means we opened from end)
+                    f.seekg(0, f.beg);       // go back to start
+                    std::vector<std::uint8_t> v(size/sizeof(std::uint8_t));
+                    f.read(reinterpret_cast<char*>(v.data()), size);
+                    j = json::from_ubjson(v);
+                } else
+                    f >> j;
                 sim.restore(j);
             } else
                 throw std::runtime_error("Error loading state file '" + state + "'");

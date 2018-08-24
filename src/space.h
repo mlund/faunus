@@ -1,6 +1,5 @@
 #pragma once
 #include "core.h"
-//#include "molecule.h"
 #include "geometry.h"
 #include "group.h"
 

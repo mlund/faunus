@@ -1,6 +1,7 @@
 #pragma once
 
 #include <numeric>
+#include "move.h"
 #include "space.h"
 #include "io.h"
 #include "energy.h"
@@ -716,13 +717,27 @@ namespace Faunus {
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatXYZ::save(file, s.p, s.geo.getLength()); },
                                     _1, std::ref(spc));
-                        if ( suffix == "state" )
-                            writeFunc = [&spc](const std::string &file) {
-                                std::ofstream f(file);
+
+                        if ( suffix == "json" || suffix == "ubj" ) {
+                            bool binary = (suffix=="ubj"); // use universal binary json
+                            writeFunc = [&spc,binary](const std::string &file) {
+                                std::ofstream f;
+                                if (binary)
+                                    f.open(file, std::ios::out | std::ios::binary);
+                                else 
+                                    f.open(file);
                                 if (f) {
-                                    f << std::setw(4) << json(spc);
+                                    json j = spc;
+                                    j["random-move"] = Move::Movebase::slump;
+                                    j["random-global"] = Faunus::random;
+                                    if (binary) {
+                                        auto v = json::to_ubjson(j); // json --> binary
+                                        f.write( (const char*)v.data(), v.size()*sizeof(decltype(v)::value_type));
+                                    } else
+                                        f << std::setw(2) << j;
                                 }
                             };
+                        }
                     }
 
                 ~SaveState() {

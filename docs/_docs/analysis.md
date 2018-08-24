@@ -217,20 +217,21 @@ The input keywords are:
 
 `savestate`    |  Description
 -------------- | ---------------------------------------------------------
-`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `state`
+`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `json`, `ubj`
 `nstep=-1`     |  Interval between samples. If -1, save at end of simulation
 
 Saves the current configuration or the system state to file.
-If the suffix is `state`, the system state is saved to a single
-JSON file that can be used to restore the state.
 
+If the suffix is `json` or `ubj`, the system state is saved to a single
+JSON file  that can be used to restore the simulation state.
+`ubj` uses Universal Binary JSON for a smaller file.
 
 ## System Energy
 
 Calculates the energy contributions from all terms in the Hamiltonian and
 outputs to a file as a function of steps.
 If filename ends with `.csv`, a comma separated value file will be saved,
-otherwise a simple space separeted file with a single hash commented header line.
+otherwise a simple space separated file with a single hash commented header line.
 All units in $k_BT$.
 
 `systemenergy`   |  Description

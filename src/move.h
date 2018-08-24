@@ -3,7 +3,7 @@
 #include "core.h"
 #include "energy.h"
 #include "average.h"
-#include "analysis.h"
+//#include "analysis.h"
 #include "potentials.h"
 #include "mpi.h"
 
@@ -1076,7 +1076,9 @@ namespace Faunus {
                 void restore(const json &j) {
                     state1.spc = j;
                     state2.spc = j;
-                    reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>(); // should be handled by space
+                    Move::Movebase::slump = j["random-move"]; // restore move random number generator
+                    Faunus::random = j["random-global"];      // restore global random number generator
+                    //reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>(); // should be handled by space
                     init();
                 } //!< restore system from previously saved state
 

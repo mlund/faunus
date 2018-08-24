@@ -701,43 +701,49 @@ namespace Faunus {
                         file = j.at("file");
                         std::string suffix = file.substr(file.find_last_of(".") + 1);
                         file = MPI::prefix + file;
+
                         if ( suffix == "aam" )
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatAAM::save(file, s.p); },
                                     _1, std::ref(spc));
+
                         if ( suffix == "gro" )
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatGRO::save(file, s); },
                                     _1, std::ref(spc));
+
                         if ( suffix == "pqr" )
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatPQR::save(file, s.p, s.geo.getLength()); },
                                     _1, std::ref(spc));
+
                         if ( suffix == "xyz" )
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatXYZ::save(file, s.p, s.geo.getLength()); },
                                     _1, std::ref(spc));
 
-                        if ( suffix == "json" || suffix == "ubj" ) {
-                            bool binary = (suffix=="ubj"); // use universal binary json
-                            writeFunc = [&spc,binary](const std::string &file) {
-                                std::ofstream f;
-                                if (binary)
-                                    f.open(file, std::ios::out | std::ios::binary);
-                                else 
-                                    f.open(file);
+                        if ( suffix == "json") // JSON state file
+                            writeFunc = [&spc](const std::string &file) {
+                                std::ofstream f(file);
                                 if (f) {
                                     json j = spc;
                                     j["random-move"] = Move::Movebase::slump;
                                     j["random-global"] = Faunus::random;
-                                    if (binary) {
-                                        auto v = json::to_ubjson(j); // json --> binary
-                                        f.write( (const char*)v.data(), v.size()*sizeof(decltype(v)::value_type));
-                                    } else
-                                        f << std::setw(2) << j;
+                                    f << std::setw(2) << j;
                                 }
                             };
-                        }
+
+                        if ( suffix == "ubj" ) // Universal Binary JSON state file
+                            writeFunc = [&spc](const std::string &file) {
+                                std::ofstream f(file, std::ios::binary);
+                                if (f) {
+                                    json j = spc;
+                                    j["random-move"] = Move::Movebase::slump;
+                                    j["random-global"] = Faunus::random;
+                                    auto v = json::to_ubjson(j); // json --> binary
+                                    f.write( (const char*)v.data(), v.size()*sizeof(decltype(v)::value_type));
+                                }
+                            };
                     }
 
                 ~SaveState() {

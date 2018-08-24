@@ -216,15 +216,21 @@ The input keywords are:
 ## Save State
 
 `savestate`    |  Description
--------------- | ---------------------------------------------------------
-`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `json`, `ubj`
+-------------- | ------------------------------------------------------------------------------------------
+`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `json`/`ubj`
 `nstep=-1`     |  Interval between samples. If -1, save at end of simulation
 
 Saves the current configuration or the system state to file.
 
-If the suffix is `json` or `ubj`, the system state is saved to a single
-JSON file  that can be used to restore the simulation state.
-`ubj` uses Universal Binary JSON for a smaller file.
+If the suffix is `json` (text) or `ubj` ([binary](http://ubjson.org)), a single 
+state file that can be used to restart the simulation is saved
+with the following information:
+
+- topology: atom, molecule, and reaction definitions
+- particle and group properties incl. positions
+- state of random number generator
+- geometry
+
 
 ## System Energy
 
@@ -238,7 +244,6 @@ All units in $k_BT$.
 ---------------- |  -------------------------------------------
 `file`           |  Output filename for energy vs. step output
 `nstep=0`        |  Interval between samples
-
 
 
 ## Virtual Volume Move

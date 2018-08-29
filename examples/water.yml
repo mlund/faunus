@@ -17,7 +17,7 @@ energy:
     - isobaric: {P/atm: 1}
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: plain, epsr: 1, cutoff: 9, alpha: 0.21, kcutoff: 7.3}
+        coulomb: {type: fanourgakis, epsr: 1, cutoff: 9, alpha: 0.21, kcutoff: 7.3}
         cutoff_g2g: 10
 
 moves:
@@ -25,10 +25,10 @@ moves:
     - volume: {dV: 0.03}
 
 analysis:
-    #- atomrdf: {file: rdf.dat, nstep: 10, dr: 0.1, name1: OW, name2: OW}
-    #- systemenergy: {file: energy.dat, nstep: 10}
-    #- xtcfile: {file: traj.xtc, nstep: 10}
-    #- savestate: {file: confout.pqr}
-    #- savestate: {file: state}
-    #- density: {nstep: 10}
+    - atomrdf: {file: rdf.dat, nstep: 50, dr: 0.1, name1: OW, name2: OW}
+    - systemenergy: {file: energy.dat, nstep: 50}
+    - xtcfile: {file: traj.xtc, nstep: 50}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.ubj}
+    - density: {nstep: 50}
 

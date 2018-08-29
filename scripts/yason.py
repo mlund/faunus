@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 import sys
+if sys.version_info < (3, 0):
+    sys.stdout.write("Sorry, Python 3 og higher required\n")
+    sys.exit(1)
+
 import json, sys, argparse
 try:
     import ruamel_yaml as yaml
@@ -20,8 +24,7 @@ except:
 parser = argparse.ArgumentParser(description='Convert json to yaml and vice versa')
 parser.add_argument('--indent', '-i', dest='indent', default=4, type=int, help='text indentation')
 parser.add_argument('--json', '-j', dest='alwaysjson', action='store_true', help='always output to json')
-parser.add_argument('infile', nargs='?', type=argparse.FileType('r'),
-        default=sys.stdin, help='json/yaml input')
+parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='json/yaml input')
 
 if pygments:
     parser.add_argument('--color', '-c', dest='color', action='store_true', help='syntax colored output')
@@ -33,10 +36,6 @@ if pygments:
         formatter = Terminal256Formatter
     else:
         formatter = NullFormatter
-
-if sys.version_info < (3, 0):
-    sys.stdout.write("Sorry, Python 3 og higher required\n")
-    sys.exit(1)
 
 try: # ... to read json
     i = args.infile.read()

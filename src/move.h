@@ -1073,6 +1073,12 @@ namespace Faunus {
                     init();
                 }
 
+                void store(json &j) const {
+                    j = state1.spc;
+                    j["random-move"] = Move::Movebase::slump;
+                    j["random-global"] = Faunus::random;
+                } // store system to json object
+
                 void restore(const json &j) {
                     state1.spc = j;
                     state2.spc = j;
@@ -1080,7 +1086,7 @@ namespace Faunus {
                     Faunus::random = j["random-global"];      // restore global random number generator
                     //reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>(); // should be handled by space
                     init();
-                } //!< restore system from previously saved state
+                } //!< restore system from previously store json object
 
                 void move() {
                     Change change;

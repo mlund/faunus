@@ -67,6 +67,8 @@ Option                               | Description
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
 `-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: /usr/local)
 `-DMYPLAYGROUND="absolute path"`     | Add additional source directory
+`-DPYTHON_LIBRARY="...`"             | Full path to python library, i.e. libpythonX.dylib/so
+
 
 ### Libraries in odd locations
 
@@ -95,7 +97,7 @@ install_name_tool -change libpython3.6.dylib \
 
 ### Resetting the build system
 
-If you need to change the compiler or for another reason want to reset the build system, do:
+To change the compiler or for another reason reset the build system, do:
 
 ~~~ bash
 make clean

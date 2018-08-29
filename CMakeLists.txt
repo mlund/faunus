@@ -9,7 +9,7 @@ endif ()
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
-
+find_package(PythonInterp 3 REQUIRED)
 enable_testing()
 
 # Default build is "RelWithDebInfo"
@@ -233,9 +233,7 @@ set_target_properties(faunus_sphere PROPERTIES COMPILE_DEFINITIONS "SPHERE")
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
     INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-
-    find_package(PythonLibs)
-    find_package(PythonInterp)
+    find_package(PythonLibs 3 REQUIRED)
 
     if (PYTHONINTERP_FOUND)
         execute_process(
@@ -255,39 +253,51 @@ if (ENABLE_PYTHON)
             pybind11_add_module(pyfaunus src/pyfaunus.cpp)
         endif()
     endif ()
-
 endif ()
 
-add_custom_target(
-    manual
-    COMMENT "Building PDF manual"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/_docs
-    COMMAND cat
-    header.md
-    docs.md
-    install.md
-    running.md
-    topology.md
-    energy.md
-    moves.md
-    analysis.md |
-    grep -v ".notice--" |
-    grep -v "Github-Improve_this_page" |
-    pandoc --self-contained --highlight-style=tango --template ../pandoc.tex
-    -V date:"\\today"
-    -V thanks:"Based on git revision "${GIT_COMMIT_HASH}
-    -N --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
-    )
-set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
+# MANUAL
 
-# Install targets
+find_program(PANDOC pandoc)
+if (PANDOC)
+    add_custom_target(
+        manual
+        COMMENT "Building PDF manual"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/_docs
+        COMMAND cat
+        header.md
+        docs.md
+        install.md
+        running.md
+        topology.md
+        energy.md
+        moves.md
+        analysis.md |
+        grep -v ".notice--" |
+        grep -v "Github-Improve_this_page" |
+        ${PANDOC} --self-contained --highlight-style=tango --template ../pandoc.tex
+        -V date:"\\today"
+        -V thanks:"Based on git revision "${GIT_COMMIT_HASH}
+        -N --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
+        )
+    set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
+endif()
+
+# TESTS
+
+add_test(
+    NAME minimal
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py minimal.yml\
+    | $<TARGET_FILE:faunus> --nobar --state minimal.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py minimal.out.json out.json --tol 0.001"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+# INSTALL TARGETS
 
 install(TARGETS faunus DESTINATION bin)
 install(TARGETS faunus_nopbc DESTINATION bin)
 install(TARGETS faunus_sphere DESTINATION bin)
 
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
-
 install(FILES ${CMAKE_SOURCE_DIR}/scripts/yason.py DESTINATION bin
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
@@ -296,13 +306,18 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/examples/bulk.yml
     ${CMAKE_SOURCE_DIR}/examples/water.yml
     ${CMAKE_SOURCE_DIR}/examples/water.xyz
+    ${CMAKE_SOURCE_DIR}/examples/minimal.yml
+    ${CMAKE_SOURCE_DIR}/examples/minimal.out.json
+    ${CMAKE_SOURCE_DIR}/examples/minimal.state.json
     ${CMAKE_SOURCE_DIR}/examples/membrane.yml
-    ${CMAKE_SOURCE_DIR}/examples/membrane.state
+    ${CMAKE_SOURCE_DIR}/examples/membrane.state.json
     ${CMAKE_SOURCE_DIR}/examples/lipid.xyz
     ${CMAKE_SOURCE_DIR}/examples/penalty.yml
     ${CMAKE_SOURCE_DIR}/examples/isochoric.yml
     ${CMAKE_SOURCE_DIR}/examples/isochoric.xyz
     DESTINATION share/faunus/examples)
+
+# INFORMATION ABOUT DEBUG MODE
 
 if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
     string(REPLACE "NDEBUG" "_ndebug" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
@@ -316,7 +331,7 @@ if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
         "  For production, switch to Release for optimal performance:\n\n"
         "  -DCMAKE_BUILD_TYPE=Release\n"
         "***************************************************************\n")
-endif ()
+endif()
 if (CMAKE_BUILD_TYPE MATCHES "Release")
     message(
         "......................................................................\n"
@@ -325,5 +340,4 @@ if (CMAKE_BUILD_TYPE MATCHES "Release")
         "  mode to enable run-time checks and assertions:\n\n"
         "  -DCMAKE_BUILD_TYPE=RelWithDebInfo\n"
         "**********************************************************************\n")
-endif ()
-
+endif()

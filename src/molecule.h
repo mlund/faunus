@@ -51,9 +51,9 @@ namespace Faunus {
 
                     if ( mol.atomic )
                     { // insert atomic species
+                        QuaternionRotate rot;
                         for ( auto &i : v )
                         { // for each atom type id
-                            QuaternionRotate rot;
                             if ( rotate )
                             {
                                 rot.set(2*pc::pi*random(), ranunit(random));
@@ -125,11 +125,12 @@ namespace Faunus {
                 typedef Tpvec TParticleVector;
                 typedef typename Tpvec::value_type Tparticle;
 
-                /** @brief Signature for inserted function */
-                typedef std::function<Tpvec( Geometry::GeometryBase &, const Tpvec &, MoleculeData<Tpvec> & )> TinserterFunc;
+                typedef std::function<Tpvec( Geometry::GeometryBase&,
+                        const Tpvec&, MoleculeData<Tpvec>& )> TinserterFunc;
+
                 TinserterFunc inserterFunctor=nullptr;      //!< Function for insertion into space
 
-                int& id() { return _id; } //!< Type id
+                int& id() { return _id; }  //!< Type id
                 const int& id() const { return _id; } //!< Type id
 
                 std::string name;          //!< Molecule name

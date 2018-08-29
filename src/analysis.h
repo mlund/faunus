@@ -722,7 +722,7 @@ namespace Faunus {
                                     []( std::string file, Tspace &s ) { FormatXYZ::save(file, s.p, s.geo.getLength()); },
                                     _1, std::ref(spc));
 
-                        if ( suffix == "json") // JSON state file
+                        if ( suffix == "json" ) // JSON state file
                             writeFunc = [&spc](const std::string &file) {
                                 std::ofstream f(file);
                                 if (f) {
@@ -744,6 +744,9 @@ namespace Faunus {
                                     f.write( (const char*)v.data(), v.size()*sizeof(decltype(v)::value_type));
                                 }
                             };
+
+                        if (writeFunc==nullptr)
+                            throw std::runtime_error("unknown file extension for '"+file+"'");
                     }
 
                 ~SaveState() {

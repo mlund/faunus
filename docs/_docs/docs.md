@@ -69,6 +69,6 @@ moves:
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - savestate: {file: confout.pqr}
-    - savestate: {file: confout.state}
+    - savestate: {file: state.json}
 mcloop: {macro: 10, micro: 1000}
 ~~~

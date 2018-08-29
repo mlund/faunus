@@ -20,6 +20,8 @@ parser.add_argument('file1', help='first file')
 parser.add_argument('file2', help='second file')
 args = parser.parse_args()
 
+returncode = 0
+
 def equals(a, b):
     return fabs(a-b)/a < args.tol
 
@@ -32,7 +34,8 @@ def isnumber(key, val):
     return False
 
 def compare(a, b):
-    ''' compare ints and floats in dict '''
+    ''' compare ints and floats in dict to to relative tolerence '''
+    global returncode
     if isinstance(a, dict):
         for key in set(a.keys()) & set(b.keys()):
             if isinstance(a[key], dict):
@@ -41,10 +44,11 @@ def compare(a, b):
                 for i, j in zip(a[key], b[key]):
                     compare(i,j)
             elif isnumber(key, a[key]) and isnumber(key, b[key]):
-                if args.quiet:
-                    return equals(a[key], b[key])
-                else: print('{:20} {:10} {:10} {}'.format(key, a[key], b[key], equals(a[key], b[key])))
-    return False
+                result = equals(a[key], b[key])
+                if result==False and returncode==0:
+                    returncode = 1
+                if not args.quiet:
+                    print('{:20} {:10} {:10} {}'.format(key, a[key], b[key], result))
 
 # load two json files to compare
 d = [json.load(open(f)) for f in [args.file1, args.file2]]
@@ -53,7 +57,7 @@ if (len(d)==2):
     if args.quiet==False:
         print('{:20} {:>10} {:>10} {}'.format("keyword", "file1", "file2", "pass"))
     compare(*[i for i in d])
-    sys.exit(0)
+    sys.exit(returncode)
 
 sys.exit(1)
 

@@ -32,7 +32,7 @@ R"(Faunus - the Monte Carlo code you're looking for!
     Options:
       -i <file> --input <file>   Input file [default: /dev/stdin].
       -o <file> --output <file>  Output file [default: out.json].
-      -s <file> --state <file>   State file to start from.
+      -s <file> --state <file>   State file to start from (.json/.ubj).
       --rerun <traj>             Rerun from trajectory (.xtc)
       -q --quiet                 Less verbose output.
       -h --help                  Show this screen.
@@ -93,17 +93,17 @@ int main( int argc, char **argv )
             bool binary = (suffix=="ubj");
             auto mode = std::ios::in;
             if (binary)
-                mode = std::ifstream::ate | std::ios::binary;
+                mode = std::ifstream::ate | std::ios::binary; // ate = open at end
             f.open(state, mode);
             if (f) {
                 json j;
                 if (!quiet)
                     mpi.cout() << "Loading state file '" << state << "'" << endl;
                 if (binary) {
-                    size_t size = f.tellg(); // get file size (ion::ate above means we opened from end)
-                    f.seekg(0, f.beg);       // go back to start
+                    size_t size = f.tellg(); // get file size
                     std::vector<std::uint8_t> v(size/sizeof(std::uint8_t));
-                    f.read(reinterpret_cast<char*>(v.data()), size);
+                    f.seekg(0, f.beg);       // go back to start
+                    f.read((char*)v.data(), size);
                     j = json::from_ubjson(v);
                 } else
                     f >> j;
@@ -142,6 +142,7 @@ int main( int argc, char **argv )
         std::ofstream f(Faunus::MPI::prefix + args["--output"].asString());
         if (f) {
             json j = sim;
+            j["relative drift"] = sim.drift();
             j["analysis"] = analysis;
             if (mpi.nproc()>1)
                 j["mpi"] = mpi;

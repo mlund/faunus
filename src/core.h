@@ -698,9 +698,7 @@ namespace Faunus {
 
     template<typename... Properties>
         void to_json(json& j, const Particle<Properties...> &a) {
-            j["id"]=a.id;
-            j["mw"]= a.mw;
-            j["pos"] = a.pos;
+            j = { {"id", a.id}, {"mw", a.mw}, {"pos", a.pos} };
             to_json<Properties...>(j, Properties(a)... );
         }
 

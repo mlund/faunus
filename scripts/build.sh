@@ -6,7 +6,8 @@ make faunus
 make faunus_nopbc
 make faunus_sphere
 make tests
-make test
+ctest -V
+#make test
 #make manual
 make install
 

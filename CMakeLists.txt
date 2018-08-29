@@ -288,7 +288,7 @@ add_test(
     NAME minimal
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py minimal.yml\
     | $<TARGET_FILE:faunus> --nobar --state minimal.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py minimal.out.json out.json --tol 0.001"
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py minimal.out.json out.json --tol 0.02"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 # INSTALL TARGETS

@@ -25,10 +25,10 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 
 - CMake 3.9+
 - C/C++14 compiler (Clang 3.9+, GCC 6+, etc.)
+- Python 3.6+ with `ruamel_yaml` or `yaml`
 
 The following are optional:
 
-- Python 3.6+ with `ruamel_yaml` or `yaml`
 - Message Passing Interface (MPI)
 - Pandoc (for building documentation)
 
@@ -50,7 +50,7 @@ A set of dependencies will automatically be downloaded.
 cd faunus
 cmake . [OPTIONS]
 make
-make tests
+make test
 make install
 ~~~
 
@@ -67,23 +67,20 @@ Option                               | Description
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
 `-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: /usr/local)
 `-DMYPLAYGROUND="absolute path"`     | Add additional source directory
-`-DPYTHON_LIBRARY="...`"             | Full path to python library, i.e. libpythonX.dylib/so
+`-DPYTHON_EXECUTABLE="..."`          | Full path to Python executable (version 3 or higher)
+`-DPYTHON_INCLUDE_DIR="..."`         | Full path to python headers
+`-DPYTHON_LIBRARY="..."`             | Full path to python library, i.e. libpythonX.dylib/so
 
 
-### Libraries in odd locations
+### Python libraries in odd locations
 
 Should you have multiple compilers or python distributions, be specific:
 
 ~~~ bash
 CC=clang CXX=clang++ cmake . \
+  -DPYTHON_EXECUTABLE=/opt/bin/python3 \
   -DPYTHON_INCLUDE_DIR=/opt/include/python3.6 \
   -DPYTHON_LIBRARY=/opt/lib/libpython3.6.dylib
-~~~
-
-Another example for compiling with Intel C++ in _Release_ mode (faster, less assertions):
-
-~~~ bash
-CXX=icpc CC=icc cmake . -DCMAKE_BUILD_TYPE=Release
 ~~~
 
 For solving python issues on macOS, the linked python library can be probed and,
@@ -104,7 +101,7 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles
 ~~~
 
-## Creating a conda package (expert usage)
+## Creating a conda package (advanced usage)
 
 To create a precompiled package for Anaconda, do the following steps:
 

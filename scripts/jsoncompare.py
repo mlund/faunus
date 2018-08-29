@@ -14,7 +14,8 @@ except:
     pass
 
 parser = argparse.ArgumentParser(description='Nulerically compare two JSON files')
-parser.add_argument('--tol', default=0.05, type=float, help='relative error tolerance (default: 0.05)')
+parser.add_argument('--tol', default=0.02, type=float, help='relative error tolerance (default: 0.02)')
+parser.add_argument('--small', default=1e-10, type=float, help='always equal if difference is smaller than this (default: 1e-10)')
 parser.add_argument('--quiet', '-q', dest='quiet', action='store_true', help='less output')
 parser.add_argument('file1', help='first file')
 parser.add_argument('file2', help='second file')
@@ -23,6 +24,8 @@ args = parser.parse_args()
 returncode = 0
 
 def equals(a, b):
+    if fabs(a-b)<args.small:
+        return True
     return fabs(a-b)/a < args.tol
 
 def isnumber(key, val):

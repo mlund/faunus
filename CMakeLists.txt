@@ -291,6 +291,14 @@ add_test(
     ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py minimal.out.json out.json --tol 0.02"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
+add_test(
+    NAME membrane
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py membrane.yml\
+    | $<TARGET_FILE:faunus> --quiet --state membrane.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py membrane.out.json out.json --tol 0.05"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+
 # INSTALL TARGETS
 
 install(TARGETS faunus DESTINATION bin)

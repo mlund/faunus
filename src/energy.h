@@ -26,6 +26,7 @@ namespace Faunus {
                 virtual double energy(Change&)=0; //!< energy due to change
                 inline virtual void to_json(json &j) const {}; //!< json output
                 inline virtual void sync(Energybase*, Change&) {}
+                inline virtual void init() {} //!< reset and initialize
         };
 
         void to_json(json &j, const Energybase &base) {
@@ -269,12 +270,16 @@ namespace Faunus {
                 private:
                     EwaldData data;
                     Policy policy;
-                public:
                     Tspace& spc;
+                public:
 
                     Ewald(const json &j, Tspace &spc) : policy(spc), spc(spc) {
                         name = "ewald";
                         data = j;
+                        init();
+                    }
+
+                    void init() override {
                         data.update( spc.geo.getLength() );
                         policy.updateComplex(data); // brute force. todo: be selective
                     }
@@ -820,6 +825,7 @@ namespace Faunus {
                     typedef Nonbonded<Tspace,Tpairpot> base;
                     typedef typename Tspace::Tgroup Tgroup;
                     Eigen::MatrixXf cache;
+                    Tspace &spc;
 
                     double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index=std::vector<int>(), const std::vector<int> &jndex=std::vector<int>()) override {
                         int i = &g1 - &base::spc.groups.front();
@@ -839,8 +845,12 @@ namespace Faunus {
                     }
 
                 public:
-                    NonbondedCached(const json &j, Tspace &spc) : base(j,spc) {
+                    NonbondedCached(const json &j, Tspace &spc) : base(j,spc), spc(spc) {
                         base::name += "EM";
+                        init();
+                    }
+
+                    void init() override {
                         cache.resize( spc.groups.size(), spc.groups.size() );
                         cache.setZero();
                         for ( auto i = base::spc.groups.begin(); i < base::spc.groups.end(); ++i ) {
@@ -858,7 +868,7 @@ namespace Faunus {
                                 cache(k,l) = u;
                             }
                         }
-                    }
+                    } //!< Cache pair interactions in matrix
 
                     double energy(Change &change) override {
                         using namespace ranges;
@@ -1329,14 +1339,20 @@ namespace Faunus {
                         return du;
                     } //!< Energy due to changes
 
+                    void init() override {
+                        for (auto i : this->vec)
+                            i->init();
+                    }
+
                     void sync(Energybase* basePtr, Change &change) override {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
-                        if (other!=NULL) {
-                            if (other->size()==size())
+                        if (other)
+                            if (other->size()==size()) {
                                 for (size_t i=0; i<size(); i++)
-                                    this->vec[i]->sync( other->vec[i].get(), change);
-                        } else
-                            throw std::runtime_error("hamiltonian mismatch");
+                                    this->vec[i]->sync( other->vec[i].get(), change );
+                                return;
+                            }
+                        throw std::runtime_error("hamiltonian mismatch");
                     }
 
             }; //!< Aggregates and sum energy terms

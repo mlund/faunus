@@ -1037,17 +1037,18 @@ namespace Faunus {
                 void init() {
                     state1.pot.key = Energy::Energybase::OLD; // this is the old energy (current)
                     state2.pot.key = Energy::Energybase::NEW; // this is the new energy (trial)
+                    state1.pot.init();
+                    state2.pot.init();
                     dusum=0;
                     Change c; c.all=true;
-                    uinit = state1.pot.energy(c);
                     state2.sync(state1, c);
+                    uinit = state1.pot.energy(c);
 
                     // Hack in reference to state1 in speciation
-                    for (auto &spec: moves.vec) {
-                        if (spec->name == "speciation") {
-                            auto specp = std::dynamic_pointer_cast<Move::SpeciationMove<Tspace>>(spec);
-                            specp->setOther(state1.spc);
-                        }
+                    for (auto base : moves.vec) {
+                        auto derived = std::dynamic_pointer_cast<Move::SpeciationMove<Tspace>>(base);
+                        if (derived)
+                            derived->setOther(state1.spc);
                     }
                     assert(state1.pot.energy(c) == state2.pot.energy(c));
                 }

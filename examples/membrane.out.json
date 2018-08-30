@@ -1,0 +1,153 @@
+{
+ "analysis": [
+  {
+   "atomrdf": {
+    "Rhyper": -1.0,
+    "dim": 3,
+    "dr": 0.1,
+    "file": "rdf.dat",
+    "file2": "rdf.dat.avg",
+    "name1": "HD",
+    "name2": "HD",
+    "nstep": 10,
+    "relative time": 0.0107,
+    "samples": 100
+   }
+  },
+  {
+   "systemenergy": {
+    "file": "energy.dat",
+    "final": [
+     -1337.125466331872,
+     5434.372388282056,
+     -1782.6251317149565
+    ],
+    "init": 2243.7,
+    "mean": 2257.6,
+    "nstep": 10,
+    "relative time": 0.00121,
+    "samples": 100
+   }
+  },
+  {
+   "xtcfile": {
+    "file": "traj.xtc",
+    "nstep": 10,
+    "reference": "http://bit.ly/2A8lzpa",
+    "relative time": 0.00154,
+    "samples": 100
+   }
+  },
+  {
+   "savestate": {
+    "file": "confout.pqr"
+   }
+  },
+  {
+   "savestate": {
+    "file": "state.json"
+   }
+  }
+ ],
+ "energy": [
+  {
+   "hamiltonian": [
+    {
+     "isobaric": {
+      "P/Pa": 0.0,
+      "P/atm": 0.0,
+      "P/mM": 0.0,
+      "reference": "Frenkel & Smith 2nd Ed (Eq. 5.4.13)"
+     }
+    },
+    {
+     "nonbondedEM": {
+      "cutoff_g2g": 42.0,
+      "pairpot": {
+       "custom": {
+        "HD HD": {
+         "eps": 2.2147,
+         "sigma": 9.5
+        },
+        "HD TL": {
+         "eps": 2.2147,
+         "sigma": 9.75
+        },
+        "TL TL": {
+         "eps": 2.2147,
+         "sigma": 10.0
+        }
+       },
+       "eps": 2.2147,
+       "epsilon unit": "kJ/mol",
+       "mixing": "LB",
+       "rc": 11.2246,
+       "wc": 16.0
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "geometry": {
+  "length": [
+   81.13028275278032,
+   81.13028275278032,
+   85.34940006675774
+  ]
+ },
+ "git revision": "565e948 (2018-08-30)",
+ "moves": [
+  {
+   "moltransrot": {
+    "acceptance": 0.295,
+    "dir": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "dp": 1.0,
+    "dprot": 0.5,
+    "molecule": "lipid",
+    "molid": 0,
+    "moves": 99853,
+    "relative time": 0.383,
+    "repeat": 100,
+    "√⟨r²⟩": 0.271
+   }
+  },
+  {
+   "transrot": {
+    "acceptance": 0.338,
+    "dir": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "molecule": "lipid",
+    "molid": 0,
+    "moves": 100110,
+    "relative time": 0.381,
+    "repeat": 100,
+    "√⟨r²⟩": 0.582
+   }
+  },
+  {
+   "volume": {
+    "acceptance": 0.411,
+    "dV": 0.03,
+    "method": "isochoric",
+    "moves": 1037,
+    "relative time": 0.188,
+    "repeat": 1,
+    "√⟨ΔV²⟩": 0.31,
+    "∛√⟨ΔV²⟩": 0.677
+   }
+  }
+ ],
+ "number of groups": 100,
+ "number of particles": 300,
+ "reactionlist": null,
+ "relative drift": 8.71519258756891e-15,
+ "temperature": 293.0
+}

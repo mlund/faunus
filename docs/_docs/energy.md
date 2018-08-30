@@ -127,7 +127,7 @@ self energies are automatically added to the Hamiltonian, activating additional 
 -------------------- | ---------------------------------------------------------------------
 `kcutoff`            | Reciprocal-space cutoff
 `epss=0`             | Dielectric constant of surroundings, $\varepsilon_{surf}$ (0=tinfoil)
-`ipbc=false`         | Use isotropic periodic boundary conditions, IPBC.
+`ipbc=false`         | Use isotropic periodic boundary conditions, [IPBC](http://doi.org/css8).
 `spherical_sum=true` | Spherical/ellipsoidal summation in reciprocal space; cubic if `false`.
 
 The added energy terms are:
@@ -159,7 +159,7 @@ $$
 In the case of isotropic periodic boundaries (`ipbc=true`), the orientational degeneracy of the
 periodic unit cell is exploited to mimic an isotropic environment, reducing the number
 of wave-vectors by one fourth compared with PBC Ewald.
-For point charges, IPBC introduce the modification,
+For point charges, [IPBC](http://doi.org/css8) introduce the modification,
 
 $$
 Q^q = \sum_jq_j\prod_{\alpha\in\{x,y,z\}}\cos\left(\frac{2\pi}{L_{\alpha}}n_{\alpha} r_{\alpha,j}\right)

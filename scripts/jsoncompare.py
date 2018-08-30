@@ -13,7 +13,7 @@ try:
 except:
     pass
 
-parser = argparse.ArgumentParser(description='Nulerically compare two JSON files')
+parser = argparse.ArgumentParser(description='Numerically compare two JSON files')
 parser.add_argument('--tol', default=0.02, type=float, help='relative error tolerance (default: 0.02)')
 parser.add_argument('--small', default=1e-10, type=float, help='always equal if difference is smaller than this (default: 1e-10)')
 parser.add_argument('--quiet', '-q', dest='quiet', action='store_true', help='less output')
@@ -37,7 +37,7 @@ def isnumber(key, val):
     return False
 
 def compare(a, b):
-    ''' compare ints and floats in dict to to relative tolerence '''
+    ''' compare ints and floats in dict to relative tolerence '''
     global returncode
     if isinstance(a, dict):
         for key in set(a.keys()) & set(b.keys()):

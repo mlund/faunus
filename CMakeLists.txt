@@ -295,7 +295,7 @@ add_test(
     NAME membrane
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py membrane.yml\
     | $<TARGET_FILE:faunus> --quiet --state membrane.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py membrane.out.json out.json --tol 0.05"
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py membrane.out.json out.json --tol 0.06"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 
@@ -312,7 +312,6 @@ install(FILES ${CMAKE_SOURCE_DIR}/scripts/yason.py DESTINATION bin
 
 install(FILES
     ${CMAKE_SOURCE_DIR}/examples/README.md
-    ${CMAKE_SOURCE_DIR}/examples/LICENSE
     ${CMAKE_SOURCE_DIR}/examples/bulk.yml
     ${CMAKE_SOURCE_DIR}/examples/water.yml
     ${CMAKE_SOURCE_DIR}/examples/water.xyz

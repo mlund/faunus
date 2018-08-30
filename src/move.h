@@ -15,10 +15,10 @@ namespace Faunus {
                 virtual void _move(Change&)=0; //!< Perform move and modify change object
                 virtual void _accept(Change&) {}; //!< Call after move is accepted
                 virtual void _reject(Change&) {}; //!< Call after move is rejected
-                TimeRelativeOfTotal<std::chrono::microseconds> timer;
-            protected:
                 virtual void _to_json(json &j) const=0; //!< Extra info for report if needed
                 virtual void _from_json(const json &j)=0; //!< Extra info for report if needed
+                TimeRelativeOfTotal<std::chrono::microseconds> timer;
+            protected:
                 unsigned long cnt=0;
                 unsigned long accepted=0;
                 unsigned long rejected=0;
@@ -211,8 +211,8 @@ namespace Faunus {
                     double dptrans=0;
                     double dprot=0;
                     Point dir={1,1,1};
+                    double _sqd; // squared displacement
                     Average<double> msqd; // mean squared displacement
-                    double _sqd; // squared displament
 
                     void _to_json(json &j) const override {
                         j = {
@@ -241,8 +241,7 @@ namespace Faunus {
                             }
                         }
                         catch (std::exception &e) {
-                            std::cerr << name << ": " << e.what();
-                            throw;
+                            throw std::runtime_error(name+": " + e.what());
                         }
                     } //!< Configure via json object
 
@@ -273,7 +272,7 @@ namespace Faunus {
                                     it->rotate(Q, spc.geo.boundaryFunc);
                                 }
 
-                                if (dptrans>0|| dprot>0) { // define changes
+                                if (dptrans>0||dprot>0) { // define changes
                                     Change::data d;
                                     d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
                                     d.all = true; // *all* atoms in group were moved

@@ -88,6 +88,13 @@ namespace Faunus {
                 groups.clear();
             } //!< Clears particle and molecule list
 
+            /*
+             * The following is considered:
+             *
+             * - `groups` vector is expanded with a new group at the end
+             * - if the particle vector is relocated, all existing group
+             *   iterators are updated to reflect the new memory positions
+             */
             void push_back(int molid, const Tpvec &in) {
                 if (!in.empty()) {
                     auto oldbegin = p.begin();
@@ -114,11 +121,18 @@ namespace Faunus {
             } //!< Safely add particles and corresponding group to back
 
             auto findMolecules(int molid, Selection sel=ACTIVE) {
-                std::function<bool(Tgroup&)> f = [molid](Tgroup &i){ return i.id==molid; };
-                if (sel==INACTIVE)
-                    f = [molid](Tgroup &i){ return (i.id==molid) && (i.size()!=i.capacity()); };
-                if (sel==ACTIVE)
-                    f = [molid](Tgroup &i){ return (i.id==molid) && (i.size()==i.capacity()); };
+                std::function<bool(Tgroup&)> f;
+                switch (sel) {
+                    case (ALL):
+                        f = [molid](Tgroup &i){ return i.id==molid; };
+                        break;
+                    case (INACTIVE):
+                        f = [molid](Tgroup &i){ return (i.id==molid) && (i.size()!=i.capacity()); };
+                        break;
+                    case (ACTIVE):
+                        f = [molid](Tgroup &i){ return (i.id==molid) && (i.size()==i.capacity()); };
+                        break;
+                }
                 return groups | ranges::view::filter(f);
             } //!< Range with all groups of type `molid` (complexity: order N)
 
@@ -217,14 +231,16 @@ namespace Faunus {
                     f(*this, Vold, Vnew);
             } //!< scale space to new volume
 
+
             json info() {
-                json j;
-                j["number of particles"] = p.size();
-                j["number of groups"] = groups.size();
-                j["geometry"] = geo;
+                json j = {
+                    {"number of particles", p.size()},
+                    {"number of groups", groups.size()},
+                    {"geometry", geo}
+                };
                 auto& _j = j["groups"];
                 for (auto &i : groups) {
-                    auto name = molecules<decltype(p)>.at(i.id).name;
+                    auto& name = molecules<decltype(p)>.at(i.id).name;
                     json tmp, d=i;
                     d.erase("cm");
                     d.erase("id");
@@ -301,6 +317,17 @@ namespace Faunus {
 
         } //!< Deserialize json object to Space
 
+    /**
+     * @brief Insert molecules into space
+     *
+     * Expects an array of molecules, for example:
+     *
+     * ~~~ yaml
+     *     - salt:  { N: 10 }
+     *     - water: { N: 256 }
+     *     - water: { N: 1, inactive: true }
+     * ~~~
+     */
     template<typename Tspace>
         void insertMolecules(const json &j, Tspace &spc) {
             typedef typename Tspace::Tpvec Tpvec;
@@ -308,15 +335,15 @@ namespace Faunus {
             assert(spc.geo.getVolume()>0);
             auto &molvec = molecules<Tpvec>;
             if (j.is_array()) {
-                for (auto &m : j) { // loop over entries in 'insert'
+                for (auto &m : j) { // loop over array of molecules
                     if (m.is_object() && m.size()==1)
                         for (auto it=m.begin(); it!=m.end(); ++it) {
                             auto mol = findName(molvec, it.key()); // is the molecule defined?
                             if (mol!=molvec.end()) {
 
                                 int N = it.value().at("N").get<int>();  // number of molecules to insert
-                                int cnt=N;
-                                bool inactive = it.value().value("inactive", false);
+                                int cnt = N;
+                                bool inactive = it.value().value("inactive", false); // active or not?
 
                                 if (mol->atomic) {
                                     typename Tspace::Tpvec p;
@@ -365,7 +392,7 @@ namespace Faunus {
                                 throw std::runtime_error("cannot insert undefined molecule '" + it.key() + "'");
                         }
                 }
-            } else throw std::runtime_error("'insert' json entry must be of array type");
+            } else throw std::runtime_error("'insertmolecules' json entry must be of array type");
         } //!< Insert `N` molecules into space as defined in `insert`
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

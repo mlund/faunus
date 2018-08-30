@@ -42,8 +42,9 @@ namespace Faunus {
                 Tpvec v;
                 int cnt = 0;
                 int _ntry = 1000000;
-                do
-                {
+                QuaternionRotate rot;
+
+                do {
                     if ( cnt++ > maxtrials )
                         throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
 
@@ -51,7 +52,6 @@ namespace Faunus {
 
                     if ( mol.atomic )
                     { // insert atomic species
-                        QuaternionRotate rot;
                         for ( auto &i : v )
                         { // for each atom type id
                             if ( rotate )
@@ -68,21 +68,16 @@ namespace Faunus {
                             // } while ( _ntry > _try && )
                         }
                     }
-                    else
-                    { // insert molecule
-                        if ( keeppos )
-                        {                   // keep original positions (no rotation/trans)
+                    else { // insert molecule
+                        if ( keeppos ) {                     // keep original positions (no rotation/trans)
                             for ( auto &i : v )              // ...but let's make sure it fits
                                 if ( geo.collision(i.pos, 0))
                                     throw std::runtime_error("Error: Inserted molecule does not fit in container");
-                        }
-                        else
-                        {
+                        } else {
                             Point cm;                      // new mass center position
                             geo.randompos(cm, random);      // random point in container
                             cm = cm.cwiseProduct(dir);     // apply user defined directions (default: 1,1,1)
                             Geometry::cm2origo(v.begin(), v.end());// translate to origin
-                            QuaternionRotate rot;
                             rot.set(random()*2*pc::pi, ranunit(random)); // random rot around random vector
                             for ( auto &i : v )
                             {            // apply rotation to all points

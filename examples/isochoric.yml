@@ -47,5 +47,5 @@ analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - xtcfile: {file: traj.xtc, nstep: 20}
     - savestate: {file: confout.pqr}
-    - savestate: {file: state}
+    - savestate: {file: state.json}
 

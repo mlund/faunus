@@ -304,7 +304,7 @@ add_test(
 install(TARGETS faunus DESTINATION bin)
 install(TARGETS faunus_nopbc DESTINATION bin)
 install(TARGETS faunus_sphere DESTINATION bin)
-install(TARGETS pyfaunus DESTINATION lib OPTIONAL)
+#install(TARGETS pyfaunus DESTINATION lib OPTIONAL)
 
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_SOURCE_DIR}/scripts/yason.py DESTINATION bin

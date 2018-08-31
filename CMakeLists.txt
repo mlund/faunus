@@ -304,8 +304,14 @@ add_test(
 install(TARGETS faunus DESTINATION bin)
 install(TARGETS faunus_nopbc DESTINATION bin)
 install(TARGETS faunus_sphere DESTINATION bin)
-#install(TARGETS pyfaunus DESTINATION lib OPTIONAL)
 
+if (pybind11_FOUND)
+    execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"
+        OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+    install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE_PACKAGES} OPTIONAL)
+endif()
+
+install(FILES ${CMAKE_BINARY_DIR}/LICENSE DESTINATION share/faunus)
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_SOURCE_DIR}/scripts/yason.py DESTINATION bin
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)

@@ -295,7 +295,7 @@ add_test(
     NAME membrane
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py membrane.yml\
     | $<TARGET_FILE:faunus> --quiet --state membrane.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py membrane.out.json out.json --tol 0.06"
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py membrane.out.json out.json --tol 0.065"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 

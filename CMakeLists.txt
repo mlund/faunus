@@ -2,10 +2,6 @@ cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
 project(neofaunus)
 
-if (POLICY CMP0042)
-    cmake_policy(SET CMP0075 OLD)
-endif ()
-
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
@@ -158,8 +154,8 @@ add_dependencies(xdrfile project_xdrfile)
 
 ExternalProject_Add( doctest
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://raw.githubusercontent.com/onqtam/doctest/1.2.9/doctest/doctest.h"
-    URL_MD5 0547af07d93f8f60ad1988199a877ab6
+    URL "https://raw.githubusercontent.com/onqtam/doctest/2.0.0/doctest/doctest.h"
+    URL_MD5 cbd33be5fb1e4bb418131bb78b52be5b
     UPDATE_DISCONNECTED ON
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )

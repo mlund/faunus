@@ -466,9 +466,7 @@ namespace Faunus {
         CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
         CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
     }
-#endif
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] ranunit_polar") {
         Random r;
         int n=2e5;
@@ -965,6 +963,7 @@ namespace Faunus {
     }
 #endif
 
+    /*
     struct json_io_base {
         std::string name;
         std::string cite;
@@ -972,4 +971,5 @@ namespace Faunus {
         inline void _to_json(json&) const {};
         inline void _from_json(const json&) {};
     };
+    */
 }//end of faunus namespace

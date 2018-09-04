@@ -1837,6 +1837,34 @@ namespace Faunus
                 }
         };
 
+    /**
+     * @brief Simple struct to measure duration of code
+     *
+     * Example:
+     *
+     * ~~~ cpp
+     * Stopwatch w;
+     * w.start();
+     * // do something expensive...
+     * w.stop(); // --> stdio
+     * ~~~
+     *
+     * `stop()` takes an optional template parameter to specify
+     * the time resolution. Default is milliseconds.
+     */
+    struct Stopwatch {
+        using clock = std::chrono::high_resolution_clock;
+        std::chrono::time_point<clock> beg, end;
+        inline Stopwatch() { start(); }
+        inline void start() { beg = clock::now(); }
+        template<typename T=std::chrono::milliseconds>
+            void stop(bool print=true) {
+                end = clock::now();
+                if (print)
+                    std::cout << "duration: " << std::chrono::duration_cast<T>(end-beg).count() << std::endl;
+            }
+    };
+
     /** @brief Count number of white-space separated words in a string */
     inline size_t numWords( const std::string &s )
     {

@@ -1163,69 +1163,83 @@ namespace Faunus {
 #ifdef ENABLE_POWERSASA
         template<class Tspace>
             class SASAEnergy : public Energybase {
-                typedef typename Tspace::Tparticle Tparticle;
-                typedef typename Tspace::Tpvec Tpvec;
-                Tspace& spc;
-                std::vector<float> sasa, radii;
-                std::vector<Point> coords;
-                double probe; // sasa probe radius (angstrom)
-                double conc=0;// co-solute concentration (mol/l)
-                Average<double> avgArea; // average surface area
-                std::shared_ptr<POWERSASA::PowerSasa<float,Point>> ps;
+                public:
+                    std::vector<float> sasa, radii;
+                    std::vector<Point> coords;
+                private:
+                    typedef typename Tspace::Tparticle Tparticle;
+                    typedef typename Tspace::Tpvec Tpvec;
+                    Tspace& spc;
+                    double probe; // sasa probe radius (angstrom)
+                    double conc=0;// co-solute concentration (mol/l)
+                    Average<double> avgArea; // average surface area
+                    std::shared_ptr<POWERSASA::PowerSasa<float,Point>> ps;
 
-                void updateSASA(const Tpvec &p) {
-                    radii.resize(p.size());
-                    coords.resize(p.size());
-                    std::transform(p.begin(), p.end(), coords.begin(), [](auto &a){ return a.pos;});
-                    std::transform(p.begin(), p.end(), radii.begin(),
-                            [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
+                    void updateSASA(const Tpvec &p) {
+                        radii.resize(p.size());
+                        coords.resize(p.size());
+                        std::transform(p.begin(), p.end(), coords.begin(), [](auto &a){ return a.pos;});
+                        std::transform(p.begin(), p.end(), radii.begin(),
+                                [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
 
-                    ps->update_coords(coords, radii); // slowest step!
+                        ps->update_coords(coords, radii); // slowest step!
 
-                    for (size_t i=0; i<p.size(); i++) {
-                        auto &a = atoms<Tparticle>[p[i].id];
-                        if (std::fabs(a.tfe)>1e-9 || std::fabs(a.tension)>1e-9)
-                            ps->calc_sasa_single(i);
+                        for (size_t i=0; i<p.size(); i++) {
+                            auto &a = atoms<Tparticle>[p[i].id];
+                            if (std::fabs(a.tfe)>1e-9 || std::fabs(a.tension)>1e-9)
+                                ps->calc_sasa_single(i);
+                        }
+                        sasa = ps->getSasa();
+                        assert(sasa.size()==p.size());
                     }
-                    sasa = ps->getSasa();
-                    assert(sasa.size()==p.size());
-                }
 
-                void to_json(json &j) const override {
-                    using namespace u8;
-                    j["molarity"] = conc / 1.0_molar;
-                    j["radius"] = probe / 1.0_angstrom;
-                    j[bracket("SASA")+"/"+angstrom+squared] = avgArea.avg() / 1.0_angstrom;
-                    _roundjson(j,5);
-                }
+                    void to_json(json &j) const override {
+                        using namespace u8;
+                        j["molarity"] = conc / 1.0_molar;
+                        j["radius"] = probe / 1.0_angstrom;
+                        j[bracket("SASA")+"/"+angstrom+squared] = avgArea.avg() / 1.0_angstrom;
+                        _roundjson(j,5);
+                    }
+
+                    void sync(Energybase *basePtr, Change &c) override {
+                        auto other = dynamic_cast<decltype(this)>(basePtr);
+                        if (other) {
+                            coords = other->coords;
+                            radii = other->radii;
+                            sasa = other->sasa;
+                        }
+                    }
 
                 public:
-                SASAEnergy(const json &j, Tspace &spc) : spc(spc) {
-                    name = "sasa";
-                    cite = "doi:10.1002/jcc.21844";
-                    probe = j.value("radius", 1.4) * 1.0_angstrom;
-                    conc = j.value("molarity", conc) * 1.0_molar;
-
-                    radii.resize(spc.p.size());
-                    coords.resize(spc.p.size());
-                    std::transform(spc.p.begin(), spc.p.end(), coords.begin(), [](auto &a){ return a.pos;});
-                    std::transform(spc.p.begin(), spc.p.end(), radii.begin(),
-                            [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
-
-                    ps = std::make_shared<POWERSASA::PowerSasa<float,Point>>(coords,radii);
-                }
-
-                double energy(Change &change) override {
-                    double u=0, A=0;
-                    updateSASA(spc.p);
-                    for (size_t i=0; i<sasa.size(); ++i) {
-                        auto &a = atoms<Tparticle>[ spc.p[i].id ];
-                        u += sasa[i] * (a.tension + conc * a.tfe);
-                        A += sasa[i];
+                    SASAEnergy(const json &j, Tspace &spc) : spc(spc) {
+                        name = "sasa";
+                        cite = "doi:10.1002/jcc.21844";
+                        probe = j.value("radius", 1.4) * 1.0_angstrom;
+                        conc = j.value("molarity", conc) * 1.0_molar;
+                        init();
                     }
-                    avgArea+=A; // sample average area for accepted confs. only
-                    return u;
-                }
+
+                    void init() override {
+                        radii.resize(spc.p.size());
+                        coords.resize(spc.p.size());
+                        std::transform(spc.p.begin(), spc.p.end(), coords.begin(), [](auto &a){ return a.pos;});
+                        std::transform(spc.p.begin(), spc.p.end(), radii.begin(),
+                                [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
+
+                        ps = std::make_shared<POWERSASA::PowerSasa<float,Point>>(coords,radii);
+                    }
+
+                    double energy(Change &change) override {
+                        double u=0, A=0;
+                        updateSASA(spc.p);
+                        for (size_t i=0; i<sasa.size(); ++i) {
+                            auto &a = atoms<Tparticle>[ spc.p[i].id ];
+                            u += sasa[i] * (a.tension + conc * a.tfe);
+                            A += sasa[i];
+                        }
+                        avgArea+=A; // sample average area for accepted confs. only
+                        return u;
+                    }
             }; //!< SASA energy from transfer free energies
 #endif
 

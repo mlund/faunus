@@ -177,7 +177,7 @@ if (ENABLE_POWERSASA)
                 "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}" STATUS status)
         endif ()
     endforeach ()
-    add_definitions("-DFAU_POWERSASA")
+    add_definitions("-DENABLE_POWERSASA")
     include_directories("${CMAKE_SOURCE_DIR}/include/faunus/sasa")
 endif ()
 

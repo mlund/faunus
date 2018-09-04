@@ -10,7 +10,7 @@
 #include <Eigen/Dense>
 #include <set>
 
-#ifdef FAU_POWERSASA
+#ifdef ENABLE_POWERSASA
 #include <power_sasa.h>
 #endif
 
@@ -1160,7 +1160,7 @@ namespace Faunus {
     }; //!< Penalty function with MPI exchange
 #endif
 
-#ifdef FAU_POWERSASA
+#ifdef ENABLE_POWERSASA
         template<class Tspace>
             class SASAEnergy : public Energybase {
                 typedef typename Tspace::Tparticle Tparticle;

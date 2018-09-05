@@ -93,7 +93,7 @@ accounted for in the acceptance criterion:
 `pivot`          | Description
 ---------------- | ----------------------------
 `molecule`       | Molecule name to operate on
-`dptot`          | Rotational displacement
+`dprot`          | Rotational displacement
 `repeat=N`       | Number of repeats per MC sweep per bond
 
 Performs a rotation around a random, harmonic bond vector in `molecule`, moving all atoms

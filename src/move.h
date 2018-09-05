@@ -754,18 +754,18 @@ namespace Faunus {
                     void _move(Change &change) override {
                         d2=0;
                         if (std::fabs(dprot)>1e-9) {
-                            auto it = spc.randomMolecule(molid, slump);
-                            if (it!=spc.groups.end())
-                                if (it->size()>2) {
+                            auto g = spc.randomMolecule(molid, slump); // look for random group
+                            if (g!=spc.groups.end())
+                                if (g->size()>2) { // must at least have three atoms
                                     auto b = slump.sample(bonds.begin(), bonds.end()); // random harmonic bond
                                     if (b != bonds.end()) {
                                         int i1 = b->get().index.at(0);
                                         int i2 = b->get().index.at(1);
-                                        int offset = std::distance( spc.p.begin(), it->begin() );
+                                        int offset = std::distance( spc.p.begin(), g->begin() );
 
                                         index.clear();
-                                        if (slump()>0.0)
-                                            for (size_t i=i2+1; i<it->size(); i++)
+                                        if (slump()>0.5)
+                                            for (size_t i=i2+1; i<g->size(); i++)
                                                 index.push_back(i+offset);
                                         else
                                             for (int i=0; i<i1; i++)
@@ -774,8 +774,8 @@ namespace Faunus {
                                         i2+=offset;
 
                                         if (!index.empty()) {
-                                            Point oldcm = it->cm;
-                                            it->unwrap(spc.geo.distanceFunc); // remove pbc
+                                            Point oldcm = g->cm;
+                                            g->unwrap(spc.geo.distanceFunc); // remove pbc
                                             Point u = (spc.p[i1].pos - spc.p[i2].pos).normalized();
                                             double angle = dprot * (slump()-0.5);
                                             Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
@@ -785,14 +785,14 @@ namespace Faunus {
                                                 spc.p[i].pos = Q * ( spc.p[i].pos - spc.p[i1].pos)
                                                     + spc.p[i1].pos; // positional rot.
                                             }
-                                            it->cm = Geometry::massCenter(it->begin(), it->end());
-                                            it->wrap(spc.geo.boundaryFunc); // re-apply pbc
+                                            g->cm = Geometry::massCenter(g->begin(), g->end());
+                                            g->wrap(spc.geo.boundaryFunc); // re-apply pbc
 
-                                            d2 = spc.geo.sqdist(it->cm, oldcm); // CM movement
+                                            d2 = spc.geo.sqdist(g->cm, oldcm); // CM movement
 
                                             Change::data d;
-                                            d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
-                                            d.all = true; // *all* atoms in group were moved
+                                            d.index = Faunus::distance( spc.groups.begin(), g ); // integer *index* of moved group
+                                            d.all = d.internal = true;    // trigger internal interactions
                                             change.groups.push_back( d ); // add to list of moved groups
                                         }
                                     }

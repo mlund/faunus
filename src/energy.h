@@ -1161,6 +1161,20 @@ namespace Faunus {
 #endif
 
 #ifdef ENABLE_POWERSASA
+        /*
+         * @todo:
+         *
+         * This class is wasteful in that i.e. particle positions are stored
+         * in three places: particle vector, in PowerSasa, and in SASAEnergy.
+         *
+         * - make a _view_ to spc.p instead of copying. PowerSasa expects a
+         *   container with begin()/end() otherwise we could have used the
+         *   `Faunus::asEigenVector()` wrapper. Alternatively modify
+         *   PowerSasa.
+         * - can only a subset of sasa be calculated? Note that it's the
+         *   `update_coord()` function that takes up most time.
+         * - delegate to GPU? In the PowerSasa paper this is mentioned
+         */
         template<class Tspace>
             class SASAEnergy : public Energybase {
                 public:
@@ -1173,7 +1187,7 @@ namespace Faunus {
                     double probe; // sasa probe radius (angstrom)
                     double conc=0;// co-solute concentration (mol/l)
                     Average<double> avgArea; // average surface area
-                    std::shared_ptr<POWERSASA::PowerSasa<float,Point>> ps;
+                    std::shared_ptr<POWERSASA::PowerSasa<float,Point>> ps=nullptr;
 
                     void updateSASA(const Tpvec &p) {
                         radii.resize(p.size());
@@ -1182,6 +1196,7 @@ namespace Faunus {
                         std::transform(p.begin(), p.end(), radii.begin(),
                                 [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
 
+                        //auto _coords = asEigenMatrix(spc.p.begin(), spc.p.end(), &Tparticle::pos);
                         ps->update_coords(coords, radii); // slowest step!
 
                         for (size_t i=0; i<p.size(); i++) {
@@ -1201,12 +1216,30 @@ namespace Faunus {
                         _roundjson(j,5);
                     }
 
+                    /*
+                     * @note
+                     * This is not enough as the PowerSasa object contains data
+                     * that also need syncing. It works due to the `update` (expensive!)
+                     * call in `energy`.
+                     */
                     void sync(Energybase *basePtr, Change &c) override {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         if (other) {
-                            coords = other->coords;
-                            radii = other->radii;
-                            sasa = other->sasa;
+                            if (c.all || c.dV) {
+                                coords = other->coords;
+                                radii = other->radii;
+                                sasa = other->sasa;
+                            } else {
+                                for (auto &d : c.groups) {
+                                    int offset = std::distance(spc.p.begin(), spc.groups.at(d.index).begin());
+                                    for (int j : d.atoms) {
+                                        int i = j + offset;
+                                        coords[i] = other->coords[i];
+                                        radii[i] = other->radii[i];
+                                        sasa[i] = other->sasa[i];
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -1220,19 +1253,26 @@ namespace Faunus {
                     }
 
                     void init() override {
-                        radii.resize(spc.p.size());
-                        coords.resize(spc.p.size());
-                        std::transform(spc.p.begin(), spc.p.end(), coords.begin(), [](auto &a){ return a.pos;});
-                        std::transform(spc.p.begin(), spc.p.end(), radii.begin(),
-                                [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
+                        radii.resize( spc.p.size() );
+                        coords.resize( spc.p.size() );
+                        std::transform( spc.p.begin(), spc.p.end(), coords.begin(), [](auto &a){ return a.pos;} );
+                        std::transform( spc.p.begin(), spc.p.end(), radii.begin(),
+                                [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;} );
 
-                        ps = std::make_shared<POWERSASA::PowerSasa<float,Point>>(coords,radii);
+                        if (ps==nullptr)
+                            ps = std::make_shared<POWERSASA::PowerSasa<float,Point>>(coords,radii);
+                        updateSASA(spc.p);
                     }
 
                     double energy(Change &change) override {
                         double u=0, A=0;
-                        updateSASA(spc.p);
-                        for (size_t i=0; i<sasa.size(); ++i) {
+                        /*
+                         * ideally we want to call `update` only is `key==NEW` but
+                         * syncronising the PowerSasa object is difficult since it's
+                         * non-copyable.
+                         */
+                        updateSASA(spc.p); // ideally we want 
+                        for (size_t i=0; i<spc.p.size(); ++i) {
                             auto &a = atoms<Tparticle>[ spc.p[i].id ];
                             u += sasa[i] * (a.tension + conc * a.tfe);
                             A += sasa[i];

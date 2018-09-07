@@ -953,7 +953,7 @@ namespace Faunus {
                     size_t dim=0;
                     size_t cnt=0;       // number of calls to `sync()`
                     size_t nupdate;     // update frequency [steps]
-                    size_t samplings=1;
+                    size_t samplings;
                     size_t nconv=0;
                     double udelta=0;    // total energy change of updating penalty function
                     double scale;       // scaling factor for f0
@@ -972,6 +972,7 @@ namespace Faunus {
                         scale = j.value("scale", 0.8);
                         quiet = j.value("quiet", true);
                         nupdate = j.value("update", 0);
+                        samplings = j.value("samplings", 1);
                         nodrift = j.value("nodrift", true);
                         file = j.at("file").get<std::string>();
                         hisfile = j.value("histogram", "penalty-histogram.dat");
@@ -1132,9 +1133,9 @@ namespace Faunus {
                             if (mpi.isMaster()) {
                                 penalty.setZero();
                                 for (int i=0; i<mpi.nproc(); i++)
-                                    penalty += double(weights[i]) * Eigen::Map<Eigen::MatrixXd>(
+                                    penalty += Eigen::Map<Eigen::MatrixXd>(
                                             buffer.data()+i*penalty.size(), penalty.rows(), penalty.cols() );
-                                penalty = ( penalty.array() - penalty.minCoeff() ) / double(weights.sum());
+                                penalty = ( penalty.array() - penalty.minCoeff() ) / double(mpi.nproc());
                             }
 
                             MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);

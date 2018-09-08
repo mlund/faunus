@@ -42,6 +42,7 @@ namespace Faunus {
             dV=false;
             all=false;
             dNpart=false;
+            internal=false;
             groups.clear();
             assert(empty());
         } //!< Clear all change data
@@ -51,9 +52,10 @@ namespace Faunus {
             if (du==0)
                 if (dV==false)
                     if (all==false)
-                        if (groups.empty())
-                            if (dNpart==false)
-                                return true;
+                        if (internal==false)
+                            if (groups.empty())
+                                if (dNpart==false)
+                                    return true;
             return false;
         } //!< Check if change object is empty
 
@@ -80,6 +82,10 @@ namespace Faunus {
             Tpvec p;       //!< Particle vector
             Tgvec groups;  //!< Group vector
             Tgeometry geo; //!< Container geometry
+
+            auto positions() const {
+               return ranges::view::transform(p, [](auto &i) -> const Point& {return i.pos;});
+            } //!< Iterable range with positions 
 
             enum Selection {ALL, ACTIVE, INACTIVE};
 
@@ -416,6 +422,9 @@ namespace Faunus {
         CHECK( spc1.groups.size()==1 );
         CHECK( spc1.groups.front().id==1);
         CHECK( spc1.groups.front().cm.x()==doctest::Approx(2.5));
+
+        // check `positions()`
+        CHECK( &spc1.positions()[0] == &spc1.p[0].pos );
 
         // sync groups
         Change c;

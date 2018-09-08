@@ -967,7 +967,7 @@ namespace Faunus {
 
                         for (auto &m : j.at("moves")) {// loop over move list
                             size_t oldsize = vec.size();
-                            for (auto it=m.begin(); it!=m.end(); ++it) {
+                            for (auto it : m.items()) {
                                 try {
 #ifdef ENABLE_MPI
                                     if (it.key()=="temper") this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);

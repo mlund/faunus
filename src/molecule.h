@@ -263,7 +263,7 @@ namespace Faunus {
             try {
                 if (j.is_object()==false || j.size()!=1)
                     throw std::runtime_error("invalid json");
-                for (auto it=j.begin(); it!=j.end(); ++it) {
+                for (auto it : j.items()) {
                     a.name = it.key();
                     auto& val = it.value();
                     a.insoffset = val.value("insoffset", a.insoffset);
@@ -283,6 +283,7 @@ namespace Faunus {
                             a.atoms.push_back(it->id());
                         }
                         assert(!a.atoms.empty());
+                        assert(a.bonds.empty() && "bonds undefined for atomic groups");
 
                         // generate config
                         Tpvec v;
@@ -291,29 +292,33 @@ namespace Faunus {
                             v.push_back( atoms<Tparticle>.at(id).p );
                         if (!v.empty())
                             a.pushConformation( v );
-                    } else
+                    } else {
                         if (val.count("structure")>0) {
                             json _struct = val["structure"];
                             if (_struct.is_string()) // structure from file
                                 a.loadConformation( val.value("structure", a.structure) );
                             else
                                 if (_struct.is_array()) { // structure is defined inside json
-                                    Tpvec v; // temporary particle vector
+                                    Tpvec v;
+                                    a.atoms.clear();
                                     v.reserve( _struct.size() );
                                     for (auto &m : _struct)
-                                        for (auto i=m.begin(); i!=m.end(); ++i)
-                                            if (i->is_object() && i->size()==1) {
-                                                auto it = findName( atoms<Tparticle>, i.key() );
-                                                if (it == atoms<Tparticle>.end() )
-                                                    throw std::runtime_error("unknown atoms in 'structure'");
-                                                v.push_back( it->p );     // set properties from atomlist
-                                                v.back().pos = i.value(); // set position
-                                            }
+                                        if (m.is_object())
+                                            if (m.size()==1)
+                                                for (auto& i : m.items()) {
+                                                    auto it = findName( atoms<Tparticle>, i.key() );
+                                                    if (it == atoms<Tparticle>.end())
+                                                        throw std::runtime_error("unknown atoms in 'structure'");
+                                                    v.push_back( it->p );     // set properties from atomlist
+                                                    v.back().pos = i.value(); // set position
+                                                    a.atoms.push_back(it->id());
+                                                }
                                     if (v.empty())
                                         throw std::runtime_error("invalid 'structure' format");
                                     a.pushConformation( v );
                                 }
                         }
+                    }
 
                     // pass information to inserter
                     auto ins = RandomInserter<MoleculeData<std::vector<Tparticle,Talloc>>>();
@@ -321,6 +326,12 @@ namespace Faunus {
                     ins.offset = a.insoffset;
                     ins.keeppos = a.keeppos;
                     a.setInserter(ins);
+
+                    // assert that all bonds are *internal*
+                    for (auto &bond : a.bonds)
+                        for (int i : bond.index)
+                            if (i>=a.atoms.size() || i<0)
+                                throw std::runtime_error("bonded atom index " + std::to_string(i) + " out of range");
                 }
             } catch(std::exception& e) {
                 throw std::runtime_error("JSON->molecule: " + a.name + ": " + e.what());

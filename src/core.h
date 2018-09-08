@@ -875,7 +875,7 @@ namespace Faunus {
         void from_json(const json& j, AtomData<T>& a) {
             if (j.is_object()==false || j.size()!=1)
                 throw std::runtime_error("Invalid JSON data for AtomData");
-            for (auto it=j.begin(); it!=j.end(); ++it) {
+            for (auto it : j.items()) {
                 a.name = it.key();
                 auto& val = it.value();
                 a.p = val;

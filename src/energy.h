@@ -1163,14 +1163,6 @@ namespace Faunus {
 #ifdef ENABLE_POWERSASA
         /*
          * @todo:
-         *
-         * This class is wasteful in that i.e. particle positions are stored
-         * in three places: particle vector, in PowerSasa, and in SASAEnergy.
-         *
-         * - make a _view_ to spc.p instead of copying. PowerSasa expects a
-         *   container with begin()/end() otherwise we could have used the
-         *   `Faunus::asEigenVector()` wrapper. Alternatively modify
-         *   PowerSasa.
          * - can only a subset of sasa be calculated? Note that it's the
          *   `update_coord()` function that takes up most time.
          * - delegate to GPU? In the PowerSasa paper this is mentioned
@@ -1179,7 +1171,6 @@ namespace Faunus {
             class SASAEnergy : public Energybase {
                 public:
                     std::vector<float> sasa, radii;
-                    std::vector<Point> coords;
                 private:
                     typedef typename Tspace::Tparticle Tparticle;
                     typedef typename Tspace::Tpvec Tpvec;
@@ -1191,13 +1182,10 @@ namespace Faunus {
 
                     void updateSASA(const Tpvec &p) {
                         radii.resize(p.size());
-                        coords.resize(p.size());
-                        std::transform(p.begin(), p.end(), coords.begin(), [](auto &a){ return a.pos;});
                         std::transform(p.begin(), p.end(), radii.begin(),
                                 [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
 
-                        //auto _coords = asEigenMatrix(spc.p.begin(), spc.p.end(), &Tparticle::pos);
-                        ps->update_coords(coords, radii); // slowest step!
+                        ps->update_coords(spc.positions(), radii); // slowest step!
 
                         for (size_t i=0; i<p.size(); i++) {
                             auto &a = atoms<Tparticle>[p[i].id];
@@ -1226,7 +1214,6 @@ namespace Faunus {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         if (other) {
                             if (c.all || c.dV) {
-                                coords = other->coords;
                                 radii = other->radii;
                                 sasa = other->sasa;
                             } else {
@@ -1234,7 +1221,6 @@ namespace Faunus {
                                     int offset = std::distance(spc.p.begin(), spc.groups.at(d.index).begin());
                                     for (int j : d.atoms) {
                                         int i = j + offset;
-                                        coords[i] = other->coords[i];
                                         radii[i] = other->radii[i];
                                         sasa[i] = other->sasa[i];
                                     }
@@ -1254,13 +1240,11 @@ namespace Faunus {
 
                     void init() override {
                         radii.resize( spc.p.size() );
-                        coords.resize( spc.p.size() );
-                        std::transform( spc.p.begin(), spc.p.end(), coords.begin(), [](auto &a){ return a.pos;} );
                         std::transform( spc.p.begin(), spc.p.end(), radii.begin(),
                                 [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;} );
 
                         if (ps==nullptr)
-                            ps = std::make_shared<POWERSASA::PowerSasa<float,Point>>(coords,radii);
+                            ps = std::make_shared<POWERSASA::PowerSasa<float,Point>>(spc.positions(),radii);
                         updateSASA(spc.p);
                     }
 

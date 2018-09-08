@@ -282,11 +282,12 @@ energy:
         bondlist: # absolute index
            - harmonic: { index: [56,921], k: 10, req: 15 }
 moleculelist:
-    - water:
+    - water: # TIP3P
         structure: water.xyz
         bondlist: # index relative to molecule
-            - harmonic: { index: [0,1], k: 100, req: 1.0 }  
-            - harmonic: { index: [0,2], k: 100, req: 1.0 }
+            - harmonic: { index: [0,1], k: 5024, req: 0.9572 }
+            - harmonic: { index: [0,2], k: 5024, req: 0.9572 }
+            - harmonic_torsion: { index: [1,0,2], k: 628, aeq: 104.52 }
 ~~~
 
 Bonded potential types:
@@ -299,27 +300,65 @@ $\mu V T$ ensembles and Widom insertion are currently unsupported for molecules 
 
 `harmonic`     | Harmonic bond
 -------------- | -------------------------------------------
-`k`            | Harmonic spring constant (kJ/mol/Å$^2$)
+`k`            | Harmonic spring constant (kJ/mol/Å²)
 `req`          | Equilibrium distance (Å)
-`index`        | Array with _exactly two_ index (relative to molecule)
+`index`        | Array with _exactly two_ indices (relative to molecule)
 
 $$
-u(r) = \frac{1}{2}k(r-r_{eq})^2
+u(r) = \frac{1}{2}k(r-r_\mathrm{eq})^2
 $$
 
 ### Finite Extensible Nonlinear Elastic
 
 `fene`         | [Finite Extensible Nonlinear Elastic Potential](http://doi.org/c78x6m)
 -------------- | ----------------------------------------------------------------------
-`k`            | Bond stiffness (kJ/mol/Å$^2$)
+`k`            | Bond stiffness (kJ/mol/Å²)
 `rmax`         | Maximum separation, $r_m$ (Å)
-`index`        | Array with _exactly two_ index (relative to molecule)
+`index`        | Array with _exactly two_ indices (relative to molecule)
 
 $$
 u(r) = -\frac{1}{2} k r_{max}^2 \ln \left [ 1-(r/r_m)^2 \right ]
 $$
 
 for $r < r_m$; infinity otherwise.
+
+### Harmonic torsion
+
+`harmonic_torsion` | Harmonic torsion
+------------------ | -------------------------------------------
+`k`                | Harmonic spring constant (kJ/mol/rad²)
+`aeq`              | Equilibrium angle α<sub>eq</sub> (deg)
+`index`            | Array with _exactly three_ indices (relative to molecule)
+
+$$
+u(r) = \frac{1}{2}k(\alpha - \alpha_\mathrm{eq})^2
+$$
+
+### Cosine based torsion (GROMOS-96)
+
+`g96_torsion`      | Cosine based torsion
+------------------ | -------------------------------------------
+`k`                | Force constant (kJ/mol)
+`aeq`              | Equilibrium angle α<sub>eq</sub> (deg)
+`index`            | Array with _exactly three_ indices (relative to molecule)
+
+$$
+u(r) = \frac{1}{2}k(\cos(\alpha) - \cos(\alpha_\mathrm{eq}))^2
+$$
+
+### Proper periodic dihedral
+
+`periodic_dihedral` | Proper periodic dihedral
+------------------- | -------------------------------------------
+`k`                 | Force constant (kJ/mol)
+`n`                 | Periodicity (multiplicity) of the dihedral (integer)
+`phi`               | Angle φ<sub>syn</sub> (deg)
+`index`             | Array with _exactly four_ indices (relative to molecule)
+
+$$
+u(r) = k(1 + \cos(n\phi - \phi_\mathrm{syn}))
+$$
+
 
 ## Geometrical Confinement
 

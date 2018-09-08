@@ -273,7 +273,7 @@ namespace Faunus {
          * :-------| :---------------------------
          * `eps`   | Depth, \f$\epsilon\f$ [kJ/mol]
          * `rc`    | Width, r_c [angstrom]
-         * `wc`    | Decay range, w_c [angstrom] 
+         * `wc`    | Decay range, w_c [angstrom]
          *
          */
         class CosAttract : public PairPotentialBase {
@@ -337,7 +337,7 @@ namespace Faunus {
             class Polarizability : public Coulomb {
                 private:
                     double epsr;
-                    PairMatrix<double> m_neutral, m_charged; 
+                    PairMatrix<double> m_neutral, m_charged;
 
                 public:
                     Polarizability (const std::string &name="polar") { PairPotentialBase::name=name; }
@@ -346,7 +346,7 @@ namespace Faunus {
                         epsr = j.at("epsr").get<double>();
                         double lB = pc::lB(epsr);
                         for (auto &i : atoms<Tparticle>) {
-                            for (auto &j : atoms<Tparticle>) { 
+                            for (auto &j : atoms<Tparticle>) {
                                 m_neutral.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
                                 // titrating particles must be charged in the beginning
                                 m_charged.set(i.id(), j.id(), -lB/2 * ( pow(i.p.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
@@ -362,7 +362,7 @@ namespace Faunus {
                     double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2=r.squaredNorm();
                         double r4inv=1/(r2*r2);
-                        if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9) 
+                        if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9)
                             return m_charged(a.id,b.id)*r4inv;
                         else
                             return m_neutral(a.id,b.id)/r2*r4inv;
@@ -370,7 +370,7 @@ namespace Faunus {
 
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
                         double r6inv=1/(r2*r2*r2);
-                        if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9) 
+                        if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9)
                             return 4*m_charged(a.id,b.id)*r6inv*p;
                         else
                             return 6*m_neutral(a.id,b.id)/r2*r6inv*p;
@@ -408,7 +408,7 @@ namespace Faunus {
 
                 double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
                     double u=wca(a,b,r);
-                    if (a.id==tail and b.id==tail) 
+                    if (a.id==tail and b.id==tail)
                         u+=cos2(a,b,r);
                     return u;
                 }
@@ -521,14 +521,14 @@ namespace Faunus {
             void sfYukawa(const json &j) {
                 kappa = 1.0 / j.at("debyelength").get<double>();
                 I = kappa*kappa / ( 8.0*lB*pc::pi*pc::Nav/1e27 );
-                table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) - std::exp(-kappa*rc); }, 0, 1 ); // q=r/Rc 
+                table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) - std::exp(-kappa*rc); }, 0, 1 ); // q=r/Rc
                 // we could also fill in some info std::string or JSON output...
             }
 
             void sfReactionField(const json &j) {
                 epsrf = j.at("eps_rf");
                 table = sf.generate( [&](double q) { return 1 + (( epsrf - epsr ) / ( 2 * epsrf + epsr ))*q*q*q
-                        - 3 * ( epsrf / ( 2 * epsrf + epsr ))*q ; }, 0, 1); 
+                        - 3 * ( epsrf / ( 2 * epsrf + epsr ))*q ; }, 0, 1);
                 calcDielectric = [&](double M2V) {
                     if(epsrf > 1e10)
                         return 1 + 3*M2V;
@@ -664,7 +664,7 @@ namespace Faunus {
              * @brief Self-energy of the potential
              */
             template<class Tpvec, class Tgroup>
-                double internal(const Tgroup &g) const { 
+                double internal(const Tgroup &g) const {
                     double Eq = 0;
                     for (auto i : g)
                         Eq += i.charge * i.charge;
@@ -673,7 +673,7 @@ namespace Faunus {
 
             double dielectric_constant(double M2V) {
                 return calcDielectric( M2V );
-            } 
+            }
 
             void to_json(json &j) const override {
                 using namespace u8;
@@ -812,7 +812,7 @@ namespace Faunus {
 #endif
 
         struct BondData {
-            enum Variant {harmonic, fene, yukawa, dihedral, none};
+            enum Variant {harmonic, fene, yukawa, harmonic_torsion, g96_torsion, periodic_dihedral, none};
             Variant type=none;
             std::vector<int> index;
             std::vector<double> k;
@@ -842,15 +842,43 @@ namespace Faunus {
                         case BondData::yukawa:
                             d = dist( p[index[0]].pos, p[index[1]].pos ).norm();
                             zz = p[index[0]].charge*p[index[1]].charge;
-                            if (zz>1e-5) 
+                            if (zz>1e-5)
                                 return zz*k[0]*exp(-d/k[1])/d;
                             else
                                 return 0;
+
+                        case BondData::harmonic_torsion:
+                        {
+                            const auto &ray1 = dist( p[index[0]].pos, p[index[1]].pos );
+                            const auto &ray2 = dist( p[index[2]].pos, p[index[1]].pos );
+                            double angle = acos(ray1.dot(ray2)/ray1.norm()/ray2.norm());
+                            return 0.5 * k[0] * (angle - k[1]) * (angle - k[1]);
+                        }
+
+                        case BondData::g96_torsion:
+                        {
+                            const auto &ray1 = dist( p[index[0]].pos, p[index[1]].pos );
+                            const auto &ray2 = dist( p[index[2]].pos, p[index[1]].pos );
+                            double cos_angle = ray1.dot(ray2)/ray1.norm()/ray2.norm();
+                            return 0.5 * k[0] * (cos_angle - k[1]) * (cos_angle - k[1]);
+                        }
+
+                        case BondData::periodic_dihedral:
+                        {
+                            const auto &vec1 = dist( p[index[1]].pos, p[index[0]].pos );
+                            const auto &vec2 = dist( p[index[2]].pos, p[index[1]].pos );
+                            const auto &vec3 = dist( p[index[3]].pos, p[index[2]].pos );
+                            const auto &norm1 = vec1.cross(vec2);
+                            const auto &norm2 = vec2.cross(vec3);
+                            // atan2( [v1×v2]×[v2×v3]⋅[v2/|v2|], [v1×v2]⋅[v2×v3] )
+                            double angle = atan2((norm1.cross(norm2)).dot(vec2)/vec2.norm(), norm1.dot(norm2));
+                            return k[0] * (1 + cos(k[1]*angle - k[2]));
+                        }
                         default: break;
                     }
                     assert(!"not implemented");
                     return 0;
-                } 
+                }
         }; //!< Harmonic and angular potentials for bonded interactions
 
         void to_json(json &j, const BondData &b) {
@@ -874,8 +902,25 @@ namespace Faunus {
                         { "index", b.index },
                         { "bjerrumlength", b.k[0] / 1.0_angstrom },
                         { "debyelength", b.k[1] / 1.0_angstrom } };
+                case BondData::harmonic_torsion:
+                    j["harmonic_torsion"] = {
+                        { "index", b.index },
+                        { "k", b.k[0] / (1.0_kJmol / std::pow(1.0_rad, 2)) },
+                        { "aeq", b.k[1] / 1.0_deg }};
                     break;
-
+                case BondData::g96_torsion:
+                    j["g96_torsion"] = {
+                        { "index", b.index },
+                        { "k", b.k[0] / 1.0_kJmol },
+                        { "aeq", acos(b.k[1]) / 1.0_deg }};
+                    break;
+                case BondData::periodic_dihedral:
+                    j["periodic_dihedral"] = {
+                        { "index", b.index },
+                        { "k", b.k[0] / 1.0_kJmol },
+                        { "n", b.k[1] },
+                        { "phi", b.k[2] / 1.0_deg }};
+                    break;
                 default: break;
             }
         }
@@ -917,10 +962,35 @@ namespace Faunus {
                         b.k[1] = val.at("debyelength").get<double>() * 1.0_angstrom; // debye length
                         return;
                     }
-
-                    if (t=="dihedral") {
-                        b.type = BondData::dihedral;
-                        assert(!"to be implemented");
+                    if (t=="harmonic_torsion") {
+                        b.type = BondData::harmonic_torsion;
+                        b.index = val.at("index").get<decltype(b.index)>();
+                        if (b.index.size()!=3)
+                            throw std::runtime_error("Harmonic torsion requires exactly three indeces");
+                        b.k.resize(2);
+                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_rad, 2); // k
+                        b.k[1] = val.at("aeq").get<double>() * 1.0_deg; // angle
+                        return;
+                    }
+                    if (t=="g96_torsion") {
+                        b.type = BondData::g96_torsion;
+                        b.index = val.at("index").get<decltype(b.index)>();
+                        if (b.index.size()!=3)
+                            throw std::runtime_error("G96 torsion requires exactly three indeces");
+                        b.k.resize(2);
+                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol; // k
+                        b.k[1] = cos(val.at("aeq").get<double>() * 1.0_deg); // cos(angle)
+                        return;
+                    }
+                    if (t=="periodic_dihedral") {
+                        b.type = BondData::periodic_dihedral;
+                        b.index = val.at("index").get<decltype(b.index)>();
+                        if (b.index.size()!=4)
+                            throw std::runtime_error("Periodic dihedral requires exactly four indeces");
+                        b.k.resize(3);
+                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol; // k
+                        b.k[1] = val.at("n").get<double>(); // multiplicity/periodicity n
+                        b.k[2] = val.at("phi").get<double>() * 1.0_deg; // angle
                         return;
                     }
                     if (b.type==BondData::none)
@@ -968,7 +1038,7 @@ namespace Faunus {
             BondData b2 = R"( {"harmonic" : { "index":[2,3], "k":0.5, "req":2.1} } )"_json;
             std::vector<BondData> bonds = {b,b2};
             auto filt = filterBonds(bonds, BondData::harmonic);
-            CHECK( filt.size() == 1 ); 
+            CHECK( filt.size() == 1 );
             CHECK( filt[0].get().type == BondData::harmonic);
             CHECK( &filt[0].get() == &bonds[1] ); // filt should contain references to bonds
         }

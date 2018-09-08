@@ -42,7 +42,6 @@ namespace Faunus {
             dV=false;
             all=false;
             dNpart=false;
-            internal=false;
             groups.clear();
             assert(empty());
         } //!< Clear all change data
@@ -52,10 +51,9 @@ namespace Faunus {
             if (du==0)
                 if (dV==false)
                     if (all==false)
-                        if (internal==false)
-                            if (groups.empty())
-                                if (dNpart==false)
-                                    return true;
+                        if (groups.empty())
+                            if (dNpart==false)
+                                return true;
             return false;
         } //!< Check if change object is empty
 

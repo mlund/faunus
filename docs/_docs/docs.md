@@ -24,7 +24,8 @@ Ondrej Marsalek, Christophe Labbez, Andre Teixeira,
 Anil Kurut, Chris Evers, Magnus Ullner,
 Robert Vacha, Axel Thuresson, Bjorn Stenqvist,
 Joao Henriques, Alexei Abrikossov, Giulio Tesei,
-Lukas Sukenik, Coralie Pasquier, Niels Kouwenhoven_
+Lukas Sukenik, Coralie Pasquier, Niels Kouwenhoven,
+Richard Chudoba_
 
 ### Supporting Faunus
 

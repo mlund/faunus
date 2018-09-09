@@ -829,6 +829,7 @@ namespace Faunus {
             virtual int numindex() const=0;
             virtual Variant type() const=0;
             virtual std::string name() const=0;
+            virtual std::shared_ptr<BondData2> clone() const=0;
 
             inline bool hasEnergyFunction() const { return energy!=nullptr; } // true if energy function has been set
 
@@ -836,6 +837,7 @@ namespace Faunus {
                 for ( auto &i : index )
                     i += offset;
             } //!< Shift indices
+
         };
 
        /**
@@ -846,6 +848,7 @@ namespace Faunus {
                 double k=0, req=0;
                 int numindex() const override { return 2; }
                 Variant type() const override { return BondData2::HARMONIC; }
+                std::shared_ptr<BondData2> clone() const override { return std::make_shared<HarmonicBond>(*this); }
 
                 void from_json(const json &j) override {
                     k = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
@@ -855,6 +858,7 @@ namespace Faunus {
                     j = { {"k", 2*k/1.0_kJmol*1.0_angstrom*1.0_angstrom},
                         {"req", req/1.0_angstrom} };
                 }
+
             public:
                 std::string name() const override { return "harmonic"; }
                 template<typename Tpvec>
@@ -874,6 +878,7 @@ namespace Faunus {
                 std::array<double,4> k = {0,0,0,0};
                 int numindex() const override { return 2; }
                 Variant type() const override { return BondData2::FENE; }
+                std::shared_ptr<BondData2> clone() const override { return std::make_shared<FENEBond>(*this); }
 
                 void from_json(const json &j) override {
                     k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
@@ -913,6 +918,7 @@ namespace Faunus {
         void to_json(json &j, const std::shared_ptr<BondData2> &b) {
             json val;
             b->to_json(val);
+            val["index"] = b->index;
             j = {{ b->name(), val }};
         }
 
@@ -920,12 +926,16 @@ namespace Faunus {
             if (j.is_object())
                 if (j.size()==1) {
                     auto& key = j.begin().key();
+                    auto& val = j.begin().value();
                     if ( key==HarmonicBond().name() )  b = std::make_shared<HarmonicBond>();
                     else if ( key==FENEBond().name() ) b = std::make_shared<FENEBond>();
                     // else if ...
                     else
                         throw std::runtime_error("unknown bond type: " + key);
-                    b->from_json( j.begin().value() );
+                    b->from_json( val );
+                    b->index = val.at("index").get<decltype(b->index)>();
+                    if (b->index.size() != b->numindex())
+                        throw std::runtime_error("exactly " + std::to_string(b->numindex()) + " indices required for " + b->name());
                     return;
                 }
             throw std::runtime_error("invalid bond data");

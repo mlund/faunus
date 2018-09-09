@@ -815,7 +815,12 @@ namespace Faunus {
         /**
          * @brief Base class for bonded potentials
          *
-         * @note Possible new implementation of BondData
+         * Check list for adding new bonded potential:
+         *
+         * 1. expand `Variant`
+         * 2. Create derived type and implement all pure virtual functions
+         * 3. expand `from_json(std::shared_ptr<BondData2>)`
+         * 4. expand `setBondEnergyFunction()`
          */
         struct BondData2 {
             enum Variant {HARMONIC=0, FENE, YUKAWA, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
@@ -826,12 +831,12 @@ namespace Faunus {
 
             virtual void from_json(const json&)=0;
             virtual void to_json(json&) const=0;
-            virtual int numindex() const=0;
-            virtual Variant type() const=0;
-            virtual std::string name() const=0;
-            virtual std::shared_ptr<BondData2> clone() const=0;
+            virtual int numindex() const=0; //!< Required number of atom indices for bond
+            virtual Variant type() const=0; //!< Returns bond type (sett `Variant` enum)
+            virtual std::string name() const=0; //!< Name/key of bond type used in for json I/O
+            virtual std::shared_ptr<BondData2> clone() const=0; //!< Make shared pointer *copy* of data
 
-            inline bool hasEnergyFunction() const { return energy!=nullptr; } // true if energy function has been set
+            inline bool hasEnergyFunction() const { return energy!=nullptr; } //!< test if energy function has been set
 
             inline void shift( int offset ) {
                 for ( auto &i : index )
@@ -861,11 +866,12 @@ namespace Faunus {
 
             public:
                 std::string name() const override { return "harmonic"; }
+
                 template<typename Tpvec>
                     void setEnergyFunction(const Tpvec &p) {
                         energy = [&](Geometry::DistanceFunction dist) {
                             double d = req - dist(p[index[0]].pos, p[index[1]].pos).norm();
-                            return 0.5 * k*d*d;
+                            return k*d*d;
                         };
                     }
         };
@@ -941,6 +947,20 @@ namespace Faunus {
             throw std::runtime_error("invalid bond data");
         }
 
+        template<typename Tpvec>
+            void setBondEnergyFunction(std::shared_ptr<BondData2> &b, const Tpvec &p) {
+                if (b->type()==BondData2::HARMONIC)
+                    std::dynamic_pointer_cast<HarmonicBond>(b)->setEnergyFunction(p);
+                else if (b->type()==BondData2::FENE)
+                    std::dynamic_pointer_cast<FENEBond>(b)->setEnergyFunction(p);
+                else {
+                    assert(false); // we should never reach here
+                }
+            } //!< Set the bond energy function of `BondData2` which require a reference to the particle vector
+
+        /*
+         * @todo Migrate all bond type to BondData2 and remove
+         */
         struct BondData {
             enum Variant {harmonic, fene, yukawa, harmonic_torsion, g96_torsion, periodic_dihedral, none};
             Variant type=none;

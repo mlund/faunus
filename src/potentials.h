@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include "core.h"
 #include "auxiliary.h"
 #include "tabulate.h"
@@ -810,6 +811,125 @@ namespace Faunus {
             CHECK( u(c,c,r*0.99) == pc::infty );
         }
 #endif
+
+        /**
+         * @brief Base class for bonded potentials
+         *
+         * @note Possible new implementation of BondData
+         */
+        struct BondData2 {
+            enum Variant {HARMONIC=0, FENE, YUKAWA, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
+            std::vector<int> index;
+            bool exclude=false;           //!< True if exclusion of non-bonded interaction should be attempted 
+            bool keepelectrostatics=true; //!< If `exclude==true`, try to keep electrostatic interactions
+            std::function<double(Geometry::DistanceFunction)> energy=nullptr; //!< potential energy (kT)
+
+            virtual void from_json(const json&)=0;
+            virtual void to_json(json&) const=0;
+            virtual int numindex() const=0;
+            virtual Variant type() const=0;
+            virtual std::string name() const=0;
+
+            inline bool hasEnergyFunction() const { return energy!=nullptr; } // true if energy function has been set
+
+            inline void shift( int offset ) {
+                for ( auto &i : index )
+                    i += offset;
+            } //!< Shift indices
+        };
+
+       /**
+         * @brief Harmonic Bond
+         */
+        class HarmonicBond : public BondData2 {
+            private:
+                double k=0, req=0;
+                int numindex() const override { return 2; }
+                Variant type() const override { return BondData2::HARMONIC; }
+
+                void from_json(const json &j) override {
+                    k = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
+                    req = j.at("req").get<double>() * 1.0_angstrom; // req
+                }
+                void to_json(json &j) const override {
+                    j = { {"k", 2*k/1.0_kJmol*1.0_angstrom*1.0_angstrom},
+                        {"req", req/1.0_angstrom} };
+                }
+            public:
+                std::string name() const override { return "harmonic"; }
+                template<typename Tpvec>
+                    void setEnergyFunction(const Tpvec &p) {
+                        energy = [&](Geometry::DistanceFunction dist) {
+                            double d = req - dist(p[index[0]].pos, p[index[1]].pos).norm();
+                            return 0.5 * k*d*d;
+                        };
+                    }
+        };
+
+       /**
+         * @brief FENE bond
+         */
+        class FENEBond : public BondData2 {
+            private:
+                std::array<double,4> k = {0,0,0,0};
+                int numindex() const override { return 2; }
+                Variant type() const override { return BondData2::FENE; }
+
+                void from_json(const json &j) override {
+                    k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
+                    k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
+                    k[2] = j.at("eps").get<double>() * 1.0_kJmol;
+                    k[3] = std::pow( j.at("sigma").get<double>() * 1.0_angstrom, 2);
+                }
+                void to_json(json &j) const override {
+                    j = {
+                        { "k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
+                        { "rmax", std::sqrt(k[1]) / 1.0_angstrom },
+                        { "eps", k[2] / 1.0_kJmol },
+                        { "sigma", std::sqrt(k[3]) / 1.0_angstrom } };
+                }
+            public:
+                std::string name() const override { return "fene"; }
+
+                template<typename Tpvec>
+                    void setEnergyFunction(const Tpvec &p) {
+                        energy = [&](Geometry::DistanceFunction dist) {
+                            double wca=0, d=dist( p[index[0]].pos, p[index[1]].pos ).squaredNorm();
+                            double x = k[3];
+                            if (d<=x*1.2599210498948732) {
+                                x = x/d;
+                                x = x*x*x;
+                                wca = k[2]*(x*x - x + 0.25);
+                            }
+                            return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
+                        };
+                    }
+        }; // end of FENE
+
+        /*
+         * Serialize to/from json
+         */
+
+        void to_json(json &j, const std::shared_ptr<BondData2> &b) {
+            json val;
+            b->to_json(val);
+            j = {{ b->name(), val }};
+        }
+
+        void from_json(const json &j, std::shared_ptr<BondData2> &b) {
+            if (j.is_object())
+                if (j.size()==1) {
+                    auto& key = j.begin().key();
+                    if ( key==HarmonicBond().name() )  b = std::make_shared<HarmonicBond>();
+                    else if ( key==FENEBond().name() ) b = std::make_shared<FENEBond>();
+                    // else if ...
+                    else
+                        throw std::runtime_error("unknown bond type: " + key);
+                    b->from_json( j.begin().value() );
+                    return;
+                }
+            throw std::runtime_error("invalid bond data");
+        }
 
         struct BondData {
             enum Variant {harmonic, fene, yukawa, harmonic_torsion, g96_torsion, periodic_dihedral, none};

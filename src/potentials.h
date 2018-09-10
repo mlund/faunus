@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include "geometry.h"
 #include "core.h"
 #include "auxiliary.h"
 #include "tabulate.h"
@@ -18,18 +19,8 @@ namespace Faunus {
             virtual void from_json(const json&)=0;
         }; //!< Base for all pair-potentials
 
-        void to_json(json &j, const PairPotentialBase &base) {
-            base.name.empty() ? base.to_json(j) : base.to_json(j[base.name]);
-        } //!< Serialize any pair potential to json
-
-        void from_json(const json &j, PairPotentialBase &base) {
-            if (!base.name.empty())
-                if (j.count(base.name)==1) {
-                    base.from_json(j.at(base.name));
-                    return;
-                }
-            base.from_json(j);
-        } //!< Serialize any pair potential from json
+        void to_json(json &j, const PairPotentialBase &base); //!< Serialize any pair potential to json
+        void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair potential from json
 
         template<class T1, class T2>
             struct CombinedPairPotential : public PairPotentialBase {
@@ -59,7 +50,7 @@ namespace Faunus {
                 } //!< Add two pair potentials
 
         struct Dummy : public PairPotentialBase {
-            Dummy() { name="dummy"; }
+            inline Dummy() { name="dummy"; }
             template<typename... T>
                 double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                     return 0;
@@ -212,14 +203,14 @@ namespace Faunus {
 
 
         struct Coulomb : public PairPotentialBase {
-            Coulomb(const std::string &name="coulomb") { PairPotentialBase::name=name; }
+            Coulomb(const std::string &name="coulomb");
             double lB; //!< Bjerrum length
             template<typename... T>
                 double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                     return lB * a.charge * b.charge / r.norm();
                 }
-            void to_json(json &j) const override { j["epsr"] = pc::lB(lB); }
-            void from_json(const json &j) override { lB = pc::lB( j.at("epsr") ); }
+            void to_json(json &j) const override;
+            void from_json(const json &j) override;
         };
 
         template<class Tparticle>
@@ -240,17 +231,11 @@ namespace Faunus {
 
         struct RepulsionR3 : public PairPotentialBase {
             double f=0, s=0, e=0;
-            inline RepulsionR3(const std::string &name="repulsionr3") {
-                PairPotentialBase::name = name;
-            }
-            void from_json(const json &j) override {
-                f = j.value("prefactor", 1.0);
-                e = j.value("lj-prefactor", 1.0);
-                s = j.value("sigma", 1.0);
-            }
-            void to_json(json &j) const override {
-                j = {{"prefactor",f}, {"lj-prefactor", e},{"sigma",s}};
-            }
+
+            RepulsionR3(const std::string &name="repulsionr3");
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
+
             template<class Tparticle>
                 double operator() (const Tparticle &a, const Tparticle &b, const Point &_r) const {
                     double r2 = _r.squaredNorm(), r = sqrt(r2);
@@ -280,7 +265,7 @@ namespace Faunus {
         class CosAttract : public PairPotentialBase {
             double eps, wc, rc, rc2, c, rcwc2;
             public:
-            CosAttract(const std::string &name="cos2") { PairPotentialBase::name=name; }
+            CosAttract(const std::string &name="cos2");
 
             /**
              * @todo
@@ -317,18 +302,8 @@ namespace Faunus {
                     return -2*c*eps*x1*x2/r*p;
                 }
 
-            void to_json(json &j) const override {
-                j = {{"eps",eps / 1.0_kJmol}, {"rc",rc / 1.0_angstrom }, {"wc", wc / 1.0_angstrom }};
-            }
-
-            void from_json(const json &j) override {
-                eps = j.at("eps").get<double>() * 1.0_kJmol;
-                rc = j.at("rc").get<double>() * 1.0_angstrom ;
-                wc = j.at("wc").get<double>() * 1.0_angstrom ;
-                rc2 = rc * rc;
-                c = pc::pi / 2 / wc;
-                rcwc2 = pow((rc + wc), 2);
-            }
+            void to_json(json &j) const override;
+            void from_json(const json &j) override;
         };
 
         /**
@@ -343,7 +318,7 @@ namespace Faunus {
                 public:
                     Polarizability (const std::string &name="polar") { PairPotentialBase::name=name; }
 
-                    inline void from_json(const json &j) override {
+                    void from_json(const json &j) override {
                         epsr = j.at("epsr").get<double>();
                         double lB = pc::lB(epsr);
                         for (auto &i : atoms<Tparticle>) {
@@ -484,17 +459,9 @@ namespace Faunus {
             double k, r02, r02inv;
 
             public:
-            FENE(const std::string &name="fene") { PairPotentialBase::name=name; }
-
-            inline void from_json(const json &j) override {
-                k  = j.at("stiffness");
-                r02 = std::pow( double(j.at("maxsep")), 2);
-                r02inv = 1/r02;
-            }
-
-            inline void to_json(json &j) const override {
-                j = {{"stiffness",k}, {"maxsep",std::sqrt(r02)}};
-            }
+            FENE(const std::string &name="fene");
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
 
             /** @brief Energy in kT between two particles, r2 = squared distance */
             template<class Tparticle>
@@ -519,124 +486,20 @@ namespace Faunus {
             double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
             int order;
 
-            void sfYukawa(const json &j) {
-                kappa = 1.0 / j.at("debyelength").get<double>();
-                I = kappa*kappa / ( 8.0*lB*pc::pi*pc::Nav/1e27 );
-                table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) - std::exp(-kappa*rc); }, 0, 1 ); // q=r/Rc
-                // we could also fill in some info std::string or JSON output...
-            }
-
-            void sfReactionField(const json &j) {
-                epsrf = j.at("eps_rf");
-                table = sf.generate( [&](double q) { return 1 + (( epsrf - epsr ) / ( 2 * epsrf + epsr ))*q*q*q
-                        - 3 * ( epsrf / ( 2 * epsrf + epsr ))*q ; }, 0, 1);
-                calcDielectric = [&](double M2V) {
-                    if(epsrf > 1e10)
-                        return 1 + 3*M2V;
-                    if(fabs(epsrf-epsr) < 1e-6)
-                        return 2.25*M2V + 0.25 + 0.75*sqrt(9*M2V*M2V + 2*M2V + 1);
-                    if(fabs(epsrf-1.0) < 1e-6)
-                        return ( 2*M2V + 1 ) / ( 1 - M2V );
-                    return 0.5 * ( 2*epsrf - 1 + sqrt( -72*M2V*M2V*epsrf
-                                + 4*epsrf*epsrf + 4*epsrf + 1) ) / ( 3*M2V-1 ); // Needs to be checked!
-                    //return (6*M2V*epsrf + 2*epsrf + 1.0)/(1.0 + 2*epsrf - 3*M2V); // Is OK when epsr=1.0
-                };
-                selfenergy_prefactor = 1.5*epsrf/(2.0*epsrf + epsr); // Correct?!, see Eq.14 in DOI: 10.1021/jp510612w
-                // we could also fill in some info std::string or JSON output...
-            }
-
-            void sfQpotential(const json &j)
-            {
-                order = j.value("order",300);
-                table = sf.generate( [&](double q) { return qPochhammerSymbol( q, 1, order ); }, 0, 1 );
-                calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
-                selfenergy_prefactor = 0.5;
-            }
-
-            void sfYonezawa(const json &j)
-            {
-                alpha = j.at("alpha");
-                table = sf.generate( [&](double q) { return 1 - std::erfc(alpha*rc)*q + q*q; }, 0, 1 );
-                calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
-                selfenergy_prefactor = erf(alpha*rc);
-            }
-
-            void sfFanourgakis(const json &j) {
-                table = sf.generate( [&](double q) { return 1 - 1.75*q + 5.25*pow(q,5) - 7*pow(q,6) + 2.5*pow(q,7); }, 0, 1 );
-                calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
-                selfenergy_prefactor = 0.875;
-            }
-
-            void sfFennel(const json &j) {
-                alpha = j.at("alpha");
-                table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - std::erfc(alpha*rc)*q + (q-1.0)*q*(std::erfc(alpha*rc)
-                                + 2 * alpha * rc / std::sqrt(pc::pi) * std::exp(-alpha*alpha*rc*rc))); }, 0, 1 );
-                calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi)))
-                    * exp(-alpha*alpha*rc*rc) * (alpha*alpha*rc*rc * alpha*alpha*rc*rc + 2.0 * alpha*alpha*rc*rc + 3.0);
-                    return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0)); };
-                selfenergy_prefactor = ( erfc(alpha*rc)/2.0 + alpha*rc/sqrt(pc::pi) );
-            }
-
-            void sfEwald(const json &j) {
-                alpha = j.at("alpha");
-                table = sf.generate( [&](double q) { return std::erfc(alpha*rc*q); }, 0, 1 );
-                calcDielectric = [&](double M2V) {
-                    double T = std::erf(alpha*rc) - (2 / (3 * sqrt(pc::pi)))
-                        * std::exp(-alpha*alpha*rc*rc) * ( 2*alpha*alpha*rc*rc + 3);
-                    return ((T + 2.0) * M2V + 1)/ ((T - 1) * M2V + 1);
-                };
-                selfenergy_prefactor = ( erfc(alpha*rc) + alpha*rc/sqrt(pc::pi)*(1.0 + std::exp(-alpha*alpha*rc2)) );
-            }
-
-            void sfWolf(const json &j) {
-                alpha = j.at("alpha");
-                table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q); }, 0, 1 );
-                calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi))) * exp(-alpha*alpha*rc*rc)
-                    * ( 2.0 * alpha*alpha*rc*rc + 3.0);
-                    return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0));};
-                selfenergy_prefactor = ( erfc(alpha*rc) + alpha*rc/sqrt(pc::pi)*(1.0 + exp(-alpha*alpha*rc2)) );
-            }
-
-            void sfPlain(const json &j, double val=1) {
-                table = sf.generate( [&](double q) { return val; }, 0, 1 );
-                calcDielectric = [&](double M2V) { return (2.0*M2V + 1.0)/(1.0 - M2V); };
-                selfenergy_prefactor = 0.0;
-            }
+            void sfYukawa(const json &j);
+            void sfReactionField(const json &j);
+            void sfQpotential(const json &j);
+            void sfYonezawa(const json &j);
+            void sfFanourgakis(const json &j);
+            void sfFennel(const json &j);
+            void sfEwald(const json &j);
+            void sfWolf(const json &j);
+            void sfPlain(const json &j, double val=1);
 
             public:
-            CoulombGalore(const std::string &name="coulomb") { PairPotentialBase::name=name; }
+            CoulombGalore(const std::string &name="coulomb");
 
-            void from_json(const json &j) override {
-                try {
-                    type = j.at("type");
-                    rc = j.at("cutoff");
-                    rc2 = rc*rc;
-                    rc1i = 1/rc;
-                    epsr = j.at("epsr");
-                    lB = pc::lB( epsr );
-                    depsdt = j.value("depsdt", -0.368*pc::temperature/epsr);
-                    sf.setTolerance(
-                            j.value("utol",1e-5),j.value("ftol",1e-2) );
-
-                    if (type=="reactionfield") sfReactionField(j);
-                    if (type=="fanourgakis") sfFanourgakis(j);
-                    if (type=="qpotential") sfQpotential(j);
-                    if (type=="yonezawa") sfYonezawa(j);
-                    if (type=="yukawa") sfYukawa(j);
-                    if (type=="fennel") sfFennel(j);
-                    if (type=="plain") sfPlain(j,1);
-                    if (type=="ewald") sfEwald(j);
-                    if (type=="none") sfPlain(j,0);
-                    if (type=="wolf") sfWolf(j);
-                    if ( table.empty() )
-                        throw std::runtime_error(name + ": unknown coulomb type '" + type + "'" );
-                }
-
-                catch ( std::exception &e ) {
-                    std::cerr << "CoulombGalore error: " << e.what();
-                    throw;
-                }
-            }
+            void from_json(const json &j) override;
 
             template<class Tparticle>
                 double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
@@ -672,33 +535,9 @@ namespace Faunus {
                     return -selfenergy_prefactor*Eq*lB/rc;
                 }
 
-            double dielectric_constant(double M2V) {
-                return calcDielectric( M2V );
-            }
+            double dielectric_constant(double M2V);
 
-            void to_json(json &j) const override {
-                using namespace u8;
-                j["epsr"] = epsr;
-                j["T"+partial+epsilon_m + "/" + partial + "T"] = depsdt;
-                j["lB"] = lB;
-                j["cutoff"] = rc;
-                j["type"] = type;
-                if (type=="yukawa") {
-                    j["debyelength"] = 1.0/kappa;
-                    j["ionic strength"] = I;
-                }
-                if (type=="qpotential")
-                    j["order"] = order;
-                if (type=="yonezawa" || type=="fennel" || type=="wolf" || type=="ewald")
-                    j["alpha"] = alpha;
-                if (type=="reactionfield") {
-                    if(epsrf > 1e10)
-                        j[epsilon_m+"_rf"] = 2e10;
-                    else
-                        j[epsilon_m+"_rf"] = epsrf;
-                }
-                _roundjson(j, 5);
-            }
+            void to_json(json &j) const override;
         };
 
         /**
@@ -855,17 +694,17 @@ namespace Faunus {
                 Variant type() const override { return BondData2::HARMONIC; }
                 std::shared_ptr<BondData2> clone() const override { return std::make_shared<HarmonicBond>(*this); }
 
-                void from_json(const json &j) override {
+                inline void from_json(const json &j) override {
                     k = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
                     req = j.at("req").get<double>() * 1.0_angstrom; // req
                 }
-                void to_json(json &j) const override {
+                inline void to_json(json &j) const override {
                     j = { {"k", 2*k/1.0_kJmol*1.0_angstrom*1.0_angstrom},
                         {"req", req/1.0_angstrom} };
                 }
 
             public:
-                std::string name() const override { return "harmonic"; }
+                inline std::string name() const override { return "harmonic"; }
 
                 template<typename Tpvec>
                     void setEnergyFunction(const Tpvec &p) {
@@ -886,13 +725,13 @@ namespace Faunus {
                 Variant type() const override { return BondData2::FENE; }
                 std::shared_ptr<BondData2> clone() const override { return std::make_shared<FENEBond>(*this); }
 
-                void from_json(const json &j) override {
+                inline void from_json(const json &j) override {
                     k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
                     k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
                     k[2] = j.at("eps").get<double>() * 1.0_kJmol;
                     k[3] = std::pow( j.at("sigma").get<double>() * 1.0_angstrom, 2);
                 }
-                void to_json(json &j) const override {
+                inline void to_json(json &j) const override {
                     j = {
                         { "k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
                         { "rmax", std::sqrt(k[1]) / 1.0_angstrom },
@@ -900,7 +739,7 @@ namespace Faunus {
                         { "sigma", std::sqrt(k[3]) / 1.0_angstrom } };
                 }
             public:
-                std::string name() const override { return "fene"; }
+                inline std::string name() const override { return "fene"; }
 
                 template<typename Tpvec>
                     void setEnergyFunction(const Tpvec &p) {
@@ -921,31 +760,8 @@ namespace Faunus {
          * Serialize to/from json
          */
 
-        void to_json(json &j, const std::shared_ptr<BondData2> &b) {
-            json val;
-            b->to_json(val);
-            val["index"] = b->index;
-            j = {{ b->name(), val }};
-        }
-
-        void from_json(const json &j, std::shared_ptr<BondData2> &b) {
-            if (j.is_object())
-                if (j.size()==1) {
-                    auto& key = j.begin().key();
-                    auto& val = j.begin().value();
-                    if ( key==HarmonicBond().name() )  b = std::make_shared<HarmonicBond>();
-                    else if ( key==FENEBond().name() ) b = std::make_shared<FENEBond>();
-                    // else if ...
-                    else
-                        throw std::runtime_error("unknown bond type: " + key);
-                    b->from_json( val );
-                    b->index = val.at("index").get<decltype(b->index)>();
-                    if (b->index.size() != b->numindex())
-                        throw std::runtime_error("exactly " + std::to_string(b->numindex()) + " indices required for " + b->name());
-                    return;
-                }
-            throw std::runtime_error("invalid bond data");
-        }
+        void to_json(json &j, const std::shared_ptr<BondData2> &b);
+        void from_json(const json &j, std::shared_ptr<BondData2> &b);
 
         template<typename Tpvec>
             void setBondEnergyFunction(std::shared_ptr<BondData2> &b, const Tpvec &p) {
@@ -967,10 +783,7 @@ namespace Faunus {
             std::vector<int> index;
             std::vector<double> k;
 
-            void shift( int offset ) {
-                for ( auto &i : index )
-                    i += offset;
-            } // shift index
+            void shift( int offset ); // shift index
 
             template<class Tpvec>
                 double energy(const Tpvec &p, Geometry::DistanceFunction dist) const {
@@ -1031,130 +844,14 @@ namespace Faunus {
                 }
         }; //!< Harmonic and angular potentials for bonded interactions
 
-        void to_json(json &j, const BondData &b) {
-            switch(b.type) {
-                case BondData::harmonic:
-                    j["harmonic"] = {
-                        { "index", b.index },
-                        { "k", b.k[0] / 1.0_kJmol * std::pow(1.0_angstrom, 2) },
-                        { "req", b.k[1] / 1.0_angstrom } };
-                    break;
-                case BondData::fene:
-                    j["fene"] = {
-                        { "index", b.index },
-                        { "k", b.k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
-                        { "rmax", std::sqrt(b.k[1]) / 1.0_angstrom },
-                        { "eps", b.k[2] / 1.0_kJmol },
-                        { "sigma", std::sqrt(b.k[3]) / 1.0_angstrom } };
-                    break;
-                case BondData::yukawa:
-                    j["yukawa"] = {
-                        { "index", b.index },
-                        { "bjerrumlength", b.k[0] / 1.0_angstrom },
-                        { "debyelength", b.k[1] / 1.0_angstrom } };
-                case BondData::harmonic_torsion:
-                    j["harmonic_torsion"] = {
-                        { "index", b.index },
-                        { "k", b.k[0] / (1.0_kJmol / std::pow(1.0_rad, 2)) },
-                        { "aeq", b.k[1] / 1.0_deg }};
-                    break;
-                case BondData::g96_torsion:
-                    j["g96_torsion"] = {
-                        { "index", b.index },
-                        { "k", b.k[0] / 1.0_kJmol },
-                        { "aeq", acos(b.k[1]) / 1.0_deg }};
-                    break;
-                case BondData::periodic_dihedral:
-                    j["periodic_dihedral"] = {
-                        { "index", b.index },
-                        { "k", b.k[0] / 1.0_kJmol },
-                        { "n", b.k[1] },
-                        { "phi", b.k[2] / 1.0_deg }};
-                    break;
-                default: break;
-            }
-        }
-
-        void from_json(const json &j, BondData &b) {
-            if (j.is_object())
-                if (j.size()==1) {
-                    std::string t = j.begin().key();
-                    auto& val = j.begin().value();
-                    if (t=="harmonic") {
-                        b.type = BondData::harmonic;
-                        b.index = val.at("index").get<decltype(b.index)>();
-                        if (b.index.size()!=2)
-                            throw std::runtime_error("harmonic bond requires exactly two indeces");
-                        b.k.resize(2);
-                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
-                        b.k[1] = val.at("req").get<double>() * 1.0_angstrom; // req
-                        return;
-                    }
-                    if (t=="fene") {
-                        b.type = BondData::fene;
-                        b.index = val.at("index").get<decltype(b.index)>();
-                        if (b.index.size()!=2)
-                            throw std::runtime_error("FENE bond requires exactly two indeces");
-                        b.k.resize(4);
-                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
-                        b.k[1] = std::pow( val.at("rmax").get<double>() * 1.0_angstrom, 2); // rmax^2
-                        b.k[2] = val.at("eps").get<double>() * 1.0_kJmol; // epsilon wca
-                        b.k[3] = std::pow( val.at("sigma").get<double>() * 1.0_angstrom, 2); // sigma^2 wca
-                        return;
-                    }
-                    if (t=="yukawa") {
-                        b.type = BondData::yukawa;
-                        b.index = val.at("index").get<decltype(b.index)>();
-                        if (b.index.size()!=2)
-                            throw std::runtime_error("yukawa requires exactly two indeces");
-                        b.k.resize(2);
-                        b.k[0] = pc::lB(val.at("epsr").get<double>()) * 1.0_angstrom; // bjerrum length
-                        b.k[1] = val.at("debyelength").get<double>() * 1.0_angstrom; // debye length
-                        return;
-                    }
-                    if (t=="harmonic_torsion") {
-                        b.type = BondData::harmonic_torsion;
-                        b.index = val.at("index").get<decltype(b.index)>();
-                        if (b.index.size()!=3)
-                            throw std::runtime_error("Harmonic torsion requires exactly three indeces");
-                        b.k.resize(2);
-                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_rad, 2); // k
-                        b.k[1] = val.at("aeq").get<double>() * 1.0_deg; // angle
-                        return;
-                    }
-                    if (t=="g96_torsion") {
-                        b.type = BondData::g96_torsion;
-                        b.index = val.at("index").get<decltype(b.index)>();
-                        if (b.index.size()!=3)
-                            throw std::runtime_error("G96 torsion requires exactly three indeces");
-                        b.k.resize(2);
-                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol; // k
-                        b.k[1] = cos(val.at("aeq").get<double>() * 1.0_deg); // cos(angle)
-                        return;
-                    }
-                    if (t=="periodic_dihedral") {
-                        b.type = BondData::periodic_dihedral;
-                        b.index = val.at("index").get<decltype(b.index)>();
-                        if (b.index.size()!=4)
-                            throw std::runtime_error("Periodic dihedral requires exactly four indeces");
-                        b.k.resize(3);
-                        b.k[0] = val.at("k").get<double>() * 1.0_kJmol; // k
-                        b.k[1] = val.at("n").get<double>(); // multiplicity/periodicity n
-                        b.k[2] = val.at("phi").get<double>() * 1.0_deg; // angle
-                        return;
-                    }
-                    if (b.type==BondData::none)
-                        throw std::runtime_error("unknown bondtype: " + t);
-                    else return;
-                }
-            throw std::runtime_error("error parsing json to bond");
-        }
+        void to_json(json &j, const BondData &b);
+        void from_json(const json &j, BondData &b);
 
         inline auto filterBonds(const std::vector<BondData> &bonds, BondData::Variant bondtype) {
             std::vector<std::reference_wrapper<const BondData>> filt;
             filt.reserve(bonds.size());
             std::copy_if(bonds.begin(), bonds.end(), std::back_inserter(filt),
-                    [bondtype](const auto &d){return d.type==bondtype;} );
+                         [bondtype](const auto &d){return d.type==bondtype;} );
             return filt;
         } //!< Filter bond container for matching bond type and return _reference_ to original
 

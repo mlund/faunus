@@ -196,34 +196,48 @@ if (GIT_FOUND)
     endif ()
 endif ()
 
+set(objs
+    ${CMAKE_SOURCE_DIR}/src/core.cpp
+    ${CMAKE_SOURCE_DIR}/src/geometry.cpp
+    ${CMAKE_SOURCE_DIR}/src/io.cpp
+    ${CMAKE_SOURCE_DIR}/src/potentials.cpp
+    )
+set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
+
 set(hdrs
     ${CMAKE_SOURCE_DIR}/src/analysis.h
     ${CMAKE_SOURCE_DIR}/src/average.h
     ${CMAKE_SOURCE_DIR}/src/auxiliary.h
     ${CMAKE_SOURCE_DIR}/src/core.h
     ${CMAKE_SOURCE_DIR}/src/energy.h
+    ${CMAKE_SOURCE_DIR}/src/geometry.h
+    ${CMAKE_SOURCE_DIR}/src/group.h
+    ${CMAKE_SOURCE_DIR}/src/io.h
+    ${CMAKE_SOURCE_DIR}/src/molecule.h
     ${CMAKE_SOURCE_DIR}/src/move.h
     ${CMAKE_SOURCE_DIR}/src/potentials.h
     ${CMAKE_SOURCE_DIR}/src/space.h
     )
 
+add_library(libfaunus STATIC ${objs} ${hdrs})
+
 add_executable(tests EXCLUDE_FROM_ALL src/tests.cpp ${hdrs})
-add_dependencies(tests modernjson doctest eigen range-v3 xdrfile)
-target_link_libraries(tests ${LINKLIBS})
+add_dependencies(tests modernjson doctest eigen range-v3)
+target_link_libraries(tests libfaunus xdrfile ${LINKLIBS})
 add_test(NAME tests COMMAND tests)
 
-add_executable(faunus src/faunus.cpp ${hdrs})
-add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
-target_link_libraries(faunus xdrfile docopt ${LINKLIBS})
+add_executable(faunus src/faunus.cpp)
+add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar)
+target_link_libraries(faunus libfaunus xdrfile docopt ${LINKLIBS})
 
 add_executable(faunus_nopbc src/faunus.cpp ${hdrs})
-add_dependencies(faunus_nopbc modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
-target_link_libraries(faunus_nopbc xdrfile docopt ${LINKLIBS})
+add_dependencies(faunus_nopbc modernjson doctest eigen range-v3 docopt xdrfile progressbar)
+target_link_libraries(faunus_nopbc libfaunus xdrfile docopt ${LINKLIBS})
 set_target_properties(faunus_nopbc PROPERTIES COMPILE_DEFINITIONS "CUBOID_NOPBC")
 
 add_executable(faunus_sphere src/faunus.cpp ${hdrs})
-add_dependencies(faunus_sphere modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
-target_link_libraries(faunus_sphere xdrfile docopt ${LINKLIBS})
+add_dependencies(faunus_sphere modernjson doctest eigen range-v3 docopt xdrfile progressbar)
+target_link_libraries(faunus_sphere libfaunus xdrfile docopt ${LINKLIBS})
 set_target_properties(faunus_sphere PROPERTIES COMPILE_DEFINITIONS "SPHERE")
 
 if (ENABLE_PYTHON)

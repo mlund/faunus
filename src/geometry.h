@@ -31,24 +31,10 @@ namespace Faunus {
 
             std::string name;
 
-            inline GeometryBase& operator=(const GeometryBase &other) {
-                if (this!=&other)
-                    name = other.name;
-                return *this;
-            } //!< Required since we *do not* want to overwrite functors (distance, boundary)
-
-            inline GeometryBase(const GeometryBase &other) {
-                if (this!=&other)
-                    name = other.name;
-            } //!< Required since we *do not* want to overwrite functors (distance, boundary)
-
-            GeometryBase() {
-                using namespace std::placeholders;
-                boundaryFunc = nullptr;//std::bind( &GeometryBase::boundary, this, _1);
-                distanceFunc = nullptr;//std::bind( &GeometryBase::vdist, this, _1, _2);
-            }
-
-            virtual ~GeometryBase() {}
+            GeometryBase& operator=(const GeometryBase &other); //!< Required since we *do not* want to overwrite functors (distance, boundary)
+            GeometryBase(const GeometryBase &other); //!< Required since we *do not* want to overwrite functors (distance, boundary)
+            GeometryBase();
+            virtual ~GeometryBase();
 
         }; //!< Base class for all geometries
 
@@ -61,102 +47,22 @@ namespace Faunus {
                 double c1, c2;
 
             public:
-
-                void setLength( const Point &l ) {
-                    len = l;
-                    len_half = l*0.5;
-                    len_inv = l.cwiseInverse();
-                    c1 = l.y()/l.x();
-                    c2 = l.z()/l.x();
-                } //!< Set cuboid side length
-
-                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override {
-                    double x, alpha; 
-                    Point s;
-                    switch (method) {
-                        case ISOTROPIC:
-                            x = std::cbrt( V / (c1*c2) ); // keep aspect ratio
-                            s = { x, c1*x, c2*x };
-                            setLength(s);
-                            break;
-                        case XY:
-                            x = std::sqrt( V / (c1*len.z()) ); // keep xy aspect ratio
-                            s = { x, c1*x, len.z() };
-                            setLength(s);  // z is untouched
-                            break;
-                        case ISOCHORIC:
-                            // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
-                            alpha = sqrt( V / pow(getVolume(), 1./3.) );
-                            s = { alpha, alpha, 1/(alpha*alpha) };
-                            setLength( len.cwiseProduct(s) );
-                            return s;
-                        default:
-                            throw std::runtime_error("unknown volume scaling method");
-                    }
-                    assert( fabs(getVolume()-V)<1e-9 );
-                    return s.cwiseQuotient(len); // this will scale any point to new volume
-                }
-
-                double getVolume(int dim=3) const override {
-                    assert(dim==3);
-                    return len.x() * len.y() * len.z();
-                }
-
-                const Point& getLength() const override { return len; } //!< Side lengths
-
-                bool collision(const Point &a, double r=0) const override {
-                    if ( std::fabs(a.z()+r) > len_half.z())
-                    return true;
-                    if ( std::fabs(a.x()+r) > len_half.x())
-                    return true;
-                    if ( std::fabs(a.y()+r) > len_half.y())
-                    return true;
-                    return false;
-                }
-
-                void randompos( Point &m, Random &rand ) const override {
-                    m.x() = (rand()-0.5) * this->len.x();
-                    m.y() = (rand()-0.5) * this->len.y();
-                    m.z() = (rand()-0.5) * this->len.z();
-                }
+                void setLength( const Point &l ); //!< Set cuboid side length
+                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
+                double getVolume(int dim=3) const override;
+                const Point& getLength() const override; //!< Side lengths
+                bool collision(const Point &a, double r=0) const override;
+                void randompos( Point &m, Random &rand ) const override;
         };
 
-        void to_json(json &j, const Box &b) {
-            j["length"] = b.getLength();
-        }
-
-        void from_json(const json& j, Box &b) {
-            try {
-                if (j.is_object()) {
-                    auto m = j.at("length");
-                    if (m.is_number()) {
-                        double l = m.get<double>();
-                        b.setLength( {l,l,l} );
-                    }
-                    else if (m.is_array()) {
-                        Point len = m.get<Point>();
-                        b.setLength( len );
-                    }
-                }
-                if (b.getVolume()<=0)
-                throw std::runtime_error("box volume is zero or less");
-            }
-            catch(std::exception& e) {
-                throw std::runtime_error( e.what() );
-            }
-        }
+        void to_json(json &j, const Box &b);
+        void from_json(const json& j, Box &b);
 
         /** @brief Periodic boundary conditions */
         template<bool X=true, bool Y=true, bool Z=true>
             struct PBC : public Box {
 
-                PBC() {
-                    using namespace std::placeholders;
-                    boundaryFunc = std::bind( &PBC<X,Y,Z>::boundary, this, _1);
-                    distanceFunc = std::bind( &PBC<X,Y,Z>::vdist, this, _1, _2);
-                    distanceFunc = [this](const Point &i, const Point &j){return this->vdist(i,j);};
-                    boundaryFunc = [this](Point &i){this->boundary(i);};
-                }
+                PBC();
 
                 Point vdist( const Point &a, const Point &b ) const override
                 {
@@ -207,6 +113,15 @@ namespace Faunus {
 
             };
 
+        template<bool X, bool Y, bool Z>
+        PBC<X, Y, Z>::PBC() {
+            using namespace std::placeholders;
+            boundaryFunc = std::bind( &PBC<X,Y,Z>::boundary, this, _1);
+            distanceFunc = std::bind( &PBC<X,Y,Z>::vdist, this, _1, _2);
+            distanceFunc = [this](const Point &i, const Point &j){return this->vdist(i,j);};
+            boundaryFunc = [this](Point &i){this->boundary(i);};
+        }
+
         using Cuboid = PBC<true,true,true>; //!< Cuboid w. PBC in all directions
         using Cuboidslit = PBC<true,true,false>; //!< Cuboidal slit w. PBC in XY directions
         using CuboidNoPBC = PBC<false,false,false>; //!< Hard cuboid - no PBC
@@ -241,56 +156,14 @@ namespace Faunus {
                 double r, r2, diameter, len;
                 typedef PBC<false,false,true> base;
             public:
-                void set(double radius, double length) {
-                    len = length;
-                    r = radius;
-                    r2 = r*r;
-                    diameter = 2*r;
-                    Box::setLength( { diameter, diameter, len } );
-                } //!< Set radius
-
-                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override {
-                    assert(method==ISOTROPIC);
-                    double rold = r;
-                    r = std::sqrt( V / (pc::pi * len) );
-                    set( r, len );
-                    return Point(r/rold, r/rold, 1);
-                } //!< Adjust radius to match volume; length is conserved.
-
-                double getVolume(int dim=3) const override {
-                    if (dim==1)
-                        return len;
-                    if (dim==2)
-                        return pc::pi * r2;
-                    return r2 * pc::pi * len;
-                } //<! Return volume
-
-                void randompos( Point &m, Random &rand ) const override
-                {
-                    double l = r2 + 1;
-                    m.z() = (rand()-0.5) * len;
-                    while ( l > r2 )
-                    {
-                        m.x() = (rand()-0.5) * diameter;
-                        m.y() = (rand()-0.5) * diameter;
-                        l = m.x() * m.x() + m.y() * m.y();
-                    }
-                }
-
-                bool collision(const Point &a, double r=0) const override {
-                    if ( a.z() < -0.5*len )
-                        return true;
-                    if ( a.z() > 0.5*len )
-                        return true;
-                    if ( a.x()*a.x() + a.y()*a.y() > r2 )
-                        return true;
-                    return false;
-                }
+                void set(double radius, double length); //!< Set radius
+                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override; //!< Adjust radius to match volume; length is conserved.
+                double getVolume(int dim=3) const override; //<! Return volume
+                void randompos( Point &m, Random &rand ) const override;
+                bool collision(const Point &a, double r=0) const override;
         };
 
-        void from_json(const json& j, Cylinder &cyl) {
-            cyl.set( j.at("radius"), j.at("length") );
-        }
+        void from_json(const json& j, Cylinder &cyl);
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] Cylinder") {
@@ -308,51 +181,16 @@ namespace Faunus {
             private:
                 double r, r2;
             public:
-                void set(double radius) {
-                    r = radius;
-                    r2 = r*r;
-                    Box::setLength( {2*r,2*r,2*r} );
-                } //!< Set radius
-
-                double getRadius() const { return r; }
-
-                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override {
-                    assert(method==ISOTROPIC);
-                    double rold = r;
-                    double r = std::cbrt(3*V/(4*pc::pi));
-                    set(r);
-                    return Point().setConstant(r/rold);
-                } //!< Adjust radius to match volume; length is conserved.
-
-                double getVolume(int dim=3) const override {
-                    if (dim==1)
-                        return 2*r;
-                    if (dim==2)
-                        return pc::pi * r2;
-                    return 4*pc::pi*r*r2/3;
-                } //<! Return volume
-
-                void randompos( Point &a, Random &rand ) const override {
-                    double diameter = 2*r;
-                    do {
-                        a.x() = (rand() - 0.5) * diameter;
-                        a.y() = (rand() - 0.5) * diameter;
-                        a.z() = (rand() - 0.5) * diameter;
-                    } while ( a.squaredNorm() > r2 );
-                }
-
-                bool collision(const Point &a, double r=0) const override {
-                    return (a.squaredNorm()>r2) ? true : false;
-                }
+                void set(double radius); //!< Set radius
+                double getRadius() const;
+                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override; //!< Adjust radius to match volume; length is conserved.
+                double getVolume(int dim=3) const override; //<! Return volume
+                void randompos( Point &a, Random &rand ) const override;
+                bool collision(const Point &a, double r=0) const override;
         };
 
-        void from_json(const json& j, Sphere &g) {
-            g.set( j.at("radius") );
-        }
-
-        void to_json(json &j, const Sphere &g) {
-            j["radius"] = g.getRadius();
-        }
+        void from_json(const json& j, Sphere &g);
+        void to_json(json &j, const Sphere &g);
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] Sphere") {

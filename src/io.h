@@ -20,18 +20,7 @@ namespace Faunus {
     namespace IO {
 
         /* @brief Read lines from file into vector */
-        inline bool readFile(const std::string &file, std::vector<std::string> &v) {
-            std::ifstream f( file );
-            if (f) {
-                std::string s;
-                while (getline(f,s))
-                    v.push_back(s);
-                f.close();
-                return true;
-            }
-            std::cerr << "# WARNING! FILE " << file << " NOT READ!\n";
-            return false;
-        }
+        bool readFile(const std::string &file, std::vector<std::string> &v);
 
         /**
          * @brief Write std::string to file
@@ -39,28 +28,15 @@ namespace Faunus {
          * @param s String to write
          * @param mode `std::ios_base::out` (new, default) or `std::ios_base::app` (append)
          */
-        inline bool writeFile(const std::string &file, const std::string &s,
-                std::ios_base::openmode mode=std::ios_base::out) {
-            std::ofstream f(file, mode);
-            if (f) {
-                f << s;
-                return true;
-            }
-            return false;
-        }
+         bool writeFile(const std::string &file, const std::string &s,
+                std::ios_base::openmode mode=std::ios_base::out);
 
         /**
          * @brief Strip lines matching a pattern
          * @param v vector of std::string
          * @param pat Pattern to search for
          */
-        inline void strip(std::vector<std::string> &v, const std::string &pat) {
-            auto iter=v.begin();
-            while (iter!=v.end())
-                if ((*iter).find(pat) != std::string::npos)
-                    v.erase(iter);
-                else ++iter;
-        }
+        void strip(std::vector<std::string> &v, const std::string &pat);
 
     }//namespace
 
@@ -507,7 +483,7 @@ namespace Faunus {
             float time_xtc, prec_xtc=1000;
             int natoms_xtc, step_xtc;
         public:
-            inline int getNumAtoms() { return natoms_xtc; }
+            int getNumAtoms();
 
             /**
              * @brief Load a single frame into cuboid
@@ -594,54 +570,15 @@ namespace Faunus {
              * This will open an xtc file for reading. The number of atoms in each frame
              * is saved and memory for the coordinate array is allocated.
              */
-            inline bool open(std::string s) {
-                if (xd!=NULL)
-                    close();
-                xd = xdrfile_open(&s[0], "r");
-                if (xd!=NULL) {
-                    int rc = read_xtc_natoms(&s[0], &natoms_xtc); // get number of atoms
-                    if (rc==exdrOK) {
-                        x_xtc = new rvec [natoms_xtc]; // resize coordinate array
-                        return true;
-                    }
-                } else
-                    std::cerr << "# ioxtc error: xtc file could not be opened." << endl;
-                return false;
-            }
+            bool open(std::string s);
+            void close();
 
-            inline void close() {
-                xdrfile_close(xd);
-                xd=NULL;
-                delete[] x_xtc;
-            }
+            FormatXTC(double len);
+            ~FormatXTC();
 
-            FormatXTC(double len) {
-                prec_xtc = 1000.;
-                time_xtc=step_xtc=0;
-                setbox(len);
-                xd=NULL;
-                x_xtc=NULL;
-            }
-
-            ~FormatXTC()
-            {
-                close();
-            }
-
-            inline void setbox(double x, double y, double z) {
-                assert(x>0 && y>0 && z>0);
-                for (int i=0; i<3; i++)
-                    for (int j=0; j<3; j++)
-                        xdbox[i][j]=0;
-                xdbox[0][0]=0.1*x; // corners of the
-                xdbox[1][1]=0.1*y; // rectangular box
-                xdbox[2][2]=0.1*z; // in nanometers!
-            }
-
-            inline void setbox(double len) { setbox(len,len,len); }
-
-            inline void setbox(const Point &p) { setbox(p.x(), p.y(), p.z()); }
-
+            void setbox(double x, double y, double z);
+            void setbox(double len);
+            void setbox(const Point &p);
     };
 
     template<class Tpvec, class Enable = void>

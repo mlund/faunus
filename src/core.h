@@ -71,57 +71,13 @@ namespace Faunus {
     }
 #endif
 
-    inline json merge( const json &a, const json &b ) {
-        json result = a.flatten();
-        json tmp = b.flatten();
-        for ( auto it = tmp.begin(); it != tmp.end(); ++it )
-            result[it.key()] = it.value();
-        return result.unflatten();
-    } //!< Merge two json objects
+    json merge( const json &a, const json &b ); //!< Merge two json objects
 
-    inline json openjson( const std::string &file ) {
-        json js;
-        std::ifstream f (file );
-        if ( f ) {
-            try {
-                f >> js;
-            }
-            catch(std::exception& e) {
-                throw std::runtime_error("Syntax error in JSON file " + file + ": " + e.what());
-            }
-        }
-        else
-            throw std::runtime_error("Cannot find or read JSON file " + file);
-        return js;
-    } //!< Read json file into json object (w. syntax check)
+    json openjson( const std::string &file ); //!< Read json file into json object (w. syntax check)
 
-    double _round(double x, int n=3) {
-        std::stringstream o;
-        o << std::setprecision(n) << x;
-        return std::stod(o.str());
-    } //!< Round to n number of significant digits
-
-    void _roundjson(json &j, int n=3) {
-        if (j.is_object())
-            for (auto &i : j)
-                if (i.is_number_float())
-                    i = _round(i,n);
-    } // round float objects to n number of significant digits
-
-    double value_inf(const json &j, const std::string &key) {
-        auto it = j.find(key);
-        if (it==j.end())
-            throw std::runtime_error("unknown json key '" + key + "'");
-        else
-            if (it->is_string()) {
-                if (*it=="inf")
-                    return std::numeric_limits<double>::infinity();
-                if (*it=="-inf")
-                    return -std::numeric_limits<double>::infinity();
-                throw std::runtime_error("value must be number or 'inf'");
-            }
-        return double(*it);
-    } //!< Extract floating point from json and allow for 'inf' and '-inf'
+    double _round(double x, int n=3); //!< Round to n number of significant digits
+    void _roundjson(json &j, int n=3); // round float objects to n number of significant digits
+    double value_inf(const json &j, const std::string &key); //!< Extract floating point from json and allow for 'inf' and '-inf'
 
     /** @brief Physical constants */
     namespace PhysicalConstants {
@@ -236,10 +192,7 @@ namespace Faunus {
         const std::string subr = "\u1D63";       //!< Subscript "r"
         const std::string theta = "\u03b8";      //!< Greek theta
 
-        inline std::string bracket( const std::string &s )
-        {
-            return "\u27e8" + s + "\u27e9";
-        }
+        std::string bracket( const std::string &s );
     } //!< Unicode
 
     struct Tensor : public Eigen::Matrix3d {
@@ -249,9 +202,9 @@ namespace Faunus {
             base::setZero();
         } //!< Constructor, clear data
 
-        Tensor( double xx, double xy, double xz, double yy, double yz, double zz ) {
-            (*this) << xx, xy, xz, xy, yy, yz, xz, yz, zz;
-        } //!< Construct from input
+        Tensor( double xx, double xy, double xz, double yy, double yz, double zz ); //!< Construct from input
+        void rotate( const base &m ); //!< Rotate using rotation matrix. Remove?
+        void eye();
 
         template<typename T>
             Tensor( const Eigen::MatrixBase<T> &other ) : base(other) {}
@@ -262,22 +215,10 @@ namespace Faunus {
                 base::operator=(other);
                 return *this;
             }
-
-        void rotate( const base &m ) {
-            (*this) = m * (*this) * m.transpose();
-        } //!< Rotate using rotation matrix. Remove?
-        void eye() { *this = base::Identity(3, 3); }
     }; //!< Tensor class
 
-    void to_json(nlohmann::json& j, const Tensor &t) {
-        j = { t(0,0), t(0,1), t(0,2), t(1,1), t(1,2), t(2,2) };
-    } //!< Tensor -> Json
-
-    void from_json(const nlohmann::json& j, Tensor &t) {
-        if ( j.size()!=6 || !j.is_array() )
-            throw std::runtime_error("Json->Tensor: array w. exactly six coefficients expected.");
-        t = Tensor(j[0],j[1],j[2],j[3],j[4],j[5]);
-    } //!< Json -> Tensor
+    void to_json(nlohmann::json& j, const Tensor &t); //!< Tensor -> Json
+    void from_json(const nlohmann::json& j, Tensor &t); //!< Json -> Tensor
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Tensor") {
@@ -312,17 +253,10 @@ namespace Faunus {
         std::mt19937 engine; //!< Random number engine used for all operations
         std::uniform_real_distribution<double> dist01; //!< Uniform real distribution [0,1)
 
-        inline Random() : dist01(0,1) {}
-
-        inline void seed() { engine = std::mt19937(std::random_device()()); }
-
-        inline double operator()() { return dist01(engine); } //!< Double in uniform range [0,1)
-
-        inline int range( int min, int max )
-        {
-            std::uniform_int_distribution<int> d(min, max);
-            return d(engine);
-        } //!< Integer in uniform range [min:max]
+        Random();
+        void seed();
+        double operator()(); //!< Double in uniform range [0,1)
+        int range(int, int); //!< Integer in uniform range [min:max]
 
         template<class Titer>
             Titer sample(const Titer &beg, const Titer &end)
@@ -333,32 +267,8 @@ namespace Faunus {
             } //!< Iterator to random element in container (std::vector, std::map, etc)
     }; //!< Class for handling random number generation
 
-    void to_json(json &j, const Random &r) {
-        std::ostringstream o;
-        o << r.engine;
-        j["seed"] = o.str();
-    } //!< Random to json conversion
-
-    void from_json(const json &j, Random &r) {
-        if (j.is_object()) {
-            auto seed = j.value("seed", std::string());
-            try {
-                if (seed=="default" || seed=="fixed")
-                    return;
-                if (seed=="hardware")
-                    r.engine = decltype(r.engine)(std::random_device()());
-                else if (!seed.empty()) {
-                    std::stringstream s(seed);
-                    s.exceptions( std::ios::badbit | std::ios::failbit );
-                    s >> r.engine;
-                }
-            }
-            catch (std::exception &e) {
-                std::cerr << "error initializing random from json: " << e.what();
-                throw;
-            }
-        }
-    } //!< json to Random conversion
+    void to_json(json&, const Random&);   //!< Random to json conversion
+    void from_json(const json&, Random&); //!< json to Random conversion
 
     static Random random; // global instance of Random
 
@@ -400,14 +310,7 @@ namespace Faunus {
      * @brief Convert cartesian- to spherical-coordinates
      * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [-\pi,\pi) \f$, and \f$ \phi\in [0,\pi] \f$.
      */
-    inline Point xyz2rtp(const Point &p, const Point &origin={0,0,0}) {
-        Point xyz = p - origin;
-        double radius = xyz.norm();
-        return {
-            radius,
-                std::atan2( xyz.y(), xyz.x() ),
-                std::acos( xyz.z()/radius) };
-    }
+    Point xyz2rtp(const Point&, const Point &origin={0,0,0});
 
     /**
      * @brief Convert spherical- to cartesian-coordinates
@@ -415,12 +318,7 @@ namespace Faunus {
      *
      * @note Input \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$, and output (x,y,z).
      */
-    inline Point rtp2xyz(const Point &rtp, const Point &origin = {0,0,0}) {
-        return origin + rtp.x() * Point(
-                std::cos(rtp.y()) * std::sin(rtp.z()),
-                std::sin(rtp.y()) * std::sin(rtp.z()),
-                std::cos(rtp.z()) );
-    }
+    Point rtp2xyz(const Point &rtp, const Point &origin = {0,0,0});
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] spherical coordinates") {
@@ -437,22 +335,10 @@ namespace Faunus {
     }
 #endif
 
-    Point ranunit_neuman(Random &rand)
-    {
-        double r2;
-        Point p;
-        do {
-            p = {rand()-0.5, rand()-0.5, rand()-0.5};
-            r2 = p.squaredNorm();
-        } while ( r2 > 0.25 );
-        return p / std::sqrt(r2);
-    } //!< Random unit vector using Neuman's method ("sphere picking")
+    Point ranunit_neuman(Random&); //!< Random unit vector using Neuman's method ("sphere picking")
+    Point ranunit_polar(Random&); //!< Random unit vector using polar coordinates ("sphere picking")
 
-    Point ranunit_polar(Random &rand) {
-        return rtp2xyz( {1, 2*pc::pi*rand(), std::acos(2*rand()-1)} );
-    } //!< Random unit vector using polar coordinates ("sphere picking")
-
-    const auto& ranunit = ranunit_polar; //!< Alias for default random unit vector function
+    constexpr auto ranunit = ranunit_neuman; //!< Reference (or alias) to default ranunit function
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] ranunit_neuman") {
@@ -492,37 +378,11 @@ namespace Faunus {
 
         double angle=0; //!< Rotation angle
 
-        QuaternionRotate() {};
-
-        QuaternionRotate(double angle, Point u) { set(angle,u); };
-
-        void set(double angle, Point u) {
-            this->angle = angle;
-            u.normalize();
-            first = Eigen::AngleAxisd(angle, u);
-            second << 0, -u.z(), u.y(), u.z(), 0, -u.x(), -u.y(), u.x(), 0;
-            second =
-                Eigen::Matrix3d::Identity() + second * std::sin(angle)
-                + second * second * (1 - std::cos(angle));
-
-            // Quaternion can be converted to rotation matrix:
-            // second = first.toRotationMatrix()
-        }
-
-        Point operator()( Point a, std::function<void(Point&)> boundary = [](Point &i){}, const Point &shift={0,0,0} ) const
-        {
-            a = a - shift;
-            boundary(a);
-            a = first * a + shift;
-            boundary(a);
-            return a;
-            // https://www.cc.gatech.edu/classes/AY2015/cs4496_spring/Eigen.html
-        } //!< Rotate point w. optional PBC boundaries
-
-        auto operator()( const Eigen::Matrix3d &a ) const
-        {
-            return second * a * second.transpose();
-        } //!< Rotate matrix/tensor
+        QuaternionRotate();
+        QuaternionRotate(double angle, Point u);
+        void set(double angle, Point u);
+        Point operator()( Point a, std::function<void(Point&)> boundary = [](Point &i){}, const Point &shift={0,0,0} ) const; //!< Rotate point w. optional PBC boundaries
+        auto operator()( const Eigen::Matrix3d &a ) const; //!< Rotate matrix/tensor
     };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -554,7 +414,7 @@ namespace Faunus {
     struct ParticlePropertyBase {
         virtual void to_json(json &j) const=0; //!< Convert to JSON object
         virtual void from_json(const json &j)=0; //!< Convert from JSON object
-        inline void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&) {}
+        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&);
     };
 
     template <typename... Ts>
@@ -576,15 +436,15 @@ namespace Faunus {
 
     struct Radius : public ParticlePropertyBase {
         double radius=0; //!< Particle radius
-        void to_json(json &j) const override { j["r"] = radius; }
-        void from_json(const json& j) override { radius = j.value("r", 0.0); }
+        void to_json(json &j) const override;
+        void from_json(const json& j) override;
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     }; //!< Radius property
 
     struct Charge : public ParticlePropertyBase {
         double charge=0; //!< Particle radius
-        void to_json(json &j) const override { j["q"] = charge; }
-        void from_json(const json& j) override { charge = j.value("q", 0.0); }
+        void to_json(json &j) const override;
+        void from_json(const json& j) override;
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     }; //!< Charge (monopole) property
 
@@ -599,43 +459,25 @@ namespace Faunus {
     struct Dipole : public ParticlePropertyBase {
         Point mu={1,0,0}; //!< dipole moment unit vector
         double mulen=0;   //!< dipole moment scalar
-
-        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&) {
-            mu = q * mu;
-        } //!< Rotate dipole moment
-
-        void to_json(json &j) const override {
-            j["mulen"] = mulen ;
-            j["mu"] = mu;
-        }
-
-        void from_json(const json& j) override {
-            mulen = j.value("mulen", 0.0);
-            mu = j.value("mu", Point(1,0,0) );
-        }
+        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&); //!< Rotate dipole moment
+        void to_json(json &j) const override;
+        void from_json(const json& j) override;
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };
 
     struct Quadrupole : public ParticlePropertyBase {
         Tensor Q;      //!< Quadrupole
-        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) { Q.rotate(m); } //!< Rotate dipole moment
-        void to_json(json &j) const override { j["Q"] = Q; }
-        void from_json(const json& j) override { Q = j.value("Q", Q); }
+        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m); //!< Rotate dipole moment
+        void to_json(json &j) const override;
+        void from_json(const json& j) override;
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     }; // Quadrupole property
 
     struct Cigar : public ParticlePropertyBase {
         double sclen=0;       //!< Sphero-cylinder length
         Point scdir = {1,0,0};//!< Sphero-cylinder direction unit vector
-
-        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&) {
-            scdir = q * scdir;
-        } //!< Rotate sphero-cylinder
-
-        void to_json(json &j) const override {
-            j["sclen"] = sclen;
-            j["scdir"] = scdir;
-        }
+        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&); //!< Rotate sphero-cylinder
+        void to_json(json &j) const override;
         void from_json(const json& j) override {
             sclen = j.value("sclen", 0.0);
             scdir = j.value("scdir", Point(1,0,0) );
@@ -963,13 +805,4 @@ namespace Faunus {
     }
 #endif
 
-    /*
-    struct json_io_base {
-        std::string name;
-        std::string cite;
-
-        inline void _to_json(json&) const {};
-        inline void _from_json(const json&) {};
-    };
-    */
 }//end of faunus namespace

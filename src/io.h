@@ -126,13 +126,7 @@ namespace Faunus {
     class FormatPQR {
         private:
             // Write box dimensions (standard PDB format)
-            template<class Tvec>
-                static std::string writeCryst1(const Tvec &len, Tvec angle=Tvec(90,90,90)) {
-                    char buf[500];
-                    sprintf(buf, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n",
-                            len.x(),len.y(),len.z(),angle.x(),angle.y(),angle.z());
-                    return std::string(buf);
-                }
+            static std::string writeCryst1(const Point &len, const Point &angle={90,90,90});
         public:
 
             /**

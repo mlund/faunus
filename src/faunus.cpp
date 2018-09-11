@@ -149,6 +149,9 @@ int main( int argc, char **argv )
 #ifdef GIT_COMMIT_HASH
             j["git revision"] = GIT_COMMIT_HASH;
 #endif
+#ifdef __VERSION__
+            j["compiler"] = __VERSION__;
+#endif
             f << std::setw(4) << j << endl;
         }
 

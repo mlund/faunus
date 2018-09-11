@@ -24,7 +24,7 @@ namespace Faunus {
             bool all=false; //!< Set to `true` if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
 
-            bool operator<( const data & a ) const{
+            inline bool operator<( const data & a ) const{
                 return index < a.index;
             }
         }; //!< Properties of changed groups
@@ -36,7 +36,7 @@ namespace Faunus {
             return ranges::view::transform(groups, [](data &i) -> int {return i.index;});
         } //!< List of moved groups (index)
 
-        void clear()
+        inline void clear()
         {
             du=0;
             dV=false;
@@ -46,7 +46,7 @@ namespace Faunus {
             assert(empty());
         } //!< Clear all change data
 
-        bool empty() const
+        inline bool empty() const
         {
             if (du==0)
                 if (dV==false)

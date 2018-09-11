@@ -79,3 +79,10 @@ void Faunus::FormatXTC::setbox(double x, double y, double z) {
 void Faunus::FormatXTC::setbox(double len) { setbox(len,len,len); }
 
 void Faunus::FormatXTC::setbox(const Faunus::Point &p) { setbox(p.x(), p.y(), p.z()); }
+
+std::string Faunus::FormatPQR::writeCryst1(const Faunus::Point &len, const Faunus::Point &angle) {
+    char buf[500];
+    sprintf(buf, "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n",
+            len.x(),len.y(),len.z(),angle.x(),angle.y(),angle.z());
+    return std::string(buf);
+}

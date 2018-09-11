@@ -13,8 +13,8 @@ namespace Faunus {
     namespace Analysis {
 
         class Analysisbase {
-            inline virtual void _to_json(json &j) const {};
-            inline virtual void _from_json(const json &j) {};
+            virtual void _to_json(json &j) const;
+            virtual void _from_json(const json &j);
             virtual void _sample()=0;
             int stepcnt=0;
             TimeRelativeOfTotal<std::chrono::microseconds> timer;
@@ -27,41 +27,13 @@ namespace Faunus {
             std::string name; //!< descriptive name
             std::string cite; //!< reference, url, doi etc. describing the analysis
 
-            inline void to_json(json &j) const {
-                assert( !name.empty() );
-                auto &_j = j[name];
-                _to_json(_j);
-                if (cnt>0) {
-                    _j["relative time"] = _round( timer.result() );
-                    _j["nstep"] = steps;
-                    _j["samples"] = cnt;
-                }
-                if (!cite.empty())
-                    _j["reference"] = cite;
-            } //!< JSON report w. statistics, output etc.
-
-            inline void from_json(const json &j) {
-                steps = j.value("nstep", 0);
-                _from_json(j);
-            } //!< configure from json object
-
-            inline virtual void sample() {
-                stepcnt++;
-                if ( stepcnt == steps ) {
-                    cnt++;
-                    stepcnt = 0;
-                    timer.start();
-                    _sample();
-                    timer.stop();
-                }
-            }
-
-            inline ~Analysisbase() {}
+            void to_json(json &j) const; //!< JSON report w. statistics, output etc.
+            void from_json(const json &j); //!< configure from json object
+            virtual void sample();
+            ~Analysisbase();
         };
 
-        inline void to_json(json &j, const Analysisbase &base) {
-            base.to_json( j );
-        }
+        void to_json(json &j, const Analysisbase &base);
 
         /**
          * @brief Excess chemical potential of molecules
@@ -602,13 +574,7 @@ namespace Faunus {
 
             double uinit;
 
-            inline void normalize() {
-                //assert(V.cnt>0);
-                    double Vr=1, sum = ehist.sumy();
-                    for (auto &i : ehist.getMap()) {
-                        i.second = i.second/sum ;
-                    }
-            }
+            void normalize();
 
             // inline virtual ~SystemEnergy() {
             //     normalize();
@@ -616,47 +582,11 @@ namespace Faunus {
             //
             // }
 
-            inline void _sample() override {
-                auto ulist = energyFunc();
-                double tot = std::accumulate(ulist.begin(), ulist.end(), 0.0);
-                uavg+=tot;
-                f << cnt*steps << sep << tot;
-                for (auto u : ulist)
-                    f << sep << u;
-                f << "\n";
-                //ehist(tot)++;
-            }
+            void _sample() override;
 
-            inline void _to_json(json &j) const override {
-                j = { {"file", file}, {"init",uinit}, {"final", energyFunc()} };
-                if (cnt>0)
-                    j["mean"] = uavg.avg();
-                _roundjson(j,5);
-                //normalize();
-                //ehist.save( "distofstates.dat" );
+            void _to_json(json &j) const override;
 
-            }
-
-            inline void _from_json(const json &j) override {
-                file = MPI::prefix + j.at("file").get<std::string>();
-                if (f)
-                    f.close();
-                f.open(file);
-                if (!f)
-                    throw std::runtime_error(name + ": cannot open output file " + file);
-                assert(!names.empty());
-                std::string suffix = file.substr(file.find_last_of(".") + 1);
-                if (suffix=="csv")
-                    sep=",";
-                else {
-                    sep=" ";
-                    f << "#";
-                }
-                f << "total";
-                for (auto &n : names)
-                    f << sep << n;
-                f << "\n";
-            }
+            void _from_json(const json &j) override;
 
             public:
             template<class Tspace>
@@ -684,12 +614,8 @@ namespace Faunus {
             private:
                 std::function<void(std::string)> writeFunc = nullptr;
                 std::string file;
-                inline void _to_json(json &j) const override {
-                    j["file"] = file;
-                }
-                void _sample() override {
-                    writeFunc(file);
-                }
+                void _to_json(json &j) const override;
+                void _sample() override;
             public:
                 template<class Tspace>
                     SaveState(const json &j, Tspace &spc) {
@@ -749,10 +675,7 @@ namespace Faunus {
                             throw std::runtime_error("unknown file extension for '"+file+"'");
                     }
 
-                ~SaveState() {
-                    if (steps==-1)
-                        _sample();
-                }
+                ~SaveState();
         };
 
         /**
@@ -771,50 +694,14 @@ namespace Faunus {
                 virtual void normalize();
             private:
 
-                inline void _from_json(const json &j) override {
-                    file = j.at("file");
-                    file2 = j.value("file2", file+".avg");
-                    name1 = j.at("name1");
-                    name2 = j.at("name2");
-                    dim = j.value("dim", 3);
-                    dr = j.value("dr", 0.1);
-                    hist.setResolution(dr);
-                    hist2.setResolution(dr);
-                    Rhypersphere = j.value("Rhyper", -1.0);
-                }
+                void _from_json(const json &j) override;
 
-                inline void _to_json(json &j) const override {
-                    j = {
-                        {"dr", dr}, {"name1", name1}, {"name2", name2}, {"file", file},
-                        {"file2", file2}, {"dim", dim}, {"Rhyper", Rhypersphere}
-                    };
-                }
+                void _to_json(json &j) const override;
 
             public:
-                inline PairFunctionBase(const json &j) { from_json(j); }
-
-                inline virtual ~PairFunctionBase() {
-                    normalize();
-                    hist.save( MPI::prefix + file );
-                }
+                PairFunctionBase(const json &j);
+                virtual ~PairFunctionBase();
         };
-
-        inline void PairFunctionBase::normalize() {
-            //assert(V.cnt>0);
-            double Vr=1, sum = hist.sumy();
-            for (auto &i : hist.getMap()) {
-                if (dim==3)
-                    Vr = 4 * pc::pi * std::pow(i.first,2) * dr;
-                if (dim==2) {
-                    Vr = 2 * pc::pi * i.first * dr;
-                    if ( Rhypersphere > 0)
-                        Vr = 2.0*pc::pi*Rhypersphere*std::sin(i.first/Rhypersphere) * dr;
-                }
-                if (dim==1)
-                    Vr = dr;
-                i.second = i.second/sum * V/Vr;
-            }
-        }
 
         /** @brief Atomic radial distribution function, g(r) */
         template<class Tspace>
@@ -928,27 +815,9 @@ namespace Faunus {
             std::function<void(double)> scaleVolume;
             Average<double> duexp; // < exp(-du/kT) >
 
-            void _sample() override {
-                if (fabs(dV)>1e-10) {
-                    double Vold = getVolume(), Uold = pot.energy(c);
-                    scaleVolume(Vold + dV);
-                    double Unew = pot.energy(c);
-                    scaleVolume(Vold);
-                    duexp += exp(-(Unew - Uold));
-                    assert(fabs(Uold - pot.energy(c)) < 1e-7);
-                }
-            }
-
-            void _from_json(const json &j) override { dV = j.at("dV"); }
-
-            void _to_json(json &j) const override {
-                double pex = log(duexp.avg()) / dV;
-                j = {
-                    {"dV", dV}, {"Pex/mM", pex/1.0_mM},
-                    {"Pex/Pa", pex/1.0_Pa}, {"Pex/kT/"+u8::angstrom+u8::cubed, pex}
-                };
-                _roundjson(j,5);
-            }
+            void _sample() override;
+            void _from_json(const json &j) override;
+            void _to_json(json &j) const override;
 
             public:
             template<class Tspace>

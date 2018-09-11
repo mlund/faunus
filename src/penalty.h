@@ -14,37 +14,18 @@ namespace Faunus {
          */
         struct ReactionCoordinateBase {
             std::function<double()> f=nullptr; // returns reaction coordinate
-            inline virtual void _to_json(json &j) const {};
-            inline virtual double normalize(double) const { return 1.; }
+            virtual void _to_json(json &j) const;
+            virtual double normalize(double) const;
             double binwidth=0, min=0, max=0;
             std::string name;
 
-            double operator()() {
-                assert(f!=nullptr);
-                return f();
-            } //!< Calculates reaction coordinate
+            double operator()(); //!< Calculates reaction coordinate
 
-            bool inRange(double coord) const {
-                return (coord>=min && coord<=max);
-            } //!< Determines if coordinate is within [min,max]
+            bool inRange(double coord) const; //!< Determines if coordinate is within [min,max]
         };
 
-        void to_json(json &j, const ReactionCoordinateBase &r) {
-            j = { {"range",{r.min,r.max}}, {"resolution",r.binwidth} };
-            r._to_json(j);
-        }
-
-        void from_json(const json &j, ReactionCoordinateBase &r) {
-            r.binwidth = j.value("resolution", 0.5);
-            auto range = j.value("range", std::vector<double>({0,0}));
-            if (range.size()==2)
-                if (range[0]<=range[1]) {
-                    r.min = range[0];
-                    r.max = range[1];
-                    return;
-                 }
-            throw std::runtime_error(r.name + ": 'range' require two numbers: [min, max>=min]");
-        }
+        void to_json(json &j, const ReactionCoordinateBase &r);
+        void from_json(const json &j, ReactionCoordinateBase &r);
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] ReactionCoordinateBase")
@@ -75,9 +56,7 @@ namespace Faunus {
                         if (f==nullptr)
                             throw std::runtime_error(name + ": unknown property '" + property + "'");
                     }
-                void _to_json(json &j) const override {
-                    j["property"] = property;
-                }
+                void _to_json(json &j) const override;
         };
 
         class AtomProperty : public ReactionCoordinateBase {
@@ -98,10 +77,7 @@ namespace Faunus {
                         if (f==nullptr)
                             throw std::runtime_error(name + ": unknown property '" + property + "'");
                     }
-                void _to_json(json &j) const override {
-                    j["property"] = property;
-                    j["index"] = index;
-                }
+                void _to_json(json &j) const override;
         };
 
         /**
@@ -140,18 +116,9 @@ namespace Faunus {
                         throw std::runtime_error(name + ": specify exactly two molecule indeces or two atom types");
                 }
 
-            double normalize(double coord) const override {
-                int dim=dir.sum();
-                if (dim==2) return 1/(2*pc::pi*coord);
-                if (dim==3) return 1/(4*pc::pi*coord*coord);
-                return 1.0;
-            } // normalize by volume element
+            double normalize(double coord) const override; // normalize by volume element
 
-            void _to_json(json &j) const override {
-                j["dir"] = dir;
-                j["index"] = index;
-                j["type"] = type;
-            }
+            void _to_json(json &j) const override;
         };
         /**
          * @brief Reaction coordinate: angle between principal axis and cartesian axis
@@ -186,10 +153,7 @@ namespace Faunus {
                     };
                 }
 
-            void _to_json(json &j) const override {
-                j["dir"] = dir;
-                j["index"] = index;
-            }
+            void _to_json(json &j) const override;
         };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

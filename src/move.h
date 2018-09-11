@@ -13,8 +13,8 @@ namespace Faunus {
         class Movebase {
             private:
                 virtual void _move(Change&)=0; //!< Perform move and modify change object
-                virtual void _accept(Change&) {}; //!< Call after move is accepted
-                virtual void _reject(Change&) {}; //!< Call after move is rejected
+                virtual void _accept(Change&); //!< Call after move is accepted
+                virtual void _reject(Change&); //!< Call after move is rejected
                 virtual void _to_json(json &j) const=0; //!< Extra info for report if needed
                 virtual void _from_json(const json &j)=0; //!< Extra info for report if needed
                 TimeRelativeOfTotal<std::chrono::microseconds> timer;
@@ -28,68 +28,16 @@ namespace Faunus {
                 std::string cite;      //!< Reference
                 int repeat=1;          //!< How many times the move should be repeated per sweep
 
-                inline void from_json(const json &j) {
-                    auto it = j.find("repeat");
-                    if (it!=j.end()) {
-                        if (it->is_number())
-                            repeat = it->get<double>();
-                        else
-                            if (it->is_string())
-                                if (it->get<std::string>()=="N")
-                                    repeat = -1;
-                    }
-                    _from_json(j);
-                    if (repeat<0)
-                        repeat=0;
-                }
-
-                inline void to_json(json &j) const {
-                    _to_json(j);
-                    j["relative time"] = timer.result();
-                    j["acceptance"] = double(accepted)/cnt;
-                    j["repeat"] = repeat;
-                    j["moves"] = cnt;
-                    if (!cite.empty())
-                        j["cite"] = cite;
-                    _roundjson(j, 3);
-                } //!< JSON report w. statistics, output etc.
-
-                inline void move(Change &change) {
-                    timer.start();
-                    cnt++;
-                    change.clear();
-                    _move(change);
-                    if (change.empty())
-                        timer.stop();
-                } //!< Perform move and modify given change object
-
-                inline void accept(Change &c) {
-                    accepted++;
-                    _accept(c);
-                    timer.stop();
-                }
-
-                inline void reject(Change &c) {
-                    rejected++;
-                    _reject(c);
-                    timer.stop();
-                }
-
-                inline virtual double bias(Change &c, double uold, double unew) {
-                    return 0; // du
-                } //!< adds extra energy change not captured by the Hamiltonian
+                void from_json(const json &j);
+                void to_json(json &j) const; //!< JSON report w. statistics, output etc.
+                void move(Change &change); //!< Perform move and modify given change object
+                void accept(Change &c);
+                void reject(Change &c);
+                virtual double bias(Change &c, double uold, double unew); //!< adds extra energy change not captured by the Hamiltonian
         };
 
-        Random Movebase::slump; // static instance of Random (shared for all moves)
-
-        inline void from_json(const json &j, Movebase &m) {
-            m.from_json( j );
-        } //!< Configure any move via json
-
-        inline void to_json(json &j, const Movebase &m) {
-            assert( !m.name.empty() );
-            m.to_json(j[m.name]);
-        }
+        void from_json(const json &j, Movebase &m); //!< Configure any move via json
+        void to_json(json &j, const Movebase &m);
 
         /**
          * @brief Swap the charge of a single atom
@@ -1261,10 +1209,8 @@ namespace Faunus {
                     if ( m.dNpart ) {
 
                         auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ALL);
-                        if ( size(mollist_n) > 1 )
-                            throw std::runtime_error("Bad definition: One group per atomic molecule!");
                         auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
-                        if ( size(mollist_o) > 1 )
+                        if ( size(mollist_n) > 1 || size(mollist_o) > 1 )
                             throw std::runtime_error("Bad definition: One group per atomic molecule!");
                         // Below is safe due to the catches above
                         // add consistency criteria with m.atoms.size() == N

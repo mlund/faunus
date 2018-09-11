@@ -268,10 +268,11 @@ namespace Faunus {
 
     template<class Tgeometry, class Tparticle>
         void to_json(json &j, Space<Tgeometry,Tparticle> &spc) {
+            typedef typename Space<Tgeometry,Tparticle>::Tpvec Tpvec;
             j["geometry"] = spc.geo;
             j["groups"] = spc.groups;
             j["particles"] = spc.p;
-            j["reactionlist"] = reactions<std::vector<Tparticle>>;
+            j["reactionlist"] = reactions<Tpvec>;
         } //!< Serialize Space to json object
 
     template<class Tgeometry, class Tparticletype>
@@ -284,8 +285,8 @@ namespace Faunus {
                     atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
                 if (molecules<Tpvec>.empty())
                     molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
-                if (j.count("reactionlist")>0)
-                    if (reactions<Tpvec>.empty())
+                if (reactions<Tpvec>.empty())
+                    if (j.count("reactionlist")>0)
                         reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
 
                 spc.clear();

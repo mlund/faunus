@@ -1245,12 +1245,14 @@ namespace Faunus {
      */
     template<typename Tspace>
         double Nchem( Tspace &spc_n, Tspace &spc_o, const Change &change) {
+            using Tpvec = typename Tspace::Tpvec;
             double NoverO=0;
             if ( change.dNpart ) {// Have the number of any molecules changed
                 for ( auto &m : change.groups ) {
                     int N_o = 0;
                     int N_n = 0;
-                    if ( !m.dNpart && !molecules<std::vector<typename Tspace::Tparticle>>[ spc_n.groups[m.index].id ].atomic) { // Molecular species
+                    if (!m.dNpart)
+                        if (!molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic) { // Molecular species
                         auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
                         auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
                         N_n=size(mollist_n);
@@ -1275,9 +1277,11 @@ namespace Faunus {
                     if (dN!=0) {
                         double V_n = spc_n.geo.getVolume();
                         double V_o = spc_o.geo.getVolume();
-                        double betamu = molecules<std::vector<typename Tspace::Tparticle>>[ spc_n.groups[m.index].id ].activity;
+                        double betamu = molecules<Tpvec>[ spc_n.groups[m.index].id ].activity;
 
-                        if (std::fabs(betamu) < 1e-20)
+                        // todo: add runtime error if activity <=0 ?
+
+                        if (betamu > 1e-20)
                             betamu = std::log( betamu / 1.0_molar );
 
                         if (dN>0)

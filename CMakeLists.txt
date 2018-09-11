@@ -220,6 +220,7 @@ set(hdrs
     )
 
 add_library(libfaunus STATIC ${objs} ${hdrs})
+add_dependencies(libfaunus modernjson doctest eigen range-v3 docopt xdrfile progressbar)
 
 add_executable(tests EXCLUDE_FROM_ALL src/tests.cpp ${hdrs})
 add_dependencies(tests modernjson doctest eigen range-v3)

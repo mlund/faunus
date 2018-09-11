@@ -4,7 +4,6 @@
 #include <limits>
 #include <vector>
 #include <map>
-#include <tuple>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -72,7 +71,6 @@ namespace Faunus {
 #endif
 
     json merge( const json &a, const json &b ); //!< Merge two json objects
-
     json openjson( const std::string &file ); //!< Read json file into json object (w. syntax check)
 
     double _round(double x, int n=3); //!< Round to n number of significant digits

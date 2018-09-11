@@ -5,7 +5,6 @@
 #include "core.h"
 #include "auxiliary.h"
 #include "tabulate.h"
-#include "multipole.h"
 
 namespace Faunus {
     namespace Potential {

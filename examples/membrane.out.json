@@ -137,7 +137,7 @@
     "acceptance": 0.411,
     "dV": 0.03,
     "method": "isochoric",
-    "moves": 1037,
+    "moves": 1000,
     "relative time": 0.188,
     "repeat": 1,
     "√⟨ΔV²⟩": 0.31,

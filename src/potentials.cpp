@@ -1,4 +1,5 @@
 #include "potentials.h"
+#include "multipole.h"
 
 void Faunus::Potential::RepulsionR3::from_json(const Faunus::json &j) {
     f = j.value("prefactor", 1.0);

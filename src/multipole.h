@@ -82,4 +82,3 @@ namespace Faunus {
 
     } // potential namespace
 } // faunus namespace
-

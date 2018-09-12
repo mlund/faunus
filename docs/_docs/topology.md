@@ -143,6 +143,4 @@ Available keywords:
 `reactionlist`  | Description
 --------------- | ---------------------------------------------------------------
 `lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log_{10}(K)$
-`canonic`       |
-`N`             |
 

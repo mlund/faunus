@@ -5,7 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <cstdio>
-#include "json.hpp"
+#include "core.h"
 
 #ifdef ENABLE_MPI
 #include <mpi.h>
@@ -70,56 +70,9 @@ namespace Faunus {
                 int _master=0;     //!< Rank number of the master
         };
 
-        static MPIController mpi;
+        void to_json(json&, const MPIController&);
 
-        /*!
-         * Besides initiating MPI, the current rank will be added to the global
-         * file I/O prefix, textio::prefix which is useful for saving rank specific
-         * data (parallel tempering, for example). The prefix format is
-         * \li \c "prefix + mpi%r." where \c \%r is the rank number.
-         */
-        //inline MPIController::MPIController(MPI_Comm c) : comm(MPI_COMM_WORLD), _master(0) {
-        inline MPIController::MPIController() {
-#ifdef ENABLE_MPI
-            MPI_Init(NULL,NULL);
-            MPI_Comm_size(comm, &_nproc);
-            MPI_Comm_rank(comm, &_rank);
-#endif
-            id=std::to_string(_rank);
-            if (_nproc>1) {
-                MPI::prefix = "mpi" + id + ".";
-                f.open((MPI::prefix+"stdout").c_str());
-            }
-        }
-
-        inline MPIController::~MPIController() {
-            f.close();
-#ifdef ENABLE_MPI
-            MPI_Finalize();
-#endif
-        }
-
-        inline std::ostream& MPIController::cout() {
-#ifdef ENABLE_MPI
-            if (_nproc>1)
-                return f;
-#endif
-            return std::cout;
-        }
-
-        inline int MPIController::nproc() const { return _nproc; }
-        inline int MPIController::rank() const { return _rank; }
-        inline int MPIController::rankMaster() const { return _master; }
-        inline bool MPIController::isMaster() const { return (_rank==_master); }
-
-        inline void to_json(json &j, const MPIController &m) {
-            j = {
-                {"rank", m.rank()},
-                {"nproc", m.nproc()},
-                {"prefix", MPI::prefix},
-                {"master", m.rankMaster()}
-            };
-        }
+        extern MPIController mpi;
 
 #ifdef ENABLE_MPI
 
@@ -144,11 +97,7 @@ namespace Faunus {
          * Each rank sends "local" to master who sums them up.
          * Master sends back (broadcasts) sum to all ranks.
          */
-        inline double reduceDouble(MPIController &mpi, double local) {
-            double sum;
-            MPI_Allreduce(&local,&sum,1,MPI_DOUBLE,MPI_SUM,mpi.comm);
-            return sum;
-        }
+        double reduceDouble(MPIController &mpi, double local);
 
         /*!
          * \brief Class for transmitting floating point arrays over MPI
@@ -222,46 +171,6 @@ namespace Faunus {
                     void pvec2buf(const Tpvec&); //!< Copy source particle vector to send buffer
                     void buf2pvec(Tpvec&);       //!< Copy receive buffer to target particle vector
             };
-
-        inline FloatTransmitter::FloatTransmitter() {
-            tag=0;
-        }
-
-        inline void FloatTransmitter::sendf(MPIController &mpi, std::vector<floatp> &src, int dst) {
-            MPI_Issend(&src[0], src.size(), MPI_DOUBLE, dst, tag, mpi.comm, &sendReq);
-        }
-
-        inline void FloatTransmitter::waitsend() {
-            MPI_Wait(&sendReq, &sendStat);
-        } 
-
-        inline void FloatTransmitter::recvf(MPIController &mpi, int src, std::vector<floatp> &dst) {
-            MPI_Irecv(&dst[0], dst.size(), MPI_DOUBLE, src, tag, mpi.comm, &recvReq);
-        }
-
-        inline void FloatTransmitter::waitrecv() {
-            MPI_Wait(&recvReq, &recvStat);
-        }
-
-        /**
-         * This will send a vector of floats and at the same time wait for the destination process
-         * to send back another vector of the same size.
-         * 
-         * @param mpi MPI controller to use
-         * @param src Vector to send
-         * @param dst Node to send/receive to/from
-         *
-         * @todo Use MPI_Sendrecv( sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount,
-         *       recvtype, source, recvtag, comm, &status);
-         */
-        inline std::vector<FloatTransmitter::floatp> FloatTransmitter::swapf(MPIController &mpi, std::vector<floatp> &src, int dst) {
-            std::vector<floatp> v( src.size() );
-            recvf(mpi, dst, v);
-            sendf(mpi, src, dst);
-            waitrecv();
-            waitsend();
-            return v;
-        }
 
         template<typename Tpvec>
             ParticleTransmitter<Tpvec>::ParticleTransmitter() { setFormat(XYZQI); }
@@ -395,6 +304,7 @@ namespace Faunus {
                 }
             }
 #endif
+
     } //end of mpi namespace
-    }//end of faunus namespace
+}//end of faunus namespace
 

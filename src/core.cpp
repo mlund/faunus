@@ -1,6 +1,5 @@
 #include "core.h"
 
-
 double Faunus::_round(double x, int n) {
     std::stringstream o;
     o << std::setprecision(n) << x;

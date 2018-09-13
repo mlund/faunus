@@ -54,6 +54,7 @@ namespace Faunus {
             };
         }
 
+#ifdef ENABLE_MPI
         double reduceDouble(MPIController &mpi, double local) {
             double sum;
             MPI_Allreduce(&local,&sum,1,MPI_DOUBLE,MPI_SUM,mpi.comm);
@@ -99,6 +100,7 @@ namespace Faunus {
             waitsend();
             return v;
         }
+#endif
 
         MPIController mpi; // Global instance of MPI controller
 

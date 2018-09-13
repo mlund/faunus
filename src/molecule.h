@@ -322,6 +322,7 @@ namespace Faunus {
                         }
                     }
 
+
                     // pass information to inserter
                     auto ins = RandomInserter<MoleculeData<std::vector<Tparticle,Talloc>>>();
                     ins.dir = a.insdir;

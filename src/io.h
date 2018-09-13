@@ -80,13 +80,16 @@ namespace Faunus {
             template<class Tparticle>
                 static Tparticle& s2p(const std::string &s, Tparticle &a) {
                     std::stringstream o;
-                    std::string name, num;
+                    std::string name;
                     double radius;
+                    int num;
                     o << s;
                     o >> name;
+                    auto it = findName( atoms<Tparticle>, name );
+                    if (it==atoms<Tparticle>.end())
+                        throw std::runtime_error("AAM load error: unknown atom name '" + name + "'.");
+                    a = it->p;
                     o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> a.mw >> radius;
-                    if (a.id==0)
-                        std::cerr << "Warning: Atom name " << name << " is not in the atom list.\n";
                     return a;
                 }
 
@@ -99,8 +102,10 @@ namespace Faunus {
                         IO::strip(v,"#");
                         unsigned int n=atoi(v[0].c_str());
                         target.resize(n);
-                        for (unsigned int i=1; i<=n; i++)
+                        for (unsigned int i=1; i<=n; i++) {
+                            assert(i<v.size());
                             s2p(v.at(i), target.at(i-1));
+                        }
                         return true;
                     }
                     return false;

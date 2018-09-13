@@ -38,33 +38,6 @@ void Faunus::from_json(const nlohmann::json &j, Faunus::Tensor &t) {
     t = Tensor(j[0],j[1],j[2],j[3],j[4],j[5]);
 }
 
-void Faunus::from_json(const Faunus::json &j, Faunus::Random &r) {
-    if (j.is_object()) {
-        auto seed = j.value("seed", std::string());
-        try {
-            if (seed=="default" || seed=="fixed")
-                return;
-            if (seed=="hardware")
-                r.engine = decltype(r.engine)(std::random_device()());
-            else if (!seed.empty()) {
-                std::stringstream s(seed);
-                s.exceptions( std::ios::badbit | std::ios::failbit );
-                s >> r.engine;
-            }
-        }
-        catch (std::exception &e) {
-            std::cerr << "error initializing random from json: " << e.what();
-            throw;
-        }
-    }
-}
-
-void Faunus::to_json(Faunus::json &j, const Faunus::Random &r) {
-    std::ostringstream o;
-    o << r.engine;
-    j["seed"] = o.str();
-}
-
 Faunus::Point Faunus::ranunit_neuman(Faunus::Random &rand) {
     double r2;
     Point p;
@@ -195,17 +168,6 @@ void Faunus::Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &)
 void Faunus::Cigar::to_json(Faunus::json &j) const {
     j["sclen"] = sclen;
     j["scdir"] = scdir;
-}
-
-void Faunus::Random::seed() { engine = std::mt19937(std::random_device()()); }
-
-Faunus::Random::Random() : dist01(0,1) {}
-
-double Faunus::Random::operator()() { return dist01(engine); }
-
-int Faunus::Random::range(int min, int max) {
-    std::uniform_int_distribution<int> d(min, max);
-    return d(engine);
 }
 
 std::string Faunus::u8::bracket(const std::string &s) {

@@ -85,6 +85,10 @@ moleculelist:
     - ...
 ~~~
 
+If the file given by `structure` contains charges or radii (i.e. pqr, aam files), this information
+is used over data from `atomlist`.
+
+
 ### Initial Configuration
 
 Upon starting a simulation, an initial configuration is required and must be

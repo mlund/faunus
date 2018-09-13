@@ -1,3 +1,4 @@
+#include "core.h"
 #include "move.h"
 
 namespace Faunus {

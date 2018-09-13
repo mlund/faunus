@@ -205,7 +205,9 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/move.cpp
     ${CMAKE_SOURCE_DIR}/src/mpi.cpp
     ${CMAKE_SOURCE_DIR}/src/penalty.cpp
-    ${CMAKE_SOURCE_DIR}/src/potentials.cpp)
+    ${CMAKE_SOURCE_DIR}/src/potentials.cpp
+    ${CMAKE_SOURCE_DIR}/src/random.cpp)
+
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 set(hdrs
@@ -223,6 +225,7 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/penalty.h
     ${CMAKE_SOURCE_DIR}/src/potentials.h
     ${CMAKE_SOURCE_DIR}/src/space.h
+    ${CMAKE_SOURCE_DIR}/src/random.h
     )
 
 add_library(libfaunus STATIC ${objs} ${hdrs})

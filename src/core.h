@@ -15,6 +15,7 @@
 #include <Eigen/Geometry>
 #include <json.hpp>
 #include <range/v3/all.hpp>
+#include "random.h"
 
 // Eigen<->JSON (de)serialization
 namespace Eigen {
@@ -234,73 +235,6 @@ namespace Faunus {
         CHECK( Q1(1,1) == Approx(4) );
         CHECK( Q1(1,2) == Approx(-2) );
         CHECK( Q1(2,2) == Approx(1) );
-    }
-#endif
-
-    /**
-     * Example code:
-     *
-     * ```{.cpp}
-     *     Random r1;                                     // default deterministic seed
-     *     Random r2 = json(r1);                          // copy engine state
-     *     Random r3 = R"( {"seed" : "hardware"} )"_json; // non-deterministic seed
-     *     Random r1.seed();                              // non-deterministic seed
-     * ```
-     */
-    struct Random {
-        std::mt19937 engine; //!< Random number engine used for all operations
-        std::uniform_real_distribution<double> dist01; //!< Uniform real distribution [0,1)
-
-        Random();
-        void seed();
-        double operator()(); //!< Double in uniform range [0,1)
-        int range(int, int); //!< Integer in uniform range [min:max]
-
-        template<class Titer>
-            Titer sample(const Titer &beg, const Titer &end)
-            {
-                auto i = beg;
-                std::advance(i, range(0, std::distance(beg, end) - 1));
-                return i;
-            } //!< Iterator to random element in container (std::vector, std::map, etc)
-    }; //!< Class for handling random number generation
-
-    void to_json(json&, const Random&);   //!< Random to json conversion
-    void from_json(const json&, Random&); //!< json to Random conversion
-
-    static Random random; // global instance of Random
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] Random")
-    {
-        Random slump; // local instance
-
-        CHECK( slump() == random() );
-
-        int min=10, max=0, N=1e6;
-        double x=0;
-        for (int i=0; i<N; i++) {
-            int j = slump.range(0,9);
-            if (j<min) min=j;
-            if (j>max) max=j;
-            x+=j;
-        }
-        CHECK( min==0 );
-        CHECK( max==9 );
-        CHECK( std::fabs(x/N) == doctest::Approx(4.5).epsilon(0.01) );
-
-        Random r1 = R"( {"seed" : "hardware"} )"_json; // non-deterministic seed
-        Random r2; // default is a deterministic seed
-        CHECK( r1() != r2() );
-        Random r3 = json(r1); // r1 --> json --> r3
-        CHECK( r1() == r3() );
-
-        // check if random_device works
-        Random a, b;
-        CHECK( a() == b() );
-        a.seed();
-        b.seed();
-        CHECK( a() != b() );
     }
 #endif
 
@@ -689,7 +623,7 @@ namespace Faunus {
                 double dp=0;       //!< Translational displacement parameter [angstrom]
                 double dprot=0;    //!< Rotational displacement parameter [degrees]
                 double mw=1;       //!< Weight
-                double sigma=0;    //!< Diamater for e.g Lennard-Jones etc. [angstrom]
+                double sigma=0;    //!< Diameter for e.g Lennard-Jones etc. [angstrom]
                 double tension=0;  //!< Surface tension [kT/Å^2]
                 double tfe=0;      //!< Transfer free energy [J/mol/angstrom^2/M]
                 int& id() { return p.id; } //!< Type id
@@ -726,7 +660,8 @@ namespace Faunus {
                 a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
                 a.mw       = val.value("mw", a.mw);
                 a.sigma    = val.value("sigma", 0.0) * 1.0_angstrom;
-                a.sigma    = 2*val.value("r", 0.5*a.sigma) * 1.0_angstrom;
+                if (fabs(a.sigma)<1e-20)
+                    a.sigma = 2.0*val.value("r", 0.0) * 1.0_angstrom;
                 a.tension  = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom);
                 a.tfe      = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom*1.0_molar);
             }

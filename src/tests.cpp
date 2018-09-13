@@ -3,6 +3,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "doctest.h"
+#include "random.h"
 #include "core.h"
 #include "mpi.h"
 #include "auxiliary.h"

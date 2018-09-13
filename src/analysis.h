@@ -1052,6 +1052,7 @@ namespace Faunus {
                             for (auto it=m.begin(); it!=m.end(); ++it)
                                 if (it->is_object())
                                     try {
+                                        size_t oldsize = this->vec.size();
                                         if (it.key()=="atomprofile") push_back<AtomProfile<Tspace>>(it.value(), spc);
                                         if (it.key()=="atomrdf") push_back<AtomRDF<Tspace>>(it.value(), spc);
                                         if (it.key()=="scatter") push_back<ScatteringFunction<Tspace>>(it.value(), spc);
@@ -1066,6 +1067,10 @@ namespace Faunus {
                                         if (it.key()=="widom") push_back<WidomInsertion<Tspace>>(it.value(), spc, pot);
                                         if (it.key()=="xtcfile") push_back<XTCtraj<Tspace>>(it.value(), spc);
                                         // additional analysis go here...
+ 
+                                        if (this->vec.size()==oldsize)
+                                            throw std::runtime_error("unknown analysis");
+
                                     } catch (std::exception &e) {
                                         throw std::runtime_error("Error adding analysis,\n\n\"" + it.key() + "\": "
                                                 + it->dump() + "\n\n: " + e.what() + "\n");

@@ -532,6 +532,24 @@ namespace Faunus {
 #endif
 
     /**
+     * @brief Generate reference view to data members in container
+     *
+     *     struct data { int N=0; };
+     *     std::vector<data> vec(2);               // original vector
+     *     auto Nvec = member_view(vec, &data::N); // ref. to all N's in vec
+     *     for (int &i : Nvec)                     // modify N values
+     *        i=1;
+     *     assert( vec[0].N == vec[1].N == 1 );    // original vector was changed
+     */
+    template<typename Container, typename Value, typename Member>
+        auto member_view(Container &p, Value Member::*m) {
+            std::vector<std::reference_wrapper<Value>> v;
+            v.reserve( p.size() );
+            std::transform(p.begin(), p.end(), std::back_inserter(v), [&](auto &i) -> Value& {return i.*m;});
+            return v;
+        }
+
+    /**
      * @brief Eigen::Map facade to data members in STL container
      *
      * No data is copied and modifications of the Eigen object
@@ -628,6 +646,7 @@ namespace Faunus {
                 double tfe=0;      //!< Transfer free energy [J/mol/angstrom^2/M]
                 int& id() { return p.id; } //!< Type id
                 const int& id() const { return p.id; } //!< Type id
+                bool hydrophobic=false;  //!< Is the particle hydrophobic?
         };
 
     template<class T>
@@ -643,6 +662,8 @@ namespace Faunus {
             _j["sigma"] = a.sigma / 1.0_angstrom;
             _j["tension"] = a.tension * 1.0_angstrom*1.0_angstrom / 1.0_kJmol;
             _j["tfe"] = a.tfe * 1.0_angstrom*1.0_angstrom * 1.0_molar / 1.0_kJmol;
+            if (a.hydrophobic)
+                _j["hydrophobic"] = a.hydrophobic;
         }
 
     template<class T>
@@ -664,6 +685,7 @@ namespace Faunus {
                     a.sigma = 2.0*val.value("r", 0.0) * 1.0_angstrom;
                 a.tension  = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom);
                 a.tfe      = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom*1.0_molar);
+                a.hydrophobic = val.value("hydrophobic", false);
             }
         }
 

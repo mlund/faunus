@@ -59,6 +59,12 @@ namespace Faunus {
 
     };
 
+    struct SpaceBase {
+        virtual Geometry::GeometryBase& getGeometry()=0;
+        virtual void clear()=0;
+        virtual void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC)=0;
+    };
+
     template<class Tgeometry, class Tparticletype>
         struct Space {
 

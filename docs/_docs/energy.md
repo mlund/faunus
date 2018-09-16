@@ -327,7 +327,7 @@ for $r < r_m$; infinity otherwise.
 `harmonic_torsion` | Harmonic torsion
 ------------------ | -------------------------------------------
 `k`                | Harmonic spring constant (kJ/mol/rad²)
-`aeq`              | Equilibrium angle α<sub>eq</sub> (deg)
+`aeq`              | Equilibrium angle $\alpha_\mathrm{eq}$ (deg)
 `index`            | Array with _exactly three_ indices (relative to molecule)
 
 $$
@@ -339,7 +339,7 @@ $$
 `g96_torsion`      | Cosine based torsion
 ------------------ | -------------------------------------------
 `k`                | Force constant (kJ/mol)
-`aeq`              | Equilibrium angle α<sub>eq</sub> (deg)
+`aeq`              | Equilibrium angle $\alpha_\mathrm{eq}$ (deg)
 `index`            | Array with _exactly three_ indices (relative to molecule)
 
 $$
@@ -352,7 +352,7 @@ $$
 ------------------- | -------------------------------------------
 `k`                 | Force constant (kJ/mol)
 `n`                 | Periodicity (multiplicity) of the dihedral (integer)
-`phi`               | Angle φ<sub>syn</sub> (deg)
+`phi`               | Angle $\phi_\mathrm{syn}$ (deg)
 `index`             | Array with _exactly four_ indices (relative to molecule)
 
 $$

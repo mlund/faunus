@@ -296,8 +296,8 @@ namespace Faunus {
         p[1].pos = {4,5,6};
 
         // iterate over positions and modify them
-        for (auto &i : g.positions() )
-            i *= 2;
+        for (Point &i : g.positions() )
+            i = 2*i;
         CHECK( p[1].pos.x() == doctest::Approx(8) );
         CHECK( p[1].pos.y() == doctest::Approx(10) );
         CHECK( p[1].pos.z() == doctest::Approx(12) );

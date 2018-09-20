@@ -90,6 +90,9 @@ namespace Faunus {
                         throw std::runtime_error("AAM load error: unknown atom name '" + name + "'.");
                     a = it->p;
                     o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> a.mw >> radius;
+                    if (fabs(it->sigma - 2*radius)>1e-20)
+                        std::cerr << "AAM file radius of " << name
+                            << " ignored. Using value from atom definition." << endl;
                     return a;
                 }
 
@@ -171,7 +174,10 @@ namespace Faunus {
                                     a = it->p;
                                     o >> rname >> ires
                                         >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
-                                    p.push_back(a);
+                                    if (fabs(it->sigma - 2*radius)>1e-20)
+                                        std::cerr << "PQR file radius of " << aname
+                                            << " ignored. Using value from atom definition." << endl;
+                                     p.push_back(a);
                                 } else if (key=="CRYST1")
                                     o >> len.x() >> len.y() >> len.z();
                         }

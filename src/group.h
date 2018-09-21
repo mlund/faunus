@@ -38,7 +38,7 @@ namespace Faunus {
             bool empty() const { return this->first==this->second; }
             void clear() { this->second = this->first; assert(empty()); }
             std::pair<int,int> to_index(T reference) {
-                return {std::distance(reference, begin()), std::distance(reference, end())};
+                return {std::distance(reference, begin()), std::distance(reference, end()-1)};
             } //!< Returns index pair relative to reference
         }; //!< Turns a pair of iterators into a range
 
@@ -128,7 +128,7 @@ namespace Faunus {
 
         auto ipair = r.to_index( v.begin() );
         CHECK( ipair.first == 0);
-        CHECK( ipair.second == 4);
+        CHECK( ipair.second == 3);
 
         r.activate( r.end(), r.end()+2 );
         CHECK( *(r.end()-2)==20); // activated elements can be retrieved from `end()-n`

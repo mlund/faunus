@@ -90,10 +90,11 @@ void Faunus::Geometry::from_json(const Faunus::json &j, Faunus::Geometry::Box &b
                 double l = m.get<double>();
                 b.setLength( {l,l,l} );
             }
-            else if (m.is_array()) {
-                Point len = m.get<Point>();
-                b.setLength( len );
-            }
+            else if (m.is_array())
+                if (m.size()==3) {
+                    Point len = m.get<Point>();
+                    b.setLength( len );
+                }
         }
         if (b.getVolume()<=0)
             throw std::runtime_error("box volume is zero or less");

@@ -486,6 +486,8 @@ namespace Faunus {
                         if (j.is_object())
                             if (j.count("bondlist")==1)
                                 inter = j["bondlist"].get<BondVector>();
+                        for (auto &i : inter) // set all energy functions
+                            Potential::setBondEnergyFunction( i, spc.p );
                     }
 
                     void to_json(json &j) const override {

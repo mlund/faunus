@@ -1,6 +1,5 @@
 #include "geometry.h"
 
-
 Faunus::Geometry::GeometryBase::GeometryBase() {
     using namespace std::placeholders;
     boundaryFunc = nullptr;//std::bind( &GeometryBase::boundary, this, _1);

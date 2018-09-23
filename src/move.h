@@ -339,6 +339,22 @@ namespace Faunus {
                     }
             };
 
+        /**
+         * @brief Sketch for MD move
+         */
+        template<typename Tspace>
+            class ForceMove : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    void _to_json(json &j) const {};
+                    void _from_json(const json &j) {};
+                    std::vector<Point> forces, velocities;
+                 public:
+                    ForceMove() {
+                        // resize forces and velocities to mathc spc.p
+                    }
+            }; // end of forcemove
+ 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] TranslateRotate")
         {
@@ -760,7 +776,7 @@ namespace Faunus {
             class Pivot : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
-                    std::vector<std::reference_wrapper<const Potential::BondData>> bonds;
+                    std::vector<std::shared_ptr<Potential::BondData>> bonds;
                     std::vector<int> index; // atom index to rotate
                     Tspace& spc;
                     std::string molname;
@@ -786,7 +802,7 @@ namespace Faunus {
                             throw std::runtime_error("unknown molecule '" + molname + "'");
                         molid = it->id();
                         bonds = Potential::filterBonds(
-                                molecules<Tpvec>[molid].bonds, Potential::BondData::harmonic);
+                                molecules<Tpvec>[molid].bonds, Potential::BondData::HARMONIC);
                         if (repeat<0) {
                             auto v = spc.findMolecules(molid);
                             repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
@@ -803,8 +819,8 @@ namespace Faunus {
                                 if (g->size()>2) { // must at least have three atoms
                                     auto b = slump.sample(bonds.begin(), bonds.end()); // random harmonic bond
                                     if (b != bonds.end()) {
-                                        int i1 = b->get().index.at(0);
-                                        int i2 = b->get().index.at(1);
+                                        int i1 = (*b)->index.at(0);
+                                        int i2 = (*b)->index.at(1);
                                         int offset = std::distance( spc.p.begin(), g->begin() );
 
                                         index.clear();

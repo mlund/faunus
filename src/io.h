@@ -5,7 +5,6 @@
 
 namespace Faunus {
 
-//    namespace Xtc {
 #ifndef __cplusplus
 #define __cplusplus
 #endif
@@ -14,8 +13,6 @@ namespace Faunus {
 #endif
 #include "xdrfile_trr.h"
 #include "xdrfile_xtc.h"
-
-//    }
 
     namespace IO {
 

@@ -2,6 +2,7 @@
 #include "core.h"
 #include "geometry.h"
 #include "group.h"
+#include "molecule.h"
 
 namespace Faunus {
 
@@ -323,7 +324,7 @@ namespace Faunus {
                                         Geometry::massCenter(i.begin(), i.end(), spc.geo.boundaryFunc, -i.cm) ) > 1e-9 )
                                 throw std::runtime_error("mass center mismatch");
             } catch(std::exception& e) {
-                throw std::runtime_error("Space construction from json error: "s + e.what());
+                throw std::runtime_error("Error while constructing Space from JSON"s + e.what());
             }
 
         } //!< Deserialize json object to Space

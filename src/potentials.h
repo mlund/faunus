@@ -325,7 +325,7 @@ namespace Faunus {
                                 m_neutral.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
                                 // titrating particles must be charged in the beginning
                                 m_charged.set(i.id(), j.id(), -lB/2 * ( pow(i.p.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
-                                        pow(j.p.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
+                                            pow(j.p.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
                             }
                         }
                     }
@@ -618,7 +618,7 @@ namespace Faunus {
                  {"B": { "q":-1.0, "r":2.0, "eps":0.05 }},
                  {"C": { "r":1.0 }} ]})"_json;
 
-                atoms<T> = j["atomlist"].get<decltype(atoms<T>)>();
+            atoms<T> = j["atomlist"].get<decltype(atoms<T>)>();
 
             FunctorPotential<T> u = R"(
                 {
@@ -635,7 +635,7 @@ namespace Faunus {
                  }
                 )"_json;
 
-                Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
+            Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
             WeeksChandlerAndersen<T> wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
             T a = atoms<T>[0].p;
@@ -653,15 +653,11 @@ namespace Faunus {
         /**
          * @brief Base class for bonded potentials
          *
-         * Check list for adding new bonded potential:
-         *
-         * 1. expand `Variant`
-         * 2. Create derived type and implement all pure virtual functions
-         * 3. expand `from_json(std::shared_ptr<BondData2>)`
-         * 4. expand `setBondEnergyFunction()`
+         * This stores data on the bond type; atom indices; json keywords;
+         * and potentially also the energy function (nullptr per default).
          */
-        struct BondData2 {
-            enum Variant {HARMONIC=0, FENE, YUKAWA, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
+        struct BondData {
+            enum Variant {HARMONIC=0, FENE, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
             std::vector<int> index;
             bool exclude=false;           //!< True if exclusion of non-bonded interaction should be attempted 
             bool keepelectrostatics=true; //!< If `exclude==true`, try to keep electrostatic interactions
@@ -672,221 +668,202 @@ namespace Faunus {
             virtual int numindex() const=0; //!< Required number of atom indices for bond
             virtual Variant type() const=0; //!< Returns bond type (sett `Variant` enum)
             virtual std::string name() const=0; //!< Name/key of bond type used in for json I/O
-            virtual std::shared_ptr<BondData2> clone() const=0; //!< Make shared pointer *copy* of data
-
-            inline bool hasEnergyFunction() const { return energy!=nullptr; } //!< test if energy function has been set
-
-            inline void shift( int offset ) {
-                for ( auto &i : index )
-                    i += offset;
-            } //!< Shift indices
-
+            virtual std::shared_ptr<BondData> clone() const=0; //!< Make shared pointer *copy* of data
+            bool hasEnergyFunction() const; //!< test if energy function has been set
+            void shift( int offset ); //!< Shift indices
         };
 
-       /**
+        /**
          * @brief Harmonic Bond
          */
-        class HarmonicBond : public BondData2 {
-            private:
-                double k=0, req=0;
-                int numindex() const override { return 2; }
-                Variant type() const override { return BondData2::HARMONIC; }
-                std::shared_ptr<BondData2> clone() const override { return std::make_shared<HarmonicBond>(*this); }
+        struct HarmonicBond : public BondData {
+            double k=0, req=0;
+            int numindex() const override;
+            Variant type() const override;
+            std::shared_ptr<BondData> clone() const override;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
+            std::string name() const override;
 
-                inline void from_json(const json &j) override {
-                    k = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
-                    req = j.at("req").get<double>() * 1.0_angstrom; // req
+            template<typename Tpvec>
+                void setEnergyFunction(const Tpvec &p) {
+                    energy = [&](Geometry::DistanceFunction dist) {
+                        double d = req - dist(p[index[0]].pos, p[index[1]].pos).norm();
+                        return k*d*d;
+                    };
                 }
-                inline void to_json(json &j) const override {
-                    j = { {"k", 2*k/1.0_kJmol*1.0_angstrom*1.0_angstrom},
-                        {"req", req/1.0_angstrom} };
-                }
-
-            public:
-                inline std::string name() const override { return "harmonic"; }
-
-                template<typename Tpvec>
-                    void setEnergyFunction(const Tpvec &p) {
-                        energy = [&](Geometry::DistanceFunction dist) {
-                            double d = req - dist(p[index[0]].pos, p[index[1]].pos).norm();
-                            return k*d*d;
-                        };
-                    }
         };
 
-       /**
+        /**
          * @brief FENE bond
          */
-        class FENEBond : public BondData2 {
-            private:
-                std::array<double,4> k = {0,0,0,0};
-                int numindex() const override { return 2; }
-                Variant type() const override { return BondData2::FENE; }
-                std::shared_ptr<BondData2> clone() const override { return std::make_shared<FENEBond>(*this); }
+        struct FENEBond : public BondData {
+            std::array<double,4> k = {0,0,0,0};
+            int numindex() const override;
+            Variant type() const override;
+            std::shared_ptr<BondData> clone() const override;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
+            std::string name() const override;
 
-                inline void from_json(const json &j) override {
-                    k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
-                    k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
-                    k[2] = j.at("eps").get<double>() * 1.0_kJmol;
-                    k[3] = std::pow( j.at("sigma").get<double>() * 1.0_angstrom, 2);
+            template<typename Tpvec>
+                void setEnergyFunction(const Tpvec &p) {
+                    energy = [&](Geometry::DistanceFunction dist) {
+                        double wca=0, d=dist( p[index[0]].pos, p[index[1]].pos ).squaredNorm();
+                        double x = k[3];
+                        if (d<=x*1.2599210498948732) {
+                            x = x/d;
+                            x = x*x*x;
+                            wca = k[2]*(x*x - x + 0.25);
+                        }
+                        return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
+                    };
                 }
-                inline void to_json(json &j) const override {
-                    j = {
-                        { "k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
-                        { "rmax", std::sqrt(k[1]) / 1.0_angstrom },
-                        { "eps", k[2] / 1.0_kJmol },
-                        { "sigma", std::sqrt(k[3]) / 1.0_angstrom } };
-                }
-            public:
-                inline std::string name() const override { return "fene"; }
-
-                template<typename Tpvec>
-                    void setEnergyFunction(const Tpvec &p) {
-                        energy = [&](Geometry::DistanceFunction dist) {
-                            double wca=0, d=dist( p[index[0]].pos, p[index[1]].pos ).squaredNorm();
-                            double x = k[3];
-                            if (d<=x*1.2599210498948732) {
-                                x = x/d;
-                                x = x*x*x;
-                                wca = k[2]*(x*x - x + 0.25);
-                            }
-                            return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
-                        };
-                    }
         }; // end of FENE
+
+        struct HarmonicTorsion : public BondData {
+            double k=0, aeq=0;
+            int numindex() const override;
+            std::shared_ptr<BondData> clone() const override;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
+            Variant type() const override;
+            std::string name() const override;
+
+            template<typename Tpvec>
+                void setEnergyFunction(const Tpvec &p) {
+                    energy = [&](Geometry::DistanceFunction dist) {
+                        Point ray1 = dist( p[index[0]].pos, p[index[1]].pos );
+                        Point ray2 = dist( p[index[2]].pos, p[index[1]].pos );
+                        double angle = std::acos(ray1.dot(ray2)/ray1.norm()/ray2.norm());
+                        return 0.5 * k * (angle - aeq) * (angle - aeq);
+                    };
+                }
+        }; // end of HarmonicTorsion
+
+        struct GromosTorsion : public BondData {
+            double k=0, aeq=0;
+            int numindex() const override;
+            std::shared_ptr<BondData> clone() const override;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
+            Variant type() const override;
+            std::string name() const override;
+
+            template<typename Tpvec>
+                void setEnergyFunction(const Tpvec &p) {
+                    energy = [&](Geometry::DistanceFunction dist) {
+                        Point ray1 = dist( p[index[0]].pos, p[index[1]].pos );
+                        Point ray2 = dist( p[index[2]].pos, p[index[1]].pos );
+                        double dangle = aeq-std::acos(ray1.dot(ray2)/ray1.norm()/ray2.norm());
+                        return k * dangle * dangle;
+                    };
+                }
+        }; // end of GromosTorsion
+
+        struct PeriodicDihedral : public BondData {
+            std::array<double,3> k;
+            int numindex() const override;
+            std::shared_ptr<BondData> clone() const override;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
+            Variant type() const override;
+            std::string name() const override;
+
+            template<typename Tpvec>
+                void setEnergyFunction(const Tpvec &p) {
+                    energy = [&](Geometry::DistanceFunction dist) {
+                        Point vec1 = dist( p[index[1]].pos, p[index[0]].pos );
+                        Point vec2 = dist( p[index[2]].pos, p[index[1]].pos );
+                        Point vec3 = dist( p[index[3]].pos, p[index[2]].pos );
+                        Point norm1 = vec1.cross(vec2);
+                        Point norm2 = vec2.cross(vec3);
+                        // atan2( [v1×v2]×[v2×v3]⋅[v2/|v2|], [v1×v2]⋅[v2×v3] )
+                        double angle = atan2((norm1.cross(norm2)).dot(vec2)/vec2.norm(), norm1.dot(norm2));
+                        return k[0] * (1 + cos(k[1]*angle - k[2]));
+                    };
+                }
+        }; // end of PeriodicDihedral
 
         /*
          * Serialize to/from json
          */
 
-        void to_json(json &j, const std::shared_ptr<BondData2> &b);
-        void from_json(const json &j, std::shared_ptr<BondData2> &b);
+        void to_json(json &j, const std::shared_ptr<BondData> &b);
+        void from_json(const json &j, std::shared_ptr<BondData> &b);
 
         template<typename Tpvec>
-            void setBondEnergyFunction(std::shared_ptr<BondData2> &b, const Tpvec &p) {
-                if (b->type()==BondData2::HARMONIC)
+            void setBondEnergyFunction(std::shared_ptr<BondData> &b, const Tpvec &p) {
+                if (b->type()==BondData::HARMONIC)
                     std::dynamic_pointer_cast<HarmonicBond>(b)->setEnergyFunction(p);
-                else if (b->type()==BondData2::FENE)
+                else if (b->type()==BondData::FENE)
                     std::dynamic_pointer_cast<FENEBond>(b)->setEnergyFunction(p);
                 else {
                     assert(false); // we should never reach here
                 }
-            } //!< Set the bond energy function of `BondData2` which require a reference to the particle vector
+            } //!< Set the bond energy function of `BondData` which require a reference to the particle vector
 
-        /*
-         * @todo Migrate all bond type to BondData2 and remove
-         */
-        struct BondData {
-            enum Variant {harmonic, fene, yukawa, harmonic_torsion, g96_torsion, periodic_dihedral, none};
-            Variant type=none;
-            std::vector<int> index;
-            std::vector<double> k;
-
-            void shift( int offset ); // shift index
-
-            template<class Tpvec>
-                double energy(const Tpvec &p, Geometry::DistanceFunction dist) const {
-                    double d, wca, x, zz;
-                    switch (type) {
-                        case BondData::harmonic:
-                            d = k[1] - dist(p[index[0]].pos, p[index[1]].pos).norm();
-                            return 0.5 * k[0]*d*d;
-                        case BondData::fene:
-                            d = dist( p[index[0]].pos, p[index[1]].pos ).squaredNorm();
-                            wca = 0;
-                            x = k[3];
-                            if (d<=x*1.2599210498948732) {
-                                x = x/d;
-                                x = x*x*x;
-                                wca = k[2]*(x*x - x + 0.25);
-                            }
-                            return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
-                        case BondData::yukawa:
-                            d = dist( p[index[0]].pos, p[index[1]].pos ).norm();
-                            zz = p[index[0]].charge*p[index[1]].charge;
-                            if (zz>1e-5)
-                                return zz*k[0]*exp(-d/k[1])/d;
-                            else
-                                return 0;
-
-                        case BondData::harmonic_torsion:
-                        {
-                            const auto &ray1 = dist( p[index[0]].pos, p[index[1]].pos );
-                            const auto &ray2 = dist( p[index[2]].pos, p[index[1]].pos );
-                            double angle = acos(ray1.dot(ray2)/ray1.norm()/ray2.norm());
-                            return 0.5 * k[0] * (angle - k[1]) * (angle - k[1]);
-                        }
-
-                        case BondData::g96_torsion:
-                        {
-                            const auto &ray1 = dist( p[index[0]].pos, p[index[1]].pos );
-                            const auto &ray2 = dist( p[index[2]].pos, p[index[1]].pos );
-                            double cos_angle = ray1.dot(ray2)/ray1.norm()/ray2.norm();
-                            return 0.5 * k[0] * (cos_angle - k[1]) * (cos_angle - k[1]);
-                        }
-
-                        case BondData::periodic_dihedral:
-                        {
-                            const auto &vec1 = dist( p[index[1]].pos, p[index[0]].pos );
-                            const auto &vec2 = dist( p[index[2]].pos, p[index[1]].pos );
-                            const auto &vec3 = dist( p[index[3]].pos, p[index[2]].pos );
-                            const auto &norm1 = vec1.cross(vec2);
-                            const auto &norm2 = vec2.cross(vec3);
-                            // atan2( [v1×v2]×[v2×v3]⋅[v2/|v2|], [v1×v2]⋅[v2×v3] )
-                            double angle = atan2((norm1.cross(norm2)).dot(vec2)/vec2.norm(), norm1.dot(norm2));
-                            return k[0] * (1 + cos(k[1]*angle - k[2]));
-                        }
-                        default: break;
-                    }
-                    assert(!"not implemented");
-                    return 0;
-                }
-        }; //!< Harmonic and angular potentials for bonded interactions
-
-        void to_json(json &j, const BondData &b);
-        void from_json(const json &j, BondData &b);
-
-        inline auto filterBonds(const std::vector<BondData> &bonds, BondData::Variant bondtype) {
-            std::vector<std::reference_wrapper<const BondData>> filt;
+        inline auto filterBonds(const std::vector<std::shared_ptr<BondData>> &bonds, BondData::Variant bondtype) {
+            std::vector<std::shared_ptr<BondData>> filt;
             filt.reserve(bonds.size());
             std::copy_if(bonds.begin(), bonds.end(), std::back_inserter(filt),
-                         [bondtype](const auto &d){return d.type==bondtype;} );
+                    [bondtype](const auto &d){return d->type()==bondtype;} );
             return filt;
         } //!< Filter bond container for matching bond type and return _reference_ to original
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] BondData")
         {
-            BondData b;
+            std::shared_ptr<BondData> b;
+
+            // exact match required
+            CHECK_THROWS( b = R"({ "harmoNIC": {"index":[2,3], "k":0.5, "req":2.1}} )"_json; );
 
             // test harmonic
-            json j = R"( {"harmonic" : { "index":[2,3], "k":0.5, "req":2.1} } )"_json;
-            b = j;
-            CHECK( j == json(b) );
-            CHECK_THROWS( b = R"( {"harmonic" : { "index":[2], "k":0.5, "req":2.1} } )"_json );
-            CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "req":2.1} } )"_json );
-            CHECK_THROWS( b = R"( {"harmonic" : { "index":[2,3], "k":2.1} } )"_json );
+            SUBCASE("HarmonicBond") {
+                json j = R"({ "harmonic": {"index":[2,3], "k":0.5, "req":2.1}} )"_json;
+                b = j;
+                CHECK( j == json(b) );
+                CHECK_THROWS( b = R"({"harmonic": { "index":[2], "k":0.5, "req":2.1}} )"_json );
+                CHECK_THROWS( b = R"({"harmonic": { "index":[2,3], "req":2.1}} )"_json );
+                CHECK_THROWS( b = R"({"harmonic": { "index":[2,3], "k":2.1}} )"_json );
+            }
 
             // test fene
-            j = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 } } )"_json;
-            b = j;
-            CHECK( j == json(b) );
-            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3,4], "k":1, "rmax":2.1} } )"_json );
-            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "rmax":2.1} } )"_json );
-            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1} } )"_json );
-            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48} } )"_json );
-            CHECK_THROWS( b = R"( {"fene" : { "index":[2,3], "k":1, "rmax":2.1, "sigma":2} } )"_json );
+            SUBCASE("FENEBond") {
+                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 }} )"_json;
+                b = j;
+                CHECK( j == json(b) );
+                CHECK_THROWS( b = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1}} )"_json );
+                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "rmax":2.1}} )"_json );
+                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1}} )"_json );
+                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json );
+                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "sigma":2}} )"_json );
+                j = json::object();
+                CHECK_THROWS( b = j );
+            }
 
-            CHECK_THROWS( b = R"( {"unknown" : { "index":[2,3], "k":2.1, "req":1.0} } )"_json );
-            j = json::object();
-            CHECK_THROWS( b = j );
+            // test harmonic
+            SUBCASE("HarmonicTorsion") {
+                json j = R"({ "harmonic_torsion": {"index":[0,1,2], "k":0.5, "aeq":60}} )"_json;
+                b = j;
+                CHECK( j == json(b) );
+                CHECK_THROWS( b = R"({"harmonic_torsion": { "index":[2], "k":0.5, "aeq":2.1}} )"_json );
+                CHECK_THROWS( b = R"({"harmonic_torsion": { "index":[0,1,2], "aeq":2.1}} )"_json );
+                CHECK_THROWS( b = R"({"harmonic_torsion": { "index":[0,1,3], "k":2.1}} )"_json );
+            }
 
-            BondData b2 = R"( {"harmonic" : { "index":[2,3], "k":0.5, "req":2.1} } )"_json;
-            std::vector<BondData> bonds = {b,b2};
-            auto filt = filterBonds(bonds, BondData::harmonic);
-            CHECK( filt.size() == 1 );
-            CHECK( filt[0].get().type == BondData::harmonic);
-            CHECK( &filt[0].get() == &bonds[1] ); // filt should contain references to bonds
+            // test bond filter
+            SUBCASE("filterBonds()") {
+                std::vector<std::shared_ptr<BondData>> bonds = {
+                    R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 }} )"_json,
+                    R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1} } )"_json
+                };
+                auto filt = filterBonds(bonds, BondData::HARMONIC);
+                CHECK( filt.size() == 1 );
+                CHECK( filt[0]->type() == BondData::HARMONIC);
+                CHECK( filt[0] == bonds[1] ); // filt should contain references to bonds
+            }
         }
 #endif
 

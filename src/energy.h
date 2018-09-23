@@ -451,7 +451,7 @@ namespace Faunus {
                 private:
                     Tspace& spc;
                     typedef typename Tspace::Tpvec Tpvec;
-                    typedef std::vector<std::shared_ptr<Potential::BondData2>> BondVector;
+                    typedef std::vector<std::shared_ptr<Potential::BondData>> BondVector;
                     BondVector inter;  // inter-molecular bonds
                     std::map<int,BondVector> intra; // intra-molecular bonds
 
@@ -461,7 +461,7 @@ namespace Faunus {
                         for (size_t i=0; i<spc.groups.size(); i++) {
                             if (!spc.groups.empty()) {
                                 auto &g = spc.groups[i];
-                                for (auto &b : molecules<Tpvec>.at(g.id).bonds2) {
+                                for (auto &b : molecules<Tpvec>.at(g.id).bonds) {
                                     intra[i].push_back( b->clone() ); // deep copy BondData from MoleculeData
                                     intra[i].back()->shift( std::distance(spc.p.begin(), g.begin()) );
                                     Potential::setBondEnergyFunction( intra[i].back(), spc.p );

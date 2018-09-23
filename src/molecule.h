@@ -4,9 +4,10 @@
 #include "core.h"
 #include "io.h"
 #include "geometry.h"
-#include "potentials.h"
 
 namespace Faunus {
+
+    namespace Potential { class BondData; }
 
     /**
      * @brief Random position and orientation - typical for rigid bodies
@@ -137,8 +138,7 @@ namespace Faunus {
                 Point insdir = {1,1,1};    //!< Insertion directions
                 Point insoffset = {0,0,0}; //!< Insertion offset
 
-                std::vector<std::shared_ptr<Potential::BondData2>> bonds2;
-                std::vector<Potential::BondData> bonds;
+                std::vector<std::shared_ptr<Potential::BondData>> bonds;
                 std::vector<int> atoms;    //!< Sequence of atoms in molecule (atom id's)
                 std::vector<Tpvec> conformations;           //!< Conformations of molecule
                 std::discrete_distribution<> confDist;      //!< Weight of conformations
@@ -272,8 +272,7 @@ namespace Faunus {
                     a.keeppos = val.value("keeppos", a.keeppos);
                     a.atomic = val.value("atomic", a.atomic);
                     a.insdir = val.value("insdir", a.insdir);
-                    a.bonds = val.value("bondlist", a.bonds);
-                    a.bonds2 = val.value("bondlist", a.bonds2);
+                    a.bonds  = val.value("bondlist", a.bonds);
                     a.id() = val.value("id", a.id());
 
                     if (a.atomic) {
@@ -332,7 +331,7 @@ namespace Faunus {
 
                     // assert that all bonds are *internal*
                     for (auto &bond : a.bonds)
-                        for (int i : bond.index)
+                        for (int i : bond->index)
                             if (i>=a.atoms.size() || i<0)
                                 throw std::runtime_error("bonded atom index " + std::to_string(i) + " out of range");
                 }

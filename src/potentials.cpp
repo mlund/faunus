@@ -205,21 +205,23 @@ void Faunus::Potential::from_json(const Faunus::json &j, Faunus::Potential::Pair
     base.from_json(j);
 }
 
-void Faunus::Potential::to_json(Faunus::json &j, const std::shared_ptr<Faunus::Potential::BondData2> &b) {
+void Faunus::Potential::to_json(Faunus::json &j, const std::shared_ptr<Faunus::Potential::BondData> &b) {
     json val;
     b->to_json(val);
     val["index"] = b->index;
     j = {{ b->name(), val }};
 }
 
-void Faunus::Potential::from_json(const Faunus::json &j, std::shared_ptr<Faunus::Potential::BondData2> &b) {
+void Faunus::Potential::from_json(const Faunus::json &j, std::shared_ptr<Faunus::Potential::BondData> &b) {
     if (j.is_object())
         if (j.size()==1) {
             auto& key = j.begin().key();
             auto& val = j.begin().value();
             if ( key==HarmonicBond().name() )  b = std::make_shared<HarmonicBond>();
             else if ( key==FENEBond().name() ) b = std::make_shared<FENEBond>();
-                // else if ...
+            else if ( key==HarmonicTorsion().name() ) b = std::make_shared<HarmonicTorsion>();
+            else if ( key==GromosTorsion().name() ) b = std::make_shared<GromosTorsion>();
+            else if ( key==PeriodicDihedral().name() ) b = std::make_shared<PeriodicDihedral>();
             else
                 throw std::runtime_error("unknown bond type: " + key);
             b->from_json( val );
@@ -231,126 +233,119 @@ void Faunus::Potential::from_json(const Faunus::json &j, std::shared_ptr<Faunus:
     throw std::runtime_error("invalid bond data");
 }
 
-void Faunus::Potential::to_json(Faunus::json &j, const Faunus::Potential::BondData &b) {
-    switch(b.type) {
-        case BondData::harmonic:
-            j["harmonic"] = {
-                    { "index", b.index },
-                    { "k", b.k[0] / 1.0_kJmol * std::pow(1.0_angstrom, 2) },
-                    { "req", b.k[1] / 1.0_angstrom } };
-            break;
-        case BondData::fene:
-            j["fene"] = {
-                    { "index", b.index },
-                    { "k", b.k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
-                    { "rmax", std::sqrt(b.k[1]) / 1.0_angstrom },
-                    { "eps", b.k[2] / 1.0_kJmol },
-                    { "sigma", std::sqrt(b.k[3]) / 1.0_angstrom } };
-            break;
-        case BondData::yukawa:
-            j["yukawa"] = {
-                    { "index", b.index },
-                    { "bjerrumlength", b.k[0] / 1.0_angstrom },
-                    { "debyelength", b.k[1] / 1.0_angstrom } };
-        case BondData::harmonic_torsion:
-            j["harmonic_torsion"] = {
-                    { "index", b.index },
-                    { "k", b.k[0] / (1.0_kJmol / std::pow(1.0_rad, 2)) },
-                    { "aeq", b.k[1] / 1.0_deg }};
-            break;
-        case BondData::g96_torsion:
-            j["g96_torsion"] = {
-                    { "index", b.index },
-                    { "k", b.k[0] / 1.0_kJmol },
-                    { "aeq", acos(b.k[1]) / 1.0_deg }};
-            break;
-        case BondData::periodic_dihedral:
-            j["periodic_dihedral"] = {
-                    { "index", b.index },
-                    { "k", b.k[0] / 1.0_kJmol },
-                    { "n", b.k[1] },
-                    { "phi", b.k[2] / 1.0_deg }};
-            break;
-        default: break;
-    }
-}
-
-void Faunus::Potential::from_json(const Faunus::json &j, Faunus::Potential::BondData &b) {
-    if (j.is_object())
-        if (j.size()==1) {
-            std::string t = j.begin().key();
-            auto& val = j.begin().value();
-            if (t=="harmonic") {
-                b.type = BondData::harmonic;
-                b.index = val.at("index").get<decltype(b.index)>();
-                if (b.index.size()!=2)
-                    throw std::runtime_error("harmonic bond requires exactly two indeces");
-                b.k.resize(2);
-                b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
-                b.k[1] = val.at("req").get<double>() * 1.0_angstrom; // req
-                return;
-            }
-            if (t=="fene") {
-                b.type = BondData::fene;
-                b.index = val.at("index").get<decltype(b.index)>();
-                if (b.index.size()!=2)
-                    throw std::runtime_error("FENE bond requires exactly two indeces");
-                b.k.resize(4);
-                b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2); // k
-                b.k[1] = std::pow( val.at("rmax").get<double>() * 1.0_angstrom, 2); // rmax^2
-                b.k[2] = val.at("eps").get<double>() * 1.0_kJmol; // epsilon wca
-                b.k[3] = std::pow( val.at("sigma").get<double>() * 1.0_angstrom, 2); // sigma^2 wca
-                return;
-            }
-            if (t=="yukawa") {
-                b.type = BondData::yukawa;
-                b.index = val.at("index").get<decltype(b.index)>();
-                if (b.index.size()!=2)
-                    throw std::runtime_error("yukawa requires exactly two indeces");
-                b.k.resize(2);
-                b.k[0] = pc::lB(val.at("epsr").get<double>()) * 1.0_angstrom; // bjerrum length
-                b.k[1] = val.at("debyelength").get<double>() * 1.0_angstrom; // debye length
-                return;
-            }
-            if (t=="harmonic_torsion") {
-                b.type = BondData::harmonic_torsion;
-                b.index = val.at("index").get<decltype(b.index)>();
-                if (b.index.size()!=3)
-                    throw std::runtime_error("Harmonic torsion requires exactly three indeces");
-                b.k.resize(2);
-                b.k[0] = val.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_rad, 2); // k
-                b.k[1] = val.at("aeq").get<double>() * 1.0_deg; // angle
-                return;
-            }
-            if (t=="g96_torsion") {
-                b.type = BondData::g96_torsion;
-                b.index = val.at("index").get<decltype(b.index)>();
-                if (b.index.size()!=3)
-                    throw std::runtime_error("G96 torsion requires exactly three indeces");
-                b.k.resize(2);
-                b.k[0] = val.at("k").get<double>() * 1.0_kJmol; // k
-                b.k[1] = cos(val.at("aeq").get<double>() * 1.0_deg); // cos(angle)
-                return;
-            }
-            if (t=="periodic_dihedral") {
-                b.type = BondData::periodic_dihedral;
-                b.index = val.at("index").get<decltype(b.index)>();
-                if (b.index.size()!=4)
-                    throw std::runtime_error("Periodic dihedral requires exactly four indeces");
-                b.k.resize(3);
-                b.k[0] = val.at("k").get<double>() * 1.0_kJmol; // k
-                b.k[1] = val.at("n").get<double>(); // multiplicity/periodicity n
-                b.k[2] = val.at("phi").get<double>() * 1.0_deg; // angle
-                return;
-            }
-            if (b.type==BondData::none)
-                throw std::runtime_error("unknown bondtype: " + t);
-            else return;
-        }
-    throw std::runtime_error("error parsing json to bond");
-}
-
 void Faunus::Potential::BondData::shift(int offset) {
     for ( auto &i : index )
         i += offset;
 }
+
+bool Faunus::Potential::BondData::hasEnergyFunction() const { return energy!=nullptr; }
+
+void Faunus::Potential::HarmonicBond::from_json(const Faunus::json &j) {
+    k = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
+    req = j.at("req").get<double>() * 1.0_angstrom; // req
+}
+
+void Faunus::Potential::HarmonicBond::to_json(Faunus::json &j) const {
+    j = { {"k", 2*k/1.0_kJmol*1.0_angstrom*1.0_angstrom},
+        {"req", req/1.0_angstrom} };
+}
+
+std::string Faunus::Potential::HarmonicBond::name() const { return "harmonic"; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::HarmonicBond::clone() const { return std::make_shared<HarmonicBond>(*this); }
+
+int Faunus::Potential::HarmonicBond::numindex() const { return 2; }
+
+Faunus::Potential::BondData::Variant Faunus::Potential::HarmonicBond::type() const { return BondData::HARMONIC; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::FENEBond::clone() const { return std::make_shared<FENEBond>(*this); }
+
+int Faunus::Potential::FENEBond::numindex() const { return 2; }
+
+Faunus::Potential::BondData::Variant Faunus::Potential::FENEBond::type() const { return BondData::FENE; }
+
+void Faunus::Potential::FENEBond::from_json(const Faunus::json &j) {
+    k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
+    k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
+    k[2] = j.at("eps").get<double>() * 1.0_kJmol;
+    k[3] = std::pow( j.at("sigma").get<double>() * 1.0_angstrom, 2);
+}
+
+void Faunus::Potential::FENEBond::to_json(Faunus::json &j) const {
+    j = {
+        { "k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
+        { "rmax", std::sqrt(k[1]) / 1.0_angstrom },
+        { "eps", k[2] / 1.0_kJmol },
+        { "sigma", std::sqrt(k[3]) / 1.0_angstrom } };
+}
+
+std::string Faunus::Potential::FENEBond::name() const { return "fene"; }
+
+int Faunus::Potential::HarmonicTorsion::numindex() const { return 3; }
+
+void Faunus::Potential::HarmonicTorsion::from_json(const Faunus::json &j) {
+    k = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_rad, 2);
+    aeq = j.at("aeq").get<double>() * 1.0_deg;
+}
+
+void Faunus::Potential::HarmonicTorsion::to_json(Faunus::json &j) const {
+    j = {
+        {"k",  k / (1.0_kJmol / std::pow(1.0_rad, 2))},
+        {"aeq",aeq / 1.0_deg}
+    };
+    _roundjson(j, 6);
+}
+
+Faunus::Potential::BondData::Variant Faunus::Potential::HarmonicTorsion::type() const { return BondData::HARMONIC_TORSION; }
+
+std::string Faunus::Potential::HarmonicTorsion::name() const { return "harmonic_torsion"; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::HarmonicTorsion::clone() const {
+    return std::make_shared<HarmonicTorsion>(*this);
+}
+
+int Faunus::Potential::GromosTorsion::numindex() const { return 3; }
+
+void Faunus::Potential::GromosTorsion::from_json(const Faunus::json &j) {
+    k = j.at("k").get<double>() * 0.5 * 1.0_kJmol; // k
+    aeq = cos(j.at("aeq").get<double>() * 1.0_deg); // cos(angle)
+}
+
+void Faunus::Potential::GromosTorsion::to_json(Faunus::json &j) const {
+    j = {
+        { "k", 2.0*k/1.0_kJmol },
+        { "aeq", std::acos(aeq)/1.0_deg }
+    };
+}
+
+Faunus::Potential::BondData::Variant Faunus::Potential::GromosTorsion::type() const { return BondData::G96_TORSION; }
+
+std::string Faunus::Potential::GromosTorsion::name() const { return "gromos_torsion"; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::GromosTorsion::clone() const {
+    return std::make_shared<GromosTorsion>(*this);
+}
+
+int Faunus::Potential::PeriodicDihedral::numindex() const { return 4; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::PeriodicDihedral::clone() const {
+    return std::make_shared<PeriodicDihedral>(*this);
+}
+
+void Faunus::Potential::PeriodicDihedral::from_json(const Faunus::json &j) {
+    k[0] = j.at("k").get<double>() * 1.0_kJmol; // k
+    k[1] = j.at("n").get<double>(); // multiplicity/periodicity n
+    k[2] = j.at("phi").get<double>() * 1.0_deg; // angle
+}
+
+void Faunus::Potential::PeriodicDihedral::to_json(Faunus::json &j) const {
+    j = {
+        { "k", k[0] / 1.0_kJmol },
+        { "n", k[1] },
+        { "phi", k[2] / 1.0_deg }
+    };
+}
+
+Faunus::Potential::BondData::Variant Faunus::Potential::PeriodicDihedral::type() const { return BondData::PERIODIC_DIHEDRAL; }
+
+std::string Faunus::Potential::PeriodicDihedral::name() const { return "periodic_dihedral"; }

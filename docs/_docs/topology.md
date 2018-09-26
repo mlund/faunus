@@ -12,6 +12,44 @@ MathJax.Hub.Config({
 
 The topology describes atomic and molecular properties as well as processes and reactions.
 
+## Global Properties
+
+The following keywords control temperature, simulation box size etc., and must be
+placed outer-most in the input file.
+
+### System Temperature
+
+-------------- | -----------------------
+`temperature`  | Temperature [K]
+
+### Simulation Container
+
+If a single number is given, a cube is generated, while an array
+of size three is used to set different side-lengths.
+
+`geometry`     | Description
+-------------- | -----------------------------------------------------
+`length`       | Cuboidal side-length(s) [Å] (float or array with $L_x, L_y, L_z$)
+
+### Number of Monte Carlo Loops
+
+The total number of MC steps is `macro` x `micro`.
+
+`mcloop`       | Description
+-------------- | ---------------------
+`macro`        | Number of macro loops (integer)
+`micro`        | Number of micro loops (integer)
+
+### Random Number Generator
+
+By default a deterministic sequence is generated, while
+the `hardware` seed attempts to use a hardware seed to provide
+a _non-deterministric_ sequence.
+
+`random`       | Description 
+-------------- | -----------------------------
+`seed`         | `fixed` (default) or `hardware`
+
 ## Atom Properties
 
 Atoms are the smallest possible particle entities with properties defined below.

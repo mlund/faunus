@@ -50,7 +50,7 @@ Faunus::Point Faunus::Geometry::Box::setVolume(double V, Faunus::Geometry::Volum
         default:
             throw std::runtime_error("unknown volume scaling method");
     }
-    assert( fabs(getVolume()-V)<1e-9 );
+    assert( fabs(getVolume()-V)<1e-6 );
     return s.cwiseQuotient(len); // this will scale any point to new volume
 }
 

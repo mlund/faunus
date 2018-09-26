@@ -24,7 +24,7 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 ### Requirements
 
 - CMake 3.9+
-- C/C++14 compiler (Clang 3.9+, GCC 6+, etc.)
+- C/C++14 compiler (Clang 3.5+, GCC 6+, etc.)
 - Python 3.6+ with `ruamel_yaml` or `yaml`
 
 The following are optional:
@@ -33,7 +33,7 @@ The following are optional:
 - Pandoc (for building documentation)
 
 **macOS tip:**
-Apple's developer tools, Xcode, is an easy way obtain
+Apple's developer tools, Xcode, is a quick way obtain
 clang on macOS. CMake can be installed with an
 [Installer package](https://cmake.org/download) from Kitware, or using
 [MacPorts](http://www.macports.org), or
@@ -65,9 +65,9 @@ Option                               | Description
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`  | Alternatives: `Debug` or `Release` (faster)
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
-`-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: /usr/local)
+`-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: `/usr/local`)
 `-DMYPLAYGROUND="absolute path"`     | Add additional source directory
-`-DPYTHON_EXECUTABLE="..."`          | Full path to Python executable (version 3 or higher)
+`-DPYTHON_EXECUTABLE="..."`          | Full path to Python executable
 `-DPYTHON_INCLUDE_DIR="..."`         | Full path to python headers
 `-DPYTHON_LIBRARY="..."`             | Full path to python library, i.e. libpythonX.dylib/so
 
@@ -77,7 +77,7 @@ Option                               | Description
 Should you have multiple compilers or python distributions, be specific:
 
 ~~~ bash
-CC=clang CXX=clang++ cmake . \
+CC=/opt/bin/clang CXX=/opt/bin/clang++ cmake . \
   -DPYTHON_EXECUTABLE=/opt/bin/python3 \
   -DPYTHON_INCLUDE_DIR=/opt/include/python3.6 \
   -DPYTHON_LIBRARY=/opt/lib/libpython3.6.dylib
@@ -123,8 +123,8 @@ conda install -c USER faunus --use-local
 
 ### Requirements
 
-Building a conda package require a full LaTeX installation in order to create
-the PDF manual. Do ensure that the Garamond fonts are available:
+Building a conda package requires a TeX Live installation to create
+the PDF manual. Make sure that the Garamond fonts are available:
 
 ~~~ bash
 wget https://tug.org/fonts/getnonfreefonts/install-getnonfreefonts

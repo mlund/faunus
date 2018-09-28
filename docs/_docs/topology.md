@@ -109,6 +109,9 @@ Properties of molecules and their default values:
 `keeppos=false`     | Keep original positions of `structure`
 `structure`         | Structure file (`.pqr, .aam, .xyz`) - required if `atomic=false`
 `bondlist`          | List of _internal_ bonds (harmonic, dihedrals etc.)
+`traj`              | Read conformations from PQR trajectory (`structure` will be ignored)
+`trajweight`        | One column file w. relative weights for each conformation. Must match frames in `traj` file.
+`trajcenter`        | CM of conformations to origo assuming whole molecules (default: `false`)
 
 Example:
 

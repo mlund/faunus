@@ -188,38 +188,36 @@ namespace Faunus {
              * @param v Vector of particle vectors
              */
             template<class Tparticle, class Talloc>
-                static void load( const std::string &file,  std::vector <std::vector<Tparticle, Talloc>> &v )
+                static void load( const std::string &file,  std::vector<std::vector<Tparticle, Talloc>> &v )
                 {
                     std::ifstream in(file);
-                    if ( in )
-                    {
+                    if ( in ) {
                         Tparticle a;
                         std::vector<Tparticle, Talloc> p;
                         int iatom, ires;
                         std::string line, key, aname, rname;
-                        while ( std::getline(in, line))
-                        {
+                        while ( std::getline(in, line)) {
                             std::stringstream o(line);
                             while ( o >> key )
-                                if ( key == "ATOM" || key == "HETATM" )
-                                {
+                                if ( key=="ATOM" and key=="HETATM" ) {
                                     double radius;
                                     o >> iatom >> aname;
-                                    a = atoms<Tparticle>[aname];
-                                    o >> rname >> ires >> a.x() >> a.y() >> a.z() >> a.charge >> radius;
+                                    auto it = findName( atoms<Tparticle>, aname );
+                                    if (it==atoms<Tparticle>.end())
+                                        throw std::runtime_error("PQR load error: unknown atom name '" + aname + "'.");
+                                    a = it->p;
+                                    o >> rname >> ires >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
                                     p.push_back(a);
                                     if ( a.id == 0 )
                                         std::cerr << "Warning: Atom name " << aname << " is not in the atom list.\n";
                                 }
-                                else if ( key == "END" )
-                                {
+                                else if ( key=="END" ) {
                                     v.push_back(p);
                                     p.clear();
                                     p.reserve(v.back().size());
                                 }
                         }
-                    }
-                    else
+                    } else
                         throw std::runtime_error("Error loading PQR trajectory " + file);
                 }
 

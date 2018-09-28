@@ -293,7 +293,8 @@ namespace Faunus {
                             v.push_back( atoms<Tparticle>.at(id).p );
                         if (!v.empty())
                             a.pushConformation( v );
-                    } else {
+                    }  // done handling atomic groups
+                    else {
                         if (val.count("structure")>0) {
                             json _struct = val["structure"];
                             if (_struct.is_string()) // structure from file
@@ -319,8 +320,54 @@ namespace Faunus {
                                     a.pushConformation( v );
                                 }
                         }
-                    }
 
+                        // read tracjectory w. conformations from disk
+                        std::string traj = val.value("traj", std::string() );
+                        if ( not traj.empty() ) {
+                            a.conformations.clear();
+                            FormatPQR::load(traj, a.conformations);
+                            if ( not a.conformations.empty()) {
+                                // create atom list
+                                a.atoms.clear();
+                                a.atoms.reserve(a.conformations.front().size());
+                                for ( auto &p : a.conformations.front())           // add atoms to atomlist
+                                    a.atoms.push_back(p.id);
+
+                                // center mass center for each frame to origo assuming whole molecules
+                                if (val.value("trajcenter", false)) {
+                                    cout << "Centering conformations in trajectory file " + traj + ". ";
+                                    for ( auto &p : a.conformations ) // loop over conformations
+                                        Geometry::cm2origo( p.begin(), p.end() );
+                                    cout << "Done.\n";
+                                }
+
+                                // set default uniform weight
+                                std::vector<float> w(a.conformations.size(), 1);
+                                a.confDist = std::discrete_distribution<>(w.begin(), w.end());
+
+                                // look for weight file
+                                std::string weightfile = val.value("trajweight", std::string());
+                                if ( !weightfile.empty()) {
+                                    std::ifstream f( weightfile.c_str() );
+                                    if (f) {
+                                        w.clear();
+                                        w.reserve(a.conformations.size());
+                                        double _val;
+                                        while ( f >> _val )
+                                            w.push_back(_val);
+                                        if ( w.size() == a.conformations.size())
+                                            a.confDist = std::discrete_distribution<>(w.begin(), w.end());
+                                        else
+                                            throw std::runtime_error("Number of weights does not match conformations.");
+                                    } else
+                                        throw std::runtime_error("Weight file " + weightfile + " not found.");
+                                }
+                            }
+                            else
+                                throw std::runtime_error("Trajectory " + traj + " not loaded or empty.");
+                        } // done handling conformations
+
+                    } // done handling molecular groups
 
                     // pass information to inserter
                     auto ins = RandomInserter<MoleculeData<std::vector<Tparticle,Talloc>>>();

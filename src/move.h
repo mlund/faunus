@@ -248,7 +248,7 @@ namespace Faunus {
          */
         template<typename Tspace>
             class TranslateRotate : public Movebase {
-                private:
+                protected:
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc; // Space to operate on
                     int molid=-1;
@@ -338,6 +338,99 @@ namespace Faunus {
                         repeat = -1; // meaning repeat N times
                     }
             };
+
+        /**
+         * @brief Move that will swap conformation of a molecule
+         *
+         * This will swap between different molecular conformations
+         * as defined in `MoleculeData` with `traj` and `weight`.
+         * If defined, the weight
+         * distribution is respected, otherwise all conformations
+         * have equal intrinsic weight. Upon insertion, the new conformation
+         * is randomly oriented and placed on top of the mass-center of
+         * an exising molecule. That is, there is no mass center movement.
+         *
+         * @todo Add feature to align molecule on top of an exiting one
+         * @todo Expand `_info()` to show number of conformations
+         * @warning Weighted distributions untested and not verified for correctness
+         * @date Malmo, November 2016
+         */
+        template<class Tspace>
+            class ConformationSwap : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    typedef MoleculeData<Tpvec> Tmoldata;
+                    RandomInserter<Tmoldata> inserter;
+                    Tspace& spc; // Space to operate on
+                    int molid=-1;
+
+                    void _to_json(json &j) const override {
+                        j = {
+                            {"molid", molid},
+                            {"molecule", molecules<Tpvec>[molid].name}
+                        };
+                        _roundjson(j,3);
+                    }
+
+                    void _from_json(const json &j) override {
+                        assert(!molecules<Tpvec>.empty());
+                        try {
+                            std::string molname = j.at("molecule");
+                            auto it = findName(molecules<Tpvec>, molname);
+                            if (it == molecules<Tpvec>.end())
+                                throw std::runtime_error("unknown molecule '" + molname + "'");
+                            molid = it->id();
+                            if ( molecules<Tpvec>[molid].numConformations()<2)
+                                throw std::runtime_error("minimum two conformations required");
+                            if (repeat<0) {
+                                auto v = spc.findMolecules(molid);
+                                repeat = std::distance(v.begin(), v.end());
+                            }
+                        }
+                        catch (std::exception &e) {
+                            throw std::runtime_error(name+": " + e.what());
+                        }
+                    } //!< Configure via json object
+
+                    void _move(Change &change) override {
+                        assert(molid>=0);
+                        assert(change.empty());
+
+                        auto mollist = spc.findMolecules( molid, Tspace::ACTIVE ); // list of molecules w. 'molid'
+                        if ( size(mollist)>0 ) {
+                            auto g = slump.sample( mollist.begin(), mollist.end() );
+                            if (not g->empty()) {
+                                inserter.offset = g->cm;
+                                Tpvec p = inserter(spc.geo, spc.p, molecules<Tpvec>[molid]); // get conformation
+
+                                if (p.size() != g->size())
+                                    throw std::runtime_error(name + ": conformation atom count mismatch");
+
+                                std::copy( p.begin(), p.end(), g->begin() ); // override w. new conformation
+#ifndef NDEBUG
+                                // this move shouldn't move mass centers, so let's check if this is true:
+                                Point newcm = Geometry::massCenter(p.begin(), p.end(), spc.geo.boundaryFunc);
+                                if ( (newcm - g->cm).norm()>1e-6 )
+                                    throw std::runtime_error(name + ": unexpected mass center movement");
+#endif
+                                Change::data d;
+                                d.index = Faunus::distance(spc.groups.begin(), g); // integer *index* of moved group
+                                d.all = true; // *all* atoms in group were moved
+                                d.internal = false; // we *don't* want to calculate the internal energy
+                                change.groups.push_back( d ); // add to list of moved groups
+                            }
+                        }
+                    }
+
+                public:
+
+                    ConformationSwap(Tspace &spc) : spc(spc) {
+                        name = "conformationswap";
+                        repeat = -1; // meaning repeat n times
+                    }
+
+            }; // end of conformation swap move
+
 
         /**
          * @brief Sketch for MD move
@@ -1033,6 +1126,7 @@ namespace Faunus {
                                     if (it.key()=="temper") this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
 #endif
                                     if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc);
+                                    if (it.key()=="conformationswap") this->template push_back<Move::ConformationSwap<Tspace>>(spc);
                                     if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
                                     if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);
                                     if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);

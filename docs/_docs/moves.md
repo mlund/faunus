@@ -88,7 +88,25 @@ This will attempt to rotate and translate clusters of molecular `molecules` defi
 between their mass centers. The move is associated with the following [bias](http://dx.doi.org/10/cj9gnn),
 accounted for in the acceptance criterion:
 
-## Pivot
+## Internal Degrees of Freedom
+
+### Conformational Swap
+
+`conformationswap` | Description
+------------------ | ---------------------------------
+`molecule`         |  Molecule name to operate on
+`repeat=N`         |  Number of repeats per MC sweep 
+
+This will swap between different molecular conformations
+as defined in the topology with `traj` and `trajweight`
+If defined, the weight
+distribution is respected, otherwise all conformations
+have equal intrinsic weight. Upon insertion, the new conformation
+is randomly oriented and placed on top of the mass-center of
+an exising molecule. That is, there is no mass center movement.
+
+
+### Pivot
 
 `pivot`          | Description
 ---------------- | ----------------------------
@@ -98,6 +116,7 @@ accounted for in the acceptance criterion:
 
 Performs a rotation around a random, harmonic bond vector in `molecule`, moving all atoms
 either before _or_ after the bond with equal probability.
+
 
 ## Parallel Tempering
 
@@ -132,6 +151,7 @@ etc. and only exchange between neighboring processes is performed.
 Parallel tempering is currently limited to systems with
 constant number of particles, $N$.
 {: .notice--info}
+
 
 ## Volume Move <a name="volumemove"></a>
 

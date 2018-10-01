@@ -13,7 +13,7 @@ moleculelist:
 insertmolecules:
     - mygroup: {N: 1}
 energy:
-    - example2d: {}
+    - example2d: {} # this is hard-coded 2d potential, see Frenkel+Smit
     - penalty:
         file: penalty.dat
         f0: 0.5
@@ -27,4 +27,4 @@ moves:
     - transrot: {molecule: mygroup, dir: [1,1,0]}
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
-    - savestate: {file: state}
+    - savestate: {file: penalty.state.json}

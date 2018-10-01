@@ -1204,6 +1204,7 @@ namespace Faunus {
                         if (derived)
                             derived->setOther(state1.spc);
                     }
+                    //cout << "s1 = " << uinit << "  s2 = " << state2.pot.energy(c) << endl; 
                     assert(state1.pot.energy(c) == state2.pot.energy(c));
                 }
 

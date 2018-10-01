@@ -96,7 +96,7 @@ int main( int argc, char **argv )
             f.open(state, mode);
             if (f) {
                 json j;
-                if (!quiet)
+                if (not quiet)
                     mpi.cout() << "Loading state file '" << state << "'" << endl;
                 if (binary) {
                     size_t size = f.tellg(); // get file size

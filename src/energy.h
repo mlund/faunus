@@ -915,7 +915,7 @@ namespace Faunus {
                         hisfile = j.value("histogram", "penalty-histogram.dat");
                         std::vector<double> binwidth, min, max;
 
-                        if (scale<0 || scale>1)
+                        if (scale<0 or scale>1)
                             throw std::runtime_error("`scale` must be in the interval [0:1]");
 
                         for (auto &i : j.at("coords"))
@@ -946,7 +946,7 @@ namespace Faunus {
                         if (dim<1 || dim>2)
                             throw std::runtime_error("minimum one maximum two coordinates required");
 
-                        coord.resize(2,0);
+                        coord.resize(rcvec.size(), 0);
                         histo.reInitializer(binwidth, min, max);
                         penalty.reInitializer(binwidth, min, max);
 
@@ -957,7 +957,7 @@ namespace Faunus {
                             f >> hash >> f0 >> samplings;
                             for (int row=0; row<penalty.rows(); row++)
                                 for (int col=0; col<penalty.cols(); col++)
-                                    if (!f.eof())
+                                    if (not f.eof())
                                         f >> penalty(row,col);
                                     else
                                         throw std::runtime_error("penalty file dimension mismatch");
@@ -966,8 +966,8 @@ namespace Faunus {
 
                     virtual ~Penalty() {
                         std::ofstream f1(MPI::prefix + file), f2(MPI::prefix + hisfile);
-                        if (f1) f1 << "# " << f0 << " " << samplings << "\n" << penalty.array() - penalty.minCoeff() << endl;
-                        if (f2) f2 << histo << endl;
+                        if (f1) f1 << "# " << f0 << " " << samplings << "\n" << penalty.array() - penalty.minCoeff() << "\n";
+                        if (f2) f2 << histo << "\n";
                         // add function to save to numpy-friendly file...
                     }
 
@@ -993,7 +993,7 @@ namespace Faunus {
                         if (!change.empty()) {
                             for (size_t i=0; i<rcvec.size(); i++) {
                                 coord.at(i) = rcvec[i]->operator()();
-                                if (!rcvec[i]->inRange(coord[i]))
+                                if ( not rcvec[i]->inRange(coord[i]) )
                                     return pc::infty;
                             }
                             penalty.to_index(coord);
@@ -1002,13 +1002,17 @@ namespace Faunus {
                         return (nodrift) ? u - udelta : u;
                     }
 
+                    /*
+                     * @todo: If this is called before `energy()`, the coord
+                     * is never calculated and causes indefined behavior
+                     */
                     virtual void update(const std::vector<double> &c) {
-                        if (++cnt % nupdate == 0 && f0>0) {
+                        if (++cnt % nupdate == 0 and f0>0) {
                             bool b = histo.minCoeff() >= (int)samplings;
-                            if (b && f0>0) {
+                            if (b) {
                                 double min = penalty.minCoeff();
                                 penalty = penalty.array() - min;
-                                if (!quiet)
+                                if (not quiet)
                                     cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                         << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff())
                                         << endl;
@@ -1027,9 +1031,9 @@ namespace Faunus {
                     void sync(Energybase *basePtr, Change &change) override {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         assert(other);
-                        update(other->coord);
+                        update(other->coord);       // is inside allowed range
                         other->update(other->coord);
-                    } // @todo: this double the MPI communication
+                    } // @todo: this doubles the MPI communication
             };
 
 #ifdef ENABLE_MPI
@@ -1058,7 +1062,7 @@ namespace Faunus {
                 void update(const std::vector<double> &c) override {
                     using namespace Faunus::MPI;
                     double uold = penalty[c];
-                    if (++cnt % this->nupdate == 0 && f0>0) {
+                    if (++cnt % this->nupdate == 0 and f0>0) {
                         int min = histo.minCoeff();
                         MPI_Barrier(mpi.comm);
                         MPI_Allgather(&min, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);

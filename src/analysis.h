@@ -36,6 +36,29 @@ namespace Faunus {
         void to_json(json &j, const Analysisbase &base);
 
         /**
+         * This will output a file with group properties as a function
+         * of simulation time/steps.
+         *
+         * The output format is as follows:
+         *
+         *     steps, group index, molid, CM_x. CM_y, CM_z, confid, number of atoms
+         *
+         */
+        template<class Tspace>
+            class GroupProperties : public Analysisbase {
+                private:
+                    Tspace& spc;
+                    void _from_json(const json &j) {
+                    }
+                    void _sample() {
+                    }
+                public:
+                    GroupProperties(Tspace &spc) : spc(spc) {
+                        name = "Group Properties";
+                    }
+            };
+
+        /**
          * @brief Excess chemical potential of molecules
          */
         template<typename Tspace>

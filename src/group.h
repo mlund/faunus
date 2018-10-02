@@ -150,9 +150,10 @@ namespace Faunus {
             typedef typename base::Titer iter;
             using base::begin;
             using base::end;
-            int id=-1;
-            bool atomic=false;   //!< Is it an atomic group?
+            int id=-1;           //!< Molecule id
+            int confid=0;        //!< Conformation index / id
             Point cm={0,0,0};    //!< Mass center
+            bool atomic=false;   //!< Is it an atomic group?
 
             template<class Trange>
                 Group(Trange &rng) : base(rng.begin(), rng.end()) {
@@ -168,7 +169,8 @@ namespace Faunus {
                 if (&o == this)
                     return *this;
                 shallowcopy(o);
-                std::copy(o.begin(), o.end(), begin()); // copy all particle data
+                if (o.begin()!=begin())
+                    std::copy(o.begin(), o.end(), begin()); // copy all particle data
                 return *this;
             } //!< Deep copy contents from another Group
 
@@ -180,6 +182,7 @@ namespace Faunus {
                     id = o.id;
                     atomic = o.atomic;
                     cm = o.cm;
+                    confid = o.confid;
                 }
                 return *this;
             } //!< copy group data from `other` but *not* particle data
@@ -330,11 +333,13 @@ namespace Faunus {
         g2.id=100;
         g2.atomic=true;
         g2.cm={1,0,0};
+        g2.confid=20;
         g1=g2;
 
         CHECK(g1.id==100);
         CHECK(g1.atomic==true);
         CHECK(g1.cm.x()==1);
+        CHECK(g1.confid==20);
 
         CHECK( *g1.begin()==-1);
         CHECK( *g2.begin()==-1);

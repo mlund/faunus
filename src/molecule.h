@@ -32,6 +32,7 @@ namespace Faunus {
             bool rotate=true;       //!< Set to true to randomly rotate molecule when inserted. Default: true
             bool keeppos=false;     //!< Set to true to keep original positions (default: false)
             int maxtrials=2e3;      //!< Maximum number of overlap checks if `checkOverlap==true`
+            int confindex=-1;       //!< Index of last used conformation
 
             RandomInserter() : name("random") {}
 
@@ -50,6 +51,7 @@ namespace Faunus {
                         throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
 
                     v = mol.getRandomConformation();
+                    confindex = mol.getConfIndex();
 
                     if ( mol.atomic )
                     { // insert atomic species
@@ -187,6 +189,8 @@ namespace Faunus {
                     _confid = confDist(random.engine); // store the index of the conformation
                     return conformations.at( _confid );
                 }
+
+                int getConfIndex() const { return _confid; } // index of last used conformation
 
                 /**
                  * @brief Get random conformation that fits in container

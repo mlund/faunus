@@ -167,9 +167,8 @@ namespace Faunus {
                 assert(&other != this);
                 assert( p.begin() != other.p.begin());
 
-                if (change.dV || change.all) {
+                if (change.dV or change.all)
                     geo = other.geo;
-                }
 
                 // deep copy *everything*
                 if (change.all) {
@@ -177,7 +176,7 @@ namespace Faunus {
                     assert( p.begin() != other.p.begin() && "deep copy problem");
                     groups = other.groups;
 
-                    if (!groups.empty())
+                    if (not groups.empty())
                         if (groups.front().begin() == other.p.begin())
                             for (auto &i : groups)
                                 i.relocate( other.p.begin(), p.begin() );

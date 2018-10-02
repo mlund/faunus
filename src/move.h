@@ -363,6 +363,7 @@ namespace Faunus {
                     RandomInserter<Tmoldata> inserter;
                     Tspace& spc; // Space to operate on
                     int molid=-1;
+                    int newconfid=-1;
 
                     void _to_json(json &j) const override {
                         j = {
@@ -402,6 +403,7 @@ namespace Faunus {
                             if (not g->empty()) {
                                 inserter.offset = g->cm;
                                 Tpvec p = inserter(spc.geo, spc.p, molecules<Tpvec>[molid]); // get conformation
+                                newconfid = molecules<Tpvec>[molid].getConfIndex();
 
                                 if (p.size() != g->size())
                                     throw std::runtime_error(name + ": conformation atom count mismatch");
@@ -420,6 +422,11 @@ namespace Faunus {
                                 change.groups.push_back( d ); // add to list of moved groups
                             }
                         }
+                    }
+
+                    void _accept(Change &change) override {
+                        assert(change.groups.size()==1);
+                        spc.groups[ change.groups.front().index ].confid = newconfid;
                     }
 
                 public:

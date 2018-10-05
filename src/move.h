@@ -115,8 +115,6 @@ namespace Faunus {
                             change.groups.push_back( cdata ); // add to list of moved groups
                             _bias = _sqd*(pH-pKa)*ln10; // one may add bias here...
                         }
-                        else
-                            std::cerr << name << ": no atoms found" << std::endl;
                     }
 
                     double bias(Change &change, double uold, double unew) override {
@@ -326,7 +324,6 @@ namespace Faunus {
                                             Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-9 );
                             }
                         }
-                        else std::cerr << name << ": no molecules found" << std::endl;
                     }
 
                     void _accept(Change &change) override { msqd += _sqd; }
@@ -1173,7 +1170,7 @@ namespace Faunus {
 
                 bool metropolis(double du) const {
                     if (std::isnan(du))
-                        return false;
+                        throw std::runtime_error("Metropolis error: energy cannot be NaN");
                     if (du<0)
                         return true;
                     return ( Move::Movebase::slump() > std::exp(-du)) ? false : true;
@@ -1267,7 +1264,18 @@ namespace Faunus {
 #pragma omp section
                                     { uold = state1.pot.energy(change); }
                                 }
+
                                 du = unew - uold;
+
+                                // if any energy returns NaN (from i.e. division by zero), the
+                                // configuration will always be rejected, or of moving from NaN
+                                // to a finite energy, always accepted:
+
+                                if (std::isnan(uold) and not std::isnan(unew))
+                                    du = -pc::infty; // accept
+                                else if (std::isnan(unew))
+                                    du = pc::infty; // reject
+
                                 double bias = (**mv).bias(change, uold, unew) + Nchem( state2.spc, state1.spc , change);
 
                                 if ( metropolis(du + bias) ) { // accept move

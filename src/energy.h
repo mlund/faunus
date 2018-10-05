@@ -292,6 +292,14 @@ namespace Faunus {
                     }
             };
 
+        /**
+         * @brief Base class for external potentials
+         *
+         * This will apply an external energy to a defined
+         * list of molecules, either acting on individual
+         * atoms or the mass-center. The specific energy
+         * function, `func` is injected in derived classes.
+         */
         template<typename Tspace>
             class ExternalPotential : public Energybase {
                 protected:
@@ -306,11 +314,11 @@ namespace Faunus {
                     template<class Tparticle>
                         double _energy(const Group<Tparticle> &g) const {
                             double u=0;
-                            if (molids.find(g.id)!=molids.end()) {
+                            if (molids.find(g.id) != molids.end()) {
                                 if (COM) { // apply only to center of mass
-                                    Tparticle dummy;
-                                    dummy.pos = g.cm;
-                                    u = func(dummy);
+                                    Tparticle cm;
+                                    cm.pos = g.cm;
+                                    u = func(cm);
                                 } else {
                                     for (auto &p : g) {
                                         u += func(p);
@@ -335,7 +343,7 @@ namespace Faunus {
                     double energy(Change &change) override {
                         assert(func!=nullptr);
                         double u=0;
-                        if (change.dV || change.all) {
+                        if (change.dV or change.all) {
                             for (auto &g : spc.groups) { // check all groups
                                 u += _energy(g);
                                 if (std::isnan(u))
@@ -344,10 +352,10 @@ namespace Faunus {
                         } else
                             for (auto &d : change.groups) {
                                 auto &g = spc.groups.at(d.index); // check specified groups
-                                if (d.all || COM)  // check all atoms in group
-                                    u += _energy(g);
+                                if (d.all or COM)  // check all atoms in group
+                                    u += _energy(g); // _energy also checks for molecule id
                                 else {       // check only specified atoms in group
-                                    if (molids.find(g.id)!=molids.end())
+                                    if (molids.find(g.id) != molids.end())
                                         for (auto i : d.atoms)
                                             u += func( *(g.begin()+i) );
                                 }
@@ -363,6 +371,10 @@ namespace Faunus {
                     }
             }; //!< Base class for external potentials, acting on particles
 
+
+        /**
+         * @brief Confines molecules inside geometric shapes
+         */
         template<typename Tspace, typename base=ExternalPotential<Tspace>>
             class Confine : public base {
                 public:
@@ -375,7 +387,9 @@ namespace Faunus {
                     double radius, k;
                     bool scale=false;
                     std::map<std::string, Variant> m = {
-                        {"sphere", sphere}, {"cylinder", cylinder}, {"cuboid", cuboid}
+                        {"sphere", sphere},
+                        {"cylinder", cylinder},
+                        {"cuboid", cuboid}
                     };
 
                 public:
@@ -384,7 +398,7 @@ namespace Faunus {
                         k = value_inf(j, "k") * 1.0_kJmol; // get floating point; allow inf/-inf
                         type = m.at( j.at("type") );
 
-                        if (type==sphere || type==cylinder) {
+                        if (type==sphere or type==cylinder) {
                             radius = j.at("radius");
                             origo = j.value("origo", origo);
                             scale = j.value("scale", scale);
@@ -423,7 +437,7 @@ namespace Faunus {
                     void to_json(json &j) const override {
                         if (type==cuboid)
                             j = {{"low", low}, {"high", high}};
-                        if (type==sphere || type==cylinder)
+                        if (type==sphere or type==cylinder)
                             j = {{"radius", radius}};
                         if (type==sphere) {
                             j["origo"] = origo;

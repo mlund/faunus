@@ -27,6 +27,7 @@ namespace Faunus {
                 virtual void to_json(json &j) const;; //!< json output
                 virtual void sync(Energybase*, Change&);
                 virtual void init(); //!< reset and initialize
+                virtual inline void force(std::vector<Point> &forces) {}; // update forces on all particles
         };
 
         void to_json(json &j, const Energybase &base); //!< Converts any energy class to json object
@@ -665,6 +666,18 @@ namespace Faunus {
                         name="nonbonded";
                         pairpot = j;
                         Rc2_g2g = std::pow( j.value("cutoff_g2g", pc::infty), 2);
+                    }
+
+                    void force(std::vector<Point> &forces) override {
+                        auto &p = spc.p; // alias to particle vector (reference)
+                        assert(forces.size() == p.size() && "the forces size must match the particle size");
+                        for (size_t i=0; i<p.size()-1; i++)
+                            for (size_t j=i+1; j<p.size(); j++) {
+                                Point r = spc.geo.vdist(p[i].pos, p[j].pos); // minimum distance vector 
+                                Point f ;//= pairpot.force( p[i], p[j], r.squaredNorm(), r );
+                                forces[i] += f;
+                                forces[j] -= f;
+                            }
                     }
 
                     double energy(Change &change) override {

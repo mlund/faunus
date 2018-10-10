@@ -25,7 +25,7 @@ Anil Kurut, Chris Evers, Magnus Ullner,
 Robert Vacha, Axel Thuresson, Bjorn Stenqvist,
 Joao Henriques, Alexei Abrikossov, Giulio Tesei,
 Lukas Sukenik, Coralie Pasquier, Niels Kouwenhoven,
-Richard Chudoba_
+Richard Chudoba, Stefan Hervø-Hansen_
 
 ### Supporting Faunus
 

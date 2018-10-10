@@ -1268,13 +1268,20 @@ namespace Faunus {
                                 du = unew - uold;
 
                                 // if any energy returns NaN (from i.e. division by zero), the
-                                // configuration will always be rejected, or of moving from NaN
-                                // to a finite energy, always accepted:
+                                // configuration will always be rejected, or if moving from NaN
+                                // to a finite energy, always accepted.
 
                                 if (std::isnan(uold) and not std::isnan(unew))
                                     du = -pc::infty; // accept
                                 else if (std::isnan(unew))
                                     du = pc::infty; // reject
+
+                                // if the difference in energy is NaN (from i.e. infinity minus infinity), the
+                                // configuration will always be accepted. This should be
+                                // noted during equilibration.
+
+                                else if (std::isnan(du))
+                                    du = 0; // accept
 
                                 double bias = (**mv).bias(change, uold, unew) + Nchem( state2.spc, state1.spc , change);
 

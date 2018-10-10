@@ -1469,7 +1469,8 @@
            * an exising molecule. That is, there is no mass center movement.
            *
            * The JSON input is identical to `Move::TranslateRotate` except that
-           * displacement parameters are ignored.
+           * displacement parameters are ignored. In addition the keyword `onlypos`
+           * can be set to copy only positions (default: true).
            *
            * @todo Add feature to align molecule on top of an exiting one
            * @todo Expand `_info()` to show number of conformations
@@ -1484,6 +1485,8 @@
 
             using base::spc;
             using base::igroup; // group pointer to molecule being moved
+
+            bool only_positions=true;
 
             typedef MoleculeData<typename Tspace::ParticleVector> Tmoldata;
             RandomInserter<Tmoldata> inserter;
@@ -1502,8 +1505,13 @@
                     auto pnew = inserter(spc->geo, spc->p, spc->molecule[igroup->molId]); // get conformation
 
                     if (pnew.size() == size_t(igroup->size()))
-                        std::copy( pnew.begin(), pnew.end(),
-                                   spc->trial.begin() + igroup->front()); // override w. new conformation
+                        if (only_positions) {
+                            int j = igroup->front();
+                            for (auto &i : pnew)
+                                spc->trial[j++] = Point(i);
+                        } else
+                            std::copy( pnew.begin(), pnew.end(),
+                                    spc->trial.begin() + igroup->front()); // override w. new conformation
                     else
                         throw std::runtime_error(base::title + ": conformation atom count mismatch");
 
@@ -1524,6 +1532,13 @@
                 return du;
             }
 
+            Tmjson _json() override
+            {
+                Tmjson j = TranslateRotate<Tspace>::_json();
+                j["onlypos"] = only_positions;
+                return j;
+            }
+
         public:
 
             ConformationSwap( Energy::Energybase<Tspace> &e, Tspace &s, Tmjson &j ) : base(e, s, j)
@@ -1534,6 +1549,7 @@
                 inserter.rotate = true;        // rotate conformation randomly
                 base::useAlternativeReturnEnergy=true; // yes, we Metropolis doesn't need internal energy change
                 base::dp_trans = 1; // if zero, base::energyChange() returns 0 which we don't want!
+                only_positions = j.value("posonly", true);
             }
         };
 

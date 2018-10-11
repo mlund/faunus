@@ -200,6 +200,31 @@ namespace Faunus {
                         }
             }; // Weeks-Chandler-Andersen potential
 
+        /**
+         * @brief Pairwise SASA potential calculating the surface area of inter-secting spheres 
+         */
+        class SASApotential : public PairPotentialBase {
+            private:
+                double proberadius=0, conc=0;
+
+                double area(double, double, double) const; //!< Total surface area of two intersecting spheres or radii R and r as a function of separation
+
+            public:
+                template<class Tparticle>
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r_ab) const {
+                        double tfe = 0.5 * ( atoms<Tparticle>[a.id].tfe + atoms<Tparticle>[b.id].tfe );
+                        double tension = 0.5 * ( atoms<Tparticle>[a.id].tension + atoms<Tparticle>[b.id].tension );
+                        if (fabs(tfe)>1e-6 or fabs(tension)>1e-6)
+                            return (tension + conc*tfe) *  area(
+                                    0.5*atoms<Tparticle>[a.id].sigma,
+                                    0.5*atoms<Tparticle>[b.id].sigma, r_ab.squaredNorm() );
+                        return 0;
+                    }
+
+                SASApotential(const std::string &name="SASA");
+                void to_json(json &j) const override;
+                void from_json(const json &j) override;
+        };
 
         struct Coulomb : public PairPotentialBase {
             Coulomb(const std::string &name="coulomb");
@@ -863,6 +888,38 @@ namespace Faunus {
                 CHECK( filt.size() == 1 );
                 CHECK( filt[0]->type() == BondData::HARMONIC);
                 CHECK( filt[0] == bonds[1] ); // filt should contain references to bonds
+            }
+        }
+
+        TEST_CASE("[Faunus] Pair Potentials")
+        {
+            using doctest::Approx;
+            json j = R"({ "atomlist" : [
+                 { "A": { "r": 1.5, "tension": 0.023} },
+                 { "B": { "r": 2.1, "tfe": 0.98 } }]})"_json;
+
+            typedef Particle<Radius> T;
+            atoms<T> = j["atomlist"].get<decltype(atoms<T>)>();
+            T a,b;
+            a.id = 0;
+            b.id = 1;
+
+            SUBCASE("SASApotential") {
+                SASApotential pot;
+                json in = R"({ "SASA": {"conc": 1.0, "radius": 0.0}})"_json;
+                pot = in["SASA"];
+                double conc = 1.0 * 1.0_molar;
+                double tension = atoms<T>[a.id].tension / 2;
+                double tfe = atoms<T>[b.id].tfe / 2;
+                double f = tension + conc*tfe;
+                CHECK( tension>0.0 );
+                CHECK( conc>0.0 );
+                CHECK( tfe>0.0 );
+                CHECK( f>0.0 );
+                CHECK( in == json(pot) );
+                CHECK( pot(a,b,{0,0,0})  == Approx( f * 4*pc::pi*2.1*2.1) ); // complete overlap
+                CHECK( pot(a,b,{10,0,0}) == Approx( f * 4*pc::pi*(2.1*2.1+1.5*1.5) ) ); // far apart
+                CHECK( pot(a,b,{2.5,0,0})== Approx( f * 71.74894965974514 ) ); // partial overlap
             }
         }
 #endif

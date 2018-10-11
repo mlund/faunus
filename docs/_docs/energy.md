@@ -269,6 +269,36 @@ $$
 `mixing=LB`  | Mixing rule; only `LB` available.
 `custom`     | Custom $\epsilon$ and $\sigma$ combinations
 
+### SASA Potential
+
+This calculates the surface area of two intersecting particles or radii $R$ and $r$
+to estimate an energy based on transfer-free-energies (TFE) and surface tension.
+The total surface area is calculated as
+
+$$
+    A = 4\pi \left ( R^2 + r^2 \right ) - 2\pi \left (  Rh_1 + rh_2  \right )
+$$
+where $h_1$ and $h_2$ are the heights of the spherical caps comprising the lens
+formed by the overlapping spheres. For complete overlap, or when far apart, the
+full area of the bigger sphere or the sum of both spheres are returned.
+The pair-energy is calculated as:
+
+$$
+    u_{ij} = A \left ( \gamma_{ij} + c_s \varepsilon_{\text{tfe},ij} \right )
+$$
+
+where $\gamma_{ij}$ and $\varepsilon_{\text{tfe},ij}$ are the arithmetic means of
+ `tension` and `tfe` provided in the atomlist.
+
+Note that SASA is strictly not additive and this
+pair-potential is merely a poor-mans way of approximately take into account ion-specificity
+and hydrophobic/hydrophilic interactions.
+
+`SASA`       | Description
+------------ | ----------------------------------------------------------
+`radius=1.4` | Probe radius for SASA calculation (angstrom)
+`conc=0`     | Molar concentration, $c_s$, of co-solute related to the TFE values
+
 
 ## Bonded Interactions
 

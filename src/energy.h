@@ -1246,6 +1246,7 @@ namespace Faunus {
         template<typename Tspace>
             class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
                 protected:
+                    double maxenergy=pc::infty; //!< Maximum allowed energy change
                     typedef typename Tspace::Tparticle Tparticle;
                     void to_json(json &j) const override {
                         for (auto i : this->vec)
@@ -1319,6 +1320,11 @@ namespace Faunus {
 
                                     addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
 
+                                    if (it.key()=="maxenergy") {
+                                        maxenergy = it.value().get<double>();
+                                        continue;
+                                    }
+
                                     if (vec.size()==oldsize)
                                         std::cerr << "warning: ignoring unknown energy '" << it.key() << "'" << endl;
 
@@ -1334,6 +1340,8 @@ namespace Faunus {
                         for (auto i : this->vec) {
                             i->key=key;
                             du += i->energy(change);
+                            if (du>maxenergy)
+                                break; // stop summing energies
                         }
                         return du;
                     } //!< Energy due to changes

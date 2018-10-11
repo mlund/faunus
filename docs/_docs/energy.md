@@ -16,7 +16,7 @@ $$
 \mathcal{H}_{sys} = U_1 + U_2 + ...
 $$
 
-The energy terms are specified in `energy` at the top level input.
+The energy terms are specified in `energy` at the top level input and evaluated in the order given.
 For example:
 
 ~~~ yaml
@@ -32,8 +32,13 @@ energy:
         Na CH:   # overwrite specific atom pairs
         - wca: { mixing: LB }
 
+    - maxenergy: 100
     - ...
 ~~~
+
+The keyword `maxenergy` can be used to stop energy evaluation when a large
+energy change (in kT) is observed which will most likely lead to rejection.
+The default value is _infinity_.
 
 **Note:**
 _Energies_ in MC may contain implicit degrees of freedom, _i.e._ be temperature-dependent,
@@ -41,6 +46,7 @@ effective potentials. This is inconsequential for sampling
 density of states, but care should be taken when interpreting derived functions such as
 energies, entropies, pressure etc.
 {: .notice--info}
+
 
 ## External Pressure <a name="isobaric"></a>
 
@@ -294,7 +300,7 @@ Note that SASA is strictly not additive and this
 pair-potential is merely a poor-mans way of approximately take into account ion-specificity
 and hydrophobic/hydrophilic interactions.
 
-`SASA`       | Description
+`sasa`       | Description
 ------------ | ----------------------------------------------------------
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
 `conc=0`     | Molar concentration, $c_s$, of co-solute related to the TFE values

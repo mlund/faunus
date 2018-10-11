@@ -221,7 +221,7 @@ namespace Faunus {
                         return 0;
                     }
 
-                SASApotential(const std::string &name="SASA");
+                SASApotential(const std::string &name="sasa");
                 void to_json(json &j) const override;
                 void from_json(const json &j) override;
         };
@@ -594,6 +594,7 @@ namespace Faunus {
                                     if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
                                     if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
                                     if (it.key()=="repulsionr3") _u = RepulsionR3() = i;
+                                    if (it.key()=="wca") _u = SASApotential() = i;
                                     if (it.key()=="wca") _u = WeeksChandlerAndersen<T>() = i;
                                     if (it.key()=="pm") _u = Coulomb() + HardSphere<T>() = it.value();
                                     if (it.key()=="pmwca") _u = Coulomb() + WeeksChandlerAndersen<T>() = it.value();
@@ -906,8 +907,8 @@ namespace Faunus {
 
             SUBCASE("SASApotential") {
                 SASApotential pot;
-                json in = R"({ "SASA": {"conc": 1.0, "radius": 0.0}})"_json;
-                pot = in["SASA"];
+                json in = R"({ "sasa": {"conc": 1.0, "radius": 0.0}})"_json;
+                pot = in["sasa"];
                 double conc = 1.0 * 1.0_molar;
                 double tension = atoms<T>[a.id].tension / 2;
                 double tfe = atoms<T>[b.id].tfe / 2;

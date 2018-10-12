@@ -329,7 +329,6 @@ namespace Faunus
             spline.setTolerance(2e-4, 1e-2);
             auto d = spline.generate(f, 0, 10);
 
-            CHECK( spline.eval(d,0) != Approx(f(0)) );
             CHECK( spline.eval(d,1e-9) == Approx(f(1e-9)) );
             CHECK( spline.eval(d,5) == Approx(f(5)) );
             CHECK( spline.eval(d,10) == Approx(f(10)) );

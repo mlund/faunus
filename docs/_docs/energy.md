@@ -358,7 +358,7 @@ Finite extensible nonlinear elastic potential long range repulsive potential com
 with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential.
 
 $$
-     u(x) = 
+     u(r) =
   \begin{cases} 
    -\frac{1}{2} k r_{\mathrm{max}}^2 \ln \left [ 1-(r/r_{\mathrm{max}})^2 \right ] + u_{\mathrm{wca}}, & \text{if } 0 < r \leq 2^{1/6}\sigma \\
    -\frac{1}{2} k r_{\mathrm{max}}^2 \ln \left [ 1-(r/r_{\mathrm{max}})^2 \right ],       & \text{if } 2^{1/6}\sigma < r < r_{\mathrm{max}} \\
@@ -589,3 +589,4 @@ if the difference in energy is NaN (from i.e. infinity minus infinity) the confi
 **Note:**
 These conditions should be considered if equilibrating a system far from equilibrium with given system Hamiltonian
 {: .notice--notice}
+

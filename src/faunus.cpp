@@ -10,9 +10,9 @@
 using namespace Faunus;
 using namespace std;
 
-#ifdef CUBOID_NOPBC
+#ifdef FAUNUS_CUBOID_NOPBC
 typedef Geometry::CuboidNoPBC Tgeometry;
-#elif SPHERE
+#elif FAUNUS_SPHERE
 typedef Geometry::Sphere Tgeometry;
 #else
 typedef Geometry::Cuboid Tgeometry;

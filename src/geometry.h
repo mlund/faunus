@@ -47,12 +47,12 @@ namespace Faunus {
          */
         class Chameleon : public GeometryBase {
             private:
-                enum Variant {CUBOID, SPHERE, CYLINDER, SLIT};
-                const std::map<std::string,Variant> names = {
+                enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT};
+                const std::map<std::string,Variant> names = {{
                     {"sphere", SPHERE},
                     {"cylinder", CYLINDER},
                     {"slit", SLIT},
-                    {"cuboid", CUBOID}
+                    {"cuboid", CUBOID}}
                 };
                 Variant type;
                 double radius=0, c1, c2;

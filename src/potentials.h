@@ -863,8 +863,6 @@ namespace Faunus {
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1}} )"_json );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3], "rmax":2.1}} )"_json );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1}} )"_json );
-                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json );
-                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "sigma":2}} )"_json );
                 j = json::object();
                 CHECK_THROWS( b = j );
             }

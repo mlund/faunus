@@ -350,13 +350,27 @@ $$
 -------------- | ----------------------------------------------------------------------
 `k`            | Bond stiffness (kJ/mol/Å²)
 `rmax`         | Maximum separation, $r_m$ (Å)
+`eps=0`        | Epsilon energy scaling (kJ/mol)
+`sigma=0`      | Particle diameter (Å)
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
+Finite extensible nonlinear elastic potential long range repulsive potential combined
+with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential.
+
 $$
-u(r) = -\frac{1}{2} k r_{max}^2 \ln \left [ 1-(r/r_m)^2 \right ]
+     u(x) = 
+  \begin{cases} 
+   -\frac{1}{2} k r_{\mathrm{max}}^2 \ln \left [ 1-(r/r_{\mathrm{max}})^2 \right ] + u_{\mathrm{wca}}, & \text{if } 0 < r \leq 2^{1/6}\sigma \\
+   -\frac{1}{2} k r_{\mathrm{max}}^2 \ln \left [ 1-(r/r_{\mathrm{max}})^2 \right ],       & \text{if } 2^{1/6}\sigma < r < r_{\mathrm{max}} \\
+   \infty, & \text{if } r \geq r_{\mathrm{max}}
+  \end{cases}
 $$
 
-for $r < r_m$; infinity otherwise.
+**Note:**
+It is recommend to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
+Should one insist on conducting simulations far from equilibrium, a large displacement parameter is recommended to reach finite energies.
+{: .notice--info}
+
 
 ### Harmonic torsion
 
@@ -566,3 +580,12 @@ but the idea appears in earlier works, for example by
 [Hunter and Reinhardt (1995)](http://dx.doi.org/10/fns6dq) and
 [Engkvist and Karlström (1996)](http://dx.doi.org/10/djjk8z).
 
+## Infinite Energies and Not a Number (NaN) Energies
+In case one or more of the potential energy terms of the system Hamiltonian returns infinite energies or NaN energies,
+a set of conditions exists to evaluate the acceptance of the proposed move. If any energy returns NaN (from i.e. division by zero),
+the configuration will always be rejected, or if moving from NaN to finite energy, always accepted.
+if the difference in energy is NaN (from i.e. infinity minus infinity) the configuration will always be accepted.
+
+**Note:**
+These conditions should be considered if equilibrating a system far from equilibrium with given system Hamiltonian
+{: .notice--notice}

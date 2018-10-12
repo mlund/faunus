@@ -50,7 +50,8 @@ void Faunus::Analysis::SystemEnergy::normalize() {
 void Faunus::Analysis::SystemEnergy::_sample() {
     auto ulist = energyFunc();
     double tot = std::accumulate(ulist.begin(), ulist.end(), 0.0);
-    uavg+=tot;
+    if (not std::isinf(tot))
+        uavg+=tot;
     f << cnt*steps << sep << tot;
     for (auto u : ulist)
         f << sep << u;

@@ -905,7 +905,7 @@ namespace Faunus {
 
             SUBCASE("SASApotential") {
                 SASApotential pot;
-                json in = R"({ "sasa": {"conc": 1.0, "radius": 0.0}})"_json;
+                json in = R"({ "sasa": {"molarity": 1.0, "radius": 0.0}})"_json;
                 pot = in["sasa"];
                 double conc = 1.0 * 1.0_molar;
                 double tension = atoms<T>[a.id].tension / 2;

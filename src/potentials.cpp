@@ -371,12 +371,12 @@ double Faunus::Potential::SASApotential::area(double R, double r, double d_squar
 }
 
 void Faunus::Potential::SASApotential::from_json(const Faunus::json &j) {
-    conc = j.value("conc", 0.0) * 1.0_molar;
+    conc = j.value("molarity", 0.0) * 1.0_molar;
     proberadius = j.value("radius", 1.4) * 1.0_angstrom;
 }
 
 void Faunus::Potential::SASApotential::to_json(Faunus::json &j) const {
-    j["conc"] = conc / 1.0_molar;
+    j["molarity"] = conc / 1.0_molar;
     j["radius"] = proberadius / 1.0_angstrom;
 }
 

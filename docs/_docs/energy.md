@@ -284,6 +284,7 @@ The total surface area is calculated as
 $$
     A = 4\pi \left ( R^2 + r^2 \right ) - 2\pi \left (  Rh_1 + rh_2  \right )
 $$
+
 where $h_1$ and $h_2$ are the heights of the spherical caps comprising the lens
 formed by the overlapping spheres. For complete overlap, or when far apart, the
 full area of the bigger sphere or the sum of both spheres are returned.
@@ -303,7 +304,7 @@ and hydrophobic/hydrophilic interactions.
 `sasa`       | Description
 ------------ | ----------------------------------------------------------
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
-`conc=0`     | Molar concentration, $c_s$, of co-solute related to the TFE values
+`molarity=0` | Molar concentration of co-solute, $c_s$.
 
 
 ## Bonded Interactions
@@ -581,10 +582,11 @@ but the idea appears in earlier works, for example by
 [Engkvist and Karlström (1996)](http://dx.doi.org/10/djjk8z).
 
 ## Infinite Energies and Not a Number (NaN) Energies
+
 In case one or more of the potential energy terms of the system Hamiltonian returns infinite energies or NaN energies,
 a set of conditions exists to evaluate the acceptance of the proposed move. If any energy returns NaN (from i.e. division by zero),
 the configuration will always be rejected, or if moving from NaN to finite energy, always accepted.
-if the difference in energy is NaN (from i.e. infinity minus infinity) the configuration will always be accepted.
+If the difference in energy is NaN (from i.e. infinity minus infinity), the configuration is always accepted.
 
 **Note:**
 These conditions should be considered if equilibrating a system far from equilibrium with given system Hamiltonian

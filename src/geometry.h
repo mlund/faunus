@@ -20,7 +20,7 @@ namespace Faunus {
             virtual Point vdist( const Point&, const Point& ) const=0; //!< (Minimum) distance between two points
             virtual void boundary( Point& ) const=0; //!< Apply boundary conditions
             virtual bool collision( const Point&, double=0) const=0; //!< Check if position lies within
-            virtual const Point& getLength() const=0; //!< Side lengths
+            virtual Point getLength() const=0; //!< Side lengths
 
             inline double sqdist( const Point &a, const Point &b ) const {
                 return vdist(a,b).squaredNorm();
@@ -28,7 +28,6 @@ namespace Faunus {
 
             BoundaryFunction boundaryFunc; //!< Functor for boundary()
             DistanceFunction distanceFunc; //!< Functor for vdist()
-
             std::string name;
 
             GeometryBase& operator=(const GeometryBase &other); //!< Required since we *do not* want to overwrite functors (distance, boundary)
@@ -37,6 +36,60 @@ namespace Faunus {
             virtual ~GeometryBase();
 
         }; //!< Base class for all geometries
+
+        /**
+         * @brief Geometry class for spheres, cylinders, cuboids, slits
+         *
+         * All geometries shares the same distance calculation where
+         * PBC is disabled by artificially setting long sidelengths.
+         *
+         * @todo Implement unit tests
+         */
+        class Chameleon : public GeometryBase {
+            private:
+                enum Variant {CUBOID, SPHERE, CYLINDER, SLIT};
+                const std::map<std::string,Variant> names = {
+                    {"sphere", SPHERE},
+                    {"cylinder", CYLINDER},
+                    {"slit", SLIT},
+                    {"cuboid", CUBOID}
+                };
+                Variant type;
+                double radius=0, c1, c2;
+                Point len, len_half, len_inv;
+
+                void setLength(const Point &l);
+
+            public:
+                double getVolume(int dim=3) const override;
+                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
+                Point getLength() const override; //!< Enscribed box
+                void randompos( Point &m, Random &rand ) const override;
+                bool collision(const Point &a, double r) const override;
+                void from_json(const json &j);
+                void to_json(json &j) const;
+
+                inline Point vdist(const Point &a, const Point &b) const override {
+                    Point r(a - b);
+                    if ( r.x() > len_half.x())
+                        r.x() -= len.x();
+                    else if ( r.x() < -len_half.x())
+                        r.x() += len.x();
+                    if ( r.y() > len_half.y())
+                        r.y() -= len.y();
+                    else if ( r.y() < -len_half.y())
+                        r.y() += len.y();
+                    if ( r.z() > len_half.z())
+                        r.z() -= len.z();
+                    else if ( r.z() < -len_half.z())
+                        r.z() += len.z();
+                    return r;
+                }
+        };
+
+        void from_json(const json &j, Chameleon &g);
+
+        void to_json(json &j, const Chameleon &g);
 
         /** @brief Cuboidal box */
         class Box : public GeometryBase {
@@ -50,7 +103,7 @@ namespace Faunus {
                 void setLength( const Point &l ); //!< Set cuboid side length
                 Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
                 double getVolume(int dim=3) const override;
-                const Point& getLength() const override; //!< Side lengths
+                Point getLength() const override; //!< Side lengths
                 bool collision(const Point &a, double r=0) const override;
                 void randompos( Point &m, Random &rand ) const override;
         };

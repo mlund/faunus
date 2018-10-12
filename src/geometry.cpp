@@ -59,7 +59,7 @@ double Faunus::Geometry::Box::getVolume(int dim) const {
     return len.x() * len.y() * len.z();
 }
 
-const Faunus::Point &Faunus::Geometry::Box::getLength() const { return len; }
+Faunus::Point Faunus::Geometry::Box::getLength() const { return len; }
 
 bool Faunus::Geometry::Box::collision(const Faunus::Point &a, double r) const {
     if ( std::fabs(a.z()+r) > len_half.z())
@@ -113,6 +113,14 @@ void Faunus::Geometry::from_json(const Faunus::json &j, Faunus::Geometry::Sphere
 
 void Faunus::Geometry::to_json(Faunus::json &j, const Faunus::Geometry::Sphere &g) {
     j["radius"] = g.getRadius();
+}
+
+void Faunus::Geometry::from_json(const Faunus::json &j, Faunus::Geometry::Chameleon &g) {
+    g.from_json(j);
+}
+
+void Faunus::Geometry::to_json(Faunus::json &j, const Faunus::Geometry::Chameleon &g) {
+    g.to_json(j);
 }
 
 void Faunus::Geometry::Cylinder::set(double radius, double length) {
@@ -195,4 +203,182 @@ void Faunus::Geometry::Sphere::randompos(Faunus::Point &a, Faunus::Random &rand)
 
 bool Faunus::Geometry::Sphere::collision(const Faunus::Point &a, double r) const {
     return (a.squaredNorm()>r2) ? true : false;
+}
+
+void Faunus::Geometry::Chameleon::setLength(const Faunus::Point &l) {
+    len = l;
+    len_half = l*0.5;
+    len_inv = l.cwiseInverse();
+    c1 = l.y()/l.x();
+    c2 = l.z()/l.x();
+}
+
+double Faunus::Geometry::Chameleon::getVolume(int dim) const {
+    switch (type) {
+        case SPHERE:   return 4*pc::pi/3*radius*radius*radius;
+        case CUBOID:   return len.x()*len.y()*len.z();
+        case SLIT:     return len.x()*len.y()*len.z()*0.5;
+        case CYLINDER: return pc::pi*radius*radius*len.z();
+    }
+}
+
+Faunus::Point Faunus::Geometry::Chameleon::setVolume(double V, Faunus::Geometry::VolumeMethod method) {
+    if (type==CUBOID) {
+        double x, alpha;
+        Point s;
+        switch (method) {
+            case ISOTROPIC:
+                x = std::cbrt( V / (c1*c2) ); // keep aspect ratio
+                s = { x, c1*x, c2*x };
+                setLength(s);
+                break;
+            case XY:
+                x = std::sqrt( V / (c1*len.z()) ); // keep xy aspect ratio
+                s = { x, c1*x, len.z() };
+                setLength(s);  // z is untouched
+                break;
+            case ISOCHORIC:
+                // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
+                alpha = sqrt( V / pow(getVolume(), 1./3.) );
+                s = { alpha, alpha, 1/(alpha*alpha) };
+                setLength( len.cwiseProduct(s) );
+                return s;
+            default:
+                throw std::runtime_error("unknown volume scaling method");
+        }
+        assert( fabs(getVolume()-V)<1e-6 );
+        return s.cwiseQuotient(len); // this will scale any point to new volume
+    }
+
+    if (type==CYLINDER and method==ISOTROPIC) {
+        double rold = radius;
+        radius = std::sqrt( V / (pc::pi * len.z()) );
+        setLength( { 4*radius, 4*radius, len.z() } );
+        assert( fabs(getVolume()-V)<1e-6 );
+        return Point(radius/rold, radius/rold, 1);
+    }
+
+    if (type==SPHERE and method==ISOTROPIC) {
+        double rold = radius;
+        radius = std::cbrt(3*V/(4*pc::pi));
+        setLength( 4*Point(radius,radius,radius) ); // disable min. image in xyz
+        assert( fabs(getVolume()-V)<1e-6 );
+        return Point().setConstant(radius/rold);
+    }
+
+    throw std::runtime_error("unsupported volume move for geometry");
+
+    return {1,1,1};
+}
+
+Faunus::Point Faunus::Geometry::Chameleon::getLength() const {
+    switch (type) {
+        case CUBOID:   return len;
+        case SLIT:     return {len.x(), len.y(), 0.5*len.z()};
+        case SPHERE:   return {2*radius,2*radius,2*radius};
+        case CYLINDER: return {2*radius,2*radius,len.z()};
+    }
+}
+
+void Faunus::Geometry::Chameleon::randompos(Faunus::Point &m, Faunus::Random &rand) const {
+    double r2 = radius*radius, d=2*radius;
+    switch (type) {
+        case SPHERE:
+            do {
+                m.x() = (rand() - 0.5) * d;
+                m.y() = (rand() - 0.5) * d;
+                m.z() = (rand() - 0.5) * d;
+            } while ( m.squaredNorm() > r2 );
+            break;
+        case CYLINDER:
+            m.z() = (rand()-0.5) * len.z();
+            do {
+                m.x() = (rand()-0.5) * d;
+                m.y() = (rand()-0.5) * d;
+                d = m.x()*m.x() + m.y()*m.y();
+            } while ( d>r2 );
+            break;
+        default:
+            m.x() = (rand()-0.5) * len.x();
+            m.y() = (rand()-0.5) * len.y();
+            m.z() = (rand()-0.5) * len.z();
+            break;
+    }
+}
+
+bool Faunus::Geometry::Chameleon::collision(const Faunus::Point &a, double r) const {
+    assert(std::fabs(r)<1e-6 && "collision test w. radius unimplemented.");
+    double r2 = radius*radius;
+    switch (type) {
+        case SPHERE:
+            return (a.squaredNorm()>r2) ? true : false;
+            break;
+        case CYLINDER:
+            if ( std::fabs(a.z()) > len_half.z()) return true;
+            if ( a.x()*a.x() + a.y()*a.y() > r2 ) return true;
+            break;
+        case SLIT:
+            if ( std::fabs(a.x()) > len_half.x()) return true;
+            if ( std::fabs(a.y()) > len_half.y()) return true;
+            if ( std::fabs(a.z()) > 0.5*len_half.z()) return true;
+            break;
+        case CUBOID:
+            if ( std::fabs(a.x()) > len_half.x()) return true;
+            if ( std::fabs(a.y()) > len_half.y()) return true;
+            if ( std::fabs(a.z()) > len_half.z()) return true;
+            break;
+    }
+    return false;
+}
+
+void Faunus::Geometry::Chameleon::from_json(const Faunus::json &j) {
+    len.setZero();
+    auto it = names.find( j.at("type").get<std::string>() );
+    if (it!=names.end()) {
+        name = it->first;
+        type = it->second;
+
+        if ( type == CUBOID or type == SLIT ) {
+            auto m = j.at("length");
+            if (m.is_number()) {
+                double l = m.get<double>();
+                setLength( {l,l,l} );
+            } else if (m.is_array())
+                if (m.size()==3)
+                    setLength( m.get<Point>() );
+        }
+
+        if ( type == SPHERE or type == CYLINDER )
+            radius = j.at("radius").get<double>();
+
+        if (type == SLIT)
+            setLength( {len.x(), len.y(), 2*len.z() } );  // disable min. image in z
+
+        if (type == SPHERE)
+            setLength( 4*Point(radius,radius,radius) ); // disable min. image in xyz
+
+        if (type == CYLINDER) {
+            len.z() = j.at("length").get<double>();
+            setLength( {4*radius,4*radius,len.z()} ); // disable min. image in xy
+        }
+    }
+}
+
+void Faunus::Geometry::Chameleon::to_json(Faunus::json &j) const {
+    assert(!name.empty());
+    switch (type) {
+        case SPHERE:
+            j = {{"radius",radius}};
+            break;
+        case CYLINDER:
+            j = {{"radius",radius}, {"length",len.z()}};
+            break;
+        case SLIT:
+            j = {{"length",Point(len.x(), len.y(), 0.5*len.z())}};
+            break;
+        case CUBOID:
+            j = {{"length",len}};
+            break;
+    }
+    j["type"] = name;
 }

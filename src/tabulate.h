@@ -189,7 +189,7 @@ namespace Faunus
                  * @param d Table data
                  * @param r2 x value
                  */
-                T eval( const typename base::data &d, T r2 ) const
+                inline T eval( const typename base::data &d, T r2 ) const
                 {
                     auto low = std::lower_bound(d.r2.begin(), d.r2.end(), r2);
                     size_t pos = (low - d.r2.begin() - 1);

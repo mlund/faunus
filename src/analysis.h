@@ -706,19 +706,18 @@ namespace Faunus {
          */
         class PairFunctionBase : public Analysisbase {
             protected:
-                int dim;
+                int dim=3;
                 int id1=-1, id2=-1; // particle id (mol or atom)
-                double dr;
+                double dr=0;
                 Table2D<double,double> hist;
                 Table2D<double,Average<double>> hist2;
-                std::string name1, name2, file, file2;
-                double Rhypersphere; // Radius of 2D hypersphere
+                std::string name1, name2, file;
+                double Rhypersphere=-1; // Radius of 2D hypersphere
                 Average<double> V;   // average volume (angstrom^3)
                 virtual void normalize();
+
             private:
-
                 void _from_json(const json &j) override;
-
                 void _to_json(json &j) const override;
 
             public:

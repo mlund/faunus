@@ -1150,6 +1150,7 @@ namespace Faunus {
                     std::shared_ptr<POWERSASA::PowerSasa<float,Point>> ps=nullptr;
 
                     void updateSASA(const Tpvec &p) {
+                        assert(ps != nullptr);
                         radii.resize(p.size());
                         std::transform(p.begin(), p.end(), radii.begin(),
                                 [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
@@ -1203,7 +1204,7 @@ namespace Faunus {
                         name = "sasa";
                         cite = "doi:10.1002/jcc.21844";
                         probe = j.value("radius", 1.4) * 1.0_angstrom;
-                        conc = j.value("molarity", conc) * 1.0_molar;
+                        conc = j.at("molarity").get<double>() * 1.0_molar;
                         init();
                     }
 
@@ -1220,7 +1221,7 @@ namespace Faunus {
                     double energy(Change &change) override {
                         double u=0, A=0;
                         /*
-                         * ideally we want to call `update` only is `key==NEW` but
+                         * ideally we want to call `update` only if `key==NEW` but
                          * syncronising the PowerSasa object is difficult since it's
                          * non-copyable.
                          */
@@ -1326,7 +1327,7 @@ namespace Faunus {
                                     }
 
                                     if (vec.size()==oldsize)
-                                        std::cerr << "warning: ignoring unknown energy '" << it.key() << "'" << endl;
+                                        throw std::runtime_error("unknown term");
 
                                 } catch (std::exception &e) {
                                     throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what());

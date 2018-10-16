@@ -1193,14 +1193,17 @@ namespace Faunus {
                 Average<double> uavg;
 
                 void init() {
+                    dusum=0;
+                    Change c; c.all=true;
+
                     state1.pot.key = Energy::Energybase::OLD; // this is the old energy (current)
                     state2.pot.key = Energy::Energybase::NEW; // this is the new energy (trial)
                     state1.pot.init();
-                    state2.pot.init();
-                    dusum=0;
-                    Change c; c.all=true;
-                    state2.sync(state1, c);
+
                     uinit = state1.pot.energy(c);
+
+                    state2.sync(state1, c);
+                    state2.pot.init();
 
                     // Hack in reference to state1 in speciation
                     for (auto base : moves.vec) {
@@ -1208,8 +1211,16 @@ namespace Faunus {
                         if (derived)
                             derived->setOther(state1.spc);
                     }
-                    //cout << "s1 = " << uinit << "  s2 = " << state2.pot.energy(c) << endl; 
-                    assert(state1.pot.energy(c) == state2.pot.energy(c));
+#ifndef NDEBUG
+                    double u2 = state2.pot.energy(c);
+                    double error = std::fabs(uinit-u2);
+                    if (uinit!=0)
+                        assert(error/uinit<1e-3);
+                    else
+                        assert(error<1e-6);
+                    //cout << "u1 = " << uinit << "  u2 = " << u2 << endl;
+                    //assert( std::fabs((uinit-u2)/uinit)<1e-3 );
+#endif
                 }
 
             public:

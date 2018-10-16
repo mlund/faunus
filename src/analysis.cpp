@@ -129,18 +129,22 @@ void Faunus::Analysis::PairFunctionBase::normalize() {
 
 void Faunus::Analysis::PairFunctionBase::_to_json(Faunus::json &j) const {
     j = {
-        {"dr", dr}, {"name1", name1}, {"name2", name2}, {"file", file},
-        {"file2", file2}, {"dim", dim}, {"Rhyper", Rhypersphere}
+        {"dr", dr/1.0_angstrom},
+        {"name1", name1},
+        {"name2", name2},
+        {"file", file},
+        {"dim", dim}
     };
+    if (Rhypersphere>0)
+        j["Rhyper"] = Rhypersphere;
 }
 
 void Faunus::Analysis::PairFunctionBase::_from_json(const Faunus::json &j) {
     file = j.at("file");
-    file2 = j.value("file2", file+".avg");
     name1 = j.at("name1");
     name2 = j.at("name2");
     dim = j.value("dim", 3);
-    dr = j.value("dr", 0.1);
+    dr = j.value("dr", 0.1) * 1.0_angstrom;
     hist.setResolution(dr);
     hist2.setResolution(dr);
     Rhypersphere = j.value("Rhyper", -1.0);
@@ -160,7 +164,7 @@ void Faunus::Analysis::VirtualVolume::_sample() {
 void Faunus::Analysis::VirtualVolume::_from_json(const Faunus::json &j) { dV = j.at("dV"); }
 
 void Faunus::Analysis::VirtualVolume::_to_json(Faunus::json &j) const {
-    double pex = log(duexp.avg()) / dV;
+    double pex = log(duexp.avg()) / dV; // excess pressure
     j = {
         {"dV", dV}, {"Pex/mM", pex/1.0_mM},
         {"Pex/Pa", pex/1.0_Pa}, {"Pex/kT/"+u8::angstrom+u8::cubed, pex}

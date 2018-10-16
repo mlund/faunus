@@ -304,7 +304,7 @@ and hydrophobic/hydrophilic interactions.
 `sasa`       | Description
 ------------ | ----------------------------------------------------------
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
-`molarity=0` | Molar concentration of co-solute, $c_s$.
+`molarity`   | Molar concentration of co-solute, $c_s$.
 
 
 ## Bonded Interactions

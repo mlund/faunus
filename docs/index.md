@@ -6,7 +6,7 @@ header:
   overlay_filter: "0.5"
   #overlay_image: http://www.worldtechtoday.com/wp-content/uploads/2016/04/bigstock-Water-Molecules-984772.jpg
   #overlay_image: https://www.wired.com/images_blogs/dangerroom/2013/02/hoth-atat.jpg
-  overlay_image: http://www.artisandice.com/wp-content/uploads/2014/05/minionsblood.jpg
+  overlay_image: https://pixabay.com/get/eb36b10c2af5023ed1584d05fb0938c9bd22ffd41cb2184695f3c17da5/cube-2303213_1280.jpg
   cta_label: "Install Now"
   cta_url: "https://github.com/mlund/faunus/releases"
   caption: # image credit:

@@ -18,7 +18,7 @@ In addition to the `faunus` program, this installs a set of examples in `share/f
 
 ## Building from source code
 
-Faunus is continuously [tested](https://travis-ci.org/mlund/neofaunus) on macOS/Linux,
+Faunus is continuously [tested](https://travis-ci.org/mlund/faunus) on macOS/Linux,
 but should compile on most unix operating systems and possibly under Cygwin (Windows).
 
 ### Requirements

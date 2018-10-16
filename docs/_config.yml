@@ -1,4 +1,4 @@
-remote_theme: "mmistakes/minimal-mistakes@4.9.0"
+remote_theme: "mmistakes/minimal-mistakes@4.13.0"
 
 # Welcome to Jekyll!
 #
@@ -193,6 +193,7 @@ plugins:
   - jekyll-gist
   - jekyll-feed
   - jemoji
+  - jekyll-include-cache
   - jekyll-remote-theme
 
 # mimic GitHub Pages with --safe

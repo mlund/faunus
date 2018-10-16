@@ -1,8 +1,0 @@
-atomlist           psc-nvt.json
-cuboid_len         100
-temperature        298.15
-loop_macrosteps    20
-loop_microsteps    20000
-tion1              PSC
-nion1              30
-

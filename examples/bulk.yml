@@ -1,0 +1,25 @@
+temperature: 1100
+mcloop: {macro: 2, micro: 25}
+geometry: {length: 42.5} # 19.73
+energy:
+    - isobaric: {P/mM: 11}
+    - nonbonded_coulomblj:
+        lennardjones: {mixing: LB}
+        coulomb: {type: ewald, epsr: 1, cutoff: 14, kcutoff: 7, alpha: 0.2}
+atomlist:
+    - Na: {q:  1.0, sigma: 3.33, eps: 0.01158968, dp: 0.5} 
+    - Cl: {q: -1.0, sigma: 4.4, eps: 0.4184, dp: 0.5} 
+moleculelist:
+    - salt: {atoms: [Na,Cl], atomic: true}
+insertmolecules:
+    - salt: {N: 1152} # 152
+moves:
+    - transrot: {molecule: salt}
+    - volume: {dV: 0.03}
+analysis:
+    - atomrdf: {file: rdf.dat, nstep: 20, dr: 0.1, name1: Na, name2: Cl}
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - xtcfile: {file: traj.xtc, nstep: 50}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}
+    - density: {nstep: 50}

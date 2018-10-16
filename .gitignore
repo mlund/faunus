@@ -1,0 +1,58 @@
+# Faunus
+faunus
+faunus_sphere
+faunus_nopbc
+tests
+include/
+3rdparty/
+examples/
+
+# CMake
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+install_manifest.txt
+DartConfiguration.tcl
+Testing
+CTestTestfile.cmake
+.ipynb_checkpoints/
+.swp
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+*.dsym
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# VIM backup files
+*~
+
+# Doxygen
+doxyhtml
+
+# Kdevelop
+*.kdev4
+
+# MacOS X generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
+/.idea/
+#!/.idea/codeStyleSettings.xml

@@ -1,0 +1,55 @@
+language: cpp
+dist: trusty
+sudo: required
+group: edge
+compiler: clang
+
+matrix:
+  include:
+
+  # OSX / Clang
+  - os: osx
+    osx_image: xcode9.2
+    env: [COMPILER=clang++, CXX=clang++, CC=clang]
+
+  # Linux / Clang
+  - os: linux
+    env: [COMPILER=clang++-5.0, CXX=clang++, CC=clang]
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
+        packages: ['g++-7', 'clang-5.0']
+
+install:
+  - |
+    # conda
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
+    else
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
+    bash miniconda.sh -b -p $HOME/miniconda
+    export PATH="$HOME/miniconda/bin:$PATH"
+    hash -r
+    conda config --set always_yes yes --set changeps1 no
+    conda config --add channels conda-forge
+    conda update -q conda
+    conda install conda-build=2 anaconda-client
+    conda update -q conda-build
+
+script:
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      #conda install cmake openmpi=1.6.3 python=3
+      #  CXX=clang++ CC=clang cmake . -DENABLE_MPI=on
+      #  make faunus
+      #  make tests
+      #  make test
+      cd scripts/
+      conda config --set anaconda_upload yes
+      conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+    else
+      cd scripts/
+      conda config --set anaconda_upload yes
+      conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+    fi

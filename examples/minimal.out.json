@@ -1,0 +1,94 @@
+{
+ "analysis": [
+  {
+   "systemenergy": {
+    "file": "energy.dat",
+    "final": [
+     -13.014839105764253
+    ],
+    "init": -13.762,
+    "mean": -14.216,
+    "nstep": 100,
+    "relative time": 0.00225,
+    "samples": 100
+   }
+  },
+  {
+   "savestate": {
+    "file": "confout.pqr"
+   }
+  },
+  {
+   "savestate": {
+    "file": "state.json"
+   }
+  }
+ ],
+ "energy": [
+  {
+   "hamiltonian": [
+    {
+     "nonbonded": {
+      "cutoff_g2g": null,
+      "pairpot": {
+       "default": [
+        {
+         "lennardjones": {
+          "mixing": "LB"
+         }
+        },
+        {
+         "coulomb": {
+          "cutoff": 50,
+          "epsr": 80,
+          "type": "plain"
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "geometry": {
+  "length": [
+   50.0,
+   50.0,
+   50.0
+  ]
+ },
+ "git revision": "139a54d (2018-08-24)",
+ "groups": [
+  {
+   "salt": {
+    "capacity": 40,
+    "index": "0-40",
+    "size": 40
+   }
+  }
+ ],
+ "moves": [
+  {
+   "transrot": {
+    "acceptance": 0.615,
+    "dir": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "molecule": "salt",
+    "molid": 0,
+    "moves": 400000,
+    "relative time": 0.817,
+    "repeat": 40,
+    "√⟨r²⟩": 11.1
+   }
+  }
+ ],
+ "number of groups": 1,
+ "number of particles": 40,
+ "reactionlist": null,
+ "relative drift": 3.355917829710387e-15,
+ "temperature": 300.0
+}

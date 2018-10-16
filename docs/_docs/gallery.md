@@ -25,3 +25,10 @@ This is a display of systems Faunus can be used to simulate. Click to see the in
 
 {% include feature_row id="feature_row2" %}
 
+<script src="http://gist-it.appspot.com/http://github.com/mlund/faunus/raw/master/examples/water.yml"></script>
+
+<script src="http://gist-it.appspot.com/github/mlund/faunus/blob/master/examples/minimal.yml"></script>
+
+
+
+

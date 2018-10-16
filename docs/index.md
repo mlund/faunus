@@ -5,24 +5,25 @@ header:
   overlay_color: "#000"
   overlay_filter: "0.5"
   #overlay_image: http://www.worldtechtoday.com/wp-content/uploads/2016/04/bigstock-Water-Molecules-984772.jpg
-  overlay_image: https://www.wired.com/images_blogs/dangerroom/2013/02/hoth-atat.jpg
+  #overlay_image: https://www.wired.com/images_blogs/dangerroom/2013/02/hoth-atat.jpg
+  overlay_image: http://www.artisandice.com/wp-content/uploads/2014/05/minionsblood.jpg
   cta_label: "Install Now"
-  cta_url: "https://github.com/mlund/faunus/releases/latest"
+  cta_url: "https://github.com/mlund/faunus/releases"
   caption: # image credit:
 excerpt: "_...the Monte Carlo code you're looking for!_"
 
 feature_row:
   - image_path: https://www.dropbox.com/s/bp8tk5xilszliod/flexibility.jpg?raw=1
-    title: "Extreme Flexibility"
+    title: "Serious Flexibility"
     excerpt: "Arbitrary Hamiltonian and Statistical Mechanical Ensembles through a modern, modular C++ framework that can easily be extended."
   - image_path: https://www.dropbox.com/s/djqi4dfhl4ee365/deathstar.png?raw=1
     title: "Patchy Particles"
     excerpt: "Spheres, Sphero-cylinders, Death Star Particles, Dipoles, Quadrupoles, or define your own anisotropic particle."
   - image_path: https://www.dropbox.com/s/r126un7q577ugxw/opensource-400.png?raw=1
     title: "Open Source"
-    excerpt: "Faunus is public, open source software and freely available through Github."
+    excerpt: "Faunus is public, open source software and freely available."
 ---
-[![GitHub release](https://img.shields.io/github/release/mlund/faunus.svg)](https://github.com/mlund/faunus/releases/latest)
+[![GitHub release](https://img.shields.io/github/release/mlund/faunus/all.svg)](https://github.com/mlund/faunus/releases)
 [![DOI](https://img.shields.io/badge/DOI-10%2Fnvn-orange.svg)](http://dx.doi.org/10/nvn)
 [![DOI](https://img.shields.io/badge/DOI-10%2Fdfqgch-orange.svg)](http://dx.doi.org/10/dfqgch)
 

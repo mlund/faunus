@@ -22,7 +22,7 @@ typedef Particle<Charge> Tparticle;
 static const char USAGE[] =
 R"(Faunus - the Monte Carlo code you're looking for!
 
-    http://github.com/mlund/neofaunus
+    http://github.com/mlund/faunus
 
     Usage:
       faunus [-q] [--nobar] [--nopfx] [--state=<file>] [--input=<file>] [--output=<file>]

@@ -12,7 +12,7 @@ example_row1:
     btn_class: "btn--inverse"
     excerpt: "Simple MC example of explicit water with pressure coupling"
   - image_path: https://www.dropbox.com/s/7ymnpf9t4w1nt48/membrane-3bead.jpg?raw=1
-    url: "{{site.github.repository_url}}/blob/master/examples/membrane.yml"
+    #url: "{{site.github.repository_url}}/blob/master/examples/membrane.yml"
     title: "Coarse Grained Bilayer"
     excerpt: "Three-bead lipid bilayer model spanning a periodic simulation box to form a bilayer. Wang-Landau sampling of bending modulus." 
 ---

@@ -1,6 +1,6 @@
 ---
 layout: splash
-toc: false
+#toc: false
 permalink: /gallery/
 
 feature_row2:
@@ -21,11 +21,11 @@ feature_row2:
 
 # Gallery
 
-This is a display of systems Faunus can be used to simulate. Click to see the inoput file.
+This is a display of systems Faunus can be used to simulate. Click to see the input file.
 
 {% include feature_row id="feature_row2" %}
 
-<script src="http://gist-it.appspot.com/http://github.com/mlund/faunus/raw/master/examples/water.yml"></script>
+## Minimal example
 
 <script src="http://gist-it.appspot.com/github/mlund/faunus/blob/master/examples/minimal.yml"></script>
 

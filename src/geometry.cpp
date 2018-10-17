@@ -55,8 +55,15 @@ Faunus::Point Faunus::Geometry::Box::setVolume(double V, Faunus::Geometry::Volum
 }
 
 double Faunus::Geometry::Box::getVolume(int dim) const {
-    assert(dim==3);
-    return len.x() * len.y() * len.z();
+    switch (dim) {
+        case 1:
+            return len.z();
+        case 2:
+            return len.x() * len.y();
+        default:
+            assert(dim==3);
+            return len.x() * len.y() * len.z();
+    }
 }
 
 Faunus::Point Faunus::Geometry::Box::getLength() const { return len; }

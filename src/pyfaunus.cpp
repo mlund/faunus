@@ -23,8 +23,10 @@ PYBIND11_MODULE(pyfaunus, m)
     using namespace pybind11::literals;
 
     // json
-    py::class_<json>(m, "json")
-        .def(py::init<>());
+    //py::class_<json>(m, "json")
+    //    .def(py::init([](std::string arg) {
+    //                return json::parse(arg);
+    //                } ) )
 
     // Geometries
     py::class_<Geometry::GeometryBase>(m, "Geometrybase")

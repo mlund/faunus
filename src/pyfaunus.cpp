@@ -19,20 +19,17 @@ typedef typename Tspace::Tpvec Tpvec;
 typedef typename Tspace::Tgroup Tgroup;
 typedef AtomData<Tparticle> Tatomdata;
 
-template<class T>
-std::unique_ptr<T> fromdict(py::dict dict) {
-    py::object dumps = py::module::import("json").attr("dumps");
-    std::string s = dumps(dict).cast<std::string>();
-    auto ptr = new T();
-    Faunus::from_json(json::parse(s), *ptr);
-    //*ptr = json::parse(s);
-    return std::unique_ptr<T>(ptr);
-} // convert py::dict to T through Faunus::json
-
 inline json dict2json(py::dict dict) {
     py::object dumps = py::module::import("json").attr("dumps");
     return json::parse( dumps(dict).cast<std::string>() );
 } // python dict --> c++ json
+
+template<class T>
+std::unique_ptr<T> from_dict(py::dict dict) {
+    auto ptr = new T();
+    *ptr = dict2json(dict);
+    return std::unique_ptr<T>(ptr);
+} // convert py::dict to T through Faunus::json
 
 PYBIND11_MODULE(pyfaunus, m)
 {
@@ -108,27 +105,20 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("sigma", &Tatomdata::sigma)
         .def_readwrite("name", &Tatomdata::name)
         .def_readwrite("activity", &Tatomdata::activity, "Activity = chemical potential in log scale (mol/l)")
-        .def_readwrite("p", &Tatomdata::p);
-        //.def("id", &Tatomdata::id);
+        .def_readwrite("p", &Tatomdata::p)
+        .def("id", (const int& (Tatomdata::*)() const) &Tatomdata::id);
 
     auto _atomdatavec = py::bind_vector<std::vector<Tatomdata>>(m, "AtomDataVector");
     _atomdatavec
         .def("from_dict", [](std::vector<Tatomdata> &a, py::dict dict) {
                 Faunus::from_json(dict2json(dict), a); } );
 
-    m.def("from_dict", [](py::dict dict, std::vector<Tatomdata> &a) {
-            from_json(dict2json(dict), a);
-            } );
-
-    m.attr("atoms") = &atoms<Tparticle>;
+    m.attr("atoms") = &atoms<Tparticle>; // global instance
 
     // Potentials
     py::class_<Potential::FunctorPotential<Tparticle>>(m, "FunctorPotential")
-        .def(py::init( [](json j) {
-                    typedef Potential::FunctorPotential<Tparticle> T;
-                    auto ptr = new T();
-                    *ptr = j;
-                    return std::unique_ptr<T>(ptr);
+        .def(py::init( [](py::dict dict) {
+                    return from_dict<Potential::FunctorPotential<Tparticle>>(dict);
                     } ) );
 
     // Change

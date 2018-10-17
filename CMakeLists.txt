@@ -113,8 +113,8 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 
 ExternalProject_Add( pybind11
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/pybind/pybind11/archive/v2.2.3.tar.gz"
-    URL_MD5 55b637945bbf47d99d2c906bf0c13f49
+    URL "https://github.com/pybind/pybind11/archive/v2.2.4.tar.gz"
+    URL_MD5 c533a107bc95bd0c5525ff650b11bfa1
     UPDATE_DISCONNECTED ON
     INSTALL_DIR "${CMAKE_SOURCE_DIR}/3rdparty"
     CMAKE_ARGS -DPYBIND11_TEST=OFF -DPYBIND11_INSTALL=ON -DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty/
@@ -270,7 +270,7 @@ if (ENABLE_PYTHON)
         find_package(pybind11 PATHS ${CMAKE_SOURCE_DIR}/3rdparty/share/cmake/pybind11/)
         if (pybind11_FOUND)
             message("Adding pyfaunus target.")
-            pybind11_add_module(pyfaunus src/pyfaunus.cpp)
+            pybind11_add_module(pyfaunus src/pyfaunus.cpp ${objs})
         endif()
     endif ()
 endif ()

@@ -2,6 +2,7 @@
 #include <pybind11/stl_bind.h>
 #include <pybind11/numpy.h>
 #include <pybind11/eigen.h>
+#include <pybind11/operators.h>
 
 #include <src/core.h>
 #include <src/space.h>
@@ -17,16 +18,36 @@ typedef Space<Geometry::Cuboid, Tparticle> Tspace;
 typedef typename Tspace::Tpvec Tpvec;
 typedef typename Tspace::Tgroup Tgroup;
 typedef AtomData<Tparticle> Tatomdata;
- 
+
+template<class T>
+std::unique_ptr<T> fromdict(py::dict dict) {
+    py::object dumps = py::module::import("json").attr("dumps");
+    std::string s = dumps(dict).cast<std::string>();
+    auto ptr = new T();
+    Faunus::from_json(json::parse(s), *ptr);
+    //*ptr = json::parse(s);
+    return std::unique_ptr<T>(ptr);
+} // convert py::dict to T through Faunus::json
+
+inline json dict2json(py::dict dict) {
+    py::object dumps = py::module::import("json").attr("dumps");
+    return json::parse( dumps(dict).cast<std::string>() );
+} // python dict --> c++ json
+
 PYBIND11_MODULE(pyfaunus, m)
 {
     using namespace pybind11::literals;
 
     // json
-    //py::class_<json>(m, "json")
-    //    .def(py::init([](std::string arg) {
-    //                return json::parse(arg);
-    //                } ) )
+    py::class_<json>(m, "json")
+        .def(py::init( [](std::string arg) {
+                    return std::unique_ptr<json>(new json(json::parse(arg)));
+                    } ) )
+    .def(py::init([](py::dict dict) {
+                py::object dumps = py::module::import("json").attr("dumps");
+                std::string s = dumps(dict).cast<std::string>();
+                return std::unique_ptr<json>(new json(json::parse(s)));
+                } ) );
 
     // Geometries
     py::class_<Geometry::GeometryBase>(m, "Geometrybase")
@@ -83,15 +104,32 @@ PYBIND11_MODULE(pyfaunus, m)
     // AtomData
     py::class_<Tatomdata>(m, "AtomData")
         .def(py::init<>())
+        .def_readwrite("eps", &Tatomdata::eps)
+        .def_readwrite("sigma", &Tatomdata::sigma)
         .def_readwrite("name", &Tatomdata::name)
         .def_readwrite("activity", &Tatomdata::activity, "Activity = chemical potential in log scale (mol/l)")
         .def_readwrite("p", &Tatomdata::p);
+        //.def("id", &Tatomdata::id);
 
-    py::bind_vector<std::vector<Tatomdata>>(m, "AtomDataVector");
+    auto _atomdatavec = py::bind_vector<std::vector<Tatomdata>>(m, "AtomDataVector");
+    _atomdatavec
+        .def("from_dict", [](std::vector<Tatomdata> &a, py::dict dict) {
+                Faunus::from_json(dict2json(dict), a); } );
+
+    m.def("from_dict", [](py::dict dict, std::vector<Tatomdata> &a) {
+            from_json(dict2json(dict), a);
+            } );
+
     m.attr("atoms") = &atoms<Tparticle>;
 
     // Potentials
-    py::class_<Potential::FunctorPotential<Tparticle>>(m, "FunctorPotential");
+    py::class_<Potential::FunctorPotential<Tparticle>>(m, "FunctorPotential")
+        .def(py::init( [](json j) {
+                    typedef Potential::FunctorPotential<Tparticle> T;
+                    auto ptr = new T();
+                    *ptr = j;
+                    return std::unique_ptr<T>(ptr);
+                    } ) );
 
     // Change
     py::class_<Change>(m, "Change")

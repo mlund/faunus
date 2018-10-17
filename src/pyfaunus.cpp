@@ -106,7 +106,7 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("name", &Tatomdata::name)
         .def_readwrite("activity", &Tatomdata::activity, "Activity = chemical potential in log scale (mol/l)")
         .def_readwrite("p", &Tatomdata::p)
-        .def("id", (const int& (Tatomdata::*)() const) &Tatomdata::id);
+        .def("id", (const int& (Tatomdata::*)() const) &Tatomdata::id); // explicit signature due to overload in c++
 
     auto _atomdatavec = py::bind_vector<std::vector<Tatomdata>>(m, "AtomDataVector");
     _atomdatavec
@@ -119,7 +119,10 @@ PYBIND11_MODULE(pyfaunus, m)
     py::class_<Potential::FunctorPotential<Tparticle>>(m, "FunctorPotential")
         .def(py::init( [](py::dict dict) {
                     return from_dict<Potential::FunctorPotential<Tparticle>>(dict);
-                    } ) );
+                    } ) )
+    .def("energy", [](Potential::FunctorPotential<Tparticle> &pot, const Tparticle &a, const Tparticle &b, const Point &r){
+            return pot(a,b,r); 
+            });
 
     // Change
     py::class_<Change>(m, "Change")

@@ -1,23 +1,24 @@
 import json
+import unittest
 import pyfaunus as pyf
 
-inputstr = '''
-{
-  "atomlist" : [
-    { "A": { "r":1.1 } },
-    { "B": { "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "mw":1.1, "tfe":0.98, "tension":0.023 } }
-  ]
-}
-'''
 # define atom types
-d = {'atomlist': [
-  dict(A = dict( r=2.0, eps=0.05 )),
-  dict(B = dict( r=1.2 )) ]}
+d = { 'atomlist': [
+    { 'Na+':  dict( r=2.0, eps=0.05, q=1.0 ) },
+    { 'Cl-':  dict( r=1.2, q=-1.0 ) }
+    ] }
 
 pyf.atoms.from_dict(d)
 
-# loop over all atom types
-for i in pyf.atoms:
-    print("atom name and diameter:", i.name, i.sigma )
+a = pyf.atoms[0].p
+b = pyf.atoms[1].p
 
-pot = pyf.FunctorPotential(d)
+b.charge = 10
+
+# loop over atom types
+for i in pyf.atoms:
+    print("atom name and diameter:", i.name, i.sigma)
+
+print("charge 2nd atomtype = ", pyf.atoms[1].p.charge)
+
+#pot = pyf.FunctorPotential(d)

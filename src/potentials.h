@@ -588,16 +588,18 @@ namespace Faunus {
                             if (i.is_object() && (i.size()==1))
                                 for (auto it=i.begin(); it!=i.end(); ++it) {
                                     uFunc _u = nullptr;
+
                                     if (it.key()=="coulomb") _u = CoulombGalore() = i;
-                                    if (it.key()=="cos2") _u = CosAttract() = i;
-                                    if (it.key()=="polar") _u = Polarizability<T>() = i;
-                                    if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
-                                    if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
-                                    if (it.key()=="repulsionr3") _u = RepulsionR3() = i;
-                                    if (it.key()=="wca") _u = SASApotential() = i;
-                                    if (it.key()=="wca") _u = WeeksChandlerAndersen<T>() = i;
-                                    if (it.key()=="pm") _u = Coulomb() + HardSphere<T>() = it.value();
-                                    if (it.key()=="pmwca") _u = Coulomb() + WeeksChandlerAndersen<T>() = it.value();
+                                    else if (it.key()=="cos2") _u = CosAttract() = i;
+                                    else if (it.key()=="polar") _u = Polarizability<T>() = i;
+                                    else if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
+                                    else if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
+                                    else if (it.key()=="repulsionr3") _u = RepulsionR3() = i;
+                                    else if (it.key()=="sasa") _u = SASApotential() = i;
+                                    else if (it.key()=="wca") _u = WeeksChandlerAndersen<T>() = i;
+                                    else if (it.key()=="pm") _u = Coulomb() + HardSphere<T>() = it.value();
+                                    else if (it.key()=="pmwca") _u = Coulomb() + WeeksChandlerAndersen<T>() = it.value();
+
                                     if (_u!=nullptr) // if found, sum them into new function object
                                         u = [u,_u](const T&a, const T&b, const Point &r){return u(a,b,r)+_u(a,b,r);};
                                     else

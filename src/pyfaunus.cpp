@@ -22,6 +22,10 @@ PYBIND11_MODULE(pyfaunus, m)
 {
     using namespace pybind11::literals;
 
+    // json
+    py::class_<json>(m, "json")
+        .def(py::init<>());
+
     // Geometries
     py::class_<Geometry::GeometryBase>(m, "Geometrybase")
         .def("getVolume", &Geometry::GeometryBase::getVolume, "Get container volume", "dim"_a=3)
@@ -83,6 +87,9 @@ PYBIND11_MODULE(pyfaunus, m)
 
     py::bind_vector<std::vector<Tatomdata>>(m, "AtomDataVector");
     m.attr("atoms") = &atoms<Tparticle>;
+
+    // Potentials
+    py::class_<Potential::FunctorPotential<Tparticle>>(m, "FunctorPotential");
 
     // Change
     py::class_<Change>(m, "Change")

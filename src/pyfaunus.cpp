@@ -71,6 +71,7 @@ PYBIND11_MODULE(pyfaunus, m)
 
     py::class_<Tparticle, Radius, Charge>(m, "Particle")
         .def(py::init<>())
+        .def_readwrite("id", &Tparticle::id, "Particle ID")
         .def_readwrite("pos", &Tparticle::pos, "Particle position");
 
     // Particle vector and it's iterator
@@ -135,5 +136,6 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("geo", &Tspace::geo)
         .def_readwrite("p", &Tspace::p)
         .def_readwrite("groups", &Tspace::groups)
-        .def("findMolecules", &Tspace::findMolecules); 
+        .def("findMolecules", &Tspace::findMolecules)
+        .def("from_dict", [](Tspace &spc, py::dict dict) { from_json(dict2json(dict), spc); } );
 }

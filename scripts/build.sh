@@ -1,14 +1,13 @@
 CXX=clang++
 CC=clang
-env
 CXX=clang++ CC=clang cmake -DENABLE_MPI=on -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX
+alias make="make -s"
 make faunus
 make faunus_nopbc
 make faunus_sphere
-make tests
-ctest -V
 #make manual
-cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX
+cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX # needed to build pyfaunus
 make pyfaunus
 make install
-
+make tests
+ctest -V

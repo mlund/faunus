@@ -472,7 +472,7 @@ elements of `high`.
 `sasa`       | SASA Transfer Free Energy
 ------------ | --------------------------------------------
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
-`molarity=0` | Molar concentration of co-solute
+`molarity`   | Molar concentration of co-solute
 
 Calculates the free energy contribution due to
 

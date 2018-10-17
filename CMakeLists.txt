@@ -312,6 +312,11 @@ add_test(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 add_test(
+    NAME pythontest
+    COMMAND sh -c "${PYTHON_EXECUTABLE} pythontest.py"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+add_test(
     NAME bulk
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py bulk.yml\
     | $<TARGET_FILE:faunus> --quiet"
@@ -356,6 +361,7 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/examples/membrane.state.json
     ${CMAKE_SOURCE_DIR}/examples/lipid.xyz
     ${CMAKE_SOURCE_DIR}/examples/penalty.yml
+    ${CMAKE_SOURCE_DIR}/examples/pythontest.py
     ${CMAKE_SOURCE_DIR}/examples/isochoric.yml
     ${CMAKE_SOURCE_DIR}/examples/isochoric.xyz
     DESTINATION share/faunus/examples)

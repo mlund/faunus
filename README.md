@@ -1,27 +1,37 @@
-[![Documentation](https://img.shields.io/badge/documentation-red.svg)](http://mlund.github.io/faunus/)
-[![Anaconda-Server Badge](https://anaconda.org/teokem/faunus/badges/installer/conda.svg)](https://conda.anaconda.org/teokem/)
+[![Documentation](https://img.shields.io/badge/documentation-brightgreen.svg)](http://mlund.github.io/faunus/)
 [![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
-[![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
+[![Anaconda-Server Badge](https://anaconda.org/teokem/faunus/badges/installer/conda.svg)](https://conda.anaconda.org/teokem/)
 
 Welcome to Faunus
 =================
 
-Faunus is a C++ framework for Metropolis Monte Carlo simulations of
+Faunus is a C++14 framework for Metropolis Monte Carlo simulations of
 molecular systems. Below is a brief overview of features:
 
 - Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
-- General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
-- **Anisotropic** atoms (multipoles, sphero-cylinders, capped particles)
-- Speciation moves (pKa prediction, Hofmeister effects etc.)
+- General hamiltonian parallel tempering (temperature, screening length, bonds etc.)
+- Anisotropic atoms (multipoles, sphero-cylinders, capped particles)
+- Speciation moves (pKa prediction, Hofmeister effects, general equilibrium reactions etc.)
+- Parallelise flat histogram method for sampling free energies along 1D/2D reaction coordinates
 - Highy modular
 - Free and open source
 
 Installing
 ===========
 
-On mac or linux, install using [conda](https://conda.io/miniconda.html):
+On macOS or Linux, install using [conda](https://conda.io/miniconda.html):
 
-    $ conda install -c teokem faunus
+    conda install -c teokem faunus
+
+Or build from source:
+
+~~~ bash
+    git clone https://github.com/mlund/faunus.git
+    cd faunus
+    cmake .
+    make
+~~~
 
 Documentation
 =============

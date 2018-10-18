@@ -18,6 +18,7 @@ typedef Space<Geometry::Cuboid, Tparticle> Tspace;
 typedef typename Tspace::Tpvec Tpvec;
 typedef typename Tspace::Tgroup Tgroup;
 typedef AtomData<Tparticle> Tatomdata;
+typedef Energy::Hamiltonian<Tspace> Thamiltonian;
 
 inline json dict2json(py::dict dict) {
     py::object dumps = py::module::import("json").attr("dumps");
@@ -128,7 +129,10 @@ PYBIND11_MODULE(pyfaunus, m)
     // Change
     py::class_<Change>(m, "Change")
         .def(py::init<>())
-        .def_readwrite("dV", &Change::dV);
+        .def_readwrite("all", &Change::all)
+        .def_readwrite("du", &Change::du)
+        .def_readwrite("dV", &Change::dV)
+        .def_readwrite("dNpart", &Change::dNpart);
 
     // Space
     py::class_<Tspace>(m, "Space")
@@ -138,4 +142,14 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("groups", &Tspace::groups)
         .def("findMolecules", &Tspace::findMolecules)
         .def("from_dict", [](Tspace &spc, py::dict dict) { from_json(dict2json(dict), spc); } );
+
+    // Hamiltonian
+    py::class_<Thamiltonian>(m, "Hamiltonian")
+        .def(py::init<Tspace&, const json&>())
+        .def(py::init([](Tspace &spc, py::dict dict) {
+                    json j = dict2json(dict);
+                    return std::unique_ptr<Thamiltonian>(new Thamiltonian(spc,j));
+                    }))
+        .def("init", &Thamiltonian::init)
+        .def("energy", &Thamiltonian::energy);
 }

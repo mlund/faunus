@@ -19,12 +19,12 @@ are available.
 The development is a **team effort** with, in chronological order,
 many valiant contributions from:
 
-_Mikael Lund, Bjorn Persson, Martin Trulsson,
-Ondrej Marsalek, Christophe Labbez, Andre Teixeira,
-Anil Kurut, Chris Evers, Magnus Ullner,
-Robert Vacha, Axel Thuresson, Bjorn Stenqvist,
-Joao Henriques, Alexei Abrikossov, Giulio Tesei,
-Lukas Sukenik, Coralie Pasquier, Niels Kouwenhoven,
+_Mikael Lund, Björn Persson, Martin Trulsson,
+Ondrej Marsalek, Christophe Labbez, André Teixeira,
+Anıl Kurut, Chris Evers, Magnus Ullner,
+Robert Vácha, Axel Thuresson, Björn Stenqvist,
+João Henriques, Alexei Abrikossov, Giulio Tesei,
+Lukáš Sukeník, Coralie Pasquier, Niels Kouwenhoven,
 Richard Chudoba, Stefan Hervø-Hansen_.
 
 ### Supporting Faunus
@@ -59,8 +59,8 @@ energy:
             - lennardjones: {mixing: LB}
             - coulomb: {type: plain, epsr: 80, cutoff: 50}
 atomlist:
-    - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40} 
-    - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10} 
+    - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}
+    - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10}
 moleculelist:
     - salt: {atoms: [Na, Cl], atomic: true }
 insertmolecules:

@@ -12,7 +12,7 @@ build:
 requirements:
   build:
     - librsvg
-    - numpy >=1.11
+    - numpy
     - cmake >=3.9
     - python {{ python }}
     - ruamel_yaml
@@ -25,6 +25,7 @@ requirements:
     - openmpi 3.1.* # [linux64]
     - ruamel_yaml
     - pygments
+    - numpy
     - python >=3
 
 build:

@@ -206,7 +206,6 @@ namespace Faunus {
         class SASApotential : public PairPotentialBase {
             private:
                 double proberadius=0, conc=0;
-
                 double area(double, double, double) const; //!< Total surface area of two intersecting spheres or radii R and r as a function of separation
 
             public:
@@ -570,7 +569,7 @@ namespace Faunus {
          * This maintains a species x species matrix with function pointers (`std::function`)
          * that wraps pair potentials. Flexibility over performance.
          *
-         * @todo `to_json` should retrive info from potentials instead of merely passing input
+         * @todo `to_json` should retrieve info from potentials instead of merely passing input
          * @warning Each atom pair will be assigned an instance of a pair-potential. This may be
          *          problematic is these have large memory requirements (Lennard-Jones for instance
          *          keep a pair-matrix with sigma/epsilon values. Make these static?)

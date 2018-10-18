@@ -140,7 +140,7 @@ ExternalProject_Add( project_xdrfile
     PATCH_COMMAND echo "add_library(xdrfile-static STATIC \${SRCS})" >> CMakeLists.txt
     BUILD_COMMAND make xdrfile-static
     UPDATE_DISCONNECTED ON
-    CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+    CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
     LOG_DOWNLOAD ON INSTALL_COMMAND "")
 
 ExternalProject_Get_Property(project_xdrfile source_dir)

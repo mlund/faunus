@@ -149,6 +149,7 @@ set(XdrfileIncludeDir ${source_dir}/include)
 add_library(xdrfile STATIC IMPORTED)
 set_property(TARGET xdrfile PROPERTY IMPORTED_LOCATION ${binary_dir}/libxdrfile-static.a)
 add_dependencies(xdrfile project_xdrfile)
+set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 # DOCTEST
 
@@ -270,7 +271,7 @@ if (ENABLE_PYTHON)
         find_package(pybind11 PATHS ${CMAKE_SOURCE_DIR}/3rdparty/share/cmake/pybind11/)
         if (pybind11_FOUND)
             pybind11_add_module(pyfaunus src/pyfaunus.cpp ${objs})
-            target_link_libraries(pyfaunus PUBLIC ${LINKLIBS})
+            target_link_libraries(pyfaunus PUBLIC xdrfile ${LINKLIBS})
         endif()
     endif ()
 endif ()

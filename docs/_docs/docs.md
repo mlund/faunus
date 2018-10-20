@@ -19,7 +19,8 @@ are available.
 The development is a **team effort** with, in chronological order,
 many valiant contributions from:
 
-_Mikael Lund, Björn Persson, Martin Trulsson,
+_[Mikael Lund](http://www.teokem.lu.se/~mikael),
+Björn Persson, Martin Trulsson,
 Ondrej Marsalek, Christophe Labbez, André Teixeira,
 Anıl Kurut, Chris Evers, Magnus Ullner,
 Robert Vácha, Axel Thuresson, Björn Stenqvist,
@@ -32,7 +33,7 @@ Richard Chudoba, Stefan Hervø-Hansen_.
 Should you find Faunus useful, do consider supporting us by crediting:
 
 - Stenqvist _et al._ [_Molecular Simulation 2013, 39:1233_](http://dx.doi.org/10/nvn)
-- Lund, M., Persson, B., Trulsson, M. [_Source Code Biol. Med., 2008, 3:1_](http://dx.doi.org/10/dfqgch)
+- Lund, M. _et al._ [_Source Code Biol. Med., 2008, 3:1_](http://dx.doi.org/10/dfqgch)
 
 ## Quick Start
 

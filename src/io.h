@@ -162,7 +162,7 @@ namespace Faunus {
                         while (std::getline(in, line)) {
                             std::stringstream o(line);
                             while (o >> key)
-                                if (key=="ATOM" || key=="HETATM") {
+                                if (key=="ATOM" or key=="HETATM") {
                                     double radius;
                                     o >> iatom >> aname;
                                     auto it = findName( atoms<Tparticle>, aname );
@@ -199,7 +199,7 @@ namespace Faunus {
                         while ( std::getline(in, line)) {
                             std::stringstream o(line);
                             while ( o >> key )
-                                if ( key=="ATOM" and key=="HETATM" ) {
+                                if ( key=="ATOM" or key=="HETATM" ) {
                                     double radius;
                                     o >> iatom >> aname;
                                     auto it = findName( atoms<Tparticle>, aname );
@@ -208,8 +208,6 @@ namespace Faunus {
                                     a = it->p;
                                     o >> rname >> ires >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
                                     p.push_back(a);
-                                    if ( a.id == 0 )
-                                        std::cerr << "Warning: Atom name " << aname << " is not in the atom list.\n";
                                 }
                                 else if ( key=="END" ) {
                                     v.push_back(p);

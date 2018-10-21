@@ -17,38 +17,16 @@ The topology describes atomic and molecular properties as well as processes and 
 The following keywords control temperature, simulation box size etc., and must be
 placed outer-most in the input file.
 
-### System Temperature
-
--------------- | -----------------------
-`temperature`  | Temperature [K]
-
-### Simulation Container
-
-If a single number is given, a cube is generated, while an array
-of size three is used to set different side-lengths.
-
-`geometry`     | Description
--------------- | -----------------------------------------------------
-`length`       | Cuboidal side-length(s) [Å] (float or array with $L_x, L_y, L_z$)
-
-### Number of Monte Carlo Loops
-
-The total number of MC steps is `macro` x `micro`.
-
-`mcloop`       | Description
--------------- | ---------------------
-`macro`        | Number of macro loops (integer)
-`micro`        | Number of micro loops (integer)
-
-### Random Number Generator
-
-By default a deterministic sequence is generated, while
-the `hardware` seed attempts to use a hardware seed to provide
-a _non-deterministric_ sequence.
-
-`random`       | Description 
--------------- | -----------------------------
-`seed`         | `fixed` (default) or `hardware`
+~~~ yaml
+temperature: 298.15    # system temperature (K)
+geometry:
+    length: [40,40,40] # cuboid dimensions (array or number) 
+mcloop:                # number of MC steps (macro x micro)
+    macro: 5
+    micro: 100
+random:                # seed for random number generator
+    seed: fixed        # "fixed" (default) or "hardware" (non-deterministic)
+~~~
 
 ## Atom Properties
 
@@ -126,16 +104,13 @@ moleculelist:
     - ...
 ~~~
 
-If the file given by `structure` contains charges or radii (i.e. pqr, aam files), this information
-is used over data from `atomlist`.
-
 
 ### Initial Configuration
 
 Upon starting a simulation, an initial configuration is required and must be
 specified in the section `insertmolecules` as a list of valid molecule names.
 Molecules are inserted in the given order and may be `inactive`
-which is used by some analysis and ensembles.
+which is used by some analysis and ensembles, grand canonical for example.
 If a group is marked `atomic`, its `atoms` will be inserted `N` times.
 
 Example:
@@ -156,9 +131,9 @@ Keyword             | Description
 `positions`         | Load positions from file (`aam`, `pqr`, `xyz`)
 `translate=[0,0,0]` | Displace loaded `positions` with vector
 
-A filename with positions for the N molecules can be given with `positions`.
+A filename with positions for the `N` molecules can be given with `positions`.
 The file must contain exactly N-times molecular
-positions that must all fit within the simulation box. Only positions from
+positions that must all fit within the simulation box. Only _positions_ from
 the file are copied while all other information is ignored.
 
 ## Equilibrium Reactions

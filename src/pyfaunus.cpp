@@ -7,6 +7,7 @@
 #include <src/core.h>
 #include <src/space.h>
 #include <src/move.h>
+#include <src/analysis.h>
 
 namespace py = pybind11;
 using namespace Faunus;
@@ -19,11 +20,17 @@ typedef typename Tspace::Tpvec Tpvec;
 typedef typename Tspace::Tgroup Tgroup;
 typedef AtomData<Tparticle> Tatomdata;
 typedef Energy::Hamiltonian<Tspace> Thamiltonian;
+typedef MCSimulation<Tgeometry,Tparticle> Tmcsimulation;
 
 inline json dict2json(py::dict dict) {
     py::object dumps = py::module::import("json").attr("dumps");
     return json::parse( dumps(dict).cast<std::string>() );
 } // python dict --> c++ json
+
+inline py::dict json2dict(const json &j) {
+    py::object loads = py::module::import("json").attr("loads");
+    return loads( j.dump() ) ;
+}
 
 template<class T>
 std::unique_ptr<T> from_dict(py::dict dict) {
@@ -152,4 +159,32 @@ PYBIND11_MODULE(pyfaunus, m)
                     }))
         .def("init", &Thamiltonian::init)
         .def("energy", &Thamiltonian::energy);
+
+    // MPI Controller
+    py::class_<Faunus::MPI::MPIController>(m, "MPIController")
+        .def(py::init<>());
+
+    // MCSimulation
+    py::class_<Tmcsimulation>(m, "MCSimulation")
+        .def(py::init([](py::dict dict) {
+                    json j = dict2json(dict);
+                    return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j,Faunus::MPI::mpi));
+                    }))
+        .def(py::init([](py::dict dict, Faunus::MPI::MPIController &mpi) {
+                    json j = dict2json(dict);
+                    return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j,mpi));
+                    }));
+
+    // CombinedAnalysis
+    py::class_<Analysis::CombinedAnalysis>(m, "Analysis")
+        .def(py::init([](Tspace &spc, Thamiltonian &pot, py::dict dict) {
+                    json j = dict2json(dict);
+                    return std::unique_ptr<Analysis::CombinedAnalysis>(new Analysis::CombinedAnalysis(j,spc,pot));
+                    }))
+        .def("to_dict", [](Analysis::CombinedAnalysis &self) {
+                json j;
+                Faunus::to_json(j, self);
+                return json2dict(j);
+                } )
+        .def("sample", &Analysis::CombinedAnalysis::sample);
 }

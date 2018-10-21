@@ -55,3 +55,7 @@ for i in r:   # loop over particle-particle distances
     spc.p[1].pos = [0,0,i]
     print ( H.energy(c) )
 
+# Analysis
+
+analysis = Analysis(spc, H, d)
+

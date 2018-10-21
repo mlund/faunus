@@ -36,8 +36,10 @@ Should you find Faunus useful, do consider supporting us by crediting:
 
 ## Quick Start
 
-Below is an example, `input.yml`, for a Metropolis Monte Carlo simulation
-of charged Lennard-Jones particles in a cubic PBC box. Running it with
+Simulations are set up using YAML or JSON files, see for example
+[minimal.yml](https://github.com/mlund/faunus/blob/master/examples/minimal.yml),
+for a Metropolis Monte Carlo simulation
+of charged Lennard-Jones particles in a cubic PBC box. Running is with
 
 ~~~ bash
 yason.py input.yml | faunus
@@ -48,28 +50,3 @@ The script `yason.py` merely converts from YAML to JSON as the former, easier to
 is used in all examples.
 For more examples, check out the `examples/` folder.
 
----
-
-~~~ yaml
-geometry: {length: 50}
-temperature: 300
-energy:
-    - nonbonded:
-        default:
-            - lennardjones: {mixing: LB}
-            - coulomb: {type: plain, epsr: 80, cutoff: 50}
-atomlist:
-    - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}
-    - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10}
-moleculelist:
-    - salt: {atoms: [Na, Cl], atomic: true }
-insertmolecules:
-    - salt: {N: 50}
-moves:
-    - transrot: { molecule: salt, dp: 40, dprot: 0 }
-analysis:
-    - systemenergy: {file: energy.dat, nstep: 10}
-    - savestate: {file: confout.pqr}
-    - savestate: {file: state.json}
-mcloop: {macro: 10, micro: 1000}
-~~~

@@ -7,6 +7,10 @@ namespace Faunus {
 
     /** @brief Simulation geometries and related operations */
     namespace Geometry {
+        template<typename T=double>
+            inline int anint( T x ) {
+                return int(x > 0.0 ? x + 0.5 : x - 0.5);
+            } //!< Round to int
 
         typedef std::function<void(Point&)> BoundaryFunction;
         typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
@@ -68,6 +72,16 @@ namespace Faunus {
                 bool collision(const Point &a, double r) const override;
                 void from_json(const json &j);
                 void to_json(json &j) const;
+
+                inline void boundary( Point &a ) const override {
+                    if ( std::fabs(a.x()) > len_half.x())
+                        a.x() -= len.x() * anint(a.x() * len_inv.x());
+                    if ( std::fabs(a.y()) > len_half.y())
+                        a.y() -= len.y() * anint(a.y() * len_inv.y());
+                    if ( std::fabs(a.z()) > len_half.z())
+                        a.z() -= len.z() * anint(a.z() * len_inv.z());
+                } //!< Apply boundary conditions
+
 
                 inline Point vdist(const Point &a, const Point &b) const override {
                     Point r(a - b);

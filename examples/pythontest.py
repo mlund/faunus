@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 import json
+import unittest
 import numpy as np
+from math import pi
 from pyfaunus import *
 
 # Dictionary defining input
@@ -56,6 +58,35 @@ for i in r:   # loop over particle-particle distances
     print ( H.energy(c) )
 
 # Analysis
-
 analysis = Analysis(spc, H, d)
+
+
+# Geometry
+
+class TestGeometry(unittest.TestCase):
+
+    def test_cuboid(self):
+        geo = Chameleon( dict(type="cuboid", length=[2,3,4]) )
+        V = geo.getVolume();
+        self.assertAlmostEqual(V, 2*3*4, msg="volume")
+
+        a = geo.boundary( [1.1, 1.5, -2.001] );
+        self.assertAlmostEqual(a[0], -0.9)
+        self.assertAlmostEqual(a[1], 1.5)
+        self.assertAlmostEqual(a[2], 1.999)
+        geo.setVolume(123.4);
+        self.assertAlmostEqual( geo.getVolume(), 123.4);
+
+    def test_sphere(self):
+        r = 15.0
+        geo = Chameleon( dict(type="sphere", radius=r) )
+        V = geo.getVolume();
+        self.assertAlmostEqual(V, 4*pi/3*r**3, msg="check volume")
+        self.assertEqual( geo.collision([0,r+0.001,0]), True, msg="collision")
+        self.assertEqual( geo.collision([0,0,r-0.001]), False, msg="no collision")
+        geo.setVolume(123.4);
+        self.assertAlmostEqual( geo.getVolume(), 123.4);
+
+if __name__ == '__main__':
+    unittest.main()
 

@@ -55,11 +55,37 @@ PYBIND11_MODULE(pyfaunus, m)
                 } ) );
 
     // Geometries
+    py::enum_<Geometry::VolumeMethod>(m, "VolumeMethod")
+        .value("ISOTROPIC", Geometry::VolumeMethod::ISOTROPIC)
+        .value("ISOCHORIC", Geometry::VolumeMethod::ISOCHORIC)
+        .value("XY", Geometry::VolumeMethod::XY)
+        .value("Z", Geometry::VolumeMethod::Z)
+        .export_values();
+
     py::class_<Geometry::GeometryBase>(m, "Geometrybase")
         .def("getVolume", &Geometry::GeometryBase::getVolume, "Get container volume", "dim"_a=3)
-        .def("setVolume", &Geometry::GeometryBase::setVolume, "Set container volume", "volume"_a, "directions"_a)
+        .def("setVolume", &Geometry::GeometryBase::setVolume, "Set container volume", "volume"_a, "method"_a=Geometry::ISOTROPIC)
         .def("randompos", &Geometry::GeometryBase::randompos, "Generates a random position within container", "point"_a, "randomfunc"_a)
-        .def("vdist", &Geometry::GeometryBase::vdist, "Minimum vector distance, a-b", "a"_a, "b"_a);
+        .def("collision", &Geometry::GeometryBase::collision, "pos"_a, "radius"_a=0, "Checks if point is inside container")
+        .def("getLength", &Geometry::GeometryBase::getLength, "Get cuboid sidelengths")
+        .def("vdist", &Geometry::GeometryBase::vdist, "Minimum vector distance, a-b", "a"_a, "b"_a)
+        .def("sqdist", &Geometry::GeometryBase::sqdist, "Squared minimum distance, |a-b|^2", "a"_a, "b"_a)
+        .def("boundary", [](Geometry::GeometryBase &g, const Point &pos) {
+                Point a = pos; // we cannot modify `pos` directly
+                g.boundary(a); // as in c++
+                return a;
+                }, R"(
+                    Apply periodic boundaries
+
+                    If applicable for the geometry type, this will apply
+                    periodic boundaries to a coordinate.
+
+                    Args:
+                       pos (array): coordinate
+
+                    Returns:
+                       array: position with wrapped coordinate
+                )");
 
     py::class_<Geometry::Box, Geometry::GeometryBase>(m, "Box")
         .def("getLength", &Geometry::Box::getLength, "Get cuboid sidelengths")
@@ -67,6 +93,14 @@ PYBIND11_MODULE(pyfaunus, m)
 
     py::class_<Geometry::Cuboid, Geometry::Box>(m, "Cuboid")
         .def(py::init<>());
+
+    py::class_<Geometry::Chameleon, Geometry::GeometryBase>(m, "Chameleon")
+        .def(py::init<>())
+        .def(py::init( [](py::dict dict) {
+                    auto ptr = std::make_unique<Geometry::Chameleon>();
+                    Faunus::Geometry::from_json( dict2json(dict), *ptr);
+                    return ptr;
+                    } ) );
 
     // Particle properties
     py::class_<Radius>(m, "Radius")

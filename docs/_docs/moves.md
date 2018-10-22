@@ -60,6 +60,7 @@ $\delta$ is a random unit vector scaled by `dp`.
 Upon MC movement, the mean squared displacement
 will be tracked.
 
+
 ### Atomic
 
 `transrot`       |  Description
@@ -74,6 +75,7 @@ and rotates individual atoms in the group. The repeat is set to the number of at
 atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
 {: .notice--info}
 
+
 ### Cluster Move
 
 `cluster`      | Description
@@ -86,7 +88,12 @@ atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
 between their mass centers. The move is associated with the following [bias](http://dx.doi.org/10/cj9gnn),
-accounted for in the acceptance criterion:
+accounted for in the acceptance criterion.
+
+**note:**
+under construction!
+{: .notice--info}
+
 
 ## Internal Degrees of Freedom
 

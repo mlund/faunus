@@ -25,6 +25,7 @@ d['insertmolecules'] = [
 #   this will:
 #   - initialize `atoms` from dictionary
 #   - add particles / molecules
+
 spc = Space()
 spc.from_dict(d)
 
@@ -32,34 +33,30 @@ spc.from_dict(d)
 for i in atoms:
     print("atom name and diameter:", i.name, i.sigma)
 
-# Use a pair-potential
-print('\nSASA from pair-potential:\n')
-d['energy'] = [
-        { 'nonbonded': {
-            'default' : [
-                { 'sasa': { 'molarity': 1.0, 'radius': 1.4 } }
-                ]
-            } }
-        ]
-pot = FunctorPotential( d['energy'][0]['nonbonded'] )
-r = np.linspace(0,10,10)
-u = np.array( [pot.energy( spc.p[0], spc.p[1], [0,0,i] ) for i in r] )
-print( np.array([r,u]) )
+# Test SASA calculations
 
-# Now let's test a Hamiltonian
-print('\nSASA from PowerSASA (Hamiltonian):\n')
-d['energy'] = [ { 'sasa': { 'molarity': 1.0, 'radius': 1.4 } } ]
-H = Hamiltonian(spc, d)
-spc.p[0].pos = [0,0,0] # fix 1st particle in origin
-c = Change()  # change object telling that a full energy calculation
-c.all = True; # should be performed when calling `energy()`
-for i in r:   # loop over particle-particle distances
-    spc.p[1].pos = [0,0,i]
-    print ( H.energy(c) )
+class TestSASA(unittest.TestCase):
+    def test_pairpot(self):
+        d = { 'default' : [
+            { 'sasa': { 'molarity': 1.5, 'radius': 1.4 } }
+            ] }
+        pot = FunctorPotential( d )
+        r = np.linspace(0,10,5)
+        u = np.array( [pot.energy( spc.p[0], spc.p[1], [0,0,i] ) for i in r] )
+        np.testing.assert_almost_equal(u, [87.3576,100.4613,127.3487,138.4422,138.4422], 4)
 
-# Analysis
-analysis = Analysis(spc, H, d)
-
+    def test_powersasa_hamiltonian(self):
+        d['energy'] = [ { 'sasa': { 'molarity': 1.5, 'radius': 1.4 } } ]
+        H = Hamiltonian(spc, d)
+        spc.p[0].pos = [0,0,0] # fix 1st particle in origin
+        c = Change()           # change object telling that a full energy calculation
+        c.all = True;          # should be performed when calling `energy()`
+        u = []
+        r = np.linspace(0,10,5)
+        for i in r:   #         loop over particle-particle distances
+            spc.p[1].pos = [0,0,i]
+            u.append( H.energy(c) )
+        np.testing.assert_almost_equal(u, [87.3576,100.4612,127.3487,138.4422,87.3576], 4)
 
 # Geometry
 
@@ -77,6 +74,11 @@ class TestGeometry(unittest.TestCase):
         geo.setVolume(123.4);
         self.assertAlmostEqual( geo.getVolume(), 123.4);
 
+        rnd = Random()
+        for i in range(1000):
+            pos = geo.randompos(rnd);
+            self.assertEqual( geo.collision( pos ), False ) 
+
     def test_sphere(self):
         r = 15.0
         geo = Chameleon( dict(type="sphere", radius=r) )
@@ -86,6 +88,11 @@ class TestGeometry(unittest.TestCase):
         self.assertEqual( geo.collision([0,0,r-0.001]), False, msg="no collision")
         geo.setVolume(123.4);
         self.assertAlmostEqual( geo.getVolume(), 123.4);
+
+        rnd = Random()
+        for i in range(1000):
+            pos = geo.randompos(rnd);
+            self.assertEqual( geo.collision( pos ), False ) 
 
 if __name__ == '__main__':
     unittest.main()

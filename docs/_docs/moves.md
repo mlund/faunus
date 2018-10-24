@@ -192,4 +192,8 @@ The table below explains the scaling behavior in different geometries:
 `xy`         |  `cuboid`    | Scales xy, z untouched.
 `isochoric`  |  `cuboid`    | Scales xy/z, const. volume
 
+## Speciation
+
+`speciation`   |  Description
+
 

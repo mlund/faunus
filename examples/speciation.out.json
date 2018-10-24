@@ -1,0 +1,148 @@
+{
+    "analysis": [
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        },
+        {
+            "density": {
+                "atomic": {
+                    "a": {
+                        "c/M": 0.111
+                    },
+                    "b": {
+                        "c/M": 0.055
+                    },
+                    "c": {
+                        "c/M": 0.0495
+                    },
+                    "d": {
+                        "c/M": 0.491
+                    }
+                },
+                "molecular": null,
+                "nstep": 10,
+                "relative time": 0.00768,
+                "samples": 20000,
+                "∛⟨V⟩": 100.0,
+                "⟨1/V⟩": 1e-06,
+                "⟨V⟩": 1000000.0,
+                "⟨∛V⟩": 100.0
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Apple LLVM 10.0.0 (clang-1000.11.45.2)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": null,
+                        "pairpot": {
+                            "default": [
+                                {
+                                    "wca": {
+                                        "mixing": "LB"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            100.0,
+            100.0,
+            100.0
+        ]
+    },
+    "git revision": "436b5b91 (2018-10-24)",
+    "groups": [
+        {
+            "A": {
+                "capacity": 100,
+                "index": "0-63",
+                "size": 64
+            }
+        },
+        {
+            "B": {
+                "capacity": 100,
+                "index": "100-135",
+                "size": 36
+            }
+        },
+        {
+            "C": {
+                "capacity": 100,
+                "index": "200-231",
+                "size": 32
+            }
+        },
+        {
+            "D": {
+                "capacity": 500,
+                "index": "300-621",
+                "size": 322
+            }
+        }
+    ],
+    "moves": [
+        {
+            "speciation": {
+                "acceptance": 0.925,
+                "moves": 200000,
+                "reactions": {
+                    "= D": {
+                        "acceptance": 0.9716077417026332,
+                        "attempts": 66497
+                    },
+                    "A + D = B": {
+                        "acceptance": 0.8909014700158678,
+                        "attempts": 66802
+                    },
+                    "D = C": {
+                        "acceptance": 0.91138063897093,
+                        "attempts": 66701
+                    }
+                },
+                "relative time": 0.902,
+                "repeat": 1
+            }
+        }
+    ],
+    "number of groups": 4,
+    "number of particles": 800,
+    "reactionlist": [
+        {
+            "A + D = B": {
+                "N_reservoir": 32743,
+                "canonic": false,
+                "lnK": -0.0,
+                "pK": 0.0
+            }
+        },
+        {
+            "D = C": {
+                "N_reservoir": 32745,
+                "canonic": false,
+                "lnK": -2.302585092994046,
+                "pK": 1.0
+            }
+        },
+        {
+            "= D": {
+                "N_reservoir": 32716,
+                "canonic": false,
+                "lnK": -0.6930781129912078,
+                "pK": 0.301
+            }
+        }
+    ],
+    "relative drift": null,
+    "temperature": 300.0
+}

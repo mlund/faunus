@@ -318,6 +318,13 @@ add_test(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 add_test(
+    NAME speciation
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py speciation.yml\
+    | $<TARGET_FILE:faunus> --quiet --state speciation.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py speciation.out.json out.json --tol 0.02"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+add_test(
     NAME bulk
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py bulk.yml\
     | $<TARGET_FILE:faunus> --quiet"

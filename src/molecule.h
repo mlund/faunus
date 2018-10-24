@@ -453,11 +453,11 @@ namespace Faunus {
             Tmap _reacid_a;     // Atomic change, equivalent of swap/titration
             Tmap _prodid_m;
             Tmap _prodid_a;
-            Tmap _Reac, _Prod;
+            //Tmap _Reac, _Prod;
 
-            bool canonic;                   //!< Finite reservoir
+            bool canonic=false;             //!< Finite reservoir
             int N_reservoir;                //!< Number of molecules in finite reservoir
-            double log_k;                   //!< log K
+            double lnK=0;                   //!< Natural logarithm of molar eq. const.
             std::string name;               //!< Name of reaction
             std::string formula;            //!< Chemical formula
             double weight;                  //!< Statistical weight to be given to reaction in speciation
@@ -469,6 +469,23 @@ namespace Faunus {
                             return true;
                 return false;
             }
+
+            std::vector<int> participatingMolecules() const {
+                std::vector<int> v;
+                v.reserve(_reacid_m.size()+_prodid_m.size());
+                for (auto i : _reacid_m)
+                    v.push_back(i.first);
+                for (auto i : _prodid_m)
+                    v.push_back(i.first);
+                return v;
+             } //!< Returns molids of participating molecules
+
+            bool containsMolecule(int molid) const {
+                if (_reacid_m.count(molid)==0)
+                    if (_prodid_m.count(molid)==0)
+                        return false;
+                return true;
+            } //!< True of molecule id is part of process
 
             const Tmap& Molecules2Add(bool forward) const {
                 return (forward) ? _prodid_m : _reacid_m;
@@ -519,11 +536,11 @@ namespace Faunus {
                 for (auto it=j.begin(); it!=j.end(); ++it) {
                     a.name = it.key();
                     auto& val = it.value();
-                    a.canonic = val.at("canonic").get<bool>();
+                    a.canonic = val.value("canonic", false);
                     if (val.count("lnK")==1)
-                        a.log_k = val.at("lnK").get<double>(); // -> e-base
-                    else
-                        a.log_k = -std::log(10) * val.at("pK").get<double>();
+                        a.lnK = val.at("lnK").get<double>();
+                    else if (val.count("pK")==1)
+                        a.lnK = -std::log(10) * val.at("pK").get<double>();
                     a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
 
                     // get pair of vector containing reactant and product species
@@ -552,12 +569,12 @@ namespace Faunus {
         template<class Tparticle, class Talloc>
             void to_json(json& j, const ReactionData<std::vector<Tparticle,Talloc>> &a) {
                 j[a.name] = {
-                    {"lnK", a.log_k}, {"pK", -a.log_k/std::log(10)},
-                    {"canonic", a.canonic}, {"N_reservoir", a.N_reservoir},
+                    {"lnK", a.lnK}, {"pK", -a.lnK/std::log(10)},
+                    {"canonic", a.canonic}, {"N_reservoir", a.N_reservoir}
                     //{"products", a._prod} ,
-                    {"exchange products", a._prodid_a  },
+                    //{"exchange products", a._prodid_m  },
                     //{"reactants", a._reac } ,
-                    {"exchange reactants", a._reacid_a  }
+                    //{"exchange reactants", a._reacid_m  }
                 };
             } //!< Serialize to JSON object
 
@@ -586,7 +603,7 @@ namespace Faunus {
 
         CHECK( r.size()==1 );
         CHECK( r.front().name=="A = B" );
-        CHECK( r.front().log_k==-10.051);
+        CHECK( r.front().lnK==-10.051);
     }
 #endif
 

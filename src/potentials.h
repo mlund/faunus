@@ -218,7 +218,7 @@ namespace Faunus {
                     if (r>R)
                         std::swap(r,R);
                     double d = sqrt(d_squared);
-                    if (d+r<R)
+                    if (d+r<=R)
                         return 4*pc::pi*R*R - offset;      // full volume of biggest sphere
                     double h1 = (r-R+d) * (r+R-d) / (2*d); // height of spherical caps
                     double h2 = (R-r+d) * (R+r-d) / (2*d); // comprising intersecting lens

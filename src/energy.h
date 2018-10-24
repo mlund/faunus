@@ -1256,8 +1256,9 @@ namespace Faunus {
 
                     void addEwald(const json &j, Tspace &spc) {
                         if (j.count("coulomb")==1)
-                            if (j["coulomb"].at("type")=="ewald")
-                                push_back<Energy::Ewald<Tspace>>(j["coulomb"], spc);
+                            if (j["coulomb"].count("type")==1)
+                                if (j["coulomb"].at("type")=="ewald")
+                                    push_back<Energy::Ewald<Tspace>>(j["coulomb"], spc);
                     } //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
 
                 public:

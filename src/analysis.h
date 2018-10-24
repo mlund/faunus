@@ -92,6 +92,8 @@ namespace Faunus {
                                         p.pos.z() = std::fabs(p.pos.z());
 
                                 assert(pin.size() == g.size());
+                                spc.geo.randompos( pin[0].pos, random );
+                                spc.geo.randompos( pin[1].pos, random );
 
                                 std::copy(pin.begin(), pin.end(), g.begin()); // copy into ghost group
                                 if (!g.atomic) // update molecular mass-center
@@ -489,6 +491,10 @@ namespace Faunus {
                     Nmol.clear();
                     Natom.clear();
 
+                    // make sure all atom counts are initially zero
+                    for (auto &g : spc.groups)
+                        (g.atomic) ? Natom[g.id]=0 : Nmol[g.id]=0;
+
                     double V = spc.geo.getVolume();
                     Vavg += V;
                     Lavg += std::cbrt(V);
@@ -499,16 +505,27 @@ namespace Faunus {
                             for (auto &p : g)
                                 Natom[p.id]++;
                             dhist[g.id]( g.size() )++;
-                            }
-                        else
-                            if (!g.empty())
-                                Nmol[g.id]++;
+                        }
+                        else if (not g.empty())
+                            Nmol[g.id]++;
 
                     for (auto &i : Nmol)
                         rho_mol[i.first] += i.second/V;
 
                     for (auto &i : Natom)
                         rho_atom[i.first] += i.second/V;
+
+                    // Sanity check for grand caninical ensembles
+                    // to see if the group size is too close to the
+                    // maximum capacity
+                    for (auto &mol : molecules<Tpvec>) // loop over atomic molecules
+                        if (mol.atomic)
+                            for (auto &r : reactions<Tpvec>) { 
+                                if (r.containsMolecule( mol.id() ))
+                                    for (auto &g : spc.findMolecules( mol.id() )) 
+                                        if (g.capacity()-g.size()<10)
+                                            std::cerr << "Warning: low capacity for atomic group '" << mol.name << "'" << endl;
+                            }
                 }
 
                 inline void _to_json(json &j) const override {

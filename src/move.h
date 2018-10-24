@@ -559,7 +559,7 @@ namespace Faunus {
                     ReactionData<Tpvec> *trialprocess;
                     std::map<std::string, Average<double>> accmap;
 
-                    double log_k;
+                    double lnK;
                     bool forward;
                     std::vector<int> molDel;                  // index of groups to delete
                     std::vector<int> atomDel;                 // atom index to delete
@@ -603,7 +603,7 @@ namespace Faunus {
                     void _move(Change &change) override {
                         if ( reactions<Tpvec>.size()>0 ) {
                             auto rit = slump.sample( reactions<Tpvec>.begin(), reactions<Tpvec>.end() );
-                            log_k = rit->log_k;
+                            lnK = rit->lnK;
                             forward = (bool)slump.range(0,1); // random boolean
                             trialprocess = &(*rit);
                             if ( rit->empty(forward) )  // Enforce canonic constraint if invoked
@@ -727,8 +727,8 @@ namespace Faunus {
 
                     double bias(Change &change, double uold, double unew) override {
                         if (forward)
-                            return -log_k*std::log(10);
-                        return log_k*std::log(10);
+                            return -lnK;
+                        return lnK;
                     } //!< adds extra energy change not captured by the Hamiltonian
 
                     void _accept(Change &change) override {

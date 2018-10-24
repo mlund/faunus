@@ -280,7 +280,7 @@ $$
 where $\delta u$ is the energy change of the perturbation and the
 average runs over the _unperturbed_ ensemble.
 If the molecule has `atomic=true`, $\delta u$ includes the internal energy of the
-inserted group. This is useful for example to calculate the mean excess activity
+inserted group. This is useful for example to calculate the excess activity
 coefficient of a neutral salt pair.
 Upon insertion, random positions and orientations are
 generated. For use with rod-like particles on surfaces, the `absz`
@@ -288,7 +288,7 @@ keyword may be used to ensure orientations on only one
 half-sphere.
 
 **Important:**
-One _inactive_ `molecule` must be added to the simulation using the `inactive`
+Exactly _one inactive_ `molecule` must be added to the simulation using the `inactive`
 keyword when inserting the initial molecules in the topology.
 {: .notice--info}
 

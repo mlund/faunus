@@ -354,23 +354,8 @@ Faunus::Potential::SASApotential::SASApotential(const std::string &name) {
     PairPotentialBase::name=name;
 }
 
-double Faunus::Potential::SASApotential::area(double R, double r, double d_squared) const {
-    R += proberadius;
-    r += proberadius;
-    double area = 4*pc::pi*(R*R + r*r);  // full volume of both spheres
-    if (d_squared>(R+r)*(R+r))
-        return area;
-    if (r>R)
-        std::swap(r,R);
-    double d = sqrt(d_squared);
-    if (d+r<R)
-        return 4*pc::pi*R*R;             // full volume of biggest sphere
-    double h1 = (r-R+d) * (r+R-d) / (2*d); // height of spherical caps
-    double h2 = (R-r+d) * (R+r-d) / (2*d); // comprising intersecting lens
-    return area - 2 * pc::pi * (R*h1 + r*h2);
-}
-
 void Faunus::Potential::SASApotential::from_json(const Faunus::json &j) {
+    shift = j.value("shift", true);
     conc = j.at("molarity").get<double>() * 1.0_molar;
     proberadius = j.value("radius", 1.4) * 1.0_angstrom;
 }
@@ -378,6 +363,7 @@ void Faunus::Potential::SASApotential::from_json(const Faunus::json &j) {
 void Faunus::Potential::SASApotential::to_json(Faunus::json &j) const {
     j["molarity"] = conc / 1.0_molar;
     j["radius"] = proberadius / 1.0_angstrom;
+    j["shift"] = shift;
 }
 
 

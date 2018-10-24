@@ -38,7 +38,7 @@ for i in atoms:
 class TestSASA(unittest.TestCase):
     def test_pairpot(self):
         d = { 'default' : [
-            { 'sasa': { 'molarity': 1.5, 'radius': 1.4 } }
+            { 'sasa': { 'molarity': 1.5, 'radius': 1.4, 'shift': False } }
             ] }
         pot = FunctorPotential( d )
         r = np.linspace(0,10,5)
@@ -83,9 +83,9 @@ class TestGeometry(unittest.TestCase):
         r = 15.0
         geo = Chameleon( dict(type="sphere", radius=r) )
         V = geo.getVolume();
-        self.assertAlmostEqual(V, 4*pi/3*r**3, msg="check volume")
-        self.assertEqual( geo.collision([0,r+0.001,0]), True, msg="collision")
-        self.assertEqual( geo.collision([0,0,r-0.001]), False, msg="no collision")
+        self.assertAlmostEqual(V, 4*pi/3*r**3)
+        self.assertEqual( geo.collision([0,r+0.001,0]), True)
+        self.assertEqual( geo.collision([0,0,r-0.001]), False)
         geo.setVolume(123.4);
         self.assertAlmostEqual( geo.getVolume(), 123.4);
 
@@ -94,6 +94,22 @@ class TestGeometry(unittest.TestCase):
             pos = geo.randompos(rnd);
             self.assertEqual( geo.collision( pos ), False ) 
 
+class TestSpeciation(unittest.TestCase):
+
+    def test_Nchem(self):
+        spc = Space()
+        spc.from_dict(d)
+
+        c = Change()
+        g = spc.groups[0]
+        self.assertEqual( Nchem(spc, spc, c), 0 ) 
+
+        self.assertEqual( g.capacity(), 2 )
+        self.assertEqual( len(g), 2 )
+        g.deactivate( g.end()-1, g.end() ) # deactivate last atom
+        self.assertEqual( len(g), 1 )
+
+        # add more...
+
 if __name__ == '__main__':
     unittest.main()
-

@@ -63,8 +63,8 @@ namespace Faunus {
                 Point len, len_half, len_inv;
 
                 void setLength(const Point &l);
-
             public:
+                inline Chameleon() {};
                 double getVolume(int dim=3) const override;
                 Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
                 Point getLength() const override; //!< Enscribed box
@@ -81,7 +81,6 @@ namespace Faunus {
                     if ( std::fabs(a.z()) > len_half.z())
                         a.z() -= len.z() * anint(a.z() * len_inv.z());
                 } //!< Apply boundary conditions
-
 
                 inline Point vdist(const Point &a, const Point &b) const override {
                     Point r(a - b);
@@ -101,9 +100,8 @@ namespace Faunus {
                 }
         };
 
-        void from_json(const json &j, Chameleon &g);
-
         void to_json(json &j, const Chameleon &g);
+        void from_json(const json &j, Chameleon &g);
 
         /** @brief Cuboidal box */
         class Box : public GeometryBase {

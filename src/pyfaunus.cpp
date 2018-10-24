@@ -142,12 +142,20 @@ PYBIND11_MODULE(pyfaunus, m)
     py::class_<Tgroup>(m, "Group")
         .def(py::init<typename Tpvec::iterator, typename Tpvec::iterator>())
         .def(py::init<Tpvec&>())
+        .def_readwrite("groups", &Tgroup::id, "Molecule id")
         .def_readwrite("id", &Tgroup::id, "Molecule id")
         .def_readwrite("cm", &Tgroup::cm, "Center of mass")
         .def_readwrite("atomic", &Tgroup::atomic)
+        .def("__len__", [](Tgroup &self) { return self.size(); } )
         .def("__iter__", [](Tgroup &v) {
                 return py::make_iterator(v.begin(), v.end()); },
-                py::keep_alive<0, 1>());
+                py::keep_alive<0, 1>())
+        .def("contains", &Tgroup::contains)
+        .def("capacity", &Tgroup::capacity)
+        .def("deactivate", &Tgroup::deactivate)
+        .def("activate", &Tgroup::activate)
+        .def("begin", (Tpvec::iterator& (Tgroup::*)() ) &Tgroup::begin)
+        .def("end", (Tpvec::iterator& (Tgroup::*)() ) &Tgroup::end);
 
     py::bind_vector<std::vector<Tgroup>>(m, "GroupVector");
 
@@ -177,13 +185,25 @@ PYBIND11_MODULE(pyfaunus, m)
             return pot(a,b,r); 
             });
 
+    // Change::Data
+    py::class_<Change::data>(m, "ChangeData")
+        .def(py::init<>())
+        .def_readwrite("dNpart", &Change::data::dNpart)
+        .def_readwrite("index", &Change::data::index)
+        .def_readwrite("internal", &Change::data::internal)
+        .def_readwrite("all", &Change::data::all)
+        .def_readwrite("atoms", &Change::data::atoms);
+
+    py::bind_vector<std::vector<Change::data>>(m, "ChangeDataVec");
+
     // Change
     py::class_<Change>(m, "Change")
         .def(py::init<>())
         .def_readwrite("all", &Change::all)
         .def_readwrite("du", &Change::du)
         .def_readwrite("dV", &Change::dV)
-        .def_readwrite("dNpart", &Change::dNpart);
+        .def_readwrite("dNpart", &Change::dNpart)
+        .def_readwrite("groups", &Change::groups);
 
     // Space
     py::class_<Tspace>(m, "Space")
@@ -204,9 +224,8 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("init", &Thamiltonian::init)
         .def("energy", &Thamiltonian::energy);
 
-    // MPI Controller
-    py::class_<Faunus::MPI::MPIController>(m, "MPIController")
-        .def(py::init<>());
+    // Nchem
+    m.def("Nchem", &Nchem<Tspace>);
 
     // MCSimulation
     py::class_<Tmcsimulation>(m, "MCSimulation")

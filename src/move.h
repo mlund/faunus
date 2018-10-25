@@ -1214,10 +1214,12 @@ namespace Faunus {
 #ifndef NDEBUG
                     double u2 = state2.pot.energy(c);
                     double error = std::fabs(uinit-u2);
-                    if (uinit!=0)
-                        assert(error/uinit<1e-3);
-                    else
-                        assert(error<1e-6);
+                    if (std::isfinite(uinit)) {
+                        if (uinit!=0)
+                            assert(error/uinit<1e-3);
+                        else
+                            assert(error<1e-6);
+                    }
                     //cout << "u1 = " << uinit << "  u2 = " << u2 << endl;
                     //assert( std::fabs((uinit-u2)/uinit)<1e-3 );
 #endif

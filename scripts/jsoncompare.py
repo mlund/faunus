@@ -33,7 +33,8 @@ def isnumber(key, val):
     if isinstance(val, float) or isinstance(val, int):
         if val!=0:
             if ("time" in key)==False:
-                return True
+                if key!="N_reservoir":
+                    return True
     return False
 
 def compare(a, b):
@@ -41,6 +42,8 @@ def compare(a, b):
     global returncode
     if isinstance(a, dict):
         for key in set(a.keys()) & set(b.keys()):
+            if (key=="groups"): # skip groups
+                continue
             if isinstance(a[key], dict):
                 compare(a[key], b[key])
             elif isinstance(a[key], list):

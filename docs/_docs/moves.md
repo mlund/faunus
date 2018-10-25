@@ -34,6 +34,9 @@ engine state | [A previously saved stae](http://en.cppreference.com/w/cpp/numeri
 
 The last option is used to restore the state of the engine as saved along with normal simulation
 output as a string containing a lenghty list of numbers.
+If initialization from a previously saved state fails -- this may happen if
+generated on another operating system -- a warning is issued and the seed
+falls back to `fixed`.
 
 ## Translation and Rotation
 
@@ -102,7 +105,7 @@ under construction!
 `conformationswap` | Description
 ------------------ | ---------------------------------
 `molecule`         |  Molecule name to operate on
-`repeat=N`         |  Number of repeats per MC sweep 
+`repeat=N`         |  Number of repeats per MC sweep
 
 This will swap between different molecular conformations
 as defined in the topology with `traj` and `trajweight`
@@ -192,8 +195,22 @@ The table below explains the scaling behavior in different geometries:
 `xy`         |  `cuboid`    | Scales xy, z untouched.
 `isochoric`  |  `cuboid`    | Scales xy/z, const. volume
 
-## Speciation
+**Note:**
+Currently only cuboidal containers are exposed to the
+`faunus` executable.
+{: .notice--info}
 
-`speciation`   |  Description
 
+## Speciation / Grand Canonical
 
+The speciation move handles density fluctuations and particle transformations and is the main move for particle insertion, deletion, and swapping used in (semi)-grand canonical ensembles.
+A reaction from `reactionlist` is randomly picked from the topology and is either propagated forward or backwards.
+In Faunus, the total number of atoms and molecules are constant, but these can be either _active_ or _inactive_.
+Deleting a molecule simply deactivates it, while insertion _vice versa_ activates an inactive molecule.
+Thus, it is important that the _capacity_ or reservoir of particles (active plus inactive) is sufficiently large to allow for fluctuations. This is ensured using `insertmolecules` (see Topology). A runtime warning will be given, should you run low on particles.
+
+For more information about reactions, see the Topology section.
+
+`speciation`    |  Description
+--------------- | ----------------------------------
+`repeat=1`      |  Average number of moves per sweep

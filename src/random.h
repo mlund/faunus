@@ -72,5 +72,4 @@ namespace Faunus {
         CHECK( a() != b() );
     }
 #endif
-
 }

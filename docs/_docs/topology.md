@@ -20,7 +20,7 @@ placed outer-most in the input file.
 ~~~ yaml
 temperature: 298.15    # system temperature (K)
 geometry:
-    length: [40,40,40] # cuboid dimensions (array or number) 
+    length: [40,40,40] # cuboid dimensions (array or number)
 mcloop:                # number of MC steps (macro x micro)
     macro: 5
     micro: 100
@@ -163,4 +163,3 @@ Available keywords:
 `reactionlist`  | Description
 --------------- | ---------------------------------------------------------------
 `lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log_{10}(K)$
-

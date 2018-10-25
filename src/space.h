@@ -256,15 +256,15 @@ namespace Faunus {
                     d.erase("id");
                     d.erase("atomic");
                     auto ndx = i.to_index(p.begin());
-                    d["index"] = std::to_string(ndx.first)+"-"+std::to_string(ndx.second);
+                    if (not i.empty())
+                        d["index"] = { ndx.first, ndx.second };
+                        //d["index"] = std::to_string(ndx.first)+"-"+std::to_string(ndx.second);
                     tmp[name] = d;
                     _j.push_back( tmp );
                 }
                 auto& _j2 = j["reactionlist"];
                 for (auto &i : reactions<decltype(p)>) {
-                    // auto name = i.name;
                     json tmp, d = i;
-                    // tmp[name] = d;
                     _j2.push_back( i );
                 }
                 return j;

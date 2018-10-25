@@ -50,6 +50,8 @@ namespace Faunus {
     using std::sqrt;
     using std::log;
 
+    using namespace std::string_literals;
+
     template<class T1, class T2>
         int distance(T1 first, T2 last) {
             return std::distance( &(*first), &(*last) );

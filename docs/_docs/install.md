@@ -36,15 +36,17 @@ The following are optional:
 Apple's developer tools, Xcode, is a quick way obtain
 clang on macOS. CMake can be installed with an
 [Installer package](https://cmake.org/download) from Kitware, or using
-[MacPorts](http://www.macports.org), or
-[Homebrew](https://brew.sh).
+[MacPorts](http://www.macports.org),
+[Homebrew](https://brew.sh), or
+[(mini)conda](https://conda.io/docs/user-guide/install/index.html)
 {: .notice--info}
 
 ### Compiling
 
 Download the [latest release](https://github.com/mlund/faunus/releases/latest)
+or [the developer branch](https://github.com/mlund/faunus/archive/master.zip)
 and perform the following steps in a terminal.
-A set of dependencies will automatically be downloaded.
+Dependencies will automatically be downloaded.
 
 ~~~ bash
 cd faunus

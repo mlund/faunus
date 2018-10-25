@@ -331,6 +331,12 @@ add_test(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 add_test(
+    NAME seawater
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py seawater.yml\
+    | $<TARGET_FILE:faunus> --quiet"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+add_test(
     NAME membrane
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py membrane.yml\
     | $<TARGET_FILE:faunus> --quiet --state membrane.state.json\
@@ -360,12 +366,17 @@ install(FILES
 install(FILES
     ${CMAKE_SOURCE_DIR}/examples/README.md
     ${CMAKE_SOURCE_DIR}/examples/bulk.yml
+    ${CMAKE_SOURCE_DIR}/examples/seawater.yml
+    ${CMAKE_SOURCE_DIR}/examples/speciation.yml
+    ${CMAKE_SOURCE_DIR}/examples/speciation.out.json
+    ${CMAKE_SOURCE_DIR}/examples/speciation.state.json
     ${CMAKE_SOURCE_DIR}/examples/water.yml
     ${CMAKE_SOURCE_DIR}/examples/water.xyz
     ${CMAKE_SOURCE_DIR}/examples/minimal.yml
     ${CMAKE_SOURCE_DIR}/examples/minimal.out.json
     ${CMAKE_SOURCE_DIR}/examples/minimal.state.json
     ${CMAKE_SOURCE_DIR}/examples/membrane.yml
+    ${CMAKE_SOURCE_DIR}/examples/membrane.out.json
     ${CMAKE_SOURCE_DIR}/examples/membrane.state.json
     ${CMAKE_SOURCE_DIR}/examples/lipid.xyz
     ${CMAKE_SOURCE_DIR}/examples/penalty.yml

@@ -11,9 +11,9 @@ namespace Faunus {
         if (j.is_object()) {
             auto seed = j.value("seed", std::string());
             try {
-                if (seed=="default" || seed=="fixed")
+                if (seed=="default" or seed=="fixed")
                     return;
-                if (seed=="hardware")
+                else if (seed=="hardware")
                     r.engine = decltype(r.engine)(std::random_device()());
                 else if (!seed.empty()) {
                     std::stringstream s(seed);
@@ -22,8 +22,7 @@ namespace Faunus {
                 }
             }
             catch (std::exception &e) {
-                std::cerr << "error initializing random from json: " << e.what();
-                throw;
+                std::cerr << "could not initialize random - falling back to fixed seed." << std::endl;
             }
         }
     }

@@ -1963,7 +1963,11 @@ namespace Faunus
 
     template<typename T>
         void to_json(json &j, const BasePointerVector<T> &b) {
-            for (auto i : b.vec)
-                j.push_back(*i);
+            try {
+                for (auto i : b.vec)
+                    j.push_back(*i);
+            } catch (const std::exception& e) {
+                throw std::runtime_error("error converting to json: "s + e.what());
+            }
         }
 }//namespace

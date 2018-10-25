@@ -485,15 +485,22 @@ namespace Faunus {
                 std::map<int, Average<double>> rho_mol, rho_atom;
                 std::map<int,int> Nmol, Natom;
                 Average<double> Lavg, Vavg, invVavg;
-                //inline void normalize();
-                inline void _sample() override {
+
+                int capacity_limit=10; // issue warning if capacity get lower than this
+
+                void _sample() override {
                     // count atom and groups of individual id's
                     Nmol.clear();
                     Natom.clear();
 
                     // make sure all atom counts are initially zero
-                    for (auto &g : spc.groups)
-                        (g.atomic) ? Natom[g.id]=0 : Nmol[g.id]=0;
+                    for (auto &g : spc.groups) {
+                        if (g.atomic)
+                            for (auto &p : g)
+                                Natom[p.id] = 0;
+                        else
+                            Nmol[g.id]=0;
+                    }
 
                     double V = spc.geo.getVolume();
                     Vavg += V;
@@ -520,15 +527,14 @@ namespace Faunus {
                     // maximum capacity
                     for (auto &mol : molecules<Tpvec>) // loop over atomic molecules
                         if (mol.atomic)
-                            for (auto &r : reactions<Tpvec>) { 
+                            for (auto &r : reactions<Tpvec>)
                                 if (r.containsMolecule( mol.id() ))
                                     for (auto &g : spc.findMolecules( mol.id() )) 
-                                        if (g.capacity()-g.size()<10)
+                                        if (g.capacity()-g.size() < capacity_limit)
                                             std::cerr << "Warning: low capacity for atomic group '" << mol.name << "'" << endl;
-                            }
                 }
 
-                inline void _to_json(json &j) const override {
+                void _to_json(json &j) const override {
                     using namespace u8;
                     j[ bracket( "V" ) ] = Vavg.avg();
                     j[ bracket( "1/V" ) ] = invVavg.avg();
@@ -537,11 +543,13 @@ namespace Faunus {
 
                     auto &_j = j["atomic"];
                     for (auto &i : rho_atom)
-                        _j[ atoms<Tparticle>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+                        if (i.second.cnt>0)
+                            _j[ atoms<Tparticle>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
 
                     auto &_jj = j["molecular"];
                     for (auto &i : rho_mol)
-                        _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+                        if (i.second.cnt>0)
+                            _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
                     _roundjson(j,4);
                 }
 
@@ -550,24 +558,19 @@ namespace Faunus {
                     from_json(j);
                     name = "density";
                 }
-                inline virtual ~Density() {
+                virtual ~Density() {
                     normalize();
-                    for ( auto &m: dhist) {
-                        m.second.save( molecules<Tpvec>.at(m.first).name + "density.dat" );
-                    }
+                    for ( auto &m: dhist)
+                        m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
                 }
-                inline void normalize() {
-                    //assert(V.cnt>0);
+                void normalize() {
                     for (auto &hist: dhist) {
                         double Vr=1, sum = hist.second.sumy();
-                        for (auto &i : hist.second.getMap()) {
+                        for (auto &i : hist.second.getMap())
                             i.second = i.second/sum ;
-                        }
                     }
                 }
             };
-
-
 
         template<class Tspace>
             class Multipole : public Analysisbase {

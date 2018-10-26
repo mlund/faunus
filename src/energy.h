@@ -576,9 +576,7 @@ namespace Faunus {
                     double g_internal(const Tgroup &g, const std::vector<int> &index=std::vector<int>()) {
                         using namespace ranges;
                         double u=0;
-                        if (molecules<Tpvec>.at(g.id).rigid)
-                            return u;
-                        if (index.empty()) // assume that all atoms have changed
+                        if (index.empty() and not molecules<Tpvec>.at(g.id).rigid) // assume that all atoms have changed
                             for ( auto i = g.begin(); i != g.end(); ++i )
                                 for ( auto j=i; ++j != g.end(); )
                                     u += i2i(*i, *j);

@@ -399,7 +399,6 @@ namespace Faunus {
                             auto g = slump.sample( mollist.begin(), mollist.end() );
                             if (not g->empty()) {
                                 inserter.offset = g->cm;
-                                inserter.dir = {0,0,0};
 
                                 // Get a new conformation that should be properly wrapped around the boundaries
                                 // (if applicable) and have the same mass-center as "g->cm".

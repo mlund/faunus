@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core.h"
-//#include "molecule.h"
+#include "molecule.h"
 #include "geometry.h"
 
 namespace Faunus {
@@ -148,12 +148,17 @@ namespace Faunus {
         struct Group : public ElasticRange<T> {
             typedef ElasticRange<T> base;
             typedef typename base::Titer iter;
+            typedef typename std::vector<T> Tpvec;
             using base::begin;
             using base::end;
             int id=-1;           //!< Molecule id
             int confid=0;        //!< Conformation index / id
             Point cm={0,0,0};    //!< Mass center
             bool atomic=false;   //!< Is it an atomic group?
+
+            const auto& traits() const {
+                return molecules<Tpvec>.at(id);
+            } //!< Convenient access to molecule properties
 
             template<class Trange>
                 Group(Trange &rng) : base(rng.begin(), rng.end()) {

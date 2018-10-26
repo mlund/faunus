@@ -291,8 +291,11 @@ namespace Faunus {
                         // generate config
                         Tpvec v;
                         v.reserve( a.atoms.size() );
-                        for ( auto id : a.atoms )
-                            v.push_back( atoms<Tparticle>.at(id).p );
+                        for ( auto id : a.atoms ) {
+                            Tparticle _p;
+                            _p = atoms<Tparticle>.at(id);
+                            v.push_back( _p );
+                        }
                         if (!v.empty())
                             a.pushConformation( v );
                     }  // done handling atomic groups
@@ -313,7 +316,7 @@ namespace Faunus {
                                                     auto it = findName( atoms<Tparticle>, i.key() );
                                                     if (it == atoms<Tparticle>.end())
                                                         throw std::runtime_error("unknown atoms in 'structure'");
-                                                    v.push_back( it->p );     // set properties from atomlist
+                                                    v.push_back( *it );     // set properties from atomlist
                                                     v.back().pos = i.value(); // set position
                                                     a.atoms.push_back(it->id());
                                                 }

@@ -310,8 +310,8 @@ namespace Faunus {
             std::vector<T> p;
 
             CHECK( !atoms<T>.empty() ); // set in a previous test
-            p.push_back( atoms<T>[0].p );
-            p.push_back( atoms<T>[0].p );
+            p.push_back( atoms<T>[0] );
+            p.push_back( atoms<T>[0] );
 
             p.front().pos = {10, 10, -10};
             p.back().pos  = {15, -10, 10};

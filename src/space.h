@@ -419,7 +419,7 @@ namespace Faunus {
         Tparticle a;
         a.id=0;
         Tspace::Tpvec p(2, a);
-        CHECK( p[0].mw == 1);
+        CHECK( p[0].traits().mw == 1);
         p[0].pos.x()=2;
         p[1].pos.x()=3;
         spc1.push_back(1, p);

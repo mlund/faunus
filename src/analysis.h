@@ -1021,6 +1021,7 @@ namespace Faunus {
          */
         template<class Tspace>
             class PolymerShape : public Analysisbase {
+                typedef typename Tspace::Tparticle Tparticle;
                 Tspace &spc;
                 std::map<int, Average<double>> Rg2, Rg, Re2, Rs, Rs2, Rg2x, Rg2y, Rg2z;
                 std::vector<int> ids; // molecule id's to analyse
@@ -1045,12 +1046,13 @@ namespace Faunus {
                     double sum = 0;
                     Point t, r2(0, 0, 0);
                     for (auto &i : g) {
+                        double mw = atoms<Tparticle>.at(i.id).mw;
                         t = i.pos - g.cm;
                         spc.geo.boundary(t);
-                        r2.x() += i.mw * t.x() * t.x();
-                        r2.y() += i.mw * t.y() * t.y();
-                        r2.z() += i.mw * t.z() * t.z();
-                        sum += i.mw;
+                        r2.x() += mw * t.x() * t.x();
+                        r2.y() += mw * t.y() * t.y();
+                        r2.z() += mw * t.z() * t.z();
+                        sum += mw;
                     }
                     assert(sum > 0 && "Zero molecular weight not allowed.");
                     return r2 * (1. / sum);

@@ -344,6 +344,112 @@ namespace Faunus {
     }
 #endif
 
+    /**
+     * @brief General properties for atoms
+     */
+    template<class T /** Particle type */>
+        struct AtomData {
+            public:
+                int _id=-1;
+                std::string name;    //!< Name
+                double eps=0;        //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
+                double activity=0;   //!< Chemical activity [mol/l]
+                double alphax=0;     //!< Excess polarisability (unit-less)
+                double charge=0;     //!< Particle charge [e]
+                double dp=0;         //!< Translational displacement parameter [angstrom]
+                double dprot=0;      //!< Rotational displacement parameter [degrees]
+                Point  mu={1,0,0};   //!< Dipole moment unit vector
+                double mulen=0;      //!< Dipole moment scalar [eÃ]
+                double mw=1;         //!< Weight
+                Point  scdir={1,0,0};//!< Sphero-cylinder direction
+                double sclen=0;      //!< Sphere-cylinder length [angstrom]
+                double sigma=0;      //!< Diameter for e.g Lennard-Jones etc. [angstrom]
+                double tension=0;    //!< Surface tension [kT/Å^2]
+                double tfe=0;        //!< Transfer free energy [J/mol/angstrom^2/M]
+                int& id() { return _id; } //!< Type id
+                const int& id() const { return _id; } //!< Type id
+                bool hydrophobic=false;  //!< Is the particle hydrophobic?
+        };
+
+    template<class T>
+        void to_json(json& j, const AtomData<T> &a) {
+            auto& _j = j[a.name];
+            _j = {
+                {"activity", a.activity / 1.0_molar},
+                {"alphax", a.alphax}, {"q", a.charge},
+                {"dp", a.dp / 1.0_angstrom}, {"dprot", a.dprot / 1.0_rad},
+                {"eps", a.eps / 1.0_kJmol}, {"mw", a.mw},
+                {"sigma", a.sigma / 1.0_angstrom},
+                {"tension", a.tension * 1.0_angstrom*1.0_angstrom / 1.0_kJmol},
+                {"tfe", a.tfe * 1.0_angstrom*1.0_angstrom * 1.0_molar / 1.0_kJmol},
+                {"mu", a.mu}, {"mulen",a.mulen},
+                {"scdir", a.scdir}, {"sclen", a.sclen},
+                {"id", a.id()}
+            };
+            if (a.hydrophobic)
+                _j["hydrophobic"] = a.hydrophobic;
+        }
+
+    template<class T>
+        void from_json(const json& j, AtomData<T>& a) {
+            if (j.is_object()==false || j.size()!=1)
+                throw std::runtime_error("Invalid JSON data for AtomData");
+            for (auto it : j.items()) {
+                a.name = it.key();
+                auto& val = it.value();
+                a.activity = val.value("activity", a.activity) * 1.0_molar;
+                a.alphax   = val.value("alphax", a.alphax);
+                a.charge   = val.value("q", a.charge);
+                a.dp       = val.value("dp", a.dp) * 1.0_angstrom;
+                a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
+                a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
+                a.id()     = val.value("id", a.id());
+                a.mu       = val.value("mu", a.mu);
+                a.mulen    = val.value("mulen", a.mulen);
+                a.scdir    = val.value("scdir", a.scdir);
+                a.sclen    = val.value("sclen", a.sclen);
+                a.mw       = val.value("mw", a.mw);
+                a.sigma    = val.value("sigma", 0.0) * 1.0_angstrom;
+                if (fabs(a.sigma)<1e-20)
+                    a.sigma = 2.0*val.value("r", 0.0) * 1.0_angstrom;
+                a.tension  = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom);
+                a.tfe      = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom*1.0_molar);
+                a.hydrophobic = val.value("hydrophobic", false);
+            }
+        }
+
+    /**
+     * @brief Construct vector of atoms from json array
+     *
+     * Items are added to existing items while if an item
+     * already exists, it will be overwritten.
+     */
+    template<class T>
+        void from_json(const json& j, std::vector<AtomData<T>> &v) {
+            auto it = j.find("atomlist");
+            json _j = ( it==j.end() ) ? j : *it;
+            v.reserve( v.size() + _j.size() );
+
+            for ( auto &i : _j ) {
+                if ( i.is_string() ) // treat ax external file to load
+                    from_json( openjson(i.get<std::string>()), v );
+                else if ( i.is_object() ) {
+                    AtomData<T> a = i;
+                    auto it = findName( v, a.name );
+                    if ( it==v.end() ) 
+                        v.push_back( a ); // add new atom
+                    else
+                        *it = a;
+                }
+            }
+            for (size_t i=0; i<v.size(); i++)
+                v[i].id() = i; // id must match position in vector
+        }
+
+    template<typename Tparticle>
+        static std::vector<AtomData<Tparticle>> atoms = {}; //!< Global instance of atom list
+
+
     /** @brief Base class for particle properties */
     struct ParticlePropertyBase {
         virtual void to_json(json &j) const=0; //!< Convert to JSON object
@@ -369,6 +475,9 @@ namespace Faunus {
         }
 
     struct Radius : public ParticlePropertyBase {
+        inline Radius() {}
+        template<class T>
+            Radius(const AtomData<T> &a) {}
         double radius=0; //!< Particle radius
         void to_json(json &j) const override;
         void from_json(const json& j) override;
@@ -376,6 +485,10 @@ namespace Faunus {
     }; //!< Radius property
 
     struct Charge : public ParticlePropertyBase {
+        inline Charge() {}
+        template<class T>
+            Charge(const AtomData<T> &a) {}
+
         double charge=0; //!< Particle radius
         void to_json(json &j) const override;
         void from_json(const json& j) override;
@@ -391,6 +504,12 @@ namespace Faunus {
      * ```
      */
     struct Dipole : public ParticlePropertyBase {
+        inline Dipole() {}
+        
+        template<class T>
+            Dipole(const AtomData<T> &a) {
+            }
+
         Point mu={1,0,0}; //!< dipole moment unit vector
         double mulen=0;   //!< dipole moment scalar
         void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&); //!< Rotate dipole moment
@@ -400,6 +519,9 @@ namespace Faunus {
     };
 
     struct Quadrupole : public ParticlePropertyBase {
+        inline Quadrupole() {}
+        template<class T>
+            Quadrupole(const AtomData<T> &a) {}
         Tensor Q;      //!< Quadrupole
         void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m); //!< Rotate dipole moment
         void to_json(json &j) const override;
@@ -408,42 +530,18 @@ namespace Faunus {
     }; // Quadrupole property
 
     struct Cigar : public ParticlePropertyBase {
-        double sclen=0;       //!< Sphero-cylinder length
-        Point scdir = {1,0,0};//!< Sphero-cylinder direction unit vector
+        Point scdir = {1,0,0}; //!< Sphero-cylinder direction unit vector
+        double sclen = 0;      //!< Length
         void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&); //!< Rotate sphero-cylinder
         void to_json(json &j) const override;
         void from_json(const json& j) override {
-            sclen = j.value("sclen", 0.0);
-            scdir = j.value("scdir", Point(1,0,0) );
+            scdir = j.value("scdir", scdir);
+            sclen = j.value("sclen", sclen);
         }
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     }; //!< Sphero-cylinder properties
 
-    /** @brief Particle
-     *
-     * In addition to basic particle properties (id, charge, weight), arbitrary
-     * features can be added via template arguments:
-     *
-     * ```{.cpp}
-     *     Particle<Dipole> p
-     *     p = R"( {"mulen":2.8} )"_json; // Json --> Particle
-     *     std::cout << json(p); // Particle --> Json --> stream
-     * ```
-     *
-     * Currently the following properties are implemented:
-     *
-     * Keyword   | Class       |  Description
-     * --------- | ----------- | --------------------
-     *  `id`     | `Particle`  |  Type id (int)
-     *  `pos`    | `Particle`  |  Position (Point)
-     *  `mw`     | `Particle`  |  Weight (double)
-     *  `q`      | `Charge`    |  valency (e)
-     *  `r`      | `Radius`    |  radius (angstrom)
-     *  `mu`     | `Dipole`    |  dipole moment unit vector (array)
-     *  `mulen`  | `Dipole`    |  dipole moment scalar (eA)
-     *  `scdir`  | `Cigar`     |  Sphero-cylinder direction unit vector (array)
-     *  `sclen`  | `Cigar`     |  Sphero-cylinder length (A)
-     */
+    /** @brief Particle */
     template<typename... Properties>
         class Particle : public Properties... {
             private:
@@ -459,9 +557,18 @@ namespace Faunus {
             public:
                 int id=-1;         //!< Particle id/type
                 Point pos={0,0,0}; //!< Particle position vector
-                double mw=1;       //!< Molecular weight
 
                 Particle() : Properties()... {}
+
+                Particle(const AtomData<Particle> &a) : Properties()... {
+                    *this = json(a).front();
+                    assert(id>=0);
+                }
+
+                const AtomData<Particle>& traits() {
+                    assert(id>=0 and id<atoms<Particle>.size());
+                    return atoms<Particle>.at(id);
+                }
 
                 void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
                     _rotate<Properties...>(q, m, dynamic_cast<Properties&>(*this)...);
@@ -472,14 +579,13 @@ namespace Faunus {
 
     template<typename... Properties>
         void to_json(json& j, const Particle<Properties...> &a) {
-            j = { {"id", a.id}, {"mw", a.mw}, {"pos", a.pos} };
+            j = { {"id", a.id}, {"pos", a.pos} };
             to_json<Properties...>(j, Properties(a)... );
         }
 
     template<typename... Properties>
         void from_json(const json& j, Particle<Properties...> &a) {
             a.id = j.value("id", a.id);
-            a.mw = j.value("mw", a.mw);
             a.pos = j.value("pos", a.pos);
             from_json<Properties...>(j, dynamic_cast<Properties&>(a)...);
         }
@@ -629,99 +735,6 @@ namespace Faunus {
             return index;
         } //!< Convert vector of names into vector in id's from Trange (exception if not found)
 
-    /**
-     * @brief General properties for atoms
-     */
-    template<class T /** Particle type */>
-        struct AtomData {
-            public:
-                T p;               //!< Particle with generic properties
-                std::string name;  //!< Name
-                double eps=0;      //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
-                double activity=0; //!< Chemical activity [mol/l]
-                double alphax=0;   //!< Excess polarisability (unit-less)
-                double dp=0;       //!< Translational displacement parameter [angstrom]
-                double dprot=0;    //!< Rotational displacement parameter [degrees]
-                double mw=1;       //!< Weight
-                double sigma=0;    //!< Diameter for e.g Lennard-Jones etc. [angstrom]
-                double tension=0;  //!< Surface tension [kT/Å^2]
-                double tfe=0;      //!< Transfer free energy [J/mol/angstrom^2/M]
-                int& id() { return p.id; } //!< Type id
-                const int& id() const { return p.id; } //!< Type id
-                bool hydrophobic=false;  //!< Is the particle hydrophobic?
-        };
-
-    template<class T>
-        void to_json(json& j, const AtomData<T> &a) {
-            auto& _j = j[a.name];
-            _j = a.p;
-            _j["activity"] = a.activity / 1.0_molar;
-            _j["alphax"] = a.alphax;
-            _j["dp"] = a.dp / 1.0_angstrom;
-            _j["dprot"] = a.dprot / 1.0_rad;
-            _j["eps"] = a.eps / 1.0_kJmol;
-            _j["mw"] = a.mw;
-            _j["sigma"] = a.sigma / 1.0_angstrom;
-            _j["tension"] = a.tension * 1.0_angstrom*1.0_angstrom / 1.0_kJmol;
-            _j["tfe"] = a.tfe * 1.0_angstrom*1.0_angstrom * 1.0_molar / 1.0_kJmol;
-            if (a.hydrophobic)
-                _j["hydrophobic"] = a.hydrophobic;
-        }
-
-    template<class T>
-        void from_json(const json& j, AtomData<T>& a) {
-            if (j.is_object()==false || j.size()!=1)
-                throw std::runtime_error("Invalid JSON data for AtomData");
-            for (auto it : j.items()) {
-                a.name = it.key();
-                auto& val = it.value();
-                a.p = val;
-                a.activity = val.value("activity", a.activity) * 1.0_molar;
-                a.alphax   = val.value("alphax", a.alphax);
-                a.dp       = val.value("dp", a.dp) * 1.0_angstrom;
-                a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
-                a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
-                a.mw       = val.value("mw", a.mw);
-                a.sigma    = val.value("sigma", 0.0) * 1.0_angstrom;
-                if (fabs(a.sigma)<1e-20)
-                    a.sigma = 2.0*val.value("r", 0.0) * 1.0_angstrom;
-                a.tension  = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom);
-                a.tfe      = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom*1.0_molar);
-                a.hydrophobic = val.value("hydrophobic", false);
-            }
-        }
-
-    /**
-     * @brief Construct vector of atoms from json array
-     *
-     * Items are added to existing items while if an item
-     * already exists, it will be overwritten.
-     */
-    template<class T>
-        void from_json(const json& j, std::vector<AtomData<T>> &v) {
-            auto it = j.find("atomlist");
-            json _j = ( it==j.end() ) ? j : *it;
-            v.reserve( v.size() + _j.size() );
-
-            for ( auto &i : _j ) {
-                if ( i.is_string() ) // treat ax external file to load
-                    from_json( openjson(i.get<std::string>()), v );
-                else if ( i.is_object() ) {
-                    AtomData<T> a = i;
-                    auto it = findName( v, a.name );
-                    if ( it==v.end() ) 
-                        v.push_back( a ); // add new atom
-                    else
-                        *it = a;
-                }
-            }
-            for (size_t i=0; i<v.size(); i++)
-                v[i].id() = i; // id must match position in vector
-        }
-
-    template<typename Tparticle>
-        static std::vector<AtomData<Tparticle>> atoms = {}; //!< Global instance of atom list
-
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] AtomData") {
         using doctest::Approx;
@@ -745,7 +758,6 @@ namespace Faunus {
 
         CHECK(a.name=="B");
         CHECK(a.id()==1);
-        CHECK(a.id()==a.p.id);
 
         CHECK(a.activity==Approx(0.2_molar));
         CHECK(a.eps==Approx(0.05_kJmol));

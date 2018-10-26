@@ -123,6 +123,7 @@ PYBIND11_MODULE(pyfaunus, m)
 
     py::class_<Tparticle, Radius, Charge>(m, "Particle")
         .def(py::init<>())
+        .def("traits", &Tparticle::traits)
         .def_readwrite("id", &Tparticle::id, "Particle ID")
         .def_readwrite("pos", &Tparticle::pos, "Particle position");
 
@@ -150,6 +151,7 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("__iter__", [](Tgroup &v) {
                 return py::make_iterator(v.begin(), v.end()); },
                 py::keep_alive<0, 1>())
+        .def("traits", &Tgroup::traits)
         .def("contains", &Tgroup::contains)
         .def("capacity", &Tgroup::capacity)
         .def("deactivate", &Tgroup::deactivate)
@@ -166,7 +168,6 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("sigma", &Tatomdata::sigma)
         .def_readwrite("name", &Tatomdata::name)
         .def_readwrite("activity", &Tatomdata::activity, "Activity = chemical potential in log scale (mol/l)")
-        .def_readwrite("p", &Tatomdata::p)
         .def("id", (const int& (Tatomdata::*)() const) &Tatomdata::id); // explicit signature due to overload in c++
 
     auto _atomdatavec = py::bind_vector<std::vector<Tatomdata>>(m, "AtomDataVector");

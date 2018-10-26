@@ -68,9 +68,10 @@ namespace Faunus {
                     std::ostringstream o;
                     o.precision(5);
                     double radius = atoms<Tparticle>.at(a.id).sigma/2;
+                    double mw = atoms<Tparticle>.at(a.id).mw;
                     o << atoms<Tparticle>.at(a.id).name << " " << i+1 << " "
                         << a.pos.transpose() << " "
-                        << a.charge << " " << a.mw << " " << radius << endl;
+                        << a.charge << " " << mw << " " << radius << endl;
                     return o.str();
                 }
 
@@ -78,15 +79,15 @@ namespace Faunus {
                 static Tparticle& s2p(const std::string &s, Tparticle &a) {
                     std::stringstream o;
                     std::string name;
-                    double radius;
+                    double radius, mw;
                     int num;
                     o << s;
                     o >> name;
                     auto it = findName( atoms<Tparticle>, name );
                     if (it==atoms<Tparticle>.end())
                         throw std::runtime_error("AAM load error: unknown atom name '" + name + "'.");
-                    a = it->p;
-                    o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> a.mw >> radius;
+                    a = *it;
+                    o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> mw >> radius;
                     if (fabs(it->sigma - 2*radius)>1e-20)
                         std::cerr << "AAM file radius of " << name
                             << " ignored. Using value from atom definition." << endl;
@@ -168,7 +169,7 @@ namespace Faunus {
                                     auto it = findName( atoms<Tparticle>, aname );
                                     if (it==atoms<Tparticle>.end())
                                         throw std::runtime_error("PQR load error: unknown atom name '" + aname + "'.");
-                                    a = it->p;
+                                    a = *it;
                                     o >> rname >> ires
                                         >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
                                     if (fabs(it->sigma - 2*radius)>1e-20)
@@ -205,7 +206,7 @@ namespace Faunus {
                                     auto it = findName( atoms<Tparticle>, aname );
                                     if (it==atoms<Tparticle>.end())
                                         throw std::runtime_error("PQR load error: unknown atom name '" + aname + "'.");
-                                    a = it->p;
+                                    a = *it;
                                     o >> rname >> ires >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
                                     p.push_back(a);
                                 }
@@ -300,7 +301,7 @@ namespace Faunus {
                         auto it = findName( atoms<Tparticle>, name );
                         if (it==atoms<Tparticle>.end())
                             throw std::runtime_error("XYZ load error: unknown atom name '" + name + "'.");
-                        a = it->p;
+                        a = *it;
                         f >> a.pos.x() >> a.pos.y() >> a.pos.z();
                         p.push_back(a);
                     }

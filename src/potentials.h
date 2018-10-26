@@ -365,8 +365,8 @@ namespace Faunus {
                             for (auto &j : atoms<Tparticle>) {
                                 m_neutral.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
                                 // titrating particles must be charged in the beginning
-                                m_charged.set(i.id(), j.id(), -lB/2 * ( pow(i.p.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
-                                            pow(j.p.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
+                                m_charged.set(i.id(), j.id(), -lB/2 * ( pow(i.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
+                                            pow(j.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
                             }
                         }
                     }
@@ -682,9 +682,9 @@ namespace Faunus {
             Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
             WeeksChandlerAndersen<T> wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
-            T a = atoms<T>[0].p;
-            T b = atoms<T>[1].p;
-            T c = atoms<T>[2].p;
+            T a = atoms<T>[0];
+            T b = atoms<T>[1];
+            T c = atoms<T>[2];
             Point r={2,0,0};
             CHECK( u(a,a,r) == Approx( coulomb(a,a,r) ) );
             CHECK( u(b,b,r) == Approx( coulomb(b,b,r) ) );

@@ -148,7 +148,7 @@ namespace Faunus {
                         double minOfeivals = eivals.minCoeff(&i_eival);
                         Point vec = esf.eigenvectors().col(i_eival).real();
                         double cosine = vec.dot(dir);
-                        double angle = acos(abs(cosine)) * 180. / pc::pi;
+                        double angle = std::acos(std::fabs(cosine)) * 180. / pc::pi;
                         return angle; 
                     };
                 }

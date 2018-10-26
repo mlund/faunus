@@ -542,6 +542,7 @@ namespace Faunus {
                 private:
                     double g2gcnt=0, g2gskip=0;
                 protected:
+                    typedef typename Tspace::Tpvec Tpvec;
                     typedef typename Tspace::Tgroup Tgroup;
                     double Rc2_g2g=pc::infty;
 
@@ -575,6 +576,8 @@ namespace Faunus {
                     double g_internal(const Tgroup &g, const std::vector<int> &index=std::vector<int>()) {
                         using namespace ranges;
                         double u=0;
+                        if (molecules<Tpvec>.at(g.id).rigid)
+                            return u;
                         if (index.empty()) // assume that all atoms have changed
                             for ( auto i = g.begin(); i != g.end(); ++i )
                                 for ( auto j=i; ++j != g.end(); )

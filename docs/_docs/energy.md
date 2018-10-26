@@ -275,7 +275,7 @@ $$
 `mixing=LB`  | Mixing rule; only `LB` available.
 `custom`     | Custom $\epsilon$ and $\sigma$ combinations
 
-### SASA Potential
+### SASA Pair-potential
 
 This calculates the surface area of two intersecting particles or radii $R$ and $r$
 to estimate an energy based on transfer-free-energies (TFE) and surface tension.
@@ -303,8 +303,9 @@ and hydrophobic/hydrophilic interactions.
 
 `sasa`       | Description
 ------------ | ----------------------------------------------------------
-`radius=1.4` | Probe radius for SASA calculation (angstrom)
 `molarity`   | Molar concentration of co-solute, $c_s$.
+`radius=1.4` | Probe radius for SASA calculation (angstrom)
+`shift=true` | Shift to zero at large separations
 
 
 ## Bonded Interactions

@@ -53,12 +53,9 @@ namespace Faunus {
                     v = mol.getRandomConformation();
                     confindex = mol.getConfIndex();
 
-                    if ( mol.atomic )
-                    { // insert atomic species
-                        for ( auto &i : v )
-                        { // for each atom type id
-                            if ( rotate )
-                            {
+                    if ( mol.atomic ) { // insert atomic species
+                        for ( auto &i : v ) { // for each atom type id
+                            if ( rotate ) {
                                 rot.set(2*pc::pi*random(), ranunit(random));
                                 i.rotate(rot.first, rot.second);
                             }
@@ -77,20 +74,18 @@ namespace Faunus {
                                 if ( geo.collision(i.pos, 0))
                                     throw std::runtime_error("Error: Inserted molecule does not fit in container");
                         } else {
-                            Point cm;                      // new mass center position
+                            Point cm;                       // new mass center position
                             geo.randompos(cm, random);      // random point in container
-                            cm = cm.cwiseProduct(dir);     // apply user defined directions (default: 1,1,1)
+                            cm = cm.cwiseProduct(dir);      // apply user defined directions (default: 1,1,1)
                             Geometry::cm2origo(v.begin(), v.end());// translate to origin
                             rot.set(random()*2*pc::pi, ranunit(random)); // random rot around random vector
-                            for ( auto &i : v )
-                            {            // apply rotation to all points
-                                if ( rotate ) {
-                                    i.rotate(rot.first, rot.second);    // internal atom rotation
-                                    i.pos = rot(i.pos) + cm + offset;   // ...and translate
-                                }
-                                else
-                                    i.pos += cm + offset;
-                                geo.boundary(i.pos);             // ...and obey boundaries
+                            if (rotate) {
+                                Geometry::rotate(v.begin(), v.end(), rot.first);
+                                assert( Geometry::massCenter(v.begin(), v.end()).norm()<1e-6); // cm shouldn't move
+                            }
+                            for (auto &i : v) {
+                                i.pos += cm + offset;
+                                geo.boundary(i.pos);
                             }
                         }
                     }
@@ -100,13 +95,12 @@ namespace Faunus {
                     _overlap = false;
                     if ( checkOverlap )              // check for container overlap
                         for ( auto &i : v )
-                            if ( geo.collision(i.pos))
-                            {
+                            if ( geo.collision(i.pos)) {
                                 _overlap = true;
                                 break;
                             }
                 }
-                while ( _overlap == true );
+                while (_overlap);
                 return v;
             }
         };
@@ -136,6 +130,7 @@ namespace Faunus {
                 bool atomic=false;         //!< True if atomic group (salt etc.)
                 bool rotate=true;          //!< True if molecule should be rotated upon insertion
                 bool keeppos=false;        //!< Keep original positions of `structure`
+                bool rigid=false;          //!< True if particle should be considered as rigid
                 double activity=0;         //!< Chemical activity (mol/l)
                 Point insdir = {1,1,1};    //!< Insertion directions
                 Point insoffset = {0,0,0}; //!< Insertion offset
@@ -254,8 +249,10 @@ namespace Faunus {
             j[a.name] = {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
-                {"keeppos", a.keeppos}, {"structure", a.structure}, {"bondlist", a.bonds}
+                {"keeppos", a.keeppos}, {"structure", a.structure}, {"bondlist", a.bonds},
+                {"rigid", a.rigid}
             };
+
             j[a.name]["atoms"] = json::array();
             for (auto id : a.atoms)
                 j[a.name]["atoms"].push_back( atoms<Tparticle>.at(id).name );
@@ -277,6 +274,7 @@ namespace Faunus {
                     a.atomic = val.value("atomic", a.atomic);
                     a.insdir = val.value("insdir", a.insdir);
                     a.bonds  = val.value("bondlist", a.bonds);
+                    a.rigid = val.value("rigid", a.rigid);
                     a.id() = val.value("id", a.id());
 
                     if (a.atomic) {

@@ -81,12 +81,13 @@ Properties of molecules and their default values:
 `activity=0`        | Chemical activity for grand canonical MC [mol/l]
 `atomic=false`      | True if collection of atomic species, salt etc.
 `atoms=[]`          | Array of atom names - required if `atomic=true`
+`bondlist`          | List of _internal_ bonds (harmonic, dihedrals etc.)
 `implicit=false`    | If this species is implicit in GCMC schemes
 `insdir=[1,1,1]`    | Insert directions are scaled by this
 `insoffset=[0,0,0]` | Shifts mass center after insertion
 `keeppos=false`     | Keep original positions of `structure`
+`rigid=false`       | Set to true for rigid molecules. Affects energy evaluation.
 `structure`         | Structure file (`.pqr, .aam, .xyz`) - required if `atomic=false`
-`bondlist`          | List of _internal_ bonds (harmonic, dihedrals etc.)
 `traj`              | Read conformations from PQR trajectory (`structure` will be ignored)
 `trajweight`        | One column file w. relative weights for each conformation. Must match frames in `traj` file.
 `trajcenter`        | CM of conformations to origo assuming whole molecules (default: `false`)

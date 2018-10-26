@@ -399,16 +399,20 @@ namespace Faunus {
                             auto g = slump.sample( mollist.begin(), mollist.end() );
                             if (not g->empty()) {
                                 inserter.offset = g->cm;
-                                Tpvec p = inserter(spc.geo, spc.p, molecules<Tpvec>[molid]); // get conformation
-                                newconfid = molecules<Tpvec>[molid].getConfIndex();
+                                inserter.dir = {0,0,0};
 
-                                if (p.size() != g->size())
+                                // Get a new conformation that should be properly wrapped around the boundaries
+                                // (if applicable) and have the same mass-center as "g->cm".
+                                Tpvec p = inserter(spc.geo, spc.p, molecules<Tpvec>[molid]);
+                                if (p.size() not_eq g->size())
                                     throw std::runtime_error(name + ": conformation atom count mismatch");
+
+                                newconfid = molecules<Tpvec>[molid].getConfIndex();
 
                                 std::copy( p.begin(), p.end(), g->begin() ); // override w. new conformation
 #ifndef NDEBUG
                                 // this move shouldn't move mass centers, so let's check if this is true:
-                                Point newcm = Geometry::massCenter(p.begin(), p.end(), spc.geo.boundaryFunc);
+                                Point newcm = Geometry::massCenter(p.begin(), p.end(), spc.geo.boundaryFunc, -g->cm);
                                 if ( (newcm - g->cm).norm()>1e-6 )
                                     throw std::runtime_error(name + ": unexpected mass center movement");
 #endif
@@ -431,6 +435,8 @@ namespace Faunus {
                     ConformationSwap(Tspace &spc) : spc(spc) {
                         name = "conformationswap";
                         repeat = -1; // meaning repeat n times
+                        inserter.dir = {0,0,0};
+                        inserter.rotate = true;
                     }
 
             }; // end of conformation swap move

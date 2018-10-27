@@ -8,7 +8,6 @@ from pyfaunus import *
 
 # Dictionary defining input
 d = {}
-d['temperature'] = 298.15
 d['geometry'] = { 'length': 50 }
 d['atomlist'] = [
         { 'Na': dict( r=2.0, eps=0.05, q=1.0, tfe=1.0 ) },
@@ -26,8 +25,16 @@ d['insertmolecules'] = [
 #   - initialize `atoms` from dictionary
 #   - add particles / molecules
 
+setTemperature(300) # must be set before atom/molecule properties are read
+
 spc = Space()
 spc.from_dict(d)
+
+# Test temperature
+
+class TestGlobals(unittest.TestCase):
+    def test_temperature(self):
+        self.assertAlmostEqual(getTemperature(), 300)
 
 # Loop over atom types
 for i in atoms:

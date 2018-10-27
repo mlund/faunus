@@ -320,7 +320,7 @@ add_test(
 
 add_test(
     NAME pythontest
-    COMMAND sh -c "${PYTHON_EXECUTABLE} pythontest.py"
+    COMMAND sh -c "${PYTHON_EXECUTABLE} pythontest.py -v"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 add_test(

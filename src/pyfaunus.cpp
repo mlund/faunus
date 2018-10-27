@@ -58,6 +58,8 @@ PYBIND11_MODULE(pyfaunus, m)
         .def(py::init<>())
         .def("__call__", [](Random &self){ return self(); } ); // function operator
 
+    m.attr("random") = &Faunus::random; // global instance
+
     // Geometries
     py::enum_<Geometry::VolumeMethod>(m, "VolumeMethod")
         .value("ISOTROPIC", Geometry::VolumeMethod::ISOTROPIC)
@@ -175,6 +177,10 @@ PYBIND11_MODULE(pyfaunus, m)
                 Faunus::from_json(dict2json(dict), a); } );
 
     m.attr("atoms") = &Faunus::atoms; // global instance
+
+    // Temperature and other globals etc.
+    m.def("getTemperature", []() { return pc::temperature; } );
+    m.def("setTemperature", [](double T) { pc::temperature = T; } );
 
     // Potentials
     py::class_<Potential::FunctorPotential<Tparticle>>(m, "FunctorPotential")

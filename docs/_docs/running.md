@@ -91,3 +91,17 @@ If all processes take the same input:
 mpirun -np 2 ./faunus --nopfx --input in.json
 mpirun -np 2 --stdin all ./faunus < in.json
 ~~~
+
+## Python Interface
+
+An increasing part of the C++ API is exposed to Python and can be used like this:
+
+~~~ python
+import pyfaunus
+help(pyfaunus)
+~~~
+
+For example usage, see
+[`pythontest.py`](https://github.com/mlund/faunus/blob/master/examples/pythontest.py).
+Please note that the interface is under development and may be subject to change.
+

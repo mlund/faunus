@@ -72,4 +72,67 @@ namespace Faunus {
         CHECK( a() != b() );
     }
 #endif
+
+    /**
+     * @brief Stores a series of elements with given weight
+     *
+     * Elements is accessed with `get()` that will
+     * randomly pick rom the weighted distribution.
+     * Add elements with `push_back()`
+     * where the default weight is _unity_.
+     */
+    template<typename T>
+        class WeightedDistribution {
+            private:
+                std::discrete_distribution<> dist;
+                std::vector<T> vec;
+                std::vector<double> weights;
+            public:
+                size_t index; //!< index from latest element access (push_back or get)
+                auto size() const { return vec.size(); }
+                bool empty() const { return vec.empty(); }
+                void clear() {
+                    vec.clear();
+                    weights.clear();
+                }
+
+                void push_back(const T &value, double weight=1) {
+                    vec.push_back(value);
+                    weights.push_back(weight);
+                    dist = std::discrete_distribution<>(weights.begin(), weights.end());
+                    index = vec.size()-1;
+                    assert(size_t(dist.max()) == vec.size() - 1);
+                } //!< add data and it's weight (default = 1)
+
+                const T& get() {
+                    assert( not empty() );
+                    index = dist(random.engine);
+                    return vec.at(index);
+                } //!< retrieve data with given weight
+        };
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] WeightedDistribution")
+    {
+        WeightedDistribution<double> v;
+
+        v.push_back(0.5);
+        CHECK( v.index==0 );
+        CHECK( v.size()==1 );
+
+        v.push_back(0.1, 4);
+        CHECK( v.index==1 );
+        CHECK( v.size()==2 );
+        CHECK( not v.empty() );
+
+        int N=1e4;
+        double sum=0;
+        for (int i=0; i<N; i++)
+            sum += v.get();
+        CHECK( sum/double(N) == doctest::Approx( (0.5*1+0.1*4) / (1+4) ).epsilon(0.05) );
+
+        v.clear();
+        CHECK( v.empty() );
+    }
+#endif
 }

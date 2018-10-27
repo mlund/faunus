@@ -1,9 +1,70 @@
 #pragma once
 
 #include "core.h"
+#include "atomdata.h"
+#include "particle.h"
 
 /** @brief Faunus main namespace */
 namespace Faunus {
+
+    /**
+     * @brief Convert cartesian- to spherical-coordinates
+     * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [-\pi,\pi) \f$, and \f$ \phi\in [0,\pi] \f$.
+     */
+    Point xyz2rtp(const Point&, const Point &origin={0,0,0});
+
+    /**
+     * @brief Convert spherical- to cartesian-coordinates
+     * @param origin The origin to be added (optional)
+     * @note Input \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$, and output (x,y,z).
+     */
+    Point rtp2xyz(const Point &rtp, const Point &origin = {0,0,0});
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] spherical coordinates") {
+        using doctest::Approx;
+
+        Point sph1 = {2, 0.5, -0.3};
+        auto pnt1 = rtp2xyz(sph1); // sph --> cart
+        auto sph2 = xyz2rtp(pnt1); // cart --> sph
+
+        CHECK( pnt1.norm() == Approx(2));
+        CHECK( sph1.x() == Approx(sph2.x()));
+        //CHECK( sph1.y() == Approx(sph2.y()));
+        //CHECK( sph1.z() == Approx(sph2.z()));
+    }
+#endif
+
+    Point ranunit_neuman(Random&); //!< Random unit vector using Neuman's method ("sphere picking")
+    Point ranunit_polar(Random&); //!< Random unit vector using polar coordinates ("sphere picking")
+
+    constexpr auto ranunit = ranunit_neuman; //!< Reference (or alias) to default ranunit function
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] ranunit_neuman") {
+        Random r;
+        int n=2e5;
+        Point rtp(0,0,0);
+        for (int i=0; i<n; i++)
+            rtp += xyz2rtp( ranunit_neuman(r) );
+        rtp = rtp / n;
+        CHECK( rtp.x() == doctest::Approx(1) );
+        CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
+        CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
+    }
+
+    TEST_CASE("[Faunus] ranunit_polar") {
+        Random r;
+        int n=2e5;
+        Point rtp(0,0,0);
+        for (int i=0; i<n; i++)
+            rtp += xyz2rtp( ranunit_polar(r) );
+        rtp = rtp / n;
+        CHECK( rtp.x() == doctest::Approx(1) );
+        CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
+        CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
+    }
+#endif
 
     /** @brief Simulation geometries and related operations */
     namespace Geometry {
@@ -299,7 +360,7 @@ namespace Faunus {
         template<typename Titer, typename Tparticle=typename Titer::value_type>
             Point massCenter(Titer begin, Titer end, BoundaryFunction boundary=[](Point&){}, const Point &shift={0,0,0}) {
                 return anyCenter(begin, end, boundary,
-                        []( const Tparticle &p ){ return atoms<Tparticle>.at(p.id).mw; }, shift );
+                        []( const Tparticle &p ){ return atoms.at(p.id).mw; }, shift );
             } // Mass center
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -309,9 +370,9 @@ namespace Faunus {
             Cylinder cyl = json( {{"length",100}, {"radius",20}} );
             std::vector<T> p;
 
-            CHECK( !atoms<T>.empty() ); // set in a previous test
-            p.push_back( atoms<T>[0] );
-            p.push_back( atoms<T>[0] );
+            CHECK( !atoms.empty() ); // set in a previous test
+            p.push_back( atoms[0] );
+            p.push_back( atoms[0] );
 
             p.front().pos = {10, 10, -10};
             p.back().pos  = {15, -10, 10};

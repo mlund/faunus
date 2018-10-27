@@ -67,9 +67,9 @@ namespace Faunus {
                 static std::string p2s(const Tparticle &a, int i) {
                     std::ostringstream o;
                     o.precision(5);
-                    double radius = atoms<Tparticle>.at(a.id).sigma/2;
-                    double mw = atoms<Tparticle>.at(a.id).mw;
-                    o << atoms<Tparticle>.at(a.id).name << " " << i+1 << " "
+                    double radius = atoms.at(a.id).sigma/2;
+                    double mw = atoms.at(a.id).mw;
+                    o << atoms.at(a.id).name << " " << i+1 << " "
                         << a.pos.transpose() << " "
                         << a.charge << " " << mw << " " << radius << endl;
                     return o.str();
@@ -83,8 +83,8 @@ namespace Faunus {
                     int num;
                     o << s;
                     o >> name;
-                    auto it = findName( atoms<Tparticle>, name );
-                    if (it==atoms<Tparticle>.end())
+                    auto it = findName( atoms, name );
+                    if (it==atoms.end())
                         throw std::runtime_error("AAM load error: unknown atom name '" + name + "'.");
                     a = *it;
                     o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> mw >> radius;
@@ -166,8 +166,8 @@ namespace Faunus {
                                 if (key=="ATOM" or key=="HETATM") {
                                     double radius;
                                     o >> iatom >> aname;
-                                    auto it = findName( atoms<Tparticle>, aname );
-                                    if (it==atoms<Tparticle>.end())
+                                    auto it = findName( atoms, aname );
+                                    if (it==atoms.end())
                                         throw std::runtime_error("PQR load error: unknown atom name '" + aname + "'.");
                                     a = *it;
                                     o >> rname >> ires
@@ -203,8 +203,8 @@ namespace Faunus {
                                 if ( key=="ATOM" or key=="HETATM" ) {
                                     double radius;
                                     o >> iatom >> aname;
-                                    auto it = findName( atoms<Tparticle>, aname );
-                                    if (it==atoms<Tparticle>.end())
+                                    auto it = findName( atoms, aname );
+                                    if (it==atoms.end())
                                         throw std::runtime_error("PQR load error: unknown atom name '" + aname + "'.");
                                     a = *it;
                                     o >> rname >> ires >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
@@ -235,14 +235,14 @@ namespace Faunus {
                     if (len.norm()>1e-6)
                         o << writeCryst1(len);
                     for (auto &p_i : p) {
-                        auto& prop = atoms<Tparticle>.at(p_i.id);
+                        auto& prop = atoms.at(p_i.id);
                         std::string name=prop.name;
                         double radius = prop.sigma/2;
                         sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
                                 natom++, name.c_str(), name.c_str(), nres,
                                 (p_i.pos+len/2).x(), (p_i.pos+len/2).y(), (p_i.pos+len/2).z(), p_i.charge, radius); // move particles inside the sim. box
                         o << buf;
-                        if ( atoms<Tparticle>.at(p_i.id).name=="CTR" )
+                        if ( atoms.at(p_i.id).name=="CTR" )
                             nres++;
                         else if (natom % n == 0)
                             nres++;
@@ -267,7 +267,7 @@ namespace Faunus {
                 std::ostringstream o;
                 o << p.size() << "\n" << box.transpose() << "\n";
                 for (auto &i : p)
-                    o << atoms<Tparticle>.at(i.id).name << " " << i.pos.transpose() << "\n";
+                    o << atoms.at(i.id).name << " " << i.pos.transpose() << "\n";
                 return IO::writeFile(file, o.str());
             }
 
@@ -298,8 +298,8 @@ namespace Faunus {
                     std::getline(f, comment); // read comment line
                     for (size_t i=0; i<n; i++) {
                         f >> name;
-                        auto it = findName( atoms<Tparticle>, name );
-                        if (it==atoms<Tparticle>.end())
+                        auto it = findName( atoms, name );
+                        if (it==atoms.end())
                             throw std::runtime_error("XYZ load error: unknown atom name '" + name + "'.");
                         a = *it;
                         f >> a.pos.x() >> a.pos.y() >> a.pos.z();
@@ -386,8 +386,12 @@ namespace Faunus {
                     std::stringstream o;
                     std::string name;
                     o << s.substr(10,5) << s.substr(20,8) << s.substr(28,8) << s.substr(36,8);
-                    o >> name >> dst.x >> dst.y >> dst.z;
-                    dst=atoms<Tparticle>.at(name);
+                    o >> name;
+                    auto it = findName(atoms, name);
+                    if (it != atoms.end()) {
+                        o >> dst.pos.x >> dst.pos.y >> dst.pos.z;
+                        dst = *it;
+                    } else throw std::runtime_error("gro: unknown atom name");
                     return 10*dst; //nm->angstrom
                 }
 
@@ -424,12 +428,12 @@ namespace Faunus {
                     o << "Generated by Faunus -- http://faunus.sourceforge.net"
                         << std::endl << p.size() << std::endl;
                     for (auto &pi : p) {
-                        std::string name=atoms<Tparticle>.at(pi.id).name;
+                        std::string name=atoms.at(pi.id).name;
                         sprintf(buf, "%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",
                                 nres,name.c_str(),name.c_str(),natom++,
                                 pi.x()/10+halflen, pi.y()/10+halflen, pi.z()/10+halflen );
                         o << buf;
-                        if ( atoms<Tparticle>[pi.id].name=="CTR" )
+                        if ( atoms[pi.id].name=="CTR" )
                             nres++;
                     }
                     if (len>0)
@@ -451,7 +455,7 @@ namespace Faunus {
                     for (auto &g : spc.groups) {
                         for (auto &i : g) {
                             Point a = (i.pos + halflen)/10; // angstron->nm
-                            std::string &name = atoms<Tparticle>.at(i.id).name;
+                            std::string &name = atoms.at(i.id).name;
                             sprintf(buf, "%5d%5s%5s%5d%8.3f%8.3f%8.3f\n",
                                     nres,name.c_str(),name.c_str(),natom++, a.x(), a.y(), a.z() );
                             o << buf;

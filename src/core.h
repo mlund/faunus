@@ -1,5 +1,4 @@
 #pragma once
-
 #include <iomanip>
 #include <limits>
 #include <vector>
@@ -17,14 +16,20 @@
 #include <range/v3/all.hpp>
 #include "random.h"
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
+#include "units.h"
+#endif
+
 // Eigen<->JSON (de)serialization
 namespace Eigen {
+
     template<typename T>
         void to_json(nlohmann::json& j, const T &p) {
             auto d = p.data();
             for (int i=0; i<(int)p.size(); ++i)
                 j.push_back( d[i] );
         }
+
     template<class T>
         void from_json(const nlohmann::json& j, Eigen::Matrix<T,3,1> &p) {
             if ( j.size()==3 ) {
@@ -80,122 +85,6 @@ namespace Faunus {
     void _roundjson(json &j, int n=3); // round float objects to n number of significant digits
     double value_inf(const json &j, const std::string &key); //!< Extract floating point from json and allow for 'inf' and '-inf'
 
-    /** @brief Physical constants */
-    namespace PhysicalConstants {
-        typedef double T; //!< Float size
-        constexpr T infty = std::numeric_limits<T>::infinity(), //!< Numerical infinity
-                  pi = 3.141592653589793, //!< Pi
-                  e0 = 8.85419e-12,  //!< Permittivity of vacuum [C^2/(J*m)]
-                  e = 1.602177e-19,  //!< Absolute electronic unit charge [C]
-                  kB = 1.380658e-23, //!< Boltzmann's constant [J/K]
-                  Nav = 6.022137e23, //!< Avogadro's number [1/mol]
-                  c = 299792458.0,   //!< Speed of light [m/s]
-                  R = kB * Nav;      //!< Molar gas constant [J/(K*mol)]
-        static T temperature=300; //!< Temperature (Kelvin)
-        static inline T kT() { return temperature*kB; } //!< Thermal energy (Joule)
-        static inline T lB( T epsilon_r ) {
-            return e*e/(4*pi*e0*epsilon_r*1e-10*kT());
-        } //!< Bjerrum length (angstrom)
-        static inline T lB2epsr( T bjerrumlength ) {
-            return lB(bjerrumlength);
-        } //!< lB --> relative dielectric constant
-    }
-
-    namespace pc = PhysicalConstants;
-
-    /**
-     * @brief Chemistry units
-     *
-     * String literals to convert to the following internal units:
-     *
-     * Property           | Unit
-     * :----------------- | :--------------------------
-     * Energy             | Thermal energy (kT)
-     * Temperature        | Kelvin (K)
-     * Length             | Angstrom (A)
-     * Charge             | Electron unit charge (e)
-     * Dipole moment      | Electron angstrom (eA)
-     * Concentration      | Particles / angstrom^3
-     * Pressure           | Particles / angstrom^3
-     * Angle              | Radians
-     */
-    namespace ChemistryUnits
-    {
-        typedef long double T; //!< Floating point size
-        constexpr T operator "" _K( T temp ) { return temp; } //!< Kelvin to Kelvin
-        constexpr T operator "" _C( T temp ) { return 273.15 + temp; } //!< Celcius to Kelvin
-        constexpr T operator "" _Debye( T mu ) { return mu * 0.208194334424626; }  //!< Debye to eA
-        constexpr T operator "" _eA( T mu ) { return mu; } //!< eA to eA
-        constexpr T operator "" _Cm( T mu ) { return mu * 1.0_Debye / 3.335640951981520e-30; } //!< Cm to eA
-        constexpr T operator "" _angstrom( T l ) { return l; } //!< Angstrom to Angstrom
-        constexpr T operator "" _angstrom3( T l ) { return l; } //!< Angstrom^3 to Angstrom^3
-        constexpr T operator "" _m( T l ) { return l * 1e10; } //!< Meter to angstrom
-        constexpr T operator "" _bohr( T l ) { return l * 0.52917721092; } //!< Bohr to angstrom
-        constexpr T operator "" _nm( T l ) { return l * 10; } //!< nanometers to angstrom
-        constexpr T operator "" _liter( T v ) { return v * 1e27; } //!< liter to angstrom cubed
-        constexpr T operator "" _m3( T v ) { return v * 1e30; } //!< -> cubic meter to angstrom cubed
-        constexpr T operator "" _mol( T n ) { return n * pc::Nav; } //!< moles to particles
-        constexpr T operator "" _molar( T c ) { return c * 1.0_mol / 1.0_liter; } //!< molar to particle / angstrom^3
-        constexpr T operator "" _mM( T c ) { return c * 1.0e-3_mol / 1.0_liter; } //!< millimolar to particle / angstrom^3
-        constexpr T operator "" _rad( T a ) { return a; } //!< Radians to radians
-        constexpr T operator "" _deg( T a ) { return a * pc::pi / 180; } //!< Degrees to radians
-        inline T operator "" _Pa( T p ) { return p / pc::kT() / 1.0_m3; } //!< Pascal to particle / angstrom^3
-        inline T operator "" _atm( T p ) { return p * 101325.0_Pa; } //!< Atmosphere to particle / angstrom^3
-        inline T operator "" _bar( T p ) { return p * 100000.0_Pa; } //!< Bar to particle / angstrom^3
-        constexpr T operator "" _kT( T u ) { return u; } //!< kT to kT (thermal energy)
-        inline T operator "" _J( T u ) { return u / pc::kT(); } //!< Joule to kT
-        inline T operator "" _kJmol( T u ) { return u / pc::kT() / pc::Nav * 1e3; } //!< kJ/mol to kT/particle
-        inline T operator "" _kcalmol( T u ) { return u * 4.1868_kJmol; } //!< kcal/mol to kT/particle
-        inline T operator "" _hartree( T u ) { return u * 4.35974434e-18_J; } //!< Hartree to kT
-    }
-    using namespace ChemistryUnits;
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] Units and string literals")
-    {
-        using doctest::Approx;
-        pc::temperature = 298.15_K;
-        CHECK( 1.0e-10_m == 1 );
-        CHECK( (1/1.0_Debye) == Approx(4.8032) );
-        CHECK( 1.0_Debye == Approx( 3.33564e-30_Cm ) );
-        CHECK( 1.0_Debye == Approx( 0.20819434_eA ) );
-        CHECK( 360.0_deg == Approx( 2*std::acos(-1) ) );
-        CHECK( (1.0_mol / 1.0_liter) == Approx( 1.0_molar ) );
-        CHECK( 1.0_bar == Approx( 0.987_atm ) );
-        CHECK( 1.0_atm == Approx( 101325._Pa) );
-        CHECK( 1.0_kT == Approx( 2.47897_kJmol ) );
-        CHECK( 1.0_hartree == Approx( 2625.499_kJmol ) );
-    }
-#endif
-
-    namespace u8 {
-        const std::string angstrom = "\u00c5";   //!< Angstrom symbol
-        const std::string beta = "\u03b2";       //!< Greek beta
-        const std::string cubed = "\u00b3";      //!< Superscript 3
-        const std::string cuberoot = "\u221b";   //!< Cubic root
-        const std::string degrees = "\u00b0";    //!< Degrees
-        const std::string Delta = "\u0394";      //!< Greek Delta
-        const std::string epsilon = "\u03f5";    //!< Greek epsilon
-        const std::string epsilon_m = "\u03b5";  //!< Greek epsilon (minuscule)
-        const std::string gamma = "\u0263";      //!< Greek gamma
-        const std::string Gamma = "\u0393";      //!< Greek capital gamma
-        const std::string infinity="\u221E";     //!< Infinity
-        const std::string kappa = "\u03ba";      //!< Greek kappa
-        const std::string mu = "\u03bc";         //!< Greek mu
-        const std::string partial = "\u2202";    //!< Partial derivative
-        const std::string percent = "\ufe6a";    //!< Percent sign
-        const std::string pm = "\u00b1";         //!< Plus minus sign
-        const std::string rho = "\u03C1";        //!< Greek rho
-        const std::string rootof = "\u221a";     //!< Square root sign
-        const std::string squared = "\u00b2";    //!< Superscript 2
-        const std::string sigma = "\u03c3";      //!< Greek sigma
-        const std::string superminus = "\u207b"; //!< Superscript minus (-)
-        const std::string subr = "\u1D63";       //!< Subscript "r"
-        const std::string theta = "\u03b8";      //!< Greek theta
-
-        std::string bracket( const std::string &s );
-    } //!< Unicode
-
     struct Tensor : public Eigen::Matrix3d {
         typedef Eigen::Matrix3d base;
 
@@ -241,66 +130,6 @@ namespace Faunus {
 #endif
 
     /**
-     * @brief Convert cartesian- to spherical-coordinates
-     * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [-\pi,\pi) \f$, and \f$ \phi\in [0,\pi] \f$.
-     */
-    Point xyz2rtp(const Point&, const Point &origin={0,0,0});
-
-    /**
-     * @brief Convert spherical- to cartesian-coordinates
-     * @param origin The origin to be added (optional)
-     *
-     * @note Input \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$, and output (x,y,z).
-     */
-    Point rtp2xyz(const Point &rtp, const Point &origin = {0,0,0});
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] spherical coordinates") {
-        using doctest::Approx;
-
-        Point sph1 = {2, 0.5, -0.3};
-        auto pnt1 = rtp2xyz(sph1); // sph --> cart
-        auto sph2 = xyz2rtp(pnt1); // cart --> sph
-
-        CHECK( pnt1.norm() == Approx(2));
-        CHECK( sph1.x() == Approx(sph2.x()));
-        //CHECK( sph1.y() == Approx(sph2.y()));
-        //CHECK( sph1.z() == Approx(sph2.z()));
-    }
-#endif
-
-    Point ranunit_neuman(Random&); //!< Random unit vector using Neuman's method ("sphere picking")
-    Point ranunit_polar(Random&); //!< Random unit vector using polar coordinates ("sphere picking")
-
-    constexpr auto ranunit = ranunit_neuman; //!< Reference (or alias) to default ranunit function
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] ranunit_neuman") {
-        Random r;
-        int n=2e5;
-        Point rtp(0,0,0);
-        for (int i=0; i<n; i++)
-            rtp += xyz2rtp( ranunit_neuman(r) );
-        rtp = rtp / n;
-        CHECK( rtp.x() == doctest::Approx(1) );
-        CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
-        CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
-    }
-
-    TEST_CASE("[Faunus] ranunit_polar") {
-        Random r;
-        int n=2e5;
-        Point rtp(0,0,0);
-        for (int i=0; i<n; i++)
-            rtp += xyz2rtp( ranunit_polar(r) );
-        rtp = rtp / n;
-        CHECK( rtp.x() == doctest::Approx(1) );
-        CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
-        CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
-    }
-#endif
-
-    /**
      * @brief Quaternion rotation routine using the Eigen library
      */
     struct QuaternionRotate : public std::pair<Eigen::Quaterniond, Eigen::Matrix3d> {
@@ -341,301 +170,6 @@ namespace Faunus {
             a = qrot.second * a;
             CHECK( a.x() == Approx(-1) );
         }
-    }
-#endif
-
-    /**
-     * @brief General properties for atoms
-     */
-    template<class T /** Particle type */>
-        struct AtomData {
-            public:
-                int _id=-1;
-                std::string name;    //!< Name
-                double eps=0;        //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
-                double activity=0;   //!< Chemical activity [mol/l]
-                double alphax=0;     //!< Excess polarisability (unit-less)
-                double charge=0;     //!< Particle charge [e]
-                double dp=0;         //!< Translational displacement parameter [angstrom]
-                double dprot=0;      //!< Rotational displacement parameter [degrees]
-                Point  mu={1,0,0};   //!< Dipole moment unit vector
-                double mulen=0;      //!< Dipole moment scalar [eÃ]
-                double mw=1;         //!< Weight
-                Point  scdir={1,0,0};//!< Sphero-cylinder direction
-                double sclen=0;      //!< Sphere-cylinder length [angstrom]
-                double sigma=0;      //!< Diameter for e.g Lennard-Jones etc. [angstrom]
-                double tension=0;    //!< Surface tension [kT/Å^2]
-                double tfe=0;        //!< Transfer free energy [J/mol/angstrom^2/M]
-                int& id() { return _id; } //!< Type id
-                const int& id() const { return _id; } //!< Type id
-                bool hydrophobic=false;  //!< Is the particle hydrophobic?
-        };
-
-    template<class T>
-        void to_json(json& j, const AtomData<T> &a) {
-            auto& _j = j[a.name];
-            _j = {
-                {"activity", a.activity / 1.0_molar},
-                {"alphax", a.alphax}, {"q", a.charge},
-                {"dp", a.dp / 1.0_angstrom}, {"dprot", a.dprot / 1.0_rad},
-                {"eps", a.eps / 1.0_kJmol}, {"mw", a.mw},
-                {"sigma", a.sigma / 1.0_angstrom},
-                {"tension", a.tension * 1.0_angstrom*1.0_angstrom / 1.0_kJmol},
-                {"tfe", a.tfe * 1.0_angstrom*1.0_angstrom * 1.0_molar / 1.0_kJmol},
-                {"mu", a.mu}, {"mulen",a.mulen},
-                {"scdir", a.scdir}, {"sclen", a.sclen},
-                {"id", a.id()}
-            };
-            if (a.hydrophobic)
-                _j["hydrophobic"] = a.hydrophobic;
-        }
-
-    template<class T>
-        void from_json(const json& j, AtomData<T>& a) {
-            if (j.is_object()==false || j.size()!=1)
-                throw std::runtime_error("Invalid JSON data for AtomData");
-            for (auto it : j.items()) {
-                a.name = it.key();
-                auto& val = it.value();
-                a.activity = val.value("activity", a.activity) * 1.0_molar;
-                a.alphax   = val.value("alphax", a.alphax);
-                a.charge   = val.value("q", a.charge);
-                a.dp       = val.value("dp", a.dp) * 1.0_angstrom;
-                a.dprot    = val.value("dprot", a.dprot) * 1.0_rad;
-                a.eps      = val.value("eps", a.eps) * 1.0_kJmol;
-                a.id()     = val.value("id", a.id());
-                a.mu       = val.value("mu", a.mu);
-                a.mulen    = val.value("mulen", a.mulen);
-                a.scdir    = val.value("scdir", a.scdir);
-                a.sclen    = val.value("sclen", a.sclen);
-                a.mw       = val.value("mw", a.mw);
-                a.sigma    = val.value("sigma", 0.0) * 1.0_angstrom;
-                if (fabs(a.sigma)<1e-20)
-                    a.sigma = 2.0*val.value("r", 0.0) * 1.0_angstrom;
-                a.tension  = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom);
-                a.tfe      = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom*1.0_molar);
-                a.hydrophobic = val.value("hydrophobic", false);
-            }
-        }
-
-    /**
-     * @brief Construct vector of atoms from json array
-     *
-     * Items are added to existing items while if an item
-     * already exists, it will be overwritten.
-     */
-    template<class T>
-        void from_json(const json& j, std::vector<AtomData<T>> &v) {
-            auto it = j.find("atomlist");
-            json _j = ( it==j.end() ) ? j : *it;
-            v.reserve( v.size() + _j.size() );
-
-            for ( auto &i : _j ) {
-                if ( i.is_string() ) // treat ax external file to load
-                    from_json( openjson(i.get<std::string>()), v );
-                else if ( i.is_object() ) {
-                    AtomData<T> a = i;
-                    auto it = findName( v, a.name );
-                    if ( it==v.end() ) 
-                        v.push_back( a ); // add new atom
-                    else
-                        *it = a;
-                }
-            }
-            for (size_t i=0; i<v.size(); i++)
-                v[i].id() = i; // id must match position in vector
-        }
-
-    template<typename Tparticle>
-        static std::vector<AtomData<Tparticle>> atoms = {}; //!< Global instance of atom list
-
-
-    /** @brief Base class for particle properties */
-    struct ParticlePropertyBase {
-        virtual void to_json(json &j) const=0; //!< Convert to JSON object
-        virtual void from_json(const json &j)=0; //!< Convert from JSON object
-        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&);
-    };
-
-    template <typename... Ts>
-        auto to_json(json&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {} //!< Particle to JSON
-    template<typename T, typename... Ts>
-        void to_json(json& j, const ParticlePropertyBase &a, const Ts&... rest) {
-            a.to_json(j);
-            to_json<Ts...>(j, rest...);
-        } //!< Particle to JSON
-
-    // JSON --> Particle
-    template <typename... Ts>
-        auto from_json(const json&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
-    template<typename T, typename... Ts>
-        void from_json(const json& j, ParticlePropertyBase &a, Ts&... rest) {
-            a.from_json(j);
-            from_json<Ts...>(j, rest...);
-        }
-
-    struct Radius : public ParticlePropertyBase {
-        inline Radius() {}
-        template<class T>
-            Radius(const AtomData<T> &a) {}
-        double radius=0; //!< Particle radius
-        void to_json(json &j) const override;
-        void from_json(const json& j) override;
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    }; //!< Radius property
-
-    struct Charge : public ParticlePropertyBase {
-        inline Charge() {}
-        template<class T>
-            Charge(const AtomData<T> &a) {}
-
-        double charge=0; //!< Particle radius
-        void to_json(json &j) const override;
-        void from_json(const json& j) override;
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    }; //!< Charge (monopole) property
-
-    /** @brief Dipole properties
-     *
-     * Json (de)serialization:
-     *
-     * ```{.cpp}
-     *     Dipole d = R"( "mu":[0,0,1], "mulen":10 )"_json
-     * ```
-     */
-    struct Dipole : public ParticlePropertyBase {
-        inline Dipole() {}
-        
-        template<class T>
-            Dipole(const AtomData<T> &a) {
-            }
-
-        Point mu={1,0,0}; //!< dipole moment unit vector
-        double mulen=0;   //!< dipole moment scalar
-        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&); //!< Rotate dipole moment
-        void to_json(json &j) const override;
-        void from_json(const json& j) override;
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    };
-
-    struct Quadrupole : public ParticlePropertyBase {
-        inline Quadrupole() {}
-        template<class T>
-            Quadrupole(const AtomData<T> &a) {}
-        Tensor Q;      //!< Quadrupole
-        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m); //!< Rotate dipole moment
-        void to_json(json &j) const override;
-        void from_json(const json& j) override;
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    }; // Quadrupole property
-
-    struct Cigar : public ParticlePropertyBase {
-        Point scdir = {1,0,0}; //!< Sphero-cylinder direction unit vector
-        double sclen = 0;      //!< Length
-        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d&); //!< Rotate sphero-cylinder
-        void to_json(json &j) const override;
-        void from_json(const json& j) override {
-            scdir = j.value("scdir", scdir);
-            sclen = j.value("sclen", sclen);
-        }
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    }; //!< Sphero-cylinder properties
-
-    /** @brief Particle */
-    template<typename... Properties>
-        class Particle : public Properties... {
-            private:
-                // rotate internal coordinates
-                template <typename... Ts>
-                    auto _rotate(const Eigen::Quaterniond&, const Eigen::Matrix3d&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
-                template<typename T, typename... Ts>
-                    void _rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m, T &a, Ts&... rest) {
-                        a.rotate(q,m);
-                        _rotate<Ts...>(q, m, rest...);
-                    }
-
-            public:
-                int id=-1;         //!< Particle id/type
-                Point pos={0,0,0}; //!< Particle position vector
-
-                Particle() : Properties()... {}
-
-                Particle(const AtomData<Particle> &a) : Properties()... {
-                    *this = json(a).front();
-                    assert(id>=0);
-                }
-
-                const AtomData<Particle>& traits() {
-                    assert(id>=0 and id<atoms<Particle>.size());
-                    return atoms<Particle>.at(id);
-                }
-
-                void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
-                    _rotate<Properties...>(q, m, dynamic_cast<Properties&>(*this)...);
-                } //!< Rotate all internal coordinates if needed
-
-                EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-        };
-
-    template<typename... Properties>
-        void to_json(json& j, const Particle<Properties...> &a) {
-            j = { {"id", a.id}, {"pos", a.pos} };
-            to_json<Properties...>(j, Properties(a)... );
-        }
-
-    template<typename... Properties>
-        void from_json(const json& j, Particle<Properties...> &a) {
-            a.id = j.value("id", a.id);
-            a.pos = j.value("pos", a.pos);
-            from_json<Properties...>(j, dynamic_cast<Properties&>(a)...);
-        }
-
-    using ParticleAllProperties = Particle<Radius,Dipole,Charge,Quadrupole,Cigar>;
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] Particle") {
-        using doctest::Approx;
-        ParticleAllProperties p1, p2;
-        p1.id = 100;
-        p1.pos = {1,2,3};
-        p1.charge = -0.8;
-        p1.radius = 7.1;
-        p1.mu = {0,0,1};
-        p1.mulen = 2.8;
-        p1.scdir = {-0.1, 0.3, 1.9};
-        p1.sclen = 0.5;
-        p1.Q = Tensor(1,2,3,4,5,6);
-
-        p2 = json(p1); // p1 --> json --> p2
-
-        CHECK( json(p1) == json(p2) ); // p1 --> json == json <-- p2 ?
-
-        CHECK( p2.id == 100 );
-        CHECK( p2.pos == Point(1,2,3) );
-        CHECK( p2.charge == -0.8 );
-        CHECK( p2.radius == 7.1 );
-        CHECK( p2.mu == Point(0,0,1) );
-        CHECK( p2.mulen == 2.8 );
-        CHECK( p2.scdir == Point(-0.1, 0.3, 1.9) );
-        CHECK( p2.sclen == 0.5 );
-        CHECK( p2.Q == Tensor(1,2,3,4,5,6) );
-
-        // check of all properties are rotated
-        QuaternionRotate qrot( pc::pi/2, {0,1,0} );
-        p1.mu = p1.scdir = {1,0,0};
-        p1.rotate( qrot.first, qrot.second );
-
-        CHECK( p1.mu.x() == Approx(0) );
-        CHECK( p1.mu.z() == Approx(-1) );
-        CHECK( p1.scdir.x() == Approx(0) );
-        CHECK( p1.scdir.z() == Approx(-1) );
-
-        CHECK( p1.Q(0,0) == Approx(6) );
-        CHECK( p1.Q(0,1) == Approx(5) );
-        CHECK( p1.Q(0,2) == Approx(-3) );
-        CHECK( p1.Q(1,1) == Approx(4) );
-        CHECK( p1.Q(1,2) == Approx(-2) );
-        CHECK( p1.Q(2,2) == Approx(1) );
     }
 #endif
 
@@ -688,7 +222,7 @@ namespace Faunus {
             return asEigenMatrix<dbl>(begin, end, m).col(0);
         }
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
+#ifdef _DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] asEigenMatrix") {
         using doctest::Approx;
         typedef Particle<Radius, Charge, Dipole, Cigar> T;
@@ -713,64 +247,6 @@ namespace Faunus {
         CHECK( m2.cols()==1 );
         CHECK( m2.rows()==3 );
         CHECK( m2.col(0).sum() == Approx(-10) );
-    }
-#endif
-
-    template<class Trange>
-        auto findName(Trange &rng, const std::string &name) {
-            return std::find_if( rng.begin(), rng.end(), [&name](auto &i){ return i.name==name; });
-        } //!< Returns iterator to first element with member `name` matching input
-
-    template<class Trange>
-        std::vector<int> names2ids(Trange &rng, const std::vector<std::string> &names) {
-            std::vector<int> index;
-            index.reserve(names.size());
-            for (auto &n : names) {
-                auto it = findName(rng, n);
-                if (it!=rng.end())
-                    index.push_back(it->id());
-                else
-                    throw std::runtime_error("name '" + n + "' not found");
-            }
-            return index;
-        } //!< Convert vector of names into vector in id's from Trange (exception if not found)
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] AtomData") {
-        using doctest::Approx;
-
-        json j = R"({ "atomlist" : [
-             { "A": { "r":1.1 } },
-             { "B": { "activity":0.2, "eps":0.05, "dp":9.8, "dprot":3.14, "mw":1.1, "tfe":0.98, "tension":0.023 } }
-             ]})"_json;
-
-        typedef Particle<Radius, Charge, Dipole, Cigar> T;
-
-        atoms<T> = j["atomlist"].get<decltype(atoms<T>)>();
-        auto &v = atoms<T>; // alias to global atom list
-
-        CHECK(v.size()==2);
-        CHECK(v.front().id()==0);
-        CHECK(v.front().name=="A"); // alphabetic order in std::map
-        CHECK(v.front().sigma==Approx(2*1.1e-10_m));
-
-        AtomData<T> a = json(v.back()); // AtomData -> JSON -> AtomData
-
-        CHECK(a.name=="B");
-        CHECK(a.id()==1);
-
-        CHECK(a.activity==Approx(0.2_molar));
-        CHECK(a.eps==Approx(0.05_kJmol));
-        CHECK(a.dp==Approx(9.8));
-        CHECK(a.dprot==Approx(3.14));
-        CHECK(a.mw==Approx(1.1));
-        CHECK(a.tfe==Approx(0.98_kJmol/1.0_angstrom/1.0_angstrom/1.0_molar));
-        CHECK(a.tension==Approx(0.023_kJmol/1.0_angstrom/1.0_angstrom));
-
-        auto it = findName(v, "B");
-        CHECK( it->id() == 1 );
-        it = findName(v, "unknown atom");
-        CHECK( it==v.end() );
     }
 #endif
 

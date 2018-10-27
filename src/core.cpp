@@ -40,36 +40,6 @@ namespace Faunus {
         t = Tensor(j[0],j[1],j[2],j[3],j[4],j[5]);
     }
 
-    Point ranunit_neuman(Random &rand) {
-        double r2;
-        Point p;
-        do {
-            p = {rand()-0.5, rand()-0.5, rand()-0.5};
-            r2 = p.squaredNorm();
-        } while ( r2 > 0.25 );
-        return p / std::sqrt(r2);
-    }
-
-    Point ranunit_polar(Random &rand) {
-        return rtp2xyz( {1, 2*pc::pi*rand(), std::acos(2*rand()-1)} );
-    }
-
-    Point xyz2rtp(const Point &p, const Point &origin) {
-        Point xyz = p - origin;
-        double radius = xyz.norm();
-        return {
-            radius,
-                std::atan2( xyz.y(), xyz.x() ),
-                std::acos( xyz.z()/radius) };
-    }
-
-    Point rtp2xyz(const Point &rtp, const Point &origin) {
-        return origin + rtp.x() * Point(
-                std::cos(rtp.y()) * std::sin(rtp.z()),
-                std::sin(rtp.y()) * std::sin(rtp.z()),
-                std::cos(rtp.z()) );
-    }
-
     json merge(const json &a, const json &b) {
         json result = a.flatten();
         json tmp = b.flatten();
@@ -134,48 +104,5 @@ namespace Faunus {
     auto QuaternionRotate::operator()(const Eigen::Matrix3d &a) const {
         return second * a * second.transpose();
     }
-
-    void Radius::to_json(json &j) const { j["r"] = radius; }
-
-    void Radius::from_json(const json &j) { radius = j.value("r", 0.0); }
-
-    void Charge::to_json(json &j) const { j["q"] = charge; }
-
-    void Charge::from_json(const json &j) { charge = j.value("q", 0.0); }
-
-    void Dipole::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) {
-        mu = q * mu;
-    }
-
-    void Dipole::to_json(json &j) const {
-        j["mu"] = mu;
-        j["mulen"] = mulen;
-    }
-
-    void Dipole::from_json(const json &j) {
-        mu = j.value("mu", Point(1,0,0) );
-        mulen = j.value("mulen", mulen);
-    }
-
-    void Quadrupole::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) { Q.rotate(m); }
-
-    void Quadrupole::to_json(json &j) const { j["Q"] = Q; }
-
-    void Quadrupole::from_json(const json &j) { Q = j.value("Q", Q); }
-
-    void Cigar::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) {
-        scdir = q * scdir;
-    }
-
-    void Cigar::to_json(json &j) const {
-        j["scdir"] = scdir;
-        j["sclen"] = sclen;
-    }
-
-    std::string u8::bracket(const std::string &s) {
-        return "\u27e8" + s + "\u27e9";
-    }
-
-    void ParticlePropertyBase::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) {}
 
 } // end of namespace

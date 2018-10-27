@@ -255,7 +255,7 @@ namespace Faunus {
 
             j[a.name]["atoms"] = json::array();
             for (auto id : a.atoms)
-                j[a.name]["atoms"].push_back( atoms<Tparticle>.at(id).name );
+                j[a.name]["atoms"].push_back( atoms.at(id).name );
         }
 
     template<class Tparticle, class Talloc>
@@ -280,8 +280,8 @@ namespace Faunus {
                     if (a.atomic) {
                         // read `atoms` list of atom names and convert to atom id's
                         for (auto &i : val.at("atoms").get<std::vector<std::string>>()) {
-                            auto it = findName( atoms<Tparticle>, i );
-                            if (it == atoms<Tparticle>.end() )
+                            auto it = findName( atoms, i );
+                            if (it == atoms.end() )
                                 throw std::runtime_error("unknown atoms in 'atoms'\n");
                             a.atoms.push_back(it->id());
                         }
@@ -293,7 +293,7 @@ namespace Faunus {
                         v.reserve( a.atoms.size() );
                         for ( auto id : a.atoms ) {
                             Tparticle _p;
-                            _p = atoms<Tparticle>.at(id);
+                            _p = atoms.at(id);
                             v.push_back( _p );
                         }
                         if (!v.empty())
@@ -313,8 +313,8 @@ namespace Faunus {
                                         if (m.is_object())
                                             if (m.size()==1)
                                                 for (auto& i : m.items()) {
-                                                    auto it = findName( atoms<Tparticle>, i.key() );
-                                                    if (it == atoms<Tparticle>.end())
+                                                    auto it = findName( atoms, i.key() );
+                                                    if (it == atoms.end())
                                                         throw std::runtime_error("unknown atoms in 'structure'");
                                                     v.push_back( *it );     // set properties from atomlist
                                                     v.back().pos = i.value(); // set position
@@ -497,10 +497,10 @@ namespace Faunus {
             } //!< Map for addition depending on direction
 
             auto findAtomOrMolecule(const std::string &name) const {
-                auto it_a = findName(atoms<Tparticle>, name);
+                auto it_a = findName(atoms, name);
                 auto it_m = findName(molecules<Tpvec>, name);
                 if (it_m == molecules<Tpvec>.end())
-                    if (it_a == atoms<Tparticle>.end())
+                    if (it_a == atoms.end())
                         throw std::runtime_error("unknown species '" + name + "'");
                 return std::make_pair(it_a, it_m);
             } //!< Returns pair of iterators to atomlist and moleculelist. One of them points to end().
@@ -530,7 +530,7 @@ namespace Faunus {
                     throw std::runtime_error("Invalid JSON data for ReactionData");
 
                 for (auto &m: molecules<Tpvec>)
-                    for (auto &a: atoms<std::vector<Tparticle>>)
+                    for (auto &a: atoms)
                         if (m.name == a.name)
                             throw std::runtime_error("Molecules and atoms nust have different names");
 
@@ -551,7 +551,7 @@ namespace Faunus {
 
                     for (auto &name : a._reac) { // loop over reactants
                         auto pair = a.findAtomOrMolecule( name );  // {iterator to atom, iterator to mol.}
-                        if ( pair.first != atoms<Tparticle>.end())
+                        if ( pair.first != atoms.end())
                             a._reacid_a[ pair.first->id() ]++;
                         else
                             a._reacid_m[ pair.second->id() ]++;
@@ -559,7 +559,7 @@ namespace Faunus {
 
                     for (auto &name : a._prod) { // loop over products
                         auto pair = a.findAtomOrMolecule( name );
-                        if ( pair.first != atoms<Tparticle>.end())
+                        if ( pair.first != atoms.end())
                             a._prodid_a[ pair.first->id() ]++;
                         else
                             a._prodid_m[ pair.second->id() ]++;
@@ -587,16 +587,21 @@ namespace Faunus {
         using doctest::Approx;
 
         json j = R"(
-            { "moleculelist": [
-                { "B": { "activity":0.2, "atomic":true, "atoms":["A"] } },
-                { "A": { "atomic":false } }
-              ],
-              "reactionlist": [
-                {"A = B": {"lnK": -10.051, "canonic": true, "N": 100 } }
-              ]
-            })"_json;
+            {
+                "atomlist" :
+                    [ {"a": { "r":1.1 } } ],
+                "moleculelist": [
+                    { "B": { "activity":0.2, "atomic":true, "atoms":["a"] } },
+                    { "A": { "atomic":false } }
+                ],
+                "reactionlist": [
+                    {"A = B": {"lnK": -10.051, "canonic": true, "N": 100 } }
+                ]
+            } )"_json;
 
         typedef std::vector<Particle<Radius, Charge, Dipole, Cigar>> Tpvec;
+
+        atoms = j["atomlist"].get<decltype(atoms)>();
         molecules<Tpvec> = j["moleculelist"].get<decltype(molecules<Tpvec>)>(); // fill global instance
 
         auto &r = reactions<Tpvec>; // reference to global reaction list

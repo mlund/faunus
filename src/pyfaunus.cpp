@@ -18,7 +18,6 @@ typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
 typedef Space<Geometry::Cuboid, Tparticle> Tspace;
 typedef typename Tspace::Tpvec Tpvec;
 typedef typename Tspace::Tgroup Tgroup;
-typedef AtomData<Tparticle> Tatomdata;
 typedef Energy::Hamiltonian<Tspace> Thamiltonian;
 typedef MCSimulation<Tgeometry,Tparticle> Tmcsimulation;
 
@@ -162,20 +161,20 @@ PYBIND11_MODULE(pyfaunus, m)
     py::bind_vector<std::vector<Tgroup>>(m, "GroupVector");
 
     // AtomData
-    py::class_<Tatomdata>(m, "AtomData")
+    py::class_<AtomData>(m, "AtomData")
         .def(py::init<>())
-        .def_readwrite("eps", &Tatomdata::eps)
-        .def_readwrite("sigma", &Tatomdata::sigma)
-        .def_readwrite("name", &Tatomdata::name)
-        .def_readwrite("activity", &Tatomdata::activity, "Activity = chemical potential in log scale (mol/l)")
-        .def("id", (const int& (Tatomdata::*)() const) &Tatomdata::id); // explicit signature due to overload in c++
+        .def_readwrite("eps", &AtomData::eps)
+        .def_readwrite("sigma", &AtomData::sigma)
+        .def_readwrite("name", &AtomData::name)
+        .def_readwrite("activity", &AtomData::activity, "Activity = chemical potential in log scale (mol/l)")
+        .def("id", (const int& (AtomData::*)() const) &AtomData::id); // explicit signature due to overload in c++
 
-    auto _atomdatavec = py::bind_vector<std::vector<Tatomdata>>(m, "AtomDataVector");
+    auto _atomdatavec = py::bind_vector<std::vector<AtomData>>(m, "AtomDataVector");
     _atomdatavec
-        .def("from_dict", [](std::vector<Tatomdata> &a, py::dict dict) {
+        .def("from_dict", [](std::vector<AtomData> &a, py::dict dict) {
                 Faunus::from_json(dict2json(dict), a); } );
 
-    m.attr("atoms") = &atoms<Tparticle>; // global instance
+    m.attr("atoms") = &Faunus::atoms; // global instance
 
     // Potentials
     py::class_<Potential::FunctorPotential<Tparticle>>(m, "FunctorPotential")

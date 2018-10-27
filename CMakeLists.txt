@@ -199,21 +199,25 @@ endif ()
 
 set(objs
     ${CMAKE_SOURCE_DIR}/src/analysis.cpp
+    ${CMAKE_SOURCE_DIR}/src/atomdata.cpp
     ${CMAKE_SOURCE_DIR}/src/core.cpp
     ${CMAKE_SOURCE_DIR}/src/energy.cpp
     ${CMAKE_SOURCE_DIR}/src/geometry.cpp
     ${CMAKE_SOURCE_DIR}/src/io.cpp
     ${CMAKE_SOURCE_DIR}/src/move.cpp
     ${CMAKE_SOURCE_DIR}/src/mpi.cpp
+    ${CMAKE_SOURCE_DIR}/src/particle.cpp
     ${CMAKE_SOURCE_DIR}/src/penalty.cpp
     ${CMAKE_SOURCE_DIR}/src/potentials.cpp
-    ${CMAKE_SOURCE_DIR}/src/random.cpp)
+    ${CMAKE_SOURCE_DIR}/src/random.cpp
+    ${CMAKE_SOURCE_DIR}/src/units.cpp)
 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 set(hdrs
     ${CMAKE_SOURCE_DIR}/src/analysis.h
     ${CMAKE_SOURCE_DIR}/src/average.h
+    ${CMAKE_SOURCE_DIR}/src/atomdata.h
     ${CMAKE_SOURCE_DIR}/src/auxiliary.h
     ${CMAKE_SOURCE_DIR}/src/core.h
     ${CMAKE_SOURCE_DIR}/src/energy.h
@@ -223,10 +227,12 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/molecule.h
     ${CMAKE_SOURCE_DIR}/src/move.h
     ${CMAKE_SOURCE_DIR}/src/mpi.h
+    ${CMAKE_SOURCE_DIR}/src/particle.h
     ${CMAKE_SOURCE_DIR}/src/penalty.h
     ${CMAKE_SOURCE_DIR}/src/potentials.h
     ${CMAKE_SOURCE_DIR}/src/space.h
     ${CMAKE_SOURCE_DIR}/src/random.h
+    ${CMAKE_SOURCE_DIR}/src/units.h
     )
 
 add_library(libfaunus STATIC ${objs} ${hdrs})

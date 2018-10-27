@@ -287,8 +287,8 @@ namespace Faunus {
             using namespace std::string_literals;
 
             try {
-                if (atoms<Tparticletype>.empty())
-                    atoms<Tparticletype> = j.at("atomlist").get<decltype(atoms<Tparticletype>)>();
+                if (atoms.empty())
+                    atoms = j.at("atomlist").get<decltype(atoms)>();
                 if (molecules<Tpvec>.empty())
                     molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
                 if (reactions<Tpvec>.empty())
@@ -414,8 +414,8 @@ namespace Faunus {
         Tspace spc1;
 
         // check molecule insertion
-        atoms<typename Tspace::Tpvec>.resize(2);
-        CHECK( atoms<typename Tspace::Tpvec>.at(0).mw == 1);
+        atoms.resize(2);
+        CHECK( atoms.at(0).mw == 1);
         Tparticle a;
         a.id=0;
         Tspace::Tpvec p(2, a);

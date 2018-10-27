@@ -105,8 +105,8 @@ namespace Faunus {
                     else if (type.size()==2) {
                         f = [&spc, dir=dir, type1=type[0], type2=type[1]]() {
                             Group<Tparticle> g(spc.p.begin(), spc.p.end());
-                            auto slice1 = g.find_id(findName(atoms<Tparticle>, type1)->id());
-                            auto slice2 = g.find_id(findName(atoms<Tparticle>, type2)->id());
+                            auto slice1 = g.find_id(findName(atoms, type1)->id());
+                            auto slice2 = g.find_id(findName(atoms, type2)->id());
                             auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.boundaryFunc);
                             auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.boundaryFunc);
                             return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum();
@@ -139,8 +139,8 @@ namespace Faunus {
                         auto &cm = spc.groups[i].cm;
                         //Point vec = spc.geo.vdist(spc.groups[i].begin()->pos,(spc.groups[i].end()-1)->pos);
                         //vec = vec / vec.norm();
-                        //cout << "P1 " << atoms<Tparticle>[spc.groups[i].begin()->id].name << endl;
-                        //cout << "P2 " << atoms<Tparticle>[(spc.groups[i].end()-1)->id].name << endl;
+                        //cout << "P1 " << atoms[spc.groups[i].begin()->id].name << endl;
+                        //cout << "P2 " << atoms[(spc.groups[i].end()-1)->id].name << endl;
                         auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
                         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                         Point eivals = esf.eigenvalues();

@@ -37,7 +37,7 @@ namespace Faunus {
     void to_json(nlohmann::json&, const Random&);   //!< Random to json conversion
     void from_json(const nlohmann::json&, Random&); //!< json to Random conversion
 
-    static Random random; // global instance of Random
+    extern Random random; // global instance of Random
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Random")

@@ -81,11 +81,11 @@ namespace Faunus {
                     default:
                         throw std::runtime_error("unknown mixing rule");
                 }
-                size_t n=atoms<Tparticle>.size(); // number of atom types
+                size_t n=atoms.size(); // number of atom types
                 m.s2.resize(n); // not required...
                 m.eps.resize(n);// ...but possible reduced mem. fragmentation
-                for (auto &i : atoms<Tparticle>)
-                    for (auto &j : atoms<Tparticle>) {
+                for (auto &i : atoms)
+                    for (auto &j : atoms) {
                         double sigma, epsilon; // mixed values
                         std::tie( sigma, epsilon ) = mixerFunc(i.sigma, j.sigma, i.eps, j.eps);
                         m.s2.set(  i.id(), j.id(), sigma*sigma );
@@ -99,8 +99,8 @@ namespace Faunus {
                         for (auto it=_j.begin(); it!=_j.end(); ++it) {
                             auto v = words2vec<std::string>( it.key() );
                             if (v.size()==2) {
-                                int id1 = (*findName( atoms<Tparticle>, v[0])).id();
-                                int id2 = (*findName( atoms<Tparticle>, v[1])).id();
+                                int id1 = (*findName( atoms, v[0])).id();
+                                int id2 = (*findName( atoms, v[1])).id();
                                 m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
                                 m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
                             } else
@@ -118,7 +118,7 @@ namespace Faunus {
                 for (size_t i=0; i<m.eps.size(); i++)
                     for (size_t j=0; j<m.eps.size(); j++)
                         if (i>=j) {
-                            auto str = atoms<Tparticle>[i].name+" "+atoms<Tparticle>[j].name;
+                            auto str = atoms[i].name+" "+atoms[j].name;
                             _j[str] = { {"eps", m.eps(i,j)/4.0_kJmol}, {"sigma", std::sqrt(m.s2(i,j))}  };
                             _roundjson(_j[str], 5);
                         }
@@ -228,12 +228,12 @@ namespace Faunus {
             public:
                 template<class Tparticle>
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r_ab) const {
-                        double tfe = 0.5 * ( atoms<Tparticle>[a.id].tfe + atoms<Tparticle>[b.id].tfe );
-                        double tension = 0.5 * ( atoms<Tparticle>[a.id].tension + atoms<Tparticle>[b.id].tension );
+                        double tfe = 0.5 * ( atoms[a.id].tfe + atoms[b.id].tfe );
+                        double tension = 0.5 * ( atoms[a.id].tension + atoms[b.id].tension );
                         if (fabs(tfe)>1e-6 or fabs(tension)>1e-6)
                             return (tension + conc*tfe) *  area(
-                                    0.5*atoms<Tparticle>[a.id].sigma,
-                                    0.5*atoms<Tparticle>[b.id].sigma, r_ab.squaredNorm() );
+                                    0.5*atoms[a.id].sigma,
+                                    0.5*atoms[b.id].sigma, r_ab.squaredNorm() );
                         return 0;
                     }
 
@@ -258,8 +258,8 @@ namespace Faunus {
                 PairMatrix<double> d2; // matrix of (r1+r2)^2
                 HardSphere(const std::string &name="hardsphere") {
                     PairPotentialBase::name=name;
-                    for (auto &i : atoms<Tparticle>)
-                        for (auto &j : atoms<Tparticle>)
+                    for (auto &i : atoms)
+                        for (auto &j : atoms)
                             d2.set( i.id(), j.id(), std::pow((i.sigma+j.sigma)/2,2));
                 }
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
@@ -361,8 +361,8 @@ namespace Faunus {
                     void from_json(const json &j) override {
                         epsr = j.at("epsr").get<double>();
                         double lB = pc::lB(epsr);
-                        for (auto &i : atoms<Tparticle>) {
-                            for (auto &j : atoms<Tparticle>) {
+                        for (auto &i : atoms) {
+                            for (auto &j : atoms) {
                                 m_neutral.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
                                 // titrating particles must be charged in the beginning
                                 m_charged.set(i.id(), j.id(), -lB/2 * ( pow(i.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
@@ -409,8 +409,8 @@ namespace Faunus {
                 inline void from_json(const json &j) override {
                     wca = j;
                     cos2 = j;
-                    auto it = findName(atoms<Tparticle>, "TL");
-                    if ( it!=atoms<Tparticle>.end() )
+                    auto it = findName(atoms, "TL");
+                    if ( it!=atoms.end() )
                         tail = it->id();
                     else
                         throw std::runtime_error("Atom type 'TL' is not defined.");
@@ -449,13 +449,13 @@ namespace Faunus {
                     wca = j;
                     cos2 = j;
                     polar = j;
-                    auto it = findName(atoms<Tparticle>, "TL");
-                    if ( it!=atoms<Tparticle>.end() )
+                    auto it = findName(atoms, "TL");
+                    if ( it!=atoms.end() )
                         tail = it->id();
                     else
                         throw std::runtime_error("Atom type 'TL' is not defined.");
-                    it = findName(atoms<Tparticle>, "AA");
-                    if ( it!=atoms<Tparticle>.end() )
+                    it = findName(atoms, "AA");
+                    if ( it!=atoms.end() )
                         aa = it->id();
                     else
                         throw std::runtime_error("Atom type 'AA' is not defined.");
@@ -640,11 +640,11 @@ namespace Faunus {
 
                 void from_json(const json &j) override {
                     _j = j;
-                    umatrix = decltype(umatrix)( atoms<T>.size(), combineFunc(j.at("default")) );
+                    umatrix = decltype(umatrix)( atoms.size(), combineFunc(j.at("default")) );
                     for (auto it=j.begin(); it!=j.end(); ++it) {
                         auto atompair = words2vec<std::string>(it.key()); // is this for a pair of atoms?
                         if (atompair.size()==2) {
-                            auto ids = names2ids(atoms<T>, atompair);
+                            auto ids = names2ids(atoms, atompair);
                             umatrix.set(ids[0], ids[1], combineFunc(it.value()));
                         }
                     }
@@ -662,7 +662,7 @@ namespace Faunus {
                  {"B": { "q":-1.0, "r":2.0, "eps":0.05 }},
                  {"C": { "r":1.0 }} ]})"_json;
 
-            atoms<T> = j["atomlist"].get<decltype(atoms<T>)>();
+            atoms = j["atomlist"].get<decltype(atoms)>();
 
             FunctorPotential<T> u = R"(
                 {
@@ -682,9 +682,9 @@ namespace Faunus {
             Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
             WeeksChandlerAndersen<T> wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
-            T a = atoms<T>[0];
-            T b = atoms<T>[1];
-            T c = atoms<T>[2];
+            T a = atoms[0];
+            T b = atoms[1];
+            T c = atoms[2];
             Point r={2,0,0};
             CHECK( u(a,a,r) == Approx( coulomb(a,a,r) ) );
             CHECK( u(b,b,r) == Approx( coulomb(b,b,r) ) );
@@ -916,7 +916,7 @@ namespace Faunus {
                  { "B": { "r": 2.1, "tfe": 0.98 } }]})"_json;
 
             typedef Particle<Radius> T;
-            atoms<T> = j["atomlist"].get<decltype(atoms<T>)>();
+            atoms = j["atomlist"].get<decltype(atoms)>();
             T a,b;
             a.id = 0;
             b.id = 1;
@@ -926,8 +926,8 @@ namespace Faunus {
                 json in = R"({ "sasa": {"molarity": 1.0, "radius": 0.0, "shift":false}})"_json;
                 pot = in["sasa"];
                 double conc = 1.0 * 1.0_molar;
-                double tension = atoms<T>[a.id].tension / 2;
-                double tfe = atoms<T>[b.id].tfe / 2;
+                double tension = atoms[a.id].tension / 2;
+                double tfe = atoms[b.id].tfe / 2;
                 double f = tension + conc*tfe;
                 CHECK( tension>0.0 );
                 CHECK( conc>0.0 );

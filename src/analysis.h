@@ -435,7 +435,7 @@ namespace Faunus {
                     ref = j.value("origo", Point(0,0,0));
                     file = j.at("file").get<std::string>();
                     names = j.at("atoms").get<decltype(names)>(); // molecule names
-                    ids = names2ids(atoms<Tparticle>, names);     // names --> molids
+                    ids = names2ids(atoms, names);     // names --> molids
                     dr = j.value("dr", 0.1);
                     tbl.setResolution(dr);
                 }
@@ -544,7 +544,7 @@ namespace Faunus {
                     auto &_j = j["atomic"];
                     for (auto &i : rho_atom)
                         if (i.second.cnt>0)
-                            _j[ atoms<Tparticle>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+                            _j[ atoms.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
 
                     auto &_jj = j["molecular"];
                     for (auto &i : rho_mol)
@@ -769,13 +769,13 @@ namespace Faunus {
                     typedef typename Tspace::Tparticle Tparticle;
                     name = "atomrdf";
 
-                    auto it = findName( atoms<Tparticle>, name1 );
-                    if ( it == atoms<Tparticle>.end() )
+                    auto it = findName( atoms, name1 );
+                    if ( it == atoms.end() )
                         throw std::runtime_error("unknown atom '" + name1 + "'");
                     id1 = it->id();
 
-                    it = findName( atoms<Tparticle>, name2 );
-                    if ( it == atoms<Tparticle>.end() )
+                    it = findName( atoms, name2 );
+                    if ( it == atoms.end() )
                         throw std::runtime_error("unknown atom '" + name2 + "'");
                     id2 = it->id();
                 }
@@ -1046,7 +1046,7 @@ namespace Faunus {
                     double sum = 0;
                     Point t, r2(0, 0, 0);
                     for (auto &i : g) {
-                        double mw = atoms<Tparticle>.at(i.id).mw;
+                        double mw = atoms.at(i.id).mw;
                         t = i.pos - g.cm;
                         spc.geo.boundary(t);
                         r2.x() += mw * t.x() * t.x();

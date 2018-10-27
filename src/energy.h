@@ -1154,12 +1154,12 @@ namespace Faunus {
                         assert(ps != nullptr);
                         radii.resize(p.size());
                         std::transform(p.begin(), p.end(), radii.begin(),
-                                [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;});
+                                [this](auto &a){ return atoms[a.id].sigma*0.5 + this->probe;});
 
                         ps->update_coords(spc.positions(), radii); // slowest step!
 
                         for (size_t i=0; i<p.size(); i++) {
-                            auto &a = atoms<Tparticle>[p[i].id];
+                            auto &a = atoms[p[i].id];
                             if (std::fabs(a.tfe)>1e-9 || std::fabs(a.tension)>1e-9)
                                 ps->calc_sasa_single(i);
                         }
@@ -1212,7 +1212,7 @@ namespace Faunus {
                     void init() override {
                         radii.resize( spc.p.size() );
                         std::transform( spc.p.begin(), spc.p.end(), radii.begin(),
-                                [this](auto &a){ return atoms<Tparticle>[a.id].sigma*0.5 + this->probe;} );
+                                [this](auto &a){ return atoms[a.id].sigma*0.5 + this->probe;} );
 
                         if (ps==nullptr)
                             ps = std::make_shared<POWERSASA::PowerSasa<float,Point>>(spc.positions(),radii);
@@ -1228,7 +1228,7 @@ namespace Faunus {
                          */
                         updateSASA(spc.p); // ideally we want 
                         for (size_t i=0; i<spc.p.size(); ++i) {
-                            auto &a = atoms<Tparticle>[ spc.p[i].id ];
+                            auto &a = atoms[ spc.p[i].id ];
                             u += sasa[i] * (a.tension + conc * a.tfe);
                             A += sasa[i];
                         }

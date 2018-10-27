@@ -202,8 +202,8 @@ namespace Faunus {
                     void _move(Change &change) override {
                         auto p = randomAtom();
                         if (p!=spc.p.end()) {
-                            double dp = atoms<Tparticle>.at(p->id).dp;
-                            double dprot = atoms<Tparticle>.at(p->id).dprot;
+                            double dp = atoms.at(p->id).dp;
+                            double dprot = atoms.at(p->id).dprot;
                             auto& g = spc.groups[cdata.index];
 
                             if (dp>0) { // translate
@@ -464,7 +464,7 @@ namespace Faunus {
             typedef Space<Geometry::Cuboid, Tparticle> Tspace;
             typedef typename Tspace::Tpvec Tpvec;
 
-            CHECK( !atoms<Tparticle>.empty() ); // set in a previous test
+            CHECK( !atoms.empty() ); // set in a previous test
             CHECK( !molecules<Tpvec>.empty() ); // set in a previous test
 
             Tspace spc;

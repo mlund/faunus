@@ -44,4 +44,5 @@ namespace Faunus {
         return d(engine);
     }
 
+    Random random; // Global instance
 }

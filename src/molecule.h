@@ -112,7 +112,6 @@ namespace Faunus {
         class MoleculeData {
             private:
                 int _id=-1;
-                int _confid=-1;
             public:
                 typedef Tpvec TParticleVector;
                 typedef typename Tpvec::value_type Tparticle;
@@ -137,8 +136,7 @@ namespace Faunus {
 
                 std::vector<std::shared_ptr<Potential::BondData>> bonds;
                 std::vector<int> atoms;    //!< Sequence of atoms in molecule (atom id's)
-                std::vector<Tpvec> conformations;           //!< Conformations of molecule
-                std::discrete_distribution<> confDist;      //!< Weight of conformations
+                WeightedDistribution<Tpvec> conformations;//!< Conformations of molecule
 
                 MoleculeData() {
                     setInserter( RandomInserter<MoleculeData<Tpvec>>() );
@@ -146,14 +144,7 @@ namespace Faunus {
 
                 void addConformation( const Tpvec &vec, double weight = 1 )
                 {
-                    if ( !conformations.empty())
-                    {     // resize weights
-                        auto w = confDist.probabilities();// (defaults to 1)
-                        w.push_back(weight);
-                        confDist = std::discrete_distribution<>(w.begin(), w.end());
-                    }
-                    conformations.push_back(vec);
-                    assert(confDist.probabilities().size() == conformations.size());
+                    conformations.push_back(vec, weight);
                 } //!< Store a single conformation
 
                 /** @brief Specify function to be used when inserting into space.
@@ -177,15 +168,10 @@ namespace Faunus {
                     if ( conformations.empty())
                         throw std::runtime_error("No configurations for molecule '" + name +
                                 "'. Perhaps you forgot to specity the 'atomic' keyword?");
-
-                    assert(size_t(confDist.max()) == conformations.size() - 1);
-                    //assert(atoms.size() == conformations.front().size());
-
-                    _confid = confDist(random.engine); // store the index of the conformation
-                    return conformations.at( _confid );
+                    return conformations.get();
                 }
 
-                int getConfIndex() const { return _confid; } // index of last used conformation
+                int getConfIndex() const { return conformations.index; } // index of last used conformation
 
                 /**
                  * @brief Get random conformation that fits in container
@@ -209,16 +195,9 @@ namespace Faunus {
                  */
                 void pushConformation( const Tpvec &vec, double weight = 1 )
                 {
-                    if (!vec.empty()) {
-                        if ( !conformations.empty())
-                        {     // resize weights
-                            auto w = confDist.probabilities();// (defaults to 1)
-                            w.push_back(weight);
-                            confDist = std::discrete_distribution<>(w.begin(), w.end());
-                        }
-                        conformations.push_back(vec);
-                        assert(confDist.probabilities().size() == conformations.size());
-                    } else
+                    if (not vec.empty())
+                        conformations.push_back(vec, weight);
+                    else
                         std::cerr << "MoleculeData: attempt to insert empty configuration\n";
                 }
 
@@ -330,25 +309,25 @@ namespace Faunus {
                         std::string traj = val.value("traj", std::string() );
                         if ( not traj.empty() ) {
                             a.conformations.clear();
-                            FormatPQR::load(traj, a.conformations);
+                            FormatPQR::load(traj, a.conformations.vec);
                             if ( not a.conformations.empty()) {
                                 // create atom list
                                 a.atoms.clear();
-                                a.atoms.reserve(a.conformations.front().size());
-                                for ( auto &p : a.conformations.front())           // add atoms to atomlist
+                                a.atoms.reserve(a.conformations.vec.front().size());
+                                for ( auto &p : a.conformations.vec.front())           // add atoms to atomlist
                                     a.atoms.push_back(p.id);
 
                                 // center mass center for each frame to origo assuming whole molecules
                                 if (val.value("trajcenter", false)) {
                                     cout << "Centering conformations in trajectory file " + traj + ". ";
-                                    for ( auto &p : a.conformations ) // loop over conformations
+                                    for ( auto &p : a.conformations.vec ) // loop over conformations
                                         Geometry::cm2origo( p.begin(), p.end() );
                                     cout << "Done.\n";
                                 }
 
                                 // set default uniform weight
                                 std::vector<float> w(a.conformations.size(), 1);
-                                a.confDist = std::discrete_distribution<>(w.begin(), w.end());
+                                a.conformations.setWeight(w);
 
                                 // look for weight file
                                 std::string weightfile = val.value("trajweight", std::string());
@@ -361,7 +340,7 @@ namespace Faunus {
                                         while ( f >> _val )
                                             w.push_back(_val);
                                         if ( w.size() == a.conformations.size())
-                                            a.confDist = std::discrete_distribution<>(w.begin(), w.end());
+                                            a.conformations.setWeight(w);
                                         else
                                             throw std::runtime_error("Number of weights does not match conformations.");
                                     } else

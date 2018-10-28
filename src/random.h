@@ -99,18 +99,20 @@ namespace Faunus {
                     weights.clear();
                 }
 
-                void setWeights(const std::vector<double> &w) {
-                    if (w.size() not_eq vec.size())
-                        throw std::runtime_error("number of weights must match data");
-                    weights = w;
-                    dist = std::discrete_distribution<>(weights.begin(), weights.end());
-                    assert(size_t(dist.max()) == vec.size() - 1);
+                template<typename Tnumber>
+                    void setWeight(const std::vector<Tnumber> &w) {
+                        if (w.size() not_eq vec.size())
+                            throw std::runtime_error("number of weights must match data");
+                        weights.resize(w.size());
+                        std::copy(w.begin(), w.end(), weights.begin());
+                        dist = std::discrete_distribution<>(weights.begin(), weights.end());
+                        assert(size_t(dist.max()) == vec.size() - 1);
                 }
 
                 void push_back(const T &value, double weight=1) {
                     vec.push_back(value);
                     weights.push_back(weight);
-                    setWeights(weights);
+                    setWeight(weights);
                     index = vec.size()-1;
                 } //!< add data and it's weight (default = 1)
 
@@ -141,13 +143,13 @@ namespace Faunus {
             sum += v.get();
         CHECK( sum/N == doctest::Approx( (0.5*1+0.1*4) / (1+4) ).epsilon(0.05) );
 
-        v.setWeights( {2,1} );
+        v.setWeight<int>( {2,1} );
         sum=0;
         for (int i=0; i<N; i++)
             sum += v.get();
         CHECK( sum/N == doctest::Approx( (0.5*2+0.1*1) / (2+1) ).epsilon(0.05) );
 
-        CHECK_THROWS(v.setWeights({2,1,1}));
+        CHECK_THROWS(v.setWeight<float>({2,1,1}));
 
         v.clear();
         CHECK( v.empty() );

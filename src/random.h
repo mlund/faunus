@@ -83,29 +83,39 @@ namespace Faunus {
      */
     template<typename T>
         class WeightedDistribution {
+
             private:
                 std::discrete_distribution<> dist;
-                std::vector<T> vec;
                 std::vector<double> weights;
+
             public:
-                size_t index; //!< index from latest element access (push_back or get)
+                std::vector<T> vec; //!< raw vector of T
+                size_t index; //!< index from latest element access via push_back or get
                 auto size() const { return vec.size(); }
                 bool empty() const { return vec.empty(); }
+
                 void clear() {
                     vec.clear();
                     weights.clear();
                 }
 
+                void setWeights(const std::vector<double> &w) {
+                    if (w.size() not_eq vec.size())
+                        throw std::runtime_error("number of weights must match data");
+                    weights = w;
+                    dist = std::discrete_distribution<>(weights.begin(), weights.end());
+                    assert(size_t(dist.max()) == vec.size() - 1);
+                }
+
                 void push_back(const T &value, double weight=1) {
                     vec.push_back(value);
                     weights.push_back(weight);
-                    dist = std::discrete_distribution<>(weights.begin(), weights.end());
+                    setWeights(weights);
                     index = vec.size()-1;
-                    assert(size_t(dist.max()) == vec.size() - 1);
                 } //!< add data and it's weight (default = 1)
 
                 const T& get() {
-                    assert( not empty() );
+                    assert( not empty() && "no data!");
                     index = dist(random.engine);
                     return vec.at(index);
                 } //!< retrieve data with given weight
@@ -129,7 +139,15 @@ namespace Faunus {
         double sum=0;
         for (int i=0; i<N; i++)
             sum += v.get();
-        CHECK( sum/double(N) == doctest::Approx( (0.5*1+0.1*4) / (1+4) ).epsilon(0.05) );
+        CHECK( sum/N == doctest::Approx( (0.5*1+0.1*4) / (1+4) ).epsilon(0.05) );
+
+        v.setWeights( {2,1} );
+        sum=0;
+        for (int i=0; i<N; i++)
+            sum += v.get();
+        CHECK( sum/N == doctest::Approx( (0.5*2+0.1*1) / (2+1) ).epsilon(0.05) );
+
+        CHECK_THROWS(v.setWeights({2,1,1}));
 
         v.clear();
         CHECK( v.empty() );

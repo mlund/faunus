@@ -50,8 +50,8 @@ namespace Faunus {
                     if ( cnt++ > maxtrials )
                         throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
 
-                    v = mol.getRandomConformation();
-                    confindex = mol.getConfIndex();
+                    v = mol.conformations.get(); // get random, weighted conformation
+                    confindex = mol.conformations.index; // lastest index
 
                     if ( mol.atomic ) { // insert atomic species
                         for ( auto &i : v ) { // for each atom type id
@@ -106,6 +106,52 @@ namespace Faunus {
         };
 
     /**
+     * Possible structure for molecular conformations
+     */
+    struct Conformation {
+        std::vector<Point> positions;
+        std::vector<double> charges;
+
+        bool empty() const {
+            if (positions.empty())
+                if (charges.empty())
+                    return true;
+            return false;
+        }
+
+        template<typename Tpvec>
+            Tpvec& toParticleVector(Tpvec &p) const {
+                assert(not p.empty() and not empty());
+                // copy positions
+                if (positions.size()==p.size())
+                    for (size_t i=0; i<p.size(); i++)
+                        p[i].pos = positions[i];
+                // copy charges
+                if (charges.size()==p.size())
+                    for (size_t i=0; i<p.size(); i++)
+                        p[i].charge = charges[i];
+                return p;
+            } // copy conformation into particle vector
+    };
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] Conformation") {
+        typedef std::vector<Particle<Charge>> Tpvec;
+        Tpvec p(1);
+        Conformation c;
+        CHECK(c.empty());
+
+        c.positions.push_back( {1,2,3} );
+        c.charges.push_back( 0.5 );
+        CHECK(not c.empty());
+
+        c.toParticleVector(p);
+
+        CHECK( p[0].pos == Point(1,2,3) );
+        CHECK( p[0].charge == 0.5 );
+    }
+#endif
+ 
+    /**
      * @brief General properties for molecules
      */
     template<class Tpvec>
@@ -142,36 +188,12 @@ namespace Faunus {
                     setInserter( RandomInserter<MoleculeData<Tpvec>>() );
                 }
 
-                void addConformation( const Tpvec &vec, double weight = 1 )
-                {
-                    conformations.push_back(vec, weight);
-                } //!< Store a single conformation
-
                 /** @brief Specify function to be used when inserting into space.
                  *
                  * By default a random position and orientation is generator and overlap
                  * with container is avoided.
                  */
                 void setInserter( const TinserterFunc &ifunc ) { inserterFunctor = ifunc; };
-
-                /**
-                 * @brief Get a random conformation
-                 *
-                 * This will return the raw coordinates of a random conformation
-                 * as loaded from a directory file. The propability of a certain
-                 * conformation is dictated by the weight which, by default,
-                 * is set to unity. Specify a custom distribution using the
-                 * `weight` keyword.
-                 */
-                Tpvec getRandomConformation()
-                {
-                    if ( conformations.empty())
-                        throw std::runtime_error("No configurations for molecule '" + name +
-                                "'. Perhaps you forgot to specity the 'atomic' keyword?");
-                    return conformations.get();
-                }
-
-                int getConfIndex() const { return conformations.index; } // index of last used conformation
 
                 /**
                  * @brief Get random conformation that fits in container
@@ -188,25 +210,6 @@ namespace Faunus {
                     return inserterFunctor(geo, otherparticles, *this);
                 }
 
-                /**
-                 * @brief Store a single conformation
-                 * @param vec Vector of particles
-                 * @param weight Relative weight of conformation (default: 1)
-                 */
-                void pushConformation( const Tpvec &vec, double weight = 1 )
-                {
-                    if (not vec.empty())
-                        conformations.push_back(vec, weight);
-                    else
-                        std::cerr << "MoleculeData: attempt to insert empty configuration\n";
-                }
-
-                /** @brief Nunber of conformations stored for molecule */
-                size_t numConformations() const
-                {
-                    return conformations.size();
-                }
-
                 void loadConformation(const std::string &file)
                 {
                     Tpvec v;
@@ -214,7 +217,7 @@ namespace Faunus {
                     {
                         if ( keeppos == false )
                             Geometry::cm2origo( v.begin(), v.end() ); // move to origo
-                        pushConformation(v);        // add conformation
+                        conformations.push_back(v);
                         for ( auto &p : v )           // add atoms to atomlist
                             atoms.push_back(p.id);
                     }
@@ -276,7 +279,7 @@ namespace Faunus {
                             v.push_back( _p );
                         }
                         if (!v.empty())
-                            a.pushConformation( v );
+                            a.conformations.push_back(v);
                     }  // done handling atomic groups
                     else {
                         if (val.count("structure")>0) {
@@ -301,7 +304,7 @@ namespace Faunus {
                                                 }
                                     if (v.empty())
                                         throw std::runtime_error("invalid 'structure' format");
-                                    a.pushConformation( v );
+                                    a.conformations.push_back(v);
                                 }
                         }
 

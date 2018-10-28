@@ -378,7 +378,7 @@ namespace Faunus {
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
                             molid = it->id();
-                            if ( molecules<Tpvec>[molid].numConformations()<2)
+                            if ( molecules<Tpvec>[molid].conformations.size()<2)
                                 throw std::runtime_error("minimum two conformations required");
                             if (repeat<0) {
                                 auto v = spc.findMolecules(molid);
@@ -406,7 +406,7 @@ namespace Faunus {
                                 if (p.size() not_eq g->size())
                                     throw std::runtime_error(name + ": conformation atom count mismatch");
 
-                                newconfid = molecules<Tpvec>[molid].getConfIndex();
+                                newconfid = molecules<Tpvec>[molid].conformations.index;
 
                                 std::copy( p.begin(), p.end(), g->begin() ); // override w. new conformation
 #ifndef NDEBUG

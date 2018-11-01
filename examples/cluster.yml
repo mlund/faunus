@@ -1,0 +1,30 @@
+temperature: 300
+random: {seed: fixed}
+geometry: {length: 40}
+mcloop: {macro: 10, micro: 5000}
+
+atomlist:
+    - OW: {q: -0.8476, sigma: 3.166, eps: 0.650, mw: 15.999}
+    - HW: {q: 0.4238,  sigma: 2, eps: 0, mw: 1.007}
+
+moleculelist:
+    - water: {structure: water.xyz}
+
+insertmolecules:
+    - water: {N: 10}
+
+energy:
+    - nonbonded_coulomblj:
+        lennardjones: {mixing: LB}
+        coulomb: {type: fanourgakis, epsr: 1.2, cutoff: 9}
+        cutoff_g2g: 10
+
+moves:
+    - moltransrot: {molecule: water, dp: 2, dprot: 1, repeat: N}
+    - cluster: {molecules: [water], dp: 2, dprot: 1, threshold: 3.166}
+
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 50}
+    - xtcfile: {file: traj.xtc, nstep: 2}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}

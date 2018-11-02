@@ -753,13 +753,21 @@ namespace Faunus {
             class Cluster : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
+                    typedef typename Tspace::Tgroup Tgroup;
                     Tspace& spc;
                     Average<double> msqd, msqd_angle, N;
                     double thresholdsq=0, dptrans=0, dprot=0, angle=0, _bias=0;
+                    size_t bias_rejected=0;
                     Point dir={1,1,1}, dp;
-                    std::vector<std::string> names;
-                    std::vector<int> ids;
-                    std::vector<size_t> index; // all possible molecules to move
+                    std::vector<std::string> names; // names of molecules to be considered
+                    std::vector<int> ids; // molecule id's of molecules to be considered
+                    std::vector<size_t> index; // index of all possible molecules to be considered
+
+                    virtual double clusterProbability(const Tgroup &g1, const Tgroup &g2) const {
+                        if (spc.geo.sqdist(g1.cm, g2.cm)<=thresholdsq)
+                            return 1.0;
+                        return 0.0;
+                    }
 
                     void _to_json(json &j) const override {
                         using namespace u8;
@@ -767,7 +775,8 @@ namespace Faunus {
                             {"threshold", std::sqrt(thresholdsq)}, {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
                             {rootof + bracket("r" + squared), std::sqrt(msqd.avg())},
                             {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
-                            {bracket("N"), N.avg()}
+                            {bracket("N"), N.avg()},
+                            {"bias rejection rate", double(bias_rejected) / cnt}
                         };
                         _roundjson(j,3);
                     }
@@ -788,32 +797,46 @@ namespace Faunus {
                             repeat = index.size();
                     }
 
-                    void findCluster(Tspace &spc, size_t first, std::set<size_t>& cluster) {
+                    /**
+                     * @param spc Space
+                     * @param first Index of initial molecule (randomly selected)
+                     * @param index w. all molecules clustered around first (first included)
+                     */
+                    void findCluster(Tspace &spc, size_t first, std::set<size_t>& cluster) const {
+                        assert(first < spc.p.size());
                         std::set<size_t> pool(index.begin(), index.end());
+                        assert(pool.count(first)>0);
+
                         cluster.clear();
                         cluster.insert(first);
                         pool.erase(first);
+
                         size_t n;
                         do { // find cluster (not very clever...)
                             n = cluster.size();
                             for (size_t i : cluster)
-                                if (!spc.groups[i].empty()) // check if group is inactive
+                                if (not spc.groups.at(i).empty()) // check if group is inactive
                                     for (size_t j : pool)
-                                        if (!spc.groups[j].empty()) // check if group is inactive
-                                            if (i!=j)
-                                                if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)<=thresholdsq) {
+                                        if (not spc.groups.at(j).empty()) // check if group is inactive
+                                            if (i!=j) {
+                                                // probability to cluster
+                                                double P = clusterProbability(spc.groups.at(i), spc.groups.at(j));
+                                                if ( Movebase::slump() <= P ) {
                                                     cluster.insert(j);
                                                     pool.erase(j);
+                                                    break;
                                                 }
-                        } while (cluster.size()!=n);
+                                            }
+                        } while (cluster.size() not_eq n);
 
                         // check if cluster is too large
                         double max = spc.geo.getLength().minCoeff()/2;
                         for (auto i : cluster)
                             for (auto j : cluster)
                                 if (j>i)
-                                    if (spc.geo.sqdist(spc.groups[i].cm, spc.groups[j].cm)>=max*max)
+                                    if (spc.geo.sqdist(spc.groups.at(i).cm, spc.groups.at(j).cm)>=max*max)
                                         throw std::runtime_error(name+": cluster larger than half box length");
+
                     }
 
                     void _move(Change &change) override {
@@ -845,13 +868,24 @@ namespace Faunus {
                                 d.index=i;
                                 change.groups.push_back(d);
                             }
-                            _bias += 0; // one may add bias here...
 #ifndef NDEBUG
                             Point newCOM = Geometry::trigoCom(spc, cluster);
                             double _zero = std::sqrt( spc.geo.sqdist(COM,newCOM) ) - dp.norm();
                             if (fabs(_zero)>1)
                                 std::cerr << _zero << " ";
 #endif
+                            // Reject if cluster composition changes during move
+                            // Note: this only works for the binary 0/1 probability function
+                            // currently implemented in `findCluster()`.
+
+                            std::set<size_t> aftercluster; // all group index in cluster _after_move
+                            findCluster(spc, first, aftercluster); // find cluster around first
+                            if (aftercluster == cluster)
+                                _bias = 0;
+                            else {
+                                _bias = pc::infty;
+                                bias_rejected++;
+                            }
                         }
                     }
 

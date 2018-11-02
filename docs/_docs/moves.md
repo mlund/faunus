@@ -90,13 +90,8 @@ atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 `dp`           | Translational displacement
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
-between their mass centers. The move is associated with the following [bias](http://dx.doi.org/10/cj9gnn),
-accounted for in the acceptance criterion.
-
-**note:**
-under construction!
-{: .notice--info}
-
+between their mass centers. The move is associated with [bias](http://dx.doi.org/10/cj9gnn), such that
+the cluster size and composition remain unaltered.
 
 ## Internal Degrees of Freedom
 

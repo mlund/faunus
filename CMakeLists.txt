@@ -331,6 +331,13 @@ add_test(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 add_test(
+    NAME cluster
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py cluster.yml\
+    | $<TARGET_FILE:faunus> --quiet --state cluster.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py cluster.out.json out.json --tol 0.042"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+add_test(
     NAME bulk
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py bulk.yml\
     | $<TARGET_FILE:faunus> --quiet"
@@ -372,6 +379,9 @@ install(FILES
 install(FILES
     ${CMAKE_SOURCE_DIR}/examples/README.md
     ${CMAKE_SOURCE_DIR}/examples/bulk.yml
+    ${CMAKE_SOURCE_DIR}/examples/cluster.yml
+    ${CMAKE_SOURCE_DIR}/examples/cluster.out.json
+    ${CMAKE_SOURCE_DIR}/examples/cluster.state.json
     ${CMAKE_SOURCE_DIR}/examples/seawater.yml
     ${CMAKE_SOURCE_DIR}/examples/speciation.yml
     ${CMAKE_SOURCE_DIR}/examples/speciation.out.json

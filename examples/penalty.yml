@@ -26,5 +26,5 @@ energy:
 moves:
     - transrot: {molecule: mygroup, dir: [1,1,0]}
 analysis:
-    - systemenergy: {file: energy.dat, nstep: 10}
-    - savestate: {file: penalty.state.json}
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - savestate: {file: state.json}

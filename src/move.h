@@ -1220,8 +1220,10 @@ namespace Faunus {
                     double u2 = state2.pot.energy(c);
                     double error = std::fabs(uinit-u2);
                     if (std::isfinite(uinit)) {
-                        if (uinit!=0)
+                        if (uinit!=0) {
+                            cout << error << " " << uinit << endl;
                             assert(error/uinit<1e-3);
+                        }
                         else
                             assert(error<1e-6);
                     }
@@ -1261,7 +1263,6 @@ namespace Faunus {
                     state2.spc = j;
                     Move::Movebase::slump = j["random-move"]; // restore move random number generator
                     Faunus::random = j["random-global"];      // restore global random number generator
-                    //reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>(); // should be handled by space
                     init();
                 } //!< restore system from previously store json object
 

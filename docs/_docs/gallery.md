@@ -1,6 +1,4 @@
 ---
-layout: splash
-#toc: false
 permalink: /gallery/
 ---
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
@@ -29,7 +27,7 @@ Ewald summation is also available.
 
 ## Coarse Grained Lipid Bilayer
 
-![image-left](https://www.dropbox.com/s/7ymnpf9t4w1nt48/membrane-3bead.jpg?raw=1){: .align-left}
+![image-right](https://www.dropbox.com/s/7ymnpf9t4w1nt48/membrane-3bead.jpg?raw=1){: .align-right}
 
 Here, a bilayer is assembled from a three-bead lipid model with zero tension using _isochoric_ moves
 of the simulation contained dimensions under constant volume. This example also illustrated how to

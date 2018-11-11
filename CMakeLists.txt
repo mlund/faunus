@@ -312,6 +312,12 @@ endif()
 # TESTS
 
 add_test(
+    NAME penalty
+    COMMAND sh -c "jupyter nbconvert --execute penalty.ipynb"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+set_tests_properties(penalty PROPERTIES ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
+
+add_test(
     NAME minimal
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py minimal.yml\
     | $<TARGET_FILE:faunus> --nobar --state minimal.state.json\

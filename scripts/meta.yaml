@@ -13,9 +13,13 @@ requirements:
   build:
     - librsvg
     - numpy
+    - matplotlib
     - cmake >=3.9
     - python {{ python }}
     - ruamel_yaml
+    - nbconvert
+    - notebook
+    - jupyter
     - openmpi 1.6.3      # [osx]
     - openmpi 3.1.*      # [linux64]
     - clangdev >=5       # [linux64]

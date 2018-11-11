@@ -1113,7 +1113,7 @@ namespace Faunus {
                             if (f3) f3 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
                             std::ofstream f4(MPI::prefix + std::to_string(nconv) + hisfile);
                             if (f4) f4 << histo << endl;
-                            if (min>0 and not quiet)
+                            if (min>0 and not this->quiet)
                                 cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                     << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;
 

@@ -567,6 +567,12 @@ of the following types (via `coord`):
 `property`    | 
 `volume`      | System volume
 
+**Note:**
+When using penalty energies there may currently be unresolved issues loading
+previously saved states. If so, the program will terminate.
+{: .notice--info}
+
+
 ### Multiple Walkers with MPI
 
 If compiled with MPI, the master process collects the bias function from all nodes

@@ -217,7 +217,7 @@ namespace Faunus {
 
                     double energy(Change &change) override {
                         double u=0;
-                        if (!change.empty()) {
+                        if (change) {
                             // If the state is NEW (trial state), then update all k-vectors
                             if (key==NEW) {
                                 if (change.all || change.dV) {       // everything changes
@@ -685,7 +685,7 @@ namespace Faunus {
                         using namespace ranges;
                         double u=0;
 
-                        if (!change.empty()) {
+                        if (change) {
 
                             if (change.dV) {
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
@@ -839,7 +839,7 @@ namespace Faunus {
                         using namespace ranges;
                         double u=0;
 
-                        if (!change.empty()) {
+                        if (change) {
 
                             if (change.all || change.dV) {
 #pragma omp parallel for reduction (+:u) schedule (dynamic)
@@ -1012,13 +1012,13 @@ namespace Faunus {
                             t[rc->name] = *rc;
                             _j.push_back(t);
                         }
-                     }
+                    }
 
                     double energy(Change &change) override {
                         assert(rcvec.size()<=coord.size());
                         double u=0;
                         coord.resize( rcvec.size() );
-                        if (!change.empty()) {
+                        if (change) {
                             for (size_t i=0; i<rcvec.size(); i++) {
                                 coord.at(i) = rcvec[i]->operator()();
                                 if ( not rcvec[i]->inRange(coord[i]) )
@@ -1113,7 +1113,7 @@ namespace Faunus {
                             if (f3) f3 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
                             std::ofstream f4(MPI::prefix + std::to_string(nconv) + hisfile);
                             if (f4) f4 << histo << endl;
-                            if (min>0 && !this->quiet)
+                            if (min>0 and not quiet)
                                 cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
                                     << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;
 

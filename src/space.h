@@ -58,8 +58,22 @@ namespace Faunus {
             return false;
         } //!< Check if change object is empty
 
+        inline operator bool() const {
+            return not empty();
+        }
     };
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] Change")
+    {
+        Change change;
+        CHECK(not change);
+        change.dV=true;
+        CHECK(not change.empty());
+        CHECK(change);
+    }
+#endif
+ 
     struct SpaceBase {
         virtual Geometry::GeometryBase& getGeometry()=0;
         virtual void clear()=0;

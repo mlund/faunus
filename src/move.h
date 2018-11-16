@@ -1308,7 +1308,7 @@ start:
                             change.clear();
                             (**mv).move(change);
 
-                            if (!change.empty()) {
+                            if (change) {
                                 double unew, uold, du;
 #pragma omp parallel sections
                                 {

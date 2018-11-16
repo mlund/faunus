@@ -813,21 +813,22 @@ namespace Faunus {
 
                         size_t n;
                         do { // find cluster (not very clever...)
+start:
                             n = cluster.size();
                             for (size_t i : cluster)
                                 if (not spc.groups.at(i).empty()) // check if group is inactive
                                     for (size_t j : pool)
-                                        if (not spc.groups.at(j).empty()) // check if group is inactive
-                                            if (i!=j) {
+                                        if (i!=j)
+                                            if (not spc.groups.at(j).empty()) { // check if group is inactive
                                                 // probability to cluster
                                                 double P = clusterProbability(spc.groups.at(i), spc.groups.at(j));
                                                 if ( Movebase::slump() <= P ) {
                                                     cluster.insert(j);
                                                     pool.erase(j);
-                                                    break;
+                                                    goto start; // wow, first goto ever!
                                                 }
                                             }
-                        } while (cluster.size() not_eq n);
+                        } while (cluster.size() != n);
 
                         // check if cluster is too large
                         double max = spc.geo.getLength().minCoeff()/2;
@@ -836,7 +837,6 @@ namespace Faunus {
                                 if (j>i)
                                     if (spc.geo.sqdist(spc.groups.at(i).cm, spc.groups.at(j).cm)>=max*max)
                                         throw std::runtime_error(name+": cluster larger than half box length");
-
                     }
 
                     void _move(Change &change) override {
@@ -1255,7 +1255,7 @@ namespace Faunus {
                     double error = std::fabs(uinit-u2);
                     if (std::isfinite(uinit)) {
                         if (uinit!=0) {
-                            cout << error << " " << uinit << endl;
+                            //cout << error << " " << uinit << endl;
                             assert(error/uinit<1e-3);
                         }
                         else

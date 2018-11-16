@@ -317,13 +317,12 @@ namespace Faunus {
                 }
                 // check correctness of molecular mass centers
                 for (auto &i : spc.groups)
-                    if (!i.empty())
-                        if (!i.atomic)
-                            if (spc.geo.sqdist( i.cm,
-                                        Geometry::massCenter(i.begin(), i.end(), spc.geo.boundaryFunc, -i.cm) ) > 1e-9 )
-                                throw std::runtime_error("mass center mismatch");
+                    if (not i.empty() and not i.atomic)
+                        if (spc.geo.sqdist( i.cm,
+                                    Geometry::massCenter(i.begin(), i.end(), spc.geo.boundaryFunc, -i.cm) ) > 1e-9 )
+                            throw std::runtime_error("mass center mismatch");
             } catch(std::exception& e) {
-                throw std::runtime_error("Error while constructing Space from JSON"s + e.what());
+                throw std::runtime_error("Error while constructing Space from JSON: "s + e.what());
             }
 
         } //!< Deserialize json object to Space

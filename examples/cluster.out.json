@@ -4,13 +4,13 @@
             "systemenergy": {
                 "file": "energy.dat",
                 "final": [
-                    -2381.0249781695843
+                    -2397.8224053806707
                 ],
                 "init": -2386.4,
-                "mean": -2380.6,
+                "mean": -2384.9,
                 "nstep": 50,
-                "relative time": 0.00105,
-                "samples": 1000
+                "relative time": 0.000965,
+                "samples": 2000
             }
         },
         {
@@ -18,8 +18,8 @@
                 "file": "traj.xtc",
                 "nstep": 2,
                 "reference": "http://bit.ly/2A8lzpa",
-                "relative time": 0.0212,
-                "samples": 25000
+                "relative time": 0.0207,
+                "samples": 50000
             }
         },
         {
@@ -83,7 +83,7 @@
             40.0
         ]
     },
-    "git revision": "888764ec (2018-10-28)",
+    "git revision": "fe7c10e5 (2018-11-20)",
     "groups": [
         {
             "water": {
@@ -189,7 +189,7 @@
     "moves": [
         {
             "moltransrot": {
-                "acceptance": 0.383,
+                "acceptance": 0.363,
                 "dir": [
                     1.0,
                     1.0,
@@ -199,16 +199,16 @@
                 "dprot": 1.0,
                 "molecule": "water",
                 "molid": 0,
-                "moves": 500758,
-                "relative time": 0.131,
+                "moves": 998246,
+                "relative time": 0.123,
                 "repeat": 10,
-                "√⟨r²⟩": 0.619
+                "√⟨r²⟩": 0.603
             }
         },
         {
             "cluster": {
-                "acceptance": 0.742,
-                "bias rejection rate": 0.112,
+                "acceptance": 0.737,
+                "bias rejection rate": 0.117,
                 "cite": "doi:10/cj9gnn",
                 "dir": [
                     1.0,
@@ -217,19 +217,19 @@
                 ],
                 "dp": 2.0,
                 "dprot": 1.0,
-                "moves": 499242,
-                "relative time": 0.777,
+                "moves": 1001754,
+                "relative time": 0.786,
                 "repeat": 10,
                 "threshold": 3.17,
-                "√⟨r²⟩": 0.862,
-                "√⟨θ²⟩/°": 14.2,
-                "⟨N⟩": 3.53
+                "√⟨r²⟩": 0.859,
+                "√⟨θ²⟩/°": 14.1,
+                "⟨N⟩": 3.54
             }
         }
     ],
     "number of groups": 10,
     "number of particles": 30,
     "reactionlist": null,
-    "relative drift": -1.4635004623161987e-13,
+    "relative drift": -2.936528922433935e-13,
     "temperature": 300.0
 }

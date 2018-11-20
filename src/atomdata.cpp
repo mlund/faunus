@@ -29,12 +29,12 @@ namespace Faunus {
             throw std::runtime_error("Invalid JSON data for AtomData");
         for (auto it : j.items()) {
             a.name = it.key();
-            auto& val = it.value();
-            assertKeys(val, {
-                    "activity", "alphax", "q", "dp", "dprot", "eps", "id",
-                    "mu", "mulen", "scdir", "sclen", "mw", "sigma",
-                    "r", "tension", "tfe", "hydrophobic"
-                    }); // throw exception if keys other than these are given
+            xjson val = it.value();
+            //assertKeys(val, {
+            //        "activity", "alphax", "q", "dp", "dprot", "eps", "id",
+            //        "mu", "mulen", "scdir", "sclen", "mw", "sigma",
+            //        "r", "tension", "tfe", "hydrophobic"
+            //        }); // throw exception if keys other than these are given
             a.activity = val.value("activity", a.activity) * 1.0_molar;
             a.alphax   = val.value("alphax", a.alphax);
             a.charge   = val.value("q", a.charge);
@@ -53,6 +53,8 @@ namespace Faunus {
             a.tension  = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom);
             a.tfe      = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom*1.0_molar);
             a.hydrophobic = val.value("hydrophobic", false);
+            if (not val.empty()) // throw exception of unused/unknown keys are passed
+                throw std::runtime_error("unused key(s) for atom '"s + a.name + "':\n" + val.dump());
         }
     }
 

@@ -231,9 +231,11 @@ namespace Faunus {
             j[a.name] = {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
-                {"keeppos", a.keeppos}, {"structure", a.structure}, {"bondlist", a.bonds},
+                {"keeppos", a.keeppos}, {"bondlist", a.bonds},
                 {"rigid", a.rigid}
             };
+            if (not a.structure.empty())
+                j[a.name]["structure"] = a.structure;
 
             j[a.name]["atoms"] = json::array();
             for (auto id : a.atoms)
@@ -249,12 +251,7 @@ namespace Faunus {
                     throw std::runtime_error("invalid json");
                 for (auto it : j.items()) {
                     a.name = it.key();
-                    auto& val = it.value();
-                    assertKeys(val, {
-                            "insoffset", "activity", "keeppos", "atomic",
-                            "insdir", "bondlist", "rigid", "id", "atoms",
-                            "structure", "traj", "trajweight", "trajcenter"
-                            }); // throw exception if keys other than these are given
+                    xjson val = it.value(); // keys are deleted after access
                     a.insoffset = val.value("insoffset", a.insoffset);
                     a.activity = val.value("activity", a.activity) * 1.0_molar;
                     a.keeppos = val.value("keeppos", a.keeppos);
@@ -288,9 +285,9 @@ namespace Faunus {
                     }  // done handling atomic groups
                     else {
                         if (val.count("structure")>0) {
-                            json _struct = val["structure"];
+                            json _struct = val["structure"s];
                             if (_struct.is_string()) // structure from file
-                                a.loadConformation( val.value("structure", a.structure) );
+                                a.loadConformation( _struct.get<std::string>() );
                             else
                                 if (_struct.is_array()) { // structure is defined inside json
                                     Tpvec v;
@@ -373,6 +370,10 @@ namespace Faunus {
                         for (int i : bond->index)
                             if (i>=a.atoms.size() || i<0)
                                 throw std::runtime_error("bonded atom index " + std::to_string(i) + " out of range");
+                    // at this stage all given keys should have been accessed. If any are
+                    // left, an exception will be thrown.
+                    if (not val.empty())
+                        throw std::runtime_error("unused key(s):\n"s + val.dump());
                 }
             } catch(std::exception& e) {
                 throw std::runtime_error("JSON->molecule: " + a.name + ": " + e.what());

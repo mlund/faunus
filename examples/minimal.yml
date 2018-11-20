@@ -7,7 +7,7 @@ atomlist: # define all atom types below
     - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}
     - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10}
 moleculelist:
-    - salt: {atoms: [Na, Cl], atomic: true }
+    - salt: {atoms: [Na, Cl], atomic: true}
 insertmolecules:
     - salt: {N: 20}
 moves:

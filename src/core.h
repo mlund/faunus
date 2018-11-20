@@ -81,6 +81,14 @@ namespace Faunus {
     json merge( const json &a, const json &b ); //!< Merge two json objects
     json openjson( const std::string &file ); //!< Read json file into json object (w. syntax check)
 
+    /**
+     * @brief Check for unknown keys in JSON object
+     * @param j JSON object to check
+     * @param okkeys Valid keys
+     * @param exception If true a runtime error will be thrown if unknown key is found
+     */
+    bool assertKeys(const json&, const std::vector<std::string>&, bool=true);
+
     double _round(double x, int n=3); //!< Round to n number of significant digits
     void _roundjson(json &j, int n=3); // round float objects to n number of significant digits
     double value_inf(const json &j, const std::string &key); //!< Extract floating point from json and allow for 'inf' and '-inf'

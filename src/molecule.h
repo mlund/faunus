@@ -250,6 +250,11 @@ namespace Faunus {
                 for (auto it : j.items()) {
                     a.name = it.key();
                     auto& val = it.value();
+                    assertKeys(val, {
+                            "insoffset", "activity", "keeppos", "atomic",
+                            "insdir", "bondlist", "rigid", "id", "atoms",
+                            "structure", "traj", "trajweight", "trajcenter"
+                            }); // throw exception if keys other than these are given
                     a.insoffset = val.value("insoffset", a.insoffset);
                     a.activity = val.value("activity", a.activity) * 1.0_molar;
                     a.keeppos = val.value("keeppos", a.keeppos);

@@ -355,6 +355,7 @@ Faunus::Potential::SASApotential::SASApotential(const std::string &name) {
 }
 
 void Faunus::Potential::SASApotential::from_json(const Faunus::json &j) {
+    assertKeys(j, {"shift", "molarity", "radius"});
     shift = j.value("shift", true);
     conc = j.at("molarity").get<double>() * 1.0_molar;
     proberadius = j.value("radius", 1.4) * 1.0_angstrom;

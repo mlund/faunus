@@ -64,6 +64,18 @@ namespace Faunus {
         return js;
     }
 
+    bool assertKeys(const json &j, const std::vector<std::string> &okkeys, bool exception) {
+        assert(j.is_object());
+        for (auto it : j.items()) {
+            if (std::find(okkeys.begin(), okkeys.end(), it.key()) == okkeys.end() ) {
+                if (exception)
+                    throw std::runtime_error("unknown key: "s + it.key());
+                else return false;
+            }
+        }
+        return true;
+    }
+
     Tensor::Tensor(double xx, double xy, double xz, double yy, double yz, double zz) {
         (*this) << xx, xy, xz, xy, yy, yz, xz, yz, zz;
     }

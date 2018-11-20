@@ -162,6 +162,7 @@ namespace Faunus {
                     void _from_json(const json &j) override {
                         assert(!molecules<Tpvec>.empty());
                         try {
+                            assertKeys(j, {"molecule", "dir", "repeat"});
                             molname = j.at("molecule");
                             auto it = findName(molecules<Tpvec>, molname);
                             if (it == molecules<Tpvec>.end())
@@ -782,6 +783,7 @@ namespace Faunus {
                     }
 
                     void _from_json(const json &j) override {
+                        assertKeys(j, {"dp", "dprot", "dir", "threshold", "molecules", "repeat"});
                         dptrans = j.at("dp");
                         dir = j.value("dir", Point(1,1,1));
                         dprot = j.at("dprot");

@@ -3,7 +3,6 @@ package:
   version: {{ GIT_BUILD_STR }}
 
 source:
-  #git_rev: 1.1.0
   git_url: https://github.com/mlund/faunus.git
 
 build:
@@ -14,7 +13,7 @@ requirements:
     - librsvg
     - numpy
     - matplotlib
-    - cmake >=3.9
+    #- cmake >=3.9
     - python {{ python }}
     - ruamel_yaml
     - nbconvert
@@ -22,7 +21,7 @@ requirements:
     - jupyter
     - openmpi 1.6.3      # [osx]
     - openmpi 3.1.*      # [linux64]
-    - clangdev >=5       # [linux64]
+    #- clangdev >=5       # [linux64]
     #- pandoc >=1.19 # [linux64]
   run:
     - openmpi 1.6.3 # [osx]

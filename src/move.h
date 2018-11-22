@@ -759,6 +759,7 @@ namespace Faunus {
                     Average<double> msqd, msqd_angle, N;
                     double thresholdsq=0, dptrans=0, dprot=0, angle=0, _bias=0;
                     size_t bias_rejected=0;
+                    bool rotate; // true if cluster should be rotated
                     Point dir={1,1,1}, dp;
                     std::vector<std::string> names; // names of molecules to be considered
                     std::vector<int> ids; // molecule id's of molecules to be considered
@@ -804,7 +805,7 @@ namespace Faunus {
                      * @param first Index of initial molecule (randomly selected)
                      * @param index w. all molecules clustered around first (first included)
                      */
-                    void findCluster(Tspace &spc, size_t first, std::set<size_t>& cluster) const {
+                    void findCluster(Tspace &spc, size_t first, std::set<size_t>& cluster) {
                         assert(first < spc.p.size());
                         std::set<size_t> pool(index.begin(), index.end());
                         assert(pool.count(first)>0);
@@ -838,11 +839,13 @@ start:
                             for (auto j : cluster)
                                 if (j>i)
                                     if (spc.geo.sqdist(spc.groups.at(i).cm, spc.groups.at(j).cm)>=max*max)
-                                        throw std::runtime_error(name+": cluster larger than half box length");
+                                        rotate=false; // skip rotation if cluster larger than half the box length
                     }
 
                     void _move(Change &change) override {
-                        if (thresholdsq>0 && !index.empty()) {
+                        _bias=0;
+                        rotate=true;
+                        if (thresholdsq>0 and not index.empty()) {
                             std::set<size_t> cluster; // all group index in cluster
                             size_t first = *slump.sample(index.begin(), index.end()); // random molecule (nuclei)
                             findCluster(spc, first, cluster); // find cluster around first
@@ -852,6 +855,8 @@ start:
                             d.all=true;
                             dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
                             angle = dprot * (slump()-0.5);
+                            if (not rotate)
+                                angle=0;
 
                             Point COM = Geometry::trigoCom(spc, cluster); // cluster center
                             Eigen::Quaterniond Q;
@@ -860,11 +865,13 @@ start:
                             for (auto i : cluster) { // loop over molecules in cluster
                                 auto &g = spc.groups[i];
 
-                                Geometry::rotate(g.begin(), g.end(), Q, spc.geo.boundaryFunc, -COM);
-                                g.cm = g.cm-COM;
-                                spc.geo.boundary(g.cm);
-                                g.cm = Q*g.cm+COM;
-                                spc.geo.boundary(g.cm);
+                                if (rotate) {
+                                    Geometry::rotate(g.begin(), g.end(), Q, spc.geo.boundaryFunc, -COM);
+                                    g.cm = g.cm-COM;
+                                    spc.geo.boundary(g.cm);
+                                    g.cm = Q*g.cm+COM;
+                                    spc.geo.boundary(g.cm);
+                                }
 
                                 g.translate( dp, spc.geo.boundaryFunc );
                                 d.index=i;

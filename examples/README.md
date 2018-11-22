@@ -5,12 +5,14 @@ demonstrating features of Faunus. It is assumed that Faunus has
 already been installed.
 
 Example         | Description
---------------- | --------------------------------------------------------
+--------------- | ---------------------------------------------------------
+`bulk`          | Melted NaCl using Ewald summation and isobaric moves
+`cluster`       | Illustration of molecular cluster moves
 `isochoric`     | Bending modulus via penalty function and isochoric moves
 `membrane`      | Coarse-grained lipid bilayer under zero tension
 `minimal`       | A simple Lennard-Jones particle system
-`penalty`       | Wang-Landau sampling along a 2D reaction coordinate
-`water`         | SPC/E water using Ewald or other electrostatic methods
+`penalty`       | 2D Wang-Landau - see also Jupyter Notebook
+`water`         | SPC/E water in the NPT ensemble
 
 Each example consists of a YAML input file and, potentially,
 other files such as previously generated states (`.state.json`) or

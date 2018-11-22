@@ -386,6 +386,7 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/examples/README.md
     ${CMAKE_SOURCE_DIR}/examples/bulk.yml
     ${CMAKE_SOURCE_DIR}/examples/cluster.yml
+    ${CMAKE_SOURCE_DIR}/examples/cluster.agr
     ${CMAKE_SOURCE_DIR}/examples/cluster.out.json
     ${CMAKE_SOURCE_DIR}/examples/cluster.state.json
     ${CMAKE_SOURCE_DIR}/examples/seawater.yml
@@ -402,6 +403,7 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/examples/membrane.state.json
     ${CMAKE_SOURCE_DIR}/examples/lipid.xyz
     ${CMAKE_SOURCE_DIR}/examples/penalty.yml
+    ${CMAKE_SOURCE_DIR}/examples/penalty.ipynb
     ${CMAKE_SOURCE_DIR}/examples/pythontest.py
     ${CMAKE_SOURCE_DIR}/examples/isochoric.yml
     ${CMAKE_SOURCE_DIR}/examples/isochoric.xyz

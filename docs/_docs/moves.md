@@ -83,15 +83,16 @@ atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 
 `cluster`      | Description
 -------------- | -----------------------
-`molecules`    | List of molecules
+`molecules`    | List of molecule names
 `threshold`    | Mass-center threshold for forming a cluster
 `dim=[1,1,1]`  | Directions to translate
-`dprot`        | Rotational displacement
+`dprot`        | Rotational displacement (radians)
 `dp`           | Translational displacement
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
 between their mass centers. The move is associated with [bias](http://dx.doi.org/10/cj9gnn), such that
 the cluster size and composition remain unaltered.
+If a cluster is larger than half the simulation box length, only translation will be attempted.
 
 ## Internal Degrees of Freedom
 

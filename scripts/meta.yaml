@@ -1,6 +1,6 @@
 package:
   name: faunus
-  version: {{ GIT_BUILD_STR }}
+  version: {{ GIT_DESCRIBE_TAG }}
 
 source:
   git_url: https://github.com/mlund/faunus.git

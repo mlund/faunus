@@ -150,7 +150,7 @@ namespace Faunus {
         CHECK( p[0].charge == 0.5 );
     }
 #endif
- 
+
     /**
      * @brief General properties for molecules
      */
@@ -563,6 +563,27 @@ namespace Faunus {
 
         template<typename Tpvec>
             static std::vector<ReactionData<Tpvec>> reactions = {}; //!< Global instance of reaction list
+
+        // struct reservoir {
+        //
+        //     //public:
+        //                 std::string name;
+        //                 int N_reservoir;
+        //                 //Average<double> N;
+        //                 bool canonic;
+        // };
+        // void from_json(const nlohmann::json& j, reservoir &a) {
+        //     if (j.is_object() ){
+        //         a.name = j.begin().key();
+        //     }
+        // }
+        //
+        // void to_json(nlohmann::json& j, const reservoir &a) {
+        //     j[a.name] = {
+        //         {"N_reservoir", a.N_reservoir } , {"canonic", a.canonic}
+        //     };
+        // }
+
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] ReactionData") {

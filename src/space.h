@@ -5,7 +5,25 @@
 #include "molecule.h"
 
 namespace Faunus {
+    struct reservoir {
 
+        //public:
+                    std::string name;
+                    int N_reservoir;
+                    //Average<double> N;
+                    bool canonic;
+    };
+    // void from_json(const nlohmann::json& j, reservoir &a) {
+    //     if (j.is_object() ){
+    //         a.name = j.begin().key();
+    //     }
+    // }
+    //
+    // void to_json(nlohmann::json& j, const reservoir &a) {
+    //     j[a.name] = {
+    //         {"N_reservoir", a.N_reservoir } , {"canonic", a.canonic}
+    //     };
+    // }
     /**
      * @brief Specify change to a new state
      *
@@ -83,14 +101,18 @@ namespace Faunus {
             std::vector<ScaleVolumeTrigger> scaleVolumeTriggers; //!< Call when volume is scaled
             std::vector<ChangeTrigger> changeTriggers; //!< Call when a Change object is applied
             std::vector<SyncTrigger> onSyncTriggers;   //!< Call when two Space objects are synched
+            //std::vector<reservoir> Reservoirs;  //!< Containers of speciation
 
             Tpvec p;       //!< Particle vector
             Tgvec groups;  //!< Group vector
             Tgeometry geo; //!< Container geometry
 
+            std::map<int,int> moltracker;   //!< Tracker to store the number of groups of molecular and atomic molecules
+            std::map<int, int> atomtracker;  //!< Tracker to store the number of given types of atoms
+
             auto positions() const {
                return ranges::view::transform(p, [](auto &i) -> const Point& {return i.pos;});
-            } //!< Iterable range with positions 
+            } //!< Iterable range with positions
 
             enum Selection {ALL, ACTIVE, INACTIVE};
 
@@ -190,12 +212,15 @@ namespace Faunus {
                         g.shallowcopy(gother); // copy group data but *not* particles
 
                         if (m.all) // copy all particles
-                            std::copy( gother.begin(), gother.end(), g.begin() );
+                            std::copy( gother.begin(), gother.trueend(), g.begin() );
                         else // copy only a subset
                             for (auto i : m.atoms)
                                 *(g.begin()+i) = *(gother.begin()+i);
                     }
                 }
+                if ( reactions<Tpvec>.size() > 0 )
+                    moltracker = other.moltracker;
+
                 assert( p.size() == other.p.size() );
                 assert( p.begin() != other.p.begin());
             } //!< Copy differing data from other (o) Space using Change object
@@ -295,6 +320,7 @@ namespace Faunus {
                     if (j.count("reactionlist")>0)
                         reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
 
+
                 spc.clear();
                 spc.geo = j.at("geometry");
 
@@ -313,6 +339,24 @@ namespace Faunus {
                         }
                         if (begin != spc.p.end())
                             throw std::runtime_error("load error");
+                    }
+                }
+                //Initiate trackers/counters
+                if ( j.count("reactionlist") > 0) {
+                    for (auto &r: reactions<Tpvec>) {
+                        for (auto &i: r._reacid_m) {
+                            if ( spc.moltracker.find(i.first) == spc.moltracker.end() ) {
+                                if ( molecules<Tpvec>[i.first].atomic ) {
+                                    auto mollist = spc.findMolecules(i.first, spc.Selection::ALL);
+                                    if ( size(mollist) != 1 )
+                                        throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                                    spc.moltracker[i.first] = mollist.begin()->size();
+                                } else {
+                                    auto mollist = spc.findMolecules(i.first, spc.Selection::ACTIVE);
+                                    spc.moltracker[i.first] = size( mollist );
+                                }
+                            }
+                        }
                     }
                 }
                 // check correctness of molecular mass centers
@@ -405,6 +449,7 @@ namespace Faunus {
                 }
             } else throw std::runtime_error("'insertmolecules' json entry must be of array type");
         } //!< Insert `N` molecules into space as defined in `insert`
+
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Space")

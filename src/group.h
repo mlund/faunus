@@ -175,7 +175,7 @@ namespace Faunus {
                     return *this;
                 shallowcopy(o);
                 if (o.begin()!=begin())
-                    std::copy(o.begin(), o.end(), begin()); // copy all particle data
+                    std::copy(o.begin(), o.trueend(), begin()); // copy all particle data
                 return *this;
             } //!< Deep copy contents from another Group
 

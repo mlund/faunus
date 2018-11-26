@@ -96,10 +96,10 @@ namespace Faunus {
                         if (size(mollist)>0) {
                             auto git = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
                             if (!git->empty()) {
-                                auto p = slump.sample( git->begin(), git->end() ); // random particle iterator  
+                                auto p = slump.sample( git->begin(), git->end() ); // random particle iterator
                                 cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                 cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
-                                return p; 
+                                return p;
                             }
                         }
                         return spc.p.end();
@@ -225,8 +225,8 @@ namespace Faunus {
                             if (dp>0 || dprot>0)
                                 change.groups.push_back( cdata ); // add to list of moved groups
                         }
-                        else
-                            std::cerr << name << ": no atoms found" << std::endl;
+                        //else
+                        //    std::cerr << name << ": no atoms found" << std::endl;
                     }
 
                     void _accept(Change &change) override { msqd += _sqd; }
@@ -456,7 +456,7 @@ namespace Faunus {
                         // resize forces and velocities to mathc spc.p
                     }
             }; // end of forcemove
- 
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] TranslateRotate")
         {
@@ -642,6 +642,7 @@ namespace Faunus {
                                         return; // Not possible to perform change, escape through the back door
                                 }
                             }
+
                             //The move is doable, raise flag
                             change.dNpart=true;
                             for (auto &m : rit->Molecules2Add( !forward )) { // Delete
@@ -670,6 +671,7 @@ namespace Faunus {
                                     }
                                     std::sort( d.atoms.begin(), d.atoms.end() );
                                     change.groups.push_back( d ); // add to list of moved groups
+                                    spc.moltracker[m.first] -= m.second;
                                 } else {
                                     mollist = spc.findMolecules( m.first, Tspace::ACTIVE);
                                     for ( int N=0; N <m.second; N++ ) {
@@ -678,12 +680,41 @@ namespace Faunus {
                                         git->deactivate( git->begin(), git->end());
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                         d.all = true; // *all* atoms in group were moved
+                                        d.internal = true;
+                                        for (int i=0; i<git->capacity(); i++)
+                                            d.atoms.push_back(i);
+
                                         change.groups.push_back( d ); // add to list of moved groups
                                         mollist = spc.findMolecules( m.first , Tspace::ACTIVE);
                                         // Activate/deactivate all? simply move end to front?
                                     }
+                                    spc.moltracker[m.first] -= m.second;
                                 }
                             }
+
+                        //     if (dptrans>0) { // translate
+                        //         Point oldcm = it->cm;
+                        //         Point dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
+                        //         it->translate( dp, spc.geo.boundaryFunc );
+                        //         _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
+                        //     }
+                        //
+                        //     if (dprot>0) { // rotate
+                        //         Point u = ranunit(slump);
+                        //         double angle = dprot * (slump()-0.5);
+                        //         Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
+                        //         it->rotate(Q, spc.geo.boundaryFunc);
+                        //     }
+                        //
+                        //     if (dptrans>0||dprot>0) { // define changes
+                        //         Change::data d;
+                        //         d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
+                        //         d.all = true; // *all* atoms in group were moved
+                        //         change.groups.push_back( d ); // add to list of moved groups
+                        //     }
+                        //     assert( spc.geo.sqdist( it->cm,
+                        //                 Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-9 );
+                        // }
 
                             for (auto &m : rit->Molecules2Add( forward )) { // Add
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
@@ -702,6 +733,7 @@ namespace Faunus {
                                     }
                                     std::sort( d.atoms.begin(), d.atoms.end());
                                     change.groups.push_back( d ); // add to list of moved groups
+                                    spc.moltracker[m.first] += m.second;
                                 } else {
                                     mollist = spc.findMolecules( m.first, Tspace::INACTIVE);
                                     if ( size(mollist) <  m.second ) {
@@ -712,17 +744,29 @@ namespace Faunus {
                                         Change::data d;
                                         auto git = slump.sample(mollist.begin(), mollist.end());
                                         git->activate( git->inactive().begin(), git->inactive().end());
-                                        Point oldcm = git->cm;
-                                        spc.geo.randompos(oldcm, random);
-                                        git->translate( oldcm, spc.geo.boundaryFunc );
-                                        oldcm = ranunit(slump);
-                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), oldcm) );
+                                        Point newpoint; // = git->cm;
+                                        spc.geo.randompos(newpoint, random);
+                                        git->translate( -git->cm, spc.geo.boundaryFunc );
+                                        git->translate( newpoint, spc.geo.boundaryFunc );
+                                                Point u = ranunit(slump);
+                                                //double angle = dprot * (slump()-0.5);
+                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), u) );
                                         git->rotate(Q, spc.geo.boundaryFunc);
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                         d.all = true; // *all* atoms in group were moved
-                                        change.groups.push_back( d ); // add to list of moved groups
+                                        d.internal = true;
+                                        for (int i=0; i<git->capacity(); i++)
+                                            d.atoms.push_back(i);
+
+                                       change.groups.push_back( d ); // add to list of moved groups
+
+                                        assert( spc.geo.sqdist( git->cm,
+                                                    Geometry::massCenter(git->begin(),git->end(),spc.geo.boundaryFunc, -git->cm ) ) < 1e-9 );
                                         mollist = spc.findMolecules( m.first , Tspace::INACTIVE);
+
                                     }
+                                    spc.moltracker[m.first] += m.second;
+
                                 }
                             }
                             std::sort(change.groups.begin(), change.groups.end() );
@@ -1381,28 +1425,9 @@ namespace Faunus {
             using Tpvec = typename Tspace::Tpvec;
             double NoverO=0;
             if ( change.dNpart ) {// Have the number of any molecules changed
-                for ( auto &m : change.groups ) {
-                    int N_o = 0;
-                    int N_n = 0;
-                    if (!m.dNpart)
-                        if (!molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic) { // Molecular species
-                        auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
-                        auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
-                        N_n=size(mollist_n);
-                        N_o=size(mollist_o);
-                    }
-                    if ( m.dNpart ) {
-
-                        auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ALL);
-                        auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
-                        if ( size(mollist_n) > 1 || size(mollist_o) > 1 )
-                            throw std::runtime_error("Bad definition: One group per atomic molecule!");
-                        // Below is safe due to the catches above
-                        // add consistency criteria with m.atoms.size() == N
-                        N_n =  mollist_n.begin()->size();
-                        N_o =  mollist_o.begin()->size();
-                    }
-
+                for ( auto &m : change.groups ) { // ToDo fix so that it works for dN > 1 for molecuar species
+                    int N_o = spc_o.moltracker[spc_n.groups[m.index].id];
+                    int N_n = spc_n.moltracker[spc_n.groups[m.index].id];
                     int dN = N_n - N_o;
 
                     if (dN!=0) {

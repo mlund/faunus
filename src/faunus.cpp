@@ -117,6 +117,17 @@ int main( int argc, char **argv )
         int macro = loop.at("macro");
         int micro = loop.at("micro");
 
+       //  std::cout <<"Coord state 1 and state 2"<<std::endl;
+       //  std::cout << sim.state1.spc.groups[59].trueend()-sim.state1.spc.groups[59].begin() <<std::endl;
+       //
+       //  for (int i=0; i < (sim.state1.spc.groups[59].trueend()-sim.state1.spc.groups[59].begin()); i++)  {
+       //      std::cout <<i<<std::endl;
+       //      std::cout << (sim.state1.spc.groups[59].begin()+i)->pos <<std::endl;
+       //      std::cout << (sim.state2.spc.groups[59].begin()+i)->pos <<std::endl<<std::endl;
+       //
+       //     //d.atoms.push_back(i);
+       // }
+
         ProgressBar progressBar(macro*micro, 70);
         for (int i=0; i<macro; i++) {
             for (int j=0; j<micro; j++) {

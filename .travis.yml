@@ -9,11 +9,15 @@ matrix:
 
   # OSX / Clang
   - os: osx
-    env: [COMPILER=clang++, CXX=clang++, CC=clang]
+    env: [CONDA_PY=36] # COMPILER=clang++, CXX=clang++, CC=clang]
+  - os: osx
+    env: [CONDA_PY=37] # COMPILER=clang++, CXX=clang++, CC=clang]
 
   # Linux / Clang
   - os: linux
-    env: [COMPILER=clang++, CXX=clang++, CC=clang]
+    env: [CONDA_PY=36]  # COMPILER=clang++, CXX=clang++, CC=clang]
+  - os: linux
+    env: [CONDA_PY=37]  # COMPILER=clang++, CXX=clang++, CC=clang]
 
 install:
   - |

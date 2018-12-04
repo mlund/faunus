@@ -9,6 +9,8 @@ build:
   number: {{ GIT_DESCRIBE_NUMBER }}
 
 requirements:
+    #  - {{ compiler('cxx') }}
+    #host:
   build:
     - librsvg
     - numpy

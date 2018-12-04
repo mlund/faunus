@@ -40,6 +40,13 @@ falls back to `fixed`.
 
 ## Translation and Rotation
 
+The following moves are for translation and rotation of atoms, molecules, or clusters.
+The `dir` keyword restricts translational directions which by default is set to
+`[1,1,1]`, meaning translation by a unit vector, randomly picked on a sphere, and scaled by
+the displacement parameter `dp`.
+If `dir=[1,1,0]` the unit vector is instead picked on a circle (here _x_, _y_)
+and if `dir=[0,0,1]` on a line (here $z$).
+
 ### Molecular
 
 `moltransrot`    |  Description
@@ -85,7 +92,7 @@ atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 -------------- | -----------------------
 `molecules`    | List of molecule names
 `threshold`    | Mass-center threshold for forming a cluster
-`dim=[1,1,1]`  | Directions to translate
+`dir=[1,1,1]`  | Directions to translate
 `dprot`        | Rotational displacement (radians)
 `dp`           | Translational displacement
 

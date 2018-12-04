@@ -303,7 +303,7 @@ namespace Faunus {
 
                                 if (dptrans>0) { // translate
                                     Point oldcm = it->cm;
-                                    Point dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
+                                    Point dp = 0.5*ranunit(slump,dir) * dptrans;
                                     it->translate( dp, spc.geo.boundaryFunc );
                                     _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
                                 }
@@ -853,7 +853,7 @@ start:
                             N += cluster.size(); // average cluster size
                             Change::data d;
                             d.all=true;
-                            dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
+                            dp = 0.5*ranunit(slump, dir) * dptrans;
                             angle = dprot * (slump()-0.5);
                             if (not rotate)
                                 angle=0;

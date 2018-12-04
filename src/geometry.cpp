@@ -1,11 +1,12 @@
 #include "geometry.h"
 
 namespace Faunus {
-    Point ranunit_neuman(Random &rand) {
+    Point ranunit(Random &rand, const Point &dir) {
         double r2;
         Point p;
         do {
-            p = {rand()-0.5, rand()-0.5, rand()-0.5};
+            for (size_t i=0; i<3; i++)
+                p[i] = ( rand()-0.5 ) * dir[i];
             r2 = p.squaredNorm();
         } while ( r2 > 0.25 );
         return p / std::sqrt(r2);

@@ -35,18 +35,16 @@ namespace Faunus {
     }
 #endif
 
-    Point ranunit_neuman(Random&); //!< Random unit vector using Neuman's method ("sphere picking")
+    Point ranunit(Random&, const Point &dir={1,1,1}); //!< Random unit vector using Neuman's method ("sphere picking")
     Point ranunit_polar(Random&); //!< Random unit vector using polar coordinates ("sphere picking")
 
-    constexpr auto ranunit = ranunit_neuman; //!< Reference (or alias) to default ranunit function
-
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] ranunit_neuman") {
+    TEST_CASE("[Faunus] ranunit") {
         Random r;
         int n=2e5;
         Point rtp(0,0,0);
         for (int i=0; i<n; i++)
-            rtp += xyz2rtp( ranunit_neuman(r) );
+            rtp += xyz2rtp( ranunit(r) );
         rtp = rtp / n;
         CHECK( rtp.x() == doctest::Approx(1) );
         CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0

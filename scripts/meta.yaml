@@ -9,13 +9,14 @@ build:
   number: {{ GIT_DESCRIBE_NUMBER }}
 
 requirements:
-    #  - {{ compiler('cxx') }}
-    #host:
   build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+  host:
     - librsvg
     - numpy
     - matplotlib
-    - python {{ python }}
+    - python
     - ruamel_yaml
     - nbconvert
     - notebook
@@ -29,7 +30,7 @@ requirements:
     - ruamel_yaml
     - pygments
     - numpy
-    - python >=3
+    - python
 
 build:
   script_env:

@@ -160,7 +160,7 @@ void Faunus::Analysis::VirtualVolume::_sample() {
         double Unew = pot.energy(c);
         scaleVolume(Vold);
         duexp += exp(-(Unew - Uold));
-        assert(std::fabs((Uold-pot.energy(c))/Uold) < 1e-6);
+        assert(std::fabs((Uold-pot.energy(c))/Uold) < 1e-4);
     }
 }
 

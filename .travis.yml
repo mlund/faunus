@@ -1,23 +1,23 @@
-language: cpp
+#language: cpp
 dist: xenial
 sudo: required
 group: edge
-compiler: clang
+#compiler: clang
 
 matrix:
   include:
 
-  # OSX / Clang
+  # Python 3.7
+  - os: linux
+    env: [CONDA_PY=37]
   - os: osx
-    env: [CONDA_PY=36] # COMPILER=clang++, CXX=clang++, CC=clang]
-  - os: osx
-    env: [CONDA_PY=37] # COMPILER=clang++, CXX=clang++, CC=clang]
+    env: [CONDA_PY=37]
 
-  # Linux / Clang
+  # Python 3.6
+  - os: osx
+    env: [CONDA_PY=36]
   - os: linux
-    env: [CONDA_PY=36]  # COMPILER=clang++, CXX=clang++, CC=clang]
-  - os: linux
-    env: [CONDA_PY=37]  # COMPILER=clang++, CXX=clang++, CC=clang]
+    env: [CONDA_PY=36]
 
 install:
   - |
@@ -31,7 +31,7 @@ install:
     export PATH="$HOME/miniconda/bin:$PATH"
     hash -r
     conda config --set always_yes yes --set changeps1 no
-    conda config --add channels conda-forge
+    conda config --add channels conda-forge/label/gcc7
     conda update -q conda
     conda install conda-build=3 anaconda-client
     conda update -q conda-build

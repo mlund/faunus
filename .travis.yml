@@ -1,8 +1,8 @@
-#language: cpp
+language: cpp
 dist: xenial
 sudo: required
 group: edge
-#compiler: clang
+compiler: clang
 
 matrix:
   include:

@@ -86,6 +86,24 @@ class TestGeometry(unittest.TestCase):
             pos = geo.randompos(rnd);
             self.assertEqual( geo.collision( pos ), False ) 
 
+    def test_slit(self):
+        geo = Chameleon( dict(type="slit", length=[2,3,4]) )
+        V = geo.getVolume();
+        self.assertAlmostEqual(V, 2*3*4, msg="volume")
+
+        a = geo.boundary( [1.1, 1.5, -2.001] );
+        self.assertAlmostEqual(a[0], -0.9)
+        self.assertAlmostEqual(a[1], 1.5)
+        self.assertAlmostEqual(a[2], 1.999)
+        geo.setVolume(123.4);
+        self.assertAlmostEqual( geo.getVolume(), 123.4);
+
+        rnd = Random()
+        for i in range(1000):
+            pos = geo.randompos(rnd);
+            self.assertEqual( geo.collision( pos ), False ) 
+
+
     def test_sphere(self):
         r = 15.0
         geo = Chameleon( dict(type="sphere", radius=r) )

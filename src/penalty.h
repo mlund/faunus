@@ -107,8 +107,8 @@ namespace Faunus {
                             Group<Tparticle> g(spc.p.begin(), spc.p.end());
                             auto slice1 = g.find_id(findName(atoms, type1)->id());
                             auto slice2 = g.find_id(findName(atoms, type2)->id());
-                            auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.boundaryFunc);
-                            auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.boundaryFunc);
+                            auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.getBoundaryFunc());
+                            auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.getBoundaryFunc());
                             return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum();
                         };
                     }
@@ -141,7 +141,7 @@ namespace Faunus {
                         //vec = vec / vec.norm();
                         //cout << "P1 " << atoms[spc.groups[i].begin()->id].name << endl;
                         //cout << "P2 " << atoms[(spc.groups[i].end()-1)->id].name << endl;
-                        auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.boundaryFunc, cm);
+                        auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.getBoundaryFunc(), cm);
                         Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                         Point eivals = esf.eigenvalues();
                         std::ptrdiff_t i_eival;
@@ -160,7 +160,7 @@ namespace Faunus {
         TEST_CASE("[Faunus] MassCenterSeparation")
         {
             using doctest::Approx;
-            typedef Space<Geometry::Cuboid, Particle<>> Tspace;
+            typedef Space<Geometry::Chameleon, Particle<>> Tspace;
             Tspace spc;
             MassCenterSeparation c( R"({"dir":[1,1,0], "index":[7,8], "type":[] })"_json, spc);
             CHECK( c.dir.x() == 1 );

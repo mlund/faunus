@@ -166,11 +166,11 @@ namespace Faunus {
         TEST_CASE("[Faunus] Ewald - IonIonPolicy")
         {
             using doctest::Approx;
-            typedef Space<Geometry::Cuboid, Particle<Charge,Dipole>> Tspace;
+            typedef Space<Geometry::Chameleon, Particle<Charge,Dipole>> Tspace;
 
             Tspace spc;
             spc.p.resize(2);
-            spc.geo  = R"( {"length": 10} )"_json;
+            spc.geo  = R"( {"type": "cuboid", "length": 10} )"_json;
             spc.p[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
             spc.p[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
 
@@ -489,7 +489,7 @@ namespace Faunus {
                         double u=0;
                         for (auto &b : v) {
                             assert(b->hasEnergyFunction());
-                            u += b->energy(spc.geo.distanceFunc);
+                            u += b->energy(spc.geo.getDistanceFunc());
                         }
                         return u;
                     } // sum energy in vector of BondData

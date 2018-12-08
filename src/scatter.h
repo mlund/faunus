@@ -57,7 +57,7 @@ namespace Faunus {
          *
          * See also <http://dx.doi.org/10.1016/S0022-2860(96)09302-7>
          */
-        template<class Tformfactor, class Tgeometry=Geometry::Sphere, class T=float>
+        template<class Tformfactor, class Tgeometry=Geometry::Chameleon, class T=float>
             class DebyeFormula {
                 private:
                     T qmin, qmax, dq, rc;
@@ -69,7 +69,7 @@ namespace Faunus {
                     std::map<T, T> S; //!< Weighted number of samplings
 
                     DebyeFormula(const json &j) {
-                        geo = R"( { "radius" : 1e9 } )"_json;
+                        geo = R"( { "type": "sphere", "radius": 1e9 } )"_json;
                         dq = j.at("dq").get<double>();
                         qmin = j.at("qmin").get<double>();
                         qmax = j.at("qmax").get<double>();

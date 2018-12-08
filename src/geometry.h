@@ -82,21 +82,24 @@ namespace Faunus {
             virtual void randompos( Point&, Random& ) const=0; //!< Generate random position
             virtual Point vdist( const Point&, const Point& ) const=0; //!< (Minimum) distance between two points
             virtual void boundary( Point& ) const=0; //!< Apply boundary conditions
-            virtual bool collision( const Point&, double=0) const=0; //!< Check if position lies within
+            virtual bool collision( const Point&, double=0) const=0; //!< Overlap with boundaries
             virtual Point getLength() const=0; //!< Side lengths
 
             inline double sqdist( const Point &a, const Point &b ) const {
                 return vdist(a,b).squaredNorm();
             } //!< Squared (minimum) distance between two points
 
-            BoundaryFunction boundaryFunc; //!< Functor for boundary()
-            DistanceFunction distanceFunc; //!< Functor for vdist()
             std::string name;
 
-            GeometryBase& operator=(const GeometryBase&); //!< Required since we *do not* want to overwrite functors (distance, boundary)
-            GeometryBase(const GeometryBase&); //!< Required since we *do not* want to overwrite functors (distance, boundary)
-            GeometryBase();
             virtual ~GeometryBase();
+
+            inline BoundaryFunction getBoundaryFunc() const {
+                return [this](Point &i){boundary(i);};
+            } //!< returns lambda to boundary()
+
+            inline DistanceFunction getDistanceFunc() const {
+                return [this](const Point &i, const Point &j){return vdist(i,j);};
+            } //!< returns lambda to vdist()
 
         }; //!< Base class for all geometries
 
@@ -109,16 +112,17 @@ namespace Faunus {
          * @todo Implement unit tests
          */
         class Chameleon : public GeometryBase {
-            private:
+            public:
                 enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT};
-                static const std::map<std::string,Variant> names;
                 Variant type;
+            private:
+                static constexpr double pbc_disable=10; //!< side-length scaling to disable PBC for non-cuboidal geometries
+                static const std::map<std::string,Variant> names;
                 double radius=0, c1, c2;
                 Point len, len_half, len_inv;
 
-                void setLength(const Point &l);
             public:
-                Chameleon();
+                void setLength(const Point &l);
                 double getVolume(int dim=3) const override;
                 Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
                 Point getLength() const override; //!< Enscribed box
@@ -157,172 +161,99 @@ namespace Faunus {
         void to_json(json&, const Chameleon&);
         void from_json(const json&, Chameleon&);
 
-        /** @brief Cuboidal box */
-        class Box : public GeometryBase {
-            protected:
-                Point len, //!< side length
-                      len_half, //!< half side length
-                      len_inv; //!< inverse side length
-                double c1, c2;
+#ifdef DOCTEST_LIBRARY_INCLUDED
+        TEST_CASE("[Faunus] Chameleon") {
 
-            public:
-                void setLength( const Point &l ); //!< Set cuboid side length
-                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
-                double getVolume(int dim=3) const override;
-                Point getLength() const override; //!< Side lengths
-                bool collision(const Point &a, double r=0) const override;
-                void randompos( Point &m, Random &rand ) const override;
-        };
+            using doctest::Approx;
+            Chameleon geo;
 
-        void to_json(json &j, const Box &b);
-        void from_json(const json& j, Box &b);
+            SUBCASE("cuboid") {
+                geo = R"( {"type": "cuboid", "length": [2,3,4]} )"_json;
+                CHECK( geo.getVolume() == doctest::Approx(2*3*4) );
+                Point a(1.1, 1.5, -2.001);
+                CHECK( geo.collision(a) == true);
+                geo.getBoundaryFunc()(a);
+                CHECK( geo.collision(a) == false);
+                CHECK( a.x() == Approx(-0.9) );
+                CHECK( a.y() == Approx(1.5) );
+                CHECK( a.z() == Approx(1.999) );
+                CHECK( geo.vdist({1,2,3}, a) == geo.getDistanceFunc()({1,2,3},a) );
+                Point b = a;
+                geo.boundary(b);
+                CHECK( a == b );
 
-        /** @brief Periodic boundary conditions */
-        template<bool X=true, bool Y=true, bool Z=true>
-            struct PBC : public Box {
+                // check that geometry is properly enscribed in a cuboid
+                Point L = geo.getLength();
+                CHECK( L.x() == Approx(2) );
+                CHECK( L.y() == Approx(3) );
+                CHECK( L.z() == Approx(4) );
+            }
 
-                PBC();
+            SUBCASE("slit") {
+                geo = R"( {"type": "slit", "length": [2,3,4]} )"_json;
+                CHECK( geo.getVolume() == doctest::Approx(2*3*4) );
+                Point a(1.1, 1.5, -2.001);
+                CHECK( geo.collision(a) == true);
+                geo.getBoundaryFunc()(a);
+                CHECK( geo.collision(a) == true);
+                CHECK( a.x() == doctest::Approx(-0.9) );
+                CHECK( a.y() == doctest::Approx(1.5) );
+                CHECK( a.z() == doctest::Approx(-2.001) );
 
-                Point vdist( const Point &a, const Point &b ) const override
-                {
-                    Point r(a - b);
-                    if (X) {
-                        if ( r.x() > len_half.x())
-                            r.x() -= len.x();
-                        else if ( r.x() < -len_half.x())
-                            r.x() += len.x();
-                    }
-                    if (Y) {
-                        if ( r.y() > len_half.y())
-                            r.y() -= len.y();
-                        else if ( r.y() < -len_half.y())
-                            r.y() += len.y();
-                    }
-                    if (Z) {
-                        if ( r.z() > len_half.z())
-                            r.z() -= len.z();
-                        else if ( r.z() < -len_half.z())
-                            r.z() += len.z();
-                    }
-                    return r;
-                } //!< (Minimum) distance between two points
+                Point b = a;
+                b.z() = -b.z();
+                geo.boundary(b);
+                CHECK( b.z() == doctest::Approx(2.001) );
+                CHECK( geo.vdist(a,b).x()==0);
+                CHECK( geo.vdist(a,b).y()==0);
+                CHECK( geo.vdist(a,b).z()==-4.002);
 
+                // check that geometry is properly enscribed in a cuboid
+                Point L = geo.getLength();
+                CHECK( L.x() == Approx(2) );
+                CHECK( L.y() == Approx(3) );
+                CHECK( L.z() == Approx(4) );
+            }
+
+            SUBCASE("cylinder") {
+                json j = {  {"type","cylinder"}, {"radius",1.0}, {"length", 1/pc::pi} };
+                geo = j;
+                CHECK( geo.getVolume() == doctest::Approx( 1.0 ) );
+                CHECK( geo.collision({1.01,0,0}) == true);
+                CHECK( geo.collision({0.99,0,0}) == false);
+                CHECK( geo.collision({0.99,1/pc::pi+0.01,0}) == true);
+
+                // check that geometry is properly enscribed in a cuboid
+                Point L = geo.getLength();
+                CHECK( L.x() == Approx(2) );
+                CHECK( L.y() == Approx(2) );
+                CHECK( L.z() == Approx(1/pc::pi) );
+            }
+
+            SUBCASE("sphere") {
+                geo = R"( { "type": "sphere", "radius": 2 } )"_json;
+                CHECK( geo.getVolume() == doctest::Approx( 4*pc::pi*8/3.0 ) );
+                CHECK( geo.collision( { 2.01, 0, 0 } ) == true );
+                CHECK( geo.collision( { 1.99, 0, 0 } ) == false );
+                CHECK( geo.getLength().squaredNorm() == doctest::Approx(48) );
+
+                // check that geometry is properly enscribed in a cuboid
+                Point L = geo.getLength();
+                CHECK( L.x() == Approx(4) );
+                CHECK( L.y() == Approx(4) );
+                CHECK( L.z() == Approx(4) );
+
+                geo.setVolume(123.4);
+                CHECK( geo.getVolume() == doctest::Approx(123.4) );
+            }
+       }
+#endif
+
+        /*
                 void unwrap( Point &a, const Point &ref ) const {
                     a = vdist(a, ref) + ref;
                 } //!< Remove PBC with respect to a reference point
-
-                template<typename T=double>
-                    inline int anint( T x ) const
-                    {
-                        return int(x > 0.0 ? x + 0.5 : x - 0.5);
-                    } //!< Round to int
-
-                void boundary( Point &a ) const override
-                {
-                    if (X)
-                        if ( std::fabs(a.x()) > len_half.x())
-                            a.x() -= len.x() * anint(a.x() * len_inv.x());
-                    if (Y)
-                        if ( std::fabs(a.y()) > len_half.y())
-                            a.y() -= len.y() * anint(a.y() * len_inv.y());
-                    if (Z)
-                        if ( std::fabs(a.z()) > len_half.z())
-                            a.z() -= len.z() * anint(a.z() * len_inv.z());
-                } //!< Apply boundary conditions
-
-            };
-
-        template<bool X, bool Y, bool Z>
-        PBC<X, Y, Z>::PBC() {
-            using namespace std::placeholders;
-            boundaryFunc = std::bind( &PBC<X,Y,Z>::boundary, this, _1);
-            distanceFunc = std::bind( &PBC<X,Y,Z>::vdist, this, _1, _2);
-            distanceFunc = [this](const Point &i, const Point &j){return this->vdist(i,j);};
-            boundaryFunc = [this](Point &i){this->boundary(i);};
-        }
-
-        using Cuboid = PBC<true,true,true>; //!< Cuboid w. PBC in all directions
-        using Cuboidslit = PBC<true,true,false>; //!< Cuboidal slit w. PBC in XY directions
-        using CuboidNoPBC = PBC<false,false,false>; //!< Hard cuboid - no PBC
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-        TEST_CASE("[Faunus] PBC/Cuboid") {
-            Cuboid geo = R"( {"length": [2,3,4]} )"_json;
-
-            CHECK( geo.getVolume() == doctest::Approx(2*3*4) );
-
-            Point a(1.1, 1.5, -2.001);
-            geo.boundaryFunc(a);
-            CHECK( a.x() == doctest::Approx(-0.9) );
-            CHECK( a.y() == doctest::Approx(1.5) );
-            CHECK( a.z() == doctest::Approx(1.999) );
-            Point b = a;
-            geo.boundary(b);
-            CHECK( a == b );
-
-            // check copying, in particular functors
-            auto g1 = new Cuboid();
-            g1->boundaryFunc(a);
-            geo = *g1; // functors should *not be copied*
-            delete g1;
-            geo.boundaryFunc(a);
-        }
-#endif
-
-        /** @brief Cylindrical cell */
-        class Cylinder : public PBC<false,false,true> {
-            private:
-                double r, r2, diameter, len;
-                typedef PBC<false,false,true> base;
-            public:
-                void set(double radius, double length); //!< Set radius
-                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override; //!< Adjust radius to match volume; length is conserved.
-                double getVolume(int dim=3) const override; //<! Return volume
-                void randompos( Point &m, Random &rand ) const override;
-                bool collision(const Point &a, double r=0) const override;
-        };
-
-        void from_json(const json& j, Cylinder &cyl);
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-        TEST_CASE("[Faunus] Cylinder") {
-            Cylinder c;
-            c.set( 1.0, 1/pc::pi );
-            CHECK( c.getVolume() == doctest::Approx( 1.0 ) );
-            CHECK( c.collision({1.01,0,0}) == true);
-            CHECK( c.collision({0.99,0,0}) == false);
-            CHECK( c.collision({0.99,1/pc::pi+0.01,0}) == true);
-        }
-#endif
-
-        /** @brief Spherical cell */
-        class Sphere : public PBC<false,false,false> {
-            private:
-                double r, r2;
-            public:
-                void set(double radius); //!< Set radius
-                double getRadius() const;
-                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override; //!< Adjust radius to match volume; length is conserved.
-                double getVolume(int dim=3) const override; //<! Return volume
-                void randompos( Point &a, Random &rand ) const override;
-                bool collision(const Point &a, double r=0) const override;
-        };
-
-        void from_json(const json& j, Sphere &g);
-        void to_json(json &j, const Sphere &g);
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-        TEST_CASE("[Faunus] Sphere") {
-            Sphere c = R"( { "radius" : 2 } )"_json;
-            CHECK( c.getVolume() == doctest::Approx( 4*pc::pi*8/3.0 ) );
-            CHECK( c.collision( { 2.01, 0, 0 } ) == true );
-            CHECK( c.collision( { 1.99, 0, 0 } ) == false );
-            CHECK( c.getLength().squaredNorm() == doctest::Approx(48) );
-            c.setVolume(123.4);
-            CHECK( c.getVolume() == doctest::Approx(123.4) );
-        }
-#endif
-
+*/
         enum class weight { MASS, CHARGE, GEOMETRIC };
 
         template<typename Titer, typename Tparticle=typename Titer::value_type, typename weightFunc>
@@ -360,7 +291,7 @@ namespace Faunus {
         TEST_CASE("[Faunus] anyCenter") {
             typedef Particle<Radius, Charge, Dipole, Cigar> T;
 
-            Cylinder cyl = json( {{"length",100}, {"radius",20}} );
+            Chameleon cyl = json( {{"type","cuboid"}, {"length",100}, {"radius",20}} );
             std::vector<T> p;
 
             CHECK( !atoms.empty() ); // set in a previous test
@@ -370,7 +301,7 @@ namespace Faunus {
             p.front().pos = {10, 10, -10};
             p.back().pos  = {15, -10, 10};
 
-            Point cm = Geometry::massCenter(p.begin(), p.end(), cyl.boundaryFunc);
+            Point cm = Geometry::massCenter(p.begin(), p.end(), cyl.getBoundaryFunc());
             CHECK( cm.x() == doctest::Approx(12.5) );
             CHECK( cm.y() == doctest::Approx(0) );
             CHECK( cm.z() == doctest::Approx(0) );

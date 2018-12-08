@@ -134,8 +134,8 @@ namespace Faunus {
                     g.atomic = molecules<Tpvec>.at(molid).atomic;
 
                     if (g.atomic==false) {
-                        g.cm = Geometry::massCenter(in.begin(), in.end(), geo.boundaryFunc, -in.begin()->pos);
-                        Point cm = Geometry::massCenter(g.begin(), g.end(), geo.boundaryFunc, -g.cm);
+                        g.cm = Geometry::massCenter(in.begin(), in.end(), geo.getBoundaryFunc(), -in.begin()->pos);
+                        Point cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
                         if (geo.sqdist(g.cm, cm)>1e-9)
                             throw std::runtime_error("space: mass center error upon insertion. Molecule too large?\n");
                     }
@@ -223,7 +223,7 @@ namespace Faunus {
             void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC) {
                 for (auto &g: groups) // remove periodic boundaries
                     if (!g.atomic)
-                        g.unwrap(geo.distanceFunc);
+                        g.unwrap(geo.getDistanceFunc());
 
                 Point scale = geo.setVolume(Vnew, method);
 
@@ -242,7 +242,7 @@ namespace Faunus {
                             assert( geo.sqdist( g.cm,
                                         Geometry::massCenter(
                                             g.begin(), g.end(),
-                                            geo.boundaryFunc, -g.cm)) < 1e-10 );
+                                            geo.getBoundaryFunc(), -g.cm)) < 1e-10 );
                         }
                     }
                 }
@@ -333,7 +333,7 @@ namespace Faunus {
                 for (auto &i : spc.groups)
                     if (not i.empty() and not i.atomic)
                         if (spc.geo.sqdist( i.cm,
-                                    Geometry::massCenter(i.begin(), i.end(), spc.geo.boundaryFunc, -i.cm) ) > 1e-9 )
+                                    Geometry::massCenter(i.begin(), i.end(), spc.geo.getBoundaryFunc(), -i.cm) ) > 1e-9 )
                             throw std::runtime_error("mass center mismatch");
             } catch(std::exception& e) {
                 throw std::runtime_error("Error while constructing Space from JSON: "s + e.what());
@@ -404,7 +404,7 @@ namespace Faunus {
                                                 if (j==p.size()) {
                                                     success=true;
                                                     for (auto g=spc.groups.end()-N; g!=spc.groups.end(); ++g)
-                                                        g->cm = Geometry::massCenter(g->begin(), g->end(), spc.geo.boundaryFunc, -g->begin()->pos);
+                                                        g->cm = Geometry::massCenter(g->begin(), g->end(), spc.geo.getBoundaryFunc(), -g->begin()->pos);
                                                 }
                                             } else std::cerr << file + ": wrong number of atoms" << endl;
                                         } else std::cerr << "error opening file '" + file + "'" << endl;
@@ -423,7 +423,7 @@ namespace Faunus {
     TEST_CASE("[Faunus] Space")
     {
         typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
-        typedef Space<Geometry::Cuboid, Tparticle> Tspace;
+        typedef Space<Geometry::Chameleon, Tparticle> Tspace;
         Tspace spc1;
 
         // check molecule insertion

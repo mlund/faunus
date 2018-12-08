@@ -28,6 +28,19 @@ random:                # seed for random number generator
     seed: fixed        # "fixed" (default) or "hardware" (non-deterministic)
 ~~~
 
+### Geometry
+
+Below is a list of possible geometries for the simulation container with indication
+if and in which directions periodic boundary conditions (PBC) are applied.
+Origo ($0,0,0$) is always placed in the geometric _center_ of the simulation container.
+
+`geometry`  | PBC        | Required keywords
+----------- | ---------- | --------------------------------
+`cuboid`    | $x,y,z$    | `length` (array or single float)
+`slit`      | $x,y$      | `length` (array or single float)
+`cylinder`  | $z$        | `radius`, `length` (along $z$)
+`sphere`    | off        | `radius`
+
 ## Atom Properties
 
 Atoms are the smallest possible particle entities with properties defined below.

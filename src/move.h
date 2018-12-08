@@ -210,10 +210,10 @@ namespace Faunus {
                             if (dp>0) { // translate
                                 Point oldpos = p->pos;
                                 p->pos +=  0.5 * dp * ranunit(slump).cwiseProduct(dir);
-                                spc.geo.boundaryFunc(p->pos);
+                                spc.geo.boundary(p->pos);
                                 _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
                                 if (!g.atomic)
-                                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.boundaryFunc, -g.cm);
+                                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
                             }
 
                             if (dprot>0) { // rotate
@@ -304,7 +304,7 @@ namespace Faunus {
                                 if (dptrans>0) { // translate
                                     Point oldcm = it->cm;
                                     Point dp = 0.5*ranunit(slump,dir) * dptrans;
-                                    it->translate( dp, spc.geo.boundaryFunc );
+                                    it->translate( dp, spc.geo.getBoundaryFunc() );
                                     _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
                                 }
 
@@ -312,7 +312,7 @@ namespace Faunus {
                                     Point u = ranunit(slump);
                                     double angle = dprot * (slump()-0.5);
                                     Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
-                                    it->rotate(Q, spc.geo.boundaryFunc);
+                                    it->rotate(Q, spc.geo.getBoundaryFunc());
                                 }
 
                                 if (dptrans>0||dprot>0) { // define changes
@@ -322,7 +322,7 @@ namespace Faunus {
                                     change.groups.push_back( d ); // add to list of moved groups
                                 }
                                 assert( spc.geo.sqdist( it->cm,
-                                            Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-9 );
+                                            Geometry::massCenter(it->begin(),it->end(),spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-9 );
                             }
                         }
                     }
@@ -412,7 +412,7 @@ namespace Faunus {
                                 std::copy( p.begin(), p.end(), g->begin() ); // override w. new conformation
 #ifndef NDEBUG
                                 // this move shouldn't move mass centers, so let's check if this is true:
-                                Point newcm = Geometry::massCenter(p.begin(), p.end(), spc.geo.boundaryFunc, -g->cm);
+                                Point newcm = Geometry::massCenter(p.begin(), p.end(), spc.geo.getBoundaryFunc(), -g->cm);
                                 if ( (newcm - g->cm).norm()>1e-6 )
                                     throw std::runtime_error(name + ": unexpected mass center movement");
 #endif
@@ -462,7 +462,7 @@ namespace Faunus {
         TEST_CASE("[Faunus] TranslateRotate")
         {
             typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
-            typedef Space<Geometry::Cuboid, Tparticle> Tspace;
+            typedef Space<Geometry::Chameleon, Tparticle> Tspace;
             typedef typename Tspace::Tpvec Tpvec;
 
             CHECK( !atoms.empty() ); // set in a previous test
@@ -698,7 +698,7 @@ namespace Faunus {
                                         git->activate( git->end(), git->end() + 1);
                                         auto ait = git->end()-1;
                                         spc.geo.randompos(ait->pos, slump);
-                                        spc.geo.boundaryFunc(ait->pos);
+                                        spc.geo.getBoundaryFunc()(ait->pos);
                                         d.atoms.push_back( Faunus::distance(git->begin(), ait) );  // index of particle rel. to group
                                     }
                                     std::sort( d.atoms.begin(), d.atoms.end());
@@ -715,10 +715,10 @@ namespace Faunus {
                                         git->activate( git->inactive().begin(), git->inactive().end());
                                         Point oldcm = git->cm;
                                         spc.geo.randompos(oldcm, random);
-                                        git->translate( oldcm, spc.geo.boundaryFunc );
+                                        git->translate( oldcm, spc.geo.getBoundaryFunc() );
                                         oldcm = ranunit(slump);
                                         Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), oldcm) );
-                                        git->rotate(Q, spc.geo.boundaryFunc);
+                                        git->rotate(Q, spc.geo.getBoundaryFunc());
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                         d.all = true; // *all* atoms in group were moved
                                         change.groups.push_back( d ); // add to list of moved groups
@@ -866,14 +866,14 @@ start:
                                 auto &g = spc.groups[i];
 
                                 if (rotate) {
-                                    Geometry::rotate(g.begin(), g.end(), Q, spc.geo.boundaryFunc, -COM);
+                                    Geometry::rotate(g.begin(), g.end(), Q, spc.geo.getBoundaryFunc(), -COM);
                                     g.cm = g.cm-COM;
                                     spc.geo.boundary(g.cm);
                                     g.cm = Q*g.cm+COM;
                                     spc.geo.boundary(g.cm);
                                 }
 
-                                g.translate( dp, spc.geo.boundaryFunc );
+                                g.translate( dp, spc.geo.getBoundaryFunc() );
                                 d.index=i;
                                 change.groups.push_back(d);
                             }
@@ -980,7 +980,7 @@ start:
 
                                         if (!index.empty()) {
                                             Point oldcm = g->cm;
-                                            g->unwrap(spc.geo.distanceFunc); // remove pbc
+                                            g->unwrap(spc.geo.getDistanceFunc()); // remove pbc
                                             Point u = (spc.p[i1].pos - spc.p[i2].pos).normalized();
                                             double angle = dprot * (slump()-0.5);
                                             Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
@@ -991,7 +991,7 @@ start:
                                                     + spc.p[i1].pos; // positional rot.
                                             }
                                             g->cm = Geometry::massCenter(g->begin(), g->end());
-                                            g->wrap(spc.geo.boundaryFunc); // re-apply pbc
+                                            g->wrap(spc.geo.getBoundaryFunc()); // re-apply pbc
 
                                             d2 = spc.geo.sqdist(g->cm, oldcm); // CM movement
 
@@ -1101,7 +1101,7 @@ start:
                             for (auto& g : spc.groups)
                                 if (g.atomic==false)
                                     g.cm = Geometry::massCenter(g.begin(), g.end(),
-                                            spc.geo.boundaryFunc, -g.begin()->pos);
+                                            spc.geo.getBoundaryFunc(), -g.begin()->pos);
                         }
                     }
 

@@ -98,7 +98,7 @@ namespace Faunus {
                                 std::copy(pin.begin(), pin.end(), g.begin()); // copy into ghost group
                                 if (!g.atomic) // update molecular mass-center
                                     g.cm = Geometry::massCenter(g.begin(), g.end(),
-                                            spc.geo.boundaryFunc, -g.begin()->pos);
+                                            spc.geo.getBoundaryFunc(), -g.begin()->pos);
 
                                 expu += exp( -pot->energy(change) ); // widom average
                             }
@@ -582,7 +582,7 @@ namespace Faunus {
                     for (auto &g : spc.groups)
                         if (!g.atomic) {
                             auto &d = _map[g.id];
-                            auto p = Geometry::toMultipole(g, spc.geo.boundaryFunc);
+                            auto p = Geometry::toMultipole(g, spc.geo.getBoundaryFunc());
                             d.Z += p.charge;
                             d.mu += p.mulen;
                             d.Z2 += p.charge*p.charge;
@@ -930,8 +930,8 @@ namespace Faunus {
                     for (auto &gi : spc.findMolecules(ids[0]))
                         for (auto &gj : spc.findMolecules(ids[1]))
                             if (gi!=gj) {
-                                auto a = Geometry::toMultipole(gi, spc.geo.boundaryFunc);
-                                auto b = Geometry::toMultipole(gj, spc.geo.boundaryFunc);
+                                auto a = Geometry::toMultipole(gi, spc.geo.getBoundaryFunc());
+                                auto b = Geometry::toMultipole(gj, spc.geo.getBoundaryFunc());
                                 Point R = spc.geo.vdist(gi.cm, gj.cm);
                                 auto &d = m[ to_bin(R.norm(), dr) ];
                                 d.tot += g2g(gi, gj);

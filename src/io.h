@@ -514,8 +514,8 @@ namespace Faunus {
                             int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
                             if (rc==0)
                             {
-                                Geometry::Cuboid* geo = dynamic_cast<Geometry::Cuboid*>(&c.geo);
-                                if (geo==nullptr)
+                                Geometry::Chameleon* geo = dynamic_cast<Geometry::Chameleon*>(&c.geo);
+                                if (geo==nullptr or geo->type not_eq Geometry::Chameleon::CUBOID)
                                     throw std::runtime_error("Cuboid-like geometry required");
                                 Point len_half = 0.5*geo->getLength();
                                 if (setbox)

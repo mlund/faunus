@@ -93,8 +93,8 @@ namespace Faunus {
             DistanceFunction distanceFunc; //!< Functor for vdist()
             std::string name;
 
-            GeometryBase& operator=(const GeometryBase &other); //!< Required since we *do not* want to overwrite functors (distance, boundary)
-            GeometryBase(const GeometryBase &other); //!< Required since we *do not* want to overwrite functors (distance, boundary)
+            GeometryBase& operator=(const GeometryBase&); //!< Required since we *do not* want to overwrite functors (distance, boundary)
+            GeometryBase(const GeometryBase&); //!< Required since we *do not* want to overwrite functors (distance, boundary)
             GeometryBase();
             virtual ~GeometryBase();
 
@@ -111,24 +111,19 @@ namespace Faunus {
         class Chameleon : public GeometryBase {
             private:
                 enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT};
-                const std::map<std::string,Variant> names = {{
-                    {"sphere", SPHERE},
-                    {"cylinder", CYLINDER},
-                    {"slit", SLIT},
-                    {"cuboid", CUBOID}}
-                };
+                static const std::map<std::string,Variant> names;
                 Variant type;
                 double radius=0, c1, c2;
                 Point len, len_half, len_inv;
 
                 void setLength(const Point &l);
             public:
-                inline Chameleon() {};
+                Chameleon();
                 double getVolume(int dim=3) const override;
                 Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
                 Point getLength() const override; //!< Enscribed box
                 void randompos( Point &m, Random &rand ) const override;
-                bool collision(const Point &a, double r) const override;
+                bool collision(const Point &a, double r=0) const override;
                 void from_json(const json &j);
                 void to_json(json &j) const;
 
@@ -159,8 +154,8 @@ namespace Faunus {
                 }
         };
 
-        void to_json(json &j, const Chameleon &g);
-        void from_json(const json &j, Chameleon &g);
+        void to_json(json&, const Chameleon&);
+        void from_json(const json&, Chameleon&);
 
         /** @brief Cuboidal box */
         class Box : public GeometryBase {

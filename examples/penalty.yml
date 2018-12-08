@@ -5,7 +5,7 @@
 temperature: 300
 random: { seed: hardware }
 mcloop: { macro: 10, micro: 1000000 }
-geometry: {length: [4,4,4]}
+geometry: {type: cuboid, length: [4,4,4]}
 atomlist:
     - A: {dp: 0.5} 
 moleculelist:

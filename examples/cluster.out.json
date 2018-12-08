@@ -77,6 +77,7 @@
         }
     ],
     "geometry": {
+        "type": "cuboid",
         "length": [
             40.0,
             40.0,

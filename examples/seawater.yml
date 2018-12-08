@@ -1,6 +1,6 @@
 temperature: 300
 random:   {seed: fixed}
-geometry: {length: 100}
+geometry: {type: cuboid, length: 100}
 mcloop:   {macro: 10, micro: 10000}
 energy:
     - nonbonded_pmwca:

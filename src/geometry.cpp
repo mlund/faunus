@@ -246,6 +246,19 @@ namespace Faunus {
             return (a.squaredNorm()>r2) ? true : false;
         }
 
+        const std::map<std::string,Chameleon::Variant> Chameleon::names = {{
+            {"sphere", SPHERE},
+                {"cylinder", CYLINDER},
+                {"slit", SLIT},
+                {"cuboid", CUBOID}}
+        };
+
+        Chameleon::Chameleon() {
+            using namespace std::placeholders;
+            distanceFunc = [this](const Point &i, const Point &j){return this->vdist(i,j);};
+            boundaryFunc = [this](Point &i){this->boundary(i);};
+        }
+
         void Chameleon::setLength(const Point &l) {
             len = l;
             len_half = l*0.5;

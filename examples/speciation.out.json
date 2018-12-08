@@ -54,6 +54,7 @@
         }
     ],
     "geometry": {
+        "type": "cuboid",
         "length": [
             100.0,
             100.0,

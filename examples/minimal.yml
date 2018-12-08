@@ -17,6 +17,6 @@ analysis:
     - savestate: {file: confout.pqr}
     - savestate: {file: state.json }
 mcloop: {macro: 10, micro: 1000}
-geometry: {length: 50} # sidelength(s): number OR array
+geometry: {type: cuboid, length: 50} # sidelength(s): number OR array
 temperature: 300
 random: { seed: hardware }

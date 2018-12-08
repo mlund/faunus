@@ -19,6 +19,10 @@
  */
 namespace Faunus
 {
+    template<typename T=double>
+        inline int anint( T x ) {
+            return int(x > 0.0 ? x + 0.5 : x - 0.5);
+        } //!< Round to int
 
     /**
      * @brief Iterate over pairs in container, call a function on the elements, and sum results

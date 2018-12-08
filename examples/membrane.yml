@@ -4,7 +4,7 @@ comment: |
 
 temperature: 293
 random: {seed: default}
-geometry: {length: [74.952, 74.952, 100]}
+geometry: {type: cuboid, length: [74.952, 74.952, 100]}
 mcloop: {macro: 10, micro: 100}
 
 atomlist:

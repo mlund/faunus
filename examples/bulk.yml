@@ -1,6 +1,6 @@
 temperature: 1100
 mcloop: {macro: 2, micro: 25}
-geometry: {length: 42.5} # 19.73
+geometry: {type: cuboid, length: 42.5} # 19.73
 energy:
     - isobaric: {P/mM: 11}
     - nonbonded_coulomblj:

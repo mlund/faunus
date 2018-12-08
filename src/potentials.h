@@ -31,7 +31,12 @@ namespace Faunus {
                 template<typename... T>
                     inline double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
                         return first(a, b, r) + second(a, b, r);
-                    }
+                    } //!< Combine pair energy
+
+                template<typename... T>
+                    inline Point force(const Particle<T...> &a, const Particle<T...> &b, double r2, const Point &p) {
+                        return first.force(a, b, r2, p) + second.force(a, b, r2, p);
+                    } //!< Combine force
 
                 void from_json(const json &j) override {
                     first = j;

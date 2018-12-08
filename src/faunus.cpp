@@ -15,7 +15,7 @@ typedef Geometry::CuboidNoPBC Tgeometry;
 #elif FAUNUS_SPHERE
 typedef Geometry::Sphere Tgeometry;
 #else
-typedef Geometry::Cuboid Tgeometry;
+typedef Geometry::Chameleon Tgeometry;
 #endif
 typedef Particle<Charge> Tparticle;
 

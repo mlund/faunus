@@ -18,28 +18,29 @@ The following keywords control temperature, simulation box size etc., and must b
 placed outer-most in the input file.
 
 ~~~ yaml
-temperature: 298.15    # system temperature (K)
+temperature: 298.15  # system temperature (K)
 geometry:
-    length: [40,40,40] # cuboid dimensions (array or number)
-mcloop:                # number of MC steps (macro x micro)
-    macro: 5
-    micro: 100
-random:                # seed for random number generator
-    seed: fixed        # "fixed" (default) or "hardware" (non-deterministic)
+  type: cuboid       # Cuboidal simulation container
+  length: [40,40,40] # cuboid dimensions (array or number)
+mcloop:              # number of MC steps (macro x micro)
+  macro: 5           # Number of outer MC steps
+  micro: 100         # ...inner MC steps; total steps: 5x100=5000
+random:              # seed for pseudo random number generator
+  seed: fixed        # "fixed" (default) or "hardware" (non-deterministic)
 ~~~
 
 ### Geometry
 
-Below is a list of possible geometries for the simulation container with indication
+Below is a list of possible geometries, specified by `type`, for the simulation container with indication
 if and in which directions periodic boundary conditions (PBC) are applied.
 Origo ($0,0,0$) is always placed in the geometric _center_ of the simulation container.
 
-`geometry`  | PBC        | Required keywords
------------ | ---------- | --------------------------------
-`cuboid`    | $x,y,z$    | `length` (array or single float)
-`slit`      | $x,y$      | `length` (array or single float)
-`cylinder`  | $z$        | `radius`, `length` (along $z$)
-`sphere`    | off        | `radius`
+`type`     | PBC      | Required keywords
+---------- | -------- | --------------------------------------
+`cuboid`   | $x,y,z$  | `length` (array or single float)
+`slit`     | $x,y$    | `length` (array or single float)
+`cylinder` | $z$      | `radius`, `length` (along $z$)
+`sphere`   | off      | `radius`
 
 ## Atom Properties
 
@@ -68,10 +69,10 @@ Example:
 
 ~~~ yaml
 atomlist:
-    - Na: {q:  1.0, sigma: 4, eps: 0.05, dp: 0.4}
-    - Ow: {q: -0.8476, eps: 0.65, sigma: 3.165, mw: 16}
-    - my-external-atomlist.json
-    - ...
+  - Na: {q:  1.0, sigma: 4, eps: 0.05, dp: 0.4}
+  - Ow: {q: -0.8476, eps: 0.65, sigma: 3.165, mw: 16}
+  - my-external-atomlist.json
+  - ...
 ~~~
 
 ## Molecule Properties
@@ -109,19 +110,20 @@ Example:
 
 ~~~ yaml
 moleculelist:
-    - salt: {atoms: [Na,Cl], atomic: true}
-    - water:
-        structure: water.xyz
-        bondlist:
-            - harmonic: {index: [0,1], k: 100, req: 1.5}
-            - ...
-    - ...
+  - salt: {atoms: [Na,Cl], atomic: true}
+  - water:
+      structure: water.xyz
+      bondlist:
+        - harmonic: {index: [0,1], k: 100, req: 1.5}
+        - ...
+  - ...
 ~~~
 
 ### Structure Loading Policies
 
-When giving structures using the `structure` keyword, the following policies applies:
+When giving structures using the `structure` keyword, the following policies apply:
 
+- A warning is issues if radii or changes differ in files and the `atomdata` section.
 - Radii in `aam` and `pqr` files are _ignored_ and `AtomData` definitions are used.
 - Charges in `aam` and `pqr` files are _used_ while `AtomData` definitions are ignored.
 - Box dimensions in files are ignored.
@@ -138,9 +140,9 @@ Example:
 
 ~~~ yaml
 insertmolecules:
-    - salt:  { N: 10 }
-    - water: { N: 256 }
-    - water: { N: 1, inactive: true }
+  - salt:  { N: 10 }
+  - water: { N: 256 }
+  - water: { N: 1, inactive: true }
 ~~~
 
 The following keywords are available:
@@ -166,8 +168,8 @@ defined in the `reactionlist` detailed below, as well as in `atomlist` and
 
 ~~~ yaml
 reactionlist:
-    - "AH = A + H": { pK: 4.8, canonic: true }
-    - "Mg(OH)2 = Mg + OH + OH": { lnK: -25.9 }
+  - "AH = A + H": { pK: 4.8, canonic: true }
+  - "Mg(OH)2 = Mg + OH + OH": { lnK: -25.9 }
 ~~~
 
 The initial string describes a transformation of reactants (left of `=`)

@@ -8,7 +8,7 @@ from pyfaunus import *
 
 # Dictionary defining input
 d = {}
-d['geometry'] = { 'length': 50 }
+d['geometry'] = { 'type': 'cuboid', 'length': 50 }
 d['atomlist'] = [
         { 'Na': dict( r=2.0, eps=0.05, q=1.0, tfe=1.0 ) },
         { 'Cl': dict( r=1.2, eps=0.05, q=-1.0, tfe=1.0 ) }

@@ -313,7 +313,7 @@ endif()
 
 add_test(
     NAME penalty
-    COMMAND sh -c "jupyter nbconvert --execute penalty.ipynb"
+    COMMAND sh -c "jupyter nbconvert --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 set_tests_properties(penalty PROPERTIES ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 

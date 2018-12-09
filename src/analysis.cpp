@@ -159,8 +159,15 @@ void Faunus::Analysis::VirtualVolume::_sample() {
         scaleVolume(Vold + dV);
         double Unew = pot.energy(c);
         scaleVolume(Vold);
-        duexp += exp(-(Unew - Uold));
-        assert(std::fabs((Uold-pot.energy(c))/Uold) < 1e-4);
+        double x = std::exp(-(Unew - Uold));
+
+        if (errno==ERANGE or std::isinf(x)) {
+            std::cerr << name+": skipping sample event due to excessive energy likely due to overlaps.";
+            cnt--; // cnt in incremented by sample() so we need to decrease
+        } else {
+            duexp += x;
+            assert(std::fabs((Uold-pot.energy(c))/Uold) < 1e-4);
+        }
     }
 }
 

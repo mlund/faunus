@@ -215,6 +215,13 @@ namespace Faunus {
                             ranges::view::transform(index, [this](int i){return this->begin()+i;}) );
                 } //!< Group subset matching given `index` (Complexity: linear with index size)
 
+            double mass() const {
+                double m=0;
+                for (auto &i : *this)
+                    m += atoms[i.id].mw;
+                return m;
+            } //!< Sum of all (active) masses
+
             auto positions() const {
                 return ranges::view::transform(*this, [](auto &i) -> Point& {return i.pos;});
             } //!< Iterable range with positions

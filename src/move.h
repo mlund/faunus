@@ -322,7 +322,8 @@ namespace Faunus {
                                     change.groups.push_back( d ); // add to list of moved groups
                                 }
                                 assert( spc.geo.sqdist( it->cm,
-                                            Geometry::massCenter(it->begin(),it->end(),spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-9 );
+                                            Geometry::massCenter(it->begin(), it->end(),
+                                                spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-6 );
                             }
                         }
                     }
@@ -853,36 +854,51 @@ start:
                             N += cluster.size(); // average cluster size
                             Change::data d;
                             d.all=true;
-                            dp = 0.5*ranunit(slump, dir) * dptrans;
-                            angle = dprot * (slump()-0.5);
-                            if (not rotate)
-                                angle=0;
+                            dp = 0.5*ranunit(slump, dir) * dptrans * slump();
 
-                            Point COM = Geometry::trigoCom(spc, cluster); // cluster center
+                            if (rotate)
+                                angle = dprot * (slump()-0.5);
+                            else
+                                angle = 0;
+
+                            auto boundary = spc.geo.getBoundaryFunc();
+
+                            // lambda function to calculate cluster COM
+                            auto clusterCOM = [&]() {
+                                double m, sum_m=0;
+                                Point cm(0,0,0);
+                                Point O = spc.groups[*cluster.begin()].cm;
+                                for (auto i : cluster) {
+                                    auto &g = spc.groups[i];
+                                    Point t = g.cm-O;
+                                    boundary(t);
+                                    m = g.mass();
+                                    cm += m*t;
+                                    sum_m += m;
+                                }
+                                cm = cm/sum_m + O;
+                                boundary(cm);
+                                return cm;
+                            };
+
+                            Point COM = clusterCOM(); // org. cluster center
                             Eigen::Quaterniond Q;
                             Q = Eigen::AngleAxisd(angle, ranunit(slump)); // quaternion
 
                             for (auto i : cluster) { // loop over molecules in cluster
                                 auto &g = spc.groups[i];
-
                                 if (rotate) {
-                                    Geometry::rotate(g.begin(), g.end(), Q, spc.geo.getBoundaryFunc(), -COM);
+                                    Geometry::rotate(g.begin(), g.end(), Q, boundary, -COM);
                                     g.cm = g.cm-COM;
-                                    spc.geo.boundary(g.cm);
+                                    boundary(g.cm);
                                     g.cm = Q*g.cm+COM;
-                                    spc.geo.boundary(g.cm);
+                                    boundary(g.cm);
                                 }
-
-                                g.translate( dp, spc.geo.getBoundaryFunc() );
+                                g.translate(dp, boundary);
                                 d.index=i;
                                 change.groups.push_back(d);
                             }
-#ifndef NDEBUG
-                            Point newCOM = Geometry::trigoCom(spc, cluster);
-                            double _zero = std::sqrt( spc.geo.sqdist(COM,newCOM) ) - dp.norm();
-                            if (fabs(_zero)>1)
-                                std::cerr << _zero << " ";
-#endif
+
                             // Reject if cluster composition changes during move
                             // Note: this only works for the binary 0/1 probability function
                             // currently implemented in `findCluster()`.
@@ -892,10 +908,19 @@ start:
                             if (aftercluster == cluster)
                                 _bias = 0;
                             else {
-                                _bias = pc::infty;
-                                bias_rejected++;
+                                _bias = pc::infty; // bias is infinite --> reject
+                                bias_rejected++; // count how many time we reject due to bias
                             }
-                        }
+#ifndef NDEBUG
+                            // check if cluster mass center movement matches displacement
+                            if (_bias==0) {
+                                Point newCOM = clusterCOM(); // org. cluster center
+                                Point d = spc.geo.vdist(COM, newCOM); // distance between new and old COM
+                                double _zero = (d+dp).norm(); // |d+dp| should ideally be zero...
+                                assert(std::fabs(_zero) < 1e-6 && "cluster likely too large");
+                            }
+#endif
+                         }
                     }
 
                     double bias(Change &change, double uold, double unew) override {

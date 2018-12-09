@@ -8,7 +8,7 @@ atomlist:
     - HW: {q: 0.4238,  sigma: 2, eps: 0, mw: 1.007}
 
 moleculelist:
-    - water: {structure: water.xyz}
+    - water: {structure: water.xyz, rigid: true}
 
 insertmolecules:
     - water: {N: 10}
@@ -20,11 +20,12 @@ energy:
         cutoff_g2g: 10
 
 moves:
-    - moltransrot: {molecule: water, dp: 2, dprot: 1, repeat: N}
-    - cluster: {molecules: [water], dp: 2, dprot: 1, threshold: 3.166}
+    - moltransrot: {molecule: water, dp: 5, dprot: 1, repeat: N}
+    - cluster: {molecules: [water], dp: 10, dprot: 2, threshold: 3.166}
 
 analysis:
+    - atomrdf: {file: rdf.dat, nstep: 10, dr: 0.2, name1: OW, name2: OW}
     - systemenergy: {file: energy.dat, nstep: 50}
-    - xtcfile: {file: traj.xtc, nstep: 2}
+    - xtcfile: {file: traj.xtc, nstep: 50}
     - savestate: {file: confout.pqr}
     - savestate: {file: state.json}

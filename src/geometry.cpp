@@ -114,7 +114,7 @@ namespace Faunus {
                 double rold = radius;
                 radius = std::cbrt(3*V/(4*pc::pi));
                 setLength( pbc_disable*2*Point(radius,radius,radius) ); // disable min. image in xyz
-                assert( fabs(getVolume()-V)<1e-6 );
+                assert( std::fabs(getVolume()-V)<1e-6 && "error setting sphere volume");
                 return Point().setConstant(radius/rold);
             }
 

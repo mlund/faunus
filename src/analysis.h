@@ -1,6 +1,7 @@
 #pragma once
 
 #include <numeric>
+#include <cerrno>
 #include "move.h"
 #include "space.h"
 #include "io.h"

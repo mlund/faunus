@@ -118,6 +118,13 @@ moleculelist:
     - ...
 ~~~
 
+### Structure Loading Policies
+
+When giving structures using the `structure` keyword, the following policies applies:
+
+- Radii in `aam` and `pqr` files are _ignored_ and `AtomData` definitions are used.
+- Charges in `aam` and `pqr` files are _used_ while `AtomData` definitions are ignored.
+- Box dimensions in files are ignored.
 
 ### Initial Configuration
 
@@ -125,7 +132,7 @@ Upon starting a simulation, an initial configuration is required and must be
 specified in the section `insertmolecules` as a list of valid molecule names.
 Molecules are inserted in the given order and may be `inactive`
 which is used by some analysis and ensembles, grand canonical for example.
-If a group is marked `atomic`, its `atoms` will be inserted `N` times.
+If a group is marked `atomic`, its `atoms` is inserted `N` times.
 
 Example:
 
@@ -148,7 +155,7 @@ Keyword             | Description
 A filename with positions for the `N` molecules can be given with `positions`.
 The file must contain exactly N-times molecular
 positions that must all fit within the simulation box. Only _positions_ from
-the file are copied while all other information is ignored.
+the file are copied; all other information is ignored.
 
 ## Equilibrium Reactions
 
@@ -171,9 +178,11 @@ Note that:
 - all species, `+`, and `=` must be surrounded by white-space
 - atom and molecule names cannot overlap
 - you may repeat species to match desired stoichiometry
+- equilibrium reaction functionality currently in *alpha state* and may be subject to sudden change!
 
 Available keywords:
 
 `reactionlist`  | Description
 --------------- | ---------------------------------------------------------------
 `lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log_{10}(K)$
+

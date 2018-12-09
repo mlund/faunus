@@ -86,11 +86,20 @@ namespace Faunus {
                     auto it = findName( atoms, name );
                     if (it==atoms.end())
                         throw std::runtime_error("AAM load error: unknown atom name '" + name + "'.");
+
                     a = *it;
                     o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> mw >> radius;
-                    if (fabs(it->sigma - 2*radius)>1e-20)
-                        std::cerr << "AAM file radius of " << name
-                            << " ignored. Using value from atom definition." << endl;
+
+                    // does charge match AtomData?
+                    if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl)
+                        std::cerr << "Charge mismatch on loaded atom " << num << name
+                            << ". Ignoring `atomdata` definitions." << endl;
+
+                    // does radius match AtomData?
+                    if (std::fabs(it->sigma - 2*radius) > pc::epsilon_dbl)
+                        std::cerr << "Radius mismatch on loaded atom " << num << name
+                            << ". Using value from `atomdata`." << endl;
+
                     return a;
                 }
 
@@ -168,14 +177,24 @@ namespace Faunus {
                                     o >> iatom >> aname;
                                     auto it = findName( atoms, aname );
                                     if (it==atoms.end())
-                                        throw std::runtime_error("PQR load error: unknown atom name '" + aname + "'.");
+                                        throw std::runtime_error("PQR load error: unknown atom name '"
+                                                + aname + "'.");
                                     a = *it;
                                     o >> rname >> ires
                                         >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
-                                    if (fabs(it->sigma - 2*radius)>1e-20)
-                                        std::cerr << "PQR file radius of " << aname
-                                            << " ignored. Using value from atom definition." << endl;
-                                     p.push_back(a);
+
+                                    // does charge match AtomData?
+                                    if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl)
+                                        std::cerr << "Charge mismatch on loaded atom " << ires << aname
+                                            << ". Ignoring `atomdata` definitions." << endl;
+
+                                    // does radius match AtomData?
+                                    if (std::fabs(it->sigma - 2*radius) > pc::epsilon_dbl)
+                                        std::cerr << "Radius mismatch on loaded atom " << ires << aname
+                                            << ". Using value from `atomdata`." << endl;
+
+                                    p.push_back(a);
+
                                 } else if (key=="CRYST1")
                                     o >> len.x() >> len.y() >> len.z();
                         }

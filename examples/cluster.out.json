@@ -202,7 +202,7 @@
     "moves": [
         {
             "moltransrot": {
-                "acceptance": 0.302,
+                "acceptance": 0.2895,
                 "dir": [
                     1.0,
                     1.0,
@@ -221,7 +221,7 @@
         {
             "cluster": {
                 "acceptance": 0.695,
-                "bias rejection rate": 0.112,
+                "bias rejection rate": 0.108,
                 "cite": "doi:10/cj9gnn",
                 "dir": [
                     1.0,

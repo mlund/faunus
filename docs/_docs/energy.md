@@ -583,19 +583,22 @@ nodes, i.e. by specifying a different random number seed; start configuration; o
 File output and input are prefixed with `mpi{rank}.`
 
 **Information:**
-Flat histogram methods are commonly attributed to [Wang and Landau (2001)](http://dx.doi.org/10/bbdg7j)
+Flat histogram methods are often attributed to [Wang and Landau (2001)](http://dx.doi.org/10/bbdg7j)
 but the idea appears in earlier works, for example by
 [Hunter and Reinhardt (1995)](http://dx.doi.org/10/fns6dq) and
 [Engkvist and Karlström (1996)](http://dx.doi.org/10/djjk8z).
 
-## Infinite Energies and Not a Number (NaN) Energies
+
+## Infinite and NaN Energies
 
 In case one or more of the potential energy terms of the system Hamiltonian returns infinite energies or NaN energies,
-a set of conditions exists to evaluate the acceptance of the proposed move. If any energy returns NaN (from i.e. division by zero),
-the configuration will always be rejected, or if moving from NaN to finite energy, always accepted.
+a set of conditions exists to evaluate the acceptance of the proposed move.
+If any energy returns Non-a-number, NaN (from i.e. division by zero),
+the configuration is rejected, or if moving from NaN to finite energy, always accepted.
 If the difference in energy is NaN (from i.e. infinity minus infinity), the configuration is always accepted.
 
 **Note:**
-These conditions should be considered if equilibrating a system far from equilibrium with given system Hamiltonian
+These conditions should be considered if equilibrating a system far from equilibrium, particularly if
+using discontinuous potentials.
 {: .notice--notice}
 

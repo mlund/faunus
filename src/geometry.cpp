@@ -36,8 +36,12 @@ namespace Faunus {
 
         GeometryBase::~GeometryBase() {}
 
-         void from_json(const json &j, Chameleon &g) {
-            g.from_json(j);
+        void from_json(const json &j, Chameleon &g) {
+            try { 
+                g.from_json(j);
+            } catch(std::exception& e) {
+                throw std::runtime_error("geometry construction error: "s + e.what());
+            }
         }
 
         void to_json(json &j, const Chameleon &g) {

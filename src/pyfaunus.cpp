@@ -12,10 +12,10 @@
 namespace py = pybind11;
 using namespace Faunus;
 
-typedef Geometry::Cuboid Tgeometry;
+typedef Geometry::Chameleon Tgeometry;
 typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
 
-typedef Space<Geometry::Cuboid, Tparticle> Tspace;
+typedef Space<Tgeometry, Tparticle> Tspace;
 typedef typename Tspace::Tpvec Tpvec;
 typedef typename Tspace::Tgroup Tgroup;
 typedef Energy::Hamiltonian<Tspace> Thamiltonian;
@@ -97,13 +97,6 @@ PYBIND11_MODULE(pyfaunus, m)
                     Returns:
                        array: position with wrapped coordinate
                 )");
-
-    py::class_<Geometry::Box, Geometry::GeometryBase>(m, "Box")
-        .def("getLength", &Geometry::Box::getLength, "Get cuboid sidelengths")
-        .def("setLength", &Geometry::Box::setLength, "Set cuboid sidelengths", "sides"_a);
-
-    py::class_<Geometry::Cuboid, Geometry::Box>(m, "Cuboid")
-        .def(py::init<>());
 
     py::class_<Geometry::Chameleon, Geometry::GeometryBase>(m, "Chameleon")
         .def(py::init<>())

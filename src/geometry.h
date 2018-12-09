@@ -66,11 +66,6 @@ namespace Faunus {
 
     /** @brief Simulation geometries and related operations */
     namespace Geometry {
-        template<typename T=double>
-            inline int anint( T x ) {
-                return int(x > 0.0 ? x + 0.5 : x - 0.5);
-            } //!< Round to int
-
         typedef std::function<void(Point&)> BoundaryFunction;
         typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
 
@@ -120,6 +115,11 @@ namespace Faunus {
                 static const std::map<std::string,Variant> names;
                 double radius=0, c1, c2;
                 Point len, len_half, len_inv;
+
+                template<typename T=double>
+                    inline int anint( T x ) const {
+                        return int(x > 0.0 ? x + 0.5 : x - 0.5);
+                    } //!< Round to int
 
             public:
                 void setLength(const Point &l);

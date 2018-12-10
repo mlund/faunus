@@ -6,7 +6,7 @@
 
 ## Using Conda
 
-For macOS and Linux x86_64, precompiled binary packages are available
+For macOS and Linux x86-64, precompiled binary packages are available
 via [(mini)conda](https://conda.io/docs/user-guide/install/index.html):
 
 ~~~ bash
@@ -14,7 +14,15 @@ conda config --add channels conda-forge
 conda install -c teokem faunus
 ~~~
 
-In addition to the `faunus` program, this installs a set of examples in `share/faunus`.
+In addition to the `faunus` executable, this installs a set of examples in `share/faunus`,
+as well as python bindings.
+To _update_ an existing installation, use
+
+~~~ bash
+faunus --version               # show version string
+conda search -c teokem faunus  # show (new) revisions
+conda upgrade -c teokem faunus
+~~~
 
 ## Building from source code
 
@@ -105,7 +113,9 @@ rm -fR CMakeCache.txt CMakeFiles
 
 ## Creating a conda package (advanced usage)
 
-To create a precompiled package for Anaconda, do the following steps:
+The basic steps for creating a conda package is outlined below, albeit
+details may depend on your build environment. See also the `.travis.yml`
+configuration file in the main repository.
 
 ~~~ bash
 conda config --add channels conda-forge
@@ -116,7 +126,7 @@ anaconda login
 anaconda upload -u USER ... # see output from build step
 ~~~
 
-Alternatively, instead of uploading to anaconda.org you
+Instead of uploading to anaconda.org you
 can install a local copy directly after the build step above:
 
 ~~~ bash
@@ -125,8 +135,8 @@ conda install -c USER faunus --use-local
 
 ### Requirements
 
-Building a conda package requires a TeX Live installation to create
-the PDF manual. Make sure that the Garamond fonts are available:
+Building a conda package may require a TeX Live installation to create
+the PDF manual. Ensure that Garamond fonts are available:
 
 ~~~ bash
 wget https://tug.org/fonts/getnonfreefonts/install-getnonfreefonts

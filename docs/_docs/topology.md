@@ -31,8 +31,8 @@ random:              # seed for pseudo random number generator
 
 ### Geometry
 
-Below is a list of possible geometries, specified by `type`, for the simulation container with indication
-if and in which directions periodic boundary conditions (PBC) are applied.
+Below is a list of possible geometries, specified by `type`, for the simulation container,
+indicating if and in which directions periodic boundary conditions (PBC) are applied.
 Origo ($0,0,0$) is always placed in the geometric _center_ of the simulation container.
 
 `type`     | PBC      | Required keywords
@@ -123,7 +123,7 @@ moleculelist:
 
 When giving structures using the `structure` keyword, the following policies apply:
 
-- A warning is issues if radii or changes differ in files and the `atomdata` section.
+- A warning is issued if radii or charges differ in files and the `atomdata` section.
 - Radii in `aam` and `pqr` files are _ignored_ and `AtomData` definitions are used.
 - Charges in `aam` and `pqr` files are _used_ while `AtomData` definitions are ignored.
 - Box dimensions in files are ignored.

@@ -1,19 +1,20 @@
 package:
   name: faunus
-  version: {{ GIT_DESCRIBE_TAG + '_' + GIT_DESCRIBE_NUMBER }}
+  version: {{ GIT_DESCRIBE_TAG }}
 
 source:
   git_url: https://github.com/mlund/faunus.git
 
 build:
   number: {{ GIT_DESCRIBE_NUMBER }}
+  script_env:
+    - PATH
 
 requirements:
   build:
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
   host:
-      #- librsvg
     - numpy
     - matplotlib
     - python
@@ -23,7 +24,6 @@ requirements:
     - jupyter
     - openmpi 1.6.3      # [osx]
     - openmpi 3.1.*      # [linux64]
-      #- pandoc >=1.19 # [linux64]
   run:
     - openmpi 1.6.3 # [osx]
     - openmpi 3.1.* # [linux64]
@@ -31,10 +31,6 @@ requirements:
     - pygments
     - numpy
     - python
-
-build:
-  script_env:
-    - PATH
 
 about:
   home: http://mlund.github.io/faunus

@@ -926,7 +926,7 @@ namespace Faunus {
                         if (change) {
 
                             if (change.all || change.dV) {
-#pragma omp parallel for reduction (+:u) schedule (dynamic)
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (this->omp_enable)
                                 for ( auto i = base::spc.groups.begin(); i < base::spc.groups.end(); ++i ) {
                                     for ( auto j=i; ++j != base::spc.groups.end(); )
                                         u += g2g( *i, *j );

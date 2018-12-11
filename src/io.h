@@ -486,7 +486,7 @@ namespace Faunus {
                 }
     };
 
-    /** 
+    /**
      * @brief GROMACS xtc compressed trajectory file format
      *
      * Saves simulation frames to a Gromacs xtc trajectory file including
@@ -529,7 +529,7 @@ namespace Faunus {
                     if (xd!=NULL)
                     {
                         if (natoms_xtc==(int)c.p.size())
-                        { 
+                        {
                             int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
                             if (rc==0)
                             {
@@ -548,7 +548,7 @@ namespace Faunus {
                                         geo->boundary( c.p[i].pos );
                                     if ( geo->collision(c.p[i].pos, 0) )
                                         throw std::runtime_error("particle-container collision");
-                                } 
+                                }
                                 return true;
                             }
                         } else
@@ -603,6 +603,55 @@ namespace Faunus {
             void setbox(const Point &p);
     };
 
+    /**
+     * @brief Convert FASTA sequence to atom id sequence
+     * @param fasta FASTA sequence, capital letters.
+     * @return vector of verified and existing atom id's
+     */
+    inline auto fastaToAtomIds(const std::string &fasta) {
+        std::map<char,std::string> map = {
+            {'A',"ALA"}, {'R',"ARG"}, {'N',"ASN"}, {'D',"ASP"}, {'C',"CYS"},
+            {'E',"GLU"}, {'Q',"GLN"}, {'G',"GLY"}, {'H',"HIS"}, {'I',"ILE"},
+            {'L',"LEU"}, {'K',"LYS"}, {'M',"MET"}, {'F',"PHE"}, {'P',"PRO"},
+            {'S',"SER"}, {'T',"THR"}, {'W',"TRP"}, {'Y',"TYR"}, {'V',"VAL"},
+            // faunus specific codes
+            {'n',"NTR"}, {'c',"CTR"}, {'a',"ANK"}
+        };
+
+        std::vector<std::string> names;
+        names.reserve(fasta.size());
+
+        for (auto c : fasta) {   // loop over letters
+            auto it = map.find(c); // is it in map?
+            if ( it==map.end() )
+                throw std::runtime_error("Invalid FASTA letter '" + std::string(1,c) + "'");
+            else
+                names.push_back( it->second );
+        }
+        return Faunus::names2ids(atoms, names);
+    }
+
+    /**
+     * @brief Create particle vector from FASTA sequence with equally spaced atoms
+     *
+     * Particle positions is generated as a random walk
+     */
+    template<typename Tpvec>
+        Tpvec fastaToParticles(const std::string &fasta, double spacing=7, const Point &origin={0,0,0}) {
+            Tpvec vec; // particle vector
+            typename Tpvec::value_type p; // single particle
+            p.pos = origin; // fitst atom place here
+            auto ids = fastaToAtomIds(fasta);
+            for (auto i : ids) {
+                p.id = i;
+                p.charge = atoms[i].charge;
+                if (not vec.empty())
+                    p.pos = vec.back().pos + ranunit(random) * spacing;
+                vec.push_back(p);
+            }
+            return vec;
+        }
+
     template<class Tpvec, class Enable = void>
         struct loadStructure {
             bool operator()(const std::string &file, Tpvec &dst, bool append) {
@@ -633,6 +682,5 @@ namespace Faunus {
                 return false;
             }
         }; //!< Load AAM/PQR/XYZ file into given particle vector
-
 
 }//namespace

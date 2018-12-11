@@ -49,6 +49,7 @@ namespace Faunus {
             class GroupProperties : public Analysisbase {
                 private:
                     Tspace& spc;
+                    int molid;        // molecule id
                     void _from_json(const json &j) {
                     }
                     void _sample() {

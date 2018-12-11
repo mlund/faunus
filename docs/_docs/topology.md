@@ -101,7 +101,7 @@ Properties of molecules and their default values:
 `insoffset=[0,0,0]` | Shifts mass center after insertion
 `keeppos=false`     | Keep original positions of `structure`
 `rigid=false`       | Set to true for rigid molecules. Affects energy evaluation.
-`structure`         | Structure file (`.pqr, .aam, .xyz`) - required if `atomic=false`
+`structure`         | Structure file or direct information - required if `atomic=false`
 `traj`              | Read conformations from PQR trajectory (`structure` will be ignored)
 `trajweight`        | One column file w. relative weights for each conformation. Must match frames in `traj` file.
 `trajcenter`        | CM of conformations to origo assuming whole molecules (default: `false`)
@@ -123,17 +123,25 @@ moleculelist:
 
 When giving structures using the `structure` keyword, the following policies apply:
 
-- A warning is issued if radii or charges differ in files and the `atomdata` section.
-- Radii in `aam` and `pqr` files are _ignored_ and `AtomData` definitions are used.
-- Charges in `aam` and `pqr` files are _used_ while `AtomData` definitions are ignored.
+- `structure` can be a file name: `file.@` where `@=xyz|pqr|aam`
+- `structure` can be an _array_ of atom names and their positions:
+  `- Mg: [2.0,0.1,2.0]`
+- `structure` can be a [FASTA sequence](https://en.wikipedia.org/wiki/FASTA_format):
+  `{fasta: [AAAAAAAK], k: 2.0; req: 7.0}` which generates
+  a linear chain of harmonically connected atoms.
+  FASTA letters are translated into three letter residue names which _must_ be defined
+  in `atomlist`.
+  Special letters: `n=NTR`, `c=CTR`, `a=ANK`.
+- Radii in files are _ignored_; `atomlist` definitions are used.
+- Charges in files are _used_; `atomlist` definitions are ignored.
+- A warning is issued if radii/charges differ in files and `atomlist`.
 - Box dimensions in files are ignored.
 
 ### Initial Configuration
 
 Upon starting a simulation, an initial configuration is required and must be
 specified in the section `insertmolecules` as a list of valid molecule names.
-Molecules are inserted in the given order and may be `inactive`
-which is used by some analysis and ensembles, grand canonical for example.
+Molecules are inserted in the given order and may be `inactive`.
 If a group is marked `atomic`, its `atoms` is inserted `N` times.
 
 Example:

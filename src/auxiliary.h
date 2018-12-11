@@ -1820,10 +1820,13 @@ namespace Faunus
                 Tunit delta;
                 std::chrono::steady_clock::time_point t0, tx;
             public:
-                TimeRelativeOfTotal() : delta(0)
-            {
-                t0 = std::chrono::steady_clock::now();
-            }
+                TimeRelativeOfTotal() : delta(0) {
+                    t0 = std::chrono::steady_clock::now();
+                } 
+
+                operator bool() const {
+                    return delta.count()!=0 ? true : false;
+                }
 
                 void start() { tx = std::chrono::steady_clock::now(); }
 

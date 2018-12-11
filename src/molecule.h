@@ -4,6 +4,7 @@
 #include "core.h"
 #include "io.h"
 #include "geometry.h"
+#include "potentials.h"
 
 namespace Faunus {
 
@@ -283,39 +284,62 @@ namespace Faunus {
                         if (!v.empty())
                             a.conformations.push_back(v);
                     }  // done handling atomic groups
-                    else {
+                    else { // molecular groups
                         if (val.count("structure")>0) {
                             json _struct = val["structure"s];
+
+                            // `structure` is a file name
                             if (_struct.is_string()) // structure from file
                                 a.loadConformation( _struct.get<std::string>() );
-                            else
-                                if (_struct.is_array()) { // structure is defined inside json
-                                    Tpvec v;
-                                    a.atoms.clear();
-                                    v.reserve( _struct.size() );
-                                    for (auto &m : _struct)
-                                        if (m.is_object())
-                                            if (m.size()==1)
-                                                for (auto& i : m.items()) {
-                                                    auto it = findName( atoms, i.key() );
-                                                    if (it == atoms.end())
-                                                        throw std::runtime_error("unknown atoms in 'structure'");
-                                                    v.push_back( *it );     // set properties from atomlist
-                                                    v.back().pos = i.value(); // set position
-                                                    a.atoms.push_back(it->id());
-                                                }
-                                    if (v.empty())
-                                        throw std::runtime_error("invalid 'structure' format");
-                                    a.conformations.push_back(v);
-                                }
-                        }
+
+                            else if (_struct.is_object()) {
+                                // `structure` is a fasta sequence
+                                if (_struct.count("fasta")) {
+                                    Potential::HarmonicBond bond; // harmonic bond
+                                    bond.from_json(_struct);      // read 'k' and 'req' from json
+                                    std::string fasta = _struct.at("fasta").get<std::string>();
+                                    Tpvec v = fastaToParticles<Tpvec>(fasta, bond.req);
+                                    if (not v.empty()) {
+                                        a.conformations.push_back(v);
+                                        for (auto &p : v)
+                                            a.atoms.push_back(p.id);
+                                        // connect all atoms with harmonic bonds
+                                        for (int i=0; i<(int)v.size()-1; i++) {
+                                            bond.index = {i,i+1};
+                                            a.bonds.push_back(bond.clone());
+                                        }
+                                    }
+                                } // end of fasta handling
+                            }
+
+                            // `structure` is a list of atom positions
+                            else if (_struct.is_array()) { // structure is defined inside json
+                                Tpvec v;
+                                a.atoms.clear();
+                                v.reserve( _struct.size() );
+                                for (auto &m : _struct)
+                                    if (m.is_object())
+                                        if (m.size()==1)
+                                            for (auto& i : m.items()) {
+                                                auto it = findName( atoms, i.key() );
+                                                if (it == atoms.end())
+                                                    throw std::runtime_error("unknown atoms in 'structure'");
+                                                v.push_back( *it );     // set properties from atomlist
+                                                v.back().pos = i.value(); // set position
+                                                a.atoms.push_back(it->id());
+                                            }
+                                if (v.empty())
+                                    throw std::runtime_error("invalid 'structure' format");
+                                a.conformations.push_back(v);
+                            } // end of position parser
+                        } // end of `structure`
 
                         // read tracjectory w. conformations from disk
                         std::string traj = val.value("traj", std::string() );
                         if ( not traj.empty() ) {
                             a.conformations.clear();
                             FormatPQR::load(traj, a.conformations.vec);
-                            if ( not a.conformations.empty()) {
+                            if (not a.conformations.empty()) {
                                 // create atom list
                                 a.atoms.clear();
                                 a.atoms.reserve(a.conformations.vec.front().size());
@@ -336,7 +360,7 @@ namespace Faunus {
 
                                 // look for weight file
                                 std::string weightfile = val.value("trajweight", std::string());
-                                if ( !weightfile.empty()) {
+                                if (not weightfile.empty()) {
                                     std::ifstream f( weightfile.c_str() );
                                     if (f) {
                                         w.clear();

@@ -8,8 +8,10 @@ void Faunus::Energy::Energybase::sync(Energybase *, Change &) {}
 void Faunus::Energy::Energybase::init() {}
 
 void Faunus::Energy::to_json(json &j, const Energybase &base) {
-    assert(!base.name.empty());
-    if (!base.cite.empty())
+    assert(not base.name.empty());
+    if (base.timer) 
+        j["relative time"] = base.timer.result();
+    if (not base.cite.empty())
         j[base.name]["reference"] = base.cite;
     base.to_json( j[base.name] );
 }

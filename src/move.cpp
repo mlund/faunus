@@ -23,6 +23,7 @@ namespace Faunus {
 
         void Movebase::to_json(json &j) const {
             _to_json(j);
+            j["relative time (move only)"] = timer_move.result();
             j["relative time"] = timer.result();
             j["acceptance"] = double(accepted)/cnt;
             j["repeat"] = repeat;
@@ -34,11 +35,13 @@ namespace Faunus {
 
         void Movebase::move(Change &change) {
             timer.start();
+            timer_move.start();
             cnt++;
             change.clear();
             _move(change);
             if (change.empty())
                 timer.stop();
+            timer_move.stop();
         }
 
         void Movebase::accept(Change &c) {

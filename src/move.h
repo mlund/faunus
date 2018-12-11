@@ -17,7 +17,8 @@ namespace Faunus {
                 virtual void _reject(Change&); //!< Call after move is rejected
                 virtual void _to_json(json &j) const=0; //!< Extra info for report if needed
                 virtual void _from_json(const json &j)=0; //!< Extra info for report if needed
-                TimeRelativeOfTotal<std::chrono::microseconds> timer;
+                TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for whole move
+                TimeRelativeOfTotal<std::chrono::microseconds> timer_move; //!< Timer for _move() only
             protected:
                 unsigned long cnt=0;
                 unsigned long accepted=0;
@@ -989,6 +990,7 @@ start:
                                 if (g->size()>2) { // must at least have three atoms
                                     auto b = slump.sample(bonds.begin(), bonds.end()); // random harmonic bond
                                     if (b != bonds.end()) {
+                                        // index in `bonds are relative to the group
                                         int i1 = (*b)->index.at(0);
                                         int i2 = (*b)->index.at(1);
                                         int offset = std::distance( spc.p.begin(), g->begin() );
@@ -1003,7 +1005,7 @@ start:
                                         i1+=offset;
                                         i2+=offset;
 
-                                        if (!index.empty()) {
+                                        if (not index.empty()) {
                                             Point oldcm = g->cm;
                                             g->unwrap(spc.geo.getDistanceFunc()); // remove pbc
                                             Point u = (spc.p[i1].pos - spc.p[i2].pos).normalized();
@@ -1021,8 +1023,11 @@ start:
                                             d2 = spc.geo.sqdist(g->cm, oldcm); // CM movement
 
                                             Change::data d;
+                                            for (int i : index)
+                                                d.atoms.push_back(i-offset); // `atoms` index are relative to group
                                             d.index = Faunus::distance( spc.groups.begin(), g ); // integer *index* of moved group
-                                            d.all = d.internal = true;    // trigger internal interactions
+                                            d.all = false;
+                                            d.internal = true;    // trigger internal interactions
                                             change.groups.push_back( d ); // add to list of moved groups
                                         }
                                     }
@@ -1344,11 +1349,11 @@ start:
 
                             if (change) {
                                 double unew, uold, du;
-#pragma omp parallel sections
+//#pragma omp parallel sections
                                 {
-#pragma omp section
+//#pragma omp section
                                     { unew = state2.pot.energy(change); }
-#pragma omp section
+//#pragma omp section
                                     { uold = state1.pot.energy(change); }
                                 }
 

@@ -11,14 +11,14 @@ matrix:
     env: [COMPILER=gcc, CONDA_PY=37]
   - os: osx
     env: [COMPILER=clang, CONDA_PY=37]
-    osx_image: xcode9.2
+    #osx_image: xcode9.2
 
   # Python 3.6
   - os: linux
     env: [COMPILER=gcc, CONDA_PY=36]
   - os: osx
     env: [COMPILER=clang, CONDA_PY=36]
-    osx_image: xcode9.2
+    #osx_image: xcode9.2
 
 install:
   - |

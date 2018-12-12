@@ -2,13 +2,13 @@ package:
   name: faunus
   version: {{ GIT_DESCRIBE_TAG }}
 
+about:
+  home: http://mlund.github.io/faunus
+  summary: A Framework for Molecular Monte Carlo Simulations
+  license: MIT
+
 source:
   git_url: https://github.com/mlund/faunus.git
-
-build:
-  number: {{ GIT_DESCRIBE_NUMBER }}
-  script_env:
-    - PATH
 
 requirements:
   build:
@@ -36,7 +36,18 @@ requirements:
     - numpy
     - python
 
-about:
-  home: http://mlund.github.io/faunus
-  summary: A Framework for Molecular Monte Carlo Simulations
-  license: MIT
+build:
+  number: {{ GIT_DESCRIBE_NUMBER }}
+  script_env:
+    - PATH
+  script:
+      - |
+      cmake -DENABLE_MPI=on -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX
+      alias make="make -s"
+      make faunus
+      cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX # needed to build pyfaunus
+      make pyfaunus
+      make install
+      make tests
+      ctest --output-on-failure
+

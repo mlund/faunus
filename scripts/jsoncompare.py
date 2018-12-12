@@ -17,8 +17,8 @@ parser = argparse.ArgumentParser(description='Numerically compare two JSON files
 parser.add_argument('--tol', default=0.02, type=float, help='relative error tolerance (default: 0.02)')
 parser.add_argument('--small', default=1e-10, type=float, help='always equal if difference is smaller than this (default: 1e-10)')
 parser.add_argument('--quiet', '-q', dest='quiet', action='store_true', help='less output')
-parser.add_argument('file1', help='first file')
-parser.add_argument('file2', help='second file')
+parser.add_argument('file1', help='first file (reference)')
+parser.add_argument('file2', help='second file (new)')
 args = parser.parse_args()
 
 returncode = 0
@@ -61,7 +61,7 @@ d = [json.load(open(f)) for f in [args.file1, args.file2]]
 
 if (len(d)==2):
     if args.quiet==False:
-        print('{:20} {:>10} {:>10} {}'.format("keyword", "file1", "file2", "pass"))
+        print('{:20} {:>10} {:>10} {}'.format("keyword", "ref", "new", "pass"))
     compare(*[i for i in d])
     sys.exit(returncode)
 

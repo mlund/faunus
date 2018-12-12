@@ -568,7 +568,7 @@ of the following types (via `coord`):
 `atom`        | Single atom properties
 ------------- | ----------------------------------
 `index`       | Atom index
-`property`    | `x`, `y`, `z`, `charge`
+`property`    | `x`, `y`, `z`, `q`
 `range`       | Array w. [min:max] value
 `resolution`  | Resolution along coordinate
 

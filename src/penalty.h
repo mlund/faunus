@@ -74,7 +74,7 @@ namespace Faunus {
                         if (property=="x") f = [&i=spc.p.at(index).pos]() { return i.x(); };
                         if (property=="y") f = [&i=spc.p.at(index).pos]() { return i.y(); };
                         if (property=="z") f = [&i=spc.p.at(index).pos]() { return i.z(); };
-                        if (property=="charge") f = [&i=spc.p.at(index).charge]() { return i; };
+                        if (property=="q") f = [&i=spc.p.at(index)]()     { return i.charge; };
                         if (property=="R") f = [&i=spc.p.at(index).pos]() { return i.norm(); };
                         if (f==nullptr)
                             throw std::runtime_error(name + ": unknown property '" + property + "'");

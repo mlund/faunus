@@ -203,7 +203,7 @@
     "moves": [
         {
             "moltransrot": {
-                "acceptance": 0.248,
+                "acceptance": 0.227,
                 "dir": [
                     1.0,
                     1.0,

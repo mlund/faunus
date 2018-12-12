@@ -539,6 +539,64 @@ namespace Faunus {
                     }
             }; // end of VolumeMove
 
+        template<typename Tspace>
+            class ChargeMove : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    Tspace& spc; // Space to operate on
+                    Average<double> msqd; // mean squared displacement
+                    //double _sqd // squared displacement
+                    double dq=0, deltaq=0, qnew=0, qold=0;
+                    int g, atomIndex;
+                    std::string molname; //added
+                    Change::data cdata;
+
+                    void _to_json(json &j) const override {
+                        using namespace u8;
+                        j = {
+                            {"index", atomIndex},
+                            {"dq", dq},
+                            //{"molecule", molname}, //added
+                            {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
+                            {cuberoot + rootof + bracket(Delta + "q" + squared),
+                                std::cbrt(std::sqrt(msqd.avg()))}
+                        };
+                        _roundjson(j,3);
+                    }
+
+                    void _from_json(const json &j) override {
+                        //molname = j.at("molecule"); //added
+                        dq = j.at("dq");
+                        atomIndex = j.at("index");
+                    }
+
+                    void _move(Change &change) override {
+                        if (dq>0) {
+
+                            auto git = spc.findGroupContaining( spc.p[atomIndex] );
+                            qold = spc.p[atomIndex].charge;
+                            spc.p[atomIndex].charge +=  dq * (slump()-0.5);
+                            deltaq = spc.p[atomIndex].charge-qold;
+
+                            cdata.index = std::distance( spc.groups.begin(), git ); // integer *index* of moved group                                                    
+                            cdata.atoms[0] = std::distance(git->begin(), spc.p.begin()+atomIndex );  // index of particle rel. to group                   
+                            change.groups.push_back( cdata ); // add to list of moved groups
+                        } else deltaq=0;
+                    }
+
+                    void _accept(Change &change) override { msqd += deltaq*deltaq; }
+                    void _reject(Change &change) override { msqd += 0; }
+
+                public:
+                    ChargeMove(Tspace &spc) : spc(spc) {
+                        name = "charge";
+                        repeat = 1;
+                        cdata.atoms.resize(1);
+                    }
+            };
+
+
+
         /*
          * @brief Establishes equilibrium of matter
          *  Establishes equilibrium of matter between all species
@@ -1212,6 +1270,7 @@ start:
                                     if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
                                     if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);
                                     if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
+                                    if (it.key()=="charge") this->template push_back<Move::ChargeMove<Tspace>>(spc);
                                     if (it.key()=="speciation") this->template push_back<Move::SpeciationMove<Tspace>>(spc);
                                     if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);
 

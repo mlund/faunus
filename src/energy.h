@@ -1037,6 +1037,8 @@ namespace Faunus {
                                     for (auto it=i.begin(); it!=i.end(); ++it) {
                                         if (it.key()=="atom")
                                             rc = std::make_shared<AtomProperty>(it.value(), spc);
+                                        if (it.key()=="charge")
+                                            rc = std::make_shared<AtomProperty>(it.value(), spc);
                                         if (it.key()=="system")
                                             rc = std::make_shared<SystemProperty>(it.value(), spc);
                                         if (it.key()=="cmcm")

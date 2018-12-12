@@ -168,8 +168,6 @@ mass center separation, $R$ and moments
 on molecule $a$ and $b$ with charges $q_i$ in position $\boldsymbol{r}_i$
 with respect to the mass center are calculated according to:
 
-
-
 $$
     q_{a/b} = \sum_i q_i \quad \quad \boldsymbol{\mu}_{a/b} = \sum_i q_i\mathbf{r_i}
 $$
@@ -211,6 +209,20 @@ The input keywords are:
 `file`           | Output file name
 `molecules`      | Array with exactly two molecule names, $a$ and $b$
 `dr=0.2`         | Distance resolution (Å) along $R$.
+
+## Reaction Coordinate
+
+This saves a given reaction coordinate (see Penalty Function in Energy) as a function of steps.
+For example, the folowing prints the mass center $z$ coordinate of the first molecule
+to disk every 100th steps:
+
+~~~ yaml
+analysis:
+  - reactioncoordinate:
+      {nstep: 100, file: comz.dat, type: molecule, index: 0, property: com_z}
+~~~ 
+
+Note that the reaction coordinate keywords `range` and `resolution` are ignored.
  
 
 ## Save State

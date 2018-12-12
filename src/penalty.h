@@ -61,9 +61,10 @@ namespace Faunus {
 
         class AtomProperty : public ReactionCoordinateBase {
             protected:
-                std::string property;
                 size_t index; // atom index
             public:
+                std::string property;
+                inline AtomProperty() {}
                 template<class Tspace>
                     AtomProperty(const json &j, Tspace &spc) {
                         name = "atom";
@@ -78,6 +79,21 @@ namespace Faunus {
                             throw std::runtime_error(name + ": unknown property '" + property + "'");
                     }
                 void _to_json(json &j) const override;
+        };
+
+        struct MoleculeProperty : public AtomProperty {
+            template<class Tspace>
+                MoleculeProperty(const json &j, Tspace &spc) {
+                    name = "molecule";
+                    from_json(j, *this);
+                    index = j.at("index");
+                    property = j.at("property").get<std::string>();
+                    if (property=="com_x") f = [&i=spc.groups.at(index)]() { return i.cm.x(); };
+                    if (property=="com_y") f = [&i=spc.groups.at(index)]() { return i.cm.y(); };
+                    if (property=="com_z") f = [&i=spc.groups.at(index)]() { return i.cm.z(); };
+                    if (f==nullptr)
+                        throw std::runtime_error(name + ": unknown property '" + property + "'");
+                }
         };
 
         /**

@@ -15,10 +15,8 @@ requirements:
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
     - llvm-openmp # [osx]
-    - openmp
   host:
     - llvm-openmp # [osx]
-    - openmp
     - numpy
     - matplotlib
     - python

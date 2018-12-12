@@ -14,9 +14,9 @@ requirements:
   build:
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
-    - llvm-openmp # [osx]
+    - llvm-openmp   # [osx]
+    - intel-openmp  # [linux]
   host:
-    - llvm-openmp # [osx]
     - numpy
     - matplotlib
     - python
@@ -27,6 +27,8 @@ requirements:
     - openmpi 1.6.3 # [osx]
     - openmpi 3.1.* # [linux64]
   run:
+    - llvm-openmp   # [osx]
+    - intel-openmp  # [linux]
     - openmpi 1.6.3 # [osx]
     - openmpi 3.1.* # [linux64]
     - ruamel_yaml

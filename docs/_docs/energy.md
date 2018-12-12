@@ -89,6 +89,23 @@ Below is a description of possible pair-potentials and their configuration.
 `nonbonded_pmwca`      | `coulomb`+`wca` (`type=plain`, `cutoff`$=\infty$)
 
 
+### OpenMP Control
+
+If compiled with OpenMP, the following keywords can be used to control parallelisation
+for non-bonded interactions. The best combination depends on the simulated system size and
+composition. Currently, parallelisation is disabled by default.
+
+~~~ yaml
+- nonbonded:
+    openmp: [g2g, i2all]
+~~~
+
+`openmp`  | Description
+--------- | -------------------------------------------
+`g2g`     | Distribute on a molecule-to-molecule basis 
+`i2all`   | Parallelise single particle energy evaluations
+
+
 ### Electrostatics
 
  `coulomb`   |  Description
@@ -552,6 +569,13 @@ of the following types (via `coord`):
 ------------- | ----------------------------------
 `index`       | Atom index
 `property`    | `x`, `y`, `z`, `charge`
+`range`       | Array w. [min:max] value
+`resolution`  | Resolution along coordinate
+
+`molecule`    | Single molecule properties
+------------- | ----------------------------------
+`index`       | Molecule index
+`property`    | `com_x`, `com_y`, `com_z`
 `range`       | Array w. [min:max] value
 `resolution`  | Resolution along coordinate
 

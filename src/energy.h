@@ -592,15 +592,15 @@ namespace Faunus {
                 private:
                     double g2gcnt=0, g2gskip=0;
 
-                    // control of when OpenMP should be used
-                    bool omp_enable=false;
-                    bool omp_i2all=false;
-                    bool omp_g2g=false;
-
                 protected:
                     typedef typename Tspace::Tpvec Tpvec;
                     typedef typename Tspace::Tgroup Tgroup;
                     double Rc2_g2g=pc::infty;
+
+                    // control of when OpenMP should be used
+                    bool omp_enable=false;
+                    bool omp_i2all=false;
+                    bool omp_g2g=false;
 
                     void to_json(json &j) const override {
                         j["pairpot"] = pairpot;
@@ -741,6 +741,9 @@ namespace Faunus {
                                     for (const std::string &k : *it)
                                         if (k=="g2g") omp_g2g=true;
                                         else if (k=="i2all") omp_i2all=true;
+#ifndef _OPENMP
+                                    std::cerr << "warning: nonbonded requests unavailable OpenMP." << endl;
+#endif
                                 }
                         Rc2_g2g = std::pow( j.value("cutoff_g2g", pc::infty), 2);
                     }
@@ -1037,8 +1040,8 @@ namespace Faunus {
                                     for (auto it=i.begin(); it!=i.end(); ++it) {
                                         if (it.key()=="atom")
                                             rc = std::make_shared<AtomProperty>(it.value(), spc);
-                                        if (it.key()=="charge")
-                                            rc = std::make_shared<AtomProperty>(it.value(), spc);
+                                        if (it.key()=="molecule")
+                                            rc = std::make_shared<MoleculeProperty>(it.value(), spc);
                                         if (it.key()=="system")
                                             rc = std::make_shared<SystemProperty>(it.value(), spc);
                                         if (it.key()=="cmcm")

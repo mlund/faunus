@@ -2,22 +2,23 @@ language: cpp
 dist: xenial
 sudo: required
 group: edge
-compiler: clang
 
 matrix:
   include:
 
   # Python 3.7
   - os: linux
-    env: [CONDA_PY=37]
+    env: [COMPILER=gcc, CONDA_PY=37]
   - os: osx
-    env: [CONDA_PY=37]
+    env: [COMPILER=clang, CONDA_PY=37]
+    osx_image: xcode9.2
 
   # Python 3.6
-  - os: osx
-    env: [CONDA_PY=36]
   - os: linux
-    env: [CONDA_PY=36]
+    env: [COMPILER=gcc, CONDA_PY=36]
+  - os: osx
+    env: [COMPILER=clang, CONDA_PY=36]
+    osx_image: xcode9.2
 
 install:
   - |

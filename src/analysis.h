@@ -36,29 +36,39 @@ namespace Faunus {
 
         void to_json(json &j, const Analysisbase &base);
 
-        /**
-         * This will output a file with group properties as a function
-         * of simulation time/steps.
-         *
-         * The output format is as follows:
-         *
-         *     steps, group index, molid, CM_x. CM_y, CM_z, confid, number of atoms
-         *
-         */
-        template<class Tspace>
-            class GroupProperties : public Analysisbase {
-                private:
-                    Tspace& spc;
-                    int molid;        // molecule id
-                    void _from_json(const json &j) {
+        class FileReactionCoordinate : public Analysisbase {
+            private:
+                std::string type, filename;
+                std::ofstream file;
+                std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
+                inline void _to_json(json &j) const override {
+                    j = *rc;
+                    j["type"] = type;
+                    j.erase("range");     // these are for penalty function
+                    j.erase("resolution");// use only, so no need to show
+                }
+                inline void _sample() override {
+                    if (file)
+                        file << cnt*steps << " " << (*rc)() << "\n";
+                }
+            public:
+                template<class Tspace>
+                    FileReactionCoordinate(const json &j, Tspace &spc) {
+                        using namespace Faunus::ReactionCoordinate;
+                        from_json(j);
+                        name = "reactioncoordinate";
+                        filename = j.at(MPI::prefix + "file").get<std::string>();
+                        file.open(filename);
+                        type = j.at("type").get<std::string>();
+                        if      (type=="atom")     rc = std::make_shared<AtomProperty>(j, spc);
+                        else if (type=="molecule") rc = std::make_shared<MoleculeProperty>(j, spc);
+                        else if (type=="system")   rc = std::make_shared<SystemProperty>(j, spc);
+                        else if (type=="cmcm")     rc = std::make_shared<MassCenterSeparation>(j, spc);
+                        else if (type=="angle")    rc = std::make_shared<PrincipalAxisAngle>(j, spc);
+                        if (rc==nullptr)
+                            throw std::runtime_error("unknown coordinate type '" + type + "'");
                     }
-                    void _sample() {
-                    }
-                public:
-                    GroupProperties(Tspace &spc) : spc(spc) {
-                        name = "Group Properties";
-                    }
-            };
+        };
 
         /**
          * @brief Excess chemical potential of molecules
@@ -1101,6 +1111,7 @@ namespace Faunus {
                                         size_t oldsize = this->vec.size();
                                         if (it.key()=="atomprofile") push_back<AtomProfile<Tspace>>(it.value(), spc);
                                         if (it.key()=="atomrdf") push_back<AtomRDF<Tspace>>(it.value(), spc);
+                                        if (it.key()=="reactioncoordinate") push_back<FileReactionCoordinate>(it.value(), spc);
                                         if (it.key()=="scatter") push_back<ScatteringFunction<Tspace>>(it.value(), spc);
                                         if (it.key()=="density") push_back<Density<Tspace>>(it.value(), spc);
                                         if (it.key()=="molrdf") push_back<MoleculeRDF<Tspace>>(it.value(), spc);

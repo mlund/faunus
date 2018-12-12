@@ -340,7 +340,7 @@ add_test(
     NAME cluster
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py cluster.yml\
     | $<TARGET_FILE:faunus> --quiet --state cluster.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py cluster.out.json out.json --tol 0.05"
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py cluster.out.json out.json --tol 0.1"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 add_test(

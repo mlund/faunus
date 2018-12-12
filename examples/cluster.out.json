@@ -8,21 +8,21 @@
                 "name1": "OW",
                 "name2": "OW",
                 "nstep": 10,
-                "relative time": 0.00188,
-                "samples": 10000
+                "relative time": 0.00183,
+                "samples": 15000
             }
         },
         {
             "systemenergy": {
                 "file": "energy.dat",
                 "final": [
-                    -32.186900170282435
+                    -45.94029320175197
                 ],
                 "init": -47.621,
-                "mean": -44.497,
+                "mean": -52.677,
                 "nstep": 50,
-                "relative time": 0.000945,
-                "samples": 2000
+                "relative time": 0.000926,
+                "samples": 3000
             }
         },
         {
@@ -30,8 +30,8 @@
                 "file": "traj.xtc",
                 "nstep": 50,
                 "reference": "http://bit.ly/2A8lzpa",
-                "relative time": 0.0015,
-                "samples": 2000
+                "relative time": 0.00133,
+                "samples": 3000
             }
         },
         {
@@ -45,7 +45,7 @@
             }
         }
     ],
-    "compiler": "4.2.1 Compatible Apple LLVM 10.0.0 (clang-1000.11.45.5)",
+    "compiler": "4.2.1 Compatible Clang 4.0.1 (tags/RELEASE_401/final)",
     "energy": [
         {
             "hamiltonian": [
@@ -83,7 +83,8 @@
                                 }
                             }
                         ]
-                    }
+                    },
+                    "relative time": 0.2073762056137123
                 }
             ]
         }
@@ -96,7 +97,7 @@
         ],
         "type": "cuboid"
     },
-    "git revision": "faa74889 (2018-12-06)",
+    "git revision": "ac24f9f6 (2018-12-12)",
     "groups": [
         {
             "water": {
@@ -202,47 +203,49 @@
     "moves": [
         {
             "moltransrot": {
-                "acceptance": 0.2895,
+                "acceptance": 0.227,
                 "dir": [
                     1.0,
                     1.0,
                     1.0
                 ],
-                "dp": 5.0,
+                "dp": 20.0,
                 "dprot": 1.0,
                 "molecule": "water",
                 "molid": 0,
-                "moves": 1000924,
-                "relative time": 0.137,
+                "moves": 1499250,
+                "relative time": 0.126,
+                "relative time (move only)": 0.00236,
                 "repeat": 10,
-                "√⟨r²⟩": 1.37
+                "√⟨r²⟩": 4.98
             }
         },
         {
             "cluster": {
-                "acceptance": 0.695,
-                "bias rejection rate": 0.108,
+                "acceptance": 0.682,
+                "bias rejection rate": 0.0829,
                 "cite": "doi:10/cj9gnn",
                 "dir": [
                     1.0,
                     1.0,
                     1.0
                 ],
-                "dp": 10.0,
-                "dprot": 2.0,
-                "moves": 999076,
-                "relative time": 0.786,
+                "dp": 20.0,
+                "dprot": 3.0,
+                "moves": 1500750,
+                "relative time": 0.804,
+                "relative time (move only)": 0.402,
                 "repeat": 10,
                 "threshold": 3.17,
-                "√⟨r²⟩": 2.36,
-                "√⟨θ²⟩/°": 27.4,
-                "⟨N⟩": 3.7
+                "√⟨r²⟩": 4.72,
+                "√⟨θ²⟩/°": 40.9,
+                "⟨N⟩": 4.09
             }
         }
     ],
     "number of groups": 10,
     "number of particles": 30,
     "reactionlist": null,
-    "relative drift": -2.3873042933469214e-14,
+    "relative drift": -2.7304792855155412e-14,
     "temperature": 300.0
 }

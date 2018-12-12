@@ -6,6 +6,8 @@ about:
   home: http://mlund.github.io/faunus
   summary: A Framework for Molecular Monte Carlo Simulations
   license: MIT
+  doc_url: http://mlund.github.io/faunus
+  dev_url: https://github.com/mlund/faunus
 
 source:
   git_url: https://github.com/mlund/faunus.git
@@ -41,13 +43,14 @@ build:
   script_env:
     - PATH
   script:
-    - |
-      cmake -DENABLE_MPI=on -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX
-      alias make="make -s"
-      make faunus
-      cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX # needed to build pyfaunus
-      make pyfaunus
-      make install
-      make tests
-      ctest --output-on-failure
+    - export CC=clang    # [osx]
+    - export CXX=clang++ # [osx]
+    - cmake -DENABLE_MPI=on -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX
+    - alias make="make -s"
+    - make faunus
+    - cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX # needed to build pyfaunus
+    - make pyfaunus
+    - make install
+    - make tests
+    - ctest --output-on-failure
 

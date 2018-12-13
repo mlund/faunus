@@ -85,7 +85,6 @@ and rotates individual atoms in the group. The repeat is set to the number of at
 atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
 {: .notice--info}
 
-
 ### Cluster Move
 
 `cluster`      | Description
@@ -101,7 +100,18 @@ between their mass centers. The move is associated with [bias](http://dx.doi.org
 the cluster size and composition remain unaltered.
 If a cluster is larger than half the simulation box length, only translation will be attempted.
 
+
 ## Internal Degrees of Freedom
+
+### Charge Move
+
+`transrot`       |  Description
+---------------- |  ---------------------------------
+`molecule`       |  Molecule name to operate on
+`dir=[1,1,1]`    |  Translational directions
+
+This will perform moves on charges of individual atoms. The charge of an atom is updated by the same operation as in `moltransrot`, but instead of specifying `dp`, you specify `dq`, the charge move increment, in the single atom properties.
+
 
 ### Conformational Swap
 

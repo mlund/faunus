@@ -549,6 +549,21 @@ energy:
     - atom: {index: 0, property: "y", range: [-2.0,2.0], resolution: 0.1}
 ~~~
 
+Example setup where the charges of atom 0 and 1, $q_0$ and $q_1$, are penalized within the ranges [-0.5, +0.5] and [-1.0, 0.0], respectively. The method can be used to estimate for example free energy of binding. The penalty assigned to the charges is carried out as the charges are moved within their respective ranges, furher explained in moves.md.
+
+~~~ yaml
+energy:
+- penalty:
+    f0: 0.5
+    scale: 0.9
+    update: 1000
+    file: penalty.dat
+    histogram: penalty-histogram.dat
+    coords:
+    - atom: {index: 0, property: "q", range: [-0.5,0.5], resolution: 0.01}
+    - atom: {index: 1, property: "q", range: [-1.0,0.0], resolution: 0.01}
+~~~
+
 Options:
 
 `penalty`     |  Description

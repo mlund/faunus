@@ -100,7 +100,7 @@ between their mass centers. The move is associated with [bias](http://dx.doi.org
 the cluster size and composition remain unaltered.
 If a cluster is larger than half the simulation box length, only translation will be attempted.
 
-## Charge Move
+### Charge Move
 
 `transrot`       |  Description
 ---------------- |  ---------------------------------

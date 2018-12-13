@@ -567,9 +567,9 @@ namespace Faunus {
                     void _from_json(const json &j) override {
                         dq = j.at("dq").get<double>();
                         atomIndex = j.at("index").get<int>();
-                    	auto git = spc.findGroupContaining( spc.p[atomIndex] ); // group containing atomIndex
-		      	cdata.index = std::distance( spc.groups.begin(), git ); // integet *index* of moved group
-			cdata.atoms[0] = std::distance( git->begin(), spc.p.begin()+atomIndex ); // index of particle 
+                        auto git = spc.findGroupContaining( spc.p[atomIndex] ); // group containing atomIndex
+		        cdata.index = std::distance( spc.groups.begin(), git ); // integet *index* of moved group
+		        cdata.atoms[0] = std::distance( git->begin(), spc.p.begin()+atomIndex ); // index of particle 
 		    }
 
                     void _move(Change &change) override {

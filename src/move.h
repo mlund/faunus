@@ -538,9 +538,9 @@ namespace Faunus {
                         repeat = 1;
                     }
             }; // end of VolumeMove
-	
-	/**
-	 * @brief Displaces charge on a single atom
+
+        /**
+         * @brief Displaces charge on a single atom
          */
         template<typename Tspace>
             class ChargeMove : public Movebase {
@@ -568,17 +568,16 @@ namespace Faunus {
                         dq = j.at("dq").get<double>();
                         atomIndex = j.at("index").get<int>();
                         auto git = spc.findGroupContaining( spc.p[atomIndex] ); // group containing atomIndex
-                        cdata.index = std::distance( spc.groups.begin(), git ); // integet *index* of moved group
-                        cdata.atoms[0] = std::distance( git->begin(), spc.p.begin()+atomIndex ); // index of particle 
-		    }
+                        cdata.index = std::distance( spc.groups.begin(), git ); // integer *index* of moved group
+                        cdata.atoms[0] = std::distance(git->begin(), spc.p.begin()+atomIndex );  // index of particle rel. to group
+                    }
 
                     void _move(Change &change) override {
                         if (dq>0) {
-
-                            auto &p = spc.p[atomIndex]; // reference to particle
+                            auto &p = spc.p[atomIndex]; // refence to particle
                             double qold = p.charge;
                             p.charge +=  dq * (slump()-0.5);
-                            deltaq = p.charge - qold;
+                            deltaq = p.charge-qold;
                             change.groups.push_back( cdata ); // add to list of moved groups
                         } else deltaq=0;
                     }

@@ -590,7 +590,7 @@ namespace Faunus {
                     ChargeMove(Tspace &spc) : spc(spc) {
                         name = "charge";
                         repeat = 1;
-			cdata.internal=true; // the group is internally changed
+		        cdata.internal=true; // the group is internally changed
                         cdata.atoms.resize(1); // we change exactly one atom
                     }
             };

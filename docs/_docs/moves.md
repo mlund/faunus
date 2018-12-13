@@ -43,7 +43,7 @@ falls back to `fixed`.
 The following moves are for translation and rotation of atoms, molecules, or clusters.
 The `dir` keyword restricts translational directions which by default is set to
 `[1,1,1]`, meaning translation by a unit vector, randomly picked on a sphere, and scaled by
-the displacement parameter `dp`.
+a random number in the interval `[0, dp]`.
 If `dir=[1,1,0]` the unit vector is instead picked on a circle (here _x_, _y_)
 and if `dir=[0,0,1]` on a line (here $z$).
 
@@ -66,7 +66,7 @@ $$
 where $\mbox{Rot}$ rotates `dprot`$\cdot \left (\zeta-\frac{1}{2} \right )$ radians around a random unit vector
 emanating from the mass center,
 $\zeta$ is a random number in the interval $[0,1[$, and
-$\delta$ is a random unit vector scaled by `dp`.
+$\delta$ is a random unit vector scaled by a random number in the interval `[0,dp]`.
 Upon MC movement, the mean squared displacement
 will be tracked.
 
@@ -79,7 +79,9 @@ will be tracked.
 `dir=[1,1,1]`    |  Translational directions
 
 As `moltransrot` but instead of operating on the molecular mass center, this translates
-and rotates individual atoms in the group. The repeat is set to the number of atoms in the specified group and the displacement parameters `dp` and `dprot` for the individual atoms are taken from the atom properties defined in the [topology](../topology).
+and rotates individual atoms in the group. The repeat is set to the number of atoms in the specified group and the
+displacement parameters `dp` and `dprot` for the individual atoms are taken from
+the atom properties defined in the [topology](../topology).
 
 **note:**
 atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.

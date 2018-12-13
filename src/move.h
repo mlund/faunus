@@ -210,7 +210,8 @@ namespace Faunus {
 
                             if (dp>0) { // translate
                                 Point oldpos = p->pos;
-                                p->pos +=  0.5 * dp * ranunit(slump).cwiseProduct(dir);
+                                p->pos += ranunit(slump,dir) * dp * slump();
+
                                 spc.geo.boundary(p->pos);
                                 _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
                                 if (!g.atomic)
@@ -304,7 +305,8 @@ namespace Faunus {
 
                                 if (dptrans>0) { // translate
                                     Point oldcm = it->cm;
-                                    Point dp = 0.5*ranunit(slump,dir) * dptrans;
+                                    Point dp = ranunit(slump,dir) * dptrans * slump();
+
                                     it->translate( dp, spc.geo.getBoundaryFunc() );
                                     _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
                                 }
@@ -910,7 +912,7 @@ start:
                             N += cluster.size(); // average cluster size
                             Change::data d;
                             d.all=true;
-                            dp = 0.5*ranunit(slump, dir) * dptrans * slump();
+                            dp = ranunit(slump, dir) * dptrans * slump();
 
                             if (rotate)
                                 angle = dprot * (slump()-0.5);

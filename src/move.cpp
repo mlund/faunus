@@ -23,7 +23,8 @@ namespace Faunus {
 
         void Movebase::to_json(json &j) const {
             _to_json(j);
-            j["relative time (move only)"] = timer_move.result();
+            if (timer_move.result() > 0.01) // only print if more than 1% of the time
+                j["relative time (move only)"] = timer_move.result();
             j["relative time"] = timer.result();
             j["acceptance"] = double(accepted)/cnt;
             j["repeat"] = repeat;

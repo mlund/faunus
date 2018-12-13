@@ -247,16 +247,6 @@ add_executable(faunus src/faunus.cpp)
 add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar)
 target_link_libraries(faunus libfaunus xdrfile docopt ${LINKLIBS})
 
-#add_executable(faunus_nopbc src/faunus.cpp ${hdrs})
-#add_dependencies(faunus_nopbc modernjson doctest eigen range-v3 docopt xdrfile progressbar)
-#target_link_libraries(faunus_nopbc libfaunus xdrfile docopt ${LINKLIBS})
-#set_target_properties(faunus_nopbc PROPERTIES COMPILE_DEFINITIONS "FAUNUS_CUBOID_NOPBC")
-
-#add_executable(faunus_sphere src/faunus.cpp ${hdrs})
-#add_dependencies(faunus_sphere modernjson doctest eigen range-v3 docopt xdrfile progressbar)
-#target_link_libraries(faunus_sphere libfaunus xdrfile docopt ${LINKLIBS})
-#set_target_properties(faunus_sphere PROPERTIES COMPILE_DEFINITIONS "FAUNUS_SPHERE")
-
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
     INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
@@ -324,10 +314,12 @@ add_test(
     ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py minimal.out.json out.json --tol 0.02"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
-add_test(
-    NAME pythontest
-    COMMAND sh -c "${PYTHON_EXECUTABLE} pythontest.py -v"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+if (pybind11_FOUND)
+    add_test(
+        NAME pythontest
+        COMMAND sh -c "${PYTHON_EXECUTABLE} pythontest.py -v"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+endif()
 
 add_test(
     NAME speciation
@@ -365,8 +357,6 @@ add_test(
 # INSTALL TARGETS
 
 install(TARGETS faunus DESTINATION bin)
-#install(TARGETS faunus_nopbc DESTINATION bin)
-#install(TARGETS faunus_sphere DESTINATION bin)
 
 if (pybind11_FOUND)
     execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"

@@ -8,14 +8,15 @@ source:
 build:
   number: {{ GIT_DESCRIBE_NUMBER }}
   script:
-    - export CC=clang    # [osx]
-    - export CXX=clang++ # [osx]
+    - export CC=clang     # [osx]
+    - export CXX=clang++  # [osx]
     - cmake -DENABLE_MPI=on -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX
-    - make faunus
+    - make faunus -j2
     - cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX # needed to build pyfaunus
-    - make pyfaunus
+    - make pyfaunus -j2
     - make install
-    - make tests
+    - sleep 480 && echo "keep travis alive" &  # [linux64]
+    - make tests -j2
     - ctest --output-on-failure
 
 requirements:
@@ -31,13 +32,13 @@ requirements:
     - nbconvert
     - notebook
     - jupyter
-    - openmpi 1.6.3 # [osx]
-    - openmpi 3.1.* # [linux64]
-    - llvm-openmp   # [osx]
+    - openmpi 1.6.3  # [osx]
+    - openmpi 3.1.*  # [linux64]
+    - llvm-openmp    # [osx]
   run:
-    - llvm-openmp   # [osx]
-    - openmpi 1.6.3 # [osx]
-    - openmpi 3.1.* # [linux64]
+    - llvm-openmp    # [osx]
+    - openmpi 1.6.3  # [osx]
+    - openmpi 3.1.*  # [linux64]
     - ruamel_yaml
     - pygments
     - numpy

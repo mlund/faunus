@@ -92,6 +92,15 @@ namespace Faunus {
                     if (property=="com_x") f = [&i=spc.groups.at(index)]() { return i.cm.x(); };
                     if (property=="com_y") f = [&i=spc.groups.at(index)]() { return i.cm.y(); };
                     if (property=="com_z") f = [&i=spc.groups.at(index)]() { return i.cm.z(); };
+                    if (property=="N")     f = [&i=spc.groups.at(index)]() { return i.size(); };
+                    if (property=="Q")     f = [&i=spc.groups.at(index)]() { return Geometry::monopoleMoment(i.begin(), i.end()); };
+
+                    auto b = spc.geo.getBoundaryFunc();
+                    if (property=="mu_x")  f = [&i=spc.groups.at(index), b]() { return Geometry::dipoleMoment(i.begin(), i.end(), b).x(); };
+                    if (property=="mu_y")  f = [&i=spc.groups.at(index), b]() { return Geometry::dipoleMoment(i.begin(), i.end(), b).y(); };
+                    if (property=="mu_z")  f = [&i=spc.groups.at(index), b]() { return Geometry::dipoleMoment(i.begin(), i.end(), b).z(); };
+                    if (property=="mu")    f = [&i=spc.groups.at(index), b]() { return Geometry::dipoleMoment(i.begin(), i.end(), b).norm(); };
+
                     if (f==nullptr)
                         throw std::runtime_error(name + ": unknown property '" + property + "'");
                 }

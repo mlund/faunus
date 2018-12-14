@@ -14,23 +14,24 @@ MathJax.Hub.Config({
 ## About
 
 Faunus is a general Monte Carlo simulation code, designed to be flexible, easy
-to use and to modify. The code is written in C++ and (limited) Python bindings
+to use, and to modify. The code is written in C++ and (limited) Python bindings
 are available.
-The development is a **team effort** with, in chronological order,
+The development is a **team effort** with, in reverse chronological order,
 many valiant contributions from:
 
-_[Mikael Lund](http://www.teokem.lu.se/~mikael),
-Björn Persson, Martin Trulsson,
-Ondrej Marsalek, Christophe Labbez, André Teixeira,
-Anıl Kurut, Chris Evers, Magnus Ullner,
-Robert Vácha, Axel Thuresson, Björn Stenqvist,
-João Henriques, Alexei Abrikossov, Giulio Tesei,
-Lukáš Sukeník, Coralie Pasquier, Niels Kouwenhoven,
-Richard Chudoba, Stefan Hervø-Hansen_.
+_Vidar Aspelin, Stefan Hervø-Hansen,
+Richard Chudoba, Niels Kouwenhoven,
+Coralie Pasquier, Lukáš Sukeník,
+Giulio Tesei, Alexei Abrikossov,
+João Henriques, Björn Stenqvist,
+Axel Thuresson, Robert Vácha,
+Magnus Ullner, Chris Evers,
+Anıl Kurut, André Teixeira,
+Christophe Labbez, Ondrej Marsalek,
+Martin Trulsson, Björn Persson, and
+[Mikael Lund](http://www.teokem.lu.se/~mikael)_
 
-### Supporting Faunus
-
-Should you find Faunus useful, do consider supporting us by crediting:
+Should you find Faunus useful, please consider supporting us by crediting:
 
 - Stenqvist _et al._ [_Molecular Simulation 2013, 39:1233_](http://dx.doi.org/10/nvn)
 - Lund, M. _et al._ [_Source Code Biol. Med., 2008, 3:1_](http://dx.doi.org/10/dfqgch)
@@ -50,4 +51,3 @@ produces an output file, `out.json`, with move statistics, system properties etc
 The script `yason.py` merely converts from YAML to JSON as the former, easier to read,
 is used in all examples.
 For more examples, check out the `examples/` folder.
-

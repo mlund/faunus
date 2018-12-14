@@ -549,7 +549,9 @@ energy:
     - atom: {index: 0, property: "y", range: [-2.0,2.0], resolution: 0.1}
 ~~~
 
-Example setup where the charges of atom 0 and 1, $q_0$ and $q_1$, are penalized within the ranges [-0.5, +0.5] and [-1.0, 0.0], respectively. The method can be used to estimate for example free energy of binding. The penalty assigned to the charges is carried out as the charges are moved within their respective ranges, furher explained in moves.md.
+Example setup where the charges of atom 0 and 1, $q_0$ and $q_1$, are penalized within the ranges [-0.5, +0.5] and [-1.0, 0.0], respectively.
+The method can be used to estimate for example free energy of binding.
+The penalty assigned to the charges is carried out as the charges are moved within their respective ranges.
 
 ~~~ yaml
 energy:
@@ -558,7 +560,7 @@ energy:
     scale: 0.9
     update: 1000
     file: penalty.dat
-    histogram: penalty-histogram.dat
+    histogram: penalty.dat
     coords:
     - atom: {index: 0, property: "q", range: [-0.5,0.5], resolution: 0.01}
     - atom: {index: 1, property: "q", range: [-1.0,0.0], resolution: 0.01}
@@ -578,7 +580,20 @@ Options:
 `coords`      |  Array of _one or two_ coordinates
 
 The coordinate, $\mathcal{X}$, can be freely composed by one or two
-of the following types (via `coord`):
+of the types listed in the next section (via `coords`)
+
+**Note:**
+When using penalty energies there may currently be unresolved issues loading
+previously saved states. If so, the program will terminate.
+{: .notice--info}
+
+
+### Reaction Coordinates
+
+The following reaction coordinates can be used for penalising the energy and can further
+be used when analysing the system (see Analysis).
+
+#### Atom Properties
 
 `atom`        | Single atom properties
 ------------- | ----------------------------------
@@ -587,12 +602,28 @@ of the following types (via `coord`):
 `range`       | Array w. [min:max] value
 `resolution`  | Resolution along coordinate
 
+#### Molecule Properties
+
 `molecule`    | Single molecule properties
 ------------- | ----------------------------------
 `index`       | Molecule index
-`property`    | `com_x`, `com_y`, `com_z`
 `range`       | Array w. [min:max] value
 `resolution`  | Resolution along coordinate
+`property`    | (see Table below)
+
+`property`                  | Description
+--------------------------- | -----------------------------------------
+`com_x`, `com_y`, `com_z`   | Mass center coordinates
+`mu_x`, `mu_y`, `mu_z`      | Molecular dipole moment components
+`mu`                        | Molecular dipole moment scalar (eA/charge)
+`N`                         | Number of atoms in group
+`Q`                         | Monopole moment (net charge)
+
+#### Molecule Separation
+
+This returns the minimum distance between the mass centers of two molecules.
+Useful for calculating i.e. the potential of mean force between strongly
+interacting molecular groups.
 
 `cmcm`        | Mass-center separation
 ------------- | -----------------------------------
@@ -601,15 +632,12 @@ of the following types (via `coord`):
 `resolution`  | Resolution along coordinate
 `dir=[1,1,1]` | Directions for distance calc.
 
+#### System Properties
+
 `system`      | System property
 ------------- | -----------------------------------
-`property`    | 
-`volume`      | System volume
-
-**Note:**
-When using penalty energies there may currently be unresolved issues loading
-previously saved states. If so, the program will terminate.
-{: .notice--info}
+`property`    |
+`V`           | System volume
 
 
 ### Multiple Walkers with MPI

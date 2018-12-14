@@ -37,20 +37,30 @@ namespace Faunus {
         void to_json(json &j, const Analysisbase &base);
 
         class FileReactionCoordinate : public Analysisbase {
+
             private:
+                Average<double> avg;
                 std::string type, filename;
                 std::ofstream file;
                 std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
+
                 inline void _to_json(json &j) const override {
                     j = *rc;
                     j["type"] = type;
                     j.erase("range");     // these are for penalty function
                     j.erase("resolution");// use only, so no need to show
+                    if (cnt>0)
+                        j["average"] = avg.avg();
                 }
+
                 inline void _sample() override {
-                    if (file)
-                        file << cnt*steps << " " << (*rc)() << "\n";
+                    if (file) {
+                        double val = (*rc)();
+                        avg += val;
+                        file << cnt*steps << " " << val << " " << avg.avg() << "\n";
+                    }
                 }
+
             public:
                 template<class Tspace>
                     FileReactionCoordinate(const json &j, Tspace &spc) {

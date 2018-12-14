@@ -129,7 +129,7 @@ form factor of unity.
 `com=true`  | Treat molecular mass centers as single point scatterers
 
 
-## Radius of Gyration
+### Radius of Gyration
 
 This calculate the radius of gyration, end-to-end distance, and related
 fluctuations for all groups defined in `molecules`.
@@ -223,7 +223,11 @@ analysis:
 ~~~ 
 
 Note that the reaction coordinate keywords `range` and `resolution` are ignored.
- 
+The output file has three columns:
+(1) steps,
+(2) the value of the reaction coordinate, and
+(3) the cummulative average of all preceding values.
+
 
 ## Save State
 

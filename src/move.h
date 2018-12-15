@@ -203,7 +203,7 @@ namespace Faunus {
 
                     void _move(Change &change) override {
                         auto p = randomAtom();
-                        if (p!=spc.p.end()) {
+                        if (p not_eq spc.p.end()) {
                             double dp = atoms.at(p->id).dp;
                             double dprot = atoms.at(p->id).dprot;
                             auto& g = spc.groups[cdata.index];
@@ -214,7 +214,7 @@ namespace Faunus {
 
                                 spc.geo.boundary(p->pos);
                                 _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
-                                if (!g.atomic)
+                                if (not g.atomic) // recalc mass-center for non-molecular groups
                                     g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
                             }
 
@@ -300,7 +300,7 @@ namespace Faunus {
                         auto mollist = spc.findMolecules( molid, Tspace::ACTIVE ); // list of molecules w. 'molid'
                         if (size(mollist)>0) {
                             auto it = slump.sample( mollist.begin(), mollist.end() );
-                            if (!it->empty()) {
+                            if (not it->empty()) {
                                 assert(it->id==molid);
 
                                 if (dptrans>0) { // translate
@@ -497,18 +497,21 @@ namespace Faunus {
                     typename decltype(methods)::const_iterator method;
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc;
-                    Average<double> msqd; // mean squared displacement
+                    Average<double> msqd, Vavg; // mean squared displacement
                     double dV=0, deltaV=0, Vnew=0, Vold=0;
 
                     void _to_json(json &j) const override {
                         using namespace u8;
-                        j = {
-                            {"dV", dV}, {"method", method->first},
-                            {rootof + bracket(Delta + "V" + squared), std::sqrt(msqd.avg())},
-                            {cuberoot + rootof + bracket(Delta + "V" + squared),
-                                std::cbrt(std::sqrt(msqd.avg()))}
-                        };
-                        _roundjson(j,3);
+                        if (cnt>0) {
+                            j = {
+                                {"dV", dV}, {"method", method->first},
+                                {bracket("V"), Vavg.avg()},
+                                {rootof + bracket(Delta + "V" + squared), std::sqrt(msqd.avg())},
+                                {cuberoot + rootof + bracket(Delta + "V" + squared),
+                                    std::cbrt(std::sqrt(msqd.avg()))}
+                            };
+                            _roundjson(j,3);
+                        }
                     }
 
                     void _from_json(const json &j) override {
@@ -531,8 +534,14 @@ namespace Faunus {
                         } else deltaV=0;
                     }
 
-                    void _accept(Change &change) override { msqd += deltaV*deltaV; }
-                    void _reject(Change &change) override { msqd += 0; }
+                    void _accept(Change &change) override {
+                        msqd += deltaV*deltaV;
+                        Vavg += spc.geo.getVolume();
+                    }
+                    void _reject(Change &change) override {
+                        msqd += 0;
+                        Vavg += spc.geo.getVolume();
+                    }
 
                 public:
                     VolumeMove(Tspace &spc) : spc(spc) {

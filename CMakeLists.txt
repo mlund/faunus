@@ -314,6 +314,13 @@ add_test(
     ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py minimal.out.json out.json --tol 0.02"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
+add_test(
+    NAME polymers
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py polymers.yml\
+    | $<TARGET_FILE:faunus> --nobar --state polymers.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py polymers.out.json out.json --tol 0.05"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
 if (pybind11_FOUND)
     add_test(
         NAME pythontest

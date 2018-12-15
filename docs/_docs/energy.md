@@ -47,6 +47,20 @@ density of states, but care should be taken when interpreting derived functions 
 energies, entropies, pressure etc.
 {: .notice--info}
 
+## Infinite and NaN Energies
+
+In case one or more potential energy terms of the system Hamiltonian returns infinite or NaN energies,
+a set of conditions exists to evaluate the acceptance of the proposed move:
+
+- always reject if new energy is NaN (i.e. division by zero)
+- always accept if energy change is from NaN to finite energy
+- always accept if the energy _difference_ is NaN (i.e. from infinity to minus infinity)
+
+**Note:**
+These conditions should be carefully considered if equilibrating a system far from equilibrium,
+particularly if using discontinuous potentials.
+{: .notice--notice}
+
 
 ## External Pressure <a name="isobaric"></a>
 
@@ -604,20 +618,24 @@ be used when analysing the system (see Analysis).
 
 #### Molecule Properties
 
-`molecule`    | Single molecule properties
-------------- | ----------------------------------
-`index`       | Molecule index
-`range`       | Array w. [min:max] value
-`resolution`  | Resolution along coordinate
-`property`    | (see Table below)
+`molecule`                | Single molecule properties
+------------------------- | ----------------------------------
+`index`                   | Molecule index
+`range`                   | Array w. [min:max] value
+`resolution`              | Resolution along coordinate
+`property`                |
+`angle`                   | Angle between instantaneous principal axis and given `dir` vector
+`com_x`, `com_y`, `com_z` | Mass center coordinates
+`mu_x`, `mu_y`, `mu_z`    | Molecular dipole moment components
+`mu`                      | Molecular dipole moment scalar (eA/charge)
+`muangle`                 | Angle between dipole moment and given `dir` vector
+`N`                       | Number of atoms in group
+`Q`                       | Monopole moment (net charge)
 
-`property`                  | Description
---------------------------- | -----------------------------------------
-`com_x`, `com_y`, `com_z`   | Mass center coordinates
-`mu_x`, `mu_y`, `mu_z`      | Molecular dipole moment components
-`mu`                        | Molecular dipole moment scalar (eA/charge)
-`N`                         | Number of atoms in group
-`Q`                         | Monopole moment (net charge)
+Notes:
+
+- the molecular dipole moment is defined w. respect to the mass-center
+- for `angle`, the principle axis is calculated by diagonalising the gyration tensor
 
 #### Molecule Separation
 
@@ -634,10 +652,20 @@ interacting molecular groups.
 
 #### System Properties
 
-`system`      | System property
-------------- | -----------------------------------
-`property`    |
-`V`           | System volume
+`system`       | System property
+-------------- | ----------------------------------------------
+`range`        | Array w. [min:max] value
+`resolution`   | Resolution along coordinate
+`property`     |
+`V`            | System volume
+`Q`            | System net-charge
+`Lx`,`Ly`,`Lz` | Side lengths of enclosing cuboid
+`height`       | Alias for `Lz`
+`radius`       | Radius of spherical or cylindrical geometries
+
+The enclosing cuboid is the smallest cuboid that can contain the geometry.
+For example, for a cylindrical simulation container, `Lz` is the height
+and `Lx=Ly` is the diameter.
 
 
 ### Multiple Walkers with MPI
@@ -654,18 +682,4 @@ Flat histogram methods are often attributed to [Wang and Landau (2001)](http://d
 but the idea appears in earlier works, for example by
 [Hunter and Reinhardt (1995)](http://dx.doi.org/10/fns6dq) and
 [Engkvist and Karlström (1996)](http://dx.doi.org/10/djjk8z).
-
-
-## Infinite and NaN Energies
-
-In case one or more of the potential energy terms of the system Hamiltonian returns infinite energies or NaN energies,
-a set of conditions exists to evaluate the acceptance of the proposed move.
-If any energy returns Non-a-number, NaN (from i.e. division by zero),
-the configuration is rejected, or if moving from NaN to finite energy, always accepted.
-If the difference in energy is NaN (from i.e. infinity minus infinity), the configuration is always accepted.
-
-**Note:**
-These conditions should be considered if equilibrating a system far from equilibrium, particularly if
-using discontinuous potentials.
-{: .notice--notice}
 

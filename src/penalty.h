@@ -52,7 +52,24 @@ namespace Faunus {
                         from_json(j, *this);
                         property = j.at("property").get<std::string>();
                         if (property=="V") f = [&g=spc.geo]() { return g.getVolume();};
-                        if (property=="height") f = [&g=spc.geo]() { return g.getLength().z(); };
+                        else if (property=="Lx") f = [&g=spc.geo]() { return g.getLength().x(); };
+                        else if (property=="Ly") f = [&g=spc.geo]() { return g.getLength().y(); };
+                        else if (property=="Lz" or property=="height") f = [&g=spc.geo]() { return g.getLength().z(); };
+                        else if (property=="radius") {
+                            if (spc.geo.type==Geometry::Chameleon::SPHERE or spc.geo.type==Geometry::Chameleon::CYLINDER)
+                                f = [&g=spc.geo]() { return 0.5*g.getLength().x(); };
+                            else
+                                std::cerr << "`radius` coordinate unavailable for geometry" << endl;
+                        }
+                        else if (property=="Q") // system net charge
+                            f = [&groups=spc.groups]() {
+                                double charge_sum=0;
+                                for (auto &g : groups) // loops over groups
+                                    for (auto &p : g)  // loop over particles
+                                        charge_sum += p.charge;
+                                return charge_sum;
+                            };
+
                         if (f==nullptr)
                             throw std::runtime_error(name + ": unknown property '" + property + "'");
                     }
@@ -62,6 +79,7 @@ namespace Faunus {
         class AtomProperty : public ReactionCoordinateBase {
             protected:
                 size_t index; // atom index
+                Point dir={0,0,0};
             public:
                 std::string property;
                 inline AtomProperty() {}
@@ -101,8 +119,35 @@ namespace Faunus {
                     if (property=="mu_z")  f = [&i=spc.groups.at(index), b]() { return Geometry::dipoleMoment(i.begin(), i.end(), b).z(); };
                     if (property=="mu")    f = [&i=spc.groups.at(index), b]() { return Geometry::dipoleMoment(i.begin(), i.end(), b).norm(); };
 
+                    if (property=="muangle") {
+                        dir = j.at("dir").get<Point>().normalized();
+                        if (not spc.groups.at(index).atomic)
+                            f = [&i=spc.groups.at(index), b, &dir=dir]() {
+                                Point mu = Geometry::dipoleMoment(i.begin(), i.end(), b);
+                                return std::acos(mu.dot(dir)) * 180 / pc::pi;
+                            };
+                    }
+
+                    if (property=="angle") {
+                        dir = j.at("dir").get<Point>().normalized();
+                        if (not spc.groups.at(index).atomic) {
+                            f = [&spc, &dir=dir, i=index]() {
+                                auto &cm = spc.groups[i].cm;
+                                auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.getBoundaryFunc(), cm);
+                                Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+                                Point eivals = esf.eigenvalues();
+                                std::ptrdiff_t i_eival;
+                                double minOfeivals = eivals.minCoeff(&i_eival);
+                                Point vec = esf.eigenvectors().col(i_eival).real();
+                                double cosine = vec.dot(dir);
+                                double angle = std::acos(std::fabs(cosine)) * 180. / pc::pi;
+                                return angle; 
+                            };
+                        }
+                    }
+
                     if (f==nullptr)
-                        throw std::runtime_error(name + ": unknown property '" + property + "'");
+                        throw std::runtime_error(name + ": unknown or impossible property '" + property + "'");
                 }
         };
 
@@ -143,41 +188,6 @@ namespace Faunus {
                 }
 
             double normalize(double coord) const override; // normalize by volume element
-
-            void _to_json(json &j) const override;
-        };
-        /**
-         * @brief Reaction coordinate: angle between principal axis and cartesian axis
-         */
-        struct PrincipalAxisAngle : public ReactionCoordinateBase {
-            Eigen::Vector3d dir={0,0,1};
-            size_t index;
-            template<class Tspace>
-                PrincipalAxisAngle(const json &j, Tspace &spc) {
-                    typedef typename Tspace::Tparticle Tparticle;
-                    name = "angle";
-                    from_json(j, *this);
-                    dir = j.value("dir", dir);
-                    index = j.at("index").get<decltype(index)>();
-                    auto name = molecules<decltype(spc.p)>.at(spc.groups[index].id).name;
-                    cout << "Molecule Name: " << name << endl;
-                    f = [&spc, dir=dir, i=index]() {
-                        auto &cm = spc.groups[i].cm;
-                        //Point vec = spc.geo.vdist(spc.groups[i].begin()->pos,(spc.groups[i].end()-1)->pos);
-                        //vec = vec / vec.norm();
-                        //cout << "P1 " << atoms[spc.groups[i].begin()->id].name << endl;
-                        //cout << "P2 " << atoms[(spc.groups[i].end()-1)->id].name << endl;
-                        auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.getBoundaryFunc(), cm);
-                        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
-                        Point eivals = esf.eigenvalues();
-                        std::ptrdiff_t i_eival;
-                        double minOfeivals = eivals.minCoeff(&i_eival);
-                        Point vec = esf.eigenvectors().col(i_eival).real();
-                        double cosine = vec.dot(dir);
-                        double angle = std::acos(std::fabs(cosine)) * 180. / pc::pi;
-                        return angle; 
-                    };
-                }
 
             void _to_json(json &j) const override;
         };

@@ -1,0 +1,560 @@
+{
+    "analysis": [
+        {
+            "sanity": {
+                "nstep": 10,
+                "relative time": 0.000108,
+                "samples": 2500
+            }
+        },
+        {
+            "reactioncoordinate": {
+                "average": 50.29663924215446,
+                "nstep": 10,
+                "property": "radius",
+                "relative time": 0.000442,
+                "samples": 2500,
+                "type": "system"
+            }
+        },
+        {
+            "molrdf": {
+                "dim": 3,
+                "dr": 0.1,
+                "file": "rdf.dat",
+                "name1": "polymer",
+                "name2": "polymer",
+                "nstep": 100,
+                "relative time": 0.000114,
+                "samples": 250
+            }
+        },
+        {
+            "Polymer Shape": {
+                "molecules": {
+                    "polymer": {
+                        "√⟨Re²⟩": 15.945555052790613,
+                        "√⟨Rgxyz²⟩": [
+                            3.9222247206797123,
+                            3.9271186356565755,
+                            3.95316692553357
+                        ],
+                        "√⟨Rg²⟩": 6.814223086982436,
+                        "⟨Re²⟩/⟨Rg²⟩": 5.475787517758273,
+                        "⟨Re⟩": 15.467035332711536,
+                        "⟨Rg²⟩": 46.43363627916443,
+                        "⟨Rg²⟩-⟨Rg⟩²": 1.0705286379930001,
+                        "⟨Rg⟩": 6.735214001141421
+                    }
+                },
+                "nstep": 10,
+                "relative time": 0.000144,
+                "samples": 2500
+            }
+        },
+        {
+            "systemenergy": {
+                "Cv/kT²": 0.14377,
+                "file": "energy.dat",
+                "final": [
+                    0.0,
+                    -504.4336588796704,
+                    79.75578857671289,
+                    0.6334060117811218
+                ],
+                "init": -427.11,
+                "mean": -421.52,
+                "nstep": 100,
+                "relative time": 0.00055,
+                "samples": 250
+            }
+        },
+        {
+            "xtcfile": {
+                "file": "traj.xtc",
+                "nstep": 100,
+                "reference": "http://bit.ly/2A8lzpa",
+                "relative time": 0.000715,
+                "samples": 250
+            }
+        },
+        {
+            "savestate": {
+                "file": "confout.pqr"
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        }
+    ],
+    "compiler": "7.3.0",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "ContainerOverlap": null,
+                    "relative time": 0.006568872823527668
+                },
+                {
+                    "isobaric": {
+                        "P/Pa": 280480.0,
+                        "P/atm": 2.7681,
+                        "P/mM": 113.2,
+                        "reference": "Frenkel & Smith 2nd Ed (Eq. 5.4.13)"
+                    },
+                    "relative time": 0.005901663250530211
+                },
+                {
+                    "bonded": {
+                        "bondlist-intramolecular": [
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        32,
+                                        33
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        33,
+                                        34
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        34,
+                                        35
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        36,
+                                        37
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        37,
+                                        38
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        38,
+                                        39
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        40,
+                                        41
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        41,
+                                        42
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        42,
+                                        43
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        44,
+                                        45
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        45,
+                                        46
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        46,
+                                        47
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        48,
+                                        49
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        49,
+                                        50
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        50,
+                                        51
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        52,
+                                        53
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        53,
+                                        54
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        54,
+                                        55
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        56,
+                                        57
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        57,
+                                        58
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        58,
+                                        59
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        60,
+                                        61
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        61,
+                                        62
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            },
+                            {
+                                "harmonic": {
+                                    "index": [
+                                        62,
+                                        63
+                                    ],
+                                    "k": 0.27583,
+                                    "req": 0.0
+                                }
+                            }
+                        ]
+                    },
+                    "relative time": 0.015782130490914106
+                },
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": null,
+                        "pairpot": [
+                            {
+                                "coulomb": {
+                                    "T∂ε/∂T": -1.3934,
+                                    "cutoff": 300.0,
+                                    "epsr": 78.7,
+                                    "lB": 7.125,
+                                    "type": "plain"
+                                }
+                            },
+                            {
+                                "hardsphere": null
+                            }
+                        ]
+                    },
+                    "relative time": 0.4500550357917964
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "radius": 50.840556776107,
+        "type": "sphere"
+    },
+    "git revision": "884034f4 (2018-12-14)",
+    "groups": [
+        {
+            "counterions": {
+                "capacity": 32,
+                "index": [
+                    0,
+                    31
+                ],
+                "size": 32
+            }
+        },
+        {
+            "polymer": {
+                "capacity": 4,
+                "index": [
+                    32,
+                    35
+                ],
+                "size": 4
+            }
+        },
+        {
+            "polymer": {
+                "capacity": 4,
+                "index": [
+                    36,
+                    39
+                ],
+                "size": 4
+            }
+        },
+        {
+            "polymer": {
+                "capacity": 4,
+                "index": [
+                    40,
+                    43
+                ],
+                "size": 4
+            }
+        },
+        {
+            "polymer": {
+                "capacity": 4,
+                "index": [
+                    44,
+                    47
+                ],
+                "size": 4
+            }
+        },
+        {
+            "polymer": {
+                "capacity": 4,
+                "index": [
+                    48,
+                    51
+                ],
+                "size": 4
+            }
+        },
+        {
+            "polymer": {
+                "capacity": 4,
+                "index": [
+                    52,
+                    55
+                ],
+                "size": 4
+            }
+        },
+        {
+            "polymer": {
+                "capacity": 4,
+                "index": [
+                    56,
+                    59
+                ],
+                "size": 4
+            }
+        },
+        {
+            "polymer": {
+                "capacity": 4,
+                "index": [
+                    60,
+                    63
+                ],
+                "size": 4
+            }
+        }
+    ],
+    "moves": [
+        {
+            "moltransrot": {
+                "acceptance": 0.565,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "dp": 10.0,
+                "dprot": 1.0,
+                "molecule": "polymer",
+                "molid": 1,
+                "moves": 199753,
+                "relative time": 0.114,
+                "repeat": 8,
+                "√⟨r²⟩": 3.82
+            }
+        },
+        {
+            "pivot": {
+                "acceptance": 0.519,
+                "dprot": 3.0,
+                "molecule": "polymer",
+                "moves": 599489,
+                "relative time": 0.18,
+                "relative time (move only)": 0.0198,
+                "repeat": 24,
+                "√⟨r_cm²⟩": 1.99
+            }
+        },
+        {
+            "transrot": {
+                "acceptance": 0.271,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "polymer",
+                "molid": 1,
+                "moves": 800486,
+                "relative time": 0.358,
+                "relative time (move only)": 0.022,
+                "repeat": 32,
+                "√⟨r²⟩": 1.89
+            }
+        },
+        {
+            "transrot": {
+                "acceptance": 0.231,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "counterions",
+                "molid": 0,
+                "moves": 800363,
+                "relative time": 0.241,
+                "relative time (move only)": 0.0169,
+                "repeat": 32,
+                "√⟨r²⟩": 15.0
+            }
+        },
+        {
+            "volume": {
+                "acceptance": 0.132,
+                "dV": 2.0,
+                "method": "isotropic",
+                "moves": 24909,
+                "relative time": 0.0866,
+                "repeat": 1,
+                "√⟨ΔV²⟩": 29400.0,
+                "∛√⟨ΔV²⟩": 30.9,
+                "⟨V⟩": 538000.0
+            }
+        }
+    ],
+    "number of groups": 9,
+    "number of particles": 64,
+    "reactionlist": null,
+    "relative drift": -2.7815625720135956e-14,
+    "temperature": 298.0
+}

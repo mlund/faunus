@@ -111,8 +111,12 @@ namespace Faunus {
                 enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT};
                 Variant type;
             private:
-                static constexpr double pbc_disable=10; //!< side-length scaling to disable PBC for non-cuboidal geometries
-                static const std::map<std::string,Variant> names;
+                /**
+                 * `pbc_disable` is used to disable PBC in `sphere`, `cylinder`, `slit` etc.
+                 * by scaling the (internal) box length by a large number.
+                 */
+                static constexpr double pbc_disable=100;
+                static const std::map<std::string,Variant> names; //!< geometry names
                 double radius=0, c1, c2;
                 Point len, len_half, len_inv;
 
@@ -134,22 +138,27 @@ namespace Faunus {
                 inline void boundary( Point &a ) const override {
                     if ( std::fabs(a.x()) > len_half.x())
                         a.x() -= len.x() * anint(a.x() * len_inv.x());
+
                     if ( std::fabs(a.y()) > len_half.y())
                         a.y() -= len.y() * anint(a.y() * len_inv.y());
+
                     if ( std::fabs(a.z()) > len_half.z())
                         a.z() -= len.z() * anint(a.z() * len_inv.z());
                 } //!< Apply boundary conditions
 
                 inline Point vdist(const Point &a, const Point &b) const override {
                     Point r(a - b);
+
                     if ( r.x() > len_half.x())
                         r.x() -= len.x();
                     else if ( r.x() < -len_half.x())
                         r.x() += len.x();
+
                     if ( r.y() > len_half.y())
                         r.y() -= len.y();
                     else if ( r.y() < -len_half.y())
                         r.y() += len.y();
+
                     if ( r.z() > len_half.z())
                         r.z() -= len.z();
                     else if ( r.z() < -len_half.z())

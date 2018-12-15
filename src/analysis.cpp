@@ -50,8 +50,10 @@ void Faunus::Analysis::SystemEnergy::normalize() {
 void Faunus::Analysis::SystemEnergy::_sample() {
     auto ulist = energyFunc();
     double tot = std::accumulate(ulist.begin(), ulist.end(), 0.0);
-    if (not std::isinf(tot))
+    if (not std::isinf(tot)) {
         uavg+=tot;
+        u2avg+=tot*tot;
+    }
     f << cnt*steps << sep << tot;
     for (auto u : ulist)
         f << sep << u;
@@ -61,8 +63,10 @@ void Faunus::Analysis::SystemEnergy::_sample() {
 
 void Faunus::Analysis::SystemEnergy::_to_json(Faunus::json &j) const {
     j = { {"file", file}, {"init",uinit}, {"final", energyFunc()} };
-    if (cnt>0)
+    if (cnt>0) {
         j["mean"] = uavg.avg();
+        j["Cv/kT"+u8::squared] = (u2avg.avg() - std::pow(uavg.avg(),2)) / pc::temperature;
+    }
     _roundjson(j,5);
     //normalize();
     //ehist.save( "distofstates.dat" );

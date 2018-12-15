@@ -222,27 +222,39 @@ namespace Faunus {
              */
             void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC) {
                 for (auto &g: groups) // remove periodic boundaries
-                    if (!g.atomic)
+                    if (not g.atomic)
                         g.unwrap(geo.getDistanceFunc());
 
                 Point scale = geo.setVolume(Vnew, method);
 
                 for (auto& g : groups) {
-                    if (!g.empty()) {
+                    if (not g.empty()) {
                         if (g.atomic) // scale all atoms
                             for (auto& i : g)
                                 i.pos = i.pos.cwiseProduct(scale);
                         else { // scale mass center and translate
+                            Point oldcm = g.cm;
                             Point delta = g.cm.cwiseProduct(scale) - g.cm;
                             g.cm = g.cm.cwiseProduct(scale);
                             for (auto &i : g) {
                                 i.pos += delta;
                                 geo.boundary(i.pos);
                             }
-                            assert( geo.sqdist( g.cm,
-                                        Geometry::massCenter(
-                                            g.begin(), g.end(),
-                                            geo.getBoundaryFunc(), -g.cm)) < 1e-10 );
+#ifndef NDEBUG
+                            Point recalc_cm =  Geometry::massCenter( g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
+                            double cm_error = std::fabs( geo.sqdist(g.cm, recalc_cm) );
+                            if (cm_error>1e-6) {
+                                std::cerr
+                                    << "error: " << cm_error << endl
+                                    << "scale: " << scale.transpose() << endl
+                                    << "delta: " << delta.transpose() << " norm = " << delta.norm() << endl
+                                    << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << endl
+                                    << "oldcm: " << oldcm.transpose() << endl
+                                    << "newcm: " << g.cm.transpose() << endl
+                                    << "actual cm: " << recalc_cm.transpose() << endl;
+                                assert(false);
+                            }
+#endif
                         }
                     }
                 }

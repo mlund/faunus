@@ -40,6 +40,8 @@ namespace Faunus {
         void AtomProperty::_to_json(json &j) const {
             j["property"] = property;
             j["index"] = index;
+            if (dir.squaredNorm()>1e-9)
+                j["dir"] = dir;
         }
 
         double MassCenterSeparation::normalize(double coord) const {
@@ -55,10 +57,6 @@ namespace Faunus {
             j["type"] = type;
         }
 
-        void PrincipalAxisAngle::_to_json(json &j) const {
-            j["dir"] = dir;
-            j["index"] = index;
-        }
     }
 }
 

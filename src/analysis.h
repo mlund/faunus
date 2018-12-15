@@ -74,7 +74,6 @@ namespace Faunus {
                         else if (type=="molecule") rc = std::make_shared<MoleculeProperty>(j, spc);
                         else if (type=="system")   rc = std::make_shared<SystemProperty>(j, spc);
                         else if (type=="cmcm")     rc = std::make_shared<MassCenterSeparation>(j, spc);
-                        else if (type=="angle")    rc = std::make_shared<PrincipalAxisAngle>(j, spc);
                         if (rc==nullptr)
                             throw std::runtime_error("unknown coordinate type '" + type + "'");
                     }
@@ -633,19 +632,13 @@ namespace Faunus {
             std::string file, sep=" ";
             std::ofstream f;
             std::function<std::vector<double>()> energyFunc;
-            Average<double> uavg; //!< mean energy
+            Average<double> uavg, u2avg; //!< mean energy and mean squared energy
             std::vector<std::string> names;
             Table2D<double,double> ehist;  //Density histograms
 
             double uinit;
 
             void normalize();
-
-            // inline virtual ~SystemEnergy() {
-            //     normalize();
-            //     ehist.save( "distofstates.dat" );
-            //
-            // }
 
             void _sample() override;
 
@@ -674,6 +667,44 @@ namespace Faunus {
                     uinit = std::accumulate(u.begin(), u.end(), 0.0); // initial energy
                 }
         }; //!< Save system energy to disk. Keywords: `nstep`, `file`.
+
+        /**
+         * @brief Checks if system is sane. If not, abort program.
+         */
+        template<class Tspace>
+            class SanityCheck : public Analysisbase {
+                private:
+                    Tspace &spc;
+                    void _sample() override {
+                        // loop over all groups
+                        for (auto &g : spc.groups) {
+                            // check if particles are inside container
+                            for (auto &i : g) // loop over active particles
+                                if (spc.geo.collision(i.pos))
+                                    throw std::runtime_error("particle outside container");
+
+                            // check if molecular mass centers are correct
+                            if (not g.atomic)
+                                if (not g.empty()) {
+                                    Point cm =  Geometry::massCenter( g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
+                                    double sqd = spc.geo.sqdist(g.cm, cm);
+                                    if (sqd>1e-6) {
+                                        std::cerr
+                                            << "dist:      " << sqrt(sqd) << endl
+                                            << "g.cm:      " << g.cm.transpose() << endl
+                                            << "actual cm: " << cm.transpose() << endl;
+                                        throw std::runtime_error("mass center-out-of-sync");
+                                    }
+                                }
+                        }
+                    }
+                public:
+                    SanityCheck(const json &j, Tspace &spc) : spc(spc) {
+                        from_json(j);
+                        name = "sanity";
+                        steps = j.value("nstep", -1);
+                     }
+            };
 
         class SaveState : public Analysisbase {
             private:
@@ -1045,7 +1076,7 @@ namespace Faunus {
             class PolymerShape : public Analysisbase {
                 typedef typename Tspace::Tparticle Tparticle;
                 Tspace &spc;
-                std::map<int, Average<double>> Rg2, Rg, Re2, Rs, Rs2, Rg2x, Rg2y, Rg2z;
+                std::map<int, Average<double>> Rg2, Rg, Re2, Re, Rs, Rs2, Rg2x, Rg2y, Rg2z;
                 std::vector<int> ids; // molecule id's to analyse
 
                 void _to_json(json &j) const override {
@@ -1053,14 +1084,20 @@ namespace Faunus {
                     json &k = j["molecules"];
                     for (int i : ids)
                         k[ molecules<typename Tspace::Tpvec>[i].name ] = {
+                            { bracket("Rg"), Rg.at(i).avg() },
+                            { bracket("Re"), Re.at(i).avg() },
                             { bracket("Rg" + squared), Rg2.at(i).avg() },
                             { bracket("Rg" + squared) + "-" + bracket("Rg") + squared, Rg2.at(i).avg() - std::pow(Rg.at(i).avg(), 2.0) },
                             { bracket("Re" + squared) + "/" + bracket("Rg" + squared), Re2.at(i).avg() / Rg2.at(i).avg() },
                             { rootof + bracket("Rg"  + squared), sqrt( Rg2.at(i).avg() ) },
                             { rootof + bracket("Re"  + squared), sqrt( Re2.at(i).avg() )  },
-                            { rootof + bracket("Rgx" + squared), sqrt( Rg2x.at(i).avg() ) },
-                            { rootof + bracket("Rgy" + squared), sqrt( Rg2y.at(i).avg() ) },
-                            { rootof + bracket("Rgz" + squared), sqrt( Rg2z.at(i).avg() ) }
+                            { rootof + bracket("Rgxyz" + squared),
+                                { 
+                                    sqrt( Rg2x.at(i).avg() ),
+                                    sqrt( Rg2y.at(i).avg() ),
+                                    sqrt( Rg2z.at(i).avg() )
+                                }
+                            }
                         };
                 }
 
@@ -1086,8 +1123,9 @@ namespace Faunus {
                             if (g.size()>1) {
                                 Point r2 = vectorgyrationRadiusSquared(g);
                                 double rg2 = r2.sum();
-                                double re2 = spc.geo.sqdist( g.begin()->pos, g.end()->pos );
+                                double re2 = spc.geo.sqdist( g.begin()->pos, (g.end()-1)->pos );
                                 Rg[i] += sqrt(rg2);
+                                Re[i] += sqrt(re2);
                                 Rg2[i] += rg2;
                                 Re2[i] += re2; //end-2-end squared
                                 Rg2x[i] += r2.x();
@@ -1128,6 +1166,7 @@ namespace Faunus {
                                         if (it.key()=="multipole") push_back<Multipole<Tspace>>(it.value(), spc);
                                         if (it.key()=="multipoledist") push_back<MultipoleDistribution<Tspace>>(it.value(), spc);
                                         if (it.key()=="polymershape") push_back<PolymerShape<Tspace>>(it.value(), spc);
+                                        if (it.key()=="sanity") push_back<SanityCheck<Tspace>>(it.value(), spc);
                                         if (it.key()=="savestate") push_back<SaveState>(it.value(), spc);
                                         if (it.key()=="systemenergy") push_back<SystemEnergy>(it.value(), pot);
                                         if (it.key()=="virtualvolume") push_back<VirtualVolume>(it.value(), spc, pot);

@@ -43,20 +43,34 @@ namespace Faunus {
             struct ContainerOverlap : public Energybase {
                 const Tspace &spc;
                 ContainerOverlap(const Tspace &spc) : spc(spc) {
-                    name = "Container Overlap";
+                    name = "ContainerOverlap";
                 }
                 double energy(Change &change) override {
-                    if (spc.geo.type not_eq Geometry::Chameleon::CUBOID) // cuboid have PBC in all directions
+                    //if (spc.geo.type not_eq Geometry::Chameleon::CUBOID) // cuboid have PBC in all directions
                         if (change) {
-                            for (auto &d : change.groups) {
-                                auto &g = spc.groups[d.index];
-                                if (d.all)
+                            // all groups have been updated
+                            if (change.dV or change.all) {
+                                for (auto &g : spc.groups) // loop over *all* groups in system
                                     for (auto &p : g) // loop over *all* active particles in group
                                         if (spc.geo.collision(p.pos))
                                             return pc::infty;
-                                for (int i : d.atoms) // loop over specific atoms
-                                    if (spc.geo.collision( (g.begin()+i)->pos ))
-                                        return pc::infty;
+                                return 0;
+                            }
+ 
+                            // only a subset of groups have been updated
+                            for (auto &d : change.groups) {
+                                auto &g = spc.groups[d.index];
+                                // all atoms were updated
+                                if (d.all) {
+                                    for (auto &p : g) // loop over *all* active particles in group
+                                        if (spc.geo.collision(p.pos))
+                                            return pc::infty;
+                                }
+                                else
+                                    // only a subset of atoms were updated
+                                    for (int i : d.atoms) // loop over specific atoms
+                                        if (spc.geo.collision( (g.begin()+i)->pos ))
+                                            return pc::infty;
                             }
                         }
                     return 0;
@@ -402,6 +416,105 @@ namespace Faunus {
                         j["com"] = COM;
                     }
             }; //!< Base class for external potentials, acting on particles
+
+        /*!
+         * \brief Mean field electric potential from outside rectangular simulation box.
+         * \author Mikael Lund
+         * \date Asljunga, December 2010.
+         * \note Currently works with the cuboid simulation container
+         *
+         * This class will calculate the average potential outside a simulation box due to ion
+         * densities inside the box, extended to infinity.
+         * The update() function calculates the average charge densities in slits in the xy-plane
+         * and with a spacing dz. This is used to evaluate the electric potential along
+         * the z-axis by using the method by Torbjorn and CO (Mol. Phys. 1996, 87:407). To avoid
+         * energy drifts, update() returns the energy change brought about by updating the charge profile.
+         * This class should be used in conjunction with an interaction class (energybase derivative) to
+         * take inte account explicit interactions within the container.
+         *
+         * @warning Update July 2017: This is a quick and dirty conversion from a 2010 commit;
+         * double check your results. Completely untestes!
+         */
+        template<typename Tspace, typename base=ExternalPotential<Tspace>>
+            class ExternalAkesson : public base { 
+                private:
+                    bool loadfromdisk=false;
+                    unsigned int cnt=0;                     //!< Number of charge density updates
+                    double dz=0.1;                          //!< z spacing between slits (A)
+                    double lB;                              //!< Bjerrum length (A)
+                    Table2D<double, Average<double>> rho;   //!< Charge density at z (unit A^-2)
+                    Table2D<double, double> phi;            //!< External potential at z (unit: beta*e)
+
+                    double getPotential(const Point &a) { return phi(a.z()); }
+
+                    //!< This is Eq. 15 of the mol. phys. 1996 paper by Greberg et al.
+                    //!< (sign typo in manuscript: phi^infty(z) should be "-2*pi*z" on page 413, middle)
+                    double phi_ext(double z, double a) {
+                        return  -2*pc::pi*z-8*a*std::log((std::sqrt(2*a*a+z*z)+a)/std::sqrt(a*a+z*z))+2*z*(pc::pi/
+                                2+std::asin((a*a*a*a-z*z*z*z-2*a*a*z*z)/std::pow(a*a+z*z,2)));
+                    }
+
+                public:
+                    ExternalAkesson(const json &j, Tspace &spc) : base(j,spc) {
+                        base::name = "confine";
+                        dz = 0.1;
+                        lB = 7;
+                        phi.load("akesson.dat");
+                        loadfromdisk = phi.getMap().empty() ? false : true;
+                        if (loadfromdisk)
+                            cout << "loaded akesson.dat" << endl;
+                        else
+                            cout << "could not load akesson.dat" << endl;
+
+                        base::func = [](const typename base::Tparticle &p) {
+                            return p.charge * getPotential(p);
+                        };
+                    }
+
+                    ~ExternalAkesson() {
+                        if (loadfromdisk==false)
+                            if (!phi.getMap().empty())
+                            {
+                                phi.save("akesson.dat");
+                                cout << "saved akesson.dat to disk" << endl;
+                            }
+                    }
+
+                    /**
+                     * @brief Updated xy-slit charge densities as well as the potential along z.
+                     * @param c Cuboid container where charged particles are sought out and averaged
+                     * @return Energy change of updating the external potential (use to avoid energy drifts)
+                     */
+                    void sample(const Tspace &spc) {
+                        if (loadfromdisk==false) {
+                            cnt++;
+                            Point len = spc.geo.getLength();
+                            Point len_half = 0.5*len;
+                            double area = len.x() * len.y();
+                            for (double z=-len_half.z(); z<=len_half.z(); z+=dz) { // update rho(z)
+                                double Q=0;
+                                // todo: ignore inactive particles
+                                for (size_t i=0; i<spc.p.size(); i++)
+                                    if (spc.p[i].z() >= z)
+                                        if (spc.p[i].z() < z+dz )
+                                            Q+=spc.p[i].charge;
+                                rho(z) += Q / area; 
+                            }
+
+                            if (random()>0.99) {
+                                double a=len_half.x();
+                                for (double z=-len_half.z(); z<=len_half.z(); z+=dz) {
+                                    double s=0;
+                                    for (double zn=-len_half.z(); zn<=len_half.z(); zn+=dz)
+                                        if (rho(zn).cnt>0)
+                                            s += rho(zn).avg() * phi_ext( std::fabs(z-zn), a );  // Eq. 14 in Greberg paper
+                                        else s+=0;
+                                    phi(z) = lB*s;
+                                }
+                            }
+                        }
+                    }
+            };
 
 
         /**
@@ -1046,8 +1159,6 @@ namespace Faunus {
                                             rc = std::make_shared<SystemProperty>(it.value(), spc);
                                         if (it.key()=="cmcm")
                                             rc = std::make_shared<MassCenterSeparation>(it.value(), spc);
-                                        if (it.key()=="angle")
-                                            rc = std::make_shared<PrincipalAxisAngle>(it.value(), spc);
                                         if (rc!=nullptr) {
                                             if (rc->min>=rc->max || rc->binwidth<=0)
                                                 throw std::runtime_error("min<max and binwidth>0 required for '" + it.key() + "'");

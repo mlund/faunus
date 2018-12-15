@@ -1,0 +1,49 @@
+random: {seed: default}
+temperature: 298
+geometry: {type: sphere, radius: 100}
+mcloop: {macro: 10, micro: 2500}
+
+atomlist:
+    - Cl: {r: 3, dp: 110, q: -1.0}
+    - MM: {r: 3, dp: 10,  q: 1.0}
+
+moleculelist:
+    - counterions: {atoms: [Cl], atomic: True}
+    - polymer:
+        structure:
+            - MM: [0.0, 0.0, 0.0]
+            - MM: [7.6, 0.0, 0.0]
+            - MM: [0.0, 7.6, 0.0]
+            - MM: [7.6, 7.6, 0.0]
+        bondlist:
+            - harmonic: {index: [0,1], k: 0.27583, req: 0}
+            - harmonic: {index: [1,2], k: 0.27583, req: 0}
+            - harmonic: {index: [2,3], k: 0.27583, req: 0}
+
+insertmolecules:
+    - counterions: {N: 32}
+    - polymer: {N: 8}
+
+energy:
+    - isobaric: {P/mM: 113.2}
+    - bonded: {}
+    - nonbonded_coulombhs:
+        coulomb: {type: plain, epsr: 78.7, cutoff: 300 }
+
+moves:
+    - moltransrot: {molecule: polymer, dp: 10, dprot: 1, repeat: N}
+    - pivot: {molecule: polymer, dprot: 3, repeat: N}
+    - transrot: {molecule: polymer, repeat: N}
+    - transrot: {molecule: counterions, repeat: N}
+    - volume: {dV: 2, method: isotropic, repeat: 1}
+
+analysis:
+    - sanity: {nstep: 10}
+    - reactioncoordinate: {file: radius.dat, nstep: 10, type: system, property: radius}
+    - molrdf: {file: rdf.dat, nstep: 100, dr: 0.1, name1: polymer, name2: polymer}
+    - polymershape: {nstep: 10, molecules: [polymer]}
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - xtcfile: {file: traj.xtc, nstep: 100}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}
+

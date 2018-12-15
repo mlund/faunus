@@ -213,21 +213,26 @@ The input keywords are:
 ## Reaction Coordinate
 
 This saves a given reaction coordinate (see Penalty Function in Energy) as a function of steps.
-For example, the folowing prints the mass center $z$ coordinate of the first molecule
+The output file has three columns with steps; the value of the reaction coordinate; and
+the cummulative average of all preceding values.
+
+Examples:
+
+The folowing prints the mass center $z$ coordinate of the first molecule
 to disk every 100th steps:
 
 ~~~ yaml
-analysis:
-  - reactioncoordinate:
-      {nstep: 100, file: comz.dat, type: molecule, index: 0, property: com_z}
+- reactioncoordinate:
+    {nstep: 100, file: cmz.dat, type: molecule, index: 0, property: com_z}
 ~~~ 
 
-Note that the reaction coordinate keywords `range` and `resolution` are ignored.
-The output file has three columns:
-(1) steps,
-(2) the value of the reaction coordinate, and
-(3) the cummulative average of all preceding values.
+Angle between the principal molecular axis and the $xy$-plane. This is done
+by diagonalising the gyration tensor to find the principal moments
 
+~~~ yaml
+- reactioncoordinate:
+    {nstep: 100, file: angle.dat, type: molecule, index: 0, property: angle}
+~~~ 
 
 ## Save State
 
@@ -246,6 +251,19 @@ with the following information:
 - particle and group properties incl. positions
 - state of random number generator
 - geometry
+
+
+## System Sanity
+
+When setting up simulations or developing, it is wise to assert that the simulation
+is internally sane. This analysis checks the following and aborts if insane:
+
+- all particles are inside the simulation boundaries
+- molecular mass centers are correct
+- ...more to be added.
+
+To envoke, use for example `- sanity: {nstep: 1}` by default, `nstep=-1`, meaning it will
+be run at the end of simulation, only.
 
 
 ## System Energy

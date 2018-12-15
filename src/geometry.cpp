@@ -103,19 +103,19 @@ namespace Faunus {
             }
 
             if (type==CYLINDER and method==ISOTROPIC) {
-                double rold = radius;
+                double oldradius = radius;
                 radius = std::sqrt( V / (pc::pi * len.z()) );
                 setLength( { pbc_disable*2*radius, pbc_disable*2*radius, len.z() } );
                 assert( fabs(getVolume()-V)<1e-6 );
-                return Point(radius/rold, radius/rold, 1);
+                return {radius/oldradius, radius/oldradius, 1};
             }
 
             if (type==SPHERE and method==ISOTROPIC) {
-                double rold = radius;
+                double oldradius = radius;
                 radius = std::cbrt(3*V/(4*pc::pi));
                 setLength( pbc_disable*2*Point(radius,radius,radius) ); // disable min. image in xyz
                 assert( std::fabs(getVolume()-V)<1e-6 && "error setting sphere volume");
-                return Point().setConstant(radius/rold);
+                return Point().setConstant(radius/oldradius);
             }
 
             throw std::runtime_error("unsupported volume move for geometry");

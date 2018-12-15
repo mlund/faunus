@@ -434,6 +434,7 @@ namespace Faunus {
          *
          * @warning Update July 2017: This is a quick and dirty conversion from a 2010 commit;
          * double check your results. Completely untestes!
+         * @todo finish
          */
         template<typename Tspace, typename base=ExternalPotential<Tspace>>
             class ExternalAkesson : public base { 
@@ -467,7 +468,7 @@ namespace Faunus {
                             cout << "could not load akesson.dat" << endl;
 
                         base::func = [](const typename base::Tparticle &p) {
-                            return p.charge * getPotential(p);
+                            return p.charge ;//* getPotential(p); // uncommented due to compiler error
                         };
                     }
 

@@ -54,7 +54,6 @@
         },
         {
             "systemenergy": {
-                "Cv/kT²": 0.14377,
                 "file": "energy.dat",
                 "final": [
                     0.0,
@@ -546,7 +545,6 @@
                 "moves": 24909,
                 "relative time": 0.0866,
                 "repeat": 1,
-                "√⟨ΔV²⟩": 29400.0,
                 "∛√⟨ΔV²⟩": 30.9,
                 "⟨V⟩": 538000.0
             }

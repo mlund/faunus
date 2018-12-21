@@ -154,6 +154,7 @@ namespace Faunus {
                     m.x() = (rand()-0.5) * len.x();
                     m.y() = (rand()-0.5) * len.y();
                     m.z() = (rand()-0.5) * len.z() / pbc_disable;
+                    break;
                 case CUBOID:
                     m.x() = (rand()-0.5) * len.x();
                     m.y() = (rand()-0.5) * len.y();

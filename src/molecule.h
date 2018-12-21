@@ -26,33 +26,28 @@ namespace Faunus {
         struct RandomInserter
         {
             typedef typename TMoleculeData::TParticleVector Tpvec;
-            std::string name;
             Point dir={1,1,1};      //!< Scalars for random mass center position. Default (1,1,1)
             Point offset={0,0,0};   //!< Added to random position. Default (0,0,0)
-            bool checkOverlap=true; //!< Set to true to enable container overlap check
             bool rotate=true;       //!< Set to true to randomly rotate molecule when inserted. Default: true
             bool keeppos=false;     //!< Set to true to keep original positions (default: false)
-            int maxtrials=2e3;      //!< Maximum number of overlap checks if `checkOverlap==true`
+            int maxtrials=2e4;      //!< Maximum number of container overlap checks
             int confindex=-1;       //!< Index of last used conformation
-
-            RandomInserter() : name("random") {}
 
             Tpvec operator()( Geometry::GeometryBase &geo, const Tpvec &p, TMoleculeData &mol )
             {
+                int cnt = 0;
+                QuaternionRotate rot;
+                bool containerOverlap;
+
                 if (std::fabs(geo.getVolume())<1e-20)
                     throw std::runtime_error("geometry has zero volume");
-                bool _overlap = true;
-                Tpvec v;
-                int cnt = 0;
-                int _ntry = 1000000;
-                QuaternionRotate rot;
+
+                Tpvec v = mol.conformations.get(); // get random, weighted conformation
+                confindex = mol.conformations.index; // lastest index
 
                 do {
                     if ( cnt++ > maxtrials )
                         throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
-
-                    v = mol.conformations.get(); // get random, weighted conformation
-                    confindex = mol.conformations.index; // lastest index
 
                     if ( mol.atomic ) { // insert atomic species
                         for ( auto &i : v ) { // for each atom type id
@@ -60,13 +55,9 @@ namespace Faunus {
                                 rot.set(2*pc::pi*random(), ranunit(random));
                                 i.rotate(rot.first, rot.second);
                             }
-                            // int _try=0;
-                            // do {
-                                geo.randompos(i.pos, random);
-                                i.pos = i.pos.cwiseProduct(dir) + offset;
-                                geo.boundary(i.pos);
-                            //     _try++;
-                            // } while ( _ntry > _try && )
+                            geo.randompos(i.pos, random);
+                            i.pos = i.pos.cwiseProduct(dir) + offset;
+                            geo.boundary(i.pos);
                         }
                     }
                     else { // insert molecule
@@ -91,17 +82,17 @@ namespace Faunus {
                         }
                     }
 
-                    assert(!v.empty());
+                    if (v.empty())
+                        throw std::runtime_error("Nothing to load/insert for molecule '"s + mol.name + "'");
 
-                    _overlap = false;
-                    if ( checkOverlap )              // check for container overlap
-                        for ( auto &i : v )
-                            if ( geo.collision(i.pos)) {
-                                _overlap = true;
-                                break;
-                            }
-                }
-                while (_overlap);
+                    // check if molecules / atoms fit inside simulation container
+                    containerOverlap = false;
+                    for ( auto &i : v )
+                        if ( geo.collision(i.pos)) {
+                            containerOverlap = true;
+                            break;
+                        }
+                } while (containerOverlap);
                 return v;
             }
         };

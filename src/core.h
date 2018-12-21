@@ -97,12 +97,16 @@ namespace Faunus {
 
         inline json at(const std::string &key) {
             json val = json::at(key);
-            erase(key);
+            json::erase(key);
             return val;
         }
 
         inline json operator[](const std::string &key) {
             return at(key);
+        }
+
+        inline void erase(const std::string &key) {
+            json::erase(key);
         }
 
         template<class T> T value(const std::string &key, const T &fallback) {

@@ -28,7 +28,7 @@ if (ENABLE_APPROXMATH)
     add_definitions(-DFAU_APPROXMATH)
 endif ()
 
-option(ENABLE_OPENMP "Try to use OpenMP parallization" off)
+option(ENABLE_OPENMP "Try to use OpenMP parallisation" on)
 if (ENABLE_OPENMP)
   find_package(OpenMP)
   if (OPENMP_FOUND)
@@ -300,6 +300,13 @@ if (PANDOC)
 endif()
 
 # TESTS
+
+add_test(
+    NAME doublelayer
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py doublelayer.yml\
+    | $<TARGET_FILE:faunus> --nobar --state doublelayer.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py doublelayer.out.json out.json --tol 0.05"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 add_test(
     NAME penalty

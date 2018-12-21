@@ -167,6 +167,13 @@ The file must contain exactly N-times molecular
 positions that must all fit within the simulation box. Only _positions_ from
 the file are copied; all other information is ignored.
 
+#### Overlap Check
+
+Random insertion is repeated until there is no overlap with the simulation
+container boundaries. Overlap between particles is ignored and for
+i.e. hard-sphere potentials the initial energy may be infinite.
+
+
 ## Equilibrium Reactions
 
 Faunus supports density fluctuations, coupled to chemical equilibria with

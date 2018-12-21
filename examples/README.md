@@ -7,6 +7,7 @@ already been installed.
 Example         | Description
 --------------- | ---------------------------------------------------------
 `bulk`          | Melted NaCl using Ewald summation and isobaric moves
+`doublelayer`   | Electric double layer in a slit geometry with mean field correction
 `cluster`       | Illustration of molecular cluster moves
 `isochoric`     | Bending modulus via penalty function and isochoric moves
 `membrane`      | Coarse-grained lipid bilayer under zero tension

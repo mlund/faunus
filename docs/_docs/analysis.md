@@ -216,9 +216,7 @@ This saves a given reaction coordinate (see Penalty Function in Energy) as a fun
 The output file has three columns with steps; the value of the reaction coordinate; and
 the cummulative average of all preceding values.
 
-Examples:
-
-The folowing prints the mass center $z$ coordinate of the first molecule
+The folowing example prints the mass center $z$ coordinate of the first molecule
 to disk every 100th steps:
 
 ~~~ yaml
@@ -226,12 +224,12 @@ to disk every 100th steps:
     {nstep: 100, file: cmz.dat, type: molecule, index: 0, property: com_z}
 ~~~ 
 
-Angle between the principal molecular axis and the $xy$-plane. This is done
-by diagonalising the gyration tensor to find the principal moments
+In the next example, the Angle between the principal molecular axis and the $xy$-plane
+is reported by diagonalising the gyration tensor to find the principal moments:
 
 ~~~ yaml
 - reactioncoordinate:
-    {nstep: 100, file: angle.dat, type: molecule, index: 0, property: angle}
+    {nstep: 100, file: angle.dat, type: molecule, index: 0, property: angle, dir: [0,0,1]}
 ~~~ 
 
 ## Save State

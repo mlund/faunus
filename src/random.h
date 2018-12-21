@@ -77,7 +77,7 @@ namespace Faunus {
      * @brief Stores a series of elements with given weight
      *
      * Elements is accessed with `get()` that will
-     * randomly pick rom the weighted distribution.
+     * randomly pick from the weighted distribution.
      * Add elements with `push_back()`
      * where the default weight is _unity_.
      */

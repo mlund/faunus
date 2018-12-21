@@ -417,103 +417,184 @@ namespace Faunus {
                     }
             }; //!< Base class for external potentials, acting on particles
 
-        /*!
-         * \brief Mean field electric potential from outside rectangular simulation box.
-         * \author Mikael Lund
-         * \date Asljunga, December 2010.
-         * \note Currently works with the cuboid simulation container
+        /**
+         * @brief Mean field electric potential from outside rectangular simulation box.
+         * @date Asljunga, December 2010.
          *
-         * This class will calculate the average potential outside a simulation box due to ion
+         * Calculates the average potential outside a simulation box due to ion
          * densities inside the box, extended to infinity.
          * The update() function calculates the average charge densities in slits in the xy-plane
          * and with a spacing dz. This is used to evaluate the electric potential along
          * the z-axis by using the method by Torbjorn and CO (Mol. Phys. 1996, 87:407). To avoid
          * energy drifts, update() returns the energy change brought about by updating the charge profile.
-         * This class should be used in conjunction with an interaction class (energybase derivative) to
-         * take inte account explicit interactions within the container.
-         *
-         * @warning Update July 2017: This is a quick and dirty conversion from a 2010 commit;
-         * double check your results. Completely untestes!
-         * @todo finish
          */
         template<typename Tspace, typename base=ExternalPotential<Tspace>>
             class ExternalAkesson : public base { 
                 private:
-                    bool loadfromdisk=false;
-                    unsigned int cnt=0;                     //!< Number of charge density updates
-                    double dz=0.1;                          //!< z spacing between slits (A)
-                    double lB;                              //!< Bjerrum length (A)
-                    Table2D<double, Average<double>> rho;   //!< Charge density at z (unit A^-2)
-                    Table2D<double, double> phi;            //!< External potential at z (unit: beta*e)
+                    using base::spc;
+                    std::string filename;                //!< File name for average charge
+                    bool fixed;
+                    unsigned int nstep=0;                //!< Internal between samples
+                    unsigned int nphi=0;                 //!< Distance between phi updating
+                    unsigned int updatecnt=0;            //!< Number of time rho has been updated
+                    double epsr;                         //!< Relative dielectric constant
+                    double dz;                           //!< z spacing between slits (A)
+                    double lB;                           //!< Bjerrum length (A)
+                    double halfz;                        //!< Half box length in z direction
+                    Table2D<double,double> Q;            //!< instantaneous net charge
 
-                    double getPotential(const Point &a) { return phi(a.z()); }
+                public:
+                    unsigned int cnt=0;                  //!< Number of charge density updates
+                    Table2D<double,Average<double>> rho; //!< Charge density at z (unit A^-2)
+                    Table2D<double, double> phi;         //!< External potential at z (unit: beta*e)
 
-                    //!< This is Eq. 15 of the mol. phys. 1996 paper by Greberg et al.
-                    //!< (sign typo in manuscript: phi^infty(z) should be "-2*pi*z" on page 413, middle)
-                    double phi_ext(double z, double a) {
-                        return  -2*pc::pi*z-8*a*std::log((std::sqrt(2*a*a+z*z)+a)/std::sqrt(a*a+z*z))+2*z*(pc::pi/
-                                2+std::asin((a*a*a*a-z*z*z*z-2*a*a*z*z)/std::pow(a*a+z*z,2)));
+                private:
+                    void to_json(json &j) const override {
+                        j = {
+                            {"lB",lB}, {"dz",dz}, {"nphi",nphi},
+                            {"epsr",epsr}, {"file",filename}, {"nstep",nstep},
+                            {"Nupdates",updatecnt}, {"fixed",fixed}
+                        };
+                        base::to_json(j);
+                        _roundjson(j,5);
+                    }
+
+                    void save() {
+                        std::ofstream f(filename);
+                        if (f) {
+                            f.precision(16);
+                            for (double z=-halfz; z<=halfz; z+=dz) {
+                                auto &r = rho(z);
+                                f << z << " "  << r.cnt << " " << r.sum << " " << r.sqsum << "\n";
+                            }
+                        }
+                        else throw std::runtime_error("cannot save file '"s + filename + "'");
+                    }
+
+                    void load() {
+                        std::ifstream f(filename);
+                        if (f) {
+                            double zFromFile;
+                            for (double z=-halfz; z<=halfz; z+=dz) {
+                                auto &r = rho(z);
+                                f >> zFromFile;
+                                if (std::fabs(zFromFile-z)>1e-6)
+                                    throw std::runtime_error(filename + " is incompatible");
+                                f >> r.cnt >> r.sum >> r.sqsum;
+                            }
+                            update_phi();
+                        }
+                        else std::cerr << "density file '" << filename << "' not loaded." << endl;
+                     }
+
+                    /*
+                     * This is Eq. 15 of the mol. phys. 1996 paper by Greberg et al.
+                     * (sign typo in manuscript: phi^infty(z) should be "-2*pi*z" on page 413, middle)
+                     */
+                    inline double phi_ext(double z, double a) const {
+                        double a2 = a*a,
+                               z2 = z*z;
+                        return
+                            - 2 * pc::pi * z
+                            - 8 * a * std::log( ( std::sqrt( 2*a2 + z2 ) + a ) / std::sqrt( a2+z2 ) )
+                            + 2 * z * (0.5*pc::pi
+                                    +std::asin( ( a2*a2 - z2*z2 - 2*a2*z2) / std::pow(a2+z2,2) ) );
+                    }
+
+                    void sync(Energybase *basePtr, Change &change) override {
+                        if (not fixed) {
+                            auto other = dynamic_cast<decltype(this)>(basePtr);
+                            assert(other);
+                            // only trial energy (new) require sync
+                            if (other->key==Energybase::OLD)
+                                if (cnt != other->cnt) {
+                                    assert(cnt < other->cnt && "trial cnt's must be smaller");
+                                    cnt = other->cnt;
+                                    rho = other->rho;
+                                    phi = other->phi;
+                                }
+                        }
+                    }
+
+                    // update average charge density
+                    void update_rho() {
+                        updatecnt++;
+                        Point L = spc.geo.getLength();
+                        double area = L.x()*L.y();
+                        if (L.x() not_eq L.y() or 0.5*L.z()!=halfz)
+                            throw std::runtime_error("Requires box Lx=Ly and Lz=const.");
+
+                        Q.clear();
+                        for (auto &g : spc.groups) // loop over all groups
+                            for (auto &p : g)        // ...and their active particles
+                                Q( p.pos.z() ) += p.charge;
+                        for (double z=-halfz; z<=halfz; z+=dz)
+                            rho(z) += Q(z) / area;
+                    }
+
+                    // update average external potential
+                    void update_phi() {
+                        Point L = spc.geo.getLength();
+                        double a = 0.5*L.x();
+                        for (double z=-halfz; z<=halfz; z+=dz) {
+                            double s=0;
+                            for (double zn=-halfz; zn<=halfz; zn+=dz)
+                                if (rho(zn).cnt>0)
+                                    s += rho(zn).avg() * phi_ext( std::fabs(z-zn), a );  // Eq. 14 in Greberg paper
+                            phi(z) = lB*s;
+                        }
                     }
 
                 public:
                     ExternalAkesson(const json &j, Tspace &spc) : base(j,spc) {
-                        base::name = "confine";
-                        dz = 0.1;
-                        lB = 7;
-                        phi.load("akesson.dat");
-                        loadfromdisk = phi.getMap().empty() ? false : true;
-                        if (loadfromdisk)
-                            cout << "loaded akesson.dat" << endl;
-                        else
-                            cout << "could not load akesson.dat" << endl;
+                        base::name = "akesson";
+                        base::cite = "doi:10/dhb9mj";
 
-                        base::func = [](const typename base::Tparticle &p) {
-                            return p.charge ;//* getPotential(p); // uncommented due to compiler error
+                        xjson _j = j; // json variant where items are deleted after access
+                        _j.erase("com");
+                        _j.erase("molecules");
+
+                        nstep = _j.at("nstep").get<unsigned int>();
+                        epsr = _j.at("epsr").get<double>();
+                        fixed = _j.value("fixed", false);
+                        nphi = _j.value("nphi", 10);
+
+                        halfz = 0.5*spc.geo.getLength().z();
+                        lB = pc::lB(epsr);
+
+                        dz = _j.value("dz", 0.2); // read z resolution
+                        Q.setResolution(dz);
+                        rho.setResolution(dz);
+                        phi.setResolution(dz);
+
+                        filename = _j.value("file", "mfcorr.dat"s);
+                        load();
+
+                        base::func = [&phi=phi](const typename Tspace::Tparticle &p) {
+                            return p.charge * phi( p.pos.z() );
                         };
+
+                        if (not _j.empty()) // throw exception of unused/unknown keys are passed
+                            throw std::runtime_error("unused key(s) for '"s + base::name + "':\n" + _j.dump());
+                    }
+
+                    double energy(Change &change) override {
+                        if (not fixed) // pho(z) unconverged, keep sampling
+                            if (base::key==Energybase::OLD) { // only sample on accepted configs
+                                cnt++;
+                                if (cnt % nstep == 0)
+                                    update_rho();
+                                if (cnt % nstep*nphi == 0)
+                                    update_phi();
+                            }
+                        return base::energy(change);
                     }
 
                     ~ExternalAkesson() {
-                        if (loadfromdisk==false)
-                            if (!phi.getMap().empty())
-                            {
-                                phi.save("akesson.dat");
-                                cout << "saved akesson.dat to disk" << endl;
-                            }
-                    }
-
-                    /**
-                     * @brief Updated xy-slit charge densities as well as the potential along z.
-                     * @param c Cuboid container where charged particles are sought out and averaged
-                     * @return Energy change of updating the external potential (use to avoid energy drifts)
-                     */
-                    void sample(const Tspace &spc) {
-                        if (loadfromdisk==false) {
-                            cnt++;
-                            Point len = spc.geo.getLength();
-                            Point len_half = 0.5*len;
-                            double area = len.x() * len.y();
-                            for (double z=-len_half.z(); z<=len_half.z(); z+=dz) { // update rho(z)
-                                double Q=0;
-                                // todo: ignore inactive particles
-                                for (size_t i=0; i<spc.p.size(); i++)
-                                    if (spc.p[i].z() >= z)
-                                        if (spc.p[i].z() < z+dz )
-                                            Q+=spc.p[i].charge;
-                                rho(z) += Q / area; 
-                            }
-
-                            if (random()>0.99) {
-                                double a=len_half.x();
-                                for (double z=-len_half.z(); z<=len_half.z(); z+=dz) {
-                                    double s=0;
-                                    for (double zn=-len_half.z(); zn<=len_half.z(); zn+=dz)
-                                        if (rho(zn).cnt>0)
-                                            s += rho(zn).avg() * phi_ext( std::fabs(z-zn), a );  // Eq. 14 in Greberg paper
-                                        else s+=0;
-                                    phi(z) = lB*s;
-                                }
-                            }
-                        }
+                        // save only if still updating and if energy type is "OLD",
+                        // that is, accepted configurations (not trial)
+                        if (not fixed and base::key==Energybase::OLD)
+                            save();
                     }
             };
 
@@ -1471,6 +1552,7 @@ namespace Faunus {
                         typedef CombinedPairPotential<CoulombGalore,HardSphere<Tparticle>> CoulombHS;
                         typedef CombinedPairPotential<CoulombGalore,WeeksChandlerAndersen<Tparticle>> CoulombWCA;
                         typedef CombinedPairPotential<Coulomb,WeeksChandlerAndersen<Tparticle>> PrimitiveModelWCA;
+                        typedef CombinedPairPotential<Coulomb,HardSphere<Tparticle>> PrimitiveModel;
 
                         Energybase::name="hamiltonian";
 
@@ -1488,11 +1570,11 @@ namespace Faunus {
                                     if (it.key()=="nonbonded")
                                         push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
 
-                                    if (it.key()=="nonbonded_coulombhs")
-                                        push_back<Energy::Nonbonded<Tspace,CoulombHS>>(it.value(), spc);
-
                                     if (it.key()=="nonbonded_coulombwca")
                                         push_back<Energy::Nonbonded<Tspace,CoulombWCA>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded_pm" or it.key()=="nonbonded_coulombhs")
+                                        push_back<Energy::Nonbonded<Tspace,PrimitiveModel>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded_pmwca")
                                         push_back<Energy::Nonbonded<Tspace,PrimitiveModelWCA>>(it.value(), spc);
@@ -1505,6 +1587,9 @@ namespace Faunus {
 
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);
+
+                                    if (it.key()=="akesson")
+                                        push_back<Energy::ExternalAkesson<Tspace>>(it.value(), spc);
 
                                     if (it.key()=="confine")
                                         push_back<Energy::Confine<Tspace>>(it.value(), spc);

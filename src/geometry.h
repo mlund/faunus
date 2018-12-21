@@ -175,6 +175,7 @@ namespace Faunus {
 
             using doctest::Approx;
             Chameleon geo;
+            Random slump;
 
             SUBCASE("cuboid") {
                 geo = R"( {"type": "cuboid", "length": [2,3,4]} )"_json;
@@ -196,6 +197,15 @@ namespace Faunus {
                 CHECK( L.x() == Approx(2) );
                 CHECK( L.y() == Approx(3) );
                 CHECK( L.z() == Approx(4) );
+
+                // check random position
+                bool containerOverlap=false;
+                for (int i=0; i<1e4; i++) {
+                    geo.randompos(a, slump);
+                    if (geo.collision(a))
+                        containerOverlap=true;
+                }
+                CHECK( containerOverlap==false );
             }
 
             SUBCASE("slit") {
@@ -222,6 +232,15 @@ namespace Faunus {
                 CHECK( L.x() == Approx(2) );
                 CHECK( L.y() == Approx(3) );
                 CHECK( L.z() == Approx(4) );
+
+                // check random position
+                bool containerOverlap=false;
+                for (int i=0; i<1e4; i++) {
+                    geo.randompos(a, slump);
+                    if (geo.collision(a))
+                        containerOverlap=true;
+                }
+                CHECK( containerOverlap==false );
             }
 
             SUBCASE("cylinder") {
@@ -237,6 +256,16 @@ namespace Faunus {
                 CHECK( L.x() == Approx(2) );
                 CHECK( L.y() == Approx(2) );
                 CHECK( L.z() == Approx(1/pc::pi) );
+
+                // check random position
+                Point a;
+                bool containerOverlap=false;
+                for (int i=0; i<1e4; i++) {
+                    geo.randompos(a, slump);
+                    if (geo.collision(a))
+                        containerOverlap=true;
+                }
+                CHECK( containerOverlap==false );
             }
 
             SUBCASE("sphere") {
@@ -254,6 +283,16 @@ namespace Faunus {
 
                 geo.setVolume(123.4);
                 CHECK( geo.getVolume() == doctest::Approx(123.4) );
+
+                // check random position
+                Point a;
+                bool containerOverlap=false;
+                for (int i=0; i<1e4; i++) {
+                    geo.randompos(a, slump);
+                    if (geo.collision(a))
+                        containerOverlap=true;
+                }
+                CHECK( containerOverlap==false );
             }
        }
 #endif

@@ -173,7 +173,6 @@ namespace Faunus {
                         from_json(j);
                         name = "widom";
                         cite = "doi:10/dkv4s6";
-                        rins.checkOverlap = false;
                     }
             };
 
@@ -489,6 +488,59 @@ namespace Faunus {
                         double r = m.first;
                         double N = m.second/double(cnt);
                         f << r << " " << N << " " << N/(4*pc::pi*r*r*dr)*1e27/pc::Nav << "\n";
+                    }
+                }
+            };
+
+        /**
+         * @brief Measures the density of atoms along z axis
+         */
+        template<class Tspace>
+            class SlicedDensity : public Analysisbase {
+                Tspace &spc;
+                typedef typename Tspace::Tparticle Tparticle;
+                Table2D<double,unsigned int> N; // N(z)
+                std::vector<std::string> names;
+                std::vector<int> ids;
+                std::string file;
+                double dz;
+
+                void _from_json(const json &j) override {
+                    file = j.at("file").get<std::string>();
+                    names = j.at("atoms").get<decltype(names)>(); // molecule names
+                    ids = names2ids(atoms, names);     // names --> molids
+                    dz = j.value("dz", 0.1);
+                    N.setResolution(dz);
+                }
+
+                void _to_json(json &j) const override {
+                    j = {{"atoms", names}, {"file", file}, {"dz", dz}};
+                }
+
+                void _sample() override {
+                    // count atoms in slices
+                    for (auto &g : spc.groups) // loop over all groups
+                        for (auto &i : g)      // loop over active particles
+                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end())
+                                N( i.pos.z() )++;
+                }
+
+                public:
+
+                SlicedDensity(const json &j, Tspace &spc) : spc(spc) {
+                    name = "sliceddensity";
+                    from_json(j);
+                }
+
+                ~SlicedDensity() {
+                    std::ofstream f(MPI::prefix + file);
+                    if (f and cnt>0) {
+                        f << "# z rho/M\n";
+                        Point L = spc.geo.getLength();
+                        double halfz = 0.5*L.z();
+                        double volume = L.x() * L.y() * dz;
+                        for (double z=-halfz; z<=halfz; z+=dz)
+                            f << z << " " << N(z) / volume / cnt * 1e27 / pc::Nav << "\n";
                     }
                 }
             };
@@ -1157,21 +1209,22 @@ namespace Faunus {
                                 if (it->is_object())
                                     try {
                                         size_t oldsize = this->vec.size();
-                                        if (it.key()=="atomprofile") push_back<AtomProfile<Tspace>>(it.value(), spc);
-                                        if (it.key()=="atomrdf") push_back<AtomRDF<Tspace>>(it.value(), spc);
-                                        if (it.key()=="reactioncoordinate") push_back<FileReactionCoordinate>(it.value(), spc);
-                                        if (it.key()=="scatter") push_back<ScatteringFunction<Tspace>>(it.value(), spc);
-                                        if (it.key()=="density") push_back<Density<Tspace>>(it.value(), spc);
-                                        if (it.key()=="molrdf") push_back<MoleculeRDF<Tspace>>(it.value(), spc);
-                                        if (it.key()=="multipole") push_back<Multipole<Tspace>>(it.value(), spc);
-                                        if (it.key()=="multipoledist") push_back<MultipoleDistribution<Tspace>>(it.value(), spc);
-                                        if (it.key()=="polymershape") push_back<PolymerShape<Tspace>>(it.value(), spc);
-                                        if (it.key()=="sanity") push_back<SanityCheck<Tspace>>(it.value(), spc);
-                                        if (it.key()=="savestate") push_back<SaveState>(it.value(), spc);
-                                        if (it.key()=="systemenergy") push_back<SystemEnergy>(it.value(), pot);
-                                        if (it.key()=="virtualvolume") push_back<VirtualVolume>(it.value(), spc, pot);
-                                        if (it.key()=="widom") push_back<WidomInsertion<Tspace>>(it.value(), spc, pot);
-                                        if (it.key()=="xtcfile") push_back<XTCtraj<Tspace>>(it.value(), spc);
+                                        if      (it.key()=="atomprofile") push_back<AtomProfile<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="atomrdf") push_back<AtomRDF<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="density") push_back<Density<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="molrdf") push_back<MoleculeRDF<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="multipole") push_back<Multipole<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="multipoledist") push_back<MultipoleDistribution<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="polymershape") push_back<PolymerShape<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="reactioncoordinate") push_back<FileReactionCoordinate>(it.value(), spc);
+                                        else if (it.key()=="sanity") push_back<SanityCheck<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="savestate") push_back<SaveState>(it.value(), spc);
+                                        else if (it.key()=="scatter") push_back<ScatteringFunction<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="sliceddensity") push_back<SlicedDensity<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="systemenergy") push_back<SystemEnergy>(it.value(), pot);
+                                        else if (it.key()=="virtualvolume") push_back<VirtualVolume>(it.value(), spc, pot);
+                                        else if (it.key()=="widom") push_back<WidomInsertion<Tspace>>(it.value(), spc, pot);
+                                        else if (it.key()=="xtcfile") push_back<XTCtraj<Tspace>>(it.value(), spc);
                                         // additional analysis go here...
  
                                         if (this->vec.size()==oldsize)

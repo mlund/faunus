@@ -232,9 +232,9 @@ To enable the correction, use the `akesson` keyword at the top level of `energy`
 `fixed=false`     | If true, assume that `file` is converged. No further updating and faster.
 
 The density is updated every `nstep` energy calls, while the external potential can be updated
-slower (`nphi`) since it effects the ensemble.
+slower (`nphi`) since it affects the ensemble.
 A reasonable value of `nstep` is system dependent and can be a rather large value.
-Updating the external potential on the fly leads to energy drifts that will decrease for consecutive run.
+Updating the external potential on the fly leads to energy drifts that decrease for consecutive runs.
 Production runs should always be performed with `fixed=true` and a well converged $\rho(z)$.
 
 At the end of simulation, `file` is overwritten unless `fixed=true`.

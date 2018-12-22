@@ -449,7 +449,7 @@ namespace Faunus
      * bin = Q(-0.5);     // --> 0
      * x = Q.frombin(2);  // --> 0.5
      *
-     * std::vector<bool> v;
+     * std::vector<bool> v(10);
      * v[ Q(0.61) ] = false; // 2nd element set to false
      * ~~~
      *
@@ -1805,6 +1805,153 @@ namespace Faunus
             static_assert(std::is_unsigned<Ty>::value, "Histogram must be unsigned");
         }
     };
+
+    /*
+     * @brief Table for storing XY data with random access
+     *
+     * Functionality:
+     *
+     * - equidistant x-spacing
+     * - supports centered and lower bound (default) binning via `centerbin`
+     * - internal storage is `std::vector<Ty>`
+     * - lookup complexity: constant
+     * - minimum x value and resolution must be given upon construction
+     * - dynamic memory allocation when adding x>=xmin
+     * - stream (de)serialization
+     * - unit tests
+     */
+    template<typename Tx=double, typename Ty=Tx, bool centerbin=false>
+        class Equidistant2DTable {
+            private:
+                Tx _dxinv, _xmin;
+                int offset;
+                std::vector<Ty> vec;
+
+                inline int to_bin(Tx x) const {
+                    if (centerbin)
+                        return (x<0) ? int(x*_dxinv-0.5) : int(x*_dxinv+0.5);
+                    else
+                        return std::floor( (x-_xmin)*_dxinv );
+                } //!< x-value to vector index
+
+                Tx from_bin(int i) const {
+                    assert(i>=0);
+                    return i/_dxinv + _xmin;
+                } //!< vector index to x-value
+
+            public:
+                /**
+                 * @brief Constructor
+                 * @param dx x spacing
+                 * @param xmin minimum x value
+                 * @param xmax maximum x value (for more efficient memory handling, only)
+                 */
+                Equidistant2DTable(Tx dx, Tx xmin, Tx xmax=std::numeric_limits<Tx>::infinity()) : _dxinv(1/dx), _xmin(xmin) {
+                    offset = -to_bin(_xmin);
+                    if (xmax<std::numeric_limits<Tx>::infinity())
+                        vec.reserve( to_bin(xmax) + offset );
+                }
+
+                const std::vector<Ty>& yvec() const { 
+                    return vec;
+                } //!< vector with y-values
+
+                std::vector<Tx> xvec() const {
+                    std::vector<Tx> v;
+                    v.reserve( vec.size() );
+                    for (size_t i=0; i<v.size(); i++)
+                        v.push_back( from_bin(i) );
+                    return v;
+                }
+
+                void clear() { vec.clear(); }
+                size_t size() const { vec.size(); }
+                bool empty() const { return vec.empty(); }
+                Tx dx() const { return 1/_dxinv; }
+                Tx xmin() const { return _xmin; } //!< minimum x-value
+
+                Tx xmax() const {
+                    return (vec.empty()) ? _xmin : from_bin(vec.size()-1);
+                } //!< maximum stored x-value
+
+                Ty& operator()(Tx x) {
+                    assert(x>=_xmin);
+                    int i = to_bin(x) + offset;
+                    if (i>=vec.size())
+                        vec.resize( i+1, Ty() );
+                    return vec[i];
+                } // return y value for given x
+
+                const Ty& operator()(Tx x) const {
+                    assert(x>=_xmin);
+                    int i = to_bin(x) + offset;
+                    assert(i<vec.size());
+                    return vec.at(i);
+                } // return y value for given x
+
+
+                friend std::ostream &operator<<( std::ostream &o, const Equidistant2DTable<Tx,Ty,centerbin> &tbl ) {
+                    o.precision(16);
+                    for (double x=tbl.xmin(); x<=tbl.xmax(); x+=tbl.dx())
+                        o << x << " " << tbl(x) << "\n";
+                    return o;
+                } // write to stream
+
+                auto &operator<<( std::istream &in ) {
+                    clear();
+                    Tx x;
+                    Ty y;
+                    std::string line;
+                    while ( std::getline(in, line)) {
+                        std::stringstream o(line);
+                        while (o >> x >> y) {
+                            if (x>=_xmin)
+                                operator()(x) = y;
+                            else
+                                throw std::runtime_error("table load error: x smaller than xmin");
+                        }
+                    }
+                    return *this;
+                } // load from stream
+
+        };
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("Faunus: Equidistant2DTable")
+    {
+        using doctest::Approx;
+
+        SUBCASE("centered") {
+            Equidistant2DTable<double, double, true> y(0.5, -3.0);
+            CHECK( y.xmin() == Approx(-3.0) );
+            CHECK( y.dx() == Approx(0.5) );
+            y(-2.51) = 0.15;
+            CHECK( y(-2.5) == Approx(0.15));
+            y(-2.76) = 0.11;
+            CHECK( y(-3) == Approx(0.11));
+            y(0.4) = 0.3;
+            CHECK( y(0.5) == Approx(0.3));
+            y(1.3) = 0.5;
+            CHECK( y(1.5) == Approx(0.5));
+            CHECK( y.xmax() == Approx(1.5) );
+        }
+
+        SUBCASE("lower bound") {
+            Equidistant2DTable<double> y(0.5, -3.0);
+            CHECK( y.xmin() == Approx(-3.0) );
+            CHECK( y.dx() == Approx(0.5) );
+            y(-2.51) = 0.15;
+            CHECK( y(-3.0) == Approx(0.15));
+            y(-2.76) = 0.11;
+            CHECK( y(-3) == Approx(0.11));
+            y(0.4) = 0.3;
+            CHECK( y(0.0) == Approx(0.3));
+            y(1.3) = 0.5;
+            CHECK( y(1.0) == Approx(0.5));
+            CHECK( y.xmax() == Approx(1.0) );
+        }
+    }
+#endif
 
     /**
      * @brief Timer for measuring relative time consumption

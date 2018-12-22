@@ -65,6 +65,16 @@ namespace Faunus
       } //!< Merge two averages (with correct weights)
 
       bool operator<( const Average &a ) const { return avg() < a.avg(); } //!< Compare operator
+
+      friend std::ostream &operator<<( std::ostream &o, const Average<T> &a ) {
+          o << a.cnt << " " << a.sum << " " << a.sqsum;
+          return o;
+      } // serialize to stream
+
+      auto &operator<<( std::istream &in ) {
+          in >> cnt >> sum >> sqsum;
+          return *this;
+      } // de-serialize from stream
   };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

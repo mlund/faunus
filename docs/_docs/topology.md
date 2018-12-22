@@ -137,7 +137,7 @@ When giving structures using the `structure` keyword, the following policies app
 - A warning is issued if radii/charges differ in files and `atomlist`.
 - Box dimensions in files are ignored.
 
-### Initial Configuration
+## Initial Configuration
 
 Upon starting a simulation, an initial configuration is required and must be
 specified in the section `insertmolecules` as a list of valid molecule names.
@@ -167,7 +167,7 @@ The file must contain exactly N-times molecular
 positions that must all fit within the simulation box. Only _positions_ from
 the file are copied; all other information is ignored.
 
-#### Overlap Check
+### Overlap Check
 
 Random insertion is repeated until there is no overlap with the simulation
 container boundaries. Overlap between particles is ignored and for

@@ -26,6 +26,7 @@ moves:
 analysis:
     - savestate: {file: state.json}
     - density: {nstep: 10}
+    - sanity: {nstep: 100}
 mcloop: {macro: 10, micro: 20000}
 geometry: {type: cuboid, length: 100}
 temperature: 300

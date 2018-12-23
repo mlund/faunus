@@ -28,3 +28,5 @@ moves:
 analysis:
     - systemenergy: {file: energy.dat, nstep: 100}
     - savestate: {file: state.json}
+    - sanity: {nstep: 1000}
+

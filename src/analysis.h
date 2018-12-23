@@ -444,7 +444,7 @@ namespace Faunus {
             class AtomProfile : public Analysisbase {
                 Tspace &spc;
                 typedef typename Tspace::Tparticle Tparticle;
-                Table2D<double,unsigned int> tbl;
+                Equidistant2DTable<double,unsigned int> tbl;
                 std::vector<std::string> names;
                 std::vector<int> ids;
                 std::string file;
@@ -457,7 +457,7 @@ namespace Faunus {
                     names = j.at("atoms").get<decltype(names)>(); // molecule names
                     ids = names2ids(atoms, names);     // names --> molids
                     dr = j.value("dr", 0.1);
-                    tbl.setResolution(dr);
+                    tbl.setResolution(dr,0);
                 }
 
                 void _to_json(json &j) const override {
@@ -482,12 +482,14 @@ namespace Faunus {
 
                 ~AtomProfile() {
                     std::ofstream f(MPI::prefix + file);
-                    if (f)
-                        f << "# r N rho/M\n";
-                    for (auto &m : tbl.getMap()) {
-                        double r = m.first;
-                        double N = m.second/double(cnt);
-                        f << r << " " << N << " " << N/(4*pc::pi*r*r*dr)*1e27/pc::Nav << "\n";
+                    if (f) {
+                        tbl.stream_decorator = [&](std::ostream &o, double r, double N) {
+                            if (r>0) {
+                                N = N/double(cnt);
+                                o << r << " " << N << " " << N/(4*pc::pi*r*r*dr)*1e27/pc::Nav << "\n";
+                            }
+                        };
+                        f << "# r N rho/M\n" << tbl;
                     }
                 }
             };
@@ -834,12 +836,10 @@ namespace Faunus {
                 int dim=3;
                 int id1=-1, id2=-1; // particle id (mol or atom)
                 double dr=0;
-                Table2D<double,double> hist;
-                Table2D<double,Average<double>> hist2;
+                Equidistant2DTable<double,double> hist;
                 std::string name1, name2, file;
                 double Rhypersphere=-1; // Radius of 2D hypersphere
                 Average<double> V;   // average volume (angstrom^3)
-                virtual void normalize();
 
             private:
                 void _from_json(const json &j) override;

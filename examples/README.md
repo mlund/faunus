@@ -13,6 +13,7 @@ Example         | Description
 `membrane`      | Coarse-grained lipid bilayer under zero tension
 `minimal`       | A simple Lennard-Jones particle system
 `penalty`       | 2D Wang-Landau - see also Jupyter Notebook
+`polymers`      | Hard-sphere polyelectrolytes in salt and NPT ensemble
 `water`         | SPC/E water in the NPT ensemble
 
 Each example consists of a YAML input file and, potentially,

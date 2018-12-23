@@ -21,7 +21,7 @@ moves:
     - transrot: {molecule: surface, dir: [1,1,0]}
     - transrot: {molecule: counter}
 analysis:
-    - sanity: {}
+    - sanity: {nstep: 100}
     - sliceddensity: {file: rho_cat.dat, atoms: [Na], nstep: 10, dz: 0.2}
     - sliceddensity: {file: rho_an.dat,  atoms: [Cl], nstep: 10, dz: 0.2}
     - systemenergy: {file: energy.dat, nstep: 10}

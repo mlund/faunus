@@ -29,3 +29,5 @@ analysis:
     - xtcfile: {file: traj.xtc, nstep: 50}
     - savestate: {file: confout.pqr}
     - savestate: {file: state.json}
+    - sanity: {nstep: 200}
+

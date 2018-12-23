@@ -441,12 +441,12 @@ namespace Faunus {
                     double dz;                           //!< z spacing between slits (A)
                     double lB;                           //!< Bjerrum length (A)
                     double halfz;                        //!< Half box length in z direction
-                    Table2D<double,double> Q;            //!< instantaneous net charge
+                    Equidistant2DTable<double> Q;        //!< instantaneous net charge
 
                 public:
                     unsigned int cnt=0;                  //!< Number of charge density updates
-                    Table2D<double,Average<double>> rho; //!< Charge density at z (unit A^-2)
-                    Table2D<double, double> phi;         //!< External potential at z (unit: beta*e)
+                    Equidistant2DTable<double,Average<double>> rho; //!< Charge density at z (unit A^-2)
+                    Equidistant2DTable<double> phi;         //!< External potential at z (unit: beta*e)
 
                 private:
                     void to_json(json &j) const override {
@@ -463,10 +463,7 @@ namespace Faunus {
                         std::ofstream f(filename);
                         if (f) {
                             f.precision(16);
-                            for (double z=-halfz; z<=halfz; z+=dz) {
-                                auto &r = rho(z);
-                                f << z << " "  << r.cnt << " " << r.sum << " " << r.sqsum << "\n";
-                            }
+                            f << rho;
                         }
                         else throw std::runtime_error("cannot save file '"s + filename + "'");
                     }
@@ -474,14 +471,7 @@ namespace Faunus {
                     void load() {
                         std::ifstream f(filename);
                         if (f) {
-                            double zFromFile;
-                            for (double z=-halfz; z<=halfz; z+=dz) {
-                                auto &r = rho(z);
-                                f >> zFromFile;
-                                if (std::fabs(zFromFile-z)>1e-6)
-                                    throw std::runtime_error(filename + " is incompatible");
-                                f >> r.cnt >> r.sum >> r.sqsum;
-                            }
+                            rho << f;
                             update_phi();
                         }
                         else std::cerr << "density file '" << filename << "' not loaded." << endl;
@@ -563,9 +553,9 @@ namespace Faunus {
                         lB = pc::lB(epsr);
 
                         dz = _j.value("dz", 0.2); // read z resolution
-                        Q.setResolution(dz);
-                        rho.setResolution(dz);
-                        phi.setResolution(dz);
+                        Q.setResolution(dz, -halfz, halfz);
+                        rho.setResolution(dz, -halfz, halfz);
+                        phi.setResolution(dz, -halfz, halfz);
 
                         filename = _j.value("file", "mfcorr.dat"s);
                         load();

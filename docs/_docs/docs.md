@@ -14,9 +14,9 @@ MathJax.Hub.Config({
 ## About
 
 Faunus is a general Monte Carlo simulation code, designed to be flexible, easy
-to use, and to modify. The code is written in C++ and (limited) Python bindings
+to use, and to modify. The code is written in C++ and Python bindings
 are available.
-The development is a **team effort** with, in reverse chronological order,
+The development is a team effort with, in reverse chronological order,
 many valiant contributions from:
 
 _Vidar Aspelin, Stefan Hervø-Hansen,
@@ -28,7 +28,7 @@ Axel Thuresson, Robert Vácha,
 Magnus Ullner, Chris Evers,
 Anıl Kurut, André Teixeira,
 Christophe Labbez, Ondrej Marsalek,
-Martin Trulsson, Björn Persson, and
+Martin Trulsson, Björn Persson,
 [Mikael Lund](http://www.teokem.lu.se/~mikael)_
 
 Should you find Faunus useful, please consider supporting us by crediting:
@@ -40,14 +40,15 @@ Should you find Faunus useful, please consider supporting us by crediting:
 
 Simulations are set up using YAML or JSON files, see for example
 [minimal.yml](https://github.com/mlund/faunus/blob/master/examples/minimal.yml),
-for a Metropolis Monte Carlo simulation
-of charged Lennard-Jones particles in a cubic PBC box. Running is with
+for a Metropolis Monte Carlo simulation of charged Lennard-Jones particles in a cubic PBC box.
+Running with
 
 ~~~ bash
-yason.py input.yml | faunus
+yason.py minimal.yml | faunus
 ~~~
 
 produces an output file, `out.json`, with move statistics, system properties etc.
 The script `yason.py` merely converts from YAML to JSON as the former, easier to read,
 is used in all examples.
-For more examples, check out the `examples/` folder.
+For more examples, see the `examples` folder.
+

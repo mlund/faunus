@@ -393,24 +393,34 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/examples/cluster.agr
     ${CMAKE_SOURCE_DIR}/examples/cluster.out.json
     ${CMAKE_SOURCE_DIR}/examples/cluster.state.json
+    ${CMAKE_SOURCE_DIR}/examples/doublelayer.yml
+    ${CMAKE_SOURCE_DIR}/examples/doublelayer.agr
+    ${CMAKE_SOURCE_DIR}/examples/doublelayer.out.json
+    ${CMAKE_SOURCE_DIR}/examples/doublelayer.state.json
+    ${CMAKE_SOURCE_DIR}/examples/doublelayer.mfcorr.dat
+    ${CMAKE_SOURCE_DIR}/examples/isochoric.yml
+    ${CMAKE_SOURCE_DIR}/examples/isochoric.xyz
+    ${CMAKE_SOURCE_DIR}/examples/membrane.yml
+    ${CMAKE_SOURCE_DIR}/examples/membrane.out.json
+    ${CMAKE_SOURCE_DIR}/examples/membrane.state.json
+    ${CMAKE_SOURCE_DIR}/examples/lipid.xyz
+    ${CMAKE_SOURCE_DIR}/examples/minimal.yml
+    ${CMAKE_SOURCE_DIR}/examples/minimal.out.json
+    ${CMAKE_SOURCE_DIR}/examples/minimal.state.json
+    ${CMAKE_SOURCE_DIR}/examples/penalty.yml
+    ${CMAKE_SOURCE_DIR}/examples/penalty.ipynb
+    ${CMAKE_SOURCE_DIR}/examples/polymers.yml
+    ${CMAKE_SOURCE_DIR}/examples/polymers.readme
+    ${CMAKE_SOURCE_DIR}/examples/polymers.pdf
+    ${CMAKE_SOURCE_DIR}/examples/polymers.state.json
+    ${CMAKE_SOURCE_DIR}/examples/polymers.out.json
+    ${CMAKE_SOURCE_DIR}/examples/pythontest.py
     ${CMAKE_SOURCE_DIR}/examples/seawater.yml
     ${CMAKE_SOURCE_DIR}/examples/speciation.yml
     ${CMAKE_SOURCE_DIR}/examples/speciation.out.json
     ${CMAKE_SOURCE_DIR}/examples/speciation.state.json
     ${CMAKE_SOURCE_DIR}/examples/water.yml
     ${CMAKE_SOURCE_DIR}/examples/water.xyz
-    ${CMAKE_SOURCE_DIR}/examples/minimal.yml
-    ${CMAKE_SOURCE_DIR}/examples/minimal.out.json
-    ${CMAKE_SOURCE_DIR}/examples/minimal.state.json
-    ${CMAKE_SOURCE_DIR}/examples/membrane.yml
-    ${CMAKE_SOURCE_DIR}/examples/membrane.out.json
-    ${CMAKE_SOURCE_DIR}/examples/membrane.state.json
-    ${CMAKE_SOURCE_DIR}/examples/lipid.xyz
-    ${CMAKE_SOURCE_DIR}/examples/penalty.yml
-    ${CMAKE_SOURCE_DIR}/examples/penalty.ipynb
-    ${CMAKE_SOURCE_DIR}/examples/pythontest.py
-    ${CMAKE_SOURCE_DIR}/examples/isochoric.yml
-    ${CMAKE_SOURCE_DIR}/examples/isochoric.xyz
     DESTINATION share/faunus/examples)
 
 # INFORMATION ABOUT DEBUG MODE

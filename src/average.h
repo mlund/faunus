@@ -71,7 +71,7 @@ namespace Faunus
           return o;
       } // serialize to stream
 
-      auto &operator<<( std::istream &in ) {
+      Average<T> &operator<<( std::istream &in ) {
           in >> cnt >> sum >> sqsum;
           return *this;
       } // de-serialize from stream

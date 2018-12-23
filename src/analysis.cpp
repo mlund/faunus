@@ -110,24 +110,23 @@ Faunus::Analysis::SaveState::~SaveState() {
 Faunus::Analysis::PairFunctionBase::PairFunctionBase(const Faunus::json &j) { from_json(j); }
 
 Faunus::Analysis::PairFunctionBase::~PairFunctionBase() {
-    normalize();
-    hist.save( MPI::prefix + file );
-}
-
-void Faunus::Analysis::PairFunctionBase::normalize() {
-    //assert(V.cnt>0);
-    double Vr=1, sum = hist.sumy();
-    for (auto &i : hist.getMap()) {
-        if (dim==3)
-            Vr = 4 * pc::pi * std::pow(i.first,2) * dr;
-        if (dim==2) {
-            Vr = 2 * pc::pi * i.first * dr;
-            if ( Rhypersphere > 0)
-                Vr = 2.0*pc::pi*Rhypersphere*std::sin(i.first/Rhypersphere) * dr;
-        }
-        if (dim==1)
-            Vr = dr;
-        i.second = i.second/sum * V/Vr;
+    std::ofstream f(MPI::prefix + file);
+    if (f) {
+        double Vr=1, sum = hist.sumy();
+        hist.stream_decorator = [&](std::ostream &o, double r, double N) {
+            if (dim==3)
+                Vr = 4 * pc::pi * std::pow(r,2) * dr;
+            else if (dim==2) {
+                Vr = 2 * pc::pi * r * dr;
+                if ( Rhypersphere > 0)
+                    Vr = 2.0*pc::pi*Rhypersphere*std::sin(r/Rhypersphere) * dr;
+            }
+            else if (dim==1)
+                Vr = dr;
+            if (Vr>0)
+                o << r << " " << N*V/(Vr*sum) << "\n";
+        };
+        f << hist;
     }
 }
 
@@ -152,8 +151,7 @@ void Faunus::Analysis::PairFunctionBase::_from_json(const Faunus::json &j) {
     name2 = j.at("name2");
     dim = j.value("dim", 3);
     dr = j.value("dr", 0.1) * 1.0_angstrom;
-    hist.setResolution(dr);
-    hist2.setResolution(dr);
+    hist.setResolution(dr, 0);
     Rhypersphere = j.value("Rhyper", -1.0);
 }
 

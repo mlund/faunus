@@ -25,8 +25,8 @@ moves:
     - volume: {dV: 0.03, method: isotropic}
 
 analysis:
-    - sanity: {nstep: 1}
-    - atomrdf: {file: rdf.dat, nstep: 50, dr: 0.1, name1: OW, name2: OW}
+    - sanity: {nstep: 100}
+    - atomrdf: {file: rdf.dat, nstep: 50, dr: 0.15, name1: OW, name2: OW}
     - systemenergy: {file: energy.dat, nstep: 50}
     - xtcfile: {file: traj.xtc, nstep: 50}
     - savestate: {file: confout.pqr}

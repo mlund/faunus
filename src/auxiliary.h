@@ -1815,10 +1815,12 @@ namespace Faunus
      * - supports centered and lower bound (default) binning via `centerbin`
      * - internal storage is `std::vector<Ty>`
      * - lookup complexity: constant
+     * - range-based for loops
      * - minimum x value and resolution must be given upon construction
      * - dynamic memory allocation when adding x>=xmin
      * - stream (de)serialization
      * - unit tests
+     * - *much* faster, leaner than `std::map`-based Table2D
      */
     template<typename Tx=double, typename Ty=Tx, bool centerbin=false>
         class Equidistant2DTable {
@@ -1840,17 +1842,62 @@ namespace Faunus
                 } //!< vector index to x-value
 
             public:
+
+                class iterator {
+                    public:
+                        typedef Equidistant2DTable<Tx,Ty,centerbin> T;
+                        iterator(T &tbl, size_t i): tbl(tbl), i(i) {}
+                        iterator operator++() { ++i; return *this; }
+                        bool operator!=(const iterator& other) const { return i != other.i; }
+                        auto operator*() { return tbl[i]; }
+                    protected:
+                        T &tbl;
+                        size_t i;
+                }; // enable range-based for loops
+
+                class const_iterator {
+                    public:
+                        typedef Equidistant2DTable<Tx,Ty,centerbin> T;
+                        const_iterator(const T &tbl, size_t i): tbl(tbl), i(i) {}
+                        const_iterator operator++() { ++i; return *this; }
+                        bool operator!=(const const_iterator& other) const { return i != other.i; }
+                        auto operator*() const { return tbl[i]; }
+                    protected:
+                        const T &tbl;
+                        size_t i;
+                }; // enable range-based for loops
+
+                iterator begin() { return iterator(*this, 0); }
+                iterator end() { return iterator(*this, size()); }
+                const_iterator begin() const { return const_iterator(*this, 0); }
+                const_iterator end() const { return const_iterator(*this, size()); }
+
+                Equidistant2DTable() {}
+
                 /**
                  * @brief Constructor
                  * @param dx x spacing
                  * @param xmin minimum x value
                  * @param xmax maximum x value (for more efficient memory handling, only)
                  */
-                Equidistant2DTable(Tx dx, Tx xmin, Tx xmax=std::numeric_limits<Tx>::infinity()) : _dxinv(1/dx), _xmin(xmin) {
+                Equidistant2DTable(Tx dx, Tx xmin, Tx xmax=std::numeric_limits<Tx>::infinity()) {
+                    setResolution(dx, xmin, xmax);
+                }
+
+                void setResolution(Tx dx, Tx xmin, Tx xmax=std::numeric_limits<Tx>::infinity()) {
+                    _xmin = xmin;
+                    _dxinv = 1/dx;
                     offset = -to_bin(_xmin);
                     if (xmax<std::numeric_limits<Tx>::infinity())
                         vec.reserve( to_bin(xmax) + offset );
                 }
+
+                double sumy() const {
+                    double sum=0;
+                    for (auto &i : vec)
+                        sum += double(i);
+                    return sum;
+                } //!< sum all y-values
 
                 const std::vector<Ty>& yvec() const { 
                     return vec;
@@ -1859,13 +1906,13 @@ namespace Faunus
                 std::vector<Tx> xvec() const {
                     std::vector<Tx> v;
                     v.reserve( vec.size() );
-                    for (size_t i=0; i<v.size(); i++)
+                    for (size_t i=0; i<vec.size(); i++)
                         v.push_back( from_bin(i) );
                     return v;
                 }
 
                 void clear() { vec.clear(); }
-                size_t size() const { vec.size(); }
+                size_t size() const { return vec.size(); }
                 bool empty() const { return vec.empty(); }
                 Tx dx() const { return 1/_dxinv; }
                 Tx xmin() const { return _xmin; } //!< minimum x-value
@@ -1882,6 +1929,18 @@ namespace Faunus
                     return vec[i];
                 } // return y value for given x
 
+                std::pair<Tx,Ty&> operator[](size_t index) {
+                    assert(index>=0);
+                    assert(index<size());
+                    return { from_bin(index), vec[index] };
+                } // pair with x,y& value
+
+                std::pair<Tx,const Ty&> operator[](size_t index) const {
+                    assert(index>=0);
+                    assert(index<size());
+                    return { from_bin(index), vec[index] };
+                } // const pair with x,y& value
+
                 const Ty& operator()(Tx x) const {
                     assert(x>=_xmin);
                     int i = to_bin(x) + offset;
@@ -1889,23 +1948,29 @@ namespace Faunus
                     return vec.at(i);
                 } // return y value for given x
 
+                // can be optinally used to customize streaming out, normalise etc.
+                std::function<void(std::ostream&,Tx,Ty)> stream_decorator=nullptr;
 
                 friend std::ostream &operator<<( std::ostream &o, const Equidistant2DTable<Tx,Ty,centerbin> &tbl ) {
                     o.precision(16);
-                    for (double x=tbl.xmin(); x<=tbl.xmax(); x+=tbl.dx())
-                        o << x << " " << tbl(x) << "\n";
+                    for (auto d : tbl)
+                        if (tbl.stream_decorator==nullptr)
+                            o << d.first << " " << d.second << "\n";
+                        else
+                            tbl.stream_decorator(o, d.first, d.second);
                     return o;
                 } // write to stream
 
                 auto &operator<<( std::istream &in ) {
+                    assert(stream_decorator==nullptr && "you probably don't want to load a decorated file");
                     clear();
                     Tx x;
                     Ty y;
                     std::string line;
                     while ( std::getline(in, line)) {
                         std::stringstream o(line);
-                        while (o >> x >> y) {
-                            if (x>=_xmin)
+                        while (o >> x) {
+                            if ((x>=_xmin) and (y << o))
                                 operator()(x) = y;
                             else
                                 throw std::runtime_error("table load error: x smaller than xmin");
@@ -1950,6 +2015,7 @@ namespace Faunus
             CHECK( y(1.0) == Approx(0.5));
             CHECK( y.xmax() == Approx(1.0) );
         }
+
     }
 #endif
 

@@ -41,4 +41,4 @@ script:
   - |
     cd scripts/
     conda config --set anaconda_upload yes
-    conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+    travis_wait 20 conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .

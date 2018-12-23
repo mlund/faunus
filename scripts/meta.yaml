@@ -12,13 +12,13 @@ build:
     - export CXX=clang++  # [osx]
     - cmake -DENABLE_MPI=on -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX
     - sleep 480 && echo "keep travis alive" &  # [linux64]
-    - travis_wait make faunus -j2
+    - make faunus -j2
     - cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX # needed to build pyfaunus
-    - travis_wait make pyfaunus -j2
+    - make pyfaunus -j2
     - make install
     - sleep 480 && echo "keep travis alive" &  # [linux64]
-    - travis_wait make tests -j2
-    - travis_wait ctest --output-on-failure
+    - make tests -j2
+    - ctest --output-on-failure
 
 requirements:
   build:

@@ -185,13 +185,10 @@ namespace Faunus {
 
                     typename Tpvec::iterator randomAtom() {
                         assert(molid>=0);
-                        //std::cout<<"molid "<<molid<<std::endl;
                         auto mollist = spc.findMolecules( molid, Tspace::ALL  ); // all `molid` groups
                         if (size(mollist)>0) {
-                            //std::cout<<"looking for atoms"<<std::endl;
                             auto git = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
-                            if (!git->empty()) {
-                                //std::cout<<"found molecule"<<std::endl;
+                            if (not git->empty()) {
                                 auto p = slump.sample( git->begin(), git->end() ); // random particle iterator
                                 cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                 cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
@@ -225,7 +222,7 @@ namespace Faunus {
                                 p->rotate(Q, Q.toRotationMatrix());
                             }
 
-                            if (dp>0 || dprot>0)
+                            if (dp>0 or dprot>0)
                                 change.groups.push_back( cdata ); // add to list of moved groups
                         }
                         else

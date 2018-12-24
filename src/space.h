@@ -74,11 +74,60 @@ namespace Faunus {
     }
 #endif
  
+    /* currently not used for anything
     struct SpaceBase {
         virtual Geometry::GeometryBase& getGeometry()=0;
         virtual void clear()=0;
         virtual void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC)=0;
     };
+    */
+
+    /**
+     * @brief Helper class for range-based for-loops over *active* particles
+     *
+     * This class is currently not used as `Space::activeParticles` achieves the
+     * same with much reduced code. However, this approach is expected to be 
+     * more efficient and is left here as an example of implementing a custom,
+     * non-linear iterator.
+     */
+    template<typename Tspace>
+        struct getActiveParticles {
+            const Tspace &spc;
+            class const_iterator {
+                private:
+                    typedef typename Tspace::Tgvec::const_iterator Tgroups_iter;
+                    typedef typename Tspace::Tpvec::const_iterator Tparticle_iter;
+                    const Tspace &spc;
+                    Tparticle_iter particle_iter;
+                    Tgroups_iter groups_iter;
+                public:
+                    const_iterator(const Tspace &spc, Tparticle_iter it) : spc(spc), particle_iter(it) {
+                        groups_iter = spc.groups.begin();
+                    }
+                    const_iterator operator++() { // advance particles and groups
+                        if (++particle_iter == groups_iter->end()) {
+                            do {
+                                if (++groups_iter == spc.groups.end())
+                                    return *this;
+                            } while (groups_iter->empty());
+                            particle_iter = groups_iter->begin();
+                        }
+                        return *this;
+                    }
+                    bool operator!=(const const_iterator& other) const { return particle_iter != other.particle_iter; }
+                    auto operator*() const { return *particle_iter; }
+            }; // enable range-based for loops
+
+            const_iterator begin() const { return const_iterator(spc, spc.p.begin()); }
+            const_iterator end() const { return spc.groups.empty() ? begin() : const_iterator(spc, spc.groups.back().end()); }
+
+            size_t size() const {
+                return std::accumulate(spc.groups.begin(), spc.groups.end(), 0,
+                        [](size_t sum, const auto &g){ return sum + g.size(); } );
+            }
+
+            getActiveParticles(const Tspace &spc) : spc(spc) {};
+        };
 
     template<class Tgeometry, class Tparticletype>
         struct Space {
@@ -136,7 +185,7 @@ namespace Faunus {
                     if (g.atomic==false) {
                         g.cm = Geometry::massCenter(in.begin(), in.end(), geo.getBoundaryFunc(), -in.begin()->pos);
                         Point cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
-                        if (geo.sqdist(g.cm, cm)>1e-9)
+                        if (geo.sqdist(g.cm, cm)>1e-6)
                             throw std::runtime_error("space: mass center error upon insertion. Molecule too large?\n");
                     }
 
@@ -175,6 +224,16 @@ namespace Faunus {
             auto findGroupContaining(const Tparticle &i) {
                 return std::find_if( groups.begin(), groups.end(), [&i](auto &g){ return g.contains(i); });
             } //!< Finds the groups containing the given atom
+
+            auto activeParticles() {
+                auto f = [&groups=groups](Tparticle &i) {
+                    for (auto &g : groups)
+                        if (g.contains(i))
+                            return true;
+                    return false;
+                }; 
+                return ranges::view::filter(p, f);
+            } //!< Returns range with all *active* particles in space
 
             void sync(Tspace &other, const Tchange &change) {
 
@@ -437,12 +496,14 @@ namespace Faunus {
         typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
         typedef Space<Geometry::Chameleon, Tparticle> Tspace;
         Tspace spc1;
+        spc1.geo = R"( {"type": "sphere", "radius": 1e9} )"_json;
 
         // check molecule insertion
         atoms.resize(2);
         CHECK( atoms.at(0).mw == 1);
         Tparticle a;
         a.id=0;
+        a.pos.setZero();
         Tspace::Tpvec p(2, a);
         CHECK( p[0].traits().mw == 1);
         p[0].pos.x()=2;
@@ -482,6 +543,54 @@ namespace Faunus {
         c.groups[0].all=true;
         spc1.sync(spc2, c);
         CHECK( spc1.p.back().pos.z() == doctest::Approx(-0.1) );
+
+        SUBCASE("getActiveParticles") {
+            // add three groups to space
+            Tspace spc;
+            spc.geo = R"( {"type": "sphere", "radius": 1e9} )"_json;
+            Tparticle a;
+            a.pos.setZero();
+            a.id=0;
+            typename Tspace::Tpvec pvec({a,a,a});
+
+            spc.push_back(0, pvec);
+            spc.push_back(0, pvec);
+            spc.push_back(0, pvec);
+
+            for (size_t i=0; i<spc.p.size(); i++)
+                spc.p[i].radius = double(i);
+
+            CHECK( spc.p.size()==9 );
+            CHECK( spc.groups.size()==3 );
+
+            spc.groups[0].deactivate(spc.p.begin(), spc.p.begin()+1);
+            spc.groups[1].deactivate(spc.groups[1].begin(), spc.groups[1].end());
+
+            CHECK( spc.groups[0].size() == 2 );
+            CHECK( spc.groups[1].size() == 0 );
+            CHECK( spc.groups[2].size() == 3 );
+
+            auto p = getActiveParticles<Tspace>(spc);
+            size_t size=0;
+            std::vector<int> vals;
+            for (const auto &i : p) {
+                size++;
+                vals.push_back( int(i.radius) );
+            }
+
+            CHECK( vals == std::vector<int>({1,2,6,7,8}) );
+            CHECK( size == p.size() );
+
+            // now let's check the rangev3 implementation
+            // in `activeParticles()`:
+            auto p2 = spc.activeParticles();
+            CHECK( std::distance(p2.begin(), p2.end()) == size );
+            vals.clear();
+            for (const auto &i : p2) {
+                vals.push_back( int(i.radius) );
+            }
+            CHECK( vals == std::vector<int>({1,2,6,7,8}) );
+        }
     }
 #endif
 

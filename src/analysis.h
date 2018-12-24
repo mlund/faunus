@@ -757,7 +757,7 @@ namespace Faunus {
                         from_json(j);
                         name = "sanity";
                         steps = j.value("nstep", -1);
-                     }
+                    }
             };
 
         class SaveState : public Analysisbase {
@@ -783,22 +783,22 @@ namespace Faunus {
                                     []( std::string file, Tspace &s ) { FormatAAM::save(file, s.p); },
                                     _1, std::ref(spc));
 
-                        if ( suffix == "gro" )
+                        else if ( suffix == "gro" )
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatGRO::save(file, s); },
                                     _1, std::ref(spc));
 
-                        if ( suffix == "pqr" )
+                        else if ( suffix == "pqr" )
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatPQR::save(file, s.p, s.geo.getLength()); },
                                     _1, std::ref(spc));
 
-                        if ( suffix == "xyz" )
+                        else if ( suffix == "xyz" )
                             writeFunc = std::bind(
                                     []( std::string file, Tspace &s ) { FormatXYZ::save(file, s.p, s.geo.getLength()); },
                                     _1, std::ref(spc));
 
-                        if ( suffix == "json" ) // JSON state file
+                        else if ( suffix == "json" ) // JSON state file
                             writeFunc = [&spc](const std::string &file) {
                                 std::ofstream f(file);
                                 if (f) {
@@ -809,7 +809,7 @@ namespace Faunus {
                                 }
                             };
 
-                        if ( suffix == "ubj" ) // Universal Binary JSON state file
+                        else if ( suffix == "ubj" ) // Universal Binary JSON state file
                             writeFunc = [&spc](const std::string &file) {
                                 std::ofstream f(file, std::ios::binary);
                                 if (f) {

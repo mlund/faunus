@@ -256,18 +256,22 @@ namespace Faunus {
     template<class T /** Particle type */>
         void to_json(json &j, const Group<T> &g) {
             j = {
-                {"id", g.id}, {"cm", g.cm}, {"atomic", g.atomic}, {"size", g.size()},
-                {"capacity", g.capacity()}
+                {"id", g.id}, {"cm", g.cm}, {"atomic", g.atomic}, {"size", g.size()}
             };
+            if (g.capacity()>g.size())
+                j["capacity"] = g.capacity();
+            if (g.confid!=0)
+                j["confid"] = g.confid;
         }
 
     template<class T /** Particle type */>
         void from_json(const json &j, Group<T> &g) {
-            g.trueend() = g.begin() + j.at("capacity");
-            g.resize( j.at("size") );
+            g.resize( j.at("size").get<int>() );
+            g.trueend() = g.begin() + j.value("capacity", g.size());
             g.id = j.at("id").get<unsigned int>();
             g.cm = j.at("cm").get<Point>();
             g.atomic = j.at("atomic").template get<bool>();
+            g.confid = j.value("confid", 0);
         }
 
     template<class Trange>

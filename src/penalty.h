@@ -106,20 +106,26 @@ namespace Faunus {
                     name = "molecule";
                     from_json(j, *this);
                     index = j.at("index");
-                    property = j.at("property").get<std::string>();
-                    if (property=="com_x") f = [&i=spc.groups.at(index)]() { return i.cm.x(); };
-                    if (property=="com_y") f = [&i=spc.groups.at(index)]() { return i.cm.y(); };
-                    if (property=="com_z") f = [&i=spc.groups.at(index)]() { return i.cm.z(); };
-                    if (property=="N")     f = [&i=spc.groups.at(index)]() { return i.size(); };
-                    if (property=="Q")     f = [&i=spc.groups.at(index)]() { return Geometry::monopoleMoment(i.begin(), i.end()); };
-
                     auto b = spc.geo.getBoundaryFunc();
-                    if (property=="mu_x")  f = [&i=spc.groups.at(index), b]() { return Geometry::dipoleMoment(i.begin(), i.end(), b).x(); };
-                    if (property=="mu_y")  f = [&i=spc.groups.at(index), b]() { return Geometry::dipoleMoment(i.begin(), i.end(), b).y(); };
-                    if (property=="mu_z")  f = [&i=spc.groups.at(index), b]() { return Geometry::dipoleMoment(i.begin(), i.end(), b).z(); };
-                    if (property=="mu")    f = [&i=spc.groups.at(index), b]() { return Geometry::dipoleMoment(i.begin(), i.end(), b).norm(); };
+                    property = j.at("property").get<std::string>();
 
-                    if (property=="muangle") {
+                    if (property=="conformation") f=[&i=spc.groups.at(index)]() { return i.confid; };
+                    else if (property=="com_x") f = [&i=spc.groups.at(index)]() { return i.cm.x(); };
+                    else if (property=="com_y") f = [&i=spc.groups.at(index)]() { return i.cm.y(); };
+                    else if (property=="com_z") f = [&i=spc.groups.at(index)]() { return i.cm.z(); };
+                    else if (property=="N")     f = [&i=spc.groups.at(index)]() { return i.size(); };
+                    else if (property=="Q")     f = [&i=spc.groups.at(index)]() { return Geometry::monopoleMoment(i.begin(), i.end()); };
+
+                    else if (property=="mu_x")  f = [&i=spc.groups.at(index), b]() {
+                        return Geometry::dipoleMoment(i.begin(), i.end(), b).x(); };
+                    else if (property=="mu_y")  f = [&i=spc.groups.at(index), b]() {
+                        return Geometry::dipoleMoment(i.begin(), i.end(), b).y(); };
+                    else if (property=="mu_z")  f = [&i=spc.groups.at(index), b]() {
+                        return Geometry::dipoleMoment(i.begin(), i.end(), b).z(); };
+                    else if (property=="mu")    f = [&i=spc.groups.at(index), b]() {
+                        return Geometry::dipoleMoment(i.begin(), i.end(), b).norm(); };
+
+                    else if (property=="muangle") {
                         dir = j.at("dir").get<Point>().normalized();
                         if (not spc.groups.at(index).atomic)
                             f = [&i=spc.groups.at(index), b, &dir=dir]() {
@@ -128,7 +134,7 @@ namespace Faunus {
                             };
                     }
 
-                    if (property=="angle") {
+                    else if (property=="angle") {
                         dir = j.at("dir").get<Point>().normalized();
                         if (not spc.groups.at(index).atomic) {
                             f = [&spc, &dir=dir, i=index]() {

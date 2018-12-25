@@ -232,24 +232,6 @@ is reported by diagonalising the gyration tensor to find the principal moments:
     {nstep: 100, file: angle.dat, type: molecule, index: 0, property: angle, dir: [0,0,1]}
 ~~~ 
 
-## Save State
-
-`savestate`    |  Description
--------------- | ------------------------------------------------------------------------------------------
-`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `json`/`ubj`
-`nstep=-1`     |  Interval between samples. If -1, save at end of simulation
-
-Saves the current configuration or the system state to file.
-
-If the suffix is `json` (text) or `ubj` ([binary](http://ubjson.org)), a single 
-state file that can be used to restart the simulation is saved
-with the following information:
-
-- topology: atom, molecule, and reaction definitions
-- particle and group properties incl. positions
-- state of random number generator
-- geometry
-
 
 ## System Sanity
 
@@ -330,10 +312,30 @@ keyword when inserting the initial molecules in the topology.
 `ninsert`     | Number of insertions per sample event
 `dir=[1,1,1]` | Inserting directions
 `absz=false`  | Apply `std::fabs` on all z-coordinates of inserted molecule
-`nstep=0`      |  Interval between samples
+`nstep`       |  Interval between samples
+
+## Positions and Trajectories
+
+### Save State
+
+`savestate`    |  Description
+-------------- | ------------------------------------------------------------------------------------------
+`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `json`/`ubj`
+`nstep=-1`     |  Interval between samples. If -1, save at end of simulation
+
+Saves the current configuration or the system state to file.
+
+If the suffix is `json` (text) or `ubj` ([binary](http://ubjson.org)), a single 
+state file that can be used to restart the simulation is saved
+with the following information:
+
+- topology: atom, molecule, and reaction definitions
+- particle and group properties incl. positions
+- state of random number generator
+- geometry
 
 
-## XTC trajectory
+### XTC trajectory
 
 Generates a Gromacs XTC trajectory file with particle positions and box
 dimensions as a function of steps.
@@ -341,6 +343,27 @@ dimensions as a function of steps.
 `xtcfile`      |  Description
 -------------- | ---------------------------------------------------------
 `file`         |  Filename of output xtc file
-`nstep=0`      |  Interval between samples.
+`nstep`        |  Interval between samples.
 
+
+### Charge-Radius trajectory
+
+Most trajectory file formats do not support a fluctuating number
+of particles. For each `nstep`, this analysis files charge and
+radius information for all particles.
+Inactive particles are included with _zero_ charge and radius.
+
+Using a TCL helper script for VMD (see `scripts/`) this information
+can be loaded to visualise flutuating charges and or number of particles.
+The script should be `source`d from the VMD console after loading the trajectory,
+or invoked when launching VMD:
+
+~~~ bash
+vmd confout.pqr traj.xtc -e scripts/vmd-qrtraj.tcl
+~~~
+
+`qrfile`          |  Description
+----------------- | ---------------------------------------------------------
+`file=qrtraj.dat` |  Filename of output file
+`nstep`           |  Interval between samples.
 

@@ -211,8 +211,7 @@ The table below explains the scaling behavior in different geometries:
 `isochoric`  |  `cuboid`    | Scales xy/z, const. volume
 
 **Note:**
-Currently only cuboidal containers are exposed to the
-`faunus` executable.
+Untested for cylinders, slits.
 {: .notice--info}
 
 

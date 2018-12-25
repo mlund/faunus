@@ -192,8 +192,17 @@ if (GIT_FOUND)
         OUTPUT_VARIABLE GIT_COMMIT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} describe --abbrev=0 --tags
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_LATEST_TAG
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
     if (GIT_COMMIT_HASH)
         add_definitions("-DGIT_COMMIT_HASH=${GIT_COMMIT_HASH}")
+    endif ()
+    if (GIT_LATEST_TAG)
+        add_definitions("-DGIT_LATEST_TAG=${GIT_LATEST_TAG}")
     endif ()
 endif ()
 
@@ -292,7 +301,7 @@ if (PANDOC)
         grep -v ".notice--" |
         grep -v "Github-Improve_this_page" |
         ${PANDOC} --self-contained --highlight-style=tango --template ../pandoc.tex
-        -V date:"\\today"
+        -V date:${GIT_LATEST_TAG}""
         -V thanks:"Based on git revision "${GIT_COMMIT_HASH}
         -N --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
         )

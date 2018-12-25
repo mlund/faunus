@@ -658,6 +658,7 @@ be used when analysing the system (see Analysis).
 `property`                |
 `angle`                   | Angle between instantaneous principal axis and given `dir` vector
 `com_x`, `com_y`, `com_z` | Mass center coordinates
+`conformation`            | Conformation number. See `traj` in molecular topology.
 `mu_x`, `mu_y`, `mu_z`    | Molecular dipole moment components
 `mu`                      | Molecular dipole moment scalar (eA/charge)
 `muangle`                 | Angle between dipole moment and given `dir` vector

@@ -1200,6 +1200,41 @@ namespace Faunus {
 
             };
 
+        /** 
+         * @brief "Trajectory" with charge and radius, only, for all (active, inactive) particles
+         *
+         * For use w. VMD to visualize charge fluctuations and grand canonical ensembles
+         */
+        class QRtraj : public Analysisbase {
+            private:
+                std::string file;
+                std::ofstream f;
+                std::function<void()> write_to_file;
+                inline void _sample() override { write_to_file(); }
+                inline void _to_json(json &j) const override { j = {{"file", file}}; }
+
+            public:
+                template<class Tspace>
+                    QRtraj(const json &j, Tspace &spc) {
+                        from_json(j);
+                        name = "qrfile";
+                        file = j.value("file", "qrtraj.dat"s);
+                        f.open(file);
+                        if (not f)
+                            throw std::runtime_error("error opening "s + file);
+                        f.precision(6);
+                        write_to_file = [&groups=spc.groups, &f=f]() {
+                            for (auto &g : groups)
+                                for (auto it=g.begin(); it!=g.trueend(); ++it) // loop over *all* particles
+                                    if (it<g.end())
+                                        f << it->charge << " " << atoms[it->id].sigma*0.5 << " "; 
+                                    else
+                                        f << "0 0 "; // zero charge and radii for inactive particles
+                            f << "\n"; // newline for every frame
+                        };
+                    }
+        };
+
         struct CombinedAnalysis : public BasePointerVector<Analysisbase> {
             template<class Tspace, class Tenergy>
                 CombinedAnalysis(const json &j, Tspace &spc, Tenergy &pot) {
@@ -1216,6 +1251,7 @@ namespace Faunus {
                                         else if (it.key()=="multipole") push_back<Multipole<Tspace>>(it.value(), spc);
                                         else if (it.key()=="multipoledist") push_back<MultipoleDistribution<Tspace>>(it.value(), spc);
                                         else if (it.key()=="polymershape") push_back<PolymerShape<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="qrfile") push_back<QRtraj>(it.value(), spc);
                                         else if (it.key()=="reactioncoordinate") push_back<FileReactionCoordinate>(it.value(), spc);
                                         else if (it.key()=="sanity") push_back<SanityCheck<Tspace>>(it.value(), spc);
                                         else if (it.key()=="savestate") push_back<SaveState>(it.value(), spc);

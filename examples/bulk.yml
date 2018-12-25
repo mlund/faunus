@@ -1,3 +1,4 @@
+#!/usr/bin/env yason.py
 temperature: 1100
 mcloop: {macro: 2, micro: 25}
 geometry: {type: cuboid, length: 42.5} # 19.73

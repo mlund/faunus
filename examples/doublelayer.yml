@@ -1,3 +1,4 @@
+#!/usr/bin/env yason.py
 temperature: 298
 mcloop: {macro: 10, micro: 1000}
 geometry: {type: slit, length: [50,50,100]}

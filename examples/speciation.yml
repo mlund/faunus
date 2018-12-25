@@ -1,3 +1,4 @@
+#!/usr/bin/env yason.py
 energy:
     - nonbonded:
         default:

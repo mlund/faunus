@@ -1,3 +1,4 @@
+#!/usr/bin/env yason.py
 random: {seed: default}
 temperature: 298
 geometry: {type: sphere, radius: 100}

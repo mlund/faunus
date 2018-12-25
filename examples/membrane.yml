@@ -1,3 +1,4 @@
+#!/usr/bin/env yason.py
 comment: |
     Three-bead membrane model ala Deserno.
     More information: doi:10/chqzjk

@@ -311,6 +311,13 @@ endif()
 # TESTS
 
 add_test(
+    NAME swapconf
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py swapconf.yml\
+    | $<TARGET_FILE:faunus> --nobar --state swapconf.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py swapconf.out.json out.json --tol 0.05"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+add_test(
     NAME doublelayer
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py doublelayer.yml\
     | $<TARGET_FILE:faunus> --nobar --state doublelayer.state.json\
@@ -428,6 +435,11 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/examples/speciation.yml
     ${CMAKE_SOURCE_DIR}/examples/speciation.out.json
     ${CMAKE_SOURCE_DIR}/examples/speciation.state.json
+    ${CMAKE_SOURCE_DIR}/examples/swapconf.yml
+    ${CMAKE_SOURCE_DIR}/examples/swapconf.out.json
+    ${CMAKE_SOURCE_DIR}/examples/swapconf.state.json
+    ${CMAKE_SOURCE_DIR}/examples/swapconf.conformations.pqr
+    ${CMAKE_SOURCE_DIR}/examples/swapconf.weights.dat
     ${CMAKE_SOURCE_DIR}/examples/water.yml
     ${CMAKE_SOURCE_DIR}/examples/water.xyz
     DESTINATION share/faunus/examples)

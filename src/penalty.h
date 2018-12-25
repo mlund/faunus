@@ -109,7 +109,7 @@ namespace Faunus {
                     auto b = spc.geo.getBoundaryFunc();
                     property = j.at("property").get<std::string>();
 
-                    if (property=="conformation") f=[&i=spc.groups.at(index)]() { return i.confid; };
+                    if (property=="confid")     f = [&i=spc.groups.at(index)]() { return i.confid; };
                     else if (property=="com_x") f = [&i=spc.groups.at(index)]() { return i.cm.x(); };
                     else if (property=="com_y") f = [&i=spc.groups.at(index)]() { return i.cm.y(); };
                     else if (property=="com_z") f = [&i=spc.groups.at(index)]() { return i.cm.z(); };

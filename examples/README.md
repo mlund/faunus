@@ -14,6 +14,7 @@ Example         | Description
 `minimal`       | A simple Lennard-Jones particle system
 `penalty`       | 2D Wang-Landau - see also Jupyter Notebook
 `polymers`      | Hard-sphere polyelectrolytes in salt and NPT ensemble
+`swapconf`      | Example of conformational swap moves from pool of weighted structures
 `water`         | SPC/E water in the NPT ensemble
 
 Each example consists of a YAML input file and, potentially,

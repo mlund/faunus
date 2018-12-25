@@ -1,0 +1,132 @@
+{
+    "analysis": [
+        {
+            "reactioncoordinate": {
+                "average": 0.672475,
+                "index": 0,
+                "nstep": 5,
+                "property": "confid",
+                "relative time": 0.0174,
+                "samples": 40000,
+                "type": "molecule"
+            }
+        },
+        {
+            "reactioncoordinate": {
+                "average": 0.666075,
+                "index": 1,
+                "nstep": 5,
+                "property": "confid",
+                "relative time": 0.0038,
+                "samples": 40000,
+                "type": "molecule"
+            }
+        },
+        {
+            "sanity": {
+                "nstep": 1,
+                "relative time": 0.00103,
+                "samples": 200000
+            }
+        },
+        {
+            "savestate": {
+                "file": "confout.pqr"
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Apple LLVM 10.0.0 (clang-1000.11.45.5)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": null,
+                        "pairpot": {
+                            "default": [
+                                {
+                                    "lennardjones": {
+                                        "mixing": "LB"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "relative time": 0.007024592598484105
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            20.0,
+            20.0,
+            20.0
+        ],
+        "type": "cuboid"
+    },
+    "git revision": "15697785 (2018-12-24)",
+    "groups": [
+        {
+            "water": {
+                "confid": 1,
+                "index": [
+                    0,
+                    2
+                ],
+                "size": 3
+            }
+        },
+        {
+            "water": {
+                "confid": 1,
+                "index": [
+                    3,
+                    5
+                ],
+                "size": 3
+            }
+        }
+    ],
+    "moves": [
+        {
+            "conformationswap": {
+                "acceptance": 0.998,
+                "molecule": "water",
+                "molid": 0,
+                "moves": 399686,
+                "relative time": 0.273,
+                "relative time (without energy calc)": 0.0151,
+                "repeat": 2
+            }
+        },
+        {
+            "moltransrot": {
+                "acceptance": 0.986,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "dp": 5.0,
+                "dprot": 1.0,
+                "molecule": "water",
+                "molid": 0,
+                "moves": 400314,
+                "relative time": 0.269,
+                "repeat": 2,
+                "√⟨r²⟩": 2.86
+            }
+        }
+    ],
+    "number of groups": 2,
+    "number of particles": 6,
+    "reactionlist": null,
+    "relative drift": 1.4831692564493886e-11,
+    "temperature": 300.0
+}

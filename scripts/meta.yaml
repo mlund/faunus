@@ -14,6 +14,7 @@ build:
     - make faunus -j2
     - cmake -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX # needed to build pyfaunus
     - make pyfaunus -j2
+    - make manual_html
     - make install
     - make tests -j2
     - ctest --output-on-failure
@@ -31,6 +32,7 @@ requirements:
     - nbconvert
     - notebook
     - jupyter
+    - pandoc
     - openmpi 1.6.3  # [osx]
     - openmpi 3.1.*  # [linux64]
     - llvm-openmp    # [osx]

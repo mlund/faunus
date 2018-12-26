@@ -306,6 +306,28 @@ if (PANDOC)
         -N --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
         )
     set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+    add_custom_target(
+        manual_html
+        COMMENT "Building html manual"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/_docs
+        COMMAND cat
+        header.md
+        docs.md
+        install.md
+        running.md
+        topology.md
+        energy.md
+        moves.md
+        analysis.md |
+        grep -v ".notice--" |
+        grep -v "Github-Improve_this_page" |
+        ${PANDOC} --template ../GitHub.html5 -s --mathjax
+        -M title:The\ Faunus\ User\ Guide
+        -V date:${GIT_LATEST_TAG}""
+        -V thanks:"Based on git revision "${GIT_COMMIT_HASH}
+        -N --toc -o ${CMAKE_BINARY_DIR}/manual.html
+        )
 endif()
 
 # TESTS
@@ -396,9 +418,11 @@ endif()
 
 install(FILES ${CMAKE_BINARY_DIR}/LICENSE DESTINATION share/faunus)
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
+install(FILES ${CMAKE_BINARY_DIR}/manual.html DESTINATION share/faunus OPTIONAL)
 install(FILES
     ${CMAKE_SOURCE_DIR}/scripts/yason.py
     ${CMAKE_SOURCE_DIR}/scripts/ob2aam.py
+    ${CMAKE_SOURCE_DIR}/scripts/faunus-manual
     DESTINATION bin
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 

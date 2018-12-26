@@ -701,4 +701,5 @@ appended to all other input and output:
 yason.py input.yml | mpirun --np 6 --stdin all faunus -s state.json
 ~~~
 
-Here, each process automatically looks for `mpi.{nproc}.state.json`.
+Here, each process automatically looks for `mpi{nproc}.state.json`.
+

@@ -25,14 +25,14 @@ requirements:
     - {{ compiler('cxx') }}
     - llvm-openmp   # [osx]
   host:
-    - numpy
+    - numpy 1.*
     - matplotlib
     - python
     - ruamel_yaml
     - nbconvert
     - notebook
     - jupyter
-    - pandoc
+    - pandoc 2.*
     - openmpi 1.6.3  # [osx]
     - openmpi 3.1.*  # [linux64]
     - llvm-openmp    # [osx]
@@ -42,7 +42,7 @@ requirements:
     - openmpi 3.1.*  # [linux64]
     - ruamel_yaml
     - pygments
-    - numpy
+    - numpy 1.*
     - python
 
 about:

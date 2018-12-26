@@ -102,7 +102,9 @@ namespace Faunus {
         }
 #endif
 
-        MPIController mpi; // Global instance of MPI controller
+        // global instances
+        std::string prefix;
+        MPIController mpi;
 
     } // namespace
 } // namespace

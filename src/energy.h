@@ -1185,9 +1185,10 @@ namespace Faunus {
                     typedef typename std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> Tcoord;
 
                     Tspace &spc;
-                    bool nodrift;
-                    bool quiet;
-                    size_t dim=0;
+                    bool overwrite_penalty=true; // overwrites the input penalty function
+                    bool nodrift;       // avoid energy drift when upgrading penalty function
+                    bool quiet;         // hold mund
+                    size_t dim=0;       // number of reaction coordinate
                     size_t cnt=0;       // number of calls to `sync()`
                     size_t nupdate;     // update frequency [steps]
                     size_t samplings;
@@ -1196,15 +1197,17 @@ namespace Faunus {
                     double scale;       // scaling factor for f0
                     double f0;          // penalty increment
                     std::string file, hisfile;
-                    std::vector<Tcoord> rcvec; // vector of reaction coordinate functions
-                    std::vector<double> coord; // latest reaction coordinate
+                    std::vector<Tcoord> rcvec; // vector of reaction coordinate functions (length = 1 or 2)
+                    std::vector<double> coord; // latest reaction coordinate (length = 1 or 2)
 
-                    Table<int> histo;
-                    Table<double> penalty;
+                    Table<int> histo;      // sampling along reaction coordinates
+                    Table<double> penalty; // penalty function
+
                 public:
                     Penalty(const json &j, Tspace &spc) : spc(spc) {
                         using namespace ReactionCoordinate;
                         name = "penalty";
+                        overwrite_penalty = j.value("overwrite", true);
                         f0 = j.value("f0", 0.5);
                         scale = j.value("scale", 0.8);
                         quiet = j.value("quiet", true);
@@ -1225,12 +1228,13 @@ namespace Faunus {
                                     for (auto it=i.begin(); it!=i.end(); ++it) {
                                         if (it.key()=="atom")
                                             rc = std::make_shared<AtomProperty>(it.value(), spc);
-                                        if (it.key()=="molecule")
+                                        else if (it.key()=="molecule")
                                             rc = std::make_shared<MoleculeProperty>(it.value(), spc);
-                                        if (it.key()=="system")
+                                        else if (it.key()=="system")
                                             rc = std::make_shared<SystemProperty>(it.value(), spc);
-                                        if (it.key()=="cmcm")
+                                        else if (it.key()=="cmcm")
                                             rc = std::make_shared<MassCenterSeparation>(it.value(), spc);
+
                                         if (rc!=nullptr) {
                                             if (rc->min>=rc->max || rc->binwidth<=0)
                                                 throw std::runtime_error("min<max and binwidth>0 required for '" + it.key() + "'");
@@ -1243,8 +1247,8 @@ namespace Faunus {
                                     }
                                 }
                         dim = binwidth.size();
-                        if (dim<1 || dim>2)
-                            throw std::runtime_error("minimum one maximum two coordinates required");
+                        if (dim<1 or dim>2)
+                            throw std::runtime_error("exactly one or two coordinates required");
 
                         coord.resize(rcvec.size(), 0);
                         histo.reInitializer(binwidth, min, max);
@@ -1254,7 +1258,7 @@ namespace Faunus {
                         if (f) {
                             cout << "Loading penalty function '" << MPI::prefix+file << "'" << endl;
                             std::string hash;
-                            f >> hash >> f0 >> samplings;
+                            f >> hash >> f0 >> samplings >> nconv;
                             for (int row=0; row<penalty.rows(); row++)
                                 for (int col=0; col<penalty.cols(); col++)
                                     if (not f.eof())
@@ -1262,12 +1266,22 @@ namespace Faunus {
                                     else
                                         throw std::runtime_error("penalty file dimension mismatch");
                         }
-                     }
+                    }
 
                     virtual ~Penalty() {
-                        std::ofstream f1(MPI::prefix + file), f2(MPI::prefix + hisfile);
-                        if (f1) f1 << "# " << f0 << " " << samplings << "\n" << penalty.array() - penalty.minCoeff() << "\n";
-                        if (f2) f2 << histo << "\n";
+                        if (overwrite_penalty) {
+                            std::ofstream f(MPI::prefix + file);
+                            if (f) {
+                                f.precision(16);
+                                f << "# " << f0 << " " << samplings << " " << nconv << "\n"
+                                    << penalty.array() - penalty.minCoeff() << "\n";
+                                f.close();
+                            }
+                        }
+
+                        std::ofstream f2(MPI::prefix + hisfile);
+                        if (f2)
+                            f2 << histo << "\n";
                         // add function to save to numpy-friendly file...
                     }
 
@@ -1278,6 +1292,7 @@ namespace Faunus {
                         j["nodrift"] = nodrift;
                         j["histogram"] = hisfile;
                         j["f0_final"] = f0;
+                        j["overwrite"] = overwrite_penalty;
                         auto& _j = j["coords"] = json::array();
                         for (auto rc : rcvec) {
                             json t;
@@ -1299,23 +1314,24 @@ namespace Faunus {
                             penalty.to_index(coord);
                             u = penalty[coord];
                         }
+                        // reaching here, `coord` always reflects
+                        // the current reaction coordinate
                         return (nodrift) ? u - udelta : u;
                     }
 
                     /*
                      * @todo: If this is called before `energy()`, the coord
-                     * is never calculated and causes indefined behavior
+                     * is never calculated and causes undefined behavior
                      */
                     virtual void update(const std::vector<double> &c) {
                         if (++cnt % nupdate == 0 and f0>0) {
                             bool b = histo.minCoeff() >= (int)samplings;
                             if (b) {
-                                double min = penalty.minCoeff();
-                                penalty = penalty.array() - min;
+                                double min = penalty.minCoeff(); // define minimun penalty energy
+                                penalty = penalty.array() - min; // ...to zero
                                 if (not quiet)
-                                    cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
-                                        << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff())
-                                        << endl;
+                                    cout << "Barriers/kT: penalty = " << penalty.maxCoeff()
+                                        << " histogram = " << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;
                                 f0 = f0 * scale; // reduce penalty energy
                                 samplings = std::ceil( samplings / scale );
                                 histo.setZero();
@@ -1329,10 +1345,18 @@ namespace Faunus {
                     }
 
                     void sync(Energybase *basePtr, Change &change) override {
+                        // this function is called when a move is accepted
+                        // or rejected, as well as when initializing the system
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         assert(other);
-                        update(other->coord);       // is inside allowed range
-                        other->update(other->coord);
+                        update(other->coord);
+                        other->update(other->coord); // this is to keep cnt and samplings in sync
+
+                        // some assertions...
+                        assert( samplings == other->samplings );
+                        assert( coord == other->coord );
+                        assert( cnt == other->cnt );
+                        assert( udelta == other->udelta) ;
                     } // @todo: this doubles the MPI communication
             };
 
@@ -1350,27 +1374,32 @@ namespace Faunus {
                 using Base::file;
                 using Base::hisfile;
                 using Base::nconv;
+                using Base::quiet;
 
                 Eigen::VectorXi weights; // array w. mininum histogram counts
                 Eigen::VectorXd buffer; // receive buffer for penalty functions
 
                 PenaltyMPI(const json &j, Tspace &spc) : Base(j,spc) {
                     weights.resize( MPI::mpi.nproc() );
-                    buffer.resize( penalty.size()*MPI::mpi.nproc() );
+                    buffer.resize( penalty.size()*MPI::mpi.nproc() ); // recieve buffer for penalty func
                 }
 
                 void update(const std::vector<double> &c) override {
                     using namespace Faunus::MPI;
                     double uold = penalty[c];
                     if (++cnt % this->nupdate == 0 and f0>0) {
-                        int min = histo.minCoeff();
-                        MPI_Barrier(mpi.comm);
+
+                        int min = histo.minCoeff(); // if min>0 --> all RC's visited
+                        MPI_Barrier(mpi.comm); // wait for all walkers to reach here
                         MPI_Allgather(&min, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
 
-                        if ( weights.maxCoeff() > samplings ) {
+                        // if at least one walker has sampled full RC space at least `samplings` times
+                        if ( weights.maxCoeff() > samplings ) { // change to minCoeff()?
+                            // master collects penalty from all slaves
                             MPI_Gather(penalty.data(), penalty.size(), MPI_DOUBLE,
                                     buffer.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
 
+                            // master performs the average
                             if (mpi.isMaster()) {
                                 penalty.setZero();
                                 for (int i=0; i<mpi.nproc(); i++)
@@ -1379,15 +1408,34 @@ namespace Faunus {
                                 penalty = ( penalty.array() - penalty.minCoeff() ) / double(mpi.nproc());
                             }
 
+                            // master sends the averaged penalty function to all slaves
                             MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
                             nconv += 1;
-                            std::ofstream f3(MPI::prefix + std::to_string(nconv) + file);
-                            if (f3) f3 << "# " << f0 << " " << samplings << "\n" << penalty.array() << endl;
-                            std::ofstream f4(MPI::prefix + std::to_string(nconv) + hisfile);
-                            if (f4) f4 << histo << endl;
-                            if (min>0 and not this->quiet)
-                                cout << "Barriers/kT. Penalty=" << penalty.maxCoeff()
-                                    << " Histogram=" << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;
+
+                            // at this point, *all* penalty functions shall be identical
+
+                            // save penalty function to disk
+                            if (mpi.isMaster()) {
+                                std::ofstream f(file + ".walkersync" + std::to_string(nconv));
+                                if (f) {
+                                    f.precision(16);
+                                    f << "# " << f0 << " " << samplings << " " << nconv << "\n"
+                                        << penalty.array() << endl;
+                                }
+                            }
+
+                            // save histogram to disk
+                            std::ofstream f(MPI::prefix + hisfile + ".walkersync" + std::to_string(nconv));
+                            if (f) {
+                                f << histo << endl;
+                                f.close();
+                            }
+
+                            // print information to console
+                            if (min>0 and not quiet) {
+                                cout << "Barriers/kT: penalty = " << penalty.maxCoeff()
+                                    << " histogram = " << std::log(double(histo.maxCoeff())/histo.minCoeff()) << endl;
+                            }
 
                             histo.setZero();
                             f0 = f0 * scale; // reduce penalty energy

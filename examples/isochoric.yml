@@ -4,9 +4,9 @@ comment: |
     More information: doi:10/chqzjk
 
 temperature: 293
-random: {seed: default}
-geometry: {length: [1000, 1000, 100]}
-mcloop: {macro: 10, micro: 100}
+random: {seed: hardware}
+geometry: {type: cuboid, length: [1000, 1000, 100]}
+mcloop: {macro: 10, micro: 1000}
 
 atomlist:
     - TL: {sigma: 10, eps: 2.2147, dp: 2}
@@ -21,7 +21,7 @@ moleculelist:
             - harmonic: {index: [0,2], k: 0.2215, req: 40}
 
 insertmolecules:
-    - lipid: {N: 510, positions: isochoric.xyz }
+    - lipid: {N: 510, positions: isochoric.xyz}
 
 energy:
     - isobaric: {P/atm: 0}
@@ -37,16 +37,17 @@ energy:
         quiet: false
         update: 100
         coords:
-            - system: {property: "height", range: [86,117], resolution: 0.1}
+            - system: {property: "height", range: [86,117], resolution: 0.5}
 
 moves:
     - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: 100}
-    - transrot: {molecule: lipid, repeat: 100}
-    - volume: {dV: 0.03, method: isochoric, repeat: 1}
+    - transrot: {molecule: lipid, repeat: 10}
+    - volume: {dV: 0.04, method: isochoric, repeat: 1}
 
 analysis:
-    - systemenergy: {file: energy.dat, nstep: 10}
-    - xtcfile: {file: traj.xtc, nstep: 20}
+    - reactioncoordinate: {type: system, property: height, file: height.dat, nstep: 10}
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - xtcfile: {file: traj.xtc, nstep: 10}
     - savestate: {file: confout.pqr}
     - savestate: {file: state.json}
 

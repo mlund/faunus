@@ -575,6 +575,11 @@ $$
     \beta A(\mathcal{X}^d) = -\beta f(\mathcal{X}^d) = -\ln\int e^{-\beta \mathcal{H}(\mathcal{R}, \mathcal{X}^d)}  d \mathcal{R}.
 $$
 
+Flat histogram methods are often attributed to [Wang and Landau (2001)](http://dx.doi.org/10/bbdg7j)
+but the idea appears in earlier works, for example by
+[Hunter and Reinhardt (1995)](http://dx.doi.org/10/fns6dq) and
+[Engkvist and Karlström (1996)](http://dx.doi.org/10/djjk8z).
+
 To reduce fluctuations, $f_0$ can be periodically reduced (`update`, `scale`) as $f$ converges.
 At the end of simulation, the penalty function is saved to disk as an array ($d=1$) or matrix ($d=2$).
 Should the penalty function file be available when starting a new simulation, it is automatically loaded
@@ -595,43 +600,22 @@ energy:
     - atom: {index: 0, property: "y", range: [-2.0,2.0], resolution: 0.1}
 ~~~
 
-Example setup where the charges of atom 0 and 1, $q_0$ and $q_1$, are penalized within the ranges [-0.5, +0.5] and [-1.0, 0.0], respectively.
-The method can be used to estimate for example free energy of binding.
-The penalty assigned to the charges is carried out as the charges are moved within their respective ranges.
-
-~~~ yaml
-energy:
-- penalty:
-    f0: 0.5
-    scale: 0.9
-    update: 1000
-    file: penalty.dat
-    histogram: penalty.dat
-    coords:
-    - atom: {index: 0, property: "q", range: [-0.5,0.5], resolution: 0.01}
-    - atom: {index: 1, property: "q", range: [-1.0,0.0], resolution: 0.01}
-~~~
-
 Options:
 
-`penalty`     |  Description
-------------- | --------------------
-`f0`          |  Penalty energy increment ($kT$)
-`update`      |  Interval between scaling of `f0`
-`scale=0.8`   |  Scaling factor for `f0`
-`nodrift=true`|  Suppress energy drift
-`quiet=false` |  Set to true to get verbose output
-`file`        |  Name of saved/loaded penalty function
-`histogram`   |  Name of saved histogram (not required)
-`coords`      |  Array of _one or two_ coordinates
+`penalty`        |  Description
+---------------- | --------------------
+`f0`             |  Penalty energy increment ($kT$)
+`update`         |  Interval between scaling of `f0`
+`scale=0.8`      |  Scaling factor for `f0`
+`nodrift=true`   |  Suppress energy drift
+`quiet=false`    |  Set to true to get verbose output
+`file`           |  Name of saved/loaded penalty function
+`overwrite=true` |  If `false`, don't save final penalty function
+`histogram`      |  Name of saved histogram (not required)
+`coords`         |  Array of _one or two_ coordinates
 
 The coordinate, $\mathcal{X}$, can be freely composed by one or two
-of the types listed in the next section (via `coords`)
-
-**Note:**
-When using penalty energies there may currently be unresolved issues loading
-previously saved states. If so, the program will terminate.
-{: .notice--info}
+of the types listed in the next section (via `coords`).
 
 
 ### Reaction Coordinates
@@ -710,9 +694,11 @@ of the free energy sampling. It is crucial that the walk in coordinate space dif
 nodes, i.e. by specifying a different random number seed; start configuration; or displacement parameter.
 File output and input are prefixed with `mpi{rank}.`
 
-**Information:**
-Flat histogram methods are often attributed to [Wang and Landau (2001)](http://dx.doi.org/10/bbdg7j)
-but the idea appears in earlier works, for example by
-[Hunter and Reinhardt (1995)](http://dx.doi.org/10/fns6dq) and
-[Engkvist and Karlström (1996)](http://dx.doi.org/10/djjk8z).
+The following starts all MPI processes with the same input file and MPI prefix is automatically
+appended to all other input and output:
 
+~~~ bash
+yason.py input.yml | mpirun --np 6 --stdin all faunus -s state.json
+~~~
+
+Here, each process automatically looks for `mpi.{nproc}.state.json`.

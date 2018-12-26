@@ -29,7 +29,7 @@ namespace Faunus {
      */
     namespace MPI {
 
-        static std::string prefix;
+        extern std::string prefix;
 
         /**
          * @brief Main controller for MPI calls

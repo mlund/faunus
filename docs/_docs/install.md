@@ -24,6 +24,8 @@ conda search -c teokem faunus  # show (new) revisions
 conda upgrade -c teokem faunus
 ~~~
 
+Starting from version 2.1, we adhere to [semantic versioning](https://semver.org).
+
 ## Building from source code
 
 Faunus is continuously [tested](https://travis-ci.org/mlund/faunus) on macOS/Linux,

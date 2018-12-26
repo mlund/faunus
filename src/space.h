@@ -407,7 +407,7 @@ namespace Faunus {
                                     Geometry::massCenter(i.begin(), i.end(), spc.geo.getBoundaryFunc(), -i.cm) ) > 1e-9 )
                             throw std::runtime_error("mass center mismatch");
             } catch(std::exception& e) {
-                throw std::runtime_error("Error while constructing Space from JSON: "s + e.what());
+                throw std::runtime_error("error while constructing Space from JSON: "s + e.what());
             }
 
         } //!< Deserialize json object to Space

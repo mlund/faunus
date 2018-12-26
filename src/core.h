@@ -284,4 +284,8 @@ namespace Faunus {
     }
 #endif
 
+    /** Add growing suffix filename until non-existing name is found */
+    std::string addGrowingSuffix(const std::string&);
+
+
 }//end of faunus namespace

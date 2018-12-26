@@ -121,7 +121,7 @@ int main( int argc, char **argv )
         for (int i=0; i<macro; i++) {
             for (int j=0; j<micro; j++) {
 
-                if (showProgress && mpi.isMaster()) {
+                if (showProgress and mpi.isMaster()) {
                     ++progressBar;
                     if (j % 10 == 0)
                         progressBar.display();
@@ -131,10 +131,10 @@ int main( int argc, char **argv )
                 analysis.sample();
             }
         }
-        if (showProgress && mpi.isMaster())
+        if (showProgress and mpi.isMaster())
             progressBar.done();
 
-        if (!quiet)
+        if (not quiet)
             mpi.cout() << "relative drift = " << sim.drift() << endl;
 
         // --output

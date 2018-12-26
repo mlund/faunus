@@ -117,4 +117,19 @@ namespace Faunus {
         return second * a * second.transpose();
     }
 
+    std::string addGrowingSuffix(const std::string& file) {
+        //using std::experimental::filesystem; // exp. c++17 feature, not available on MacOS (Dec. 2018)
+        size_t cnt=0;
+        std::string newfile;
+        auto exists = [&]() {
+            std::ifstream f(newfile.c_str());
+            return f.good();
+        };
+
+        do {
+            newfile = file + "." + std::to_string(cnt++);
+        } while (not exists());
+        return newfile;
+    }
+
 } // end of namespace

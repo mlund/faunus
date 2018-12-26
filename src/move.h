@@ -1267,17 +1267,18 @@ start:
                             size_t oldsize = vec.size();
                             for (auto it : m.items()) {
                                 try {
-#ifdef ENABLE_MPI
-                                    if (it.key()=="temper") this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
-#endif
                                     if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc);
-                                    if (it.key()=="conformationswap") this->template push_back<Move::ConformationSwap<Tspace>>(spc);
-                                    if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
-                                    if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);
-                                    if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
-                                    if (it.key()=="charge") this->template push_back<Move::ChargeMove<Tspace>>(spc);
-                                    if (it.key()=="speciation") this->template push_back<Move::SpeciationMove<Tspace>>(spc);
-                                    if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);
+                                    else if (it.key()=="conformationswap") this->template push_back<Move::ConformationSwap<Tspace>>(spc);
+                                    else if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
+                                    else if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);
+                                    else if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
+                                    else if (it.key()=="charge") this->template push_back<Move::ChargeMove<Tspace>>(spc);
+                                    else if (it.key()=="speciation") this->template push_back<Move::SpeciationMove<Tspace>>(spc);
+                                    else if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);
+                                    // more moves go here...
+#ifdef ENABLE_MPI
+                                    else if (it.key()=="temper") this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
+#endif
 
                                     if (vec.size()==oldsize+1) {
                                         vec.back()->from_json( it.value() );
@@ -1329,8 +1330,8 @@ start:
                     }
                 }; //!< Contains everything to describe a state
 
-                State state1, // old state
-                      state2; // new state (trial);
+                State state1, // old state (accepted)
+                      state2; // new state (trial)
                 double uinit=0, dusum=0;
                 Average<double> uavg;
 
@@ -1338,35 +1339,30 @@ start:
                     dusum=0;
                     Change c; c.all=true;
 
-                    state1.pot.key = Energy::Energybase::OLD; // this is the old energy (current)
+                    state1.pot.key = Energy::Energybase::OLD; // this is the old energy (current, accepted)
                     state2.pot.key = Energy::Energybase::NEW; // this is the new energy (trial)
+
                     state1.pot.init();
+                    double u1 = state1.pot.energy(c);
+                    uinit = u1;
 
-                    uinit = state1.pot.energy(c);
-
-                    state2.sync(state1, c);
+                    state2.sync(state1, c); // copy all information from state1 into state2
                     state2.pot.init();
+                    double u2 = state2.pot.energy(c);
 
-                    // Hack in reference to state1 in speciation
+                    // check that the energies in state1 and state2 are *identical*
+                    if (u1 not_eq u2) {
+                        std::cerr << "u1 = " << u1 << "  u2 = " << u2 << endl;
+                        throw std::runtime_error("error aligning energies - this could be a bug...");
+                    }
+
+                    // inject reference to state1 in SpeciationMove (needed to calc. *differences*
+                    // in ideal excess chem. potentials)
                     for (auto base : moves.vec) {
                         auto derived = std::dynamic_pointer_cast<Move::SpeciationMove<Tspace>>(base);
                         if (derived)
                             derived->setOther(state1.spc);
                     }
-#ifndef NDEBUG
-                    double u2 = state2.pot.energy(c);
-                    double error = std::fabs(uinit-u2);
-                    if (std::isfinite(uinit)) {
-                        if (uinit!=0) {
-                            //cout << error << " " << uinit << endl;
-                            assert(error/uinit<1e-3);
-                        }
-                        else
-                            assert(error<1e-6);
-                    }
-                    //cout << "u1 = " << uinit << "  u2 = " << u2 << endl;
-                    //assert( std::fabs((uinit-u2)/uinit)<1e-3 );
-#endif
                 }
 
             public:
@@ -1396,8 +1392,8 @@ start:
                 } // store system to json object
 
                 void restore(const json &j) {
-                    state1.spc = j;
-                    state2.spc = j;
+                    state1.spc = j; // old/accepted state
+                    state2.spc = j; // trial state
                     Move::Movebase::slump = j["random-move"]; // restore move random number generator
                     Faunus::random = j["random-global"];      // restore global random number generator
                     init();
@@ -1444,8 +1440,7 @@ start:
                                 if ( metropolis(du + bias) ) { // accept move
                                     state1.sync( state2, change );
                                     (**mv).accept(change);
-                                }
-                                else { // reject move
+                                } else { // reject move
                                     state2.sync( state1, change );
                                     (**mv).reject(change);
                                     du=0;

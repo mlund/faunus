@@ -89,11 +89,11 @@ namespace Faunus {
                         from_json(j, *this);
                         index = j.at("index");
                         property = j.at("property").get<std::string>();
-                        if (property=="x") f = [&i=spc.p.at(index).pos]() { return i.x(); };
-                        if (property=="y") f = [&i=spc.p.at(index).pos]() { return i.y(); };
-                        if (property=="z") f = [&i=spc.p.at(index).pos]() { return i.z(); };
-                        if (property=="q") f = [&i=spc.p.at(index)]()     { return i.charge; };
-                        if (property=="R") f = [&i=spc.p.at(index).pos]() { return i.norm(); };
+                        if (property=="x") f = [&p=spc.p, i=index]() { return p[i].pos.x(); };
+                        if (property=="y") f = [&p=spc.p, i=index]() { return p[i].pos.y(); };
+                        if (property=="z") f = [&p=spc.p, i=index]() { return p[i].pos.z(); };
+                        if (property=="R") f = [&p=spc.p, i=index]() { return p[i].pos.norm(); };
+                        if (property=="q") f = [&p=spc.p, i=index]() { return p[i].charge; };
                         if (f==nullptr)
                             throw std::runtime_error(name + ": unknown property '" + property + "'");
                     }
@@ -109,27 +109,34 @@ namespace Faunus {
                     auto b = spc.geo.getBoundaryFunc();
                     property = j.at("property").get<std::string>();
 
-                    if (property=="confid")     f = [&i=spc.groups.at(index)]() { return i.confid; };
-                    else if (property=="com_x") f = [&i=spc.groups.at(index)]() { return i.cm.x(); };
-                    else if (property=="com_y") f = [&i=spc.groups.at(index)]() { return i.cm.y(); };
-                    else if (property=="com_z") f = [&i=spc.groups.at(index)]() { return i.cm.z(); };
-                    else if (property=="N")     f = [&i=spc.groups.at(index)]() { return i.size(); };
-                    else if (property=="Q")     f = [&i=spc.groups.at(index)]() { return Geometry::monopoleMoment(i.begin(), i.end()); };
+                    if (property=="confid")     f = [&g=spc.groups, i=index]() { return g[i].confid; };
+                    else if (property=="com_x") f = [&g=spc.groups, i=index]() { return g[i].cm.x(); };
+                    else if (property=="com_y") f = [&g=spc.groups, i=index]() { return g[i].cm.y(); };
+                    else if (property=="com_z") f = [&g=spc.groups, i=index]() { return g[i].cm.z(); };
+                    else if (property=="N")     f = [&g=spc.groups, i=index]() { return g[i].size(); };
+                    else if (property=="Q")     f = [&g=spc.groups, i=index]() { return Geometry::monopoleMoment(g[i].begin(), g[i].end()); };
 
-                    else if (property=="mu_x")  f = [&i=spc.groups.at(index), b]() {
-                        return Geometry::dipoleMoment(i.begin(), i.end(), b).x(); };
-                    else if (property=="mu_y")  f = [&i=spc.groups.at(index), b]() {
-                        return Geometry::dipoleMoment(i.begin(), i.end(), b).y(); };
-                    else if (property=="mu_z")  f = [&i=spc.groups.at(index), b]() {
-                        return Geometry::dipoleMoment(i.begin(), i.end(), b).z(); };
-                    else if (property=="mu")    f = [&i=spc.groups.at(index), b]() {
-                        return Geometry::dipoleMoment(i.begin(), i.end(), b).norm(); };
+                    else if (property=="mu_x")  f = [&g=spc.groups, i=index, b]() {
+                        return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).x();
+                    };
+
+                    else if (property=="mu_y")  f = [&g=spc.groups, i=index, b]() {
+                        return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).y();
+                    };
+
+                    else if (property=="mu_z")  f = [&g=spc.groups, i=index, b]() {
+                        return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).z();
+                    };
+
+                    else if (property=="mu")    f = [&g=spc.groups, i=index, b]() {
+                        return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).norm();
+                    };
 
                     else if (property=="muangle") {
                         dir = j.at("dir").get<Point>().normalized();
                         if (not spc.groups.at(index).atomic)
-                            f = [&i=spc.groups.at(index), b, &dir=dir]() {
-                                Point mu = Geometry::dipoleMoment(i.begin(), i.end(), b);
+                            f = [&g=spc.groups, i=index, b, &dir=dir]() {
+                                Point mu = Geometry::dipoleMoment(g[i].begin(), g[i].end(), b);
                                 return std::acos(mu.dot(dir)) * 180 / pc::pi;
                             };
                     }

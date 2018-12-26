@@ -215,8 +215,8 @@ void Faunus::Potential::to_json(Faunus::json &j, const std::shared_ptr<Faunus::P
 void Faunus::Potential::from_json(const Faunus::json &j, std::shared_ptr<Faunus::Potential::BondData> &b) {
     if (j.is_object())
         if (j.size()==1) {
-            auto& key = j.begin().key();
-            auto& val = j.begin().value();
+            const auto& key = j.begin().key();
+            const auto& val = j.begin().value();
             if ( key==HarmonicBond().name() )  b = std::make_shared<HarmonicBond>();
             else if ( key==FENEBond().name() ) b = std::make_shared<FENEBond>();
             else if ( key==HarmonicTorsion().name() ) b = std::make_shared<HarmonicTorsion>();

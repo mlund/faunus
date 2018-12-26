@@ -47,6 +47,7 @@ namespace Faunus {
                 inline void _to_json(json &j) const override {
                     j = *rc;
                     j["type"] = type;
+                    j["file"] = filename;
                     j.erase("range");     // these are for penalty function
                     j.erase("resolution");// use only, so no need to show
                     if (cnt>0)
@@ -67,8 +68,8 @@ namespace Faunus {
                         using namespace Faunus::ReactionCoordinate;
                         from_json(j);
                         name = "reactioncoordinate";
-                        filename = j.at(MPI::prefix + "file").get<std::string>();
-                        file.open(filename);
+                        filename = MPI::prefix + j.at("file").get<std::string>();
+                        file.open(filename); // output file
                         type = j.at("type").get<std::string>();
                         if      (type=="atom")     rc = std::make_shared<AtomProperty>(j, spc);
                         else if (type=="molecule") rc = std::make_shared<MoleculeProperty>(j, spc);

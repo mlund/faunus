@@ -224,10 +224,14 @@ void Faunus::Potential::from_json(const Faunus::json &j, std::shared_ptr<Faunus:
             else if ( key==PeriodicDihedral().name() ) b = std::make_shared<PeriodicDihedral>();
             else
                 throw std::runtime_error("unknown bond type: " + key);
-            b->from_json( val );
-            b->index = val.at("index").get<decltype(b->index)>();
-            if (b->index.size() != b->numindex())
-                throw std::runtime_error("exactly " + std::to_string(b->numindex()) + " indices required for " + b->name());
+            try {
+                b->from_json( val );
+                b->index = val.at("index").get<decltype(b->index)>();
+                if (b->index.size() != b->numindex())
+                    throw std::runtime_error("exactly " + std::to_string(b->numindex()) + " indices required for " + b->name());
+            } catch (std::exception &e) {
+                throw std::runtime_error(e.what() + usageTip[key]);
+            }
             return;
         }
     throw std::runtime_error("invalid bond data");

@@ -68,7 +68,7 @@ make install
 
 The following options are available:
 
-Option                               | Description
+CMake Option                         | Description
 ------------------------------------ | ---------------------------------------
 `-DENABLE_MPI=OFF`                   | Enable MPI
 `-DENABLE_OPENMP=OFF`                | Enable OpenMP support

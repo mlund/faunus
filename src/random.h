@@ -26,11 +26,9 @@ namespace Faunus {
         int range(int, int); //!< Integer in uniform range [min:max]
 
         template<class Titer>
-            Titer sample(const Titer &beg, const Titer &end)
-            {
-                auto i = beg;
-                std::advance(i, range(0, std::distance(beg, end) - 1));
-                return i;
+            Titer sample(Titer begin, Titer end) {
+                std::advance(begin, range(0, std::distance(begin, end) - 1));
+                return begin;
             } //!< Iterator to random element in container (std::vector, std::map, etc)
     }; //!< Class for handling random number generation
 

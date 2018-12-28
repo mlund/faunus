@@ -54,7 +54,8 @@ namespace Faunus {
             a.tfe      = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom*1.0_molar);
             a.hydrophobic = val.value("hydrophobic", false);
             if (not val.empty()) // throw exception of unused/unknown keys are passed
-                throw std::runtime_error("unused key(s) for atom '"s + a.name + "':\n" + val.dump());
+                throw std::runtime_error("unused key(s) for atom '"s + a.name + "':\n"
+                        + val.dump() + usageTip["atomlist"]);
         }
     }
 

@@ -10,6 +10,10 @@
 using namespace Faunus;
 using namespace std;
 
+#ifndef FAUNUS_TIPSFILE
+#define FAUNUS_TIPSFILE ""
+#endif
+
 #ifdef FAUNUS_CUBOID_NOPBC
 typedef Geometry::CuboidNoPBC Tgeometry;
 #elif FAUNUS_SPHERE
@@ -25,7 +29,7 @@ R"(Faunus - the Monte Carlo code you're looking for!
     http://github.com/mlund/faunus
 
     Usage:
-      faunus [-q] [--nobar] [--nopfx] [--state=<file>] [--input=<file>] [--output=<file>]
+      faunus [-q] [--nobar] [--nopfx] [--notips] [--state=<file>] [--input=<file>] [--output=<file>]
       faunus (-h | --help)
       faunus --version
 
@@ -37,6 +41,7 @@ R"(Faunus - the Monte Carlo code you're looking for!
       -h --help                  Show this screen.
       --nobar                    No progress bar.
       --nopfx                    Do not prefix input file with MPI rank.
+      --notips                   Do not give input assistance
       --version                  Show version.
 
     Multiple processes using MPI:
@@ -56,6 +61,10 @@ int main( int argc, char **argv )
 #endif
         auto args = docopt::docopt( USAGE,
                 { argv + 1, argv + argc }, true, version);
+
+        // --notips
+        if (not args["--notips"].asBool())
+            usageTip.load( {FAUNUS_TIPSFILE} ); 
 
         // --nobar
         bool showProgress = !args["--nobar"].asBool();

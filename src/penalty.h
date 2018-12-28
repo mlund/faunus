@@ -71,7 +71,7 @@ namespace Faunus {
                             };
 
                         if (f==nullptr)
-                            throw std::runtime_error(name + ": unknown property '" + property + "'");
+                            throw std::runtime_error(name + ": unknown property '" + property + "'" + usageTip["coords=[system]"]);
                     }
                 void _to_json(json &j) const override;
         };
@@ -95,7 +95,7 @@ namespace Faunus {
                         if (property=="R") f = [&p=spc.p, i=index]() { return p[i].pos.norm(); };
                         if (property=="q") f = [&p=spc.p, i=index]() { return p[i].charge; };
                         if (f==nullptr)
-                            throw std::runtime_error(name + ": unknown property '" + property + "'");
+                            throw std::runtime_error(name + ": unknown property '" + property + "'" + usageTip["coords=[atom]"]);
                     }
                 void _to_json(json &j) const override;
         };
@@ -160,7 +160,7 @@ namespace Faunus {
                     }
 
                     if (f==nullptr)
-                        throw std::runtime_error(name + ": unknown or impossible property '" + property + "'");
+                        throw std::runtime_error(name + ": unknown or impossible property '" + property + "'" + usageTip["coords=[molecule]"]);
                 }
         };
 

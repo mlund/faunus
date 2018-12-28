@@ -52,3 +52,9 @@ The script `yason.py` merely converts from YAML to JSON as the former, easier to
 is used in all examples.
 For more examples, see the `examples` folder.
 
+To open the user-guide in a browser, type:
+
+~~~ bash
+faunus-manual
+~~~
+

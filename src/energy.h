@@ -1661,7 +1661,7 @@ namespace Faunus {
                                         throw std::runtime_error("unknown term");
 
                                 } catch (std::exception &e) {
-                                    throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what());
+                                    throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
                                 }
                             }
                         }

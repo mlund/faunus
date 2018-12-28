@@ -487,7 +487,7 @@ namespace Faunus {
                                 throw std::runtime_error("cannot insert undefined molecule '" + it.key() + "'");
                         }
                 }
-            } else throw std::runtime_error("'insertmolecules' json entry must be of array type");
+            } else throw std::runtime_error("'insertmolecules' json entry must be of array type" + usageTip["insertmolecule"]);
         } //!< Insert `N` molecules into space as defined in `insert`
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

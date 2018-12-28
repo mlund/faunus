@@ -139,7 +139,7 @@ $$
 
 where $\mathcal{S}(q=r/R_c)$ is a splitting function:
 
-`type`                                   | Keywords      | $\mathcal{S}(q)$                                   
+coulomb types                            | Keywords      | $\mathcal{S}(q)$
 ---------------------------------------- | ------------- | ---------------------------------------------------
 `none`                                   |               | 0
 [`plain`](http://doi.org/ctnnsj)         |               | 1
@@ -625,16 +625,16 @@ be used when analysing the system (see Analysis).
 
 #### Atom Properties
 
-`atom`        | Single atom properties
-------------- | ----------------------------------
-`index`       | Atom index
-`property`    | `x`, `y`, `z`, `q`
-`range`       | Array w. [min:max] value
-`resolution`  | Resolution along coordinate
+`coords=[atom]`| Single atom properties
+-------------- | ----------------------------------
+`index`        | Atom index
+`property`     | `x`, `y`, `z`, `q`
+`range`        | Array w. [min:max] value
+`resolution`   | Resolution along coordinate
 
 #### Molecule Properties
 
-`molecule`                | Single molecule properties
+`coords=[molecule]`       | Single molecule properties
 ------------------------- | ----------------------------------
 `index`                   | Molecule index
 `range`                   | Array w. [min:max] value
@@ -660,25 +660,25 @@ This returns the minimum distance between the mass centers of two molecules.
 Useful for calculating i.e. the potential of mean force between strongly
 interacting molecular groups.
 
-`cmcm`        | Mass-center separation
-------------- | -----------------------------------
-`index`       | Array w. exactly two molecule index
-`range`       | Array w. [min:max] separation
-`resolution`  | Resolution along coordinate
-`dir=[1,1,1]` | Directions for distance calc.
+`coords=[cmcm]` | Mass-center separation
+--------------- | -----------------------------------
+`index`         | Array w. exactly two molecule index
+`range`         | Array w. [min:max] separation
+`resolution`    | Resolution along coordinate
+`dir=[1,1,1]`   | Directions for distance calc.
 
 #### System Properties
 
-`system`       | System property
--------------- | ----------------------------------------------
-`range`        | Array w. [min:max] value
-`resolution`   | Resolution along coordinate
-`property`     |
-`V`            | System volume
-`Q`            | System net-charge
-`Lx`,`Ly`,`Lz` | Side lengths of enclosing cuboid
-`height`       | Alias for `Lz`
-`radius`       | Radius of spherical or cylindrical geometries
+`coords=[system]` | System property
+----------------- | ----------------------------------------
+`range`           | Array w. [min:max] value
+`resolution`      | Resolution along coordinate
+`property`        |
+`V`               | System volume
+`Q`               | System net-charge
+`Lx`,`Ly`,`Lz`    | Side lengths of enclosing cuboid
+`height`          | Alias for `Lz`
+`radius`          | Radius of spherical or cylindrical geometries
 
 The enclosing cuboid is the smallest cuboid that can contain the geometry.
 For example, for a cylindrical simulation container, `Lz` is the height

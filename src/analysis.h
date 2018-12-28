@@ -1269,7 +1269,7 @@ namespace Faunus {
 
                                     } catch (std::exception &e) {
                                         throw std::runtime_error("Error adding analysis,\n\n\"" + it.key() + "\": "
-                                                + it->dump() + "\n\n: " + e.what() + "\n");
+                                                + it->dump() + "\n\n: " + e.what() + usageTip[it.key()]);
                                     }
                 }
 

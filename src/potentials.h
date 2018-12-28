@@ -610,16 +610,20 @@ namespace Faunus {
                                 for (auto it=i.begin(); it!=i.end(); ++it) {
                                     uFunc _u = nullptr;
 
-                                    if (it.key()=="coulomb") _u = CoulombGalore() = i;
-                                    else if (it.key()=="cos2") _u = CosAttract() = i;
-                                    else if (it.key()=="polar") _u = Polarizability<T>() = i;
-                                    else if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
-                                    else if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
-                                    else if (it.key()=="repulsionr3") _u = RepulsionR3() = i;
-                                    else if (it.key()=="sasa") _u = SASApotential() = i;
-                                    else if (it.key()=="wca") _u = WeeksChandlerAndersen<T>() = i;
-                                    else if (it.key()=="pm") _u = Coulomb() + HardSphere<T>() = it.value();
-                                    else if (it.key()=="pmwca") _u = Coulomb() + WeeksChandlerAndersen<T>() = it.value();
+                                    try {
+                                        if (it.key()=="coulomb") _u = CoulombGalore() = i;
+                                        else if (it.key()=="cos2") _u = CosAttract() = i;
+                                        else if (it.key()=="polar") _u = Polarizability<T>() = i;
+                                        else if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
+                                        else if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
+                                        else if (it.key()=="repulsionr3") _u = RepulsionR3() = i;
+                                        else if (it.key()=="sasa") _u = SASApotential() = i;
+                                        else if (it.key()=="wca") _u = WeeksChandlerAndersen<T>() = i;
+                                        else if (it.key()=="pm") _u = Coulomb() + HardSphere<T>() = it.value();
+                                        else if (it.key()=="pmwca") _u = Coulomb() + WeeksChandlerAndersen<T>() = it.value();
+                                    } catch (std::exception &e) {
+                                        throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
+                                    }
 
                                     if (_u!=nullptr) // if found, sum them into new function object
                                         u = [u,_u](const T&a, const T&b, const Point &r){return u(a,b,r)+_u(a,b,r);};

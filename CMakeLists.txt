@@ -255,6 +255,8 @@ add_test(NAME tests COMMAND tests)
 add_executable(faunus src/faunus.cpp)
 add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar)
 target_link_libraries(faunus libfaunus xdrfile docopt ${LINKLIBS})
+target_compile_definitions(faunus PUBLIC
+    FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
@@ -328,6 +330,15 @@ if (PANDOC)
         -V thanks:"Based on git revision "${GIT_COMMIT_HASH}
         -N --toc -o ${CMAKE_BINARY_DIR}/manual.html
         )
+
+    add_custom_target(
+        usagetips
+        ALL
+        COMMENT "extracting tips from manual"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMAND ${PYTHON_EXECUTABLE} scripts/extracttips.py)
+
+    add_dependencies(usagetips manual_html)
 endif()
 
 # TESTS
@@ -417,6 +428,7 @@ if (pybind11_FOUND)
 endif()
 
 install(FILES ${CMAKE_BINARY_DIR}/LICENSE DESTINATION share/faunus)
+install(FILES ${CMAKE_BINARY_DIR}/tips.json DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_BINARY_DIR}/manual.html DESTINATION share/faunus OPTIONAL)
 install(FILES

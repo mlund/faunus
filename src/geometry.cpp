@@ -40,7 +40,7 @@ namespace Faunus {
             try { 
                 g.from_json(j);
             } catch(std::exception& e) {
-                throw std::runtime_error("geometry construction error: "s + e.what());
+                throw std::runtime_error("geometry construction error: "s + e.what() + usageTip["geometry"]);
             }
         }
 

@@ -35,8 +35,9 @@ Below is a list of possible geometries, specified by `type`, for the simulation 
 indicating if and in which directions periodic boundary conditions (PBC) are applied.
 Origo ($0,0,0$) is always placed in the geometric _center_ of the simulation container.
 
-`type`     | PBC      | Required keywords
+`geometry` | PBC      | Required keywords
 ---------- | -------- | --------------------------------------
+type:      |          |
 `cuboid`   | $x,y,z$  | `length` (array or single float)
 `slit`     | $x,y$    | `length` (array or single float)
 `cylinder` | $z$      | `radius`, `length` (along $z$)
@@ -155,12 +156,13 @@ insertmolecules:
 
 The following keywords are available:
 
-Keyword             | Description
-------------------- | -------------------------------------------------
-`N`                 | Number of molecules to insert
-`inactive=false`    | Deactivates inserted molecules
-`positions`         | Load positions from file (`aam`, `pqr`, `xyz`)
-`translate=[0,0,0]` | Displace loaded `positions` with vector
+`insertmolecules`    | Description
+-------------------- | ---------------------------------------
+Molecule properties: |
+`N`                  | Number of molecules to insert
+`inactive=false`     | Deactivates inserted molecules
+`positions`          | Load positions from file (`aam`, `pqr`, `xyz`)
+`translate=[0,0,0]`  | Displace loaded `positions` with vector
 
 A filename with positions for the `N` molecules can be given with `positions`.
 The file must contain exactly N-times molecular

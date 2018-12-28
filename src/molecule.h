@@ -388,7 +388,7 @@ namespace Faunus {
                     // at this stage all given keys should have been accessed. If any are
                     // left, an exception will be thrown.
                     if (not val.empty())
-                        throw std::runtime_error("unused key(s):\n"s + val.dump());
+                        throw std::runtime_error("unused key(s):\n"s + val.dump() + usageTip["moleculelist"]);
                 }
             } catch(std::exception& e) {
                 throw std::runtime_error("JSON->molecule: " + a.name + ": " + e.what());

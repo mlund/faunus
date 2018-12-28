@@ -79,7 +79,7 @@ namespace Faunus {
 #endif
 
     json merge( const json &a, const json &b ); //!< Merge two json objects
-    json openjson( const std::string &file ); //!< Read json file into json object (w. syntax check)
+    json openjson( const std::string &file, bool=true); //!< Read json file into json object (w. syntax check)
 
     /**
      * @brief Check for unknown keys in JSON object
@@ -118,6 +118,18 @@ namespace Faunus {
     double _round(double x, int n=3); //!< Round to n number of significant digits
     void _roundjson(json &j, int n=3); // round float objects to n number of significant digits
     double value_inf(const json &j, const std::string &key); //!< Extract floating point from json and allow for 'inf' and '-inf'
+
+    class TipFromTheManual {
+        private:
+            json db; // database
+            Random slump;
+        public:
+            bool tip_already_given=false;
+            void load(const std::vector<std::string>&);
+            std::string operator[](const std::string&);
+    };
+
+    extern TipFromTheManual usageTip;
 
     struct Tensor : public Eigen::Matrix3d {
         typedef Eigen::Matrix3d base;

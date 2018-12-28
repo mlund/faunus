@@ -48,9 +48,9 @@ namespace Faunus {
         return result.unflatten();
     }
 
-    json openjson(const std::string &file) {
+    json openjson(const std::string &file, bool throw_if_file_not_found) {
         json js;
-        std::ifstream f (file );
+        std::ifstream f(file);
         if ( f ) {
             try {
                 f >> js;
@@ -59,7 +59,7 @@ namespace Faunus {
                 throw std::runtime_error("Syntax error in JSON file " + file + ": " + e.what());
             }
         }
-        else
+        else if (throw_if_file_not_found)
             throw std::runtime_error("Cannot find or read JSON file " + file);
         return js;
     }
@@ -75,6 +75,36 @@ namespace Faunus {
         }
         return true;
     }
+
+    void TipFromTheManual::load(const std::vector<std::string> &files) {
+        slump.seed();
+        // try loading `files`; stop of not empty
+        for (auto &i : files) {
+            db = openjson(i, false); // allow for file not found
+            if (not db.empty())
+                break;
+        }
+    }
+
+    std::string TipFromTheManual::operator[](const std::string &key) {
+        std::string t;
+        if (not tip_already_given) {
+            auto it = db.find(key);
+            if (it!=db.end()) {
+                t = "\n\nNeed help, my young Padawan?\n\n" + it->get<std::string>();
+                if (key=="coulomb")
+                    t += db.at("coulomb types").get<std::string>();
+                auto ascii = db["ascii"].get<std::vector<std::string>>();
+                if (not ascii.empty()) {
+                    t += *(slump.sample(ascii.begin(), ascii.end())) + "\n";
+                    tip_already_given = true;
+                }
+            }
+        }
+        return t; // empty string of no tips available
+    }
+
+    TipFromTheManual usageTip; // Global instance
 
     Tensor::Tensor(double xx, double xy, double xz, double yy, double yz, double zz) {
         (*this) << xx, xy, xz, xy, yy, yz, xz, yz, zz;

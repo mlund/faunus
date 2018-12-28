@@ -512,11 +512,15 @@ namespace Faunus {
                     }
 
                     void _from_json(const json &j) override {
-                        method = methods.find( j.value("method", "isotropic") );
-                        if (method==methods.end())
-                            std::runtime_error("unknown volume change method");
-                        dV = j.at("dV");
-                    }
+                        try {
+                            method = methods.find( j.value("method", "isotropic") );
+                            if (method==methods.end())
+                                std::runtime_error("unknown volume change method");
+                            dV = j.at("dV");
+                        } catch (std::exception &e) {
+                            throw std::runtime_error(e.what());
+                        }
+                     }
 
                     void _move(Change &change) override {
                         if (dV>0) {
@@ -1286,7 +1290,7 @@ start:
                                     } else
                                         std::cerr << "warning: ignoring unknown move '" << it.key() << "'" << endl;
                                 } catch (std::exception &e) {
-                                    throw std::runtime_error("Error adding move '" + it.key() + "': " + e.what());
+                                    throw std::runtime_error("Error adding move '" + it.key() + "': " + e.what() + usageTip[it.key()]);
                                 }
                             }
                         }

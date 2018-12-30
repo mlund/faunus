@@ -119,6 +119,14 @@ namespace Faunus {
     void _roundjson(json &j, int n=3); // round float objects to n number of significant digits
     double value_inf(const json &j, const std::string &key); //!< Extract floating point from json and allow for 'inf' and '-inf'
 
+    /**
+     * @brief Class for showing help based on input errors
+     *
+     * If no valid database files are found using `load()`,
+     * or of the key is not found, an empty string is
+     * returned by the call operator. The idea is that this
+     * functionality is completely optional.
+     */
     class TipFromTheManual {
         private:
             json db; // database
@@ -129,7 +137,7 @@ namespace Faunus {
             std::string operator[](const std::string&);
     };
 
-    extern TipFromTheManual usageTip;
+    extern TipFromTheManual usageTip; // global instance
 
     struct Tensor : public Eigen::Matrix3d {
         typedef Eigen::Matrix3d base;
@@ -190,7 +198,7 @@ namespace Faunus {
         QuaternionRotate();
         QuaternionRotate(double angle, Point u);
         void set(double angle, Point u);
-        Point operator()( Point a, std::function<void(Point&)> boundary = [](Point &i){}, const Point &shift={0,0,0} ) const; //!< Rotate point w. optional PBC boundaries
+        Point operator()( Point a, std::function<void(Point&)> boundary = [](Point&){}, const Point &shift={0,0,0} ) const; //!< Rotate point w. optional PBC boundaries
         auto operator()( const Eigen::Matrix3d &a ) const; //!< Rotate matrix/tensor
     };
 

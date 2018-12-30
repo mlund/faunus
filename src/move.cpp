@@ -57,13 +57,13 @@ namespace Faunus {
             timer.stop();
         }
 
-        double Movebase::bias(Change &c, double uold, double unew) {
+        double Movebase::bias(Change&, double, double) {
             return 0; // du
         }
 
-        void Movebase::_accept(Change &) {}
+        void Movebase::_accept(Change&) {}
 
-        void Movebase::_reject(Change &) {}
+        void Movebase::_reject(Change&) {}
 
         void from_json(const json &j, Movebase &m) {
             m.from_json( j );

@@ -3,7 +3,7 @@
 namespace Faunus {
     namespace ReactionCoordinate {
 
-        void ReactionCoordinateBase::_to_json(json &j) const {}
+        void ReactionCoordinateBase::_to_json(json&) const {}
 
         double ReactionCoordinateBase::normalize(double) const { return 1.; }
 

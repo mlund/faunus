@@ -37,7 +37,7 @@ namespace Faunus {
         template<class T=float>
             struct FormFactorUnity {
                 template<class Tparticle>
-                    T operator()( T q, const Tparticle &a ) const {
+                    T operator()(T, const Tparticle& ) const {
                         return 1;
                     }
             };

@@ -8,7 +8,7 @@
 
 namespace Faunus {
 
-    namespace Potential { class BondData; }
+    namespace Potential { struct BondData; }
 
     /**
      * @brief Random position and orientation - typical for rigid bodies
@@ -33,7 +33,7 @@ namespace Faunus {
             int maxtrials=2e4;      //!< Maximum number of container overlap checks
             int confindex=-1;       //!< Index of last used conformation
 
-            Tpvec operator()( Geometry::GeometryBase &geo, const Tpvec &p, TMoleculeData &mol )
+            Tpvec operator()( Geometry::GeometryBase &geo, const Tpvec&, TMoleculeData &mol )
             {
                 int cnt = 0;
                 QuaternionRotate rot;

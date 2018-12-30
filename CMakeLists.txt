@@ -72,8 +72,8 @@ set(ProgressIncludeDir ${source_dir}/../../src/)
 
 ExternalProject_Add( modernjson
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/nlohmann/json/releases/download/v3.2.0/json.hpp"
-    URL_MD5 d7e8c50249635575d3271e41dda4e7c7
+    URL "https://github.com/nlohmann/json/releases/download/v3.5.0/json.hpp"
+    URL_HASH SHA256=8a6dbf3bf01156f438d0ca7e78c2971bca50eec4ca6f0cf59adf3464c43bb9d5
     UPDATE_DISCONNECTED ON
     DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
     CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
@@ -84,8 +84,8 @@ set(JSONIncludeDir ${source_dir}/../../src/)
 
 ExternalProject_Add( range-v3
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/ericniebler/range-v3/archive/0.3.6.tar.gz"
-    URL_MD5 1a781c28acba501e76a4b04da62645ab
+    URL "https://github.com/ericniebler/range-v3/archive/0.4.0.tar.gz"
+    URL_MD5 f835637e23b09a65863fca26e07fb8fa
     UPDATE_DISCONNECTED ON
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(range-v3 source_dir)
@@ -124,8 +124,8 @@ ExternalProject_Add( pybind11
 
 ExternalProject_Add( eigen
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "http://bitbucket.org/eigen/eigen/get/3.3.5.tar.gz"
-    URL_MD5 ee48cafede2f51fe33984ff5c9f48026
+    URL "http://bitbucket.org/eigen/eigen/get/3.3.7.tar.gz"
+    URL_MD5 f2a417d083fe8ca4b8ed2bc613d20f07
     UPDATE_DISCONNECTED ON
     LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
 ExternalProject_Get_Property(eigen source_dir)
@@ -244,6 +244,14 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/units.h
     )
 
+add_compile_options(
+    -Wall
+    -Wextra
+    -pedantic-errors
+    -Wno-sign-compare
+    -Wno-unused-local-typedef
+    -Wno-unknown-pragmas)
+
 add_library(libfaunus STATIC ${objs} ${hdrs})
 add_dependencies(libfaunus modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
 
@@ -257,6 +265,7 @@ add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progres
 target_link_libraries(faunus libfaunus xdrfile docopt ${LINKLIBS})
 target_compile_definitions(faunus PUBLIC
     FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
+
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)

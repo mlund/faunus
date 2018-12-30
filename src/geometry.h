@@ -358,7 +358,7 @@ namespace Faunus {
 
         template<class Titer=typename std::vector<T>::iterator>
             void translate( Titer begin, Titer end, const Point &d,
-                    BoundaryFunction boundary=[](Point &i){}  )
+                    BoundaryFunction boundary=[](Point&){}  )
             {
                 for ( auto i=begin; i!=end; ++i )
                 {

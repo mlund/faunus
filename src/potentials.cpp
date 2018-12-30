@@ -70,7 +70,7 @@ void Faunus::Potential::CoulombGalore::sfYonezawa(const Faunus::json &j) {
     selfenergy_prefactor = erf(alpha*rc);
 }
 
-void Faunus::Potential::CoulombGalore::sfFanourgakis(const Faunus::json &j) {
+void Faunus::Potential::CoulombGalore::sfFanourgakis(const Faunus::json&) {
     table = sf.generate( [&](double q) { return 1 - 1.75*q + 5.25*pow(q,5) - 7*pow(q,6) + 2.5*pow(q,7); }, 0, 1 );
     calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
     selfenergy_prefactor = 0.875;
@@ -106,8 +106,8 @@ void Faunus::Potential::CoulombGalore::sfWolf(const Faunus::json &j) {
     selfenergy_prefactor = ( erfc(alpha*rc) + alpha*rc/sqrt(pc::pi)*(1.0 + exp(-alpha*alpha*rc2)) );
 }
 
-void Faunus::Potential::CoulombGalore::sfPlain(const Faunus::json &j, double val) {
-    table = sf.generate( [&](double q) { return val; }, 0, 1 );
+void Faunus::Potential::CoulombGalore::sfPlain(const Faunus::json&, double val) {
+    table = sf.generate( [&](double) { return val; }, 0, 1 );
     calcDielectric = [&](double M2V) { return (2.0*M2V + 1.0)/(1.0 - M2V); };
     selfenergy_prefactor = 0.0;
 }
@@ -197,12 +197,17 @@ void Faunus::Potential::to_json(Faunus::json &j, const Faunus::Potential::PairPo
 }
 
 void Faunus::Potential::from_json(const Faunus::json &j, Faunus::Potential::PairPotentialBase &base) {
-    if (!base.name.empty())
-        if (j.count(base.name)==1) {
-            base.from_json(j.at(base.name));
-            return;
+    try {
+        if (not base.name.empty()) {
+            if (j.count(base.name)==1) {
+                base.from_json(j.at(base.name));
+                return;
+            }
         }
-    base.from_json(j);
+        base.from_json(j);
+    } catch (std::exception &e) {
+        throw std::runtime_error("pairpotential error for " + base.name + ": " + e.what() + usageTip[base.name]);
+    }
 }
 
 void Faunus::Potential::to_json(Faunus::json &j, const std::shared_ptr<Faunus::Potential::BondData> &b) {

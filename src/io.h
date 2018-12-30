@@ -342,7 +342,7 @@ namespace Faunus {
     class FormatMXYZ {
         private:
             template<class Tparticle>
-                static std::string p2s(const Tparticle &a, int i) {
+                static std::string p2s(const Tparticle &a, int) {
                     std::ostringstream o;
                     o.precision(5);
                     o << a.transpose() << " " << a.dir.transpose() << " "
@@ -567,7 +567,7 @@ namespace Faunus {
              * set by the `ioxtc::setbox()` function before calling this.
              */
             template<class Tgroup, class Tparticle, class Talloc>
-                bool save(const std::string &file, const std::vector<Tparticle,Talloc> &p, Tgroup g) {
+                bool save(const std::string &file, const std::vector<Tparticle,Talloc>&, Tgroup g) {
                     if (!g.empty()) {
                         if ( xd == NULL )
                             xd = xdrfile_open(&file[0], "w");

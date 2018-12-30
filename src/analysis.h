@@ -31,7 +31,7 @@ namespace Faunus {
             void to_json(json &j) const; //!< JSON report w. statistics, output etc.
             void from_json(const json &j); //!< configure from json object
             virtual void sample();
-            ~Analysisbase();
+            virtual ~Analysisbase();
         };
 
         void to_json(json &j, const Analysisbase &base);
@@ -71,12 +71,18 @@ namespace Faunus {
                         filename = MPI::prefix + j.at("file").get<std::string>();
                         file.open(filename); // output file
                         type = j.at("type").get<std::string>();
-                        if      (type=="atom")     rc = std::make_shared<AtomProperty>(j, spc);
-                        else if (type=="molecule") rc = std::make_shared<MoleculeProperty>(j, spc);
-                        else if (type=="system")   rc = std::make_shared<SystemProperty>(j, spc);
-                        else if (type=="cmcm")     rc = std::make_shared<MassCenterSeparation>(j, spc);
-                        if (rc==nullptr)
-                            throw std::runtime_error("unknown coordinate type '" + type + "'");
+                        try {
+                            if      (type=="atom")     rc = std::make_shared<AtomProperty>(j, spc);
+                            else if (type=="molecule") rc = std::make_shared<MoleculeProperty>(j, spc);
+                            else if (type=="system")   rc = std::make_shared<SystemProperty>(j, spc);
+                            else if (type=="cmcm")     rc = std::make_shared<MassCenterSeparation>(j, spc);
+                            if (rc==nullptr)
+                                throw std::runtime_error("unknown coordinate type");
+
+                        } catch (std::exception &e) {
+                            throw std::runtime_error("error for reaction coordinate '"
+                                    + type + "': " + e.what() + usageTip["coords=["+type+"]"]  );
+                        }
                     }
         };
 
@@ -641,7 +647,7 @@ namespace Faunus {
                 }
                 void normalize() {
                     for (auto &hist: dhist) {
-                        double Vr=1, sum = hist.second.sumy();
+                        double sum = hist.second.sumy();
                         for (auto &i : hist.second.getMap())
                             i.second = i.second/sum ;
                     }
@@ -803,7 +809,8 @@ namespace Faunus {
                             writeFunc = [&spc](const std::string &file) {
                                 std::ofstream f(file);
                                 if (f) {
-                                    json j = spc;
+                                    json j;
+                                    Faunus::to_json(j, spc);
                                     j["random-move"] = Move::Movebase::slump;
                                     j["random-global"] = Faunus::random;
                                     f << std::setw(2) << j;
@@ -814,7 +821,8 @@ namespace Faunus {
                             writeFunc = [&spc](const std::string &file) {
                                 std::ofstream f(file, std::ios::binary);
                                 if (f) {
-                                    json j = spc;
+                                    json j;
+                                    Faunus::to_json(j, spc);
                                     j["random-move"] = Move::Movebase::slump;
                                     j["random-global"] = Faunus::random;
                                     auto v = json::to_ubjson(j); // json --> binary
@@ -1282,7 +1290,7 @@ namespace Faunus {
         /** @brief Example analysis */
         template<class T, class Enable = void>
             struct _analyse {
-                void sample(T &p) {
+                void sample(T&) {
                     std::cout << "not a dipole!" << std::endl;
                 } //!< Sample
             }; // primary template
@@ -1290,7 +1298,7 @@ namespace Faunus {
         /** @brief Example analysis */
         template<class T>
             struct _analyse<T, typename std::enable_if<std::is_base_of<Dipole, T>::value>::type> {
-                void sample(T &p) {
+                void sample(T&) {
                     std::cout << "dipole!" << std::endl;
                 } //!< Sample
             }; // specialized template

@@ -106,8 +106,8 @@ namespace Faunus
                 int ndr=100;    // Max number of trials to decr dr
                 T drfrac=0.9;   // Multiplicative factor to decr dr
 
-                std::vector<T> SetUBuffer( T rlow,
-                        T zlow, T rupp, T zupp, T u0low, T u1low,
+                std::vector<T> SetUBuffer( T,
+                        T zlow, T, T zupp, T u0low, T u1low,
                         T u2low, T u0upp, T u1upp, T u2upp ) {
 
                     // Zero potential and force return no coefficients

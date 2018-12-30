@@ -76,6 +76,14 @@ namespace Faunus {
         return true;
     }
 
+    /**
+     * @brief Load JSON tips database
+     * @param files vector of file names
+     *
+     * Iterate over `files` until file is successfully opened. The JSON
+     * file must consist of objects with `key`s and markdown formatted
+     * tips. If no file can be opened, the database is left empty.
+     */
     void TipFromTheManual::load(const std::vector<std::string> &files) {
         slump.seed();
         // try loading `files`; stop of not empty
@@ -86,22 +94,30 @@ namespace Faunus {
         }
     }
 
+    /**
+     * @brief If possible, give help based on short keys/tags
+     */
     std::string TipFromTheManual::operator[](const std::string &key) {
         std::string t;
         if (not tip_already_given) {
+            // look for help for the given `key`
             auto it = db.find(key);
             if (it!=db.end()) {
-                t = "\n\nNeed help, my young Padawan?\n\n" + it->get<std::string>();
+                t = "\n\nNeed help, my young apprentice?\n\n" + it->get<std::string>();
+
+                // for the Coulomb potential, add additional table w. types
                 if (key=="coulomb")
-                    t += db.at("coulomb types").get<std::string>();
-                auto ascii = db["ascii"].get<std::vector<std::string>>();
-                if (not ascii.empty()) {
-                    t += *(slump.sample(ascii.begin(), ascii.end())) + "\n";
-                    tip_already_given = true;
-                }
+                    t += "\n" + db.at("coulomb types").get<std::string>();
+                tip_already_given = true;
+
+                // add ascii art
+                it = db.find("ascii");
+                if (it!=db.end())
+                    if (not it->empty() and it->is_array())
+                        t += slump.sample(it->begin(), it->end()) -> get<std::string>() + "\n";
             }
         }
-        return t; // empty string of no tips available
+        return t; // empty string of no tip available
     }
 
     TipFromTheManual usageTip; // Global instance

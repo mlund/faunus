@@ -34,7 +34,8 @@ namespace Faunus {
                 void move(Change &change); //!< Perform move and modify given change object
                 void accept(Change &c);
                 void reject(Change &c);
-                virtual double bias(Change &c, double uold, double unew); //!< adds extra energy change not captured by the Hamiltonian
+                virtual double bias(Change&, double uold, double unew); //!< adds extra energy change not captured by the Hamiltonian
+                inline virtual ~Movebase() {};
         };
 
         void from_json(const json &j, Movebase &m); //!< Configure any move via json
@@ -118,12 +119,12 @@ namespace Faunus {
                         }
                     }
 
-                    double bias(Change &change, double uold, double unew) override {
+                    double bias(Change&, double, double) override {
                         return _bias;
                     } //!< adds extra energy change not captured by the Hamiltonian
 
-                    void _accept(Change &change) override { msqd += _sqd; }
-                    void _reject(Change &change) override { msqd += 0; }
+                    void _accept(Change&) override { msqd += _sqd; }
+                    void _reject(Change&) override { msqd += 0; }
 
                 public:
                     AtomicSwapCharge(Tspace &spc) : spc(spc) {
@@ -229,8 +230,8 @@ namespace Faunus {
                             std::cerr << name << ": no atoms found" << std::endl;
                     }
 
-                    void _accept(Change &change) override { msqd += _sqd; }
-                    void _reject(Change &change) override { msqd += 0; }
+                    void _accept(Change&) override { msqd += _sqd; }
+                    void _reject(Change&) override { msqd += 0; }
 
                 public:
                     AtomicTranslateRotate(Tspace &spc) : spc(spc) {
@@ -328,8 +329,8 @@ namespace Faunus {
                         }
                     }
 
-                    void _accept(Change &change) override { msqd += _sqd; }
-                    void _reject(Change &change) override { msqd += 0; }
+                    void _accept(Change&) override { msqd += _sqd; }
+                    void _reject(Change&) override { msqd += 0; }
 
                 public:
                     TranslateRotate(Tspace &spc) : spc(spc) {
@@ -450,8 +451,8 @@ namespace Faunus {
             class ForceMove : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
-                    void _to_json(json &j) const {};
-                    void _from_json(const json &j) {};
+                    void _to_json(json&) const {};
+                    void _from_json(const json&) {};
                     std::vector<Point> forces, velocities;
                  public:
                     ForceMove() {
@@ -535,11 +536,11 @@ namespace Faunus {
                         } else deltaV=0;
                     }
 
-                    void _accept(Change &change) override {
+                    void _accept(Change&) override {
                         msqd += deltaV*deltaV;
                         Vavg += spc.geo.getVolume();
                     }
-                    void _reject(Change &change) override {
+                    void _reject(Change&) override {
                         msqd += 0;
                         Vavg += spc.geo.getVolume();
                     }
@@ -594,8 +595,8 @@ namespace Faunus {
                         } else deltaq=0;
                     }
 
-                    void _accept(Change &change) override { msqd += deltaq*deltaq; }
-                    void _reject(Change &change) override { msqd += 0; }
+                    void _accept(Change&) override { msqd += deltaq*deltaq; }
+                    void _reject(Change&) override { msqd += 0; }
 
                 public:
                     ChargeMove(Tspace &spc) : spc(spc) {
@@ -658,7 +659,7 @@ namespace Faunus {
                             };
                     }
 
-                    void _from_json(const json &j) override {
+                    void _from_json(const json&) override {
                         //j["speciation"] = "speciation";
                     }
 
@@ -800,20 +801,20 @@ namespace Faunus {
                             throw std::runtime_error("No reactions in list, disable speciation or add reactions");
                     }
 
-                    double bias(Change &change, double uold, double unew) override {
+                    double bias(Change&, double, double) override {
                         if (forward)
                             return -lnK;
                         return lnK;
                     } //!< adds extra energy change not captured by the Hamiltonian
 
-                    void _accept(Change &change) override {
+                    void _accept(Change&) override {
                         accmap[ trialprocess->name ] += 1;
                         trialprocess->N_reservoir += (forward == true) ? -1 : 1;
                         if( trialprocess->N_reservoir < 0 && trialprocess->canonic == true )
                             throw std::runtime_error("There are no negative number of molecules");
                     }
 
-                    void _reject(Change &change) override {
+                    void _reject(Change&) override {
                         accmap[ trialprocess->name ] += 0;
                     }
 
@@ -991,13 +992,13 @@ start:
                          }
                     }
 
-                    double bias(Change &change, double uold, double unew) override {
+                    double bias(Change&, double, double) override {
                         return _bias;
                     } //!< adds extra energy change not captured by the Hamiltonian
 
-                    void _reject(Change &change) override { msqd += 0; msqd_angle += 0; }
+                    void _reject(Change&) override { msqd += 0; msqd_angle += 0; }
 
-                    void _accept(Change &change) override {
+                    void _accept(Change&) override {
                         msqd += dp.squaredNorm();
                         msqd_angle += angle*angle;
                     }
@@ -1102,8 +1103,8 @@ start:
                         }
                     }
 
-                    void _accept(Change &change) override { msqd += d2; }
-                    void _reject(Change &change) override { msqd += 0; }
+                    void _accept(Change&) override { msqd += d2; }
+                    void _reject(Change&) override { msqd += 0; }
 
                 public:
                     Pivot(Tspace &spc) : spc(spc) {
@@ -1209,7 +1210,7 @@ start:
                         return duPartner.at(0);               // return partner energy change
                     } //!< Exchange energy with partner
 
-                    double bias(Change &change, double uold, double unew) override {
+                    double bias(Change&, double uold, double unew) override {
                         return exchangeEnergy(unew-uold); // Exchange dU with partner (MPI)
                     }
 
@@ -1222,12 +1223,12 @@ start:
                         return o.str();
                     } //!< Unique string to identify set of partners
 
-                    void _accept(Change &change) override {
+                    void _accept(Change&) override {
                         if ( goodPartner() )
                             accmap[ id() ] += 1;
                     }
 
-                    void _reject(Change &change) override {
+                    void _reject(Change&) override {
                         if ( goodPartner() )
                             accmap[ id() ] += 0;
                     }
@@ -1262,7 +1263,7 @@ start:
                 public:
                     using BasePointerVector<Movebase>::vec;
                     inline Propagator() {}
-                    inline Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi) {
+                    inline Propagator(const json &j, Tspace &spc, MPI::MPIController&) {
 
                         if (j.count("random")==1)
                             Movebase::slump = j["random"]; // slump is static --> shared for all moves
@@ -1510,7 +1511,7 @@ start:
 
                     if (dN!=0) {
                         double V_n = spc_n.geo.getVolume();
-                        double V_o = spc_o.geo.getVolume();
+                        //double V_o = spc_o.geo.getVolume();
                         double betamu = molecules<Tpvec>[ spc_n.groups[m.index].id ].activity;
 
                         // todo: add runtime error if activity <=0 ?

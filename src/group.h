@@ -328,7 +328,7 @@ namespace Faunus {
 
             // a new range by using an index filter
             auto subset = g.find_index( {0,1} );
-            CHECK( std::distance(subset.begin(), subset.end()) == 2 );
+            CHECK( subset.size()==2 );
             // On some compilers, this may FAIL if not in Debug mode
             //for (auto& i : subset) // On some compilers, this may FAIL if not in Debug mode
             //    i.pos *= 2;

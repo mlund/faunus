@@ -35,13 +35,13 @@ void Faunus::Analysis::Analysisbase::to_json(Faunus::json &j) const {
         _j["reference"] = cite;
 }
 
-void Faunus::Analysis::Analysisbase::_to_json(Faunus::json &j) const {}
+void Faunus::Analysis::Analysisbase::_to_json(Faunus::json&) const {}
 
-void Faunus::Analysis::Analysisbase::_from_json(const Faunus::json &j) {}
+void Faunus::Analysis::Analysisbase::_from_json(const Faunus::json&) {}
 
 void Faunus::Analysis::SystemEnergy::normalize() {
     //assert(V.cnt>0);
-    double Vr=1, sum = ehist.sumy();
+    double sum = ehist.sumy();
     for (auto &i : ehist.getMap()) {
         i.second = i.second/sum ;
     }

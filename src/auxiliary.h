@@ -735,7 +735,7 @@ namespace Faunus
                 return b;
             }
 
-            Tvec hist2buf( int &size ) const {
+            Tvec hist2buf( int ) const {
                 Tvec sendBuf;
                 for ( int i = 0; i < _cols; ++i )
                     for ( int j = 0; j < _rows; ++j )

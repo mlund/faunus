@@ -31,6 +31,8 @@ points, and the relative run-time spent on the analysis.
 
 ## Density
 
+### Bulk Density
+
 `density`   |  Description
 ----------- |  -------------------------------------------
 `nstep=0`   |  Interval between samples
@@ -39,7 +41,7 @@ This calculates the average density, $\langle N_i/V \rangle$ of molecules and at
 which may fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
 For atomic groups, densities of individual atom types are reported.
 
-## Density Profile
+### Density Profile
 
 `atomprofile`  | Description
 -------------- | ---------------------------------------------
@@ -58,6 +60,18 @@ $$
 
 This can be used to obtain charge profiles, measure excess pressure
 etc.
+
+### Density Slice
+
+`sliceddensity` | Description
+--------------- | ---------------------------------------------
+`atoms=[]`      | List of atom names to sample
+`file`          | Output filename with profile
+`dz=0.1`        | Resolution along _z_-axis
+`nstep`         | Interval between samples
+
+Calculates the density in cuboidal slices of thickness _dz_ along the _z_ axis.
+
 
 ## Structure
 

@@ -25,10 +25,11 @@ namespace Faunus {
                 std::string cite;
                 TimeRelativeOfTotal<std::chrono::microseconds> timer;
                 virtual double energy(Change&)=0; //!< energy due to change
-                virtual void to_json(json &j) const;; //!< json output
+                virtual void to_json(json &j) const; //!< json output
                 virtual void sync(Energybase*, Change&);
                 virtual void init(); //!< reset and initialize
-                virtual inline void force(std::vector<Point> &forces) {}; // update forces on all particles
+                virtual inline void force(std::vector<Point>&) {}; // update forces on all particles
+                inline virtual ~Energybase() {};
         };
 
         void to_json(json &j, const Energybase &base); //!< Converts any energy class to json object
@@ -286,7 +287,7 @@ namespace Faunus {
                         return u;
                     }
 
-                    void sync(Energybase *basePtr, Change &change) override {
+                    void sync(Energybase *basePtr, Change&) override {
                         auto other = dynamic_cast<decltype(this)>(basePtr);
                         assert(other);
                         if (other->key==OLD)
@@ -491,7 +492,7 @@ namespace Faunus {
                                     +std::asin( ( a2*a2 - z2*z2 - 2*a2*z2) / std::pow(a2+z2,2) ) );
                     }
 
-                    void sync(Energybase *basePtr, Change &change) override {
+                    void sync(Energybase *basePtr, Change&) override {
                         if (not fixed) {
                             auto other = dynamic_cast<decltype(this)>(basePtr);
                             assert(other);
@@ -631,7 +632,7 @@ namespace Faunus {
                             // If volume is scaled, also scale the confining radius by adding a trigger
                             // to `Space::scaleVolume()`
                             if (scale)
-                                spc.scaleVolumeTriggers.push_back( [&radius=radius](Tspace &spc, double Vold, double Vnew) {
+                                spc.scaleVolumeTriggers.push_back( [&radius=radius](Tspace&, double Vold, double Vnew) {
                                         radius *= std::cbrt(Vnew/Vold); } );
                         }
 
@@ -938,7 +939,7 @@ namespace Faunus {
                         assert(forces.size() == p.size() && "the forces size must match the particle size");
                         for (size_t i=0; i<p.size()-1; i++)
                             for (size_t j=i+1; j<p.size(); j++) {
-                                Point r = spc.geo.vdist(p[i].pos, p[j].pos); // minimum distance vector 
+                                //Point r = spc.geo.vdist(p[i].pos, p[j].pos); // minimum distance vector 
                                 Point f ;//= pairpot.force( p[i], p[j], r.squaredNorm(), r );
                                 forces[i] += f;
                                 forces[j] -= f;
@@ -1063,8 +1064,10 @@ namespace Faunus {
                     typedef typename Tspace::Tgroup Tgroup;
                     Eigen::MatrixXf cache;
                     Tspace &spc;
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
                     double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index=std::vector<int>(), const std::vector<int> &jndex=std::vector<int>()) override {
+#pragma GCC diagnostic pop
                         int i = &g1 - &base::spc.groups.front();
                         int j = &g2 - &base::spc.groups.front();
                         if (j<i)
@@ -1208,10 +1211,10 @@ namespace Faunus {
                         using namespace ReactionCoordinate;
                         name = "penalty";
                         overwrite_penalty = j.value("overwrite", true);
-                        f0 = j.value("f0", 0.5);
-                        scale = j.value("scale", 0.8);
+                        f0 = j.at("f0").get<double>();
+                        scale = j.at("scale").get<double>();
                         quiet = j.value("quiet", true);
-                        nupdate = j.value("update", 0);
+                        nupdate = j.at("update").get<double>();
                         samplings = j.value("samplings", 1);
                         nodrift = j.value("nodrift", true);
                         file = j.at("file").get<std::string>();
@@ -1226,24 +1229,30 @@ namespace Faunus {
                                 if (i.size()==1) {
                                     std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
                                     for (auto it=i.begin(); it!=i.end(); ++it) {
-                                        if (it.key()=="atom")
-                                            rc = std::make_shared<AtomProperty>(it.value(), spc);
-                                        else if (it.key()=="molecule")
-                                            rc = std::make_shared<MoleculeProperty>(it.value(), spc);
-                                        else if (it.key()=="system")
-                                            rc = std::make_shared<SystemProperty>(it.value(), spc);
-                                        else if (it.key()=="cmcm")
-                                            rc = std::make_shared<MassCenterSeparation>(it.value(), spc);
 
-                                        if (rc!=nullptr) {
-                                            if (rc->min>=rc->max || rc->binwidth<=0)
-                                                throw std::runtime_error("min<max and binwidth>0 required for '" + it.key() + "'");
-                                            rcvec.push_back(rc);
-                                            binwidth.push_back( rc->binwidth );
-                                            min.push_back( rc->min );
-                                            max.push_back( rc->max );
-                                        } else
-                                            throw std::runtime_error("unknown coordinate type '" + it.key() + "'");
+                                        try {
+                                            if (it.key()=="atom")
+                                                rc = std::make_shared<AtomProperty>(it.value(), spc);
+                                            else if (it.key()=="molecule")
+                                                rc = std::make_shared<MoleculeProperty>(it.value(), spc);
+                                            else if (it.key()=="system")
+                                                rc = std::make_shared<SystemProperty>(it.value(), spc);
+                                            else if (it.key()=="cmcm")
+                                                rc = std::make_shared<MassCenterSeparation>(it.value(), spc);
+                                            if (rc!=nullptr) {
+                                                if (rc->min>=rc->max || rc->binwidth<=0)
+                                                    throw std::runtime_error("min<max and binwidth>0 required");
+                                                rcvec.push_back(rc);
+                                                binwidth.push_back( rc->binwidth );
+                                                min.push_back( rc->min );
+                                                max.push_back( rc->max );
+                                            } else
+                                                throw std::runtime_error("unknown coordinate type");
+
+                                        } catch (std::exception &e) {
+                                            throw std::runtime_error("error for reaction coordinate '"
+                                                    + it.key() + "': " + e.what() + usageTip["coords=["+it.key()+"]"]  );
+                                        }
                                     }
                                 }
                         dim = binwidth.size();
@@ -1344,7 +1353,7 @@ namespace Faunus {
                         udelta += f0;
                     }
 
-                    void sync(Energybase *basePtr, Change &change) override {
+                    void sync(Energybase *basePtr, Change&) override {
                         // this function is called when a move is accepted
                         // or rejected, as well as when initializing the system
                         auto other = dynamic_cast<decltype(this)>(basePtr);
@@ -1539,7 +1548,7 @@ namespace Faunus {
                         updateSASA(spc.p);
                     }
 
-                    double energy(Change &change) override {
+                    double energy(Change&) override {
                         double u=0, A=0;
                         /*
                          * ideally we want to call `update` only if `key==NEW` but
@@ -1561,7 +1570,7 @@ namespace Faunus {
         struct Example2D : public Energybase {
             Point& i; // reference to 1st particle in the system
             template<typename Tspace>
-                Example2D(const json &j, Tspace &spc): i(spc.p.at(0).pos) { name = "Example2D"; }
+                Example2D(const json&, Tspace &spc): i(spc.p.at(0).pos) { name = "Example2D"; }
             double energy(Change &change) override;
         };
 

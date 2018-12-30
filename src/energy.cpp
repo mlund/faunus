@@ -1,9 +1,9 @@
 
 #include "energy.h"
 
-void Faunus::Energy::Energybase::to_json(json &j) const {}
+void Faunus::Energy::Energybase::to_json(json&) const {}
 
-void Faunus::Energy::Energybase::sync(Energybase *, Change &) {}
+void Faunus::Energy::Energybase::sync(Energybase*, Change&) {}
 
 void Faunus::Energy::Energybase::init() {}
 
@@ -87,7 +87,7 @@ void Faunus::Energy::to_json(json &j, const EwaldData &d) {
         {"wavefunctions", d.kVectors.cols()}, {"spherical_sum", d.spherical_sum}};
 }
 
-double Faunus::Energy::Example2D::energy(Change &change) {
+double Faunus::Energy::Example2D::energy(Change&) {
     double s=1+std::sin(2*pc::pi*i.x())+std::cos(2*pc::pi*i.y());
     if (i.x()>=-2.00 && i.x()<=-1.25) return 1*s;
     if (i.x()>=-1.25 && i.x()<=-0.25) return 2*s;

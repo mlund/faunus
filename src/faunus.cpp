@@ -149,7 +149,8 @@ int main( int argc, char **argv )
         // --output
         std::ofstream f(Faunus::MPI::prefix + args["--output"].asString());
         if (f) {
-            json j = sim;
+            json j;
+            Faunus::to_json(j, sim);
             j["relative drift"] = sim.drift();
             j["analysis"] = analysis;
             if (mpi.nproc()>1)

@@ -1,7 +1,7 @@
 #include "particle.h"
 
 namespace Faunus {
-    void ParticlePropertyBase::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &) {}
+    void ParticlePropertyBase::rotate(const Eigen::Quaterniond&, const Eigen::Matrix3d&) {}
 
     void Radius::to_json(json &j) const { j["r"] = radius; }
 
@@ -25,7 +25,7 @@ namespace Faunus {
         mulen = j.value("mulen", mulen);
     }
 
-    void Quadrupole::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) { Q.rotate(m); }
+    void Quadrupole::rotate(const Eigen::Quaterniond&, const Eigen::Matrix3d &m) { Q.rotate(m); }
 
     void Quadrupole::to_json(json &j) const { j["Q"] = Q; }
 

@@ -37,7 +37,7 @@ energy:
         quiet: false
         update: 100
         coords:
-            - system: {property: "height", range: [86,117], resolution: 0.5}
+            - system: {property: height, range: [86,117], resolution: 0.5}
 
 moves:
     - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: 100}

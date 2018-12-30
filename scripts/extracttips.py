@@ -1,9 +1,27 @@
+#!/usr/bin/env python
+
+#
+# Converts all tables from manual.html to Markdown and stores
+# them in a JSON file where the table text from the
+# _upper left corner_ is used as keys.
+# Long equations are filtered out.
+#
+# In addition, this adds a list of arbitrary ASCII to
+# the `ascii` key.
+#
+
 import warnings
 warnings.filterwarnings('ignore')
 from bs4 import BeautifulSoup
 import json
 import pypandoc
 import re
+
+from sympy.external import import_module
+#from .errors import LaTeXParsingError  # noqa
+from sympy.parsing.latex import parse_latex
+from sympy import init_printing
+from sympy import pprint, pretty
 
 with open('manual.html', 'r') as f:
     data=f.read()
@@ -14,25 +32,80 @@ with open('manual.html', 'r') as f:
 
     # http://www.ascii-art.de/ascii/
     # http://ascii.co.uk/art
-    tables['ascii'] = []
+    # http://www.oocities.org/spunk1111/wildlife.htm
+    tables['ascii'] = [
+    r'''
+  ___________                               _________
+   \_   _____/_____    __ __   ____   __ __ /   _____/
+    |    __)  \__  \  |  |  \ /    \ |  |  \\_____  \
+    |     \    / __ \_|  |  /|   |  \|  |  //        \
+    \___  /   (____  /|____/ |___|  /|____//_______  /
+        \/         \/             \/               \/''',
 
-    tables['ascii'].append(r'''
+    r'''
     _                ___       _.--.
     \`.|\..----...-'`   `-._.-'_.-'`
     /  ' `         ,       __.--'
     )/' _/     \   `-_,   /
     `-'" `"\_  ,_.-;_.-\_ ',     fsc/as
         _.-'_./   {_.'   ; /
-       {_.-``-'         {_/''')
+       {_.-``-'         {_/''',
 
-    tables['ascii'].append(r'''
-    __.-._
-    '-._"7'
-     /'.-c
-     |  /T
-snd _)_/LI''')
+    r"""
+                            )/_
+                  _.--..---"-,--c_
+             \L..'           ._O__)_
+     ,-.     _.+  _  \..--( /           a:f
+       `\.-''__.-' \ (     \_
+         `'''       `\__   /\
+                     ')""",
 
-    tables['ascii'].append(r'''
+    r'''
+      ----------.................._____________  _  .-.
+                                      _____.. . .   | |
+                   _____....------""""             uuuuu
+ ____....------""""                                |===|
+                                                   |===|
+                                                   |===|
+                                                   |===|
+ _a:f____________________________________________ .[__N]. _______''',
+
+    r'''
+               boing         boing         boing
+     e-e           . - .         . - .         . - .
+    (\_/)\       '       `.   ,'       `.   ,'       .
+     `-'\ `--.___,         . .           . .          .
+        '\( ,_.-'
+           \\               "             "            a:f
+           ^' ''',
+
+    r'''
+     "Mystery is the key to enchantment"             Armando Frazao
+              ,d@@b,                    \.             a.k.a. Seal
+     ._.__._._@@@@@@__...__.._..___._. _) `----._ ._..__._._.__.___._._
+             -_-__-_-               _.'         e`.__
+              -_-__-           _ ,-'..---~~~)/---'~~~
+                _-       _ - '.,',',-       '
+                          -  -_ -_ -''',
+
+    r'''
+                    ,.-----__
+                 ,:::://///,:::-.
+                /:''/////// ``:::`;/|/
+               /'   ||||||     :://'`\
+             .' ,   ||||||     `/(  e \
+       -===~__-'\__X_`````\_____/~`-._ `.
+                   ~~        ~~       `~-'  Seal''',
+
+    r'''
+                                ____
+                               /\' .\    _____
+                              /: \___\  / .  /\
+   valkyrie                   \' / . / /____/..\
+                               \/___/  \'  '\  /
+                                        \'__'\/''',
+
+    r'''
                                                   _  _
                                                  (\\( \
                                                   `.\-.)
@@ -45,9 +118,9 @@ snd _)_/LI''')
           `.._                   _            ;   <_ \
               `--.___             `.           `-._ \ \
                      `--<           `.     (\ _/)/ `.\/
-                         \            \     `''')
+                         \            \     `''',
 
-    tables['ascii'].append(r'''
+    r'''
                   ,,__
         ..  ..   / o._)                   .---.
        /--'/--\  \-'||        .----.    .'     '.
@@ -56,10 +129,9 @@ snd _)_/LI''')
       )\ |  )\ |      _.'
      // \\ // \\
     ||_  \\|_  \\_
-mrf '--' '--'' '--' ''')
+mrf '--' '--'' '--' ''',
 
-    # http://www.oocities.org/spunk1111/wildlife.htm
-    tables['ascii'].append(r'''
+    r'''
                __.....__
             .-'         '-.
           .'               '.
@@ -74,18 +146,18 @@ mrf '--' '--'' '--' ''')
           '.   \       \   .'
             '-._|       \-'
                 | |\     |
-        __jgs___/ |_'.   /______''')
+        __jgs___/ |_'.   /______''',
 
-    tables['ascii'].append(r'''
+    r'''
    Waves are my home    .:~~--__                __--~~:.
  Wind is my life      ,:;'~'-,__~~--..,---..--~~__,-`~`::.
                     ,:;'        ''-,_ (. .)_,-``        `::.
                   ,;'                \ `\)/                `:.
                  '                    `--'                    `
    __._                       _.._                 _._
--~~    ~~--..__.._-~~~--..--~~    ~~--.__.---...-'~   ~~---...-.__seal__.''')
+-~~    ~~--..__.._-~~~--..--~~    ~~--.__.---...-'~   ~~---...-.__seal__.''',
 
-    tables['ascii'].append(r'''
+    r'''
                 ________
             _.-'::'\____`.
           ,'::::'  |,------.
@@ -103,9 +175,9 @@ mrf '--' '--'' '--' ''')
         [_]     | |[_]      [_]          (_       _))
        /___\    [ ] __\    /___\           (( \   ) )
 jrei          /___\                        (     ) )
-                                             (  #  )''')
+                                             (  #  )''',
 
-    tables['ascii'].append(r'''
+    r'''
               .==,_
              .===,_`\
            .====,_ ` \      .====,__
@@ -117,40 +189,46 @@ jrei          /___\                        (     ) )
               jgs        `.=====)
                       ___.--~~~--.__
             ___\.--~~~              ~~~---.._|/
-            ~~~"                             /''')
+            ~~~"                             /''',
 
-    tables['ascii'].append(r'''
-   ______________________________________________________________________
-  | .     .               .   .                   .          .           |
-  |              . .                     .      ___,_   _         .   .  |
-  | .                       .      .          [:t_:::;t"t"+        .     |
-  |      .                     .            . `=_ "`[ j.:\=\             |
-  |             .      .              .        _,:-.| -"_:\=\  .         |
-  |    .           .          .           _,-=":.:%.."+"+|:\=\        .  |
-  |          .                   _ _____,:,,;,==.==+nnnpppppppt          |
-  |                           _.;-^-._-:._::.'';nn;::m;:%%%%%%%\   .     |
-  |  .       .              .;-'_::-:_"--;_:. ((888:(@) ,,;::^%%%,       |
-  |                      __='::_:"`::::::::"-;_`YPP::; (d8B((@b."%\     .|
-  |      ,------..    __,-:-:::::::::`::`::::::"--;_(@' 88P':^" ;nn:,    |
-  |   ,-":%%%%::==.  ;-':::::`%%%\::---:::-:_::::::_"-;_.::((@,(88J::\   |
-  |  /:::__ ::%::== """"""""""""""`------`.__.-:::::;___;;::`^__;;;:..7  |
-  | /::.'  `.:%%=:=`-=,     . i                   .       """"           |
-  |Y:::f    j :%%%%:::=::    ,^.    .        |-|  . .                    |
-  |l   `.__+ :::%%%%:::_;[                        |o|                    |
-  ||^~'-------------""~:^|                       _` ` _  .. __,,,,+++O#@@#
-  |! ::::::::::%%%%==:{                       __j [,,j [#O|||O#@@#O++:|@@#
-  | \ `::====: ==== :='            .__,,,++::::.j "  " [%+++::|@##O+::+O##
-  |  \:== :: == :=='    __,,,+++|O|. +++..   :::j_[nnj_[_++:+%%_%%|+%|%+O#
-  |   "-. =_:::: },+|O##|+::+|:++:::..    ::: .:+%%%%%%j [%O%%j [:+++|++|O
-  |   _,,`-------' .+#O#+:||%+ ____   :: .. .:++|O###O%j `'  `' [:::::::++
-  |.+:..:++|++||||+.O.::++:|::| _  |:...:++++|||+O##||%j [%..%j [+::LS:+%|
-                              || \ |
-                              ||  || eath Star II above Endor, surveyed by
-                              ||_/ | the Super Star Destroyer "Executor".
-                              |____|''')
+    r'''
+                   ~.
+            Ya...___|__..ab.     .   .
+             Y88b  \88b  \88b   (     )
+              Y88b  :88b  :88b   `.oo'
+              :888  |888  |888  ( (`-'
+     .---.    d88P  ;88P  ;88P   `.`.
+    / .-._)  d8P-"""|"""'-Y8P      `.`.
+   ( (`._) .-.  .-. |.-.  .-.  .-.   ) )
+    \ `---( O )( O )( O )( O )( O )-' /
+     `.    `-'  `-'  `-'  `-'  `-'  .' CJ
+       `---------------------------' ''',
 
-    find_headings = False
+    r'''
+           .          .
+ .          .                  .          .              .
+       +.           _____  .        .        + .                    .
+   .        .   ,-~"     "~-.                                +
+              ,^ ___         ^. +                  .    .       .
+             / .^   ^.         \         .      _ .
+            Y  l  o  !          Y  .         __CL\H--.
+    .       l_ `.___.'        _,[           L__/_\H' \\--_-          +
+            |^~"-----------""~ ^|       +    __L_(=): ]-_ _-- -
+  +       . !                   !     .     T__\ /H. //---- -       .
+         .   \                 /               ~^-H--'
+              ^.             .^            .      "       +.
+                "-.._____.,-" .                    .
+         +           .                .   +                       .
+  +          .             +                                  .
+         .             .      .       -Row
+                                                        .''']
+
+    assist_phrase = [
+            ]
+
+    find_headings = False # experimental
     find_tables = True
+    max_math_length = 20
 
     if find_headings:
         html = u""
@@ -163,14 +241,24 @@ jrei          /___\                        (     ) )
         print(md)
 
     if find_tables:
+        # find all tables
         for table in soup.findAll("table"):
             if table.findParent("table") is None:
+
+                # remove long LaTeX strings
+                for i in table.findAll('span', class_="math inline"):
+                    if len(i.string)>max_math_length:
+                        i.string = "(hidden math)" # we could also delete w. `i.decompose`
+
+                # tag = text in upper left corner of table
                 tag = table.thead.tr.findAll('th')[0].string
                 if tag!=None:
                     md = pypandoc.convert_text(table, 'plain', format='html')
-                    md = re.sub(r'\n+', '\n', md)
+                    md = re.sub(r'\n+', '\n', md) # remove double newline
                     tables[tag] = md
 
+        # store dictionary as JSON file 
         out = json.dumps(tables, indent=2)
         with open('tips.json', 'w') as f:
             f.write(out)
+

@@ -22,6 +22,7 @@ namespace Faunus {
             double operator()(); //!< Calculates reaction coordinate
 
             bool inRange(double coord) const; //!< Determines if coordinate is within [min,max]
+            inline virtual ~ReactionCoordinateBase() {}
         };
 
         void to_json(json &j, const ReactionCoordinateBase &r);
@@ -150,7 +151,7 @@ namespace Faunus {
                                 Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                                 Point eivals = esf.eigenvalues();
                                 std::ptrdiff_t i_eival;
-                                double minOfeivals = eivals.minCoeff(&i_eival);
+                                eivals.minCoeff(&i_eival);
                                 Point vec = esf.eigenvectors().col(i_eival).real();
                                 double cosine = vec.dot(dir);
                                 double angle = std::acos(std::fabs(cosine)) * 180. / pc::pi;

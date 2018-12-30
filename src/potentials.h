@@ -16,6 +16,7 @@ namespace Faunus {
             std::string cite;
             virtual void to_json(json&) const=0;
             virtual void from_json(const json&)=0;
+            inline virtual ~PairPotentialBase() {};
         }; //!< Base for all pair-potentials
 
         void to_json(json &j, const PairPotentialBase &base); //!< Serialize any pair potential to json
@@ -49,14 +50,14 @@ namespace Faunus {
         template<class T1, class T2,
             class = typename std::enable_if<std::is_base_of<PairPotentialBase, T1>::value>::type,
             class = typename std::enable_if<std::is_base_of<PairPotentialBase, T2>::value>::type>
-                CombinedPairPotential<T1, T2> &operator+(const T1 &pot1, const T2 &pot2) {
+                CombinedPairPotential<T1, T2> &operator+(const T1 &pot1, const T2&) {
                     return *(new CombinedPairPotential<T1, T2>(pot1.name));
                 } //!< Add two pair potentials
 
         struct Dummy : public PairPotentialBase {
             inline Dummy() { name="dummy"; }
             template<typename... T>
-                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                double operator()(const Particle<T...>&, const Particle<T...>&, const Point&) const {
                     return 0;
                 }
             void from_json(const json&) override {}
@@ -270,7 +271,7 @@ namespace Faunus {
                 double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                     return r.squaredNorm() < d2(a.id,b.id) ? pc::infty : 0;
                 }
-                void to_json(json &j) const override {}
+                void to_json(json&) const override {}
                 void from_json(const json&) override {}
             }; //!< Hardsphere potential
 
@@ -282,7 +283,7 @@ namespace Faunus {
             void to_json(json &j) const override;
 
             template<class Tparticle>
-                double operator() (const Tparticle &a, const Tparticle &b, const Point &_r) const {
+                double operator() (const Tparticle&, const Tparticle&, const Point &_r) const {
                     double r2 = _r.squaredNorm(), r = sqrt(r2);
                     return f / (r*r2) + e * std::pow( s/r, 12 );
                 }
@@ -327,7 +328,7 @@ namespace Faunus {
              * ~~~
              */
             template<typename... T>
-                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                double operator()(const Particle<T...>&, const Particle<T...>&, const Point &r) const {
                     double r2=r.squaredNorm();
                     if (r2<rc2)
                         return -eps;
@@ -338,7 +339,7 @@ namespace Faunus {
                 }
 
             template<class Tparticle>
-                Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+                Point force(const Tparticle&, const Tparticle&, double r2, const Point &p) {
                     if (r2<rc2 || r2>rcwc2)
                         return Point(0,0,0);
                     double r=sqrt(r2);
@@ -510,13 +511,13 @@ namespace Faunus {
 
             /** @brief Energy in kT between two particles, r2 = squared distance */
             template<class Tparticle>
-                inline double operator() (const Tparticle &a, const Tparticle &b, const Point &r) {
+                inline double operator() (const Tparticle&, const Tparticle&, const Point &r) {
                     double r2=r.squaredNorm();
                     return (r2>r02) ? pc::infty : -0.5*k*r02*std::log(1-r2*r02inv);
                 }
 
             template<class Tparticle>
-                Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
+                Point force(const Tparticle&, const Tparticle&, double r2, const Point &p) {
                     return (r2>r02) ? -pc::infty*p : -k * r02 / (r02-r2) * p;
                 }
         };
@@ -603,7 +604,7 @@ namespace Faunus {
                 json _j; // storage for input json
 
                 uFunc combineFunc(const json &j) const {
-                    uFunc u = [](const T&a, const T&b, const Point &r){return 0.0;};
+                    uFunc u = [](const T&, const T&, const Point &){return 0.0;};
                     if (j.is_array()) {
                         for (auto &i : j) // loop over all defined potentials in array
                             if (i.is_object() && (i.size()==1))
@@ -724,6 +725,7 @@ namespace Faunus {
             virtual std::shared_ptr<BondData> clone() const=0; //!< Make shared pointer *copy* of data
             bool hasEnergyFunction() const; //!< test if energy function has been set
             void shift( int offset ); //!< Shift indices
+            inline virtual ~BondData() {};
         };
 
         /**

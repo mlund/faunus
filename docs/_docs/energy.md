@@ -604,9 +604,9 @@ Options:
 
 `penalty`        |  Description
 ---------------- | --------------------
-`f0`             |  Penalty energy increment ($kT$)
+`f0`             |  Penalty energy increment (_kT_)
 `update`         |  Interval between scaling of `f0`
-`scale=0.8`      |  Scaling factor for `f0`
+`scale`          |  Scaling factor for `f0`
 `nodrift=true`   |  Suppress energy drift
 `quiet=false`    |  Set to true to get verbose output
 `file`           |  Name of saved/loaded penalty function

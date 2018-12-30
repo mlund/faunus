@@ -65,7 +65,7 @@ namespace Faunus {
             c2 = l.z()/l.x();
         }
 
-        double Chameleon::getVolume(int dim) const {
+        double Chameleon::getVolume(int) const {
             switch (type) {
                 case SPHERE:   return 4*pc::pi/3*radius*radius*radius;
                 case CUBOID:   return len.x()*len.y()*len.z();

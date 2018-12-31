@@ -72,6 +72,8 @@ namespace Faunus {
                 case SLIT:     return len.x()*len.y()*len.z() / pbc_disable;
                 case CYLINDER: return pc::pi*radius*radius*len.z();
             }
+            assert(false);
+            return 0;
         }
 
         Point Chameleon::setVolume(double V, VolumeMethod method) {
@@ -130,6 +132,8 @@ namespace Faunus {
                 case SPHERE:   return {2*radius,2*radius,2*radius};
                 case CYLINDER: return {2*radius,2*radius,len.z()};
             }
+            assert(false);
+            return Point();
         } //!< Enscribe geometry in cuboid
 
         void Chameleon::randompos(Point &m, Random &rand) const {

@@ -49,7 +49,7 @@ if (ENABLE_MPI)
             set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
         endif ()
         set(LINKLIBS ${LINKLIBS} ${MPI_CXX_LIBRARIES})
-        include_directories(${MPI_CXX_INCLUDE_PATH})
+        include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
         add_definitions(-DENABLE_MPI)
     endif ()
 endif ()
@@ -165,7 +165,7 @@ ExternalProject_Get_Property(doctest source_dir)
 set(DocTestIncludeDir ${source_dir}/../../src/)
 
 add_definitions(-DDOCTEST_CONFIG_DISABLE)
-include_directories(${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir}
+include_directories(SYSTEM ${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir}
     ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir} ${ProgressIncludeDir})
 
 # POWERSASA
@@ -179,7 +179,7 @@ if (ENABLE_POWERSASA)
         endif ()
     endforeach ()
     add_definitions("-DENABLE_POWERSASA")
-    include_directories("${CMAKE_SOURCE_DIR}/include/faunus/sasa")
+    include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/include/faunus/sasa")
 endif ()
 
 # GIT
@@ -244,13 +244,17 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/units.h
     )
 
-add_compile_options(
-    -Wall
-    -Wextra
-    -pedantic-errors
-    -Wno-sign-compare
-    -Wno-unused-local-typedef
-    -Wno-unknown-pragmas)
+# Compiler spacific flagg
+
+## GCC
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    add_compile_options(-Wall -Wextra -pedantic-errors -Werror -Wunreachable-code
+        -Wno-sign-compare -Wno-unused-local-typedefs -Wno-unknown-pragmas)
+## Clang
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wall -Wextra -pedantic-errors -Werror -Wunreachable-code
+        -Wstrict-aliasing -Wno-sign-compare -Wno-unused-local-typedef -Wno-unknown-pragmas)
+endif()
 
 add_library(libfaunus STATIC ${objs} ${hdrs})
 add_dependencies(libfaunus modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)

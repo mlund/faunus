@@ -14,11 +14,11 @@
 #include <Eigen/Geometry>
 #include <json.hpp>
 #include <range/v3/all.hpp>
-#include "random.h"
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "units.h"
 #endif
+#include "random.h"
 
 // Eigen<->JSON (de)serialization
 namespace Eigen {
@@ -40,7 +40,7 @@ namespace Eigen {
             }
             throw std::runtime_error("JSON->Eigen conversion error");
         }
-};
+}
 
 /** @brief Faunus main namespace */
 namespace Faunus {

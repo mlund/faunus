@@ -296,7 +296,7 @@ namespace Faunus
         typedef std::int32_t Tint;
         static_assert(2 * sizeof(Tint) == sizeof(double),
                 "Approximate exp() requires 4-byte integer");
-        double d;
+        double d(0);
         *((Tint *) (&d) + 0) = 0;
         *((Tint *) (&d) + 1) = (Tint) (1512775 * y + 1072632447);
         return d;

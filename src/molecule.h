@@ -63,7 +63,7 @@ namespace Faunus {
                     else { // insert molecule
                         if ( keeppos ) {                     // keep original positions (no rotation/trans)
                             for ( auto &i : v )              // ...but let's make sure it fits
-                                if ( geo.collision(i.pos, 0))
+                                if (geo.collision(i.pos))
                                     throw std::runtime_error("Error: Inserted molecule does not fit in container");
                         } else {
                             Point cm;                       // new mass center position

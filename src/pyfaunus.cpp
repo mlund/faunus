@@ -72,7 +72,7 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("getVolume", &Geometry::GeometryBase::getVolume, "Get container volume", "dim"_a=3)
         .def("setVolume", &Geometry::GeometryBase::setVolume, "Set container volume", "volume"_a,
                 "method"_a=Geometry::ISOTROPIC)
-        .def("collision", &Geometry::GeometryBase::collision, "pos"_a, "radius"_a=0, "Checks if point is inside container")
+        .def("collision", &Geometry::GeometryBase::collision, "pos"_a, "Checks if point is inside container")
         .def("getLength", &Geometry::GeometryBase::getLength, "Get cuboid sidelengths")
         .def("vdist", &Geometry::GeometryBase::vdist, "Minimum vector distance, a-b", "a"_a, "b"_a)
         .def("sqdist", &Geometry::GeometryBase::sqdist, "Squared minimum distance, |a-b|^2", "a"_a, "b"_a)

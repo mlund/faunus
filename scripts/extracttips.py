@@ -17,12 +17,6 @@ import json
 import pypandoc
 import re
 
-from sympy.external import import_module
-#from .errors import LaTeXParsingError  # noqa
-from sympy.parsing.latex import parse_latex
-from sympy import init_printing
-from sympy import pprint, pretty
-
 with open('manual.html', 'r') as f:
     data=f.read()
     soup = BeautifulSoup(data)

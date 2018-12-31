@@ -35,12 +35,15 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 
 - CMake 3.9+
 - C/C++14 compiler (Clang 3.5+, GCC 6+, etc.)
-- Python 3.6+ with `ruamel_yaml` or `yaml`
+- Python 3.6+ with the following packages:
+  - `ruamel_yaml` or `yaml`
 
 The following are optional:
 
 - Message Passing Interface (MPI)
-- Pandoc (for building documentation)
+- `pandoc`
+- `pypandoc`
+- `BeautifulSoup4`
 
 **macOS tip:**
 Apple's developer tools, Xcode, is a quick way obtain
@@ -61,8 +64,8 @@ Dependencies will automatically be downloaded.
 ~~~ bash
 cd faunus
 cmake . [OPTIONS]
-make
-make test
+make faunus
+make usagetips # optional, requires `pandoc`, `pypandoc`, `BeautifulSoup4`
 make install
 ~~~
 
@@ -71,14 +74,13 @@ The following options are available:
 CMake Option                         | Description
 ------------------------------------ | ---------------------------------------
 `-DENABLE_MPI=OFF`                   | Enable MPI
-`-DENABLE_OPENMP=OFF`                | Enable OpenMP support
+`-DENABLE_OPENMP=ON`                 | Enable OpenMP support
 `-DENABLE_PYTHON=ON`                 | Build python bindings (experimental)
 `-DENABLE_POWERSASA=ON`              | Enable SASA routines (external download)
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`  | Alternatives: `Debug` or `Release` (faster)
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
 `-DCMAKE_INSTALL_PREFIX:PATH="..."`  | Install location (default: `/usr/local`)
-`-DMYPLAYGROUND="absolute path"`     | Add additional source directory
 `-DPYTHON_EXECUTABLE="..."`          | Full path to Python executable
 `-DPYTHON_INCLUDE_DIR="..."`         | Full path to python headers
 `-DPYTHON_LIBRARY="..."`             | Full path to python library, i.e. libpythonX.dylib/so
@@ -86,7 +88,7 @@ CMake Option                         | Description
 
 ### Python libraries in odd locations
 
-Should you have multiple compilers or python distributions, be specific:
+Should there are multiple compilers or python distributions, be specific:
 
 ~~~ bash
 CC=/opt/bin/clang CXX=/opt/bin/clang++ cmake . \
@@ -116,7 +118,7 @@ rm -fR CMakeCache.txt CMakeFiles
 ## Creating a conda package (advanced usage)
 
 The basic steps for creating a conda package is outlined below, albeit
-details may depend on your build environment. See also the `.travis.yml`
+details depend on the build environment. See also the `.travis.yml`
 configuration file in the main repository.
 
 ~~~ bash
@@ -128,8 +130,7 @@ anaconda login
 anaconda upload -u USER ... # see output from build step
 ~~~
 
-Instead of uploading to anaconda.org you
-can install a local copy directly after the build step above:
+Instead of uploading to anaconda.org, install a local copy directly after the build step above:
 
 ~~~ bash
 conda install -c USER faunus --use-local

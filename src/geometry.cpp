@@ -167,8 +167,7 @@ namespace Faunus {
             }
         }
 
-        bool Chameleon::collision(const Point &a, double r) const {
-            assert(std::fabs(r)<1e-6 && "collision test w. radius unimplemented.");
+        bool Chameleon::collision(const Point &a) const {
             double r2 = radius*radius;
             switch (type) {
                 case SPHERE:

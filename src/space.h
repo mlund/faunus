@@ -292,7 +292,9 @@ namespace Faunus {
                             for (auto& i : g)
                                 i.pos = i.pos.cwiseProduct(scale);
                         else { // scale mass center and translate
+#ifndef NDEBUG
                             Point oldcm = g.cm;
+#endif
                             Point delta = g.cm.cwiseProduct(scale) - g.cm;
                             g.cm = g.cm.cwiseProduct(scale);
                             for (auto &i : g) {

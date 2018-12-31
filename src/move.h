@@ -1263,8 +1263,10 @@ start:
                 public:
                     using BasePointerVector<Movebase>::vec;
                     inline Propagator() {}
-                    inline Propagator(const json &j, Tspace &spc, MPI::MPIController&) {
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+                    inline Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi) {
+#pragma GCC diagnostic pop
                         if (j.count("random")==1)
                             Movebase::slump = j["random"]; // slump is static --> shared for all moves
 
@@ -1280,11 +1282,11 @@ start:
                                     else if (it.key()=="charge") this->template push_back<Move::ChargeMove<Tspace>>(spc);
                                     else if (it.key()=="speciation") this->template push_back<Move::SpeciationMove<Tspace>>(spc);
                                     else if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);
-                                    // more moves go here...
+                                    // new moves go here...
 #ifdef ENABLE_MPI
                                     else if (it.key()=="temper") this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
+                                    // new moves requiring MPI go here...
 #endif
-
                                     if (vec.size()==oldsize+1) {
                                         vec.back()->from_json( it.value() );
                                         addWeight(vec.back()->repeat);

@@ -245,14 +245,13 @@ set(hdrs
     )
 
 # Compiler spacific flagg
-
 ## GCC
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    add_compile_options(-Wall -Wextra -pedantic-errors -Werror -Wunreachable-code
+    add_compile_options(-Wall -Wextra -Wpedantic -Wunreachable-code -Wstrict-aliasing
         -Wno-sign-compare -Wno-unused-local-typedefs -Wno-unknown-pragmas)
 ## Clang
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-Wall -Wextra -pedantic-errors -Werror -Wunreachable-code
+    add_compile_options(-Wall -Wextra -Wpedantic -Wunreachable-code
         -Wstrict-aliasing -Wno-sign-compare -Wno-unused-local-typedef -Wno-unknown-pragmas)
 endif()
 

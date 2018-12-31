@@ -77,7 +77,7 @@ namespace Faunus {
             virtual void randompos( Point&, Random& ) const=0; //!< Generate random position
             virtual Point vdist( const Point&, const Point& ) const=0; //!< (Minimum) distance between two points
             virtual void boundary( Point& ) const=0; //!< Apply boundary conditions
-            virtual bool collision( const Point&, double=0) const=0; //!< Overlap with boundaries
+            virtual bool collision(const Point&) const=0; //!< Overlap with boundaries
             virtual Point getLength() const=0; //!< Side lengths
 
             inline double sqdist( const Point &a, const Point &b ) const {
@@ -131,7 +131,7 @@ namespace Faunus {
                 Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
                 Point getLength() const override; //!< Enscribed box
                 void randompos( Point &m, Random &rand ) const override;
-                bool collision(const Point &a, double r=0) const override;
+                bool collision(const Point &a) const override;
                 void from_json(const json &j);
                 void to_json(json &j) const;
 

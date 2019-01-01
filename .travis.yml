@@ -44,4 +44,7 @@ script:
     #travis_wait 20 conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
     while sleep 540; do echo "=====[ $SECONDS seconds still running ]====="; done &
     conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+    conda_exit_code=$?
     kill %1
+    exit "$conda_exit_code"
+

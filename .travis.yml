@@ -41,4 +41,7 @@ script:
   - |
     cd scripts/
     conda config --set anaconda_upload yes
-    travis_wait 20 conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+    #travis_wait 20 conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+    while sleep 540; do echo "=====[ $SECONDS seconds still running ]====="; done &
+    conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
+    kill %1

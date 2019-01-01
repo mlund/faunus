@@ -30,11 +30,6 @@ namespace Faunus {
         for (auto it : j.items()) {
             a.name = it.key();
             xjson val = it.value();
-            //assertKeys(val, {
-            //        "activity", "alphax", "q", "dp", "dprot", "eps", "id",
-            //        "mu", "mulen", "scdir", "sclen", "mw", "sigma",
-            //        "r", "tension", "tfe", "hydrophobic"
-            //        }); // throw exception if keys other than these are given
             a.activity = val.value("activity", a.activity) * 1.0_molar;
             a.alphax   = val.value("alphax", a.alphax);
             a.charge   = val.value("q", a.charge);

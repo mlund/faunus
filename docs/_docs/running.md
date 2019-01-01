@@ -63,6 +63,12 @@ import json
 with open('out.json') as f:
     d = json.load(f) # --> dict
     print( d['atomlist'][0]["Na+"]["mw"] ) # --> 22.99
+    #             ^      ^    ^     ^
+    #             |      |    |     |
+    #             |      |    |     get mol. weight value
+    #             |      |    key is the atom name
+    #             |      fist object in array
+    #             atomlist is an array of objects
 ~~~
 
 ## Restarting
@@ -74,11 +80,14 @@ To start from the previously saved state, use:
 faunus --input in.json --state state.json
 ~~~
 
-## Message Passing Interface
+## Message Passing Interface (MPI)
+
+Only few routines in Faunus are currently parallelisable using MPI, for example
+parallel tempering, and penalty function energies.
 
 Running with MPI spawns `nproc` processes that may or may not communicate
 with each other. If `nproc>1`, input and output files are prefixed with
-`mpi{rank}.` where `{rank}` is the rank or process number.
+`mpi{rank}.` where `{rank}` is the rank or process number, starting from zero.
 
 The following starts two processes, reading input from `mpi0.in.json` and
 `mpi1.in.json`. All output files, including those from any analysis are
@@ -106,5 +115,5 @@ help(pyfaunus)
 
 For more examples, see
 [`pythontest.py`](https://github.com/mlund/faunus/blob/master/examples/pythontest.py).
-Please note that the interface is under development and subject to change.
+Note that the interface is under development and subject to change.
 

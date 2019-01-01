@@ -37,11 +37,11 @@ Origo ($0,0,0$) is always placed in the geometric _center_ of the simulation con
 
 `geometry` | PBC      | Required keywords
 ---------- | -------- | --------------------------------------
-type:      |          |
+`type`:    |          |
 `cuboid`   | $x,y,z$  | `length` (array or single float)
 `slit`     | $x,y$    | `length` (array or single float)
 `cylinder` | $z$      | `radius`, `length` (along $z$)
-`sphere`   | off      | `radius`
+`sphere`   | none     | `radius`
 
 ## Atom Properties
 
@@ -54,7 +54,8 @@ Atoms are the smallest possible particle entities with properties defined below.
 `dp=0`        | Translational displacement parameter [Å]
 `dprot=0`     | Rotational displacement parameter [degrees] (will be converted to radians)
 `eps=0`       | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol]
-`mu=[0,0,0]`  | Dipole moment vector [Debye]
+`mu=[1,0,0]`  | Dipole moment unit vector
+`mulen=0`     | Dipole moment scalar [eÅ]
 `mw=1`        | Molecular weight [g/mol]
 `q=0`         | Valency / partial charge number [$e$]
 `r=0`         | Radius = `sigma/2` [Å]
@@ -76,17 +77,22 @@ atomlist:
   - ...
 ~~~
 
+### Anisotropic Atoms
+
+By default, Faunus is currently compiled with centro-symmetric atoms, only. To add _i.e._ dipolar properties, modify the particle definition at the top of `src/faunus.cpp`.
+
+
 ## Molecule Properties
 
 A molecule is a collection of atoms, but need not be associated
 as real molecules. Two particular modes can be specified:
 
 1. If `atomic=true` the atoms in the molecule are unassociated and is
-   typically used to defined salt particles or any other non-aggregated
+   typically used to define salt particles or other non-aggregated
    species. No structure is required, and the molecular center of mass (COM) is
    unspecified.
 
-2. If `atomic=false` the molecule resembles a real molecule and a structure
+2. If `atomic=false` the molecule resembles a real molecule and a structure or trajectory
    is _required_.
 
 Properties of molecules and their default values:
@@ -176,7 +182,7 @@ container boundaries. Overlap between particles is ignored and for
 i.e. hard-sphere potentials the initial energy may be infinite.
 
 
-## Equilibrium Reactions
+## Equilibrium Reactions (beta)
 
 Faunus supports density fluctuations, coupled to chemical equilibria with
 explicit and/or implicit particles via their chemical potentials as
@@ -204,4 +210,8 @@ Available keywords:
 `reactionlist`  | Description
 --------------- | ---------------------------------------------------------------
 `lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log_{10}(K)$
+
+**Warning:**
+This functionality is under construction and subject to change.
+{: .notice--warning}
 

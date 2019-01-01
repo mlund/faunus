@@ -50,11 +50,15 @@ yason.py minimal.yml | faunus
 produces an output file, `out.json`, with move statistics, system properties etc.
 The script `yason.py` merely converts from YAML to JSON as the former, easier to read,
 is used in all examples.
-For more examples, see the `examples` folder.
+For more examples, see the [`examples` folder](https://github.com/mlund/faunus/tree/master/examples).
+
+## Getting Help
 
 To open the user-guide in a browser, type:
 
 ~~~ bash
 faunus-manual
 ~~~
+
+If you have questions, comments, or need help, create a ticket on [our Github issue page](https://github.com/mlund/faunus/issues).
 

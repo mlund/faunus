@@ -384,7 +384,7 @@ energy:
            - harmonic: { index: [56,921], k: 10, req: 15 }
 moleculelist:
     - water: # TIP3P
-        structure: water.xyz
+        structure: "water.xyz"
         bondlist: # index relative to molecule
             - harmonic: { index: [0,1], k: 5024, req: 0.9572 }
             - harmonic: { index: [0,2], k: 5024, req: 0.9572 }

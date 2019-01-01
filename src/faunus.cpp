@@ -14,13 +14,7 @@ using namespace std;
 #define FAUNUS_TIPSFILE ""
 #endif
 
-#ifdef FAUNUS_CUBOID_NOPBC
-typedef Geometry::CuboidNoPBC Tgeometry;
-#elif FAUNUS_SPHERE
-typedef Geometry::Sphere Tgeometry;
-#else
 typedef Geometry::Chameleon Tgeometry;
-#endif
 typedef Particle<Charge> Tparticle;
 
 static const char USAGE[] =

@@ -40,10 +40,10 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 
 The following are optional:
 
-- Message Passing Interface (MPI)
 - `pandoc`
 - `pypandoc`
 - `BeautifulSoup4`
+- Message Passing Interface (MPI)
 
 **macOS tip:**
 Apple's developer tools, Xcode, is a quick way obtain
@@ -58,16 +58,19 @@ clang on macOS. CMake can be installed with an
 
 Download the [latest release](https://github.com/mlund/faunus/releases/latest)
 or [the developer branch](https://github.com/mlund/faunus/archive/master.zip)
-and perform the following steps in a terminal.
-Dependencies will automatically be downloaded.
+and perform the following steps in a terminal:
 
 ~~~ bash
 cd faunus
 cmake . [OPTIONS]
-make faunus
-make usagetips # optional, requires `pandoc`, `pypandoc`, `BeautifulSoup4`
+make
+make test
+make manual_html  # requires `pandoc`
+make usagetips    # requires `pandoc`, `pypandoc`, `BeautifulSoup4`
 make install
 ~~~
+
+For merely building the Faunus executable, use `make faunus` after the `cmake` command.
 
 The following options are available:
 
@@ -85,10 +88,27 @@ CMake Option                         | Description
 `-DPYTHON_INCLUDE_DIR="..."`         | Full path to python headers
 `-DPYTHON_LIBRARY="..."`             | Full path to python library, i.e. libpythonX.dylib/so
 
+### Compiling the Manual
+
+Pandoc is required to build the HTML manual: 
+
+~~~ bash
+make manual_html
+~~~
+
+In addition to pandoc, a TeX Live installation is required to build
+the PDF manual. Garamond fonts must be available:
+
+~~~ bash
+wget https://tug.org/fonts/getnonfreefonts/install-getnonfreefonts
+sudo texlua install-getnonfreefonts
+sudo getnonfreefonts garamond --sys
+make manual
+~~~
 
 ### Python libraries in odd locations
 
-Should there are multiple compilers or python distributions, be specific:
+Should there be multiple compilers or python distributions, be specific:
 
 ~~~ bash
 CC=/opt/bin/clang CXX=/opt/bin/clang++ cmake . \
@@ -115,7 +135,7 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles
 ~~~
 
-## Creating a conda package (advanced usage)
+## Creating a conda package (development usage)
 
 The basic steps for creating a conda package is outlined below, albeit
 details depend on the build environment. See also the `.travis.yml`
@@ -136,13 +156,3 @@ Instead of uploading to anaconda.org, install a local copy directly after the bu
 conda install -c USER faunus --use-local
 ~~~
 
-### Requirements
-
-Building a conda package may require a TeX Live installation to create
-the PDF manual. Ensure that Garamond fonts are available:
-
-~~~ bash
-wget https://tug.org/fonts/getnonfreefonts/install-getnonfreefonts
-sudo texlua install-getnonfreefonts
-sudo getnonfreefonts garamond --sys
-~~~

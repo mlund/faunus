@@ -24,14 +24,7 @@ On macOS or Linux, install using [conda](https://conda.io/miniconda.html):
 
     conda install -c teokem faunus
 
-Or build from source:
-
-~~~ bash
-    git clone https://github.com/mlund/faunus.git
-    cd faunus
-    cmake .
-    make
-~~~
+Or build from source, see [here](http://mlund.github.io/faunus/docs/install/).
 
 Documentation
 =============
@@ -41,7 +34,7 @@ http://mlund.github.io/faunus
 Licence
 =======
 
-Copyright 2002-2018 Mikael Lund
+Copyright 2002-2019 Mikael Lund
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"), to deal in the Software without restriction,

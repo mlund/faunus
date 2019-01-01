@@ -210,21 +210,30 @@ The table below explains the scaling behavior in different geometries:
 `xy`         |  `cuboid`    | Scales xy, z untouched.
 `isochoric`  |  `cuboid`    | Scales xy/z, const. volume
 
-**Note:**
+**Warning:**
 Untested for cylinders, slits.
-{: .notice--info}
+{: .notice--warning}
 
 
-## Speciation / Grand Canonical
+## Speciation / Grand Canonical (beta)
 
-The speciation move handles density fluctuations and particle transformations and is the main move for particle insertion, deletion, and swapping used in (semi)-grand canonical ensembles.
+The speciation move handles density fluctuations and particle transformations and is the main move
+for particle insertion, deletion, and swapping used in (semi)-grand canonical ensembles.
 A reaction from `reactionlist` is randomly picked from the topology and is either propagated forward or backwards.
 In Faunus, the total number of atoms and molecules are constant, but these can be either _active_ or _inactive_.
 Deleting a molecule simply deactivates it, while insertion _vice versa_ activates an inactive molecule.
-Thus, it is important that the _capacity_ or reservoir of particles (active plus inactive) is sufficiently large to allow for fluctuations. This is ensured using `insertmolecules` (see Topology). A runtime warning will be given, should you run low on particles.
+Thus, it is important that the _capacity_ or reservoir of particles (active plus inactive) is
+sufficiently large to allow for fluctuations.
+This is ensured using `insertmolecules` (see Topology).
+A runtime warning will be given, should you run low on particles.
 
 For more information about reactions, see the Topology section.
 
 `speciation`    |  Description
 --------------- | ----------------------------------
 `repeat=1`      |  Average number of moves per sweep
+
+**Warning:**
+The speciation move is under construction and subject to change.
+{: .notice--warning}
+

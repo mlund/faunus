@@ -36,24 +36,6 @@ if (ENABLE_OPENMP)
   endif()
 endif()
 
-# MPI
-
-option(ENABLE_MPI "Enable MPI code" off)
-if (ENABLE_MPI)
-    find_package(MPI)
-    if (MPI_CXX_FOUND)
-        set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
-        if (APPLE)
-            set(CMAKE_CXX_LINK_FLAGS ${MPI_CXX_LINK_FLAGS})
-        else ()
-            set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
-        endif ()
-        #set(LINKLIBS ${LINKLIBS} ${MPI_CXX_LIBRARIES})
-        include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
-        add_definitions(-DENABLE_MPI)
-    endif ()
-endif ()
-
 include(ExternalProject)
 
 # PROGRESS BAR
@@ -255,20 +237,40 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Wstrict-aliasing -Wno-sign-compare -Wno-unused-local-typedef -Wno-unknown-pragmas)
 endif()
 
+# target: libfaunus
 add_library(libfaunus STATIC ${objs} ${hdrs})
-add_dependencies(libfaunus modernjson doctest eigen range-v3 docopt xdrfile progressbar pybind11)
+add_dependencies(libfaunus modernjson eigen range-v3 xdrfile)
+target_link_libraries(libfaunus xdrfile)
 
-add_executable(unittests src/unittests.cpp ${hdrs})
-add_dependencies(unittests modernjson doctest eigen range-v3)
-target_link_libraries(unittests libfaunus xdrfile)
+# check for MPI
+option(ENABLE_MPI "Enable MPI code" off)
+if (ENABLE_MPI)
+    find_package(MPI)
+    if (MPI_CXX_FOUND)
+        set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
+        if (APPLE)
+            set(CMAKE_CXX_LINK_FLAGS ${MPI_CXX_LINK_FLAGS})
+        else ()
+            set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
+        endif ()
+        include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
+        target_link_libraries(libfaunus ${MPI_CXX_LIBRARIES})
+        target_compile_definitions(libfaunus PUBLIC ENABLE_MPI)
+    endif ()
+endif ()
+
+# target: unittests
+add_executable(unittests src/unittests.cpp ${objs} ${hdrs})
+add_dependencies(unittests modernjson eigen range-v3 xdrfile doctest)
+target_link_libraries(unittests xdrfile)
 add_test(NAME unittests COMMAND unittests)
 
+# target: faunus
 add_executable(faunus src/faunus.cpp)
-add_dependencies(faunus modernjson doctest eigen range-v3 docopt xdrfile progressbar)
-target_link_libraries(faunus libfaunus xdrfile docopt ${MPI_CXX_LIBRARIES})
+add_dependencies(faunus progressbar)
+target_link_libraries(faunus libfaunus docopt)
 target_compile_definitions(faunus PUBLIC
     FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
-
 
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)

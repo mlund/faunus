@@ -58,19 +58,16 @@ clang on macOS. CMake can be installed with an
 
 Download the [latest release](https://github.com/mlund/faunus/releases/latest)
 or [the developer branch](https://github.com/mlund/faunus/archive/master.zip)
-and perform the following steps in a terminal:
+and build using cmake:
 
 ~~~ bash
 cd faunus
 cmake . [OPTIONS]
-make
-make test
-make manual_html  # requires `pandoc`
-make usagetips    # requires `pandoc`, `pypandoc`, `BeautifulSoup4`
-make install
+make faunus
+make usagetips # requires `pandoc`, `pypandoc`, `BeautifulSoup4`
 ~~~
 
-For merely building the Faunus executable, use `make faunus` after the `cmake` command.
+Use `make help` to see all build targets.
 
 The following options are available:
 

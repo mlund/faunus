@@ -820,6 +820,11 @@ namespace Faunus {
 
             }; // End of class SpeciationMove
 
+        /**
+         * @brief Molecular cluster move
+         *
+         * @todo fix so that it works w. GC molecules (index are calculating before simulation)
+         */
         template<typename Tspace>
             class Cluster : public Movebase {
                 private:
@@ -862,10 +867,11 @@ namespace Faunus {
                         names = j.at("molecules").get<decltype(names)>(); // molecule names
                         ids = names2ids(molecules<Tpvec>, names);     // names --> molids
                         index.clear();
-                        for (auto &g : spc.groups)
-                            if (!g.atomic)
-                                if (std::find(ids.begin(), ids.end(), g.id)!=ids.end() )
-                                    index.push_back( &g-&spc.groups.front() );
+                        for (auto &g : spc.groups) // loop over all groups
+                            if (not g.atomic) // only molecular groups
+                                if (g.size()==g.capacity()) // only active particles
+                                    if (std::find(ids.begin(), ids.end(), g.id)!=ids.end() )
+                                        index.push_back( &g-&spc.groups.front() );
                         if (repeat<0)
                             repeat = index.size();
                     }

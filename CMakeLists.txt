@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.11.4 FATAL_ERROR)
 
 project(neofaunus)
 
@@ -37,44 +37,39 @@ if (ENABLE_OPENMP)
 endif()
 
 include(ExternalProject)
+include(FetchContent)
 
 # PROGRESS BAR
-
-ExternalProject_Add( progressbar
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://raw.githubusercontent.com/prakhar1989/progress-cpp/master/ProgressBar.hpp"
-    URL_MD5 0cdfc175b8a19e38a8b27c9e6ab81785
-    UPDATE_DISCONNECTED ON
-    DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
-    CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-ExternalProject_Get_Property(progressbar source_dir)
-set(ProgressIncludeDir ${source_dir}/../../src/)
+FetchContent_Declare(
+    progressbar
+    URL https://github.com/prakhar1989/progress-cpp/archive/06fdda086eb06b462faff7a917984062bc15b61e.zip
+    URL_HASH MD5=a5bc9375399eb80e37f03a3e32dcde0f)
+FetchContent_GetProperties(progressbar)
+if(NOT progressbar_POPULATED)
+    FetchContent_Populate(progressbar)
+endif()
 
 # MODERN JSON
-
-ExternalProject_Add( modernjson
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/nlohmann/json/releases/download/v3.5.0/json.hpp"
-    URL_HASH SHA256=8a6dbf3bf01156f438d0ca7e78c2971bca50eec4ca6f0cf59adf3464c43bb9d5
-    UPDATE_DISCONNECTED ON
-    DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
-    CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-ExternalProject_Get_Property(modernjson source_dir)
-set(JSONIncludeDir ${source_dir}/../../src/)
+FetchContent_Declare(
+    modernjson
+    URL "https://github.com/nlohmann/json/releases/download/v3.5.0/include.zip"
+    URL_HASH SHA256=3564da9c5b0cf2e032f97c69baedf10ddbc98030c337d0327a215ea72259ea21)
+FetchContent_GetProperties(modernjson)
+if(NOT modernjson_POPULATED)
+    FetchContent_Populate(modernjson)
+endif()
 
 # RANGE-V3
-
-ExternalProject_Add( range-v3
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+FetchContent_Declare(
+    rangev3
     URL "https://github.com/ericniebler/range-v3/archive/0.4.0.tar.gz"
-    URL_MD5 f835637e23b09a65863fca26e07fb8fa
-    UPDATE_DISCONNECTED ON
-    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-ExternalProject_Get_Property(range-v3 source_dir)
-set(RangeV3IncludeDir ${source_dir}/include)
+    URL_HASH MD5=f835637e23b09a65863fca26e07fb8fa)
+FetchContent_GetProperties(rangev3)
+if(NOT rangev3_POPULATED)
+    FetchContent_Populate(rangev3)
+endif()
 
 # DOCOPT.CPP
-
 ExternalProject_Add(project_docopt
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -92,30 +87,24 @@ add_dependencies(docopt project_docopt)
 set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 
 # PYBIND11
-
-ExternalProject_Add( pybind11
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://github.com/pybind/pybind11/archive/v2.2.4.tar.gz"
-    URL_MD5 c533a107bc95bd0c5525ff650b11bfa1
-    UPDATE_DISCONNECTED ON
-    INSTALL_DIR "${CMAKE_SOURCE_DIR}/3rdparty"
-    CMAKE_ARGS -DPYBIND11_TEST=OFF -DPYBIND11_INSTALL=ON -DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty/
-    LOG_DOWNLOAD ON)
+FetchContent_Declare(
+    pybind11
+    URL https://github.com/pybind/pybind11/archive/v2.2.4.tar.gz
+    URL_HASH MD5=c533a107bc95bd0c5525ff650b11bfa1)
 
 # EIGEN
-
-ExternalProject_Add( eigen
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+FetchContent_Declare(
+    eigen
     URL "http://bitbucket.org/eigen/eigen/get/3.3.7.tar.gz"
-    URL_MD5 f2a417d083fe8ca4b8ed2bc613d20f07
-    UPDATE_DISCONNECTED ON
-    LOG_DOWNLOAD ON CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-ExternalProject_Get_Property(eigen source_dir)
-set(EigenIncludeDir ${source_dir})
-
+    URL_HASH MD5=f2a417d083fe8ca4b8ed2bc613d20f07)
+FetchContent_GetProperties(eigen)
+if(NOT eigen_POPULATED)
+    FetchContent_Populate(eigen)
+endif()
+ 
 # XRDFILE
-
-ExternalProject_Add( project_xdrfile
+ExternalProject_Add(
+    project_xdrfile
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     URL "https://github.com/wesbarnett/libxdrfile/archive/2.1.2.tar.gz"
     URL_MD5 ee114404b4a01613b2f0167a2ad92536
@@ -134,24 +123,17 @@ add_dependencies(xdrfile project_xdrfile)
 set_target_properties(xdrfile PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 # DOCTEST
-
-ExternalProject_Add( doctest
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    URL "https://raw.githubusercontent.com/onqtam/doctest/2.0.0/doctest/doctest.h"
-    URL_MD5 cbd33be5fb1e4bb418131bb78b52be5b
-    UPDATE_DISCONNECTED ON
-    DOWNLOAD_NO_EXTRACT 0 DOWNLOAD_NO_PROGRESS ON
-    CONFIGURE_COMMAND "" BUILD_COMMAND "" INSTALL_COMMAND "" )
-
-ExternalProject_Get_Property(doctest source_dir)
-set(DocTestIncludeDir ${source_dir}/../../src/)
-
-add_definitions(-DDOCTEST_CONFIG_DISABLE)
-include_directories(SYSTEM ${EigenIncludeDir} ${DocTestIncludeDir} ${JSONIncludeDir} ${RangeV3IncludeDir}
-    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir} ${ProgressIncludeDir})
+FetchContent_Declare(
+    doctest
+    URL "https://github.com/onqtam/doctest/archive/2.2.0.tar.gz"
+    URL_MD5 3f91262877b792e545f971e54afb7602)
+FetchContent_GetProperties(doctest)
+if(NOT doctest_POPULATED)
+    FetchContent_Populate(doctest)
+    add_definitions(-DDOCTEST_CONFIG_DISABLE)
+endif()
 
 # POWERSASA
-
 if (ENABLE_POWERSASA)
     foreach (powf array.hpp power_diagram.h power_sasa.h LICENSE)
         if (NOT EXISTS "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}")
@@ -165,7 +147,6 @@ if (ENABLE_POWERSASA)
 endif ()
 
 # GIT
-
 find_package(Git)
 if (GIT_FOUND)
     execute_process(
@@ -188,6 +169,12 @@ if (GIT_FOUND)
     endif ()
 endif ()
 
+# Add third-party headers to include path. Note this is done with SYSTEM
+# to disable potential compiler warnings
+include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
+    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR})
+
+# faunus cpp files
 set(objs
     ${CMAKE_SOURCE_DIR}/src/analysis.cpp
     ${CMAKE_SOURCE_DIR}/src/atomdata.cpp
@@ -205,6 +192,7 @@ set(objs
 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
+# faunus header files
 set(hdrs
     ${CMAKE_SOURCE_DIR}/src/analysis.h
     ${CMAKE_SOURCE_DIR}/src/average.h
@@ -226,7 +214,8 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/units.h
     )
 
-# Compiler spacific flagg
+# Compiler specific flags
+
 ## GCC
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     add_compile_options(-Wall -Wextra -Wpedantic -Wunreachable-code -Wstrict-aliasing
@@ -239,7 +228,7 @@ endif()
 
 # target: libfaunus
 add_library(libfaunus STATIC ${objs} ${hdrs})
-add_dependencies(libfaunus modernjson eigen range-v3 xdrfile)
+add_dependencies(libfaunus xdrfile)
 target_link_libraries(libfaunus xdrfile)
 
 # check for MPI
@@ -261,13 +250,12 @@ endif ()
 
 # target: unittests
 add_executable(unittests src/unittests.cpp ${objs} ${hdrs})
-add_dependencies(unittests modernjson eigen range-v3 xdrfile doctest)
+add_dependencies(unittests xdrfile)
 target_link_libraries(unittests xdrfile)
 add_test(NAME unittests COMMAND unittests)
 
 # target: faunus
 add_executable(faunus src/faunus.cpp)
-add_dependencies(faunus progressbar)
 target_link_libraries(faunus libfaunus docopt)
 target_compile_definitions(faunus PUBLIC
     FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
@@ -289,8 +277,10 @@ if (ENABLE_PYTHON)
     endif()
 
     if (PYTHONLIBS_FOUND)
-        find_package(pybind11 PATHS ${CMAKE_SOURCE_DIR}/3rdparty/share/cmake/pybind11/)
-        if (pybind11_FOUND)
+        FetchContent_GetProperties(pybind11)
+        if(NOT pybind11_POPULATED)
+            FetchContent_Populate(pybind11)
+            add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
             pybind11_add_module(pyfaunus src/pyfaunus.cpp ${objs})
             target_link_libraries(pyfaunus PUBLIC xdrfile)
         endif()
@@ -345,17 +335,26 @@ if (PANDOC)
         -N --toc -o ${CMAKE_BINARY_DIR}/manual.html
         )
 
-    add_custom_target(
-        usagetips
-        ALL
-        COMMENT "extracting tips from manual"
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        COMMAND ${PYTHON_EXECUTABLE} scripts/extracttips.py)
-
-    add_dependencies(usagetips manual_html)
+    if (PYTHONINTERP_FOUND)
+        add_custom_target(
+            usagetips
+            ALL
+            COMMENT "extracting tips from manual"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMAND ${PYTHON_EXECUTABLE} scripts/extracttips.py)
+        add_dependencies(usagetips manual_html)
+    endif()
 endif()
 
 # TESTS
+
+if (TARGET pyfaunus)
+    add_test(
+        NAME pythontest
+        COMMAND sh -c "${PYTHON_EXECUTABLE} pythontest.py -v"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    set_tests_properties(pythontest PROPERTIES ENVIRONMENT "PYTHONPATH=$<TARGET_FILE_DIR:pyfaunus>")
+endif()
 
 add_test(
     NAME swapconf
@@ -390,13 +389,6 @@ add_test(
     | $<TARGET_FILE:faunus> --nobar --state polymers.state.json\
     ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py polymers.out.json out.json --tol 0.05"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
-
-if (pybind11_FOUND)
-    add_test(
-        NAME pythontest
-        COMMAND sh -c "${PYTHON_EXECUTABLE} pythontest.py -v"
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
-endif()
 
 add_test(
     NAME speciation
@@ -435,8 +427,9 @@ add_test(
 
 install(TARGETS faunus DESTINATION bin)
 
-if (pybind11_FOUND)
-    execute_process ( COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"
+if (TARGET pyfaunus)
+    execute_process(
+        COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"
         OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
     install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE_PACKAGES} OPTIONAL)
 endif()

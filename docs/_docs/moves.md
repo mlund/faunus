@@ -102,6 +102,11 @@ between their mass centers. The move is associated with [bias](http://dx.doi.org
 the cluster size and composition remain unaltered.
 If a cluster is larger than half the simulation box length, only translation will be attempted.
 
+**Restrictions:**
+Currently, the number of `molecules` must be constant throughout simulation.
+{: .notice--info}
+
+
 
 ## Internal Degrees of Freedom
 

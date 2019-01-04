@@ -12,7 +12,7 @@
 #include <random>
 #include <memory>
 #include <Eigen/Geometry>
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 #include <range/v3/all.hpp>
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

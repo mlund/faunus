@@ -2,7 +2,7 @@
 
 #include <random>
 #include <iterator>
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 
 namespace Faunus {
 

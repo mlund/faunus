@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.11.4 FATAL_ERROR)
 project(neofaunus)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS ON)
+set(CMAKE_CXX_STANDARD_REQUIRED YES)
+set(CMAKE_CXX_EXTENSIONS NO)
 find_package(PythonInterp 3 REQUIRED)
 enable_testing()
 

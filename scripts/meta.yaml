@@ -12,8 +12,8 @@ build:
     - export CXX=clang++  # [osx]
     - cmake -DENABLE_MPI=on -DENABLE_OPENMP=on -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX
     - make
-    - make test
     - make install
+    - ctest --output-on-failure
 
 requirements:
   build:
@@ -24,11 +24,12 @@ requirements:
     - pandoc 2.*
     - pypandoc 1.*
     - beautifulsoup4
+    - ruamel_yaml
   host:
     - cmake >=3.11.4
+    - python
     - numpy 1.*
     - matplotlib
-    - python
     - ruamel_yaml
     - nbconvert
     - notebook

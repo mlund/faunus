@@ -1,6 +1,6 @@
 site_name: faunusmk2
 repo_url: https://github.com/mlund/faunus
-docs_dir: _docs
+docs_dir: docs/_docs
 extra_css: ['https://assets.readthedocs.org/static/css/badge_only.css', 'https://assets.readthedocs.org/static/css/readthedocs-doc-embed.css']
 extra_javascript: [readthedocs-data.js, 'https://assets.readthedocs.org/static/core/js/readthedocs-doc-embed.js', 'https://assets.readthedocs.org/static/javascript/readthedocs-analytics.js']
 

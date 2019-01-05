@@ -428,10 +428,16 @@ add_test(
 install(TARGETS faunus DESTINATION bin)
 
 if (TARGET pyfaunus)
+    # find _relative_ path of python library and thus respect CMAKE_INSTALL_PREFIX.
+    # could be replaced by FindPython() but req. cmake 3.12
+    # https://stackoverflow.com/questions/1242904/finding-python-site-packages-directory-with-cmake
     execute_process(
-        COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"
-        OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
-    install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE_PACKAGES} OPTIONAL)
+        COMMAND "${PYTHON_EXECUTABLE}" -c "if True:
+        from distutils import sysconfig as sc
+        print(sc.get_python_lib(prefix='', plat_specific=True))"
+        OUTPUT_VARIABLE PYTHON_SITE
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE} OPTIONAL)
 endif()
 
 install(FILES ${CMAKE_BINARY_DIR}/LICENSE DESTINATION share/faunus)

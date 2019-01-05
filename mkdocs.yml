@@ -1,10 +1,8 @@
 site_name: faunus
-google_analytics: null
-site_name: neofaunus
 repo_url: https://github.com/mlund/faunus
-docs_dir: docs/_docs
+docs_dir: _docs
 
-pages:
-- Introduction:
-  - Topology: topology.md
+#pages:
+#- Introduction:
+#  - Topology: topology.md
 

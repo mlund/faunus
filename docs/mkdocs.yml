@@ -2,7 +2,7 @@ site_name: faunus
 repo_url: https://github.com/mlund/faunus
 docs_dir: _docs
 
-#pages:
-#- Introduction:
-#  - Topology: topology.md
+pages:
+    - Introduction:
+        - Topology: topology.md
 

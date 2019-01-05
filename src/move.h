@@ -1405,11 +1405,15 @@ start:
                 } // store system to json object
 
                 void restore(const json &j) {
-                    state1.spc = j; // old/accepted state
-                    state2.spc = j; // trial state
-                    Move::Movebase::slump = j["random-move"]; // restore move random number generator
-                    Faunus::random = j["random-global"];      // restore global random number generator
-                    init();
+                    try {
+                        state1.spc = j; // old/accepted state
+                        state2.spc = j; // trial state
+                        Move::Movebase::slump = j["random-move"]; // restore move random number generator
+                        Faunus::random = j["random-global"];      // restore global random number generator
+                        init();
+                    } catch (std::exception &e) {
+                        throw std::runtime_error("error initialising simulation: "s + e.what());
+                    }
                 } //!< restore system from previously store json object
 
                 void move() {

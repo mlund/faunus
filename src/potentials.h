@@ -132,29 +132,36 @@ namespace Faunus {
 
         /**
          * @brief Lennard-Jones with arbitrary mixing rule
+         * @note Mixing data is _shared_ upon copying
          */
         template<typename Tparticle>
-            struct LennardJones : public PairPotentialBase {
-                LennardJones(const std::string &name="lennardjones"s) { PairPotentialBase::name=name; }
-                SigmaEpsilonTable<Tparticle> m; // table w. sigma_ij^2 and 4xepsilon
+            class LennardJones : public PairPotentialBase {
+                protected:
+                    std::shared_ptr<SigmaEpsilonTable<Tparticle>> m; // table w. sigma_ij^2 and 4xepsilon
 
-                template<typename... T>
-                    Point force(const Particle<T...> &a, const Particle<T...> &b, double r2, const Point &p) const {
-                        double s6=powi<3>( m.s2(a.id,b.id) );
-                        double r6=r2*r2*r2;
-                        double r14=r6*r6*r2;
-                        return 6.*m.eps(a.id,b.id) * s6 * (2*s6-r6) / r14 * p;
+                public:
+                    LennardJones(const std::string &name="lennardjones"s) {
+                        PairPotentialBase::name=name;
+                        m = std::make_shared<SigmaEpsilonTable<Tparticle>>();
                     }
 
-                template<typename... T>
-                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
-                        double x=m.s2(a.id,b.id)/r.squaredNorm(); //s2/r2
-                        x=x*x*x; // s6/r6
-                        return m.eps(a.id,b.id) * (x*x - x);
-                    }
+                    template<typename... T>
+                        Point force(const Particle<T...> &a, const Particle<T...> &b, double r2, const Point &p) const {
+                            double s6=powi<3>( m->s2(a.id,b.id) );
+                            double r6=r2*r2*r2;
+                            double r14=r6*r6*r2;
+                            return 6.*m->eps(a.id,b.id) * s6 * (2*s6-r6) / r14 * p;
+                        }
 
-                void to_json(json &j) const override { j = m; }
-                void from_json(const json &j) override { m = j; }
+                    template<typename... T>
+                        double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                            double x=m->s2(a.id,b.id)/r.squaredNorm(); //s2/r2
+                            x=x*x*x; // s6/r6
+                            return m->eps(a.id,b.id) * (x*x - x);
+                        }
+
+                    void to_json(json &j) const override { j = *m; }
+                    void from_json(const json &j) override { *m = j; }
             };
 
         /**
@@ -167,6 +174,8 @@ namespace Faunus {
          * @f]
          * where sigma, epsilon per default are set
          * using Lorentz-Berthelot mixing rules.
+         *
+         * @note Mixing data is _shared_ upon copying
          */
         template<class Tparticle>
             class WeeksChandlerAndersen : public LennardJones<Tparticle> {
@@ -182,12 +191,12 @@ namespace Faunus {
 
                     template<typename... T>
                         inline double operator() (const Particle<T...> &a, const Particle<T...> &b, double r2) const {
-                            double x=m.s2(a.id,b.id); // s^2
+                            double x=m->s2(a.id,b.id); // s^2
                             if (r2>x*twototwosixth)
                                 return 0;
                             x=x/r2;  // (s/r)^2
                             x=x*x*x;// (s/r)^6
-                            return m.eps(a.id,b.id)*(x*x - x + onefourth);
+                            return m->eps(a.id,b.id)*(x*x - x + onefourth);
                         }
 
                     template<typename... T>
@@ -197,12 +206,12 @@ namespace Faunus {
 
                     template<typename... T>
                         Point force(const Particle<T...> &a, const Particle<T...> &b, double r2, const Point &p) const {
-                            double x=m.s2(a.id,b.id); // s^2
+                            double x=m->s2(a.id,b.id); // s^2
                             if (r2>x*twototwosixth)
                                 return Point(0,0,0);
                             x=x/r2;  // (s/r)^2
                             x=x*x*x;// (s/r)^6
-                            return m.eps(a.id,b.id)*6*(2*x*x - x)/r2*p;
+                            return m->eps(a.id,b.id)*6*(2*x*x - x)/r2*p;
                         }
             }; // Weeks-Chandler-Andersen potential
 
@@ -259,20 +268,27 @@ namespace Faunus {
             void from_json(const json &j) override;
         };
 
+        /**
+         * @brief Hardsphere potential
+         * @note `PairMatrix` is _shared_ upon copying
+         */
         template<class Tparticle>
-            struct HardSphere : public PairPotentialBase {
-                PairMatrix<double> d2; // matrix of (r1+r2)^2
-                HardSphere(const std::string &name="hardsphere") {
-                    PairPotentialBase::name=name;
-                    for (auto &i : atoms)
-                        for (auto &j : atoms)
-                            d2.set( i.id(), j.id(), std::pow((i.sigma+j.sigma)/2,2));
-                }
-                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                    return r.squaredNorm() < d2(a.id,b.id) ? pc::infty : 0;
-                }
-                void to_json(json&) const override {}
-                void from_json(const json&) override {}
+            class HardSphere : public PairPotentialBase {
+                private:
+                    std::shared_ptr<PairMatrix<double>> d2; // matrix of (r1+r2)^2
+                public:
+                    HardSphere(const std::string &name="hardsphere") {
+                        PairPotentialBase::name=name;
+                        d2 = std::make_shared<PairMatrix<double>>();
+                        for (auto &i : atoms)
+                            for (auto &j : atoms)
+                                d2->set( i.id(), j.id(), std::pow((i.sigma+j.sigma)/2,2));
+                    }
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        return r.squaredNorm() < d2->operator()(a.id,b.id) ? pc::infty : 0;
+                    }
+                    void to_json(json&) const override {}
+                    void from_json(const json&) override {}
             }; //!< Hardsphere potential
 
         struct RepulsionR3 : public PairPotentialBase {
@@ -354,24 +370,29 @@ namespace Faunus {
 
         /**
          * @brief Charge-nonpolar pair interaction
+         * @note Pair data is _shared_ upon copying
          */
         template<class Tparticle>
             class Polarizability : public Coulomb {
                 private:
                     double epsr;
-                    PairMatrix<double> m_neutral, m_charged;
+                    std::shared_ptr<PairMatrix<double>> m_neutral, m_charged;
 
                 public:
-                    Polarizability (const std::string &name="polar") { PairPotentialBase::name=name; }
+                    Polarizability (const std::string &name="polar") {
+                        PairPotentialBase::name=name;
+                        m_neutral = std::make_shared<PairMatrix<double>>();
+                        m_charged = std::make_shared<PairMatrix<double>>();
+                    }
 
                     void from_json(const json &j) override {
                         epsr = j.at("epsr").get<double>();
                         double lB = pc::lB(epsr);
                         for (auto &i : atoms) {
                             for (auto &j : atoms) {
-                                m_neutral.set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
+                                m_neutral->set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
                                 // titrating particles must be charged in the beginning
-                                m_charged.set(i.id(), j.id(), -lB/2 * ( pow(i.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
+                                m_charged->set(i.id(), j.id(), -lB/2 * ( pow(i.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
                                             pow(j.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
                             }
                         }
@@ -385,17 +406,17 @@ namespace Faunus {
                         double r2=r.squaredNorm();
                         double r4inv=1/(r2*r2);
                         if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9)
-                            return m_charged(a.id,b.id)*r4inv;
+                            return (*m_charged)(a.id,b.id)*r4inv;
                         else
-                            return m_neutral(a.id,b.id)/r2*r4inv;
+                            return (*m_neutral)(a.id,b.id)/r2*r4inv;
                     }
 
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
                         double r6inv=1/(r2*r2*r2);
                         if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9)
-                            return 4*m_charged(a.id,b.id)*r6inv*p;
+                            return 4*m_charged->operator()(a.id,b.id)*r6inv*p;
                         else
-                            return 6*m_neutral(a.id,b.id)/r2*r6inv*p;
+                            return 6*m_neutral->operator()(a.id,b.id)/r2*r6inv*p;
                     }
             };
 
@@ -587,15 +608,18 @@ namespace Faunus {
         };
 
         /**
+         * Some convenient typedefs
+         */
+
+        /**
          * @brief Arbitrary potentials for specific atom types
          *
          * This maintains a species x species matrix with function pointers (`std::function`)
          * that wraps pair potentials. Flexibility over performance.
          *
          * @todo `to_json` should retrieve info from potentials instead of merely passing input
-         * @warning Each atom pair will be assigned an instance of a pair-potential. This may be
-         *          problematic is these have large memory requirements (Lennard-Jones for instance
-         *          keep a pair-matrix with sigma/epsilon values. Make these static?)
+         * @warning Each atom pair will be assigned an instance of a pair-potential. This *could* be
+         *          problematic if these have large memory requirements.
          */
         template<class T /** particle type */>
             class FunctorPotential : public PairPotentialBase {
@@ -603,25 +627,45 @@ namespace Faunus {
                 PairMatrix<uFunc,true> umatrix; // matrix with potential for each atom pair
                 json _j; // storage for input json
 
-                uFunc combineFunc(const json &j) const {
+                typedef CombinedPairPotential<Coulomb,HardSphere<T>> PrimitiveModel;
+                typedef CombinedPairPotential<Coulomb,WeeksChandlerAndersen<T>> PrimitiveModelWCA;
+
+                // List of pair-potential instances used when constructing functors.
+                // Note that potentials w. large memory requirements (LJ, WCA etc.)
+                // typically use `shared_ptr` so that the created functors _share_
+                // the data.
+                std::tuple<
+                    CoulombGalore,    // 0
+                    CosAttract,       // 1
+                    Polarizability<T>,// 2
+                    HardSphere<T>,    // 3
+                    LennardJones<T>,  // 4
+                    RepulsionR3,      // 5
+                    SASApotential,    // 6
+                    WeeksChandlerAndersen<T>,// 7
+                    PrimitiveModel,   // 8
+                    PrimitiveModelWCA // 9
+                        > potlist;
+
+                 uFunc combineFunc(const json &j) { 
                     uFunc u = [](const T&, const T&, const Point &){return 0.0;};
                     if (j.is_array()) {
                         for (auto &i : j) // loop over all defined potentials in array
-                            if (i.is_object() && (i.size()==1))
-                                for (auto it=i.begin(); it!=i.end(); ++it) {
+                            if (i.is_object() and (i.size()==1))
+                                for (auto it : i.items()) {
                                     uFunc _u = nullptr;
-
                                     try {
-                                        if (it.key()=="coulomb") _u = CoulombGalore() = i;
-                                        else if (it.key()=="cos2") _u = CosAttract() = i;
-                                        else if (it.key()=="polar") _u = Polarizability<T>() = i;
-                                        else if (it.key()=="hardsphere") _u = HardSphere<T>() = i;
-                                        else if (it.key()=="lennardjones") _u = LennardJones<T>() = i;
-                                        else if (it.key()=="repulsionr3") _u = RepulsionR3() = i;
-                                        else if (it.key()=="sasa") _u = SASApotential() = i;
-                                        else if (it.key()=="wca") _u = WeeksChandlerAndersen<T>() = i;
-                                        else if (it.key()=="pm") _u = Coulomb() + HardSphere<T>() = it.value();
-                                        else if (it.key()=="pmwca") _u = Coulomb() + WeeksChandlerAndersen<T>() = it.value();
+                                        if (it.key()=="coulomb") _u = std::get<0>(potlist) = i;
+                                        else if (it.key()=="cos2") _u = std::get<1>(potlist) = i;
+                                        else if (it.key()=="polar") _u = std::get<2>(potlist) = i;
+                                        else if (it.key()=="hardsphere") _u = std::get<3>(potlist) = i;
+                                        else if (it.key()=="lennardjones") _u = std::get<4>(potlist) = i;
+                                        else if (it.key()=="repulsionr3") _u = std::get<5>(potlist) = i;
+                                        else if (it.key()=="sasa") _u = std::get<6>(potlist) = i;
+                                        else if (it.key()=="wca") _u = std::get<7>(potlist) = i;
+                                        else if (it.key()=="pm") _u = std::get<8>(potlist) = it.value();
+                                        else if (it.key()=="pmwca") _u = std::get<9>(potlist) = it.value();
+                                        // place additional potentials here...
                                     } catch (std::exception &e) {
                                         throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
                                     }

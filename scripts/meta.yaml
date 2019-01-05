@@ -31,11 +31,11 @@ requirements:
     - nbconvert
     - notebook
     - jupyter
-    - mpich 3.2.*    # [osx]
+    - openmpi 1.6.*  # [osx]
     - openmpi 3.1.*  # [linux64]
   run:
     - llvm-openmp    # [osx]
-    - mpich 3.2.*    # [osx]
+    - openmpi 1.6.*  # [osx]
     - openmpi 3.1.*  # [linux64]
     - ruamel_yaml
     - pygments

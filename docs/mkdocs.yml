@@ -1,0 +1,8 @@
+site_name: faunusmk2
+repo_url: https://github.com/mlund/faunus
+docs_dir: _docs
+
+nav:
+    - Topology: 'topology.md'
+    - Energy: 'energy.md'
+

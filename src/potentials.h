@@ -797,7 +797,7 @@ namespace Faunus {
          * @brief FENE bond
          */
         struct FENEBond : public BondData {
-            std::array<double,4> k = {0,0,0,0};
+            std::array<double,4> k = {{0,0,0,0}};
             int numindex() const override;
             Variant type() const override;
             std::shared_ptr<BondData> clone() const override;

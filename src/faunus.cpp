@@ -10,6 +10,9 @@
 using namespace Faunus;
 using namespace std;
 
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+
 #ifndef FAUNUS_TIPSFILE
 #define FAUNUS_TIPSFILE ""
 #endif
@@ -49,7 +52,10 @@ int main( int argc, char **argv )
 {
     using namespace Faunus::MPI;
     try {
-        std::string version="Faunus Mk2";
+        std::string version="Faunus";
+#ifdef GIT_LATEST_TAG
+        version += " "s + QUOTE(GIT_LATEST_TAG);
+#endif
 #ifdef GIT_COMMIT_HASH
         version += " git " + std::string(GIT_COMMIT_HASH);
 #endif

@@ -692,30 +692,6 @@ namespace Faunus {
                                 }
                             }
 
-                        //     if (dptrans>0) { // translate
-                        //         Point oldcm = it->cm;
-                        //         Point dp = 0.5*ranunit(slump).cwiseProduct(dir) * dptrans;
-                        //         it->translate( dp, spc.geo.boundaryFunc );
-                        //         _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
-                        //     }
-                        //
-                        //     if (dprot>0) { // rotate
-                        //         Point u = ranunit(slump);
-                        //         double angle = dprot * (slump()-0.5);
-                        //         Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
-                        //         it->rotate(Q, spc.geo.boundaryFunc);
-                        //     }
-                        //
-                        //     if (dptrans>0||dprot>0) { // define changes
-                        //         Change::data d;
-                        //         d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
-                        //         d.all = true; // *all* atoms in group were moved
-                        //         change.groups.push_back( d ); // add to list of moved groups
-                        //     }
-                        //     assert( spc.geo.sqdist( it->cm,
-                        //                 Geometry::massCenter(it->begin(),it->end(),spc.geo.boundaryFunc,-it->cm) ) < 1e-9 );
-                        // }
-
                             for (auto &m : rit->Molecules2Add( forward )) { // Add
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
@@ -1339,7 +1315,7 @@ namespace Faunus {
                     state2.spc = j;
                     Move::Movebase::slump = j["random-move"]; // restore move random number generator
                     Faunus::random = j["random-global"];      // restore global random number generator
-                    //reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>(); // should be handled by space
+                    reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>(); // should be handled by space
                     init();
                 } //!< restore system from previously store json object
 
@@ -1426,9 +1402,33 @@ namespace Faunus {
             double NoverO=0;
             if ( change.dNpart ) {// Have the number of any molecules changed
                 for ( auto &m : change.groups ) { // ToDo fix so that it works for dN > 1 for molecuar species
-                    int N_o = spc_o.moltracker[spc_n.groups[m.index].id];
-                    int N_n = spc_n.moltracker[spc_n.groups[m.index].id];
+                    int N_o = 0;//spc_o.moltracker[spc_n.groups[m.index].id];
+                    int N_n = 0;//spc_n.moltracker[spc_n.groups[m.index].id];
+                    // int dN = N_n - N_o;
+
+                    if (!m.dNpart)
+                                         if (!molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic) { // Molecular species
+                                         auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
+                                         auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
+                                         N_n=size(mollist_n);
+                                         N_o=size(mollist_o);
+                                     }
+                                     if ( m.dNpart ) {
+
+                                         auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ALL);
+                                         auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
+                                         if ( size(mollist_n) > 1 || size(mollist_o) > 1 )
+                                             throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                                         // Below is safe due to the catches above
+                                         // add consistency criteria with m.atoms.size() == N
+                                         N_n =  mollist_n.begin()->size();
+                                         N_o =  mollist_o.begin()->size();
+                                     }
                     int dN = N_n - N_o;
+
+                    // std::cout <<"old dN "<<dN<<" new dN"<< spc_n.moltracker[spc_n.groups[m.index].id]-spc_o.moltracker[spc_n.groups[m.index].id]<<std::endl
+                    //           <<"old N_n and N_o "<<N_n<<"  "<<N_o<<std::endl
+                    //           <<"new N_n and N_o "<<spc_n.moltracker[spc_n.groups[m.index].id]<<"  "<<spc_o.moltracker[spc_n.groups[m.index].id]<<std::endl;
 
                     if (dN!=0) {
                         double V_n = spc_n.geo.getVolume();

@@ -36,6 +36,11 @@ if (ENABLE_OPENMP)
   endif()
 endif()
 
+option(ENABLE_MPI "Enable MPI code" off)
+if (ENABLE_MPI)
+    find_package(MPI REQUIRED)
+endif()
+
 include(ExternalProject)
 include(FetchContent)
 
@@ -230,40 +235,23 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Wstrict-aliasing -Wno-sign-compare -Wno-unused-local-typedef -Wno-unknown-pragmas)
 endif()
 
-# target: libfaunus
-add_library(libfaunus STATIC ${objs} ${hdrs})
-add_dependencies(libfaunus xdrfile)
-target_link_libraries(libfaunus xdrfile)
-
-# check for MPI
-option(ENABLE_MPI "Enable MPI code" off)
-if (ENABLE_MPI)
-    find_package(MPI)
-    if (MPI_CXX_FOUND)
-        set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
-        if (APPLE)
-            set(CMAKE_CXX_LINK_FLAGS ${MPI_CXX_LINK_FLAGS})
-        else ()
-            set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
-        endif ()
-        include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
-        target_link_libraries(libfaunus ${MPI_CXX_LIBRARIES})
-        target_compile_definitions(libfaunus PUBLIC ENABLE_MPI)
-    endif ()
-endif ()
-
 # target: unittests
 add_executable(unittests src/unittests.cpp ${objs} ${hdrs})
-add_dependencies(unittests xdrfile)
 target_link_libraries(unittests xdrfile)
 add_test(NAME unittests COMMAND unittests)
 
 # target: faunus
-add_executable(faunus src/faunus.cpp)
-target_link_libraries(faunus libfaunus docopt)
-target_compile_definitions(faunus PUBLIC
+add_executable(faunus src/faunus.cpp ${objs} ${hdrs})
+target_link_libraries(faunus PRIVATE xdrfile docopt)
+target_compile_definitions(faunus PRIVATE
     FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
 
+if (MPI_CXX_FOUND)
+    target_link_libraries(faunus PRIVATE MPI::MPI_C)
+    target_compile_definitions(faunus PRIVATE ENABLE_MPI)
+endif()
+
+# python bindings
 if (ENABLE_PYTHON)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
     INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})

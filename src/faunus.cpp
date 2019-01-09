@@ -1,7 +1,7 @@
 #include "core.h"
+#include "mpi.h"
 #include "move.h"
 #include "analysis.h"
-#include "mpi.h"
 #include "multipole.h"
 #include "docopt.h"
 #include <cstdlib>
@@ -61,6 +61,8 @@ int main( int argc, char **argv )
 #endif
         auto args = docopt::docopt( USAGE,
                 { argv + 1, argv + argc }, true, version);
+
+        mpi.init(); // initialize MPI, if available
 
         // --notips
         if (not args["--notips"].asBool())
@@ -163,6 +165,8 @@ int main( int argc, char **argv )
 #endif
             f << std::setw(4) << j << endl;
         }
+
+        mpi.finalize();
 
     } catch (std::exception &e) {
         std::cerr << e.what() << endl;

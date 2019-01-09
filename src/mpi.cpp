@@ -11,8 +11,21 @@ namespace Faunus {
          * data (parallel tempering, for example). The prefix format is
          * \li \c "prefix + mpi%r." where \c \%r is the rank number.
          */
-        //inline MPIController::MPIController(MPI_Comm c) : comm(MPI_COMM_WORLD), _master(0) {
-        MPIController::MPIController() {
+        MPIController::~MPIController() {
+            finalize();
+        }
+
+        void MPIController::finalize() {
+            if (mpi_initialized) {
+#ifdef ENABLE_MPI
+                MPI_Finalize();
+#endif
+                mpi_initialized=false;
+            }
+        }
+
+        void MPIController::init() {
+            mpi_initialized=true;
 #ifdef ENABLE_MPI
             MPI_Init(NULL,NULL);
             MPI_Comm_size(comm, &_nproc);
@@ -25,14 +38,8 @@ namespace Faunus {
             }
         }
 
-        MPIController::~MPIController() {
-            f.close();
-#ifdef ENABLE_MPI
-            MPI_Finalize();
-#endif
-        }
-
         std::ostream& MPIController::cout() {
+            assert(mpi_initialized);
 #ifdef ENABLE_MPI
             if (_nproc>1)
                 return f;

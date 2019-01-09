@@ -36,7 +36,8 @@ namespace Faunus {
          *
          * This is the MPI controller required for all MPI programs.
          *
-         *     MPIController mpi; // call this very first thing in your program
+         *     MPIController mpi;
+         *     mpi.init();
          *     std::cout << "I'm rank " << mpi.rank << " out of " << mpi.nproc;
          *     mpi.cout << "This will go to a file called mpi%r.stdout where %r is my rank"
          *     if (mpi.isMaster())
@@ -51,7 +52,8 @@ namespace Faunus {
          */
         class MPIController {
             public:
-                MPIController();        //!< Constructor
+                void init();            //!< Initialize MPI and file IO
+                void finalize();        //!< Finalize MPI
                 ~MPIController();       //!< End of all MPI calls!
                 int nproc() const;      //!< Number of processors in communicator
                 int rank() const;       //!< Rank of process
@@ -68,6 +70,7 @@ namespace Faunus {
                 int _nproc=1;      //!< Number of processors in communicator
                 int _rank=0;       //!< Rank of process
                 int _master=0;     //!< Rank number of the master
+                bool mpi_initialized=false;
         };
 
         void to_json(json&, const MPIController&);

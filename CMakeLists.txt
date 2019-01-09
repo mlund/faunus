@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.11.4 FATAL_ERROR)
 
-project(neofaunus)
+project(faunus)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
@@ -185,19 +185,19 @@ include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjso
 
 # faunus cpp files
 set(objs
+    ${CMAKE_SOURCE_DIR}/src/random.cpp
+    ${CMAKE_SOURCE_DIR}/src/mpi.cpp
+    ${CMAKE_SOURCE_DIR}/src/core.cpp
+    ${CMAKE_SOURCE_DIR}/src/units.cpp
     ${CMAKE_SOURCE_DIR}/src/analysis.cpp
     ${CMAKE_SOURCE_DIR}/src/atomdata.cpp
-    ${CMAKE_SOURCE_DIR}/src/core.cpp
     ${CMAKE_SOURCE_DIR}/src/energy.cpp
     ${CMAKE_SOURCE_DIR}/src/geometry.cpp
     ${CMAKE_SOURCE_DIR}/src/io.cpp
     ${CMAKE_SOURCE_DIR}/src/move.cpp
-    ${CMAKE_SOURCE_DIR}/src/mpi.cpp
     ${CMAKE_SOURCE_DIR}/src/particle.cpp
     ${CMAKE_SOURCE_DIR}/src/penalty.cpp
-    ${CMAKE_SOURCE_DIR}/src/potentials.cpp
-    ${CMAKE_SOURCE_DIR}/src/random.cpp
-    ${CMAKE_SOURCE_DIR}/src/units.cpp)
+    ${CMAKE_SOURCE_DIR}/src/potentials.cpp)
 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
@@ -247,7 +247,7 @@ target_compile_definitions(faunus PRIVATE
     FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
 
 if (MPI_CXX_FOUND)
-    target_link_libraries(faunus PRIVATE MPI::MPI_C)
+    target_link_libraries(faunus PRIVATE MPI::MPI_CXX)
     target_compile_definitions(faunus PRIVATE ENABLE_MPI)
 endif()
 

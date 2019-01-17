@@ -226,8 +226,8 @@ namespace Faunus {
                             if (dp>0 or dprot>0)
                                 change.groups.push_back( cdata ); // add to list of moved groups
                         }
-                        else
-                            std::cerr << name << ": no atoms found" << std::endl;
+                        // else
+                        //    std::cerr << name << ": no atoms found" << std::endl;
                     }
 
                     void _accept(Change&) override { msqd += _sqd; }
@@ -749,6 +749,9 @@ namespace Faunus {
                                         git->deactivate( git->begin(), git->end());
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                         d.all = true; // *all* atoms in group were moved
+                                        d.internal = true;
+                                        for (int i=0; i<git->capacity(); i++)
+                                            d.atoms.push_back(i);
                                         change.groups.push_back( d ); // add to list of moved groups
                                         mollist = spc.findMolecules( m.first , Tspace::ACTIVE);
                                         // Activate/deactivate all? simply move end to front?
@@ -783,15 +786,20 @@ namespace Faunus {
                                         Change::data d;
                                         auto git = slump.sample(mollist.begin(), mollist.end());
                                         git->activate( git->inactive().begin(), git->inactive().end());
-                                        Point oldcm = git->cm;
-                                        spc.geo.randompos(oldcm, random);
-                                        git->translate( oldcm, spc.geo.getBoundaryFunc() );
-                                        oldcm = ranunit(slump);
-                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), oldcm) );
+                                        Point newpoint; // = git->cm;
+                                        spc.geo.randompos(newpoint, random);
+                                        git->translate( -git->cm, spc.geo.getBoundaryFunc() );
+                                        git->translate( newpoint, spc.geo.getBoundaryFunc() );
+                                        Point u = ranunit(slump);
+                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), u) );
                                         git->rotate(Q, spc.geo.getBoundaryFunc());
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                         d.all = true; // *all* atoms in group were moved
+                                        d.internal = true;
+                                        for (int i=0; i<git->capacity(); i++)
+                                            d.atoms.push_back(i);
                                         change.groups.push_back( d ); // add to list of moved groups
+                                        assert( spc.geo.sqdist( git->cm, Geometry::massCenter(git->begin(),git->end(),spc.geo.getBoundaryFunc(), -git->cm ) ) < 1e-9 );
                                         mollist = spc.findMolecules( m.first , Tspace::INACTIVE);
                                     }
                                 }
@@ -1410,6 +1418,7 @@ start:
                         state2.spc = j; // trial state
                         Move::Movebase::slump = j["random-move"]; // restore move random number generator
                         Faunus::random = j["random-global"];      // restore global random number generator
+                        reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>(); // should be handled by space
                         init();
                     } catch (std::exception &e) {
                         throw std::runtime_error("error initialising simulation: "s + e.what());
@@ -1500,15 +1509,15 @@ start:
                 for ( auto &m : change.groups ) {
                     int N_o = 0;
                     int N_n = 0;
-                    if (!m.dNpart)
+                    if ( not m.dNpart ) {
                         if (!molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic) { // Molecular species
-                        auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
-                        auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
-                        N_n=size(mollist_n);
-                        N_o=size(mollist_o);
+                            auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
+                            auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
+                            N_n=size(mollist_n);
+                            N_o=size(mollist_o);
+                        }
                     }
                     if ( m.dNpart ) {
-
                         auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ALL);
                         auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
                         if ( size(mollist_n) > 1 || size(mollist_o) > 1 )

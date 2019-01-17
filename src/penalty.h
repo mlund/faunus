@@ -178,27 +178,28 @@ namespace Faunus {
                     name = "cmcm";
                     from_json(j, *this);
                     dir = j.value("dir", dir);
-                    index = j.at("index").get<decltype(index)>();
-                    type = j.at("type").get<decltype(type)>();
-                    if (index.size()==2) {
-                        f = [&spc, dir=dir, i=index[0], j=index[1]]() {
-                            auto &cm1 = spc.groups[i].cm;
-                            auto &cm2 = spc.groups[j].cm;
-                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm(); 
+                    ndx = j.value("index", decltype(ndx)());
+                    type = j.value("type", decltype(type)());
+                    if (ndx.size()==4) {
+                        f = [&spc, dir=dir, i=ndx[0], j=ndx[1], k=ndx[2], l=ndx[3]]() {
+                            Group<Tparticle> g(spc.p.begin(), spc.p.end());
+                            auto cm1 = Geometry::massCenter(g.begin()+i, g.begin()+j, spc.geo.boundaryFunc);
+                            auto cm2 = Geometry::massCenter(g.begin()+k, g.begin()+l, spc.geo.boundaryFunc);
+                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum(); 
                         };
                     }
                     else if (type.size()==2) {
                         f = [&spc, dir=dir, type1=type[0], type2=type[1]]() {
                             Group<Tparticle> g(spc.p.begin(), spc.p.end());
-                            auto slice1 = g.find_id(findName(atoms, type1)->id());
-                            auto slice2 = g.find_id(findName(atoms, type2)->id());
-                            auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.getBoundaryFunc());
-                            auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.getBoundaryFunc());
+                            auto slice1 = g.find_id(findName(atoms<Tparticle>, type1)->id());
+                            auto slice2 = g.find_id(findName(atoms<Tparticle>, type2)->id());
+                            auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.boundaryFunc);
+                            auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.boundaryFunc);
                             return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum();
                         };
                     }
                     else
-                        throw std::runtime_error(name + ": specify exactly two molecule indeces or two atom types");
+                        throw std::runtime_error(name + ": specify 4 indexes or two atom types");
                 }
 
             double normalize(double coord) const override; // normalize by volume element

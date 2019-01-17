@@ -557,13 +557,16 @@ namespace Faunus {
         /**
          * @brief Analysis of particle densities
          */
-        template<class Tspace>
+         template<class Tspace>
             class Density : public Analysisbase {
                 Tspace& spc;
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
 
-                std::map<int, Table2D<double,double>> dhist;  //Density histograms
+                std::vector<std::string> names;
+                std::map<int, Table2D<double,double>> seldhist;  // Density histograms for selected atoms
+                std::map<int, Table2D<double,double>> atmdhist;  // Density histograms for atomic molecules
+                std::map<int, Table2D<double,double>> moldhist;  // Density histograms for molecules
                 std::map<int, Average<double>> rho_mol, rho_atom;
                 std::map<int,int> Nmol, Natom;
                 Average<double> Lavg, Vavg, invVavg;
@@ -578,8 +581,8 @@ namespace Faunus {
                     // make sure all atom counts are initially zero
                     for (auto &g : spc.groups) {
                         if (g.atomic)
-                            for (auto &p : g)
-                                Natom[p.id] = 0;
+                            for ( auto p = g.begin(); p < g.trueend() ; ++p)
+                                Natom[p->id] = 0;
                         else
                             Nmol[g.id]=0;
                     }
@@ -593,27 +596,26 @@ namespace Faunus {
                         if (g.atomic) {
                             for (auto &p : g)
                                 Natom[p.id]++;
-                            dhist[g.id]( g.size() )++;
+                            atmdhist[g.id]( g.size() )++;
                         }
                         else if (not g.empty())
                             Nmol[g.id]++;
 
-                    for (auto &i : Nmol)
+                    for (auto &i : Nmol) {
                         rho_mol[i.first] += i.second/V;
+                        moldhist[i.first](i.second)++;
+                    }
 
                     for (auto &i : Natom)
                         rho_atom[i.first] += i.second/V;
 
-                    // Sanity check for grand caninical ensembles
-                    // to see if the group size is too close to the
-                    // maximum capacity
-                    for (auto &mol : molecules<Tpvec>) // loop over atomic molecules
-                        if (mol.atomic)
-                            for (auto &r : reactions<Tpvec>)
-                                if (r.containsMolecule( mol.id() ))
-                                    for (auto &g : spc.findMolecules( mol.id() )) 
-                                        if (g.capacity()-g.size() < capacity_limit)
-                                            std::cerr << "Warning: low capacity for atomic group '" << mol.name << "'" << endl;
+                    for (auto &name : names) {
+                        int id = findName(atoms, name)->id();
+                        seldhist[ id ]( id )++;
+                    }
+                }
+                void _from_json(const json &j) override {
+                    names = j.value("atoms", decltype(names)()); // atom names
                 }
 
                 void _to_json(json &j) const override {
@@ -626,12 +628,12 @@ namespace Faunus {
                     auto &_j = j["atomic"];
                     for (auto &i : rho_atom)
                         if (i.second.cnt>0)
-                            _j[ atoms.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+                            _j[ atoms.at(i.first).name ] = json({{ "c/M", i.second.avg() / 1.0_molar }});
 
                     auto &_jj = j["molecular"];
                     for (auto &i : rho_mol)
                         if (i.second.cnt>0)
-                            _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+                            _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", i.second.avg() / 1.0_molar }});
                     _roundjson(j,4);
                 }
 
@@ -642,12 +644,25 @@ namespace Faunus {
                 }
                 virtual ~Density() {
                     normalize();
-                    for ( auto &m: dhist)
+                    for ( auto &m: atmdhist)
                         m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
+                    for ( auto &m: moldhist)
+                        m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
+                    for ( auto &m: seldhist)
+                        m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
+                    for (auto &name : names) {
+                        int id = findName(atoms, name)->id();
+                        seldhist.at( id ).save( "rho-"s + name + ".dat" );
+                    }
                 }
                 void normalize() {
-                    for (auto &hist: dhist) {
-                        double sum = hist.second.sumy();
+                    for (auto &hist: atmdhist) {
+                        double Vr=1, sum = hist.second.sumy();
+                        for (auto &i : hist.second.getMap())
+                            i.second = i.second/sum ;
+                    }
+                    for (auto &hist: moldhist) {
+                        double Vr=1, sum = hist.second.sumy();
                         for (auto &i : hist.second.getMap())
                             i.second = i.second/sum ;
                     }

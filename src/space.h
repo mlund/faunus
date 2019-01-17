@@ -6,6 +6,12 @@
 
 namespace Faunus {
 
+    struct reservoir {
+        std::string name;
+        int N_reservoir;
+        bool canonic;
+    };
+
     /**
      * @brief Specify change to a new state
      *
@@ -263,7 +269,7 @@ namespace Faunus {
                         g.shallowcopy(gother); // copy group data but *not* particles
 
                         if (m.all) // copy all particles
-                            std::copy( gother.begin(), gother.end(), g.begin() );
+                            std::copy( gother.begin(), gother.trueend(), g.begin() );
                         else // copy only a subset
                             for (auto i : m.atoms)
                                 *(g.begin()+i) = *(gother.begin()+i);

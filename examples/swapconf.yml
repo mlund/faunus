@@ -1,0 +1,38 @@
+#!/usr/bin/env yason.py
+temperature: 300
+random: {seed: default}
+geometry: {type: cuboid, length: 20}
+mcloop: {macro: 10, micro: 20000}
+
+atomlist:
+    - OW: {q: -0.8476, sigma: 3.166, eps: 0.650, mw: 15.999}
+    - HW: {q: 0.4238,  sigma: 2, eps: 0, mw: 1.007}
+
+moleculelist:
+    # The pqr-file containes two conformations which will be labelled 0 and 1. The corresponding
+    # weights are 1 and 2, meaning that conformation 1 is twice as likely as conformation 0.
+    - water: {rigid: true, traj: swapconf.conformations.pqr, trajweight: swapconf.weights.dat}
+
+insertmolecules:
+    - water: {N: 2}
+
+energy:
+    - nonbonded:
+        default:
+            - lennardjones: {mixing: LB} # we just want a simple non-bonded potential
+
+moves:
+    - conformationswap: {molecule: water} # attemps a conformational swap move
+    - moltransrot: {molecule: water, dp: 5, dprot: 1, repeat: N} # rotate/translate
+
+analysis:
+    # The `reactioncoordinate` analysis is used to file the current conformation number (0 or 1) as
+    # a function of steps. The id's of the two possible conformations are [0,1], and their weights
+    # [1,2]. Thus the "average" conformation number should be (1*0+2*1)/(1+2) = 2/3 as is indeed
+    # found by inspecting the two .dat files 
+    - reactioncoordinate: {type: molecule, property: confid, file: confid_mol0.dat, nstep: 5, index: 0}
+    - reactioncoordinate: {type: molecule, property: confid, file: confid_mol1.dat, nstep: 5, index: 1}
+    - sanity: {nstep: 1} # for testing purposes, let's check sanity for every step
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}
+

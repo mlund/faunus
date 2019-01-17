@@ -1,0 +1,22 @@
+# Conda environment definition for development
+#
+#     conda env create -f environment.yml
+#     source activate faunusdev
+#
+name: faunusdev
+channels:
+    - conda-forge/label/gcc7
+    - defaults
+dependencies:
+    - llvm
+    - clang
+    - clangxx
+    - libcxx
+    - cmake>=3.11.4
+    - python=3
+    - pandoc=2
+    - pypandoc 1.*
+    - beautifulsoup4
+    - ruamel_yaml
+    - pygments
+    - numpy

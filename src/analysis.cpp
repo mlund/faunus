@@ -1,254 +1,185 @@
-#include <faunus/analysis.h>
-#include <faunus/species.h>
-#include <faunus/energy.h>
-#include <faunus/space.h>
-#include <faunus/inputfile.h>
-#include <faunus/geometry.h>
-#include <faunus/textio.h>
+#include "analysis.h"
 
-namespace Faunus
-{
+void Faunus::Analysis::to_json(Faunus::json &j, const Faunus::Analysis::Analysisbase &base) {
+    base.to_json( j );
+}
 
-  namespace Analysis
-  {
-    AnalysisBase::AnalysisBase() : w(30), cnt(0)
-    {
-        stepcnt = 0;
-    }
+Faunus::Analysis::Analysisbase::~Analysisbase() {}
 
-    AnalysisBase::AnalysisBase( Tmjson &j, string name ) : w(30), cnt(0), name(name)
-    {
-        if (!j.is_object())
-            std::runtime_error("Analysis JSON entry must be of type object");
-        steps = j.value("nstep", 0);
-        stepcnt = 0;
-    }
-
-    AnalysisBase::~AnalysisBase() {}
-
-    string AnalysisBase::_info() { return string(); }
-
-    Tmjson AnalysisBase::_json() { return Tmjson(); }
-
-    void AnalysisBase::_sample()
-    {
-        assert(!"We should never reach here -- implement _sample() function");
-        /* make pure virtual! */
-    }
-
-    void AnalysisBase::sample()
-    {
-        stepcnt++;
-        if ( stepcnt == steps )
-        {
-            cnt++;
-            stepcnt = 0;
-            timer.start();
-            _sample();
-            timer.stop();
-        }
-    }
-
-    void AnalysisBase::_test( UnitTest &t ) {}
-
-    void AnalysisBase::test( UnitTest &t ) { _test(t); }
-
-    string AnalysisBase::info()
-    {
-        using namespace textio;
-        std::ostringstream o;
-        if ( cnt > 0 )
-        {
-            o << header("Analysis: " + name);
-            if ( !cite.empty())
-                o << pad(SUB, w, "Reference:") << cite << "\n";
-
-            o << pad(SUB, w, "Sample interval") << steps << "\n";
-
-            if ( cnt > 0 )
-            {
-                o << pad(SUB, w, "Number of sample events") << cnt << "\n";
-                double time = timer.result();
-                if ( time > 1e-3 )
-                    o << pad(SUB, w, "Relative time") << time << "\n";
-            }
-            o << _info();
-        }
-        return o.str();
-    }
-
-    Tmjson AnalysisBase::json()
-    {
-        Tmjson j;
-        if ( !name.empty())
-            if ( cnt > 0 )
-            {
-                j[name] = {
-                    {"nstep", steps},
-                    {"samples", cnt},
-                    {"relative time", timer.result()}
-                };
-                if ( !cite.empty())
-                {
-                    j[name]["citation"] = cite;
-                }
-                j = merge(j, _json());
-            }
-        return j;
-    }
-
-    void BilayerStructure::_test( UnitTest &t )
-    {
-        t("bilayer_order", S.avg());
-        t("bilayer_area", A.avg());
-    }
-
-    Tmjson MeanForce::_json()
-    {
-        if ( mf1.cnt>0 && mf2.cnt>0 )
-            return {
-                { name,
-                    {
-                        { "groups", {g1, g2} },
-                        { "meanforce", { mf1.avg(), mf2.avg() } },
-                        { "forceunit", "kT/angstrom" }
-                    }
-                }
-            };
-        return Tmjson();
-    }
-
-    void MeanForce::_sample() {
-        func();
-    }
-
-    void PropertyTraj::_sample() {
-        if ( !v.empty() )
-        {
-            for (auto &i : v)
-                f << i() << " ";
-            f << "\n"; 
-        }
-    }
-
-    void SystemEnergy::_sample() {
-        f << energy() << "\n"; 
-    }
-
-    void PairFunctionBase::_sample()
-    {
-        for (auto &d : datavec)
-            update(d);
-    }
-
-    Tmjson PairFunctionBase::_json()
-    {
-        Tmjson j;
-        auto &_j = j[name];
-        for (auto &d : datavec)
-            _j[ d.name1+"-"+d.name2 ] = {
-                { "dr", d.dr },
-                { "file", d.file },
-		{ "file2", d.file2 },
-                { "dim", d.dim },
-		{ "Rhyper", d.Rhypersphere }
-            };
-        return j;
-    }
-
-    PairFunctionBase::PairFunctionBase( Tmjson j, string name ) : AnalysisBase(j, name) {
-        try {
-            for (auto &i : j.at("pairs"))
-                if (i.is_object())
-                {
-                    data d;
-                    d.file = i.at("file");
-		    d.file2 = i.value("file2",d.file+".avg");
-                    d.name1 = i.at("name1");
-                    d.name2 = i.at("name2");
-                    d.dim = i.value("dim", 3);
-                    d.dr = i.value("dr", 0.1);
-                    d.hist.setResolution(d.dr);
-		    d.hist2.setResolution(d.dr);
-		    d.Rhypersphere = i.value("Rhyper", -1.0);
-                    datavec.push_back( d );
-                }
-        }
-        catch(std::exception& e) {
-            throw std::runtime_error(name + ": " + e.what());
-        }
-
-        if (datavec.empty())
-            std::cerr << name + ": no sample sets defined for analysis\n";
-    }
-    
-    void PairFunctionBase::normalize(data &d)
-    {
-	assert(V.cnt>0);
-	double Vr=1, sum = d.hist.sumy();
-	for (auto &i : d.hist.getMap()) {
-	    if (d.dim==3)
-		Vr = 4 * pc::pi * pow(i.first,2) * d.dr;
-	    if (d.dim==2) {
-		Vr = 2 * pc::pi * i.first * d.dr;
-		if (d.Rhypersphere > 0)
-		    Vr = 2.0*pc::pi*d.Rhypersphere*sin(i.first/d.Rhypersphere) * d.dr;
-	    }
-	    if (d.dim==1)
-		Vr = d.dr;
-	    i.second = i.second/sum * V/Vr;
-	}
-    }
-
-    PairFunctionBase::~PairFunctionBase()
-    {
-        for (auto &d : datavec) {
-            d.hist.save( d.file );
-	    d.hist2.save( d.file2 );
-	}
-    }
-
-    void CombinedAnalysis::sample()
-    {
+void Faunus::Analysis::Analysisbase::sample() {
+    stepcnt++;
+    if ( stepcnt == steps ) {
         cnt++;
-        for ( auto i : v )
-            i->sample();
+        stepcnt = 0;
+        timer.start();
+        _sample();
+        timer.stop();
     }
+}
 
-    string CombinedAnalysis::info()
-    {
-        std::ostringstream o;
-        for ( auto i : v )
-            o << i->info();
-        return o.str();
+void Faunus::Analysis::Analysisbase::from_json(const Faunus::json &j) {
+    steps = j.value("nstep", 0);
+    _from_json(j);
+}
+
+void Faunus::Analysis::Analysisbase::to_json(Faunus::json &j) const {
+    assert( !name.empty() );
+    auto &_j = j[name];
+    _to_json(_j);
+    if (cnt>0) {
+        _j["relative time"] = _round( timer.result() );
+        _j["nstep"] = steps;
+        _j["samples"] = cnt;
     }
+    if (!cite.empty())
+        _j["reference"] = cite;
+}
 
-    string CombinedAnalysis::_info() { return string(); }
+void Faunus::Analysis::Analysisbase::_to_json(Faunus::json&) const {}
 
-    void CombinedAnalysis::_sample() {}
+void Faunus::Analysis::Analysisbase::_from_json(const Faunus::json&) {}
 
-    void CombinedAnalysis::test( UnitTest &test )
-    {
-        for ( auto i : v )
-            i->test(test);
+void Faunus::Analysis::SystemEnergy::normalize() {
+    //assert(V.cnt>0);
+    double sum = ehist.sumy();
+    for (auto &i : ehist.getMap()) {
+        i.second = i.second/sum ;
     }
+}
 
-    Tmjson CombinedAnalysis::json()
-    {
-        Tmjson js;
-        for ( auto i : v )
-            js = merge(js, i->json());
-        return js;
+void Faunus::Analysis::SystemEnergy::_sample() {
+    auto ulist = energyFunc();
+    double tot = std::accumulate(ulist.begin(), ulist.end(), 0.0);
+    if (not std::isinf(tot)) {
+        uavg+=tot;
+        u2avg+=tot*tot;
     }
+    f << cnt*steps << sep << tot;
+    for (auto u : ulist)
+        f << sep << u;
+    f << "\n";
+    //ehist(tot)++;
+}
 
-    CombinedAnalysis::~CombinedAnalysis()
-    {
-        if (cnt>0) {
-            std::ofstream f(jsonfile);
-            if ( f )
-                f << std::setw(4) << json() << std::endl;
+void Faunus::Analysis::SystemEnergy::_to_json(Faunus::json &j) const {
+    j = { {"file", file}, {"init",uinit}, {"final", energyFunc()} };
+    if (cnt>0) {
+        j["mean"] = uavg.avg();
+        j["Cv/kT"+u8::squared] = (u2avg.avg() - std::pow(uavg.avg(),2)) / pc::temperature;
+    }
+    _roundjson(j,5);
+    //normalize();
+    //ehist.save( "distofstates.dat" );
+
+}
+
+void Faunus::Analysis::SystemEnergy::_from_json(const Faunus::json &j) {
+    file = MPI::prefix + j.at("file").get<std::string>();
+    if (f)
+        f.close();
+    f.open(file);
+    if (!f)
+        throw std::runtime_error(name + ": cannot open output file " + file);
+    assert(!names.empty());
+    std::string suffix = file.substr(file.find_last_of(".") + 1);
+    if (suffix=="csv")
+        sep=",";
+    else {
+        sep=" ";
+        f << "#";
+    }
+    f << "total";
+    for (auto &n : names)
+        f << sep << n;
+    f << "\n";
+}
+
+void Faunus::Analysis::SaveState::_to_json(Faunus::json &j) const {
+    j["file"] = file;
+}
+
+void Faunus::Analysis::SaveState::_sample() {
+    writeFunc(file);
+}
+
+Faunus::Analysis::SaveState::~SaveState() {
+    if (steps==-1)
+        _sample();
+}
+
+Faunus::Analysis::PairFunctionBase::PairFunctionBase(const Faunus::json &j) { from_json(j); }
+
+Faunus::Analysis::PairFunctionBase::~PairFunctionBase() {
+    std::ofstream f(MPI::prefix + file);
+    if (f) {
+        double Vr=1, sum = hist.sumy();
+        hist.stream_decorator = [&](std::ostream &o, double r, double N) {
+            if (dim==3)
+                Vr = 4 * pc::pi * std::pow(r,2) * dr;
+            else if (dim==2) {
+                Vr = 2 * pc::pi * r * dr;
+                if ( Rhypersphere > 0)
+                    Vr = 2.0*pc::pi*Rhypersphere*std::sin(r/Rhypersphere) * dr;
+            }
+            else if (dim==1)
+                Vr = dr;
+            if (Vr>0)
+                o << r << " " << N*V/(Vr*sum) << "\n";
+        };
+        f << hist;
+    }
+}
+
+void Faunus::Analysis::PairFunctionBase::_to_json(Faunus::json &j) const {
+    j = {
+        {"dr", dr/1.0_angstrom},
+        {"name1", name1},
+        {"name2", name2},
+        {"file", file},
+        {"dim", dim}
+    };
+    if (Rhypersphere>0)
+        j["Rhyper"] = Rhypersphere;
+}
+
+void Faunus::Analysis::PairFunctionBase::_from_json(const Faunus::json &j) {
+    assertKeys(j, {
+            "file", "name1", "name2", "dim", "dr", "Rhyper", "nstep"
+            });
+    file = j.at("file");
+    name1 = j.at("name1");
+    name2 = j.at("name2");
+    dim = j.value("dim", 3);
+    dr = j.value("dr", 0.1) * 1.0_angstrom;
+    hist.setResolution(dr, 0);
+    Rhypersphere = j.value("Rhyper", -1.0);
+}
+
+void Faunus::Analysis::VirtualVolume::_sample() {
+    if (fabs(dV)>1e-10) {
+        double Vold = getVolume(), Uold = pot.energy(c);
+        scaleVolume(Vold + dV);
+        double Unew = pot.energy(c);
+        scaleVolume(Vold);
+        double x = std::exp(-(Unew - Uold));
+
+        if (errno==ERANGE or std::isinf(x)) {
+            std::cerr << name+": skipping sample event due to excessive energy likely due to overlaps.";
+            cnt--; // cnt in incremented by sample() so we need to decrease
+        } else {
+            duexp += x;
+            assert(std::fabs((Uold-pot.energy(c))/Uold) < 1e-4);
         }
     }
+}
 
-  }//Analysis namespace
-}//Faunus namespace
+void Faunus::Analysis::VirtualVolume::_from_json(const Faunus::json &j) { dV = j.at("dV"); }
+
+void Faunus::Analysis::VirtualVolume::_to_json(Faunus::json &j) const {
+    double pex = log(duexp.avg()) / dV; // excess pressure
+    j = {
+        {"dV", dV}, {"Pex/mM", pex/1.0_mM},
+        {"Pex/Pa", pex/1.0_Pa}, {"Pex/kT/"+u8::angstrom+u8::cubed, pex}
+    };
+    _roundjson(j,5);
+}

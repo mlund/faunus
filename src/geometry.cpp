@@ -1,519 +1,249 @@
-#include <faunus/geometry.h>
-#include <faunus/inputfile.h>
-#include <faunus/species.h>
-#include <faunus/physconst.h>
-#include <faunus/textio.h>
-#include <faunus/group.h>
-#include <Eigen/Core>
-#include <Eigen/Geometry>
+#include "geometry.h"
 
-namespace Faunus
-{
-  namespace Geometry
-  {
-
-    using namespace Faunus::textio;
-
-    Geometrybase::Geometrybase() {}
-
-    Geometrybase::Geometrybase( const string &name ) : name(name)
-    {
+namespace Faunus {
+    Point ranunit(Random &rand, const Point &dir) {
+        double r2;
+        Point p;
+        do {
+            for (size_t i=0; i<3; i++)
+                p[i] = ( rand()-0.5 ) * dir[i];
+            r2 = p.squaredNorm();
+        } while ( r2 > 0.25 );
+        return p / std::sqrt(r2);
     }
 
-    Geometrybase::~Geometrybase() {}
-
-    double Geometrybase::dist( const Point &p1, const Point &p2 ) const
-    {
-        return sqrt(sqdist(p1, p2));
+    Point ranunit_polar(Random &rand) {
+        return rtp2xyz( {1, 2*pc::pi*rand(), std::acos(2*rand()-1)} );
     }
 
-    void Geometrybase::scale( Point &a, Point &s, const double xyz, const double xy ) const
-    {
-        assert(!"Scaling function unimplemented for this geometry");
+    Point xyz2rtp(const Point &p, const Point &origin) {
+        Point xyz = p - origin;
+        double radius = xyz.norm();
+        return {
+            radius,
+                std::atan2( xyz.y(), xyz.x() ),
+                std::acos( xyz.z()/radius) };
     }
 
-    Cuboid Geometrybase::inscribe() const
-    {
-        assert(!"Inscribe function not implemented for this geometry");
-        return Cuboid();
+    Point rtp2xyz(const Point &rtp, const Point &origin) {
+        return origin + rtp.x() * Point(
+                std::cos(rtp.y()) * std::sin(rtp.z()),
+                std::sin(rtp.y()) * std::sin(rtp.z()),
+                std::cos(rtp.z()) );
     }
 
-    string Geometrybase::info( char w )
-    {
-        using namespace textio;
-        std::ostringstream o;
-        o << pad(SUB, w, "Boundary") << name << endl
-          << pad(SUB, w, "Volume") << getVolume() << _angstrom << cubed
-          << " = " << getVolume() / 1e3 << " nm" << cubed
-          << " = " << getVolume() / 1e27 << " liters" << endl
-          << _info(w);
-        return o.str();
-    }
+    namespace Geometry {
 
-    void Geometrybase::setVolume( double volume )
-    {
-        _setVolume(volume);
-    }
+        GeometryBase::~GeometryBase() {}
 
-    double Geometrybase::getVolume(int dim) const
-    {
-        assert(dim==1 || dim==2 || dim==3);
-        return _getVolume(dim);
-    }
-
-    double Geometrybase::_getRadius() const
-    {
-      throw std::runtime_error(name + " error: radius undefined.");
-      return 0;
-    }
-    
-    double Geometrybase::getRadius() const
-    {
-      return _getRadius();
-    }
-
-    Sphere::Sphere( double radius ) : Geometrybase("Sphere")
-    {
-        len = Point(r, diameter, 0);
-    }
-
-    /**
-     * Key        | Description
-     * :--------- | :-----------------------
-     * `radius`   | Sphere radius [angstrom]
-     */
-    Sphere::Sphere( Tmjson &j ) : Geometrybase("Sphere")
-      {
-          try {
-              setRadius( j.at("radius") );
-          }
-          catch(std::exception& e) {
-              throw std::runtime_error(name + ": " + e.what());
-          }
-      }
-
-
-    void Sphere::setRadius( double radius )
-    {
-        assert(radius > 0 && "Radius must be larger than zero.");
-        r = radius;
-        r2 = r * r;
-        diameter = 2 * r;
-        len = Point(r, diameter, 0);
-    }
-
-    /**
-     * - 3D: \f$ 4\pi r^3/3 \f$ (default)
-     * - 2D: \f$ \pi r^2 \f$
-     * - 1D: \f$ 2r \f$
-     */
-    double Sphere::_getVolume(int dim) const
-    {
-        if (dim==1)
-            return 2*r;
-        if (dim==2)
-            return pc::pi * r * r;
-        return 4 / 3. * pc::pi * std::pow(r, 3);
-    }
-
-    void Sphere::_setVolume( double vol )
-    {
-        setRadius(cbrt(3 * vol / (4 * pc::pi)));
-    }
-
-    void Sphere::setlen( const Point &l )
-    {
-        Sphere::setRadius(l.x());
-        if ( getVolume() < 1e-9 )
-            throw std::runtime_error("Sphere volume is zero.");
-    }
-
-    void Sphere::scale( Point &a, Point &s, const double xyz = 1, const double xy = 1 ) const
-    {
-        assert(getVolume() > 0);
-        double newradius = cbrt(3 * xyz * xyz * xyz * getVolume() / (4 * pc::pi));
-        a = a * (newradius / r);
-    }
-
-    string Sphere::_info( char w )
-    {
-        std::ostringstream o;
-        o << pad(SUB, w, "Radius") << r << textio::_angstrom << endl;
-        return o.str();
-    }
-
-    void Sphere::randompos( Point &a )
-    {
-        do
-        {
-            a.x() = (slump() - 0.5) * diameter;
-            a.y() = (slump() - 0.5) * diameter;
-            a.z() = (slump() - 0.5) * diameter;
+        void from_json(const json &j, Chameleon &g) {
+            try { 
+                g.from_json(j);
+            } catch(std::exception& e) {
+                throw std::runtime_error("geometry construction error: "s + e.what() + usageTip["geometry"]);
+            }
         }
-        while ( a.squaredNorm() > r2 );
-    }
 
-    bool Sphere::collision( const Point &a, double radius, collisiontype type ) const
-    {
-        return (a.squaredNorm() > r2) ? true : false;
-    }
-    
-    SphereSurface::SphereSurface( double radius ) : Geometrybase("SphereSurface")
-    {
-        len = Point(r, diameter, 0);
-    }
+        void to_json(json &j, const Chameleon &g) {
+            g.to_json(j);
+        }
 
-    /**
-     * Key        | Description
-     * :--------- | :-----------------------
-     * `radius`   | Sphere radius [angstrom]
-     */
-    SphereSurface::SphereSurface( Tmjson &j ) : Geometrybase("SphereSurface")
-      {
-          try {
-              setRadius( j.at("radius") );
-          }
-          catch(std::exception& e) {
-              throw std::runtime_error(name + ": " + e.what());
-          }
-      }
+        const std::map<std::string,Chameleon::Variant> Chameleon::names = {
+            {
+                {"cuboid", CUBOID},
+                {"cylinder", CYLINDER},
+                {"slit", SLIT},
+                {"sphere", SPHERE}
+            }
+        };
 
-    void SphereSurface::setRadius(double radius) {
-      assert(radius>0 && "Radius must be larger than zero.");
-      r = radius; 
-      r2 = r*r; 
-      diameter = 2.0*r; 
-      len = Point(r,diameter,0);
-    }
-    
-    double SphereSurface::_getRadius() const {
-      return r;
-    }
+        void Chameleon::setLength(const Point &l) {
+            len = l;
+            len_half = l*0.5;
+            len_inv = l.cwiseInverse();
+            c1 = l.y()/l.x();
+            c2 = l.z()/l.x();
+        }
 
-    double SphereSurface::_getVolume(int dim) const {
-        if (dim==1)
-            return 2*pc::pi*r;      // circumference (surface area of a 2-sphere)
-        if (dim==2)
-            return 4.0*pc::pi * r * r;   // surface area (of a 3-sphere)
-        return 2.0 * pc::pi*pc::pi * std::pow(r, 3); // surface area of a 4-sphere 
-    }
+        double Chameleon::getVolume(int) const {
+            switch (type) {
+                case SPHERE:   return 4*pc::pi/3*radius*radius*radius;
+                case CUBOID:   return len.x()*len.y()*len.z();
+                case SLIT:     return len.x()*len.y()*len.z() / pbc_disable;
+                case CYLINDER: return pc::pi*radius*radius*len.z();
+            }
+            assert(false);
+            return 0;
+        }
 
-    /**
-     * @param vol The surface area of the sphere
-     */
-    void SphereSurface::_setVolume(double vol) {
-      setRadius( cbrt( vol/(2.0*pc::pi*pc::pi) ) );
-    }
+        Point Chameleon::setVolume(double V, VolumeMethod method) {
+            if (type==CUBOID) {
+                double x, alpha;
+                Point s;
+                switch (method) {
+                    case ISOTROPIC:
+                        x = std::cbrt( V / (c1*c2) ); // keep aspect ratio
+                        s = { x, c1*x, c2*x };
+                        setLength(s);
+                        break;
+                    case XY:
+                        x = std::sqrt( V / (c1*len.z()) ); // keep xy aspect ratio
+                        s = { x, c1*x, len.z() };
+                        setLength(s);  // z is untouched
+                        break;
+                    case ISOCHORIC:
+                        // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
+                        alpha = sqrt( V / pow(getVolume(), 1./3.) );
+                        s = { alpha, alpha, 1/(alpha*alpha) };
+                        setLength( len.cwiseProduct(s) );
+                        return s;
+                    default:
+                        throw std::runtime_error("unknown volume scaling method");
+                }
+                assert( fabs(getVolume()-V)<1e-6 );
+                return s.cwiseQuotient(len); // this will scale any point to new volume
+            }
 
-    void SphereSurface::setlen(const Point &l) {
-      SphereSurface::setRadius( l.x() );
-      if ( getVolume()<1e-9 )
-        throw std::runtime_error( "Sphere volume is zero." );
-    }
+            if (type==CYLINDER and method==ISOTROPIC) {
+                double oldradius = radius;
+                radius = std::sqrt( V / (pc::pi * len.z()) );
+                setLength( { pbc_disable*2*radius, pbc_disable*2*radius, len.z() } );
+                assert( fabs(getVolume()-V)<1e-6 );
+                return {radius/oldradius, radius/oldradius, 1};
+            }
 
-    void SphereSurface::scale(Point &a, Point &s, const double xyz=1, const double xy=1) const {
-      assert( getVolume()>0 );
-      double newradius = cbrt( 3*xyz*xyz*xyz*getVolume()/(4*pc::pi) );
-      a = a * (newradius/r);
-    }
+            if (type==SPHERE and method==ISOTROPIC) {
+                double oldradius = radius;
+                radius = std::cbrt(3*V/(4*pc::pi));
+                setLength( pbc_disable*2*Point(radius,radius,radius) ); // disable min. image in xyz
+                assert( std::fabs(getVolume()-V)<1e-6 && "error setting sphere volume");
+                return Point().setConstant(radius/oldradius);
+            }
 
-    string SphereSurface::_info(char w) {
-      std::ostringstream o;
-      o << pad(SUB, w, "Area") << getVolume(2) << _angstrom << squared
-        << " = " << getVolume(2) / 1e2 << " nm" << squared
-        << " = " << getVolume(2) / 1e18 << " dm" << squared << endl
-        << pad(SUB,w,"Radius") << r << textio::_angstrom << endl;
-      return o.str();
-    }
+            throw std::runtime_error("unsupported volume move for geometry");
 
-    void SphereSurface::randompos(Point &a) {
-      do {
-        a.x() = (slump()-0.5)*diameter;
-        a.y() = (slump()-0.5)*diameter;
-        a.z() = (slump()-0.5)*diameter;
-      } while ( a.squaredNorm()>r2 );
-      a = r*a/a.norm();
-    }
+            return {1,1,1};
+        }
 
-    bool SphereSurface::collision(const Point &a, double radius, collisiontype type) const {
-      return (std::fabs( a.squaredNorm() - r2 ) > 1e-6) ? true:false;
-    }
+        Point Chameleon::getLength() const {
+            switch (type) {
+                case CUBOID:   return len;
+                case SLIT:     return {len.x(), len.y(), len.z() / pbc_disable};
+                case SPHERE:   return {2*radius,2*radius,2*radius};
+                case CYLINDER: return {2*radius,2*radius,len.z()};
+            }
+            assert(false);
+            return Point();
+        } //!< Enscribe geometry in cuboid
 
-    Cuboid SphereSurface::inscribe() const
-    {
-        Cuboid c;
-        c.setlen({diameter, diameter, diameter});
-        return c;
-    }
-    
-    Cuboid Sphere::inscribe() const
-    {
-        Cuboid c;
-        c.setlen({diameter, diameter, diameter});
-        return c;
-    }
+        void Chameleon::randompos(Point &m, Random &rand) const {
+            double r2 = radius*radius, d=2*radius;
+            switch (type) {
+                case SPHERE:
+                    do {
+                        m.x() = (rand() - 0.5) * d;
+                        m.y() = (rand() - 0.5) * d;
+                        m.z() = (rand() - 0.5) * d;
+                    } while ( m.squaredNorm() > r2 );
+                    break;
+                case CYLINDER:
+                    m.z() = (rand()-0.5) * len.z();
+                    do {
+                        m.x() = (rand()-0.5) * d;
+                        m.y() = (rand()-0.5) * d;
+                        d = m.x()*m.x() + m.y()*m.y();
+                    } while ( d>r2 );
+                    break;
+                case SLIT:
+                    m.x() = (rand()-0.5) * len.x();
+                    m.y() = (rand()-0.5) * len.y();
+                    m.z() = (rand()-0.5) * len.z() / pbc_disable;
+                    break;
+                case CUBOID:
+                    m.x() = (rand()-0.5) * len.x();
+                    m.y() = (rand()-0.5) * len.y();
+                    m.z() = (rand()-0.5) * len.z();
+                    break;
+            }
+        }
 
-    Cuboid Cuboid::inscribe() const
-    {
-        return *this;
-    }
+        bool Chameleon::collision(const Point &a) const {
+            double r2 = radius*radius;
+            switch (type) {
+                case SPHERE:
+                    return (a.squaredNorm()>r2) ? true : false;
+                    break;
+                case CYLINDER:
+                    if ( std::fabs(a.z()) > len_half.z()) return true;
+                    if ( a.x()*a.x() + a.y()*a.y() > r2 ) return true;
+                    break;
+                case SLIT:
+                    if ( std::fabs(a.x()) > len_half.x()) return true;
+                    if ( std::fabs(a.y()) > len_half.y()) return true;
+                    if ( std::fabs(a.z()) > len_half.z() / pbc_disable ) return true;
+                    break;
+                case CUBOID:
+                    if ( std::fabs(a.x()) > len_half.x()) return true;
+                    if ( std::fabs(a.y()) > len_half.y()) return true;
+                    if ( std::fabs(a.z()) > len_half.z()) return true;
+                    break;
+            }
+            return false;
+        }
 
-    Cuboid::Cuboid() {}
+        void Chameleon::from_json(const json &j) {
+            auto it = names.find( j.at("type").get<std::string>() );
+            if (it==names.end())
+                throw std::runtime_error("unknown geometry");
 
-    void Cuboid::setlen( const Point &l )
-    {
-        len = l;                    // Cuboid sidelength
-        len_half = l * 0.5;             // half Cuboid sidelength
-        len_inv.x() = 1 / len.x();      // inverse Cuboid side length
-        len_inv.y() = 1 / len.y();
-        len_inv.z() = 1 / len.z();
-        if ( getVolume() < 1e-9 )
-            throw std::runtime_error("Cuboid volume is zero");
-    }
+            name = it->first;
+            type = it->second;
+            len.setZero();
 
-    void Cuboid::_setVolume( double newV )
-    {
-        double xyz = 1.0, xy = 1.0;
-        Point s = Point(1, 1, 1);
-        if ( scaledir == XYZ )
-            xyz = cbrt(newV / getVolume());
-        if ( scaledir == XY )
-            xy = sqrt(newV / getVolume());
-        scale(len, s, xyz, xy);
-        setlen(len);
-    }
-
-    /**
-     * - 3D: \f$ l_x l_y l_z \f$ (default)
-     * - 2D: \f$ l_x l_y \f$
-     * - 1D: \f$ l_z \f$
-     */
-    double Cuboid::_getVolume(int dim) const
-    {
-        if (dim==1)
-            return len.z();
-        if (dim==2)
-            return len.x() * len.y();
-        return len.x() * len.y() * len.z();
-    }
-
-    string Cuboid::_info( char w )
-    {
-        std::ostringstream o;
-        o << pad(SUB, w, "Sidelengths")
-          << len.transpose() << " (" + textio::angstrom + ")" << endl
-          << pad(SUB, w, "Scale directions") << scaledirstr << endl;
-        return o.str();
-    }
-
-    Point Cuboid::randompos()
-    {
-        Point m;
-        randompos(m);
-        return m;
-    }
-
-    void Cuboid::randompos( Point &m )
-    {
-        m.x() = slump.half() * len.x();
-        m.y() = slump.half() * len.y();
-        m.z() = slump.half() * len.z();
-    }
-
-    void Cuboid::scale( Point &a, Point &s, const double xyz = 1, const double xy = 1 ) const
-    {
-        assert(getVolume() > 0);
-        if ( scaledir == XYZ )
-            a = Point(a.x() * s.x() * xyz, a.y() * s.y() * xyz, a.z() * s.z() * xyz);
-        if ( scaledir == XY )
-            a = Point(a.x() * s.x() * xy, a.y() * s.y() * xy, a.z() * s.z());
-    }
-
-    /**
-     * The json object is scanned for the following parameters:
-     *
-     * Key           | Description
-     * :------------ | :-----------------------------------------------------------
-     * `length`      | Array of sidelengths _or_ single length for cube [angstrom]
-     * `scaledir`    | Isobaric scaling directions (`XYZ`=isotropic, `XY`=xy only).
-     */
-    Cuboid::Cuboid( Tmjson &j ) : Geometrybase("Cuboid")
-    {
-        try {
-            if (j.is_object()) {
-                scaledirstr = j.value<string>("scaledir", "XYZ");
-                scaledir = (scaledirstr == "XY") ? XY : XYZ;
+            if ( type == CUBOID or type == SLIT ) {
                 auto m = j.at("length");
                 if (m.is_number()) {
                     double l = m.get<double>();
-                    setlen( {l,l,l} );
-                }
-                if (m.is_array()) {
-                    len << m.get<vector<double>>();
-                    setlen( len );
-                }
-                if (getVolume()<=0)
-                    throw std::runtime_error("volume is zero or less");
+                    setLength( {l,l,l} );
+                } else if (m.is_array())
+                    if (m.size()==3)
+                        setLength( m.get<Point>() );
+            }
+
+            if ( type == SPHERE or type == CYLINDER )
+                radius = j.at("radius").get<double>();
+
+            if (type == SLIT)
+                setLength( {len.x(), len.y(), pbc_disable*len.z() } );  // disable min. image in z
+
+            if (type == SPHERE)
+                setLength( pbc_disable*2*Point(radius,radius,radius) ); // disable min. image in xyz
+
+            if (type == CYLINDER) {
+                len.z() = j.at("length").get<double>();
+                setLength( {2*radius*pbc_disable, 2*radius*pbc_disable, len.z() } ); // disable min. image in xy
             }
         }
-        catch(std::exception& e) {
-            throw std::runtime_error(name + ": " + e.what());
+
+        void Chameleon::to_json(json &j) const {
+            assert(!name.empty());
+            switch (type) {
+                case SPHERE:
+                    j = {{"radius",radius}};
+                    break;
+                case CYLINDER:
+                    j = {{"radius",radius}, {"length",len.z()}};
+                    break;
+                case SLIT:
+                    j = {{"length",Point(len.x(), len.y(), len.z() / pbc_disable)}};
+                    break;
+                case CUBOID:
+                    j = {{"length",len}};
+                    break;
+            }
+            j["type"] = name;
         }
-    }
 
-    Cuboidslit::Cuboidslit() { name += " (XY-periodicity)"; }
+    } // end of Geometry namespace
 
-    Cuboidslit::Cuboidslit( Tmjson &j ) : Cuboid(j) { name += " (XY-periodicity)"; }
-
-    /**
-     * @param length Length of the Cylinder (angstrom)
-     * @param radius Radius of the Cylinder (angstrom)
-     */
-    Cylinder::Cylinder( double length, double radius ) : Geometrybase("Cylinder")
-    {
-        init(length, radius);
-    }
-
-    /**
-     * The json object is scanned for the following parameters:
-     *
-     * Key      | Description
-     * :------- | :-------------------------
-     * `length` | Cylinder length [angstrom]
-     * `radius` | Cylinder radius [angstrom] 
-     */
-    Cylinder::Cylinder( Tmjson &j ) : Geometrybase("Cylinder")
-    {
-        try {
-            init( j.at("length"),
-                  j.at("radius") );
-        }
-        catch(std::exception& e) {
-            throw std::runtime_error(name + ": " + e.what());
-        }
-    }
-
-    void Cylinder::init( double length, double radius )
-    {
-        name = "Cylinder (hard ends)";
-        _len = length;
-        setVolume(pc::pi * radius * radius * _len);
-    }
-
-    /**
-     * Dummy function not be used other than for compatibility
-     * reasons. Sets length to x component of vector.
-     */
-    void Cylinder::setlen( const Point &l )
-    {
-        init(l.x(), r);
-    }
-
-    void Cylinder::_setVolume( double newV )
-    {
-        r2 = newV / (pc::pi * _len);
-        r = sqrt(r2);
-        diameter = 2 * r;
-        _halflen = _len / 2;
-    }
-
-    /**
-     * - 3D: \f$ l \pi r^2 \f$ (default)
-     * - 2D: \f$ \pi r^2 \f$
-     * - 1D: \f$ l \f$
-     */
-    double Cylinder::_getVolume(int dim) const
-    {
-        if (dim==1)
-            return _len;
-        if (dim==2)
-            return pc::pi * r2;
-        return r2 * pc::pi * _len;
-    }
-
-    void Cylinder::boundary( Point &p ) const {}
-
-    void Cylinder::randompos( Point &m )
-    {
-        double l = r2 + 1;
-        m.z() = slump.half() * _len;
-        while ( l > r2 )
-        {
-            m.x() = slump.half() * diameter;
-            m.y() = slump.half() * diameter;
-            l = m.x() * m.x() + m.y() * m.y();
-        }
-    }
-
-    bool Cylinder::collision( const Point &a, double radius, collisiontype type ) const
-    {
-        assert((_halflen - _len / 2) < 1e-9 && "Cylinder length initialization problems");
-        if ( a.z() < -_halflen )
-            return true;
-        if ( a.z() > _halflen )
-            return true;
-        if ( a.x() * a.x() + a.y() * a.y() > r2 )
-            return true;
-        return false;
-    }
-
-    string Cylinder::_info( char w )
-    {
-        std::ostringstream o;
-        o << pad(SUB, w, "Length") << _halflen * 2 << textio::_angstrom << endl
-          << pad(SUB, w, "Radius") << sqrt(r2) << textio::_angstrom << endl;
-        return o.str();
-    }
-
-    Cuboid Cylinder::inscribe() const
-    {
-        Cuboid c;
-        c.setlen({diameter, diameter, _len});
-        return c;
-    }
-
-    PeriodicCylinder::PeriodicCylinder(
-        double length, double radius ) : Cylinder(length, radius)
-    {
-        name = "Periodic " + name;
-    }
-
-    PeriodicCylinder::PeriodicCylinder( Tmjson &j ) : Cylinder(j)
-    {
-        name = "Periodic " + name;
-    }
-
-    void PeriodicCylinder::boundary( Point &a ) const
-    {
-        if ( std::abs(a.z()) > _halflen )
-            a.z() -= _len * anint(a.z() / _len);
-    }
-
-    void QuaternionRotate::setAxis( Geometrybase &g, const Point &beg, const Point &end, double angle )
-    {
-        geoPtr = &g;
-        origin = beg;
-        angle_ = angle;
-        Point u(end - beg); //Point u(end-beg);
-        assert(u.squaredNorm() > 0 && "Rotation vector has zero length");
-        g.boundary(u);
-        u.normalize(); // make unit vector
-        q = Eigen::AngleAxisd(angle, u);
-
-        rot_mat << 0, -u.z(), u.y(), u.z(), 0, -u.x(), -u.y(), u.x(), 0;
-        rot_mat =
-            Eigen::Matrix3d::Identity() + rot_mat * std::sin(angle) + rot_mat * rot_mat * (1 - std::cos(angle));
-    }
-
-    FindSpace::FindSpace()
-    {
-        dir = Point(1, 1, 1);
-        allowContainerOverlap = false;
-        allowMatterOverlap = false;
-    }
-
-    CuboidNoPBC::CuboidNoPBC( ) { name += " (No PBC)"; }
-
-    CuboidNoPBC::CuboidNoPBC( Tmjson &j ) : Cuboid(j) { name += " (No PBC)"; }
-  }//namespace geometry
-}//namespace
+} // end of Faunus namespace

@@ -1,0 +1,31 @@
+#!/usr/bin/env yason.py
+temperature: 298
+mcloop: {macro: 10, micro: 1000}
+geometry: {type: slit, length: [50,50,100]}
+energy:
+    - akesson: {epsr: 80, molecules: [salt,surface,counter], nstep: 10000, dz: 0.2, file: doublelayer.mfcorr.dat, fixed: true}
+    - nonbonded_pm:
+        coulomb: {epsr: 80}
+atomlist:
+    - Na: {q:  1.0, r: 2.0, dp: 20} 
+    - Cl: {q: -1.0, r: 2.0, dp: 20} 
+moleculelist:
+    - salt: {atoms: [Na,Cl], atomic: true}
+    - surface: {atoms: [Na], atomic: true, insdir: [1,1,0], insoffset: [0,0,-50]}
+    - counter: {atoms: [Cl], atomic: true}
+insertmolecules:
+    - salt: {N: 20}
+    - surface: {N: 20}
+    - counter: {N: 20}
+moves:
+    - transrot: {molecule: salt}
+    - transrot: {molecule: surface, dir: [1,1,0]}
+    - transrot: {molecule: counter}
+analysis:
+    - sanity: {nstep: 100}
+    - sliceddensity: {file: rho_cat.dat, atoms: [Na], nstep: 10, dz: 0.2}
+    - sliceddensity: {file: rho_an.dat,  atoms: [Cl], nstep: 10, dz: 0.2}
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - xtcfile: {file: traj.xtc, nstep: 100}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}

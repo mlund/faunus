@@ -1,4 +1,12 @@
-*
+# Faunus
+manual.pdf
+faunus
+faunus_sphere
+faunus_nopbc
+tests
+include/
+3rdparty/
+examples/
 
 # CMake
 CMakeCache.txt
@@ -9,7 +17,8 @@ install_manifest.txt
 DartConfiguration.tcl
 Testing
 CTestTestfile.cmake
-src/examples/
+.ipynb_checkpoints/
+.swp
 
 # Compiled Object files
 *.slo

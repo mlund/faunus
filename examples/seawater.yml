@@ -1,0 +1,27 @@
+#!/usr/bin/env yason.py
+temperature: 300
+random:   {seed: fixed}
+geometry: {type: cuboid, length: 100}
+mcloop:   {macro: 10, micro: 10000}
+energy:
+    - nonbonded_pmwca:
+        wca: {mixing: LB}
+        coulomb: {epsr: 80}
+atomlist:
+    - Na+ : {q:  1.0, eps: 0.5, sigma: 4.0, dp: 20}
+    - Cl- : {q: -1.0, eps: 0.5, sigma: 4.0, dp: 20}
+moleculelist:
+    - sodium:   {atoms: [Na+], atomic: true, activity: 0.05}
+    - chloride: {atoms: [Cl-], atomic: true, activity: 0.05}
+insertmolecules:
+    - sodium:   {N: 100}
+    - chloride: {N: 100}
+reactionlist:
+    - "= sodium + chloride": {}
+moves:
+    - speciation: {repeat: 1}
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - savestate: {file: state.json}
+    - density: {nstep: 20}
+

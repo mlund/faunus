@@ -1,0 +1,46 @@
+#!/usr/bin/env yason.py
+comment: |
+    Three-bead membrane model ala Deserno.
+    More information: doi:10/chqzjk
+
+temperature: 293
+random: {seed: default}
+geometry: {type: cuboid, length: [74.952, 74.952, 100]}
+mcloop: {macro: 10, micro: 100}
+
+atomlist:
+    - TL: {sigma: 10, eps: 2.2147, dp: 2}
+    - HD: {sigma: 9.5, eps: 2.2147, dp: 2}
+
+moleculelist:
+    - lipid:
+        structure: "lipid.xyz"
+        bondlist:
+            - fene:     {index: [0,1], k: 0.6644, rmax: 15, sigma: 10, eps: 2.2147}
+            - fene:     {index: [1,2], k: 0.6644, rmax: 15, sigma: 10, eps: 2.2147}
+            - harmonic: {index: [0,2], k: 0.2215, req: 40}
+
+insertmolecules:
+    - lipid: {N: 100}
+
+energy:
+    - isobaric: {P/atm: 0}
+    - bonded: {}
+    - nonbonded_deserno:
+        cutoff_g2g: 42
+        wca: {mixing: LB}
+        cos2: {rc: 11.2246, eps: 2.2147, wc: 16}
+
+moves:
+    - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: 100}
+    - transrot: {molecule: lipid, repeat: 100}
+    - volume: {dV: 0.03, method: isochoric, repeat: 1}
+
+analysis:
+    - atomrdf: {file: rdf.dat, nstep: 10, dr: 0.1, name1: HD, name2: HD}
+    - systemenergy: {file: energy.dat, nstep: 10}
+    - xtcfile: {file: traj.xtc, nstep: 10}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}
+    - sanity: {nstep: 100}
+

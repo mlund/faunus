@@ -1,17 +1,17 @@
-#
+#!/usr/bin/env python
+
 # Simple script to convert molecular structures into Faunus AAM
 # format. Uses OpenBabel's python interface to read a multitude
 # of different input formats. Openbabel can be installed in
 # anacona using:
 # conda install --channel https://conda.anaconda.org/openbabel openbabel
-
 # python 2/3 compatibility
+
 from __future__ import print_function, division
 
 import openbabel as ob
 from math import pi
 import sys, os, datetime
-
 
 # see http://openbabel.org/docs/2.3.0/UseTheLibrary/PythonDoc.html
 

@@ -1,0 +1,251 @@
+{
+    "analysis": [
+        {
+            "atomrdf": {
+                "dim": 3,
+                "dr": 0.2,
+                "file": "rdf.dat",
+                "name1": "OW",
+                "name2": "OW",
+                "nstep": 10,
+                "relative time": 0.00206,
+                "samples": 15000
+            }
+        },
+        {
+            "systemenergy": {
+                "file": "energy.dat",
+                "final": [
+                    -38.99678283052885
+                ],
+                "init": -47.621,
+                "mean": -45.083,
+                "nstep": 50,
+                "relative time": 0.000894,
+                "samples": 3000
+            }
+        },
+        {
+            "xtcfile": {
+                "file": "traj.xtc",
+                "nstep": 50,
+                "reference": "http://bit.ly/2A8lzpa",
+                "relative time": 0.00134,
+                "samples": 3000
+            }
+        },
+        {
+            "savestate": {
+                "file": "confout.pqr"
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Clang 4.0.1 (tags/RELEASE_401/final)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": 10.0,
+                        "pairpot": [
+                            {
+                                "coulomb": {
+                                    "T∂ε/∂T": -92.0,
+                                    "cutoff": 9.0,
+                                    "epsr": 1.2,
+                                    "lB": 464.17,
+                                    "type": "fanourgakis"
+                                }
+                            },
+                            {
+                                "lennardjones": {
+                                    "custom": {
+                                        "HW HW": {
+                                            "eps": 0.0,
+                                            "sigma": 2.0
+                                        },
+                                        "HW OW": {
+                                            "eps": 0.0,
+                                            "sigma": 2.583
+                                        },
+                                        "OW OW": {
+                                            "eps": 0.65,
+                                            "sigma": 3.166
+                                        }
+                                    },
+                                    "epsilon unit": "kJ/mol",
+                                    "mixing": "LB"
+                                }
+                            }
+                        ]
+                    },
+                    "relative time": 0.1844044648058091
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            40.0,
+            40.0,
+            40.0
+        ],
+        "type": "cuboid"
+    },
+    "git revision": "7e44a7db (2018-12-12)",
+    "groups": [
+        {
+            "water": {
+                "capacity": 3,
+                "index": [
+                    0,
+                    2
+                ],
+                "size": 3
+            }
+        },
+        {
+            "water": {
+                "capacity": 3,
+                "index": [
+                    3,
+                    5
+                ],
+                "size": 3
+            }
+        },
+        {
+            "water": {
+                "capacity": 3,
+                "index": [
+                    6,
+                    8
+                ],
+                "size": 3
+            }
+        },
+        {
+            "water": {
+                "capacity": 3,
+                "index": [
+                    9,
+                    11
+                ],
+                "size": 3
+            }
+        },
+        {
+            "water": {
+                "capacity": 3,
+                "index": [
+                    12,
+                    14
+                ],
+                "size": 3
+            }
+        },
+        {
+            "water": {
+                "capacity": 3,
+                "index": [
+                    15,
+                    17
+                ],
+                "size": 3
+            }
+        },
+        {
+            "water": {
+                "capacity": 3,
+                "index": [
+                    18,
+                    20
+                ],
+                "size": 3
+            }
+        },
+        {
+            "water": {
+                "capacity": 3,
+                "index": [
+                    21,
+                    23
+                ],
+                "size": 3
+            }
+        },
+        {
+            "water": {
+                "capacity": 3,
+                "index": [
+                    24,
+                    26
+                ],
+                "size": 3
+            }
+        },
+        {
+            "water": {
+                "capacity": 3,
+                "index": [
+                    27,
+                    29
+                ],
+                "size": 3
+            }
+        }
+    ],
+    "moves": [
+        {
+            "moltransrot": {
+                "acceptance": 0.302,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "dp": 20.0,
+                "dprot": 1.0,
+                "molecule": "water",
+                "molid": 0,
+                "moves": 1500497,
+                "relative time": 0.134,
+                "relative time (move only)": 0.00224,
+                "repeat": 10,
+                "√⟨r²⟩": 6.19
+            }
+        },
+        {
+            "cluster": {
+                "acceptance": 0.657,
+                "bias rejection rate": 0.0516,
+                "cite": "doi:10/cj9gnn",
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "dp": 20.0,
+                "dprot": 3.0,
+                "moves": 1499503,
+                "relative time": 0.787,
+                "relative time (move only)": 0.422,
+                "repeat": 10,
+                "threshold": 3.17,
+                "√⟨r²⟩": 9.28,
+                "√⟨θ²⟩/°": 40.1,
+                "⟨N⟩": 3.38
+            }
+        }
+    ],
+    "number of groups": 10,
+    "number of particles": 30,
+    "reactionlist": null,
+    "relative drift": -5.416196615530828e-14,
+    "temperature": 300.0
+}

@@ -1,148 +1,52 @@
-[![Documentation](https://codedocs.xyz/mlund/faunus.svg)](https://codedocs.xyz/mlund/faunus/)
+[![Documentation](https://img.shields.io/badge/documentation-brightgreen.svg)](http://mlund.github.io/faunus/)
 [![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
-[![Faunus](doc/images/animation.gif)](https://github.com/mlund/faunus)
+[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
+[![Anaconda-Server Badge](https://anaconda.org/teokem/faunus/badges/installer/conda.svg)](https://conda.anaconda.org/teokem/)
 
 Welcome to Faunus
 =================
 
-Faunus is a C++ framework for Metropolis Monte Carlo simulations of
+Faunus is a C++14 framework for Metropolis Monte Carlo simulations of
 molecular systems. Below is a brief overview of features:
 
 - Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
-- General hamiltonian **parallel tempering** (temperature, screening length, bonds etc.)
-- **Anisotropic** atoms (multipoles, sphero-cylinders, capped particles)
-- Ion titration moves (pKa prediction, Hofmeister effects etc.)
+- General hamiltonian parallel tempering (temperature, screening length, bonds etc.)
+- Anisotropic atoms (multipoles, sphero-cylinders, capped particles)
+- Speciation moves (pKa prediction, Hofmeister effects, general equilibrium reactions etc.)
+- Parallelise flat histogram method for sampling free energies along 1D/2D reaction coordinates
 - Highy modular
-- Free and open source (**GPL**)
+- Free and open source
 
-Detailed information and support:
+Installing
+===========
 
-- Support: <http://github.com/mlund/faunus/issues>
-- Source code: <http://github.com/mlund/faunus>
-- Code documentation: <https://codedocs.xyz/mlund/faunus>
+On macOS or Linux, install using [conda](https://conda.io/miniconda.html):
 
-Requirements
-============
+    conda install -c teokem faunus
 
-- C/C++11 compiler (clang3.5+, gcc4.9+, intel15+, ...)
-- CMake 3.1+
+Or build from source, see [here](http://mlund.github.io/faunus/docs/install/).
 
-Optional:
-
-- Doxygen (for code manual)
-- MPI (for parallelisation)
-- Python (for python module, experimental)
-
-Developed and tested on Linux and MacOS X.
-
-Getting the Source Code
-=======================
-
-Download the [latest release](https://github.com/mlund/faunus/releases/latest) or, if you're feeling adventurous, clone the development version directly from github,
-
-    git clone https://github.com/mlund/faunus.git
-    cd faunus
-
-Compiling
-=========
-
-    $ cmake . [options]
-    $ make [help]
-    $ make test (or use 'ctest -V' for verbose test output)
-
-Build options
--------------
-
-Option                             | Description
-:--------------------------------- | :----------------------------------------
-`-DENABLE_MPI=OFF`                 | Build MPI programs (parallel tempering etc.)
-`-DENABLE_OPENMP=OFF`              | Enable OpenMP support
-`-DENABLE_STATIC=OFF`              | Static linkage of faunus as opposed to default dynamic linkage
-`-DENABLE_UNICODE=ON`              | Use Unicode UTF-16 encoding for pretty output
-`-DENABLE_PYTHON=ON`               | Build python bindings (experimental)
-`-DENABLE_POWERSASA=OFF`           | Enable SASA routines (external download)
-`-DCMAKE_BUILD_TYPE=RelWithDebInfo`| Alternatives: `Debug` or `Release` (faster)
-`-DCMAKE_CXX_FLAGS_RELEASE="..."`  | Compiler options for Release mode
-`-DCMAKE_CXX_FLAGS_DEBUG="..."`    | Compiler options for Debug mode
-`-DMYPLAYGROUND="absolute path"`   | Add additional source directory
-
-Example: Intel's C++ compiler
------------------------------
-
-    $ CXX=icpc CC=icc cmake . -DCMAKE_BUILD_TYPE=Release
-    $ make
-
-Example: Libraries in odd locations
------------------------------------
-
-    $ LDFLAGS=-L/sw/lib CPPFLAGS=-I/sw/include cmake .
-
-Examples: Python support
-------------------------
-Faunus has preliminary python support -- see this Jupyter [notebook](scripts/pyfaunus-test.ipynb)
-for examples.
-If several python distributions are installed, the build system may be guided to specific
-libraries using i.e.:
-
-    $ cmake . -DPYTHON_INCLUDE_DIR=$HOME/miniconda/include/python2.7 -DPYTHON_LIBRARY=$HOME/minoconda/lib/libpython2.7.dylib
-    $ make pyfaunus
-
-On OSX the linked python library can be probed and, if needed, renamed like this:
-
-    $ otool -L pyfaunus.so
-    $ install_name_tool -change libpython2.7.dylib $HOME/miniconda/lib/libpython2.7.dylib pyfaunus.so
-
-Resetting the build system
---------------------------
-
-    $ make clean
-    $ rm -fR CMakeCache.txt CMakeFiles
-
-Contributors
-============
-
-In chronological order:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  Mikael Lund         Bjorn Persson       Martin Trulsson    
-Ondrej Marsalek     Christophe Labbez     Andre Teixeira     
-  Anil Kurut           Chris Evers         Magnus Ullner      
- Robert Vacha         Axel Thuresson      Bjorn Stenqvist
- Joao Henriques     Alexei Abrikossov      Giulio Tesei
- Lukas Sukenik      Niels Kouwenhoven
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Citing Faunus
+Documentation
 =============
 
-- Stenqvist et al.
-  _Molecular Simulation 2013, 39:1233_
-
-  [![DOI](https://img.shields.io/badge/DOI-10%2Fnvn-orange.svg)](http://dx.doi.org/10/nvn)
-
-- Lund, M., Persson, B., Trulsson, M.
-  _Source Code Biol. Med., 2008, 3:1_
-
-  [![DOI](https://img.shields.io/badge/DOI-10%2Fdfqgch-orange.svg)](http://dx.doi.org/10/dfqgch)
-
+http://mlund.github.io/faunus
 
 Licence
 =======
 
- Faunus - A Framework for Molecular Modelling 
- Copyright (C) 2002-2017 Mikael Lund
+Copyright 2002-2019 Mikael Lund
 
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or 
- (at your option) any later version.
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
 
- You should have received a copy of the GNU General Public License along
- with this program; if not, write to the Free Software Foundation, Inc.,
- 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

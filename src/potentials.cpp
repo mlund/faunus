@@ -1,588 +1,379 @@
-#ifndef FAU_POT_BASE_H
-#define FAU_POT_BASE_H
-
-#include <faunus/common.h>
-#include <faunus/point.h>
-#include <faunus/inputfile.h>
-#include <faunus/physconst.h>
-#include <faunus/geometry.h>
-#include <faunus/potentials.h>
-#include <faunus/textio.h>
-
-namespace Faunus
-{
-
-  namespace Potential
-  {
-
-    PairPotentialBase::PairPotentialBase()
-    {
-        if ( atom.empty())
-            std::cerr << "Warning: no atoms defined when initializing pair potential.\n";
-        rcut2.resize(atom.size());
-    }
-
-    PairPotentialBase::~PairPotentialBase()
-    {
-    }
-
-    /*
-     * @param N Maximum number of atom types
-     * @param rc Default cutoff distance (angstrom)
-     *
-     void PairPotentialBase::initCutoff(size_t N, float rcut) {
-     rcut2.setConstant(N,N,rcut*rcut);
-     }*/
-
-    /*
-     * @param i Particle type i
-     * @param j Particle type j
-     * @param rc Cutoff distance (angstrom)
-     void PairPotentialBase::setCutoff(size_t i, size_t j, float rcut) {
-     rcut2(i,j)=rcut2(j,i)=rcut*rcut;
-     }*/
-
-    std::string PairPotentialBase::_brief()
-    {
-        assert(!name.empty() && "Provide a descriptive name for the potential");
-        return name;
-    }
-
-    std::string PairPotentialBase::info( char w )
-    {
-        return name + ": N/A";
-    }
-
-    string PairPotentialBase::brief()
-    {
-        assert(!name.empty() && "Potential must have a name.");
-        return _brief();
-    }
-
-    void PairPotentialBase::test( UnitTest & ) {}
-    
-    
-    string Potfromfile::_brief()
-    {
-        std::ostringstream o;
-        o << name << " Filename = " << filename << std::endl;
-        return o.str();
-    }
-    
-    string Potfromfile::info(char w)
-    {
-      using namespace Faunus::textio;
-      std::ostringstream o;
-      o << pad(SUB, w, "File with the Potential") << filename << std::endl 
-	<< pad(SUB, w, "The range of the tabulated potential")<< std::endl
-	<< pad(SUB, w, "xmin: ") << xmin << _angstrom  << std::endl 
-	<< pad(SUB, w, "xmax: ") << xmax << _angstrom <<  std::endl;
-      
-      return o.str();
-    }
-
-    string Harmonic::_brief()
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << name + ": k=" << k << kT + "/" + angstrom + squared + " req=" << req << _angstrom;
-        return o.str();
-    }
-
-    Hertz::Hertz( Tmjson &j )
-    {
-        name = "Hertz";
-        E = j.at("_E") = 0.0;
-    }
-
-    string Hertz::_brief()
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << name + " E:" << E;
-        return o.str();
-    }
-
-    string Hertz::info( char w )
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << name + " E: " << E;
-        return o.str();
-    }
-
-    YukawaGel::YukawaGel( Tmjson &j ) : Coulomb(j)
-    {
-        name = "YukawaGel";
-
-        Z  = j["yukawagel_Z"] | 0.0;
-        nc = j["yukawagel_nc"] | 0.0;
-        ns = j["yukawagel_ns"] | 0.0;
-        v  = j["yukawagel_v"] | 1.0;
-        d  = j["yukawagel_d"] | 1.0;
-
-        k = sqrt(4. * pc::pi * (nc + 2. * ns) * v * v * bjerrumLength());
-        Z2e2overER = Z * Z * bjerrumLength();
-        kd = k * d;
-        k2d2 = k * k * d * d;
-        ekd = exp(-kd);
-        braket7 = (cosh(kd / 2.) - (2. * sinh(kd / 2.) / kd));
-        cout << Z << "   " << bjerrumLength() << "  " << k << endl;
-    }
-
-    string YukawaGel::_brief()
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << name;
-        return o.str();
-    }
-
-    string YukawaGel::info( char w )
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << name + " Z: " << Z << endl << " Counter ions:  " << nc << endl
-          << " Salt: " << ns << endl << " BjerrumL: " << bjerrumLength() << endl
-          << " kappa: " << k << endl;
-
-        return o.str();
-    }
-
-    CosAttract::CosAttract( Tmjson &j )
-    {
-        name = "CosAttract";
-        eps = j.at("eps");
-        rc = j.at("rc");
-        wc = j.at("wc");
-        rc2 = rc * rc;
-        c = pc::pi / 2 / wc;
-        rcwc2 = pow((rc + wc), 2);
-    }
-
-    string CosAttract::_brief()
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << name + ": " + epsilon + "=" << eps << kT + " rc=" << rc << _angstrom
-          << " wc=" << wc << _angstrom;
-        return o.str();
-    }
-
-    string CosAttract::info( char w )
-    {
-        using namespace textio;
-        std::ostringstream o;
-        o << pad(SUB, w, "Depth") << eps << kT << endl
-          << pad(SUB, w, "Decay length") << wc << _angstrom << endl
-          << pad(SUB, w, "Width") << rc << _angstrom << endl
-          << pad(SUB, w, "More info") << "doi:10/chqzjk" << endl;
-        return o.str();
-    }
-
-    HardSphere::HardSphere()
-    {
-        name = "Hardsphere";
-    }
-
-    string HardSphere::info( char w )
-    {
-        using namespace Faunus::textio;
-        return textio::indent(SUB) + name + "\n";
-    }
-
-    string LennardJones::_brief()
-    {
-        std::ostringstream o;
-        o << name << ": " << textio::epsilon + "(LJ)=" << eps / 4 << textio::kT;
-        return o.str();
-    }
-
-    string LennardJones::info( char w )
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << pad(SUB, w + 1, epsilon + "(LJ)") << eps / 4 << kT
-          << " = " << eps / 4.0_kJmol << " kJ/mol" << endl;
-        return o.str();
-    }
-
-    LennardJonesTrunkShift::LennardJonesTrunkShift( Tmjson &j ) : LennardJones(j)
-    {
-        name += " Truncated and shifted to sigma";
-    }
-
-    /**
-     * @param j json obect is scanned for the keys `threshold` (angstrom) and `depth` (kT).
-     */
-    SquareWell::SquareWell( Tmjson &j )
-    {
-        name = "Square Well";
-        threshold = j.at("threshold");
-        depth = j.at("depth");
-    }
-
-    string SquareWell::_brief()
-    {
-        std::ostringstream o;
-        o << name << ": u=" << depth << textio::kT + " r=" << threshold;
-        return o.str();
-    }
-
-    string SquareWell::info( char w )
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << pad(SUB, w, "Threshold") << threshold << " " + angstrom + " (surface-surface)" << endl;
-        o << pad(SUB, w, "Depth") << depth << kT << endl;
-        return o.str();
-    }
-
-    /**
-     * In addition to the keywords from `Potential::SquareWell` the json object is
-     * searched for:
-     * - `threshold_lower`
-     */
-    SquareWellShifted::SquareWellShifted( Tmjson &j ) : SquareWell(j)
-    {
-        name += " Shifted";
-        threshold_lower = j.at("threshold_lower");
-    }
-
-    string SquareWellShifted::_brief()
-    {
-        std::ostringstream o;
-        o << name << ": u=" << depth << textio::kT
-          << " range=" << threshold_lower << "-" << threshold;
-        return o.str();
-    }
-
-    string SquareWellShifted::info( char w )
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << SquareWell::info(w)
-          << pad(SUB, w, "Threshold_lower") << threshold_lower << _angstrom
-          << " (surface-surface)" << endl;
-        return o.str();
-    }
-
-    string R12Repulsion::_brief()
-    {
-        std::ostringstream o;
-        o << name << ": " << textio::epsilon + "(r12)=" << eps / 4 << textio::kT;
-        return o.str();
-    }
-
-    string R12Repulsion::info( char w )
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << pad(SUB, w + 1, epsilon + "(r12_rep)") << eps / 4 << kT << endl;
-        return o.str();
-    }
-
-    Coulomb::Coulomb( Tmjson &j )
-    {
-        name = "Coulomb";
-        epsilon_r = j.value("epsr", 80.0);
-        depsdt = j.value("depsdt", -0.368*pc::T()/epsilon_r);
-        lB = pc::lB(epsilon_r);
-    }
-
-    string Coulomb::_brief()
-    {
-        std::ostringstream o;
-        o << name << ": lB=" << lB << " eps_r=" << epsilon_r << " T=" << pc::T();
-        return o.str();
-    }
-
-    double Coulomb::bjerrumLength() const
-    {
-        return lB;
-    }
-
-    string Coulomb::info( char w )
-    {
-        using namespace textio;
-        std::ostringstream o;
-        o << pad(SUB, w, "Temperature") << pc::T() << " K" << endl
-          << pad(SUB, w, "Dielectric constant") << epsilon_r << endl
-          << pad(SUB, w + 6, "T" + partial + epsilon + "/" + epsilon + partial + "T") << depsdt << endl
-          << pad(SUB, w, "Bjerrum length") << lB << " " + angstrom << endl;
-
-        return o.str();
-    }
-
-    void Coulomb::test( UnitTest &t )
-    {
-        t("bjerrum", bjerrumLength(), 1e-6);
-    }
-
-    CoulombWolf::CoulombWolf( Tmjson &j ) : Coulomb(j)
-    {
-        double Rc = j.at("cutoff");
-        Rcinv = 1 / Rc;
-        Rc2 = Rc * Rc;
-        name += "Wolf/Yonezawa";
-
-        for (auto &i : atom)
-            for (auto &j : atom)
-                lBxQQ.set(i.id, j.id, bjerrumLength() * i.charge * j.charge );
-     }
-
-    string CoulombWolf::info( char w )
-    {
-        using namespace textio;
-        std::ostringstream o;
-        o << Coulomb::info(w)
-          << pad(SUB, w, "More info") << "doi:10/j97\n"
-          << pad(SUB, w, "Cut-off") << 1 / Rcinv << _angstrom + "\n";
-        return o.str();
-    }
-
-    ChargeNonpolar::ChargeNonpolar( Tmjson &j ) : Coulomb(j)
-    {
-        name = "Charge-Nonpolar";
-        c = bjerrumLength() / 2.;
-    }
-
-    string ChargeNonpolar::info( char w )
-    {
-        std::ostringstream o;
-        o << Coulomb::info(w)
-          << textio::pad(textio::SUB, w, "Excess polarization") << 2 * c * bjerrumLength() << endl;
-        return o.str();
-    }
-
-    PolarPolar::PolarPolar( Tmjson &j ) : Coulomb(j)
-    {
-        name = "Polar-Polar";
-    }
-
-    string PolarPolar::info( char w )
-    {
-        std::ostringstream o;
-        o << Coulomb::info(w) << endl;
-        return o.str();
-    }
-
-    string DebyeHuckel::_brief()
-    {
-        std::ostringstream o;
-        o << Coulomb::_brief() << " I=" << ionicStrength();
-        return o.str();
-    }
-
-    double DebyeHuckel::ionicStrength() const
-    {
-        return k * k / c;
-    }
-
-    double DebyeHuckel::debyeLength() const
-    {
-        return 1 / k;
-    }
-
-    /**
-     * @details The Debye-Huckel potential is temperature dependent and contains entropy
-     * contributions from both solvent and salt degrees of freedom.
-     * This function return the entropy of interaction between a pair of
-     * particles interacting with an effective Debye-Huckel potential. This is done by
-     * taking the temperature derivate of w(R):
-     *
-     * @f[
-     * S(r_{ij})/k_B = -\frac{ \partial w(r_{ij},T) } {k_B \partial T}
-     *     = \beta w_{ij}\left [ \alpha - \frac{\kappa r_{ij}(\alpha+1)}{2}\right ]
-     * @f]
-     * where \f$ \alpha=T \partial \epsilon_r/\epsilon_r\partial T\f$
-     * is determined experimentally for pure water. To get the entropy from salt ions
-     * only, set \f$\alpha=0\f$ via the following keywords:
-     *
-     * @param  betaw    Inter particle free energy, \f$\beta w\f$, in units of kT.
-     * @param  r        Inter particle distance
-     * @return Interaction entropy \f$ S(r_{ij})/k_B = \beta TS(r_{ij})\f$
-     * @todo   Optimize
-     */
-    double DebyeHuckel::entropy( double betaw, double r ) const
-    {
-        return betaw * (depsdt - 0.5 * k * r * (depsdt + 1));
-    }
-
-    /**
-     * @return \f$\beta \mu_{\mbox{excess}} = -\frac{l_Bz^2\kappa}{2(1+\kappa a)}\f$
-     * @param z Charge number
-     * @param a Particle diameter (angstrom)
-     */
-    double DebyeHuckel::excessChemPot( double z, double a ) const
-    {
-        return -lB * z * z * k / (2 * (1 + k * a));
-    }
-
-    /**
-     * @return \f$\exp {(\beta\mu_{\mbox{excess}})}\f$
-     * @param z Charge number
-     * @param a Particle diameter (angstrom)
-     */
-    double DebyeHuckel::activityCoeff( double z, double a ) const
-    {
-        return exp(excessChemPot(z, a));
-    }
-
-    string DebyeHuckel::info( char w )
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << Coulomb::info(w)
-          << pad(SUB, w, "Ionic strength") << ionicStrength() << " mol/l" << endl
-          << pad(SUB, w + 1, "Debye length, 1/" + textio::kappa) << debyeLength() << " "
-          << 1 / k << " " + angstrom << endl;
-        if ( k2_count_avg.cnt > 0 )
-        {
-            double k2_s = k * k - k2_count;
-            o << pad(SUB, w + 1, "Debye length, 1/" + textio::kappa)
-              << 1 / sqrt(k2_count_avg.avg()) << " " + angstrom + " (counter ions)\n"
-              << pad(SUB, w + 1, "Debye length, 1/" + textio::kappa)
-              << 1 / sqrt(k2_s) << " " + angstrom + " (salt)" << endl;
-        }
-        return o.str();
-    }
-
-    Harmonic::Harmonic( double k, double req ) : k(k), req(req) { name = "Harmonic"; }
-
-    FENE::FENE( double k_kT, double rmax_A ) : k(k_kT)
-    {
-        name = "FENE";
-        r02 = rmax_A * rmax_A;
-        r02inv = 1 / r02;
-    }
-
-    LennardJones::LennardJones( Tmjson &j )
-    {
-
-        name = "Lennard-Jones";
-        eps = 4.0 * j.at("eps").get<double>();
-        string unit = j.value("unit", string("kT"));
-        if ( unit == "kJ/mol" )
-            eps *= 1.0_kJmol;
-    }
-
-    LennardJones::LennardJones() : eps(0) { name = "Lennard-Jones"; }
-
-    SquareWellHydrophobic::SquareWellHydrophobic( Tmjson &j ) : SquareWell(j)
-    {
-        name = "Hydrophobic " + name;
-    }
-
-    string SoftRepulsion::_brief()
-    {
-        std::ostringstream o;
-        o << name << ": " << textio::sigma << pow(sigma6, 1 / 6.) << textio::_angstrom;
-        return o.str();
-    }
-
-    SoftRepulsion::SoftRepulsion( Tmjson &j )
-    {
-        name = "Repulsive r6";
-        sigma6 = pow(j["sigma"] | 5.0, 6);
-    }
-
-    Harmonic::Harmonic( Tmjson &j )
-    {
-        name = "Harmonic";
-        k = j.at("k");
-        req = j.at("req");
-    }
-
-    string FENE::_brief()
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << name + ": k=" << k << kT + "/" + angstrom + squared + " r0=" << sqrt(r02) << _angstrom;
-        return o.str();
-    }
-
-    Cardinaux::Cardinaux( Tmjson &j )
-    {
-        name = "Cardinaux";
-        alpha = j.at("alpha");
-        alphahalf = 0.5 * alpha;
-        for ( auto &i : atom )
-            for ( auto &j : atom )
-                eps.set(i.id, j.id, sqrt(i.eps * j.eps) * 4.0_kJmol);
-    }
-
-    string Cardinaux::_brief()
-    {
-        return name + ": a=" + std::to_string(alpha);
-    }
-
-    DebyeHuckelShift::DebyeHuckelShift( Tmjson &j ) : DebyeHuckel(j)
-    {
+#include "potentials.h"
+#include "multipole.h"
+
+void Faunus::Potential::RepulsionR3::from_json(const Faunus::json &j) {
+    f = j.value("prefactor", 1.0);
+    e = j.value("lj-prefactor", 1.0);
+    s = j.value("sigma", 1.0);
+}
+
+Faunus::Potential::RepulsionR3::RepulsionR3(const std::string &name) {
+    PairPotentialBase::name = name;
+}
+
+void Faunus::Potential::RepulsionR3::to_json(Faunus::json &j) const {
+    j = {{"prefactor",f}, {"lj-prefactor", e},{"sigma",s}};
+}
+
+void Faunus::Potential::CosAttract::to_json(Faunus::json &j) const {
+    j = {{"eps",eps / 1.0_kJmol}, {"rc",rc / 1.0_angstrom }, {"wc", wc / 1.0_angstrom }};
+}
+
+void Faunus::Potential::CosAttract::from_json(const Faunus::json &j) {
+    eps = j.at("eps").get<double>() * 1.0_kJmol;
+    rc = j.at("rc").get<double>() * 1.0_angstrom ;
+    wc = j.at("wc").get<double>() * 1.0_angstrom ;
+    rc2 = rc * rc;
+    c = pc::pi / 2 / wc;
+    rcwc2 = pow((rc + wc), 2);
+}
+
+Faunus::Potential::CosAttract::CosAttract(const std::string &name) { PairPotentialBase::name=name; }
+
+void Faunus::Potential::CoulombGalore::sfYukawa(const Faunus::json &j) {
+    kappa = 1.0 / j.at("debyelength").get<double>();
+    I = kappa*kappa / ( 8.0*lB*pc::pi*pc::Nav/1e27 );
+    table = sf.generate( [&](double q) { return std::exp(-q*rc*kappa) - std::exp(-kappa*rc); }, 0, 1 ); // q=r/Rc
+    // we could also fill in some info std::string or JSON output...
+}
+
+void Faunus::Potential::CoulombGalore::sfReactionField(const Faunus::json &j) {
+    epsrf = j.at("eps_rf");
+    table = sf.generate( [&](double q) { return 1 + (( epsrf - epsr ) / ( 2 * epsrf + epsr ))*q*q*q
+            - 3 * ( epsrf / ( 2 * epsrf + epsr ))*q ; }, 0, 1);
+    calcDielectric = [&](double M2V) {
+        if(epsrf > 1e10)
+            return 1 + 3*M2V;
+        if(fabs(epsrf-epsr) < 1e-6)
+            return 2.25*M2V + 0.25 + 0.75*sqrt(9*M2V*M2V + 2*M2V + 1);
+        if(fabs(epsrf-1.0) < 1e-6)
+            return ( 2*M2V + 1 ) / ( 1 - M2V );
+        return 0.5 * ( 2*epsrf - 1 + sqrt( -72*M2V*M2V*epsrf
+                    + 4*epsrf*epsrf + 4*epsrf + 1) ) / ( 3*M2V-1 ); // Needs to be checked!
+        //return (6*M2V*epsrf + 2*epsrf + 1.0)/(1.0 + 2*epsrf - 3*M2V); // Is OK when epsr=1.0
+    };
+    selfenergy_prefactor = 1.5*epsrf/(2.0*epsrf + epsr); // Correct?!, see Eq.14 in DOI: 10.1021/jp510612w
+    // we could also fill in some info std::string or JSON output...
+}
+
+void Faunus::Potential::CoulombGalore::sfQpotential(const Faunus::json &j) {
+    order = j.value("order",300);
+    table = sf.generate( [&](double q) { return qPochhammerSymbol( q, 1, order ); }, 0, 1 );
+    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+    selfenergy_prefactor = 0.5;
+}
+
+void Faunus::Potential::CoulombGalore::sfYonezawa(const Faunus::json &j) {
+    alpha = j.at("alpha");
+    table = sf.generate( [&](double q) { return 1 - std::erfc(alpha*rc)*q + q*q; }, 0, 1 );
+    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+    selfenergy_prefactor = erf(alpha*rc);
+}
+
+void Faunus::Potential::CoulombGalore::sfFanourgakis(const Faunus::json&) {
+    table = sf.generate( [&](double q) { return 1 - 1.75*q + 5.25*pow(q,5) - 7*pow(q,6) + 2.5*pow(q,7); }, 0, 1 );
+    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+    selfenergy_prefactor = 0.875;
+}
+
+void Faunus::Potential::CoulombGalore::sfFennel(const Faunus::json &j) {
+    alpha = j.at("alpha");
+    table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - std::erfc(alpha*rc)*q + (q-1.0)*q*(std::erfc(alpha*rc)
+                    + 2 * alpha * rc / std::sqrt(pc::pi) * std::exp(-alpha*alpha*rc*rc))); }, 0, 1 );
+    calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi)))
+        * exp(-alpha*alpha*rc*rc) * (alpha*alpha*rc*rc * alpha*alpha*rc*rc + 2.0 * alpha*alpha*rc*rc + 3.0);
+        return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0)); };
+    selfenergy_prefactor = ( erfc(alpha*rc)/2.0 + alpha*rc/sqrt(pc::pi) );
+}
+
+void Faunus::Potential::CoulombGalore::sfEwald(const Faunus::json &j) {
+    alpha = j.at("alpha");
+    table = sf.generate( [&](double q) { return std::erfc(alpha*rc*q); }, 0, 1 );
+    calcDielectric = [&](double M2V) {
+        double T = std::erf(alpha*rc) - (2 / (3 * sqrt(pc::pi)))
+            * std::exp(-alpha*alpha*rc*rc) * ( 2*alpha*alpha*rc*rc + 3);
+        return ((T + 2.0) * M2V + 1)/ ((T - 1) * M2V + 1);
+    };
+    selfenergy_prefactor = ( erfc(alpha*rc) + alpha*rc/sqrt(pc::pi)*(1.0 + std::exp(-alpha*alpha*rc2)) );
+}
+
+void Faunus::Potential::CoulombGalore::sfWolf(const Faunus::json &j) {
+    alpha = j.at("alpha");
+    table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - erfc(alpha*rc)*q); }, 0, 1 );
+    calcDielectric = [&](double M2V) { double T = erf(alpha*rc) - (2 / (3 * sqrt(pc::pi))) * exp(-alpha*alpha*rc*rc)
+        * ( 2.0 * alpha*alpha*rc*rc + 3.0);
+        return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0));};
+    selfenergy_prefactor = ( erfc(alpha*rc) + alpha*rc/sqrt(pc::pi)*(1.0 + exp(-alpha*alpha*rc2)) );
+}
+
+void Faunus::Potential::CoulombGalore::sfPlain(const Faunus::json&, double val) {
+    table = sf.generate( [&](double) { return val; }, 0, 1 );
+    calcDielectric = [&](double M2V) { return (2.0*M2V + 1.0)/(1.0 - M2V); };
+    selfenergy_prefactor = 0.0;
+}
+
+Faunus::Potential::CoulombGalore::CoulombGalore(const std::string &name) { PairPotentialBase::name=name; }
+
+void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
+    try {
+        type = j.at("type");
         rc = j.at("cutoff");
-        rc2 = rc * rc;
-#ifdef FAU_APPROXMATH
-        u_rc = exp_cawley(-k*rc)/rc; // use approx. func even here!
-#else
-        u_rc = exp(-k * rc) / rc;
-#endif
-        dudrc = -k * u_rc - u_rc / rc; // 1st derivative of u(r) at r_c
-        std::ostringstream o;
-        o << " (shifted, rcut=" << rc << textio::_angstrom << ")";
-        name += o.str();
+        rc2 = rc*rc;
+        rc1i = 1/rc;
+        epsr = j.at("epsr");
+        lB = pc::lB( epsr );
+        depsdt = j.value("depsdt", -0.368*pc::temperature/epsr);
+        sf.setTolerance(
+                j.value("utol",1e-5),j.value("ftol",1e-2) );
+
+        if (type=="reactionfield") sfReactionField(j);
+        if (type=="fanourgakis") sfFanourgakis(j);
+        if (type=="qpotential") sfQpotential(j);
+        if (type=="yonezawa") sfYonezawa(j);
+        if (type=="yukawa") sfYukawa(j);
+        if (type=="fennel") sfFennel(j);
+        if (type=="plain") sfPlain(j,1);
+        if (type=="ewald") sfEwald(j);
+        if (type=="none") sfPlain(j,0);
+        if (type=="wolf") sfWolf(j);
+        if ( table.empty() )
+            throw std::runtime_error(name + ": unknown coulomb type '" + type + "'" );
     }
 
-    string DebyeHuckelDenton::info( char w )
-    {
-        lB = lB_org;
-        return DebyeHuckel::info(w);
+    catch ( std::exception &e ) {
+        std::cerr << "CoulombGalore error: " << e.what();
+        throw;
     }
+}
 
-    DebyeHuckelDenton::DebyeHuckelDenton( Tmjson &in ) : DebyeHuckel(in)
-    {
-        name += "-Denton";
-        lB_org = lB;
+double Faunus::Potential::CoulombGalore::dielectric_constant(double M2V) {
+    return calcDielectric( M2V );
+}
+
+void Faunus::Potential::CoulombGalore::to_json(Faunus::json &j) const {
+    using namespace u8;
+    j["epsr"] = epsr;
+    j["T"+partial+epsilon_m + "/" + partial + "T"] = depsdt;
+    j["lB"] = lB;
+    j["cutoff"] = rc;
+    j["type"] = type;
+    if (type=="yukawa") {
+        j["debyelength"] = 1.0/kappa;
+        j["ionic strength"] = I;
     }
-
-    void DebyeHuckelDenton::setBjerrum( double a_m, double a_n )
-    {
-        double ka_m = k * a_m, ka_n = k * a_n;
-        lB = lB_org * exp(ka_m + ka_n) / ((1 + ka_m) * (1 + ka_n));
+    if (type=="qpotential")
+        j["order"] = order;
+    if (type=="yonezawa" || type=="fennel" || type=="wolf" || type=="ewald")
+        j["alpha"] = alpha;
+    if (type=="reactionfield") {
+        if(epsrf > 1e10)
+            j[epsilon_m+"_rf"] = 2e10;
+        else
+            j[epsilon_m+"_rf"] = epsrf;
     }
+    _roundjson(j, 5);
+}
 
-    double DebyeHuckelDenton::fmn( double m, double n )
-    {
-        return k * (m * m + n * n + k * (m + n) * m * n) / ((1 + k * m) * (1 + k * n));
+Faunus::Potential::Coulomb::Coulomb(const std::string &name) { PairPotentialBase::name=name; }
+
+void Faunus::Potential::Coulomb::to_json(Faunus::json &j) const { j["epsr"] = pc::lB(lB); }
+
+void Faunus::Potential::Coulomb::from_json(const Faunus::json &j) { lB = pc::lB( j.at("epsr") ); }
+
+Faunus::Potential::FENE::FENE(const std::string &name) { PairPotentialBase::name=name; }
+
+void Faunus::Potential::FENE::from_json(const Faunus::json &j) {
+    k  = j.at("stiffness");
+    r02 = std::pow( double(j.at("maxsep")), 2);
+    r02inv = 1/r02;
+}
+
+void Faunus::Potential::FENE::to_json(Faunus::json &j) const {
+    j = {{"stiffness",k}, {"maxsep",std::sqrt(r02)}};
+}
+
+void Faunus::Potential::to_json(Faunus::json &j, const Faunus::Potential::PairPotentialBase &base) {
+    base.name.empty() ? base.to_json(j) : base.to_json(j[base.name]);
+}
+
+void Faunus::Potential::from_json(const Faunus::json &j, Faunus::Potential::PairPotentialBase &base) {
+    try {
+        if (not base.name.empty()) {
+            if (j.count(base.name)==1) {
+                base.from_json(j.at(base.name));
+                return;
+            }
+        }
+        base.from_json(j);
+    } catch (std::exception &e) {
+        throw std::runtime_error("pairpotential error for " + base.name + ": " + e.what() + usageTip[base.name]);
     }
+}
 
-    DebyeHuckel::DebyeHuckel( Tmjson &j ) : Coulomb(j)
-    {
-        const double zero = 1e-10;
-        name = "Debye-Huckel";
-        c = 8 * lB * pc::pi * pc::Nav / 1e27;
-        double I = j.value("ionicstrength", 0.0);   // [mol/l]
-        z_count = j.value("countervalency", 0.0);  // [e]
-        k2_count = 0;
-        k = sqrt(I * c);
-        cout << "Ionic s = " << I << endl;
-        if ( k < zero )
-            k = 1 / j.at("debyelength").get<double>(); // [A]
-    }
+void Faunus::Potential::to_json(Faunus::json &j, const std::shared_ptr<Faunus::Potential::BondData> &b) {
+    json val;
+    b->to_json(val);
+    val["index"] = b->index;
+    j = {{ b->name(), val }};
+}
 
-    R12Repulsion::R12Repulsion( Tmjson &j )
-    {
-        name = "r12-Repulsion";
-        eps = 4.0 * j.at("eps").get<double>();
-    }
+void Faunus::Potential::from_json(const Faunus::json &j, std::shared_ptr<Faunus::Potential::BondData> &b) {
+    if (j.is_object())
+        if (j.size()==1) {
+            const auto& key = j.begin().key();
+            const auto& val = j.begin().value();
+            if ( key==HarmonicBond().name() )  b = std::make_shared<HarmonicBond>();
+            else if ( key==FENEBond().name() ) b = std::make_shared<FENEBond>();
+            else if ( key==HarmonicTorsion().name() ) b = std::make_shared<HarmonicTorsion>();
+            else if ( key==GromosTorsion().name() ) b = std::make_shared<GromosTorsion>();
+            else if ( key==PeriodicDihedral().name() ) b = std::make_shared<PeriodicDihedral>();
+            else
+                throw std::runtime_error("unknown bond type: " + key);
+            try {
+                b->from_json( val );
+                b->index = val.at("index").get<decltype(b->index)>();
+                if (b->index.size() != b->numindex())
+                    throw std::runtime_error("exactly " + std::to_string(b->numindex()) + " indices required for " + b->name());
+            } catch (std::exception &e) {
+                throw std::runtime_error(e.what() + usageTip[key]);
+            }
+            return;
+        }
+    throw std::runtime_error("invalid bond data");
+}
 
-    string SoftRepulsion::info( char w )
-    {
-        using namespace Faunus::textio;
-        std::ostringstream o;
-        o << textio::pad(SUB, w + 1, textio::sigma) << pow(sigma6, 1 / 6.) << _angstrom << endl;
-        return o.str();
-    }
-  } //Potential namespace
+void Faunus::Potential::BondData::shift(int offset) {
+    for ( auto &i : index )
+        i += offset;
+}
 
-} //Faunus namespace
-#endif
+bool Faunus::Potential::BondData::hasEnergyFunction() const { return energy!=nullptr; }
+
+void Faunus::Potential::HarmonicBond::from_json(const Faunus::json &j) {
+    k = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
+    req = j.at("req").get<double>() * 1.0_angstrom; // req
+}
+
+void Faunus::Potential::HarmonicBond::to_json(Faunus::json &j) const {
+    j = { {"k", 2*k/1.0_kJmol*1.0_angstrom*1.0_angstrom},
+        {"req", req/1.0_angstrom} };
+}
+
+std::string Faunus::Potential::HarmonicBond::name() const { return "harmonic"; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::HarmonicBond::clone() const { return std::make_shared<HarmonicBond>(*this); }
+
+int Faunus::Potential::HarmonicBond::numindex() const { return 2; }
+
+Faunus::Potential::BondData::Variant Faunus::Potential::HarmonicBond::type() const { return BondData::HARMONIC; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::FENEBond::clone() const { return std::make_shared<FENEBond>(*this); }
+
+int Faunus::Potential::FENEBond::numindex() const { return 2; }
+
+Faunus::Potential::BondData::Variant Faunus::Potential::FENEBond::type() const { return BondData::FENE; }
+
+void Faunus::Potential::FENEBond::from_json(const Faunus::json &j) {
+    k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
+    k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
+    k[2] = j.value("eps", 0.0) * 1.0_kJmol;
+    k[3] = std::pow( j.value("sigma", 0.0)  * 1.0_angstrom, 2);
+}
+
+void Faunus::Potential::FENEBond::to_json(Faunus::json &j) const {
+    j = {
+        { "k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
+        { "rmax", std::sqrt(k[1]) / 1.0_angstrom },
+        { "eps", k[2] / 1.0_kJmol },
+        { "sigma", std::sqrt(k[3]) / 1.0_angstrom } };
+}
+
+std::string Faunus::Potential::FENEBond::name() const { return "fene"; }
+
+int Faunus::Potential::HarmonicTorsion::numindex() const { return 3; }
+
+void Faunus::Potential::HarmonicTorsion::from_json(const Faunus::json &j) {
+    k = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_rad, 2);
+    aeq = j.at("aeq").get<double>() * 1.0_deg;
+}
+
+void Faunus::Potential::HarmonicTorsion::to_json(Faunus::json &j) const {
+    j = {
+        {"k",  k / (1.0_kJmol / std::pow(1.0_rad, 2))},
+        {"aeq",aeq / 1.0_deg}
+    };
+    _roundjson(j, 6);
+}
+
+Faunus::Potential::BondData::Variant Faunus::Potential::HarmonicTorsion::type() const { return BondData::HARMONIC_TORSION; }
+
+std::string Faunus::Potential::HarmonicTorsion::name() const { return "harmonic_torsion"; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::HarmonicTorsion::clone() const {
+    return std::make_shared<HarmonicTorsion>(*this);
+}
+
+int Faunus::Potential::GromosTorsion::numindex() const { return 3; }
+
+void Faunus::Potential::GromosTorsion::from_json(const Faunus::json &j) {
+    k = j.at("k").get<double>() * 0.5 * 1.0_kJmol; // k
+    aeq = cos(j.at("aeq").get<double>() * 1.0_deg); // cos(angle)
+}
+
+void Faunus::Potential::GromosTorsion::to_json(Faunus::json &j) const {
+    j = {
+        { "k", 2.0*k/1.0_kJmol },
+        { "aeq", std::acos(aeq)/1.0_deg }
+    };
+}
+
+Faunus::Potential::BondData::Variant Faunus::Potential::GromosTorsion::type() const { return BondData::G96_TORSION; }
+
+std::string Faunus::Potential::GromosTorsion::name() const { return "gromos_torsion"; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::GromosTorsion::clone() const {
+    return std::make_shared<GromosTorsion>(*this);
+}
+
+int Faunus::Potential::PeriodicDihedral::numindex() const { return 4; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::PeriodicDihedral::clone() const {
+    return std::make_shared<PeriodicDihedral>(*this);
+}
+
+void Faunus::Potential::PeriodicDihedral::from_json(const Faunus::json &j) {
+    k[0] = j.at("k").get<double>() * 1.0_kJmol; // k
+    k[1] = j.at("n").get<double>(); // multiplicity/periodicity n
+    k[2] = j.at("phi").get<double>() * 1.0_deg; // angle
+}
+
+void Faunus::Potential::PeriodicDihedral::to_json(Faunus::json &j) const {
+    j = {
+        { "k", k[0] / 1.0_kJmol },
+        { "n", k[1] },
+        { "phi", k[2] / 1.0_deg }
+    };
+}
+
+Faunus::Potential::BondData::Variant Faunus::Potential::PeriodicDihedral::type() const { return BondData::PERIODIC_DIHEDRAL; }
+
+std::string Faunus::Potential::PeriodicDihedral::name() const { return "periodic_dihedral"; }
+
+Faunus::Potential::SASApotential::SASApotential(const std::string &name) {
+    PairPotentialBase::name=name;
+}
+
+void Faunus::Potential::SASApotential::from_json(const Faunus::json &j) {
+    assertKeys(j, {"shift", "molarity", "radius"});
+    shift = j.value("shift", true);
+    conc = j.at("molarity").get<double>() * 1.0_molar;
+    proberadius = j.value("radius", 1.4) * 1.0_angstrom;
+}
+
+void Faunus::Potential::SASApotential::to_json(Faunus::json &j) const {
+    j["molarity"] = conc / 1.0_molar;
+    j["radius"] = proberadius / 1.0_angstrom;
+    j["shift"] = shift;
+}
+
+

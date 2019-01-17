@@ -1,0 +1,208 @@
+{
+    "analysis": [
+        {
+            "sanity": null
+        },
+        {
+            "sliceddensity": {
+                "atoms": [
+                    "Na"
+                ],
+                "dz": 0.2,
+                "file": "rho_cat.dat",
+                "nstep": 10,
+                "relative time": 0.000347,
+                "samples": 1000
+            }
+        },
+        {
+            "sliceddensity": {
+                "atoms": [
+                    "Cl"
+                ],
+                "dz": 0.2,
+                "file": "rho_an.dat",
+                "nstep": 10,
+                "relative time": 0.000375,
+                "samples": 1000
+            }
+        },
+        {
+            "systemenergy": {
+                "file": "energy.dat",
+                "final": [
+                    0.0,
+                    8.525379739742252,
+                    -29.902454484256758
+                ],
+                "init": -23.218,
+                "mean": -18.941,
+                "nstep": 10,
+                "relative time": 0.00492,
+                "samples": 1000
+            }
+        },
+        {
+            "xtcfile": {
+                "file": "traj.xtc",
+                "nstep": 100,
+                "reference": "http://bit.ly/2A8lzpa",
+                "relative time": 0.00116,
+                "samples": 100
+            }
+        },
+        {
+            "savestate": {
+                "file": "confout.pqr"
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        }
+    ],
+    "compiler": "7.3.0",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "ContainerOverlap": null,
+                    "relative time": 0.00428320323061534
+                },
+                {
+                    "akesson": {
+                        "Nupdates": 0,
+                        "com": false,
+                        "dz": 0.2,
+                        "epsr": 80.0,
+                        "file": "doublelayer.mfcorr.dat",
+                        "fixed": true,
+                        "lB": 7.0092,
+                        "molecules": [
+                            "salt",
+                            "surface",
+                            "counter"
+                        ],
+                        "nphi": 10,
+                        "nstep": 10000
+                    },
+                    "relative time": 0.010031828482570958
+                },
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": null,
+                        "pairpot": [
+                            {
+                                "coulomb": {
+                                    "epsr": 80.0
+                                }
+                            },
+                            {
+                                "hardsphere": null
+                            }
+                        ]
+                    },
+                    "relative time": 0.18039888327975367
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            50.0,
+            50.0,
+            100.0
+        ],
+        "type": "slit"
+    },
+    "git revision": "884034f4 (2018-12-14)",
+    "groups": [
+        {
+            "salt": {
+                "capacity": 40,
+                "index": [
+                    0,
+                    39
+                ],
+                "size": 40
+            }
+        },
+        {
+            "surface": {
+                "capacity": 20,
+                "index": [
+                    40,
+                    59
+                ],
+                "size": 20
+            }
+        },
+        {
+            "counter": {
+                "capacity": 20,
+                "index": [
+                    60,
+                    79
+                ],
+                "size": 20
+            }
+        }
+    ],
+    "moves": [
+        {
+            "transrot": {
+                "acceptance": 0.662,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "salt",
+                "molid": 0,
+                "moves": 400109,
+                "relative time": 0.492,
+                "relative time (move only)": 0.0134,
+                "repeat": 40,
+                "√⟨r²⟩": 8.7
+            }
+        },
+        {
+            "transrot": {
+                "acceptance": 0.425,
+                "dir": [
+                    1.0,
+                    1.0,
+                    0.0
+                ],
+                "molecule": "surface",
+                "molid": 1,
+                "moves": 200022,
+                "relative time": 0.247,
+                "repeat": 20,
+                "√⟨r²⟩": 6.46
+            }
+        },
+        {
+            "transrot": {
+                "acceptance": 0.557,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "counter",
+                "molid": 2,
+                "moves": 199869,
+                "relative time": 0.242,
+                "repeat": 20,
+                "√⟨r²⟩": 7.75
+            }
+        }
+    ],
+    "number of groups": 3,
+    "number of particles": 80,
+    "reactionlist": null,
+    "relative drift": -1.989213357403945e-15,
+    "temperature": 298.0
+}

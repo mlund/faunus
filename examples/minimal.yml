@@ -1,0 +1,23 @@
+#!/usr/bin/env yason.py
+energy:
+    - nonbonded:
+        default:
+            - lennardjones: {mixing: LB}
+            - coulomb: {type: plain, epsr: 80, cutoff: 50}
+atomlist: # define all atom types below
+    - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}
+    - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10}
+moleculelist:
+    - salt: {atoms: [Na, Cl], atomic: true}
+insertmolecules:
+    - salt: {N: 20}
+moves:
+    - transrot: { molecule: salt }
+analysis:
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json }
+mcloop: {macro: 10, micro: 1000}
+geometry: {type: cuboid, length: 50} # sidelength(s): number OR array
+temperature: 300
+random: { seed: hardware }

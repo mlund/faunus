@@ -22,13 +22,14 @@ namespace Faunus {
         bool dV = false;    //!< Set to true if there's a volume change
         double all = false; //!< Set to true if *everything* has changed
         double du=0;        //!< Additional energy change not captured by Hamiltonian
-        bool dNpart=false;      //!< Is the size of groups partially changed
+        bool dN=false;  //!< True if the number of atomic or molecular species has changed
 
         struct data {
-            bool dNpart=false;      //!< Is the size of groups partially changed
+            bool dNatomic=false; //!< True if the number of atomic molecules has changed
+            bool dNswap=false; //!< True if the number of atoms has changed as a result of a swap move
             int index; //!< Touched group index
-            bool internal=false; //!< True is the internal energy/config has changed
-            bool all=false; //!< Set to `true` if all particles in group have been updated
+            bool internal=false; //!< True if the internal energy/config has changed
+            bool all=false; //!< True if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
 
             inline bool operator<( const data & a ) const{
@@ -48,7 +49,7 @@ namespace Faunus {
             du=0;
             dV=false;
             all=false;
-            dNpart=false;
+            dN=false;
             groups.clear();
             assert(empty());
         } //!< Clear all change data
@@ -59,7 +60,7 @@ namespace Faunus {
                 if (dV==false)
                     if (all==false)
                         if (groups.empty())
-                            if (dNpart==false)
+                            if (dN==false)
                                 return true;
             return false;
         } //!< Check if change object is empty

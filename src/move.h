@@ -454,12 +454,12 @@ namespace Faunus {
                     void _to_json(json&) const {};
                     void _from_json(const json&) {};
                     std::vector<Point> forces, velocities;
-                 public:
+                public:
                     ForceMove() {
                         // resize forces and velocities to mathc spc.p
                     }
             }; // end of forcemove
- 
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] TranslateRotate")
         {
@@ -521,7 +521,7 @@ namespace Faunus {
                         } catch (std::exception &e) {
                             throw std::runtime_error(e.what());
                         }
-                     }
+                    }
 
                     void _move(Change &change) override {
                         if (dV>0) {
@@ -659,9 +659,7 @@ namespace Faunus {
                             };
                     }
 
-                    void _from_json(const json&) override {
-                        //j["speciation"] = "speciation";
-                    }
+                    void _from_json(const json&) override {};
 
                 public:
 
@@ -714,7 +712,7 @@ namespace Faunus {
                                 }
                             }
                             //The move is doable, raise flag
-                            change.dNpart=true;
+                            change.dN=true;
                             for (auto &m : rit->Molecules2Add( !forward )) { // Delete
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
@@ -726,7 +724,7 @@ namespace Faunus {
                                     auto othergit=othermollist.begin();
                                     d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                     d.internal = true;
-                                    d.dNpart = true;
+                                    d.dNatomic = true;
                                     for ( int N=0; N<m.second; N++ ) {  // deactivate m.second m.first atoms
                                         auto ait = slump.sample( git->begin(), git->end()); // iterator to random atom
                                         // Shuffle back to end, both in trial and new
@@ -766,7 +764,7 @@ namespace Faunus {
                                     auto git = mollist.begin();
                                     d.index = Faunus::distance( spc.groups.begin(), git);
                                     d.internal = true;
-                                    d.dNpart = true;
+                                    d.dNatomic = true;
                                     for ( int N=0; N<m.second; N++ ) {  // activate m.second m.first atoms
                                         git->activate( git->end(), git->end() + 1);
                                         auto ait = git->end()-1;
@@ -779,7 +777,7 @@ namespace Faunus {
                                 } else {
                                     mollist = spc.findMolecules( m.first, Tspace::INACTIVE);
                                     if ( size(mollist) <  m.second ) {
-                                        change.dNpart=false;
+                                        change.dN=false;
                                         return; // Not possible to perform change, escape through the back door
                                     }
                                     for ( int N=0; N <m.second; N++ ) {
@@ -850,8 +848,7 @@ namespace Faunus {
                             };
                     }
 
-                    void _from_json(const json &j) override {
-                    }
+                    void _from_json(const json&) override {};
 
                 public:
 
@@ -864,6 +861,7 @@ namespace Faunus {
 
                     void _move(Change &change) override {
                         if ( reactions<Tpvec>.size()>0 ) {
+                            change.dN=true;
                             auto rit = slump.sample( reactions<Tpvec>.begin(), reactions<Tpvec>.end() );
                             lnK = rit->lnK;
                             forward = (bool)slump.range(0,1); // random boolean
@@ -884,15 +882,17 @@ namespace Faunus {
                             }
                             auto atomlist = spc.findAtoms( m1.begin()->first );
                             if ( size(atomlist) < 1 ) { // make sure that there are any atoms to swap
+                                cout << "no atoms to swap" << endl;
                                 return;
+                                //throw std::runtime_error("no atoms to swap");  
                             }
                             auto ait = slump.sample( atomlist.begin(), atomlist.end() ); // random particle iterator
                             auto git = spc.findGroupContaining( *ait );
                             Change::data d;
                             d.atoms.push_back( Faunus::distance(git->begin(), ait) ); // index of particle rel. to group
-                            d.index = Faunus::distance( spc.groups.begin(), git);
+                            d.index = Faunus::distance( spc.groups.begin(), git );
                             d.internal = true;
-                            d.dNpart = false;
+                            d.dNswap = true;
                             change.groups.push_back( d ); // add to list of moved groups
                             typename Tspace::Tparticle p;
                             p = atoms.at( m2.begin()->first );
@@ -903,20 +903,20 @@ namespace Faunus {
                             throw std::runtime_error("No reactions in list, disable swap or add reactions");
                     }
 
-                    double bias(Change &change, double uold, double unew) override {
+                    double bias(Change&, double, double) override {
                         if (forward)
                             return -lnK;
                         return lnK;
                     } //!< adds extra energy change not captured by the Hamiltonian
 
-                    void _accept(Change &change) override {
+                    void _accept(Change&) override {
                         accmap[ trialprocess->name ] += 1;
                         trialprocess->N_reservoir += (forward == true) ? -1 : 1;
                         if( trialprocess->N_reservoir < 0 && trialprocess->canonic == true )
                             throw std::runtime_error("There are no negative number of molecules");
                     }
 
-                    void _reject(Change &change) override {
+                    void _reject(Change&) override {
                         accmap[ trialprocess->name ] += 0;
                     }
 
@@ -924,8 +924,8 @@ namespace Faunus {
 
         /**
          * @brief QuadrantJump translates a molecule to another quadrant
-         * considering as the origin the center of the box or the center of mass of a range of atomic indexes
-         * specified by "index": [start:stop].
+         * considering as the origin the center of the box or the center of mass 
+         * of a range of atomic indexes specified by "index": [start:stop].
          */
         template<typename Tspace>
             class QuadrantJump : public Movebase {
@@ -1003,8 +1003,8 @@ namespace Faunus {
                         else std::cerr << name << ": no molecules found" << std::endl;
                     }
 
-                    void _accept(Change &change) override { msqd += _sqd; }
-                    void _reject(Change &change) override { msqd += 0; }
+                    void _accept(Change&) override { msqd += _sqd; }
+                    void _reject(Change&) override { msqd += 0; }
 
 
                 public:
@@ -1189,7 +1189,7 @@ start:
                                 assert(std::fabs(_zero) < 1e-6 && "cluster likely too large");
                             }
 #endif
-                         }
+                        }
                     }
 
                     double bias(Change&, double, double) override {
@@ -1481,6 +1481,7 @@ start:
                                     else if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
                                     else if (it.key()=="charge") this->template push_back<Move::ChargeMove<Tspace>>(spc);
                                     else if (it.key()=="speciation") this->template push_back<Move::SpeciationMove<Tspace>>(spc);
+                                    else if (it.key()=="swap") this->template push_back<Move::SwapMove<Tspace>>(spc);
                                     else if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);
                                     // new moves go here...
 #ifdef ENABLE_MPI
@@ -1621,11 +1622,11 @@ start:
 
                             if (change) {
                                 double unew, uold, du;
-//#pragma omp parallel sections
+                                //#pragma omp parallel sections
                                 {
-//#pragma omp section
+                                    //#pragma omp section
                                     { unew = state2.pot.energy(change); }
-//#pragma omp section
+                                    //#pragma omp section
                                     { uold = state1.pot.energy(change); }
                                 }
 
@@ -1691,27 +1692,28 @@ start:
         double Nchem( Tspace &spc_n, Tspace &spc_o, const Change &change) {
             using Tpvec = typename Tspace::Tpvec;
             double NoverO=0;
-            if ( change.dNpart ) {// Have the number of any molecules changed
+            if ( change.dN ) { // Has the number of any molecules changed?
                 for ( auto &m : change.groups ) {
                     int N_o = 0;
                     int N_n = 0;
-                    if ( not m.dNpart ) {
-                        if (!molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic) { // Molecular species
+                    if ( m.dNatomic ) {
+                        auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ALL);
+                        auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
+                        if ( size(mollist_n) > 1 || size(mollist_o) > 1 )
+                            throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                        if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic)
+                            throw std::runtime_error("Only atomic molecules!");
+                        // Below is safe due to the catches above
+                        // add consistency criteria with m.atoms.size() == N
+                        N_n =  mollist_n.begin()->size();
+                        N_o =  mollist_o.begin()->size();
+                    } else {
+                        if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic ) { // Molecular species
                             auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
                             auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
                             N_n=size(mollist_n);
                             N_o=size(mollist_o);
                         }
-                    }
-                    if ( m.dNpart ) {
-                        auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ALL);
-                        auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
-                        if ( size(mollist_n) > 1 || size(mollist_o) > 1 )
-                            throw std::runtime_error("Bad definition: One group per atomic molecule!");
-                        // Below is safe due to the catches above
-                        // add consistency criteria with m.atoms.size() == N
-                        N_n =  mollist_n.begin()->size();
-                        N_o =  mollist_o.begin()->size();
                     }
 
                     int dN = N_n - N_o;
@@ -1734,6 +1736,48 @@ start:
                                 NoverO += std::log( (N_o - n) / ( V_n * 1.0_molar )) - betamu;
                     }
                 }
+            }
+
+            int N_n = 0;
+            int N_o = 0;
+            if ( not change.groups.empty() ) {
+                assert(change.groups.size()==1);
+                auto m = change.groups.front();
+                if ( m.dNswap ) {
+                    assert(m.atoms.size()==1);
+                    auto &g_n = spc_n.groups.at(m.index);
+                    int id1 = (g_n.begin()+m.atoms.front())->id;
+                    auto &g_o = spc_o.groups.at(m.index);
+                    int id2 = (g_o.begin()+m.atoms.front())->id;
+
+                    for (int id : {id1, id2}) {
+
+                        auto atomlist_n = spc_n.findAtoms(id);
+                        auto atomlist_o = spc_o.findAtoms(id);
+
+                        N_n = size(atomlist_n);
+                        N_o = size(atomlist_o);
+
+                        int dN = N_n - N_o;
+
+                        if (dN!=0) {
+                            double V_n = spc_n.geo.getVolume();
+                            //double V_o = spc_o.geo.getVolume();
+                            double betamu = molecules<Tpvec>[ spc_n.groups[m.index].id ].activity;
+                            // todo: add runtime error if activity <=0 ?
+                            if (betamu > 1e-20)
+                                betamu = std::log( betamu / 1.0_molar );
+
+                            if (dN>0)
+                                for (int n=0; n < dN; n++)
+                                    NoverO += -std::log( (N_o + 1 + n) / ( V_n * 1.0_molar )) + betamu;
+                            else if (dN<0)
+                                for (int n=0; n < (-dN); n++)
+                                    NoverO += std::log( (N_o - n) / ( V_n * 1.0_molar )) - betamu;
+                        }
+                    }
+                }
+
             }
             return -NoverO; // negative sign since Pref exp{-beta(dU)} = exp{-beta(dU -ln(Pref)}
         }

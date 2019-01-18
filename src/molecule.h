@@ -547,24 +547,24 @@ namespace Faunus {
                         a.lnK = -std::log(10) * val.at("pK").get<double>();
                     a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
 
-                    // get pair of vector containing reactant and product species
+                    // get pair of vectors containing reactant and product species
                     auto process = parseProcess(a.name);
                     a._reac = process.first;
                     a._prod = process.second;
 
                     for (auto &name : a._reac) { // loop over reactants
                         auto pair = a.findAtomOrMolecule( name );  // {iterator to atom, iterator to mol.}
-                        if ( pair.first != atoms.end())
+                        if ( pair.first != atoms.end() )
                             a._reacid_a[ pair.first->id() ]++;
-                        else
+                        if ( pair.second != molecules<Tpvec>.end() )
                             a._reacid_m[ pair.second->id() ]++;
                     }
 
                     for (auto &name : a._prod) { // loop over products
                         auto pair = a.findAtomOrMolecule( name );
-                        if ( pair.first != atoms.end())
+                        if ( pair.first != atoms.end() )
                             a._prodid_a[ pair.first->id() ]++;
-                        else
+                        if ( pair.second != molecules<Tpvec>.end() )
                             a._prodid_m[ pair.second->id() ]++;
                     }
                 }
@@ -575,9 +575,9 @@ namespace Faunus {
                 j[a.name] = {
                     {"lnK", a.lnK}, {"pK", -a.lnK/std::log(10)},
                     {"canonic", a.canonic}, {"N_reservoir", a.N_reservoir}
-                    //{"products", a._prod} ,
+                    //{"products", json::value::array(a._prod) },
                     //{"exchange products", a._prodid_m  },
-                    //{"reactants", a._reac } ,
+                    //{"reactants", a._reac.data() },
                     //{"exchange reactants", a._reacid_m  }
                 };
             } //!< Serialize to JSON object

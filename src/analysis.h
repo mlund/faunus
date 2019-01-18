@@ -658,12 +658,12 @@ namespace Faunus {
                 }
                 void normalize() {
                     for (auto &hist: atmdhist) {
-                        double Vr=1, sum = hist.second.sumy();
+                        double sum = hist.second.sumy();
                         for (auto &i : hist.second.getMap())
                             i.second = i.second/sum ;
                     }
                     for (auto &hist: moldhist) {
-                        double Vr=1, sum = hist.second.sumy();
+                        double sum = hist.second.sumy();
                         for (auto &i : hist.second.getMap())
                             i.second = i.second/sum ;
                     }

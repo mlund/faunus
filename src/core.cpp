@@ -108,6 +108,11 @@ namespace Faunus {
                 // for the Coulomb potential, add additional table w. types
                 if (key=="coulomb")
                     t += "\n" + db.at("coulomb types").get<std::string>();
+
+                // for the custom potential, add also list of symbols
+                if (key=="custom")
+                    t += "\n" + db.at("symbol").get<std::string>();
+
                 tip_already_given = true;
 
                 // add ascii art

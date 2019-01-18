@@ -376,4 +376,38 @@ void Faunus::Potential::SASApotential::to_json(Faunus::json &j) const {
     j["shift"] = shift;
 }
 
+namespace Faunus {
+    namespace Potential {
 
+        CustomPairPotential::CustomPairPotential(const std::string &name) {
+            PairPotentialBase::name = name;
+            d = std::make_shared<Data>();
+        }
+
+        void CustomPairPotential::from_json(const json &j) {
+            Rc2 = j.value("cutoff", pc::infty);
+            Rc2 = Rc2*Rc2;
+            jin = j;
+            auto &_j = jin["constants"];
+            if (_j==nullptr)
+                _j = json::object();
+            _j["e0"] = pc::e0;
+            _j["kB"] = pc::kB;
+            _j["kT"] = pc::kT();
+            _j["Nav"] = pc::Nav;
+            _j["Rc"] = std::sqrt(Rc2);
+            _j["T"] = pc::temperature;
+            expr.set(jin, {
+                    {"r", &d->r},
+                    {"q1",&d->q1}, {"q2",&d->q2},
+                    {"s1",&d->s1}, {"s2",&d->s2} } );
+        }
+
+        void CustomPairPotential::to_json(json &j) const {
+            j = jin;
+            if (std::isfinite(Rc2))
+                j["cutoff"] = std::sqrt(Rc2);
+        }
+
+    }
+}

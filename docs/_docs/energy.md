@@ -370,6 +370,47 @@ and hydrophobic/hydrophilic interactions.
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
 `shift=true` | Shift to zero at large separations
 
+### Custom Pair-Potential
+
+This takes a user-defined expression and a list of constants to produce a runtime,
+custom pair-potential.
+While perhaps not as computationally efficient as hard-coded potentials, it is a
+convenient way to access alien potentials.
+
+`custom`     | Description
+------------ | --------------------------------------------------------
+`function`   | Mathematical expression for the potential (units of kT)
+`constants`  | User-defined constants
+`cutoff`     | Spherical cut-off distance
+
+The following illustrates how to define a custom Yukawa potential:
+
+~~~ yaml
+custom:
+    function: lB * q1 * q2 / r * exp( -kappa / r ) # in kT
+    constants:
+        lB: 7.1     # Bjerrum length
+        kappa: 30.0 # Debye length
+~~~
+
+The function is passed using the efficient
+[ExprTk library](http://www.partow.net/programming/exprtk/index.html) and
+a rich set of mathmatical functions and logic is available.
+In addition to user-defined constants, the following symbols are defined:
+
+`symbol`   | Description
+---------- | ---------------------------------------------
+`e0`       | Vacuum permittivity [C^2/J/m]
+`kB`       | Boltzmann's constant [J/K]
+`kT`       | Boltzmann's constant x temperature [J]
+`Nav`      | Avogadro's number [1/mol]
+`pi`       | Pi
+`q1`,`q2`  | particle charge [e]
+`r`        | particle-particle separation [angstrom]
+`Rc`       | Spherical cut-off [angstrom]
+`s1`,`s2`  | particle sigma [angstrom]
+`T`        | temperature [K]
+
 
 ## Bonded Interactions
 

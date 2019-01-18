@@ -828,6 +828,192 @@ namespace Faunus {
 
             }; // End of class SpeciationMove
 
+        template<typename Tspace>
+            class SwapMove : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+
+                    Tspace& spc;
+                    ReactionData<Tpvec> *trialprocess;
+                    std::map<std::string, Average<double>> accmap;
+                    int molid=-1;
+                    double lnK;
+                    bool forward;
+
+                    void _to_json(json &j) const override {
+                        json &_j = j["reactions"];
+                        _j = json::object();
+                        for (auto &m : accmap)
+                            _j[m.first] = {
+                                {"attempts", m.second.cnt},
+                                {"acceptance", m.second.avg()}
+                            };
+                    }
+
+                    void _from_json(const json &j) override {
+                    }
+
+                public:
+
+                    SwapMove(Tspace &spc) : spc(spc) {
+                        name = "swap";
+                        repeat = 1;
+                    }
+
+                    double energy(); //!< Returns intrinsic energy of the process
+
+                    void _move(Change &change) override {
+                        if ( reactions<Tpvec>.size()>0 ) {
+                            auto rit = slump.sample( reactions<Tpvec>.begin(), reactions<Tpvec>.end() );
+                            lnK = rit->lnK;
+                            forward = (bool)slump.range(0,1); // random boolean
+                            trialprocess = &(*rit);
+                            auto m1 = rit->Atoms2Add( forward );
+                            if ( m1.size() > 1 ) {
+                                // return; // only reactions of the A = B type
+                                throw std::runtime_error("only reactions of the A = B type");
+                            }
+                            auto m2 = rit->Atoms2Add( not forward );
+                            if ( m2.size() > 1 ) {
+                                // return; // only reactions of the A = B type
+                                throw std::runtime_error("only reactions of the A = B type");
+                            }
+                            if ( m1.begin()->second > 1 | m2.begin()->second > 1 ) {
+                                // return; // only reactions of the A = B type
+                                throw std::runtime_error("only reactions of the A = B type");
+                            }
+                            auto atomlist = spc.findAtoms( m1.begin()->first );
+                            if ( size(atomlist) < 1 ) { // make sure that there are any atoms to swap
+                                return;
+                            }
+                            auto ait = slump.sample( atomlist.begin(), atomlist.end() ); // random particle iterator
+                            auto git = spc.findGroupContaining( *ait );
+                            Change::data d;
+                            d.atoms.push_back( Faunus::distance(git->begin(), ait) ); // index of particle rel. to group
+                            d.index = Faunus::distance( spc.groups.begin(), git);
+                            d.internal = true;
+                            d.dNpart = false;
+                            change.groups.push_back( d ); // add to list of moved groups
+                            typename Tspace::Tparticle p;
+                            p = atoms.at( m2.begin()->first );
+                            p.pos = ait->pos;
+                            *ait = p;
+                            assert(ait->id == m2.begin()->first);
+                        } else
+                            throw std::runtime_error("No reactions in list, disable swap or add reactions");
+                    }
+
+                    double bias(Change &change, double uold, double unew) override {
+                        if (forward)
+                            return -lnK;
+                        return lnK;
+                    } //!< adds extra energy change not captured by the Hamiltonian
+
+                    void _accept(Change &change) override {
+                        accmap[ trialprocess->name ] += 1;
+                        trialprocess->N_reservoir += (forward == true) ? -1 : 1;
+                        if( trialprocess->N_reservoir < 0 && trialprocess->canonic == true )
+                            throw std::runtime_error("There are no negative number of molecules");
+                    }
+
+                    void _reject(Change &change) override {
+                        accmap[ trialprocess->name ] += 0;
+                    }
+
+            }; // End of class SwapMove
+
+        /**
+         * @brief QuadrantJump translates a molecule to another quadrant
+         * considering as the origin the center of the box or the center of mass of a range of atomic indexes
+         * specified by "index": [start:stop].
+         */
+        template<typename Tspace>
+            class QuadrantJump : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    typedef typename Tspace::Tparticle Tparticle;
+                    Tspace& spc; // Space to operate on
+                    int molid=-1;
+                    Point dir={1,1,1};
+                    std::vector<size_t> index;
+                    double _sqd; // squared displacement
+                    Average<double> msqd; // mean squared displacement
+
+                    void _to_json(json &j) const override {
+                        j = {
+                            {"dir", dir},
+                            {"molid", molid},
+                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+                            {"molecule", molecules<Tpvec>[molid].name}
+                        };
+                        _roundjson(j,3);
+                    }
+
+                    void _from_json(const json &j) override {
+                        assert(!molecules<Tpvec>.empty());
+                        try {
+                            std::string molname = j.at("molecule");
+                            auto it = findName(molecules<Tpvec>, molname);
+                            if (it == molecules<Tpvec>.end())
+                                throw std::runtime_error("unknown molecule '" + molname + "'");
+                            molid = it->id();
+                            dir = j.value("dir", Point(1,1,1));
+                            index = j.value("index", decltype(index)());
+                            if (repeat<0) {
+                                auto v = spc.findMolecules(molid);
+                                repeat = std::distance(v.begin(), v.end());
+                            }
+                        }
+                        catch (std::exception &e) {
+                            throw std::runtime_error(name+": " + e.what());
+                        }
+                    } //!< Configure via json object
+
+
+                    void _move(Change &change) override {
+                        assert(molid>=0);
+                        assert(!spc.groups.empty());
+                        assert(spc.geo.getVolume()>0);
+
+                        // pick random group from the system matching molecule type
+                        // TODO: This can be slow -- implement look-up-table in Space
+                        auto mollist = spc.findMolecules( molid, Tspace::ACTIVE ); // list of molecules w. 'molid'
+                        if (size(mollist)>0) {
+                            auto it = slump.sample( mollist.begin(), mollist.end() );
+                            if (not it->empty()) {
+                                assert(it->id==molid);
+                                Point oldcm = it->cm;
+                                if (index.size()==2) {
+                                    Group<Tparticle> g(spc.p.begin(), spc.p.end());
+                                    auto cm_O = Geometry::massCenter(g.begin()+index[0], g.begin()+index[1], spc.geo.getBoundaryFunc() );
+                                    it->translate( -2*spc.geo.vdist(oldcm, cm_O).cwiseProduct(dir.cast<double>()), spc.geo.getBoundaryFunc() );
+                                } else {
+                                    it->translate( -2*oldcm.cwiseProduct(dir.cast<double>()), spc.geo.getBoundaryFunc() );
+                                }
+                                _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
+                                Change::data d;
+                                d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
+                                d.all = true; // *all* atoms in group were moved
+                                change.groups.push_back( d ); // add to list of moved groups
+
+                                assert( spc.geo.sqdist( it->cm,
+                                            Geometry::massCenter(it->begin(),it->end(),spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-9 );
+                            }
+                        }
+                        else std::cerr << name << ": no molecules found" << std::endl;
+                    }
+
+                    void _accept(Change &change) override { msqd += _sqd; }
+                    void _reject(Change &change) override { msqd += 0; }
+
+
+                public:
+                    QuadrantJump(Tspace &spc) : spc(spc) {
+                        name = "quadrantjump";
+                        repeat = -1; // meaning repeat N times
+                    }
+            };
+
         /**
          * @brief Molecular cluster move
          *

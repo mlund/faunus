@@ -223,8 +223,19 @@ namespace Faunus {
                 return groups.end();
             } //!< Random group; groups.end() if not found
 
-            auto findAtoms(int atomid) const {
-                return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
+            // auto findAtoms(int atomid) const {
+            //    return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
+            // } //!< Range with all atoms of type `atomid` (complexity: order N)
+
+            auto findAtoms(int atomid) {
+                auto f = [atomid,&groups=groups](Tparticle &i) {
+                    if (i.id==atomid)
+                        for (auto &g : groups)
+                            if (g.contains(i))
+                                return true;
+                        return false;
+                };
+                return ranges::view::filter(p, f);
             } //!< Range with all atoms of type `atomid` (complexity: order N)
 
             auto findGroupContaining(const Tparticle &i) {

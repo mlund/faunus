@@ -611,7 +611,8 @@ namespace Faunus {
 
                     for (auto &name : names) {
                         int id = findName(atoms, name)->id();
-                        seldhist[ id ]( id )++;
+                        auto atomlist = spc.findAtoms(id);
+                        seldhist[ id ]( size(atomlist) )++;
                     }
                 }
                 void _from_json(const json &j) override {

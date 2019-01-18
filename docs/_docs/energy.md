@@ -387,10 +387,10 @@ The following illustrates how to define a custom Yukawa potential:
 
 ~~~ yaml
 custom:
-    function: lB * q1 * q2 / r * exp( -kappa / r ) # in kT
-    constants:
-        lB: 7.1     # Bjerrum length
-        kappa: 30.0 # Debye length
+  function: lB * q1 * q2/r * exp(-r/D) # in kT
+  constants:
+    lB: 7.1  # Bjerrum length
+    D: 30    # Debye length
 ~~~
 
 The function is passed using the efficient

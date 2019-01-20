@@ -866,12 +866,12 @@ namespace Faunus {
                             lnK = rit->lnK;
                             forward = (bool)slump.range(0,1); // random boolean
                             trialprocess = &(*rit);
-                            auto m1 = rit->Atoms2Add( forward );
+                            auto m1 = rit->Atoms2Add( not forward );
                             if ( m1.size() > 1 ) {
                                 // return; // only reactions of the A = B type
                                 throw std::runtime_error("only reactions of the A = B type");
                             }
-                            auto m2 = rit->Atoms2Add( not forward );
+                            auto m2 = rit->Atoms2Add( forward );
                             if ( m2.size() > 1 ) {
                                 // return; // only reactions of the A = B type
                                 throw std::runtime_error("only reactions of the A = B type");

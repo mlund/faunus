@@ -882,7 +882,6 @@ namespace Faunus {
                             }
                             auto atomlist = spc.findAtoms( m1.begin()->first );
                             if ( size(atomlist) < 1 ) { // make sure that there are any atoms to swap
-                                cout << "no atoms to swap" << endl;
                                 return;
                                 //throw std::runtime_error("no atoms to swap");  
                             }

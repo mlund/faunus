@@ -107,6 +107,7 @@ namespace Faunus {
                     name = "molecule";
                     from_json(j, *this);
                     index = j.at("index");
+                    std::vector<size_t> indexes;
                     auto b = spc.geo.getBoundaryFunc();
                     property = j.at("property").get<std::string>();
 
@@ -141,6 +142,17 @@ namespace Faunus {
                                 return std::acos(mu.dot(dir)) * 180 / pc::pi;
                             };
                     }
+                
+                    else if (property=="atomatom") {
+                        dir = j.at("dir").get<Point>().normalized(); 
+                        indexes = j.value("indexes", decltype(indexes)());
+                        f = [&spc, &dir=dir, i=indexes[0], j=indexes[1]]() {
+                            auto &pos1 = spc.p.at(i).pos;
+                            auto &pos2 = spc.p.at(j).pos;
+                            return spc.geo.vdist(pos1, pos2).cwiseProduct(dir.cast<double>()).norm(); 
+                        };
+                    }
+
 
                     else if (property=="angle") {
                         dir = j.at("dir").get<Point>().normalized();
@@ -170,7 +182,7 @@ namespace Faunus {
          */
         struct MassCenterSeparation : public ReactionCoordinateBase {
             Eigen::Vector3i dir={1,1,1};
-            std::vector<size_t> index;
+            std::vector<size_t> indexes;
             std::vector<std::string> type;
             template<class Tspace>
                 MassCenterSeparation(const json &j, Tspace &spc) {
@@ -178,10 +190,10 @@ namespace Faunus {
                     name = "cmcm";
                     from_json(j, *this);
                     dir = j.value("dir", dir);
-                    index = j.value("index", decltype(index)());
+                    indexes = j.value("indexes", decltype(indexes)());
                     type = j.value("type", decltype(type)());
-                    if (index.size()==4) {
-                        f = [&spc, dir=dir, i=index[0], j=index[1], k=index[2], l=index[3]]() {
+                    if (indexes.size()==4) {
+                        f = [&spc, dir=dir, i=indexes[0], j=indexes[1], k=indexes[2], l=indexes[3]]() {
                             Group<Tparticle> g(spc.p.begin(), spc.p.end());
                             auto cm1 = Geometry::massCenter(g.begin()+i, g.begin()+j, spc.geo.getBoundaryFunc());
                             auto cm2 = Geometry::massCenter(g.begin()+k, g.begin()+l, spc.geo.getBoundaryFunc());
@@ -213,11 +225,11 @@ namespace Faunus {
             using doctest::Approx;
             typedef Space<Geometry::Chameleon, Particle<>> Tspace;
             Tspace spc;
-            MassCenterSeparation c( R"({"dir":[1,1,0], "index":[7,8], "type":[] })"_json, spc);
+            MassCenterSeparation c( R"({"dir":[1,1,0], "indexes":[0,8,9,18], "type":[] })"_json, spc);
             CHECK( c.dir.x() == 1 );
             CHECK( c.dir.y() == 1 );
             CHECK( c.dir.z() == 0 );
-            CHECK( c.index == decltype(c.index)({7,8}) );
+            CHECK( c.indexes == decltype(c.indexes)({0,8,9,18}) );
         }
 #endif
 

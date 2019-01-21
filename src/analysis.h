@@ -649,8 +649,6 @@ namespace Faunus {
                         m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
                     for ( auto &m: moldhist)
                         m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
-                    for ( auto &m: seldhist)
-                        m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
                     for (auto &name : names) {
                         int id = findName(atoms, name)->id();
                         seldhist.at( id ).save( "rho-"s + name + ".dat" );

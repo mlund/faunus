@@ -1737,12 +1737,11 @@ start:
                 }
             }
 
-            int N_n = 0;
-            int N_o = 0;
-            if ( not change.groups.empty() ) {
-                assert(change.groups.size()==1);
+            if ( change.groups.size()==1 ) {
                 auto m = change.groups.front();
                 if ( m.dNswap ) {
+                    int N_n = 0;
+                    int N_o = 0;
                     assert(m.atoms.size()==1);
                     auto &g_n = spc_n.groups.at(m.index);
                     int id1 = (g_n.begin()+m.atoms.front())->id;

@@ -876,7 +876,7 @@ namespace Faunus {
                                 // return; // only reactions of the A = B type
                                 throw std::runtime_error("only reactions of the A = B type");
                             }
-                            if ( m1.begin()->second > 1 | m2.begin()->second > 1 ) {
+                            if ( (m1.begin()->second > 1) | (m2.begin()->second > 1) ) {
                                 // return; // only reactions of the A = B type
                                 throw std::runtime_error("only reactions of the A = B type");
                             }

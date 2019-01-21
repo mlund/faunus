@@ -230,11 +230,14 @@ namespace Faunus {
 
             auto findAtoms(int atomid) {
                 auto f = [atomid,&groups=groups](Tparticle &i) {
-                    if (i.id==atomid)
-                        for (auto &g : groups)
-                            if (g.contains(i))
+                    if (i.id==atomid) {
+                        for (auto &g : groups) {
+                            if (g.contains(i)) {
                                 return true;
+                            }
+                        }
                         return false;
+                    }
                 };
                 return ranges::view::filter(p, f);
             } //!< Range with all atoms of type `atomid` (complexity: order N)

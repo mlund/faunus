@@ -25,6 +25,11 @@ namespace Faunus {
      * - the list of particle index in each grid point is stored in a
      *   `std::set<int>` container.
      *
+     * @todo
+     * - Update cell list based on Change object
+     * - Make a non-periodic version
+     * - std::set --> set::vector?
+     *
      * @date Malmo, March 2018
      */
     template<typename CellPoint=Eigen::Vector3i>

@@ -639,7 +639,7 @@ be used when analysing the system (see Analysis).
 `index`                   | Molecule index
 `range`                   | Array w. [min:max] value
 `resolution`              | Resolution along coordinate
-`property`                |
+`property`                | Options:
 `angle`                   | Angle between instantaneous principal axis and given `dir` vector
 `com_x`, `com_y`, `com_z` | Mass center coordinates
 `confid`                  | Conformation id corresponding to frame in `traj` (see molecular topology).
@@ -673,7 +673,7 @@ interacting molecular groups.
 ----------------- | ----------------------------------------
 `range`           | Array w. [min:max] value
 `resolution`      | Resolution along coordinate
-`property`        |
+`property`        | Options:
 `V`               | System volume
 `Q`               | System net-charge
 `Lx`,`Ly`,`Lz`    | Side lengths of enclosing cuboid

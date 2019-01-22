@@ -160,11 +160,10 @@ insertmolecules:
   - water: { N: 1, inactive: true }
 ~~~
 
-The following keywords are available:
+The following keywords for each molecule type are available:
 
 `insertmolecules`    | Description
 -------------------- | ---------------------------------------
-Molecule properties: |
 `N`                  | Number of molecules to insert
 `inactive=false`     | Deactivates inserted molecules
 `positions`          | Load positions from file (`aam`, `pqr`, `xyz`)

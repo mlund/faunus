@@ -165,10 +165,16 @@ void Faunus::Analysis::VirtualVolume::_sample() {
 
         if (errno==ERANGE or std::isinf(x)) {
             std::cerr << name+": skipping sample event due to excessive energy likely due to overlaps.";
-            cnt--; // cnt in incremented by sample() so we need to decrease
+            cnt--; // cnt is incremented by sample() so we need to decrease
         } else {
+            assert(not std::isnan(x));
             duexp += x;
-            assert(std::fabs((Uold-pot.energy(c))/Uold) < 1e-4);
+#ifndef NDEBUG
+            // check volume and particle positions are properly restored
+            double err = std::fabs((Uold-pot.energy(c))/Uold); // must be ~zero!
+            if (std::isfinite(err)) // catch if Uold==0
+                assert(err < 1e-4);
+#endif
         }
     }
 }

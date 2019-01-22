@@ -46,8 +46,8 @@ The following are optional:
 - Message Passing Interface (MPI)
 
 **macOS tip:**
-Apple's developer tools, Xcode, is a quick way obtain
-clang on macOS. CMake can be installed with an
+Apple's developer tools, Xcode, include clang and
+CMake can be installed with an
 [Installer package](https://cmake.org/download) from Kitware, or using
 [MacPorts](http://www.macports.org),
 [Homebrew](https://brew.sh), or

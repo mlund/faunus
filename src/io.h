@@ -93,12 +93,12 @@ namespace Faunus {
                     // does charge match AtomData?
                     if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl)
                         std::cerr << "Charge mismatch on loaded atom " << num << name
-                            << ". Ignoring `atomdata` definitions." << endl;
+                            << ". Ignoring `atomlist` definitions." << endl;
 
                     // does radius match AtomData?
                     if (std::fabs(it->sigma - 2*radius) > pc::epsilon_dbl)
                         std::cerr << "Radius mismatch on loaded atom " << num << name
-                            << ". Using value from `atomdata`." << endl;
+                            << ". Using value from `atomlist`." << endl;
 
                     return a;
                 }
@@ -186,12 +186,12 @@ namespace Faunus {
                                     // does charge match AtomData?
                                     if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl)
                                         std::cerr << "Charge mismatch on loaded atom " << ires << aname
-                                            << ". Ignoring `atomdata` definitions." << endl;
+                                            << ". Ignoring `atomlist` definitions." << endl;
 
                                     // does radius match AtomData?
                                     if (std::fabs(it->sigma - 2*radius) > pc::epsilon_dbl)
                                         std::cerr << "Radius mismatch on loaded atom " << ires << aname
-                                            << ". Using value from `atomdata`." << endl;
+                                            << ". Using value from `atomlist`." << endl;
 
                                     p.push_back(a);
 

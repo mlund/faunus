@@ -1329,6 +1329,8 @@ start:
                         throw std::runtime_error("Metropolis error: energy cannot be NaN");
                     if (du<0)
                         return true;
+                    if (-du > pc::max_exp_argument)
+                        std::cerr << "warning: large metropolis energy" << std::endl;
                     return ( Move::Movebase::slump() > std::exp(-du)) ? false : true;
                 } //!< Metropolis criterion (true=accept)
 

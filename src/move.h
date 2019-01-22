@@ -629,6 +629,7 @@ namespace Faunus {
             class SpeciationMove : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
+                    typedef typename Tspace::Tparticle Tparticle;
 
                     Tspace& spc;
                     Tspace *otherspc;
@@ -683,17 +684,18 @@ namespace Faunus {
                             if ( rit->empty(forward) ) // Enforce canonic constraint if invoked
                                 return; // Out of material, slip out the back door
 
+
                             for (auto &m : rit->Molecules2Add( !forward )) { // Delete checks
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
                                     if( size(mollist)!=1 ) // There can be only one
                                         throw std::runtime_error("Bad definition: One group per atomic molecule!");
                                     auto git = mollist.begin();
-                                    if ( git->size() < m.second ) // assure that there are atoms enough in the group
-                                        return;
+                                    if ( git->size() < m.second ) // Assure that there are atoms enough in the group
+                                        return; // Slip out the back door
                                 } else {
                                     mollist = spc.findMolecules( m.first, Tspace::ACTIVE);
-                                    if ( size(mollist) <  m.second )
+                                    if ( size(mollist) <  m.second ) 
                                         return; // Not possible to perform change, escape through the back door
                                 }
                             }
@@ -703,17 +705,39 @@ namespace Faunus {
                                     if( size(mollist)!=1 ) // There can be only one
                                         throw std::runtime_error("Bad definition: One group per atomic molecule!");
                                     auto git = mollist.begin();
-                                    if ( (git->size() + m.second) > git->capacity() )  // assure that there are atoms enough in the group
-                                        return;  // if not slip out the back door
+                                    if ( (git->size() + m.second) > git->capacity() ) {  // Assure that there are atoms enough in the group
+                                        return; // Slip out the back door
+                                    }
                                 } else {
                                     mollist = spc.findMolecules( m.first, Tspace::INACTIVE);
-                                    if ( size(mollist) <  m.second )
+                                    if ( size(mollist) <  m.second ) {
                                         return; // Not possible to perform change, escape through the back door
+                                    }
                                 }
                             }
-                            // If both deletion and addition can be performed, the move is doable 
-                            change.dN=true; // Attempting to change the number of atoms/molecules
-                            for (auto &m : rit->Molecules2Add( !forward )) { // Delete
+
+                            auto m1 = rit->Atoms2Add( not forward ); // Swap checks
+                            auto m2 = rit->Atoms2Add( forward );
+                            if ( (m1.size() == 1) && (m2.size() == 1) ) { // Swap A = B between atoms of different ID
+                                auto atomlist = spc.findAtoms( m1.begin()->first );
+                                if ( size(atomlist) < 1 ) // Make sure that there are any active atoms to swap
+                                    return; // End of swap checks
+                                auto ait = slump.sample( atomlist.begin(), atomlist.end() ); // Random particle iterator
+                                auto git = spc.findGroupContaining( *ait );
+                                Change::data d;
+                                d.atoms.push_back( Faunus::distance(git->begin(), ait) ); // Index of particle rel. to group
+                                d.index = Faunus::distance( spc.groups.begin(), git );
+                                d.internal = true;
+                                d.dNswap = true;
+                                change.groups.push_back( d ); // Add to list of moved groups
+                                Tparticle p = atoms.at( m2.begin()->first );
+                                p.pos = ait->pos;
+                                *ait = p;
+                                assert(ait->id == m2.begin()->first);
+                            }
+
+                            change.dN=true; // Attempting to change the number of atoms / molecules
+                            for (auto &m : rit->Molecules2Add( not forward )) { // Delete
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
                                     auto git = mollist.begin();
@@ -761,15 +785,15 @@ namespace Faunus {
                                     d.index = Faunus::distance( spc.groups.begin(), git);
                                     d.internal = true;
                                     d.dNatomic = true;
-                                    for ( int N=0; N<m.second; N++ ) {  // activate m.second m.first atoms
+                                    for ( int N=0; N<m.second; N++ ) {  // Activate m.second m.first atoms
                                         git->activate( git->end(), git->end() + 1);
                                         auto ait = git->end()-1;
                                         spc.geo.randompos(ait->pos, slump);
                                         spc.geo.getBoundaryFunc()(ait->pos);
-                                        d.atoms.push_back( Faunus::distance(git->begin(), ait) );  // index of particle rel. to group
+                                        d.atoms.push_back( Faunus::distance(git->begin(), ait) );  // Index of particle rel. to group
                                     }
                                     std::sort( d.atoms.begin(), d.atoms.end());
-                                    change.groups.push_back( d ); // add to list of moved groups
+                                    change.groups.push_back( d ); // Add to list of moved groups
                                 } else {
                                     mollist = spc.findMolecules( m.first, Tspace::INACTIVE);
                                     for ( int N=0; N <m.second; N++ ) {
@@ -783,16 +807,18 @@ namespace Faunus {
                                         Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), u) );
                                         git->rotate(Q, spc.geo.getBoundaryFunc());
                                         Change::data d;
-                                        d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
-                                        d.all = true; // *all* atoms in group were moved
+                                        d.index = Faunus::distance( spc.groups.begin(), git ); // Integer *index* of moved group
+                                        d.all = true; // All atoms in group were moved
                                         d.internal = true;
                                         for (int i=0; i<git->capacity(); i++)
                                             d.atoms.push_back(i);
-                                        change.groups.push_back( d ); // add to list of moved groups
+                                        change.groups.push_back( d ); // Add to list of moved groups
                                         assert( spc.geo.sqdist( git->cm, Geometry::massCenter(git->begin(),git->end(),spc.geo.getBoundaryFunc(), -git->cm ) ) < 1e-9 );
                                     }
+
                                 }
                             }
+
                             std::sort(change.groups.begin(), change.groups.end() );
                         } else
                             throw std::runtime_error("No reactions in list, disable speciation or add reactions");
@@ -1686,66 +1712,46 @@ start:
                 for ( auto &m : change.groups ) {
                     int N_o = 0;
                     int N_n = 0;
-                    if ( m.dNatomic ) {
-                        auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ALL);
-                        auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
-                        if ( size(mollist_n) > 1 || size(mollist_o) > 1 )
-                            throw std::runtime_error("Bad definition: One group per atomic molecule!");
-                        if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic)
-                            throw std::runtime_error("Only atomic molecules!");
-                        // Below is safe due to the catches above
-                        // add consistency criteria with m.atoms.size() == N
-                        N_n =  mollist_n.begin()->size();
-                        N_o =  mollist_o.begin()->size();
-                    } else {
-                        if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic ) { // Molecular species
-                            auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
-                            auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
-                            N_n=size(mollist_n);
-                            N_o=size(mollist_o);
+                    if ( m.dNswap ) {
+                        assert( m.atoms.size()==1 );
+                        auto &g_n = spc_n.groups.at(m.index);
+                        int id1 = (g_n.begin()+m.atoms.front())->id;
+                        auto &g_o = spc_o.groups.at(m.index);
+                        int id2 = (g_o.begin()+m.atoms.front())->id;
+                        for (int id : {id1, id2}) {
+                            auto atomlist_n = spc_n.findAtoms(id);
+                            auto atomlist_o = spc_o.findAtoms(id);
+                            N_n = size(atomlist_n);
+                            N_o = size(atomlist_o);
+                            int dN = N_n - N_o;
+                            double V_n = spc_n.geo.getVolume();
+                            if (dN>0)
+                                for (int n=0; n < dN; n++)
+                                    NoverO += -std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
+                            else if (dN<0)
+                                for (int n=0; n < (-dN); n++)
+                                    NoverO += std::log( (N_o - n) / ( V_n * 1.0_molar ));
                         }
-                    }
-
-                    int dN = N_n - N_o;
-
-                    if (dN!=0) {
-                        double V_n = spc_n.geo.getVolume();
-                        //double V_o = spc_o.geo.getVolume();
-                        double betamu = molecules<Tpvec>[ spc_n.groups[m.index].id ].activity;
-
-                        // todo: add runtime error if activity <=0 ?
-
-                        if (betamu > 1e-20)
-                            betamu = std::log( betamu / 1.0_molar );
-
-                        if (dN>0)
-                            for (int n=0; n < dN; n++)
-                                NoverO += -std::log( (N_o + 1 + n) / ( V_n * 1.0_molar )) + betamu;
-                        else if (dN<0)
-                            for (int n=0; n < (-dN); n++)
-                                NoverO += std::log( (N_o - n) / ( V_n * 1.0_molar )) - betamu;
-                    }
-                }
-            }
-
-            if ( change.groups.size()==1 ) {
-                auto m = change.groups.front();
-                if ( m.dNswap ) {
-                    int N_n = 0;
-                    int N_o = 0;
-                    assert(m.atoms.size()==1);
-                    auto &g_n = spc_n.groups.at(m.index);
-                    int id1 = (g_n.begin()+m.atoms.front())->id;
-                    auto &g_o = spc_o.groups.at(m.index);
-                    int id2 = (g_o.begin()+m.atoms.front())->id;
-
-                    for (int id : {id1, id2}) {
-
-                        auto atomlist_n = spc_n.findAtoms(id);
-                        auto atomlist_o = spc_o.findAtoms(id);
-
-                        N_n = size(atomlist_n);
-                        N_o = size(atomlist_o);
+                    } else {
+                        if ( m.dNatomic ) {
+                            auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ALL);
+                            auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
+                            if ( size(mollist_n) > 1 || size(mollist_o) > 1 )
+                                throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                            if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic)
+                                throw std::runtime_error("Only atomic molecules!");
+                            // Below is safe due to the catches above
+                            // add consistency criteria with m.atoms.size() == N
+                            N_n =  mollist_n.begin()->size();
+                            N_o =  mollist_o.begin()->size();
+                        } else {
+                            if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic ) { // Molecular species
+                                auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
+                                auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
+                                N_n=size(mollist_n);
+                                N_o=size(mollist_o);
+                            }
+                        }
 
                         int dN = N_n - N_o;
 
@@ -1753,7 +1759,9 @@ start:
                             double V_n = spc_n.geo.getVolume();
                             //double V_o = spc_o.geo.getVolume();
                             double betamu = molecules<Tpvec>[ spc_n.groups[m.index].id ].activity;
+
                             // todo: add runtime error if activity <=0 ?
+
                             if (betamu > 1e-20)
                                 betamu = std::log( betamu / 1.0_molar );
 
@@ -1766,7 +1774,6 @@ start:
                         }
                     }
                 }
-
             }
             return -NoverO; // negative sign since Pref exp{-beta(dU)} = exp{-beta(dU -ln(Pref)}
         }

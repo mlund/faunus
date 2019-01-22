@@ -460,7 +460,6 @@ namespace Faunus {
             //Tmap _Reac, _Prod;
 
             bool canonic=false;             //!< Finite reservoir
-            bool swap=false;                //!< Swap move (e.g. titration)
             int N_reservoir;                //!< Number of molecules in finite reservoir
             double lnK=0;                   //!< Natural logarithm of molar eq. const.
             std::string name;               //!< Name of reaction
@@ -556,8 +555,11 @@ namespace Faunus {
                     for (auto &name : a._reac) { // loop over reactants
                         auto pair = a.findAtomOrMolecule( name );  // {iterator to atom, iterator to mol.}
                         if ( pair.first != atoms.end() ) {
-                            a._reacid_a[ pair.first->id() ]++;
-                            if ( pair.first->implicit ) a.swap=true;
+                            if ( pair.first->implicit ) {
+                                a.lnK -= std::log(pair.first->activity/1.0_molar);
+                            } else {
+                                a._reacid_a[ pair.first->id() ]++;
+                            }
                         }
                         if ( pair.second != molecules<Tpvec>.end() )
                             a._reacid_m[ pair.second->id() ]++;
@@ -566,8 +568,11 @@ namespace Faunus {
                     for (auto &name : a._prod) { // loop over products
                         auto pair = a.findAtomOrMolecule( name );
                         if ( pair.first != atoms.end() ) {
-                            a._prodid_a[ pair.first->id() ]++;
-                            if ( pair.first->implicit ) a.swap=true;
+                            if ( pair.first->implicit ) {
+                                a.lnK += std::log(pair.first->activity/1.0_molar);
+                            } else {
+                                a._prodid_a[ pair.first->id() ]++;
+                            }
                         }
                         if ( pair.second != molecules<Tpvec>.end() )
                             a._prodid_m[ pair.second->id() ]++;

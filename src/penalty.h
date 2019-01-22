@@ -147,7 +147,7 @@ namespace Faunus {
                     
                         else if (property=="atomatom") {
                             dir = j.at("dir"); 
-                            indexes = j.at("indexes");
+                            indexes = j.value("indexes", decltype(indexes)());
                             assert(indexes.size()==2 && "An array of 2 indexes should be specified.");
                             f = [&spc, &dir=dir, i=indexes[0], j=indexes[1]]() {
                                 auto &pos1 = spc.p.at(i).pos;
@@ -158,7 +158,7 @@ namespace Faunus {
 
                         else if (property=="cmcm") {
                             dir = j.at("dir"); 
-                            indexes = j.at("indexes");
+                            indexes = j.value("indexes", decltype(indexes)());
                             assert(indexes.size()==4 && "An array of 4 indexes should be specified.");
                             f = [&spc, dir=dir, i=indexes[0], j=indexes[1]+1, k=indexes[2], l=indexes[3]+1]() {
                                 auto cm1 = Geometry::massCenter(spc.p.begin()+i, spc.p.begin()+j, spc.geo.getBoundaryFunc());

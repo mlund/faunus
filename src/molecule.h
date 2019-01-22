@@ -503,8 +503,8 @@ namespace Faunus {
             auto findAtomOrMolecule(const std::string &name) const {
                 auto it_a = findName(atoms, name);
                 auto it_m = findName(molecules<Tpvec>, name);
-                if (it_m == molecules<Tpvec>.end()) 
-                    if (it_a == atoms.end()) 
+                if (it_m == molecules<Tpvec>.end())
+                    if (it_a == atoms.end())
                         throw std::runtime_error("unknown species '" + name + "'");
                 return std::make_pair(it_a, it_m);
             } //!< Returns pair of iterators to atomlist and moleculelist. One of them points to end().

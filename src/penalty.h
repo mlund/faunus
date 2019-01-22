@@ -109,7 +109,7 @@ namespace Faunus {
                     MoleculeProperty(const json &j, Tspace &spc) {
                         name = "molecule";
                         from_json(j, *this);
-                        index = j.at("index");
+                        index = j.value("index", 0);
                         auto b = spc.geo.getBoundaryFunc();
                         property = j.at("property").get<std::string>();
 
@@ -146,12 +146,24 @@ namespace Faunus {
                         }
                     
                         else if (property=="atomatom") {
-                            dir = j.at("dir").get<Point>().normalized(); 
-                            indexes = j.value("indexes", decltype(indexes)());
+                            dir = j.at("dir"); 
+                            indexes = j.at("indexes");
+                            assert(indexes.size()==2 && "An array of 2 indexes should be specified.");
                             f = [&spc, &dir=dir, i=indexes[0], j=indexes[1]]() {
                                 auto &pos1 = spc.p.at(i).pos;
                                 auto &pos2 = spc.p.at(j).pos;
                                 return spc.geo.vdist(pos1, pos2).cwiseProduct(dir.cast<double>()).norm(); 
+                            };
+                        }
+
+                        else if (property=="cmcm") {
+                            dir = j.at("dir"); 
+                            indexes = j.at("indexes");
+                            assert(indexes.size()==4 && "An array of 4 indexes should be specified.");
+                            f = [&spc, dir=dir, i=indexes[0], j=indexes[1]+1, k=indexes[2], l=indexes[3]+1]() {
+                                auto cm1 = Geometry::massCenter(spc.p.begin()+i, spc.p.begin()+j, spc.geo.getBoundaryFunc());
+                                auto cm2 = Geometry::massCenter(spc.p.begin()+k, spc.p.begin()+l, spc.geo.getBoundaryFunc());
+                                return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm(); 
                             };
                         }
 

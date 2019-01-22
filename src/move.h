@@ -680,8 +680,8 @@ namespace Faunus {
                             lnK = rit->lnK;
                             forward = (bool)slump.range(0,1); // random boolean
                             trialprocess = &(*rit);
-                            if ( rit->empty(forward) )  // Enforce canonic constraint if invoked
-                                return; //Out of material, slip out the back door
+                            if ( rit->empty(forward) ) // Enforce canonic constraint if invoked
+                                return; // Out of material, slip out the back door
 
                             for (auto &m : rit->Molecules2Add( !forward )) { // Delete checks
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
@@ -689,7 +689,7 @@ namespace Faunus {
                                     if( size(mollist)!=1 ) // There can be only one
                                         throw std::runtime_error("Bad definition: One group per atomic molecule!");
                                     auto git = mollist.begin();
-                                    if ( git->size() < m.second )  // assure that there are atoms enough in the group
+                                    if ( git->size() < m.second ) // assure that there are atoms enough in the group
                                         return;
                                 } else {
                                     mollist = spc.findMolecules( m.first, Tspace::ACTIVE);
@@ -711,17 +711,15 @@ namespace Faunus {
                                         return; // Not possible to perform change, escape through the back door
                                 }
                             }
-                            //The move is doable, raise flag
-                            change.dN=true;
+                            // If both deletion and addition can be performed, the move is doable 
+                            change.dN=true; // Attempting to change the number of atoms/molecules
                             for (auto &m : rit->Molecules2Add( !forward )) { // Delete
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
-                                    if( size(mollist)!=1 ) // There can be only one
-                                        throw std::runtime_error("Bad definition: One group per atomic molecule!");
-                                    Change::data d;
                                     auto git = mollist.begin();
                                     auto othermollist = otherspc->findMolecules(m.first, Tspace::ALL);  // implies that new and old are in sync
                                     auto othergit=othermollist.begin();
+                                    Change::data d;
                                     d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                     d.internal = true;
                                     d.dNatomic = true;
@@ -742,17 +740,15 @@ namespace Faunus {
                                 } else {
                                     mollist = spc.findMolecules( m.first, Tspace::ACTIVE);
                                     for ( int N=0; N <m.second; N++ ) {
-                                        Change::data d;
                                         auto git = slump.sample(mollist.begin(), mollist.end());
                                         git->deactivate( git->begin(), git->end());
+                                        Change::data d;
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                         d.all = true; // *all* atoms in group were moved
                                         d.internal = true;
                                         for (int i=0; i<git->capacity(); i++)
                                             d.atoms.push_back(i);
                                         change.groups.push_back( d ); // add to list of moved groups
-                                        mollist = spc.findMolecules( m.first , Tspace::ACTIVE);
-                                        // Activate/deactivate all? simply move end to front?
                                     }
                                 }
                             }
@@ -760,8 +756,8 @@ namespace Faunus {
                             for (auto &m : rit->Molecules2Add( forward )) { // Add
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
-                                    Change::data d;
                                     auto git = mollist.begin();
+                                    Change::data d;
                                     d.index = Faunus::distance( spc.groups.begin(), git);
                                     d.internal = true;
                                     d.dNatomic = true;
@@ -776,12 +772,7 @@ namespace Faunus {
                                     change.groups.push_back( d ); // add to list of moved groups
                                 } else {
                                     mollist = spc.findMolecules( m.first, Tspace::INACTIVE);
-                                    if ( size(mollist) <  m.second ) {
-                                        change.dN=false;
-                                        return; // Not possible to perform change, escape through the back door
-                                    }
                                     for ( int N=0; N <m.second; N++ ) {
-                                        Change::data d;
                                         auto git = slump.sample(mollist.begin(), mollist.end());
                                         git->activate( git->inactive().begin(), git->inactive().end());
                                         Point newpoint; // = git->cm;
@@ -791,6 +782,7 @@ namespace Faunus {
                                         Point u = ranunit(slump);
                                         Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), u) );
                                         git->rotate(Q, spc.geo.getBoundaryFunc());
+                                        Change::data d;
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                         d.all = true; // *all* atoms in group were moved
                                         d.internal = true;
@@ -798,7 +790,6 @@ namespace Faunus {
                                             d.atoms.push_back(i);
                                         change.groups.push_back( d ); // add to list of moved groups
                                         assert( spc.geo.sqdist( git->cm, Geometry::massCenter(git->begin(),git->end(),spc.geo.getBoundaryFunc(), -git->cm ) ) < 1e-9 );
-                                        mollist = spc.findMolecules( m.first , Tspace::INACTIVE);
                                     }
                                 }
                             }

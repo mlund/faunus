@@ -22,7 +22,7 @@ Installing
 
 On macOS or Linux, install using [conda](https://conda.io/miniconda.html):
 
-    conda install -c teokem faunus
+    conda install -c conda-forge faunus
 
 Or build from source, see [here](http://mlund.github.io/faunus/docs/install/).
 

@@ -1,0 +1,40 @@
+{% set T = 0.18 %}
+{% set eps = 1/T %}
+{% set N = 1000 %}
+{% set rho = 0.291 %}
+{% set L = (N/rho)**0.5 %}
+
+# Core-shell particles on a two-dimensional surface (doi:10.1038/nmat820)
+# This is an illustration of how to use a user-defined pair potential, albeit
+# this is computationally not particularly efficient.
+#
+# It also illustrates how to use jinja2 string replacements using
+# the `yason.py` script.
+
+temperature: {{ T }} # this has no effect in this simulation
+random: { seed: fixed }
+geometry: { type: cuboid, length: {{ L }} }
+atomlist:
+    - CS: {dp: 0.9}
+moleculelist:
+    - mymol: {atomic: true, atoms: [CS], insdir: [1,1,0]}
+insertmolecules:
+    - mymol: { N: {{ N }} }
+energy:
+    - nonbonded:
+        default:
+            - custom: # custom pair-potential
+                cutoff: 2.5 # shell size
+                constants: { Rcore: 1.0 }
+                function: >
+                    if (r<Rcore)
+                        inf;
+                    else
+                        {{ eps }};
+mcloop: {macro: 10, micro: 100}
+moves:
+    - transrot: { molecule: mymol, dir: [1,1,0], repeat: N }
+analysis:
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}
+

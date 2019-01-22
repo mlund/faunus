@@ -11,7 +11,7 @@ via [(mini)conda](https://conda.io/docs/user-guide/install/index.html):
 
 ~~~ bash
 conda config --add channels conda-forge
-conda install -c teokem faunus
+conda install faunus
 ~~~
 
 In addition to the `faunus` executable, this installs a set of examples in `share/faunus`,
@@ -19,9 +19,9 @@ as well as python bindings.
 To _update_ an existing installation, use
 
 ~~~ bash
-faunus --version               # show version string
-conda search -c teokem faunus  # show (new) revisions
-conda upgrade -c teokem faunus
+faunus --version      # show version string
+conda search faunus   # show (new) revisions
+conda upgrade faunus
 ~~~
 
 Starting from version 2.1, we adhere to [semantic versioning](https://semver.org).

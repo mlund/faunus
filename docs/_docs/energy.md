@@ -338,7 +338,7 @@ $$
 `mixing=LB`  | Mixing rule; only `LB` available.
 `custom`     | Custom $\epsilon$ and $\sigma$ combinations
 
-### SASA Pair-potential
+### SASA
 
 This calculates the surface area of two intersecting particles or radii $R$ and $r$
 to estimate an energy based on transfer-free-energies (TFE) and surface tension.
@@ -369,6 +369,48 @@ and hydrophobic/hydrophilic interactions.
 `molarity`   | Molar concentration of co-solute, $c_s$.
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
 `shift=true` | Shift to zero at large separations
+
+### Custom
+
+This takes a user-defined expression and a list of constants to produce a runtime,
+custom pair-potential.
+While perhaps not as computationally efficient as hard-coded potentials, it is a
+convenient way to access alien potentials.
+
+`custom`     | Description
+------------ | --------------------------------------------------------
+`function`   | Mathematical expression for the potential (units of kT)
+`constants`  | User-defined constants
+`cutoff`     | Spherical cut-off distance
+
+The following illustrates how to define a custom Yukawa potential:
+
+~~~ yaml
+custom:
+    function: lB * q1 * q2 / r * exp( -r/D ) # in kT
+    constants:
+        lB: 7.1  # Bjerrum length
+        D: 30    # Debye length
+~~~
+
+The function is passed using the efficient
+[ExprTk library](http://www.partow.net/programming/exprtk/index.html) and
+a rich set of mathematical functions and logic is available.
+In addition to user-defined constants, the following symbols are defined:
+
+`symbol`   | Description
+---------- | ---------------------------------------------
+`e0`       | Vacuum permittivity [C^2/J/m]
+`inf`      | infinity
+`kB`       | Boltzmann's constant [J/K]
+`kT`       | Boltzmann's constant x temperature [J]
+`Nav`      | Avogadro's number [1/mol]
+`pi`       | Pi
+`q1`,`q2`  | particle charge [e]
+`r`        | particle-particle separation [angstrom]
+`Rc`       | Spherical cut-off [angstrom]
+`s1`,`s2`  | particle sigma [angstrom]
+`T`        | temperature [K]
 
 
 ## Bonded Interactions

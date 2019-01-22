@@ -5,6 +5,7 @@
 #include "core.h"
 #include "auxiliary.h"
 #include "tabulate.h"
+#include "functionparser.h"
 
 namespace Faunus {
     namespace Potential {
@@ -22,6 +23,12 @@ namespace Faunus {
         void to_json(json &j, const PairPotentialBase &base); //!< Serialize any pair potential to json
         void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair potential from json
 
+        /**
+         * @brief Statically combines two pair potentials at compile-time
+         *
+         * This is the most efficient way to combining pair-potentials due
+         * to the possibility for compile-time optimisation.
+         */
         template<class T1, class T2>
             struct CombinedPairPotential : public PairPotentialBase {
                 T1 first;  //!< First pair potential of type T1
@@ -52,7 +59,7 @@ namespace Faunus {
             class = typename std::enable_if<std::is_base_of<PairPotentialBase, T2>::value>::type>
                 CombinedPairPotential<T1, T2> &operator+(const T1 &pot1, const T2&) {
                     return *(new CombinedPairPotential<T1, T2>(pot1.name));
-                } //!< Add two pair potentials
+                } //!< Statically add two pair potentials at compile-time
 
         struct Dummy : public PairPotentialBase {
             inline Dummy() { name="dummy"; }
@@ -608,8 +615,57 @@ namespace Faunus {
         };
 
         /**
-         * Some convenient typedefs
+         * @brief Custom pair-potential taking math. expressions at runtime
          */
+        class CustomPairPotential : public PairPotentialBase {
+            private:
+                ExprFunction<double> expr;
+                struct Data {
+                    double r=0, q1=0, q2=0, s1=0, s2=0;
+                };
+                double Rc2;
+                std::shared_ptr<Data> d;
+                json jin; // initial json input
+            public:
+                template<typename... T>
+                    inline double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                        double r2 = r.squaredNorm();
+                        if (r2>Rc2)
+                            return 0;
+                        d->r  = sqrt(r2);
+                        d->q1 = a.charge;
+                        d->q2 = b.charge;
+                        d->s1 = atoms[a.id].sigma;
+                        d->s2 = atoms[b.id].sigma;
+                        return expr();
+                    }
+                CustomPairPotential(const std::string &name="custom");
+                void from_json(const json&) override;
+                void to_json(json&) const override;
+        };
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+        TEST_CASE("[Faunus] CustomPairPotential")
+        {
+            using doctest::Approx;
+            typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
+            json j = R"({ "atomlist" : [
+                 {"A": { "q":1.0,  "r":3, "eps":0.1 }},
+                 {"B": { "q":-1.0, "r":4, "eps":0.05 }} ]})"_json;
+
+            atoms = j["atomlist"].get<decltype(atoms)>();
+
+            Tparticle a,b;
+            a = atoms[0];
+            b = atoms[1];
+
+            CustomPairPotential pot = R"({
+                "constants": { "kappa": 30, "lB": 7},
+                "function": "lB * q1 * q2 / (s1+s2) * exp(-kappa/r) * kT + pi"})"_json;
+
+            CHECK( pot(a,b,{0,0,2}) == Approx( -7/(3.0+4.0) * std::exp(-30/2) * pc::kT() + pc::pi  ));
+        }
+#endif
 
         /**
          * @brief Arbitrary potentials for specific atom types
@@ -633,7 +689,8 @@ namespace Faunus {
                 // List of pair-potential instances used when constructing functors.
                 // Note that potentials w. large memory requirements (LJ, WCA etc.)
                 // typically use `shared_ptr` so that the created functors _share_
-                // the data.
+                // the data. That is *only* put the pair-potential here if you can
+                // share internal (shared) pointers.
                 std::tuple<
                     CoulombGalore,    // 0
                     CosAttract,       // 1
@@ -648,14 +705,15 @@ namespace Faunus {
                         > potlist;
 
                  uFunc combineFunc(const json &j) { 
-                    uFunc u = [](const T&, const T&, const Point &){return 0.0;};
+                    uFunc u = [](const T&, const T&, const Point&){return 0.0;};
                     if (j.is_array()) {
                         for (auto &i : j) // loop over all defined potentials in array
                             if (i.is_object() and (i.size()==1))
                                 for (auto it : i.items()) {
                                     uFunc _u = nullptr;
                                     try {
-                                        if (it.key()=="coulomb") _u = std::get<0>(potlist) = i;
+                                        if (it.key()=="custom") _u = CustomPairPotential() = it.value();
+                                        else if (it.key()=="coulomb") _u = std::get<0>(potlist) = i;
                                         else if (it.key()=="cos2") _u = std::get<1>(potlist) = i;
                                         else if (it.key()=="polar") _u = std::get<2>(potlist) = i;
                                         else if (it.key()=="hardsphere") _u = std::get<3>(potlist) = i;

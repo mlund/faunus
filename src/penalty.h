@@ -102,79 +102,81 @@ namespace Faunus {
         };
 
         struct MoleculeProperty : public AtomProperty {
-            template<class Tspace>
-                MoleculeProperty(const json &j, Tspace &spc) {
-                    name = "molecule";
-                    from_json(j, *this);
-                    index = j.at("index");
-                    std::vector<size_t> indexes;
-                    auto b = spc.geo.getBoundaryFunc();
-                    property = j.at("property").get<std::string>();
+            protected:
+                std::vector<size_t> indexes;
+            public:
+                template<class Tspace>
+                    MoleculeProperty(const json &j, Tspace &spc) {
+                        name = "molecule";
+                        from_json(j, *this);
+                        index = j.at("index");
+                        auto b = spc.geo.getBoundaryFunc();
+                        property = j.at("property").get<std::string>();
 
-                    if (property=="confid")     f = [&g=spc.groups, i=index]() { return g[i].confid; };
-                    else if (property=="com_x") f = [&g=spc.groups, i=index]() { return g[i].cm.x(); };
-                    else if (property=="com_y") f = [&g=spc.groups, i=index]() { return g[i].cm.y(); };
-                    else if (property=="com_z") f = [&g=spc.groups, i=index]() { return g[i].cm.z(); };
-                    else if (property=="N")     f = [&g=spc.groups, i=index]() { return g[i].size(); };
-                    else if (property=="Q")     f = [&g=spc.groups, i=index]() { return Geometry::monopoleMoment(g[i].begin(), g[i].end()); };
+                        if (property=="confid")     f = [&g=spc.groups, i=index]() { return g[i].confid; };
+                        else if (property=="com_x") f = [&g=spc.groups, i=index]() { return g[i].cm.x(); };
+                        else if (property=="com_y") f = [&g=spc.groups, i=index]() { return g[i].cm.y(); };
+                        else if (property=="com_z") f = [&g=spc.groups, i=index]() { return g[i].cm.z(); };
+                        else if (property=="N")     f = [&g=spc.groups, i=index]() { return g[i].size(); };
+                        else if (property=="Q")     f = [&g=spc.groups, i=index]() { return Geometry::monopoleMoment(g[i].begin(), g[i].end()); };
 
-                    else if (property=="mu_x")  f = [&g=spc.groups, i=index, b]() {
-                        return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).x();
-                    };
-
-                    else if (property=="mu_y")  f = [&g=spc.groups, i=index, b]() {
-                        return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).y();
-                    };
-
-                    else if (property=="mu_z")  f = [&g=spc.groups, i=index, b]() {
-                        return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).z();
-                    };
-
-                    else if (property=="mu")    f = [&g=spc.groups, i=index, b]() {
-                        return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).norm();
-                    };
-
-                    else if (property=="muangle") {
-                        dir = j.at("dir").get<Point>().normalized();
-                        if (not spc.groups.at(index).atomic)
-                            f = [&g=spc.groups, i=index, b, &dir=dir]() {
-                                Point mu = Geometry::dipoleMoment(g[i].begin(), g[i].end(), b);
-                                return std::acos(mu.dot(dir)) * 180 / pc::pi;
-                            };
-                    }
-                
-                    else if (property=="atomatom") {
-                        dir = j.at("dir").get<Point>().normalized(); 
-                        indexes = j.value("indexes", decltype(indexes)());
-                        f = [&spc, &dir=dir, i=indexes[0], j=indexes[1]]() {
-                            auto &pos1 = spc.p.at(i).pos;
-                            auto &pos2 = spc.p.at(j).pos;
-                            return spc.geo.vdist(pos1, pos2).cwiseProduct(dir.cast<double>()).norm(); 
+                        else if (property=="mu_x")  f = [&g=spc.groups, i=index, b]() {
+                            return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).x();
                         };
-                    }
 
+                        else if (property=="mu_y")  f = [&g=spc.groups, i=index, b]() {
+                            return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).y();
+                        };
 
-                    else if (property=="angle") {
-                        dir = j.at("dir").get<Point>().normalized();
-                        if (not spc.groups.at(index).atomic) {
-                            f = [&spc, &dir=dir, i=index]() {
-                                auto &cm = spc.groups[i].cm;
-                                auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.getBoundaryFunc(), cm);
-                                Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
-                                Point eivals = esf.eigenvalues();
-                                std::ptrdiff_t i_eival;
-                                eivals.minCoeff(&i_eival);
-                                Point vec = esf.eigenvectors().col(i_eival).real();
-                                double cosine = vec.dot(dir);
-                                double angle = std::acos(std::fabs(cosine)) * 180. / pc::pi;
-                                return angle; 
+                        else if (property=="mu_z")  f = [&g=spc.groups, i=index, b]() {
+                            return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).z();
+                        };
+
+                        else if (property=="mu")    f = [&g=spc.groups, i=index, b]() {
+                            return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).norm();
+                        };
+
+                        else if (property=="muangle") {
+                            dir = j.at("dir").get<Point>().normalized();
+                            if (not spc.groups.at(index).atomic)
+                                f = [&g=spc.groups, i=index, b, &dir=dir]() {
+                                    Point mu = Geometry::dipoleMoment(g[i].begin(), g[i].end(), b);
+                                    return std::acos(mu.dot(dir)) * 180 / pc::pi;
+                                };
+                        }
+                    
+                        else if (property=="atomatom") {
+                            dir = j.at("dir").get<Point>().normalized(); 
+                            indexes = j.value("indexes", decltype(indexes)());
+                            f = [&spc, &dir=dir, i=indexes[0], j=indexes[1]]() {
+                                auto &pos1 = spc.p.at(i).pos;
+                                auto &pos2 = spc.p.at(j).pos;
+                                return spc.geo.vdist(pos1, pos2).cwiseProduct(dir.cast<double>()).norm(); 
                             };
                         }
-                    }
 
-                    if (f==nullptr)
-                        throw std::runtime_error(name + ": unknown or impossible property '" + property + "'" + usageTip["coords=[molecule]"]);
-                }
+                        else if (property=="angle") {
+                            dir = j.at("dir").get<Point>().normalized();
+                            if (not spc.groups.at(index).atomic) {
+                                f = [&spc, &dir=dir, i=index]() {
+                                    auto &cm = spc.groups[i].cm;
+                                    auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.getBoundaryFunc(), cm);
+                                    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+                                    Point eivals = esf.eigenvalues();
+                                    std::ptrdiff_t i_eival;
+                                    eivals.minCoeff(&i_eival);
+                                    Point vec = esf.eigenvectors().col(i_eival).real();
+                                    double cosine = vec.dot(dir);
+                                    double angle = std::acos(std::fabs(cosine)) * 180. / pc::pi;
+                                    return angle; 
+                                };
+                            }
+                        }
+
+                        if (f==nullptr)
+                            throw std::runtime_error(name + ": unknown or impossible property '" + property + "'" + usageTip["coords=[molecule]"]);
+                    }
+                void _to_json(json &j) const override;
         };
 
         /**
@@ -193,11 +195,11 @@ namespace Faunus {
                     indexes = j.value("indexes", decltype(indexes)());
                     type = j.value("type", decltype(type)());
                     if (indexes.size()==4) {
-                        f = [&spc, dir=dir, i=indexes[0], j=indexes[1], k=indexes[2], l=indexes[3]]() {
+                        f = [&spc, dir=dir, i=indexes[0], j=indexes[1]+1, k=indexes[2], l=indexes[3]+1]() {
                             Group<Tparticle> g(spc.p.begin(), spc.p.end());
                             auto cm1 = Geometry::massCenter(g.begin()+i, g.begin()+j, spc.geo.getBoundaryFunc());
                             auto cm2 = Geometry::massCenter(g.begin()+k, g.begin()+l, spc.geo.getBoundaryFunc());
-                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum(); 
+                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm(); 
                         };
                     }
                     else if (type.size()==2) {
@@ -207,15 +209,13 @@ namespace Faunus {
                             auto slice2 = g.find_id(findName(atoms, type2)->id());
                             auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.getBoundaryFunc());
                             auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.getBoundaryFunc());
-                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).sum();
+                            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
                         };
                     }
                     else
                         throw std::runtime_error(name + ": specify 4 indexes or two atom types");
                 }
-
             double normalize(double coord) const override; // normalize by volume element
-
             void _to_json(json &j) const override;
         };
 

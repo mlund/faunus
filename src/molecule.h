@@ -460,6 +460,7 @@ namespace Faunus {
             //Tmap _Reac, _Prod;
 
             bool canonic=false;             //!< Finite reservoir
+            bool swap=false;                //!< Swap move (e.g. titration)
             int N_reservoir;                //!< Number of molecules in finite reservoir
             double lnK=0;                   //!< Natural logarithm of molar eq. const.
             std::string name;               //!< Name of reaction
@@ -502,8 +503,8 @@ namespace Faunus {
             auto findAtomOrMolecule(const std::string &name) const {
                 auto it_a = findName(atoms, name);
                 auto it_m = findName(molecules<Tpvec>, name);
-                if (it_m == molecules<Tpvec>.end())
-                    if (it_a == atoms.end())
+                if (it_m == molecules<Tpvec>.end()) 
+                    if (it_a == atoms.end()) 
                         throw std::runtime_error("unknown species '" + name + "'");
                 return std::make_pair(it_a, it_m);
             } //!< Returns pair of iterators to atomlist and moleculelist. One of them points to end().
@@ -554,16 +555,20 @@ namespace Faunus {
 
                     for (auto &name : a._reac) { // loop over reactants
                         auto pair = a.findAtomOrMolecule( name );  // {iterator to atom, iterator to mol.}
-                        if ( pair.first != atoms.end() )
+                        if ( pair.first != atoms.end() ) {
                             a._reacid_a[ pair.first->id() ]++;
+                            if ( pair.first->implicit ) a.swap=true;
+                        }
                         if ( pair.second != molecules<Tpvec>.end() )
                             a._reacid_m[ pair.second->id() ]++;
                     }
 
                     for (auto &name : a._prod) { // loop over products
                         auto pair = a.findAtomOrMolecule( name );
-                        if ( pair.first != atoms.end() )
+                        if ( pair.first != atoms.end() ) {
                             a._prodid_a[ pair.first->id() ]++;
+                            if ( pair.first->implicit ) a.swap=true;
+                        }
                         if ( pair.second != molecules<Tpvec>.end() )
                             a._prodid_m[ pair.second->id() ]++;
                     }

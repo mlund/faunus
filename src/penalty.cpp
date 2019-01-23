@@ -49,7 +49,7 @@ namespace Faunus {
             j["index"] = index;
             if (dir.squaredNorm()>1e-9)
                 j["dir"] = dir;
-            if (indexes.size()==2)
+            if (indexes.size()>=2)
                 j["indexes"] = indexes;
         }
 

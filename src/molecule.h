@@ -593,12 +593,10 @@ namespace Faunus {
         template<class Tparticle, class Talloc>
             void to_json(json& j, const ReactionData<std::vector<Tparticle,Talloc>> &a) {
                 j[a.name] = {
-                    {"original pK", a.pK }, {"activity-modified pK", -a.lnK/std::log(10) },
+                    {"input pK", a.pK }, {"activity-modified pK", -a.lnK/std::log(10) },
                     {"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
                     {"products", a._prod },
-                    //{"exchange products", a._prodid_m  },
                     {"reactants", a._reac }
-                    //{"exchange reactants", a._reacid_m  }
                 };
             } //!< Serialize to JSON object
 

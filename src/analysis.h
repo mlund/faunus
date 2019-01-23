@@ -557,7 +557,7 @@ namespace Faunus {
         /**
          * @brief Analysis of particle densities
          */
-         template<class Tspace>
+        template<class Tspace>
             class Density : public Analysisbase {
                 Tspace& spc;
                 typedef typename Tspace::Tparticle Tparticle;

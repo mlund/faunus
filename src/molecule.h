@@ -462,6 +462,7 @@ namespace Faunus {
             bool canonic=false;             //!< Finite reservoir
             int N_reservoir;                //!< Number of molecules in finite reservoir
             double lnK=0;                   //!< Natural logarithm of molar eq. const.
+            double pK=0;                    //!< -log10 of molar eq. const.
             std::string name;               //!< Name of reaction
             std::string formula;            //!< Chemical formula
             double weight;                  //!< Statistical weight to be given to reaction in speciation
@@ -545,6 +546,7 @@ namespace Faunus {
                         a.lnK = val.at("lnK").get<double>();
                     else if (val.count("pK")==1)
                         a.lnK = -std::log(10) * val.at("pK").get<double>();
+                    a.pK = - a.lnK / std::log(10);
                     a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
 
                     // get pair of vectors containing reactant and product species
@@ -561,8 +563,12 @@ namespace Faunus {
                                 a._reacid_a[ pair.first->id() ]++;
                             }
                         }
-                        if ( pair.second != molecules<Tpvec>.end() )
+                        if ( pair.second != molecules<Tpvec>.end() ) {
                             a._reacid_m[ pair.second->id() ]++;
+                            if ( pair.second->activity > 0 ) {
+                                a.lnK -= std::log(pair.second->activity/1.0_molar);
+                            }
+                        }
                     }
 
                     for (auto &name : a._prod) { // loop over products
@@ -574,8 +580,12 @@ namespace Faunus {
                                 a._prodid_a[ pair.first->id() ]++;
                             }
                         }
-                        if ( pair.second != molecules<Tpvec>.end() )
+                        if ( pair.second != molecules<Tpvec>.end() ) {
                             a._prodid_m[ pair.second->id() ]++;
+                            if ( pair.second->activity > 0 ) {
+                                a.lnK += std::log(pair.second->activity/1.0_molar);
+                            }
+                        }
                     }
                 }
             }
@@ -583,11 +593,11 @@ namespace Faunus {
         template<class Tparticle, class Talloc>
             void to_json(json& j, const ReactionData<std::vector<Tparticle,Talloc>> &a) {
                 j[a.name] = {
-                    {"lnK", a.lnK}, {"pK", -a.lnK/std::log(10)},
-                    {"canonic", a.canonic}, {"N_reservoir", a.N_reservoir}
-                    //{"products", json::value::array(a._prod) },
+                    {"original pK", a.pK }, {"activity-modified pK", -a.lnK/std::log(10) },
+                    {"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
+                    {"products", a._prod },
                     //{"exchange products", a._prodid_m  },
-                    //{"reactants", a._reac.data() },
+                    {"reactants", a._reac }
                     //{"exchange reactants", a._reacid_m  }
                 };
             } //!< Serialize to JSON object

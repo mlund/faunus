@@ -1632,7 +1632,7 @@ start:
                             if (dN>0)
                                 for (int n=0; n < dN; n++)
                                     NoverO += -std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
-                            else if (dN<0)
+                            else 
                                 for (int n=0; n < (-dN); n++)
                                     NoverO += std::log( (N_o - n) / ( V_n * 1.0_molar ));
                         }
@@ -1656,25 +1656,16 @@ start:
                                 N_o=size(mollist_o);
                             }
                         }
-
                         int dN = N_n - N_o;
-
                         if (dN!=0) {
                             double V_n = spc_n.geo.getVolume();
                             //double V_o = spc_o.geo.getVolume();
-                            double betamu = molecules<Tpvec>[ spc_n.groups[m.index].id ].activity;
-
-                            // todo: add runtime error if activity <=0 ?
-
-                            if (betamu > 1e-20)
-                                betamu = std::log( betamu / 1.0_molar );
-
                             if (dN>0)
                                 for (int n=0; n < dN; n++)
-                                    NoverO += -std::log( (N_o + 1 + n) / ( V_n * 1.0_molar )) + betamu;
-                            else if (dN<0)
+                                    NoverO += -std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
+                            else 
                                 for (int n=0; n < (-dN); n++)
-                                    NoverO += std::log( (N_o - n) / ( V_n * 1.0_molar )) - betamu;
+                                    NoverO += std::log( (N_o - n) / ( V_n * 1.0_molar ));
                         }
                     }
                 }

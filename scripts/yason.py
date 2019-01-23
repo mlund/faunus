@@ -6,15 +6,16 @@ if sys.version_info < (3, 0):
     sys.exit(1)
 
 import json, sys, argparse
+import warnings
 
 try:
     import jinja2
 except ImportError:
+    warnings.warn("warning: missing jinja2 module");
     jinja2 = None 
 
 try:
     import ruamel_yaml as yaml
-    import warnings
     warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
 except ImportError:
     import yaml

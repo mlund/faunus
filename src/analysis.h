@@ -563,7 +563,6 @@ namespace Faunus {
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
 
-                std::vector<std::string> names;
                 std::map<int, Table2D<double,double>> seldhist;  // Density histograms for selected atoms
                 std::map<int, Table2D<double,double>> atmdhist;  // Density histograms for atomic molecules
                 std::map<int, Table2D<double,double>> moldhist;  // Density histograms for molecules
@@ -609,15 +608,22 @@ namespace Faunus {
                     for (auto &i : Natom)
                         rho_atom[i.first] += i.second/V;
 
-                    for (auto &name : names) {
-                        int id = findName(atoms, name)->id();
-                        auto atomlist = spc.findAtoms(id);
-                        seldhist[ id ]( size(atomlist) )++;
+                    if ( reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
+                        for (auto &rit : reactions<Tpvec> ) {
+                            for (auto pid : rit._prodid_a) {
+                                auto atomlist = spc.findAtoms(pid.first);
+                                seldhist[ pid.first ]( size(atomlist) )++;
+                            }
+                            for (auto rid : rit._reacid_a) {
+                                auto atomlist = spc.findAtoms(rid.first);
+                                seldhist[ rid.first ]( size(atomlist) )++;
+                            }
+                        }
                     }
                 }
-                void _from_json(const json &j) override {
-                    names = j.value("atoms", decltype(names)()); // atom names
-                }
+                //void _from_json(const json &j) override {
+                //    names = j.value("atoms", decltype(names)()); // atom names
+                //}
 
                 void _to_json(json &j) const override {
                     using namespace u8;
@@ -649,10 +655,14 @@ namespace Faunus {
                         m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
                     for ( auto &m: moldhist)
                         m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
-                    for (auto &name : names) {
-                        int id = findName(atoms, name)->id();
-                        seldhist.at( id ).save( "rho-"s + name + ".dat" );
-                    }
+                    if ( reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
+                        for (auto &rit : reactions<Tpvec> ) {
+                            for (auto pid : rit._prodid_a) 
+                                seldhist.at( pid.first ).save( "rho-"s + atoms.at( pid.first ).name + ".dat" );
+                            for (auto rid : rit._reacid_a) 
+                                seldhist.at( rid.first ).save( "rho-"s + atoms.at( rid.first ).name + ".dat" );
+                        }
+                    } 
                 }
                 void normalize() {
                     for (auto &hist: atmdhist) {

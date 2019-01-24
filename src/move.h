@@ -716,12 +716,13 @@ namespace Faunus {
                                 }
                             }
 
-                            auto m1 = rit->Atoms2Add( not forward ); // Swap checks
-                            auto m2 = rit->Atoms2Add( forward );
-                            if ( (m1.size() == 1) && (m2.size() == 1) ) { // Swap A = B between atoms of different ID
+                            if (rit->swap==true) {
+                                auto m1 = rit->Atoms2Add( not forward ); // Swap checks
+                                auto m2 = rit->Atoms2Add( forward );
+                                assert( (m1.size() == 1) and (m2.size() == 1) && "Bad definition: Only 2 explicit atoms per reaction!"); // Swap A = B
                                 auto atomlist = spc.findAtoms( m1.begin()->first );
                                 if ( size(atomlist) < 1 ) // Make sure that there are any active atoms to swap
-                                    return; // End of swap checks
+                                    return; // Slip out the back door
                                 auto ait = slump.sample( atomlist.begin(), atomlist.end() ); // Random particle iterator
                                 auto git = spc.findGroupContaining( *ait );
                                 Change::data d;
@@ -905,8 +906,7 @@ namespace Faunus {
                                 assert(it->id==molid);
                                 Point oldcm = it->cm;
                                 if (index.size()==2) {
-                                    Group<Tparticle> g(spc.p.begin(), spc.p.end());
-                                    auto cm_O = Geometry::massCenter(g.begin()+index[0], g.begin()+index[1], spc.geo.getBoundaryFunc() );
+                                    auto cm_O = Geometry::massCenter(spc.p.begin()+index[0], spc.p.begin()+index[1]+1, spc.geo.getBoundaryFunc() );
                                     it->translate( -2*spc.geo.vdist(oldcm, cm_O).cwiseProduct(dir.cast<double>()), spc.geo.getBoundaryFunc() );
                                 } else {
                                     it->translate( -2*oldcm.cwiseProduct(dir.cast<double>()), spc.geo.getBoundaryFunc() );
@@ -1402,6 +1402,7 @@ start:
                                     else if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
                                     else if (it.key()=="charge") this->template push_back<Move::ChargeMove<Tspace>>(spc);
                                     else if (it.key()=="speciation") this->template push_back<Move::SpeciationMove<Tspace>>(spc);
+                                    else if (it.key()=="quadrantjump") this->template push_back<Move::QuadrantJump<Tspace>>(spc);
                                     else if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);
                                     // new moves go here...
 #ifdef ENABLE_MPI

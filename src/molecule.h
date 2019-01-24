@@ -460,6 +460,7 @@ namespace Faunus {
             //Tmap _Reac, _Prod;
 
             bool canonic=false;             //!< Finite reservoir
+            bool swap=false;                //!< True if swap move
             int N_reservoir;                //!< Number of molecules in finite reservoir
             double lnK=0;                   //!< Natural logarithm of molar eq. const.
             double pK=0;                    //!< -log10 of molar eq. const.
@@ -557,6 +558,13 @@ namespace Faunus {
                     for (auto &name : a._reac) { // loop over reactants
                         auto pair = a.findAtomOrMolecule( name );  // {iterator to atom, iterator to mol.}
                         if ( pair.first != atoms.end() ) {
+                            a.swap = true; // if the reaction involves atoms, identify it as swap move
+                        }
+                    }
+
+                    for (auto &name : a._reac) { // loop over reactants
+                        auto pair = a.findAtomOrMolecule( name ); // {iterator to atom, iterator to mol.}
+                        if ( pair.first != atoms.end() ) {
                             if ( pair.first->implicit ) {
                                 a.lnK -= std::log(pair.first->activity/1.0_molar);
                             } else {
@@ -565,7 +573,8 @@ namespace Faunus {
                         }
                         if ( pair.second != molecules<Tpvec>.end() ) {
                             a._reacid_m[ pair.second->id() ]++;
-                            if ( pair.second->activity > 0 ) {
+                            // in swap moves, only activities of implicit atoms modify lnK
+                            if ( a.swap==false and pair.second->activity > 0 ) {
                                 a.lnK -= std::log(pair.second->activity/1.0_molar);
                             }
                         }
@@ -575,15 +584,16 @@ namespace Faunus {
                         auto pair = a.findAtomOrMolecule( name );
                         if ( pair.first != atoms.end() ) {
                             if ( pair.first->implicit ) {
-                                a.lnK += std::log(pair.first->activity/1.0_molar);
+                                a.lnK -= std::log(pair.first->activity/1.0_molar);
                             } else {
                                 a._prodid_a[ pair.first->id() ]++;
                             }
                         }
                         if ( pair.second != molecules<Tpvec>.end() ) {
                             a._prodid_m[ pair.second->id() ]++;
-                            if ( pair.second->activity > 0 ) {
-                                a.lnK += std::log(pair.second->activity/1.0_molar);
+                            // in swap moves, only activities of implicit atoms modify lnK
+                            if ( a.swap==false and pair.second->activity > 0 ) {
+                                a.lnK -= std::log(pair.second->activity/1.0_molar);
                             }
                         }
                     }

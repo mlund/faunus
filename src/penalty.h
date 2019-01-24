@@ -156,6 +156,16 @@ namespace Faunus {
                             };
                         }
 
+                        else if (property=="cmcm_z") {
+                            indexes = j.value("indexes", decltype(indexes)());
+                            assert(indexes.size()==4 && "An array of 4 indexes should be specified.");
+                            f = [&spc, dir=dir, i=indexes[0], j=indexes[1]+1, k=indexes[2], l=indexes[3]+1]() {
+                                auto cm1 = Geometry::massCenter(spc.p.begin()+i, spc.p.begin()+j, spc.geo.getBoundaryFunc());
+                                auto cm2 = Geometry::massCenter(spc.p.begin()+k, spc.p.begin()+l, spc.geo.getBoundaryFunc());
+                                return spc.geo.vdist(cm1, cm2).z();
+                            };
+                        }
+
                         else if (property=="cmcm") {
                             dir = j.at("dir"); 
                             indexes = j.value("indexes", decltype(indexes)());
@@ -208,9 +218,8 @@ namespace Faunus {
                     type = j.value("type", decltype(type)());
                     if (indexes.size()==4) {
                         f = [&spc, dir=dir, i=indexes[0], j=indexes[1]+1, k=indexes[2], l=indexes[3]+1]() {
-                            Group<Tparticle> g(spc.p.begin(), spc.p.end());
-                            auto cm1 = Geometry::massCenter(g.begin()+i, g.begin()+j, spc.geo.getBoundaryFunc());
-                            auto cm2 = Geometry::massCenter(g.begin()+k, g.begin()+l, spc.geo.getBoundaryFunc());
+                            auto cm1 = Geometry::massCenter(spc.p.begin()+i, spc.p.begin()+j, spc.geo.getBoundaryFunc());
+                            auto cm2 = Geometry::massCenter(spc.p.begin()+k, spc.p.begin()+l, spc.geo.getBoundaryFunc());
                             return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm(); 
                         };
                     }

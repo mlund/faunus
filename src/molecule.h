@@ -566,15 +566,18 @@ namespace Faunus {
                         auto pair = a.findAtomOrMolecule( name ); // {iterator to atom, iterator to mol.}
                         if ( pair.first != atoms.end() ) {
                             if ( pair.first->implicit ) {
-                                a.lnK -= std::log(pair.first->activity/1.0_molar);
+                                // implicit reagent? K is multiplied by its activity
+                                a.lnK += std::log(pair.first->activity/1.0_molar);
                             } else {
                                 a._reacid_a[ pair.first->id() ]++;
                             }
                         }
                         if ( pair.second != molecules<Tpvec>.end() ) {
                             a._reacid_m[ pair.second->id() ]++;
-                            // in swap moves, only activities of implicit atoms modify lnK
-                            if ( a.swap==false and pair.second->activity > 0 ) {
+                            if ( pair.second->activity > 0 ) {
+                                // explicit reagent?
+                                // its activity is not part of K? 
+                                // K is divided by its activity 
                                 a.lnK -= std::log(pair.second->activity/1.0_molar);
                             }
                         }
@@ -584,6 +587,7 @@ namespace Faunus {
                         auto pair = a.findAtomOrMolecule( name );
                         if ( pair.first != atoms.end() ) {
                             if ( pair.first->implicit ) {
+                                // implicit product? K is divided by its activity
                                 a.lnK -= std::log(pair.first->activity/1.0_molar);
                             } else {
                                 a._prodid_a[ pair.first->id() ]++;
@@ -591,9 +595,11 @@ namespace Faunus {
                         }
                         if ( pair.second != molecules<Tpvec>.end() ) {
                             a._prodid_m[ pair.second->id() ]++;
-                            // in swap moves, only activities of implicit atoms modify lnK
-                            if ( a.swap==false and pair.second->activity > 0 ) {
-                                a.lnK -= std::log(pair.second->activity/1.0_molar);
+                            if ( pair.second->activity > 0 ) {
+                                // explicit product?
+                                // its activity is not part of K?
+                                // K is multiplied by its activity
+                                a.lnK += std::log(pair.second->activity/1.0_molar);
                             }
                         }
                     }

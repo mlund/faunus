@@ -1632,10 +1632,10 @@ start:
                             double V_n = spc_n.geo.getVolume();
                             if (dN>0)
                                 for (int n=0; n < dN; n++)
-                                    NoverO += -std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
+                                    NoverO += std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
                             else 
                                 for (int n=0; n < (-dN); n++)
-                                    NoverO += std::log( (N_o - n) / ( V_n * 1.0_molar ));
+                                    NoverO -= std::log( (N_o - n) / ( V_n * 1.0_molar ));
                         }
                     } else {
                         if ( m.dNatomic ) {
@@ -1663,15 +1663,15 @@ start:
                             //double V_o = spc_o.geo.getVolume();
                             if (dN>0)
                                 for (int n=0; n < dN; n++)
-                                    NoverO += -std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
+                                    NoverO += std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
                             else 
                                 for (int n=0; n < (-dN); n++)
-                                    NoverO += std::log( (N_o - n) / ( V_n * 1.0_molar ));
+                                    NoverO -= std::log( (N_o - n) / ( V_n * 1.0_molar ));
                         }
                     }
                 }
             }
-            return -NoverO; // negative sign since Pref exp{-beta(dU)} = exp{-beta(dU -ln(Pref)}
+            return NoverO; // negative sign since Pref exp{-beta(dU)} = exp{-beta(dU -ln(Pref)}
         }
 
 }//Faunus namespace

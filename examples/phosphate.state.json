@@ -930,10 +930,8 @@
   "reactionlist": [
     {
       "h3po4 = h2po4 + H": {
-        "N_reservoir": 32620,
-        "activity-modified pK": 0.12000000000000045,
-        "canonic": false,
-        "input pK": 2.12,
+        "pK": 2.12,
+        "pK'": 0.12000000000000045,
         "products": [
           "h2po4",
           "H"
@@ -945,10 +943,8 @@
     },
     {
       "h2po4 = hpo4 + H": {
-        "N_reservoir": 32657,
-        "activity-modified pK": 5.21,
-        "canonic": false,
-        "input pK": 7.21,
+        "pK": 7.21,
+        "pK'": 5.21,
         "products": [
           "hpo4",
           "H"
@@ -960,10 +956,8 @@
     },
     {
       "hpo4 = po4 + H": {
-        "N_reservoir": 32657,
-        "activity-modified pK": 10.670000000000002,
-        "canonic": false,
-        "input pK": 12.67,
+        "pK": 12.67,
+        "pK'": 10.670000000000002,
         "products": [
           "po4",
           "H"

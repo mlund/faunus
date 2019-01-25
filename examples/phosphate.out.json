@@ -1,0 +1,151 @@
+{
+    "analysis": [
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        },
+        {
+            "density": {
+                "atomic": {
+                    "h2po4": {
+                        "c/M": 0.0715314181660102
+                    },
+                    "h3po4": {
+                        "c/M": 0.09452167893224142
+                    },
+                    "hpo4": {
+                        "c/M": 0.001660540103953132
+                    }
+                },
+                "molecular": null,
+                "nstep": 10,
+                "relative time": 0.0203,
+                "samples": 20000,
+                "∛⟨V⟩": 100.0,
+                "⟨1/V⟩": 1e-06,
+                "⟨V⟩": 1000000.0,
+                "⟨∛V⟩": 100.0
+            }
+        },
+        {
+            "sanity": {
+                "nstep": 100,
+                "relative time": 2.15e-05,
+                "samples": 2000
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Apple LLVM 10.0.0 (clang-1000.11.45.5)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": null,
+                        "pairpot": {
+                            "default": [
+                                {
+                                    "wca": {
+                                        "mixing": "LB"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "relative time": 0.08018401732342866
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            100.0,
+            100.0,
+            100.0
+        ],
+        "type": "cuboid"
+    },
+    "git revision": "d8c9447c (2019-01-25)",
+    "groups": [
+        {
+            "H3PO4": {
+                "index": [
+                    0,
+                    99
+                ],
+                "size": 100
+            }
+        }
+    ],
+    "moves": [
+        {
+            "speciation": {
+                "acceptance": 0.305,
+                "moves": 200000,
+                "reactions": {
+                    "h2po4 = hpo4 + H": {
+                        "acceptance": 0.0010150768771458427,
+                        "attempts": 33495
+                    },
+                    "h3po4 = h2po4 + H": {
+                        "acceptance": 0.9181453921007441,
+                        "attempts": 66386
+                    },
+                    "hpo4 = po4 + H": {
+                        "acceptance": 0.0,
+                        "attempts": 15
+                    }
+                },
+                "relative time": 0.816,
+                "relative time (without energy calc)": 0.539,
+                "repeat": 1
+            }
+        }
+    ],
+    "number of groups": 1,
+    "number of particles": 100,
+    "reactionlist": [
+        {
+            "h3po4 = h2po4 + H": {
+                "pK": 2.12,
+                "pK'": 0.12000000000000045,
+                "products": [
+                    "h2po4",
+                    "H"
+                ],
+                "reactants": [
+                    "h3po4"
+                ]
+            }
+        },
+        {
+            "h2po4 = hpo4 + H": {
+                "pK": 7.21,
+                "pK'": 5.21,
+                "products": [
+                    "hpo4",
+                    "H"
+                ],
+                "reactants": [
+                    "h2po4"
+                ]
+            }
+        },
+        {
+            "hpo4 = po4 + H": {
+                "pK": 12.67,
+                "pK'": 10.670000000000002,
+                "products": [
+                    "po4",
+                    "H"
+                ],
+                "reactants": [
+                    "hpo4"
+                ]
+            }
+        }
+    ],
+    "relative drift": null,
+    "temperature": 300.0
+}

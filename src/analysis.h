@@ -22,6 +22,7 @@ namespace Faunus {
 
             protected:
             int steps=0; //!< Sample interval (do not modify)
+            int nskip=0; //!< MC steps to skip before sampling
             int cnt=0;   //!< number of samples
 
             public:
@@ -621,9 +622,6 @@ namespace Faunus {
                         }
                     }
                 }
-                //void _from_json(const json &j) override {
-                //    names = j.value("atoms", decltype(names)()); // atom names
-                //}
 
                 void _to_json(json &j) const override {
                     using namespace u8;

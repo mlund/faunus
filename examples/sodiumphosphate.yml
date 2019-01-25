@@ -32,6 +32,7 @@ moves:
 analysis:
     - savestate: {file: state.json}
     - density: {nstep: 10}
+    - reactioncoordinate: {file: Q.dat, nstep: 100, type: system, property: Q}
     - sanity: {nstep: 100}
 mcloop: {macro: 10, micro: 30000}
 geometry: {type: cuboid, length: 100}

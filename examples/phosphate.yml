@@ -1,0 +1,32 @@
+#!/usr/bin/env yason.py
+energy:
+    - nonbonded:
+        default:
+            - wca: {mixing: LB}
+atomlist:
+    - h3po4 : {eps: 1, sigma: 1, q: 0}
+    - h2po4 : {eps: 1, sigma: 1, q: -1}
+    - hpo4 : {eps: 1, sigma: 1., q: -2}
+    - po4 : {eps: 1, sigma: 1, q: -3}
+    - H : {eps: 1, sigma: 1, q: 1, activity: 0.01, implicit: True}
+moleculelist:
+    - H3PO4: {atoms: [h3po4], atomic: true}
+    - H2PO4: {atoms: [h2po4], atomic: true}
+    - HPO4: {atoms: [hpo4], atomic: true}
+    - PO4: {atoms: [po4], atomic: true}
+insertmolecules:
+    - H3PO4: {N: 100}
+reactionlist:
+    - "h3po4 = h2po4 + H": {pK: 2.12}
+    - "h2po4 = hpo4 + H": {pK: 7.21}
+    - "hpo4 = po4 + H":  {pK: 12.67}
+moves:
+    - speciation: {repeat: 1}
+analysis:
+    - savestate: {file: state.json}
+    - density: {nstep: 10}
+    - sanity: {nstep: 100}
+mcloop: {macro: 10, micro: 20000}
+geometry: {type: cuboid, length: 100}
+temperature: 300
+random: {seed: fixed }

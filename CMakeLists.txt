@@ -388,6 +388,20 @@ add_test(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 add_test(
+    NAME speciation
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py phosphate.yml\
+    | $<TARGET_FILE:faunus> --quiet --state phosphate.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py phosphate.out.json out.json --tol 0.02"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+add_test(
+    NAME speciation
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py phosphate_na.yml\
+    | $<TARGET_FILE:faunus> --quiet --state phosphate_na.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py phosphate_na.out.json out.json --tol 0.02"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+add_test(
     NAME cluster
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py cluster.yml\
     | $<TARGET_FILE:faunus> --quiet --state cluster.state.json\

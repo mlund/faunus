@@ -224,14 +224,18 @@ Untested for cylinders, slits.
 
 The speciation move handles density fluctuations and particle transformations and is the main move
 for particle insertion, deletion, and swapping used in (semi)-grand canonical ensembles.
-A reaction from `reactionlist` is randomly picked from the topology and is either propagated forward or backwards.
-In Faunus, the total number of atoms and molecules are constant, but these can be either _active_ or _inactive_.
+A reaction from `reactionlist` is randomly picked from the topology and is either propagated forward or backward.
+In Faunus, the total number of atoms and molecules is constant, but these can be either _active_ or _inactive_.
 Deleting a molecule simply deactivates it, while insertion _vice versa_ activates an inactive molecule.
 Thus, it is important that the _capacity_ or reservoir of particles (active plus inactive) is
 sufficiently large to allow for fluctuations.
 This is ensured using `insertmolecules` (see Topology).
-A runtime warning will be given, should you run low on particles.
-
+A runtime warning will be given, should you run low on particles.<br>
+Besides deleting/inserting molecules (mono- or polyatomic), the speciation move performs reactions involving a 
+single-atom ID transformation (e.g., acid-base reactions).
+In this case, an particle of type A (part of a mono- or polyatomic molecule) is randomly picked from the system 
+and all its properties, except its position, are replaced with those of an atom of type B. 
+Such ID transormations can also involve the addition/deletion of molecules or _implicit_ atoms.
 For more information about reactions, see the Topology section.
 
 `speciation`    |  Description

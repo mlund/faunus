@@ -19,17 +19,17 @@ namespace Faunus {
      *   empty, it is assumed that *all* particles in the group are affected.
      */
     struct Change {
-        bool dV = false;    //!< Set to true if there's a volume change
-        double all = false; //!< Set to true if *everything* has changed
-        double du=0;        //!< Additional energy change not captured by Hamiltonian
-        bool dN=false;  //!< True if the number of atomic or molecular species has changed
+        bool dV=false;    //!< Set to true if there's a volume change
+        double all=false; //!< Set to true if *everything* has changed
+        double du=0;      //!< Additional energy change not captured by Hamiltonian
+        bool dN=false;    //!< True if the number of atomic or molecular species has changed
 
         struct data {
-            bool dNatomic=false; //!< True if the number of atomic molecules has changed
-            bool dNswap=false; //!< True if the number of atoms has changed as a result of a swap move
-            int index; //!< Touched group index
-            bool internal=false; //!< True if the internal energy/config has changed
-            bool all=false; //!< True if all particles in group have been updated
+            bool dNatomic=false;    //!< True if the number of atomic molecules has changed
+            bool dNswap=false;      //!< True if the number of atoms has changed as a result of a swap move
+            int index;              //!< Touched group index
+            bool internal=false;    //!< True if the internal energy/config has changed
+            bool all=false;         //!< True if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
 
             inline bool operator<( const data & a ) const{

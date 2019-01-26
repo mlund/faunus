@@ -18,6 +18,7 @@ namespace Faunus {
             virtual void _from_json(const json &j);
             virtual void _sample()=0;
             int stepcnt=0;
+            int totstepcnt=0;
             TimeRelativeOfTotal<std::chrono::microseconds> timer;
 
             protected:

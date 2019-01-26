@@ -16,7 +16,7 @@ at the top level input:
 
 ~~~ yaml
 analysis:
-    - systemenergy: {file: energy.dat, nstep: 500}
+    - systemenergy: {file: energy.dat, nstep: 500, nskip: 2000}
     - xtcfile: {file: traj.xtc, nstep: 1000}
     - widom:  {molecule: water, ninsert: 20, nstep: 50}
     - molrdf: {name1: water, name2: water, nstep: 100,
@@ -25,7 +25,7 @@ analysis:
 ~~~
 
 **Note:** all analysis methods support the `nstep` keyword that defines the interval between
-sampling points. In addition all analysis provide output statistics of number of sample
+sampling points and the `nskip` keyword that defines the number of initial steps that are excluded from the analysis. In addition all analysis provide output statistics of number of sample
 points, and the relative run-time spent on the analysis.
 {: .notice--info}
 

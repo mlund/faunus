@@ -609,20 +609,13 @@ namespace Faunus {
 
         /*
          * @brief Establishes equilibrium of matter
-         *  Establishes equilibrium of matter between all species
+         * Establishes equilibrium of matter between all species
          *
          * Consider the dissociation process AX=A+X. This class will locate
          * all species of type AX and A and make a MC swap move between them.
-         * X is implicit, meaning that it enters only with its chemical potential
-         * (activity). The titrating species, their dissociation constants
-         * and the chemical potential of the titrant are read from a
-         * `processes` JSON object.
-         * For example, for proton titration of phosphate one would
-         * use the following JSON input (pH 7.0):
-         *
-         * @todo
-         *    Implement classification of reactions to group weight in
-         *    mc sweep {refrerence : prob(reference)}
+         * X can be implicit, meaning that it enters only with its chemical potential
+         * (activity). The reacting species, the equilibrium constant,
+         * and the activities are read from the JSON input file.
          *
          */
         template<typename Tspace>
@@ -1569,7 +1562,7 @@ start:
                                 else if (std::isnan(du))
                                     du = 0; // accept
 
-                                double bias = (**mv).bias(change, uold, unew) + Nchem( state2.spc, state1.spc , change);
+                                double bias = (**mv).bias(change, uold, unew) + IdealTerm( state2.spc, state1.spc , change);
 
                                 if ( metropolis(du + bias) ) { // accept move
                                     state1.sync( state2, change );
@@ -1599,18 +1592,21 @@ start:
         }
 
     /**
-     * @brief add documentation.....
+     * @brief Ideal energy contribution of a speciation move
+     * This funciton calculates the contribution to the energy change arising from the
+     * change in concentration of reactant and products in the current and in the trial state.
      *
      * @f[
-     *     \beta U = \ln ( \sum N_o!/N_n! \exp([N_n - N_o]\beta \mu) V^{N_n - N_o} )
+     *     \beta \Delta U = - \sum \ln ( N_o!/N_n! V^{N_n - N_o} )
      * @f]
      *
+     * where the sum runs over all products and reactants.
+     *
      * @todo
-     * - Rename to something more descriptive
      * - use exception message to suggest how to fix the problem
      */
     template<typename Tspace>
-        double Nchem( Tspace &spc_n, Tspace &spc_o, const Change &change) {
+        double IdealTerm( Tspace &spc_n, Tspace &spc_o, const Change &change) {
             using Tpvec = typename Tspace::Tpvec;
             double NoverO=0;
             if ( change.dN ) { // Has the number of any molecules changed?

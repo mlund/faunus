@@ -223,8 +223,8 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("init", &Thamiltonian::init)
         .def("energy", &Thamiltonian::energy);
 
-    // Nchem
-    m.def("Nchem", &Nchem<Tspace>);
+    // IdealTerm
+    m.def("IdealTerm", &IdealTerm<Tspace>);
 
     // MCSimulation
     py::class_<Tmcsimulation>(m, "MCSimulation")

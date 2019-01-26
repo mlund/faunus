@@ -9,19 +9,20 @@
             "density": {
                 "atomic": {
                     "h2po4": {
-                        "c/M": 0.0715314181660102
+                        "c/M": 0.07196525342824749
                     },
                     "h3po4": {
-                        "c/M": 0.09452167893224142
+                        "c/M": 0.09408836821185433
                     },
                     "hpo4": {
-                        "c/M": 0.001660540103953132
+                        "c/M": 0.0016605401039531315
                     }
                 },
                 "molecular": null,
+                "nskip": 1000,
                 "nstep": 10,
-                "relative time": 0.0203,
-                "samples": 20000,
+                "relative time": 0.0195,
+                "samples": 29900,
                 "∛⟨V⟩": 100.0,
                 "⟨1/V⟩": 1e-06,
                 "⟨V⟩": 1000000.0,
@@ -29,10 +30,23 @@
             }
         },
         {
-            "sanity": {
+            "reactioncoordinate": {
+                "average": -43.33779264214047,
+                "file": "Q.dat",
+                "nskip": 1000,
                 "nstep": 100,
-                "relative time": 2.15e-05,
-                "samples": 2000
+                "property": "Q",
+                "relative time": 0.0022,
+                "samples": 2990,
+                "type": "system"
+            }
+        },
+        {
+            "sanity": {
+                "nskip": 0,
+                "nstep": 100,
+                "relative time": 1.74e-05,
+                "samples": 3000
             }
         }
     ],
@@ -53,7 +67,7 @@
                             ]
                         }
                     },
-                    "relative time": 0.08018401732342866
+                    "relative time": 0.07581020255906433
                 }
             ]
         }
@@ -66,7 +80,7 @@
         ],
         "type": "cuboid"
     },
-    "git revision": "d8c9447c (2019-01-25)",
+    "git revision": "527ca52c (2019-01-25)",
     "groups": [
         {
             "H3PO4": {
@@ -81,24 +95,24 @@
     "moves": [
         {
             "speciation": {
-                "acceptance": 0.305,
-                "moves": 200000,
+                "acceptance": 0.307,
+                "moves": 300000,
                 "reactions": {
                     "h2po4 = hpo4 + H": {
-                        "acceptance": 0.0010150768771458427,
-                        "attempts": 33495
+                        "acceptance": 0.0006772503635240922,
+                        "attempts": 50203
                     },
                     "h3po4 = h2po4 + H": {
-                        "acceptance": 0.9181453921007441,
-                        "attempts": 66386
+                        "acceptance": 0.9204913768956825,
+                        "attempts": 99964
                     },
                     "hpo4 = po4 + H": {
                         "acceptance": 0.0,
-                        "attempts": 15
+                        "attempts": 11
                     }
                 },
-                "relative time": 0.816,
-                "relative time (without energy calc)": 0.539,
+                "relative time": 0.834,
+                "relative time (without energy calc)": 0.567,
                 "repeat": 1
             }
         }

@@ -7,11 +7,12 @@ void Faunus::Analysis::to_json(Faunus::json &j, const Faunus::Analysis::Analysis
 Faunus::Analysis::Analysisbase::~Analysisbase() {}
 
 void Faunus::Analysis::Analysisbase::sample() {
+    totstepcnt++;
     stepcnt++;
-    if ( stepcnt > nskip ) {
-        if ( stepcnt == steps ) {
+    if ( stepcnt == steps ) {
+        stepcnt = 0;
+        if ( totstepcnt > nskip ) {
             cnt++;
-            stepcnt = 0;
             timer.start();
             _sample();
             timer.stop();

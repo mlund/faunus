@@ -9,25 +9,26 @@
             "density": {
                 "atomic": {
                     "cl": {
-                        "c/M": 0.4673996954901643
+                        "c/M": 0.46728603735137675
                     },
                     "h2po4": {
-                        "c/M": 0.06848283258916214
+                        "c/M": 0.06851388468910602
                     },
                     "h3po4": {
-                        "c/M": 0.09757079034678488
+                        "c/M": 0.09753973695099026
                     },
                     "hpo4": {
                         "c/M": 0.0016605401039531315
                     },
                     "na": {
-                        "c/M": 0.5358833029980435
+                        "c/M": 0.535800699550901
                     }
                 },
                 "molecular": null,
+                "nskip": 1000,
                 "nstep": 10,
-                "relative time": 0.0478,
-                "samples": 30000,
+                "relative time": 0.0458,
+                "samples": 29900,
                 "∛⟨V⟩": 100.0,
                 "⟨1/V⟩": 1e-06,
                 "⟨V⟩": 1000000.0,
@@ -35,9 +36,22 @@
             }
         },
         {
-            "sanity": {
+            "reactioncoordinate": {
+                "average": 0.0,
+                "file": "Q.dat",
+                "nskip": 1000,
                 "nstep": 100,
-                "relative time": 0.00049,
+                "property": "Q",
+                "relative time": 0.000838,
+                "samples": 2990,
+                "type": "system"
+            }
+        },
+        {
+            "sanity": {
+                "nskip": 0,
+                "nstep": 100,
+                "relative time": 0.000435,
                 "samples": 3000
             }
         }
@@ -59,7 +73,7 @@
                             ]
                         }
                     },
-                    "relative time": 0.277887652627333
+                    "relative time": 0.27929037485750996
                 }
             ]
         }
@@ -72,7 +86,7 @@
         ],
         "type": "cuboid"
     },
-    "git revision": "d8c9447c (2019-01-25)",
+    "git revision": "527ca52c (2019-01-25)",
     "groups": [
         {
             "H3PO4": {
@@ -127,8 +141,8 @@
                         "attempts": 11
                     }
                 },
-                "relative time": 0.891,
-                "relative time (without energy calc)": 0.188,
+                "relative time": 0.9,
+                "relative time (without energy calc)": 0.194,
                 "repeat": 1
             }
         }

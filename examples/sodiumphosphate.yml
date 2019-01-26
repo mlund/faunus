@@ -31,8 +31,8 @@ moves:
     - speciation: {repeat: 1}
 analysis:
     - savestate: {file: state.json}
-    - density: {nstep: 10}
-    - reactioncoordinate: {file: Q.dat, nstep: 100, type: system, property: Q}
+    - density: {nstep: 10, nskip: 1000}
+    - reactioncoordinate: {file: Q.dat, nstep: 100, type: system, property: Q, nskip: 1000}
     - sanity: {nstep: 100}
 mcloop: {macro: 10, micro: 30000}
 geometry: {type: cuboid, length: 100}

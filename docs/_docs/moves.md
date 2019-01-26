@@ -235,8 +235,19 @@ Besides deleting/inserting molecules (mono- or polyatomic), the speciation move 
 single-atom ID transformation (e.g., acid-base reactions).
 In this case, an particle of type A (part of a mono- or polyatomic molecule) is randomly picked from the system 
 and all its properties, except its position, are replaced with those of an atom of type B. 
-Such ID transormations can also involve the addition/deletion of molecules or _implicit_ atoms.
-For more information about reactions, see the Topology section.
+Such ID transormations can also involve the addition/deletion of molecules or _implicit_ atoms.<br>
+For a reaction
+$$
+\sum_i \nu_i M_i = 0
+$$
+where $M_i$ is the chemical symbol and $\nu_i$ is the stoichiometric coefficient of species $i$ (positive for products and negative for reagents),
+the contribution of a speciation move to the energy change is
+$$
+\beta \Delta U = - \sum_i \ln{ \left ( \frac{ N_i! }{(N_i+\nu_i)!} V^{\nu_i} \right ) } - \ln{ \prod_i a_i^{\nu_i} },
+$$
+where $N_i$ is the number of particles of species $i$ in the current state and $a_i$ is the activity of species $i$.
+
+For more information, see the Topology section and [DOI:10.1080/00268979400100481](https://doi.org/10.1080/00268979400100481).
 
 `speciation`    |  Description
 --------------- | ----------------------------------

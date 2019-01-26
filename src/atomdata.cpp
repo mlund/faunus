@@ -10,6 +10,7 @@ namespace Faunus {
         auto& _j = j[a.name];
         _j = {
             {"activity", a.activity / 1.0_molar},
+            {"pactivity", -std::log10( a.activity / 1.0_molar )},
             {"alphax", a.alphax}, {"q", a.charge},
             {"dp", a.dp / 1.0_angstrom}, {"dprot", a.dprot / 1.0_rad},
             {"eps", a.eps / 1.0_kJmol}, {"mw", a.mw},
@@ -32,7 +33,10 @@ namespace Faunus {
         for (auto it : j.items()) {
             a.name = it.key();
             xjson val = it.value();
-            a.activity = val.value("activity", a.activity) * 1.0_molar;
+            if (val.count("activity")==1)
+                a.activity = val.at("activity").get<double>() * 1.0_molar;
+            else if (val.count("pactivity")==1)
+                a.activity = std::pow( 10, -val.at("pactivity").get<double>() ) * 1.0_molar;
             a.alphax   = val.value("alphax", a.alphax);
             a.charge   = val.value("q", a.charge);
             a.dp       = val.value("dp", a.dp) * 1.0_angstrom;

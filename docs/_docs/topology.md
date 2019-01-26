@@ -50,6 +50,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 `atomlist`    | Description
 ------------- | ------------------------------------------------------
 `activity=0`  | Chemical activity for grand canonical MC [mol/l]
+`pactivity`   | -log10 of chemical activity (will be converted to activity)
 `alphax=0`    | Excess polarizability (unit-less)
 `dp=0`        | Translational displacement parameter [Å]
 `dprot=0`     | Rotational displacement parameter [degrees] (will be converted to radians)
@@ -238,7 +239,7 @@ where Na and Cl are included in the `moleculelist` as
 In this case K is both divided by $a_{\mathrm{H}}$ and $a_{\mathrm{Cl}}$, so that the actual equilibrium constant used by the speciation move is
 
 $$
-K = \frac{K_a}{a_{ \mathrm{H} } a_{ \mathrm{Cl} } } = \frac{ a_{\mathrm{ASP}} }{ a_{\mathrm{HASP}} a_{\mathrm{Cl}} }.
+K' = \frac{K_a}{a_{ \mathrm{H} } a_{ \mathrm{Cl} } } = \frac{ a_{\mathrm{ASP}} }{ a_{\mathrm{HASP}} a_{\mathrm{Cl}} }.
 $$
 
 In an ideal system, the involvement of Cl in the acid-base reaction does not affect the equilibrium since the grand canonical ensemble
@@ -249,7 +250,6 @@ Note that:
 - all species, `+`, and `=` must be surrounded by white-space
 - atom and molecule names cannot overlap
 - you may repeat species to match the desired stoichiometry
-- equilibrium reaction functionality currently in *alpha state* and may be subject to sudden change!
 
 Available keywords:
 

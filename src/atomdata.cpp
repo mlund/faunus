@@ -10,6 +10,7 @@ namespace Faunus {
         auto& _j = j[a.name];
         _j = {
             {"activity", a.activity / 1.0_molar},
+            {"pactivity", -std::log10( a.activity / 1.0_molar )},
             {"alphax", a.alphax}, {"q", a.charge},
             {"dp", a.dp / 1.0_angstrom}, {"dprot", a.dprot / 1.0_rad},
             {"eps", a.eps / 1.0_kJmol}, {"mw", a.mw},
@@ -22,6 +23,8 @@ namespace Faunus {
         };
         if (a.hydrophobic)
             _j["hydrophobic"] = a.hydrophobic;
+        if (a.implicit)
+            _j["implicit"] = a.implicit;
     }
 
     void from_json(const json &j, AtomData &a) {
@@ -30,7 +33,10 @@ namespace Faunus {
         for (auto it : j.items()) {
             a.name = it.key();
             xjson val = it.value();
-            a.activity = val.value("activity", a.activity) * 1.0_molar;
+            if (val.count("activity")==1)
+                a.activity = val.at("activity").get<double>() * 1.0_molar;
+            else if (val.count("pactivity")==1)
+                a.activity = std::pow( 10, -val.at("pactivity").get<double>() ) * 1.0_molar;
             a.alphax   = val.value("alphax", a.alphax);
             a.charge   = val.value("q", a.charge);
             a.dp       = val.value("dp", a.dp) * 1.0_angstrom;
@@ -48,6 +54,7 @@ namespace Faunus {
             a.tension  = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom);
             a.tfe      = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom*1.0_molar);
             a.hydrophobic = val.value("hydrophobic", false);
+            a.implicit = val.value("implicit", false);
             if (not val.empty()) // throw exception of unused/unknown keys are passed
                 throw std::runtime_error("unused key(s) for atom '"s + a.name + "':\n"
                         + val.dump() + usageTip["atomlist"]);

@@ -27,6 +27,7 @@ namespace Faunus {
             int& id(); //!< Type id
             const int& id() const; //!< Type id
             bool hydrophobic=false;  //!< Is the particle hydrophobic?
+            bool implicit=false; //!< Is the particle implicit (e.g. proton)?
     };
 
     void to_json(json& j, const AtomData &a);

@@ -224,15 +224,30 @@ Untested for cylinders, slits.
 
 The speciation move handles density fluctuations and particle transformations and is the main move
 for particle insertion, deletion, and swapping used in (semi)-grand canonical ensembles.
-A reaction from `reactionlist` is randomly picked from the topology and is either propagated forward or backwards.
-In Faunus, the total number of atoms and molecules are constant, but these can be either _active_ or _inactive_.
+A reaction from `reactionlist` is randomly picked from the topology and is either propagated forward or backward.
+In Faunus, the total number of atoms and molecules is constant, but these can be either _active_ or _inactive_.
 Deleting a molecule simply deactivates it, while insertion _vice versa_ activates an inactive molecule.
 Thus, it is important that the _capacity_ or reservoir of particles (active plus inactive) is
 sufficiently large to allow for fluctuations.
 This is ensured using `insertmolecules` (see Topology).
-A runtime warning will be given, should you run low on particles.
+A runtime warning will be given, should you run low on particles.<br>
+Besides deleting/inserting molecules (mono- or polyatomic), the speciation move performs reactions involving a 
+single-atom ID transformation (e.g., acid-base reactions).
+In this case, an particle of type A (part of a mono- or polyatomic molecule) is randomly picked from the system 
+and all its properties, except its position, are replaced with those of an atom of type B. 
+Such ID transormations can also involve the addition/deletion of molecules or _implicit_ atoms.<br>
+For a reaction
+$$
+\sum_i \nu_i M_i = 0
+$$
+where $M_i$ is the chemical symbol and $\nu_i$ is the stoichiometric coefficient of species $i$ (positive for products and negative for reagents),
+the contribution of a speciation move to the energy change is
+$$
+\beta \Delta U = - \sum_i \ln{ \left ( \frac{ N_i! }{(N_i+\nu_i)!} V^{\nu_i} \right ) } - \ln{ \prod_i a_i^{\nu_i} },
+$$
+where $N_i$ is the number of particles of species $i$ in the current state and $a_i$ is the activity of species $i$.
 
-For more information about reactions, see the Topology section.
+For more information, see the Topology section and [DOI:10.1080/00268979400100481](https://doi.org/10.1080/00268979400100481).
 
 `speciation`    |  Description
 --------------- | ----------------------------------

@@ -187,7 +187,8 @@ PYBIND11_MODULE(pyfaunus, m)
     // Change::Data
     py::class_<Change::data>(m, "ChangeData")
         .def(py::init<>())
-        .def_readwrite("dNpart", &Change::data::dNpart)
+        .def_readwrite("dNatomic", &Change::data::dNatomic)
+        .def_readwrite("dNswap", &Change::data::dNswap)
         .def_readwrite("index", &Change::data::index)
         .def_readwrite("internal", &Change::data::internal)
         .def_readwrite("all", &Change::data::all)
@@ -201,7 +202,7 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("all", &Change::all)
         .def_readwrite("du", &Change::du)
         .def_readwrite("dV", &Change::dV)
-        .def_readwrite("dNpart", &Change::dNpart)
+        .def_readwrite("dN", &Change::dN)
         .def_readwrite("groups", &Change::groups);
 
     // Space
@@ -223,8 +224,8 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("init", &Thamiltonian::init)
         .def("energy", &Thamiltonian::energy);
 
-    // Nchem
-    m.def("Nchem", &Nchem<Tspace>);
+    // IdealTerm
+    m.def("IdealTerm", &IdealTerm<Tspace>);
 
     // MCSimulation
     py::class_<Tmcsimulation>(m, "MCSimulation")

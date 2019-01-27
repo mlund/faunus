@@ -92,78 +92,80 @@ int main( int argc, char **argv )
             j = openjson(input);
         }
 
-        pc::temperature = j.at("temperature").get<double>() * 1.0_K;
-        MCSimulation<Tgeometry,Tparticle> sim(j, mpi);
+        {
+            pc::temperature = j.at("temperature").get<double>() * 1.0_K;
+            MCSimulation<Tgeometry,Tparticle> sim(j, mpi);
 
-        // --state
-        if (args["--state"]) {
-            std::ifstream f;
-            std::string state = Faunus::MPI::prefix + args["--state"].asString();
-            std::string suffix = state.substr(state.find_last_of(".") + 1);
-            bool binary = (suffix=="ubj");
-            auto mode = std::ios::in;
-            if (binary)
-                mode = std::ifstream::ate | std::ios::binary; // ate = open at end
-            f.open(state, mode);
+            // --state
+            if (args["--state"]) {
+                std::ifstream f;
+                std::string state = Faunus::MPI::prefix + args["--state"].asString();
+                std::string suffix = state.substr(state.find_last_of(".") + 1);
+                bool binary = (suffix=="ubj");
+                auto mode = std::ios::in;
+                if (binary)
+                    mode = std::ifstream::ate | std::ios::binary; // ate = open at end
+                f.open(state, mode);
+                if (f) {
+                    json j;
+                    if (not quiet)
+                        mpi.cout() << "Loading state file '" << state << "'" << endl;
+                    if (binary) {
+                        size_t size = f.tellg(); // get file size
+                        std::vector<std::uint8_t> v(size/sizeof(std::uint8_t));
+                        f.seekg(0, f.beg);       // go back to start
+                        f.read((char*)v.data(), size);
+                        j = json::from_ubjson(v);
+                    } else
+                        f >> j;
+                    sim.restore(j);
+                } else
+                    throw std::runtime_error("Error loading state file '" + state + "'");
+            }
+
+            Analysis::CombinedAnalysis analysis(j.at("analysis"), sim.space(), sim.pot());
+
+            auto& loop = j.at("mcloop");
+            int macro = loop.at("macro");
+            int micro = loop.at("micro");
+
+            ProgressBar progressBar(macro*micro, 70);
+            for (int i=0; i<macro; i++) {
+                for (int j=0; j<micro; j++) {
+
+                    if (showProgress and mpi.isMaster()) {
+                        ++progressBar;
+                        if (j % 10 == 0)
+                            progressBar.display();
+                    }
+
+                    sim.move();
+                    analysis.sample();
+                }
+            }
+            if (showProgress and mpi.isMaster())
+                progressBar.done();
+
+            if (not quiet)
+                mpi.cout() << "relative drift = " << sim.drift() << endl;
+
+            // --output
+            std::ofstream f(Faunus::MPI::prefix + args["--output"].asString());
             if (f) {
                 json j;
-                if (not quiet)
-                    mpi.cout() << "Loading state file '" << state << "'" << endl;
-                if (binary) {
-                    size_t size = f.tellg(); // get file size
-                    std::vector<std::uint8_t> v(size/sizeof(std::uint8_t));
-                    f.seekg(0, f.beg);       // go back to start
-                    f.read((char*)v.data(), size);
-                    j = json::from_ubjson(v);
-                } else
-                    f >> j;
-                sim.restore(j);
-            } else
-                throw std::runtime_error("Error loading state file '" + state + "'");
-        }
-
-        Analysis::CombinedAnalysis analysis(j.at("analysis"), sim.space(), sim.pot());
-
-        auto& loop = j.at("mcloop");
-        int macro = loop.at("macro");
-        int micro = loop.at("micro");
-
-        ProgressBar progressBar(macro*micro, 70);
-        for (int i=0; i<macro; i++) {
-            for (int j=0; j<micro; j++) {
-
-                if (showProgress and mpi.isMaster()) {
-                    ++progressBar;
-                    if (j % 10 == 0)
-                        progressBar.display();
-                }
-
-                sim.move();
-                analysis.sample();
-            }
-        }
-        if (showProgress and mpi.isMaster())
-            progressBar.done();
-
-        if (not quiet)
-            mpi.cout() << "relative drift = " << sim.drift() << endl;
-
-        // --output
-        std::ofstream f(Faunus::MPI::prefix + args["--output"].asString());
-        if (f) {
-            json j;
-            Faunus::to_json(j, sim);
-            j["relative drift"] = sim.drift();
-            j["analysis"] = analysis;
-            if (mpi.nproc()>1)
-                j["mpi"] = mpi;
+                Faunus::to_json(j, sim);
+                j["relative drift"] = sim.drift();
+                j["analysis"] = analysis;
+                if (mpi.nproc()>1)
+                    j["mpi"] = mpi;
 #ifdef GIT_COMMIT_HASH
-            j["git revision"] = GIT_COMMIT_HASH;
+                j["git revision"] = GIT_COMMIT_HASH;
 #endif
 #ifdef __VERSION__
-            j["compiler"] = __VERSION__;
+                j["compiler"] = __VERSION__;
 #endif
-            f << std::setw(4) << j << endl;
+                f << std::setw(4) << j << endl;
+            }
         }
 
         mpi.finalize();

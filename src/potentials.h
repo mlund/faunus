@@ -17,7 +17,7 @@ namespace Faunus {
             std::string cite;
             virtual void to_json(json&) const=0;
             virtual void from_json(const json&)=0;
-            inline virtual ~PairPotentialBase() {};
+            virtual ~PairPotentialBase();
         }; //!< Base for all pair-potentials
 
         void to_json(json &j, const PairPotentialBase &base); //!< Serialize any pair potential to json
@@ -62,7 +62,7 @@ namespace Faunus {
                 } //!< Statically add two pair potentials at compile-time
 
         struct Dummy : public PairPotentialBase {
-            inline Dummy() { name="dummy"; }
+            Dummy();
             template<typename... T>
                 double operator()(const Particle<T...>&, const Particle<T...>&, const Point&) const {
                     return 0;
@@ -191,7 +191,7 @@ namespace Faunus {
                     using base::m;
                     static constexpr double onefourth=0.25, twototwosixth=1.2599210498948732;
                 public:
-                    inline WeeksChandlerAndersen(const std::string &name="wca") {
+                    WeeksChandlerAndersen(const std::string &name="wca") {
                         base::name=name;
                         base::cite="doi:ct4kh9";
                     }
@@ -230,22 +230,7 @@ namespace Faunus {
                 bool shift=true; // shift potential to zero at large separations?
                 double proberadius=0, conc=0;
 
-                inline double area(double R, double r, double d_squared) const {
-                    R += proberadius;
-                    r += proberadius;
-                    double area = 4*pc::pi*(R*R + r*r);  // full volume of both spheres
-                    double offset = (shift ? area : 0);
-                    if (d_squared>(R+r)*(R+r))
-                        return area - offset;
-                    if (r>R)
-                        std::swap(r,R);
-                    double d = sqrt(d_squared);
-                    if (d+r<=R)
-                        return 4*pc::pi*R*R - offset;      // full volume of biggest sphere
-                    double h1 = (r-R+d) * (r+R-d) / (2*d); // height of spherical caps
-                    double h2 = (R-r+d) * (R+r-d) / (2*d); // comprising intersecting lens
-                    return area - 2 * pc::pi * (R*h1 + r*h2) - offset;
-                } //!< Total surface area of two intersecting spheres or radii R and r as a function of separation
+                double area(double R, double r, double d_squared) const; //!< Total surface area of two intersecting spheres or radii R and r as a function of separation
 
             public:
                 template<class Tparticle>
@@ -405,7 +390,7 @@ namespace Faunus {
                         }
                     }
 
-                    inline void to_json(json &j) const override {
+                    void to_json(json &j) const override {
                         j = { {"epsr",epsr} };
                     }
 
@@ -440,7 +425,7 @@ namespace Faunus {
                     PairPotentialBase::name.clear();
                 }
 
-                inline void from_json(const json &j) override {
+                void from_json(const json &j) override {
                     wca = j;
                     cos2 = j;
                     auto it = findName(atoms, "TL");
@@ -479,7 +464,7 @@ namespace Faunus {
                     PairPotentialBase::name.clear();
                 }
 
-                inline void from_json(const json &j) override {
+                void from_json(const json &j) override {
                     wca = j;
                     cos2 = j;
                     polar = j;
@@ -827,7 +812,7 @@ namespace Faunus {
             virtual std::shared_ptr<BondData> clone() const=0; //!< Make shared pointer *copy* of data
             bool hasEnergyFunction() const; //!< test if energy function has been set
             void shift( int offset ); //!< Shift indices
-            inline virtual ~BondData() {};
+            virtual ~BondData();
         };
 
         /**

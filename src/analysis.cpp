@@ -186,3 +186,11 @@ void Faunus::Analysis::VirtualVolume::_to_json(Faunus::json &j) const {
     };
     _roundjson(j,5);
 }
+
+void Faunus::Analysis::QRtraj::_sample() { write_to_file(); }
+
+void Faunus::Analysis::QRtraj::_to_json(Faunus::json &j) const { j = {{"file", file}}; }
+
+void Faunus::Analysis::CombinedAnalysis::sample() {
+    for (auto i : this->vec) i->sample();
+}

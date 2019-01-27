@@ -46,7 +46,8 @@ For atomic groups, densities of individual atom types are reported.
 `atomprofile`  | Description
 -------------- | ---------------------------------------------
 `nstep=0`      | Interval between samples
-`atoms=[]`     | List of atom names to sample
+`atoms=[]`     | List of atom names to sample; `*` selects all
+`charge=false` | Calc. charge density instead of density
 `file`         | Output filename with profile
 `dr=0.1`       | Radial resolution
 `origo=[0,0,0]`| Center of the profile ($r=0$)
@@ -65,7 +66,7 @@ etc.
 
 `sliceddensity` | Description
 --------------- | ---------------------------------------------
-`atoms=[]`      | List of atom names to sample
+`atoms=[]`      | List of atom names to sample; `*` selects all 
 `file`          | Output filename with profile
 `dz=0.1`        | Resolution along _z_-axis
 `nstep`         | Interval between samples
@@ -136,7 +137,7 @@ form factor of unity.
 ----------- | ------------------------------------------
 `nstep`     | Interval with which to sample
 `file`      | Output filename for $I(q)$
-`molecules` | List of molecule names to sample (array)
+`molecules` | List of molecule names to sample (array); `*` selects all 
 `qmin`      | Minimum _q_ value (1/Å)
 `qmax`      | Maximum _q_ value (1/Å)
 `dq`        | _q_ spacing (1/Å)
@@ -151,7 +152,7 @@ fluctuations for all groups defined in `molecules`.
 `polymershape`   | Description
 ---------------- | ----------------------------------------
 `nstep`          | Interval with which to sample
-`molecules`      | List of molecule names to sample (array)
+`molecules`      | List of molecule names to sample (array); `*` selects all 
 
 
 ## Molecular Multipoles
@@ -210,10 +211,8 @@ $$
 
 During simulation, the above terms are thermally averaged over angles, co-solute degrees of freedom etc.
 Note also that the moments are defined with respect to the *mass* center, not *charge* center.
-While for most macromolecules there is only a minor difference between the two,
+While for globular macromolecules the difference between the two is often small,
 the latter is more appropriate and is planned for a future update.
-A simply way to mimic this, is to assign zero mass to all neutral
-atoms in the molecule.
 
 The input keywords are:
 
@@ -222,7 +221,7 @@ The input keywords are:
 `nstep`          | Interval between samples
 `file`           | Output file name
 `molecules`      | Array with exactly two molecule names, $a$ and $b$
-`dr=0.2`         | Distance resolution (Å) along $R$.
+`dr=0.2`         | Distance resolution (Å) along _R_.
 
 ## Reaction Coordinate
 

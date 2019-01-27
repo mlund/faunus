@@ -36,8 +36,10 @@ namespace Faunus {
 
         void to_json(json &j, const Analysisbase &base);
 
+        /*
+         * @brief Sample and save reaction coordinates to a file
+         */
         class FileReactionCoordinate : public Analysisbase {
-
             private:
                 Average<double> avg;
                 std::string type, filename;
@@ -451,32 +453,41 @@ namespace Faunus {
             class AtomProfile : public Analysisbase {
                 Tspace &spc;
                 typedef typename Tspace::Tparticle Tparticle;
-                Equidistant2DTable<double,unsigned int> tbl;
-                std::vector<std::string> names;
-                std::vector<int> ids;
-                std::string file;
+                Equidistant2DTable<double,double> tbl;
+                std::vector<std::string> names; // atom names to analyse
+                std::set<int> ids; // atom ids to analyse
+                std::string file; // output filename
                 Point ref={0,0,0};
-                double dr=0.1;
+                double dr; // radial resolution
+                bool count_charge=false;
+                bool Vnormalise=true;
 
                 void _from_json(const json &j) override {
                     ref = j.value("origo", Point(0,0,0));
                     file = j.at("file").get<std::string>();
-                    names = j.at("atoms").get<decltype(names)>(); // molecule names
-                    ids = names2ids(atoms, names);     // names --> molids
+                    names = j.at("atoms").get<decltype(names)>(); // atom names
+                    auto vec_of_ids = names2ids(Faunus::atoms, names);     // names --> molids
+                    ids = std::set<int>(vec_of_ids.begin(), vec_of_ids.end()); // copy vector to set
                     dr = j.value("dr", 0.1);
                     tbl.setResolution(dr,0);
+                    count_charge = j.value("charge", false);
                 }
 
                 void _to_json(json &j) const override {
-                    j = {{"origo", ref}, {"atoms", names}, {"file", file}, {"dr", dr}};
+                    j = {
+                        {"origo", ref}, {"atoms", names}, {"file", file}, {"dr", dr},
+                        {"charge", count_charge} };
                 }
 
                 void _sample() override {
                     for (auto &g : spc.groups)
                         for (auto &p : g)
-                            if (std::find(ids.begin(), ids.end(), p.id)!=ids.end()) {
+                            if (ids.count(p.id)!=0) {
                                 double r = spc.geo.vdist(p.pos, ref).norm();
-                                tbl(r)++;
+                                if (count_charge)
+                                    tbl(r) += p.charge; // count charge
+                                else
+                                    tbl(r) += 1; // count atoms
                             }
                 }
 
@@ -492,8 +503,9 @@ namespace Faunus {
                     if (f) {
                         tbl.stream_decorator = [&](std::ostream &o, double r, double N) {
                             if (r>0) {
+                                double V = 4*pc::pi*r*r*dr;
                                 N = N/double(cnt);
-                                o << r << " " << N << " " << N/(4*pc::pi*r*r*dr)*1e27/pc::Nav << "\n";
+                                o << r << " " << N << " " << N / V * 1e27 / pc::Nav << "\n";
                             }
                         };
                         f << "# r N rho/M\n" << tbl;
@@ -1219,8 +1231,8 @@ namespace Faunus {
                 std::string file;
                 std::ofstream f;
                 std::function<void()> write_to_file;
-                inline void _sample() override { write_to_file(); }
-                inline void _to_json(json &j) const override { j = {{"file", file}}; }
+                void _sample() override;
+                void _to_json(json &j) const override;
 
             public:
                 template<class Tspace>
@@ -1281,9 +1293,7 @@ namespace Faunus {
                                     }
                 }
 
-            inline void sample() {
-                for (auto i : this->vec) i->sample();
-            }
+            void sample();
 
         }; //!< Aggregates analysis
 

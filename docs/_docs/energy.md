@@ -87,7 +87,7 @@ This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise add
 $$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
 
 **Note:** the pair-potential can be a combination of several potentials defined at runtime.
-However, for optimal performance we include certain hard-coded combinations, defined at _compile time_.
+However, for optimal performance we include a set of hard-coded combinations, defined at _compile time_.
 It is straight forward to add more by editing the class
 `Energy::Hamiltonian` found in `src/energy.h` and then re-compile.
 {: .notice--info}
@@ -95,8 +95,8 @@ It is straight forward to add more by editing the class
 Below is a description of possible pair-potentials and their configuration.
 
 `energy`               | $u_{ij}$
----------------------- | ----------------------------------
-`nonbonded`            | Any combination of pair potentials
+---------------------- | ------------------------------------------
+`nonbonded`            | Any combination of pair potentials (slow!)
 `nonbonded_coulomblj`  | `coulomb`+`lennardjones`
 `nonbonded_coulombwca` | `coulomb`+`wca`
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)

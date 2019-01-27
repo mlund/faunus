@@ -6,6 +6,12 @@
 
 namespace Faunus {
 
+    struct reservoir {
+        std::string name;
+        int N_reservoir;
+        bool canonic;
+    };
+
     /**
      * @brief Specify change to a new state
      *
@@ -13,16 +19,17 @@ namespace Faunus {
      *   empty, it is assumed that *all* particles in the group are affected.
      */
     struct Change {
-        bool dV = false;    //!< Set to true if there's a volume change
-        double all = false; //!< Set to true if *everything* has changed
-        double du=0;        //!< Additional energy change not captured by Hamiltonian
-        bool dNpart=false;      //!< Is the size of groups partially changed
+        bool dV=false;    //!< Set to true if there's a volume change
+        double all=false; //!< Set to true if *everything* has changed
+        double du=0;      //!< Additional energy change not captured by Hamiltonian
+        bool dN=false;    //!< True if the number of atomic or molecular species has changed
 
         struct data {
-            bool dNpart=false;      //!< Is the size of groups partially changed
-            int index; //!< Touched group index
-            bool internal=false; //!< True is the internal energy/config has changed
-            bool all=false; //!< Set to `true` if all particles in group have been updated
+            bool dNatomic=false;    //!< True if the number of atomic molecules has changed
+            bool dNswap=false;      //!< True if the number of atoms has changed as a result of a swap move
+            int index;              //!< Touched group index
+            bool internal=false;    //!< True if the internal energy/config has changed
+            bool all=false;         //!< True if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
 
             inline bool operator<( const data & a ) const{
@@ -42,7 +49,7 @@ namespace Faunus {
             du=0;
             dV=false;
             all=false;
-            dNpart=false;
+            dN=false;
             groups.clear();
             assert(empty());
         } //!< Clear all change data
@@ -53,7 +60,7 @@ namespace Faunus {
                 if (dV==false)
                     if (all==false)
                         if (groups.empty())
-                            if (dNpart==false)
+                            if (dN==false)
                                 return true;
             return false;
         } //!< Check if change object is empty
@@ -217,8 +224,19 @@ namespace Faunus {
                 return groups.end();
             } //!< Random group; groups.end() if not found
 
-            auto findAtoms(int atomid) const {
-                return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
+            // auto findAtoms(int atomid) const {
+            //    return p | ranges::view::filter( [atomid](auto &i){ return i.id==atomid; } );
+            // } //!< Range with all atoms of type `atomid` (complexity: order N)
+
+            auto findAtoms(int atomid) {
+                auto f = [atomid,&groups=groups](Tparticle &i) {
+                    if (i.id==atomid) 
+                        for (auto &g : groups) 
+                            if (g.contains(i)) 
+                                return true;
+                    return false;
+                };
+                return ranges::view::filter(p, f);
             } //!< Range with all atoms of type `atomid` (complexity: order N)
 
             auto findGroupContaining(const Tparticle &i) {
@@ -263,7 +281,7 @@ namespace Faunus {
                         g.shallowcopy(gother); // copy group data but *not* particles
 
                         if (m.all) // copy all particles
-                            std::copy( gother.begin(), gother.end(), g.begin() );
+                            std::copy( gother.begin(), gother.trueend(), g.begin() );
                         else // copy only a subset
                             for (auto i : m.atoms)
                                 *(g.begin()+i) = *(gother.begin()+i);

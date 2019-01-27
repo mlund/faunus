@@ -976,7 +976,7 @@ namespace Faunus {
                             }
 
                             // if exactly ONE molecule is changed
-                            if (change.groups.size()==1 && !change.dNpart) {
+                            if (change.groups.size()==1 && not change.dN) {
                                 auto& d = change.groups[0];
                                 auto gindex = spc.groups.at(d.index).to_index(spc.p.begin()).first;
 
@@ -999,7 +999,7 @@ namespace Faunus {
                             }
 
                             //
-                            if (change.dNpart) {
+                            if (change.dN) {
                                 auto moved = change.touchedGroupIndex(); // index of moved groups
                                 std::vector<int> Moved;
                                 for (auto i: moved)
@@ -1010,12 +1010,13 @@ namespace Faunus {
                                             [&Moved](int i){return std::binary_search(Moved.begin(), Moved.end(), i);}
                                             ); // index of static groups
                                 for ( auto cg1 = change.groups.begin(); cg1 < change.groups.end() ; ++cg1 ) { // Loop over all changed groups
-                                    std::vector<int> ifiltered, jfiltered;
+                                    std::vector<int> ifiltered, jfiltered; // Active atoms
                                     for (auto i: cg1->atoms) {
                                         if ( i < spc.groups.at(cg1->index).size() )
                                             ifiltered.push_back(i);
                                     }
-                                    if ( !( cg1->dNpart && ifiltered.empty() ) ) // Skip if particles are removed
+                                    // Skip if all atomic molecules have been removed from both (never skip for polyatomic)
+                                    if ( not ( cg1->dNatomic && ifiltered.empty() ) )
                                         for ( auto j : fixed) {
                                             u += g2g( spc.groups.at(cg1->index), spc.groups[j], ifiltered, jfiltered );
                                     }
@@ -1023,11 +1024,12 @@ namespace Faunus {
                                         for (auto i: cg2->atoms)
                                             if ( i < spc.groups.at(cg2->index).size() )
                                                 jfiltered.push_back(i);
-                                        if ( !( (cg1->dNpart && ifiltered.empty()) && (cg2->dNpart && jfiltered.empty()) ) ) //Skip if particles are removed from both
+                                        // Skip if all atomic molecules have been removed from both (never skip for polyatomic)
+                                        if ( not ( (cg1->dNatomic && ifiltered.empty()) && (cg2->dNatomic && jfiltered.empty()) ) ) 
                                             u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
                                         jfiltered.clear();
                                     }
-                                    if ( ifiltered.size() != 0 )
+                                    if ( not ifiltered.empty() ) 
                                         u += g_internal( spc.groups.at( cg1->index ), ifiltered );
                                 }
                                 return u;

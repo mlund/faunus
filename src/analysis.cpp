@@ -7,18 +7,22 @@ void Faunus::Analysis::to_json(Faunus::json &j, const Faunus::Analysis::Analysis
 Faunus::Analysis::Analysisbase::~Analysisbase() {}
 
 void Faunus::Analysis::Analysisbase::sample() {
+    totstepcnt++;
     stepcnt++;
     if ( stepcnt == steps ) {
-        cnt++;
         stepcnt = 0;
-        timer.start();
-        _sample();
-        timer.stop();
+        if ( totstepcnt > nskip ) {
+            cnt++;
+            timer.start();
+            _sample();
+            timer.stop();
+        }
     }
 }
 
 void Faunus::Analysis::Analysisbase::from_json(const Faunus::json &j) {
     steps = j.value("nstep", 0);
+    nskip = j.value("nskip", 0);
     _from_json(j);
 }
 
@@ -29,6 +33,7 @@ void Faunus::Analysis::Analysisbase::to_json(Faunus::json &j) const {
     if (cnt>0) {
         _j["relative time"] = _round( timer.result() );
         _j["nstep"] = steps;
+        _j["nskip"] = nskip;
         _j["samples"] = cnt;
     }
     if (!cite.empty())

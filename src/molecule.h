@@ -638,7 +638,7 @@ namespace Faunus {
 
         typedef std::vector<Particle<Radius, Charge, Dipole, Cigar>> Tpvec;
 
-        atoms = j["atomlist"].get<decltype(atoms)>();
+        Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
         molecules<Tpvec> = j["moleculelist"].get<decltype(molecules<Tpvec>)>(); // fill global instance
 
         auto &r = reactions<Tpvec>; // reference to global reaction list

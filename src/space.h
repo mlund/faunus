@@ -528,11 +528,11 @@ namespace Faunus {
         CHECK( p[0].traits().mw == 1);
         p[0].pos.x()=2;
         p[1].pos.x()=3;
-        spc1.push_back(1, p);
+        spc1.push_back(0, p);
         CHECK( spc1.p.size()==2 );
         CHECK( spc1.groups.size()==1 );
-        CHECK( spc1.groups.front().id==1);
-        CHECK( spc1.groups.front().cm.x()==doctest::Approx(0));
+        CHECK( spc1.groups.front().id==0);
+        CHECK( spc1.groups.front().cm.x()==doctest::Approx(2.5));
 
         // check `positions()`
         CHECK( &spc1.positions()[0] == &spc1.p[0].pos );
@@ -548,7 +548,7 @@ namespace Faunus {
         spc2.sync(spc1, c);
         CHECK( spc2.p.size()==2 );
         CHECK( spc2.groups.size()==1 );
-        CHECK( spc2.groups.front().id==1);
+        CHECK( spc2.groups.front().id==0);
         CHECK( spc2.groups.front().begin() != spc1.groups.front().begin());
         CHECK( spc2.p.front().pos.x()==doctest::Approx(2));
 

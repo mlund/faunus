@@ -11,10 +11,14 @@
 #include <cmath>
 #include <random>
 #include <memory>
+#include <chrono>
 #include <Eigen/Geometry>
 #include <nlohmann/json.hpp>
-#include <range/v3/all.hpp>
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
+#include <range/v3/view.hpp>
+#endif
+ 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "units.h"
 #endif
@@ -64,7 +68,7 @@ namespace Faunus {
 
     template<class T>
         int size(T &rng) {
-            return ranges::distance(rng.begin(), rng.end());
+            return std::distance(rng.begin(), rng.end());
         } //!< Size of arbitrary range
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -90,29 +94,19 @@ namespace Faunus {
     bool assertKeys(const json&, const std::vector<std::string>&, bool=true);
 
     struct xjson : private json {
-        inline xjson(const json &j) : json(j) {}
-        inline bool empty() const { return json::empty(); }
-        inline size_type count(const std::string &key) const { return json::count(key); }
+        xjson(const json &j);
+        bool empty() const;
+        size_type count(const std::string &key) const;
         inline auto dump(int w=-1) const { return json::dump(w); }
 
-        inline json at(const std::string &key) {
-            json val = json::at(key);
-            json::erase(key);
-            return val;
-        }
-
-        inline json operator[](const std::string &key) {
-            return at(key);
-        }
-
-        inline void erase(const std::string &key) {
-            json::erase(key);
-        }
+        void clear();
+        json at(const std::string &key);
+        json operator[](const std::string &key);
+        void erase(const std::string &key);
 
         template<class T> T value(const std::string &key, const T &fallback) {
             return (count(key)>0) ? at(key).get<T>() : fallback;
         }
-
     }; //!< Like json, but delete entries after access
 
     double _round(double x, int n=3); //!< Round to n number of significant digits

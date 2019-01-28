@@ -87,7 +87,7 @@ This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise add
 $$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
 
 **Note:** the pair-potential can be a combination of several potentials defined at runtime.
-However, for optimal performance we include certain hard-coded combinations, defined at _compile time_.
+However, for optimal performance we include a set of hard-coded combinations, defined at _compile time_.
 It is straight forward to add more by editing the class
 `Energy::Hamiltonian` found in `src/energy.h` and then re-compile.
 {: .notice--info}
@@ -95,8 +95,8 @@ It is straight forward to add more by editing the class
 Below is a description of possible pair-potentials and their configuration.
 
 `energy`               | $u_{ij}$
----------------------- | ----------------------------------
-`nonbonded`            | Any combination of pair potentials
+---------------------- | ------------------------------------------
+`nonbonded`            | Any combination of pair potentials (slow!)
 `nonbonded_coulomblj`  | `coulomb`+`lennardjones`
 `nonbonded_coulombwca` | `coulomb`+`wca`
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)
@@ -338,7 +338,7 @@ $$
 `mixing=LB`  | Mixing rule; only `LB` available.
 `custom`     | Custom $\epsilon$ and $\sigma$ combinations
 
-### SASA Pair-potential
+### SASA
 
 This calculates the surface area of two intersecting particles or radii $R$ and $r$
 to estimate an energy based on transfer-free-energies (TFE) and surface tension.
@@ -369,6 +369,48 @@ and hydrophobic/hydrophilic interactions.
 `molarity`   | Molar concentration of co-solute, $c_s$.
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
 `shift=true` | Shift to zero at large separations
+
+### Custom
+
+This takes a user-defined expression and a list of constants to produce a runtime,
+custom pair-potential.
+While perhaps not as computationally efficient as hard-coded potentials, it is a
+convenient way to access alien potentials.
+
+`custom`     | Description
+------------ | --------------------------------------------------------
+`function`   | Mathematical expression for the potential (units of kT)
+`constants`  | User-defined constants
+`cutoff`     | Spherical cut-off distance
+
+The following illustrates how to define a custom Yukawa potential:
+
+~~~ yaml
+custom:
+    function: lB * q1 * q2 / r * exp( -r/D ) # in kT
+    constants:
+        lB: 7.1  # Bjerrum length
+        D: 30    # Debye length
+~~~
+
+The function is passed using the efficient
+[ExprTk library](http://www.partow.net/programming/exprtk/index.html) and
+a rich set of mathematical functions and logic is available.
+In addition to user-defined constants, the following symbols are defined:
+
+`symbol`   | Description
+---------- | ---------------------------------------------
+`e0`       | Vacuum permittivity [C^2/J/m]
+`inf`      | infinity
+`kB`       | Boltzmann's constant [J/K]
+`kT`       | Boltzmann's constant x temperature [J]
+`Nav`      | Avogadro's number [1/mol]
+`pi`       | Pi
+`q1`,`q2`  | particle charge [e]
+`r`        | particle-particle separation [angstrom]
+`Rc`       | Spherical cut-off [angstrom]
+`s1`,`s2`  | particle sigma [angstrom]
+`T`        | temperature [K]
 
 
 ## Bonded Interactions
@@ -639,7 +681,7 @@ be used when analysing the system (see Analysis).
 `index`                   | Molecule index
 `range`                   | Array w. [min:max] value
 `resolution`              | Resolution along coordinate
-`property`                |
+`property`                | Options:
 `angle`                   | Angle between instantaneous principal axis and given `dir` vector
 `com_x`, `com_y`, `com_z` | Mass center coordinates
 `confid`                  | Conformation id corresponding to frame in `traj` (see molecular topology).
@@ -673,7 +715,7 @@ interacting molecular groups.
 ----------------- | ----------------------------------------
 `range`           | Array w. [min:max] value
 `resolution`      | Resolution along coordinate
-`property`        |
+`property`        | Options:
 `V`               | System volume
 `Q`               | System net-charge
 `Lx`,`Ly`,`Lz`    | Side lengths of enclosing cuboid

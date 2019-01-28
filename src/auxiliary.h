@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <regex>
+#include <chrono>
 
 #include "average.h"
 
@@ -1982,7 +1983,7 @@ namespace Faunus
         };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("Faunus: Equidistant2DTable")
+    TEST_CASE("[Faunus] Equidistant2DTable")
     {
         using doctest::Approx;
 

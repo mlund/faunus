@@ -44,6 +44,18 @@ endif()
 include(ExternalProject)
 include(FetchContent)
 
+# EXPRTK
+FetchContent_Declare(
+    exprtk
+    URL https://github.com/ArashPartow/exprtk/archive/e0e880c3797ea363d24782ba63fe362f7d94f89c.zip
+    URL_HASH MD5=772293e80f8353961fcc8a2b337e8dec)
+FetchContent_GetProperties(exprtk)
+if(NOT exprtk_POPULATED)
+    FetchContent_Populate(exprtk)
+endif()
+add_definitions("-Dexprtk_disable_string_capabilities")
+add_definitions("-Dexprtk_disable_rtl_io_file")
+
 # PROGRESS BAR
 FetchContent_Declare(
     progressbar
@@ -181,7 +193,7 @@ endif ()
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
-    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR})
+    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR} ${exprtk_SOURCE_DIR})
 
 # faunus cpp files
 set(objs

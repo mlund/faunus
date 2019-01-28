@@ -65,7 +65,7 @@ namespace Faunus {
             return false;
         } //!< Check if change object is empty
 
-        inline operator bool() const {
+        inline explicit operator bool() const {
             return not empty();
         }
     };
@@ -246,7 +246,7 @@ namespace Faunus {
             auto activeParticles() {
                 auto f = [&groups=groups](Tparticle &i) {
                     for (auto &g : groups)
-                        if (g.contains(i))
+                        if (g.contains(i)) // true if particle is within active part
                             return true;
                     return false;
                 }; 

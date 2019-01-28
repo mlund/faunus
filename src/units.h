@@ -11,6 +11,7 @@ namespace Faunus {
         typedef double T; //!< Float size
         constexpr T infty = std::numeric_limits<T>::infinity(), //!< Numerical infinity
                   epsilon_dbl = std::numeric_limits<T>::epsilon(), //!< Numerical precision
+                  max_exp_argument = 709.8, //!< Largest value exp() can take before overflow (hard-coded for double)
                   pi = 3.141592653589793, //!< Pi
                   e0 = 8.85419e-12,  //!< Permittivity of vacuum [C^2/(J*m)]
                   e = 1.602177e-19,  //!< Absolute electronic unit charge [C]

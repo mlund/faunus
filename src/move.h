@@ -1438,6 +1438,8 @@ start:
                         throw std::runtime_error("Metropolis error: energy cannot be NaN");
                     if (du<0)
                         return true;
+                    if (-du > pc::max_exp_argument)
+                        std::cerr << "warning: large metropolis energy" << std::endl;
                     return ( Move::Movebase::slump() > std::exp(-du)) ? false : true;
                 } //!< Metropolis criterion (true=accept)
 
@@ -1500,8 +1502,11 @@ start:
                 double drift() {
                     Change c; c.all=true;
                     double ufinal = state1.pot.energy(c);
-                    return ( ufinal-(uinit+dusum) ) / uinit;
-                } //!< Calculates the relative energy drift from initial configuration
+                    if (uinit!=0)
+                        return ( ufinal-(uinit+dusum) ) / uinit;
+                    else
+                        return ufinal-(uinit+dusum); // in case uinit==0, report absolute drift
+                } //!< Calculates the relative or absolute energy drift from initial configuration
 
                 MCSimulation(const json &j, MPI::MPIController &mpi) : state1(j), state2(j), moves(j, state2.spc, mpi) {
                     init();

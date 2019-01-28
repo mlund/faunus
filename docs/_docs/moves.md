@@ -91,7 +91,7 @@ atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 
 `cluster`      | Description
 -------------- | -----------------------
-`molecules`    | List of molecule names
+`molecules`    | List of molecule names; `*` selects all 
 `threshold`    | Mass-center threshold for forming a cluster
 `dir=[1,1,1]`  | Directions to translate
 `dprot`        | Rotational displacement (radians)

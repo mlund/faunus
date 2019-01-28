@@ -532,7 +532,7 @@ namespace Faunus {
         CHECK( spc1.p.size()==2 );
         CHECK( spc1.groups.size()==1 );
         CHECK( spc1.groups.front().id==1);
-        CHECK( spc1.groups.front().cm.x()==doctest::Approx(2.5));
+        CHECK( spc1.groups.front().cm.x()==doctest::Approx(0));
 
         // check `positions()`
         CHECK( &spc1.positions()[0] == &spc1.p[0].pos );

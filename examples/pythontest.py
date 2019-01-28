@@ -103,13 +103,13 @@ class TestGeometry(unittest.TestCase):
 
 class TestSpeciation(unittest.TestCase):
 
-    def test_Nchem(self):
+    def test_IdealTerm(self):
         spc = Space()
         spc.from_dict(d)
 
         c = Change()
         g = spc.groups[0]
-        self.assertEqual( Nchem(spc, spc, c), 0 ) 
+        self.assertEqual( IdealTerm(spc, spc, c), 0 ) 
 
         self.assertEqual( g.capacity(), 2 )
         self.assertEqual( len(g), 2 )

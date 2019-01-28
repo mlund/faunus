@@ -44,6 +44,15 @@ namespace Faunus {
                 j["dir"] = dir;
         }
 
+        void MoleculeProperty::_to_json(json &j) const {
+            j["property"] = property;
+            j["index"] = index;
+            if (dir.squaredNorm()>1e-9)
+                j["dir"] = dir;
+            if (indexes.size()>=2)
+                j["indexes"] = indexes;
+        }
+
         double MassCenterSeparation::normalize(double coord) const {
             int dim=dir.sum();
             if (dim==2) return 1/(2*pc::pi*coord);
@@ -53,7 +62,7 @@ namespace Faunus {
 
         void MassCenterSeparation::_to_json(json &j) const {
             j["dir"] = dir;
-            j["index"] = index;
+            j["indexes"] = indexes;
             j["type"] = type;
         }
 

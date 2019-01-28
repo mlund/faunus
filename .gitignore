@@ -1,12 +1,13 @@
 # Faunus
 manual.pdf
+manual.html
+tips.json
 faunus
-faunus_sphere
-faunus_nopbc
-tests
+unittests
 include/
 3rdparty/
 examples/
+_deps/
 
 # CMake
 CMakeCache.txt

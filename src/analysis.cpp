@@ -7,18 +7,22 @@ void Faunus::Analysis::to_json(Faunus::json &j, const Faunus::Analysis::Analysis
 Faunus::Analysis::Analysisbase::~Analysisbase() {}
 
 void Faunus::Analysis::Analysisbase::sample() {
+    totstepcnt++;
     stepcnt++;
     if ( stepcnt == steps ) {
-        cnt++;
         stepcnt = 0;
-        timer.start();
-        _sample();
-        timer.stop();
+        if ( totstepcnt > nskip ) {
+            cnt++;
+            timer.start();
+            _sample();
+            timer.stop();
+        }
     }
 }
 
 void Faunus::Analysis::Analysisbase::from_json(const Faunus::json &j) {
     steps = j.value("nstep", 0);
+    nskip = j.value("nskip", 0);
     _from_json(j);
 }
 
@@ -29,6 +33,7 @@ void Faunus::Analysis::Analysisbase::to_json(Faunus::json &j) const {
     if (cnt>0) {
         _j["relative time"] = _round( timer.result() );
         _j["nstep"] = steps;
+        _j["nskip"] = nskip;
         _j["samples"] = cnt;
     }
     if (!cite.empty())
@@ -161,14 +166,23 @@ void Faunus::Analysis::VirtualVolume::_sample() {
         scaleVolume(Vold + dV);
         double Unew = pot.energy(c);
         scaleVolume(Vold);
-        double x = std::exp(-(Unew - Uold));
 
-        if (errno==ERANGE or std::isinf(x)) {
+        // check if energy change is too big for exp()
+        double x=pc::infty, du = Unew-Uold;
+        if (-du < pc::max_exp_argument)
+            x = std::exp(-du);
+        if (std::isinf(x)) {
             std::cerr << name+": skipping sample event due to excessive energy likely due to overlaps.";
-            cnt--; // cnt in incremented by sample() so we need to decrease
+            cnt--; // cnt is incremented by sample() so we need to decrease
         } else {
+            assert(not std::isnan(x));
             duexp += x;
-            assert(std::fabs((Uold-pot.energy(c))/Uold) < 1e-4);
+#ifndef NDEBUG
+            // check volume and particle positions are properly restored
+            double err = std::fabs((Uold-pot.energy(c))/Uold); // must be ~zero!
+            if (std::isfinite(err)) // catch if Uold==0
+                assert(err < 1e-4);
+#endif
         }
     }
 }
@@ -182,4 +196,12 @@ void Faunus::Analysis::VirtualVolume::_to_json(Faunus::json &j) const {
         {"Pex/Pa", pex/1.0_Pa}, {"Pex/kT/"+u8::angstrom+u8::cubed, pex}
     };
     _roundjson(j,5);
+}
+
+void Faunus::Analysis::QRtraj::_sample() { write_to_file(); }
+
+void Faunus::Analysis::QRtraj::_to_json(Faunus::json &j) const { j = {{"file", file}}; }
+
+void Faunus::Analysis::CombinedAnalysis::sample() {
+    for (auto i : this->vec) i->sample();
 }

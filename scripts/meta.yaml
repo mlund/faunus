@@ -41,6 +41,7 @@ requirements:
     - pygments
     - numpy 1.*
     - python
+    - jinja2
 
 about:
   home: http://mlund.github.io/faunus

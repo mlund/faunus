@@ -24,6 +24,7 @@ feature_row:
     excerpt: "Faunus is public, open source software and freely available."
 ---
 [![GitHub release](https://img.shields.io/github/release/mlund/faunus/all.svg)](https://github.com/mlund/faunus/releases)
+[![Anaconda-Server Badge](https://anaconda.org/conda-forge/faunus/badges/installer/conda.svg)](https://anaconda.org/conda-forge/faunus)
 [![DOI](https://img.shields.io/badge/DOI-10%2Fnvn-orange.svg)](http://dx.doi.org/10/nvn)
 [![DOI](https://img.shields.io/badge/DOI-10%2Fdfqgch-orange.svg)](http://dx.doi.org/10/dfqgch)
 

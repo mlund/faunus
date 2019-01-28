@@ -6,19 +6,26 @@ if sys.version_info < (3, 0):
     sys.exit(1)
 
 import json, sys, argparse
+import warnings
+
+try:
+    import jinja2
+except ImportError:
+    warnings.warn("warning: missing jinja2 module");
+    jinja2 = None 
+
 try:
     import ruamel_yaml as yaml
-    import warnings
     warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
-except:
+except ImportError:
     import yaml
 
 try:
+    pygments = True
     from pygments import highlight
     from pygments.lexers import JsonLexer, YamlLexer
     from pygments.formatters import NullFormatter, Terminal256Formatter
-    pygments = True
-except:
+except ImportError:
     pygments = False
 
 parser = argparse.ArgumentParser(description='Convert json to yaml and vice versa')
@@ -39,6 +46,9 @@ if pygments:
 
 try: # ... to read json
     i = args.infile.read()
+    if jinja2:
+        i = jinja2.Template(i).render() # render jinja2 
+
     d = json.loads( i )
     if args.alwaysjson:
         if pygments:

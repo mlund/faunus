@@ -1,8 +1,9 @@
+#pragma once
 #include <string>
 #include <functional>
 #include <iostream>
-#include "exprtk.hpp"
-#include "json.hpp"
+#include <exprtk.hpp> // https://github.com/ArashPartow/exprtk
+#include <nlohmann/json.hpp>
 
 /**
  * Since parser<T> is non-copyable we instantiate it
@@ -18,32 +19,39 @@ template <typename T=double> class ExprFunction {
         typedef std::vector<std::pair<std::string,T>> Tconstvec;
     public:
         void set(const std::string &exprstr, const Tvarvec &vars={}, const Tconstvec &consts={}) {
-            if (!parser)
+            if (not parser)
                 parser = std::make_shared<exprtk::parser<T>>();
             symbols.clear();
-            for (auto &v : vars) symbols.add_variable(v.first,*v.second);
-            for (auto &v : consts) symbols.add_constant(v.first,v.second);
+            for (auto &v : vars)
+                symbols.add_variable(v.first,*v.second);
+            for (auto &v : consts)
+                symbols.add_constant(v.first,v.second);
             symbols.add_constants();
             expression.register_symbol_table(symbols);
-            parser->compile(exprstr,expression);
+            if (not parser->compile( exprstr, expression ))
+                throw std::runtime_error("error passing function/expression");
         }
-        T operator()() { return expression.value(); }
-#ifdef NLOHMANN_JSON_HPP
-        ExprFunction(const nlohmann::json &j, const Tvarvec &vars={}) {
+
+        void set(const nlohmann::json &j, const Tvarvec &vars={}) {
             Tconstvec consts;
             auto it = j.find("constants");
             if (it!=j.end())
                 for (auto i=it->begin(); i!=it->end(); ++i)
                     consts.push_back( {i.key(), i.value()} );
-            set(j.at("expr"), vars, consts);
+            set(j.at("function"), vars, consts);
         }
-#endif
+
+        T operator()() const { return expression.value(); }
 };
 
-int main() {
+#ifdef DOCTEST_LIBRARY_INCLUDED
+TEST_CASE("[Faunus] ExprFunction") {
     double x=0, y=0;
-    nlohmann::json j = R"( { "expr":"x*x+kappa", "constants":{ "kappa":0.4, "f":2 } })"_json;
-    std::function<double()> f = ExprFunction<double>( j, {{"x",&x}, {"y",&y}} );
-    for (x=0; x<5; x+=1)
-        std::cout << x << " " << f() << std::endl;
+    ExprFunction<double> expr;
+    nlohmann::json j = R"( { "function":"x*x+kappa", "constants":{ "kappa":0.4, "f":2 } })"_json;
+    expr.set(j, {{"x",&x}, {"y",&y}} );
+    std::function<double()> f = expr;
+    x=4;
+    CHECK(f() == doctest::Approx(4*4+0.4));
 }
+#endif

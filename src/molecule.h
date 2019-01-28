@@ -460,8 +460,10 @@ namespace Faunus {
             //Tmap _Reac, _Prod;
 
             bool canonic=false;             //!< Finite reservoir
+            bool swap=false;                //!< True if swap move
             int N_reservoir;                //!< Number of molecules in finite reservoir
             double lnK=0;                   //!< Natural logarithm of molar eq. const.
+            double pK=0;                    //!< -log10 of molar eq. const.
             std::string name;               //!< Name of reaction
             std::string formula;            //!< Chemical formula
             double weight;                  //!< Statistical weight to be given to reaction in speciation
@@ -545,27 +547,61 @@ namespace Faunus {
                         a.lnK = val.at("lnK").get<double>();
                     else if (val.count("pK")==1)
                         a.lnK = -std::log(10) * val.at("pK").get<double>();
+                    a.pK = - a.lnK / std::log(10);
                     a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
 
-                    // get pair of vector containing reactant and product species
+                    // get pair of vectors containing reactant and product species
                     auto process = parseProcess(a.name);
                     a._reac = process.first;
                     a._prod = process.second;
 
                     for (auto &name : a._reac) { // loop over reactants
                         auto pair = a.findAtomOrMolecule( name );  // {iterator to atom, iterator to mol.}
-                        if ( pair.first != atoms.end())
-                            a._reacid_a[ pair.first->id() ]++;
-                        else
+                        if ( pair.first != atoms.end() ) {
+                            a.swap = true; // if the reaction involves atoms, identify it as swap move
+                        }
+                    }
+
+                    for (auto &name : a._reac) { // loop over reactants
+                        auto pair = a.findAtomOrMolecule( name ); // {iterator to atom, iterator to mol.}
+                        if ( pair.first != atoms.end() ) {
+                            if ( pair.first->implicit ) {
+                                // implicit reagent? K is multiplied by its activity
+                                a.lnK += std::log(pair.first->activity/1.0_molar);
+                            } else {
+                                a._reacid_a[ pair.first->id() ]++;
+                            }
+                        }
+                        if ( pair.second != molecules<Tpvec>.end() ) {
                             a._reacid_m[ pair.second->id() ]++;
+                            if ( pair.second->activity > 0 ) {
+                                // explicit reagent?
+                                // its activity is not part of K? 
+                                // K is divided by its activity 
+                                a.lnK -= std::log(pair.second->activity/1.0_molar);
+                            }
+                        }
                     }
 
                     for (auto &name : a._prod) { // loop over products
                         auto pair = a.findAtomOrMolecule( name );
-                        if ( pair.first != atoms.end())
-                            a._prodid_a[ pair.first->id() ]++;
-                        else
+                        if ( pair.first != atoms.end() ) {
+                            if ( pair.first->implicit ) {
+                                // implicit product? K is divided by its activity
+                                a.lnK -= std::log(pair.first->activity/1.0_molar);
+                            } else {
+                                a._prodid_a[ pair.first->id() ]++;
+                            }
+                        }
+                        if ( pair.second != molecules<Tpvec>.end() ) {
                             a._prodid_m[ pair.second->id() ]++;
+                            if ( pair.second->activity > 0 ) {
+                                // explicit product?
+                                // its activity is not part of K?
+                                // K is multiplied by its activity
+                                a.lnK += std::log(pair.second->activity/1.0_molar);
+                            }
+                        }
                     }
                 }
             }
@@ -573,12 +609,10 @@ namespace Faunus {
         template<class Tparticle, class Talloc>
             void to_json(json& j, const ReactionData<std::vector<Tparticle,Talloc>> &a) {
                 j[a.name] = {
-                    {"lnK", a.lnK}, {"pK", -a.lnK/std::log(10)},
-                    {"canonic", a.canonic}, {"N_reservoir", a.N_reservoir}
-                    //{"products", a._prod} ,
-                    //{"exchange products", a._prodid_m  },
-                    //{"reactants", a._reac } ,
-                    //{"exchange reactants", a._reacid_m  }
+                    {"pK", a.pK }, {"pK'", -a.lnK/std::log(10) },
+                    //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
+                    {"products", a._prod },
+                    {"reactants", a._reac }
                 };
             } //!< Serialize to JSON object
 
@@ -612,7 +646,7 @@ namespace Faunus {
 
         CHECK( r.size()==1 );
         CHECK( r.front().name=="A = B" );
-        CHECK( r.front().lnK==-10.051);
+        CHECK( r.front().lnK==Approx(-10.051));
     }
 #endif
 

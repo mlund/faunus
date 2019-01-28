@@ -3,6 +3,7 @@
 #include "core.h"
 #include "molecule.h"
 #include "geometry.h"
+#include <range/v3/view.hpp>
 
 namespace Faunus {
 
@@ -151,6 +152,7 @@ namespace Faunus {
             typedef typename std::vector<T> Tpvec;
             using base::begin;
             using base::end;
+            using base::size;
             int id=-1;           //!< Molecule id
             int confid=0;        //!< Conformation index / id
             Point cm={0,0,0};    //!< Mass center
@@ -175,7 +177,7 @@ namespace Faunus {
                     return *this;
                 shallowcopy(o);
                 if (o.begin()!=begin())
-                    std::copy(o.begin(), o.end(), begin()); // copy all particle data
+                    std::copy(o.begin(), o.trueend(), begin()); // copy all particle data
                 return *this;
             } //!< Deep copy contents from another Group
 
@@ -209,18 +211,26 @@ namespace Faunus {
                 return *this | ranges::view::filter( [id](T &i){ return (i.id==id); } );
             } //!< Range of all elements with matching particle id
 
-            template<class Trange=std::vector<int>>
-                auto find_index( const Trange &index ) {
-                    return ranges::view::indirect(
-                            ranges::view::transform(index, [this](int i){return this->begin()+i;}) );
-                } //!< Group subset matching given `index` (Complexity: linear with index size)
+            /*
+             * @brief Reference to subset of given index, where 0 is the start of the group
+             * @note do not parse index as `const&` which would create a dangling reference
+             */
+            template<class Tint=size_t>
+                auto operator[](std::vector<Tint> &index) {
+#ifndef NDEBUG
+                    // check that range is within group
+                    if (not index.empty()) 
+                        assert( *std::max_element(index.begin(), index.end()) < size() );
+#endif
+                    return index | ranges::view::transform([this](Tint i) -> T& { return *(this->begin()+i); });
+                }
 
             double mass() const {
                 double m=0;
                 for (auto &i : *this)
                     m += atoms[i.id].mw;
                 return m;
-            } //!< Sum of all (active) masses
+            } //!< Sum of all active masses
 
             auto positions() const {
                 return ranges::view::transform(*this, [](auto &i) -> Point& {return i.pos;});
@@ -321,22 +331,22 @@ namespace Faunus {
         CHECK( p[1].pos.y() == doctest::Approx(10) );
         CHECK( p[1].pos.z() == doctest::Approx(12) );
 
-#pragma OPTIMIZE OFF
-        SUBCASE("test find_index") {
+        SUBCASE("operator[]") {
             CHECK( p.begin() == g.begin() );
             CHECK( p.end() == g.end() );
 
             // a new range by using an index filter
-            auto subset = g.find_index( {0,1} );
+            std::vector<size_t> index = {0,1};
+            auto subset = g[index];
             CHECK( subset.size()==2 );
-            // On some compilers, this may FAIL if not in Debug mode
-            //for (auto& i : subset) // On some compilers, this may FAIL if not in Debug mode
-            //    i.pos *= 2;
-            //CHECK( p[1].pos.x() == doctest::Approx(16) );
-            //CHECK( p[1].pos.y() == doctest::Approx(20) );
-            //CHECK( p[1].pos.z() == doctest::Approx(24) );
+            CHECK( &(*p.begin()) == &(*subset.begin()) );
+            CHECK( &(*(p.begin()+1)) == &(*(subset.begin()+1)) );
+            for (auto& i : subset)
+                i.pos *= 2;
+            CHECK( p[1].pos.x() == doctest::Approx(16) );
+            CHECK( p[1].pos.y() == doctest::Approx(20) );
+            CHECK( p[1].pos.z() == doctest::Approx(24) );
         }
-#pragma OPTIMIZE ON
 
         // check deep copy and resizing
         std::vector<int> p1(5), p2(5);

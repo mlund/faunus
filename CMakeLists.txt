@@ -44,6 +44,18 @@ endif()
 include(ExternalProject)
 include(FetchContent)
 
+# EXPRTK
+FetchContent_Declare(
+    exprtk
+    URL https://github.com/ArashPartow/exprtk/archive/e0e880c3797ea363d24782ba63fe362f7d94f89c.zip
+    URL_HASH MD5=772293e80f8353961fcc8a2b337e8dec)
+FetchContent_GetProperties(exprtk)
+if(NOT exprtk_POPULATED)
+    FetchContent_Populate(exprtk)
+endif()
+add_definitions("-Dexprtk_disable_string_capabilities")
+add_definitions("-Dexprtk_disable_rtl_io_file")
+
 # PROGRESS BAR
 FetchContent_Declare(
     progressbar
@@ -181,7 +193,7 @@ endif ()
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
-    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR})
+    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR} ${exprtk_SOURCE_DIR})
 
 # faunus cpp files
 set(objs
@@ -385,6 +397,20 @@ add_test(
     COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py speciation.yml\
     | $<TARGET_FILE:faunus> --quiet --state speciation.state.json\
     ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py speciation.out.json out.json --tol 0.02"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+add_test(
+    NAME phosphate
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py phosphate.yml\
+    | $<TARGET_FILE:faunus> --quiet --state phosphate.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py phosphate.out.json out.json --tol 0.02"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+
+add_test(
+    NAME sodiumphosphate
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py sodiumphosphate.yml\
+    | $<TARGET_FILE:faunus> --quiet --state sodiumphosphate.state.json\
+    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py sodiumphosphate.out.json out.json --tol 0.02"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
 
 add_test(

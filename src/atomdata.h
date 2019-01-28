@@ -27,6 +27,7 @@ namespace Faunus {
             int& id(); //!< Type id
             const int& id() const; //!< Type id
             bool hydrophobic=false;  //!< Is the particle hydrophobic?
+            bool implicit=false; //!< Is the particle implicit (e.g. proton)?
     };
 
     void to_json(json& j, const AtomData &a);
@@ -52,6 +53,12 @@ namespace Faunus {
             std::vector<int> index;
             index.reserve(names.size());
             for (auto &n : names) {
+                // wildcard selecting all id's
+                if (n=="*") {
+                    index.resize( rng.size() );
+                    std::iota(index.begin(), index.end(), 0);
+                    return index;
+                }
                 auto it = findName(rng, n);
                 if (it!=rng.end())
                     index.push_back(it->id());
@@ -59,7 +66,7 @@ namespace Faunus {
                     throw std::runtime_error("name '" + n + "' not found");
             }
             return index;
-        } //!< Convert vector of names into vector in id's from Trange (exception if not found)
+        } //!< Convert vector of names into vector of id's from Trange (exception if not found)
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] AtomData") {

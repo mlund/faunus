@@ -8,15 +8,14 @@ channels:
     - conda-forge/label/gcc7
     - defaults
 dependencies:
-    - llvm
-    - clang
-    - clangxx
+    - clangdev
     - libcxx
     - cmake>=3.11.4
     - python=3
     - pandoc=2
-    - pypandoc 1.*
+    - pypandoc=1
     - beautifulsoup4
     - ruamel_yaml
     - pygments
+    - jinja2
     - numpy

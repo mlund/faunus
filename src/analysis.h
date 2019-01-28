@@ -18,10 +18,12 @@ namespace Faunus {
             virtual void _from_json(const json &j);
             virtual void _sample()=0;
             int stepcnt=0;
+            int totstepcnt=0;
             TimeRelativeOfTotal<std::chrono::microseconds> timer;
 
             protected:
             int steps=0; //!< Sample interval (do not modify)
+            int nskip=0; //!< MC steps to skip before sampling
             int cnt=0;   //!< number of samples
 
             public:
@@ -36,8 +38,10 @@ namespace Faunus {
 
         void to_json(json &j, const Analysisbase &base);
 
+        /*
+         * @brief Sample and save reaction coordinates to a file
+         */
         class FileReactionCoordinate : public Analysisbase {
-
             private:
                 Average<double> avg;
                 std::string type, filename;
@@ -451,32 +455,41 @@ namespace Faunus {
             class AtomProfile : public Analysisbase {
                 Tspace &spc;
                 typedef typename Tspace::Tparticle Tparticle;
-                Equidistant2DTable<double,unsigned int> tbl;
-                std::vector<std::string> names;
-                std::vector<int> ids;
-                std::string file;
+                Equidistant2DTable<double,double> tbl;
+                std::vector<std::string> names; // atom names to analyse
+                std::set<int> ids; // atom ids to analyse
+                std::string file; // output filename
                 Point ref={0,0,0};
-                double dr=0.1;
+                double dr; // radial resolution
+                bool count_charge=false;
+                bool Vnormalise=true;
 
                 void _from_json(const json &j) override {
                     ref = j.value("origo", Point(0,0,0));
                     file = j.at("file").get<std::string>();
-                    names = j.at("atoms").get<decltype(names)>(); // molecule names
-                    ids = names2ids(atoms, names);     // names --> molids
+                    names = j.at("atoms").get<decltype(names)>(); // atom names
+                    auto vec_of_ids = names2ids(Faunus::atoms, names);     // names --> molids
+                    ids = std::set<int>(vec_of_ids.begin(), vec_of_ids.end()); // copy vector to set
                     dr = j.value("dr", 0.1);
                     tbl.setResolution(dr,0);
+                    count_charge = j.value("charge", false);
                 }
 
                 void _to_json(json &j) const override {
-                    j = {{"origo", ref}, {"atoms", names}, {"file", file}, {"dr", dr}};
+                    j = {
+                        {"origo", ref}, {"atoms", names}, {"file", file}, {"dr", dr},
+                        {"charge", count_charge} };
                 }
 
                 void _sample() override {
                     for (auto &g : spc.groups)
                         for (auto &p : g)
-                            if (std::find(ids.begin(), ids.end(), p.id)!=ids.end()) {
+                            if (ids.count(p.id)!=0) {
                                 double r = spc.geo.vdist(p.pos, ref).norm();
-                                tbl(r)++;
+                                if (count_charge)
+                                    tbl(r) += p.charge; // count charge
+                                else
+                                    tbl(r) += 1; // count atoms
                             }
                 }
 
@@ -492,8 +505,9 @@ namespace Faunus {
                     if (f) {
                         tbl.stream_decorator = [&](std::ostream &o, double r, double N) {
                             if (r>0) {
+                                double V = 4*pc::pi*r*r*dr;
                                 N = N/double(cnt);
-                                o << r << " " << N << " " << N/(4*pc::pi*r*r*dr)*1e27/pc::Nav << "\n";
+                                o << r << " " << N << " " << N / V * 1e27 / pc::Nav << "\n";
                             }
                         };
                         f << "# r N rho/M\n" << tbl;
@@ -563,7 +577,9 @@ namespace Faunus {
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
 
-                std::map<int, Table2D<double,double>> dhist;  //Density histograms
+                std::map<int, Table2D<double,double>> seldhist;  // Density histograms for selected atoms
+                std::map<int, Table2D<double,double>> atmdhist;  // Density histograms for atomic molecules
+                std::map<int, Table2D<double,double>> moldhist;  // Density histograms for molecules
                 std::map<int, Average<double>> rho_mol, rho_atom;
                 std::map<int,int> Nmol, Natom;
                 Average<double> Lavg, Vavg, invVavg;
@@ -578,8 +594,8 @@ namespace Faunus {
                     // make sure all atom counts are initially zero
                     for (auto &g : spc.groups) {
                         if (g.atomic)
-                            for (auto &p : g)
-                                Natom[p.id] = 0;
+                            for ( auto p = g.begin(); p < g.trueend() ; ++p)
+                                Natom[p->id] = 0;
                         else
                             Nmol[g.id]=0;
                     }
@@ -593,27 +609,31 @@ namespace Faunus {
                         if (g.atomic) {
                             for (auto &p : g)
                                 Natom[p.id]++;
-                            dhist[g.id]( g.size() )++;
+                            atmdhist[g.id]( g.size() )++;
                         }
                         else if (not g.empty())
                             Nmol[g.id]++;
 
-                    for (auto &i : Nmol)
+                    for (auto &i : Nmol) {
                         rho_mol[i.first] += i.second/V;
+                        moldhist[i.first](i.second)++;
+                    }
 
                     for (auto &i : Natom)
                         rho_atom[i.first] += i.second/V;
 
-                    // Sanity check for grand caninical ensembles
-                    // to see if the group size is too close to the
-                    // maximum capacity
-                    for (auto &mol : molecules<Tpvec>) // loop over atomic molecules
-                        if (mol.atomic)
-                            for (auto &r : reactions<Tpvec>)
-                                if (r.containsMolecule( mol.id() ))
-                                    for (auto &g : spc.findMolecules( mol.id() )) 
-                                        if (g.capacity()-g.size() < capacity_limit)
-                                            std::cerr << "Warning: low capacity for atomic group '" << mol.name << "'" << endl;
+                    if ( reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
+                        for (auto &rit : reactions<Tpvec> ) {
+                            for (auto pid : rit._prodid_a) {
+                                auto atomlist = spc.findAtoms(pid.first);
+                                seldhist[ pid.first ]( size(atomlist) )++;
+                            }
+                            for (auto rid : rit._reacid_a) {
+                                auto atomlist = spc.findAtoms(rid.first);
+                                seldhist[ rid.first ]( size(atomlist) )++;
+                            }
+                        }
+                    }
                 }
 
                 void _to_json(json &j) const override {
@@ -626,12 +646,12 @@ namespace Faunus {
                     auto &_j = j["atomic"];
                     for (auto &i : rho_atom)
                         if (i.second.cnt>0)
-                            _j[ atoms.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+                            _j[ atoms.at(i.first).name ] = json({{ "c/M", i.second.avg() / 1.0_molar }});
 
                     auto &_jj = j["molecular"];
                     for (auto &i : rho_mol)
                         if (i.second.cnt>0)
-                            _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", _round(i.second.avg() / 1.0_molar) }});
+                            _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", i.second.avg() / 1.0_molar }});
                     _roundjson(j,4);
                 }
 
@@ -642,11 +662,26 @@ namespace Faunus {
                 }
                 virtual ~Density() {
                     normalize();
-                    for ( auto &m: dhist)
+                    for ( auto &m: atmdhist)
                         m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
+                    for ( auto &m: moldhist)
+                        m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
+                    if ( reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
+                        for (auto &rit : reactions<Tpvec> ) {
+                            for (auto pid : rit._prodid_a) 
+                                seldhist.at( pid.first ).save( "rho-"s + atoms.at( pid.first ).name + ".dat" );
+                            for (auto rid : rit._reacid_a) 
+                                seldhist.at( rid.first ).save( "rho-"s + atoms.at( rid.first ).name + ".dat" );
+                        }
+                    } 
                 }
                 void normalize() {
-                    for (auto &hist: dhist) {
+                    for (auto &hist: atmdhist) {
+                        double sum = hist.second.sumy();
+                        for (auto &i : hist.second.getMap())
+                            i.second = i.second/sum ;
+                    }
+                    for (auto &hist: moldhist) {
                         double sum = hist.second.sumy();
                         for (auto &i : hist.second.getMap())
                             i.second = i.second/sum ;
@@ -1219,8 +1254,8 @@ namespace Faunus {
                 std::string file;
                 std::ofstream f;
                 std::function<void()> write_to_file;
-                inline void _sample() override { write_to_file(); }
-                inline void _to_json(json &j) const override { j = {{"file", file}}; }
+                void _sample() override;
+                void _to_json(json &j) const override;
 
             public:
                 template<class Tspace>
@@ -1281,9 +1316,7 @@ namespace Faunus {
                                     }
                 }
 
-            inline void sample() {
-                for (auto i : this->vec) i->sample();
-            }
+            void sample();
 
         }; //!< Aggregates analysis
 

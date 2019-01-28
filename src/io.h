@@ -173,7 +173,7 @@ namespace Faunus {
                             std::stringstream o(line);
                             while (o >> key)
                                 if (key=="ATOM" or key=="HETATM") {
-                                    double radius;
+                                    double charge, radius;
                                     o >> iatom >> aname;
                                     auto it = findName( atoms, aname );
                                     if (it==atoms.end())
@@ -181,17 +181,19 @@ namespace Faunus {
                                                 + aname + "'.");
                                     a = *it;
                                     o >> rname >> ires
-                                        >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
+                                        >> a.pos.x() >> a.pos.y() >> a.pos.z() >> charge >> radius;
 
                                     // does charge match AtomData?
-                                    if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl)
-                                        std::cerr << "Charge mismatch on loaded atom " << ires << aname
-                                            << ". Ignoring `atomdata` definitions." << endl;
+                                    if (std::fabs(it->charge - charge) > pc::epsilon_dbl)
+                                        std::cerr << "Charge mismatch on loaded atom " << aname << " " << ires
+                                            << ". Using value from `atomdata`, i.e., "
+                                            << it->charge << " instead of " << charge << "." << endl;
 
                                     // does radius match AtomData?
                                     if (std::fabs(it->sigma - 2*radius) > pc::epsilon_dbl)
-                                        std::cerr << "Radius mismatch on loaded atom " << ires << aname
-                                            << ". Using value from `atomdata`." << endl;
+                                        std::cerr << "Radius mismatch on loaded atom " << aname << " " << ires
+                                            << ". Using value from `atomdata`, i.e., "
+                                            << it->sigma/2 << " instead of " << radius << "." << endl;
 
                                     p.push_back(a);
 

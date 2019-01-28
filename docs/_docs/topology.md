@@ -50,6 +50,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 `atomlist`    | Description
 ------------- | ------------------------------------------------------
 `activity=0`  | Chemical activity for grand canonical MC [mol/l]
+`pactivity`   | -log10 of chemical activity (will be converted to activity)
 `alphax=0`    | Excess polarizability (unit-less)
 `dp=0`        | Translational displacement parameter [Å]
 `dprot=0`     | Rotational displacement parameter [degrees] (will be converted to radians)
@@ -160,11 +161,10 @@ insertmolecules:
   - water: { N: 1, inactive: true }
 ~~~
 
-The following keywords are available:
+The following keywords for each molecule type are available:
 
 `insertmolecules`    | Description
 -------------------- | ---------------------------------------
-Molecule properties: |
 `N`                  | Number of molecules to insert
 `inactive=false`     | Deactivates inserted molecules
 `positions`          | Load positions from file (`aam`, `pqr`, `xyz`)
@@ -198,12 +198,57 @@ reactionlist:
 The initial string describes a transformation of reactants (left of `=`)
 into products (right of `=`) that may be a mix of atomic and molecular species.
 
+An implicit reactant or product is an atom which is included in the equilibrium constant but it is not represented
+explicitly in the simulation cell.
+A common example is the acid-base equilibrium of the aspartic acid (treated here as atomic particle):
+
+~~~ yaml
+reactionlist:
+  - "HASP = ASP + H": { pK: 4.0 }
+~~~
+
+where H is included in the `atomlist` as
+
+~~~ yaml
+  - H: { implicit: true, activity: 1e-7 }
+~~~
+
+and we set `pK` equal to the `pKa`, i.e.,
+$$
+K_a = \frac{ a_{\mathrm{ASP}} a_{\mathrm{H}} }{ a_{\mathrm{HASP}} }.
+$$
+To simulate at a given constant pH, H is specified as an implicit atom of activity $10^{-\mathrm{pH}}$ and the equilibrium 
+is modified accordingly (in this case K is divided by $a_{\mathrm{H}}$). 
+An acid-base equilibrium, or any other single-atom ID transformation (see the Move section), can also be coupled with the insertion/deletion
+of a molecule. For example, 
+
+~~~ yaml
+reactionlist:
+  - "HASP + Cl = ASP + H": { pK: 4.0 }
+  - "= Na + Cl": { }
+~~~
+
+where Na and Cl are included in the `moleculelist` as
+
+~~~ yaml
+  - Cl: {atoms: [cl], atomic: true, activity: 0.1 } 
+  - Na: {atoms: [na], atomic: true, activity: 0.1 } 
+~~~
+
+In this case K is both divided by $a_{\mathrm{H}}$ and $a_{\mathrm{Cl}}$, so that the actual equilibrium constant used by the speciation move is
+
+$$
+K' = \frac{K_a}{a_{ \mathrm{H} } a_{ \mathrm{Cl} } } = \frac{ a_{\mathrm{ASP}} }{ a_{\mathrm{HASP}} a_{\mathrm{Cl}} }.
+$$
+
+In an ideal system, the involvement of Cl in the acid-base reaction does not affect the equilibrium since the grand canonical ensemble
+ensures that the activity of Cl matches its concentration in the simulation cell.
+
 Note that:
 
 - all species, `+`, and `=` must be surrounded by white-space
 - atom and molecule names cannot overlap
-- you may repeat species to match desired stoichiometry
-- equilibrium reaction functionality currently in *alpha state* and may be subject to sudden change!
+- you may repeat species to match the desired stoichiometry
 
 Available keywords:
 

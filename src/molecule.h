@@ -646,7 +646,7 @@ namespace Faunus {
 
         CHECK( r.size()==1 );
         CHECK( r.front().name=="A = B" );
-        CHECK( r.front().lnK==-10.051);
+        CHECK( r.front().lnK==Approx(-10.051));
     }
 #endif
 

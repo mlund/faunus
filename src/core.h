@@ -11,6 +11,7 @@
 #include <cmath>
 #include <random>
 #include <memory>
+#include <chrono>
 #include <Eigen/Geometry>
 #include <nlohmann/json.hpp>
 

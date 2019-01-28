@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <regex>
+#include <chrono>
 
 #include "average.h"
 

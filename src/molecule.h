@@ -628,8 +628,8 @@ namespace Faunus {
                 "atomlist" :
                     [ {"a": { "r":1.1 } } ],
                 "moleculelist": [
-                    { "B": { "activity":0.2, "atomic":true, "atoms":["a"] } },
-                    { "A": { "atomic":false } }
+                    { "A": { "atomic":false } },
+                    { "B": { "activity":0.2, "atomic":true, "atoms":["a"] } }
                 ],
                 "reactionlist": [
                     {"A = B": {"lnK": -10.051, "canonic": true, "N": 100 } }
@@ -638,7 +638,7 @@ namespace Faunus {
 
         typedef std::vector<Particle<Radius, Charge, Dipole, Cigar>> Tpvec;
 
-        atoms = j["atomlist"].get<decltype(atoms)>();
+        Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
         molecules<Tpvec> = j["moleculelist"].get<decltype(molecules<Tpvec>)>(); // fill global instance
 
         auto &r = reactions<Tpvec>; // reference to global reaction list
@@ -646,7 +646,7 @@ namespace Faunus {
 
         CHECK( r.size()==1 );
         CHECK( r.front().name=="A = B" );
-        CHECK( r.front().lnK==Approx(-10.051));
+        CHECK( r.front().lnK==Approx( -10.051+std::log(0.2)) );
     }
 #endif
 

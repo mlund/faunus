@@ -35,8 +35,12 @@ namespace Faunus {
             xjson val = it.value();
             if (val.count("activity")==1)
                 a.activity = val.at("activity").get<double>() * 1.0_molar;
-            else if (val.count("pactivity")==1)
+            if (val.count("pactivity")==1) {
+                if (val.count("activity")==1) {
+                    throw std::runtime_error("Specify either activity or pactivity for atom '"s + a.name + "'!");
+                }
                 a.activity = std::pow( 10, -val.at("pactivity").get<double>() ) * 1.0_molar;
+            }
             a.alphax   = val.value("alphax", a.alphax);
             a.charge   = val.value("q", a.charge);
             a.dp       = val.value("dp", a.dp) * 1.0_angstrom;

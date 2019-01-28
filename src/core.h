@@ -14,11 +14,8 @@
 #include <chrono>
 #include <Eigen/Geometry>
 #include <nlohmann/json.hpp>
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
 #include <range/v3/view.hpp>
-#endif
- 
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "units.h"
 #endif
@@ -68,7 +65,7 @@ namespace Faunus {
 
     template<class T>
         int size(T &rng) {
-            return std::distance(rng.begin(), rng.end());
+            return ranges::distance(rng.begin(), rng.end());
         } //!< Size of arbitrary range
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

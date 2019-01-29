@@ -232,7 +232,7 @@ sufficiently large to allow for fluctuations.
 This is ensured using `insertmolecules` (see Topology).
 A runtime warning will be given, should you run low on particles.<br>
 Besides deleting/inserting molecules (mono- or polyatomic), the speciation move performs reactions involving a 
-single-atom ID transformation (e.g., acid-base reactions).
+single-atom ID transformation (_e.g._, acid-base reactions).
 In this case, an particle of type A (part of a mono- or polyatomic molecule) is randomly picked from the system 
 and all its properties, except its position, are replaced with those of an atom of type B. 
 Such ID transormations can also involve the addition/deletion of molecules or _implicit_ atoms.<br>

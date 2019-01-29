@@ -162,7 +162,7 @@ namespace Faunus {
              *       work with files from VMD, pdb2pqr, and Faunus.
              */
             template<class Tparticle, class Talloc>
-                static Point load(const std::string &file, std::vector<Tparticle,Talloc> &p) {
+                static Point load(const std::string &file, std::vector<Tparticle,Talloc> &p, bool keepcharges) {
                     Point len(0,0,0);
                     std::ifstream in(file);
                     if (in) {
@@ -173,7 +173,7 @@ namespace Faunus {
                             std::stringstream o(line);
                             while (o >> key)
                                 if (key=="ATOM" or key=="HETATM") {
-                                    double charge, radius;
+                                    double radius;
                                     o >> iatom >> aname;
                                     auto it = findName( atoms, aname );
                                     if (it==atoms.end())
@@ -181,13 +181,21 @@ namespace Faunus {
                                                 + aname + "'.");
                                     a = *it;
                                     o >> rname >> ires
-                                        >> a.pos.x() >> a.pos.y() >> a.pos.z() >> charge >> radius;
+                                        >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> radius;
 
                                     // does charge match AtomData?
-                                    if (std::fabs(it->charge - charge) > pc::epsilon_dbl)
-                                        std::cerr << "Charge mismatch on loaded atom " << aname << " " << ires
-                                            << ". Using value from `atomdata`, i.e., "
-                                            << it->charge << " instead of " << charge << "." << endl;
+                                    if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl) {
+                                        if (keepcharges) {
+                                            std::cerr << "Charge mismatch on loaded atom " << aname << " " << ires
+                                                << ". Using value from `atomdata`, i.e., "
+                                                << it->charge << " instead of " << a.charge << "." << endl;
+                                        } else {
+                                            std::cerr << "Charge mismatch on loaded atom " << aname << " " << ires
+                                                << ". Ignoring `atomdata` definitions and using "
+                                                << it->charge << " instead of " << a.charge << "." << endl;
+                                            a.charge = it->charge;
+                                        }
+                                    }
 
                                     // does radius match AtomData?
                                     if (std::fabs(it->sigma - 2*radius) > pc::epsilon_dbl)
@@ -669,7 +677,7 @@ namespace Faunus {
 
     template<class Tpvec>
         struct loadStructure<Tpvec, std::enable_if_t<std::is_base_of<Charge,typename Tpvec::value_type>::value>> {
-            bool operator()(const std::string &file, Tpvec &dst, bool append)
+            bool operator()(const std::string &file, Tpvec &dst, bool append, bool keepcharges=true)
             {
                 if (append==false)
                     dst.clear();
@@ -677,7 +685,7 @@ namespace Faunus {
                 if ( suffix == "aam" )
                     FormatAAM::load(file, dst);
                 if ( suffix == "pqr" )
-                    FormatPQR::load(file, dst);
+                    FormatPQR::load(file, dst, keepcharges);
                 if ( suffix == "xyz" )
                     FormatXYZ::load(file, dst);
                 if ( !dst.empty() ) return true;

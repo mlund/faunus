@@ -9,26 +9,26 @@
             "density": {
                 "atomic": {
                     "cl": {
-                        "c/M": 0.46728603735137675
+                        "c/M": 0.4652881884551666
                     },
                     "h2po4": {
-                        "c/M": 0.06851388468910602
+                        "c/M": 0.06860434115586783
                     },
                     "h3po4": {
-                        "c/M": 0.09753973695099026
+                        "c/M": 0.09744925341135122
                     },
                     "hpo4": {
-                        "c/M": 0.0016605401039531315
+                        "c/M": 0.001660540103953132
                     },
                     "na": {
-                        "c/M": 0.535800699550901
+                        "c/M": 0.533893361267224
                     }
                 },
                 "molecular": null,
                 "nskip": 1000,
                 "nstep": 10,
-                "relative time": 0.0458,
-                "samples": 29900,
+                "relative time": 0.0442,
+                "samples": 59900,
                 "∛⟨V⟩": 100.0,
                 "⟨1/V⟩": 1e-06,
                 "⟨V⟩": 1000000.0,
@@ -42,8 +42,8 @@
                 "nskip": 1000,
                 "nstep": 100,
                 "property": "Q",
-                "relative time": 0.000838,
-                "samples": 2990,
+                "relative time": 0.000823,
+                "samples": 5990,
                 "type": "system"
             }
         },
@@ -51,8 +51,8 @@
             "sanity": {
                 "nskip": 0,
                 "nstep": 100,
-                "relative time": 0.000435,
-                "samples": 3000
+                "relative time": 0.000441,
+                "samples": 6000
             }
         }
     ],
@@ -73,7 +73,7 @@
                             ]
                         }
                     },
-                    "relative time": 0.27929037485750996
+                    "relative time": 0.28175986932597774
                 }
             ]
         }
@@ -86,7 +86,7 @@
         ],
         "type": "cuboid"
     },
-    "git revision": "527ca52c (2019-01-25)",
+    "git revision": "d2ee5e1e (2019-01-28)",
     "groups": [
         {
             "H3PO4": {
@@ -102,9 +102,9 @@
                 "capacity": 1000,
                 "index": [
                     100,
-                    434
+                    402
                 ],
-                "size": 335
+                "size": 303
             }
         },
         {
@@ -112,37 +112,37 @@
                 "capacity": 1000,
                 "index": [
                     1100,
-                    1398
+                    1367
                 ],
-                "size": 299
+                "size": 268
             }
         }
     ],
     "moves": [
         {
             "speciation": {
-                "acceptance": 0.469,
-                "moves": 300000,
+                "acceptance": 0.471,
+                "moves": 600000,
                 "reactions": {
                     "= Na + Cl": {
-                        "acceptance": 0.966029525614672,
-                        "attempts": 74918
+                        "acceptance": 0.9655987429925831,
+                        "attempts": 150198
                     },
                     "h2po4 = hpo4 + H + Na": {
-                        "acceptance": 0.0004761526862947385,
-                        "attempts": 37803
+                        "acceptance": 0.00040150967638320084,
+                        "attempts": 74718
                     },
                     "h3po4 = h2po4 + H + Na": {
-                        "acceptance": 0.9182002442985812,
-                        "attempts": 74499
+                        "acceptance": 0.9162694576847439,
+                        "attempts": 150005
                     },
                     "hpo4 = po4 + H + Na": {
                         "acceptance": 0.0,
-                        "attempts": 11
+                        "attempts": 17
                     }
                 },
-                "relative time": 0.9,
-                "relative time (without energy calc)": 0.194,
+                "relative time": 0.901,
+                "relative time (without energy calc)": 0.196,
                 "repeat": 1
             }
         }
@@ -204,6 +204,6 @@
             }
         }
     ],
-    "relative drift": null,
+    "relative drift": -4.440892098500626e-16,
     "temperature": 300.0
 }

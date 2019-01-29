@@ -167,6 +167,7 @@ namespace Faunus {
                 bool atomic=false;         //!< True if atomic group (salt etc.)
                 bool rotate=true;          //!< True if molecule should be rotated upon insertion
                 bool keeppos=false;        //!< Keep original positions of `structure`
+                bool keepcharges=true;     //!< Set to true to keep charges in PQR file (default: true)
                 bool rigid=false;          //!< True if particle should be considered as rigid
                 double activity=0;         //!< Chemical activity (mol/l)
                 Point insdir = {1,1,1};    //!< Insertion directions
@@ -202,10 +203,10 @@ namespace Faunus {
                     return inserterFunctor(geo, otherparticles, *this);
                 }
 
-                void loadConformation(const std::string &file)
+                void loadConformation(const std::string &file, bool keepcharges)
                 {
                     Tpvec v;
-                    if (loadStructure<Tpvec>()(file, v, false))
+                    if (loadStructure<Tpvec>()(file, v, false, keepcharges))
                     {
                         if ( keeppos == false )
                             Geometry::cm2origo( v.begin(), v.end() ); // move to origo
@@ -223,7 +224,7 @@ namespace Faunus {
             j[a.name] = {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
-                {"keeppos", a.keeppos}, {"bondlist", a.bonds},
+                {"keeppos", a.keeppos}, {"keepcharges", a.keepcharges}, {"bondlist", a.bonds},
                 {"rigid", a.rigid}
             };
             if (not a.structure.empty())
@@ -247,6 +248,7 @@ namespace Faunus {
                     a.insoffset = val.value("insoffset", a.insoffset);
                     a.activity = val.value("activity", a.activity) * 1.0_molar;
                     a.keeppos = val.value("keeppos", a.keeppos);
+                    a.keepcharges = val.value("keepcharges", a.keepcharges);
                     a.atomic = val.value("atomic", a.atomic);
                     a.insdir = val.value("insdir", a.insdir);
                     a.bonds  = val.value("bondlist", a.bonds);
@@ -281,7 +283,7 @@ namespace Faunus {
 
                             // `structure` is a file name
                             if (_struct.is_string()) // structure from file
-                                a.loadConformation( _struct.get<std::string>() );
+                                a.loadConformation( _struct.get<std::string>(), a.keepcharges );
 
                             else if (_struct.is_object()) {
                                 // `structure` is a fasta sequence
@@ -447,14 +449,14 @@ namespace Faunus {
         private:
             int _id=-1;
         public:
-            std::vector<std::string> _reac, _prod;
+            std::vector<std::string> _reag, _prod;
 
             typedef Tpvec TParticleVector;
             typedef typename Tpvec::value_type Tparticle;
             typedef std::map<int,int> Tmap;
 
-            Tmap _reacid_m;     // Molecular change, groups. Atomic as Groupwise
-            Tmap _reacid_a;     // Atomic change, equivalent of swap/titration
+            Tmap _reagid_m;     // Molecular change, groups. Atomic as Groupwise
+            Tmap _reagid_a;     // Atomic change, equivalent of swap/titration
             Tmap _prodid_m;
             Tmap _prodid_a;
             //Tmap _Reac, _Prod;
@@ -478,8 +480,8 @@ namespace Faunus {
 
             std::vector<int> participatingMolecules() const {
                 std::vector<int> v;
-                v.reserve(_reacid_m.size()+_prodid_m.size());
-                for (auto i : _reacid_m)
+                v.reserve(_reagid_m.size()+_prodid_m.size());
+                for (auto i : _reagid_m)
                     v.push_back(i.first);
                 for (auto i : _prodid_m)
                     v.push_back(i.first);
@@ -487,18 +489,18 @@ namespace Faunus {
              } //!< Returns molids of participating molecules
 
             bool containsMolecule(int molid) const {
-                if (_reacid_m.count(molid)==0)
+                if (_reagid_m.count(molid)==0)
                     if (_prodid_m.count(molid)==0)
                         return false;
                 return true;
             } //!< True of molecule id is part of process
 
             const Tmap& Molecules2Add(bool forward) const {
-                return (forward) ? _prodid_m : _reacid_m;
+                return (forward) ? _prodid_m : _reagid_m;
             } //!< Map for addition depending on direction
 
             const Tmap& Atoms2Add(bool forward) const {
-                return (forward) ? _prodid_a : _reacid_a;
+                return (forward) ? _prodid_a : _reagid_a;
             } //!< Map for addition depending on direction
 
             auto findAtomOrMolecule(const std::string &name) const {
@@ -552,28 +554,28 @@ namespace Faunus {
 
                     // get pair of vectors containing reactant and product species
                     auto process = parseProcess(a.name);
-                    a._reac = process.first;
+                    a._reag = process.first;
                     a._prod = process.second;
 
-                    for (auto &name : a._reac) { // loop over reactants
+                    for (auto &name : a._reag) { // loop over reactants
                         auto pair = a.findAtomOrMolecule( name );  // {iterator to atom, iterator to mol.}
                         if ( pair.first != atoms.end() ) {
                             a.swap = true; // if the reaction involves atoms, identify it as swap move
                         }
                     }
 
-                    for (auto &name : a._reac) { // loop over reactants
+                    for (auto &name : a._reag) { // loop over reactants
                         auto pair = a.findAtomOrMolecule( name ); // {iterator to atom, iterator to mol.}
                         if ( pair.first != atoms.end() ) {
                             if ( pair.first->implicit ) {
                                 // implicit reagent? K is multiplied by its activity
                                 a.lnK += std::log(pair.first->activity/1.0_molar);
                             } else {
-                                a._reacid_a[ pair.first->id() ]++;
+                                a._reagid_a[ pair.first->id() ]++;
                             }
                         }
                         if ( pair.second != molecules<Tpvec>.end() ) {
-                            a._reacid_m[ pair.second->id() ]++;
+                            a._reagid_m[ pair.second->id() ]++;
                             if ( pair.second->activity > 0 ) {
                                 // explicit reagent?
                                 // its activity is not part of K? 
@@ -612,7 +614,7 @@ namespace Faunus {
                     {"pK", a.pK }, {"pK'", -a.lnK/std::log(10) },
                     //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
                     {"products", a._prod },
-                    {"reactants", a._reac }
+                    {"reactants", a._reag }
                 };
             } //!< Serialize to JSON object
 

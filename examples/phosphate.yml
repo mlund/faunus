@@ -27,7 +27,7 @@ analysis:
     - density: {nstep: 10, nskip: 1000}
     - reactioncoordinate: {file: Q.dat, nstep: 100, type: system, property: Q, nskip: 1000}
     - sanity: {nstep: 100}
-mcloop: {macro: 10, micro: 30000}
+mcloop: {macro: 10, micro: 60000}
 geometry: {type: cuboid, length: 100}
 temperature: 300
 random: {seed: fixed }

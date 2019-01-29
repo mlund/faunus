@@ -40,6 +40,8 @@ points, and the relative run-time spent on the analysis.
 This calculates the average density, $\langle N_i/V \rangle$ of molecules and atoms
 which may fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
 For atomic groups, densities of individual atom types are reported.
+The analysis also prints to file probability density distributions of atomic and polyatomic molecules
+as well as of atoms involved in ID transformations, _e.g._, acid-base equilibria.
 
 ### Density Profile
 

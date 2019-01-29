@@ -108,6 +108,7 @@ Properties of molecules and their default values:
 `insdir=[1,1,1]`    | Insert directions are scaled by this
 `insoffset=[0,0,0]` | Shifts mass center after insertion
 `keeppos=false`     | Keep original positions of `structure`
+`keepcharges=true`  | Keep original charges of `structure`
 `rigid=false`       | Set to true for rigid molecules. Affects energy evaluation.
 `structure`         | Structure file or direct information - required if `atomic=false`
 `traj`              | Read conformations from PQR trajectory (`structure` will be ignored)
@@ -141,7 +142,7 @@ When giving structures using the `structure` keyword, the following policies app
   in `atomlist`.
   Special letters: `n=NTR`, `c=CTR`, `a=ANK`.
 - Radii in files are _ignored_; `atomlist` definitions are used.
-- Charges in files are _used_; `atomlist` definitions are ignored.
+- By default, charges in files are _used_; `atomlist` definitions are ignored.
 - A warning is issued if radii/charges differ in files and `atomlist`.
 - Box dimensions in files are ignored.
 

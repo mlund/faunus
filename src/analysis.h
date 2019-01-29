@@ -577,9 +577,9 @@ namespace Faunus {
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
 
-                std::map<int, Table2D<double,double>> seldhist;  // Density histograms for selected atoms
-                std::map<int, Table2D<double,double>> atmdhist;  // Density histograms for atomic molecules
-                std::map<int, Table2D<double,double>> moldhist;  // Density histograms for molecules
+                std::map<int, Equidistant2DTable<int,double> > swpdhist;  // Probability density of swapping atoms
+                std::map<int, Equidistant2DTable<int,double> > atmdhist;  // Probability density of atomic molecules
+                std::map<int, Equidistant2DTable<int,double> > moldhist;  // Probability density of polyatomic molecules
                 std::map<int, Average<double>> rho_mol, rho_atom;
                 std::map<int,int> Nmol, Natom;
                 Average<double> Lavg, Vavg, invVavg;
@@ -597,7 +597,7 @@ namespace Faunus {
                             for ( auto p = g.begin(); p < g.trueend() ; ++p)
                                 Natom[p->id] = 0;
                         else
-                            Nmol[g.id]=0;
+                            Nmol[g.id] = 0;
                     }
 
                     double V = spc.geo.getVolume();
@@ -626,11 +626,11 @@ namespace Faunus {
                         for (auto &rit : reactions<Tpvec> ) {
                             for (auto pid : rit._prodid_a) {
                                 auto atomlist = spc.findAtoms(pid.first);
-                                seldhist[ pid.first ]( size(atomlist) )++;
+                                swpdhist[ pid.first ]( size(atomlist) )++;
                             }
-                            for (auto rid : rit._reacid_a) {
+                            for (auto rid : rit._reagid_a) {
                                 auto atomlist = spc.findAtoms(rid.first);
-                                seldhist[ rid.first ]( size(atomlist) )++;
+                                swpdhist[ rid.first ]( size(atomlist) )++;
                             }
                         }
                     }
@@ -659,32 +659,71 @@ namespace Faunus {
                 Density( const json &j, Tspace &spc ) : spc(spc) {
                     from_json(j);
                     name = "density";
-                }
-                virtual ~Density() {
-                    normalize();
-                    for ( auto &m: atmdhist)
-                        m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
-                    for ( auto &m: moldhist)
-                        m.second.save( "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat" );
+                    for (auto &m: molecules<Tpvec>) {
+                        if (m.atomic)
+                            atmdhist[m.id()].setResolution(1,0);
+                        else
+                            moldhist[m.id()].setResolution(1,0);
+                    }
                     if ( reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
                         for (auto &rit : reactions<Tpvec> ) {
-                            for (auto pid : rit._prodid_a) 
-                                seldhist.at( pid.first ).save( "rho-"s + atoms.at( pid.first ).name + ".dat" );
-                            for (auto rid : rit._reacid_a) 
-                                seldhist.at( rid.first ).save( "rho-"s + atoms.at( rid.first ).name + ".dat" );
+                            for (auto pid : rit._prodid_a) {
+                                swpdhist[pid.first].setResolution(1,0);
+                            }
+                            for (auto rid : rit._reagid_a) {
+                                swpdhist[rid.first].setResolution(1,0);
+                            }
                         }
-                    } 
-                }
-                void normalize() {
-                    for (auto &hist: atmdhist) {
-                        double sum = hist.second.sumy();
-                        for (auto &i : hist.second.getMap())
-                            i.second = i.second/sum ;
                     }
-                    for (auto &hist: moldhist) {
-                        double sum = hist.second.sumy();
-                        for (auto &i : hist.second.getMap())
-                            i.second = i.second/sum ;
+                }
+                virtual ~Density() {
+                    for ( auto &m: atmdhist) { // atomic molecules
+                        std::string file = "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat";
+                        std::ofstream f(MPI::prefix + file);
+                        if (f) {
+                            m.second.stream_decorator = [&](std::ostream &o, int N, double samplings) {
+                                double sum = m.second.sumy();
+                                o << N << " " << samplings << " " << samplings / sum << "\n";
+                            };
+                            f << "# N samplings P\n" << m.second;
+                        }
+                    }
+                    for ( auto &m: moldhist) { // polyatomic molecules
+                        std::string file = "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat";
+                        std::ofstream f(MPI::prefix + file);
+                        if (f) {
+                            m.second.stream_decorator = [&](std::ostream &o, int N, double samplings) {
+                                double sum = m.second.sumy();
+                                o << N << " " << samplings << " " << samplings / sum << "\n";
+                            };
+                            f << "# N samplings P\n" << m.second;
+                        }
+                    }
+                    if ( reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
+                        for (auto &rit : reactions<Tpvec> ) {
+                            for (auto pid : rit._prodid_a) {
+                                std::string file = "rho-"s + atoms.at( pid.first ).name + ".dat";
+                                std::ofstream f(MPI::prefix + file);
+                                if (f) {
+                                    swpdhist.at( pid.first ).stream_decorator = [&](std::ostream &o, int N, double samplings) {
+                                        double sum = swpdhist.at( pid.first ).sumy();
+                                        o << N << " " << samplings << " " << samplings / sum << "\n";
+                                    };
+                                    f << "# N samplings P\n" << swpdhist.at( pid.first );
+                                }
+                            }
+                            for (auto rid : rit._reagid_a) {
+                                std::string file = "rho-"s + atoms.at( rid.first ).name + ".dat";
+                                std::ofstream f(MPI::prefix + file);
+                                if (f) {
+                                    swpdhist.at( rid.first ).stream_decorator = [&](std::ostream &o, int N, double samplings) {
+                                        double sum = swpdhist.at( rid.first ).sumy();
+                                        o << N << " " << samplings << " " << samplings / sum << "\n";
+                                    };
+                                    f << "# N samplings P\n" << swpdhist.at( rid.first );
+                                }
+                            }
+                        }
                     }
                 }
             };

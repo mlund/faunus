@@ -251,18 +251,27 @@ namespace Faunus {
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc; // Space to operate on
                     int molid=-1;
+                    int refid1=-1;
+                    int refid2=-1;
                     double dptrans=0;
                     double dprot=0;
                     Point dir={1,1,1};
+                    double p=1;
+                    Point cylAxis={0,0,0};
+                    Point origo={0, 0, 0}, dirCyl={1,1,0};
+                    double a=0;
+                    double b=0;
+                    double c=0;
                     double _sqd; // squared displacement
                     Average<double> msqd; // mean squared displacement
 
                     void _to_json(json &j) const override {
                         j = {
-                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
-                            {"molid", molid},
+                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot}, 
+                            {"p", p}, {"origo", origo}, {"a", a}, {"b", b}, {"c", c},
+                            {"molid", molid}, {"refid", refid1}, {"refid", refid2}, 
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"molecule", molecules<Tpvec>[molid].name}
+                            {"molecule", molecules<Tpvec>[molid].name}, {"ref1", atoms[refid1].name}, {"ref2", atoms[refid2].name}
                         };
                         _roundjson(j,3);
                     }
@@ -271,13 +280,28 @@ namespace Faunus {
                         assert(!molecules<Tpvec>.empty());
                         try {
                             std::string molname = j.at("molecule");
+                            std::string refname1 = j.at("ref1");
+                            std::string refname2 = j.at("ref2");
                             auto it = findName(molecules<Tpvec>, molname);
+                            auto ref1 = findName(atoms, refname1);
+                            auto ref2 = findName(atoms, refname2);
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
+                            if (ref1 == atoms.end())
+                                throw std::runtime_error("unknown reference atom '" + refname1 + "'");
+                            if (ref2 == atoms.end())
+                                throw std::runtime_error("unknown reference atom '" + refname2 + "'");
                             molid = it->id();
+                            refid1 = ref1->id();
+                            refid2 = ref2->id();
                             dir = j.value("dir", Point(1,1,1));
                             dprot = j.at("dprot");
                             dptrans = j.at("dp");
+                            p = j.at("p");
+                            a = j.at("a");
+                            b = j.at("b");
+                            c = j.at("c");
+                            
                             if (repeat<0) {
                                 auto v = spc.findMolecules(molid);
                                 repeat = std::distance(v.begin(), v.end());
@@ -288,6 +312,14 @@ namespace Faunus {
                         }
                     } //!< Configure via json object
 
+                    template<class Tmollist>
+                      auto selectMolecule(Tmollist &mollist) {
+                        //typename Tspace::Tgvec::iterator it;
+                         
+                        return slump.sample( mollist.begin(), mollist.end() );
+                        //return it;
+                     }
+
                     void _move(Change &change) override {
                         assert(molid>=0);
                         assert(!spc.groups.empty());
@@ -296,35 +328,68 @@ namespace Faunus {
                         // pick random group from the system matching molecule type
                         // TODO: This can be slow -- implement look-up-table in Space
                         auto mollist = spc.findMolecules( molid, Tspace::ACTIVE ); // list of molecules w. 'molid'
+                        auto reflist1 = spc.findAtoms( refid1 ); 
+                        auto reflist2 = spc.findAtoms( refid2 );
                         if (size(mollist)>0) {
-                            auto it = slump.sample( mollist.begin(), mollist.end() );
+                            auto it = selectMolecule( mollist );
+                            auto ref1 = selectMolecule( reflist1 );
+                            auto ref2 = selectMolecule( reflist2 );
+                            cylAxis = spc.geo.vdist( ref2->pos, ref1->pos )*0.5;  // half vector between reference points
+                            origo = ref2->pos - cylAxis;  // Coordinates of middle point between reference points: new origo
+                             // kolla (ref1 + ref2)/2 med pbc och att det blir lika med origo
+
+
                             if (not it->empty()) {
-                                assert(it->id==molid);
+                                double randNbr = slump(); 
+                                // if ((spc.geo.vdist(it->cm, it0->cm).norm() < dist) || ((spc.geo.vdist(it->cm, it0->cm).norm() > dist) && (p > slump()))) {
+                                double at = cylAxis.norm()+a;
+                                Point molV = spc.geo.vdist( it->cm, origo);
+                                double cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
+                                double theta = acos(cosTheta);
+                                double x = cosTheta*molV.norm();
+                                double y = sin(theta)*molV.norm();
+                                double temp = x*x/(at*at)+y*y/(b*b);
+                                
+                                if (temp > 1.0) {
+                                    //cout << "Selected reference molecule: " << Faunus::distance( spc.groups.begin(), it0 ) << "\n";
+                                    //cout << "Selected water molecule: " << Faunus::distance( spc.groups.begin(), it ) << "\n";
+                                    //cout << "Distance between selected molecules: " << spc.geo.vdist(it->cm, it0->cm).norm() << "\n";
+                                    //cout << "Region boundary: " << dist << "\n";
+                                    //cout << "Probability specified: " << p << "\n";
+                                    //cout << "Random number: " << randNbr << "\n\n";
+                                    cout << "Origo: " << origo << "\n";
+                                    cout << "Position of selected reference molecule 1: " << ref1->pos << "\n";
+                                    cout << "Position of selected reference molecule 2: " << ref2->pos << "\n";
+                                    cout << "Position of selected water molecule: " << it->cm << "\n";
+                                    cout << "Distance between reference atoms: " << cylAxis.norm()*2.0 << "\n";   
+                                    cout << "a: " << a << "\n";
+                                    assert(it->id==molid);
 
-                                if (dptrans>0) { // translate
-                                    Point oldcm = it->cm;
-                                    Point dp = ranunit(slump,dir) * dptrans * slump();
+                                    if (dptrans>0) { // translate
+                                        Point oldcm = it->cm;
+                                        Point dp = ranunit(slump,dir) * dptrans * slump();
 
-                                    it->translate( dp, spc.geo.getBoundaryFunc() );
-                                    _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
+                                        it->translate( dp, spc.geo.getBoundaryFunc() );
+                                        _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
+                                    }
+
+                                    if (dprot>0) { // rotate
+                                        Point u = ranunit(slump);
+                                        double angle = dprot * (slump()-0.5);
+                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
+                                        it->rotate(Q, spc.geo.getBoundaryFunc());
+                                    }
+
+                                    if (dptrans>0||dprot>0) { // define changes
+                                        Change::data d;
+                                        d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
+                                        d.all = true; // *all* atoms in group were moved
+                                        change.groups.push_back( d ); // add to list of moved groups
+                                    }
+                                    assert( spc.geo.sqdist( it->cm,
+                                                Geometry::massCenter(it->begin(), it->end(),
+                                                    spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-6 );
                                 }
-
-                                if (dprot>0) { // rotate
-                                    Point u = ranunit(slump);
-                                    double angle = dprot * (slump()-0.5);
-                                    Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
-                                    it->rotate(Q, spc.geo.getBoundaryFunc());
-                                }
-
-                                if (dptrans>0||dprot>0) { // define changes
-                                    Change::data d;
-                                    d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
-                                    d.all = true; // *all* atoms in group were moved
-                                    change.groups.push_back( d ); // add to list of moved groups
-                                }
-                                assert( spc.geo.sqdist( it->cm,
-                                            Geometry::massCenter(it->begin(), it->end(),
-                                                spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-6 );
                             }
                         }
                     }
@@ -335,7 +400,7 @@ namespace Faunus {
                 public:
                     TranslateRotate(Tspace &spc) : spc(spc) {
                         name = "moltransrot";
-                        repeat = -1; // meaning repeat N times
+                        repeat = -1; // m eaning repeat N times
                     }
             };
 

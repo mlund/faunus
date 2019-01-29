@@ -129,16 +129,12 @@
                         "attempts": 150198
                     },
                     "h2po4 = hpo4 + H + Na": {
-                        "acceptance": 0.00040150967638320084,
+                        "acceptance": 0.00041,
                         "attempts": 74718
                     },
                     "h3po4 = h2po4 + H + Na": {
                         "acceptance": 0.9162694576847439,
                         "attempts": 150005
-                    },
-                    "hpo4 = po4 + H + Na": {
-                        "acceptance": 0.0,
-                        "attempts": 17
                     }
                 },
                 "relative time": 0.901,

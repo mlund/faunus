@@ -2,8 +2,7 @@
 
 # Simple script to convert molecular structures into Faunus AAM
 # format. Uses OpenBabel's python interface to read a multitude
-# of different input formats. Openbabel can be installed in
-# anacona using:
+# of different input formats. Openbabel can be installed using conda:
 # conda install --channel https://conda.anaconda.org/openbabel openbabel
 # python 2/3 compatibility
 

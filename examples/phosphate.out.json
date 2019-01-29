@@ -99,16 +99,12 @@
                 "moves": 600000,
                 "reactions": {
                     "h2po4 = hpo4 + H": {
-                        "acceptance": 0.0005588655030288514,
+                        "acceptance": 0.00055,
                         "attempts": 100203
                     },
                     "h3po4 = h2po4 + H": {
                         "acceptance": 0.9194168768711543,
                         "attempts": 199409
-                    },
-                    "hpo4 = po4 + H": {
-                        "acceptance": 0.0,
-                        "attempts": 27
                     }
                 },
                 "relative time": 0.835,

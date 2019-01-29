@@ -187,14 +187,14 @@ namespace Faunus {
                                     if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl) {
                                         if (keepcharges) {
                                             std::cerr << "Charge mismatch on loaded atom " << aname << " " << ires
-                                                << ". Using value from `atomdata`, i.e., "
+                                                << ". Ignoring `atomdata` definitions and using "
                                                 << it->charge << " instead of " << a.charge << "." << endl;
                                         } else {
                                             std::cerr << "Charge mismatch on loaded atom " << aname << " " << ires
-                                                << ". Ignoring `atomdata` definitions and using "
+                                                << ". Using value from `atomdata`, i.e., "
                                                 << it->charge << " instead of " << a.charge << "." << endl;
                                             a.charge = it->charge;
-                                        }
+                                       }
                                     }
 
                                     // does radius match AtomData?

@@ -63,18 +63,19 @@ namespace Faunus {
     class FormatAAM {
         private:
 
+            static bool keepcharges; // true of we prefer charges from AAM file over AtomData
+
             template<class Tparticle>
                 static std::string p2s(const Tparticle &a, int i) {
                     std::ostringstream o;
                     o.precision(5);
-                    double radius = atoms.at(a.id).sigma/2;
-                    double mw = atoms.at(a.id).mw;
-                    o << atoms.at(a.id).name << " " << i+1 << " "
-                        << a.pos.transpose() << " "
-                        << a.charge << " " << mw << " " << radius << endl;
+                    auto& atom = Faunus::atoms.at(a.id);
+                    o << atom.name << " " << i+1 << " " << a.pos.transpose() << " "
+                        << a.charge << " " << atom.mw << " " << atom.sigma/2 << endl;
                     return o.str();
                 }
 
+            // convert string line to particle
             template<class Tparticle>
                 static Tparticle& s2p(const std::string &s, Tparticle &a) {
                     std::stringstream o;
@@ -83,29 +84,33 @@ namespace Faunus {
                     int num;
                     o << s;
                     o >> name;
-                    auto it = findName( atoms, name );
-                    if (it==atoms.end())
+                    auto it = findName( Faunus::atoms, name );
+                    if (it==Faunus::atoms.end())
                         throw std::runtime_error("AAM load error: unknown atom name '" + name + "'.");
 
                     a = *it;
                     o >> num >> a.pos.x() >> a.pos.y() >> a.pos.z() >> a.charge >> mw >> radius;
 
                     // does charge match AtomData?
-                    if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl)
-                        std::cerr << "Charge mismatch on loaded atom " << num << name
-                            << ". Ignoring `atomdata` definitions." << endl;
+                    if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl) {
+                        std::cerr
+                            << "charge mismatch on atom " << num << name << ": "
+                            << ((keepcharges) ? "ignoring" : "using") << " `atomlist` value" << endl;
+                        if (not keepcharges)
+                            a.charge = it->charge; // let's use atomdata charge
+                    }
 
                     // does radius match AtomData?
                     if (std::fabs(it->sigma - 2*radius) > pc::epsilon_dbl)
-                        std::cerr << "Radius mismatch on loaded atom " << num << name
-                            << ". Using value from `atomdata`." << endl;
+                        std::cerr << "radius mismatch on atom " << num << name << ": using `atomlist` value" << endl;
 
                     return a;
                 }
 
         public:
             template<class Tpvec>
-                static bool load(const std::string &file, Tpvec &target) {
+                static bool load(const std::string &file, Tpvec &target, bool _keepcharges=true) {
+                    keepcharges = _keepcharges;
                     std::vector<std::string> v;
                     target.clear();
                     if (IO::readFile(file,v)==true) {
@@ -185,23 +190,22 @@ namespace Faunus {
 
                                     // does charge match AtomData?
                                     if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl) {
-                                        if (keepcharges) {
-                                            std::cerr << "Charge mismatch on loaded atom " << aname << " " << ires
-                                                << ". Ignoring `atomdata` definitions and using "
-                                                << it->charge << " instead of " << a.charge << "." << endl;
-                                        } else {
-                                            std::cerr << "Charge mismatch on loaded atom " << aname << " " << ires
-                                                << ". Using value from `atomdata`, i.e., "
-                                                << it->charge << " instead of " << a.charge << "." << endl;
+                                        std::cerr << "charge mismatch on atom " << aname << " " << ires;
+                                        if (keepcharges)
+                                            std::cerr << "; using " << it->charge
+                                                << " instead of `atomlist`s " << a.charge << "." << endl;
+                                        else {
+                                            std::cerr << "; using `atomlist`s "
+                                                << it->charge << " over " << a.charge << "." << endl;
                                             a.charge = it->charge;
-                                       }
+                                        }
                                     }
 
                                     // does radius match AtomData?
                                     if (std::fabs(it->sigma - 2*radius) > pc::epsilon_dbl)
-                                        std::cerr << "Radius mismatch on loaded atom " << aname << " " << ires
-                                            << ". Using value from `atomdata`, i.e., "
-                                            << it->sigma/2 << " instead of " << radius << "." << endl;
+                                        std::cerr << "radius mismatch on atom " << aname << " " << ires
+                                            << "; using `atomdata`s "
+                                            << it->sigma/2 << " over " << radius << "." << endl;
 
                                     p.push_back(a);
 
@@ -683,7 +687,7 @@ namespace Faunus {
                     dst.clear();
                 std::string suffix = file.substr(file.find_last_of(".") + 1);
                 if ( suffix == "aam" )
-                    FormatAAM::load(file, dst);
+                    FormatAAM::load(file, dst, keepcharges);
                 if ( suffix == "pqr" )
                     FormatPQR::load(file, dst, keepcharges);
                 if ( suffix == "xyz" )

@@ -710,7 +710,8 @@ namespace Faunus {
                                 if (f) {
                                     swpdhist.at( pid.first ).stream_decorator = [&](std::ostream &o, int N, double samplings) {
                                         double sum = swpdhist.at( pid.first ).sumy();
-                                        o << N << " " << samplings << " " << samplings / sum << "\n";
+                                        if (samplings>0)
+                                            o << N << " " << samplings << " " << samplings / sum << "\n";
                                     };
                                     f << "# N samplings P\n" << swpdhist.at( pid.first );
                                 }
@@ -721,7 +722,8 @@ namespace Faunus {
                                 if (f) {
                                     swpdhist.at( rid.first ).stream_decorator = [&](std::ostream &o, int N, double samplings) {
                                         double sum = swpdhist.at( rid.first ).sumy();
-                                        o << N << " " << samplings << " " << samplings / sum << "\n";
+                                        if (samplings>0)
+                                            o << N << " " << samplings << " " << samplings / sum << "\n";
                                     };
                                     f << "# N samplings P\n" << swpdhist.at( rid.first );
                                 }

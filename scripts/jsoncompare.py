@@ -54,14 +54,15 @@ def compare(a, b):
                 if result==False and returncode==0:
                     returncode = 1
                 if not args.quiet:
-                    print('{:20} {:10} {:10} {}'.format(key, a[key], b[key], result))
+                    print('{:24} {:>8} {:16.6G} {:16.6G}'.format(key, str(result), a[key], b[key]))
 
 # load two json files to compare
 d = [json.load(open(f)) for f in [args.file1, args.file2]]
 
 if (len(d)==2):
     if args.quiet==False:
-        print('{:20} {:>10} {:>10} {}'.format("keyword", "ref", "new", "pass"))
+        print('{:24} {:>8} {:>16} {:>16}'.format("keyword", "pass", "reference", "current"))
+        print('-'*(24+8+16+16+3))
     compare(*[i for i in d])
     sys.exit(returncode)
 

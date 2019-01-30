@@ -99,7 +99,6 @@
                 "moves": 600000,
                 "reactions": {
                     "h2po4 = hpo4 + H": {
-                        "acceptance": 0.00055,
                         "attempts": 100203
                     },
                     "h3po4 = h2po4 + H": {

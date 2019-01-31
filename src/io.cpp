@@ -33,6 +33,8 @@ void Faunus::IO::strip(std::vector<std::string> &v, const std::string &pat) {
 
 int Faunus::FormatXTC::getNumAtoms() { return natoms_xtc; }
 
+bool Faunus::FormatAAM::keepcharges = true;
+
 bool Faunus::FormatXTC::open(std::string s) {
     if (xd!=NULL)
         close();

@@ -1,19 +1,19 @@
 #!/usr/bin/env yason.py
 temperature: 1100
-mcloop: {macro: 2, micro: 25}
-geometry: {type: cuboid, length: 42.5} # 19.73
+mcloop: {macro: 10, micro: 100}
+geometry: {type: cuboid, length: 19.715}
 energy:
     - isobaric: {P/mM: 11}
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: ewald, epsr: 1, cutoff: 14, kcutoff: 7, alpha: 0.2}
+        coulomb: {type: ewald, epsr: 1, cutoff: 9, kcutoff: 7, alpha: 0.2}
 atomlist:
     - Na: {q:  1.0, sigma: 3.33, eps: 0.01158968, dp: 0.5} 
     - Cl: {q: -1.0, sigma: 4.4, eps: 0.4184, dp: 0.5} 
 moleculelist:
     - salt: {atoms: [Na,Cl], atomic: true}
 insertmolecules:
-    - salt: {N: 1152} # 152
+    - salt: {N: 115}
 moves:
     - transrot: {molecule: salt}
     - volume: {dV: 0.03}

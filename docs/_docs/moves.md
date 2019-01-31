@@ -112,12 +112,12 @@ Currently, the number of `molecules` must be constant throughout simulation.
 
 ### Charge Move
 
-`transrot`       |  Description
+`charge`         |  Description
 ---------------- |  ---------------------------------
-`molecule`       |  Molecule name to operate on
-`dir=[1,1,1]`    |  Translational directions
+`index`          |  Atom index to operate on
+`dq`             |  Charge displacement
 
-This will perform moves on charges of individual atoms. The charge of an atom is updated by the same operation as in `moltransrot`, but instead of specifying `dp`, you specify `dq`, the charge move increment, in the single atom properties.
+This performs a fractional charge move on a specific atom.
 
 
 ### Conformational Swap

@@ -576,10 +576,11 @@ namespace Faunus {
                 Tspace& spc;
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
+                typedef Equidistant2DTable<unsigned int, double> Ttable; // why double?
 
-                std::map<int, Equidistant2DTable<int,double> > swpdhist;  // Probability density of swapping atoms
-                std::map<int, Equidistant2DTable<int,double> > atmdhist;  // Probability density of atomic molecules
-                std::map<int, Equidistant2DTable<int,double> > moldhist;  // Probability density of polyatomic molecules
+                std::map<int, Ttable> swpdhist;  // Probability density of swapping atoms
+                std::map<int, Ttable> atmdhist;  // Probability density of atomic molecules
+                std::map<int, Ttable> moldhist;  // Probability density of polyatomic molecules
                 std::map<int, Average<double>> rho_mol, rho_atom;
                 std::map<int,int> Nmol, Natom;
                 Average<double> Lavg, Vavg, invVavg;
@@ -622,7 +623,7 @@ namespace Faunus {
                     for (auto &i : Natom)
                         rho_atom[i.first] += i.second/V;
 
-                    if ( reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
+                    if ( Faunus::reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
                         for (auto &rit : reactions<Tpvec> ) {
                             for (auto pid : rit._prodid_a) {
                                 auto atomlist = spc.findAtoms(pid.first);
@@ -665,7 +666,7 @@ namespace Faunus {
                         else
                             moldhist[m.id()].setResolution(1,0);
                     }
-                    if ( reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
+                    if ( Faunus::reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
                         for (auto &rit : reactions<Tpvec> ) {
                             for (auto pid : rit._prodid_a) {
                                 swpdhist[pid.first].setResolution(1,0);
@@ -683,7 +684,8 @@ namespace Faunus {
                         if (f) {
                             m.second.stream_decorator = [&](std::ostream &o, int N, double samplings) {
                                 double sum = m.second.sumy();
-                                o << N << " " << samplings << " " << samplings / sum << "\n";
+                                if (samplings>0)
+                                    o << N << " " << samplings << " " << samplings / sum << "\n";
                             };
                             f << "# N samplings P\n" << m.second;
                         }
@@ -694,12 +696,13 @@ namespace Faunus {
                         if (f) {
                             m.second.stream_decorator = [&](std::ostream &o, int N, double samplings) {
                                 double sum = m.second.sumy();
-                                o << N << " " << samplings << " " << samplings / sum << "\n";
+                                if (samplings>0)
+                                    o << N << " " << samplings << " " << samplings / sum << "\n";
                             };
                             f << "# N samplings P\n" << m.second;
                         }
                     }
-                    if ( reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
+                    if ( Faunus::reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
                         for (auto &rit : reactions<Tpvec> ) {
                             for (auto pid : rit._prodid_a) {
                                 std::string file = "rho-"s + atoms.at( pid.first ).name + ".dat";
@@ -707,7 +710,8 @@ namespace Faunus {
                                 if (f) {
                                     swpdhist.at( pid.first ).stream_decorator = [&](std::ostream &o, int N, double samplings) {
                                         double sum = swpdhist.at( pid.first ).sumy();
-                                        o << N << " " << samplings << " " << samplings / sum << "\n";
+                                        if (samplings>0)
+                                            o << N << " " << samplings << " " << samplings / sum << "\n";
                                     };
                                     f << "# N samplings P\n" << swpdhist.at( pid.first );
                                 }
@@ -718,7 +722,8 @@ namespace Faunus {
                                 if (f) {
                                     swpdhist.at( rid.first ).stream_decorator = [&](std::ostream &o, int N, double samplings) {
                                         double sum = swpdhist.at( rid.first ).sumy();
-                                        o << N << " " << samplings << " " << samplings / sum << "\n";
+                                        if (samplings>0)
+                                            o << N << " " << samplings << " " << samplings / sum << "\n";
                                     };
                                     f << "# N samplings P\n" << swpdhist.at( rid.first );
                                 }

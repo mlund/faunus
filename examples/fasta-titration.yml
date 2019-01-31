@@ -1,0 +1,107 @@
+{% set eps = 0.05 %}
+{% set pH = 7.0 %}
+{% set Cs = 0.010 %}
+{% set debyelength = 3.04/Cs**0.5 %}
+{% set dpsalt = 20 %}
+
+temperature: 298
+random: {seed: default}
+geometry: {type: cuboid, length: [200,200,200]}
+mcloop: {macro: 10, micro: 100}
+
+atomlist:
+    - ASP  :  { q: -1, r: 3.6, mw: 110, dp: 2, eps: {{ eps }} }
+    - HASP :  { q:  0, r: 3.6, mw: 110, dp: 2, eps: {{ eps }} }
+    - CTR  :  { q: -1, r: 2.0, mw: 16,  dp: 2, eps: {{ eps }} }
+    - HCTR :  { q:  0, r: 2.0, mw: 16,  dp: 2, eps: {{ eps }} }
+    - GLU  :  { q: -1, r: 3.8, mw: 122, dp: 2, eps: {{ eps }} }
+    - HGLU :  { q:  0, r: 3.8, mw: 122, dp: 2, eps: {{ eps }} }
+    - TYR  :  { q: -1, r: 4.1, mw: 154, dp: 2, eps: {{ eps }} }
+    - HTYR :  { q: 0,  r: 4.1, mw: 154, dp: 2, eps: {{ eps }} }
+    - CYS  :  { q: -1, r: 3.6, mw: 103, dp: 2, eps: {{ eps }} }
+    - HCYS :  { q: 0,  r: 3.6, mw: 103, dp: 2, eps: {{ eps }} }
+    - HIS  :  { q: 0,  r: 3.9, mw: 130, dp: 2, eps: {{ eps }} }
+    - HHIS :  { q: 1,  r: 3.9, mw: 130, dp: 2, eps: {{ eps }} }
+    - NTR  :  { q: 0,  r: 2.0, mw: 14,  dp: 2, eps: {{ eps }} }
+    - HNTR :  { q: 1,  r: 2.0, mw: 14,  dp: 2, eps: {{ eps }} }
+    - LYS  :  { q: 0,  r: 3.7, mw: 116, dp: 2, eps: {{ eps }} }
+    - HLYS :  { q: 1,  r: 3.7, mw: 116, dp: 2, eps: {{ eps }} }
+    - ARG  :  { q: 0,  r: 4.0, mw: 144, dp: 2, eps: {{ eps }} }
+    - HARG :  { q: 1,  r: 4.0, mw: 144, dp: 2, eps: {{ eps }} }
+    - ALA  :  { q: 0,  r: 3.1, mw: 66,  dp: 2, eps: {{ eps }} }
+    - ILE  :  { q: 0,  r: 3.6, mw: 102, dp: 2, eps: {{ eps }} }
+    - LEU  :  { q: 0,  r: 3.6, mw: 102, dp: 2, eps: {{ eps }} }
+    - MET  :  { q: 0,  r: 3.8, mw: 122, dp: 2, eps: {{ eps }} }
+    - PHE  :  { q: 0,  r: 3.9, mw: 138, dp: 2, eps: {{ eps }} }
+    - PRO  :  { q: 0,  r: 3.4, mw: 90,  dp: 2, eps: {{ eps }} }
+    - TRP  :  { q: 0,  r: 4.3, mw: 176, dp: 2, eps: {{ eps }} }
+    - VAL  :  { q: 0,  r: 3.4, mw: 90,  dp: 2, eps: {{ eps }} }
+    - SER  :  { q: 0,  r: 3.3, mw: 82,  dp: 2, eps: {{ eps }} }
+    - THR  :  { q: 0,  r: 3.5, mw: 94,  dp: 2, eps: {{ eps }} }
+    - ASN  :  { q: 0,  r: 3.6, mw: 108, dp: 2, eps: {{ eps }} }
+    - GLN  :  { q: 0,  r: 3.8, mw: 120, dp: 2, eps: {{ eps }} }
+    - GLY  :  { q: 0,  r: 2.9, mw: 54,  dp: 2, eps: {{ eps }} }
+    - na   :  { q: 1,  r: 2.0, mw: 1, eps: {{ eps }}, dp: {{ dpsalt }} }
+    - cl   :  { q: -1, r: 2.0, mw: 1, eps: {{ eps }}, dp: {{ dpsalt }} }
+    - H+   :  { implicit: True, activity: {{ 10**(-pH) }} }
+
+moleculelist:
+    - Na+: {atomic: True, atoms: [na], activity: {{ Cs }} }
+    - Cl-: {atomic: True, atoms: [cl], activity: {{ Cs }} }
+    - peptide:
+        structure: {fasta: "nGKNEEGAPQEGILEDMPVDPDNEAYEMPSEEGYQDYEPEAc", k: 3, req: 7}
+
+reactionlist:
+    # H+ is implicit and to maintain electroneutrality
+    # we accompany swap moves with insertion/deletion
+    # of either a chloride or a sodium ion.
+    # Effectively this means that we can interconvert
+    # H+ <-> Na+ <-> Cl-. Excess salt pairs are removed
+    # by the final NaCl GC reaction.
+    - HCTR + Cl- = CTR + H+:  {pK: 2.6}
+    - HASP + Cl- = ASP + H+:  {pK: 4.0}
+    - HGLU + Cl- = GLU + H+:  {pK: 4.4}
+    - HHIS + Cl- = HIS + H+:  {pK: 6.3}
+    - HNTR + Cl- = NTR + H+:  {pK: 7.5}
+    - HTYR + Cl- = TYR + H+:  {pK: 9.6}
+    - HLYS + Cl- = LYS + H+:  {pK: 10.4}
+    - HCYS + Cl- = CYS + H+:  {pK: 10.8}
+    - HARG + Cl- = ARG + H+:  {pK: 12.0}
+    - HCTR = Na+ + CTR + H+:  {pK: 2.6}
+    - HASP = Na+ + ASP + H+:  {pK: 4.0}
+    - HGLU = Na+ + GLU + H+:  {pK: 4.4}
+    - HHIS = Na+ + HIS + H+:  {pK: 6.3}
+    - HNTR = Na+ + NTR + H+:  {pK: 7.5}
+    - HTYR = Na+ + TYR + H+:  {pK: 9.6}
+    - HLYS = Na+ + LYS + H+:  {pK: 10.4}
+    - HCYS = Na+ + CYS + H+:  {pK: 10.8}
+    - HARG = Na+ + ARG + H+:  {pK: 12.0}
+    - = Na+ + Cl-: {} # activates grand canonical salt
+
+insertmolecules:
+    - Na+: {N: 118} # add enough ions to create
+    - Cl-: {N: 100} # an electroneutral system
+    - peptide: {N: 1} # the initial peptide has a charge of -18e
+
+energy:
+    - bonded: {}
+    - nonbonded_coulombwca:
+        openmp: [i2all]
+        wca: {mixing: LB}
+        coulomb: {epsr: 80, type: yukawa, debyelength: {{ debyelength }}, cutoff: 30}
+moves:
+    - speciation:  {}
+    - transrot:    {molecule: Na+, repeat: N}
+    - transrot:    {molecule: Cl-, repeat: N}
+    - transrot:    {molecule: peptide, repeat: 1}
+    - pivot:       {molecule: peptide, dprot: 0.1, repeat: 1}
+
+analysis:
+    - sanity: {nstep: 10}
+    - multipole: {nstep: 20}
+    - reactioncoordinate: {file: systemcharge.dat, type: system, property: Q, nstep: 100}
+    - systemenergy: {file: energy.dat, nstep: 20}
+    - xtcfile: {file: traj.xtc, nstep: 20}
+    - savestate: {file: confout.pqr}
+    - savestate: {file: state.json}
+

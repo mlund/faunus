@@ -27,16 +27,17 @@ void Faunus::Analysis::Analysisbase::from_json(const Faunus::json &j) {
 }
 
 void Faunus::Analysis::Analysisbase::to_json(Faunus::json &j) const {
-    assert( !name.empty() );
+    assert( not name.empty() );
     auto &_j = j[name];
     _to_json(_j);
     if (cnt>0) {
         _j["relative time"] = _round( timer.result() );
         _j["nstep"] = steps;
-        _j["nskip"] = nskip;
         _j["samples"] = cnt;
+        if (nskip>0)
+            _j["nskip"] = nskip;
     }
-    if (!cite.empty())
+    if (not cite.empty())
         _j["reference"] = cite;
 }
 

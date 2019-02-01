@@ -788,7 +788,7 @@ namespace Faunus {
                     idcnt.resize(ndx1-ndx0+1);
                     charge.resize(ndx1-ndx0+1);
                 }
-            }; // Molecular multipoles and their fluctuations
+            }; // Fluctuations of atomic charges
 
         template<class Tspace>
             class Multipole : public Analysisbase {

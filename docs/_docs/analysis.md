@@ -226,6 +226,17 @@ The input keywords are:
 `molecules`      | Array with exactly two molecule names, $a$ and $b$
 `dr=0.2`         | Distance resolution (Å) along _R_.
 
+## Charge Fluctuations
+
+Calculates the average charge, the standard deviation of the charge, and the most 
+probable species (atom name) of atomic indexes undergoing charge fluctuations.
+
+`chargefluctuations`    | Description
+----------------------- | ----------------------------------------------------------
+`nstep`                 | Interval between samples.
+`nskip`                 | Number of initial steps excluded from the analysis.
+`indexes`               | Lower and upper bound of the index range to be analyzed.
+
 ## Reaction Coordinate
 
 This saves a given reaction coordinate (see Penalty Function in Energy) as a function of steps.

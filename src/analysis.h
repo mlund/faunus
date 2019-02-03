@@ -734,6 +734,63 @@ namespace Faunus {
             };
 
         template<class Tspace>
+            class ChargeFluctuations : public Analysisbase {
+                const Tspace& spc;
+                std::vector< std::map<int,int> > idcnt; // populations of types of atomic indexes
+                std::vector< Average<double> > charge; // average charges of atomic indexes
+                std::vector<size_t> indexes; // lower and upper bound of indexes to analyze
+                size_t ndx0, ndx1, cnt;
+
+                void _sample() override {
+                    cnt = 0;
+                    for (auto p=spc.p.begin()+ndx0; p!=(spc.p.begin()+ndx1+1); ++p) {
+                        idcnt.at(cnt)[p->id]++;
+                        charge.at(cnt) += p->charge;
+                        ++cnt;
+                    }
+                }
+
+                void _to_json(json &j) const override {
+                    std::vector< std::string > mainid; // main id of atom with fluctuating charge
+                    std::vector< int > idxfluc; // indexes of atoms with fluctuating charge
+                    std::vector< double > qavg; // average charge
+                    std::vector< double > qstdev; // standard deviation of the charge
+                    for (size_t i=0; i!=idcnt.size(); ++i) { 
+                        if (charge.at(i).stdev()>0 and std::isfinite(charge.at(i).stdev())) { // true if the charge fluctuated
+                            idxfluc.push_back( ndx0+i );
+                            qavg.push_back( charge.at(i).avg() );
+                            qstdev.push_back( charge.at(i).stdev() );
+                            // we look for the id that was sampled most often
+                            auto id_max = std::max_element( std::begin(idcnt.at(i)), std::end(idcnt.at(i)), 
+                                [] (const std::pair<int, int>& p1, const std::pair<int, int>& p2) {
+                                    return p1.second < p2.second;
+                                }
+                            );
+                            mainid.push_back(atoms.at( id_max->first ).name);
+                            }
+                    }
+                    j = { {"indexes", idxfluc}, {"main species", mainid},
+                        {"average q", qavg }, {"stdev of q", qstdev } };
+                }
+
+                public:
+                ChargeFluctuations(const json &j, const Tspace &spc ) : spc(spc) {
+                    from_json(j);
+                    name = "chargefluctuations";
+                    if (j.count("indexes")==1) {
+                        indexes = j.value("indexes", decltype(indexes)());
+                        ndx0 = indexes.at(0);
+                        ndx1 = indexes.at(1);
+                    } else {
+                        ndx0 = 0 ;
+                        ndx1 = spc.p.size();
+                    }
+                    idcnt.resize(ndx1-ndx0+1);
+                    charge.resize(ndx1-ndx0+1);
+                }
+            }; // Fluctuations of atomic charges
+
+        template<class Tspace>
             class Multipole : public Analysisbase {
                 const Tspace& spc;
                 struct data { Average<double> Z, Z2, mu, mu2; };
@@ -1335,6 +1392,7 @@ namespace Faunus {
                                         if      (it.key()=="atomprofile") push_back<AtomProfile<Tspace>>(it.value(), spc);
                                         else if (it.key()=="atomrdf") push_back<AtomRDF<Tspace>>(it.value(), spc);
                                         else if (it.key()=="density") push_back<Density<Tspace>>(it.value(), spc);
+                                        else if (it.key()=="chargefluctuations") push_back<ChargeFluctuations<Tspace>>(it.value(), spc);
                                         else if (it.key()=="molrdf") push_back<MoleculeRDF<Tspace>>(it.value(), spc);
                                         else if (it.key()=="multipole") push_back<Multipole<Tspace>>(it.value(), spc);
                                         else if (it.key()=="multipoledist") push_back<MultipoleDistribution<Tspace>>(it.value(), spc);

@@ -73,8 +73,8 @@ namespace Faunus {
 
         template<typename Tparticle>
             struct SigmaEpsilonTable {
-                enum Mixers {LB};
-                Mixers mixer = LB;
+                enum Mixers {LB, NONE};
+                Mixers mixer = NONE;
                 PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and 4*eps_ij
             }; //!< Table of sigma and epsilons
 
@@ -82,7 +82,7 @@ namespace Faunus {
             void from_json(const json &j, SigmaEpsilonTable<Tparticle> &m) {
                 std::function<std::pair<double,double>(double,double,double,double)> mixerFunc;
 
-                std::string mixer = j.value("mixing", std::string("LB"));
+                auto mixer = j.at("mixing").get<std::string>();
                 if (mixer=="LB")
                     m.mixer=SigmaEpsilonTable<Tparticle>::LB;
                 switch(m.mixer) {
@@ -117,9 +117,10 @@ namespace Faunus {
                                 m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
                                 m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
                             } else
-                                std::runtime_error("custom epsilon/sigma parameters require exactly two space-separated atoms");
+                                throw std::runtime_error("custom epsilon/sigma parameters require exactly two space-separated atoms");
                         }
-                    }
+                    } else
+                        throw std::runtime_error("custom sigma/epsilon syntax error");
                 }
             }
 

@@ -298,7 +298,7 @@ The hard sphere potential does not take any input. Radii are read from the atoml
 
 `lennardjones` | Description
 -------------- | -------------------------------------------
-`mixing=LB`    | Mixing rule. `LB`
+`mixing`       | Mixing rule (`LB`)
 `custom`       | Custom $\epsilon$ and $\sigma$ combinations
 
 The Lennard-Jones potential consists of a repulsive and attractive term,
@@ -308,7 +308,7 @@ u_{ij}^{\text{LJ}} = 4\epsilon_{ij} \left (
     \left ( \frac{\sigma_{ij}} {r_{ij})} \right )^{12} - \left ( \frac{\sigma_{ij}}{r_{ij})}\right )^6 \right )
 $$
 
-where the default mixing rule is Lorentz-Berthelot (`LB`):
+and currently only the Lorentz-Berthelot (`LB`) mixing rule is available:
 
 $$
 \sigma_{ij} = \frac{\sigma_i+\sigma_j}{2} \quad \textrm{and} \quad
@@ -319,6 +319,7 @@ The mixing rule can be overridden for specific pairs of atoms:
 
 ~~~ yaml
 lennardjones:
+    mixing: LB
     custom:
         "Na Cl": {eps: 0.2, sigma: 2}
         "K Cl": {eps: 0.1, sigma: 3}

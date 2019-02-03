@@ -451,7 +451,6 @@ namespace Faunus {
         public:
             std::vector<std::string> _reag, _prod;
 
-            typedef Tpvec TParticleVector;
             typedef typename Tpvec::value_type Tparticle;
             typedef std::map<int,int> Tmap;
 
@@ -504,10 +503,10 @@ namespace Faunus {
             } //!< Map for addition depending on direction
 
             auto findAtomOrMolecule(const std::string &name) const {
-                auto it_a = findName(atoms, name);
-                auto it_m = findName(molecules<Tpvec>, name);
-                if (it_m == molecules<Tpvec>.end())
-                    if (it_a == atoms.end())
+                auto it_a = findName(Faunus::atoms, name);
+                auto it_m = findName(Faunus::molecules<Tpvec>, name);
+                if (it_m == Faunus::molecules<Tpvec>.end())
+                    if (it_a == Faunus::atoms.end())
                         throw std::runtime_error("unknown species '" + name + "'");
                 return std::make_pair(it_a, it_m);
             } //!< Returns pair of iterators to atomlist and moleculelist. One of them points to end().
@@ -536,8 +535,8 @@ namespace Faunus {
                 if (j.is_object()==false || j.size()!=1)
                     throw std::runtime_error("Invalid JSON data for ReactionData");
 
-                for (auto &m: molecules<Tpvec>)
-                    for (auto &a: atoms)
+                for (auto &m: Faunus::molecules<Tpvec>)
+                    for (auto &a: Faunus::atoms)
                         if (m.name == a.name)
                             throw std::runtime_error("Molecules and atoms nust have different names");
 

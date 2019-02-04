@@ -255,20 +255,31 @@ namespace Faunus {
                     int refid2=-1;
                     double dptrans=0;
                     double dprot=0;
-                    Point dir={1,1,1};
                     double p=1;
-                    Point cylAxis={0,0,0};
-                    Point origo={0, 0, 0}, dirCyl={1,1,0};
-                    double a=0;
+                    double apad=0;
                     double b=0;
                     double c=0;
                     double _sqd; // squared displacement
                     Average<double> msqd; // mean squared displacement
+                    double a;
+                    double cosTheta;
+                    double theta;
+                    double x;
+                    double y;
+                    double coord;
+                    double randNbr;
+                    double cntInner=0;
+                    double cntOuter=0;
+
+                    Point dir={1,1,1};
+                    Point cylAxis={0,0,0};
+                    Point origo={0,0,0};
+                    Point molV={0,0,0};
 
                     void _to_json(json &j) const override {
                         j = {
                             {"dir", dir}, {"dp", dptrans}, {"dprot", dprot}, 
-                            {"p", p}, {"origo", origo}, {"a", a}, {"b", b}, {"c", c},
+                            {"p", p}, {"origo", origo}, {"apad", apad}, {"b", b}, {"c", c},
                             {"molid", molid}, {"refid", refid1}, {"refid", refid2}, 
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
                             {"molecule", molecules<Tpvec>[molid].name}, {"ref1", atoms[refid1].name}, {"ref2", atoms[refid2].name}
@@ -298,7 +309,7 @@ namespace Faunus {
                             dprot = j.at("dprot");
                             dptrans = j.at("dp");
                             p = j.at("p");
-                            a = j.at("a");
+                            apad = j.at("apad");
                             b = j.at("b");
                             c = j.at("c");
                             
@@ -340,29 +351,43 @@ namespace Faunus {
 
 
                             if (not it->empty()) {
-                                double randNbr = slump(); 
+                                randNbr = slump(); 
                                 // if ((spc.geo.vdist(it->cm, it0->cm).norm() < dist) || ((spc.geo.vdist(it->cm, it0->cm).norm() > dist) && (p > slump()))) {
-                                double at = cylAxis.norm()+a;
-                                Point molV = spc.geo.vdist( it->cm, origo);
-                                double cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
-                                double theta = acos(cosTheta);
-                                double x = cosTheta*molV.norm();
-                                double y = sin(theta)*molV.norm();
-                                double temp = x*x/(at*at)+y*y/(b*b);
-                                
-                                if (temp > 1.0) {
+                                a = cylAxis.norm()+apad;
+                                molV = spc.geo.vdist( it->cm, origo);
+                                cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
+                                theta = acos(cosTheta);
+                                x = cosTheta*molV.norm();
+                                y = sin(theta)*molV.norm();
+                                coord = x*x/(a*a)+y*y/(b*b);
+                                //cntTot++; 
+
+                                if ( not ( coord > 1.0 && p < randNbr ) ) {
+                                    
+                                    if (coord > 1.0) {
+                                        cntOuter++;
+                                        //cout << "Inner counter: " << cnt << "\n";
+                                        //cout << "Inner loop, coord: " << coord << "\n";
+                                        //cout << "Inner loop, random number: " << randNbr << "\n"; 
+                                    }
+                                    else
+                                        cntInner++;
                                     //cout << "Selected reference molecule: " << Faunus::distance( spc.groups.begin(), it0 ) << "\n";
                                     //cout << "Selected water molecule: " << Faunus::distance( spc.groups.begin(), it ) << "\n";
                                     //cout << "Distance between selected molecules: " << spc.geo.vdist(it->cm, it0->cm).norm() << "\n";
                                     //cout << "Region boundary: " << dist << "\n";
                                     //cout << "Probability specified: " << p << "\n";
-                                    //cout << "Random number: " << randNbr << "\n\n";
-                                    cout << "Origo: " << origo << "\n";
-                                    cout << "Position of selected reference molecule 1: " << ref1->pos << "\n";
-                                    cout << "Position of selected reference molecule 2: " << ref2->pos << "\n";
-                                    cout << "Position of selected water molecule: " << it->cm << "\n";
-                                    cout << "Distance between reference atoms: " << cylAxis.norm()*2.0 << "\n";   
-                                    cout << "a: " << a << "\n";
+                                    //cout << "Random number: " << randNbr << "\n";
+                                    //cout << "Normalized coordinate: " << coord << "\n"; 
+                                    //cout << "Normal component of the distance from the center: " << x << "\n"; 
+                                    //cout << "Lateral component of the distance from the center: " << y << "\n"; 
+                                    //cout << "Fraction Outer/Inner moves: " << cnt/(cntTot-cnt) << "\n\n";
+                                    //cout << "Origo: " << origo << "\n";
+                                    //cout << "Position of selected reference molecule 1: " << ref1->pos << "\n";
+                                    //cout << "Position of selected reference molecule 2: " << ref2->pos << "\n";
+                                    //cout << "Position of selected water molecule: " << it->cm << "\n";
+                                    //cout << "Distance between reference atoms: " << cylAxis.norm()*2.0 << "\n";   
+                                    //cout << "a: " << a << "\n";
                                     assert(it->id==molid);
 
                                     if (dptrans>0) { // translate
@@ -392,8 +417,8 @@ namespace Faunus {
                                 }
                             }
                         }
+                        //cout << "Total number of moves: " << cntInner+cntOuter << "\n";
                     }
-
                     void _accept(Change&) override { msqd += _sqd; }
                     void _reject(Change&) override { msqd += 0; }
 

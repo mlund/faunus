@@ -41,8 +41,8 @@ atomlist:
     - ASN  :  { q: 0,  r: 3.6, mw: 108, dp: 2, eps: {{ eps }} }
     - GLN  :  { q: 0,  r: 3.8, mw: 120, dp: 2, eps: {{ eps }} }
     - GLY  :  { q: 0,  r: 2.9, mw: 54,  dp: 2, eps: {{ eps }} }
-    - na   :  { q: 1,  r: 2.0, mw: 1, eps: {{ eps }}, dp: {{ dpsalt }} }
-    - cl   :  { q: -1, r: 2.0, mw: 1, eps: {{ eps }}, dp: {{ dpsalt }} }
+    - na   :  { q: 1,  r: 2.3, mw: 1, eps: {{ 0.01 }}, dp: {{ dpsalt }} }
+    - cl   :  { q: -1, r: 2.3, mw: 1, eps: {{ 0.01 }}, dp: {{ dpsalt }} }
     - H+   :  { implicit: True, activity: {{ 10**(-pH) }} }
 
 moleculelist:
@@ -87,7 +87,19 @@ energy:
     - bonded: {}
     - nonbonded_coulombwca:
         openmp: [i2all]
-        wca: {mixing: LB}
+        wca:
+            mixing: LB
+            custom:
+                # custom parameters to match bulk electrolyte
+                # activity coefficient measurements. Valid
+                # for LJ potential + Coulomb potential.
+                "na cl" :  {sigma: 4.6,  eps: 0.01}
+                "na GLU":  {sigma: 5.25, eps: 0.01}
+                "na ASP":  {sigma: 5.25, eps: 0.01}
+                "na CTR":  {sigma: 5.25, eps: 0.01}
+                "cl HNTR": {sigma: 4.7,  eps: 0.01}
+                "cl HLYS": {sigma: 4.7,  eps: 0.01}
+                "cl HARG": {sigma: 3.5,  eps: 0.01}
         coulomb: {epsr: 80, type: yukawa, debyelength: {{ debyelength }}, cutoff: 30}
 moves:
     - speciation:  {}

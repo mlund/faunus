@@ -193,7 +193,7 @@ defined in the `reactionlist` detailed below, as well as in `atomlist` and
 
 ~~~ yaml
 reactionlist:
-  - "AH = A + H": { pK: 4.8, canonic: true }
+  - "AH = A + H": { pK: 4.8 }
   - "Mg(OH)2 = Mg + OH + OH": { lnK: -25.9 }
 ~~~
 

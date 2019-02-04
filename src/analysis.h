@@ -736,57 +736,70 @@ namespace Faunus {
         template<class Tspace>
             class ChargeFluctuations : public Analysisbase {
                 const Tspace& spc;
-                std::vector< std::map<int,int> > idcnt; // populations of types of atomic indexes
-                std::vector< Average<double> > charge; // average charges of atomic indexes
-                std::vector<size_t> indexes; // lower and upper bound of indexes to analyze
-                size_t ndx0, ndx1, cnt;
+                typedef typename Tspace::Tpvec Tpvec;
+                std::map< int, std::vector< std::map<int,int> > > idcnt; // populations of types of atomic indexes
+                std::map< int, std::vector< Average<double> > > charge; // average charges of atomic indexes
+                std::vector<size_t> gids; // group IDs to analyze
+                std::vector<std::string> molnames; // names of molecules to analyze
+                size_t cnt = 0;
+                bool verbose = false;
 
                 void _sample() override {
-                    cnt = 0;
-                    for (auto p=spc.p.begin()+ndx0; p!=(spc.p.begin()+ndx1+1); ++p) {
-                        idcnt.at(cnt)[p->id]++;
-                        charge.at(cnt) += p->charge;
-                        ++cnt;
+                    for (auto &g : spc.groups) {
+                        cnt = 0;
+                        if (std::find(gids.begin(), gids.end(), g.id) != gids.end()) {
+                            for ( auto p = g.begin(); p < g.trueend() ; ++p) {
+                                idcnt[g.id].at(cnt)[p->id]++;
+                                charge[g.id].at(cnt) += p->charge;
+                                ++cnt;
+                            }
+                        }
                     }
                 }
 
                 void _to_json(json &j) const override {
-                    std::vector< std::string > mainid; // main id of atom with fluctuating charge
-                    std::vector< int > idxfluc; // indexes of atoms with fluctuating charge
-                    std::vector< double > qavg; // average charge
-                    std::vector< double > qstdev; // standard deviation of the charge
-                    for (size_t i=0; i!=idcnt.size(); ++i) { 
-                        if (charge.at(i).stdev()>0 and std::isfinite(charge.at(i).stdev())) { // true if the charge fluctuated
-                            idxfluc.push_back( ndx0+i );
-                            qavg.push_back( charge.at(i).avg() );
-                            qstdev.push_back( charge.at(i).stdev() );
+                    json &k = j["molecules"];
+                    for (int id : gids) {
+                        std::vector< std::string > mainid; // main id of atom with fluctuating charge
+                        std::vector< double > qavg; // average charge
+                        std::vector< double > qstdev; // standard deviation of the charge
+                        for (size_t i=0; i!=idcnt.at(id).size(); ++i) { 
+                            qavg.push_back( charge.at(id).at(i).avg() );
+                            qstdev.push_back( charge.at(id).at(i).stdev() );
                             // we look for the id that was sampled most often
-                            auto id_max = std::max_element( std::begin(idcnt.at(i)), std::end(idcnt.at(i)), 
+                            auto id_max = std::max_element( std::begin(idcnt.at(id).at(i)), std::end(idcnt.at(id).at(i)), 
                                 [] (const std::pair<int, int>& p1, const std::pair<int, int>& p2) {
                                     return p1.second < p2.second;
                                 }
                             );
                             mainid.push_back(atoms.at( id_max->first ).name);
+                            if (verbose) {
+                                k[ Faunus::molecules<Tpvec>[id].name ] = {
+                                    {"main species", mainid},
+                                    {"average q", qavg }, {"stdev of q", qstdev } };
+                            } else {
+                                k[ Faunus::molecules<Tpvec>[id].name ] = {}; 
                             }
+                        }
                     }
-                    j = { {"indexes", idxfluc}, {"main species", mainid},
-                        {"average q", qavg }, {"stdev of q", qstdev } };
                 }
 
                 public:
                 ChargeFluctuations(const json &j, const Tspace &spc ) : spc(spc) {
                     from_json(j);
                     name = "chargefluctuations";
-                    if (j.count("indexes")==1) {
-                        indexes = j.value("indexes", decltype(indexes)());
-                        ndx0 = indexes.at(0);
-                        ndx1 = indexes.at(1);
-                    } else {
-                        ndx0 = 0 ;
-                        ndx1 = spc.p.size();
+                    if (j.count("molecules")==1) 
+                        molnames = j.value("molecules", decltype(molnames)());
+                    for (std::string name : molnames) {
+                        auto it = findName(Faunus::molecules<Tpvec>, name);
+                        if (it == Faunus::molecules<Tpvec>.end())
+                            throw std::runtime_error("unknown species '" + name + "'");
+                        gids.push_back( it->id() );
+                        cout << name << " " << it->id() << endl;
+                        idcnt[ it->id() ].resize( it->atoms.size() );
+                        charge[ it->id() ].resize( it->atoms.size() );
                     }
-                    idcnt.resize(ndx1-ndx0+1);
-                    charge.resize(ndx1-ndx0+1);
+                    verbose = j.value("verbose", false);
                 }
             }; // Fluctuations of atomic charges
 

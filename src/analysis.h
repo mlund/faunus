@@ -813,7 +813,7 @@ namespace Faunus {
                                 Point pos = p->pos - g.cm;
                                 sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
                                         natom++, prop.name.c_str(), prop.name.c_str(), 1,
-                                        pos.x(), pos.y(), pos.z(), qavg, radius); // move particles inside the sim. box
+                                        pos.x(), pos.y(), pos.z(), qavg, radius);
                                 o << buf;
                             }
                             o << "END\n";

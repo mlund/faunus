@@ -740,17 +740,18 @@ namespace Faunus {
                 std::vector< std::map<int,int> > idcnt; // populations of types of atomic indexes
                 std::vector< Average<double> > charge; // average charges of atomic indexes
                 std::string molname; // name of molecule to analyze
+                std::string file; // name of PQR file with average charges
                 int molid; // id of molecule to analyze
                 bool verbose = false;
                 size_t cnt;
 
                 void _sample() override {
                     for (auto &g : spc.groups) {
-                        cnt = 0;
                         if (g.id == molid) {
-                            for ( auto p = g.begin(); p < g.trueend() ; ++p) {
-                                idcnt[cnt][p->id]++;
-                                charge[cnt] += p->charge;
+                            cnt = 0;
+                            for (auto &p : g) {
+                                idcnt[cnt][p.id]++;
+                                charge[cnt] += p.charge;
                                 ++cnt;
                             }
                         }
@@ -785,6 +786,7 @@ namespace Faunus {
                     from_json(j);
                     name = "chargefluctuations";
                     verbose = j.value("verbose", false);
+                    file = j.value("pqrfile", "");
                     molname = j.at("molecule").get<decltype(molname)>(); // molecule name
                     auto it = findName(Faunus::molecules<Tpvec>, molname);
                     if (it == Faunus::molecules<Tpvec>.end())
@@ -795,35 +797,29 @@ namespace Faunus {
                 }
 
                 virtual ~ChargeFluctuations() {
-                    int natom=1;
-                    char buf[500];
-                    std::ostringstream o;
-                    for (auto &g : spc.groups) {
-                        if (g.id == molid) {
-                            for (auto p = g.begin(); p < g.trueend() ; ++p) {
-                                // we look for the id that was sampled most often
-                                auto id_max = std::max_element( std::begin(idcnt.at(natom-1)), std::end(idcnt.at(natom-1)), 
-                                    [] (const std::pair<int, int>& p1, const std::pair<int, int>& p2) {
-                                        return p1.second < p2.second;
-                                    }
-                                );
-                                auto& prop = atoms.at( id_max->first );
-                                double radius = prop.sigma/2;
-                                double qavg = charge.at(natom-1).avg(); 
-                                Point pos = p->pos - g.cm;
-                                sprintf(buf, "ATOM  %5d %-4s %-4s%5d    %8.3f %8.3f %8.3f %.3f %.3f\n",
-                                        natom++, prop.name.c_str(), prop.name.c_str(), 1,
-                                        pos.x(), pos.y(), pos.z(), qavg, radius);
-                                o << buf;
+                    if (file.size()>0) {
+                        Tpvec pvec;
+                        for (auto &g : spc.groups) {
+                            if (g.id == molid) {
+                                cnt = 0;    
+                                for (auto p = g.begin(); p < g.trueend() ; ++p) {
+                                    // we look for the id that was sampled most often
+                                    auto id_max = std::max_element( std::begin(idcnt.at(cnt)), std::end(idcnt.at(cnt)), 
+                                        [] (const std::pair<int, int>& p1, const std::pair<int, int>& p2) {
+                                            return p1.second < p2.second;
+                                        }
+                                    );
+                                    pvec.push_back( atoms.at( id_max->first ) );
+                                    pvec.back().charge = charge.at(cnt).avg();  
+                                    pvec.back().pos = p->pos - g.cm;  
+                                    ++cnt;
+                                }
+                                break;
                             }
-                            o << "END\n";
-                            IO::writeFile(molname+"_qavg.pqr", o.str());
-                            break;
                         }
+                        FormatPQR::save(file, pvec, spc.geo.getLength());
                     }
                 }
-
-
             }; // Fluctuations of atomic charges
 
         template<class Tspace>

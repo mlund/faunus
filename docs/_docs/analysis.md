@@ -228,14 +228,17 @@ The input keywords are:
 
 ## Charge Fluctuations
 
-Calculates the average charge, the standard deviation of the charge, and the most 
-probable species (atom name) of atomic indexes undergoing charge fluctuations.
+For a given molecule, this calculates the average charge, the standard deviation of the charge, 
+and the most probable species (atom name) averaging over all molecular groups.
+The structure of one of the molecular groups with average charges and most probable 
+atomic species is saved in PQR format.
 
 `chargefluctuations`    | Description
 ----------------------- | ----------------------------------------------------------
 `nstep`                 | Interval between samples.
 `nskip`                 | Number of initial steps excluded from the analysis.
-`indexes`               | Lower and upper bound of the index range to be analyzed.
+`molecule`              | Name of the molecule to analyze.
+`verbose`               | If True, include the results in the output file.
 
 ## Reaction Coordinate
 

@@ -241,12 +241,125 @@ namespace Faunus {
                         cdata.internal=true;
                     }
             };
-
+        
         /**
          * @brief Translate and rotate a molecular group
          */
         template<typename Tspace>
             class TranslateRotate : public Movebase {
+                protected:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    Tspace& spc; // Space to operate on
+                    int molid=-1;
+                    double dptrans=0;
+                    double dprot=0;
+                    double _sqd; // squared displacement
+                    Average<double> msqd; // mean squared displacement
+
+                    Point dir={1,1,1};
+
+                    void _to_json(json &j) const override {
+                        j = {
+                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot}, 
+                            {"molid", molid}, 
+                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+                            {"molecule", molecules<Tpvec>[molid].name}
+                        };
+                        _roundjson(j,3);
+                    }
+
+                    void _from_json(const json &j) override {
+                        assert(!molecules<Tpvec>.empty());
+                        try {
+                            std::string molname = j.at("molecule");
+                            auto it = findName(molecules<Tpvec>, molname);
+                            if (it == molecules<Tpvec>.end())
+                                throw std::runtime_error("unknown molecule '" + molname + "'");
+                            molid = it->id();
+                            dir = j.value("dir", Point(1,1,1));
+                            dprot = j.at("dprot");
+                            dptrans = j.at("dp");
+                            
+                            if (repeat<0) {
+                                auto v = spc.findMolecules(molid);
+                                repeat = std::distance(v.begin(), v.end());
+                            }
+                        }
+                        catch (std::exception &e) {
+                            throw std::runtime_error(name+": " + e.what());
+                        }
+                    } //!< Configure via json object
+
+                    template<class Tmollist>
+                      auto selectMolecule(Tmollist &mollist) {
+                        //typename Tspace::Tgvec::iterator it;
+                         
+                        return slump.sample( mollist.begin(), mollist.end() );
+                        //return it;
+                     }
+                    
+                    void _move(Change &change) override {
+                        assert(molid>=0);
+                        assert(!spc.groups.empty());
+                        assert(spc.geo.getVolume()>0);
+                        // pick random group from the system matching molecule type
+                        // TODO: This can be slow -- implement look-up-table in Space
+                        auto mollist = spc.findMolecules( molid, Tspace::ACTIVE ); // list of molecules w. 'molid'
+                        if (size(mollist)>0) {
+                            auto it = selectMolecule( mollist );
+
+                            if (not it->empty()) {
+                                
+
+                                    
+                                    
+                                assert(it->id==molid);
+
+                                if (dptrans>0) { // translate
+                                    Point oldcm = it->cm;
+                                    Point dp = ranunit(slump,dir) * dptrans * slump();
+
+                                    it->translate( dp, spc.geo.getBoundaryFunc() );
+                                    _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
+                                    }
+
+                                if (dprot>0) { // rotate
+                                    Point u = ranunit(slump);
+                                    double angle = dprot * (slump()-0.5);
+                                    Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
+                                    it->rotate(Q, spc.geo.getBoundaryFunc());
+                                }
+
+                                if (dptrans>0||dprot>0) { // define changes
+                                    Change::data d;
+                                    d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
+                                    d.all = true; // *all* atoms in group were moved
+                                    change.groups.push_back( d ); // add to list of moved groups
+                                }
+                                assert( spc.geo.sqdist( it->cm,
+                                            Geometry::massCenter(it->begin(), it->end(),
+                                                spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-6 );
+                                    
+
+                            }
+                        }
+                    }
+                
+                    void _accept(Change&) override { msqd += _sqd; }
+                    void _reject(Change&) override { msqd += 0; }
+
+                public:
+                    TranslateRotate(Tspace &spc) : spc(spc) {
+                        name = "moltransrot";
+                        repeat = -1; // m eaning repeat N times
+                    }
+            };         
+
+        /**
+         * @brief Translate and rotate a molecular group
+         */
+        template<typename Tspace>
+            class BiasedTranslateRotate : public Movebase {
                 protected:
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc; // Space to operate on
@@ -266,10 +379,12 @@ namespace Faunus {
                     double theta;
                     double x;
                     double y;
-                    double coord;
+                    double coord, coordNew, coordTemp;
                     double randNbr;
                     double cntInner=0;
                     double cntOuter=0;
+                    double countN=0, countNtot=0, countNsum=0, countNtotsum=0;
+                    double _bias=0;
 
                     Point dir={1,1,1};
                     Point cylAxis={0,0,0};
@@ -282,6 +397,10 @@ namespace Faunus {
                             {"p", p}, {"origo", origo}, {"apad", apad}, {"b", b}, {"c", c},
                             {"molid", molid}, {"refid", refid1}, {"refid", refid2}, 
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+                            {"# of water in ellipsoid", countNsum/(cntInner+cntOuter)},
+                            {"Fraction inner/total moves", cntInner/(cntInner+cntOuter)},
+                            {"Number of inner moves", cntInner},
+                            {"Total number of attempted moves", cntInner+cntOuter},
                             {"molecule", molecules<Tpvec>[molid].name}, {"ref1", atoms[refid1].name}, {"ref2", atoms[refid2].name}
                         };
                         _roundjson(j,3);
@@ -330,12 +449,12 @@ namespace Faunus {
                         return slump.sample( mollist.begin(), mollist.end() );
                         //return it;
                      }
-
+                    
                     void _move(Change &change) override {
                         assert(molid>=0);
                         assert(!spc.groups.empty());
                         assert(spc.geo.getVolume()>0);
-
+                        _bias = 0;
                         // pick random group from the system matching molecule type
                         // TODO: This can be slow -- implement look-up-table in Space
                         auto mollist = spc.findMolecules( molid, Tspace::ACTIVE ); // list of molecules w. 'molid'
@@ -348,12 +467,13 @@ namespace Faunus {
                             cylAxis = spc.geo.vdist( ref2->pos, ref1->pos )*0.5;  // half vector between reference points
                             origo = ref2->pos - cylAxis;  // Coordinates of middle point between reference points: new origo
                              // kolla (ref1 + ref2)/2 med pbc och att det blir lika med origo
+                            a = cylAxis.norm()+apad;
 
 
                             if (not it->empty()) {
+                                
                                 randNbr = slump(); 
                                 // if ((spc.geo.vdist(it->cm, it0->cm).norm() < dist) || ((spc.geo.vdist(it->cm, it0->cm).norm() > dist) && (p > slump()))) {
-                                a = cylAxis.norm()+apad;
                                 molV = spc.geo.vdist( it->cm, origo);
                                 cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
                                 theta = acos(cosTheta);
@@ -364,30 +484,12 @@ namespace Faunus {
 
                                 if ( not ( coord > 1.0 && p < randNbr ) ) {
                                     
-                                    if (coord > 1.0) {
+                                    if (coord > 1.0) 
                                         cntOuter++;
-                                        //cout << "Inner counter: " << cnt << "\n";
-                                        //cout << "Inner loop, coord: " << coord << "\n";
-                                        //cout << "Inner loop, random number: " << randNbr << "\n"; 
-                                    }
+                                    
                                     else
                                         cntInner++;
-                                    //cout << "Selected reference molecule: " << Faunus::distance( spc.groups.begin(), it0 ) << "\n";
-                                    //cout << "Selected water molecule: " << Faunus::distance( spc.groups.begin(), it ) << "\n";
-                                    //cout << "Distance between selected molecules: " << spc.geo.vdist(it->cm, it0->cm).norm() << "\n";
-                                    //cout << "Region boundary: " << dist << "\n";
-                                    //cout << "Probability specified: " << p << "\n";
-                                    //cout << "Random number: " << randNbr << "\n";
-                                    //cout << "Normalized coordinate: " << coord << "\n"; 
-                                    //cout << "Normal component of the distance from the center: " << x << "\n"; 
-                                    //cout << "Lateral component of the distance from the center: " << y << "\n"; 
-                                    //cout << "Fraction Outer/Inner moves: " << cnt/(cntTot-cnt) << "\n\n";
-                                    //cout << "Origo: " << origo << "\n";
-                                    //cout << "Position of selected reference molecule 1: " << ref1->pos << "\n";
-                                    //cout << "Position of selected reference molecule 2: " << ref2->pos << "\n";
-                                    //cout << "Position of selected water molecule: " << it->cm << "\n";
-                                    //cout << "Distance between reference atoms: " << cylAxis.norm()*2.0 << "\n";   
-                                    //cout << "a: " << a << "\n";
+                                    
                                     assert(it->id==molid);
 
                                     if (dptrans>0) { // translate
@@ -414,17 +516,53 @@ namespace Faunus {
                                     assert( spc.geo.sqdist( it->cm,
                                                 Geometry::massCenter(it->begin(), it->end(),
                                                     spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-6 );
+                                    
+                                    countN = 0;
+                                    countNtot = 0;
+                                
+                                    for ( auto &g : mollist) {
+                                        molV = spc.geo.vdist( g.cm, origo );
+                                        cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
+                                        theta = acos(cosTheta);
+                                        x = cosTheta*molV.norm();
+                                        y = sin(theta)*molV.norm();
+                                        coordTemp = x*x/(a*a)+y*y/(b*b);
+                                        countNtot++;
+                                        if (coordTemp < 1.0) {
+                                            countN++;
+                                        }
+                                    }
+                                    countNsum += countN;
+                                    countNtotsum += countNtot; 
+
+                                    molV = spc.geo.vdist( it->cm, origo);
+                                    cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
+                                    theta = acos(cosTheta);
+                                    x = cosTheta*molV.norm();
+                                    y = sin(theta)*molV.norm();
+                                    coordNew = x*x/(a*a)+y*y/(b*b);
+
+                                    if (coord < 1.0 && coordNew > 1.0) {
+                                        _bias = -log(p/(1-(1-p)/(p*countNtot+(1-p)*countN)));
+                                    }
+                                    else if (coord > 1.0 && coordNew < 1.0) {
+                                        _bias = -log(1/(p*(1+(1-p)/(p*countNtot+(1-p)*countN))));
+                                    } 
+
                                 }
                             }
                         }
-                        //cout << "Total number of moves: " << cntInner+cntOuter << "\n";
                     }
+                    double bias(Change&, double, double) override {                                                                                                                                                                                                                                                                                
+                        return _bias;
+                    }
+
                     void _accept(Change&) override { msqd += _sqd; }
                     void _reject(Change&) override { msqd += 0; }
 
                 public:
-                    TranslateRotate(Tspace &spc) : spc(spc) {
-                        name = "moltransrot";
+                    BiasedTranslateRotate(Tspace &spc) : spc(spc) {
+                        name = "biasedmoltransrot";
                         repeat = -1; // m eaning repeat N times
                     }
             };
@@ -1478,7 +1616,8 @@ start:
                             size_t oldsize = vec.size();
                             for (auto it : m.items()) {
                                 try {
-                                    if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc);
+                                    if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc); 
+                                    else if (it.key()=="biasedmoltransrot") this->template push_back<Move::BiasedTranslateRotate<Tspace>>(spc);
                                     else if (it.key()=="conformationswap") this->template push_back<Move::ConformationSwap<Tspace>>(spc);
                                     else if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
                                     else if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);

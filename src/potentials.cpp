@@ -398,9 +398,8 @@ double Faunus::Potential::SASApotential::area(double R, double r, double d_squar
 namespace Faunus {
     namespace Potential {
 
-        CustomPairPotential::CustomPairPotential(const std::string &name) {
+        CustomPairPotential::CustomPairPotential(const std::string &name) : d(std::make_shared<Data>()) {
             PairPotentialBase::name = name;
-            d = std::make_shared<Data>();
         }
 
         void CustomPairPotential::from_json(const json &j) {

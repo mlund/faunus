@@ -2,6 +2,7 @@
 [![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Anaconda-Server Badge](https://anaconda.org/teokem/faunus/badges/installer/conda.svg)](https://conda.anaconda.org/teokem/)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2ac7217d373a4f34a2dae2d912c9d1a1)](https://www.codacy.com/app/mlund/faunus?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mlund/faunus&amp;utm_campaign=Badge_Grade)
 
 Welcome to Faunus
 =================

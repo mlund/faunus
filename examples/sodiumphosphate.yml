@@ -28,7 +28,7 @@ reactionlist:
     - "hpo4 = po4 + H + Na":  {pK: 12.67}
     - "= Na + Cl": { }
 moves:
-    - speciation: {repeat: 1}
+    - rcmc: {repeat: 1}
 analysis:
     - savestate: {file: state.json}
     - density: {nstep: 10, nskip: 1000}

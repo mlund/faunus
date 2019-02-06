@@ -1407,7 +1407,7 @@ start:
                                         vec.back()->from_json( it.value() );
                                         addWeight(vec.back()->repeat);
                                     } else
-                                        std::cerr << "warning: ignoring unknown move '" << it.key() << "'" << endl;
+                                        throw std::runtime_error("unknown move");
                                 } catch (std::exception &e) {
                                     throw std::runtime_error("Error adding move '" + it.key() + "': " + e.what() + usageTip[it.key()]);
                                 }

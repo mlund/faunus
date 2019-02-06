@@ -102,7 +102,7 @@ energy:
                 "cl HARG": {sigma: 3.5,  eps: 0.01}
         coulomb: {epsr: 80, type: yukawa, debyelength: {{ debyelength }}, cutoff: 30}
 moves:
-    - speciation:  {}
+    - rcmc:  {}
     - transrot:    {molecule: Na+, repeat: N}
     - transrot:    {molecule: Cl-, repeat: N}
     - transrot:    {molecule: peptide, repeat: 1}
@@ -112,6 +112,7 @@ analysis:
     - sanity: {nstep: 10}
     - multipole: {nstep: 20}
     - reactioncoordinate: {file: systemcharge.dat, type: system, property: Q, nstep: 100}
+    - chargefluctuations: {molecule: peptide, nstep: 10, pqrfile: peptide_avg.pqr, verbose: true}
     - systemenergy: {file: energy.dat, nstep: 20}
     - xtcfile: {file: traj.xtc, nstep: 20}
     - savestate: {file: confout.pqr}

@@ -19,7 +19,7 @@ insertmolecules:
 reactionlist:
     - "= sodium + chloride": {}
 moves:
-    - speciation: {repeat: 1}
+    - rcmc: {repeat: 1}
 analysis:
     - systemenergy: {file: energy.dat, nstep: 10}
     - savestate: {file: state.json}

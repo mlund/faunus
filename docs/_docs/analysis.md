@@ -236,10 +236,10 @@ atomic species is saved in PQR format.
 `chargefluctuations`    | Description
 ----------------------- | ----------------------------------------------------------
 `nstep`                 | Interval between samples.
-`nskip`                 | Number of initial steps excluded from the analysis.
+`nskip=0`               | Number of initial steps excluded from the analysis.
 `molecule`              | Name of the molecule to analyze.
 `pqrfile`               | Name of the PQR file.
-`verbose`               | If True, include the results in the output file.
+`verbose=True`          | If True, include the results in the output file.
 
 ## Reaction Coordinate
 

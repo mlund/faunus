@@ -58,24 +58,24 @@ reactionlist:
     # Effectively this means that we can interconvert
     # H+ <-> Na+ <-> Cl-. Excess salt pairs are removed
     # by the final NaCl GC reaction.
-    - HCTR + Cl- = CTR + H+:  {pK: 2.6}
-    - HASP + Cl- = ASP + H+:  {pK: 4.0}
-    - HGLU + Cl- = GLU + H+:  {pK: 4.4}
-    - HHIS + Cl- = HIS + H+:  {pK: 6.3}
-    - HNTR + Cl- = NTR + H+:  {pK: 7.5}
-    - HTYR + Cl- = TYR + H+:  {pK: 9.6}
-    - HLYS + Cl- = LYS + H+:  {pK: 10.4}
-    - HCYS + Cl- = CYS + H+:  {pK: 10.8}
-    - HARG + Cl- = ARG + H+:  {pK: 12.0}
-    - HCTR = Na+ + CTR + H+:  {pK: 2.6}
-    - HASP = Na+ + ASP + H+:  {pK: 4.0}
-    - HGLU = Na+ + GLU + H+:  {pK: 4.4}
-    - HHIS = Na+ + HIS + H+:  {pK: 6.3}
-    - HNTR = Na+ + NTR + H+:  {pK: 7.5}
-    - HTYR = Na+ + TYR + H+:  {pK: 9.6}
-    - HLYS = Na+ + LYS + H+:  {pK: 10.4}
-    - HCYS = Na+ + CYS + H+:  {pK: 10.8}
-    - HARG = Na+ + ARG + H+:  {pK: 12.0}
+    - HCTR + Cl- = CTR + H+:  {pK: 3.6}
+    - HASP + Cl- = ASP + H+:  {pK: 3.9}
+    - HGLU + Cl- = GLU + H+:  {pK: 4.1}
+    - HHIS + Cl- = HIS + H+:  {pK: 6.5}
+    - HCYS + Cl- = CYS + H+:  {pK: 8.5}
+    - HNTR + Cl- = NTR + H+:  {pK: 8.6}
+    - HTYR + Cl- = TYR + H+:  {pK: 10.1}
+    - HLYS + Cl- = LYS + H+:  {pK: 10.8}
+    - HARG + Cl- = ARG + H+:  {pK: 12.5}
+    - HCTR = Na+ + CTR + H+:  {pK: 3.6}
+    - HASP = Na+ + ASP + H+:  {pK: 3.9}
+    - HGLU = Na+ + GLU + H+:  {pK: 4.1}
+    - HHIS = Na+ + HIS + H+:  {pK: 6.5}
+    - HCYS = Na+ + CYS + H+:  {pK: 8.5}
+    - HNTR = Na+ + NTR + H+:  {pK: 8.6}
+    - HTYR = Na+ + TYR + H+:  {pK: 10.1}
+    - HLYS = Na+ + LYS + H+:  {pK: 10.8}
+    - HARG = Na+ + ARG + H+:  {pK: 12.5}
     - = Na+ + Cl-: {} # activates grand canonical salt
 
 insertmolecules:

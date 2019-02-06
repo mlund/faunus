@@ -737,6 +737,8 @@ namespace Faunus {
             class ChargeFluctuations : public Analysisbase {
                 const Tspace& spc;
                 typedef typename Tspace::Tpvec Tpvec;
+                typename decltype(Faunus::molecules<Tpvec>)::const_iterator mol_iter; // selected molecule type
+
                 std::vector< std::map<int,int> > idcnt; // populations of types of atomic indexes
                 std::vector< Average<double> > charge; // average charges of atomic indexes
                 std::string molname; // name of molecule to analyze
@@ -788,12 +790,12 @@ namespace Faunus {
                     verbose = j.value("verbose", false);
                     file = j.value("pqrfile", "");
                     molname = j.at("molecule").get<decltype(molname)>(); // molecule name
-                    auto it = findName(Faunus::molecules<Tpvec>, molname);
-                    if (it == Faunus::molecules<Tpvec>.end())
+                    mol_iter = findName(Faunus::molecules<Tpvec>, molname);
+                    if (mol_iter == Faunus::molecules<Tpvec>.end())
                         throw std::runtime_error("unknown species '" + molname + "'");
-                    molid = it->id(); // molecule ID
-                    idcnt.resize( it->atoms.size() );
-                    charge.resize( it->atoms.size() );
+                    molid = mol_iter->id(); // molecule ID
+                    idcnt.resize( mol_iter->atoms.size() );
+                    charge.resize( mol_iter->atoms.size() );
                 }
 
                 virtual ~ChargeFluctuations() {

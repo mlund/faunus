@@ -735,7 +735,7 @@ namespace Faunus {
 
         template<class Tspace>
             class ChargeFluctuations : public Analysisbase {
-                const Tspace& spc;
+                Tspace& spc;
                 typedef typename Tspace::Tpvec Tpvec;
                 typename decltype(Faunus::molecules<Tpvec>)::const_iterator mol_iter; // selected molecule type
 
@@ -748,14 +748,12 @@ namespace Faunus {
                 size_t cnt;
 
                 void _sample() override {
-                    for (auto &g : spc.groups) {
-                        if (g.id == molid) {
-                            cnt = 0;
-                            for (auto &p : g) {
-                                idcnt[cnt][p.id]++;
-                                charge[cnt] += p.charge;
-                                ++cnt;
-                            }
+                    for (auto &g : spc.findMolecules(molid, Tspace::ACTIVE)) {
+                        cnt = 0;
+                        for (auto &p : g) {
+                            idcnt[cnt][p.id]++;
+                            charge[cnt] += p.charge;
+                            ++cnt;
                         }
                     }
                 }
@@ -784,7 +782,7 @@ namespace Faunus {
                 }
 
                 public:
-                ChargeFluctuations(const json &j, const Tspace &spc ) : spc(spc) {
+                ChargeFluctuations(const json &j, Tspace &spc) : spc(spc) {
                     from_json(j);
                     name = "chargefluctuations";
                     verbose = j.value("verbose", false);
@@ -801,23 +799,21 @@ namespace Faunus {
                 virtual ~ChargeFluctuations() {
                     if (file.size()>0) {
                         Tpvec pvec;
-                        for (auto &g : spc.groups) {
-                            if (g.id == molid) {
-                                cnt = 0;    
-                                for (auto p = g.begin(); p < g.trueend() ; ++p) {
-                                    // we look for the id that was sampled most often
-                                    auto id_max = std::max_element( std::begin(idcnt.at(cnt)), std::end(idcnt.at(cnt)), 
-                                        [] (const std::pair<int, int>& p1, const std::pair<int, int>& p2) {
-                                            return p1.second < p2.second;
-                                        }
-                                    );
-                                    pvec.push_back( atoms.at( id_max->first ) );
-                                    pvec.back().charge = charge.at(cnt).avg();  
-                                    pvec.back().pos = p->pos - g.cm;  
-                                    ++cnt;
-                                }
-                                break;
+                        for (auto &g : spc.findMolecules(molid, Tspace::ALL)) {
+                            cnt = 0;    
+                            for (auto p = g.begin(); p < g.trueend() ; ++p) {
+                                // we look for the id that was sampled most often
+                                auto id_max = std::max_element( std::begin(idcnt.at(cnt)), std::end(idcnt.at(cnt)), 
+                                    [] (const std::pair<int, int>& p1, const std::pair<int, int>& p2) {
+                                        return p1.second < p2.second;
+                                    }
+                                );
+                                pvec.push_back( atoms.at( id_max->first ) );
+                                pvec.back().charge = charge.at(cnt).avg();  
+                                pvec.back().pos = p->pos - g.cm;  
+                                ++cnt;
                             }
+                            break;
                         }
                         FormatPQR::save(file, pvec, spc.geo.getLength());
                     }

@@ -25,7 +25,7 @@ bool Faunus::IO::writeFile(const std::string &file, const std::string &s, std::i
 
 void Faunus::IO::strip(std::vector<std::string> &v, const std::string &pat) {
     auto iter=v.begin();
-    while (iter!=v.end())
+    while (iter<v.end())
         if ((*iter).find(pat) != std::string::npos)
             v.erase(iter);
         else ++iter;

@@ -151,8 +151,7 @@ namespace Faunus {
                     do {
                         m.x() = (rand()-0.5) * d;
                         m.y() = (rand()-0.5) * d;
-                        d = m.x()*m.x() + m.y()*m.y();
-                    } while ( d>r2 );
+                    } while ( m.x()*m.x() + m.y()*m.y() > r2 );
                     break;
                 case SLIT:
                     m.x() = (rand()-0.5) * len.x();

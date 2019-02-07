@@ -651,6 +651,7 @@ namespace Faunus {
                                 {"attempts", m.second.cnt},
                                 {"acceptance", m.second.avg()}
                             };
+                        Faunus::_roundjson(_j, 3);
                     }
 
                     void _from_json(const json&) override {};

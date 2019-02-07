@@ -793,9 +793,10 @@ namespace Faunus {
                                     // we look for the id that was sampled most often
                                     auto id_max = std::max_element( std::begin(idcnt.at(cnt)), std::end(idcnt.at(cnt)), 
                                             [] (auto& p1, auto& p2) { return p1.second < p2.second; } );
-                                    pvec.push_back( atoms.at( id_max->first ) );
-                                    pvec.back().charge = charge.at(cnt).avg();  
-                                    pvec.back().pos = p->pos - g.cm;  
+                                    pvec.push_back( Faunus::atoms.at( id_max->first ) );
+                                    pvec.back().charge = charge.at(cnt).avg();
+                                    pvec.back().pos = p->pos - g.cm;
+                                    spc.geo.boundary( pvec.back().pos );
                                     cnt++;
                                 }
                                 FormatPQR::save(file, pvec, spc.geo.getLength());
@@ -807,12 +808,14 @@ namespace Faunus {
                     ChargeFluctuations(const json &j, Tspace &spc) : spc(spc) {
                         from_json(j);
                         name = "chargefluctuations";
-                        file = j.value("pqrfile", std::string());
+                        file = j.value("pqrfile", ""s);
                         verbose = j.value("verbose", true);
                         auto molname = j.at("molecule").get<std::string>(); // molecule name
                         mol_iter = findName(Faunus::molecules<Tpvec>, molname);
                         if (mol_iter == Faunus::molecules<Tpvec>.end())
                             throw std::runtime_error("unknown species '" + molname + "'");
+                        if (mol_iter->atomic)
+                            throw std::runtime_error("only molecular groups allowed");
                         idcnt.resize( mol_iter->atoms.size() );
                         charge.resize( mol_iter->atoms.size() );
                     }

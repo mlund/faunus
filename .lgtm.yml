@@ -1,11 +1,12 @@
 path_classifiers:
   test:
-    - "**/*.cpp"
-    - "**/*.h"
-    - exclude: scripts/
-    - exclude: docs/
+    - src/*.cpp
+    - src/*.h
+    - exclude: examples
+    - exclude: scripts
+    - exclude: docs
 queries:
-  - exclude: cpp/use-of-goto            
+  - exclude: cpp/use-of-goto
 extraction:
   cpp:
     prepare:    # Customizable step used by all languages.
@@ -28,6 +29,6 @@ extraction:
       - export CRYPTOPP_DIR=$LGTM_SRC/cryptopp
     index:    # Customizable step used by all languages.
       build_command:
-        - cmake .
+        - CXX=g++-6 CC=gcc-6 cmake .
         - make faunus
 

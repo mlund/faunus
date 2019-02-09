@@ -41,7 +41,8 @@ void Faunus::Analysis::Analysisbase::to_json(Faunus::json &j) const {
     auto &_j = j[name];
     _to_json(_j);
     if (cnt>0) {
-        _j["relative time"] = _round( timer.result() );
+        if (timer.result() > 0.01) // only print if more than 1% of the time
+            _j["relative time"] = _round( timer.result() );
         _j["nstep"] = steps;
         _j["samples"] = cnt;
         if (nskip>0)

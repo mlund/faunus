@@ -30,6 +30,7 @@ namespace Faunus {
             Point offset={0,0,0};   //!< Added to random position. Default (0,0,0)
             bool rotate=true;       //!< Set to true to randomly rotate molecule when inserted. Default: true
             bool keeppos=false;     //!< Set to true to keep original positions (default: false)
+            bool allowoverlap=true; //!< Set to true to skip container overlap check
             int maxtrials=2e4;      //!< Maximum number of container overlap checks
             int confindex=-1;       //!< Index of last used conformation
 
@@ -37,7 +38,7 @@ namespace Faunus {
             {
                 int cnt = 0;
                 QuaternionRotate rot;
-                bool containerOverlap;
+                bool containerOverlap; // true if container overlap detected
 
                 if (std::fabs(geo.getVolume())<1e-20)
                     throw std::runtime_error("geometry has zero volume");
@@ -87,11 +88,12 @@ namespace Faunus {
 
                     // check if molecules / atoms fit inside simulation container
                     containerOverlap = false;
-                    for ( auto &i : v )
-                        if ( geo.collision(i.pos)) {
-                            containerOverlap = true;
-                            break;
-                        }
+                    if (allowoverlap==false)
+                        for ( auto &i : v )
+                            if ( geo.collision(i.pos)) {
+                                containerOverlap = true;
+                                break;
+                            }
                 } while (containerOverlap);
                 return v;
             }
@@ -225,7 +227,7 @@ namespace Faunus {
                 {"activity", a.activity/1.0_molar}, {"atomic", a.atomic},
                 {"id", a.id()}, {"insdir", a.insdir}, {"insoffset", a.insoffset},
                 {"keeppos", a.keeppos}, {"keepcharges", a.keepcharges}, {"bondlist", a.bonds},
-                {"rigid", a.rigid}
+                {"rigid", a.rigid}, {"rotate", a.rotate}
             };
             if (not a.structure.empty())
                 j[a.name]["structure"] = a.structure;
@@ -253,6 +255,7 @@ namespace Faunus {
                     a.insdir = val.value("insdir", a.insdir);
                     a.bonds  = val.value("bondlist", a.bonds);
                     a.rigid = val.value("rigid", a.rigid);
+                    a.rotate = val.value("rotate", true);
                     a.id() = val.value("id", a.id());
 
                     if (a.atomic) {
@@ -378,6 +381,7 @@ namespace Faunus {
                     // pass information to inserter
                     auto ins = RandomInserter<MoleculeData<std::vector<Tparticle,Talloc>>>();
                     ins.dir = a.insdir;
+                    ins.rotate = a.rotate;
                     ins.offset = a.insoffset;
                     ins.keeppos = a.keeppos;
                     a.setInserter(ins);

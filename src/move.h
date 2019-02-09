@@ -439,6 +439,7 @@ namespace Faunus {
                         repeat = -1; // meaning repeat n times
                         inserter.dir = {0,0,0};
                         inserter.rotate = true;
+                        inserter.allowoverlap = true;
                     }
 
             }; // end of conformation swap move

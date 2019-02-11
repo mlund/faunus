@@ -1,0 +1,17 @@
+path_classifiers:
+  test:
+    - src/*.cpp
+    - src/*.h
+    - exclude: examples
+    - exclude: scripts
+    - exclude: docs
+extraction:
+  cpp:
+    prepare:    # Customizable step used by all languages.
+      packages:
+        - g++-7
+    index:    # Customizable step used by all languages.
+      build_command:
+        - CXX=g++-7 CC=gcc-7 cmake . -DENABLE_PYTHON=off
+        - make faunus -j2
+

@@ -23,7 +23,7 @@ reactionlist:
     - "D = C": {pK: 1.0}
     - "= D":  {pK: 0.301}
 moves:
-    - speciation: {repeat: 1}
+    - rcmc: {repeat: 1}
 analysis:
     - savestate: {file: state.json}
     - density: {nstep: 10}

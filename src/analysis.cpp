@@ -6,6 +6,16 @@ void Faunus::Analysis::to_json(Faunus::json &j, const Faunus::Analysis::Analysis
 
 Faunus::Analysis::Analysisbase::~Analysisbase() {}
 
+/*
+ * This is always called by the destructor, but may be called
+ * any number of times earlier.
+ */
+void Faunus::Analysis::Analysisbase::_to_disk() {}
+
+void Faunus::Analysis::Analysisbase::to_disk() {
+    _to_disk();
+}
+
 void Faunus::Analysis::Analysisbase::sample() {
     totstepcnt++;
     stepcnt++;
@@ -31,7 +41,8 @@ void Faunus::Analysis::Analysisbase::to_json(Faunus::json &j) const {
     auto &_j = j[name];
     _to_json(_j);
     if (cnt>0) {
-        _j["relative time"] = _round( timer.result() );
+        if (timer.result() > 0.01) // only print if more than 1% of the time
+            _j["relative time"] = _round( timer.result() );
         _j["nstep"] = steps;
         _j["samples"] = cnt;
         if (nskip>0)
@@ -205,4 +216,8 @@ void Faunus::Analysis::QRtraj::_to_json(Faunus::json &j) const { j = {{"file", f
 
 void Faunus::Analysis::CombinedAnalysis::sample() {
     for (auto i : this->vec) i->sample();
+}
+
+Faunus::Analysis::CombinedAnalysis::~CombinedAnalysis() {
+    for (auto i : this->vec) i->to_disk();
 }

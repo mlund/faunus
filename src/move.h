@@ -439,6 +439,7 @@ namespace Faunus {
                         repeat = -1; // meaning repeat n times
                         inserter.dir = {0,0,0};
                         inserter.rotate = true;
+                        inserter.allowoverlap = true;
                     }
 
             }; // end of conformation swap move
@@ -651,6 +652,7 @@ namespace Faunus {
                                 {"attempts", m.second.cnt},
                                 {"acceptance", m.second.avg()}
                             };
+                        Faunus::_roundjson(_j, 3);
                     }
 
                     void _from_json(const json&) override {};
@@ -658,7 +660,8 @@ namespace Faunus {
                 public:
 
                     SpeciationMove(Tspace &spc) : spc(spc) {
-                        name = "speciation";
+                        name = "rcmc";
+                        cite = "doi:10/fqcpg3";
                         repeat = 1;
                     }
 
@@ -815,7 +818,7 @@ namespace Faunus {
 
                             std::sort(change.groups.begin(), change.groups.end() );
                         } else
-                            throw std::runtime_error("No reactions in list, disable speciation or add reactions");
+                            throw std::runtime_error("No reactions in list, disable rcmc or add reactions");
                     }
 
                     double bias(Change&, double, double) override {
@@ -1394,7 +1397,7 @@ start:
                                     else if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);
                                     else if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
                                     else if (it.key()=="charge") this->template push_back<Move::ChargeMove<Tspace>>(spc);
-                                    else if (it.key()=="speciation") this->template push_back<Move::SpeciationMove<Tspace>>(spc);
+                                    else if (it.key()=="rcmc") this->template push_back<Move::SpeciationMove<Tspace>>(spc);
                                     else if (it.key()=="quadrantjump") this->template push_back<Move::QuadrantJump<Tspace>>(spc);
                                     else if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);
                                     // new moves go here...
@@ -1406,7 +1409,7 @@ start:
                                         vec.back()->from_json( it.value() );
                                         addWeight(vec.back()->repeat);
                                     } else
-                                        std::cerr << "warning: ignoring unknown move '" << it.key() << "'" << endl;
+                                        throw std::runtime_error("unknown move");
                                 } catch (std::exception &e) {
                                     throw std::runtime_error("Error adding move '" + it.key() + "': " + e.what() + usageTip[it.key()]);
                                 }
@@ -1475,10 +1478,11 @@ start:
                     double u2 = state2.pot.energy(c);
 
                     // check that the energies in state1 and state2 are *identical*
-                    if (u1 not_eq u2) {
-                        std::cerr << "u1 = " << u1 << "  u2 = " << u2 << endl;
-                        throw std::runtime_error("error aligning energies - this could be a bug...");
-                    }
+                    if (std::isfinite(u1) and std::isfinite(u2))
+                        if (std::fabs((u1-u2)/u1)>1e-3) {
+                            std::cerr << "u1 = " << u1 << "  u2 = " << u2 << endl;
+                            throw std::runtime_error("error aligning energies - this could be a bug...");
+                        }
 
                     // inject reference to state1 in SpeciationMove (needed to calc. *differences*
                     // in ideal excess chem. potentials)

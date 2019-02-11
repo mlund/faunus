@@ -25,7 +25,8 @@ namespace Faunus {
             _to_json(j);
             if (timer_move.result() > 0.01) // only print if more than 1% of the time
                 j["relative time (without energy calc)"] = timer_move.result();
-            j["relative time"] = timer.result();
+            if (timer.result() > 0.01) // only print if more than 1% of the time
+                j["relative time"] = timer.result();
             j["acceptance"] = double(accepted)/cnt;
             j["repeat"] = repeat;
             j["moves"] = cnt;

@@ -21,7 +21,7 @@ reactionlist:
     - "h2po4 = hpo4 + H": {pK: 7.21}
     - "hpo4 = po4 + H":  {pK: 12.67}
 moves:
-    - speciation: {repeat: 1}
+    - rcmc: {repeat: 1}
 analysis:
     - savestate: {file: state.json}
     - density: {nstep: 10, nskip: 1000}

@@ -110,10 +110,11 @@ Properties of molecules and their default values:
 `keeppos=false`     | Keep original positions of `structure`
 `keepcharges=true`  | Keep original charges of `structure` (aam/pqr files)
 `rigid=false`       | Set to true for rigid molecules. Affects energy evaluation.
+`rotate=true`       | If false, the original structure will not be rotated upon insertion
 `structure`         | Structure file or direct information - required if `atomic=false`
 `traj`              | Read conformations from PQR trajectory (`structure` will be ignored)
 `trajweight`        | One column file w. relative weights for each conformation. Must match frames in `traj` file.
-`trajcenter`        | CM of conformations to origo assuming whole molecules (default: `false`)
+`trajcenter=false`  | Move CM of conformations to origo assuming whole molecules (default: `false`)
 
 Example:
 

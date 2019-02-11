@@ -220,7 +220,7 @@ Untested for cylinders, slits.
 {: .notice--warning}
 
 
-## Speciation / Grand Canonical (beta)
+## Reactive Canonical Monte Carlo (beta) <a name="rcmc"></a>
 
 The speciation move handles density fluctuations and particle transformations and is the main move
 for particle insertion, deletion, and swapping used in (semi)-grand canonical ensembles.
@@ -247,9 +247,9 @@ $$
 $$
 where $N_i$ is the number of particles of species $i$ in the current state and $a_i$ is the activity of species $i$.
 
-For more information, see the Topology section and [DOI:10.1080/00268979400100481](https://doi.org/10.1080/00268979400100481).
+For more information, see the Topology section and [doi:10/fqcpg3](https://doi.org/10/fqcpg3).
 
-`speciation`    |  Description
+`rcmc`          |  Description
 --------------- | ----------------------------------
 `repeat=1`      |  Average number of moves per sweep
 

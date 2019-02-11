@@ -228,18 +228,18 @@ The input keywords are:
 
 ## Charge Fluctuations
 
-For a given molecule, this calculates the average charge, the standard deviation of the charge, 
-and the most probable species (atom name) averaging over all molecular groups.
-The structure of one of the molecular groups with average charges and most probable 
-atomic species is saved in PQR format.
+For a given molecule, this calculates the average charge and standard deviation per atom, 
+and the most probable species (atom name) averaged over all present molecules.
+A PQR file of a random molecule with average charges and most probable 
+atomic species can be saved.
 
-`chargefluctuations`    | Description
------------------------ | ----------------------------------------------------------
-`nstep`                 | Interval between samples.
-`nskip`                 | Number of initial steps excluded from the analysis.
-`molecule`              | Name of the molecule to analyze.
-`pqrfile`               | Name of the PQR file.
-`verbose`               | If True, include the results in the output file.
+`chargefluctuations` | Description
+-------------------- | ----------------------------------------------------------
+`nstep`              | Interval between samples
+`nskip=0`            | Number of initial steps excluded from the analysis
+`molecule`           | Name of molecular group
+`pqrfile`            | Output PQR file (optional)
+`verbose=True`       | If `True`, add results to general output
 
 ## Reaction Coordinate
 

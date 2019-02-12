@@ -189,7 +189,7 @@ namespace Faunus {
                     g.id = molid;
                     g.atomic = molecules<Tpvec>.at(molid).atomic;
 
-                    if (g.atomic==false and molecules<Tpvec>.at(molid).name!="rna"s) {
+                    if (g.atomic==false) {
                         g.cm = Geometry::massCenter(in.begin(), in.end(), geo.getBoundaryFunc(), -in.begin()->pos);
                         Point cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
                         if (geo.sqdist(g.cm, cm)>1e-6)

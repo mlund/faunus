@@ -51,7 +51,10 @@ namespace Faunus {
             a.mulen    = val.value("mulen", a.mulen);
             a.scdir    = val.value("scdir", a.scdir);
             a.sclen    = val.value("sclen", a.sclen);
-            a.mw       = val.value("mw", a.mw);
+            if (val.count("mw")==1) {
+                a.mw   = value_inf(j[a.name],"mw");
+                val.erase("mw");
+            }
             a.sigma    = val.value("sigma", 0.0) * 1.0_angstrom;
             if (fabs(a.sigma)<1e-20)
                 a.sigma = 2.0*val.value("r", 0.0) * 1.0_angstrom;

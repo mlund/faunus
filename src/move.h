@@ -1506,11 +1506,14 @@ start:
                 double drift() {
                     Change c; c.all=true;
                     double ufinal = state1.pot.energy(c);
-                    if (uinit!=0)
-                        return ( ufinal-(uinit+dusum) ) / uinit;
-                    else
-                        return ufinal-(uinit+dusum); // in case uinit==0, report absolute drift
-                } //!< Calculates the relative or absolute energy drift from initial configuration
+                    double du = ufinal-uinit;
+                    if (std::isfinite(du)) {
+                        if (std::fabs(du)<1e-10) return 0;
+                        if (uinit!=0) return ( ufinal-(uinit+dusum) ) / uinit;
+                        else if (ufinal!=0) return ( ufinal-(uinit+dusum) ) / ufinal;
+                    }
+                    return std::numeric_limits<double>::quiet_NaN();
+                } //!< Calculates the relative energy drift from initial configuration
 
                 MCSimulation(const json &j, MPI::MPIController &mpi) : state1(j), state2(j), moves(j, state2.spc, mpi) {
                     init();

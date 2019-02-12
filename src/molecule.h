@@ -294,7 +294,7 @@ namespace Faunus {
                                     Potential::HarmonicBond bond; // harmonic bond
                                     bond.from_json(_struct);      // read 'k' and 'req' from json
                                     std::string fasta = _struct.at("fasta").get<std::string>();
-                                    Tpvec v = fastaToParticles<Tpvec>(fasta, bond.req);
+                                    Tpvec v = Faunus::fastaToParticles<Tpvec>(fasta, bond.req);
                                     if (not v.empty()) {
                                         a.conformations.push_back(v);
                                         for (auto &p : v)

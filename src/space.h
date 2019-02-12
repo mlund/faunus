@@ -189,11 +189,11 @@ namespace Faunus {
                     g.id = molid;
                     g.atomic = molecules<Tpvec>.at(molid).atomic;
 
-                    if (g.atomic==false) {
+                    if (g.atomic==false and molecules<Tpvec>.at(molid).name!="rna"s) {
                         g.cm = Geometry::massCenter(in.begin(), in.end(), geo.getBoundaryFunc(), -in.begin()->pos);
                         Point cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
                         if (geo.sqdist(g.cm, cm)>1e-6)
-                            throw std::runtime_error("space: mass center error upon insertion. Molecule too large?\n");
+                            throw std::runtime_error("space: mass center error upon insertion. "s+molecules<Tpvec>.at(molid).name+" molecule too large?\n");
                     }
 
                     groups.push_back(g);

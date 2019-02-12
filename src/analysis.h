@@ -910,7 +910,10 @@ namespace Faunus {
                             // check if particles are inside container
                             for (auto &i : g) // loop over active particles
                                 if (spc.geo.collision(i.pos))
-                                    throw std::runtime_error("particle outside container");
+                                    throw std::runtime_error("step "s + std::to_string(cnt) + ": index "
+                                            + std::to_string(&i - &(*g.begin())) + " of group "
+                                            + std::to_string(std::distance(spc.groups.begin(), spc.findGroupContaining(i)))
+                                            + " outside container");
 
                             // check if molecular mass centers are correct
                             if (not g.atomic)
@@ -919,6 +922,7 @@ namespace Faunus {
                                     double sqd = spc.geo.sqdist(g.cm, cm);
                                     if (sqd>1e-6) {
                                         std::cerr
+                                            << "step:      " << cnt << endl
                                             << "dist:      " << sqrt(sqd) << endl
                                             << "g.cm:      " << g.cm.transpose() << endl
                                             << "actual cm: " << cm.transpose() << endl;

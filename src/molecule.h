@@ -30,7 +30,7 @@ namespace Faunus {
             Point offset={0,0,0};   //!< Added to random position. Default (0,0,0)
             bool rotate=true;       //!< Set to true to randomly rotate molecule when inserted. Default: true
             bool keeppos=false;     //!< Set to true to keep original positions (default: false)
-            bool allowoverlap=true; //!< Set to true to skip container overlap check
+            bool allowoverlap=false;//!< Set to true to skip container overlap check
             int maxtrials=2e4;      //!< Maximum number of container overlap checks
             int confindex=-1;       //!< Index of last used conformation
 

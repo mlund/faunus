@@ -99,7 +99,7 @@ namespace Faunus {
         }; //!< Base class for all geometries
 
         /**
-         * @brief Geometry class for spheres, cylinders, cuboids, slits
+         * @brief Geometry class for spheres, cylinders, cuboids, hexagonal prism, truncated octahedron, slits
          *
          * All geometries shares the same distance calculation where
          * PBC is disabled by artificially setting long sidelengths.
@@ -108,11 +108,11 @@ namespace Faunus {
          */
         class Chameleon : public GeometryBase {
             public:
-                enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT};
+                enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON};
                 Variant type;
             private:
                 /**
-                 * `pbc_disable` is used to disable PBC in `sphere`, `cylinder`, `slit` etc.
+                 * `pbc_disable` is used to disable PBC in `sphere`, `cylinder`, `hexagonal`, `octahedron`, `slit` etc.
                  * by scaling the (internal) box length by a large number.
                  */
                 static constexpr double pbc_disable=100;
@@ -136,19 +136,49 @@ namespace Faunus {
                 void to_json(json &j) const;
 
                 inline void boundary( Point &a ) const override {
-                    if ( std::fabs(a.x()) > len_half.x())
+		    if ( type == CUBOID or type == SPHERE or type == CYLINDER or type == SLIT ) {
+		      if ( std::fabs(a.x()) > len_half.x())
                         a.x() -= len.x() * anint(a.x() * len_inv.x());
 
-                    if ( std::fabs(a.y()) > len_half.y())
+		      if ( std::fabs(a.y()) > len_half.y())
                         a.y() -= len.y() * anint(a.y() * len_inv.y());
 
-                    if ( std::fabs(a.z()) > len_half.z())
+		      if ( std::fabs(a.z()) > len_half.z())
                         a.z() -= len.z() * anint(a.z() * len_inv.z());
+		    } else if( type == HEXAGONAL ) {
+		      Point unitvX = Point(1.0,0.0,0.0);
+		      Point unitvY = Point(0.5,sqrt(3.0)/2.0,0.0);
+		      Point unitvZ = Point(-0.5,sqrt(3.0)/2.0,0.0);
+		      if(a.dot(unitvX) > len_half.x())
+			a = a - len.x()*unitvX;
+		      if(a.dot(unitvX) < -len_half.x())
+			a = a + len.x()*unitvX;
+		      if(a.dot(unitvY) > len_half.x()) {
+			a = a - len.x()*unitvY;
+			if(a.dot(unitvX) < -len_half.x()) // Check that point did not get past x-limit
+			    a = a + len.x()*unitvX;
+		      }
+		      if(a.dot(unitvY) < -len_half.x()) {
+			a = a + len.x()*unitvY;
+			if(a.dot(unitvX) > len_half.x()) // Check that point did not get past x-limit
+			    a = a - len.x()*unitvX;
+		      }
+		      if(a.dot(unitvZ) > len_half.x())
+			a = a - len.x()*unitvZ;
+		      if(a.dot(unitvZ) < -len_half.x())
+			a = a + len.x()*unitvZ;
+
+		      if(a.z() > len_half.z())
+			a.z() = a.z() - len.z();
+		      if(a.z() < -len_half.z())
+			a.z() = a.z() + len.z();
+		    }
                 } //!< Apply boundary conditions
 
                 inline Point vdist(const Point &a, const Point &b) const override {
                     Point r(a - b);
 
+		    if ( type == CUBOID or type == SPHERE or type == CYLINDER or type == SLIT ) {
                     if ( r.x() > len_half.x())
                         r.x() -= len.x();
                     else if ( r.x() < -len_half.x())
@@ -163,8 +193,12 @@ namespace Faunus {
                         r.z() -= len.z();
                     else if ( r.z() < -len_half.z())
                         r.z() += len.z();
+		    } else if( type == HEXAGONAL ) {
+		      boundary(r);
+		    }
                     return r;
                 }
+
         };
 
         void to_json(json&, const Chameleon&);
@@ -256,6 +290,31 @@ namespace Faunus {
                 CHECK( L.x() == Approx(2) );
                 CHECK( L.y() == Approx(2) );
                 CHECK( L.z() == Approx(1/pc::pi) );
+
+                // check random position
+                Point a;
+                bool containerOverlap=false;
+                for (int i=0; i<1e4; i++) {
+                    geo.randompos(a, slump);
+                    if (geo.collision(a))
+                        containerOverlap=true;
+                }
+                CHECK( containerOverlap==false );
+            }
+            
+            SUBCASE("hexagonal") {
+                json j = {  {"type","hexagonal"}, {"radius",1.0}, {"length", 1.0/2.0/std::sqrt(3.0)} };
+                geo = j;
+                CHECK( geo.getVolume() == doctest::Approx( 1.0 ) );
+                CHECK( geo.collision({1.01,0,0}) == true);
+                CHECK( geo.collision({0.99,0,0}) == false);
+                CHECK( geo.collision({0.0,2.0/std::sqrt(3.0)+0.01,0}) == true);
+
+                // check that geometry is properly enscribed in a cuboid
+                Point L = geo.getLength();
+                CHECK( L.x() == Approx(2.0) );
+                CHECK( L.y() == Approx(2.0) );
+                CHECK( L.z() == Approx(1.0/2.0/std::sqrt(3.0)) );
 
                 // check random position
                 Point a;

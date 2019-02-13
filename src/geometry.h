@@ -318,7 +318,7 @@ namespace Faunus {
                         c += w * t;
                         sum += w;
                     }
-                    if ( not std::isinf(sum) )
+                    if (std::isinf(sum))
                         c = {0,0,0};
                     else
                         c = c/sum - shift;

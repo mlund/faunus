@@ -30,7 +30,7 @@ namespace Faunus {
             Point offset={0,0,0};   //!< Added to random position. Default (0,0,0)
             bool rotate=true;       //!< Set to true to randomly rotate molecule when inserted. Default: true
             bool keeppos=false;     //!< Set to true to keep original positions (default: false)
-            bool allowoverlap=true; //!< Set to true to skip container overlap check
+            bool allowoverlap=false;//!< Set to true to skip container overlap check
             int maxtrials=2e4;      //!< Maximum number of container overlap checks
             int confindex=-1;       //!< Index of last used conformation
 
@@ -294,7 +294,7 @@ namespace Faunus {
                                     Potential::HarmonicBond bond; // harmonic bond
                                     bond.from_json(_struct);      // read 'k' and 'req' from json
                                     std::string fasta = _struct.at("fasta").get<std::string>();
-                                    Tpvec v = fastaToParticles<Tpvec>(fasta, bond.req);
+                                    Tpvec v = Faunus::fastaToParticles<Tpvec>(fasta, bond.req);
                                     if (not v.empty()) {
                                         a.conformations.push_back(v);
                                         for (auto &p : v)

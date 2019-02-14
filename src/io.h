@@ -654,13 +654,13 @@ namespace Faunus {
         Tpvec fastaToParticles(const std::string &fasta, double spacing=7, const Point &origin={0,0,0}) {
             Tpvec vec; // particle vector
             typename Tpvec::value_type p; // single particle
-            p.pos = origin; // fitst atom place here
+            p.pos = origin; // first atom place here
             auto ids = fastaToAtomIds(fasta);
-            for (auto i : ids) {
+            for (auto i : ids) { // loop over atom ids
                 p.id = i;
-                p.charge = atoms[i].charge;
+                p.charge = Faunus::atoms[i].charge;
                 if (not vec.empty())
-                    p.pos = vec.back().pos + ranunit(random) * spacing;
+                    p.pos = vec.back().pos + Faunus::ranunit(Faunus::random) * spacing;
                 vec.push_back(p);
             }
             return vec;

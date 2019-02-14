@@ -161,7 +161,7 @@ void Faunus::Analysis::PairFunctionBase::_to_json(Faunus::json &j) const {
 
 void Faunus::Analysis::PairFunctionBase::_from_json(const Faunus::json &j) {
     assertKeys(j, {
-            "file", "name1", "name2", "dim", "dr", "Rhyper", "nstep"
+            "file", "name1", "name2", "dim", "dr", "Rhyper", "nstep", "nskip"
             });
     file = j.at("file");
     name1 = j.at("name1");

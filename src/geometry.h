@@ -310,7 +310,6 @@ namespace Faunus {
             {
                 double sum=0;
                 Point c(0,0,0);
-                try {
                     for (auto &i=begin; i!=end; ++i) {
                         Point t = i->pos + shift;       // translate to origo
                         boundary(t);
@@ -318,14 +317,11 @@ namespace Faunus {
                         c += w * t;
                         sum += w;
                     }
-                    c = c/sum - shift;
+                    if (sum<=pc::epsilon_dbl)
+                        c = {0,0,0};
+                    else
+                        c = c/sum - shift;
                     boundary(c);
-                    if (std::isnan(c[0]))
-                        throw std::runtime_error("sum of weights is zero");
-                }
-                catch(std::exception& e) {
-                    throw std::runtime_error("anyCenter error: " + std::string(e.what()));
-                }
                 return c;
             } //!< Mass, charge, or geometric center of a collection of particles
 

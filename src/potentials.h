@@ -501,6 +501,76 @@ namespace Faunus {
                 }
             };
 
+        template<class Tparticle>
+            class CookeRNA : public PairPotentialBase {
+
+                CosAttract cos2;
+                Polarizability<Tparticle> polar;
+                std::vector<int> lipid, other;
+
+                public:
+                CookeRNA(const std::string &name="CookeRNA") {
+                    PairPotentialBase::name=name;
+                    PairPotentialBase::name.clear();
+                }
+
+                void from_json(const json &j) override {
+                    cos2 = j;
+                    polar = j;
+                    auto it = findName(atoms, "TL");
+                    if ( it!=atoms.end() )
+                        lipid.push_back(it->id());
+                    else
+                        throw std::runtime_error("Atom type 'TL' is not defined.");
+                    it = findName(atoms, "HD");
+                    if ( it!=atoms.end() )
+                        lipid.push_back(it->id());
+                    else
+                        throw std::runtime_error("Atom type 'HD' is not defined.");
+                    it = findName(atoms, "HTMA");
+                    if ( it!=atoms.end() )
+                        other.push_back(it->id());
+                    else
+                        throw std::runtime_error("Atom type 'HTMA' is not defined.");
+                    it = findName(atoms, "MP");
+                    if ( it!=atoms.end() )
+                        other.push_back(it->id());
+                    it = findName(atoms, "Cl");
+                    if ( it!=atoms.end() )
+                        other.push_back(it->id());
+                    it = findName(atoms, "Na");
+                    if ( it!=atoms.end() )
+                        other.push_back(it->id());
+                }
+                void to_json(json &j) const override {
+                    json _j;
+                    cos2.to_json(j);
+                    polar.to_json(_j);
+                    j = merge(j,_j);
+                }
+
+                double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
+                    double u=0;
+                    if (std::find(lipid.begin(),lipid.end(),a.id)!=lipid.end()) {
+                        if (a.id==lipid[0] and b.id==lipid[0]) {
+                            u+=cos2(a,b,r);
+                        } else {
+                            if (std::find(other.begin(),other.end(),b.id)!=other.end()) {
+                                u+=polar(a,b,r);
+                            }
+                        }
+                    } else {
+                        if (std::find(lipid.begin(),lipid.end(),b.id)!=lipid.end()) {
+                            if (std::find(other.begin(),other.end(),a.id)!=other.end()) {
+                                u+=polar(a,b,r);
+                            }
+                        }
+                    }
+                    return u;
+                }
+            };
+
+
         /**
          * @brief Finite Extensible Nonlinear Elastic (FENE) potential
          *

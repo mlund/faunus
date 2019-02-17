@@ -143,9 +143,21 @@ an exising molecule. That is, there is no mass center movement.
 `molecule`       | Molecule name to operate on
 `dprot`          | Rotational displacement
 `repeat=N`       | Number of repeats per MC sweep per bond
+`skiplarge=true` | Skip too large molecules
 
 Performs a rotation around a random, harmonic bond vector in `molecule`, moving all atoms
 either before _or_ after the bond with equal probability.
+For long polymers (compared to the box size), a large displacement parameter may cause
+problems with mass center calculation in periodic systems.
+This can be caught with the `sanity` analysis and should it occur, try one of the following:
+
+- enable `skiplarge`
+- decrease `dprot`
+- increase the simulation container.
+
+The first option will simply reject troublesome configurations and the
+final output contains information of the skipped fraction. Skipping is
+unphysical so make sure the skipped fraction is small.
 
 
 ## Parallel Tempering

@@ -309,19 +309,19 @@ namespace Faunus {
                     const Point &shift={0,0,0})
             {
                 double sum=0;
-                Point c(0,0,0);
-                    for (auto &i=begin; i!=end; ++i) {
-                        Point t = i->pos + shift;       // translate to origo
-                        boundary(t);
-                        double w = weight(*i);
-                        c += w * t;
-                        sum += w;
-                    }
-                    if (sum<=pc::epsilon_dbl)
-                        c = {0,0,0};
-                    else
-                        c = c/sum - shift;
-                    boundary(c);
+                Point c(0,0,0), t;
+                for (auto &i=begin; i!=end; ++i) {
+                    t = i->pos + shift;       // translate to origo
+                    boundary(t);
+                    double w = weight(*i);
+                    c += w * t;
+                    sum += w;
+                }
+                if (sum<=pc::epsilon_dbl)
+                    return {0,0,0};
+                else
+                    c = c/sum - shift;
+                boundary(c);
                 return c;
             } //!< Mass, charge, or geometric center of a collection of particles
 

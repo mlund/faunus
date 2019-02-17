@@ -923,6 +923,7 @@ namespace Faunus {
                                     if (sqd>1e-6) {
                                         std::cerr
                                             << "step:      " << cnt << endl
+                                            << "molecule:  " << &g-&*spc.groups.begin() << endl
                                             << "dist:      " << sqrt(sqd) << endl
                                             << "g.cm:      " << g.cm.transpose() << endl
                                             << "actual cm: " << cm.transpose() << endl;

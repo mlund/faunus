@@ -236,6 +236,7 @@ namespace Faunus {
                 return ranges::view::transform(*this, [](auto &i) -> Point& {return i.pos;});
             } //!< Iterable range with positions
 
+            // warning! this should be tested -- do not use yet.
             template<typename TdistanceFunc>
                 void unwrap(const TdistanceFunc &vdist) {
                     for (auto &i : *this)

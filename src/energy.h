@@ -1600,7 +1600,7 @@ namespace Faunus {
                         typedef CombinedPairPotential<CoulombGalore,LennardJones<Tparticle>> CoulombLJ;
                         typedef CombinedPairPotential<CoulombGalore,HardSphere<Tparticle>> CoulombHS;
                         typedef CombinedPairPotential<CoulombGalore,WeeksChandlerAndersen<Tparticle>> CoulombWCA;
-                        typedef CombinedPairPotential<CoulombWCA,Polarizability<Tparticle>> CoulombPolarWCA;
+                        typedef CombinedPairPotential<CoulombWCA,PolarHTMA<Tparticle>> CoulombPolarWCA;
                         typedef CombinedPairPotential<Coulomb,WeeksChandlerAndersen<Tparticle>> PrimitiveModelWCA;
                         typedef CombinedPairPotential<Coulomb,HardSphere<Tparticle>> PrimitiveModel;
 

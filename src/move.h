@@ -212,8 +212,18 @@ namespace Faunus {
 
                                 spc.geo.boundary(p->pos);
                                 _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
-                                if (not g.atomic) // recalc mass-center for non-molecular groups
+                                if (not g.atomic) { // recalc mass-center for non-molecular groups
                                     g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
+#ifndef NDEBUG
+                                    Point cmbak = g.cm; // backup mass center
+                                    g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
+                                    double should_be_zero = spc.geo.sqdist( {0,0,0}, Geometry::massCenter(g.begin(), g.end()) );
+                                    if (should_be_zero>1e-6)
+                                        throw std::runtime_error("atomic move too large");
+                                    else
+                                        g.translate(cmbak, spc.geo.getBoundaryFunc());
+#endif
+                                }
                             }
 
                             if (dprot>0) { // rotate
@@ -1137,9 +1147,12 @@ start:
                     Tspace& spc;
                     std::string molname;
                     int molid;
+                    int skipped=0; // number of skipped moves due to too small container
                     double dprot;
+                    double _bias=0; // bias energy
                     double d2; // cm movement, squared
                     Average<double> msqd; // cm mean squared displacement
+                    bool skip_if_too_large=true;
 
                     void _to_json(json &j) const override {
                         using namespace u8;
@@ -1147,12 +1160,15 @@ start:
                             {"molecule", molname}, {"dprot", dprot},
                             {u8::rootof + u8::bracket("r_cm" + u8::squared), std::sqrt(msqd.avg())}
                         };
+                        if (skipped>0)
+                            j["skipped"] = double(skipped) / cnt;
                         _roundjson(j,3);
                     }
 
                     void _from_json(const json &j) override {
                         dprot = j.at("dprot");
                         molname = j.at("molecule");
+                        skip_if_too_large = j.value("skiplarge", true);
                         auto it = findName(molecules<Tpvec>, molname);
                         if (it == molecules<Tpvec>.end())
                             throw std::runtime_error("unknown molecule '" + molname + "'");
@@ -1167,13 +1183,19 @@ start:
                         }
                     }
 
+                    /**
+                     * 1. pick random harmonic bond
+                     * 2. set rotation axis to bond axis
+                     * 3. rotate all atoms aither before or after bond
+                     * 4. recalc. mass center
+                     */
                     void _move(Change &change) override {
                         d2=0;
                         if (std::fabs(dprot)>1e-9) {
                             auto g = spc.randomMolecule(molid, slump); // look for random group
                             if (g!=spc.groups.end())
                                 if (g->size()>2) { // must at least have three atoms
-                                    auto b = slump.sample(bonds.begin(), bonds.end()); // random harmonic bond
+                                    auto b = slump.sample(bonds.begin(), bonds.end()); // pick random harmonic bond
                                     if (b != bonds.end()) {
                                         // index in `bonds are relative to the group
                                         int i1 = (*b)->index.at(0);
@@ -1181,7 +1203,7 @@ start:
                                         int offset = std::distance( spc.p.begin(), g->begin() );
 
                                         index.clear();
-                                        if (slump()>0.5)
+                                        if (slump()>0.5) // either rotate after or before bond
                                             for (size_t i=i2+1; i<g->size(); i++)
                                                 index.push_back(i+offset);
                                         else
@@ -1192,8 +1214,9 @@ start:
 
                                         if (not index.empty()) {
                                             Point oldcm = g->cm;
-                                            g->unwrap(spc.geo.getDistanceFunc()); // remove pbc
-                                            Point u = (spc.p[i1].pos - spc.p[i2].pos).normalized();
+                                            Point shift = spc.p[i1].pos; // center around this point to disable PBC
+                                            g->translate(-shift, spc.geo.getBoundaryFunc());
+                                            Point u = spc.geo.vdist(spc.p[i1].pos, spc.p[i2].pos).normalized();
                                             double angle = dprot * (slump()-0.5);
                                             Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
                                             auto M = Q.toRotationMatrix();
@@ -1203,7 +1226,20 @@ start:
                                                     + spc.p[i1].pos; // positional rot.
                                             }
                                             g->cm = Geometry::massCenter(g->begin(), g->end());
-                                            g->wrap(spc.geo.getBoundaryFunc()); // re-apply pbc
+                                            g->translate(shift, spc.geo.getBoundaryFunc());
+
+                                            // in periodic systems (cuboid, slit etc.) a pivot move
+                                            // can cause the molecule to be large than half the box
+                                            // length which we catch here.
+                                            double should_be_zero = spc.geo.sqdist( g->cm,
+                                                    Geometry::massCenter(g->begin(), g->end(), spc.geo.getBoundaryFunc(), -g->cm));
+                                            if (should_be_zero>1e-6) {
+                                                if (skip_if_too_large) {
+                                                    skipped++;
+                                                    d2 = 0;
+                                                    _bias = pc::infty; // config. WILL be rejected
+                                                } else throw std::runtime_error("container too small for molecule");
+                                            } else _bias = 0;
 
                                             d2 = spc.geo.sqdist(g->cm, oldcm); // CM movement
 
@@ -1218,6 +1254,10 @@ start:
                                     }
                                 }
                         }
+                    }
+
+                    double bias(Change&, double, double) override {
+                        return _bias;
                     }
 
                     void _accept(Change&) override { msqd += d2; }

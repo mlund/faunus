@@ -266,7 +266,7 @@ is reported by diagonalising the gyration tensor to find the principal moments:
 
 ## System Sanity
 
-When setting up simulations or developing, it is wise to assert that the simulation
+It is wise to always assert that the simulation
 is internally sane. This analysis checks the following and aborts if insane:
 
 - all particles are inside the simulation boundaries
@@ -275,6 +275,8 @@ is internally sane. This analysis checks the following and aborts if insane:
 
 To envoke, use for example `- sanity: {nstep: 1}` by default, `nstep=-1`, meaning it will
 be run at the end of simulation, only.
+This is not a particularly time-consuming analysis and we recommend that it is enabled
+for all simulations.
 
 
 ## System Energy

@@ -19,3 +19,5 @@ dependencies:
     - pygments
     - jinja2
     - numpy
+    - notebook
+    - nbconvert

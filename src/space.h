@@ -21,7 +21,6 @@ namespace Faunus {
     struct Change {
         bool dV=false;    //!< Set to true if there's a volume change
         double all=false; //!< Set to true if *everything* has changed
-        double du=0;      //!< Additional energy change not captured by Hamiltonian
         bool dN=false;    //!< True if the number of atomic or molecular species has changed
 
         struct data {
@@ -46,7 +45,6 @@ namespace Faunus {
 
         inline void clear()
         {
-            du=0;
             dV=false;
             all=false;
             dN=false;
@@ -56,12 +54,11 @@ namespace Faunus {
 
         inline bool empty() const
         {
-            if (du==0)
-                if (dV==false)
-                    if (all==false)
-                        if (groups.empty())
-                            if (dN==false)
-                                return true;
+            if (dV==false)
+                if (all==false)
+                    if (groups.empty())
+                        if (dN==false)
+                            return true;
             return false;
         } //!< Check if change object is empty
 

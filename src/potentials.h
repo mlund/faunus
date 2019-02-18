@@ -527,11 +527,6 @@ namespace Faunus {
                         lipid.push_back(it->id());
                     else
                         throw std::runtime_error("Atom type 'HD' is not defined.");
-                    it = findName(atoms, "HTMA");
-                    if ( it!=atoms.end() )
-                        other.push_back(it->id());
-                    else
-                        throw std::runtime_error("Atom type 'HTMA' is not defined.");
                     it = findName(atoms, "MP");
                     if ( it!=atoms.end() )
                         other.push_back(it->id());

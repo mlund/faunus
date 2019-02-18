@@ -1600,6 +1600,7 @@ namespace Faunus {
                         typedef CombinedPairPotential<CoulombGalore,LennardJones<Tparticle>> CoulombLJ;
                         typedef CombinedPairPotential<CoulombGalore,HardSphere<Tparticle>> CoulombHS;
                         typedef CombinedPairPotential<CoulombGalore,WeeksChandlerAndersen<Tparticle>> CoulombWCA;
+                        typedef CombinedPairPotential<CoulombWCA,Polarizability<Tparticle>> CoulombPolarWCA;
                         typedef CombinedPairPotential<Coulomb,WeeksChandlerAndersen<Tparticle>> PrimitiveModelWCA;
                         typedef CombinedPairPotential<Coulomb,HardSphere<Tparticle>> PrimitiveModel;
 
@@ -1621,6 +1622,9 @@ namespace Faunus {
 
                                     if (it.key()=="nonbonded_coulombwca")
                                         push_back<Energy::Nonbonded<Tspace,CoulombWCA>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded_coulombpolarwca")
+                                        push_back<Energy::Nonbonded<Tspace,CoulombPolarWCA>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded_pm" or it.key()=="nonbonded_coulombhs")
                                         push_back<Energy::Nonbonded<Tspace,PrimitiveModel>>(it.value(), spc);

@@ -845,7 +845,7 @@ namespace Faunus {
                     for (auto &d : _map)
                         k[ molecules<typename Tspace::Tpvec>[d.first].name ] = {
                             {"Z", d.second.Z.avg()}, {"Z2", d.second.Z2.avg()},
-                            {"C", std::pow(d.second.Z.avg(),2)-d.second.Z2.avg()},
+                            {"C", d.second.Z2.avg() - std::pow(d.second.Z.avg(),2)},
                             {u8::mu, d.second.mu.avg()}, {u8::mu+u8::squared, d.second.mu2.avg()}
                         };
                 }
@@ -923,6 +923,7 @@ namespace Faunus {
                                     if (sqd>1e-6) {
                                         std::cerr
                                             << "step:      " << cnt << endl
+                                            << "molecule:  " << &g-&*spc.groups.begin() << endl
                                             << "dist:      " << sqrt(sqd) << endl
                                             << "g.cm:      " << g.cm.transpose() << endl
                                             << "actual cm: " << cm.transpose() << endl;

@@ -927,6 +927,7 @@ namespace Faunus {
                                             << "dist:      " << sqrt(sqd) << endl
                                             << "g.cm:      " << g.cm.transpose() << endl
                                             << "actual cm: " << cm.transpose() << endl;
+                                        FormatPQR::save(MPI::prefix + "sanity-" + std::to_string(cnt) + ".pqr", spc.p, spc.geo.getLength());
                                         throw std::runtime_error("mass center-out-of-sync");
                                     }
                                 }

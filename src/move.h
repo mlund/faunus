@@ -212,8 +212,18 @@ namespace Faunus {
 
                                 spc.geo.boundary(p->pos);
                                 _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
-                                if (not g.atomic) // recalc mass-center for non-molecular groups
+                                if (not g.atomic) { // recalc mass-center for non-molecular groups
                                     g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
+#ifndef NDEBUG
+                                    Point cmbak = g.cm; // backup mass center
+                                    g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
+                                    double should_be_zero = spc.geo.sqdist( {0,0,0}, Geometry::massCenter(g.begin(), g.end()) );
+                                    if (should_be_zero>1e-6)
+                                        throw std::runtime_error("atomic move too large");
+                                    else
+                                        g.translate(cmbak, spc.geo.getBoundaryFunc());
+#endif
+                                }
                             }
 
                             if (dprot>0) { // rotate

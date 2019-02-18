@@ -799,7 +799,7 @@ namespace Faunus {
                                     spc.geo.boundary( pvec.back().pos );
                                     cnt++;
                                 }
-                                FormatPQR::save(file, pvec, spc.geo.getLength());
+                                FormatPQR::save(MPI::prefix + file, pvec, spc.geo.getLength());
                             }
                         }
                     }
@@ -1400,7 +1400,7 @@ namespace Faunus {
                         from_json(j);
                         name = "qrfile";
                         file = j.value("file", "qrtraj.dat"s);
-                        f.open(file);
+                        f.open(MPI::prefix + file);
                         if (not f)
                             throw std::runtime_error("error opening "s + file);
                         f.precision(6);

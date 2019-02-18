@@ -440,8 +440,10 @@ namespace Faunus {
                         double lB = pc::lB(epsr);
                         for (auto &i : atoms) {
                             for (auto &j : atoms) {
-                                m_charged->set(i.id(), j.id(), -lB/2 * ( pow(i.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
-                                            pow(j.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
+                                if (i.id() == HTMAid or j.id() == HTMAid) {
+                                    m_charged->set(i.id(), j.id(), -lB/2 * ( pow(i.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
+                                                pow(j.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
+                                }
                             }
                         }
                     }
@@ -451,7 +453,7 @@ namespace Faunus {
                     }
 
                     double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        if (a.id != HTMAid or b.id != HTMAid) {
+                        if (a.id == HTMAid or b.id == HTMAid) {
                             double r2=r.squaredNorm();
                             double r4inv=1/(r2*r2);
                             return (*m_charged)(a.id,b.id)*r4inv;
@@ -460,7 +462,7 @@ namespace Faunus {
                     }
 
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
-                        if (a.id != HTMAid or b.id != HTMAid) {
+                        if (a.id == HTMAid or b.id == HTMAid) {
                             double r6inv=1/(r2*r2*r2);
                             return 4*m_charged->operator()(a.id,b.id)*r6inv*p;
                         }

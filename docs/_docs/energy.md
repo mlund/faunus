@@ -747,3 +747,17 @@ yason.py input.yml | mpirun --np 6 --stdin all faunus -s state.json
 
 Here, each process automatically looks for `mpi{nproc}.state.json`.
 
+## Constraining the system
+
+Reaction coordinates can be used to constrain the system within a `range`
+using the `constrain` energy term. Stepping outside the range results in an inifinite
+energy, forcing rejection. For example,
+
+~~~ yaml
+energy:
+    - constrain: {type: molecule, index: 0, property: end2end, range: [0,200]}
+~~~
+
+Tip: placing `constrain` at the _top_ of the energy list is more efficient as the remaining
+energy terms are skipped should an infinite energy arise.
+

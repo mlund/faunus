@@ -340,6 +340,51 @@ namespace Faunus {
             };
 
         /**
+         * @brief Constrain system using reaction coordinates
+         *
+         * If outside specified `range`, infinity energy is returned, causing rejection.
+         */
+        class Constrain : public Energybase {
+            private:
+                std::string type;
+                std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
+            public:
+                template<class Tspace>
+                    Constrain(const json &j, Tspace &spc) {
+                        using namespace Faunus::ReactionCoordinate;
+                        name = "constrain";
+                        type = j.at("type").get<std::string>();
+                        try {
+                            if      (type=="atom")     rc = std::make_shared<AtomProperty>(j, spc);
+                            else if (type=="molecule") rc = std::make_shared<MoleculeProperty>(j, spc);
+                            else if (type=="system")   rc = std::make_shared<SystemProperty>(j, spc);
+                            else if (type=="cmcm")     rc = std::make_shared<MassCenterSeparation>(j, spc);
+                            if (rc==nullptr)
+                                throw std::runtime_error("unknown coordinate type");
+
+                        } catch (std::exception &e) {
+                            throw std::runtime_error("error for reaction coordinate '"
+                                    + type + "': " + e.what() + usageTip["coords=["+type+"]"]  );
+                        }
+                    }
+
+                inline double energy(Change &change) override {
+                    if (change) {
+                        double val = (*rc)(); // calculate reaction coordinate
+                        if (not rc->inRange(val)) // is it within allowed range?
+                            return pc::infty;  // if not, return infinite energy
+                    }
+                    return 0;
+                }
+
+                inline void to_json(json &j) const override {
+                    j = *rc;
+                    j["type"] = type;
+                    j.erase("resolution");
+                }
+        };
+
+        /**
          * @brief Base class for external potentials
          *
          * This will apply an external energy to a defined
@@ -1645,6 +1690,9 @@ namespace Faunus {
 
                                     if (it.key()=="confine")
                                         push_back<Energy::Confine<Tspace>>(it.value(), spc);
+
+                                    if (it.key()=="constrain")
+                                        push_back<Energy::Constrain>(it.value(), spc);
 
                                     if (it.key()=="example2d")
                                         push_back<Energy::Example2D>(it.value(), spc);

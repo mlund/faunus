@@ -124,16 +124,21 @@ namespace Faunus {
                             return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).x();
                         };
 
-                        else if (property=="mu_y")  f = [&g=spc.groups, i=index, b]() {
+                        else if (property=="mu_y") f = [&g=spc.groups, i=index, b]() {
                             return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).y();
                         };
 
-                        else if (property=="mu_z")  f = [&g=spc.groups, i=index, b]() {
+                        else if (property=="mu_z") f = [&g=spc.groups, i=index, b]() {
                             return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).z();
                         };
 
-                        else if (property=="mu")    f = [&g=spc.groups, i=index, b]() {
+                        else if (property=="mu") f = [&g=spc.groups, i=index, b]() {
                             return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).norm();
+                        };
+
+                        else if (property=="end2end") f = [&spc, i=index]() {
+                            assert(spc.groups[i].size()>1);
+                            return std::sqrt(spc.geo.sqdist(spc.groups[i].begin()->pos, (spc.groups[i].end()-1)->pos));
                         };
 
                         else if (property=="muangle") {
@@ -147,8 +152,9 @@ namespace Faunus {
                     
                         else if (property=="atomatom") {
                             dir = j.at("dir"); 
-                            indexes = j.value("indexes", decltype(indexes)());
-                            assert(indexes.size()==2 && "An array of 2 indexes should be specified.");
+                            indexes = j.at("indexes").get<decltype(indexes)>();
+                            if (indexes.size()!=2)
+                                throw std::runtime_error("exactly two indices expected");
                             f = [&spc, &dir=dir, i=indexes[0], j=indexes[1]]() {
                                 auto &pos1 = spc.p.at(i).pos;
                                 auto &pos2 = spc.p.at(j).pos;
@@ -158,7 +164,8 @@ namespace Faunus {
 
                         else if (property=="cmcm_z") {
                             indexes = j.value("indexes", decltype(indexes)());
-                            assert(indexes.size()==4 && "An array of 4 indexes should be specified.");
+                            if (indexes.size()!=4)
+                                throw std::runtime_error("exactly four indices expected");
                             f = [&spc, dir=dir, i=indexes[0], j=indexes[1]+1, k=indexes[2], l=indexes[3]+1]() {
                                 auto cm1 = Geometry::massCenter(spc.p.begin()+i, spc.p.begin()+j, spc.geo.getBoundaryFunc());
                                 auto cm2 = Geometry::massCenter(spc.p.begin()+k, spc.p.begin()+l, spc.geo.getBoundaryFunc());

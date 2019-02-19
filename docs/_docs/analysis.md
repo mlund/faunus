@@ -263,6 +263,26 @@ is reported by diagonalising the gyration tensor to find the principal moments:
     {nstep: 100, file: angle.dat, type: molecule, index: 0, property: angle, dir: [0,0,1]}
 ~~~ 
 
+### Processing
+
+In the example above we saved two properties as a function of steps. To join the two
+files and generate the average angle as a function of _z_, the following python code
+may be used:
+
+~~~ python
+import numpy as np
+from scipy.stats import binned_statistic
+
+def joinRC(xfile, yfile, bins):
+    x = np.loadtxt(xfile, usecols=[1])
+    y = np.loadtxt(yfile, usecols=[1])
+    means, edges, bins = binned_statistic(x,y,'mean',bins)
+    return (edges[:-1] + edges[1:]) / 2, means
+
+cmz, angle = joinRC('cmz.dat', 'angle.dat', 100)
+np.diff(cmz) # --> cmz resolution; control w. `bins`
+~~~
+
 
 ## System Sanity
 

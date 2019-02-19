@@ -686,6 +686,7 @@ be used when analysing the system (see Analysis).
 `angle`                   | Angle between instantaneous principal axis and given `dir` vector
 `com_x`, `com_y`, `com_z` | Mass center coordinates
 `confid`                  | Conformation id corresponding to frame in `traj` (see molecular topology).
+`end2end`                 | Distance between first and last atom
 `mu_x`, `mu_y`, `mu_z`    | Molecular dipole moment components
 `mu`                      | Molecular dipole moment scalar (eA/charge)
 `muangle`                 | Angle between dipole moment and given `dir` vector

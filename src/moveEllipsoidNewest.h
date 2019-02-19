@@ -364,40 +364,36 @@ namespace Faunus {
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc; // Space to operate on
                     
-                    int molid=-1, refid1=-1, refid2=-1;
-                    unsigned int cnt=0;
+                    int molid=-1, refid1=-1, cntAcross=0, cnt;
                     double dptrans=0, dprot=0;
                     double p=1;
-                    double apad=0, a, b=0, c=0;
+                    double radius;
                     double _sqd; // squared displacement
-                    Average<double> msqd, countNin_avg, countNin_avgBlocks, countNout_avg, countNout_avgBlocks; // mean squared displacement
-              
-                    double cosTheta, theta;
-                    double x, y;
-                    double coord, coordNew, coordTemp;
+                    Average<double> msqd; // mean squared displacement
+                    
+                    double dist, distNew, distTemp;
                     double randNbr;
-                    double _bias=0, rsd = 0.01, Nin, countNin, countNout, Ntot=0, cntInner=0;
+                    double countNavg=0;
+                    double _bias=0, var = 0, varSum = 0, variance = 0.05, countN [1000000],  countNout [1000000], cntInner=0, countNtot=0, countNsum=0, countNtotsum=0;
 
                     Point dir={1,1,1};
-                    Point cylAxis={0,0,0};
                     Point origo={0,0,0};
-                    Point molV={0,0,0};
                     
                     bool findBias = true;
 
                     void _to_json(json &j) const override {
                         j = {
                             {"dir", dir}, {"dp", dptrans}, {"dprot", dprot}, 
-                            {"p", p}, {"origo", origo}, {"apad", apad}, {"b", b}, {"c", c},
-                            {"molid", molid}, {"refid", refid1}, {"refid", refid2}, 
+                            {"p", p}, {"origo", origo}, {"radius", radius},
+                            {"molid", molid}, {"refid", refid1}, 
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"# of water in ellipsoid in last loop", countNin},
-                            {"Average # of water in ellipsoid calculated in loop", Nin},
+                            {"# of water in sphere in last loop", countN[cntAcross]},
+                            {"Average # of water in sphere calculated in loop", countNavg},
                             //{"# of water in ellipsoid specified", countN},
                             {"Fraction inner/total moves", cntInner/cnt},
                             {"Number of inner moves", cntInner},
                             {"Total number of attempted moves", cnt},
-                            {"molecule", molecules<Tpvec>[molid].name}, {"ref1", atoms[refid1].name}, {"ref2", atoms[refid2].name}
+                            {"molecule", molecules<Tpvec>[molid].name}, {"ref1", atoms[refid1].name}
                         };
                         _roundjson(j,3);
                     }
@@ -407,29 +403,20 @@ namespace Faunus {
                         try {
                             std::string molname = j.at("molecule");
                             std::string refname1 = j.at("ref1");
-                            std::string refname2 = j.at("ref2");
                             auto it = findName(molecules<Tpvec>, molname);
                             auto ref1 = findName(atoms, refname1);
-                            auto ref2 = findName(atoms, refname2);
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
                             if (ref1 == atoms.end())
                                 throw std::runtime_error("unknown reference atom '" + refname1 + "'");
-                            if (ref2 == atoms.end())
-                                throw std::runtime_error("unknown reference atom '" + refname2 + "'");
                             molid = it->id();
                             refid1 = ref1->id();
-                            refid2 = ref2->id();
                             dir = j.value("dir", Point(1,1,1));
                             dprot = j.at("dprot");
                             dptrans = j.at("dp");
                             p = j.at("p");
-                            apad = j.at("apad");
-                            b = j.at("b");
-                            c = j.at("c");
-                            rsd = j.at("rsd");
-                            //countN = j.at("n");
-                            //countNtot = j.at("Ntot");
+                            radius = j.at("radius");
+                            variance = j.at("var");
                             
                             if (repeat<0) {
                                 auto v = spc.findMolecules(molid);
@@ -458,15 +445,11 @@ namespace Faunus {
                         // TODO: This can be slow -- implement look-up-table in Space
                         auto mollist = spc.findMolecules( molid, Tspace::ACTIVE ); // list of molecules w. 'molid'
                         auto reflist1 = spc.findAtoms( refid1 ); 
-                        auto reflist2 = spc.findAtoms( refid2 );
                         if (size(mollist)>0) {
                             auto it = selectMolecule( mollist );
                             auto ref1 = selectMolecule( reflist1 );
-                            auto ref2 = selectMolecule( reflist2 );
-                            cylAxis = spc.geo.vdist( ref2->pos, ref1->pos )*0.50000;  // half vector between reference points
-                            origo = ref2->pos - cylAxis;  // Coordinates of middle point between reference points: new origo
+                            origo = ref1->pos;  // Coordinates of middle point between reference points: new origo
                              // kolla (ref1 + ref2)/2 med pbc och att det blir lika med origo
-                            a = cylAxis.norm()+apad;
 
 
                             if (not it->empty()) {
@@ -474,60 +457,80 @@ namespace Faunus {
                                 assert(it->id==molid);
                                 
                                 randNbr = slump(); 
-                                molV = spc.geo.vdist( it->cm, origo);
-                                cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
-                                theta = acos(cosTheta);
-                                x = cosTheta*molV.norm();
-                                y = sin(theta)*molV.norm();
-                                coord = x*x/(a*a)+y*y/(b*b);
+                                // if ((spc.geo.vdist(it->cm, it0->cm).norm() < dist) || ((spc.geo.vdist(it->cm, it0->cm).norm() > dist) && (p > slump()))) {
+                                dist = spc.geo.vdist( it->cm, origo).norm();
+                                //cntTot++; 
 
-                                if ( not ( coord > 1.00000 && p < randNbr ) ) {
+                                if ( not ( dist > radius && p < randNbr ) ) {
                                     
-                                    if (coord <= 1.00000) 
+                                    if (dist <= 1.00000) 
                                         cntInner += 1.00000;
                                     
                                     
-                                    cnt += 1;
-
-                                    if (findBias == true) {
-                                        countNin = 0.00;
-                                        countNout = 0.00;
-                                        Ntot = 0.00;
-                                        for ( auto &g : mollist) {
-                                            Ntot += 1.00;
-                                            molV = spc.geo.vdist( g.cm, origo );
-                                            cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
-                                            theta = acos(cosTheta);
-                                            x = cosTheta*molV.norm();
-                                            y = sin(theta)*molV.norm();
-                                            coordTemp = x*x/(a*a)+y*y/(b*b);
-                                            if (coordTemp <= 1.00000) {
-                                                countNin += 1.00;
-                                            }
-                                            else
-                                                countNout += 1.00;
+                                    cnt +=1;
+                                    var = 0.00; 
+                                    varSum = 0.00;
+                                    countNtot = 0.00;
+                                    //cout << "moves across boundary: " << cntacross << "\n"; 
+                                    countN[cnt] = 0.00;
+                                    countNout[cnt] = 0.00;
+                                    for ( auto &g : mollist) {
+                                        countNtot += 1.00;;
+                                        distTemp = spc.geo.vdist( g.cm, origo).norm();
+                                        if (distTemp <= radius) {
+                                            countN[cnt] += 1.00;
                                         }
-                                        
-                                        countNin_avg += countNin;
-                                        countNout_avg += countNout;
+                                        else
+                                            countNout[cnt] += 1.00;
+                                    }
+                                    countNsum += countN[cnt];
+                                    countNavg = countNsum/cnt;
+                                    for (int i=1; i<=cnt; i++) {
+                                        varSum += (countN[i]-countNavg)*(countN[i]-countNavg);
+                                        //cout << "variance sum in loop, not normalized: " << varsum << "\n\n";
+                                    }
+                                    if (cnt > 500) {
+                                        var = varSum/cnt;
+                                        //cout << "variance sum, not normalized: " << varsum << "\n";
+                                        //cout << "variance: " << var << "\n\n";
+                                        /*
+                                        if (var <= variance) {
+                                             
+                                            findBias = false;
+                                            cout << "bias found, with average number of particles inside ellipsoid = " << countnavg << " after " << cntacross << " steps across boundary\n\n";
+                                            cout << "this steps number of water molecules inside: " << countn[cntacross] << "\n";
+                                            cout << "this steps average number of water molecules inside: " << countnavg << "\n";
+                                            cout << "this steps bias when going in->out: " << _bias << "\n";
+                                            cout << "moves across boundary: " << cntacross << "\n"; 
+                                            cout << "variance: " << var << "\n\n";
 
-                                        if(cnt%100==0) {
-                                            countNin_avgBlocks += countNin_avg.avg();
-                                            countNout_avgBlocks += countNout_avg.avg();
+                                        }
+                                        */
+                                    }
+                                     
+
+                                    if (cnt%1000 == 0) {
+                                        /*
+                                        cout << "this steps number of water molecules inside: " << countN[cnt] << "\n";
+                                        cout << "this steps average number of water molecules inside: " << countNavg << "\n";
+                                        cout << "this steps bias: " << _bias << "\n";
+                                        cout << "moves: " << cnt << "\n"; 
+                                        cout << "variance: " << var << "\n\n";
+                                    */
+                                    }
+                                    
+                                    if (cnt == 200000) {
+                                        FILE *f = fopen("watersInAndOut.dat", "w");
+                                        if (f == NULL) {
+                                            printf("Can't open this file!\n");
+                                            exit(1);
                                         }
 
-                                        if (cnt%1000000 == 0) {
-                                            Nin = countNin_avgBlocks.avg();
-                                            cout << "Average # of water molecules inside sphere: " << Nin << "\n";
-                                            cout << "Relative standard deviation based on molecules inside sphere: " << countNin_avgBlocks.stdev()/Nin << "\n";
-                                            cout << "Average # of water molecules outside sphere: " << countNout_avgBlocks.avg() << "\n";
-                                            cout << "Relative standard deviation based on molecules outside sphere: " << countNout_avgBlocks.stdev()/countNout_avgBlocks.avg() << "\n";
-                                            if ( countNin_avgBlocks.stdev()/Nin < rsd) {
-                                                cout << "Bias found with rsd = " << countNin_avgBlocks.stdev()/Nin << " < " << rsd << "\n\n";
-                                                findBias = false;
-                                            }
+                                        for(int i = 1; i<=cnt; i++) {
+                                            fprintf(f, "%lf   %lf\n", countN[i], countNout[i]);
                                         }
                                     }
+
                                     
                                     if (dptrans>0) { // translate
                                         Point oldcm = it->cm;
@@ -553,43 +556,162 @@ namespace Faunus {
                                     assert( spc.geo.sqdist( it->cm,
                                                 Geometry::massCenter(it->begin(), it->end(),
                                                     spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-6 );
+                                      
                                     
-                                    molV = spc.geo.vdist( it->cm, origo);
-                                    cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
-                                    theta = acos(cosTheta);
-                                    x = cosTheta*molV.norm();
-                                    y = sin(theta)*molV.norm();
-                                    coordNew = x*x/(a*a)+y*y/(b*b);
-                                    
-                                    if (findBias == true) {
-                                        if (coord <= 1.00000 && coordNew > 1.00000) {
-                                            _bias = -log(p/(1-(1-p)/(p*Ntot+(1-p)*countNin)));
-                                            //cout << "This steps number of water molecules inside sphere: " << countNin << "\n";
-                                            //cout << "Total number of water molecules: " << Ntot << "\n";
-                                            //cout << "This steps bias when going in->out: " << _bias << "\n\n";
-                                        }
-                                        else if (coord > 1.0000 && coordNew <= 1.00000) {
-                                            _bias = -log(1/(1+(1-p)/(p*Ntot+(1-p)*countNin)));
-                                            //cout << "This steps number of water molecules inside sphere: " << countNin << "\n";
-                                            //cout << "Total number of water molecules: " << Ntot << "\n";
-                                            //cout << "This steps bias when going out->in: " << _bias << "\n\n";
-                                        }
+                                    distNew = spc.geo.vdist( it->cm, origo).norm();
+
+                                    if (dist <= radius && distNew > radius) {
+                                        _bias = -log(p/(1-(1-p)/(p*countNtot+(1-p)*countN[cnt])));
+                                        
+                                        cout << "Old distance: " << dist << ", new distance: " << distNew << "\n";
+                                        cout << "Bias going in->out: " << _bias << "\n";
+                                        cout << "Average number of waters in sphere: " << countNavg << "\n";
+                                        cout << "This steps number of waters in sphere: " << countN[cnt] << "\n"; 
+                                        cout << "This steps total number of water molecules: " << countNtot << "\n\n"; 
+                                        
+                                    }   
+                                    else if (dist > radius && distNew <= radius) {
+                                        
+                                        _bias = -log(1/(1+(1-p)/(p*countNtot+(1-p)*countN[cnt])));
+                                        cout << "Old distance: " << dist << ", new distance: " << distNew << "\n";
+                                        cout << "Bias going out->in: " << _bias << "\n";
+                                        cout << "Average number of waters in sphere: " << countNavg << "\n";
+                                        cout << "This steps number of waters in sphere: " << countN[cnt] << "\n"; 
+                                        cout << "This steps total number of water molecules: " << countNtot << "\n\n"; 
+                                        
                                     }
 
-                                    else { 
-                                        if (coord <= 1.00000 && coordNew > 1.00000) {
-                                            _bias = -log(p/(1-(1-p)/(p*Ntot+(1-p)*Nin)));
-                                            //cout << "Average number of water molecules inside sphere: " << Nin << "\n";
-                                            //cout << "Total number of water molecules: " << Ntot << "\n";
-                                            //cout << "Constant bias when going in->out: " << _bias << "\n\n";
+                                    /*
+                                    if (coord <= 1.00000 && coordNew > 1.00000) {
+                                        if (findBias == true) {
+                                            varsum = 0.00;
+                                            countntot = 0.00;
+                                            cntacross += 1.00;
+                                            //cout << "moves across boundary: " << cntacross << "\n"; 
+                                            countn[cntacross] = 0.00;
+                                            for ( auto &g : mollist) {
+                                                molv = spc.geo.vdist( g.cm, origo );
+                                                costheta = molv.dot(cylaxis)/molv.norm()/cylaxis.norm();
+                                                theta = acos(costheta);
+                                                x = costheta*molv.norm();
+                                                y = sin(theta)*molv.norm();
+                                                coordtemp = x*x/(a*a)+y*y/(b*b);
+                                                if (coordtemp <= 1.00000) {
+                                                    countn[cntacross] += 1.00;
+                                                }
+                                            }
+                                            countnsum += countn[cntacross];
+                                            countnavg = countnsum/cntacross;
+                                            for (int i=1; i<=cntacross; i++) {
+                                                varsum += (countn[i]-countnavg)*(countn[i]-countnavg);
+                                                //cout << "variance sum in loop, not normalized: " << varsum << "\n\n";
+                                            }
+                                            if (cntacross > 4) {
+                                                var = varsum/cntacross;
+                                                //cout << "variance sum, not normalized: " << varsum << "\n";
+                                                //cout << "variance: " << var << "\n\n";
+                                                if (var <= variance) {
+                                                     
+                                                    findbias = false;
+                                                    cout << "bias found, with average number of particles inside ellipsoid = " << countnavg << " after " << cntacross << " steps across boundary\n\n";
+                                                    cout << "this steps number of water molecules inside: " << countn[cntacross] << "\n";
+                                                    cout << "this steps average number of water molecules inside: " << countnavg << "\n";
+                                                    cout << "this steps bias when going in->out: " << _bias << "\n";
+                                                    cout << "moves across boundary: " << cntacross << "\n"; 
+                                                    cout << "variance: " << var << "\n\n";
+
+                                                }
+                                            }
+                                            _bias = -log(p/(1-(1-p)/(p*countntot+(1-p)*countn[cntacross])));
+                                            if (cntacross%1000) {
+                                                cout << "this steps number of water molecules inside: " << countn[cntacross] << "\n";
+                                                cout << "this steps average number of water molecules inside: " << countnavg << "\n";
+                                                cout << "this steps bias when going in->out: " << _bias << "\n";
+                                                cout << "moves across boundary: " << cntacross << "\n"; 
+                                                cout << "variance: " << var << "\n\n";
+                                            }
                                         }
-                                        else if (coord > 1.0000 && coordNew <= 1.00000) {
-                                            _bias = -log(1/(1+(1-p)/(p*Ntot+(1-p)*Nin)));
-                                            //cout << "Average number of water molecules inside sphere: " << Nin << "\n";
-                                            //cout << "Total number of water molecules: " << Ntot << "\n";
-                                            //cout << "Constant bias when going out->in: " << _bias << "\n\n";
+                                        else {
+                                            _bias = -log(p/(1-(1-p)/(p*countNtot+(1-p)*countNavg)));
+                                            //cout << "Average number of water molecules inside: " << countNavg << "\n";
+                                            //cout << "Bias when going in->out: " << _bias << "\n\n";
                                         }
                                     }
+                                    else if (coord > 1.00000 && coordNew <= 1.00000) {
+                                        if (findBias == true) {
+                                            varSum = 0.00;
+                                            countNtot = 0.00;
+                                            cntAcross += 1.00;
+                                            countN[cntAcross] = 0.00;
+                                            for ( auto &g : mollist) {
+                                                molV = spc.geo.vdist( g.cm, origo );
+                                                cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
+                                                theta = acos(cosTheta);
+                                                x = cosTheta*molV.norm();
+                                                y = sin(theta)*molV.norm();
+                                                coordTemp = x*x/(a*a)+y*y/(b*b);
+                                                if (coordTemp <= 1.00000) {
+                                                    countN[cntAcross] += 1.00;
+                                                }
+                                            }
+                                            countNsum += countN[cntAcross];
+                                            countNavg = countNsum/cntAcross;
+                                            for (int i=1; i<=cntAcross; i++) {
+                                                varSum += (countN[i]-countNavg)*(countN[i]-countNavg);
+                                                //cout << "Variance sum in loop, not normalized: " << varSum << "\n\n";
+                                            }
+                                            if (cntAcross > 4) {
+                                                var = varSum/cntAcross;
+                                                //cout << "Variance sum, not normalized: " << varSum << "\n";
+                                                if (var < variance) {
+                                      
+                                                    findBias = false;
+                                                    cout << "Bias found, with average number of particles inside ellipsoid = " << countNavg << " after " << cntAcross << " steps across boundary\n\n";
+                                                    cout << "This steps number of water molecules inside: " << countN[cntAcross] << "\n";
+                                                    cout << "This steps average number of water molecules inside: " << countNavg << "\n";
+                                                    cout << "This steps bias when going in->out: " << _bias << "\n\n";
+                                                    cout << "Moves across boundary: " << cntAcross << "\n"; 
+                                                    cout << "Variance: " << var << "\n\n";
+
+                                                }
+                                            }
+                                            _bias = -log(1/(p*(1+(1-p)/(p*countNtot+(1-p)*countN[cntAcross]))));
+                                            if (cntAcross%1000) {
+                                                cout << "This steps number of water molecules inside: " << countN[cntAcross] << "\n";
+                                                cout << "This steps average number of water molecules inside: " << countNavg << "\n";
+                                                cout << "This steps bias when going out->in: " << _bias << "\n\n";
+                                                cout << "Moves across boundary: " << cntAcross << "\n"; 
+                                                cout << "Variance: " << var << "\n\n";
+                                            }
+                                        }                                            
+                                        else { 
+                                            _bias = -log(1/(p*(1+(1-p)/(p*countNtot+(1-p)*countNavg))));
+                                            //cout << "Average number of water molecules inside: " << countNavg << "\n";
+                                            //cout << "Bias when going out->in: " << _bias << "\n\n";
+                                        }
+
+                                    }
+                                    else {
+                                        _bias = 0.00;
+                                        countN[cntAcross] = 0.00;
+                                        for ( auto &g : mollist) {
+                                            molV = spc.geo.vdist( g.cm, origo );
+                                            cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
+                                            theta = acos(cosTheta);
+                                            x = cosTheta*molV.norm();
+                                            y = sin(theta)*molV.norm();
+                                            coordTemp = x*x/(a*a)+y*y/(b*b);
+                                            if (coordTemp <= 1.00000) {
+                                                countN[cntAcross] += 1.00;
+                                            }
+                                        }
+                                        //cout << "This steps number of water molecules inside: " << countN[cntAcross] << "\n";
+                                        //cout << "This steps average number of water molecules inside: " << countNavg << "\n";
+                                        //cout << "This steps bias when going out->in: " << _bias << "\n\n";
+                                        //cout << "Moves across boundary: " << cntAcross << "\n"; 
+                                        //cout << "Variance: " << var << "\n\n";
+                                    }
+                                    */     
                                 }
                             }
                         }

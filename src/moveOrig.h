@@ -241,7 +241,7 @@ namespace Faunus {
                         cdata.internal=true;
                     }
             };
-         
+
         /**
          * @brief Translate and rotate a molecular group
          */
@@ -251,19 +251,21 @@ namespace Faunus {
                     typedef typename Tspace::Tpvec Tpvec;
                     Tspace& spc; // Space to operate on
                     int molid=-1;
+                    int refid=-1;
                     double dptrans=0;
                     double dprot=0;
+                    Point dir={1,1,1};
+                    double p=0;
+                    double dist=0;
                     double _sqd; // squared displacement
                     Average<double> msqd; // mean squared displacement
 
-                    Point dir={1,1,1};
-
                     void _to_json(json &j) const override {
                         j = {
-                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot}, 
-                            {"molid", molid}, 
+                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot}, {"p", p}, {"dist", dist},
+                            {"molid", molid}, {"refid", refid},
                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"molecule", molecules<Tpvec>[molid].name}
+                            {"molecule", molecules<Tpvec>[molid].name}, {"ref", molecules<Tpvec>[refid].name}
                         };
                         _roundjson(j,3);
                     }
@@ -272,165 +274,20 @@ namespace Faunus {
                         assert(!molecules<Tpvec>.empty());
                         try {
                             std::string molname = j.at("molecule");
+                            std::string refname = j.at("ref");
                             auto it = findName(molecules<Tpvec>, molname);
+                            auto it0 = findName(molecules<Tpvec>, refname); 
                             if (it == molecules<Tpvec>.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
+                            if (it0 == molecules<Tpvec>.end())
+                                throw std::runtime_error("unknown reference molecule '" + refname + "'");
                             molid = it->id();
-                            dir = j.value("dir", Point(1,1,1));
-                            dprot = j.at("dprot");
-                            dptrans = j.at("dp");
-                            
-                            if (repeat<0) {
-                                auto v = spc.findMolecules(molid);
-                                repeat = std::distance(v.begin(), v.end());
-                            }
-                        }
-                        catch (std::exception &e) {
-                            throw std::runtime_error(name+": " + e.what());
-                        }
-                    } //!< Configure via json object
-
-                    template<class Tmollist>
-                      auto selectMolecule(Tmollist &mollist) {
-                        //typename Tspace::Tgvec::iterator it;
-                         
-                        return slump.sample( mollist.begin(), mollist.end() );
-                        //return it;
-                     }
-                    
-                    void _move(Change &change) override {
-                        assert(molid>=0);
-                        assert(!spc.groups.empty());
-                        assert(spc.geo.getVolume()>0);
-                        // pick random group from the system matching molecule type
-                        // TODO: This can be slow -- implement look-up-table in Space
-                        auto mollist = spc.findMolecules( molid, Tspace::ACTIVE ); // list of molecules w. 'molid'
-                        if (size(mollist)>0) {
-                            auto it = selectMolecule( mollist );
-
-                            if (not it->empty()) {
-                                
-
-                                    
-                                    
-                                assert(it->id==molid);
-
-                                if (dptrans>0) { // translate
-                                    Point oldcm = it->cm;
-                                    Point dp = ranunit(slump,dir) * dptrans * slump();
-
-                                    it->translate( dp, spc.geo.getBoundaryFunc() );
-                                    _sqd = spc.geo.sqdist(oldcm, it->cm); // squared displacement
-                                    }
-
-                                if (dprot>0) { // rotate
-                                    Point u = ranunit(slump);
-                                    double angle = dprot * (slump()-0.5);
-                                    Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
-                                    it->rotate(Q, spc.geo.getBoundaryFunc());
-                                }
-
-                                if (dptrans>0||dprot>0) { // define changes
-                                    Change::data d;
-                                    d.index = Faunus::distance( spc.groups.begin(), it ); // integer *index* of moved group
-                                    d.all = true; // *all* atoms in group were moved
-                                    change.groups.push_back( d ); // add to list of moved groups
-                                }
-                                assert( spc.geo.sqdist( it->cm,
-                                            Geometry::massCenter(it->begin(), it->end(),
-                                                spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-6 );
-                                    
-
-                            }
-                        }
-                    }
-                
-                    void _accept(Change&) override { msqd += _sqd; }
-                    void _reject(Change&) override { msqd += 0; }
-
-                public:
-                    TranslateRotate(Tspace &spc) : spc(spc) {
-                        name = "moltransrot";
-                        repeat = -1; // m eaning repeat N times
-                    }
-            };         
-
-        /**
-         * @brief Translate and rotate a molecular group
-         */
-        template<typename Tspace>
-            class BiasedTranslateRotate : public Movebase {
-                protected:
-                    typedef typename Tspace::Tpvec Tpvec;
-                    Tspace& spc; // Space to operate on
-                    
-                    int molid=-1, refid1=-1, refid2=-1;
-                    unsigned int cnt=0;
-                    double dptrans=0, dprot=0;
-                    double p=1;
-                    double apad=0, a, b=0, c=0;
-                    double _sqd; // squared displacement
-                    Average<double> msqd, countNin_avg, countNin_avgBlocks, countNout_avg, countNout_avgBlocks; // mean squared displacement
-              
-                    double cosTheta, theta;
-                    double x, y;
-                    double coord, coordNew, coordTemp;
-                    double randNbr;
-                    double _bias=0, rsd = 0.01, Nin, countNin, countNout, Ntot=0, cntInner=0;
-
-                    Point dir={1,1,1};
-                    Point cylAxis={0,0,0};
-                    Point origo={0,0,0};
-                    Point molV={0,0,0};
-                    
-                    bool findBias = true;
-
-                    void _to_json(json &j) const override {
-                        j = {
-                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot}, 
-                            {"p", p}, {"origo", origo}, {"apad", apad}, {"b", b}, {"c", c},
-                            {"molid", molid}, {"refid", refid1}, {"refid", refid2}, 
-                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"# of water in ellipsoid in last loop", countNin},
-                            {"Average # of water in ellipsoid calculated in loop", Nin},
-                            //{"# of water in ellipsoid specified", countN},
-                            {"Fraction inner/total moves", cntInner/cnt},
-                            {"Number of inner moves", cntInner},
-                            {"Total number of attempted moves", cnt},
-                            {"molecule", molecules<Tpvec>[molid].name}, {"ref1", atoms[refid1].name}, {"ref2", atoms[refid2].name}
-                        };
-                        _roundjson(j,3);
-                    }
-
-                    void _from_json(const json &j) override {
-                        assert(!molecules<Tpvec>.empty());
-                        try {
-                            std::string molname = j.at("molecule");
-                            std::string refname1 = j.at("ref1");
-                            std::string refname2 = j.at("ref2");
-                            auto it = findName(molecules<Tpvec>, molname);
-                            auto ref1 = findName(atoms, refname1);
-                            auto ref2 = findName(atoms, refname2);
-                            if (it == molecules<Tpvec>.end())
-                                throw std::runtime_error("unknown molecule '" + molname + "'");
-                            if (ref1 == atoms.end())
-                                throw std::runtime_error("unknown reference atom '" + refname1 + "'");
-                            if (ref2 == atoms.end())
-                                throw std::runtime_error("unknown reference atom '" + refname2 + "'");
-                            molid = it->id();
-                            refid1 = ref1->id();
-                            refid2 = ref2->id();
+                            refid = it0->id();
                             dir = j.value("dir", Point(1,1,1));
                             dprot = j.at("dprot");
                             dptrans = j.at("dp");
                             p = j.at("p");
-                            apad = j.at("apad");
-                            b = j.at("b");
-                            c = j.at("c");
-                            rsd = j.at("rsd");
-                            //countN = j.at("n");
-                            //countNtot = j.at("Ntot");
-                            
+                            dist = j.at("dist");
                             if (repeat<0) {
                                 auto v = spc.findMolecules(molid);
                                 repeat = std::distance(v.begin(), v.end());
@@ -448,87 +305,31 @@ namespace Faunus {
                         return slump.sample( mollist.begin(), mollist.end() );
                         //return it;
                      }
-                    
+
                     void _move(Change &change) override {
                         assert(molid>=0);
                         assert(!spc.groups.empty());
                         assert(spc.geo.getVolume()>0);
-                        _bias = 0.0;
+
                         // pick random group from the system matching molecule type
                         // TODO: This can be slow -- implement look-up-table in Space
                         auto mollist = spc.findMolecules( molid, Tspace::ACTIVE ); // list of molecules w. 'molid'
-                        auto reflist1 = spc.findAtoms( refid1 ); 
-                        auto reflist2 = spc.findAtoms( refid2 );
+                        auto reflist = spc.findMolecules( refid, Tspace::ACTIVE ); 
                         if (size(mollist)>0) {
                             auto it = selectMolecule( mollist );
-                            auto ref1 = selectMolecule( reflist1 );
-                            auto ref2 = selectMolecule( reflist2 );
-                            cylAxis = spc.geo.vdist( ref2->pos, ref1->pos )*0.50000;  // half vector between reference points
-                            origo = ref2->pos - cylAxis;  // Coordinates of middle point between reference points: new origo
-                             // kolla (ref1 + ref2)/2 med pbc och att det blir lika med origo
-                            a = cylAxis.norm()+apad;
-
-
+                            auto it0 = selectMolecule( reflist );
                             if (not it->empty()) {
-                                
-                                assert(it->id==molid);
-                                
-                                randNbr = slump(); 
-                                molV = spc.geo.vdist( it->cm, origo);
-                                cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
-                                theta = acos(cosTheta);
-                                x = cosTheta*molV.norm();
-                                y = sin(theta)*molV.norm();
-                                coord = x*x/(a*a)+y*y/(b*b);
+                                double randNbr = slump(); 
+                                // if ((spc.geo.vdist(it->cm, it0->cm).norm() < dist) || ((spc.geo.vdist(it->cm, it0->cm).norm() > dist) && (p > slump()))) {
+                                if (not (spc.geo.vdist(it->cm, it0->cm).norm() > dist && p < randNbr)) {
+                                    cout << "Selected reference molecule: " << Faunus::distance( spc.groups.begin(), it0 ) << "\n";
+                                    cout << "Selected water molecule: " << Faunus::distance( spc.groups.begin(), it ) << "\n";
+                                    cout << "Distance between selected molecules: " << spc.geo.vdist(it->cm, it0->cm).norm() << "\n";
+                                    cout << "Region boundary: " << dist << "\n";
+                                    cout << "Probability specified: " << p << "\n";
+                                    cout << "Random number: " << randNbr << "\n\n";
+                                    assert(it->id==molid);
 
-                                if ( not ( coord > 1.00000 && p < randNbr ) ) {
-                                    
-                                    if (coord <= 1.00000) 
-                                        cntInner += 1.00000;
-                                    
-                                    
-                                    cnt += 1;
-
-                                    if (findBias == true) {
-                                        countNin = 0.00;
-                                        countNout = 0.00;
-                                        Ntot = 0.00;
-                                        for ( auto &g : mollist) {
-                                            Ntot += 1.00;
-                                            molV = spc.geo.vdist( g.cm, origo );
-                                            cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
-                                            theta = acos(cosTheta);
-                                            x = cosTheta*molV.norm();
-                                            y = sin(theta)*molV.norm();
-                                            coordTemp = x*x/(a*a)+y*y/(b*b);
-                                            if (coordTemp <= 1.00000) {
-                                                countNin += 1.00;
-                                            }
-                                            else
-                                                countNout += 1.00;
-                                        }
-                                        
-                                        countNin_avg += countNin;
-                                        countNout_avg += countNout;
-
-                                        if(cnt%100==0) {
-                                            countNin_avgBlocks += countNin_avg.avg();
-                                            countNout_avgBlocks += countNout_avg.avg();
-                                        }
-
-                                        if (cnt%1000000 == 0) {
-                                            Nin = countNin_avgBlocks.avg();
-                                            cout << "Average # of water molecules inside sphere: " << Nin << "\n";
-                                            cout << "Relative standard deviation based on molecules inside sphere: " << countNin_avgBlocks.stdev()/Nin << "\n";
-                                            cout << "Average # of water molecules outside sphere: " << countNout_avgBlocks.avg() << "\n";
-                                            cout << "Relative standard deviation based on molecules outside sphere: " << countNout_avgBlocks.stdev()/countNout_avgBlocks.avg() << "\n";
-                                            if ( countNin_avgBlocks.stdev()/Nin < rsd) {
-                                                cout << "Bias found with rsd = " << countNin_avgBlocks.stdev()/Nin << " < " << rsd << "\n\n";
-                                                findBias = false;
-                                            }
-                                        }
-                                    }
-                                    
                                     if (dptrans>0) { // translate
                                         Point oldcm = it->cm;
                                         Point dp = ranunit(slump,dir) * dptrans * slump();
@@ -553,66 +354,17 @@ namespace Faunus {
                                     assert( spc.geo.sqdist( it->cm,
                                                 Geometry::massCenter(it->begin(), it->end(),
                                                     spc.geo.getBoundaryFunc(),-it->cm) ) < 1e-6 );
-                                    
-                                    molV = spc.geo.vdist( it->cm, origo);
-                                    cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
-                                    theta = acos(cosTheta);
-                                    x = cosTheta*molV.norm();
-                                    y = sin(theta)*molV.norm();
-                                    coordNew = x*x/(a*a)+y*y/(b*b);
-                                    
-                                    if (findBias == true) {
-                                        if (coord <= 1.00000 && coordNew > 1.00000) {
-                                            _bias = -log(p/(1-(1-p)/(p*Ntot+(1-p)*countNin)));
-                                            //cout << "This steps number of water molecules inside sphere: " << countNin << "\n";
-                                            //cout << "Total number of water molecules: " << Ntot << "\n";
-                                            //cout << "This steps bias when going in->out: " << _bias << "\n\n";
-                                        }
-                                        else if (coord > 1.0000 && coordNew <= 1.00000) {
-                                            _bias = -log(1/(1+(1-p)/(p*Ntot+(1-p)*countNin)));
-                                            //cout << "This steps number of water molecules inside sphere: " << countNin << "\n";
-                                            //cout << "Total number of water molecules: " << Ntot << "\n";
-                                            //cout << "This steps bias when going out->in: " << _bias << "\n\n";
-                                        }
-                                    }
-
-                                    else { 
-                                        if (coord <= 1.00000 && coordNew > 1.00000) {
-                                            _bias = -log(p/(1-(1-p)/(p*Ntot+(1-p)*Nin)));
-                                            //cout << "Average number of water molecules inside sphere: " << Nin << "\n";
-                                            //cout << "Total number of water molecules: " << Ntot << "\n";
-                                            //cout << "Constant bias when going in->out: " << _bias << "\n\n";
-                                        }
-                                        else if (coord > 1.0000 && coordNew <= 1.00000) {
-                                            _bias = -log(1/(1+(1-p)/(p*Ntot+(1-p)*Nin)));
-                                            //cout << "Average number of water molecules inside sphere: " << Nin << "\n";
-                                            //cout << "Total number of water molecules: " << Ntot << "\n";
-                                            //cout << "Constant bias when going out->in: " << _bias << "\n\n";
-                                        }
-                                    }
                                 }
                             }
                         }
                     }
-                    double bias(Change&, double, double) override { 
-                        return _bias;
-                    }
 
-                    void _accept(Change&) override { 
-                        msqd += _sqd; 
-                        /*
-                        cout << "This steps number of water molecules inside: " << countN[cntAcross] << "\n";
-                        cout << "This steps average number of water molecules inside: " << countNavg << "\n";
-                        cout << "This steps bias when going in->out: " << _bias << "\n";
-                        cout << "Moves across boundary: " << cntAcross << "\n"; 
-                        cout << "Variance: " << var << "\n\n";
-                        */
-                    }
+                    void _accept(Change&) override { msqd += _sqd; }
                     void _reject(Change&) override { msqd += 0; }
 
                 public:
-                    BiasedTranslateRotate(Tspace &spc) : spc(spc) {
-                        name = "biasedmoltransrot";
+                    TranslateRotate(Tspace &spc) : spc(spc) {
+                        name = "moltransrot";
                         repeat = -1; // m eaning repeat N times
                     }
             };
@@ -1666,8 +1418,7 @@ start:
                             size_t oldsize = vec.size();
                             for (auto it : m.items()) {
                                 try {
-                                    if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc); 
-                                    else if (it.key()=="biasedmoltransrot") this->template push_back<Move::BiasedTranslateRotate<Tspace>>(spc);
+                                    if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc);
                                     else if (it.key()=="conformationswap") this->template push_back<Move::ConformationSwap<Tspace>>(spc);
                                     else if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
                                     else if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);

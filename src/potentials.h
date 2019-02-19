@@ -667,6 +667,8 @@ namespace Faunus {
             double selfenergy_prefactor;
             double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
             int order;
+	    bool ellipse_cutoff;
+	    Point Rc_ellipse;
 
             void sfYukawa(const json &j);
             void sfReactionField(const json &j);
@@ -683,18 +685,28 @@ namespace Faunus {
 
             void from_json(const json &j) override;
 
-            template<class Tparticle>
-                double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+            template<typename... T>
+                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+		  /*
+		    if(ellipse_cutoff) {
+		      double tx = r.x()/Rc_ellipse.x();
+		      double ty = r.y()/Rc_ellipse.y();
+		      double tz = r.z()/Rc_ellipse.z();
+		      double rcEff = tx*tx + ty*ty + tz*tz;
+		      if(rcEff <= 1.0) {
+			double r1 = r.norm();
+			double rc1t = r1/sqrt(rcEff);
+			return lB * a.charge * b.charge / r1 * sf.eval( table, r1*rc1t );
+		      }
+		      return 0.0;
+		    }
+		    */
+                    double r2 = r.squaredNorm();
                     if (r2 < rc2) {
                         double r = std::sqrt(r2);
                         return lB * a.charge * b.charge / r * sf.eval( table, r*rc1i );
                     }
                     return 0;
-                }
-
-            template<typename... T>
-                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
-                    return operator()(a,b,r.squaredNorm());
                 }
 
             template<typename... T>

@@ -32,7 +32,7 @@ Documentation
 
 - manual for latest stable release: https://github.com/mlund/faunus/releases/latest
 - manual for development branch: http://mlund.github.io/faunus
-- manual for installed verion: `faunus-manual`
+- manual for installed version: type `faunus-manual`
 
 Licence
 =======

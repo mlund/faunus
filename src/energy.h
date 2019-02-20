@@ -822,6 +822,7 @@ namespace Faunus {
             class Nonbonded : public Energybase {
                 private:
                     double g2gcnt=0, g2gskip=0;
+                    PairMatrix<double> cutoff2; // matrix w. group-to-group cutoff
 
                 protected:
                     typedef typename Tspace::Tpvec Tpvec;
@@ -835,13 +836,18 @@ namespace Faunus {
 
                     void to_json(json &j) const override {
                         j["pairpot"] = pairpot;
-                        j["cutoff_g2g"] = std::sqrt(Rc2_g2g);
                         if (omp_enable) {
                             json _a = json::array();
                             if (omp_g2g) _a.push_back("g2g");
                             if (omp_i2all) _a.push_back("i2all");
                             j["openmp"] = _a;
                         }
+                        j["cutoff_g2g"] = json::object();
+                        auto &_j = j["cutoff_g2g"];
+                        for (auto &a : Faunus::molecules<typename Tspace::Tpvec>)
+                            for (auto &b : Faunus::molecules<typename Tspace::Tpvec>)
+                                if (a.id()>=b.id())
+                                    _j[a.name+" "+b.name] = sqrt( cutoff2(a.id(), b.id()) );
                     }
 
                     template<typename T>
@@ -849,7 +855,7 @@ namespace Faunus {
                             g2gcnt++;
                             if (g1.atomic || g2.atomic)
                                 return false;
-                            if ( spc.geo.sqdist(g1.cm, g2.cm)<Rc2_g2g )
+                            if ( spc.geo.sqdist(g1.cm, g2.cm) < cutoff2(g1.id, g2.id) )
                                 return false;
                             g2gskip++;
                             return true;
@@ -976,7 +982,39 @@ namespace Faunus {
                                     std::cerr << "warning: nonbonded requests unavailable OpenMP." << endl;
 #endif
                                 }
-                        Rc2_g2g = std::pow( j.value("cutoff_g2g", pc::infty), 2);
+
+                        // disable all group-to-group cutoffs by setting infinity
+                        for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
+                            for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                cutoff2.set(i.id(), j.id(), pc::infty);
+
+                        it = j.find("cutoff_g2g");
+                        if (it != j.end()) {
+                            // old style input w. only a single cutoff
+                            if (it->is_number()) {
+                                Rc2_g2g = std::pow( it->get<double>(), 2 );
+                                for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
+                                    for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                        cutoff2.set(i.id(), j.id(), Rc2_g2g);
+                            }
+                            // new style input w. multiple cutoffs between molecules
+                            else if (it->is_object()) {
+                                // ensure that there is a default, fallback cutoff
+                                Rc2_g2g = std::pow( it->at("default").get<double>(), 2);
+                                for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
+                                    for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                        cutoff2.set(i.id(), j.id(), Rc2_g2g);
+                                // loop for space separated molecule pairs in keys
+                                for (auto& i : it->items()) {
+                                    auto v = words2vec<std::string>( i.key() );
+                                    if (v.size()==2) {
+                                        int id1 = (*findName( Faunus::molecules<typename Tspace::Tpvec>, v[0])).id();
+                                        int id2 = (*findName( Faunus::molecules<typename Tspace::Tpvec>, v[1])).id();
+                                        cutoff2.set( id1, id2, std::pow(i.value().get<double>(),2) );
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     void force(std::vector<Point> &forces) override {

@@ -30,7 +30,9 @@ Or build from source, see [here](http://mlund.github.io/faunus/docs/install/).
 Documentation
 =============
 
-http://mlund.github.io/faunus
+- manual for latest stable release: https://github.com/mlund/faunus/releases/latest
+- manual for development branch: http://mlund.github.io/faunus
+- manual for installed verion: `faunus-manual`
 
 Licence
 =======

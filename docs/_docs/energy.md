@@ -102,6 +102,19 @@ Below is a description of possible pair-potentials and their configuration.
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)
 `nonbonded_pmwca`      | `coulomb`+`wca` (fixed `type=plain`, `cutoff`$=\infty$)
 
+### Mass Center Cut-offs
+
+For cut-off based pair-potentials working on large molecules, it can be very efficient to
+use mass center cut-offs between molecular groups, thus skipping all pair-interactions.
+A single cut-off can be used between all molecules (`default`), or specified for specific
+combinations:
+
+~~~ yaml
+- nonbonded:
+      cutoff_g2g:
+          default: 40
+          "protein water": 60
+~~~
 
 ### OpenMP Control
 

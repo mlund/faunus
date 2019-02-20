@@ -1,0 +1,35 @@
+# eps = LJ epsilon (kj/mol)
+# pH = solution pH
+- ASP  :  { q: -1, r: 3.6, mw: 110, dp: 2, eps: {{ eps }} }
+- HASP :  { q:  0, r: 3.6, mw: 110, dp: 2, eps: {{ eps }} }
+- CTR  :  { q: -1, r: 2.0, mw: 16,  dp: 2, eps: {{ eps }} }
+- HCTR :  { q:  0, r: 2.0, mw: 16,  dp: 2, eps: {{ eps }} }
+- GLU  :  { q: -1, r: 3.8, mw: 122, dp: 2, eps: {{ eps }} }
+- HGLU :  { q:  0, r: 3.8, mw: 122, dp: 2, eps: {{ eps }} }
+- TYR  :  { q: -1, r: 4.1, mw: 154, dp: 2, eps: {{ eps }} }
+- HTYR :  { q: 0,  r: 4.1, mw: 154, dp: 2, eps: {{ eps }} }
+- CYS  :  { q: -1, r: 3.6, mw: 103, dp: 2, eps: {{ eps }} }
+- HCYS :  { q: 0,  r: 3.6, mw: 103, dp: 2, eps: {{ eps }} }
+- HIS  :  { q: 0,  r: 3.9, mw: 130, dp: 2, eps: {{ eps }} }
+- HHIS :  { q: 1,  r: 3.9, mw: 130, dp: 2, eps: {{ eps }} }
+- NTR  :  { q: 0,  r: 2.0, mw: 14,  dp: 2, eps: {{ eps }} }
+- HNTR :  { q: 1,  r: 2.0, mw: 14,  dp: 2, eps: {{ eps }} }
+- LYS  :  { q: 0,  r: 3.7, mw: 116, dp: 2, eps: {{ eps }} }
+- HLYS :  { q: 1,  r: 3.7, mw: 116, dp: 2, eps: {{ eps }} }
+- ARG  :  { q: 0,  r: 4.0, mw: 144, dp: 2, eps: {{ eps }} }
+- HARG :  { q: 1,  r: 4.0, mw: 144, dp: 2, eps: {{ eps }} }
+- ALA  :  { q: 0,  r: 3.1, mw: 66,  dp: 2, eps: {{ eps }} }
+- ILE  :  { q: 0,  r: 3.6, mw: 102, dp: 2, eps: {{ eps }} }
+- LEU  :  { q: 0,  r: 3.6, mw: 102, dp: 2, eps: {{ eps }} }
+- MET  :  { q: 0,  r: 3.8, mw: 122, dp: 2, eps: {{ eps }} }
+- PHE  :  { q: 0,  r: 3.9, mw: 138, dp: 2, eps: {{ eps }} }
+- PRO  :  { q: 0,  r: 3.4, mw: 90,  dp: 2, eps: {{ eps }} }
+- TRP  :  { q: 0,  r: 4.3, mw: 176, dp: 2, eps: {{ eps }} }
+- VAL  :  { q: 0,  r: 3.4, mw: 90,  dp: 2, eps: {{ eps }} }
+- SER  :  { q: 0,  r: 3.3, mw: 82,  dp: 2, eps: {{ eps }} }
+- THR  :  { q: 0,  r: 3.5, mw: 94,  dp: 2, eps: {{ eps }} }
+- ASN  :  { q: 0,  r: 3.6, mw: 108, dp: 2, eps: {{ eps }} }
+- GLN  :  { q: 0,  r: 3.8, mw: 120, dp: 2, eps: {{ eps }} }
+- GLY  :  { q: 0,  r: 2.9, mw: 54,  dp: 2, eps: {{ eps }} }
+- H+   :  { implicit: True, activity: {{ 10**(-pH) }} }
+

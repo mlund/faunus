@@ -340,6 +340,51 @@ namespace Faunus {
             };
 
         /**
+         * @brief Constrain system using reaction coordinates
+         *
+         * If outside specified `range`, infinity energy is returned, causing rejection.
+         */
+        class Constrain : public Energybase {
+            private:
+                std::string type;
+                std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
+            public:
+                template<class Tspace>
+                    Constrain(const json &j, Tspace &spc) {
+                        using namespace Faunus::ReactionCoordinate;
+                        name = "constrain";
+                        type = j.at("type").get<std::string>();
+                        try {
+                            if      (type=="atom")     rc = std::make_shared<AtomProperty>(j, spc);
+                            else if (type=="molecule") rc = std::make_shared<MoleculeProperty>(j, spc);
+                            else if (type=="system")   rc = std::make_shared<SystemProperty>(j, spc);
+                            else if (type=="cmcm")     rc = std::make_shared<MassCenterSeparation>(j, spc);
+                            if (rc==nullptr)
+                                throw std::runtime_error("unknown coordinate type");
+
+                        } catch (std::exception &e) {
+                            throw std::runtime_error("error for reaction coordinate '"
+                                    + type + "': " + e.what() + usageTip["coords=["+type+"]"]  );
+                        }
+                    }
+
+                inline double energy(Change &change) override {
+                    if (change) {
+                        double val = (*rc)(); // calculate reaction coordinate
+                        if (not rc->inRange(val)) // is it within allowed range?
+                            return pc::infty;  // if not, return infinite energy
+                    }
+                    return 0;
+                }
+
+                inline void to_json(json &j) const override {
+                    j = *rc;
+                    j["type"] = type;
+                    j.erase("resolution");
+                }
+        };
+
+        /**
          * @brief Base class for external potentials
          *
          * This will apply an external energy to a defined
@@ -777,6 +822,7 @@ namespace Faunus {
             class Nonbonded : public Energybase {
                 private:
                     double g2gcnt=0, g2gskip=0;
+                    PairMatrix<double> cutoff2; // matrix w. group-to-group cutoff
 
                 protected:
                     typedef typename Tspace::Tpvec Tpvec;
@@ -790,13 +836,18 @@ namespace Faunus {
 
                     void to_json(json &j) const override {
                         j["pairpot"] = pairpot;
-                        j["cutoff_g2g"] = std::sqrt(Rc2_g2g);
                         if (omp_enable) {
                             json _a = json::array();
                             if (omp_g2g) _a.push_back("g2g");
                             if (omp_i2all) _a.push_back("i2all");
                             j["openmp"] = _a;
                         }
+                        j["cutoff_g2g"] = json::object();
+                        auto &_j = j["cutoff_g2g"];
+                        for (auto &a : Faunus::molecules<typename Tspace::Tpvec>)
+                            for (auto &b : Faunus::molecules<typename Tspace::Tpvec>)
+                                if (a.id()>=b.id())
+                                    _j[a.name+" "+b.name] = sqrt( cutoff2(a.id(), b.id()) );
                     }
 
                     template<typename T>
@@ -804,7 +855,7 @@ namespace Faunus {
                             g2gcnt++;
                             if (g1.atomic || g2.atomic)
                                 return false;
-                            if ( spc.geo.sqdist(g1.cm, g2.cm)<Rc2_g2g )
+                            if ( spc.geo.sqdist(g1.cm, g2.cm) < cutoff2(g1.id, g2.id) )
                                 return false;
                             g2gskip++;
                             return true;
@@ -931,7 +982,39 @@ namespace Faunus {
                                     std::cerr << "warning: nonbonded requests unavailable OpenMP." << endl;
 #endif
                                 }
-                        Rc2_g2g = std::pow( j.value("cutoff_g2g", pc::infty), 2);
+
+                        // disable all group-to-group cutoffs by setting infinity
+                        for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
+                            for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                cutoff2.set(i.id(), j.id(), pc::infty);
+
+                        it = j.find("cutoff_g2g");
+                        if (it != j.end()) {
+                            // old style input w. only a single cutoff
+                            if (it->is_number()) {
+                                Rc2_g2g = std::pow( it->get<double>(), 2 );
+                                for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
+                                    for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                        cutoff2.set(i.id(), j.id(), Rc2_g2g);
+                            }
+                            // new style input w. multiple cutoffs between molecules
+                            else if (it->is_object()) {
+                                // ensure that there is a default, fallback cutoff
+                                Rc2_g2g = std::pow( it->at("default").get<double>(), 2);
+                                for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
+                                    for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                        cutoff2.set(i.id(), j.id(), Rc2_g2g);
+                                // loop for space separated molecule pairs in keys
+                                for (auto& i : it->items()) {
+                                    auto v = words2vec<std::string>( i.key() );
+                                    if (v.size()==2) {
+                                        int id1 = (*findName( Faunus::molecules<typename Tspace::Tpvec>, v[0])).id();
+                                        int id2 = (*findName( Faunus::molecules<typename Tspace::Tpvec>, v[1])).id();
+                                        cutoff2.set( id1, id2, std::pow(i.value().get<double>(),2) );
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     void force(std::vector<Point> &forces) override {
@@ -1649,6 +1732,9 @@ namespace Faunus {
 
                                     if (it.key()=="confine")
                                         push_back<Energy::Confine<Tspace>>(it.value(), spc);
+
+                                    if (it.key()=="constrain")
+                                        push_back<Energy::Constrain>(it.value(), spc);
 
                                     if (it.key()=="example2d")
                                         push_back<Energy::Example2D>(it.value(), spc);

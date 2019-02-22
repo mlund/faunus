@@ -1476,6 +1476,8 @@ start:
                 typedef Space<Tgeometry, Tparticle> Tspace;
                 typedef typename Tspace::Tpvec Tpvec;
 
+                std::string lastMoveName; //!< name of latest move
+
                 bool metropolis(double du) const {
                     if (std::isnan(du))
                         throw std::runtime_error("Metropolis error: energy cannot be NaN");
@@ -1559,12 +1561,13 @@ start:
                     init();
                 }
 
+/* currently unused -- see Analysis::SaveState.
                 void store(json &j) const {
                     j = state1.spc;
                     j["random-move"] = Move::Movebase::slump;
                     j["random-global"] = Faunus::random;
                 } // store system to json object
-
+*/
                 void restore(const json &j) {
                     try {
                         state1.spc = j; // old/accepted state
@@ -1587,6 +1590,7 @@ start:
                             (**mv).move(change);
 
                             if (change) {
+                                lastMoveName = (**mv).name; // store name of move for output
                                 double unew, uold, du;
                                 //#pragma omp parallel sections
                                 {
@@ -1635,6 +1639,7 @@ start:
                     j["temperature"] = pc::temperature / 1.0_K;
                     j["moves"] = moves;
                     j["energy"].push_back(state1.pot);
+                    j["last move"] = lastMoveName;
                 }
         };
 

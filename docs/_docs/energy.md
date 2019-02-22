@@ -102,6 +102,19 @@ Below is a description of possible pair-potentials and their configuration.
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)
 `nonbonded_pmwca`      | `coulomb`+`wca` (fixed `type=plain`, `cutoff`$=\infty$)
 
+### Mass Center Cut-offs
+
+For cut-off based pair-potentials working on large molecules, it can be very efficient to
+use mass center cut-offs between molecular groups, thus skipping all pair-interactions.
+A single cut-off can be used between all molecules (`default`), or specified for specific
+combinations:
+
+~~~ yaml
+- nonbonded:
+      cutoff_g2g:
+          default: 40
+          "protein water": 60
+~~~
 
 ### OpenMP Control
 
@@ -686,6 +699,7 @@ be used when analysing the system (see Analysis).
 `angle`                   | Angle between instantaneous principal axis and given `dir` vector
 `com_x`, `com_y`, `com_z` | Mass center coordinates
 `confid`                  | Conformation id corresponding to frame in `traj` (see molecular topology).
+`end2end`                 | Distance between first and last atom
 `mu_x`, `mu_y`, `mu_z`    | Molecular dipole moment components
 `mu`                      | Molecular dipole moment scalar (eA/charge)
 `muangle`                 | Angle between dipole moment and given `dir` vector
@@ -745,4 +759,18 @@ yason.py input.yml | mpirun --np 6 --stdin all faunus -s state.json
 ~~~
 
 Here, each process automatically looks for `mpi{nproc}.state.json`.
+
+## Constraining the system
+
+Reaction coordinates can be used to constrain the system within a `range`
+using the `constrain` energy term. Stepping outside the range results in an inifinite
+energy, forcing rejection. For example,
+
+~~~ yaml
+energy:
+    - constrain: {type: molecule, index: 0, property: end2end, range: [0,200]}
+~~~
+
+Tip: placing `constrain` at the _top_ of the energy list is more efficient as the remaining
+energy terms are skipped should an infinite energy arise.
 

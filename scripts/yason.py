@@ -5,6 +5,7 @@ if sys.version_info < (3, 0):
     sys.stdout.write("Sorry, Python 3 og higher required\n")
     sys.exit(1)
 
+import os
 import json, sys, argparse
 import warnings
 
@@ -47,7 +48,12 @@ if pygments:
 try: # ... to read json
     i = args.infile.read()
     if jinja2:
-        i = jinja2.Template(i).render() # render jinja2 
+        # additional files can be used with {% include "file" %}
+        dirs = [os.getcwd(), os.path.dirname(os.path.realpath(__file__)) + "/../top"]
+        loader = jinja2.FileSystemLoader(dirs)
+        env = jinja2.Environment(loader=loader)
+        i = env.from_string(i).render() # render jinja2
+        #i = jinja2.Template(i).render() # render jinja2 
 
     d = json.loads( i )
     if args.alwaysjson:

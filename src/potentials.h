@@ -160,15 +160,12 @@ namespace Faunus {
                             double r14=r6*r6*r2;
                             return 6.*m->eps(a.id,b.id) * s6 * (2*s6-r6) / r14 * p;
                         }
-                    template<typename... T>
-                        inline double operator()(const Particle<T...> &a, const Particle<T...> &b, double r2) const {
-                            double x=m->s2(a.id,b.id)/r2; //s2/r2
-                            x=x*x*x; // s6/r6
-                            return m->eps(a.id,b.id) * (x*x - x);
-                        }
+
                     template<typename... T>
                         double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
-                            return operator()(a,b,r.squaredNorm());
+                            double x=m->s2(a.id,b.id)/r.squaredNorm(); //s2/r2
+                            x=x*x*x; // s6/r6
+                            return m->eps(a.id,b.id) * (x*x - x);
                         }
 
                     void to_json(json &j) const override { j = *m; }
@@ -238,22 +235,17 @@ namespace Faunus {
 
             public:
                 template<class Tparticle>
-                    inline double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r_ab) const {
                         double tfe = 0.5 * ( atoms[a.id].tfe + atoms[b.id].tfe );
                         double tension = 0.5 * ( atoms[a.id].tension + atoms[b.id].tension );
                         if (fabs(tfe)>1e-6 or fabs(tension)>1e-6)
                             return (tension + conc*tfe) *  area(
                                     0.5*atoms[a.id].sigma,
-                                    0.5*atoms[b.id].sigma, r2 );
+                                    0.5*atoms[b.id].sigma, r_ab.squaredNorm() );
                         return 0;
                     }
- 
-                template<class Tparticle>
-                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r_ab) const {
-                        operator()(a,b,r_ab.squaredNorm());
-                    }
 
-               SASApotential(const std::string &name="sasa");
+                SASApotential(const std::string &name="sasa");
                 void to_json(json &j) const override;
                 void from_json(const json &j) override;
         };
@@ -285,11 +277,8 @@ namespace Faunus {
                             for (auto &j : atoms)
                                 d2->set( i.id(), j.id(), std::pow((i.sigma+j.sigma)/2,2));
                     }
-                    inline double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
-                        return r2 < d2->operator()(a.id,b.id) ? pc::infty : 0;
-                    }
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        return operator()(a,b,r.squaredNorm());
+                        return r.squaredNorm() < d2->operator()(a.id,b.id) ? pc::infty : 0;
                     }
                     void to_json(json&) const override {}
                     void from_json(const json&) override {}
@@ -303,13 +292,9 @@ namespace Faunus {
             void to_json(json &j) const override;
 
             template<class Tparticle>
-                inline double operator() (const Tparticle&, const Tparticle&, double r2) const {
-                    double r = sqrt(r2);
+                double operator() (const Tparticle&, const Tparticle&, const Point &_r) const {
+                    double r2 = _r.squaredNorm(), r = sqrt(r2);
                     return f / (r*r2) + e * std::pow( s/r, 12 );
-                }
-            template<class Tparticle>
-                double operator() (const Tparticle &a, const Tparticle &b, const Point &_r) const {
-                    return operator()(a,b,_r.squaredNorm());
                 }
         };
 
@@ -352,17 +337,14 @@ namespace Faunus {
              * ~~~
              */
             template<typename... T>
-                inline double operator()(const Particle<T...>&, const Particle<T...>&, double r2) const {
+                double operator()(const Particle<T...>&, const Particle<T...>&, const Point &r) const {
+                    double r2=r.squaredNorm();
                     if (r2<rc2)
                         return -eps;
                     if (r2>rcwc2)
                         return 0;
                     double x=std::cos( c*( sqrt(r2)-rc ) );
                     return -eps*x*x;
-                }
-            template<typename... T>
-                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
-                    return operator()(a,b,r.squaredNorm());
                 }
 
             template<class Tparticle>
@@ -413,16 +395,13 @@ namespace Faunus {
                         j = { {"epsr",epsr} };
                     }
 
-                    inline double operator() (const Tparticle &a, const Tparticle &b, double r2) const {
+                    double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        double r2=r.squaredNorm();
                         double r4inv=1/(r2*r2);
                         if (fabs(a.charge)>1e-9 or fabs(b.charge)>1e-9)
                             return (*m_charged)(a.id,b.id)*r4inv;
                         else
                             return (*m_neutral)(a.id,b.id)/r2*r4inv;
-                    }
-
-                    double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        return operator()(a,b,r.squaredNorm());
                     }
 
                     Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
@@ -706,8 +685,8 @@ namespace Faunus {
 
             void from_json(const json &j) override;
 
-            template<typename... T>
-                inline double operator()(const Particle<T...> &a, const Particle<T...> &b, double r2) const {
+            template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
                     if (r2 < rc2) {
                         double r = std::sqrt(r2);
                         return lB * a.charge * b.charge / r * sf.eval( table, r*rc1i );
@@ -759,7 +738,8 @@ namespace Faunus {
                 json jin; // initial json input
             public:
                 template<typename... T>
-                    inline double operator()(const Particle<T...> &a, const Particle<T...> &b, double r2) const {
+                    inline double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                        double r2 = r.squaredNorm();
                         if (r2>Rc2)
                             return 0;
                         d->r  = sqrt(r2);
@@ -768,10 +748,6 @@ namespace Faunus {
                         d->s1 = atoms[a.id].sigma;
                         d->s2 = atoms[b.id].sigma;
                         return expr();
-                    }
-                template<typename... T>
-                    double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
-                        operator()(a,b,r.squaredNorm());
                     }
                 CustomPairPotential(const std::string &name="custom");
                 void from_json(const json&) override;
@@ -814,14 +790,17 @@ namespace Faunus {
         template<class T /** particle type */>
             class FunctorPotential : public PairPotentialBase {
                 typedef std::function<double(const T&, const T&, const Point&)> uFunc;
+                PairMatrix<uFunc,true> umatrix; // matrix with potential for each atom pair
                 typedef Tabulate::TabulatorBase<double>::data Ttable; // data for tabulated potential
                 Tabulate::Andrea<double> tblt; // tabulated potential
-                Ttable table; // data for tabulated potential
-                PairMatrix<uFunc,true> umatrix; // matrix with potential for each atom pair
-                PairMatrix<Ttable,true> tmatrix; // matrix with potential for each atom pair
-                double rc2;
+                struct data {
+                    double rmin2;
+                    double rmax2;
+                    Ttable knotdata;
+                };
+                PairMatrix<data,true> tmatrix; // matrix with tabulated potential for each atom pair
                 json _j; // storage for input json
-
+                double rc2;
                 typedef CombinedPairPotential<Coulomb,HardSphere<T>> PrimitiveModel;
                 typedef CombinedPairPotential<Coulomb,WeeksChandlerAndersen<T>> PrimitiveModelWCA;
 
@@ -885,18 +864,22 @@ namespace Faunus {
 
                 double operator()(const T &a, const T &b, const Point &r) const {
                     double r2 = r.squaredNorm();
-                    if (r2 > rc2)
+                    if (r2 > tmatrix(a.id, b.id).rmax2)
                         return 0.0;
+                    else if (r2 < tmatrix(a.id, b.id).rmin2)
+                        return pc::infty;
                     else 
-                        return tblt.eval(tmatrix(a.id, b.id), std::sqrt(r2));
+                        return tblt.eval(tmatrix(a.id, b.id).knotdata, std::sqrt(r2));
                 }
 
                 void to_json(json &j) const override { j = _j; }
 
                 void from_json(const json &j) override {
+                    Ttable knotdata; // data for tabulated potential
+                    tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
+                    double rmax2 = j.value("cutoff",100);
+                    rmax2 = rmax2*rmax2;
                     _j = j;
-                    rc2 = j.at("cutoff");
-                    rc2 = rc2*rc2;
                     umatrix = decltype(umatrix)( atoms.size(), combineFunc(j.at("default")) );
                     for (auto it=j.begin(); it!=j.end(); ++it) {
                         auto atompair = words2vec<std::string>(it.key()); // is this for a pair of atoms?
@@ -905,12 +888,25 @@ namespace Faunus {
                             umatrix.set(ids[0], ids[1], combineFunc(it.value()));
                         }
                     }
-                    for (size_t i=0; i<atoms.size(); i++) {
-                        for (size_t k=0; k<=i; k++) {
+                    for (size_t i=0; i<atoms.size(); ++i) {
+                        for (size_t k=0; k<=i; ++k) {
                             T a = atoms.at(i);
                             T b = atoms.at(k);
-                            table = tblt.generate( [&](double r2) { return umatrix(i,k)(a,b,r2); }, 0, rc2);
-                            tmatrix.set(i, k, table);
+                            double rmin2 = 0.5*(atoms[i].sigma + atoms[k].sigma);
+                            rmin2 = rmin2*rmin2;
+                            while (rmin2 > 1e-4) {
+                                if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e8)
+                                    break;
+                                rmin2 = rmin2 - 1e-4;
+                            }
+                            while (rmax2 > 1e-4) {
+                                if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmax2)))) > 1e-8)
+                                    break;
+                                rmax2 = rmax2 - 1e-4;
+                            }
+                            cout << i << " " << k << " " << atoms[i].name << " " << atoms[k].name << " " << sqrt(rmin2) << " " << sqrt(rmax2) << endl;
+                            knotdata = tblt.generate( [&](double r2) { return umatrix(i,k)(a, b, Point(0,0,sqrt(r2))); }, rmin2, rmax2);
+                            tmatrix.set(i, k, {rmin2,rmax2,knotdata});
                         }
                     }
                 }

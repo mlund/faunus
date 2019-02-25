@@ -915,6 +915,14 @@ namespace Faunus {
                                             + std::to_string(std::distance(spc.groups.begin(), spc.findGroupContaining(i)))
                                             + " outside container");
 
+                            // The groups must exactly contain all particles in `p`
+                            size_t i=0;
+                            for (auto &g : spc.groups)
+                                for (auto it=g.begin(); it!=g.trueend(); ++it)
+                                    if (&*it != &spc.p.at(i++))
+                                        throw std::runtime_error("group vector out of sync");
+                            assert(i==spc.p.size());
+
                             // check if molecular mass centers are correct
                             if (not g.atomic)
                                 if (not g.empty()) {
@@ -1110,11 +1118,33 @@ namespace Faunus {
         template<class Tspace>
             class XTCtraj : public Analysisbase {
                 typedef typename Tspace::Tparticle Tparticle;
+                std::vector<int> molids; // molecule ids to save to disk
+                std::vector<std::string> names; // molecule names of above
+                std::function<bool(Tparticle&)> filter = [](Tparticle&){ return true; };
+
                 void _to_json(json &j) const override {
                     j["file"] = file;
+                    if (not names.empty())
+                        j["molecules"] = names;
                 }
+
                 void _from_json(const json &j) override {
                     file = MPI::prefix + j.at("file").get<std::string>();
+                    names = j.value("molecules", std::vector<std::string>());
+                    if (not names.empty()) {
+                        molids = Faunus::names2ids(Faunus::molecules<typename Tspace::Tpvec>, names);
+                        if (not molids.empty())
+                            filter = [&](Tparticle& i) {
+                                for (auto& g : spc.groups)
+                                    if (g.contains(i, true)) { // does group contain particle? (include inactive part)
+                                        if (std::find(molids.begin(), molids.end(), g.id)!=molids.end()) {
+                                            cout << Faunus::atoms[i.id].name << " ";
+                                            return true;
+                                        } else return false;
+                                    }
+                                return false;
+                            };
+                    };
                 }
 
                 FormatXTC xtc;
@@ -1123,7 +1153,8 @@ namespace Faunus {
 
                 void _sample() override {
                     xtc.setbox( spc.geo.getLength() );
-                    bool rc = xtc.save(file, spc.p, Group<Tparticle>(spc.p.begin(), spc.p.end()));
+                    auto particles = ranges::view::filter(spc.p, filter);
+                    bool rc = xtc.save(file, particles.begin(), particles.end());
                     if (rc==false)
                         std::cerr << "error saving xtc\n";
                 }
@@ -1133,7 +1164,6 @@ namespace Faunus {
                 XTCtraj( const json &j, Tspace &s ) : xtc(1e6), spc(s) {
                     from_json(j);
                     name = "xtcfile";
-                    cite = "http://bit.ly/2A8lzpa";
                 }
             };
 

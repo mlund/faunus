@@ -194,13 +194,15 @@ namespace Faunus {
                 return *this;
             } //!< copy group data from `other` but *not* particle data
 
-            bool contains(const T &a) const {
-                int d = &a - &(*(this->begin()));
-                if (d>=0)
-                    if ((size_t)d<this->size())
+            bool contains(const T &a, bool include_inactive=false) const {
+                if (not this->empty()) {
+                    int size = (include_inactive ? this->capacity() : this->size());
+                    int d = &a - &(*(this->begin()));
+                    if (d>=0 and d<size)
                         return true;
+                }
                 return false;
-            } //!< Determines if particle belongs to (active part) of group
+            } //!< Determines if particle belongs to group (complexity: constant)
 
             template<class UnaryPredicate>
                 auto filter( UnaryPredicate f ) const {
@@ -234,7 +236,7 @@ namespace Faunus {
 
             auto positions() const {
                 return ranges::view::transform(*this, [](auto &i) -> Point& {return i.pos;});
-            } //!< Iterable range with positions
+            } //!< Iterable range with positions of active particles
 
             // warning! this should be tested -- do not use yet.
             template<typename TdistanceFunc>
@@ -295,11 +297,19 @@ namespace Faunus {
         Random rand;
         typedef ParticleAllProperties particle;
         std::vector<particle> p(3);
+        p.reserve(10);
         p[0].id=0;
         p[1].id=1;
         p[2].id=1;
         Group<particle> g(p.begin(), p.end());
 
+        SUBCASE("contains()") {
+            CHECK( g.contains(p[0]) );
+            CHECK( g.contains(p[1]) );
+            CHECK( g.contains(p[2]) );
+            CHECK( g.contains(p[3]) == false );
+        }
+ 
         // find all elements with id=1
         auto slice1 = g.find_id(1);
         CHECK( std::distance(slice1.begin(), slice1.end()) == 2 );

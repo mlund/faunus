@@ -104,6 +104,10 @@ namespace Faunus {
          * All geometries shares the same distance calculation where
          * PBC is disabled by artificially setting long sidelengths.
          *
+         * @note
+         * - [Efficient Coding of the Minimum Image Convention](http://doi.org/kvs)
+         * - [Fast Coding of the Minimum Image Convention](http://doi.org/ck2nrd)
+         *
          * @todo Implement unit tests
          */
         class Chameleon : public GeometryBase {

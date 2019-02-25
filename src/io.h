@@ -578,23 +578,23 @@ namespace Faunus {
              * be added, while a new file is created if not.
              * Coordinates are shifted and converted to nanometers.
              * Box dimensions for the frame must be manually
-             * set by the `ioxtc::setbox()` function before calling this.
+             * set by the `setbox()` function before calling this.
              */
-            template<class Tgroup, class Tparticle, class Talloc>
-                bool save(const std::string &file, const std::vector<Tparticle,Talloc>&, Tgroup g) {
-                    if (!g.empty()) {
+            template<class Titer1, class Titer2 /** particle vector iterator */>
+                bool save(const std::string &file, Titer1 begin, Titer2 end) {
+                    if (begin!=end) {
                         if ( xd == NULL )
                             xd = xdrfile_open(&file[0], "w");
                         if ( xd != NULL ) {
-                            rvec *x = new rvec[ g.size() ];
-                            unsigned int i=0;
-                            for ( auto &j : g ) {
-                                x[i][0] = j.pos.x()*0.1 + xdbox[0][0]*0.5; // AA->nm
-                                x[i][1] = j.pos.y()*0.1 + xdbox[1][1]*0.5; // move inside sim. box
-                                x[i][2] = j.pos.z()*0.1 + xdbox[2][2]*0.5; //
-                                i++;
+                            rvec *x = new rvec[ ranges::distance(begin, end) ];
+                            size_t N=0;
+                            for (auto j=begin; j!=end; ++j) {
+                                x[N][0] = j->pos.x()*0.1 + xdbox[0][0]*0.5; // AA->nm
+                                x[N][1] = j->pos.y()*0.1 + xdbox[1][1]*0.5; // move inside sim. box
+                                x[N][2] = j->pos.z()*0.1 + xdbox[2][2]*0.5; //
+                                N++;
                             }
-                            write_xtc( xd, g.size(), step_xtc++, time_xtc++, xdbox, x, prec_xtc );
+                            write_xtc( xd, N, step_xtc++, time_xtc++, xdbox, x, prec_xtc );
                             delete[] x;
                             return true;
                         }

@@ -391,12 +391,14 @@ with the following information:
 ### XTC trajectory
 
 Generates a Gromacs XTC trajectory file with particle positions and box
-dimensions as a function of steps.
+dimensions as a function of steps. Both _active_ and _inactive_ atoms are
+saved.
 
 `xtcfile`      |  Description
 -------------- | ---------------------------------------------------------
 `file`         |  Filename of output xtc file
 `nstep`        |  Interval between samples.
+`molecules=*`  |  Array of molecules to save (default: all)
 
 
 ### Charge-Radius trajectory

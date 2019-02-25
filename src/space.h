@@ -194,6 +194,7 @@ namespace Faunus {
                     }
 
                     groups.push_back(g);
+                    assert( groups.back().begin() == g.begin());
                     assert( in.size() == groups.back().capacity() );
                 }
             } //!< Safely add particles and corresponding group to back

@@ -516,7 +516,7 @@ namespace Faunus {
                                             countNout_avgBlocks += countNout_avg.avg();
                                         }
 
-                                        if (cnt%1000000 == 0) {
+                                        if (cnt%100000 == 0) {
                                             Nin = countNin_avgBlocks.avg();
                                             cout << "Average # of water molecules inside sphere: " << Nin << "\n";
                                             cout << "Relative standard deviation based on molecules inside sphere: " << countNin_avgBlocks.stdev()/Nin << "\n";
@@ -885,6 +885,78 @@ namespace Faunus {
                     }
             };
 
+        /**
+         * @brief Tranfers charge between two atoms
+         */
+        template<typename Tspace>
+            class ChargeTransfer : public Movebase {
+                private:
+                    typedef typename Tspace::Tpvec Tpvec;
+                    Tspace& spc; // Space to operate on
+                    Average<double> msqd; // mean squared displacement
+                    double dq=0, deltaq=0;
+                    int atomIndex1, atomIndex2;
+                    Change::data cdata;
+
+                    void _to_json(json &j) const override {
+                        using namespace u8;
+                        j = {
+                            {"index1", atomIndex1},
+                            {"index2", atomIndex2},
+                            {"dq", dq},
+                            {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
+                            {cuberoot + rootof + bracket(Delta + "q" + squared),
+                                std::cbrt(std::sqrt(msqd.avg()))}
+                        };
+                        _roundjson(j,3);
+                    }
+
+                    void _from_json(const json &j) override {
+                        dq = j.at("dq").get<double>();
+                        atomIndex1 = j.at("index1").get<int>();
+                        atomIndex2 = j.at("index2").get<int>();
+                        //cdata.index = std::distance( spc.groups.begin(), git1 ); // integer *index* of moved group
+                        //cdata.atoms[0] = std::distance(git1->begin(), spc.p.begin()+atomIndex1 );  // index of particle rel. to group
+                        //cdata.index = std::distance( spc.groups.begin(), git2 ); // integer *index* of moved group
+                        //cdata.atoms[0] = std::distance(git2->begin(), spc.p.begin()+atomIndex2 );  // index of particle rel. to group
+                    }
+
+                    void _move(Change &change) override {
+                        if (dq>0) {
+                            auto &p1 = spc.p[atomIndex1]; // refence to particle
+                            auto &p2 = spc.p[atomIndex2]; // refence to particle
+                            double qold = p1.charge;
+                            p1.charge +=  dq * (slump()-0.5);
+                            deltaq = p1.charge-qold;
+                            auto git1 = spc.findGroupContaining( spc.p[atomIndex1] ); // group containing atomIndex
+                            cdata.index = std::distance( spc.groups.begin(), git1 ); // integer *index* of moved group;
+                            change.groups.push_back( cdata );
+                            if ( (0.00 <= p2.charge-deltaq) && (p2.charge-deltaq <= 1.00) ) {
+                                //cout << "Charge, K: " << p2.charge << "\n";
+                                //cout << "Charge increment: " << deltaq << "\n\n";
+                                p2.charge -=  deltaq;
+                            }
+          
+                            auto git2 = spc.findGroupContaining( spc.p[atomIndex2] ); // group containing atomIndex
+                            cdata.index = std::distance( spc.groups.begin(), git2 ); // integer *index* of moved group;
+                            //cout << "Charge increment: " << dq * (slump()-0.5) << ", " << deltaq << "\n";
+                            //cout << "Charge, A: " << p1.charge << "\n";
+                            //cout << "Charge, K: " << p2.charge << "\n\n";
+                            change.groups.push_back( cdata );
+                        } else deltaq=0;
+                    }
+
+                    void _accept(Change&) override { msqd += deltaq*deltaq; }
+                    void _reject(Change&) override { msqd += 0; }
+
+                public:
+                    ChargeTransfer(Tspace &spc) : spc(spc) {
+                        name = "chargetransfer";
+                        repeat = 1;
+                        cdata.all=true; // the group is internally changed
+                        cdata.atoms.resize(2); // we change exactly two atoms
+                    }
+            };
         /*
          * @brief Establishes equilibrium of matter
          * Establishes equilibrium of matter between all species
@@ -1673,6 +1745,7 @@ start:
                                     else if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);
                                     else if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
                                     else if (it.key()=="charge") this->template push_back<Move::ChargeMove<Tspace>>(spc);
+                                    else if (it.key()=="chargetransfer") this->template push_back<Move::ChargeTransfer<Tspace>>(spc);
                                     else if (it.key()=="speciation") this->template push_back<Move::SpeciationMove<Tspace>>(spc);
                                     else if (it.key()=="quadrantjump") this->template push_back<Move::QuadrantJump<Tspace>>(spc);
                                     else if (it.key()=="cluster") this->template push_back<Move::Cluster<Tspace>>(spc);

@@ -887,6 +887,8 @@ namespace Faunus {
 
         /**
          * @brief Tranfers charge between two atoms
+         *
+         * Add description here...
          */
         template<typename Tspace>
             class ChargeTransfer : public Movebase {
@@ -895,14 +897,13 @@ namespace Faunus {
                     Tspace& spc; // Space to operate on
                     Average<double> msqd; // mean squared displacement
                     double dq=0, deltaq=0;
-                    int atomIndex1, atomIndex2;
-                    Change::data cdata;
+                    std::vector<int> atomIndex;
+                    Change::data cdata1, cdata2;
 
                     void _to_json(json &j) const override {
                         using namespace u8;
                         j = {
-                            {"index1", atomIndex1},
-                            {"index2", atomIndex2},
+                            {"index", atomIndex},
                             {"dq", dq},
                             {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
                             {cuberoot + rootof + bracket(Delta + "q" + squared),
@@ -913,36 +914,30 @@ namespace Faunus {
 
                     void _from_json(const json &j) override {
                         dq = j.at("dq").get<double>();
-                        atomIndex1 = j.at("index1").get<int>();
-                        atomIndex2 = j.at("index2").get<int>();
-                        //cdata.index = std::distance( spc.groups.begin(), git1 ); // integer *index* of moved group
-                        //cdata.atoms[0] = std::distance(git1->begin(), spc.p.begin()+atomIndex1 );  // index of particle rel. to group
-                        //cdata.index = std::distance( spc.groups.begin(), git2 ); // integer *index* of moved group
-                        //cdata.atoms[0] = std::distance(git2->begin(), spc.p.begin()+atomIndex2 );  // index of particle rel. to group
+                        atomIndex = j.at("index").get<std::vector<int>>();
+                        if (atomIndex.size()!=2)
+                            throw std::runtime_error("exactly two atom index must be given");
+                        if (atomIndex[0]>=spc.p.size() or atomIndex[1]>=spc.p.size())
+                            throw std::runtime_error("atom index out of bounds");
+
+                        auto git1 = spc.findGroupContaining( spc.p[atomIndex[0]] ); // group containing atomIndex
+                        auto git2 = spc.findGroupContaining( spc.p[atomIndex[1]] ); // group containing atomIndex
+                        cdata1.index = std::distance( spc.groups.begin(), git1 ); // integer *index* of moved group
+                        cdata2.index = std::distance( spc.groups.begin(), git2 ); // integer *index* of moved group
+                        cdata1.atoms[0] = std::distance(git1->begin(), spc.p.begin()+atomIndex[0] );  // index of particle rel. to group
+                        cdata2.atoms[0] = std::distance(git2->begin(), spc.p.begin()+atomIndex[1] );  // index of particle rel. to group
                     }
 
                     void _move(Change &change) override {
                         if (dq>0) {
-                            auto &p1 = spc.p[atomIndex1]; // refence to particle
-                            auto &p2 = spc.p[atomIndex2]; // refence to particle
+                            auto &p1 = spc.p[atomIndex[0]]; // refence to particle
+                            auto &p2 = spc.p[atomIndex[1]]; // refence to particle
                             double qold = p1.charge;
                             p1.charge +=  dq * (slump()-0.5);
                             deltaq = p1.charge-qold;
-                            auto git1 = spc.findGroupContaining( spc.p[atomIndex1] ); // group containing atomIndex
-                            cdata.index = std::distance( spc.groups.begin(), git1 ); // integer *index* of moved group;
-                            change.groups.push_back( cdata );
-                            if ( (0.00 <= p2.charge-deltaq) && (p2.charge-deltaq <= 1.00) ) {
-                                //cout << "Charge, K: " << p2.charge << "\n";
-                                //cout << "Charge increment: " << deltaq << "\n\n";
-                                p2.charge -=  deltaq;
-                            }
-          
-                            auto git2 = spc.findGroupContaining( spc.p[atomIndex2] ); // group containing atomIndex
-                            cdata.index = std::distance( spc.groups.begin(), git2 ); // integer *index* of moved group;
-                            //cout << "Charge increment: " << dq * (slump()-0.5) << ", " << deltaq << "\n";
-                            //cout << "Charge, A: " << p1.charge << "\n";
-                            //cout << "Charge, K: " << p2.charge << "\n\n";
-                            change.groups.push_back( cdata );
+                            p2.charge -=  deltaq;
+                            change.groups.push_back( cdata1 );
+                            change.groups.push_back( cdata2 );
                         } else deltaq=0;
                     }
 
@@ -953,8 +948,10 @@ namespace Faunus {
                     ChargeTransfer(Tspace &spc) : spc(spc) {
                         name = "chargetransfer";
                         repeat = 1;
-                        cdata.all=true; // the group is internally changed
-                        cdata.atoms.resize(2); // we change exactly two atoms
+                        cdata1.internal=true; // the group is internally changed
+                        cdata2.internal=true; // the group is internally changed
+                        cdata1.atoms.resize(1); // we change exactly two atoms
+                        cdata2.atoms.resize(1); // we change exactly two atoms
                     }
             };
         /*

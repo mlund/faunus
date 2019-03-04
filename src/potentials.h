@@ -900,12 +900,12 @@ namespace Faunus {
                             }
                             Ttable knotdata = tblt.generate( [&](double r2) { return umatrix(i,k)(a, b, Point(0,0,sqrt(r2))); }, rmin2, rmax2);
                             tmatrix.set(i, k, knotdata);
-                            std::ofstream file(atoms[i].name+atoms[k].name+"_tabulated.dat"); // output file
-                            file << "# Separation  Tabulated  Original\n";
+                            std::ofstream file(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file
+                            file << "# Separation\tTabulated\tOriginal\n";
                             double r2 = rmin2;
-                            while (r2 <= rmax2) {
+                            while (r2 < rmax2) {
                                 r2 = r2 + 1e-2;
-                                file << r2 << " " << tblt.eval(tmatrix(i, k), r2) << " " << umatrix(i,k)(a, b, Point(0,0,sqrt(r2))) << "\n";
+                                file << r2 << "\t" << tblt.eval(tmatrix(i, k), r2) << "\t" << umatrix(i,k)(a, b, Point(0,0,sqrt(r2))) << "\n";
                             }
                         }
                     }

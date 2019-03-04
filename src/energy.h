@@ -1703,6 +1703,9 @@ namespace Faunus {
                                     if (it.key()=="nonbonded")
                                         push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
 
+                                    if (it.key()=="nonbonded_cached")
+                                        push_back<Energy::NonbondedCached<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+
                                     if (it.key()=="nonbonded_coulombwca")
                                         push_back<Energy::Nonbonded<Tspace,CoulombWCA>>(it.value(), spc);
 

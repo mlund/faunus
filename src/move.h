@@ -960,6 +960,7 @@ namespace Faunus {
                     std::vector<std::string> names; // names of molecules to be considered
                     std::vector<int> ids; // molecule id's of molecules to be considered
                     std::vector<size_t> index; // index of all possible molecules to be considered
+                    std::map<size_t, size_t> clusterSizeDistribution; // distribution of cluster sizes
 
                     virtual double clusterProbability(const Tgroup &g1, const Tgroup &g2) const {
                         if (spc.geo.sqdist(g1.cm, g2.cm)<=thresholdsq)
@@ -974,7 +975,8 @@ namespace Faunus {
                             {rootof + bracket("r" + squared), std::sqrt(msqd.avg())},
                             {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
                             {bracket("N"), N.avg()},
-                            {"bias rejection rate", double(bias_rejected) / cnt}
+                            {"bias rejection rate", double(bias_rejected) / cnt},
+                            {"clusterdistribution", clusterSizeDistribution}
                         };
                         _roundjson(j,3);
                     }
@@ -1048,6 +1050,7 @@ start:
                             findCluster(spc, first, cluster); // find cluster around first
 
                             N += cluster.size(); // average cluster size
+                            clusterSizeDistribution[ cluster.size() ]++; // update cluster size distribution
                             Change::data d;
                             d.all=true;
                             dp = ranunit(slump, dir) * dptrans * slump();

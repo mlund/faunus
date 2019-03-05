@@ -889,7 +889,7 @@ namespace Faunus {
                             double rmin2 = 0.5*(atoms[i].sigma + atoms[k].sigma);
                             rmin2 = rmin2*rmin2;
                             while (rmin2 >= 1e-2) {
-                                if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e6)
+                                if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e3)
                                     break;
                                 rmin2 = rmin2 - 1e-2;
                             }
@@ -905,7 +905,7 @@ namespace Faunus {
                             double r2 = rmin2;
                             while (r2 < rmax2) {
                                 r2 = r2 + 1e-2;
-                                file << r2 << "\t" << tblt.eval(tmatrix(i, k), r2) << "\t" << umatrix(i,k)(a, b, Point(0,0,sqrt(r2))) << "\n";
+                                file << sqrt(r2) << "\t" << tblt.eval(tmatrix(i, k), r2) << "\t" << umatrix(i,k)(a, b, Point(0,0,sqrt(r2))) << "\n";
                             }
                         }
                     }

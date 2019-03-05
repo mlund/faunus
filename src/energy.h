@@ -833,11 +833,13 @@ namespace Faunus {
                     bool omp_enable=false;
                     bool omp_i2all=false;
                     bool omp_g2g=false;
+                    bool omp_p2p=false;
 
                     void to_json(json &j) const override {
                         j["pairpot"] = pairpot;
                         if (omp_enable) {
                             json _a = json::array();
+                            if (omp_p2p) _a.push_back("p2p");
                             if (omp_g2g) _a.push_back("g2g");
                             if (omp_i2all) _a.push_back("i2all");
                             j["openmp"] = _a;
@@ -941,9 +943,10 @@ namespace Faunus {
                         double u = 0;
                         if (not cut(g1,g2)) {
                             if ( index.empty() && jndex.empty() ) // if index is empty, assume all in g1 have changed
-                                for (auto &i : g1)
-                                    for (auto &j : g2)
-                                        u += i2i(i,j);
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (omp_enable and omp_p2p)  
+                                for (size_t i=0; i<g1.size(); i++)
+                                    for (size_t j=0; j<g2.size(); j++)
+                                        u += i2i( *(g1.begin()+i), *(g2.begin()+j) );
                             else {// only a subset of g1
                                 for (auto i : index)
                                     for (auto j=g2.begin(); j!=g2.end(); ++j)
@@ -977,6 +980,7 @@ namespace Faunus {
                                     omp_enable=true;
                                     for (const std::string &k : *it)
                                         if (k=="g2g") omp_g2g=true;
+                                        else if (k=="p2p") omp_p2p=true;
                                         else if (k=="i2all") omp_i2all=true;
 #ifndef _OPENMP
                                     std::cerr << "warning: nonbonded requests unavailable OpenMP." << endl;
@@ -1070,7 +1074,7 @@ namespace Faunus {
                                 // more atoms moved
                                 auto& g1 = spc.groups.at(d.index);
                                 //for (auto &g2 : spc.groups)
-#pragma omp parallel for reduction (+:u) if (omp_enable and omp_g2g)
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (omp_enable and omp_g2g)
                                 for (size_t i=0; i<spc.groups.size(); i++) {
                                     auto &g2 = spc.groups[i];
                                     if (&g1 != &g2)
@@ -1131,9 +1135,19 @@ namespace Faunus {
                                         u += g2g( spc.groups[*i], spc.groups[*j] );
 
                             // moved<->static
-                            for ( auto i : moved)
-                                for ( auto j : fixed)
-                                    u += g2g(spc.groups[i], spc.groups[j]);
+                            if (omp_enable and omp_g2g) {
+                                std::vector<std::pair<int,int>> pairs( size(moved) * size(fixed) );
+                                size_t cnt=0;
+                                for (auto i : moved)
+                                    for( auto j : fixed)
+                                        pairs[cnt++] = {i,j};
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (omp_enable and omp_g2g)
+                                for (size_t i=0; i<pairs.size(); i++)
+                                    u += g2g(spc.groups[pairs[i].first], spc.groups[pairs[i].second]);
+                            } else
+                                for ( auto i : moved)
+                                    for ( auto j : fixed)
+                                        u += g2g(spc.groups[i], spc.groups[j]);
 
                             // more todo!
                         }
@@ -1215,7 +1229,7 @@ namespace Faunus {
                                 auto& d = change.groups[0];
                                 auto& g1 = base::spc.groups.at(d.index);
 
-#pragma omp parallel for reduction (+:u) if (this->omp_enable and this->omp_g2g)
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (this->omp_enable and this->omp_g2g)
                                 for (size_t i=0; i<spc.groups.size(); i++) {
                                     auto &g2 = spc.groups[i];
                                     if (&g1 != &g2)
@@ -1233,13 +1247,22 @@ namespace Faunus {
                             // moved<->moved
                             if (change.moved2moved)
                                 for ( auto i = moved.begin(); i != moved.end(); ++i )
-                                    for ( auto j=i; ++j != moved.end(); ) {
+                                    for ( auto j=i; ++j != moved.end(); )
                                         u += g2g( base::spc.groups[*i], base::spc.groups[*j] );
-                                    }
                             // moved<->static
-                            for ( auto i : moved)
-                                for ( auto j : fixed)
-                                    u += g2g(base::spc.groups[i], base::spc.groups[j]);
+                            if (this->omp_enable and this->omp_g2g) {
+                                std::vector<std::pair<int,int>> pairs( size(moved) * size(fixed) );
+                                size_t cnt=0;
+                                for (auto i : moved)
+                                    for( auto j : fixed)
+                                        pairs[cnt++] = {i,j};
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (this->omp_enable and this->omp_g2g)
+                                for (size_t i=0; i<pairs.size(); i++)
+                                    u += g2g(spc.groups[pairs[i].first], spc.groups[pairs[i].second]);
+                            } else
+                                for ( auto i : moved)
+                                    for ( auto j : fixed)
+                                        u += g2g(base::spc.groups[i], base::spc.groups[j]);
 
                             // more todo!
                         }
@@ -1702,6 +1725,9 @@ namespace Faunus {
                                 try {
                                     if (it.key()=="nonbonded_coulomblj")
                                         push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded_coulomblj_EM")
+                                        push_back<Energy::NonbondedCached<Tspace,CoulombLJ>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded")
                                         push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);

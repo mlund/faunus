@@ -39,8 +39,7 @@ namespace Faunus {
 
         std::vector<data> groups; //!< Touched groups by index in group vector
 
-        auto touchedGroupIndex() {
-            // skitfunktion
+        inline auto touchedGroupIndex() {
             return ranges::view::transform(groups, [](data &i) -> int {return i.index;});
         } //!< List of moved groups (index)
 
@@ -80,14 +79,6 @@ namespace Faunus {
     }
 #endif
  
-    /* currently not used for anything
-    struct SpaceBase {
-        virtual Geometry::GeometryBase& getGeometry()=0;
-        virtual void clear()=0;
-        virtual void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC)=0;
-    };
-    */
-
     /**
      * @brief Helper class for range-based for-loops over *active* particles
      *

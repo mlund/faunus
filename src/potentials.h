@@ -886,10 +886,10 @@ namespace Faunus {
                         for (size_t k=0; k<=i; ++k) {
                             T a = atoms.at(i);
                             T b = atoms.at(k);
-                            double rmin2 = 0.5*(atoms[i].sigma + atoms[k].sigma);
+                            double rmin2 = atoms[i].sigma + atoms[k].sigma;
                             rmin2 = rmin2*rmin2;
                             while (rmin2 >= 1e-2) {
-                                if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e3)
+                                if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e4)
                                     break;
                                 rmin2 = rmin2 - 1e-2;
                             }

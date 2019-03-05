@@ -1095,6 +1095,8 @@ start:
                                 change.groups.push_back(d);
                             }
 
+                            change.moved2moved = false; // do not calc. internal cluster energy
+
                             // Reject if cluster composition changes during move
                             // Note: this only works for the binary 0/1 probability function
                             // currently implemented in `findCluster()`.

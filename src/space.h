@@ -22,6 +22,7 @@ namespace Faunus {
         bool dV=false;    //!< Set to true if there's a volume change
         double all=false; //!< Set to true if *everything* has changed
         bool dN=false;    //!< True if the number of atomic or molecular species has changed
+        bool moved2moved=true; //!< If several groups are moved, should they interact with each other?
 
         struct data {
             bool dNatomic=false;    //!< True if the number of atomic molecules has changed
@@ -48,6 +49,7 @@ namespace Faunus {
             dV=false;
             all=false;
             dN=false;
+            moved2moved=true;
             groups.clear();
             assert(empty());
         } //!< Clear all change data

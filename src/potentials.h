@@ -112,8 +112,12 @@ namespace Faunus {
                         for (auto it=_j.begin(); it!=_j.end(); ++it) {
                             auto v = words2vec<std::string>( it.key() );
                             if (v.size()==2) {
-                                int id1 = (*findName( atoms, v[0])).id();
-                                int id2 = (*findName( atoms, v[1])).id();
+                                auto it1 = findName(atoms, v[0]);
+                                auto it2 = findName(atoms, v[1]);
+                                if (it1==atoms.end() or it2==atoms.end())
+                                    throw std::runtime_error("unknown atom(s): ["s + v[0] + " " + v[1] + "]");
+                                int id1 = it1->id();
+                                int id2 = it2->id();
                                 m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
                                 m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
                             } else

@@ -1125,10 +1125,10 @@ namespace Faunus {
                                         ); // index of static groups
 
                             // moved<->moved
-                            for ( auto i = moved.begin(); i != moved.end(); ++i ) {
-                                for ( auto j=i; ++j != moved.end(); )
-                                    u += g2g( spc.groups[*i], spc.groups[*j] );
-                            }
+                            if (change.moved2moved)
+                                for ( auto i = moved.begin(); i != moved.end(); ++i )
+                                    for ( auto j=i; ++j != moved.end(); )
+                                        u += g2g( spc.groups[*i], spc.groups[*j] );
 
                             // moved<->static
                             for ( auto i : moved)
@@ -1214,7 +1214,10 @@ namespace Faunus {
                             if (change.groups.size()==1) {
                                 auto& d = change.groups[0];
                                 auto& g1 = base::spc.groups.at(d.index);
-                                for (auto &g2 : base::spc.groups) {
+
+#pragma omp parallel for reduction (+:u) if (this->omp_enable and this->omp_g2g)
+                                for (size_t i=0; i<spc.groups.size(); i++) {
+                                    auto &g2 = spc.groups[i];
                                     if (&g1 != &g2)
                                         u += g2g(g1, g2, d.atoms);
                                 }
@@ -1228,10 +1231,11 @@ namespace Faunus {
                                         ); // index of static groups
 
                             // moved<->moved
-                            for ( auto i = moved.begin(); i != moved.end(); ++i )
-                                for ( auto j=i; ++j != moved.end(); ) {
-                                    u += g2g( base::spc.groups[*i], base::spc.groups[*j] );
-                            }
+                            if (change.moved2moved)
+                                for ( auto i = moved.begin(); i != moved.end(); ++i )
+                                    for ( auto j=i; ++j != moved.end(); ) {
+                                        u += g2g( base::spc.groups[*i], base::spc.groups[*j] );
+                                    }
                             // moved<->static
                             for ( auto i : moved)
                                 for ( auto j : fixed)

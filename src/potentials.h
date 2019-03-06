@@ -871,8 +871,6 @@ namespace Faunus {
 
                 void from_json(const json &j) override {
                     tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
-                    double rmax2 = j.value("cutoff",100);
-                    rmax2 = rmax2*rmax2;
                     _j = j;
                     umatrix = decltype(umatrix)( atoms.size(), combineFunc(j.at("default")) );
                     for (auto it=j.begin(); it!=j.end(); ++it) {
@@ -884,28 +882,35 @@ namespace Faunus {
                     }
                     for (size_t i=0; i<atoms.size(); ++i) {
                         for (size_t k=0; k<=i; ++k) {
-                            T a = atoms.at(i);
-                            T b = atoms.at(k);
-                            double rmin2 = atoms[i].sigma + atoms[k].sigma;
-                            rmin2 = rmin2*rmin2;
-                            while (rmin2 >= 1e-2) {
-                                if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e4)
-                                    break;
-                                rmin2 = rmin2 - 1e-2;
-                            }
-                            while (rmax2 >= 1e-2) {
-                                if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmax2)))) > pc::epsilon_dbl)
-                                    break;
-                                rmax2 = rmax2 - 1e-2;
-                            }
-                            Ttable knotdata = tblt.generate( [&](double r2) { return umatrix(i,k)(a, b, Point(0,0,sqrt(r2))); }, rmin2, rmax2);
-                            tmatrix.set(i, k, knotdata);
-                            std::ofstream file(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file
-                            file << "# Separation\tTabulated\tOriginal\n";
-                            double r2 = rmin2;
-                            while (r2 < rmax2) {
-                                r2 = r2 + 1e-2;
-                                file << sqrt(r2) << "\t" << tblt.eval(tmatrix(i, k), r2) << "\t" << umatrix(i,k)(a, b, Point(0,0,sqrt(r2))) << "\n";
+                           if (atoms[i].implicit==false and atoms[k].implicit==false) {
+                                T a = atoms.at(i);
+                                T b = atoms.at(k);
+                                double rmin2 = .5*(atoms[i].sigma + atoms[k].sigma);
+                                rmin2 = rmin2*rmin2;
+                                double rmax2 = j.value("cutoff",100);
+                                rmax2 = rmax2*rmax2;
+                                while (rmin2 >= 1e-2) {
+                                    if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e6)
+                                        rmin2 = rmin2 + 1e-2;
+                                    else if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e5)
+                                        break;
+                                    else
+                                        rmin2 = rmin2 - 1e-2;
+                                }
+                                while (rmax2 >= 1e-2) {
+                                    if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmax2)))) > pc::epsilon_dbl)
+                                        break;
+                                    rmax2 = rmax2 - 1e-2;
+                                }
+                                Ttable knotdata = tblt.generate( [&](double r2) { return umatrix(i,k)(a, b, Point(0,0,sqrt(r2))); }, rmin2, rmax2);
+                                tmatrix.set(i, k, knotdata);
+                                std::ofstream file(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file
+                                file << "# Separation\tTabulated\tOriginal\n";
+                                double r2 = rmin2;
+                                while (r2 < rmax2) {
+                                    r2 = r2 + 1e-2;
+                                    file << sqrt(r2) << "\t" << tblt.eval(tmatrix(i, k), r2) << "\t" << umatrix(i,k)(a, b, Point(0,0,sqrt(r2))) << "\n";
+                                }
                             }
                         }
                     }

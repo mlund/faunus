@@ -872,6 +872,7 @@ namespace Faunus {
                 void from_json(const json &j) override {
                     tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
                     _j = j;
+                    double rmax2 = pc::Nav;
                     umatrix = decltype(umatrix)( atoms.size(), combineFunc(j.at("default")) );
                     for (auto it=j.begin(); it!=j.end(); ++it) {
                         auto atompair = words2vec<std::string>(it.key()); // is this for a pair of atoms?
@@ -887,8 +888,11 @@ namespace Faunus {
                                 T b = atoms.at(k);
                                 double rmin2 = .5*(atoms[i].sigma + atoms[k].sigma);
                                 rmin2 = rmin2*rmin2;
-                                double rmax2 = j.value("cutoff",100);
-                                rmax2 = rmax2*rmax2;
+                                auto it = j.find("cutoff_g2g");
+                                if (it->is_number())
+                                    rmax2 = std::pow( it->get<double>(), 2 );
+                                else if (it->is_object())
+                                    rmax2 = std::pow( it->at("default").get<double>(), 2);
                                 while (rmin2 >= 1e-2) {
                                     if (abs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e6)
                                         rmin2 = rmin2 + 1e-2;

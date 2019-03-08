@@ -137,41 +137,41 @@ namespace Faunus {
 
                 inline void boundary( Point &a ) const override {
 		    if ( type == CUBOID or type == SPHERE or type == CYLINDER or type == SLIT ) {
-		      if ( std::fabs(a.x()) > len_half.x())
-                        a.x() -= len.x() * anint(a.x() * len_inv.x());
+			if ( std::fabs(a.x()) > len_half.x())
+			    a.x() -= len.x() * anint(a.x() * len_inv.x());
 
-		      if ( std::fabs(a.y()) > len_half.y())
-                        a.y() -= len.y() * anint(a.y() * len_inv.y());
+			if ( std::fabs(a.y()) > len_half.y())
+			    a.y() -= len.y() * anint(a.y() * len_inv.y());
 
-		      if ( std::fabs(a.z()) > len_half.z())
-                        a.z() -= len.z() * anint(a.z() * len_inv.z());
+			if ( std::fabs(a.z()) > len_half.z())
+			    a.z() -= len.z() * anint(a.z() * len_inv.z());
 		    } else if( type == HEXAGONAL ) {
-		      Point unitvX = Point(1.0,0.0,0.0);
-		      Point unitvY = Point(0.5,sqrt(3.0)/2.0,0.0);
-		      Point unitvZ = Point(-0.5,sqrt(3.0)/2.0,0.0);
-		      if(a.dot(unitvX) > len_half.x())
-			a = a - len.x()*unitvX;
-		      if(a.dot(unitvX) < -len_half.x())
-			a = a + len.x()*unitvX;
-		      if(a.dot(unitvY) > len_half.x()) {
-			a = a - len.x()*unitvY;
-			if(a.dot(unitvX) < -len_half.x()) // Check that point did not get past x-limit
-			    a = a + len.x()*unitvX;
-		      }
-		      if(a.dot(unitvY) < -len_half.x()) {
-			a = a + len.x()*unitvY;
-			if(a.dot(unitvX) > len_half.x()) // Check that point did not get past x-limit
+			Point unitvX = Point(1.0,0.0,0.0);
+			Point unitvY = Point(0.5,sqrt(3.0)/2.0,0.0);
+			Point unitvZ = Point(-0.5,sqrt(3.0)/2.0,0.0);
+			if(a.dot(unitvX) > len_half.x())
 			    a = a - len.x()*unitvX;
-		      }
-		      if(a.dot(unitvZ) > len_half.x())
-			a = a - len.x()*unitvZ;
-		      if(a.dot(unitvZ) < -len_half.x())
-			a = a + len.x()*unitvZ;
+			if(a.dot(unitvX) < -len_half.x())
+			    a = a + len.x()*unitvX;
+			if(a.dot(unitvY) > len_half.x()) {
+			    a = a - len.x()*unitvY;
+			    if(a.dot(unitvX) < -len_half.x()) // Check that point did not get past x-limit
+				a = a + len.x()*unitvX;
+			}
+			if(a.dot(unitvY) < -len_half.x()) {
+			    a = a + len.x()*unitvY;
+			    if(a.dot(unitvX) > len_half.x()) // Check that point did not get past x-limit
+				a = a - len.x()*unitvX;
+			}
+			if(a.dot(unitvZ) > len_half.x())
+			    a = a - len.x()*unitvZ;
+			if(a.dot(unitvZ) < -len_half.x())
+			    a = a + len.x()*unitvZ;
 
-		      if(a.z() > len_half.z())
-			a.z() = a.z() - len.z();
-		      if(a.z() < -len_half.z())
-			a.z() = a.z() + len.z();
+			if(a.z() > len_half.z())
+			    a.z() = a.z() - len.z();
+			if(a.z() < -len_half.z())
+			    a.z() = a.z() + len.z();
 		    }
                 } //!< Apply boundary conditions
 
@@ -179,22 +179,22 @@ namespace Faunus {
                     Point r(a - b);
 
 		    if ( type == CUBOID or type == SPHERE or type == CYLINDER or type == SLIT ) {
-                    if ( r.x() > len_half.x())
-                        r.x() -= len.x();
-                    else if ( r.x() < -len_half.x())
-                        r.x() += len.x();
+			if ( r.x() > len_half.x())
+			    r.x() -= len.x();
+			else if ( r.x() < -len_half.x())
+			    r.x() += len.x();
 
-                    if ( r.y() > len_half.y())
-                        r.y() -= len.y();
-                    else if ( r.y() < -len_half.y())
-                        r.y() += len.y();
+			if ( r.y() > len_half.y())
+			    r.y() -= len.y();
+			else if ( r.y() < -len_half.y())
+			    r.y() += len.y();
 
-                    if ( r.z() > len_half.z())
-                        r.z() -= len.z();
-                    else if ( r.z() < -len_half.z())
-                        r.z() += len.z();
+			if ( r.z() > len_half.z())
+			    r.z() -= len.z();
+			else if ( r.z() < -len_half.z())
+			    r.z() += len.z();
 		    } else if( type == HEXAGONAL ) {
-		      boundary(r);
+			boundary(r);
 		    }
                     return r;
                 }

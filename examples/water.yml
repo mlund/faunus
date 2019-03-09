@@ -18,7 +18,7 @@ energy:
     - isobaric: {P/atm: 1}
     - nonbonded_coulomblj:
         lennardjones: {mixing: LB}
-        coulomb: {type: fanourgakis, epsr: 1, cutoff: 9, debyelength: 1.0} # , ellipse_cutoff: True, ellipse_x: 9, ellipse_y: 9, ellipse_z: 9
+        coulomb: {type: fanourgakis, epsr: 1, cutoff: 9}
         cutoff_g2g: 10
 
 moves:

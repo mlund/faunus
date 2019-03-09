@@ -69,10 +69,10 @@ namespace Faunus {
 
         double Chameleon::getVolume(int) const {
             switch (type) {
-                case SPHERE:     return 4*pc::pi/3*radius*radius*radius;
-                case CUBOID:     return len.x()*len.y()*len.z();
-                case SLIT:       return len.x()*len.y()*len.z() / pbc_disable;
-                case CYLINDER:   return pc::pi*radius*radius*len.z();
+		case SPHERE:     return 4*pc::pi/3*radius*radius*radius;
+		case CUBOID:     return len.x()*len.y()*len.z();
+		case SLIT:       return len.x()*len.y()*len.z() / pbc_disable;
+		case CYLINDER:   return pc::pi*radius*radius*len.z();
 		case HEXAGONAL:  return 2.0*std::sqrt(3.0)*radius*radius*len.z();
 		case OCTAHEDRON: return pc::pi*radius*radius*len.z();
             }
@@ -185,8 +185,8 @@ namespace Faunus {
                 case HEXAGONAL:
 		    double Ra = rand();
 		    double Rb = rand();
-		    Point unitvA = Point(sqrt(3.0)/2.0,0.5,0.0);
-		    Point unitvB = Point(sqrt(3.0)/2.0,-0.5,0.0);
+		    const Point unitvA = Point(sqrt(3.0)/2.0,0.5,0.0);
+		    const Point unitvB = Point(sqrt(3.0)/2.0,-0.5,0.0);
 		    double R = d/std::sqrt(3.0);
 		    Point p = R*unitvA*Ra+R*unitvB*Rb;
 		    if(2.0*p.x() > d) p.x() = p.x() - d;
@@ -223,12 +223,12 @@ namespace Faunus {
 		    if(std::fabs(a.dot(Point(1.0,0.0,0.0))) > len_half.x()) return true;
 		    if(std::fabs(a.dot(Point(0.5,sqrt(3.0)/2.0,0.0))) > len_half.x()) return true;
 		    if(std::fabs(a.dot(Point(-0.5,sqrt(3.0)/2.0,0.0))) > len_half.x()) return true;
-                    break;
+		    break;
                 case OCTAHEDRON:
                     if ( std::fabs(a.x()) > len_half.x()) return true;
                     if ( std::fabs(a.y()) > len_half.y()) return true;
                     if ( std::fabs(a.z()) > len_half.z()) return true;
-                    break;
+		    break;
             }
             return false;
         }

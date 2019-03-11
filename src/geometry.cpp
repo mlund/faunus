@@ -127,6 +127,7 @@ namespace Faunus {
                         // z is scaled by 1/alpha/alpha, radius is scaled by alpha
                         alpha = sqrt( V / pow(getVolume(), 1./3.) );
                         s = { alpha, alpha, 1/(alpha*alpha) };
+                        radius = alpha*radius;
                         setLength( len.cwiseProduct(s) );
                         return s;
                     default:
@@ -208,13 +209,13 @@ namespace Faunus {
                 case OCTAHEDRON:
                     d = len.z(); // use circumradius
                     r2 = len_half.z()*len_half.z();
-                    {
+                    do {
                         do {
                             m.x() = (rand() - 0.5)*d;
                             m.y() = (rand() - 0.5)*d;
                             m.z() = (rand() - 0.5)*d;
                         } while ( m.squaredNorm() > r2 );
-                    }	while(Chameleon::collision(m));
+                    } while(Chameleon::collision(m));
                     break;
                 case HEXAGONAL:
                     double Ra = rand();
@@ -237,8 +238,8 @@ namespace Faunus {
 
         bool Chameleon::collision(const Point &a) const {
             double r2 = radius*radius;
-	    double sqrtThreeByTwo = std::sqrt(3.0)/2.0;
-	    double sqrtThreeI = 1.0/std::sqrt(3.0);
+            double sqrtThreeByTwo = std::sqrt(3.0)/2.0;
+            double sqrtThreeI = 1.0/std::sqrt(3.0);
             switch (type) {
                 case SPHERE:
                     return (a.squaredNorm()>r2) ? true : false;

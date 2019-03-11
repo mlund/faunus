@@ -150,10 +150,11 @@ namespace Faunus {
                         const Point unitvX = Point(1.0,0.0,0.0);
                         const Point unitvY = Point(0.5,sqrtThreeByTwo,0.0);
                         const Point unitvZ = Point(-0.5,sqrtThreeByTwo,0.0);
-                        if(a.dot(unitvX) > len_half.x())
-                            a = a - len.x()*unitvX;
-                        if(a.dot(unitvX) < -len_half.x())
-                            a = a + len.x()*unitvX;
+
+                        double tmp = a.dot(unitvX);
+                        if ( std::fabs(tmp) > len_half.x())
+                            a -= len.x() * anint(tmp * len_inv.x())*unitvX;
+
                         if(a.dot(unitvY) > len_half.x()) {
                             a = a - len.x()*unitvY;
                             if(a.dot(unitvX) < -len_half.x()) // Check that point did not get past x-limit
@@ -164,15 +165,13 @@ namespace Faunus {
                             if(a.dot(unitvX) > len_half.x()) // Check that point did not get past x-limit
                                 a = a - len.x()*unitvX;
                         }
-                        if(a.dot(unitvZ) > len_half.x())
-                            a = a - len.x()*unitvZ;
-                        if(a.dot(unitvZ) < -len_half.x())
-                            a = a + len.x()*unitvZ;
 
-                        if(a.z() > len_half.z())
-                            a.z() = a.z() - len.z();
-                        if(a.z() < -len_half.z())
-                            a.z() = a.z() + len.z();
+                        tmp = a.dot(unitvZ);
+                        if ( std::fabs(tmp) > len_half.x())
+                            a -= len.x() * anint(tmp * len_inv.x())*unitvZ;
+                        if ( std::fabs(a.z()) > len_half.z())
+                            a.z() -= len.z() * anint(a.z() * len_inv.z());
+
                     } else if ( type == OCTAHEDRON ) {
                         const double sqrtThreeI = 1.0/sqrt(3.0);
                         const Point unitvXYZ = Point(1.0,1.0,1.0)*sqrtThreeI;
@@ -183,56 +182,36 @@ namespace Faunus {
                         bool outside = false;
                         do {
                             outside = false;
-                            if(a.dot(unitvXYZ) > len_half.x()) {
-                                a = a - len.x()*unitvXYZ;
+                            double tmp = a.dot(unitvXYZ);
+                            if ( std::fabs(tmp) > len_half.x()) {
+                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXYZ;
                                 outside = true;
                             }
-                            if(a.dot(unitvXYZ) < -len_half.x()) {
-                                a = a + len.x()*unitvXYZ;
+                            tmp = a.dot(unitvXiYZ);
+                            if ( std::fabs(tmp) > len_half.x()) {
+                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXiYZ;
                                 outside = true;
                             }
-                            if(a.dot(unitvXiYZ) > len_half.x()) {
-                                a = a - len.x()*unitvXiYZ;
+                            tmp = a.dot(unitvXYiZ);
+                            if ( std::fabs(tmp) > len_half.x()) {
+                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXYiZ;
                                 outside = true;
                             }
-                            if(a.dot(unitvXiYZ) < -len_half.x()) {
-                                a = a + len.x()*unitvXiYZ;
-                                outside = true;
-                            }
-
-                            if(a.dot(unitvXYiZ) > len_half.x()) {
-                                a = a - len.x()*unitvXYiZ;
-                                outside = true;
-                            }
-                            if(a.dot(unitvXYiZ) < -len_half.x()) {
-                                a = a + len.x()*unitvXYiZ;
-                                outside = true;
-                            }
-                            if(a.dot(unitvXYZi) > len_half.x()) {
-                                a = a - len.x()*unitvXYZi;
-                                outside = true;
-                            }
-                            if(a.dot(unitvXYZi) < -len_half.x()) {
-                                a = a + len.x()*unitvXYZi;
+                            tmp = a.dot(unitvXYZi);
+                            if ( std::fabs(tmp) > len_half.x()) {
+                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXYZi;
                                 outside = true;
                             }
                         } while(outside);
 
-                        const Point unitvX = Point(1.0,0.0,0.0);
-                        const Point unitvY = Point(0.0,1.0,0.0);
-                        const Point unitvZ = Point(0.0,0.0,1.0);
-                        if(a.dot(unitvX) > len_half.y())
-                            a = a - len.y()*unitvX;
-                        if(a.dot(unitvX) < -len_half.y())
-                            a = a + len.y()*unitvX;
-                        if(a.dot(unitvY) > len_half.y())
-                            a = a - len.y()*unitvY;
-                        if(a.dot(unitvY) < -len_half.y())
-                            a = a + len.y()*unitvY;
-                        if(a.dot(unitvZ) > len_half.y())
-                            a = a - len.y()*unitvZ;
-                        if(a.dot(unitvZ) < -len_half.y())
-                            a = a + len.y()*unitvZ;
+                        if ( std::fabs(a.x()) > len_half.y())
+                            a.x() -= len.y() * anint(a.x() * len_inv.y());
+
+                        if ( std::fabs(a.y()) > len_half.y())
+                            a.y() -= len.y() * anint(a.y() * len_inv.y());
+
+                        if ( std::fabs(a.z()) > len_half.y())
+                            a.z() -= len.y() * anint(a.z() * len_inv.y());
                     }
                 } //!< Apply boundary conditions
 

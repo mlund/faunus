@@ -108,16 +108,35 @@ namespace Faunus {
                 return s.cwiseQuotient(len); // this will scale any point to new volume
             }
             
-            if (type==HEXAGONAL and method==ISOTROPIC) {
-		double oldradius = radius;
-                radius = std::sqrt(V/len.z()/2.0/std::sqrt(3.0)); // inner radius
-                setLength( { 2*radius, 2*radius, len.z() } );
+            if (type==HEXAGONAL) {
+                double alpha, oldradius, ratio;
+                Point s;
+                switch (method) {
+                    case ISOTROPIC:
+                        oldradius = radius;
+                        radius = std::cbrt( V / 2.0 / sqrt(3.0) / c2 ); // keep aspect ratio
+                        setLength( { 2*radius, 2*radius, c2*radius } );
+                        ratio = radius/oldradius;
+                        return {ratio,ratio,ratio}; // last term comes from keeping the aspect ratio
+                    case XY:
+                        oldradius = radius;
+                        radius = std::sqrt(V/len.z()/2.0/std::sqrt(3.0)); // inner radius
+                        setLength( { 2*radius, 2*radius, len.z() } );
+                        return {radius/oldradius, radius/oldradius, 1};
+                    case ISOCHORIC:
+                        // z is scaled by 1/alpha/alpha, radius is scaled by alpha
+                        alpha = sqrt( V / pow(getVolume(), 1./3.) );
+                        s = { alpha, alpha, 1/(alpha*alpha) };
+                        setLength( len.cwiseProduct(s) );
+                        return s;
+                    default:
+                        throw std::runtime_error("unknown volume scaling method");
+                }
                 assert( fabs(getVolume()-V)<1e-6 );
-                return {radius/oldradius, radius/oldradius, 1};
             }
 
             if (type==CYLINDER and method==ISOTROPIC) {
-                double oldradius = radius;
+                const double oldradius = radius;
                 radius = std::sqrt( V / (pc::pi * len.z()) );
                 setLength( { pbc_disable*2*radius, pbc_disable*2*radius, len.z() } );
                 assert( fabs(getVolume()-V)<1e-6 );
@@ -125,7 +144,7 @@ namespace Faunus {
             }
 
             if (type==SPHERE and method==ISOTROPIC) {
-                double oldradius = radius;
+                const double oldradius = radius;
                 radius = std::cbrt(3*V/(4*pc::pi));
                 setLength( pbc_disable*2*Point(radius,radius,radius) ); // disable min. image in xyz
                 assert( std::fabs(getVolume()-V)<1e-6 && "error setting sphere volume");
@@ -185,14 +204,17 @@ namespace Faunus {
                 case HEXAGONAL:
 		    double Ra = rand();
 		    double Rb = rand();
-		    const Point unitvA = Point(sqrt(3.0)/2.0,0.5,0.0);
-		    const Point unitvB = Point(sqrt(3.0)/2.0,-0.5,0.0);
-		    double R = d/std::sqrt(3.0);
+		    const double sqrtThree = sqrt(3.0);
+		    const Point unitvA = Point(sqrtThree/2.0,0.5,0.0);
+		    const Point unitvB = Point(sqrtThree/2.0,-0.5,0.0);
+		    double R = d/sqrtThree;
 		    Point p = R*unitvA*Ra+R*unitvB*Rb;
 		    if(2.0*p.x() > d) p.x() = p.x() - d;
 		    double theta = pc::pi/3.0*std::floor(6.0*rand());
-		    m.x() = std::cos(theta)*p.x() - std::sin(theta)*p.y();
-		    m.y() = std::cos(theta)*p.y() + std::sin(theta)*p.x();
+		    const double cosT = std::cos(theta);
+		    const double sinT = std::sin(theta);
+		    m.x() = cosT*p.x() - sinT*p.y();
+		    m.y() = cosT*p.y() + sinT*p.x();
 		    m.z() = (rand() - 0.5)*len.z();
                     break;
             }
@@ -219,16 +241,16 @@ namespace Faunus {
                     if ( std::fabs(a.z()) > len_half.z()) return true;
                     break;
                 case HEXAGONAL:
-		    if ( std::fabs(a.z()) > len_half.z()) return true;
-		    if(std::fabs(a.dot(Point(1.0,0.0,0.0))) > len_half.x()) return true;
-		    if(std::fabs(a.dot(Point(0.5,sqrt(3.0)/2.0,0.0))) > len_half.x()) return true;
-		    if(std::fabs(a.dot(Point(-0.5,sqrt(3.0)/2.0,0.0))) > len_half.x()) return true;
-		    break;
+                    if(std::fabs(a.z()) > len_half.z()) return true;
+                    if(std::fabs(a.dot(Point(1.0,0.0,0.0))) > len_half.x()) return true;
+                    if(std::fabs(a.dot(Point(0.5,sqrt(3.0)/2.0,0.0))) > len_half.x()) return true;
+                    if(std::fabs(a.dot(Point(-0.5,sqrt(3.0)/2.0,0.0))) > len_half.x()) return true;
+                    break;
                 case OCTAHEDRON:
                     if ( std::fabs(a.x()) > len_half.x()) return true;
                     if ( std::fabs(a.y()) > len_half.y()) return true;
                     if ( std::fabs(a.z()) > len_half.z()) return true;
-		    break;
+                    break;
             }
             return false;
         }

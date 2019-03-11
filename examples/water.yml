@@ -1,8 +1,8 @@
 #!/usr/bin/env yason.py
 temperature: 300
 random: {seed: fixed}
-geometry: {type: hexagonal, length: 18.6, radius: 10.0}
-mcloop: {macro: 10, micro: 10}
+geometry: {type: cuboid, length: 18.6}
+mcloop: {macro: 10, micro: 100}
 
 atomlist:
     - OW: {q: -0.8476, sigma: 3.166, eps: 0.650, mw: 15.999}
@@ -23,7 +23,7 @@ energy:
 
 moves:
     - moltransrot: {molecule: water, dp: 0.4, dprot: 0.4, repeat: N}
-    - volume: {dV: 0.0, method: isotropic}
+    - volume: {dV: 0.03, method: isotropic}
 
 analysis:
     - sanity: {nstep: 100}

@@ -82,7 +82,7 @@ void Faunus::Analysis::SystemEnergy::_to_json(Faunus::json &j) const {
     j = { {"file", file}, {"init",uinit}, {"final", energyFunc()} };
     if (cnt>0) {
         j["mean"] = uavg.avg();
-        j["Cv/R"] = u2avg.avg() - std::pow(uavg.avg(),2);
+        j["Cv/kB"] = u2avg.avg() - std::pow(uavg.avg(),2);
     }
     _roundjson(j,5);
     //normalize();

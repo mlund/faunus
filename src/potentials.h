@@ -678,10 +678,16 @@ namespace Faunus {
                                 double rmin2 = .5*(atoms[i].sigma + atoms[k].sigma);
                                 rmin2 = rmin2*rmin2;
                                 auto it = j.find("cutoff_g2g");
-                                if (it->is_number())
-                                    rmax2 = std::pow( it->get<double>(), 2 );
-                                else if (it->is_object())
-                                    rmax2 = std::pow( it->at("default").get<double>(), 2);
+                                if (j.count("cutoff_max")==1) {
+                                    rmax2 = std::pow( j.at("cutoff_max").get<double>(), 2);
+                                } else if (it != j.end()) {
+                                    if (it->is_number())
+                                        rmax2 = std::pow( it->get<double>(), 2 );
+                                    else if (it->is_object())
+                                        rmax2 = std::pow( it->at("default").get<double>(), 2);
+                                } else {
+                                    throw std::runtime_error("Specify cutoff_g2g or cutoff_max");
+                                }
                                 while (rmin2 >= 1e-2) {
                                     if (std::fabs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e6)
                                         rmin2 = rmin2 + 1e-2;

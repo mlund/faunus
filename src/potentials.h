@@ -457,7 +457,6 @@ namespace Faunus {
             double selfenergy_prefactor;
             double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
             int order;
-	    bool ellipse_cutoff;
 	    Point Rc_ellipse;
 
             void sfYukawa(const json &j);

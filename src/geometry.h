@@ -136,7 +136,7 @@ namespace Faunus {
                 void to_json(json &j) const;
 
                 inline void boundary( Point &a ) const override {
-		    if ( type == CUBOID or type == SPHERE or type == CYLINDER or type == SLIT ) {
+		    if ( type != HEXAGONAL ) {
 			if ( std::fabs(a.x()) > len_half.x())
 			    a.x() -= len.x() * anint(a.x() * len_inv.x());
 
@@ -145,7 +145,8 @@ namespace Faunus {
 
 			if ( std::fabs(a.z()) > len_half.z())
 			    a.z() -= len.z() * anint(a.z() * len_inv.z());
-		    } else if( type == HEXAGONAL ) {
+		    } else {
+			// type == HEXAGONAL
 			Point unitvX = Point(1.0,0.0,0.0);
 			Point unitvY = Point(0.5,sqrt(3.0)/2.0,0.0);
 			Point unitvZ = Point(-0.5,sqrt(3.0)/2.0,0.0);

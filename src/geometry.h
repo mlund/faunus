@@ -136,67 +136,127 @@ namespace Faunus {
                 void to_json(json &j) const;
 
                 inline void boundary( Point &a ) const override {
-		    if ( type != HEXAGONAL ) {
-			if ( std::fabs(a.x()) > len_half.x())
-			    a.x() -= len.x() * anint(a.x() * len_inv.x());
+                    if ( type != HEXAGONAL && type != OCTAHEDRON ) {
+                        if ( std::fabs(a.x()) > len_half.x())
+                            a.x() -= len.x() * anint(a.x() * len_inv.x());
 
-			if ( std::fabs(a.y()) > len_half.y())
-			    a.y() -= len.y() * anint(a.y() * len_inv.y());
+                        if ( std::fabs(a.y()) > len_half.y())
+                            a.y() -= len.y() * anint(a.y() * len_inv.y());
 
-			if ( std::fabs(a.z()) > len_half.z())
-			    a.z() -= len.z() * anint(a.z() * len_inv.z());
-		    } else {
-			// type == HEXAGONAL
-			Point unitvX = Point(1.0,0.0,0.0);
-			Point unitvY = Point(0.5,sqrt(3.0)/2.0,0.0);
-			Point unitvZ = Point(-0.5,sqrt(3.0)/2.0,0.0);
-			if(a.dot(unitvX) > len_half.x())
-			    a = a - len.x()*unitvX;
-			if(a.dot(unitvX) < -len_half.x())
-			    a = a + len.x()*unitvX;
-			if(a.dot(unitvY) > len_half.x()) {
-			    a = a - len.x()*unitvY;
-			    if(a.dot(unitvX) < -len_half.x()) // Check that point did not get past x-limit
-				a = a + len.x()*unitvX;
-			}
-			if(a.dot(unitvY) < -len_half.x()) {
-			    a = a + len.x()*unitvY;
-			    if(a.dot(unitvX) > len_half.x()) // Check that point did not get past x-limit
-				a = a - len.x()*unitvX;
-			}
-			if(a.dot(unitvZ) > len_half.x())
-			    a = a - len.x()*unitvZ;
-			if(a.dot(unitvZ) < -len_half.x())
-			    a = a + len.x()*unitvZ;
+                        if ( std::fabs(a.z()) > len_half.z())
+                            a.z() -= len.z() * anint(a.z() * len_inv.z());
+                    } else if ( type == HEXAGONAL ) {
+                        const double sqrtThreeByTwo = sqrt(3.0)/2.0;
+                        const Point unitvX = Point(1.0,0.0,0.0);
+                        const Point unitvY = Point(0.5,sqrtThreeByTwo,0.0);
+                        const Point unitvZ = Point(-0.5,sqrtThreeByTwo,0.0);
+                        if(a.dot(unitvX) > len_half.x())
+                            a = a - len.x()*unitvX;
+                        if(a.dot(unitvX) < -len_half.x())
+                            a = a + len.x()*unitvX;
+                        if(a.dot(unitvY) > len_half.x()) {
+                            a = a - len.x()*unitvY;
+                            if(a.dot(unitvX) < -len_half.x()) // Check that point did not get past x-limit
+                                a = a + len.x()*unitvX;
+                        }
+                        if(a.dot(unitvY) < -len_half.x()) {
+                            a = a + len.x()*unitvY;
+                            if(a.dot(unitvX) > len_half.x()) // Check that point did not get past x-limit
+                                a = a - len.x()*unitvX;
+                        }
+                        if(a.dot(unitvZ) > len_half.x())
+                            a = a - len.x()*unitvZ;
+                        if(a.dot(unitvZ) < -len_half.x())
+                            a = a + len.x()*unitvZ;
 
-			if(a.z() > len_half.z())
-			    a.z() = a.z() - len.z();
-			if(a.z() < -len_half.z())
-			    a.z() = a.z() + len.z();
-		    }
+                        if(a.z() > len_half.z())
+                            a.z() = a.z() - len.z();
+                        if(a.z() < -len_half.z())
+                            a.z() = a.z() + len.z();
+                    } else if ( type == OCTAHEDRON ) {
+                        const double sqrtThreeI = 1.0/sqrt(3.0);
+                        const Point unitvXYZ = Point(1.0,1.0,1.0)*sqrtThreeI;
+                        const Point unitvXiYZ = Point(1.0,1.0,-1.0)*sqrtThreeI;
+                        const Point unitvXYiZ = Point(1.0,-1.0,-1.0)*sqrtThreeI;
+                        const Point unitvXYZi = Point(1.0,-1.0,1.0)*sqrtThreeI;
+
+                        bool outside = false;
+                        do {
+                            outside = false;
+                            if(a.dot(unitvXYZ) > len_half.x()) {
+                                a = a - len.x()*unitvXYZ;
+                                outside = true;
+                            }
+                            if(a.dot(unitvXYZ) < -len_half.x()) {
+                                a = a + len.x()*unitvXYZ;
+                                outside = true;
+                            }
+                            if(a.dot(unitvXiYZ) > len_half.x()) {
+                                a = a - len.x()*unitvXiYZ;
+                                outside = true;
+                            }
+                            if(a.dot(unitvXiYZ) < -len_half.x()) {
+                                a = a + len.x()*unitvXiYZ;
+                                outside = true;
+                            }
+
+                            if(a.dot(unitvXYiZ) > len_half.x()) {
+                                a = a - len.x()*unitvXYiZ;
+                                outside = true;
+                            }
+                            if(a.dot(unitvXYiZ) < -len_half.x()) {
+                                a = a + len.x()*unitvXYiZ;
+                                outside = true;
+                            }
+                            if(a.dot(unitvXYZi) > len_half.x()) {
+                                a = a - len.x()*unitvXYZi;
+                                outside = true;
+                            }
+                            if(a.dot(unitvXYZi) < -len_half.x()) {
+                                a = a + len.x()*unitvXYZi;
+                                outside = true;
+                            }
+                        } while(outside);
+
+                        const Point unitvX = Point(1.0,0.0,0.0);
+                        const Point unitvY = Point(0.0,1.0,0.0);
+                        const Point unitvZ = Point(0.0,0.0,1.0);
+                        if(a.dot(unitvX) > len_half.y())
+                            a = a - len.y()*unitvX;
+                        if(a.dot(unitvX) < -len_half.y())
+                            a = a + len.y()*unitvX;
+                        if(a.dot(unitvY) > len_half.y())
+                            a = a - len.y()*unitvY;
+                        if(a.dot(unitvY) < -len_half.y())
+                            a = a + len.y()*unitvY;
+                        if(a.dot(unitvZ) > len_half.y())
+                            a = a - len.y()*unitvZ;
+                        if(a.dot(unitvZ) < -len_half.y())
+                            a = a + len.y()*unitvZ;
+                    }
                 } //!< Apply boundary conditions
 
                 inline Point vdist(const Point &a, const Point &b) const override {
                     Point r(a - b);
 
-		    if ( type == CUBOID or type == SPHERE or type == CYLINDER or type == SLIT ) {
-			if ( r.x() > len_half.x())
-			    r.x() -= len.x();
-			else if ( r.x() < -len_half.x())
-			    r.x() += len.x();
+                    if ( type == CUBOID or type == SPHERE or type == CYLINDER or type == SLIT ) {
+                        if ( r.x() > len_half.x())
+                            r.x() -= len.x();
+                        else if ( r.x() < -len_half.x())
+                            r.x() += len.x();
 
-			if ( r.y() > len_half.y())
-			    r.y() -= len.y();
-			else if ( r.y() < -len_half.y())
-			    r.y() += len.y();
+                        if ( r.y() > len_half.y())
+                            r.y() -= len.y();
+                        else if ( r.y() < -len_half.y())
+                            r.y() += len.y();
 
-			if ( r.z() > len_half.z())
-			    r.z() -= len.z();
-			else if ( r.z() < -len_half.z())
-			    r.z() += len.z();
-		    } else if( type == HEXAGONAL ) {
-			boundary(r);
-		    }
+                        if ( r.z() > len_half.z())
+                            r.z() -= len.z();
+                        else if ( r.z() < -len_half.z())
+                            r.z() += len.z();
+                    } else if( type == HEXAGONAL or type == OCTAHEDRON ) {
+                        boundary(r);
+                    }
                     return r;
                 }
 
@@ -302,7 +362,7 @@ namespace Faunus {
                 }
                 CHECK( containerOverlap==false );
             }
-            
+
             SUBCASE("hexagonal") {
                 json j = {  {"type","hexagonal"}, {"radius",1.0}, {"length", 1.0/2.0/std::sqrt(3.0)} };
                 geo = j;
@@ -354,14 +414,14 @@ namespace Faunus {
                 }
                 CHECK( containerOverlap==false );
             }
-       }
+        }
 #endif
 
         /*
-                void unwrap( Point &a, const Point &ref ) const {
-                    a = vdist(a, ref) + ref;
-                } //!< Remove PBC with respect to a reference point
-*/
+           void unwrap( Point &a, const Point &ref ) const {
+           a = vdist(a, ref) + ref;
+           } //!< Remove PBC with respect to a reference point
+         */
         enum class weight { MASS, CHARGE, GEOMETRIC };
 
         template<typename Titer, typename Tparticle=typename Titer::value_type, typename weightFunc>

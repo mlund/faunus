@@ -22,6 +22,7 @@ namespace Faunus {
         bool dV=false;    //!< Set to true if there's a volume change
         double all=false; //!< Set to true if *everything* has changed
         bool dN=false;    //!< True if the number of atomic or molecular species has changed
+        bool moved2moved=true; //!< If several groups are moved, should they interact with each other?
 
         struct data {
             bool dNatomic=false;    //!< True if the number of atomic molecules has changed
@@ -38,8 +39,7 @@ namespace Faunus {
 
         std::vector<data> groups; //!< Touched groups by index in group vector
 
-        auto touchedGroupIndex() {
-            // skitfunktion
+        inline auto touchedGroupIndex() {
             return ranges::view::transform(groups, [](data &i) -> int {return i.index;});
         } //!< List of moved groups (index)
 
@@ -48,6 +48,7 @@ namespace Faunus {
             dV=false;
             all=false;
             dN=false;
+            moved2moved=true;
             groups.clear();
             assert(empty());
         } //!< Clear all change data
@@ -78,14 +79,6 @@ namespace Faunus {
     }
 #endif
  
-    /* currently not used for anything
-    struct SpaceBase {
-        virtual Geometry::GeometryBase& getGeometry()=0;
-        virtual void clear()=0;
-        virtual void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC)=0;
-    };
-    */
-
     /**
      * @brief Helper class for range-based for-loops over *active* particles
      *
@@ -194,6 +187,7 @@ namespace Faunus {
                     }
 
                     groups.push_back(g);
+                    assert( groups.back().begin() == g.begin());
                     assert( in.size() == groups.back().capacity() );
                 }
             } //!< Safely add particles and corresponding group to back

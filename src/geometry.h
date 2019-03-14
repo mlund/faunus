@@ -356,8 +356,8 @@ namespace Faunus {
 
                 // check that geometry is properly enscribed in a cuboid
                 Point L = geo.getLength();
-                CHECK( L.x() == Approx(2.0) );
-                CHECK( L.y() == Approx(2.0) );
+                CHECK( L.x() == Approx(1.0) );
+                CHECK( L.y() == Approx(1.0) );
                 CHECK( L.z() == Approx(1.0/2.0/std::sqrt(3.0)) );
 
                 // check random position

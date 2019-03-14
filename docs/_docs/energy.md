@@ -95,8 +95,10 @@ It is straight forward to add more by editing the class
 Below is a description of possible pair-potentials and their configuration.
 
 `energy`               | $u_{ij}$
----------------------- | ------------------------------------------
-`nonbonded`            | Any combination of pair potentials (slow!)
+---------------------- | ------------------------------------------------------
+`nonbonded`            | Any combination of (tabulated) pair potentials
+`nonbonded_cached`     | Any combination of pair potentials (only intergroup!)
+`nonbonded_exact`      | Any combination of pair potentials (slow!)
 `nonbonded_coulomblj`  | `coulomb`+`lennardjones`
 `nonbonded_coulombwca` | `coulomb`+`wca`
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)

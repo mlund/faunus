@@ -1,95 +1,103 @@
 {
- "analysis": [
-  {
-   "systemenergy": {
-    "file": "energy.dat",
-    "final": [
-     -13.014839105764253
-    ],
-    "init": -13.762,
-    "mean": -14.216,
-    "nstep": 100,
-    "relative time": 0.00225,
-    "samples": 100
-   }
-  },
-  {
-   "savestate": {
-    "file": "confout.pqr"
-   }
-  },
-  {
-   "savestate": {
-    "file": "state.json"
-   }
-  }
- ],
- "energy": [
-  {
-   "hamiltonian": [
-    {
-     "nonbonded": {
-      "cutoff_g2g": null,
-      "pairpot": {
-       "default": [
+    "analysis": [
         {
-         "lennardjones": {
-          "mixing": "LB"
-         }
+            "systemenergy": {
+                "Cv/kB": 3.5804,
+                "file": "energy.dat",
+                "final": [
+                    -2.435134976901417
+                ],
+                "init": -3.9501,
+                "mean": -2.9095,
+                "nstep": 100,
+                "samples": 100
+            }
         },
         {
-         "coulomb": {
-          "cutoff": 50,
-          "epsr": 80,
-          "type": "plain"
-         }
+            "savestate": {
+                "file": "confout.pqr"
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
         }
-       ]
-      }
-     }
-    }
-   ]
-  }
- ],
- "geometry": {
-  "type": "cuboid",
-  "length": [
-   50.0,
-   50.0,
-   50.0
-  ]
- },
- "git revision": "139a54d (2018-08-24)",
- "groups": [
-  {
-   "salt": {
-    "capacity": 40,
-    "index": "0-40",
-    "size": 40
-   }
-  }
- ],
- "moves": [
-  {
-   "transrot": {
-    "acceptance": 0.654,
-    "dir": [
-     1.0,
-     1.0,
-     1.0
     ],
-    "molecule": "salt",
-    "molid": 0,
-    "moves": 400000,
-    "relative time": 0.817,
-    "repeat": 40,
-    "√⟨r²⟩": 11.1
-   }
-  }
- ],
- "number of groups": 1,
- "number of particles": 40,
- "reactionlist": null,
- "relative drift": 3.355917829710387e-15,
- "temperature": 300.0
+    "compiler": "4.2.1 Compatible Apple LLVM 10.0.0 (clang-1000.11.45.5)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": {
+                            "salt salt": null
+                        },
+                        "pairpot": {
+                            "default": [
+                                {
+                                    "lennardjones": {
+                                        "mixing": "LB"
+                                    }
+                                },
+                                {
+                                    "coulomb": {
+                                        "cutoff": 100,
+                                        "debyelength": 7,
+                                        "epsr": 80,
+                                        "type": "yukawa"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "relative time": 0.3175889157413659
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            50.0,
+            50.0,
+            50.0
+        ],
+        "type": "cuboid"
+    },
+    "git revision": "083bdeba (2019-03-12)",
+    "groups": [
+        {
+            "salt": {
+                "index": [
+                    0,
+                    39
+                ],
+                "size": 40
+            }
+        }
+    ],
+    "last move": "transrot",
+    "moves": [
+        {
+            "transrot": {
+                "acceptance": 0.717,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "salt",
+                "molid": 0,
+                "moves": 400000,
+                "relative time": 0.856,
+                "repeat": 40,
+                "√⟨r²⟩": 12.4
+            }
+        }
+    ],
+    "number of groups": 1,
+    "number of particles": 40,
+    "reactionlist": null,
+    "relative drift": 4.159684332635808e-15,
+    "temperature": 300.0
 }

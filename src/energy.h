@@ -1730,10 +1730,13 @@ namespace Faunus {
                                         push_back<Energy::NonbondedCached<Tspace,CoulombLJ>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded")
+                                        push_back<Energy::Nonbonded<Tspace,TabulatedPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+                                    
+                                    if (it.key()=="nonbonded_exact")
                                         push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded_cached")
-                                        push_back<Energy::NonbondedCached<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+                                        push_back<Energy::NonbondedCached<Tspace,TabulatedPotential<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded_coulombwca")
                                         push_back<Energy::Nonbonded<Tspace,CoulombWCA>>(it.value(), spc);

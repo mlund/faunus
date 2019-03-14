@@ -1,46 +1,58 @@
 #!/usr/bin/env yason.py
-comment: |
-    Three-bead membrane model ala Deserno.
-    More information: doi:10/chqzjk
-
-temperature: 293
-random: {seed: default}
-geometry: {type: cuboid, length: [74.952, 74.952, 100]}
-mcloop: {macro: 10, micro: 100}
-
+comment: "3-bead Cooke lipid model. More information: doi:10/chqzjk"
+temperature: 298
+random: {seed: fixed}
+geometry: {type: cuboid, length: [85, 85, 170]}
+mcloop: {macro: 10, micro: 200}
 atomlist:
-    - TL: {sigma: 10, eps: 2.2147, dp: 2}
-    - HD: {sigma: 9.5, eps: 2.2147, dp: 2}
-
+    - TL: {sigma: 9, eps: 2.2525, dp: 2}
+    - HD: {sigma: 8.55, eps: 2.2525, dp: 2}
 moleculelist:
     - lipid:
-        structure: "lipid.xyz"
+        structure: 
+            - HD: [0,0,0]
+            - TL: [0,0,5]
+            - TL: [0,0,10]   
         bondlist:
-            - fene:     {index: [0,1], k: 0.6644, rmax: 15, sigma: 10, eps: 2.2147}
-            - fene:     {index: [1,2], k: 0.6644, rmax: 15, sigma: 10, eps: 2.2147}
-            - harmonic: {index: [0,2], k: 0.2215, req: 40}
-
+            - fene:     {index: [0,1], k: 0.8343, rmax: 13.5, sigma: 9, eps: 2.2525}
+            - fene:     {index: [1,2], k: 0.8343, rmax: 13.5, sigma: 9, eps: 2.2525}
+            - harmonic: {index: [0,2], k: 0.2781, req: 36}
 insertmolecules:
-    - lipid: {N: 100}
-
+    - lipid: {N: 150}
 energy:
-    - isobaric: {P/atm: 0}
+    - confine: {type: cuboid, low: [-1e5,-1e5,-30], 
+                 high: [1e5,1e5,30], k: 0,
+                 molecules: [lipid], com: True}
     - bonded: {}
-    - nonbonded_deserno:
-        cutoff_g2g: 42
-        wca: {mixing: LB}
-        cos2: {rc: 11.2246, eps: 2.2147, wc: 16}
-
+    - nonbonded_cached:
+        cutoff_g2g: 50
+        rmax: 25
+        default:
+            - wca: {mixing: LB}
+        TL TL:
+            - wca:
+                mixing: LB
+                custom:
+                    TL TL: {sigma: 9, eps: 2.2525}
+            - cos2: {rc: 10.1021, eps: 2.2525, wc: 14.4}
+        HD TL:
+            - wca:
+                mixing: LB
+                custom:
+                    HD TL: {sigma: 9, eps: 2.2525}
+        HD HD:
+            - wca:
+                mixing: LB
+                custom:
+                    HD HD: {sigma: 8.55, eps: 2.2525}
 moves:
     - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: 100}
     - transrot: {molecule: lipid, repeat: 100}
     - volume: {dV: 0.03, method: isochoric, repeat: 1}
-
 analysis:
-    - atomrdf: {file: rdf.dat, nstep: 10, dr: 0.1, name1: HD, name2: HD}
-    - systemenergy: {file: energy.dat, nstep: 10}
-    - xtcfile: {file: traj.xtc, nstep: 10}
-    - savestate: {file: confout.pqr}
     - savestate: {file: state.json}
-    - sanity: {nstep: 1}
-
+    - savestate: {file: confout.pqr}
+    - systemenergy: {file: energy.dat, nstep: 1e2}
+    - sliceddensity: {file: HD.dat, nstep: 1e2, atoms: [HD], dz: 0.5}
+    - sliceddensity: {file: TL.dat, nstep: 1e2, atoms: [TL], dz: 0.5}
+    - sanity: {nstep: 1e2}

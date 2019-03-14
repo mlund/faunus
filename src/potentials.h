@@ -582,12 +582,7 @@ namespace Faunus {
         template<class T /** particle type */>
             class FunctorPotential : public PairPotentialBase {
                 typedef std::function<double(const T&, const T&, const Point&)> uFunc;
-                PairMatrix<uFunc,true> umatrix; // matrix with potential for each atom pair
-                typedef Tabulate::TabulatorBase<double>::data Ttable; // data for tabulated potential
-                Tabulate::Andrea<double> tblt; // tabulated potential
-                PairMatrix<Ttable,true> tmatrix; // matrix with tabulated potential for each atom pair
                 json _j; // storage for input json
-                double rc2;
                 typedef CombinedPairPotential<Coulomb,HardSphere<T>> PrimitiveModel;
                 typedef CombinedPairPotential<Coulomb,WeeksChandlerAndersen<T>> PrimitiveModelWCA;
 
@@ -643,6 +638,9 @@ namespace Faunus {
                     return u;
                 } // parse json array of potentials to a single potential function object
 
+                protected:
+                PairMatrix<uFunc,true> umatrix; // matrix with potential for each atom pair
+
                 public:
 
                 FunctorPotential(const std::string &name="") {
@@ -650,21 +648,13 @@ namespace Faunus {
                 }
 
                 double operator()(const T &a, const T &b, const Point &r) const {
-                    double r2 = r.squaredNorm();
-                    if (r2 > tmatrix(a.id, b.id).rmax2)
-                        return 0.0;
-                    else if (r2 <= tmatrix(a.id, b.id).rmin2)
-                        return umatrix(a.id, b.id)(a, b, Point(0,0,sqrt(r2))); // pc::infty;
-                    else 
-                        return tblt.eval(tmatrix(a.id, b.id), r2);
+                        return umatrix(a.id, b.id)(a, b, r); // pc::infty;
                 }
 
                 void to_json(json &j) const override { j = _j; }
 
                 void from_json(const json &j) override {
-                    tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
                     _j = j;
-                    double rmax2 = pc::Nav;
                     umatrix = decltype(umatrix)( atoms.size(), combineFunc(j.at("default")) );
                     for (auto it=j.begin(); it!=j.end(); ++it) {
                         auto atompair = words2vec<std::string>(it.key()); // is this for a pair of atoms?
@@ -673,6 +663,43 @@ namespace Faunus {
                             umatrix.set(ids[0], ids[1], combineFunc(it.value()));
                         }
                     }
+                }
+            };
+
+        /**
+         * @brief Tabulated arbitrary potentials for specific atom types
+         *
+         * This maintains a species x species matrix as in FunctorPotential 
+         * but with tabulated pair potentials to improve performance.
+         *
+         */
+        template<class T /** particle type */>
+            class TabulatedPotential : public FunctorPotential<T> {
+                typedef Tabulate::TabulatorBase<double>::data Ttable; // data for tabulated potential
+                PairMatrix<Ttable,true> tmatrix; // matrix with tabulated potential for each atom pair
+                Tabulate::Andrea<double> tblt; // tabulated potential
+
+                public:
+
+                TabulatedPotential(const std::string &name="") {
+                    PairPotentialBase::name = name;
+                }
+
+                double operator()(const T &a, const T &b, const Point &r) const {
+                    double r2 = r.squaredNorm();
+                    if (r2 >= tmatrix(a.id, b.id).rmax2)
+                        return 0.0;
+                    else if (r2 <= tmatrix(a.id, b.id).rmin2)
+                        return this->umatrix(a.id, b.id)(a, b, r); // pc::infty; 
+                    else 
+                        return tblt.eval(tmatrix(a.id, b.id), r2);
+                }
+
+                void from_json(const json &j) override {
+                    FunctorPotential<T>::from_json(j);
+                    tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
+                    double u_at_rmin = j.value("u_at_rmin",20);
+                    double u_at_rmax = j.value("u_at_rmax",1e-6);
                     for (size_t i=0; i<atoms.size(); ++i) {
                         for (size_t k=0; k<=i; ++k) {
                            if (atoms[i].implicit==false and atoms[k].implicit==false) {
@@ -680,44 +707,49 @@ namespace Faunus {
                                 T b = atoms.at(k);
                                 double rmin2 = .5*(atoms[i].sigma + atoms[k].sigma);
                                 rmin2 = rmin2*rmin2;
+                                double rmax2 = rmin2*100;
                                 auto it = j.find("cutoff_g2g");
-                                if (j.count("cutoff_max")==1) {
-                                    rmax2 = std::pow( j.at("cutoff_max").get<double>(), 2);
+                                if (j.count("rmax")==1) {
+                                    rmax2 = std::pow( j.at("rmax").get<double>(), 2);
                                 } else if (it != j.end()) {
                                     if (it->is_number())
                                         rmax2 = std::pow( it->get<double>(), 2 );
                                     else if (it->is_object())
                                         rmax2 = std::pow( it->at("default").get<double>(), 2);
-                                } else {
-                                    throw std::runtime_error("Specify cutoff_g2g or cutoff_max");
                                 }
                                 while (rmin2 >= 1e-2) {
-                                    if (std::fabs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e6)
+                                    double u = std::fabs(this->umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2))));
+                                    if (u > u_at_rmin*1.1)
                                         rmin2 = rmin2 + 1e-2;
-                                    else if (std::fabs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2)))) > 1e5)
-                                        break;
-                                    else
+                                    if (u < u_at_rmin/1.1)
                                         rmin2 = rmin2 - 1e-2;
+                                    else
+                                        break;
                                 }
                                 while (rmax2 >= 1e-2) {
-                                    if (std::fabs(umatrix(i,k)(a, b, Point(0,0,sqrt(rmax2)))) > pc::epsilon_dbl)
+                                    double u = std::fabs(this->umatrix(i,k)(a, b, Point(0,0,sqrt(rmax2))));
+                                    if (u > u_at_rmax)
+                                        rmax2 = rmax2 + 1e-2;
+                                    else
                                         break;
-                                    rmax2 = rmax2 - 1e-2;
                                 }
-                                Ttable knotdata = tblt.generate( [&](double r2) { return umatrix(i,k)(a, b, Point(0,0,sqrt(r2))); }, rmin2, rmax2);
+                                Ttable knotdata = tblt.generate( [&](double r2) { return this->umatrix(i,k)(a, b, Point(0,0,sqrt(r2))); }, rmin2, rmax2);
                                 tmatrix.set(i, k, knotdata);
-                                std::ofstream file(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file
-                                file << "# Separation\tTabulated\tOriginal\n";
-                                double r2 = rmin2;
-                                while (r2 < rmax2) {
-                                    r2 = r2 + 1e-2;
-                                    file << sqrt(r2) << "\t" << tblt.eval(tmatrix(i, k), r2) << "\t" << umatrix(i,k)(a, b, Point(0,0,sqrt(r2))) << "\n";
+                                if (j.value("to_disk",false)) {
+                                    std::ofstream file(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file
+                                    file << "# Separation\tTabulated\tOriginal\n";
+                                    double r2 = rmin2 + 1e-2;
+                                    while (r2 < rmax2) {
+                                        file << sqrt(r2) << "\t" << tblt.eval(tmatrix(i, k), r2) << "\t" << this->umatrix(i,k)(a, b, Point(0,0,sqrt(r2))) << "\n";
+                                        r2 = r2 + 1e-2;
+                                    }
                                 }
                             }
                         }
                     }
                 }
             };
+
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] FunctorPotential")

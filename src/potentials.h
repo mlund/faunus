@@ -688,25 +688,24 @@ namespace Faunus {
                 inline double operator()(const T &a, const T &b, const Point &r) const {
                     double r2 = r.squaredNorm();
                     const Ttable& knots = tmatrix(a.id, b.id);
-                    if (r2 > knots.rmax2)
+                    if (r2 >= knots.rmax2)
                         return 0.0;
-                    else if (r2 < knots.rmin2) {
+                    else if (r2 <= knots.rmin2) {
                         double u_rmin = tblt.eval(knots, knots.rmin2+0.01);
                         if (u_rmin>0) // if positive, assume extreme repulsion
                             return pc::infty;
-                        else
+                        else // if negative, we have no clue, so better to be exact
                             return this->umatrix(a.id, b.id)(a, b, r); // exact energy
                         //return pc::infty; // ~2 x speedup
                         //return this->umatrix(a.id, b.id)(a, b, r); 
                     }
-
-                    return tblt.eval(knots, r2);
+                    return tblt.eval(knots, r2); // we are in splined interval
                 }
 
                 void from_json(const json &j) override {
                     FunctorPotential<T>::from_json(j);
                     tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
-                        double u_at_rmin = j.value("u_at_rmin",20);
+                    double u_at_rmin = j.value("u_at_rmin",20);
                     double u_at_rmax = j.value("u_at_rmax",1e-6);
 
                     // build matrix of spline data, each element corresponding

@@ -677,7 +677,7 @@ namespace Faunus {
             class TabulatedPotential : public FunctorPotential<T> {
                 typedef Tabulate::TabulatorBase<double>::data Ttable; // data for tabulated potential
                 PairMatrix<Ttable,true> tmatrix; // matrix with tabulated potential for each atom pair
-                Tabulate::Andrea<double> tblt; // tabulated potential
+                Tabulate::Andrea<double> tblt; // spline class
 
                 public:
 
@@ -685,21 +685,32 @@ namespace Faunus {
                     PairPotentialBase::name = name;
                 }
 
-                double operator()(const T &a, const T &b, const Point &r) const {
+                inline double operator()(const T &a, const T &b, const Point &r) const {
                     double r2 = r.squaredNorm();
-                    if (r2 >= tmatrix(a.id, b.id).rmax2)
+                    const Ttable& knots = tmatrix(a.id, b.id);
+                    if (r2 > knots.rmax2)
                         return 0.0;
-                    else if (r2 <= tmatrix(a.id, b.id).rmin2)
-                        return this->umatrix(a.id, b.id)(a, b, r); // pc::infty; 
-                    else 
-                        return tblt.eval(tmatrix(a.id, b.id), r2);
+                    else if (r2 < knots.rmin2) {
+                        double u_rmin = tblt.eval(knots, knots.rmin2+0.01);
+                        if (u_rmin>0) // if positive, assume extreme repulsion
+                            return pc::infty;
+                        else
+                            return this->umatrix(a.id, b.id)(a, b, r); // exact energy
+                        //return pc::infty; // ~2 x speedup
+                        //return this->umatrix(a.id, b.id)(a, b, r); 
+                    }
+
+                    return tblt.eval(knots, r2);
                 }
 
                 void from_json(const json &j) override {
                     FunctorPotential<T>::from_json(j);
                     tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
-                    double u_at_rmin = j.value("u_at_rmin",20);
+                        double u_at_rmin = j.value("u_at_rmin",20);
                     double u_at_rmax = j.value("u_at_rmax",1e-6);
+
+                    // build matrix of spline data, each element corresponding
+                    // to a pair of atom types
                     for (size_t i=0; i<atoms.size(); ++i) {
                         for (size_t k=0; k<=i; ++k) {
                            if (atoms[i].implicit==false and atoms[k].implicit==false) {
@@ -717,32 +728,41 @@ namespace Faunus {
                                     else if (it->is_object())
                                         rmax2 = std::pow( it->at("default").get<double>(), 2);
                                 }
-                                while (rmin2 >= 1e-2) {
-                                    double u = std::fabs(this->umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2))));
-                                    if (u > u_at_rmin*1.1)
-                                        rmin2 = rmin2 + 1e-2;
-                                    if (u < u_at_rmin/1.1)
-                                        rmin2 = rmin2 - 1e-2;
+
+                                // adjust lower splining distance to match
+                                // the given energy threshold (u_at_min2)
+                                double dr = 1e-3;
+                                while (rmin2 >= dr) {
+                                    double u = std::fabs(this->umatrix(i,k)(a, b, {0,0,sqrt(rmin2)}));
+                                    if (u > u_at_rmin*1.01)
+                                        rmin2 = rmin2 + dr;
+                                    else if (u < u_at_rmin/1.01)
+                                        rmin2 = rmin2 - dr;
                                     else
                                         break;
                                 }
+
+                                assert(rmin2>=0);
+
                                 while (rmax2 >= 1e-2) {
-                                    double u = std::fabs(this->umatrix(i,k)(a, b, Point(0,0,sqrt(rmax2))));
+                                    double u = std::fabs(this->umatrix(i,k)(a, b, {0,0,sqrt(rmax2)}));
                                     if (u > u_at_rmax)
                                         rmax2 = rmax2 + 1e-2;
                                     else
                                         break;
                                 }
-                                Ttable knotdata = tblt.generate( [&](double r2) { return this->umatrix(i,k)(a, b, Point(0,0,sqrt(r2))); }, rmin2, rmax2);
+
+                                assert( rmin2 < rmax2 );
+
+                                Ttable knotdata = tblt.generate( [&](double r2) { return this->umatrix(i,k)(a, b, {0,0,sqrt(r2)}); }, rmin2, rmax2);
                                 tmatrix.set(i, k, knotdata);
                                 if (j.value("to_disk",false)) {
-                                    std::ofstream file(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file
-                                    file << "# Separation\tTabulated\tOriginal\n";
-                                    double r2 = rmin2 + 1e-2;
-                                    while (r2 < rmax2) {
-                                        file << sqrt(r2) << "\t" << tblt.eval(tmatrix(i, k), r2) << "\t" << this->umatrix(i,k)(a, b, Point(0,0,sqrt(r2))) << "\n";
-                                        r2 = r2 + 1e-2;
-                                    }
+                                    std::ofstream f(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file
+                                    f << "# r splined exact\n";
+                                    double dr = 0.01;
+                                    Point r = {dr,0,0}; // variable distance vector between particle a and b
+                                    for (; r.x()<sqrt(rmax2); r.x()+=dr)
+                                        f << r.x() << " " << operator()(a, b, r) << " " << this->umatrix(i,k)(a, b, r) << "\n";
                                 }
                             }
                         }

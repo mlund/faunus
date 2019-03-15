@@ -36,8 +36,8 @@ energy:
     - ...
 ~~~
 
-The keyword `maxenergy` can be used to stop energy evaluation when a large
-energy change (in kT) is observed which will most likely lead to rejection.
+The keyword `maxenergy` can be used to skip further energy evaluation if a term returns a large
+energy change (in kT), which will likely lead to rejection.
 The default value is _infinity_.
 
 **Note:**
@@ -57,8 +57,7 @@ a set of conditions exists to evaluate the acceptance of the proposed move:
 - always accept if the energy _difference_ is NaN (i.e. from infinity to minus infinity)
 
 **Note:**
-These conditions should be carefully considered if equilibrating a system far from equilibrium,
-particularly if using discontinuous potentials.
+These conditions should be carefully considered if equilibrating a system far from equilibrium.
 {: .notice--notice}
 
 
@@ -86,27 +85,32 @@ This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise add
 
 $$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
 
-**Note:** the pair-potential can be a combination of several potentials defined at runtime.
-However, for optimal performance we include a set of hard-coded combinations, defined at _compile time_.
-It is straight forward to add more by editing the class
-`Energy::Hamiltonian` found in `src/energy.h` and then re-compile.
-{: .notice--info}
+Using `nonbonded`, potentials can be arbitrarily mixed and customized for specific particle
+combinations. Internally, the potential is _splined_ in an interval [`rmin`,`rmax`] determined
+by the following policies:
 
-Below is a description of possible pair-potentials and their configuration.
+- `rmin` is decreased towards zero until the potential reaches `u_at_rmin=20` kT
+- `rmax` is increased until the potential reaches `u_at_rmax=1e-6` kT
+
+If outside the interval, infinity or zero is returned, respectively.
+Finally, the spline precision can be controlled with `utol=1e-5` kT.
+
+Below is a description of possible nonbonded methods. For simple potentials, the hard coded
+variants are often the fastest option. 
 
 `energy`               | $u_{ij}$
 ---------------------- | ------------------------------------------------------
-`nonbonded`            | Any combination of (tabulated) pair potentials
-`nonbonded_cached`     | Any combination of pair potentials (only intergroup!)
-`nonbonded_exact`      | Any combination of pair potentials (slow!)
-`nonbonded_coulomblj`  | `coulomb`+`lennardjones`
-`nonbonded_coulombwca` | `coulomb`+`wca`
+`nonbonded`            | Any combination of pair potentials (splined)
+`nonbonded_cached`     | Any combination of pair potentials (splined, only intergroup!)
+`nonbonded_exact`      | Any combination of pair potentials (slow, but exact)
+`nonbonded_coulomblj`  | `coulomb`+`lennardjones` (hard coded)
+`nonbonded_coulombwca` | `coulomb`+`wca` (hard coded)
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)
 `nonbonded_pmwca`      | `coulomb`+`wca` (fixed `type=plain`, `cutoff`$=\infty$)
 
 ### Mass Center Cut-offs
 
-For cut-off based pair-potentials working on large molecules, it can be very efficient to
+For cut-off based pair-potentials working between large molecules, it can be efficient to
 use mass center cut-offs between molecular groups, thus skipping all pair-interactions.
 A single cut-off can be used between all molecules (`default`), or specified for specific
 combinations:
@@ -391,7 +395,8 @@ and hydrophobic/hydrophilic interactions.
 This takes a user-defined expression and a list of constants to produce a runtime,
 custom pair-potential.
 While perhaps not as computationally efficient as hard-coded potentials, it is a
-convenient way to access alien potentials.
+convenient way to access alien potentials. Further, used in combination with `nonbonded`
+there is no overhead since all potentials are splined.
 
 `custom`     | Description
 ------------ | --------------------------------------------------------
@@ -399,7 +404,7 @@ convenient way to access alien potentials.
 `constants`  | User-defined constants
 `cutoff`     | Spherical cut-off distance
 
-The following illustrates how to define a custom Yukawa potential:
+The following illustrates how to define a Yukawa potential:
 
 ~~~ yaml
 custom:
@@ -422,7 +427,7 @@ In addition to user-defined constants, the following symbols are defined:
 `kT`       | Boltzmann's constant x temperature [J]
 `Nav`      | Avogadro's number [1/mol]
 `pi`       | Pi
-`q1`,`q2`  | particle charge [e]
+`q1`,`q2`  | particle charges [e]
 `r`        | particle-particle separation [angstrom]
 `Rc`       | Spherical cut-off [angstrom]
 `s1`,`s2`  | particle sigma [angstrom]

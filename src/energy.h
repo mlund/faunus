@@ -1730,7 +1730,13 @@ namespace Faunus {
                                         push_back<Energy::NonbondedCached<Tspace,CoulombLJ>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded")
+                                        push_back<Energy::Nonbonded<Tspace,TabulatedPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+                                    
+                                    if (it.key()=="nonbonded_exact")
                                         push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded_cached")
+                                        push_back<Energy::NonbondedCached<Tspace,TabulatedPotential<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded_coulombwca")
                                         push_back<Energy::Nonbonded<Tspace,CoulombWCA>>(it.value(), spc);
@@ -1740,15 +1746,6 @@ namespace Faunus {
 
                                     if (it.key()=="nonbonded_pmwca")
                                         push_back<Energy::Nonbonded<Tspace,PrimitiveModelWCA>>(it.value(), spc);
-
-                                    if (it.key()=="nonbonded_deserno")
-                                        push_back<Energy::NonbondedCached<Tspace,DesernoMembrane<typename Tspace::Tparticle>>>(it.value(), spc);
-
-                                    if (it.key()=="nonbonded_desernoAA")
-                                        push_back<Energy::NonbondedCached<Tspace,DesernoMembraneAA<typename Tspace::Tparticle>>>(it.value(), spc);
-
-                                    if (it.key()=="nonbonded_CookeRNA")
-                                        push_back<Energy::NonbondedCached<Tspace,CookeRNA<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);

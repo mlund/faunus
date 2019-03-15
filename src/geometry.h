@@ -99,7 +99,7 @@ namespace Faunus {
         }; //!< Base class for all geometries
 
         /**
-         * @brief Geometry class for spheres, cylinders, cuboids, slits
+         * @brief Geometry class for spheres, cylinders, cuboids, hexagonal prism, truncated octahedron, slits
          *
          * All geometries shares the same distance calculation where
          * PBC is disabled by artificially setting long sidelengths.
@@ -112,11 +112,11 @@ namespace Faunus {
          */
         class Chameleon : public GeometryBase {
             public:
-                enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT};
+                enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON};
                 Variant type;
             private:
                 /**
-                 * `pbc_disable` is used to disable PBC in `sphere`, `cylinder`, `slit` etc.
+                 * `pbc_disable` is used to disable PBC in `sphere`, `cylinder`, `hexagonal`, `octahedron`, `slit` etc.
                  * by scaling the (internal) box length by a large number.
                  */
                 static constexpr double pbc_disable=100;
@@ -140,35 +140,109 @@ namespace Faunus {
                 void to_json(json &j) const;
 
                 inline void boundary( Point &a ) const override {
-                    if ( std::fabs(a.x()) > len_half.x())
-                        a.x() -= len.x() * anint(a.x() * len_inv.x());
+                    if ( type != HEXAGONAL && type != OCTAHEDRON ) {
+                        if ( std::fabs(a.x()) > len_half.x())
+                            a.x() -= len.x() * anint(a.x() * len_inv.x());
 
-                    if ( std::fabs(a.y()) > len_half.y())
-                        a.y() -= len.y() * anint(a.y() * len_inv.y());
+                        if ( std::fabs(a.y()) > len_half.y())
+                            a.y() -= len.y() * anint(a.y() * len_inv.y());
 
-                    if ( std::fabs(a.z()) > len_half.z())
-                        a.z() -= len.z() * anint(a.z() * len_inv.z());
+                        if ( std::fabs(a.z()) > len_half.z())
+                            a.z() -= len.z() * anint(a.z() * len_inv.z());
+                    } else if ( type == HEXAGONAL ) {
+                        const double sqrtThreeByTwo = sqrt(3.0)/2.0;
+                        const Point unitvX = Point(1.0,0.0,0.0);
+                        const Point unitvY = Point(0.5,sqrtThreeByTwo,0.0);
+                        const Point unitvZ = Point(-0.5,sqrtThreeByTwo,0.0);
+
+                        double tmp = a.dot(unitvX);
+                        if ( std::fabs(tmp) > len_half.x())
+                            a -= len.x() * anint(tmp * len_inv.x())*unitvX;
+
+                        if(a.dot(unitvY) > len_half.x()) {
+                            a = a - len.x()*unitvY;
+                            if(a.dot(unitvX) < -len_half.x()) // Check that point did not get past x-limit
+                                a = a + len.x()*unitvX;
+                        }
+                        if(a.dot(unitvY) < -len_half.x()) {
+                            a = a + len.x()*unitvY;
+                            if(a.dot(unitvX) > len_half.x()) // Check that point did not get past x-limit
+                                a = a - len.x()*unitvX;
+                        }
+
+                        tmp = a.dot(unitvZ);
+                        if ( std::fabs(tmp) > len_half.x())
+                            a -= len.x() * anint(tmp * len_inv.x())*unitvZ;
+                        if ( std::fabs(a.z()) > len_half.z())
+                            a.z() -= len.z() * anint(a.z() * len_inv.z());
+
+                    } else if ( type == OCTAHEDRON ) {
+                        const double sqrtThreeI = 1.0/sqrt(3.0);
+                        const Point unitvXYZ = Point(1.0,1.0,1.0)*sqrtThreeI;
+                        const Point unitvXiYZ = Point(1.0,1.0,-1.0)*sqrtThreeI;
+                        const Point unitvXYiZ = Point(1.0,-1.0,-1.0)*sqrtThreeI;
+                        const Point unitvXYZi = Point(1.0,-1.0,1.0)*sqrtThreeI;
+
+                        bool outside = false;
+                        do {
+                            outside = false;
+                            double tmp = a.dot(unitvXYZ);
+                            if ( std::fabs(tmp) > len_half.x()) {
+                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXYZ;
+                                outside = true;
+                            }
+                            tmp = a.dot(unitvXiYZ);
+                            if ( std::fabs(tmp) > len_half.x()) {
+                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXiYZ;
+                                outside = true;
+                            }
+                            tmp = a.dot(unitvXYiZ);
+                            if ( std::fabs(tmp) > len_half.x()) {
+                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXYiZ;
+                                outside = true;
+                            }
+                            tmp = a.dot(unitvXYZi);
+                            if ( std::fabs(tmp) > len_half.x()) {
+                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXYZi;
+                                outside = true;
+                            }
+                        } while(outside);
+
+                        if ( std::fabs(a.x()) > len_half.y())
+                            a.x() -= len.y() * anint(a.x() * len_inv.y());
+
+                        if ( std::fabs(a.y()) > len_half.y())
+                            a.y() -= len.y() * anint(a.y() * len_inv.y());
+
+                        if ( std::fabs(a.z()) > len_half.y())
+                            a.z() -= len.y() * anint(a.z() * len_inv.y());
+                    }
                 } //!< Apply boundary conditions
 
                 inline Point vdist(const Point &a, const Point &b) const override {
                     Point r(a - b);
 
-                    if ( r.x() > len_half.x())
-                        r.x() -= len.x();
-                    else if ( r.x() < -len_half.x())
-                        r.x() += len.x();
+                    if ( type == CUBOID or type == SPHERE or type == CYLINDER or type == SLIT ) {
+                        if ( r.x() > len_half.x())
+                            r.x() -= len.x();
+                        else if ( r.x() < -len_half.x())
+                            r.x() += len.x();
 
-                    if ( r.y() > len_half.y())
-                        r.y() -= len.y();
-                    else if ( r.y() < -len_half.y())
-                        r.y() += len.y();
+                        if ( r.y() > len_half.y())
+                            r.y() -= len.y();
+                        else if ( r.y() < -len_half.y())
+                            r.y() += len.y();
 
-                    if ( r.z() > len_half.z())
-                        r.z() -= len.z();
-                    else if ( r.z() < -len_half.z())
-                        r.z() += len.z();
+                        if ( r.z() > len_half.z())
+                            r.z() -= len.z();
+                        else if ( r.z() < -len_half.z())
+                            r.z() += len.z();
+                    } else if( type == HEXAGONAL or type == OCTAHEDRON ) {
+                        boundary(r);
+                    }
                     return r;
                 }
+
         };
 
         void to_json(json&, const Chameleon&);
@@ -272,6 +346,31 @@ namespace Faunus {
                 CHECK( containerOverlap==false );
             }
 
+            SUBCASE("hexagonal") {
+                json j = {  {"type","hexagonal"}, {"radius",1.0}, {"length", 1.0/2.0/std::sqrt(3.0)} };
+                geo = j;
+                CHECK( geo.getVolume() == doctest::Approx( 1.0 ) );
+                CHECK( geo.collision({1.01,0,0}) == true);
+                CHECK( geo.collision({0.99,0,0}) == false);
+                CHECK( geo.collision({0.0,2.0/std::sqrt(3.0)+0.01,0}) == true);
+
+                // check that geometry is properly enscribed in a cuboid
+                Point L = geo.getLength();
+                CHECK( L.x() == Approx(1.0) );
+                CHECK( L.y() == Approx(1.0) );
+                CHECK( L.z() == Approx(1.0/2.0/std::sqrt(3.0)) );
+
+                // check random position
+                Point a;
+                bool containerOverlap=false;
+                for (int i=0; i<1e4; i++) {
+                    geo.randompos(a, slump);
+                    if (geo.collision(a))
+                        containerOverlap=true;
+                }
+                CHECK( containerOverlap==false );
+            }
+
             SUBCASE("sphere") {
                 geo = R"( { "type": "sphere", "radius": 2 } )"_json;
                 CHECK( geo.getVolume() == doctest::Approx( 4*pc::pi*8/3.0 ) );
@@ -298,14 +397,14 @@ namespace Faunus {
                 }
                 CHECK( containerOverlap==false );
             }
-       }
+        }
 #endif
 
         /*
-                void unwrap( Point &a, const Point &ref ) const {
-                    a = vdist(a, ref) + ref;
-                } //!< Remove PBC with respect to a reference point
-*/
+           void unwrap( Point &a, const Point &ref ) const {
+           a = vdist(a, ref) + ref;
+           } //!< Remove PBC with respect to a reference point
+         */
         enum class weight { MASS, CHARGE, GEOMETRIC };
 
         template<typename Titer, typename Tparticle=typename Titer::value_type, typename weightFunc>

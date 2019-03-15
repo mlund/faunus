@@ -417,164 +417,6 @@ namespace Faunus {
                     }
             };
 
-        template<class Tparticle>
-            class DesernoMembrane : public PairPotentialBase {
-
-                WeeksChandlerAndersen<Tparticle> wca;
-                CosAttract cos2;
-                int tail;
-
-                public:
-                DesernoMembrane(const std::string &name="dmembrane") {
-                    PairPotentialBase::name=name;
-                    PairPotentialBase::name.clear();
-                }
-
-                void from_json(const json &j) override {
-                    wca = j;
-                    cos2 = j;
-                    auto it = findName(atoms, "TL");
-                    if ( it!=atoms.end() )
-                        tail = it->id();
-                    else
-                        throw std::runtime_error("Atom type 'TL' is not defined.");
-                }
-                void to_json(json &j) const override {
-                    json _j;
-                    wca.to_json(j);
-                    cos2.to_json(_j);
-                    j = merge(j,_j);
-                }
-
-                double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
-                    double u=wca(a,b,r);
-                    if (a.id==tail and b.id==tail)
-                        u+=cos2(a,b,r);
-                    return u;
-                }
-            };
-
-        template<class Tparticle>
-            class DesernoMembraneAA : public PairPotentialBase {
-
-                WeeksChandlerAndersen<Tparticle> wca;
-                CosAttract cos2;
-                Polarizability<Tparticle> polar;
-                int tail;
-                int aa;
-
-                public:
-                DesernoMembraneAA(const std::string &name="dmembraneAA") {
-                    PairPotentialBase::name=name;
-                    PairPotentialBase::name.clear();
-                }
-
-                void from_json(const json &j) override {
-                    wca = j;
-                    cos2 = j;
-                    polar = j;
-                    auto it = findName(atoms, "TL");
-                    if ( it!=atoms.end() )
-                        tail = it->id();
-                    else
-                        throw std::runtime_error("Atom type 'TL' is not defined.");
-                    it = findName(atoms, "AA");
-                    if ( it!=atoms.end() )
-                        aa = it->id();
-                    else
-                        throw std::runtime_error("Atom type 'AA' is not defined.");
-
-                }
-                void to_json(json &j) const override {
-                    json _j;
-                    wca.to_json(j);
-                    cos2.to_json(_j);
-                    j = merge(j,_j);
-                    polar.to_json(_j);
-                    j = merge(j,_j);
-                }
-
-                double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
-                    double u=wca(a,b,r);
-                    if (a.id==tail and b.id==tail)
-                        u+=cos2(a,b,r);
-                    if (a.id==aa or b.id==aa) {
-                        u+=polar(a,b,r);
-                    }
-                    return u;
-                }
-            };
-
-        template<class Tparticle>
-            class CookeRNA : public PairPotentialBase {
-
-                CosAttract cos2;
-                Polarizability<Tparticle> polar;
-                std::vector<int> lipid, other;
-
-                public:
-                CookeRNA(const std::string &name="CookeRNA") {
-                    PairPotentialBase::name=name;
-                    PairPotentialBase::name.clear();
-                }
-
-                void from_json(const json &j) override {
-                    cos2 = j;
-                    polar = j;
-                    auto it = findName(atoms, "TL");
-                    if ( it!=atoms.end() )
-                        lipid.push_back(it->id());
-                    else
-                        throw std::runtime_error("Atom type 'TL' is not defined.");
-                    it = findName(atoms, "HD");
-                    if ( it!=atoms.end() )
-                        lipid.push_back(it->id());
-                    else
-                        throw std::runtime_error("Atom type 'HD' is not defined.");
-                    it = findName(atoms, "HTMA");
-                    if ( it!=atoms.end() )
-                        other.push_back(it->id());
-                    else
-                        throw std::runtime_error("Atom type 'HTMA' is not defined.");
-                    it = findName(atoms, "MP");
-                    if ( it!=atoms.end() )
-                        other.push_back(it->id());
-                    it = findName(atoms, "Cl");
-                    if ( it!=atoms.end() )
-                        other.push_back(it->id());
-                    it = findName(atoms, "Na");
-                    if ( it!=atoms.end() )
-                        other.push_back(it->id());
-                }
-                void to_json(json &j) const override {
-                    json _j;
-                    cos2.to_json(j);
-                    polar.to_json(_j);
-                    j = merge(j,_j);
-                }
-
-                double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
-                    double u=0;
-                    if (std::find(lipid.begin(),lipid.end(),a.id)!=lipid.end()) {
-                        if (a.id==lipid[0] and b.id==lipid[0]) {
-                            u+=cos2(a,b,r);
-                        } else {
-                            if (std::find(other.begin(),other.end(),b.id)!=other.end()) {
-                                u+=polar(a,b,r);
-                            }
-                        }
-                    } else {
-                        if (std::find(lipid.begin(),lipid.end(),b.id)!=lipid.end()) {
-                            if (std::find(other.begin(),other.end(),a.id)!=other.end()) {
-                                u+=polar(a,b,r);
-                            }
-                        }
-                    }
-                    return u;
-                }
-            };
-
-
         /**
          * @brief Finite Extensible Nonlinear Elastic (FENE) potential
          *
@@ -740,9 +582,7 @@ namespace Faunus {
         template<class T /** particle type */>
             class FunctorPotential : public PairPotentialBase {
                 typedef std::function<double(const T&, const T&, const Point&)> uFunc;
-                PairMatrix<uFunc,true> umatrix; // matrix with potential for each atom pair
                 json _j; // storage for input json
-
                 typedef CombinedPairPotential<Coulomb,HardSphere<T>> PrimitiveModel;
                 typedef CombinedPairPotential<Coulomb,WeeksChandlerAndersen<T>> PrimitiveModelWCA;
 
@@ -798,6 +638,9 @@ namespace Faunus {
                     return u;
                 } // parse json array of potentials to a single potential function object
 
+                protected:
+                PairMatrix<uFunc,true> umatrix; // matrix with potential for each atom pair
+
                 public:
 
                 FunctorPotential(const std::string &name="") {
@@ -805,7 +648,7 @@ namespace Faunus {
                 }
 
                 double operator()(const T &a, const T &b, const Point &r) const {
-                    return umatrix(a.id, b.id)(a, b, r);
+                        return umatrix(a.id, b.id)(a, b, r); // pc::infty;
                 }
 
                 void to_json(json &j) const override { j = _j; }
@@ -822,6 +665,91 @@ namespace Faunus {
                     }
                 }
             };
+
+        /**
+         * @brief Tabulated arbitrary potentials for specific atom types
+         *
+         * This maintains a species x species matrix as in FunctorPotential 
+         * but with tabulated pair potentials to improve performance.
+         *
+         */
+        template<class T /** particle type */>
+            class TabulatedPotential : public FunctorPotential<T> {
+                typedef Tabulate::TabulatorBase<double>::data Ttable; // data for tabulated potential
+                PairMatrix<Ttable,true> tmatrix; // matrix with tabulated potential for each atom pair
+                Tabulate::Andrea<double> tblt; // tabulated potential
+
+                public:
+
+                TabulatedPotential(const std::string &name="") {
+                    PairPotentialBase::name = name;
+                }
+
+                double operator()(const T &a, const T &b, const Point &r) const {
+                    double r2 = r.squaredNorm();
+                    if (r2 >= tmatrix(a.id, b.id).rmax2)
+                        return 0.0;
+                    else if (r2 <= tmatrix(a.id, b.id).rmin2)
+                        return this->umatrix(a.id, b.id)(a, b, r); // pc::infty; 
+                    else 
+                        return tblt.eval(tmatrix(a.id, b.id), r2);
+                }
+
+                void from_json(const json &j) override {
+                    FunctorPotential<T>::from_json(j);
+                    tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
+                    double u_at_rmin = j.value("u_at_rmin",20);
+                    double u_at_rmax = j.value("u_at_rmax",1e-6);
+                    for (size_t i=0; i<atoms.size(); ++i) {
+                        for (size_t k=0; k<=i; ++k) {
+                           if (atoms[i].implicit==false and atoms[k].implicit==false) {
+                                T a = atoms.at(i);
+                                T b = atoms.at(k);
+                                double rmin2 = .5*(atoms[i].sigma + atoms[k].sigma);
+                                rmin2 = rmin2*rmin2;
+                                double rmax2 = rmin2*100;
+                                auto it = j.find("cutoff_g2g");
+                                if (j.count("rmax")==1) {
+                                    rmax2 = std::pow( j.at("rmax").get<double>(), 2);
+                                } else if (it != j.end()) {
+                                    if (it->is_number())
+                                        rmax2 = std::pow( it->get<double>(), 2 );
+                                    else if (it->is_object())
+                                        rmax2 = std::pow( it->at("default").get<double>(), 2);
+                                }
+                                while (rmin2 >= 1e-2) {
+                                    double u = std::fabs(this->umatrix(i,k)(a, b, Point(0,0,sqrt(rmin2))));
+                                    if (u > u_at_rmin*1.1)
+                                        rmin2 = rmin2 + 1e-2;
+                                    if (u < u_at_rmin/1.1)
+                                        rmin2 = rmin2 - 1e-2;
+                                    else
+                                        break;
+                                }
+                                while (rmax2 >= 1e-2) {
+                                    double u = std::fabs(this->umatrix(i,k)(a, b, Point(0,0,sqrt(rmax2))));
+                                    if (u > u_at_rmax)
+                                        rmax2 = rmax2 + 1e-2;
+                                    else
+                                        break;
+                                }
+                                Ttable knotdata = tblt.generate( [&](double r2) { return this->umatrix(i,k)(a, b, Point(0,0,sqrt(r2))); }, rmin2, rmax2);
+                                tmatrix.set(i, k, knotdata);
+                                if (j.value("to_disk",false)) {
+                                    std::ofstream file(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file
+                                    file << "# Separation\tTabulated\tOriginal\n";
+                                    double r2 = rmin2 + 1e-2;
+                                    while (r2 < rmax2) {
+                                        file << sqrt(r2) << "\t" << tblt.eval(tmatrix(i, k), r2) << "\t" << this->umatrix(i,k)(a, b, Point(0,0,sqrt(r2))) << "\n";
+                                        r2 = r2 + 1e-2;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] FunctorPotential")

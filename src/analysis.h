@@ -544,11 +544,18 @@ namespace Faunus {
                 }
 
                 void _sample() override {
+                    Group<Tparticle> all(spc.p.begin(), spc.p.end());
+                    std::map<int, Point> cms;
+                    for (int id : ids) {
+                        auto slice = all.find_id(id);
+                        auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
+                        cms[id] = cm;
+                    }
                     // count atoms in slices
                     for (auto &g : spc.groups) // loop over all groups
                         for (auto &i : g)      // loop over active particles
                             if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end())
-                                N( i.pos.z() )++;
+                                N( i.pos.z() - cms[i.id].z() )++;
                 }
 
                 public:

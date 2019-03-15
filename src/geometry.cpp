@@ -53,7 +53,9 @@ namespace Faunus {
                 {"cuboid", CUBOID},
                 {"cylinder", CYLINDER},
                 {"slit", SLIT},
-                {"sphere", SPHERE}
+                {"sphere", SPHERE},
+                {"hexagonal", HEXAGONAL},
+                {"octahedron", OCTAHEDRON}
             }
         };
 
@@ -67,10 +69,12 @@ namespace Faunus {
 
         double Chameleon::getVolume(int) const {
             switch (type) {
-                case SPHERE:   return 4*pc::pi/3*radius*radius*radius;
-                case CUBOID:   return len.x()*len.y()*len.z();
-                case SLIT:     return len.x()*len.y()*len.z() / pbc_disable;
-                case CYLINDER: return pc::pi*radius*radius*len.z();
+                case SPHERE:     return 4*pc::pi/3*radius*radius*radius;
+                case CUBOID:     return len.x()*len.y()*len.z();
+                case SLIT:       return len.x()*len.y()*len.z() / pbc_disable;
+                case CYLINDER:   return pc::pi*radius*radius*len.z();
+                case HEXAGONAL:  return 2.0*std::sqrt(3.0)*radius*radius*len.z();
+                case OCTAHEDRON: return 8.0*std::sqrt(2.0)*radius*radius*radius; // for the truncated octahedron then 'radius' really is the side-length 'a'
             }
             assert(false);
             return 0;
@@ -104,8 +108,45 @@ namespace Faunus {
                 return s.cwiseQuotient(len); // this will scale any point to new volume
             }
 
+            if (type==HEXAGONAL) {
+                double alpha, oldradius, ratio;
+                Point s;
+                switch (method) {
+                    case ISOTROPIC:
+                        oldradius = radius;
+                        radius = std::cbrt( V / 4.0 / sqrt(3.0) / c2 ); // keep aspect ratio, note that c2 = h / ( 2*radius )
+                        setLength( { 2.0*radius, 2.0*radius, c2*2.0*radius } );
+                        ratio = radius/oldradius;
+                        return {ratio,ratio,ratio}; // last term comes from keeping the aspect ratio
+                    case XY:
+                        oldradius = radius;
+                        radius = std::sqrt(V/len.z()/2.0/std::sqrt(3.0)); // inner radius
+                        setLength( { 2.0*radius, 2.0*radius, len.z() } );
+                        return {radius/oldradius, radius/oldradius, 1};
+                    case ISOCHORIC:
+                        // z is scaled by 1/alpha/alpha, radius is scaled by alpha
+                        alpha = sqrt( V / pow(getVolume(), 1./3.) );
+                        s = { alpha, alpha, 1/(alpha*alpha) };
+                        radius = alpha*radius;
+                        setLength( len.cwiseProduct(s) );
+                        return s;
+                    default:
+                        throw std::runtime_error("unknown volume scaling method");
+                }
+                assert( fabs(getVolume()-V)<1e-6 );
+            }
+
+            if (type==OCTAHEDRON and method==ISOTROPIC) {
+                const double oldradius = radius; // for the truncated octahedron then 'radius' really is the side-length 'a'
+                radius = std::cbrt( V / 8.0 / std::sqrt(2.0) );
+                setLength( 2.0*radius*Point(std::sqrt(1.5),std::sqrt(2.0),std::sqrt(10.0)/2.0) ); // 2*( origin to regular hexagon, origin to square, and circumradius)
+                assert( fabs(getVolume()-V)<1e-6 );
+                const double ratio = radius/oldradius;
+                return {ratio,ratio,ratio};
+            }
+
             if (type==CYLINDER and method==ISOTROPIC) {
-                double oldradius = radius;
+                const double oldradius = radius;
                 radius = std::sqrt( V / (pc::pi * len.z()) );
                 setLength( { pbc_disable*2*radius, pbc_disable*2*radius, len.z() } );
                 assert( fabs(getVolume()-V)<1e-6 );
@@ -113,7 +154,7 @@ namespace Faunus {
             }
 
             if (type==SPHERE and method==ISOTROPIC) {
-                double oldradius = radius;
+                const double oldradius = radius;
                 radius = std::cbrt(3*V/(4*pc::pi));
                 setLength( pbc_disable*2*Point(radius,radius,radius) ); // disable min. image in xyz
                 assert( std::fabs(getVolume()-V)<1e-6 && "error setting sphere volume");
@@ -127,10 +168,12 @@ namespace Faunus {
 
         Point Chameleon::getLength() const {
             switch (type) {
-                case CUBOID:   return len;
-                case SLIT:     return {len.x(), len.y(), len.z() / pbc_disable};
-                case SPHERE:   return {2*radius,2*radius,2*radius};
-                case CYLINDER: return {2*radius,2*radius,len.z()};
+                case CUBOID:     return len;
+                case SLIT:       return {len.x(), len.y(), len.z() / pbc_disable};
+                case SPHERE:     return {2*radius,2*radius,2*radius};
+                case CYLINDER:   return {2*radius,2*radius,len.z()};
+                case HEXAGONAL:  return {radius,radius,len.z()};
+                case OCTAHEDRON: return {2.0*std::sqrt(1.5)*radius,2.0*std::sqrt(2.0)*radius,2.0*std::sqrt(10.0)/2.0*radius}; // 2*( origin to regular hexagon, origin to square, and circumradius )
             }
             assert(false);
             return Point();
@@ -163,11 +206,40 @@ namespace Faunus {
                     m.y() = (rand()-0.5) * len.y();
                     m.z() = (rand()-0.5) * len.z();
                     break;
+                case OCTAHEDRON:
+                    d = len.z(); // use circumradius
+                    r2 = len_half.z()*len_half.z();
+                    do {
+                        do {
+                            m.x() = (rand() - 0.5)*d;
+                            m.y() = (rand() - 0.5)*d;
+                            m.z() = (rand() - 0.5)*d;
+                        } while ( m.squaredNorm() > r2 );
+                    } while(Chameleon::collision(m));
+                    break;
+                case HEXAGONAL:
+                    double Ra = rand();
+                    double Rb = rand();
+                    const double sqrtThree = sqrt(3.0);
+                    const Point unitvA = Point(sqrtThree/2.0,0.5,0.0);
+                    const Point unitvB = Point(sqrtThree/2.0,-0.5,0.0);
+                    double R = d/sqrtThree;
+                    Point p = R*unitvA*Ra+R*unitvB*Rb;
+                    if(2.0*p.x() > d) p.x() = p.x() - d;
+                    double theta = pc::pi/3.0*std::floor(6.0*rand());
+                    double cosT = std::cos(theta);
+                    double sinT = std::sin(theta);
+                    m.x() = cosT*p.x() - sinT*p.y();
+                    m.y() = cosT*p.y() + sinT*p.x();
+                    m.z() = (rand() - 0.5)*len.z();
+                    break;
             }
         }
 
         bool Chameleon::collision(const Point &a) const {
             double r2 = radius*radius;
+            double sqrtThreeByTwo = std::sqrt(3.0)/2.0;
+            double sqrtThreeI = 1.0/std::sqrt(3.0);
             switch (type) {
                 case SPHERE:
                     return (a.squaredNorm()>r2) ? true : false;
@@ -185,6 +257,21 @@ namespace Faunus {
                     if ( std::fabs(a.x()) > len_half.x()) return true;
                     if ( std::fabs(a.y()) > len_half.y()) return true;
                     if ( std::fabs(a.z()) > len_half.z()) return true;
+                    break;
+                case HEXAGONAL:
+                    if(std::fabs(a.z()) > len_half.z()) return true;
+                    if(std::fabs(a.dot(Point(1.0,0.0,0.0))) > len_half.x()) return true;
+                    if(std::fabs(a.dot(Point(0.5,sqrtThreeByTwo,0.0))) > len_half.x()) return true;
+                    if(std::fabs(a.dot(Point(-0.5,sqrtThreeByTwo,0.0))) > len_half.x()) return true;
+                    break;
+                case OCTAHEDRON:
+                    if(std::fabs(a.dot(Point(1.0,0.0,0.0))) > len_half.y()) return true;
+                    if(std::fabs(a.dot(Point(0.0,1.0,0.0))) > len_half.y()) return true;
+                    if(std::fabs(a.dot(Point(0.0,0.0,1.0))) > len_half.y()) return true;
+                    if(std::fabs(a.dot(Point(1.0,1.0,1.0)*sqrtThreeI)) > len_half.x()) return true;
+                    if(std::fabs(a.dot(Point(1.0,1.0,-1.0)*sqrtThreeI)) > len_half.x()) return true;
+                    if(std::fabs(a.dot(Point(1.0,-1.0,-1.0)*sqrtThreeI)) > len_half.x()) return true;
+                    if(std::fabs(a.dot(Point(1.0,-1.0,1.0)*sqrtThreeI)) > len_half.x()) return true;
                     break;
             }
             return false;
@@ -209,7 +296,7 @@ namespace Faunus {
                         setLength( m.get<Point>() );
             }
 
-            if ( type == SPHERE or type == CYLINDER )
+            if ( type == SPHERE or type == CYLINDER or type == HEXAGONAL or type == OCTAHEDRON )
                 radius = j.at("radius").get<double>();
 
             if (type == SLIT)
@@ -218,9 +305,16 @@ namespace Faunus {
             if (type == SPHERE)
                 setLength( pbc_disable*2*Point(radius,radius,radius) ); // disable min. image in xyz
 
+            if (type == OCTAHEDRON)
+                setLength( {2.0*std::sqrt(1.5)*radius,2.0*std::sqrt(2.0)*radius,2.0*std::sqrt(10.0)/2.0*radius} ); // 2*( origin to regular hexagon, origin to square, and circumradius )
+
             if (type == CYLINDER) {
                 len.z() = j.at("length").get<double>();
                 setLength( {2*radius*pbc_disable, 2*radius*pbc_disable, len.z() } ); // disable min. image in xy
+            }
+            if (type == HEXAGONAL) {
+                len.z() = j.at("length").get<double>();
+                setLength( {2.0*radius, 2.0*radius, len.z() } );
             }
         }
 
@@ -238,6 +332,12 @@ namespace Faunus {
                     break;
                 case CUBOID:
                     j = {{"length",len}};
+                    break;
+                case HEXAGONAL:
+                    j = {{"radius",radius}, {"length",len.z()}};
+                    break;
+                case OCTAHEDRON:
+                    j = {{"radius",radius}};
                     break;
             }
             j["type"] = name;

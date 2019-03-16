@@ -3,7 +3,6 @@
 #include "core.h"
 #include "energy.h"
 #include "average.h"
-//#include "analysis.h"
 #include "potentials.h"
 #include "mpi.h"
 
@@ -1688,12 +1687,13 @@ start:
                             N_o = size(atomlist_o);
                             int dN = N_n - N_o;
                             double V_n = spc_n.geo.getVolume();
+                            double V_o = spc_o.geo.getVolume();
                             if (dN>0)
                                 for (int n=0; n < dN; n++)
                                     NoverO += std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
                             else 
                                 for (int n=0; n < (-dN); n++)
-                                    NoverO -= std::log( (N_o - n) / ( V_n * 1.0_molar ));
+                                    NoverO -= std::log( (N_o - n) / ( V_o * 1.0_molar ));
                         }
                     } else {
                         if ( m.dNatomic ) {
@@ -1705,26 +1705,25 @@ start:
                                 throw std::runtime_error("Only atomic molecules!");
                             // Below is safe due to the catches above
                             // add consistency criteria with m.atoms.size() == N
-                            N_n =  mollist_n.begin()->size();
-                            N_o =  mollist_o.begin()->size();
+                            N_n = mollist_n.begin()->size();
+                            N_o = mollist_o.begin()->size();
                         } else {
-                            if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic ) { // Molecular species
-                                auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
-                                auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
-                                N_n=size(mollist_n);
-                                N_o=size(mollist_o);
-                            }
+                            //if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic ) { // Molecular species
+                            auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ACTIVE);
+                            auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ACTIVE);
+                            N_n = size(mollist_n);
+                            N_o = size(mollist_o);
                         }
                         int dN = N_n - N_o;
                         if (dN!=0) {
                             double V_n = spc_n.geo.getVolume();
-                            //double V_o = spc_o.geo.getVolume();
+                            double V_o = spc_o.geo.getVolume();
                             if (dN>0)
                                 for (int n=0; n < dN; n++)
                                     NoverO += std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
                             else 
                                 for (int n=0; n < (-dN); n++)
-                                    NoverO -= std::log( (N_o - n) / ( V_n * 1.0_molar ));
+                                    NoverO -= std::log( (N_o - n) / ( V_o * 1.0_molar ));
                         }
                     }
                 }

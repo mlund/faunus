@@ -119,6 +119,12 @@ Currently, the number of `molecules` must be constant throughout simulation.
 
 This performs a fractional charge move on a specific atom.
 
+**Limitations:**
+This move changes the particle charge and therefore cannot be used with
+splined pair-potentials where the initial charges from are read from `atomlist`.
+Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
+{: .notice--info}
+
 
 ### Conformational Swap
 

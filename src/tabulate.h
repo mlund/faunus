@@ -195,13 +195,12 @@ namespace Faunus
                     size_t pos = (low - d.r2.begin() - 1);
                     size_t pos6 = 6 * pos;
                     T dz = r2 - d.r2[pos];
-                    T usum = d.c[pos6] +
+                    return d.c[pos6] +
                         dz * (d.c[pos6 + 1] +
                                 dz * (d.c[pos6 + 2] +
                                     dz * (d.c[pos6 + 3] +
                                         dz * (d.c[pos6 + 4] +
                                             dz * (d.c[pos6 + 5])))));
-                    return usum;
                 }
 
                 /**

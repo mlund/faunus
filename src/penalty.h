@@ -70,6 +70,13 @@ namespace Faunus {
                                         charge_sum += p.charge;
                                 return charge_sum;
                             };
+                        else if (property=="N") // number of particles
+                            f = [&groups=spc.groups]() {
+                                double N_sum=0;
+                                for (auto &g : groups) // loops over groups
+                                    N_sum += g.size();
+                                return N_sum;
+                            };
 
                         if (f==nullptr)
                             throw std::runtime_error(name + ": unknown property '" + property + "'" + usageTip["coords=[system]"]);

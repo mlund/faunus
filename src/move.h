@@ -748,7 +748,7 @@ namespace Faunus {
                                 if ( molecules<Tpvec>[m.first].atomic ) {
                                     auto git = mollist.begin();
                                     auto othermollist = otherspc->findMolecules(m.first, Tspace::ALL);  // implies that new and old are in sync
-                                    auto othergit=othermollist.begin();
+                                    auto othergit = othermollist.begin();
                                     Change::data d;
                                     d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                     d.internal = true;
@@ -758,7 +758,7 @@ namespace Faunus {
                                         // Shuffle back to end, both in trial and new
                                         auto nait = git->end()-1; //iterator to last atom
                                         int dist = Faunus::distance( ait, git->end() ); // distance to random atom from end
-                                        if ( Faunus::distance( ait, nait) > 1 ) {
+                                        if ( Faunus::distance(ait, nait) > 1 ) {
                                             std::iter_swap(ait, nait);
                                             std::iter_swap(othergit->end()-dist-N, othergit->end() - (1+N) );
                                         }
@@ -805,12 +805,12 @@ namespace Faunus {
                                     for ( int N=0; N <m.second; N++ ) {
                                         auto git = slump.sample(mollist.begin(), mollist.end());
                                         git->activate( git->inactive().begin(), git->inactive().end());
-                                        Point newpoint; // = git->cm;
-                                        spc.geo.randompos(newpoint, random);
-                                        git->translate( -git->cm, spc.geo.getBoundaryFunc() );
-                                        git->translate( newpoint, spc.geo.getBoundaryFunc() );
+                                        Point cm = git->cm;
+                                        git->translate( -cm, spc.geo.getBoundaryFunc() );
+                                        spc.geo.randompos(cm, slump);
+                                        git->translate( cm, spc.geo.getBoundaryFunc() );
                                         Point u = ranunit(slump);
-                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), u) );
+                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*(slump()-0.5), u) );
                                         git->rotate(Q, spc.geo.getBoundaryFunc());
                                         Change::data d;
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // Integer *index* of moved group

@@ -388,7 +388,6 @@ namespace Faunus {
                         for (auto &i : atoms) {
                             for (auto &j : atoms) {
                                 m_neutral->set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
-                                // titrating particles must be charged in the beginning
                                 m_charged->set(i.id(), j.id(), -lB/2 * ( pow(i.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
                                             pow(j.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
                             }

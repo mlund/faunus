@@ -273,8 +273,6 @@ $$
 
 where $a_j$ is the radius of the non-polar particle and $\alpha_j$ is set in
 the atom topology, `alphax`.
-If `alphaneutral=true` it is required that one of the particles
-is charged, while the other is neutral.
 For non-polar particles in a polar medium, $\alpha_i$ is a negative number.
 For more information, see
 [J. Israelachvili's book, Chapter 5.](https://www.sciencedirect.com/science/book/9780123751829)
@@ -287,7 +285,6 @@ For more information, see
 **Limitations:**
 Charge-polarizability products for each pair of species is evaluated once during
 construction and based on the defined atom types.
-Also, `alphaneutral` must be the same for all instances of the potential.
 {: .notice--info}
 
 ### Cosine Attraction

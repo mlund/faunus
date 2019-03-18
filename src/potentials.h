@@ -675,7 +675,15 @@ namespace Faunus {
          */
         template<class T /** particle type */>
             class TabulatedPotential : public FunctorPotential<T> {
-                typedef Tabulate::TabulatorBase<double>::data Ttable; // data for tabulated potential
+
+                // expand spline data class to hold information about
+                // the sign of values for r<rmin
+                struct Ttable : public Tabulate::TabulatorBase<double>::data {
+                    typedef Tabulate::TabulatorBase<double>::data base;
+                    bool isNegativeBelowRmin=false;
+                    Ttable() {};
+                    Ttable(const base &b) : base(b) {}
+                };
                 PairMatrix<Ttable,true> tmatrix; // matrix with tabulated potential for each atom pair
                 Tabulate::Andrea<double> tblt; // spline class
 
@@ -691,13 +699,10 @@ namespace Faunus {
                     if (r2 >= knots.rmax2)
                         return 0.0;
                     else if (r2 <= knots.rmin2) {
-                        double u_rmin = tblt.eval(knots, knots.rmin2+0.01);
-                        if (u_rmin>0) // if positive, assume extreme repulsion
-                            return pc::infty;
-                        else // if negative, we have no clue, so better to be exact
+                        if (knots.isNegativeBelowRmin) // if negative return
                             return this->umatrix(a.id, b.id)(a, b, r); // exact energy
-                        //return pc::infty; // ~2 x speedup
-                        //return this->umatrix(a.id, b.id)(a, b, r); 
+                        else
+                            return pc::infty; // assume extreme repulsion
                     }
                     return tblt.eval(knots, r2); // we are in splined interval
                 }
@@ -754,6 +759,11 @@ namespace Faunus {
                                 assert( rmin2 < rmax2 );
 
                                 Ttable knotdata = tblt.generate( [&](double r2) { return this->umatrix(i,k)(a, b, {0,0,sqrt(r2)}); }, rmin2, rmax2);
+
+                                // assert if potential is negative for r<rmin
+                                if (tblt.eval(knotdata, knotdata.rmin2+0.01) < 0)
+                                    knotdata.isNegativeBelowRmin=true;
+
                                 tmatrix.set(i, k, knotdata);
                                 if (j.value("to_disk",false)) {
                                     std::ofstream f(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file

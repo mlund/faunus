@@ -1708,7 +1708,6 @@ start:
                             N_n = mollist_n.begin()->size();
                             N_o = mollist_o.begin()->size();
                         } else {
-                            //if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic ) { // Molecular species
                             auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ACTIVE);
                             auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ACTIVE);
                             N_n = size(mollist_n);
@@ -1728,7 +1727,7 @@ start:
                     }
                 }
             }
-            return NoverO; // negative sign since Pref exp{-beta(dU)} = exp{-beta(dU -ln(Pref)}
+            return NoverO;
         }
 
 }//Faunus namespace

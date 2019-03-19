@@ -388,6 +388,7 @@ namespace Faunus {
                         for (auto &i : atoms) {
                             for (auto &j : atoms) {
                                 m_neutral->set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
+                                // titrating particles must be charged in the beginning
                                 m_charged->set(i.id(), j.id(), -lB/2 * ( pow(i.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
                                             pow(j.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
                             }
@@ -709,7 +710,7 @@ namespace Faunus {
                 void from_json(const json &j) override {
                     FunctorPotential<T>::from_json(j);
                     tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
-                    double u_at_rmin = j.value("u_at_rmin",100);
+                    double u_at_rmin = j.value("u_at_rmin",20);
                     double u_at_rmax = j.value("u_at_rmax",1e-6);
 
                     // build matrix of spline data, each element corresponding
@@ -734,7 +735,7 @@ namespace Faunus {
 
                                 // adjust lower splining distance to match
                                 // the given energy threshold (u_at_min2)
-                                double dr = 1e-2;
+                                double dr = 1e-3;
                                 while (rmin2 >= dr) {
                                     double u = std::fabs(this->umatrix(i,k)(a, b, {0,0,sqrt(rmin2)}));
                                     if (u > u_at_rmin*1.01)
@@ -747,10 +748,10 @@ namespace Faunus {
 
                                 assert(rmin2>=0);
 
-                                while (rmax2 >= dr) {
+                                while (rmax2 >= 1e-2) {
                                     double u = std::fabs(this->umatrix(i,k)(a, b, {0,0,sqrt(rmax2)}));
                                     if (u > u_at_rmax)
-                                        rmax2 = rmax2 + dr;
+                                        rmax2 = rmax2 + 1e-2;
                                     else
                                         break;
                                 }
@@ -760,13 +761,14 @@ namespace Faunus {
                                 Ttable knotdata = tblt.generate( [&](double r2) { return this->umatrix(i,k)(a, b, {0,0,sqrt(r2)}); }, rmin2, rmax2);
 
                                 // assert if potential is negative for r<rmin
-                                if (tblt.eval(knotdata, knotdata.rmin2+dr) < 0)
+                                if (tblt.eval(knotdata, knotdata.rmin2+0.01) < 0)
                                     knotdata.isNegativeBelowRmin=true;
 
                                 tmatrix.set(i, k, knotdata);
                                 if (j.value("to_disk",false)) {
                                     std::ofstream f(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file
                                     f << "# r splined exact\n";
+                                    double dr = 0.01;
                                     Point r = {dr,0,0}; // variable distance vector between particle a and b
                                     for (; r.x()<sqrt(rmax2); r.x()+=dr)
                                         f << r.x() << " " << operator()(a, b, r) << " " << this->umatrix(i,k)(a, b, r) << "\n";

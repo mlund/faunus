@@ -534,16 +534,14 @@ namespace Faunus {
                     }
 
                     void _move(Change &change) override {
-                        if (dV>0) {
-                            change.dV=true;
-                            change.all=true;
+                        if (dV > 0) {
+                            change.dV = true;
+                            change.all = true;
                             Vold = spc.geo.getVolume();
-                            if (method->second == Geometry::ISOCHORIC)
-                                Vold = std::pow(Vold,1.0/3.0); // volume is constant
                             Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
-                            deltaV = Vnew-Vold;
+                            deltaV = Vnew - Vold;
                             spc.scaleVolume(Vnew, method->second);
-                        } else deltaV=0;
+                        } else deltaV = 0;
                     }
 
                     void _accept(Change&) override {

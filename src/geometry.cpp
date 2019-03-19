@@ -97,7 +97,7 @@ namespace Faunus {
                         break;
                     case ISOCHORIC:
                         // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
-                        alpha = sqrt( V / pow(getVolume(), 1./3.) );
+                        alpha = std::cbrt( V / (c1*c2) ) / len.x();
                         s = { alpha, alpha, 1/(alpha*alpha) };
                         setLength( len.cwiseProduct(s) );
                         return s;
@@ -125,7 +125,7 @@ namespace Faunus {
                         return {radius/oldradius, radius/oldradius, 1};
                     case ISOCHORIC:
                         // z is scaled by 1/alpha/alpha, radius is scaled by alpha
-                        alpha = sqrt( V / pow(getVolume(), 1./3.) );
+                        alpha = std::cbrt( V / 4.0 / sqrt(3.0) / c2 ) / radius;
                         s = { alpha, alpha, 1/(alpha*alpha) };
                         radius = alpha*radius;
                         setLength( len.cwiseProduct(s) );
@@ -145,12 +145,26 @@ namespace Faunus {
                 return {ratio,ratio,ratio};
             }
 
-            if (type==CYLINDER and method==ISOTROPIC) {
-                const double oldradius = radius;
-                radius = std::sqrt( V / (pc::pi * len.z()) );
-                setLength( { pbc_disable*2*radius, pbc_disable*2*radius, len.z() } );
-                assert( fabs(getVolume()-V)<1e-6 );
-                return {radius/oldradius, radius/oldradius, 1};
+            if (type==CYLINDER) {
+                    double oldradius, alpha;
+                    Point s;
+                switch (method) {
+                    case ISOTROPIC:
+                        oldradius = radius;
+                        radius = std::sqrt( V / (pc::pi * len.z()) );
+                        setLength( { pbc_disable*2*radius, pbc_disable*2*radius, len.z() } );
+                        assert( fabs(getVolume()-V)<1e-6 );
+                        return {radius/oldradius, radius/oldradius, 1};
+                    case ISOCHORIC:
+                        // z is scaled by 1/alpha/alpha, radius is scaled by alpha
+                        alpha = std::sqrt( V / (pc::pi * len.z()) ) / radius;
+                        s = { pbc_disable*alpha, pbc_disable*alpha, 1/(alpha*alpha) };
+                        radius = alpha*radius;
+                        setLength( len.cwiseProduct(s) );
+                        return s;
+                    default:
+                        throw std::runtime_error("unsupported volume move for geometry");
+                }
             }
 
             if (type==SPHERE and method==ISOTROPIC) {
@@ -310,7 +324,7 @@ namespace Faunus {
 
             if (type == CYLINDER) {
                 len.z() = j.at("length").get<double>();
-                setLength( {2*radius*pbc_disable, 2*radius*pbc_disable, len.z() } ); // disable min. image in xy
+                setLength( {2.0*radius*pbc_disable, 2.0*radius*pbc_disable, len.z() } ); // disable min. image in xy
             }
             if (type == HEXAGONAL) {
                 len.z() = j.at("length").get<double>();

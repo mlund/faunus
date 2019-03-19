@@ -685,6 +685,7 @@ namespace Faunus {
                 };
                 PairMatrix<Ttable,true> tmatrix; // matrix with tabulated potential for each atom pair
                 Tabulate::Andrea<double> tblt; // spline class
+                bool equilibrate = false; // in equilibration runs return actual potential for r <= rmin
 
                 public:
 
@@ -698,7 +699,7 @@ namespace Faunus {
                     if (r2 >= knots.rmax2)
                         return 0.0;
                     else if (r2 <= knots.rmin2) {
-                        if (knots.isNegativeBelowRmin) // if negative return
+                        if (knots.isNegativeBelowRmin or equilibrate) // if negative or equilibration run return
                             return this->umatrix(a.id, b.id)(a, b, r); // exact energy
                         else
                             return pc::infty; // assume extreme repulsion
@@ -709,8 +710,9 @@ namespace Faunus {
                 void from_json(const json &j) override {
                     FunctorPotential<T>::from_json(j);
                     tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
-                    double u_at_rmin = j.value("u_at_rmin",100);
+                    double u_at_rmin = j.value("u_at_rmin",20);
                     double u_at_rmax = j.value("u_at_rmax",1e-6);
+                    equilibrate = j.value("equilibrate",false);
 
                     // build matrix of spline data, each element corresponding
                     // to a pair of atom types

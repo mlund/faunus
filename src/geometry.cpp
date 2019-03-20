@@ -158,7 +158,7 @@ namespace Faunus {
                     case ISOCHORIC:
                         // z is scaled by 1/alpha/alpha, radius is scaled by alpha
                         alpha = std::sqrt( V / (pc::pi * len.z()) ) / radius;
-                        s = { pbc_disable*alpha, pbc_disable*alpha, 1/(alpha*alpha) };
+                        s = { alpha, alpha, 1/(alpha*alpha) };
                         radius = alpha*radius;
                         setLength( len.cwiseProduct(s) );
                         return s;

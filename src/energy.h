@@ -318,7 +318,7 @@ namespace Faunus {
                         }
                     }
                     double energy(Change &change) override {
-                        if (change.dV || change.all) {
+                        if (change.dV || change.all || change.dN) {
                             double V = spc.geo.getVolume();
                             size_t N=0;
                             for (auto &g : spc.groups)
@@ -872,20 +872,20 @@ namespace Faunus {
                     /*
                      * Internal energy in group, calculating all with all or, if `index`
                      * is given, only a subset. Index specifies the internal index (starting
-                     * at zero) of changed particles within the group.
+                     * from zero) of changed particles within the group.
                      */
                     double g_internal(const Tgroup &g, const std::vector<int> &index=std::vector<int>()) {
                         using namespace ranges;
-                        double u=0;
+                        double u = 0;
                         if (index.empty() and not molecules<Tpvec>.at(g.id).rigid) // assume that all atoms have changed
                             for ( auto i = g.begin(); i != g.end(); ++i )
                                 for ( auto j=i; ++j != g.end(); )
                                     u += i2i(*i, *j);
-                        else { // only a subset have changed
+                        else { // only a subset has changed
                             auto fixed = view::ints( 0, int(g.size()) )
                                 | view::remove_if(
                                         [&index](int i){return std::binary_search(index.begin(), index.end(), i);});
-                            for (int i : index) {// moved<->static
+                            for (int i : index) { // moved<->static
                                 for (int j : fixed ) {
                                     u += i2i( *(g.begin()+i), *(g.begin()+j));
                                 }
@@ -947,7 +947,7 @@ namespace Faunus {
                                 for (size_t i=0; i<g1.size(); i++)
                                     for (size_t j=0; j<g2.size(); j++)
                                         u += i2i( *(g1.begin()+i), *(g2.begin()+j) );
-                            else {// only a subset of g1
+                            else { // only a subset of g1
                                 for (auto i : index)
                                     for (auto j=g2.begin(); j!=g2.end(); ++j)
                                         u += i2i( *(g1.begin()+i), *j);
@@ -1085,54 +1085,55 @@ namespace Faunus {
                                 return u;
                             }
 
-                            //
-                            if (change.dN) {
-                                auto moved = change.touchedGroupIndex(); // index of moved groups
-                                std::vector<int> Moved;
-                                for (auto i: moved)
-                                    Moved.push_back(i);
-                                std::sort( Moved.begin(), Moved.end() );
-                                auto fixed = view::ints( 0, int(spc.groups.size()) )
-                                    | view::remove_if(
-                                            [&Moved](int i){return std::binary_search(Moved.begin(), Moved.end(), i);}
-                                            ); // index of static groups
-                                for ( auto cg1 = change.groups.begin(); cg1 < change.groups.end() ; ++cg1 ) { // Loop over all changed groups
-                                    std::vector<int> ifiltered, jfiltered; // Active atoms
-                                    for (auto i: cg1->atoms) {
-                                        if ( i < spc.groups.at(cg1->index).size() )
-                                            ifiltered.push_back(i);
-                                    }
-                                    // Skip if all atomic molecules have been removed from both (never skip for polyatomic)
-                                    if ( not ( cg1->dNatomic && ifiltered.empty() ) )
-                                        for ( auto j : fixed) {
-                                            u += g2g( spc.groups.at(cg1->index), spc.groups[j], ifiltered, jfiltered );
-                                    }
-                                    for ( auto cg2 = cg1; ++cg2 != change.groups.end(); ) {
-                                        for (auto i: cg2->atoms)
-                                            if ( i < spc.groups.at(cg2->index).size() )
-                                                jfiltered.push_back(i);
-                                        // Skip if all atomic molecules have been removed from both (never skip for polyatomic)
-                                        if ( not ( (cg1->dNatomic && ifiltered.empty()) && (cg2->dNatomic && jfiltered.empty()) ) ) 
-                                            u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
-                                        jfiltered.clear();
-                                    }
-                                    if ( not ifiltered.empty() ) 
-                                        u += g_internal( spc.groups.at( cg1->index ), ifiltered );
-                                }
-                                return u;
-                            }
-
                             auto moved = change.touchedGroupIndex(); // index of moved groups
                             auto fixed = view::ints( 0, int(spc.groups.size()) )
                                 | view::remove_if(
                                         [&moved](int i){return std::binary_search(moved.begin(), moved.end(), i);}
                                         ); // index of static groups
 
+                            if (change.dN) {
+                                /*auto moved = change.touchedGroupIndex(); // index of moved groups
+                                std::vector<int> Moved;
+                                for (auto i: moved) {
+                                    Moved.push_back(i);
+                                }
+                                std::sort( Moved.begin(), Moved.end() );
+                                auto fixed = view::ints( 0, int(spc.groups.size()) )
+                                    | view::remove_if(
+                                            [&Moved](int i){return std::binary_search(Moved.begin(), Moved.end(), i);}
+                                            ); // index of static groups*/
+                                for ( auto cg1 = change.groups.begin(); cg1 < change.groups.end() ; ++cg1 ) { // Loop over all changed groups
+                                    std::vector<int> ifiltered, jfiltered; // Active atoms
+                                    for (auto i: cg1->atoms) {
+                                        if ( i < spc.groups.at(cg1->index).size() )
+                                            ifiltered.push_back(i);
+                                    }
+                                    // Skip if the group is empty
+                                    if ( not ifiltered.empty() )
+                                        for ( auto j : fixed )
+                                            u += g2g( spc.groups.at(cg1->index), spc.groups[j], ifiltered, jfiltered );
+
+                                    for ( auto cg2 = cg1; ++cg2 != change.groups.end(); ) {
+                                        for (auto i: cg2->atoms)
+                                            if ( i < spc.groups.at(cg2->index).size() )
+                                                jfiltered.push_back(i);
+                                        // Skip if both groups are empty
+                                        if ( not ifiltered.empty() && not jfiltered.empty() )
+                                            u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
+                                        jfiltered.clear();
+                                    }
+                                    if ( not ifiltered.empty() && cg1->dNatomic )
+                                        u += g_internal( spc.groups.at( cg1->index ), ifiltered );
+                                }
+                                return u;
+                            }
+
                             // moved<->moved
-                            if (change.moved2moved)
+                            if (change.moved2moved) {
                                 for ( auto i = moved.begin(); i != moved.end(); ++i )
                                     for ( auto j=i; ++j != moved.end(); )
                                         u += g2g( spc.groups[*i], spc.groups[*j] );
+                            }
 
                             // moved<->static
                             if (omp_enable and omp_g2g) {

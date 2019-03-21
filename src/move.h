@@ -3,7 +3,6 @@
 #include "core.h"
 #include "energy.h"
 #include "average.h"
-//#include "analysis.h"
 #include "potentials.h"
 #include "mpi.h"
 
@@ -535,16 +534,14 @@ namespace Faunus {
                     }
 
                     void _move(Change &change) override {
-                        if (dV>0) {
-                            change.dV=true;
-                            change.all=true;
+                        if (dV > 0) {
+                            change.dV = true;
+                            change.all = true;
                             Vold = spc.geo.getVolume();
-                            if (method->second == Geometry::ISOCHORIC)
-                                Vold = std::pow(Vold,1.0/3.0); // volume is constant
                             Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
-                            deltaV = Vnew-Vold;
+                            deltaV = Vnew - Vold;
                             spc.scaleVolume(Vnew, method->second);
-                        } else deltaV=0;
+                        } else deltaV = 0;
                     }
 
                     void _accept(Change&) override {
@@ -749,7 +746,7 @@ namespace Faunus {
                                 if ( molecules<Tpvec>[m.first].atomic ) {
                                     auto git = mollist.begin();
                                     auto othermollist = otherspc->findMolecules(m.first, Tspace::ALL);  // implies that new and old are in sync
-                                    auto othergit=othermollist.begin();
+                                    auto othergit = othermollist.begin();
                                     Change::data d;
                                     d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                     d.internal = true;
@@ -759,7 +756,7 @@ namespace Faunus {
                                         // Shuffle back to end, both in trial and new
                                         auto nait = git->end()-1; //iterator to last atom
                                         int dist = Faunus::distance( ait, git->end() ); // distance to random atom from end
-                                        if ( Faunus::distance( ait, nait) > 1 ) {
+                                        if ( Faunus::distance(ait, nait) > 1 ) {
                                             std::iter_swap(ait, nait);
                                             std::iter_swap(othergit->end()-dist-N, othergit->end() - (1+N) );
                                         }
@@ -806,12 +803,12 @@ namespace Faunus {
                                     for ( int N=0; N <m.second; N++ ) {
                                         auto git = slump.sample(mollist.begin(), mollist.end());
                                         git->activate( git->inactive().begin(), git->inactive().end());
-                                        Point newpoint; // = git->cm;
-                                        spc.geo.randompos(newpoint, random);
-                                        git->translate( -git->cm, spc.geo.getBoundaryFunc() );
-                                        git->translate( newpoint, spc.geo.getBoundaryFunc() );
+                                        Point cm = git->cm;
+                                        git->translate( -cm, spc.geo.getBoundaryFunc() );
+                                        spc.geo.randompos(cm, slump);
+                                        git->translate( cm, spc.geo.getBoundaryFunc() );
                                         Point u = ranunit(slump);
-                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), u) );
+                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*(slump()-0.5), u) );
                                         git->rotate(Q, spc.geo.getBoundaryFunc());
                                         Change::data d;
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // Integer *index* of moved group
@@ -1688,12 +1685,13 @@ start:
                             N_o = size(atomlist_o);
                             int dN = N_n - N_o;
                             double V_n = spc_n.geo.getVolume();
+                            double V_o = spc_o.geo.getVolume();
                             if (dN>0)
                                 for (int n=0; n < dN; n++)
                                     NoverO += std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
                             else 
                                 for (int n=0; n < (-dN); n++)
-                                    NoverO -= std::log( (N_o - n) / ( V_n * 1.0_molar ));
+                                    NoverO -= std::log( (N_o - n) / ( V_o * 1.0_molar ));
                         }
                     } else {
                         if ( m.dNatomic ) {
@@ -1705,31 +1703,29 @@ start:
                                 throw std::runtime_error("Only atomic molecules!");
                             // Below is safe due to the catches above
                             // add consistency criteria with m.atoms.size() == N
-                            N_n =  mollist_n.begin()->size();
-                            N_o =  mollist_o.begin()->size();
+                            N_n = mollist_n.begin()->size();
+                            N_o = mollist_o.begin()->size();
                         } else {
-                            if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic ) { // Molecular species
-                                auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
-                                auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
-                                N_n=size(mollist_n);
-                                N_o=size(mollist_o);
-                            }
+                            auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ACTIVE);
+                            auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ACTIVE);
+                            N_n = size(mollist_n);
+                            N_o = size(mollist_o);
                         }
                         int dN = N_n - N_o;
                         if (dN!=0) {
                             double V_n = spc_n.geo.getVolume();
-                            //double V_o = spc_o.geo.getVolume();
+                            double V_o = spc_o.geo.getVolume();
                             if (dN>0)
                                 for (int n=0; n < dN; n++)
                                     NoverO += std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
                             else 
                                 for (int n=0; n < (-dN); n++)
-                                    NoverO -= std::log( (N_o - n) / ( V_n * 1.0_molar ));
+                                    NoverO -= std::log( (N_o - n) / ( V_o * 1.0_molar ));
                         }
                     }
                 }
             }
-            return NoverO; // negative sign since Pref exp{-beta(dU)} = exp{-beta(dU -ln(Pref)}
+            return NoverO;
         }
 
 }//Faunus namespace

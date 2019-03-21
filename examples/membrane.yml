@@ -11,8 +11,8 @@ moleculelist:
     - lipid:
         structure: 
             - HD: [0,0,0]
-            - TL: [0,0,5]
-            - TL: [0,0,10]   
+            - TL: [0,0,9]
+            - TL: [0,0,18]   
         bondlist:
             - fene:     {index: [0,1], k: 0.8343, rmax: 13.5, sigma: 9, eps: 2.2525}
             - fene:     {index: [1,2], k: 0.8343, rmax: 13.5, sigma: 9, eps: 2.2525}
@@ -27,6 +27,7 @@ energy:
     - nonbonded_cached:
         cutoff_g2g: 50
         rmax: 25
+        equilibrate: true
         default:
             - wca: {mixing: LB}
         TL TL:

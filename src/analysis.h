@@ -1055,8 +1055,9 @@ namespace Faunus {
 
                 void _sample() override {
                     V += spc.geo.getVolume( dim );
-                    for ( auto i = spc.p.begin(); i != spc.p.end(); ++i )
-                        for ( auto j=i; ++j != spc.p.end(); )
+                    auto active = spc.activeParticles();
+                    for ( auto i = active.begin(); i != active.end(); ++i )
+                        for ( auto j=i; ++j != active.end(); )
                             if (
                                     ( i->id==id1 && j->id==id2 ) ||
                                     ( i->id==id2 && j->id==id1 )
@@ -1092,8 +1093,11 @@ namespace Faunus {
 
                 void _sample() override {
                     V += spc.geo.getVolume( dim );
-                    for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i )
-                        for ( auto j=i; ++j != spc.groups.end(); )
+                    auto mollist1 = spc.findMolecules( id1, Tspace::ACTIVE );
+                    auto mollist2 = spc.findMolecules( id2, Tspace::ACTIVE );
+                    auto mollist = ranges::view::concat( mollist1, mollist2 );
+                    for ( auto i = mollist.begin(); i != mollist.end(); ++i )
+                        for ( auto j=i; ++j != mollist.end(); )
                             if (
                                     ( i->id==id1 && j->id==id2 ) ||
                                     ( i->id==id2 && j->id==id1 )

@@ -102,7 +102,7 @@ variants are often the fastest option.
 ---------------------- | ------------------------------------------------------
 `nonbonded`            | Any combination of pair potentials (splined)
 `nonbonded_cached`     | Any combination of pair potentials (splined, only intergroup!)
-`nonbonded_exact`      | Any combination of pair potentials (slow, but exact)
+`nonbonded_exact`      | Any combination of pair potentials (slower, but exact)
 `nonbonded_coulomblj`  | `coulomb`+`lennardjones` (hard coded)
 `nonbonded_coulombwca` | `coulomb`+`wca` (hard coded)
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)
@@ -243,6 +243,7 @@ To enable the correction, use the `akesson` keyword at the top level of `energy`
 
 `akesson`         | Keywords
 ----------------- | ------------------------------------------------------------
+`molecules`       | Array of molecules to operate on
 `epsr`            | Relative dielectric constant
 `nstep`           | Number of energy evalutations between updating $\rho(z)$
 `dz=0.2`          | $z$ resolution (angstrom)
@@ -429,6 +430,52 @@ In addition to user-defined constants, the following symbols are defined:
 `Rc`       | Spherical cut-off [angstrom]
 `s1`,`s2`  | particle sigma [angstrom]
 `T`        | temperature [K]
+
+## Custom External Potential
+
+This applies a custom expernal potential to atoms or molecular mass centra
+using the [ExprTk library](http://www.partow.net/programming/exprtk/index.html)
+syntax.
+
+`customexternal` | Description
+---------------- | --------------------------------------------------------
+`molecules`      | Array of molecules to operate on
+`com=false`      | Operate on mass-center instead of individual atoms?
+`function`       | Mathematical expression for the potential (units of kT)
+`constants`      | User-defined constants
+
+In addition to user-defined `constants`, the following symbols are available:
+
+`symbol`   | Description
+---------- | ---------------------------------------
+`e0`       | Vacuum permittivity [C^2/J/m]
+`inf`      | infinity
+`kB`       | Boltzmann's constant [J/K]
+`kT`       | Boltzmann's constant x temperature [J]
+`Nav`      | Avogadro's number [1/mol]
+`pi`       | Pi
+`q`        | particle charge [e]
+`s`        | particle sigma [angstrom]
+`x`,`y`,`z`| particle positions [angstrom]
+`T`        | temperature [K]
+
+If `com=true`, charge refers to the molecular net-charge, and `x,y,z` the mass-center coordinates.
+The following illustrates how to confine molecules in a spherical shell:
+
+~~~ yaml
+customexternal:
+    molecules: [water]
+    com: true
+    constants: {radius: 15, dr: 3}
+    function:
+        var r2 := x^2 + y^2 + z^2;
+        if ( r2 < radius^2 )
+           1000 * ( radius-sqrt(r2) )^2;
+        else if ( r2 > (radius+dr)^2 )
+           1000 * ( radius+dr-sqrt(r2) )^2;
+        else
+           0;
+~~~
 
 
 ## Bonded Interactions

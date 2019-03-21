@@ -27,7 +27,6 @@ energy:
     - nonbonded_cached:
         cutoff_g2g: 50
         rmax: 25
-        equilibrate: true
         default:
             - wca: {mixing: LB}
         TL TL:

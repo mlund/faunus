@@ -555,7 +555,7 @@ namespace Faunus {
                     for (auto &g : spc.groups) // loop over all groups
                         for (auto &i : g)      // loop over active particles
                             if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end())
-                                N( i.pos.z() - cms[i.id].z() )++;
+                                N( i.pos.z() )++;//- cms[i.id].z() )++;
                 }
 
                 public:

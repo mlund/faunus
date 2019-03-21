@@ -42,6 +42,7 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 
 The following are optional:
 
+- `jinja2`
 - `pandoc`
 - `pypandoc`
 - `BeautifulSoup4`

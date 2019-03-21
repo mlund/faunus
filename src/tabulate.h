@@ -69,7 +69,7 @@ namespace Faunus
                     {
                         std::vector<T> r2;  // r2 for intervals
                         std::vector<T> c;   // c for coefficents
-                        T rmin2, rmax2;     // useful to save these with table
+                        T rmin2=0, rmax2=0;     // useful to save these with table
                         bool empty() const { return r2.empty() && c.empty(); }
                     };
 

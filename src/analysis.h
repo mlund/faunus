@@ -529,12 +529,14 @@ namespace Faunus {
                 std::vector<std::string> names;
                 std::vector<int> ids;
                 std::string file;
+                bool wrt_cm;
                 double dz;
 
                 void _from_json(const json &j) override {
                     file = j.at("file").get<std::string>();
                     names = j.at("atoms").get<decltype(names)>(); // molecule names
                     ids = names2ids(atoms, names);     // names --> molids
+                    wrt_cm = j.value("wrt_cm", false);
                     dz = j.value("dz", 0.1);
                     N.setResolution(dz);
                 }
@@ -545,17 +547,21 @@ namespace Faunus {
 
                 void _sample() override {
                     Group<Tparticle> all(spc.p.begin(), spc.p.end());
-                    std::map<int, Point> cms;
-                    for (int id : ids) {
-                        auto slice = all.find_id(id);
-                        auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
-                        cms[id] = cm;
-                    }
+                    std::map<int, double> cm_z;
+                    if (wrt_cm)
+                        for (int id : ids) {
+                            auto slice = all.find_id(id);
+                            auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
+                            cm_z[id] = cm.z();
+                        }
                     // count atoms in slices
                     for (auto &g : spc.groups) // loop over all groups
                         for (auto &i : g)      // loop over active particles
                             if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end())
-                                N( i.pos.z() )++;//- cms[i.id].z() )++;
+                                if (wrt_cm)
+                                    N( i.pos.z() - cm_z[i.id] )++;
+                                else
+                                    N( i.pos.z() )++;
                 }
 
                 public:

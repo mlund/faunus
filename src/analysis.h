@@ -549,9 +549,9 @@ namespace Faunus {
                     Group<Tparticle> all(spc.p.begin(), spc.p.end());
                     std::map<int, double> cm_z;
                     for (int id : ids) {
-                        auto slice = all.find_id(id);
                         cm_z[id] = 0;
                         if (wrt_cm) {
+                            auto slice = all.find_id(id);
                             auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
                             cm_z[id] = cm.z();
                         }

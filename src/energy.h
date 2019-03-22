@@ -407,8 +407,9 @@ namespace Faunus {
                         double _energy(const Group<Tparticle> &g) const {
                             double u=0;
                             if (molids.find(g.id) != molids.end()) {
-                                if (COM) { // apply only to center of mass
-                                    Tparticle cm;
+                                if (COM and g.atomic==false) { // apply only to center of mass
+                                    Tparticle cm; // fake particle representin molecule
+                                    cm.charge = Geometry::monopoleMoment(g.begin(), g.end());
                                     cm.pos = g.cm;
                                     u = func(cm);
                                 } else {
@@ -432,10 +433,15 @@ namespace Faunus {
                             throw std::runtime_error(name + ": molecule list is empty");
                     }
 
+                    /*
+                     * @todo The `dN` check is very inefficient
+                     * as it calculates the external potential on *all*
+                     * particles.
+                     */
                     double energy(Change &change) override {
                         assert(func!=nullptr);
                         double u=0;
-                        if (change.dV or change.all) {
+                        if (change.dV or change.all or change.dN) {
                             for (auto &g : spc.groups) { // check all groups
                                 u += _energy(g);
                                 if (std::isnan(u))
@@ -462,6 +468,48 @@ namespace Faunus {
                         j["com"] = COM;
                     }
             }; //!< Base class for external potentials, acting on particles
+
+        /**
+         * @brief Custom external potential on molecules
+         */
+        template<typename Tspace, typename base=ExternalPotential<Tspace>>
+            class CustomExternal : public base { 
+                private:
+                    ExprFunction<double> expr;
+                    struct Data { // variables
+                        double q=0, x=0, y=0, z=0;
+                    };
+                    Data d;
+                    json jin; // initial json input
+
+                 public:
+                    CustomExternal(const json &j, Tspace &spc) : base(j,spc) {
+                        base::name = "customexternal";
+                        jin = j;
+                        auto &_j = jin["constants"];
+                        if (_j==nullptr)
+                            _j = json::object();
+                        _j["e0"] = pc::e0;
+                        _j["kB"] = pc::kB;
+                        _j["kT"] = pc::kT();
+                        _j["Nav"] = pc::Nav;
+                        _j["T"] = pc::temperature;
+                        expr.set(jin, {
+                                {"q",&d.q}, {"x",&d.x}, {"y",&d.y}, {"z",&d.z} } );
+                        base::func = [&](const typename Tspace::Tparticle &a) {
+                            d.x = a.pos.x();
+                            d.y = a.pos.y();
+                            d.z = a.pos.z();
+                            d.q = a.charge;
+                            return expr();
+                        };
+                    }
+
+                    void to_json(json &j) const override {
+                        j = jin;
+                        base::to_json(j);
+                    }
+            };
 
         /**
          * @brief Mean field electric potential from outside rectangular simulation box.
@@ -1118,7 +1166,7 @@ namespace Faunus {
                                             if ( i < spc.groups.at(cg2->index).size() )
                                                 jfiltered.push_back(i);
                                         // Skip if both groups are empty
-                                        if ( not ifiltered.empty() && not jfiltered.empty() )
+                                        if ( not (ifiltered.empty() && jfiltered.empty()) )
                                             u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
                                         jfiltered.clear();
                                     }
@@ -1750,6 +1798,9 @@ namespace Faunus {
 
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);
+
+                                    if (it.key()=="customexternal")
+                                        push_back<Energy::CustomExternal<Tspace>>(it.value(), spc);
 
                                     if (it.key()=="akesson")
                                         push_back<Energy::ExternalAkesson<Tspace>>(it.value(), spc);

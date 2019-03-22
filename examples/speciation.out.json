@@ -144,6 +144,6 @@
             }
         }
     ],
-    "relative drift": null,
+    "relative drift": 1e-11,
     "temperature": 300.0
 }

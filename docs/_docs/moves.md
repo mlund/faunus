@@ -92,18 +92,40 @@ atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 `cluster`      | Description
 -------------- | -----------------------
 `molecules`    | List of molecule names; `*` selects all 
-`threshold`    | Mass-center threshold for forming a cluster
+`threshold`    | Mass-center threshold for forming a cluster (number or object)
 `dir=[1,1,1]`  | Directions to translate
 `dprot`        | Rotational displacement (radians)
 `dp`           | Translational displacement
+`satellites`   | Subset of `molecules` that cannot be cluster centers
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
-between their mass centers. The move is associated with [bias](http://dx.doi.org/10/cj9gnn), such that
+between mass centers.
+The `threshold` can be specified as a single number or as a complete list of combinations.
+For simulations where small molecules cluster around a large macro-molecules it can be useful to use the `satellites`
+keyword which denotes a list of molecules that can be part of a cluster, but cannot be the cluster nucleus or
+starting point. All molecules listed in `satellites` must be part of `molecules`.
+
+The move is associated with [bias](http://dx.doi.org/10/cj9gnn), such that
 the cluster size and composition remain unaltered.
 If a cluster is larger than half the simulation box length, only translation will be attempted.
 
+Example:
+
+``` yaml
+cluster:
+   molecules: [protein, cations]
+   satellites: [cations]
+   threshold:
+      protein protein: 25
+      protein cations: 15
+      cations cations: 0
+   dp: 3
+   dprot: 1
+```
+
 **Restrictions:**
-Currently, the number of `molecules` must be constant throughout simulation.
+Currently, the number of `molecules` must be constant throughout simulation, i.e.
+grand canonical schemes are unsupported.
 {: .notice--info}
 
 

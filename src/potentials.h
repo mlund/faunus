@@ -302,6 +302,38 @@ namespace Faunus {
                 }
         };
 
+        template<class Tparticle>
+            class Hertz : public PairPotentialBase {
+                private:
+                    double E;
+                    std::shared_ptr<PairMatrix<double>> rr2; // matrix of (r1+r2)^2
+                public:
+                    Hertz(const std::string &name="hertz") {
+                        PairPotentialBase::name=name;
+                        rr2 = std::make_shared<PairMatrix<double>>();
+                        for (auto &i : atoms)
+                            for (auto &j : atoms)
+                                rr2->set( i.id(), j.id(), pow((i.sigma+j.sigma)/2,2));
+                    }
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        double r2 = r.squaredNorm();
+                        double m2 = rr2->operator()(a.id,b.id);
+                        double diameter = atoms[a.id].sigma;
+                        if(r2 <= m2)
+                            return E*pow((1-(sqrt(r2)/diameter)),(5./2.));
+                        return 0.0;
+                    }
+
+                    void from_json(const json &j) override {
+                        E = j.at("E").get<double>();
+                    }
+
+                    void to_json(json &j) const override { 
+                        j["E"] = E; 
+
+                    }
+            }; //!< Hertz potential
+
         /**
          * @brief Cosine attraction
          * @details This is an attractive potential used for coarse grained lipids
@@ -554,7 +586,7 @@ namespace Faunus {
                  {"A": { "q":1.0,  "r":3, "eps":0.1 }},
                  {"B": { "q":-1.0, "r":4, "eps":0.05 }} ]})"_json;
 
-            atoms = j["atomlist"].get<decltype(atoms)>();
+                atoms = j["atomlist"].get<decltype(atoms)>();
 
             Tparticle a,b;
             a = atoms[0];
@@ -564,7 +596,7 @@ namespace Faunus {
                 "constants": { "kappa": 30, "lB": 7},
                 "function": "lB * q1 * q2 / (s1+s2) * exp(-kappa/r) * kT + pi"})"_json;
 
-            CHECK( pot(a,b,{0,0,2}) == Approx( -7/(3.0+4.0) * std::exp(-30/2) * pc::kT() + pc::pi  ));
+                CHECK( pot(a,b,{0,0,2}) == Approx( -7/(3.0+4.0) * std::exp(-30/2) * pc::kT() + pc::pi  ));
         }
 #endif
 
@@ -600,10 +632,11 @@ namespace Faunus {
                     SASApotential,    // 6
                     WeeksChandlerAndersen<T>,// 7
                     PrimitiveModel,   // 8
-                    PrimitiveModelWCA // 9
+                    PrimitiveModelWCA, // 9
+                    Hertz<T> // 10
                         > potlist;
 
-                 uFunc combineFunc(const json &j) { 
+                uFunc combineFunc(const json &j) { 
                     uFunc u = [](const T&, const T&, const Point&){return 0.0;};
                     if (j.is_array()) {
                         for (auto &i : j) // loop over all defined potentials in array
@@ -622,6 +655,7 @@ namespace Faunus {
                                         else if (it.key()=="wca") _u = std::get<7>(potlist) = i;
                                         else if (it.key()=="pm") _u = std::get<8>(potlist) = it.value();
                                         else if (it.key()=="pmwca") _u = std::get<9>(potlist) = it.value();
+                                        else if (it.key()=="hertz") _u = std::get<10>(potlist) = it.value();
                                         // place additional potentials here...
                                     } catch (std::exception &e) {
                                         throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
@@ -647,7 +681,7 @@ namespace Faunus {
                 }
 
                 double operator()(const T &a, const T &b, const Point &r) const {
-                        return umatrix(a.id, b.id)(a, b, r); // pc::infty;
+                    return umatrix(a.id, b.id)(a, b, r); // pc::infty;
                 }
 
                 void to_json(json &j) const override { j = _j; }
@@ -718,7 +752,7 @@ namespace Faunus {
                     // to a pair of atom types
                     for (size_t i=0; i<atoms.size(); ++i) {
                         for (size_t k=0; k<=i; ++k) {
-                           if (atoms[i].implicit==false and atoms[k].implicit==false) {
+                            if (atoms[i].implicit==false and atoms[k].implicit==false) {
                                 T a = atoms.at(i);
                                 T b = atoms.at(k);
                                 double rmin2 = .5*(atoms[i].sigma + atoms[k].sigma);
@@ -791,7 +825,7 @@ namespace Faunus {
                  {"B": { "q":-1.0, "r":2.0, "eps":0.05 }},
                  {"C": { "r":1.0 }} ]})"_json;
 
-            atoms = j["atomlist"].get<decltype(atoms)>();
+                atoms = j["atomlist"].get<decltype(atoms)>();
 
             FunctorPotential<T> u = R"(
                 {
@@ -808,7 +842,7 @@ namespace Faunus {
                  }
                 )"_json;
 
-            Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
+                Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
             WeeksChandlerAndersen<T> wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
             T a = atoms[0];
@@ -1045,7 +1079,7 @@ namespace Faunus {
                  { "A": { "r": 1.5, "tension": 0.023} },
                  { "B": { "r": 2.1, "tfe": 0.98 } }]})"_json;
 
-            typedef Particle<Radius> T;
+                typedef Particle<Radius> T;
             atoms = j["atomlist"].get<decltype(atoms)>();
             T a,b;
             a.id = 0;

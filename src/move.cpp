@@ -74,6 +74,40 @@ namespace Faunus {
             assert( !m.name.empty() );
             m.to_json(j[m.name]);
         }
+
+        void ChainRotationMovebase::_from_json(const json &j) {
+            molname = j.at("molecule");
+            dprot = j.at("dprot");
+            allow_small_box = j.value("skiplarge", true); // todo rename the json attribute and make false default
+        }
+
+        void ChainRotationMovebase::_to_json(json &j) const {
+            using namespace u8;
+            j = {
+                    {"molecule", molname}, {"dprot", dprot},
+                    {u8::rootof + u8::bracket("r_cm" + u8::squared), std::sqrt(msqdispl.avg())}
+            };
+            if(small_box_encountered > 0) {
+                j["skipped"] = double(small_box_encountered) / cnt;  // todo rename the json attribute
+            }
+            _roundjson(j,3);
+        }
+
+        void ChainRotationMovebase::_move(Change &change) {
+            permit_move = true;
+            sqdispl = 0;
+            if (std::fabs(dprot) > 1e-9) {
+                if (select_segment() > 0) {
+                    double angle = dprot * (slump() - 0.5);
+                    rotate_segment(angle);
+                    store_change(change);
+                }
+            }
+        }
+
+        void ChainRotationMovebase::_accept(Change&) { msqdispl += sqdispl; }
+        void ChainRotationMovebase::_reject(Change&) { msqdispl += 0; }
+        double ChainRotationMovebase::bias(Change&, double, double) { return permit_move ? 0 : pc::infty; }
     }
 }
 

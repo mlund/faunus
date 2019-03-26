@@ -21,8 +21,8 @@ namespace Faunus {
     struct Change {
         bool dV=false;    //!< Set to true if there's a volume change
         double all=false; //!< Set to true if *everything* has changed
-        double du=0;      //!< Additional energy change not captured by Hamiltonian
         bool dN=false;    //!< True if the number of atomic or molecular species has changed
+        bool moved2moved=true; //!< If several groups are moved, should they interact with each other?
 
         struct data {
             bool dNatomic=false;    //!< True if the number of atomic molecules has changed
@@ -39,29 +39,27 @@ namespace Faunus {
 
         std::vector<data> groups; //!< Touched groups by index in group vector
 
-        auto touchedGroupIndex() {
-            // skitfunktion
+        inline auto touchedGroupIndex() {
             return ranges::view::transform(groups, [](data &i) -> int {return i.index;});
         } //!< List of moved groups (index)
 
         inline void clear()
         {
-            du=0;
             dV=false;
             all=false;
             dN=false;
+            moved2moved=true;
             groups.clear();
             assert(empty());
         } //!< Clear all change data
 
         inline bool empty() const
         {
-            if (du==0)
-                if (dV==false)
-                    if (all==false)
-                        if (groups.empty())
-                            if (dN==false)
-                                return true;
+            if (dV==false)
+                if (all==false)
+                    if (groups.empty())
+                        if (dN==false)
+                            return true;
             return false;
         } //!< Check if change object is empty
 
@@ -81,14 +79,6 @@ namespace Faunus {
     }
 #endif
  
-    /* currently not used for anything
-    struct SpaceBase {
-        virtual Geometry::GeometryBase& getGeometry()=0;
-        virtual void clear()=0;
-        virtual void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC)=0;
-    };
-    */
-
     /**
      * @brief Helper class for range-based for-loops over *active* particles
      *
@@ -193,10 +183,11 @@ namespace Faunus {
                         g.cm = Geometry::massCenter(in.begin(), in.end(), geo.getBoundaryFunc(), -in.begin()->pos);
                         Point cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
                         if (geo.sqdist(g.cm, cm)>1e-6)
-                            throw std::runtime_error("space: mass center error upon insertion. Molecule too large?\n");
+                            throw std::runtime_error("space: mass center error upon insertion. "s+molecules<Tpvec>.at(molid).name+" molecule too large?\n");
                     }
 
                     groups.push_back(g);
+                    assert( groups.back().begin() == g.begin());
                     assert( in.size() == groups.back().capacity() );
                 }
             } //!< Safely add particles and corresponding group to back

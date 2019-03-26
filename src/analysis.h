@@ -530,25 +530,39 @@ namespace Faunus {
                 std::vector<int> ids;
                 std::string file;
                 double dz;
+                bool COM=false; // center at COM of atoms?
 
                 void _from_json(const json &j) override {
                     file = j.at("file").get<std::string>();
                     names = j.at("atoms").get<decltype(names)>(); // molecule names
                     ids = names2ids(atoms, names);     // names --> molids
                     dz = j.value("dz", 0.1);
+                    COM = j.value("com", false);
                     N.setResolution(dz);
                 }
 
                 void _to_json(json &j) const override {
-                    j = {{"atoms", names}, {"file", file}, {"dz", dz}};
+                    j = {{"atoms", names}, {"file", file}, {"dz", dz}, {"com", COM}};
                 }
 
                 void _sample() override {
+                    Group<Tparticle> all(spc.p.begin(), spc.p.end());
+                    std::map<int, Point> cms;
+                    if (COM) // calc. mass center of selected atoms
+                        for (int id : ids) {
+                            auto slice = all.find_id(id);
+                            auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
+                            cms[id] = cm;
+                        }
                     // count atoms in slices
                     for (auto &g : spc.groups) // loop over all groups
                         for (auto &i : g)      // loop over active particles
-                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end())
-                                N( i.pos.z() )++;
+                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end()) {
+                                if (COM)
+                                    N( i.pos.z() - cms[i.id].z() )++;
+                                else
+                                    N( i.pos.z() )++;
+                            }
                 }
 
                 public:
@@ -799,7 +813,7 @@ namespace Faunus {
                                     spc.geo.boundary( pvec.back().pos );
                                     cnt++;
                                 }
-                                FormatPQR::save(file, pvec, spc.geo.getLength());
+                                FormatPQR::save(MPI::prefix + file, pvec, spc.geo.getLength());
                             }
                         }
                     }
@@ -845,7 +859,7 @@ namespace Faunus {
                     for (auto &d : _map)
                         k[ molecules<typename Tspace::Tpvec>[d.first].name ] = {
                             {"Z", d.second.Z.avg()}, {"Z2", d.second.Z2.avg()},
-                            {"C", std::pow(d.second.Z.avg(),2)-d.second.Z2.avg()},
+                            {"C", d.second.Z2.avg() - std::pow(d.second.Z.avg(),2)},
                             {u8::mu, d.second.mu.avg()}, {u8::mu+u8::squared, d.second.mu2.avg()}
                         };
                 }
@@ -910,7 +924,18 @@ namespace Faunus {
                             // check if particles are inside container
                             for (auto &i : g) // loop over active particles
                                 if (spc.geo.collision(i.pos))
-                                    throw std::runtime_error("particle outside container");
+                                    throw std::runtime_error("step "s + std::to_string(cnt) + ": index "
+                                            + std::to_string(&i - &(*g.begin())) + " of group "
+                                            + std::to_string(std::distance(spc.groups.begin(), spc.findGroupContaining(i)))
+                                            + " outside container");
+
+                            // The groups must exactly contain all particles in `p`
+                            size_t i=0;
+                            for (auto &g : spc.groups)
+                                for (auto it=g.begin(); it!=g.trueend(); ++it)
+                                    if (&*it != &spc.p.at(i++))
+                                        throw std::runtime_error("group vector out of sync");
+                            assert(i==spc.p.size());
 
                             // check if molecular mass centers are correct
                             if (not g.atomic)
@@ -919,9 +944,12 @@ namespace Faunus {
                                     double sqd = spc.geo.sqdist(g.cm, cm);
                                     if (sqd>1e-6) {
                                         std::cerr
+                                            << "step:      " << cnt << endl
+                                            << "molecule:  " << &g-&*spc.groups.begin() << endl
                                             << "dist:      " << sqrt(sqd) << endl
                                             << "g.cm:      " << g.cm.transpose() << endl
                                             << "actual cm: " << cm.transpose() << endl;
+                                        FormatPQR::save(MPI::prefix + "sanity-" + std::to_string(cnt) + ".pqr", spc.p, spc.geo.getLength());
                                         throw std::runtime_error("mass center-out-of-sync");
                                     }
                                 }
@@ -1034,8 +1062,9 @@ namespace Faunus {
 
                 void _sample() override {
                     V += spc.geo.getVolume( dim );
-                    for ( auto i = spc.p.begin(); i != spc.p.end(); ++i )
-                        for ( auto j=i; ++j != spc.p.end(); )
+                    auto active = spc.activeParticles();
+                    for ( auto i = active.begin(); i != active.end(); ++i )
+                        for ( auto j=i; ++j != active.end(); )
                             if (
                                     ( i->id==id1 && j->id==id2 ) ||
                                     ( i->id==id2 && j->id==id1 )
@@ -1071,8 +1100,11 @@ namespace Faunus {
 
                 void _sample() override {
                     V += spc.geo.getVolume( dim );
-                    for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i )
-                        for ( auto j=i; ++j != spc.groups.end(); )
+                    auto mollist1 = spc.findMolecules( id1, Tspace::ACTIVE );
+                    auto mollist2 = spc.findMolecules( id2, Tspace::ACTIVE );
+                    auto mollist = ranges::view::concat( mollist1, mollist2 );
+                    for ( auto i = mollist.begin(); i != mollist.end(); ++i )
+                        for ( auto j=i; ++j != mollist.end(); )
                             if (
                                     ( i->id==id1 && j->id==id2 ) ||
                                     ( i->id==id2 && j->id==id1 )
@@ -1104,11 +1136,33 @@ namespace Faunus {
         template<class Tspace>
             class XTCtraj : public Analysisbase {
                 typedef typename Tspace::Tparticle Tparticle;
+                std::vector<int> molids; // molecule ids to save to disk
+                std::vector<std::string> names; // molecule names of above
+                std::function<bool(Tparticle&)> filter = [](Tparticle&){ return true; };
+
                 void _to_json(json &j) const override {
                     j["file"] = file;
+                    if (not names.empty())
+                        j["molecules"] = names;
                 }
+
                 void _from_json(const json &j) override {
                     file = MPI::prefix + j.at("file").get<std::string>();
+                    names = j.value("molecules", std::vector<std::string>());
+                    if (not names.empty()) {
+                        molids = Faunus::names2ids(Faunus::molecules<typename Tspace::Tpvec>, names);
+                        if (not molids.empty())
+                            filter = [&](Tparticle& i) {
+                                for (auto& g : spc.groups)
+                                    if (g.contains(i, true)) { // does group contain particle? (include inactive part)
+                                        if (std::find(molids.begin(), molids.end(), g.id)!=molids.end()) {
+                                            cout << Faunus::atoms[i.id].name << " ";
+                                            return true;
+                                        } else return false;
+                                    }
+                                return false;
+                            };
+                    };
                 }
 
                 FormatXTC xtc;
@@ -1117,7 +1171,8 @@ namespace Faunus {
 
                 void _sample() override {
                     xtc.setbox( spc.geo.getLength() );
-                    bool rc = xtc.save(file, spc.p, Group<Tparticle>(spc.p.begin(), spc.p.end()));
+                    auto particles = ranges::view::filter(spc.p, filter);
+                    bool rc = xtc.save(file, particles.begin(), particles.end());
                     if (rc==false)
                         std::cerr << "error saving xtc\n";
                 }
@@ -1127,7 +1182,6 @@ namespace Faunus {
                 XTCtraj( const json &j, Tspace &s ) : xtc(1e6), spc(s) {
                     from_json(j);
                     name = "xtcfile";
-                    cite = "http://bit.ly/2A8lzpa";
                 }
             };
 
@@ -1396,7 +1450,7 @@ namespace Faunus {
                         from_json(j);
                         name = "qrfile";
                         file = j.value("file", "qrtraj.dat"s);
-                        f.open(file);
+                        f.open(MPI::prefix + file);
                         if (not f)
                             throw std::runtime_error("error opening "s + file);
                         f.precision(6);

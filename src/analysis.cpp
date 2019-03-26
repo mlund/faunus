@@ -82,7 +82,7 @@ void Faunus::Analysis::SystemEnergy::_to_json(Faunus::json &j) const {
     j = { {"file", file}, {"init",uinit}, {"final", energyFunc()} };
     if (cnt>0) {
         j["mean"] = uavg.avg();
-        j["Cv/kT"+u8::squared] = (u2avg.avg() - std::pow(uavg.avg(),2)) / pc::temperature;
+        j["Cv/kB"] = u2avg.avg() - std::pow(uavg.avg(),2);
     }
     _roundjson(j,5);
     //normalize();
@@ -161,7 +161,7 @@ void Faunus::Analysis::PairFunctionBase::_to_json(Faunus::json &j) const {
 
 void Faunus::Analysis::PairFunctionBase::_from_json(const Faunus::json &j) {
     assertKeys(j, {
-            "file", "name1", "name2", "dim", "dr", "Rhyper", "nstep"
+            "file", "name1", "name2", "dim", "dr", "Rhyper", "nstep", "nskip"
             });
     file = j.at("file");
     name1 = j.at("name1");

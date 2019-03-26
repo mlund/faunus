@@ -9,7 +9,7 @@ atomlist:
     - HW: {q: 0.4238,  sigma: 2, eps: 0, mw: 1.007}
 
 moleculelist:
-    # The pqr-file containes two conformations which will be labelled 0 and 1. The corresponding
+    # The pqr-file contains two conformations which will be labelled 0 and 1. The corresponding
     # weights are 1 and 2, meaning that conformation 1 is twice as likely as conformation 0.
     - water: {rigid: true, traj: swapconf.conformations.pqr, trajweight: swapconf.weights.dat}
 
@@ -17,7 +17,7 @@ insertmolecules:
     - water: {N: 2}
 
 energy:
-    - nonbonded:
+    - nonbonded_exact: 
         default:
             - lennardjones: {mixing: LB} # we just want a simple non-bonded potential
 
@@ -33,6 +33,7 @@ analysis:
     - reactioncoordinate: {type: molecule, property: confid, file: confid_mol0.dat, nstep: 5, index: 0}
     - reactioncoordinate: {type: molecule, property: confid, file: confid_mol1.dat, nstep: 5, index: 1}
     - sanity: {nstep: 1} # for testing purposes, let's check sanity for every step
+    - systemenergy: {file: energy.dat, nstep: 5}
     - savestate: {file: confout.pqr}
     - savestate: {file: state.json}
 

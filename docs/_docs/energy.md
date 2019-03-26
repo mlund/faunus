@@ -36,8 +36,8 @@ energy:
     - ...
 ~~~
 
-The keyword `maxenergy` can be used to stop energy evaluation when a large
-energy change (in kT) is observed which will most likely lead to rejection.
+The keyword `maxenergy` can be used to skip further energy evaluation if a term returns a large
+energy change (in kT), which will likely lead to rejection.
 The default value is _infinity_.
 
 **Note:**
@@ -57,8 +57,7 @@ a set of conditions exists to evaluate the acceptance of the proposed move:
 - always accept if the energy _difference_ is NaN (i.e. from infinity to minus infinity)
 
 **Note:**
-These conditions should be carefully considered if equilibrating a system far from equilibrium,
-particularly if using discontinuous potentials.
+These conditions should be carefully considered if equilibrating a system far from equilibrium.
 {: .notice--notice}
 
 
@@ -86,22 +85,42 @@ This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise add
 
 $$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
 
-**Note:** the pair-potential can be a combination of several potentials defined at runtime.
-However, for optimal performance we include a set of hard-coded combinations, defined at _compile time_.
-It is straight forward to add more by editing the class
-`Energy::Hamiltonian` found in `src/energy.h` and then re-compile.
-{: .notice--info}
+Using `nonbonded`, potentials can be arbitrarily mixed and customized for specific particle
+combinations. Internally, the potential is _splined_ in an interval [`rmin`,`rmax`] determined
+by the following policies:
 
-Below is a description of possible pair-potentials and their configuration.
+- `rmin` is decreased towards zero until the potential reaches `u_at_rmin=20` kT
+- `rmax` is increased until the potential reaches `u_at_rmax=1e-6` kT
+
+If outside the interval, infinity or zero is returned, respectively.
+Finally, the spline precision can be controlled with `utol=1e-5` kT.
+
+Below is a description of possible nonbonded methods. For simple potentials, the hard coded
+variants are often the fastest option. 
 
 `energy`               | $u_{ij}$
----------------------- | ------------------------------------------
-`nonbonded`            | Any combination of pair potentials (slow!)
-`nonbonded_coulomblj`  | `coulomb`+`lennardjones`
-`nonbonded_coulombwca` | `coulomb`+`wca`
+---------------------- | ------------------------------------------------------
+`nonbonded`            | Any combination of pair potentials (splined)
+`nonbonded_cached`     | Any combination of pair potentials (splined, only intergroup!)
+`nonbonded_exact`      | Any combination of pair potentials (slower, but exact)
+`nonbonded_coulomblj`  | `coulomb`+`lennardjones` (hard coded)
+`nonbonded_coulombwca` | `coulomb`+`wca` (hard coded)
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)
 `nonbonded_pmwca`      | `coulomb`+`wca` (fixed `type=plain`, `cutoff`$=\infty$)
 
+### Mass Center Cut-offs
+
+For cut-off based pair-potentials working between large molecules, it can be efficient to
+use mass center cut-offs between molecular groups, thus skipping all pair-interactions.
+A single cut-off can be used between all molecules (`default`), or specified for specific
+combinations:
+
+~~~ yaml
+- nonbonded:
+      cutoff_g2g:
+          default: 40
+          "protein water": 60
+~~~
 
 ### OpenMP Control
 
@@ -224,6 +243,7 @@ To enable the correction, use the `akesson` keyword at the top level of `energy`
 
 `akesson`         | Keywords
 ----------------- | ------------------------------------------------------------
+`molecules`       | Array of molecules to operate on
 `epsr`            | Relative dielectric constant
 `nstep`           | Number of energy evalutations between updating $\rho(z)$
 `dz=0.2`          | $z$ resolution (angstrom)
@@ -254,8 +274,6 @@ $$
 
 where $a_j$ is the radius of the non-polar particle and $\alpha_j$ is set in
 the atom topology, `alphax`.
-If `alphaneutral=true` it is required that one of the particles
-is charged, while the other is neutral.
 For non-polar particles in a polar medium, $\alpha_i$ is a negative number.
 For more information, see
 [J. Israelachvili's book, Chapter 5.](https://www.sciencedirect.com/science/book/9780123751829)
@@ -268,7 +286,6 @@ For more information, see
 **Limitations:**
 Charge-polarizability products for each pair of species is evaluated once during
 construction and based on the defined atom types.
-Also, `alphaneutral` must be the same for all instances of the potential.
 {: .notice--info}
 
 ### Cosine Attraction
@@ -376,7 +393,8 @@ and hydrophobic/hydrophilic interactions.
 This takes a user-defined expression and a list of constants to produce a runtime,
 custom pair-potential.
 While perhaps not as computationally efficient as hard-coded potentials, it is a
-convenient way to access alien potentials.
+convenient way to access alien potentials. Further, used in combination with `nonbonded`
+there is no overhead since all potentials are splined.
 
 `custom`     | Description
 ------------ | --------------------------------------------------------
@@ -384,7 +402,7 @@ convenient way to access alien potentials.
 `constants`  | User-defined constants
 `cutoff`     | Spherical cut-off distance
 
-The following illustrates how to define a custom Yukawa potential:
+The following illustrates how to define a Yukawa potential:
 
 ~~~ yaml
 custom:
@@ -407,11 +425,57 @@ In addition to user-defined constants, the following symbols are defined:
 `kT`       | Boltzmann's constant x temperature [J]
 `Nav`      | Avogadro's number [1/mol]
 `pi`       | Pi
-`q1`,`q2`  | particle charge [e]
+`q1`,`q2`  | particle charges [e]
 `r`        | particle-particle separation [angstrom]
 `Rc`       | Spherical cut-off [angstrom]
 `s1`,`s2`  | particle sigma [angstrom]
 `T`        | temperature [K]
+
+## Custom External Potential
+
+This applies a custom expernal potential to atoms or molecular mass centra
+using the [ExprTk library](http://www.partow.net/programming/exprtk/index.html)
+syntax.
+
+`customexternal` | Description
+---------------- | --------------------------------------------------------
+`molecules`      | Array of molecules to operate on
+`com=false`      | Operate on mass-center instead of individual atoms?
+`function`       | Mathematical expression for the potential (units of kT)
+`constants`      | User-defined constants
+
+In addition to user-defined `constants`, the following symbols are available:
+
+`symbol`   | Description
+---------- | ---------------------------------------
+`e0`       | Vacuum permittivity [C^2/J/m]
+`inf`      | infinity
+`kB`       | Boltzmann's constant [J/K]
+`kT`       | Boltzmann's constant x temperature [J]
+`Nav`      | Avogadro's number [1/mol]
+`pi`       | Pi
+`q`        | particle charge [e]
+`s`        | particle sigma [angstrom]
+`x`,`y`,`z`| particle positions [angstrom]
+`T`        | temperature [K]
+
+If `com=true`, charge refers to the molecular net-charge, and `x,y,z` the mass-center coordinates.
+The following illustrates how to confine molecules in a spherical shell:
+
+~~~ yaml
+customexternal:
+    molecules: [water]
+    com: true
+    constants: {radius: 15, dr: 3}
+    function:
+        var r2 := x^2 + y^2 + z^2;
+        if ( r2 < radius^2 )
+           1000 * ( radius-sqrt(r2) )^2;
+        else if ( r2 > (radius+dr)^2 )
+           1000 * ( radius+dr-sqrt(r2) )^2;
+        else
+           0;
+~~~
 
 
 ## Bonded Interactions
@@ -686,6 +750,7 @@ be used when analysing the system (see Analysis).
 `angle`                   | Angle between instantaneous principal axis and given `dir` vector
 `com_x`, `com_y`, `com_z` | Mass center coordinates
 `confid`                  | Conformation id corresponding to frame in `traj` (see molecular topology).
+`end2end`                 | Distance between first and last atom
 `mu_x`, `mu_y`, `mu_z`    | Molecular dipole moment components
 `mu`                      | Molecular dipole moment scalar (eA/charge)
 `muangle`                 | Angle between dipole moment and given `dir` vector
@@ -745,4 +810,18 @@ yason.py input.yml | mpirun --np 6 --stdin all faunus -s state.json
 ~~~
 
 Here, each process automatically looks for `mpi{nproc}.state.json`.
+
+## Constraining the system
+
+Reaction coordinates can be used to constrain the system within a `range`
+using the `constrain` energy term. Stepping outside the range results in an inifinite
+energy, forcing rejection. For example,
+
+~~~ yaml
+energy:
+    - constrain: {type: molecule, index: 0, property: end2end, range: [0,200]}
+~~~
+
+Tip: placing `constrain` at the _top_ of the energy list is more efficient as the remaining
+energy terms are skipped should an infinite energy arise.
 

@@ -104,6 +104,10 @@ namespace Faunus {
          * All geometries shares the same distance calculation where
          * PBC is disabled by artificially setting long sidelengths.
          *
+         * @note
+         * - [Efficient Coding of the Minimum Image Convention](http://doi.org/kvs)
+         * - [Fast Coding of the Minimum Image Convention](http://doi.org/ck2nrd)
+         *
          * @todo Implement unit tests
          */
         class Chameleon : public GeometryBase {
@@ -136,48 +140,46 @@ namespace Faunus {
                 void to_json(json &j) const;
 
                 inline void boundary( Point &a ) const override {
-                    if ( type != HEXAGONAL && type != OCTAHEDRON ) {
+                    if ( type!=HEXAGONAL and type!=OCTAHEDRON ) {
                         if ( std::fabs(a.x()) > len_half.x())
                             a.x() -= len.x() * anint(a.x() * len_inv.x());
-
                         if ( std::fabs(a.y()) > len_half.y())
                             a.y() -= len.y() * anint(a.y() * len_inv.y());
-
                         if ( std::fabs(a.z()) > len_half.z())
                             a.z() -= len.z() * anint(a.z() * len_inv.z());
                     } else if ( type == HEXAGONAL ) {
-                        const double sqrtThreeByTwo = sqrt(3.0)/2.0;
-                        const Point unitvX = Point(1.0,0.0,0.0);
-                        const Point unitvY = Point(0.5,sqrtThreeByTwo,0.0);
-                        const Point unitvZ = Point(-0.5,sqrtThreeByTwo,0.0);
+                        const double sqrtThreeByTwo = 0.5*sqrt(3.0);
+                        const Point unitvX = {1,0,0};
+                        const Point unitvY = {0.5,sqrtThreeByTwo,0};
+                        const Point unitvZ = {-0.5,sqrtThreeByTwo,0.0};
 
                         double tmp = a.dot(unitvX);
-                        if ( std::fabs(tmp) > len_half.x())
+                        if (std::fabs(tmp) > len_half.x())
                             a -= len.x() * anint(tmp * len_inv.x())*unitvX;
 
-                        if(a.dot(unitvY) > len_half.x()) {
+                        if (a.dot(unitvY) > len_half.x()) {
                             a = a - len.x()*unitvY;
-                            if(a.dot(unitvX) < -len_half.x()) // Check that point did not get past x-limit
+                            if (a.dot(unitvX) < -len_half.x()) // Check that point did not get past x-limit
                                 a = a + len.x()*unitvX;
                         }
-                        if(a.dot(unitvY) < -len_half.x()) {
+                        if (a.dot(unitvY) < -len_half.x()) {
                             a = a + len.x()*unitvY;
-                            if(a.dot(unitvX) > len_half.x()) // Check that point did not get past x-limit
+                            if (a.dot(unitvX) > len_half.x()) // Check that point did not get past x-limit
                                 a = a - len.x()*unitvX;
                         }
 
                         tmp = a.dot(unitvZ);
-                        if ( std::fabs(tmp) > len_half.x())
+                        if (std::fabs(tmp) > len_half.x())
                             a -= len.x() * anint(tmp * len_inv.x())*unitvZ;
-                        if ( std::fabs(a.z()) > len_half.z())
+                        if (std::fabs(a.z()) > len_half.z())
                             a.z() -= len.z() * anint(a.z() * len_inv.z());
 
                     } else if ( type == OCTAHEDRON ) {
-                        const double sqrtThreeI = 1.0/sqrt(3.0);
-                        const Point unitvXYZ = Point(1.0,1.0,1.0)*sqrtThreeI;
-                        const Point unitvXiYZ = Point(1.0,1.0,-1.0)*sqrtThreeI;
-                        const Point unitvXYiZ = Point(1.0,-1.0,-1.0)*sqrtThreeI;
-                        const Point unitvXYZi = Point(1.0,-1.0,1.0)*sqrtThreeI;
+                        const double sqrtThreeI = 1.0/std::sqrt(3.0);
+                        const Point unitvXYZ  = Point(1, 1, 1)*sqrtThreeI;
+                        const Point unitvXiYZ = Point(1, 1,-1)*sqrtThreeI;
+                        const Point unitvXYiZ = Point(1,-1,-1)*sqrtThreeI;
+                        const Point unitvXYZi = Point(1,-1, 1)*sqrtThreeI;
 
                         bool outside = false;
                         do {
@@ -202,7 +204,7 @@ namespace Faunus {
                                 a -= len.x() * anint(tmp * len_inv.x()) * unitvXYZi;
                                 outside = true;
                             }
-                        } while(outside);
+                        } while (outside);
 
                         if ( std::fabs(a.x()) > len_half.y())
                             a.x() -= len.y() * anint(a.x() * len_inv.y());
@@ -217,8 +219,7 @@ namespace Faunus {
 
                 inline Point vdist(const Point &a, const Point &b) const override {
                     Point r(a - b);
-
-                    if ( type == CUBOID or type == SPHERE or type == CYLINDER or type == SLIT ) {
+                    if (type!=HEXAGONAL and type!=OCTAHEDRON) {
                         if ( r.x() > len_half.x())
                             r.x() -= len.x();
                         else if ( r.x() < -len_half.x())
@@ -233,12 +234,10 @@ namespace Faunus {
                             r.z() -= len.z();
                         else if ( r.z() < -len_half.z())
                             r.z() += len.z();
-                    } else if( type == HEXAGONAL or type == OCTAHEDRON ) {
+                    } else
                         boundary(r);
-                    }
                     return r;
                 }
-
         };
 
         void to_json(json&, const Chameleon&);
@@ -352,8 +351,8 @@ namespace Faunus {
 
                 // check that geometry is properly enscribed in a cuboid
                 Point L = geo.getLength();
-                CHECK( L.x() == Approx(2.0) );
-                CHECK( L.y() == Approx(2.0) );
+                CHECK( L.x() == Approx(1.0) );
+                CHECK( L.y() == Approx(1.0) );
                 CHECK( L.z() == Approx(1.0/2.0/std::sqrt(3.0)) );
 
                 // check random position
@@ -408,23 +407,19 @@ namespace Faunus {
                     const Point &shift={0,0,0})
             {
                 double sum=0;
-                Point c(0,0,0);
-                try {
-                    for (auto &i=begin; i!=end; ++i) {
-                        Point t = i->pos + shift;       // translate to origo
-                        boundary(t);
-                        double w = weight(*i);
-                        c += w * t;
-                        sum += w;
-                    }
+                Point c(0,0,0), t;
+                for (auto &i=begin; i!=end; ++i) {
+                    t = i->pos + shift;       // translate to origo
+                    boundary(t);
+                    double w = weight(*i);
+                    c += w * t;
+                    sum += w;
+                }
+                if (sum<=pc::epsilon_dbl)
+                    return {0,0,0};
+                else
                     c = c/sum - shift;
-                    boundary(c);
-                    if (std::isnan(c[0]))
-                        throw std::runtime_error("sum of weights is zero");
-                }
-                catch(std::exception& e) {
-                    throw std::runtime_error("anyCenter error: " + std::string(e.what()));
-                }
+                boundary(c);
                 return c;
             } //!< Mass, charge, or geometric center of a collection of particles
 

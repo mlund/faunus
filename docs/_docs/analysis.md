@@ -72,10 +72,11 @@ etc.
 `atoms=[]`      | List of atom names to sample; `*` selects all 
 `file`          | Output filename with profile
 `dz=0.1`        | Resolution along _z_-axis
+`com=false`     | Use mass center _z_ of selected atoms as origin
 `nstep`         | Interval between samples
 
 Calculates the density in cuboidal slices of thickness _dz_ along the _z_ axis.
-
+If `com=true`, the _z_ position of each atom is calculated with respect to the center of mass of all atoms of the same type in the sampled configuration.
 
 ## Structure
 
@@ -263,10 +264,30 @@ is reported by diagonalising the gyration tensor to find the principal moments:
     {nstep: 100, file: angle.dat, type: molecule, index: 0, property: angle, dir: [0,0,1]}
 ~~~ 
 
+### Processing
+
+In the example above we saved two properties as a function of steps. To join the two
+files and generate the average angle as a function of _z_, the following python code
+may be used:
+
+~~~ python
+import numpy as np
+from scipy.stats import binned_statistic
+
+def joinRC(xfile, yfile, bins):
+    x = np.loadtxt(xfile, usecols=[1])
+    y = np.loadtxt(yfile, usecols=[1])
+    means, edges, bins = binned_statistic(x,y,'mean',bins)
+    return (edges[:-1] + edges[1:]) / 2, means
+
+cmz, angle = joinRC('cmz.dat', 'angle.dat', 100)
+np.diff(cmz) # --> cmz resolution; control w. `bins`
+~~~
+
 
 ## System Sanity
 
-When setting up simulations or developing, it is wise to assert that the simulation
+It is wise to always assert that the simulation
 is internally sane. This analysis checks the following and aborts if insane:
 
 - all particles are inside the simulation boundaries
@@ -275,6 +296,8 @@ is internally sane. This analysis checks the following and aborts if insane:
 
 To envoke, use for example `- sanity: {nstep: 1}` by default, `nstep=-1`, meaning it will
 be run at the end of simulation, only.
+This is not a particularly time-consuming analysis and we recommend that it is enabled
+for all simulations.
 
 
 ## System Energy
@@ -369,12 +392,14 @@ with the following information:
 ### XTC trajectory
 
 Generates a Gromacs XTC trajectory file with particle positions and box
-dimensions as a function of steps.
+dimensions as a function of steps. Both _active_ and _inactive_ atoms are
+saved.
 
 `xtcfile`      |  Description
 -------------- | ---------------------------------------------------------
 `file`         |  Filename of output xtc file
 `nstep`        |  Interval between samples.
+`molecules=*`  |  Array of molecules to save (default: all)
 
 
 ### Charge-Radius trajectory

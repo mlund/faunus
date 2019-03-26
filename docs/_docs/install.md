@@ -24,6 +24,8 @@ conda search faunus   # show (new) revisions
 conda upgrade faunus
 ~~~
 
+For the adventurous, the latest development version is available with `conda install -c teokem faunus`. 
+
 Starting from version 2.1, we adhere to [semantic versioning](https://semver.org).
 
 ## Building from source code
@@ -40,6 +42,7 @@ but should compile on most unix operating systems and possibly under Cygwin (Win
 
 The following are optional:
 
+- `jinja2`
 - `pandoc`
 - `pypandoc`
 - `BeautifulSoup4`

@@ -112,8 +112,12 @@ namespace Faunus {
                         for (auto it=_j.begin(); it!=_j.end(); ++it) {
                             auto v = words2vec<std::string>( it.key() );
                             if (v.size()==2) {
-                                int id1 = (*findName( atoms, v[0])).id();
-                                int id2 = (*findName( atoms, v[1])).id();
+                                auto it1 = findName(atoms, v[0]);
+                                auto it2 = findName(atoms, v[1]);
+                                if (it1==atoms.end() or it2==atoms.end())
+                                    throw std::runtime_error("unknown atom(s): ["s + v[0] + " " + v[1] + "]");
+                                int id1 = it1->id();
+                                int id2 = it2->id();
                                 m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
                                 m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
                             } else
@@ -384,7 +388,6 @@ namespace Faunus {
                         for (auto &i : atoms) {
                             for (auto &j : atoms) {
                                 m_neutral->set(i.id(), j.id(), -3*i.alphax*pow(0.5*i.sigma,3)*j.alphax*pow(0.5*j.sigma,3) );
-                                // titrating particles must be charged in the beginning
                                 m_charged->set(i.id(), j.id(), -lB/2 * ( pow(i.charge,2)*j.alphax*pow(0.5*j.sigma,3) +
                                             pow(j.charge,2)*i.alphax*pow(0.5*i.sigma,3) ) );
                             }
@@ -411,94 +414,6 @@ namespace Faunus {
                         else
                             return 6*m_neutral->operator()(a.id,b.id)/r2*r6inv*p;
                     }
-            };
-
-        template<class Tparticle>
-            class DesernoMembrane : public PairPotentialBase {
-
-                WeeksChandlerAndersen<Tparticle> wca;
-                CosAttract cos2;
-                int tail;
-
-                public:
-                DesernoMembrane(const std::string &name="dmembrane") {
-                    PairPotentialBase::name=name;
-                    PairPotentialBase::name.clear();
-                }
-
-                void from_json(const json &j) override {
-                    wca = j;
-                    cos2 = j;
-                    auto it = findName(atoms, "TL");
-                    if ( it!=atoms.end() )
-                        tail = it->id();
-                    else
-                        throw std::runtime_error("Atom type 'TL' is not defined.");
-                }
-                void to_json(json &j) const override {
-                    json _j;
-                    wca.to_json(j);
-                    cos2.to_json(_j);
-                    j = merge(j,_j);
-                }
-
-                double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
-                    double u=wca(a,b,r);
-                    if (a.id==tail and b.id==tail)
-                        u+=cos2(a,b,r);
-                    return u;
-                }
-            };
-
-        template<class Tparticle>
-            class DesernoMembraneAA : public PairPotentialBase {
-
-                WeeksChandlerAndersen<Tparticle> wca;
-                CosAttract cos2;
-                Polarizability<Tparticle> polar;
-                int tail;
-                int aa;
-
-                public:
-                DesernoMembraneAA(const std::string &name="dmembraneAA") {
-                    PairPotentialBase::name=name;
-                    PairPotentialBase::name.clear();
-                }
-
-                void from_json(const json &j) override {
-                    wca = j;
-                    cos2 = j;
-                    polar = j;
-                    auto it = findName(atoms, "TL");
-                    if ( it!=atoms.end() )
-                        tail = it->id();
-                    else
-                        throw std::runtime_error("Atom type 'TL' is not defined.");
-                    it = findName(atoms, "AA");
-                    if ( it!=atoms.end() )
-                        aa = it->id();
-                    else
-                        throw std::runtime_error("Atom type 'AA' is not defined.");
-
-                }
-                void to_json(json &j) const override {
-                    json _j;
-                    wca.to_json(j);
-                    cos2.to_json(_j);
-                    j = merge(j,_j);
-                    polar.to_json(_j);
-                    j = merge(j,_j);
-                }
-
-                double operator() (const Tparticle &a, const Tparticle &b, const Point &r) const {
-                    double u=wca(a,b,r);
-                    if (a.id==tail and b.id==tail)
-                        u+=cos2(a,b,r);
-                    if (a.id==aa or b.id==aa) {
-                        u+=polar(a,b,r);
-                    }
-                    return u;
-                }
             };
 
         /**
@@ -561,14 +476,18 @@ namespace Faunus {
 
             void from_json(const json &j) override;
 
-            template<typename... T>
-                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
-                    double r2 = r.squaredNorm();
+            template<class Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
                     if (r2 < rc2) {
                         double r = std::sqrt(r2);
                         return lB * a.charge * b.charge / r * sf.eval( table, r*rc1i );
                     }
                     return 0;
+                }
+
+            template<typename... T>
+                double operator()(const Particle<T...> &a, const Particle<T...> &b, const Point &r) const {
+                    return operator()(a,b,r.squaredNorm());
                 }
 
             template<typename... T>
@@ -662,9 +581,7 @@ namespace Faunus {
         template<class T /** particle type */>
             class FunctorPotential : public PairPotentialBase {
                 typedef std::function<double(const T&, const T&, const Point&)> uFunc;
-                PairMatrix<uFunc,true> umatrix; // matrix with potential for each atom pair
                 json _j; // storage for input json
-
                 typedef CombinedPairPotential<Coulomb,HardSphere<T>> PrimitiveModel;
                 typedef CombinedPairPotential<Coulomb,WeeksChandlerAndersen<T>> PrimitiveModelWCA;
 
@@ -720,6 +637,9 @@ namespace Faunus {
                     return u;
                 } // parse json array of potentials to a single potential function object
 
+                protected:
+                PairMatrix<uFunc,true> umatrix; // matrix with potential for each atom pair
+
                 public:
 
                 FunctorPotential(const std::string &name="") {
@@ -727,7 +647,7 @@ namespace Faunus {
                 }
 
                 double operator()(const T &a, const T &b, const Point &r) const {
-                    return umatrix(a.id, b.id)(a, b, r);
+                        return umatrix(a.id, b.id)(a, b, r); // pc::infty;
                 }
 
                 void to_json(json &j) const override { j = _j; }
@@ -744,6 +664,121 @@ namespace Faunus {
                     }
                 }
             };
+
+        /**
+         * @brief Tabulated arbitrary potentials for specific atom types
+         *
+         * This maintains a species x species matrix as in FunctorPotential 
+         * but with tabulated pair potentials to improve performance.
+         *
+         */
+        template<class T /** particle type */>
+            class TabulatedPotential : public FunctorPotential<T> {
+
+                // expand spline data class to hold information about
+                // the sign of values for r<rmin
+                struct Ttable : public Tabulate::TabulatorBase<double>::data {
+                    typedef Tabulate::TabulatorBase<double>::data base;
+                    bool isNegativeBelowRmin=false;
+                    Ttable() {};
+                    Ttable(const base &b) : base(b) {}
+                };
+                PairMatrix<Ttable,true> tmatrix; // matrix with tabulated potential for each atom pair
+                Tabulate::Andrea<double> tblt; // spline class
+                bool hardsphere = false; // use hardsphere for r<rmin?
+
+                public:
+
+                TabulatedPotential(const std::string &name="") {
+                    PairPotentialBase::name = name;
+                }
+
+                inline double operator()(const T &a, const T &b, const Point &r) const {
+                    double r2 = r.squaredNorm();
+                    const Ttable& knots = tmatrix(a.id, b.id);
+                    if (r2 >= knots.rmax2)
+                        return 0.0;
+                    else if (r2 <= knots.rmin2) {
+                        if (knots.isNegativeBelowRmin or (not hardsphere))
+                            return this->umatrix(a.id, b.id)(a, b, r); // exact energy
+                        else
+                            return pc::infty; // assume extreme repulsion
+                    }
+                    return tblt.eval(knots, r2); // we are in splined interval
+                }
+
+                void from_json(const json &j) override {
+                    FunctorPotential<T>::from_json(j);
+                    tblt.setTolerance(j.value("utol",1e-5),j.value("ftol",1e-2) );
+                    double u_at_rmin = j.value("u_at_rmin",20);
+                    double u_at_rmax = j.value("u_at_rmax",1e-6);
+                    hardsphere = j.value("hardsphere",false);
+
+                    // build matrix of spline data, each element corresponding
+                    // to a pair of atom types
+                    for (size_t i=0; i<atoms.size(); ++i) {
+                        for (size_t k=0; k<=i; ++k) {
+                           if (atoms[i].implicit==false and atoms[k].implicit==false) {
+                                T a = atoms.at(i);
+                                T b = atoms.at(k);
+                                double rmin2 = .5*(atoms[i].sigma + atoms[k].sigma);
+                                rmin2 = rmin2*rmin2;
+                                double rmax2 = rmin2*100;
+                                auto it = j.find("cutoff_g2g");
+                                if (j.count("rmax")==1) {
+                                    rmax2 = std::pow( j.at("rmax").get<double>(), 2);
+                                } else if (it != j.end()) {
+                                    if (it->is_number())
+                                        rmax2 = std::pow( it->get<double>(), 2 );
+                                    else if (it->is_object())
+                                        rmax2 = std::pow( it->at("default").get<double>(), 2);
+                                }
+
+                                // adjust lower splining distance to match
+                                // the given energy threshold (u_at_min2)
+                                double dr = 1e-2;
+                                while (rmin2 >= dr) {
+                                    double u = std::fabs(this->umatrix(i,k)(a, b, {0,0,sqrt(rmin2)}));
+                                    if (u > u_at_rmin*1.1)
+                                        rmin2 = rmin2 + dr;
+                                    else if (u < u_at_rmin/1.1)
+                                        rmin2 = rmin2 - dr;
+                                    else
+                                        break;
+                                }
+
+                                assert(rmin2>=0);
+
+                                while (rmax2 >= dr) {
+                                    double u = std::fabs(this->umatrix(i,k)(a, b, {0,0,sqrt(rmax2)}));
+                                    if (u > u_at_rmax)
+                                        rmax2 = rmax2 + dr;
+                                    else
+                                        break;
+                                }
+
+                                assert( rmin2 < rmax2 );
+
+                                Ttable knotdata = tblt.generate( [&](double r2) { return this->umatrix(i,k)(a, b, {0,0,sqrt(r2)}); }, rmin2, rmax2);
+
+                                // assert if potential is negative for r<rmin
+                                if (tblt.eval(knotdata, knotdata.rmin2+dr) < 0)
+                                    knotdata.isNegativeBelowRmin=true;
+
+                                tmatrix.set(i, k, knotdata);
+                                if (j.value("to_disk",false)) {
+                                    std::ofstream f(atoms[i].name+"-"+atoms[k].name+"_tabulated.dat"); // output file
+                                    f << "# r splined exact\n";
+                                    Point r = {dr,0,0}; // variable distance vector between particle a and b
+                                    for (; r.x()<sqrt(rmax2); r.x()+=dr)
+                                        f << r.x() << " " << operator()(a, b, r) << " " << this->umatrix(i,k)(a, b, r) << "\n";
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] FunctorPotential")

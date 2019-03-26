@@ -2,22 +2,23 @@
     "analysis": [
         {
             "reactioncoordinate": {
-                "average": 0.672475,
+                "average": 0.66615,
+                "file": "confid_mol0.dat",
                 "index": 0,
                 "nstep": 5,
                 "property": "confid",
-                "relative time": 0.0174,
+                "relative time": 0.0385,
                 "samples": 40000,
                 "type": "molecule"
             }
         },
         {
             "reactioncoordinate": {
-                "average": 0.666075,
+                "average": 0.666875,
+                "file": "confid_mol1.dat",
                 "index": 1,
                 "nstep": 5,
                 "property": "confid",
-                "relative time": 0.0038,
                 "samples": 40000,
                 "type": "molecule"
             }
@@ -25,7 +26,6 @@
         {
             "sanity": {
                 "nstep": 1,
-                "relative time": 0.00103,
                 "samples": 200000
             }
         },
@@ -46,7 +46,9 @@
             "hamiltonian": [
                 {
                     "nonbonded": {
-                        "cutoff_g2g": null,
+                        "cutoff_g2g": {
+                            "water water": null
+                        },
                         "pairpot": {
                             "default": [
                                 {
@@ -57,7 +59,7 @@
                             ]
                         }
                     },
-                    "relative time": 0.007024592598484105
+                    "relative time": 0.013522036484861794
                 }
             ]
         }
@@ -70,7 +72,7 @@
         ],
         "type": "cuboid"
     },
-    "git revision": "15697785 (2018-12-24)",
+    "git revision": "083bdeba (2019-03-12)",
     "groups": [
         {
             "water": {
@@ -93,21 +95,22 @@
             }
         }
     ],
+    "last move": "conformationswap",
     "moves": [
         {
             "conformationswap": {
                 "acceptance": 0.998,
                 "molecule": "water",
                 "molid": 0,
-                "moves": 399686,
-                "relative time": 0.273,
-                "relative time (without energy calc)": 0.0151,
+                "moves": 401102,
+                "relative time": 0.294,
+                "relative time (without energy calc)": 0.0574,
                 "repeat": 2
             }
         },
         {
             "moltransrot": {
-                "acceptance": 0.986,
+                "acceptance": 0.987,
                 "dir": [
                     1.0,
                     1.0,
@@ -117,8 +120,9 @@
                 "dprot": 1.0,
                 "molecule": "water",
                 "molid": 0,
-                "moves": 400314,
-                "relative time": 0.269,
+                "moves": 398898,
+                "relative time": 0.249,
+                "relative time (without energy calc)": 0.026,
                 "repeat": 2,
                 "√⟨r²⟩": 2.86
             }
@@ -127,6 +131,6 @@
     "number of groups": 2,
     "number of particles": 6,
     "reactionlist": null,
-    "relative drift": 1.4831692564493886e-11,
+    "relative drift": 1.3097431273518417e-14,
     "temperature": 300.0
 }

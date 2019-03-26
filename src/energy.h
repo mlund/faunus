@@ -318,7 +318,7 @@ namespace Faunus {
                         }
                     }
                     double energy(Change &change) override {
-                        if (change.dV || change.all) {
+                        if (change.dV || change.all || change.dN) {
                             double V = spc.geo.getVolume();
                             size_t N=0;
                             for (auto &g : spc.groups)
@@ -338,6 +338,51 @@ namespace Faunus {
                         _roundjson(j,5);
                     }
             };
+
+        /**
+         * @brief Constrain system using reaction coordinates
+         *
+         * If outside specified `range`, infinity energy is returned, causing rejection.
+         */
+        class Constrain : public Energybase {
+            private:
+                std::string type;
+                std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
+            public:
+                template<class Tspace>
+                    Constrain(const json &j, Tspace &spc) {
+                        using namespace Faunus::ReactionCoordinate;
+                        name = "constrain";
+                        type = j.at("type").get<std::string>();
+                        try {
+                            if      (type=="atom")     rc = std::make_shared<AtomProperty>(j, spc);
+                            else if (type=="molecule") rc = std::make_shared<MoleculeProperty>(j, spc);
+                            else if (type=="system")   rc = std::make_shared<SystemProperty>(j, spc);
+                            else if (type=="cmcm")     rc = std::make_shared<MassCenterSeparation>(j, spc);
+                            if (rc==nullptr)
+                                throw std::runtime_error("unknown coordinate type");
+
+                        } catch (std::exception &e) {
+                            throw std::runtime_error("error for reaction coordinate '"
+                                    + type + "': " + e.what() + usageTip["coords=["+type+"]"]  );
+                        }
+                    }
+
+                inline double energy(Change &change) override {
+                    if (change) {
+                        double val = (*rc)(); // calculate reaction coordinate
+                        if (not rc->inRange(val)) // is it within allowed range?
+                            return pc::infty;  // if not, return infinite energy
+                    }
+                    return 0;
+                }
+
+                inline void to_json(json &j) const override {
+                    j = *rc;
+                    j["type"] = type;
+                    j.erase("resolution");
+                }
+        };
 
         /**
          * @brief Base class for external potentials
@@ -362,8 +407,9 @@ namespace Faunus {
                         double _energy(const Group<Tparticle> &g) const {
                             double u=0;
                             if (molids.find(g.id) != molids.end()) {
-                                if (COM) { // apply only to center of mass
-                                    Tparticle cm;
+                                if (COM and g.atomic==false) { // apply only to center of mass
+                                    Tparticle cm; // fake particle representin molecule
+                                    cm.charge = Geometry::monopoleMoment(g.begin(), g.end());
                                     cm.pos = g.cm;
                                     u = func(cm);
                                 } else {
@@ -387,10 +433,15 @@ namespace Faunus {
                             throw std::runtime_error(name + ": molecule list is empty");
                     }
 
+                    /*
+                     * @todo The `dN` check is very inefficient
+                     * as it calculates the external potential on *all*
+                     * particles.
+                     */
                     double energy(Change &change) override {
                         assert(func!=nullptr);
                         double u=0;
-                        if (change.dV or change.all) {
+                        if (change.dV or change.all or change.dN) {
                             for (auto &g : spc.groups) { // check all groups
                                 u += _energy(g);
                                 if (std::isnan(u))
@@ -417,6 +468,48 @@ namespace Faunus {
                         j["com"] = COM;
                     }
             }; //!< Base class for external potentials, acting on particles
+
+        /**
+         * @brief Custom external potential on molecules
+         */
+        template<typename Tspace, typename base=ExternalPotential<Tspace>>
+            class CustomExternal : public base { 
+                private:
+                    ExprFunction<double> expr;
+                    struct Data { // variables
+                        double q=0, x=0, y=0, z=0;
+                    };
+                    Data d;
+                    json jin; // initial json input
+
+                 public:
+                    CustomExternal(const json &j, Tspace &spc) : base(j,spc) {
+                        base::name = "customexternal";
+                        jin = j;
+                        auto &_j = jin["constants"];
+                        if (_j==nullptr)
+                            _j = json::object();
+                        _j["e0"] = pc::e0;
+                        _j["kB"] = pc::kB;
+                        _j["kT"] = pc::kT();
+                        _j["Nav"] = pc::Nav;
+                        _j["T"] = pc::temperature;
+                        expr.set(jin, {
+                                {"q",&d.q}, {"x",&d.x}, {"y",&d.y}, {"z",&d.z} } );
+                        base::func = [&](const typename Tspace::Tparticle &a) {
+                            d.x = a.pos.x();
+                            d.y = a.pos.y();
+                            d.z = a.pos.z();
+                            d.q = a.charge;
+                            return expr();
+                        };
+                    }
+
+                    void to_json(json &j) const override {
+                        j = jin;
+                        base::to_json(j);
+                    }
+            };
 
         /**
          * @brief Mean field electric potential from outside rectangular simulation box.
@@ -777,6 +870,7 @@ namespace Faunus {
             class Nonbonded : public Energybase {
                 private:
                     double g2gcnt=0, g2gskip=0;
+                    PairMatrix<double> cutoff2; // matrix w. group-to-group cutoff
 
                 protected:
                     typedef typename Tspace::Tpvec Tpvec;
@@ -787,16 +881,23 @@ namespace Faunus {
                     bool omp_enable=false;
                     bool omp_i2all=false;
                     bool omp_g2g=false;
+                    bool omp_p2p=false;
 
                     void to_json(json &j) const override {
                         j["pairpot"] = pairpot;
-                        j["cutoff_g2g"] = std::sqrt(Rc2_g2g);
                         if (omp_enable) {
                             json _a = json::array();
+                            if (omp_p2p) _a.push_back("p2p");
                             if (omp_g2g) _a.push_back("g2g");
                             if (omp_i2all) _a.push_back("i2all");
                             j["openmp"] = _a;
                         }
+                        j["cutoff_g2g"] = json::object();
+                        auto &_j = j["cutoff_g2g"];
+                        for (auto &a : Faunus::molecules<typename Tspace::Tpvec>)
+                            for (auto &b : Faunus::molecules<typename Tspace::Tpvec>)
+                                if (a.id()>=b.id())
+                                    _j[a.name+" "+b.name] = sqrt( cutoff2(a.id(), b.id()) );
                     }
 
                     template<typename T>
@@ -804,7 +905,7 @@ namespace Faunus {
                             g2gcnt++;
                             if (g1.atomic || g2.atomic)
                                 return false;
-                            if ( spc.geo.sqdist(g1.cm, g2.cm)<Rc2_g2g )
+                            if ( spc.geo.sqdist(g1.cm, g2.cm) < cutoff2(g1.id, g2.id) )
                                 return false;
                             g2gskip++;
                             return true;
@@ -819,20 +920,20 @@ namespace Faunus {
                     /*
                      * Internal energy in group, calculating all with all or, if `index`
                      * is given, only a subset. Index specifies the internal index (starting
-                     * at zero) of changed particles within the group.
+                     * from zero) of changed particles within the group.
                      */
                     double g_internal(const Tgroup &g, const std::vector<int> &index=std::vector<int>()) {
                         using namespace ranges;
-                        double u=0;
+                        double u = 0;
                         if (index.empty() and not molecules<Tpvec>.at(g.id).rigid) // assume that all atoms have changed
                             for ( auto i = g.begin(); i != g.end(); ++i )
                                 for ( auto j=i; ++j != g.end(); )
                                     u += i2i(*i, *j);
-                        else { // only a subset have changed
+                        else { // only a subset has changed
                             auto fixed = view::ints( 0, int(g.size()) )
                                 | view::remove_if(
                                         [&index](int i){return std::binary_search(index.begin(), index.end(), i);});
-                            for (int i : index) {// moved<->static
+                            for (int i : index) { // moved<->static
                                 for (int j : fixed ) {
                                     u += i2i( *(g.begin()+i), *(g.begin()+j));
                                 }
@@ -890,10 +991,11 @@ namespace Faunus {
                         double u = 0;
                         if (not cut(g1,g2)) {
                             if ( index.empty() && jndex.empty() ) // if index is empty, assume all in g1 have changed
-                                for (auto &i : g1)
-                                    for (auto &j : g2)
-                                        u += i2i(i,j);
-                            else {// only a subset of g1
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (omp_enable and omp_p2p)  
+                                for (size_t i=0; i<g1.size(); i++)
+                                    for (size_t j=0; j<g2.size(); j++)
+                                        u += i2i( *(g1.begin()+i), *(g2.begin()+j) );
+                            else { // only a subset of g1
                                 for (auto i : index)
                                     for (auto j=g2.begin(); j!=g2.end(); ++j)
                                         u += i2i( *(g1.begin()+i), *j);
@@ -926,12 +1028,45 @@ namespace Faunus {
                                     omp_enable=true;
                                     for (const std::string &k : *it)
                                         if (k=="g2g") omp_g2g=true;
+                                        else if (k=="p2p") omp_p2p=true;
                                         else if (k=="i2all") omp_i2all=true;
 #ifndef _OPENMP
                                     std::cerr << "warning: nonbonded requests unavailable OpenMP." << endl;
 #endif
                                 }
-                        Rc2_g2g = std::pow( j.value("cutoff_g2g", pc::infty), 2);
+
+                        // disable all group-to-group cutoffs by setting infinity
+                        for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
+                            for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                cutoff2.set(i.id(), j.id(), pc::infty);
+
+                        it = j.find("cutoff_g2g");
+                        if (it != j.end()) {
+                            // old style input w. only a single cutoff
+                            if (it->is_number()) {
+                                Rc2_g2g = std::pow( it->get<double>(), 2 );
+                                for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
+                                    for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                        cutoff2.set(i.id(), j.id(), Rc2_g2g);
+                            }
+                            // new style input w. multiple cutoffs between molecules
+                            else if (it->is_object()) {
+                                // ensure that there is a default, fallback cutoff
+                                Rc2_g2g = std::pow( it->at("default").get<double>(), 2);
+                                for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
+                                    for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                        cutoff2.set(i.id(), j.id(), Rc2_g2g);
+                                // loop for space separated molecule pairs in keys
+                                for (auto& i : it->items()) {
+                                    auto v = words2vec<std::string>( i.key() );
+                                    if (v.size()==2) {
+                                        int id1 = (*findName( Faunus::molecules<typename Tspace::Tpvec>, v[0])).id();
+                                        int id2 = (*findName( Faunus::molecules<typename Tspace::Tpvec>, v[1])).id();
+                                        cutoff2.set( id1, id2, std::pow(i.value().get<double>(),2) );
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     void force(std::vector<Point> &forces) override {
@@ -987,7 +1122,7 @@ namespace Faunus {
                                 // more atoms moved
                                 auto& g1 = spc.groups.at(d.index);
                                 //for (auto &g2 : spc.groups)
-#pragma omp parallel for reduction (+:u) if (omp_enable and omp_g2g)
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (omp_enable and omp_g2g)
                                 for (size_t i=0; i<spc.groups.size(); i++) {
                                     auto &g2 = spc.groups[i];
                                     if (&g1 != &g2)
@@ -998,59 +1133,70 @@ namespace Faunus {
                                 return u;
                             }
 
-                            //
-                            if (change.dN) {
-                                auto moved = change.touchedGroupIndex(); // index of moved groups
-                                std::vector<int> Moved;
-                                for (auto i: moved)
-                                    Moved.push_back(i);
-                                std::sort( Moved.begin(), Moved.end() );
-                                auto fixed = view::ints( 0, int(spc.groups.size()) )
-                                    | view::remove_if(
-                                            [&Moved](int i){return std::binary_search(Moved.begin(), Moved.end(), i);}
-                                            ); // index of static groups
-                                for ( auto cg1 = change.groups.begin(); cg1 < change.groups.end() ; ++cg1 ) { // Loop over all changed groups
-                                    std::vector<int> ifiltered, jfiltered; // Active atoms
-                                    for (auto i: cg1->atoms) {
-                                        if ( i < spc.groups.at(cg1->index).size() )
-                                            ifiltered.push_back(i);
-                                    }
-                                    // Skip if all atomic molecules have been removed from both (never skip for polyatomic)
-                                    if ( not ( cg1->dNatomic && ifiltered.empty() ) )
-                                        for ( auto j : fixed) {
-                                            u += g2g( spc.groups.at(cg1->index), spc.groups[j], ifiltered, jfiltered );
-                                    }
-                                    for ( auto cg2 = cg1; ++cg2 != change.groups.end(); ) {
-                                        for (auto i: cg2->atoms)
-                                            if ( i < spc.groups.at(cg2->index).size() )
-                                                jfiltered.push_back(i);
-                                        // Skip if all atomic molecules have been removed from both (never skip for polyatomic)
-                                        if ( not ( (cg1->dNatomic && ifiltered.empty()) && (cg2->dNatomic && jfiltered.empty()) ) ) 
-                                            u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
-                                        jfiltered.clear();
-                                    }
-                                    if ( not ifiltered.empty() ) 
-                                        u += g_internal( spc.groups.at( cg1->index ), ifiltered );
-                                }
-                                return u;
-                            }
-
                             auto moved = change.touchedGroupIndex(); // index of moved groups
                             auto fixed = view::ints( 0, int(spc.groups.size()) )
                                 | view::remove_if(
                                         [&moved](int i){return std::binary_search(moved.begin(), moved.end(), i);}
                                         ); // index of static groups
 
+                            if (change.dN) {
+                                /*auto moved = change.touchedGroupIndex(); // index of moved groups
+                                std::vector<int> Moved;
+                                for (auto i: moved) {
+                                    Moved.push_back(i);
+                                }
+                                std::sort( Moved.begin(), Moved.end() );
+                                auto fixed = view::ints( 0, int(spc.groups.size()) )
+                                    | view::remove_if(
+                                            [&Moved](int i){return std::binary_search(Moved.begin(), Moved.end(), i);}
+                                            ); // index of static groups*/
+                                for ( auto cg1 = change.groups.begin(); cg1 < change.groups.end() ; ++cg1 ) { // Loop over all changed groups
+                                    std::vector<int> ifiltered, jfiltered; // Active atoms
+                                    for (auto i: cg1->atoms) {
+                                        if ( i < spc.groups.at(cg1->index).size() )
+                                            ifiltered.push_back(i);
+                                    }
+                                    // Skip if the group is empty
+                                    if ( not ifiltered.empty() )
+                                        for ( auto j : fixed )
+                                            u += g2g( spc.groups.at(cg1->index), spc.groups[j], ifiltered, jfiltered );
+
+                                    for ( auto cg2 = cg1; ++cg2 != change.groups.end(); ) {
+                                        for (auto i: cg2->atoms)
+                                            if ( i < spc.groups.at(cg2->index).size() )
+                                                jfiltered.push_back(i);
+                                        // Skip if both groups are empty
+                                        if ( not (ifiltered.empty() && jfiltered.empty()) )
+                                            u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
+                                        jfiltered.clear();
+                                    }
+                                    if ( not ifiltered.empty() && cg1->dNatomic )
+                                        u += g_internal( spc.groups.at( cg1->index ), ifiltered );
+                                }
+                                return u;
+                            }
+
                             // moved<->moved
-                            for ( auto i = moved.begin(); i != moved.end(); ++i ) {
-                                for ( auto j=i; ++j != moved.end(); )
-                                    u += g2g( spc.groups[*i], spc.groups[*j] );
+                            if (change.moved2moved) {
+                                for ( auto i = moved.begin(); i != moved.end(); ++i )
+                                    for ( auto j=i; ++j != moved.end(); )
+                                        u += g2g( spc.groups[*i], spc.groups[*j] );
                             }
 
                             // moved<->static
-                            for ( auto i : moved)
-                                for ( auto j : fixed)
-                                    u += g2g(spc.groups[i], spc.groups[j]);
+                            if (omp_enable and omp_g2g) {
+                                std::vector<std::pair<int,int>> pairs( size(moved) * size(fixed) );
+                                size_t cnt=0;
+                                for (auto i : moved)
+                                    for( auto j : fixed)
+                                        pairs[cnt++] = {i,j};
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (omp_enable and omp_g2g)
+                                for (size_t i=0; i<pairs.size(); i++)
+                                    u += g2g(spc.groups[pairs[i].first], spc.groups[pairs[i].second]);
+                            } else
+                                for ( auto i : moved)
+                                    for ( auto j : fixed)
+                                        u += g2g(spc.groups[i], spc.groups[j]);
 
                             // more todo!
                         }
@@ -1131,7 +1277,10 @@ namespace Faunus {
                             if (change.groups.size()==1) {
                                 auto& d = change.groups[0];
                                 auto& g1 = base::spc.groups.at(d.index);
-                                for (auto &g2 : base::spc.groups) {
+
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (this->omp_enable and this->omp_g2g)
+                                for (size_t i=0; i<spc.groups.size(); i++) {
+                                    auto &g2 = spc.groups[i];
                                     if (&g1 != &g2)
                                         u += g2g(g1, g2, d.atoms);
                                 }
@@ -1145,14 +1294,24 @@ namespace Faunus {
                                         ); // index of static groups
 
                             // moved<->moved
-                            for ( auto i = moved.begin(); i != moved.end(); ++i )
-                                for ( auto j=i; ++j != moved.end(); ) {
-                                    u += g2g( base::spc.groups[*i], base::spc.groups[*j] );
-                            }
+                            if (change.moved2moved)
+                                for ( auto i = moved.begin(); i != moved.end(); ++i )
+                                    for ( auto j=i; ++j != moved.end(); )
+                                        u += g2g( base::spc.groups[*i], base::spc.groups[*j] );
                             // moved<->static
-                            for ( auto i : moved)
-                                for ( auto j : fixed)
-                                    u += g2g(base::spc.groups[i], base::spc.groups[j]);
+                            if (this->omp_enable and this->omp_g2g) {
+                                std::vector<std::pair<int,int>> pairs( size(moved) * size(fixed) );
+                                size_t cnt=0;
+                                for (auto i : moved)
+                                    for( auto j : fixed)
+                                        pairs[cnt++] = {i,j};
+#pragma omp parallel for reduction (+:u) schedule (dynamic) if (this->omp_enable and this->omp_g2g)
+                                for (size_t i=0; i<pairs.size(); i++)
+                                    u += g2g(spc.groups[pairs[i].first], spc.groups[pairs[i].second]);
+                            } else
+                                for ( auto i : moved)
+                                    for ( auto j : fixed)
+                                        u += g2g(base::spc.groups[i], base::spc.groups[j]);
 
                             // more todo!
                         }
@@ -1616,8 +1775,17 @@ namespace Faunus {
                                     if (it.key()=="nonbonded_coulomblj")
                                         push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(it.value(), spc);
 
+                                    if (it.key()=="nonbonded_coulomblj_EM")
+                                        push_back<Energy::NonbondedCached<Tspace,CoulombLJ>>(it.value(), spc);
+
                                     if (it.key()=="nonbonded")
+                                        push_back<Energy::Nonbonded<Tspace,TabulatedPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+                                    
+                                    if (it.key()=="nonbonded_exact")
                                         push_back<Energy::Nonbonded<Tspace,FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+
+                                    if (it.key()=="nonbonded_cached")
+                                        push_back<Energy::NonbondedCached<Tspace,TabulatedPotential<typename Tspace::Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="nonbonded_coulombwca")
                                         push_back<Energy::Nonbonded<Tspace,CoulombWCA>>(it.value(), spc);
@@ -1628,20 +1796,20 @@ namespace Faunus {
                                     if (it.key()=="nonbonded_pmwca")
                                         push_back<Energy::Nonbonded<Tspace,PrimitiveModelWCA>>(it.value(), spc);
 
-                                    if (it.key()=="nonbonded_deserno")
-                                        push_back<Energy::NonbondedCached<Tspace,DesernoMembrane<typename Tspace::Tparticle>>>(it.value(), spc);
-
-                                    if (it.key()=="nonbonded_desernoAA")
-                                        push_back<Energy::NonbondedCached<Tspace,DesernoMembraneAA<typename Tspace::Tparticle>>>(it.value(), spc);
-
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);
+
+                                    if (it.key()=="customexternal")
+                                        push_back<Energy::CustomExternal<Tspace>>(it.value(), spc);
 
                                     if (it.key()=="akesson")
                                         push_back<Energy::ExternalAkesson<Tspace>>(it.value(), spc);
 
                                     if (it.key()=="confine")
                                         push_back<Energy::Confine<Tspace>>(it.value(), spc);
+
+                                    if (it.key()=="constrain")
+                                        push_back<Energy::Constrain>(it.value(), spc);
 
                                     if (it.key()=="example2d")
                                         push_back<Energy::Example2D>(it.value(), spc);

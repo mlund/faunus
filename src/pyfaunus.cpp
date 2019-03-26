@@ -200,7 +200,6 @@ PYBIND11_MODULE(pyfaunus, m)
     py::class_<Change>(m, "Change")
         .def(py::init<>())
         .def_readwrite("all", &Change::all)
-        .def_readwrite("du", &Change::du)
         .def_readwrite("dV", &Change::dV)
         .def_readwrite("dN", &Change::dN)
         .def_readwrite("groups", &Change::groups);

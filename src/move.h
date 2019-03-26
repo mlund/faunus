@@ -3,7 +3,6 @@
 #include "core.h"
 #include "energy.h"
 #include "average.h"
-//#include "analysis.h"
 #include "potentials.h"
 #include "mpi.h"
 
@@ -212,8 +211,18 @@ namespace Faunus {
 
                                 spc.geo.boundary(p->pos);
                                 _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
-                                if (not g.atomic) // recalc mass-center for non-molecular groups
+                                if (not g.atomic) { // recalc mass-center for non-molecular groups
                                     g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
+#ifndef NDEBUG
+                                    Point cmbak = g.cm; // backup mass center
+                                    g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
+                                    double should_be_zero = spc.geo.sqdist( {0,0,0}, Geometry::massCenter(g.begin(), g.end()) );
+                                    if (should_be_zero>1e-6)
+                                        throw std::runtime_error("atomic move too large");
+                                    else
+                                        g.translate(cmbak, spc.geo.getBoundaryFunc());
+#endif
+                                }
                             }
 
                             if (dprot>0) { // rotate
@@ -525,16 +534,14 @@ namespace Faunus {
                     }
 
                     void _move(Change &change) override {
-                        if (dV>0) {
-                            change.dV=true;
-                            change.all=true;
+                        if (dV > 0) {
+                            change.dV = true;
+                            change.all = true;
                             Vold = spc.geo.getVolume();
-                            if (method->second == Geometry::ISOCHORIC)
-                                Vold = std::pow(Vold,1.0/3.0); // volume is constant
                             Vnew = std::exp(std::log(Vold) + (slump()-0.5) * dV);
-                            deltaV = Vnew-Vold;
+                            deltaV = Vnew - Vold;
                             spc.scaleVolume(Vnew, method->second);
-                        } else deltaV=0;
+                        } else deltaV = 0;
                     }
 
                     void _accept(Change&) override {
@@ -739,7 +746,7 @@ namespace Faunus {
                                 if ( molecules<Tpvec>[m.first].atomic ) {
                                     auto git = mollist.begin();
                                     auto othermollist = otherspc->findMolecules(m.first, Tspace::ALL);  // implies that new and old are in sync
-                                    auto othergit=othermollist.begin();
+                                    auto othergit = othermollist.begin();
                                     Change::data d;
                                     d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
                                     d.internal = true;
@@ -749,7 +756,7 @@ namespace Faunus {
                                         // Shuffle back to end, both in trial and new
                                         auto nait = git->end()-1; //iterator to last atom
                                         int dist = Faunus::distance( ait, git->end() ); // distance to random atom from end
-                                        if ( Faunus::distance( ait, nait) > 1 ) {
+                                        if ( Faunus::distance(ait, nait) > 1 ) {
                                             std::iter_swap(ait, nait);
                                             std::iter_swap(othergit->end()-dist-N, othergit->end() - (1+N) );
                                         }
@@ -796,12 +803,12 @@ namespace Faunus {
                                     for ( int N=0; N <m.second; N++ ) {
                                         auto git = slump.sample(mollist.begin(), mollist.end());
                                         git->activate( git->inactive().begin(), git->inactive().end());
-                                        Point newpoint; // = git->cm;
-                                        spc.geo.randompos(newpoint, random);
-                                        git->translate( -git->cm, spc.geo.getBoundaryFunc() );
-                                        git->translate( newpoint, spc.geo.getBoundaryFunc() );
+                                        Point cm = git->cm;
+                                        git->translate( -cm, spc.geo.getBoundaryFunc() );
+                                        spc.geo.randompos(cm, slump);
+                                        git->translate( cm, spc.geo.getBoundaryFunc() );
                                         Point u = ranunit(slump);
-                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*random(), u) );
+                                        Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*(slump()-0.5), u) );
                                         git->rotate(Q, spc.geo.getBoundaryFunc());
                                         Change::data d;
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // Integer *index* of moved group
@@ -943,16 +950,19 @@ namespace Faunus {
                     typedef typename Tspace::Tgroup Tgroup;
                     Tspace& spc;
                     Average<double> msqd, msqd_angle, N;
-                    double thresholdsq=0, dptrans=0, dprot=0, angle=0, _bias=0;
+                    double dptrans=0, dprot=0, angle=0, _bias=0;
                     size_t bias_rejected=0;
                     bool rotate; // true if cluster should be rotated
                     Point dir={1,1,1}, dp;
                     std::vector<std::string> names; // names of molecules to be considered
                     std::vector<int> ids; // molecule id's of molecules to be considered
+                    std::set<int> satellites; // subset of molecules to cluster, but NOT act as nuclei (cluster centers)
                     std::vector<size_t> index; // index of all possible molecules to be considered
+                    std::map<size_t, size_t> clusterSizeDistribution; // distribution of cluster sizes
+                    PairMatrix<double,true> thresholdsq;
 
                     virtual double clusterProbability(const Tgroup &g1, const Tgroup &g2) const {
-                        if (spc.geo.sqdist(g1.cm, g2.cm)<=thresholdsq)
+                        if ( spc.geo.sqdist(g1.cm, g2.cm) <= thresholdsq(g1.id,g2.id) )
                             return 1.0;
                         return 0.0;
                     }
@@ -960,21 +970,39 @@ namespace Faunus {
                     void _to_json(json &j) const override {
                         using namespace u8;
                         j = {
-                            {"threshold", std::sqrt(thresholdsq)}, {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
+                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
                             {rootof + bracket("r" + squared), std::sqrt(msqd.avg())},
                             {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
                             {bracket("N"), N.avg()},
-                            {"bias rejection rate", double(bias_rejected) / cnt}
+                            {"bias rejection rate", double(bias_rejected) / cnt},
+                            {"clusterdistribution", clusterSizeDistribution}
                         };
                         _roundjson(j,3);
+
+                        // print threshold matrix
+                        auto& _j = j["threshold"];
+                        for (auto i : ids)
+                            for (auto j : ids)
+                                if (i>=j) {
+                                    auto str = Faunus::molecules<Tpvec>[i].name+" "+Faunus::molecules<Tpvec>[j].name;
+                                    _j[str] = std::sqrt( thresholdsq(i,j) );
+                                    _roundjson(_j[str], 3);
+                                }
+
+                        // print satellite molecules
+                        if (not satellites.empty()) {
+                            auto &_j = j["satellites"];
+                            _j = json::array();
+                            for (auto id : satellites)
+                                _j.push_back( Faunus::molecules<Tpvec>[id].name );
+                        }
                     }
 
                     void _from_json(const json &j) override {
-                        assertKeys(j, {"dp", "dprot", "dir", "threshold", "molecules", "repeat"});
+                        assertKeys(j, {"dp", "dprot", "dir", "threshold", "molecules", "repeat", "satellites"});
                         dptrans = j.at("dp");
                         dir = j.value("dir", Point(1,1,1));
                         dprot = j.at("dprot");
-                        thresholdsq = std::pow(j.at("threshold").get<double>(), 2);
                         names = j.at("molecules").get<decltype(names)>(); // molecule names
                         ids = names2ids(molecules<Tpvec>, names);     // names --> molids
                         index.clear();
@@ -985,6 +1013,42 @@ namespace Faunus {
                                         index.push_back( &g-&spc.groups.front() );
                         if (repeat<0)
                             repeat = index.size();
+
+                        // read satellite ids (molecules NOT to be considered as cluster centers)
+                        auto satnames = j.value("satellites", std::vector<std::string>()); // molecule names
+                        auto vec = names2ids(Faunus::molecules<Tpvec>, satnames);     // names --> molids
+                        satellites = std::set<int>(vec.begin(), vec.end());
+                        
+                        for (auto id : satellites)
+                            if (std::find(ids.begin(), ids.end(), id)==ids.end() )
+                                throw std::runtime_error("satellite molecules must be defined in `molecules`");
+
+                        // read cluster thresholds
+                        if (j.count("threshold")==1) {
+                            auto &_j = j.at("threshold");
+                            // threshold is given as a single number
+                            if (_j.is_number()) {
+                                for (auto i : ids)
+                                    for (auto j : ids)
+                                        if (i>=j)
+                                            thresholdsq.set(i, j, std::pow( _j.get<double>(), 2));
+                            }
+                            // threshold is given as pairs of clustering molecules
+                            else if (_j.is_object()) {
+                                for (auto it=_j.begin(); it!=_j.end(); ++it) {
+                                    auto v = words2vec<std::string>( it.key() );
+                                    if (v.size()==2) {
+                                        auto it1 = findName(Faunus::molecules<Tpvec>, v[0]);
+                                        auto it2 = findName(Faunus::molecules<Tpvec>, v[1]);
+                                        if (it1==Faunus::molecules<Tpvec>.end() or it2==Faunus::molecules<Tpvec>.end())
+                                            throw std::runtime_error("unknown molecule(s): ["s + v[0] + " " + v[1] + "]");
+                                        thresholdsq.set(it1->id(), it2->id(), std::pow( it.value().get<double>(), 2) );
+                                    } else
+                                        throw std::runtime_error("threshold requires exactly two space-separated molecules");
+                                }
+                            } else
+                                throw std::runtime_error("threshold must be a number or object");
+                        }
                     }
 
                     /**
@@ -1032,12 +1096,19 @@ start:
                     void _move(Change &change) override {
                         _bias=0;
                         rotate=true;
-                        if (thresholdsq>0 and not index.empty()) {
+                        if (not index.empty()) {
                             std::set<size_t> cluster; // all group index in cluster
-                            size_t first = *slump.sample(index.begin(), index.end()); // random molecule (nuclei)
+
+                            // find "nuclei" or cluster center and exclude any molecule id listed as "satellite".
+                            size_t first;
+                            do {
+                                first = *slump.sample(index.begin(), index.end()); // random molecule (nuclei)
+                            } while (satellites.count( spc.groups[first].id ) != 0);
+
                             findCluster(spc, first, cluster); // find cluster around first
 
                             N += cluster.size(); // average cluster size
+                            clusterSizeDistribution[ cluster.size() ]++; // update cluster size distribution
                             Change::data d;
                             d.all=true;
                             dp = ranunit(slump, dir) * dptrans * slump();
@@ -1084,6 +1155,8 @@ start:
                                 d.index=i;
                                 change.groups.push_back(d);
                             }
+
+                            change.moved2moved = false; // do not calc. internal cluster energy
 
                             // Reject if cluster composition changes during move
                             // Note: this only works for the binary 0/1 probability function
@@ -1137,9 +1210,12 @@ start:
                     Tspace& spc;
                     std::string molname;
                     int molid;
+                    int skipped=0; // number of skipped moves due to too small container
                     double dprot;
+                    double _bias=0; // bias energy
                     double d2; // cm movement, squared
                     Average<double> msqd; // cm mean squared displacement
+                    bool skip_if_too_large=true;
 
                     void _to_json(json &j) const override {
                         using namespace u8;
@@ -1147,12 +1223,15 @@ start:
                             {"molecule", molname}, {"dprot", dprot},
                             {u8::rootof + u8::bracket("r_cm" + u8::squared), std::sqrt(msqd.avg())}
                         };
+                        if (skipped>0)
+                            j["skipped"] = double(skipped) / cnt;
                         _roundjson(j,3);
                     }
 
                     void _from_json(const json &j) override {
                         dprot = j.at("dprot");
                         molname = j.at("molecule");
+                        skip_if_too_large = j.value("skiplarge", true);
                         auto it = findName(molecules<Tpvec>, molname);
                         if (it == molecules<Tpvec>.end())
                             throw std::runtime_error("unknown molecule '" + molname + "'");
@@ -1167,13 +1246,19 @@ start:
                         }
                     }
 
+                    /**
+                     * 1. pick random harmonic bond
+                     * 2. set rotation axis to bond axis
+                     * 3. rotate all atoms aither before or after bond
+                     * 4. recalc. mass center
+                     */
                     void _move(Change &change) override {
                         d2=0;
                         if (std::fabs(dprot)>1e-9) {
                             auto g = spc.randomMolecule(molid, slump); // look for random group
                             if (g!=spc.groups.end())
                                 if (g->size()>2) { // must at least have three atoms
-                                    auto b = slump.sample(bonds.begin(), bonds.end()); // random harmonic bond
+                                    auto b = slump.sample(bonds.begin(), bonds.end()); // pick random harmonic bond
                                     if (b != bonds.end()) {
                                         // index in `bonds are relative to the group
                                         int i1 = (*b)->index.at(0);
@@ -1181,7 +1266,7 @@ start:
                                         int offset = std::distance( spc.p.begin(), g->begin() );
 
                                         index.clear();
-                                        if (slump()>0.5)
+                                        if (slump()>0.5) // either rotate after or before bond
                                             for (size_t i=i2+1; i<g->size(); i++)
                                                 index.push_back(i+offset);
                                         else
@@ -1192,8 +1277,9 @@ start:
 
                                         if (not index.empty()) {
                                             Point oldcm = g->cm;
-                                            g->unwrap(spc.geo.getDistanceFunc()); // remove pbc
-                                            Point u = (spc.p[i1].pos - spc.p[i2].pos).normalized();
+                                            Point shift = spc.p[i1].pos; // center around this point to disable PBC
+                                            g->translate(-shift, spc.geo.getBoundaryFunc());
+                                            Point u = spc.geo.vdist(spc.p[i1].pos, spc.p[i2].pos).normalized();
                                             double angle = dprot * (slump()-0.5);
                                             Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
                                             auto M = Q.toRotationMatrix();
@@ -1203,7 +1289,20 @@ start:
                                                     + spc.p[i1].pos; // positional rot.
                                             }
                                             g->cm = Geometry::massCenter(g->begin(), g->end());
-                                            g->wrap(spc.geo.getBoundaryFunc()); // re-apply pbc
+                                            g->translate(shift, spc.geo.getBoundaryFunc());
+
+                                            // in periodic systems (cuboid, slit etc.) a pivot move
+                                            // can cause the molecule to be large than half the box
+                                            // length which we catch here.
+                                            double should_be_zero = spc.geo.sqdist( g->cm,
+                                                    Geometry::massCenter(g->begin(), g->end(), spc.geo.getBoundaryFunc(), -g->cm));
+                                            if (should_be_zero>1e-6) {
+                                                if (skip_if_too_large) {
+                                                    skipped++;
+                                                    d2 = 0;
+                                                    _bias = pc::infty; // config. WILL be rejected
+                                                } else throw std::runtime_error("container too small for molecule");
+                                            } else _bias = 0;
 
                                             d2 = spc.geo.sqdist(g->cm, oldcm); // CM movement
 
@@ -1218,6 +1317,10 @@ start:
                                     }
                                 }
                         }
+                    }
+
+                    double bias(Change&, double, double) override {
+                        return _bias;
                     }
 
                     void _accept(Change&) override { msqd += d2; }
@@ -1436,6 +1539,8 @@ start:
                 typedef Space<Tgeometry, Tparticle> Tspace;
                 typedef typename Tspace::Tpvec Tpvec;
 
+                std::string lastMoveName; //!< name of latest move
+
                 bool metropolis(double du) const {
                     if (std::isnan(du))
                         throw std::runtime_error("Metropolis error: energy cannot be NaN");
@@ -1506,22 +1611,26 @@ start:
                 double drift() {
                     Change c; c.all=true;
                     double ufinal = state1.pot.energy(c);
-                    if (uinit!=0)
-                        return ( ufinal-(uinit+dusum) ) / uinit;
-                    else
-                        return ufinal-(uinit+dusum); // in case uinit==0, report absolute drift
-                } //!< Calculates the relative or absolute energy drift from initial configuration
+                    double du = ufinal-uinit;
+                    if (std::isfinite(du)) {
+                        if (std::fabs(du)<1e-10) return 0;
+                        if (uinit!=0) return ( ufinal-(uinit+dusum) ) / uinit;
+                        else if (ufinal!=0) return ( ufinal-(uinit+dusum) ) / ufinal;
+                    }
+                    return std::numeric_limits<double>::quiet_NaN();
+                } //!< Calculates the relative energy drift from initial configuration
 
                 MCSimulation(const json &j, MPI::MPIController &mpi) : state1(j), state2(j), moves(j, state2.spc, mpi) {
                     init();
                 }
 
+/* currently unused -- see Analysis::SaveState.
                 void store(json &j) const {
                     j = state1.spc;
                     j["random-move"] = Move::Movebase::slump;
                     j["random-global"] = Faunus::random;
                 } // store system to json object
-
+*/
                 void restore(const json &j) {
                     try {
                         state1.spc = j; // old/accepted state
@@ -1544,6 +1653,7 @@ start:
                             (**mv).move(change);
 
                             if (change) {
+                                lastMoveName = (**mv).name; // store name of move for output
                                 double unew, uold, du;
                                 //#pragma omp parallel sections
                                 {
@@ -1592,6 +1702,7 @@ start:
                     j["temperature"] = pc::temperature / 1.0_K;
                     j["moves"] = moves;
                     j["energy"].push_back(state1.pot);
+                    j["last move"] = lastMoveName;
                 }
         };
 
@@ -1635,12 +1746,13 @@ start:
                             N_o = size(atomlist_o);
                             int dN = N_n - N_o;
                             double V_n = spc_n.geo.getVolume();
+                            double V_o = spc_o.geo.getVolume();
                             if (dN>0)
                                 for (int n=0; n < dN; n++)
                                     NoverO += std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
                             else 
                                 for (int n=0; n < (-dN); n++)
-                                    NoverO -= std::log( (N_o - n) / ( V_n * 1.0_molar ));
+                                    NoverO -= std::log( (N_o - n) / ( V_o * 1.0_molar ));
                         }
                     } else {
                         if ( m.dNatomic ) {
@@ -1652,31 +1764,29 @@ start:
                                 throw std::runtime_error("Only atomic molecules!");
                             // Below is safe due to the catches above
                             // add consistency criteria with m.atoms.size() == N
-                            N_n =  mollist_n.begin()->size();
-                            N_o =  mollist_o.begin()->size();
+                            N_n = mollist_n.begin()->size();
+                            N_o = mollist_o.begin()->size();
                         } else {
-                            if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic ) { // Molecular species
-                                auto mollist_n = spc_n.findMolecules(m.index, Tspace::ACTIVE);
-                                auto mollist_o = spc_o.findMolecules(m.index, Tspace::ACTIVE);
-                                N_n=size(mollist_n);
-                                N_o=size(mollist_o);
-                            }
+                            auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ACTIVE);
+                            auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ACTIVE);
+                            N_n = size(mollist_n);
+                            N_o = size(mollist_o);
                         }
                         int dN = N_n - N_o;
                         if (dN!=0) {
                             double V_n = spc_n.geo.getVolume();
-                            //double V_o = spc_o.geo.getVolume();
+                            double V_o = spc_o.geo.getVolume();
                             if (dN>0)
                                 for (int n=0; n < dN; n++)
                                     NoverO += std::log( (N_o + 1 + n) / ( V_n * 1.0_molar ));
                             else 
                                 for (int n=0; n < (-dN); n++)
-                                    NoverO -= std::log( (N_o - n) / ( V_n * 1.0_molar ));
+                                    NoverO -= std::log( (N_o - n) / ( V_o * 1.0_molar ));
                         }
                     }
                 }
             }
-            return NoverO; // negative sign since Pref exp{-beta(dU)} = exp{-beta(dU -ln(Pref)}
+            return NoverO;
         }
 
 }//Faunus namespace

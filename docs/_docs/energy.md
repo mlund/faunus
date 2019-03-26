@@ -266,7 +266,7 @@ used. Through the C++ API, it is easy to add new potentials.
 
 ### Charge-Nonpolar
 
-The energy when the field from a point charge, $z_i$, induces a dipole in a polarizable particle of unit-less excess polarizability, $\alpha_j=\left ( \frac{\epsilon_j-\epsilon_r}{\epsilon_r+2\epsilon_r}\right ) a^3$, is
+The energy when the field from a point charge, $z_i$, induces a dipole in a polarizable particle of unit-less excess polarizability, $\alpha_j=\left ( \frac{\epsilon_j-\epsilon_r}{\epsilon_j+2\epsilon_r}\right ) a_j^3$, is
 
 $$
     \beta u_{ij} = -\frac{\lambda_B z_i^2 \alpha_j}{2r_{ij}^4}
@@ -281,7 +281,6 @@ For more information, see
 `ionalpha`           | Description
 -------------------- | ---------------------------------------
 `epsr`               | Relative dielectric constant of medium
-`alphaneutral=false` | Do not polarize charged particle
 
 **Limitations:**
 Charge-polarizability products for each pair of species is evaluated once during

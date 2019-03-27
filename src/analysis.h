@@ -967,6 +967,7 @@ namespace Faunus {
             private:
                 std::function<void(std::string)> writeFunc = nullptr;
                 std::string file;
+                bool saverandom;
                 void _to_json(json &j) const override;
                 void _sample() override;
             public:
@@ -977,6 +978,7 @@ namespace Faunus {
                         from_json(j);
                         name = "savestate";
                         steps = j.value("nstep", -1);
+                        saverandom = j.value("saverandom", false);
                         file = j.at("file");
                         std::string suffix = file.substr(file.find_last_of(".") + 1);
                         file = MPI::prefix + file;
@@ -1002,25 +1004,29 @@ namespace Faunus {
                                     _1, std::ref(spc));
 
                         else if ( suffix == "json" ) // JSON state file
-                            writeFunc = [&spc](const std::string &file) {
+                            writeFunc = [&spc,this](const std::string &file) {
                                 std::ofstream f(file);
                                 if (f) {
                                     json j;
                                     Faunus::to_json(j, spc);
-                                    j["random-move"] = Move::Movebase::slump;
-                                    j["random-global"] = Faunus::random;
+                                    if (this->saverandom) {
+                                        j["random-move"] = Move::Movebase::slump;
+                                        j["random-global"] = Faunus::random;
+                                    }
                                     f << std::setw(2) << j;
                                 }
                             };
 
                         else if ( suffix == "ubj" ) // Universal Binary JSON state file
-                            writeFunc = [&spc](const std::string &file) {
+                            writeFunc = [&spc,this](const std::string &file) {
                                 std::ofstream f(file, std::ios::binary);
                                 if (f) {
                                     json j;
                                     Faunus::to_json(j, spc);
-                                    j["random-move"] = Move::Movebase::slump;
-                                    j["random-global"] = Faunus::random;
+                                    if (this->saverandom) {
+                                        j["random-move"] = Move::Movebase::slump;
+                                        j["random-global"] = Faunus::random;
+                                    }
                                     auto v = json::to_ubjson(j); // json --> binary
                                     f.write( (const char*)v.data(), v.size()*sizeof(decltype(v)::value_type));
                                 }

@@ -669,7 +669,6 @@ namespace Faunus {
                     SpeciationMove(Tspace &spc) : spc(spc) {
                         name = "rcmc";
                         cite = "doi:10/fqcpg3";
-                        repeat = 1;
                     }
 
                     void setOther(Tspace &ospc) {
@@ -1487,8 +1486,10 @@ start:
 #pragma GCC diagnostic ignored "-Wunused-parameter"
                     inline Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi) {
 #pragma GCC diagnostic pop
-                        if (j.count("random")==1)
+                        if (j.count("random")==1) {
                             Movebase::slump = j["random"]; // slump is static --> shared for all moves
+                            Faunus::random = j["random"];
+                        }
 
                         for (auto &m : j.at("moves")) {// loop over move list
                             size_t oldsize = vec.size();
@@ -1635,8 +1636,10 @@ start:
                     try {
                         state1.spc = j; // old/accepted state
                         state2.spc = j; // trial state
-                        Move::Movebase::slump = j["random-move"]; // restore move random number generator
-                        Faunus::random = j["random-global"];      // restore global random number generator
+                        if (j.count("random-move")==1)
+                            Move::Movebase::slump = j["random-move"]; // restore move random number generator
+                        if (j.count("random-global")==1)
+                            Faunus::random = j["random-global"];      // restore global random number generator
                         reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>(); // should be handled by space
                         init();
                     } catch (std::exception &e) {

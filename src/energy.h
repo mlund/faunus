@@ -1170,7 +1170,7 @@ namespace Faunus {
                                             u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
                                         jfiltered.clear();
                                     }
-                                    if ( not ifiltered.empty() && cg1->dNatomic )
+                                    if ( not ifiltered.empty() )
                                         u += g_internal( spc.groups.at( cg1->index ), ifiltered );
                                 }
                                 return u;

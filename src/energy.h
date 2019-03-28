@@ -301,6 +301,44 @@ namespace Faunus {
                     }
             };
 
+        /** @brief Self-energy term of electrostatic potentials  */
+        template<class Tspace>
+            class SelfEnergy : public Energybase {
+                private:
+                    std::string type;
+                    double selfenergy_prefactor, epsr, lB, rc;
+                    Tspace& spc;
+
+                public:
+
+                    SelfEnergy(const json &j, Tspace &spc) : spc(spc) {
+                        name = "selfenergy";
+                        type = j.at("type");
+                        rc = j.at("cutoff");
+                        epsr = j.at("epsr");
+                        lB = pc::lB( epsr );
+                        if (type=="fanourgakis") selfenergy_prefactor = 0.875;
+                        if (type=="qpotential") selfenergy_prefactor = 0.5;
+                        if (type=="stenqvist") selfenergy_prefactor = 1;
+                    }
+
+                    double energy(Change &change) override {
+                        double Eq = 0;
+                        if (change.dN) 
+                            for ( auto cg = change.groups.begin(); cg < change.groups.end() ; ++cg ) {
+                                auto g = &spc.groups.at(cg->index);
+                                for (auto i: cg->atoms) 
+                                    if ( i < g->size() )
+                                        Eq += std::pow( (g->begin()+i)->charge, 2);
+                            }
+                        else if (change.all and not change.dV) 
+                            for (auto g = spc.groups.begin(); g < spc.groups.end(); ++g) 
+                                for (auto i : *g) 
+                                    Eq += i.charge * i.charge;
+                        return -selfenergy_prefactor*Eq*lB/rc;
+                    }
+            };
+
         template<typename Tspace>
             class Isobaric : public Energybase {
                 private:
@@ -1152,14 +1190,15 @@ namespace Faunus {
                                             ); // index of static groups*/
                                 for ( auto cg1 = change.groups.begin(); cg1 < change.groups.end() ; ++cg1 ) { // Loop over all changed groups
                                     std::vector<int> ifiltered, jfiltered; // Active atoms
+                                    auto g1 = &spc.groups.at(cg1->index);
                                     for (auto i: cg1->atoms) {
-                                        if ( i < spc.groups.at(cg1->index).size() )
+                                        if ( i < g1->size() )
                                             ifiltered.push_back(i);
                                     }
                                     // Skip if the group is empty
                                     if ( not ifiltered.empty() )
                                         for ( auto j : fixed )
-                                            u += g2g( spc.groups.at(cg1->index), spc.groups[j], ifiltered, jfiltered );
+                                            u += g2g( *g1, spc.groups[j], ifiltered, jfiltered );
 
                                     for ( auto cg2 = cg1; ++cg2 != change.groups.end(); ) {
                                         for (auto i: cg2->atoms)
@@ -1167,11 +1206,11 @@ namespace Faunus {
                                                 jfiltered.push_back(i);
                                         // Skip if both groups are empty
                                         if ( not (ifiltered.empty() && jfiltered.empty()) )
-                                            u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
+                                            u += g2g( *g1,  spc.groups.at(cg2->index), ifiltered, jfiltered );
                                         jfiltered.clear();
                                     }
-                                    if ( not ifiltered.empty() )
-                                        u += g_internal( spc.groups.at( cg1->index ), ifiltered );
+                                    if ( not ifiltered.empty() and not molecules<Tpvec>.at(g1->id).rigid )
+                                        u += g_internal( *g1, ifiltered );
                                 }
                                 return u;
                             }
@@ -1752,6 +1791,15 @@ namespace Faunus {
                                     push_back<Energy::Ewald<Tspace>>(j["coulomb"], spc);
                     } //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
 
+                    void addSelfEnergy(const json &j, Tspace &spc) {
+                        std::vector<std::string> methods = {"stenqvist","qpotential","fanourgakis"};
+                        if (j.count("coulomb")==1)
+                            if (j["coulomb"].count("type")==1)
+                                if (std::find(methods.begin(), methods.end(), j["coulomb"].at("type"))!=methods.end())
+                                    push_back<Energy::SelfEnergy<Tspace>>(j["coulomb"], spc);
+                    } //!< Adds an instance of the self term of the electrostatic potential (if appropriate)
+
+
                 public:
                     Hamiltonian(Tspace &spc, const json &j) {
                         using namespace Potential;
@@ -1830,6 +1878,8 @@ namespace Faunus {
                                     // additional energies go here...
 
                                     addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
+
+                                    addSelfEnergy(it.value(), spc); // add self-term of electrostatic potential if appropriate
 
                                     if (it.key()=="maxenergy") {
                                         maxenergy = it.value().get<double>();

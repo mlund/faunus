@@ -466,6 +466,7 @@ namespace Faunus {
             void sfQpotential(const json &j);
             void sfYonezawa(const json &j);
             void sfFanourgakis(const json &j);
+            void sfStenqvist(const json &j);
             void sfFennel(const json &j);
             void sfEwald(const json &j);
             void sfWolf(const json &j);
@@ -502,13 +503,13 @@ namespace Faunus {
             /**
              * @brief Self-energy of the potential
              */
-            template<class Tpvec, class Tgroup>
+            /*template<class Tpvec, class Tgroup>
                 double internal(const Tgroup &g) const {
                     double Eq = 0;
                     for (auto i : g)
                         Eq += i.charge * i.charge;
                     return -selfenergy_prefactor*Eq*lB/rc;
-                }
+                }*/
 
             double dielectric_constant(double M2V);
 

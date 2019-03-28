@@ -76,6 +76,12 @@ void Faunus::Potential::CoulombGalore::sfFanourgakis(const Faunus::json&) {
     selfenergy_prefactor = 0.875;
 }
 
+void Faunus::Potential::CoulombGalore::sfStenqvist(const Faunus::json&) {
+    table = sf.generate( [&](double q) { return 1 - 2*q + 5*pow(q,4) - 6*pow(q,5) + 2*pow(q,6); }, 0, 1 );
+    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+    selfenergy_prefactor = 1;
+}
+
 void Faunus::Potential::CoulombGalore::sfFennel(const Faunus::json &j) {
     alpha = j.at("alpha");
     table = sf.generate( [&](double q) { return (erfc(alpha*rc*q) - std::erfc(alpha*rc)*q + (q-1.0)*q*(std::erfc(alpha*rc)
@@ -130,6 +136,7 @@ void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
         if (type=="reactionfield") sfReactionField(j);
         if (type=="fanourgakis") sfFanourgakis(j);
         if (type=="qpotential") sfQpotential(j);
+        if (type=="stenqvist") sfStenqvist(j);
         if (type=="yonezawa") sfYonezawa(j);
         if (type=="yukawa") sfYukawa(j);
         if (type=="fennel") sfFennel(j);

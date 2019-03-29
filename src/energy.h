@@ -1773,9 +1773,6 @@ namespace Faunus {
                             size_t oldsize = vec.size();
                             for (auto it=m.begin(); it!=m.end(); ++it) {
                                 try {
-                                    if (it.key()=="hertz_model")
-                                        push_back<Energy::Nonbonded<Tspace,HertzModel>>(it.value(), spc);
-
                                     if (it.key()=="nonbonded_coulomblj")
                                         push_back<Energy::Nonbonded<Tspace,CoulombLJ>>(it.value(), spc);
 

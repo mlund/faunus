@@ -302,6 +302,22 @@ namespace Faunus {
                 }
         };
 
+        /**
+         * @brief Hertz potential
+         * @details This is a repulsive potential describes the change in elasticenergy of two deformable objects when subjected to an axialcompression.
+         * @f[
+         *     u(r) = \epsilon_H \left(1 - \frac{r}{\sigma}\right)^{5/2}
+         * @f]
+         *
+         * JSON keywords:
+         *
+         * Key     | Description
+         * :-------| :---------------------------
+         * `E`     | Strength, \f$E\f$ [kT]
+         *
+         * More info: doi:10.1063/1.3186742
+         *
+         */
         template<class Tparticle>
             class Hertz : public PairPotentialBase {
                 private:
@@ -586,7 +602,7 @@ namespace Faunus {
                  {"A": { "q":1.0,  "r":3, "eps":0.1 }},
                  {"B": { "q":-1.0, "r":4, "eps":0.05 }} ]})"_json;
 
-                atoms = j["atomlist"].get<decltype(atoms)>();
+            atoms = j["atomlist"].get<decltype(atoms)>();
 
             Tparticle a,b;
             a = atoms[0];
@@ -596,7 +612,7 @@ namespace Faunus {
                 "constants": { "kappa": 30, "lB": 7},
                 "function": "lB * q1 * q2 / (s1+s2) * exp(-kappa/r) * kT + pi"})"_json;
 
-                CHECK( pot(a,b,{0,0,2}) == Approx( -7/(3.0+4.0) * std::exp(-30/2) * pc::kT() + pc::pi  ));
+            CHECK( pot(a,b,{0,0,2}) == Approx( -7/(3.0+4.0) * std::exp(-30/2) * pc::kT() + pc::pi  ));
         }
 #endif
 
@@ -825,7 +841,7 @@ namespace Faunus {
                  {"B": { "q":-1.0, "r":2.0, "eps":0.05 }},
                  {"C": { "r":1.0 }} ]})"_json;
 
-                atoms = j["atomlist"].get<decltype(atoms)>();
+            atoms = j["atomlist"].get<decltype(atoms)>();
 
             FunctorPotential<T> u = R"(
                 {
@@ -1079,7 +1095,7 @@ namespace Faunus {
                  { "A": { "r": 1.5, "tension": 0.023} },
                  { "B": { "r": 2.1, "tfe": 0.98 } }]})"_json;
 
-                typedef Particle<Radius> T;
+            typedef Particle<Radius> T;
             atoms = j["atomlist"].get<decltype(atoms)>();
             T a,b;
             a.id = 0;

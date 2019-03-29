@@ -770,7 +770,7 @@ interacting molecular groups.
 
 `coords=[cmcm]` | Mass-center separation
 --------------- | -----------------------------------
-`index`         | Array w. exactly two molecule index
+`indexes`       | Array w. exactly two molecule index
 `range`         | Array w. [min:max] separation
 `resolution`    | Resolution along coordinate
 `dir=[1,1,1]`   | Directions for distance calc.

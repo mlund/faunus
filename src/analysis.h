@@ -1047,6 +1047,8 @@ namespace Faunus {
                 int dim=3;
                 int id1=-1, id2=-1; // particle id (mol or atom)
                 double dr=0;
+                Eigen::Vector3i slicedir={0,0,0};
+                double thickness=0;
                 Equidistant2DTable<double,double> hist;
                 std::string name1, name2, file;
                 double Rhypersphere=-1; // Radius of 2D hypersphere
@@ -1076,8 +1078,15 @@ namespace Faunus {
                                     ( i->id==id2 && j->id==id1 )
                                )
                             {
-                                double r = std::sqrt( spc.geo.sqdist( i->pos, j->pos ) );
-                                hist(r)++;
+                                Point rvec = spc.geo.vdist( i->pos, j->pos );
+                                if (slicedir.sum()>0) {
+                                    if (rvec.cwiseProduct( slicedir.cast<double>() ).norm() < thickness) {
+                                        // rvec = rvec.cwiseProduct( Point(1.,1.,1.) - slice.cast<double>() );
+                                        hist( rvec.norm() )++;
+                                    }
+                                } else {
+                                    hist( rvec.norm() )++;
+                                }
                             }
                 }
 

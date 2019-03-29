@@ -1795,9 +1795,6 @@ namespace Faunus {
 
                                     if (it.key()=="nonbonded_pmwca")
                                         push_back<Energy::Nonbonded<Tspace,PrimitiveModelWCA>>(it.value(), spc);
-				    
-                                    if (it.key()=="hertz")
-                                        push_back<Energy::Nonbonded<Tspace,Hertz<Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);

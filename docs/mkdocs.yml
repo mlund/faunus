@@ -1,6 +1,6 @@
-site_name: faunusmk2
+site_name: faunus
 repo_url: https://github.com/mlund/faunus
-docs_dir: docs/_docs
+docs_dir: _docs
 
 nav:
     - Topology: 'topology.md'

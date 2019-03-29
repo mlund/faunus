@@ -306,7 +306,7 @@ namespace Faunus {
          * @brief Hertz potential
          * @details This is a repulsive potential describes the change in elasticenergy of two deformable objects when subjected to an axialcompression.
          * @f[
-         *     u(r) = \epsilon_H \left(1 - \frac{r}{\sigma}\right)^{5/2}
+         *     u(r) = \epsilon_H \left(1 - \frac{r}{n\sigma}\right)^{5/2}
          * @f]
          *
          * JSON keywords:
@@ -314,7 +314,7 @@ namespace Faunus {
          * Key     | Description
          * :-------| :---------------------------
          * `E`     | Strength, \f$E\f$ [kT]
-         * `n`     | Scale diameter, \f$\sigma_{eff}=n\sigma\f$ (optional, default value: 1)
+         * `n`     | Scale diameter, (optional, default value: 1)
          *
          * More info: doi:10.1063/1.3186742
          *
@@ -323,33 +323,35 @@ namespace Faunus {
             class Hertz : public PairPotentialBase {
                 private:
                     double E, n;
-                    std::shared_ptr<PairMatrix<double>> rr2; // matrix of (r1+r2)^2
+                    std::shared_ptr<PairMatrix<double>> rr, rr2; // matrices of (r1+r2), and (r1+r2)^2
                 public:
                     Hertz(const std::string &name="hertz") {
                         PairPotentialBase::name=name;
+                        rr = std::make_shared<PairMatrix<double>>();
                         rr2 = std::make_shared<PairMatrix<double>>();
-                        for (auto &i : atoms)
-                            for (auto &j : atoms)
-                                rr2->set( i.id(), j.id(), pow(n*(i.sigma+j.sigma)/2,2));
                     }
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2 = r.squaredNorm();
-                        double m2 = rr2->operator()(a.id,b.id);
-                        double diameter = n*atoms[a.id].sigma;
-                        if(r2 <= m2)
-                            return E*pow((1-(sqrt(r2)/diameter)),(5./2.));
+                        if(r2 <= rr2->operator()(a.id,b.id))
+                            return E*pow((1-(sqrt(r2)/rr->operator()(a.id,b.id))),2.5);
                         return 0.0;
                     }
 
                     void from_json(const json &j) override {
                         E = j.at("E").get<double>();
-			n = j.value("n",1.0);
+                        n = j.value("n",1.0);
+
+                        for (auto &i : atoms)
+                            for (auto &j : atoms) {
+                                double rirj = (i.sigma+j.sigma)*n/2;
+                                rr->set( i.id(), j.id(), rirj);
+                                rr2->set( i.id(), j.id(), rirj*rirj);
+                            }
                     }
 
                     void to_json(json &j) const override { 
-                        j["E"] = E; 
-			j["n"] = n;
-
+                        j["E"] = E;
+                        j["n"] = n;
                     }
             }; //!< Hertz potential
 

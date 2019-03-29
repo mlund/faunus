@@ -1761,7 +1761,6 @@ namespace Faunus {
                         typedef CombinedPairPotential<CoulombGalore,WeeksChandlerAndersen<Tparticle>> CoulombWCA;
                         typedef CombinedPairPotential<Coulomb,WeeksChandlerAndersen<Tparticle>> PrimitiveModelWCA;
                         typedef CombinedPairPotential<Coulomb,HardSphere<Tparticle>> PrimitiveModel;
-			typedef Hertz<Tparticle> HertzModel;
 
                         Energybase::name="hamiltonian";
 
@@ -1796,6 +1795,9 @@ namespace Faunus {
 
                                     if (it.key()=="nonbonded_pmwca")
                                         push_back<Energy::Nonbonded<Tspace,PrimitiveModelWCA>>(it.value(), spc);
+				    
+                                    if (it.key()=="hertz")
+                                        push_back<Energy::Nonbonded<Tspace,Hertz<Tparticle>>>(it.value(), spc);
 
                                     if (it.key()=="bonded")
                                         push_back<Energy::Bonded<Tspace>>(it.value(), spc);

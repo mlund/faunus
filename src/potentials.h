@@ -314,6 +314,7 @@ namespace Faunus {
          * Key     | Description
          * :-------| :---------------------------
          * `E`     | Strength, \f$E\f$ [kT]
+         * `n`     | Scale diameter, \f$\sigma_{eff}=n\sigma\f$ (optional, default value: 1)
          *
          * More info: doi:10.1063/1.3186742
          *
@@ -321,7 +322,7 @@ namespace Faunus {
         template<class Tparticle>
             class Hertz : public PairPotentialBase {
                 private:
-                    double E;
+                    double E, n;
                     std::shared_ptr<PairMatrix<double>> rr2; // matrix of (r1+r2)^2
                 public:
                     Hertz(const std::string &name="hertz") {
@@ -329,12 +330,12 @@ namespace Faunus {
                         rr2 = std::make_shared<PairMatrix<double>>();
                         for (auto &i : atoms)
                             for (auto &j : atoms)
-                                rr2->set( i.id(), j.id(), pow((i.sigma+j.sigma)/2,2));
+                                rr2->set( i.id(), j.id(), pow(n*(i.sigma+j.sigma)/2,2));
                     }
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2 = r.squaredNorm();
                         double m2 = rr2->operator()(a.id,b.id);
-                        double diameter = atoms[a.id].sigma;
+                        double diameter = n*atoms[a.id].sigma;
                         if(r2 <= m2)
                             return E*pow((1-(sqrt(r2)/diameter)),(5./2.));
                         return 0.0;
@@ -342,10 +343,12 @@ namespace Faunus {
 
                     void from_json(const json &j) override {
                         E = j.at("E").get<double>();
+			n = j.value("n",1.0);
                     }
 
                     void to_json(json &j) const override { 
                         j["E"] = E; 
+			j["n"] = n;
 
                     }
             }; //!< Hertz potential

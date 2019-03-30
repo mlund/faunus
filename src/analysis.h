@@ -551,7 +551,7 @@ namespace Faunus {
 
                 void _sample() override {
                     Group<Tparticle> all(spc.p.begin(), spc.p.end());
-                    double zcm;
+                    double zcm = 0;
                     if (idCOM >= 0) { // calc. mass center of selected atoms
                         auto slice = all.find_id(idCOM);
                         zcm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc()).z();
@@ -559,12 +559,8 @@ namespace Faunus {
                     // count atoms in slices
                     for (auto &g : spc.groups) // loop over all groups
                         for (auto &i : g)      // loop over active particles
-                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end()) {
-                                if (idCOM >= 0)
-                                    N( i.pos.z() - zcm )++;
-                                else
-                                    N( i.pos.z() )++;
-                            }
+                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end())
+                                N( i.pos.z() - zcm )++;
                 }
 
                 public:

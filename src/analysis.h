@@ -530,36 +530,38 @@ namespace Faunus {
                 std::vector<int> ids;
                 std::string file;
                 double dz;
-                bool COM=false; // center at COM of atoms?
+                std::string atomCOM;
+                int idCOM = -1; // center at COM of idCOM atoms?
 
                 void _from_json(const json &j) override {
                     file = j.at("file").get<std::string>();
                     names = j.at("atoms").get<decltype(names)>(); // molecule names
                     ids = names2ids(atoms, names);     // names --> molids
                     dz = j.value("dz", 0.1);
-                    COM = j.value("com", false);
+                    if (j.count("atomcom") == 1) {
+                        atomCOM = j.at("atomcom");
+                        idCOM = findName(atoms, atomCOM)->id();
+                    }
                     N.setResolution(dz);
                 }
 
                 void _to_json(json &j) const override {
-                    j = {{"atoms", names}, {"file", file}, {"dz", dz}, {"com", COM}};
+                    j = {{"atoms", names}, {"file", file}, {"dz", dz}, {"atomcom", atomCOM}};
                 }
 
                 void _sample() override {
                     Group<Tparticle> all(spc.p.begin(), spc.p.end());
-                    std::map<int, Point> cms;
-                    if (COM) // calc. mass center of selected atoms
-                        for (int id : ids) {
-                            auto slice = all.find_id(id);
-                            auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
-                            cms[id] = cm;
-                        }
+                    double zcm;
+                    if (idCOM >= 0) { // calc. mass center of selected atoms
+                        auto slice = all.find_id(idCOM);
+                        zcm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc()).z();
+                    }
                     // count atoms in slices
                     for (auto &g : spc.groups) // loop over all groups
                         for (auto &i : g)      // loop over active particles
                             if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end()) {
-                                if (COM)
-                                    N( i.pos.z() - cms[i.id].z() )++;
+                                if (idCOM >= 0)
+                                    N( i.pos.z() - zcm )++;
                                 else
                                     N( i.pos.z() )++;
                             }

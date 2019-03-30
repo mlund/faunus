@@ -303,6 +303,59 @@ namespace Faunus {
         };
 
         /**
+         * @brief Hertz potential
+         * @details This is a repulsive potential describes the change in elasticenergy of two deformable objects when subjected to an axialcompression.
+         * @f[
+         *     u(r) = \epsilon_H \left(1 - \frac{r}{n\sigma}\right)^{5/2}
+         * @f]
+         *
+         * JSON keywords:
+         *
+         * Key     | Description
+         * :-------| :---------------------------
+         * `E`     | Strength, \f$E\f$ [kT]
+         * `n`     | Scale diameter, (optional, default value: 1)
+         *
+         * More info: doi:10.1063/1.3186742
+         *
+         */
+        template<class Tparticle>
+            class Hertz : public PairPotentialBase {
+                private:
+                    double E, n;
+                    std::shared_ptr<PairMatrix<double>> rr, rr2; // matrices of (r1+r2), and (r1+r2)^2
+                public:
+                    Hertz(const std::string &name="hertz") {
+                        PairPotentialBase::name=name;
+                        rr = std::make_shared<PairMatrix<double>>();
+                        rr2 = std::make_shared<PairMatrix<double>>();
+                    }
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        double r2 = r.squaredNorm();
+                        if(r2 <= rr2->operator()(a.id,b.id))
+                            return E*pow((1-(sqrt(r2)/rr->operator()(a.id,b.id))),2.5);
+                        return 0.0;
+                    }
+
+                    void from_json(const json &j) override {
+                        E = j.at("E").get<double>();
+                        n = j.value("n",1.0);
+
+                        for (auto &i : atoms)
+                            for (auto &j : atoms) {
+                                double rirj = (i.sigma+j.sigma)*n/2;
+                                rr->set( i.id(), j.id(), rirj);
+                                rr2->set( i.id(), j.id(), rirj*rirj);
+                            }
+                    }
+
+                    void to_json(json &j) const override { 
+                        j["E"] = E;
+                        j["n"] = n;
+                    }
+            }; //!< Hertz potential
+
+        /**
          * @brief Cosine attraction
          * @details This is an attractive potential used for coarse grained lipids
          * and has the form:
@@ -600,10 +653,11 @@ namespace Faunus {
                     SASApotential,    // 6
                     WeeksChandlerAndersen<T>,// 7
                     PrimitiveModel,   // 8
-                    PrimitiveModelWCA // 9
+                    PrimitiveModelWCA, // 9
+                    Hertz<T> // 10
                         > potlist;
 
-                 uFunc combineFunc(const json &j) { 
+                uFunc combineFunc(const json &j) { 
                     uFunc u = [](const T&, const T&, const Point&){return 0.0;};
                     if (j.is_array()) {
                         for (auto &i : j) // loop over all defined potentials in array
@@ -622,6 +676,7 @@ namespace Faunus {
                                         else if (it.key()=="wca") _u = std::get<7>(potlist) = i;
                                         else if (it.key()=="pm") _u = std::get<8>(potlist) = it.value();
                                         else if (it.key()=="pmwca") _u = std::get<9>(potlist) = it.value();
+                                        else if (it.key()=="hertz") _u = std::get<10>(potlist) = it.value();
                                         // place additional potentials here...
                                     } catch (std::exception &e) {
                                         throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
@@ -647,7 +702,7 @@ namespace Faunus {
                 }
 
                 double operator()(const T &a, const T &b, const Point &r) const {
-                        return umatrix(a.id, b.id)(a, b, r); // pc::infty;
+                    return umatrix(a.id, b.id)(a, b, r); // pc::infty;
                 }
 
                 void to_json(json &j) const override { j = _j; }
@@ -718,7 +773,7 @@ namespace Faunus {
                     // to a pair of atom types
                     for (size_t i=0; i<atoms.size(); ++i) {
                         for (size_t k=0; k<=i; ++k) {
-                           if (atoms[i].implicit==false and atoms[k].implicit==false) {
+                            if (atoms[i].implicit==false and atoms[k].implicit==false) {
                                 T a = atoms.at(i);
                                 T b = atoms.at(k);
                                 double rmin2 = .5*(atoms[i].sigma + atoms[k].sigma);
@@ -808,7 +863,7 @@ namespace Faunus {
                  }
                 )"_json;
 
-            Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
+                Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
             WeeksChandlerAndersen<T> wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
             T a = atoms[0];

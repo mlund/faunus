@@ -145,10 +145,7 @@ void Faunus::Potential::CoulombGalore::sfPlain(const Faunus::json&, double val) 
     selfenergy_prefactor = 0.0;
 }
 
-Faunus::Potential::CoulombGalore::CoulombGalore(const std::string &name) { 
-  PairPotentialBase::name=name; 
-  ecs = std::make_shared<PairMatrix<double>>();
-}
+Faunus::Potential::CoulombGalore::CoulombGalore(const std::string &name) { PairPotentialBase::name=name; }
 
 void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
     try {
@@ -177,6 +174,7 @@ void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
         if (type=="none") sfPlain(j,0);
         if (type=="wolf") sfWolf(j);
 
+        ecs = std::make_shared<PairMatrix<double>>();
         for (auto &i : atoms)
             for (auto &j : atoms) {
                 double tmpi = kappa*i.sigma/2.0;

@@ -306,53 +306,46 @@ namespace Faunus {
          * @brief Hertz potential
          * @details This is a repulsive potential describes the change in elasticenergy of two deformable objects when subjected to an axialcompression.
          * @f[
-         *     u(r) = \epsilon_H \left(1 - \frac{r}{n\sigma}\right)^{5/2}
+         *     u(r) = \epsilon_H \left(1 - \frac{r}{\sigma}\right)^{5/2}
          * @f]
-         *
-         * JSON keywords:
-         *
-         * Key     | Description
-         * :-------| :---------------------------
-         * `E`     | Strength, \f$E\f$ [kT]
-         * `n`     | Scale diameter, (optional, default value: 1)
-         *
+         * where sigma is twice the hydrodynamic radius.
+         * 
          * More info: doi:10.1063/1.3186742
          *
          */
         template<class Tparticle>
             class Hertz : public PairPotentialBase {
                 private:
-                    double E, n;
-                    std::shared_ptr<PairMatrix<double>> rr, rr2; // matrices of (r1+r2), and (r1+r2)^2
+                    std::shared_ptr<PairMatrix<double>> E, rr, rr2; // matrices of energy-strength, (r1+r2), and (r1+r2)^2
                 public:
                     Hertz(const std::string &name="hertz") {
                         PairPotentialBase::name=name;
+                        E = std::make_shared<PairMatrix<double>>();
                         rr = std::make_shared<PairMatrix<double>>();
                         rr2 = std::make_shared<PairMatrix<double>>();
                     }
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2 = r.squaredNorm();
                         if(r2 <= rr2->operator()(a.id,b.id))
-                            return E*pow((1-(sqrt(r2)/rr->operator()(a.id,b.id))),2.5);
+                            return E->operator()(a.id,b.id)*pow((1-(sqrt(r2)/rr->operator()(a.id,b.id))),2.5);
                         return 0.0;
                     }
 
                     void from_json(const json &j) override {
-                        E = j.at("E").get<double>();
-                        n = j.value("n",1.0);
-
                         for (auto &i : atoms)
                             for (auto &j : atoms) {
-                                double rirj = (i.sigma+j.sigma)*n/2;
+                                double rirj = i.hdr+j.hdr;
                                 rr->set( i.id(), j.id(), rirj);
                                 rr2->set( i.id(), j.id(), rirj*rirj);
+
+                                if(i.id() == j.id())
+                                    E->set( i.id(), j.id(), i.eps);
+                                else
+                                    E->set( i.id(), j.id(), 0.0);
                             }
                     }
 
-                    void to_json(json &j) const override { 
-                        j["E"] = E;
-                        j["n"] = n;
-                    }
+                    void to_json(json&) const override {}
             }; //!< Hertz potential
 
         /**
@@ -506,19 +499,22 @@ namespace Faunus {
 
         /** @brief Coulomb type potentials with spherical cutoff */
         class CoulombGalore : public PairPotentialBase {
+            std::shared_ptr<PairMatrix<double>> ecs; // effective charge-scaling
             Tabulate::Andrea<double> sf; // splitting function
             Tabulate::TabulatorBase<double>::data table; // data for splitting function
             std::function<double(double)> calcDielectric; // function for dielectric const. calc.
             std::string type;
             double selfenergy_prefactor;
             double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
-            int order;
+            int order, C, D;
 
             void sfYukawa(const json &j);
             void sfReactionField(const json &j);
             void sfQpotential(const json &j);
             void sfYonezawa(const json &j);
             void sfFanourgakis(const json &j);
+            void sfYukawaPoisson(const json &j);
+            void sfPoisson(const json &j);
             void sfFennel(const json &j);
             void sfEwald(const json &j);
             void sfWolf(const json &j);
@@ -533,7 +529,7 @@ namespace Faunus {
                 double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
                     if (r2 < rc2) {
                         double r = std::sqrt(r2);
-                        return lB * a.charge * b.charge / r * sf.eval( table, r*rc1i );
+                        return lB * ecs->operator()(a.id,b.id) * a.charge * b.charge / r * sf.eval( table, r*rc1i );
                     }
                     return 0;
                 }

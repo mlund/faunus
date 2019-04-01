@@ -22,6 +22,7 @@ namespace Faunus {
             Point  scdir={1,0,0}; //!< Sphero-cylinder direction
             double sclen=0;       //!< Sphere-cylinder length [angstrom]
             double sigma=0;       //!< Diameter for e.g Lennard-Jones etc. [angstrom]
+            double hdr=0;         //!< Hydrodynamic radius [angstrom]
             double tension=0;     //!< Surface tension [kT/Å^2]
             double tfe=0;         //!< Transfer free energy [J/mol/angstrom^2/M]
             int& id(); //!< Type id

@@ -66,6 +66,19 @@ namespace Faunus {
     namespace Potential {
 
         /**
+         * @brief Returns the factorial of 'n'. Note that 'n' must be positive semidefinite.
+         */
+        inline int factorial(int n) {
+            // assert(n >= 0 && "Factorial not defined for negative integers");
+            if(n < 0)
+                throw std::runtime_error("Factorial not defined for negative integers");
+            if(n > 1)
+                return n * factorial(n - 1);
+            else
+                return 1;
+        }
+
+        /**
          * @brief Help-function for the q-potential in class CoulombGalore
          */
         inline double qPochhammerSymbol(double q, int k=1, int P=300) {

@@ -99,7 +99,7 @@ namespace Faunus {
         }; //!< Base class for all geometries
 
         /**
-         * @brief Geometry class for spheres, cylinders, cuboids, hexagonal prism, truncated octahedron, slits
+         * @brief Geometry class for spheres, cylinders, cuboids, hexagonal prism, truncated octahedron, slits, 2D hypersphere
          *
          * All geometries shares the same distance calculation where
          * PBC is disabled by artificially setting long sidelengths.
@@ -112,11 +112,11 @@ namespace Faunus {
          */
         class Chameleon : public GeometryBase {
             public:
-                enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON};
+                enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON, HYPERSPHERE2D};
                 Variant type;
             private:
                 /**
-                 * `pbc_disable` is used to disable PBC in `sphere`, `cylinder`, `hexagonal`, `octahedron`, `slit` etc.
+                 * `pbc_disable` is used to disable PBC in `sphere`, `cylinder`, `hexagonal`, `octahedron`, `slit`, `hypersphere2d` etc.
                  * by scaling the (internal) box length by a large number.
                  */
                 static constexpr double pbc_disable=100;
@@ -132,6 +132,7 @@ namespace Faunus {
             public:
                 void setLength(const Point &l);
                 double getVolume(int dim=3) const override;
+                double getRadius() const;
                 Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
                 Point getLength() const override; //!< Enscribed box
                 void randompos( Point &m, Random &rand ) const override;
@@ -139,8 +140,11 @@ namespace Faunus {
                 void from_json(const json &j);
                 void to_json(json &j) const;
 
+                /**
+                 * @todo 'HYPERSPHERE2D' does not have a boundary. Does that matter for the program?
+                 */
                 inline void boundary( Point &a ) const override {
-                    if ( type!=HEXAGONAL and type!=OCTAHEDRON ) {
+                    if ( type!=HEXAGONAL and type!=OCTAHEDRON and type!=HYPERSPHERE2D ) {
                         if ( std::fabs(a.x()) > len_half.x())
                             a.x() -= len.x() * anint(a.x() * len_inv.x());
                         if ( std::fabs(a.y()) > len_half.y())
@@ -219,7 +223,7 @@ namespace Faunus {
 
                 inline Point vdist(const Point &a, const Point &b) const override {
                     Point r(a - b);
-                    if (type!=HEXAGONAL and type!=OCTAHEDRON) {
+                    if (type!=HEXAGONAL and type!=OCTAHEDRON and type!=HYPERSPHERE2D) {
                         if ( r.x() > len_half.x())
                             r.x() -= len.x();
                         else if ( r.x() < -len_half.x())
@@ -234,7 +238,11 @@ namespace Faunus {
                             r.z() -= len.z();
                         else if ( r.z() < -len_half.z())
                             r.z() += len.z();
-                    } else
+                    } else if(type == HYPERSPHERE2D) { // ugly but works, needs fixing though...
+		      double angle = std::acos(a.dot(b)/radius/radius);
+		      double distance = radius*angle;
+		      return r/r.norm()*distance;
+		    } else
                         boundary(r);
                     return r;
                 }

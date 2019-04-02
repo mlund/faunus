@@ -349,6 +349,61 @@ namespace Faunus {
             }; //!< Hertz potential
 
         /**
+         * @brief Square-well potential
+         * @details This is an attractive potential described by
+         * @f[
+         *     u(r) = -depth
+         * @f]
+         * when r < threshold, and zero otherwise. `type` index the mixing-rule.
+         *
+         * JSON keywords:
+         *
+         * Key         | Description
+         * :-----------| :---------------------------
+         * `threshold` | Threshold, [angstrom]
+         * `type`      | Type of mixing-rule, [integer]
+         *
+         */
+            class SquareWell : public PairPotentialBase {
+                private:
+                    std::shared_ptr<PairMatrix<double>> depth; // matrices of depths
+                    double threshold;
+		    int type;
+                public:
+                    SquareWell(const std::string &name="square well") {
+                        PairPotentialBase::name=name;
+                        depth = std::make_shared<PairMatrix<double>>();
+                    }
+                template<class Tparticle>
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        double d=(atoms[a.id].sigma + atoms[b.id].sigma)/2.0 + threshold;
+                        double r2 = r.squaredNorm();
+                        if ( r2 < d*d )
+                            return -depth->operator()(a.id,b.id);
+                        return 0.0;
+                    }
+
+                    void from_json(const json &j) override {
+                        threshold = j.at("threshold").get<double>() * 1.0_angstrom;
+                        type = j.at("type").get<int>();
+                        if(type == 0)
+                            for (auto &i : atoms)
+                                for (auto &j : atoms)
+                                    depth->set( i.id(), j.id(), std::sqrt(i.eps*j.eps));
+                        if(type == 1)
+                            for (auto &i : atoms)
+                                for (auto &j : atoms) {
+                                    if(i.id() != j.id())
+                                        depth->set( i.id(), j.id(), std::sqrt(i.eps*j.eps));
+                                    else
+                                        depth->set( i.id(), j.id(), 0.0);
+                                }
+                    }
+
+                    void to_json(json &j) const override;
+            }; //!< SquareWell potential
+
+        /**
          * @brief Cosine attraction
          * @details This is an attractive potential used for coarse grained lipids
          * and has the form:
@@ -640,17 +695,18 @@ namespace Faunus {
                 // the data. That is *only* put the pair-potential here if you can
                 // share internal (shared) pointers.
                 std::tuple<
-                    CoulombGalore,    // 0
-                    CosAttract,       // 1
-                    Polarizability<T>,// 2
-                    HardSphere<T>,    // 3
-                    LennardJones<T>,  // 4
-                    RepulsionR3,      // 5
-                    SASApotential,    // 6
+                    CoulombGalore,     // 0
+                    CosAttract,        // 1
+                    Polarizability<T>, // 2
+                    HardSphere<T>,     // 3
+                    LennardJones<T>,   // 4
+                    RepulsionR3,       // 5
+                    SASApotential,     // 6
                     WeeksChandlerAndersen<T>,// 7
-                    PrimitiveModel,   // 8
+                    PrimitiveModel,    // 8
                     PrimitiveModelWCA, // 9
-                    Hertz<T> // 10
+                    Hertz<T>,          // 10
+		    SquareWell      // 11
                         > potlist;
 
                 uFunc combineFunc(const json &j) { 
@@ -673,6 +729,7 @@ namespace Faunus {
                                         else if (it.key()=="pm") _u = std::get<8>(potlist) = it.value();
                                         else if (it.key()=="pmwca") _u = std::get<9>(potlist) = it.value();
                                         else if (it.key()=="hertz") _u = std::get<10>(potlist) = it.value();
+                                        else if (it.key()=="squarewell") _u = std::get<11>(potlist) = it.value();
                                         // place additional potentials here...
                                     } catch (std::exception &e) {
                                         throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);

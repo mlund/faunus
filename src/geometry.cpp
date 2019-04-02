@@ -55,7 +55,8 @@ namespace Faunus {
                 {"slit", SLIT},
                 {"sphere", SPHERE},
                 {"hexagonal", HEXAGONAL},
-                {"octahedron", OCTAHEDRON}
+                {"octahedron", OCTAHEDRON},
+                {"hypersphere2d", HYPERSPHERE2D}
             }
         };
 
@@ -69,15 +70,20 @@ namespace Faunus {
 
         double Chameleon::getVolume(int) const {
             switch (type) {
-                case SPHERE:     return 4*pc::pi/3*radius*radius*radius;
-                case CUBOID:     return len.x()*len.y()*len.z();
-                case SLIT:       return len.x()*len.y()*len.z() / pbc_disable;
-                case CYLINDER:   return pc::pi*radius*radius*len.z();
-                case HEXAGONAL:  return 2.0*std::sqrt(3.0)*radius*radius*len.z();
-                case OCTAHEDRON: return 8.0*std::sqrt(2.0)*radius*radius*radius; // for the truncated octahedron then 'radius' really is the side-length 'a'
+                case SPHERE:        return 4*pc::pi/3*radius*radius*radius;
+                case CUBOID:        return len.x()*len.y()*len.z();
+                case SLIT:          return len.x()*len.y()*len.z() / pbc_disable;
+                case CYLINDER:      return pc::pi*radius*radius*len.z();
+                case HEXAGONAL:     return 2.0*std::sqrt(3.0)*radius*radius*len.z();
+                case OCTAHEDRON:    return 8.0*std::sqrt(2.0)*radius*radius*radius; // for the truncated octahedron then 'radius' really is the side-length 'a'
+		case HYPERSPHERE2D: return 4*pc::pi*radius*radius; // surface-area of sphere
             }
             assert(false);
             return 0;
+        }
+        
+        double Chameleon::getRadius() const {
+            return radius;
         }
 
         Point Chameleon::setVolume(double V, VolumeMethod method) {
@@ -144,6 +150,14 @@ namespace Faunus {
                 const double ratio = radius/oldradius;
                 return {ratio,ratio,ratio};
             }
+            
+            if (type==HYPERSPHERE2D and method==ISOTROPIC) {
+                const double oldradius = radius;
+                radius = std::cbrt(3*V/(4*pc::pi));
+                setLength( 2*Point(radius,radius,radius) );
+                assert( std::fabs(getVolume()-V)<1e-6 && "error setting sphere volume");
+                return Point().setConstant(radius/oldradius);
+            }
 
             if (type==CYLINDER) {
                     double oldradius, alpha;
@@ -182,12 +196,13 @@ namespace Faunus {
 
         Point Chameleon::getLength() const {
             switch (type) {
-                case CUBOID:     return len;
-                case SLIT:       return {len.x(), len.y(), len.z() / pbc_disable};
-                case SPHERE:     return {2*radius,2*radius,2*radius};
-                case CYLINDER:   return {2*radius,2*radius,len.z()};
-                case HEXAGONAL:  return {radius,radius,len.z()};
-                case OCTAHEDRON: return {2.0*std::sqrt(1.5)*radius,2.0*std::sqrt(2.0)*radius,2.0*std::sqrt(10.0)/2.0*radius}; // 2*( origin to regular hexagon, origin to square, and circumradius )
+                case CUBOID:        return len;
+                case SLIT:          return {len.x(), len.y(), len.z() / pbc_disable};
+                case SPHERE:        return {2*radius,2*radius,2*radius};
+                case CYLINDER:      return {2*radius,2*radius,len.z()};
+                case HEXAGONAL:     return {radius,radius,len.z()};
+                case OCTAHEDRON:    return {2.0*std::sqrt(1.5)*radius,2.0*std::sqrt(2.0)*radius,2.0*std::sqrt(10.0)/2.0*radius}; // 2*( origin to regular hexagon, origin to square, and circumradius )
+                case HYPERSPHERE2D: return {2*radius,2*radius,2*radius};
             }
             assert(false);
             return Point();
@@ -231,6 +246,14 @@ namespace Faunus {
                         } while ( m.squaredNorm() > r2 );
                     } while(Chameleon::collision(m));
                     break;
+                case HYPERSPHERE2D:
+                    do {
+                        m.x() = (rand() - 0.5) * d;
+                        m.y() = (rand() - 0.5) * d;
+                        m.z() = (rand() - 0.5) * d;
+                    } while ( m.squaredNorm() > r2 );
+		    m = m/m.norm()*radius;
+                    break;
                 case HEXAGONAL:
                     double Ra = rand();
                     double Rb = rand();
@@ -272,6 +295,9 @@ namespace Faunus {
                     if ( std::fabs(a.y()) > len_half.y()) return true;
                     if ( std::fabs(a.z()) > len_half.z()) return true;
                     break;
+                case HYPERSPHERE2D:
+                    if(std::fabs(a.norm() - radius) > 1e-6) return true;
+                    break;
                 case HEXAGONAL:
                     if(std::fabs(a.z()) > len_half.z()) return true;
                     if(std::fabs(a.dot(Point(1.0,0.0,0.0))) > len_half.x()) return true;
@@ -310,7 +336,7 @@ namespace Faunus {
                         setLength( m.get<Point>() );
             }
 
-            if ( type == SPHERE or type == CYLINDER or type == HEXAGONAL or type == OCTAHEDRON )
+            if ( type == SPHERE or type == CYLINDER or type == HEXAGONAL or type == OCTAHEDRON or type == HYPERSPHERE2D  )
                 radius = j.at("radius").get<double>();
 
             if (type == SLIT)
@@ -318,6 +344,9 @@ namespace Faunus {
 
             if (type == SPHERE)
                 setLength( pbc_disable*2*Point(radius,radius,radius) ); // disable min. image in xyz
+
+            if (type == HYPERSPHERE2D)
+                setLength( 2*Point(radius,radius,radius) );
 
             if (type == OCTAHEDRON)
                 setLength( {2.0*std::sqrt(1.5)*radius,2.0*std::sqrt(2.0)*radius,2.0*std::sqrt(10.0)/2.0*radius} ); // 2*( origin to regular hexagon, origin to square, and circumradius )
@@ -346,6 +375,9 @@ namespace Faunus {
                     break;
                 case CUBOID:
                     j = {{"length",len}};
+                    break;
+                case HYPERSPHERE2D:
+                    j = {{"radius",radius}};
                     break;
                 case HEXAGONAL:
                     j = {{"radius",radius}, {"length",len.z()}};

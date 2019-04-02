@@ -15,6 +15,10 @@ void Faunus::Potential::RepulsionR3::to_json(Faunus::json &j) const {
     j = {{"prefactor",f}, {"lj-prefactor", e},{"sigma",s}};
 }
 
+void Faunus::Potential::SquareWell::to_json(Faunus::json &j) const {
+    j = {{"threshold",threshold / 1.0_angstrom}};
+}
+
 void Faunus::Potential::CosAttract::to_json(Faunus::json &j) const {
     j = {{"eps",eps / 1.0_kJmol}, {"rc",rc / 1.0_angstrom }, {"wc", wc / 1.0_angstrom }};
 }

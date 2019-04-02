@@ -354,53 +354,42 @@ namespace Faunus {
          * @f[
          *     u(r) = -depth
          * @f]
-         * when r < threshold, and zero otherwise. `type` index the mixing-rule.
+         * when r < threshold, and zero otherwise.
          *
          * JSON keywords:
          *
          * Key         | Description
          * :-----------| :---------------------------
          * `threshold` | Threshold, [angstrom]
-         * `type`      | Type of mixing-rule, [integer]
          *
          */
+	template<class Tparticle>
             class SquareWell : public PairPotentialBase {
+                protected:
+                    std::shared_ptr<SigmaEpsilonTable<Tparticle>> m; // table w. sigma_ij^2 and 4xepsilon
                 private:
-                    std::shared_ptr<PairMatrix<double>> depth; // matrices of depths
                     double threshold;
-		    int type;
                 public:
                     SquareWell(const std::string &name="square well") {
                         PairPotentialBase::name=name;
-                        depth = std::make_shared<PairMatrix<double>>();
+                        m = std::make_shared<SigmaEpsilonTable<Tparticle>>();
                     }
-                template<class Tparticle>
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double d=(atoms[a.id].sigma + atoms[b.id].sigma)/2.0 + threshold;
-                        double r2 = r.squaredNorm();
-                        if ( r2 < d*d )
-                            return -depth->operator()(a.id,b.id);
+                        if ( r.squaredNorm() < d*d )
+                            return -m->eps(a.id,b.id)/4.0;
                         return 0.0;
                     }
 
-                    void from_json(const json &j) override {
-                        threshold = j.at("threshold").get<double>() * 1.0_angstrom;
-                        type = j.at("type").get<int>();
-                        if(type == 0)
-                            for (auto &i : atoms)
-                                for (auto &j : atoms)
-                                    depth->set( i.id(), j.id(), std::sqrt(i.eps*j.eps));
-                        if(type == 1)
-                            for (auto &i : atoms)
-                                for (auto &j : atoms) {
-                                    if(i.id() != j.id())
-                                        depth->set( i.id(), j.id(), std::sqrt(i.eps*j.eps));
-                                    else
-                                        depth->set( i.id(), j.id(), 0.0);
-                                }
+                    void to_json(json &j) const override {
+                        j = *m;
+                        j["threshold"] = threshold;
                     }
 
-                    void to_json(json &j) const override;
+                    void from_json(const json &j) override {
+                        *m = j;
+                        threshold = j.at("threshold").get<double>() * 1.0_angstrom;
+                    }
             }; //!< SquareWell potential
 
         /**
@@ -706,7 +695,7 @@ namespace Faunus {
                     PrimitiveModel,    // 8
                     PrimitiveModelWCA, // 9
                     Hertz<T>,          // 10
-		    SquareWell      // 11
+		    SquareWell<T>      // 11
                         > potlist;
 
                 uFunc combineFunc(const json &j) { 

@@ -134,10 +134,11 @@ namespace Faunus {
                 PolicyIonIon(Tspace &spc) : spc(&spc) {}
 
                 void updateComplex(EwaldData &data) const {
+                    auto active = spc->activeParticles();
                     if (eigenopt)
                         if (data.ipbc==false) {
-                            auto pos = asEigenMatrix(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::pos); //  Nx3
-                            auto charge = asEigenVector(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::charge); // Nx1
+                            auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Tspace::Tparticle::pos); //  Nx3
+                            auto charge = asEigenVector(active.begin().base(), active.end().base(), &Tspace::Tparticle::charge); // Nx1
                             Eigen::MatrixXd kr = pos.matrix() * data.kVectors; // Nx3 * 3xK = NxK
                             data.Qion.real() = (kr.array().cos().colwise()*charge).colwise().sum();
                             data.Qion.imag() = kr.array().sin().colwise().sum();
@@ -147,10 +148,10 @@ namespace Faunus {
                         const Point& kv = data.kVectors.col(k);
                         EwaldData::Tcomplex Q(0,0);
                         if (data.ipbc)
-                            for (auto &i : spc->p)
+                            for (auto &i : active)
                                 Q += kv.cwiseProduct(i.pos).array().cos().prod() * i.charge;
                         else
-                            for (auto &i : spc->p) {
+                            for (auto &i : active) {
                                 double dot = kv.dot(i.pos);
                                 Q += i.charge * EwaldData::Tcomplex( std::cos(dot), std::sin(dot) );
                             }
@@ -158,42 +159,72 @@ namespace Faunus {
                     }
                 } //!< Update all k vectors
 
-                void updateComplex(EwaldData &data, iter begin, iter end) const {
+                void updateComplex(EwaldData &data, Change &change) const {
                     assert(old!=nullptr);
                     assert(spc->p.size() == old->p.size());
-                    size_t ibeg = std::distance(spc->p.begin(), begin); // it->index
-                    size_t iend = std::distance(spc->p.begin(), end);   // it->index
                     for (int k=0; k<data.kVectors.cols(); k++) {
                         auto& Q = data.Qion[k];
                         Point q = data.kVectors.col(k);
                         if (data.ipbc)
-                            for (size_t i=ibeg; i<=iend; i++) {
-                                Q +=  q.cwiseProduct( spc->p[i].pos ).array().cos().prod() * spc->p[i].charge;
-                                Q -=  q.cwiseProduct( old->p[i].pos ).array().cos().prod() * old->p[i].charge;
+                            for (auto cg : change.groups) {
+                                auto g_new = spc->groups.at(cg.index);
+                                auto g_old = old->groups.at(cg.index);
+                                for (auto i: cg.atoms) {
+                                    if ( i < g_new.size() )
+                                        Q +=  q.cwiseProduct( (g_new.begin()+i)->pos ).array().cos().prod() * (g_new.begin()+i)->charge;
+                                    if ( i < g_old.size() )
+                                        Q -=  q.cwiseProduct( (g_old.begin()+i)->pos ).array().cos().prod() * (g_old.begin()+i)->charge;
+                                }
                             }
                         else
-                            for (size_t i=ibeg; i<=iend; i++) {
-                                double _new = q.dot(spc->p[i].pos);
-                                double _old = q.dot(old->p[i].pos);
-                                Q += spc->p[i].charge * EwaldData::Tcomplex( std::cos(_new), std::sin(_new) );
-                                Q -= old->p[i].charge * EwaldData::Tcomplex( std::cos(_old), std::sin(_old) );
+                            for (auto cg : change.groups) {
+                                auto g_new = spc->groups.at(cg.index);
+                                auto g_old = old->groups.at(cg.index);
+                                for (auto i: cg.atoms)  {
+                                    if ( i < g_new.size() ) {
+                                        double _new = q.dot((g_new.begin()+i)->pos);
+                                        Q += (g_new.begin()+i)->charge * EwaldData::Tcomplex( std::cos(_new), std::sin(_new) );
+                                    }
+                                    if ( i < g_old.size() ) {
+                                        double _old = q.dot((g_old.begin()+i)->pos);
+                                        Q -= (g_old.begin()+i)->charge * EwaldData::Tcomplex( std::cos(_old), std::sin(_old) );
+                                    }
+                                }
                             }
                     }
                 } //!< Optimized update of k subset. Require access to old positions through `old` pointer
 
-                double selfEnergy(const EwaldData &d) {
-                    double E = 0;
-                    for (auto& i : spc->p)
-                        E += i.charge * i.charge;
-                    return -d.alpha*E / std::sqrt(pc::pi) * d.lB;
+                double selfEnergy(const EwaldData &d, Change &change) {
+                    double Eq = 0;
+                    if (change.dN) 
+                        for (auto cg : change.groups) {
+                            auto g = spc->groups.at(cg.index);
+                            for (auto i: cg.atoms) 
+                                if ( i < g.size() )
+                                    Eq += std::pow( (g.begin()+i)->charge, 2);
+                        }
+                    else if (change.all and not change.dV) 
+                        for (auto g : spc->groups ) 
+                            for (auto i : g) 
+                               Eq += i.charge * i.charge;
+                    return -d.alpha * Eq / std::sqrt(pc::pi) * d.lB;
                 }
 
-                double surfaceEnergy(const EwaldData &d) {
+                double surfaceEnergy(const EwaldData &d, Change &change) {
                     if (d.const_inf < 0.5)
                         return 0;
                     Point qr(0,0,0);
-                    for (auto &i : spc->p)
-                        qr += i.charge*i.pos;
+                    if (change.all or change.dV) 
+                        for (auto g : spc->groups ) 
+                            for (auto i : g) 
+                               qr += i.charge * i.pos;
+                    else if (change.groups.size()>0)
+                        for (auto cg : change.groups) {
+                            auto g = spc->groups.at(cg.index);
+                            for (auto i: cg.atoms) 
+                                if ( i < g.size() )
+                                   qr += (g.begin()+i)->charge * (g.begin()+i)->pos;
+                        }
                     return d.const_inf * 2 * pc::pi / ( (2*d.eps_surf+1) * spc->geo.getVolume() ) * qr.dot(qr) * d.lB;
                 }
 
@@ -271,18 +302,11 @@ namespace Faunus {
                                     policy.updateComplex(data);    // update all (expensive!)
                                 }
                                 else {
-                                    if (change.groups.size()==1) { // exactly one group is moved
-                                        auto& d = change.groups[0];
-                                        auto& g = spc.groups[d.index];
-                                        if (d.atoms.size()==1)     // exactly one atom is moved
-                                            policy.updateComplex(data, g.begin()+d.atoms[0], g.begin()+d.atoms[0]);
-                                        else
-                                            policy.updateComplex(data, g.begin(), g.end());
-                                    } else
-                                        policy.updateComplex(data);
+                                    if (change.groups.size()>0)
+                                        policy.updateComplex(data, change);
                                 }
                             }
-                            u = policy.selfEnergy(data) + policy.surfaceEnergy(data) + policy.reciprocalEnergy(data);
+                            u = policy.selfEnergy(data, change) + policy.surfaceEnergy(data, change) + policy.reciprocalEnergy(data);
                         }
                         return u;
                     }
@@ -325,15 +349,15 @@ namespace Faunus {
                     double energy(Change &change) override {
                         double Eq = 0;
                         if (change.dN) 
-                            for ( auto cg = change.groups.begin(); cg < change.groups.end() ; ++cg ) {
-                                auto g = &spc.groups.at(cg->index);
-                                for (auto i: cg->atoms) 
-                                    if ( i < g->size() )
-                                        Eq += std::pow( (g->begin()+i)->charge, 2);
+                            for (auto cg : change.groups) {
+                                auto g = spc.groups.at(cg.index);
+                                for (auto i: cg.atoms) 
+                                    if ( i < g.size() )
+                                        Eq += std::pow( (g.begin()+i)->charge, 2);
                             }
                         else if (change.all and not change.dV) 
-                            for (auto g = spc.groups.begin(); g < spc.groups.end(); ++g) 
-                                for (auto i : *g) 
+                            for (auto g : spc.groups ) 
+                                for (auto i : g) 
                                     Eq += i.charge * i.charge;
                         return -selfenergy_prefactor*Eq*lB/rc;
                     }

@@ -250,24 +250,26 @@ namespace Faunus {
             spc.geo  = R"( {"type": "cuboid", "length": 10} )"_json;
             spc.p[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
             spc.p[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
+            Group<Particle<Charge,Dipole>> g(spc.p.begin(), spc.p.end());
+            spc.groups.push_back(g);
 
             PolicyIonIon<Tspace> ionion(spc);
             EwaldData data = R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
-
+            Change c; c.all=true;
             data.ipbc = false; // PBC Ewald (http://dx.doi.org/10.1063/1.481216)
             data.update( spc.geo.getLength() );
             ionion.updateComplex( data );
-            CHECK( ionion.selfEnergy(data) == Approx(-1.0092530088080642*data.lB) );
-            CHECK( ionion.surfaceEnergy(data) == Approx(0.0020943951023931952*data.lB) );
+            CHECK( ionion.selfEnergy(data, c) == Approx(-1.0092530088080642*data.lB) );
+            CHECK( ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952*data.lB) );
             CHECK( ionion.reciprocalEnergy(data) == Approx(0.21303063979675319*data.lB) );
 
             data.ipbc = true; // IPBC Ewald
             data.update( spc.geo.getLength() );
             ionion.updateComplex( data );
-            CHECK( ionion.selfEnergy(data) == Approx(-1.0092530088080642*data.lB) );
-            CHECK( ionion.surfaceEnergy(data) == Approx(0.0020943951023931952*data.lB) );
+            CHECK( ionion.selfEnergy(data, c) == Approx(-1.0092530088080642*data.lB) );
+            CHECK( ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952*data.lB) );
             CHECK( ionion.reciprocalEnergy(data) == Approx(0.0865107467*data.lB) );
         }
 #endif
@@ -306,7 +308,7 @@ namespace Faunus {
                                         policy.updateComplex(data, change);
                                 }
                             }
-                            u = policy.selfEnergy(data, change) + policy.surfaceEnergy(data, change) + policy.reciprocalEnergy(data);
+                            u = policy.surfaceEnergy(data, change) + policy.reciprocalEnergy(data) + policy.selfEnergy(data, change);
                         }
                         return u;
                     }

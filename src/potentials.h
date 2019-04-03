@@ -72,37 +72,77 @@ namespace Faunus {
         }; //!< A dummy pair potential that always returns zero
 
         template<typename Tparticle>
-            struct SigmaEpsilonTable {
-                enum Mixers {LB, NONE};
+            struct ParametersTable {
+                enum Mixers {LB, LBSW, HE, NONE};
                 Mixers mixer = NONE;
-                PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and 4*eps_ij
-            }; //!< Table of sigma and epsilons
+                PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and 4*eps_ij (LJ)
+                PairMatrix<double> th,esw; // matrix of threshold_ij and depth_ij (Square-well)
+                PairMatrix<double> hd,ehe; // matrix of hydrodynamic diameter_ij and energy-strength_ij (Hertz)
+            }; //!< Table of parameters for potential 
 
         template<typename Tparticle>
-            void from_json(const json &j, SigmaEpsilonTable<Tparticle> &m) {
+            void from_json(const json &j, ParametersTable<Tparticle> &m) {
                 std::function<std::pair<double,double>(double,double,double,double)> mixerFunc;
 
                 auto mixer = j.at("mixing").get<std::string>();
                 if (mixer=="LB")
-                    m.mixer=SigmaEpsilonTable<Tparticle>::LB;
+                    m.mixer=ParametersTable<Tparticle>::LB;
+                if (mixer=="LBSW")
+                    m.mixer=ParametersTable<Tparticle>::LBSW;
+                if (mixer=="HE")
+                    m.mixer=ParametersTable<Tparticle>::HE;
+
+                size_t n=atoms.size(); // number of atom types
                 switch(m.mixer) {
-                    case SigmaEpsilonTable<Tparticle>::LB:
+                    case ParametersTable<Tparticle>::LB:
                         mixerFunc = [](double s1, double s2, double e1, double e2) {
                             return std::pair<double,double>( { (s1+s2)/2, std::sqrt(e1*e2) } );
                         };
+                        m.s2.resize(n); // not required...
+                        m.eps.resize(n);// ...but possible reduced mem. fragmentation
+                        break;
+                    case ParametersTable<Tparticle>::LBSW:
+                        mixerFunc = [](double s1, double s2, double e1, double e2) {
+                            return std::pair<double,double>( { s1+s2, std::sqrt(e1*e2) } );
+                        };
+                        m.th.resize(n); // not required...
+                        m.esw.resize(n);// ...but possible reduced mem. fragmentation
+                        break;
+                    case ParametersTable<Tparticle>::HE:
+                        mixerFunc = [](double s1, double s2, double e1, double e2) {
+                            return std::pair<double,double>( { s1+s2, std::sqrt(e1*e2) } );
+                        };
+                        m.hd.resize(n); // not required...
+                        m.ehe.resize(n);// ...but possible reduced mem. fragmentation
                         break;
                     default:
                         throw std::runtime_error("unknown mixing rule");
                 }
-                size_t n=atoms.size(); // number of atom types
-                m.s2.resize(n); // not required...
-                m.eps.resize(n);// ...but possible reduced mem. fragmentation
+
                 for (auto &i : atoms)
                     for (auto &j : atoms) {
-                        double sigma, epsilon; // mixed values
-                        std::tie( sigma, epsilon ) = mixerFunc(i.sigma, j.sigma, i.eps, j.eps);
-                        m.s2.set(  i.id(), j.id(), sigma*sigma );
-                        m.eps.set( i.id(), j.id(), 4*epsilon ); // should already be in kT
+                        switch(m.mixer) {
+                            case ParametersTable<Tparticle>::LB:
+                                double sigma, epsilon; // mixed values
+                                std::tie( sigma, epsilon ) = mixerFunc(i.sigma, j.sigma, i.eps, j.eps);
+                                m.s2.set(  i.id(), j.id(), sigma*sigma );
+                                m.eps.set( i.id(), j.id(), 4*epsilon ); // should already be in kT
+                                break;
+                            case ParametersTable<Tparticle>::LBSW:
+                                double threshold, depth; // mixed values
+                                std::tie( threshold, depth ) = mixerFunc(i.threshold, j.threshold, i.depth, j.depth);
+                                m.th.set(  i.id(), j.id(), threshold );
+                                m.esw.set( i.id(), j.id(), depth ); // should already be in kT
+                                break;
+                            case ParametersTable<Tparticle>::HE:
+                                double hdd, eh; // mixed values
+                                std::tie( hdd, eh ) = mixerFunc(i.hdr, j.hdr, i.eh, j.eh);
+                                m.hd.set(  i.id(), j.id(), hdd );
+                                m.ehe.set( i.id(), j.id(), eh ); // should already be in kT
+                                break;
+                            default:
+                                throw std::runtime_error("unknown mixing rule");
+                        }
                     }
 
                 // custom eps/sigma for specific pairs
@@ -118,28 +158,91 @@ namespace Faunus {
                                     throw std::runtime_error("unknown atom(s): ["s + v[0] + " " + v[1] + "]");
                                 int id1 = it1->id();
                                 int id2 = it2->id();
-                                m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
-                                m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
-                            } else
-                                throw std::runtime_error("custom epsilon/sigma parameters require exactly two space-separated atoms");
+
+                                switch(m.mixer) {
+                                    case ParametersTable<Tparticle>::LB:
+                                        m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
+                                        m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
+                                        break;
+                                    case ParametersTable<Tparticle>::LBSW:
+                                        m.th.set( id1, id2, it.value().at("threshold").get<double>() );
+                                        m.esw.set(id1, id2, it.value().at("depth").get<double>() * 1.0_kJmol);
+                                        break;
+                                    case ParametersTable<Tparticle>::HE:
+                                        m.hd.set( id1, id2, it.value().at("hdd").get<double>() );
+                                        m.ehe.set(id1, id2, it.value().at("eh").get<double>() * 1.0_kJmol);
+                                        break;
+                                    default:
+                                        throw std::runtime_error("unknown mixing rule");
+                                }
+                            } else {
+                                switch(m.mixer) {
+                                    case ParametersTable<Tparticle>::LB:
+                                        throw std::runtime_error("custom epsilon/sigma parameters require exactly two space-separated atoms");
+                                    case ParametersTable<Tparticle>::LBSW:
+                                        throw std::runtime_error("custom depth/threshold parameters require exactly two space-separated atoms");
+                                    case ParametersTable<Tparticle>::HE:
+                                        throw std::runtime_error("custom eh/hdd parameters require exactly two space-separated atoms");
+                                    default:
+                                        throw std::runtime_error("unknown mixing rule");
+                                }
+                            }
                         }
-                    } else
-                        throw std::runtime_error("custom sigma/epsilon syntax error");
+                    } else {
+                        switch(m.mixer) {
+                            case ParametersTable<Tparticle>::LB:
+                                throw std::runtime_error("custom sigma/epsilon syntax error");
+                            case ParametersTable<Tparticle>::LBSW:
+                                throw std::runtime_error("custom depth/threshold syntax error");
+                            case ParametersTable<Tparticle>::HE:
+                                throw std::runtime_error("custom eh/hdd syntax error");
+                            default:
+                                throw std::runtime_error("unknown mixing rule");
+                        }
+                    }
                 }
             }
 
         template<typename Tparticle>
-            void to_json(json &j, const SigmaEpsilonTable<Tparticle> &m) {
-                j["mixing"] = "LB";
-                j["epsilon unit"] = "kJ/mol";
+            void to_json(json &j, const ParametersTable<Tparticle> &m) {
                 auto& _j = j["custom"];
-                for (size_t i=0; i<m.eps.size(); i++)
-                    for (size_t j=0; j<m.eps.size(); j++)
-                        if (i>=j) {
-                            auto str = atoms[i].name+" "+atoms[j].name;
-                            _j[str] = { {"eps", m.eps(i,j)/4.0_kJmol}, {"sigma", std::sqrt(m.s2(i,j))}  };
-                            _roundjson(_j[str], 5);
-                        }
+                switch(m.mixer) {
+                    case ParametersTable<Tparticle>::LB:
+                        j["mixing"] = "LB";
+                        j["epsilon unit"] = "kJ/mol";
+                        for (size_t i=0; i<m.eps.size(); i++)
+                            for (size_t j=0; j<m.eps.size(); j++)
+                                if (i>=j) {
+                                    auto str = atoms[i].name+" "+atoms[j].name;
+                                    _j[str] = { {"eps", m.eps(i,j)/4.0_kJmol}, {"sigma", std::sqrt(m.s2(i,j))}  };
+                                    _roundjson(_j[str], 5);
+                                }
+                        break;
+                    case ParametersTable<Tparticle>::LBSW:
+                        j["mixing"] = "LBSW";
+                        j["depth unit"] = "kJ/mol";
+                        for (size_t i=0; i<m.esw.size(); i++)
+                            for (size_t j=0; j<m.esw.size(); j++)
+                                if (i>=j) {
+                                    auto str = atoms[i].name+" "+atoms[j].name;
+                                    _j[str] = { {"depth", m.esw(i,j)/1.0_kJmol}, {"threshold", m.th(i,j)}  };
+                                    _roundjson(_j[str], 5);
+                                }
+                        break;
+                    case ParametersTable<Tparticle>::HE:
+                        j["mixing"] = "HE";
+                        j["eh unit"] = "kJ/mol";
+                        for (size_t i=0; i<m.ehe.size(); i++)
+                            for (size_t j=0; j<m.ehe.size(); j++)
+                                if (i>=j) {
+                                    auto str = atoms[i].name+" "+atoms[j].name;
+                                    _j[str] = { {"eh", m.ehe(i,j)/1.0_kJmol}, {"hdd", m.hd(i,j)}  };
+                                    _roundjson(_j[str], 5);
+                                }
+                        break;
+                    default:
+                        throw std::runtime_error("unknown mixing rule");
+                }
             }
 
         /**
@@ -149,12 +252,12 @@ namespace Faunus {
         template<typename Tparticle>
             class LennardJones : public PairPotentialBase {
                 protected:
-                    std::shared_ptr<SigmaEpsilonTable<Tparticle>> m; // table w. sigma_ij^2 and 4xepsilon
+                    std::shared_ptr<ParametersTable<Tparticle>> m; // table w. sigma_ij^2 and 4xepsilon
 
                 public:
-                    LennardJones(const std::string &name="lennardjones"s) {
+                    LennardJones(const std::string &name="lennardjones") {
                         PairPotentialBase::name=name;
-                        m = std::make_shared<SigmaEpsilonTable<Tparticle>>();
+                        m = std::make_shared<ParametersTable<Tparticle>>();
                     }
 
                     template<typename... T>
@@ -173,7 +276,12 @@ namespace Faunus {
                         }
 
                     void to_json(json &j) const override { j = *m; }
-                    void from_json(const json &j) override { *m = j; }
+
+                    void from_json(const json &j) override { 
+                        *m = j;
+                        if(m->s2.size() == 0)
+                            throw std::runtime_error("unknown mixing rule for Lennard-Jones potential");
+                    }
             };
 
         /**
@@ -306,46 +414,36 @@ namespace Faunus {
          * @brief Hertz potential
          * @details This is a repulsive potential describes the change in elasticenergy of two deformable objects when subjected to an axialcompression.
          * @f[
-         *     u(r) = \epsilon_H \left(1 - \frac{r}{\sigma}\right)^{5/2}
+         *     u(r) = \epsilon_H \left(1 - \frac{r}{2r_H}\right)^{5/2}
          * @f]
-         * where sigma is twice the hydrodynamic radius.
+         * where r_H is the hydrodynamic radius.
          * 
          * More info: doi:10.1063/1.3186742
          *
          */
         template<class Tparticle>
             class Hertz : public PairPotentialBase {
-                private:
-                    std::shared_ptr<PairMatrix<double>> E, rr, rr2; // matrices of energy-strength, (r1+r2), and (r1+r2)^2
+                protected:
+                    std::shared_ptr<ParametersTable<Tparticle>> m; // table w. diameter_ij and energy-strength_ij
                 public:
                     Hertz(const std::string &name="hertz") {
                         PairPotentialBase::name=name;
-                        E = std::make_shared<PairMatrix<double>>();
-                        rr = std::make_shared<PairMatrix<double>>();
-                        rr2 = std::make_shared<PairMatrix<double>>();
+                        m = std::make_shared<ParametersTable<Tparticle>>();
                     }
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2 = r.squaredNorm();
-                        if(r2 <= rr2->operator()(a.id,b.id))
-                            return E->operator()(a.id,b.id)*pow((1-(sqrt(r2)/rr->operator()(a.id,b.id))),2.5);
+                        if(r2 <= m->hd(a.id,b.id))
+                            return m->ehe(a.id,b.id)*pow((1-(sqrt(r2)/m->hd(a.id,b.id))),2.5);
                         return 0.0;
                     }
 
-                    void from_json(const json &j) override {
-                        for (auto &i : atoms)
-                            for (auto &j : atoms) {
-                                double rirj = i.hdr+j.hdr;
-                                rr->set( i.id(), j.id(), rirj);
-                                rr2->set( i.id(), j.id(), rirj*rirj);
+                    void to_json(json &j) const override { j = *m; }
 
-                                if(i.id() == j.id())
-                                    E->set( i.id(), j.id(), i.eps);
-                                else
-                                    E->set( i.id(), j.id(), 0.0);
-                            }
+                    void from_json(const json &j) override { 
+                        *m = j;
+                        if(m->hd.size() == 0)
+                            throw std::runtime_error("unknown mixing rule for Hertz potential");
                     }
-
-                    void to_json(json&) const override {}
             }; //!< Hertz potential
 
         /**
@@ -354,41 +452,31 @@ namespace Faunus {
          * @f[
          *     u(r) = -depth
          * @f]
-         * when r < threshold, and zero otherwise.
-         *
-         * JSON keywords:
-         *
-         * Key         | Description
-         * :-----------| :---------------------------
-         * `threshold` | Threshold, [angstrom]
+         * when r < sum of radii + threshold, and zero otherwise.
          *
          */
 	template<class Tparticle>
             class SquareWell : public PairPotentialBase {
                 protected:
-                    std::shared_ptr<SigmaEpsilonTable<Tparticle>> m; // table w. sigma_ij^2 and 4xepsilon
-                private:
-                    double threshold;
+                    std::shared_ptr<ParametersTable<Tparticle>> m; // table w. threshold_ij and depth_ij
                 public:
                     SquareWell(const std::string &name="square well") {
                         PairPotentialBase::name=name;
-                        m = std::make_shared<SigmaEpsilonTable<Tparticle>>();
+                        m = std::make_shared<ParametersTable<Tparticle>>();
                     }
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
-                        double d=(atoms[a.id].sigma + atoms[b.id].sigma)/2.0 + threshold;
+                        double d=(atoms[a.id].sigma + atoms[b.id].sigma)/2.0 + m->th(a.id,b.id);
                         if ( r.squaredNorm() < d*d )
-                            return -m->eps(a.id,b.id)/4.0;
+                            return -m->esw(a.id,b.id);
                         return 0.0;
                     }
 
-                    void to_json(json &j) const override {
-                        j = *m;
-                        j["threshold"] = threshold;
-                    }
+                    void to_json(json &j) const override { j = *m; }
 
-                    void from_json(const json &j) override {
+                    void from_json(const json &j) override { 
                         *m = j;
-                        threshold = j.at("threshold").get<double>() * 1.0_angstrom;
+                        if(m->th.size() == 0)
+                            throw std::runtime_error("unknown mixing rule for Square-well potential");
                     }
             }; //!< SquareWell potential
 

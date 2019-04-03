@@ -139,7 +139,7 @@ namespace Faunus {
          */
         template<typename Tspace>
             class AtomicTranslateRotate : public Movebase {
-                private:
+                protected:
                     typedef typename Tspace::Tpvec Tpvec;
                     typedef typename Tspace::Tparticle Tparticle;
                     Tspace& spc; // Space to operate on
@@ -255,127 +255,68 @@ namespace Faunus {
          * @brief Translate and rotate an atom on a 2D hypersphere-surface
          */
         template<typename Tspace>
-            class Atomic2dTranslateRotate : public Movebase {
-                private:
-                    typedef typename Tspace::Tpvec Tpvec;
-                    typedef typename Tspace::Tparticle Tparticle;
-                    Tspace& spc; // Space to operate on
-                    int molid=-1;
-                    Point dir={1,1,1};
-                    Average<double> msqd; // mean squared displacement
-                    double _sqd; // squared displament
-                    std::string molname; // name of molecule to operate on
-                    Change::data cdata;
-
-                    void _to_json(json &j) const override {
-                        j = {
-                            {"dir", dir},
-                            {"molid", molid},
-                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"molecule", molname}
-                        };
-                        _roundjson(j,3);
-                    }
-
-                    void _from_json(const json &j) override {
-                        assert(!molecules<Tpvec>.empty());
-                        try {
-                            assertKeys(j, {"molecule", "dir", "repeat"});
-                            molname = j.at("molecule");
-                            auto it = findName(molecules<Tpvec>, molname);
-                            if (it == molecules<Tpvec>.end())
-                                throw std::runtime_error("unknown molecule '" + molname + "'");
-                            molid = it->id();
-                            dir = j.value("dir", Point(1,1,1));
-                            if (repeat<0) {
-                                auto v = spc.findMolecules(molid, Tspace::ALL );
-                                repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
-                                if (repeat>0)
-                                    repeat = repeat * v.front().size();     // ...and for each atom
-                            }
-                        }
-                        catch (std::exception &e) {
-                            std::cerr << name << ": " << e.what();
-                            throw;
-                        }
-                    } //!< Configure via json object
-
-                    typename Tpvec::iterator randomAtom() {
-                        assert(molid>=0);
-                        auto mollist = spc.findMolecules( molid, Tspace::ALL  ); // all `molid` groups
-                        if (size(mollist)>0) {
-                            auto git = slump.sample( mollist.begin(), mollist.end() ); // random molecule iterator
-                            if (not git->empty()) {
-                                auto p = slump.sample( git->begin(), git->end() ); // random particle iterator
-                                cdata.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
-                                cdata.atoms[0] = std::distance(git->begin(), p);  // index of particle rel. to group
-                                return p;
-                            }
-                        }
-                        return spc.p.end();
-                    }
+            class Atomic2dTranslateRotate : public AtomicTranslateRotate<Tspace> {
+                protected:
+                    typedef AtomicTranslateRotate<Tspace> base;
 
                     void _move(Change &change) override {
-                        auto p = randomAtom();
-                        if (p not_eq spc.p.end()) {
+                        auto p = base::randomAtom();
+                        if (p not_eq base::spc.p.end()) {
                             double dp = atoms.at(p->id).dp;
                             double dprot = atoms.at(p->id).dprot;
-                            auto& g = spc.groups[cdata.index];
+                            auto& g = base::spc.groups[base::cdata.index];
 
                             if (dp>0) { // translate
                                 Point oldpos = p->pos;
 
                                 Point rtp = xyz2rtp(p->pos); // Get the spherical coordinates of the particle
-                                double slump_theta = dp*(slump()-0.5);  // Get random theta-move
-                                double slump_phi = dp*(slump()-0.5);   // Get random phi-move
+                                double slump_theta = dp*(base::slump()-0.5);  // Get random theta-move
+                                double slump_phi = dp*(base::slump()-0.5);   // Get random phi-move
 
-                                double scalefactor_theta = spc.geo.getRadius()*sin(rtp.z()); // Scale-factor for theta
-                                double scalefactor_phi = spc.geo.getRadius();                // Scale-factor for phi
+                                double scalefactor_theta = base::spc.geo.getRadius()*sin(rtp.z()); // Scale-factor for theta
+                                double scalefactor_phi = base::spc.geo.getRadius();                // Scale-factor for phi
 
                                 Point theta_dir = Point(-sin(rtp.y()),cos(rtp.y()),0);    // Unit-vector in theta-direction
                                 Point phi_dir = Point(cos(rtp.y())*cos(rtp.z()),sin(rtp.y())*cos(rtp.z()),-sin(rtp.z()));  // Unit-vector in phi-direction
                                 Point xyz = oldpos + scalefactor_theta*theta_dir*slump_theta + scalefactor_phi*phi_dir*slump_phi; // New position
-                                p->pos = spc.geo.getRadius()*xyz/xyz.norm(); // Convert to cartesian coordinates
+                                p->pos = base::spc.geo.getRadius()*xyz/xyz.norm(); // Convert to cartesian coordinates
 
-                                spc.geo.boundary(p->pos);
-                                _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
+                                base::spc.geo.boundary(p->pos);
+                                base::_sqd = base::spc.geo.sqdist(oldpos, p->pos); // squared displacement
                                 if (not g.atomic) { // recalc mass-center for non-molecular groups
-                                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
+                                    g.cm = Geometry::massCenter(g.begin(), g.end(), base::spc.geo.getBoundaryFunc(), -g.cm);
 #ifndef NDEBUG
                                     Point cmbak = g.cm; // backup mass center
-                                    g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
-                                    double should_be_zero = spc.geo.sqdist( {0,0,0}, Geometry::massCenter(g.begin(), g.end()) );
+                                    g.translate(-cmbak, base::spc.geo.getBoundaryFunc()); // translate to {0,0,0}
+                                    double should_be_zero = base::spc.geo.sqdist( {0,0,0}, Geometry::massCenter(g.begin(), g.end()) );
                                     if (should_be_zero>1e-6)
                                         throw std::runtime_error("atomic move too large");
                                     else
-                                        g.translate(cmbak, spc.geo.getBoundaryFunc());
+                                        g.translate(cmbak, base::spc.geo.getBoundaryFunc());
 #endif
                                 }
                             }
 
                             if (dprot>0) { // rotate
-                                Point u = ranunit(slump);
-                                double angle = dprot * (slump()-0.5);
+                                Point u = ranunit(base::slump);
+                                double angle = dprot * (base::slump()-0.5);
                                 Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
                                 p->rotate(Q, Q.toRotationMatrix());
                             }
 
                             if (dp>0 or dprot>0)
-                                change.groups.push_back( cdata ); // add to list of moved groups
+                                change.groups.push_back( base::cdata ); // add to list of moved groups
                         }
                         // else
                         //    std::cerr << name << ": no atoms found" << std::endl;
                     }
 
-                    void _accept(Change&) override { msqd += _sqd; }
-                    void _reject(Change&) override { msqd += 0; }
-
                 public:
-                    Atomic2dTranslateRotate(Tspace &spc) : spc(spc) {
-                        name = "transrot 2d";
-                        repeat = -1; // meaning repeat N times
-                        cdata.atoms.resize(1);
-                        cdata.internal=true;
+                    Atomic2dTranslateRotate(Tspace &spc) : base(spc) {
+                        base::name = "transrot 2d";
+                        base::repeat = -1; // meaning repeat N times
+                        base::cdata.atoms.resize(1);
+                        base::cdata.internal=true;
                     }
             };
 

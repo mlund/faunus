@@ -1019,7 +1019,7 @@ namespace Faunus {
                     typedef typename Tspace::Tgroup Tgroup;
                     Tspace& spc;
                     Average<double> msqd, msqd_angle, N;
-                    double dptrans=0, dprot=0, angle=0, _bias=0;
+                    double dptrans=0, dprot=0, angle=0, _bias=0, probability=1.0;
                     size_t bias_rejected=0;
                     bool rotate; // true if cluster should be rotated
                     Point dir={1,1,1}, dp;
@@ -1032,14 +1032,14 @@ namespace Faunus {
 
                     virtual double clusterProbability(const Tgroup &g1, const Tgroup &g2) const {
                         if ( spc.geo.sqdist(g1.cm, g2.cm) <= thresholdsq(g1.id,g2.id) )
-                            return 1.0;
+                            return probability;
                         return 0.0;
                     }
 
                     void _to_json(json &j) const override {
                         using namespace u8;
                         j = {
-                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
+                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot}, {"probability", probability},
                             {rootof + bracket("r" + squared), std::sqrt(msqd.avg())},
                             {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
                             {bracket("N"), N.avg()},
@@ -1068,10 +1068,11 @@ namespace Faunus {
                     }
 
                     void _from_json(const json &j) override {
-                        assertKeys(j, {"dp", "dprot", "dir", "threshold", "molecules", "repeat", "satellites"});
+                        assertKeys(j, {"dp", "dprot", "dir", "threshold", "molecules", "repeat", "satellites", "probability"});
                         dptrans = j.at("dp");
                         dir = j.value("dir", Point(1,1,1));
                         dprot = j.at("dprot");
+                        probability = j.value("probability",1.0);
                         names = j.at("molecules").get<decltype(names)>(); // molecule names
                         ids = names2ids(molecules<Tpvec>, names);     // names --> molids
                         index.clear();

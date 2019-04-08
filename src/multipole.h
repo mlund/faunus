@@ -68,14 +68,8 @@ namespace Faunus {
         /**
          * @brief Returns the factorial of 'n'. Note that 'n' must be positive semidefinite.
          */
-        inline int factorial(int n) {
-            // assert(n >= 0 && "Factorial not defined for negative integers");
-            if(n < 0)
-                throw std::runtime_error("Factorial not defined for negative integers");
-            if(n > 1)
-                return n * factorial(n - 1);
-            else
-                return 1;
+        inline unsigned int factorial( unsigned int number ) {
+	  return number > 1 ? factorial(number-1)*number : 1;
         }
 
         /**

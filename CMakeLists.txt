@@ -350,94 +350,104 @@ endif()
 
 # TESTS
 
+set(EXAMPLES_DIR ${CMAKE_SOURCE_DIR}/examples)
+set(YASON ${CMAKE_SOURCE_DIR}/scripts/yason.py)
+set(JSON_COMPARE ${CMAKE_SOURCE_DIR}/scripts/jsoncompare.py)
 if (TARGET pyfaunus)
     add_test(
         NAME pythontest
         COMMAND sh -c "${PYTHON_EXECUTABLE} pythontest.py -v"
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+        WORKING_DIRECTORY ${EXAMPLES_DIR})
     set_tests_properties(pythontest PROPERTIES ENVIRONMENT "PYTHONPATH=$<TARGET_FILE_DIR:pyfaunus>")
 endif()
 
 add_test(
     NAME swapconf
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py swapconf.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} swapconf.yml\
     | $<TARGET_FILE:faunus> --nobar --state swapconf.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py swapconf.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} swapconf.out.json out.json --tol 0.05"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(
     NAME doublelayer
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py doublelayer.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} doublelayer.yml\
     | $<TARGET_FILE:faunus> --nobar --state doublelayer.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py doublelayer.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} doublelayer.out.json out.json --tol 0.05"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(
     NAME penalty
     COMMAND sh -c "jupyter nbconvert --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 set_tests_properties(penalty PROPERTIES ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 
 add_test(
     NAME minimal
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py minimal.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} minimal.yml\
     | $<TARGET_FILE:faunus> --nobar --state minimal.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py minimal.out.json out.json --tol 0.02"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} minimal.out.json out.json --tol 0.02"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
+
+add_test(
+    NAME chain
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} chain.yml\
+    | $<TARGET_FILE:faunus> --nobar --state chain.state.json\
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} chain.cmp.json out.json --tol 0.05"
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/chain)
 
 add_test(
     NAME polymers
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py polymers.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} polymers.yml\
     | $<TARGET_FILE:faunus> --nobar --state polymers.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py polymers.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} polymers.out.json out.json --tol 0.05"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(
     NAME speciation
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py speciation.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} speciation.yml\
     | $<TARGET_FILE:faunus> --quiet --state speciation.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py speciation.out.json out.json --tol 0.02"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} speciation.out.json out.json --tol 0.02"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(
     NAME phosphate
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py phosphate.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} phosphate.yml\
     | $<TARGET_FILE:faunus> --quiet --state phosphate.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py phosphate.out.json out.json --tol 0.02"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} phosphate.out.json out.json --tol 0.02"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(
     NAME sodiumphosphate
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py sodiumphosphate.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} sodiumphosphate.yml\
     | $<TARGET_FILE:faunus> --quiet --state sodiumphosphate.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py sodiumphosphate.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} sodiumphosphate.out.json out.json --tol 0.05"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(
     NAME cluster
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py cluster.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} cluster.yml\
     | $<TARGET_FILE:faunus> --quiet --state cluster.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py cluster.out.json out.json --tol 0.1"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} cluster.out.json out.json --tol 0.1"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(
     NAME bulk
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py bulk.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bulk.yml\
     | $<TARGET_FILE:faunus> --quiet"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(
     NAME seawater
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py seawater.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} seawater.yml\
     | $<TARGET_FILE:faunus> --quiet"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(
     NAME membrane
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ../scripts/yason.py membrane.yml\
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} membrane.yml\
     | $<TARGET_FILE:faunus> --quiet --state membrane.state.json\
-    ; ${PYTHON_EXECUTABLE} ../scripts/jsoncompare.py membrane.out.json out.json --tol 0.065"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples)
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} membrane.out.json out.json --tol 0.065"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 # INSTALL TARGETS
 
@@ -468,45 +478,50 @@ install(FILES
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 install(FILES
-    ${CMAKE_SOURCE_DIR}/examples/README.md
-    ${CMAKE_SOURCE_DIR}/examples/bulk.yml
-    ${CMAKE_SOURCE_DIR}/examples/cluster.yml
-    ${CMAKE_SOURCE_DIR}/examples/cluster.agr
-    ${CMAKE_SOURCE_DIR}/examples/cluster.out.json
-    ${CMAKE_SOURCE_DIR}/examples/cluster.state.json
-    ${CMAKE_SOURCE_DIR}/examples/doublelayer.yml
-    ${CMAKE_SOURCE_DIR}/examples/doublelayer.agr
-    ${CMAKE_SOURCE_DIR}/examples/doublelayer.out.json
-    ${CMAKE_SOURCE_DIR}/examples/doublelayer.state.json
-    ${CMAKE_SOURCE_DIR}/examples/doublelayer.mfcorr.dat
-    ${CMAKE_SOURCE_DIR}/examples/isochoric.yml
-    ${CMAKE_SOURCE_DIR}/examples/isochoric.xyz
-    ${CMAKE_SOURCE_DIR}/examples/membrane.yml
-    ${CMAKE_SOURCE_DIR}/examples/membrane.out.json
-    ${CMAKE_SOURCE_DIR}/examples/membrane.state.json
-    ${CMAKE_SOURCE_DIR}/examples/lipid.xyz
-    ${CMAKE_SOURCE_DIR}/examples/minimal.yml
-    ${CMAKE_SOURCE_DIR}/examples/minimal.out.json
-    ${CMAKE_SOURCE_DIR}/examples/minimal.state.json
-    ${CMAKE_SOURCE_DIR}/examples/penalty.yml
-    ${CMAKE_SOURCE_DIR}/examples/penalty.ipynb
-    ${CMAKE_SOURCE_DIR}/examples/polymers.yml
-    ${CMAKE_SOURCE_DIR}/examples/polymers.readme
-    ${CMAKE_SOURCE_DIR}/examples/polymers.pdf
-    ${CMAKE_SOURCE_DIR}/examples/polymers.state.json
-    ${CMAKE_SOURCE_DIR}/examples/polymers.out.json
-    ${CMAKE_SOURCE_DIR}/examples/pythontest.py
-    ${CMAKE_SOURCE_DIR}/examples/seawater.yml
-    ${CMAKE_SOURCE_DIR}/examples/speciation.yml
-    ${CMAKE_SOURCE_DIR}/examples/speciation.out.json
-    ${CMAKE_SOURCE_DIR}/examples/speciation.state.json
-    ${CMAKE_SOURCE_DIR}/examples/swapconf.yml
-    ${CMAKE_SOURCE_DIR}/examples/swapconf.out.json
-    ${CMAKE_SOURCE_DIR}/examples/swapconf.state.json
-    ${CMAKE_SOURCE_DIR}/examples/swapconf.conformations.pqr
-    ${CMAKE_SOURCE_DIR}/examples/swapconf.weights.dat
-    ${CMAKE_SOURCE_DIR}/examples/water.yml
-    ${CMAKE_SOURCE_DIR}/examples/water.xyz
+    ${EXAMPLES_DIR}/README.md
+    ${EXAMPLES_DIR}/bulk.yml
+    ${EXAMPLES_DIR}/cluster.yml
+    ${EXAMPLES_DIR}/cluster.agr
+    ${EXAMPLES_DIR}/cluster.out.json
+    ${EXAMPLES_DIR}/cluster.state.json
+    ${EXAMPLES_DIR}/doublelayer.yml
+    ${EXAMPLES_DIR}/doublelayer.agr
+    ${EXAMPLES_DIR}/doublelayer.out.json
+    ${EXAMPLES_DIR}/doublelayer.state.json
+    ${EXAMPLES_DIR}/doublelayer.mfcorr.dat
+    ${EXAMPLES_DIR}/isochoric.yml
+    ${EXAMPLES_DIR}/isochoric.xyz
+    ${EXAMPLES_DIR}/membrane.yml
+    ${EXAMPLES_DIR}/membrane.out.json
+    ${EXAMPLES_DIR}/membrane.state.json
+    ${EXAMPLES_DIR}/lipid.xyz
+    ${EXAMPLES_DIR}/minimal.yml
+    ${EXAMPLES_DIR}/minimal.out.json
+    ${EXAMPLES_DIR}/minimal.state.json
+    ${EXAMPLES_DIR}/penalty.yml
+    ${EXAMPLES_DIR}/penalty.ipynb
+    ${EXAMPLES_DIR}/chain/chain.yml
+    ${EXAMPLES_DIR}/chain/chain.xyz
+    ${EXAMPLES_DIR}/chain/chain.state.json
+    ${EXAMPLES_DIR}/chain/chain.out.json
+    ${EXAMPLES_DIR}/chain/chain.cmp.json
+    ${EXAMPLES_DIR}/polymers.yml
+    ${EXAMPLES_DIR}/polymers.readme
+    ${EXAMPLES_DIR}/polymers.pdf
+    ${EXAMPLES_DIR}/polymers.state.json
+    ${EXAMPLES_DIR}/polymers.out.json
+    ${EXAMPLES_DIR}/pythontest.py
+    ${EXAMPLES_DIR}/seawater.yml
+    ${EXAMPLES_DIR}/speciation.yml
+    ${EXAMPLES_DIR}/speciation.out.json
+    ${EXAMPLES_DIR}/speciation.state.json
+    ${EXAMPLES_DIR}/swapconf.yml
+    ${EXAMPLES_DIR}/swapconf.out.json
+    ${EXAMPLES_DIR}/swapconf.state.json
+    ${EXAMPLES_DIR}/swapconf.conformations.pqr
+    ${EXAMPLES_DIR}/swapconf.weights.dat
+    ${EXAMPLES_DIR}/water.yml
+    ${EXAMPLES_DIR}/water.xyz
     DESTINATION share/faunus/examples)
 
 # INFORMATION ABOUT DEBUG MODE

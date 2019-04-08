@@ -1,0 +1,71 @@
+#!/usr/bin/env yason.py
+comment: |
+    36mer chain with harmonic bonds connecting the hard spheres
+
+temperature: 300.0
+random: {seed: default}
+geometry:
+  type: cuboid
+  length: [500., 500., 500.]
+mcloop: {macro: 150, micro: 200}
+
+atomlist:
+   - MER: {r: 2.0, dp: 2.0 }
+
+moleculelist:
+    - POL:
+        structure: "chain.xyz"
+        bondlist:
+            - harmonic: {index: [0,1], k: 100, req: 5.0}
+            - harmonic: {index: [1,2], k: 100, req: 5.0}
+            - harmonic: {index: [2,3], k: 100, req: 5.0}
+            - harmonic: {index: [3,4], k: 100, req: 5.0}
+            - harmonic: {index: [4,5], k: 100, req: 5.0}
+            - harmonic: {index: [5,6], k: 100, req: 5.0}
+            - harmonic: {index: [6,7], k: 100, req: 5.0}
+            - harmonic: {index: [7,8], k: 100, req: 5.0}
+            - harmonic: {index: [8,9], k: 100, req: 5.0}
+            - harmonic: {index: [9,10], k: 100, req: 5.0}
+            - harmonic: {index: [10,11], k: 100, req: 5.0}
+            - harmonic: {index: [11,12], k: 100, req: 5.0}
+            - harmonic: {index: [12,13], k: 100, req: 5.0}
+            - harmonic: {index: [13,14], k: 100, req: 5.0}
+            - harmonic: {index: [14,15], k: 100, req: 5.0}
+            - harmonic: {index: [15,16], k: 100, req: 5.0}
+            - harmonic: {index: [16,17], k: 100, req: 5.0}
+            - harmonic: {index: [17,18], k: 100, req: 5.0}
+            - harmonic: {index: [18,19], k: 100, req: 5.0}
+            - harmonic: {index: [19,20], k: 100, req: 5.0}
+            - harmonic: {index: [20,21], k: 100, req: 5.0}
+            - harmonic: {index: [21,22], k: 100, req: 5.0}
+            - harmonic: {index: [22,23], k: 100, req: 5.0}
+            - harmonic: {index: [23,24], k: 100, req: 5.0}
+            - harmonic: {index: [24,25], k: 100, req: 5.0}
+            - harmonic: {index: [25,26], k: 100, req: 5.0}
+            - harmonic: {index: [26,27], k: 100, req: 5.0}
+            - harmonic: {index: [27,28], k: 100, req: 5.0}
+            - harmonic: {index: [28,29], k: 100, req: 5.0}
+            - harmonic: {index: [29,30], k: 100, req: 5.0}
+            - harmonic: {index: [30,31], k: 100, req: 5.0}
+            - harmonic: {index: [31,32], k: 100, req: 5.0}
+            - harmonic: {index: [32,33], k: 100, req: 5.0}
+            - harmonic: {index: [33,34], k: 100, req: 5.0}
+            - harmonic: {index: [34,35], k: 100, req: 5.0}
+
+insertmolecules:
+    - POL: {N: 1}
+
+energy:
+    - bonded: {}
+    - nonbonded:
+        default:
+        - hardsphere
+
+moves:
+    - transrot: {molecule: POL, repeat: 100}
+    - crankshaft: {molecule: POL, dprot: 0.5, repeat: 10}
+    - pivot: {molecule: POL, dprot: 0.5, repeat: 10}
+
+analysis:
+    - polymershape: {nstep: 10, molecules: [POL]}
+#    - savestate: {file: chain.state.json}

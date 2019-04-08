@@ -76,7 +76,7 @@ namespace Faunus {
                 enum Mixers {LB, LBSW, HE, NONE};
                 Mixers mixer = NONE;
                 PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and 4*eps_ij (LJ)
-                PairMatrix<double> th,esw; // matrix of threshold_ij and depth_ij (Square-well)
+                PairMatrix<double> th,esw; // matrix of squarewell_threshold_ij and squarewell_depth_ij (Square-well)
                 PairMatrix<double> hd,ehe; // matrix of hydrodynamic diameter_ij and energy-strength_ij (Hertz)
             }; //!< Table of parameters for potential 
 
@@ -130,13 +130,13 @@ namespace Faunus {
                                 break;
                             case ParametersTable<Tparticle>::LBSW:
                                 double threshold, depth; // mixed values
-                                std::tie( threshold, depth ) = mixerFunc(i.threshold, j.threshold, i.depth, j.depth);
+                                std::tie( threshold, depth ) = mixerFunc(i.squarewell_threshold, j.squarewell_threshold, i.squarewell_depth, j.squarewell_depth);
                                 m.th.set(  i.id(), j.id(), threshold );
                                 m.esw.set( i.id(), j.id(), depth ); // should already be in kT
                                 break;
                             case ParametersTable<Tparticle>::HE:
                                 double hdd, eh; // mixed values
-                                std::tie( hdd, eh ) = mixerFunc(i.hdr, j.hdr, i.eh, j.eh);
+                                std::tie( hdd, eh ) = mixerFunc(i.hdr, j.hdr, i.hz_eps, j.hz_eps);
                                 m.hd.set(  i.id(), j.id(), hdd );
                                 m.ehe.set( i.id(), j.id(), eh ); // should already be in kT
                                 break;
@@ -165,12 +165,12 @@ namespace Faunus {
                                         m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
                                         break;
                                     case ParametersTable<Tparticle>::LBSW:
-                                        m.th.set( id1, id2, it.value().at("threshold").get<double>() );
-                                        m.esw.set(id1, id2, it.value().at("depth").get<double>() * 1.0_kJmol);
+                                        m.th.set( id1, id2, it.value().at("squarewell_threshold").get<double>() );
+                                        m.esw.set(id1, id2, it.value().at("squarewell_depth").get<double>() * 1.0_kJmol);
                                         break;
                                     case ParametersTable<Tparticle>::HE:
                                         m.hd.set( id1, id2, it.value().at("hdd").get<double>() );
-                                        m.ehe.set(id1, id2, it.value().at("eh").get<double>() * 1.0_kJmol);
+                                        m.ehe.set(id1, id2, it.value().at("hz_eps").get<double>() * 1.0_kJmol);
                                         break;
                                     default:
                                         throw std::runtime_error("unknown mixing rule");
@@ -180,9 +180,9 @@ namespace Faunus {
                                     case ParametersTable<Tparticle>::LB:
                                         throw std::runtime_error("custom epsilon/sigma parameters require exactly two space-separated atoms");
                                     case ParametersTable<Tparticle>::LBSW:
-                                        throw std::runtime_error("custom depth/threshold parameters require exactly two space-separated atoms");
+                                        throw std::runtime_error("custom squarewell_depth/squarewell_threshold parameters require exactly two space-separated atoms");
                                     case ParametersTable<Tparticle>::HE:
-                                        throw std::runtime_error("custom eh/hdd parameters require exactly two space-separated atoms");
+                                        throw std::runtime_error("custom hz_eps/hdd parameters require exactly two space-separated atoms");
                                     default:
                                         throw std::runtime_error("unknown mixing rule");
                                 }
@@ -193,9 +193,9 @@ namespace Faunus {
                             case ParametersTable<Tparticle>::LB:
                                 throw std::runtime_error("custom sigma/epsilon syntax error");
                             case ParametersTable<Tparticle>::LBSW:
-                                throw std::runtime_error("custom depth/threshold syntax error");
+                                throw std::runtime_error("custom squarewell_depth/squarewell_threshold syntax error");
                             case ParametersTable<Tparticle>::HE:
-                                throw std::runtime_error("custom eh/hdd syntax error");
+                                throw std::runtime_error("custom hz_eps/hdd syntax error");
                             default:
                                 throw std::runtime_error("unknown mixing rule");
                         }
@@ -225,18 +225,18 @@ namespace Faunus {
                             for (size_t j=0; j<m.esw.size(); j++)
                                 if (i>=j) {
                                     auto str = atoms[i].name+" "+atoms[j].name;
-                                    _j[str] = { {"depth", m.esw(i,j)/1.0_kJmol}, {"threshold", m.th(i,j)}  };
+                                    _j[str] = { {"squarewell_depth", m.esw(i,j)/1.0_kJmol}, {"squarewell_threshold", m.th(i,j)}  };
                                     _roundjson(_j[str], 5);
                                 }
                         break;
                     case ParametersTable<Tparticle>::HE:
                         j["mixing"] = "HE";
-                        j["eh unit"] = "kJ/mol";
+                        j["hz_eps unit"] = "kJ/mol";
                         for (size_t i=0; i<m.ehe.size(); i++)
                             for (size_t j=0; j<m.ehe.size(); j++)
                                 if (i>=j) {
                                     auto str = atoms[i].name+" "+atoms[j].name;
-                                    _j[str] = { {"eh", m.ehe(i,j)/1.0_kJmol}, {"hdd", m.hd(i,j)}  };
+                                    _j[str] = { {"hz_eps", m.ehe(i,j)/1.0_kJmol}, {"hdd", m.hd(i,j)}  };
                                     _roundjson(_j[str], 5);
                                 }
                         break;
@@ -450,15 +450,15 @@ namespace Faunus {
          * @brief Square-well potential
          * @details This is an attractive potential described by
          * @f[
-         *     u(r) = -depth
+         *     u(r) = -squarewell_depth
          * @f]
-         * when r < sum of radii + threshold, and zero otherwise.
+         * when r < sum of radii + squarewell_threshold, and zero otherwise.
          *
          */
 	template<class Tparticle>
             class SquareWell : public PairPotentialBase {
                 protected:
-                    std::shared_ptr<ParametersTable<Tparticle>> m; // table w. threshold_ij and depth_ij
+                    std::shared_ptr<ParametersTable<Tparticle>> m; // table w. squarewell_threshold_ij and squarewell_depth_ij
                 public:
                     SquareWell(const std::string &name="square well") {
                         PairPotentialBase::name=name;
@@ -638,7 +638,8 @@ namespace Faunus {
             std::string type;
             double selfenergy_prefactor;
             double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
-            int order, C, D;
+            int order;
+            unsigned int C, D;
 
             void sfYukawa(const json &j);
             void sfReactionField(const json &j);

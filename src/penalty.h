@@ -114,6 +114,7 @@ namespace Faunus {
             public:
                 template<class Tspace>
                     MoleculeProperty(const json &j, Tspace &spc) {
+                        typedef typename Tspace::Tparticle Tparticle;
                         name = "molecule";
                         from_json(j, *this);
                         index = j.value("index", 0);
@@ -188,6 +189,30 @@ namespace Faunus {
                                 auto cm1 = Geometry::massCenter(spc.p.begin()+i, spc.p.begin()+j, spc.geo.getBoundaryFunc());
                                 auto cm2 = Geometry::massCenter(spc.p.begin()+k, spc.p.begin()+l, spc.geo.getBoundaryFunc());
                                 return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm(); 
+                            };
+                        }
+
+                        else if (property=="L/R") {
+                            dir = j.at("dir"); 
+                            indexes = j.value("indexes", decltype(indexes)());
+                            assert(indexes.size()==2 && "An array of 2 indexes should be specified.");
+                            f = [&spc, &dir=dir, i=indexes[0], j=indexes[1]]() {
+                                Average<double> Rj, Rin, Rout;
+                                Group<Tparticle> g(spc.p.begin(), spc.p.end());
+                                auto slicei = g.find_id(i);
+                                auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
+                                auto slicej = g.find_id(j);
+                                for (auto p : slicej)
+                                    Rj += spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
+                                double Rjavg = Rj.avg();
+                                for (auto p : slicei) {
+                                    double d = spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
+                                    if (d < Rjavg)
+                                        Rin += d;
+                                    else if (d > Rjavg)
+                                        Rout += d;
+                                }
+                                return 2 * spc.geo.getLength().z() / ( Rin.avg() + Rout.avg() ); 
                             };
                         }
 

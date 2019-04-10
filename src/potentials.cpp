@@ -286,11 +286,30 @@ Faunus::Potential::BondData::Variant Faunus::Potential::FENEBond::type() const {
 void Faunus::Potential::FENEBond::from_json(const Faunus::json &j) {
     k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
     k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
+}
+
+void Faunus::Potential::FENEBond::to_json(Faunus::json &j) const {
+    j = {
+        { "k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
+        { "rmax", std::sqrt(k[1]) / 1.0_angstrom } };
+}
+
+std::string Faunus::Potential::FENEBond::name() const { return "fene"; }
+
+std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::FENEWCABond::clone() const { return std::make_shared<FENEWCABond>(*this); }
+
+int Faunus::Potential::FENEWCABond::numindex() const { return 2; }
+
+Faunus::Potential::BondData::Variant Faunus::Potential::FENEWCABond::type() const { return BondData::FENEWCA; }
+
+void Faunus::Potential::FENEWCABond::from_json(const Faunus::json &j) {
+    k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
+    k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
     k[2] = j.value("eps", 0.0) * 1.0_kJmol;
     k[3] = std::pow( j.value("sigma", 0.0)  * 1.0_angstrom, 2);
 }
 
-void Faunus::Potential::FENEBond::to_json(Faunus::json &j) const {
+void Faunus::Potential::FENEWCABond::to_json(Faunus::json &j) const {
     j = {
         { "k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
         { "rmax", std::sqrt(k[1]) / 1.0_angstrom },
@@ -298,7 +317,7 @@ void Faunus::Potential::FENEBond::to_json(Faunus::json &j) const {
         { "sigma", std::sqrt(k[3]) / 1.0_angstrom } };
 }
 
-std::string Faunus::Potential::FENEBond::name() const { return "fene"; }
+std::string Faunus::Potential::FENEWCABond::name() const { return "fene+wca"; }
 
 int Faunus::Potential::HarmonicTorsion::numindex() const { return 3; }
 

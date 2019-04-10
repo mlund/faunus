@@ -831,7 +831,7 @@ namespace Faunus {
          * and potentially also the energy function (nullptr per default).
          */
         struct BondData {
-            enum Variant {HARMONIC=0, FENE, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
+            enum Variant {HARMONIC=0, FENE, FENEWCA, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
             std::vector<int> index;
             bool exclude=false;           //!< True if exclusion of non-bonded interaction should be attempted 
             bool keepelectrostatics=true; //!< If `exclude==true`, try to keep electrostatic interactions
@@ -873,6 +873,27 @@ namespace Faunus {
          * @brief FENE bond
          */
         struct FENEBond : public BondData {
+            std::array<double,2> k = {{0,0}};
+            int numindex() const override;
+            Variant type() const override;
+            std::shared_ptr<BondData> clone() const override;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
+            std::string name() const override;
+
+            template<typename Tpvec>
+                void setEnergyFunction(const Tpvec &p) {
+                    energy = [&](Geometry::DistanceFunction dist) {
+                        double d=dist( p[index[0]].pos, p[index[1]].pos ).squaredNorm();
+                        return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]);
+                    };
+                }
+        }; // end of FENE
+
+        /**
+         * @brief FENE+WCA bond
+         */
+        struct FENEWCABond : public BondData {
             std::array<double,4> k = {{0,0,0,0}};
             int numindex() const override;
             Variant type() const override;
@@ -894,7 +915,7 @@ namespace Faunus {
                         return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
                     };
                 }
-        }; // end of FENE
+        }; // end of FENE+WCA
 
         struct HarmonicTorsion : public BondData {
             double k=0, aeq=0;
@@ -1004,9 +1025,23 @@ namespace Faunus {
                 CHECK_THROWS( b = R"({"harmonic": { "index":[2,3], "k":2.1}} )"_json );
             }
 
+            // test fene+wca
+            SUBCASE("FENEWCABond") {
+                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json;
+                b = j;
+                CHECK( j == json(b) );
+                CHECK_THROWS( b = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
+                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
+                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1, "eps":2.48, "sigma":2}} )"_json );
+                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json );
+                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "sigma":2}} )"_json );
+                j = json::object();
+                CHECK_THROWS( b = j );
+            }
+
             // test fene
             SUBCASE("FENEBond") {
-                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 }} )"_json;
+                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1 }} )"_json;
                 b = j;
                 CHECK( j == json(b) );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1}} )"_json );

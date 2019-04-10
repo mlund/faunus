@@ -994,6 +994,8 @@ namespace Faunus {
                     std::dynamic_pointer_cast<HarmonicBond>(b)->setEnergyFunction(p);
                 else if (b->type()==BondData::FENE)
                     std::dynamic_pointer_cast<FENEBond>(b)->setEnergyFunction(p);
+                else if (b->type()==BondData::FENEWCA)
+                    std::dynamic_pointer_cast<FENEWCABond>(b)->setEnergyFunction(p);
                 else {
                     assert(false); // we should never reach here
                 }

@@ -232,6 +232,7 @@ void Faunus::Potential::from_json(const Faunus::json &j, std::shared_ptr<Faunus:
             const auto& val = j.begin().value();
             if ( key==HarmonicBond().name() )  b = std::make_shared<HarmonicBond>();
             else if ( key==FENEBond().name() ) b = std::make_shared<FENEBond>();
+            else if ( key==FENEWCABond().name() ) b = std::make_shared<FENEWCABond>();
             else if ( key==HarmonicTorsion().name() ) b = std::make_shared<HarmonicTorsion>();
             else if ( key==GromosTorsion().name() ) b = std::make_shared<GromosTorsion>();
             else if ( key==PeriodicDihedral().name() ) b = std::make_shared<PeriodicDihedral>();

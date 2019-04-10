@@ -1025,20 +1025,6 @@ namespace Faunus {
                 CHECK_THROWS( b = R"({"harmonic": { "index":[2,3], "k":2.1}} )"_json );
             }
 
-            // test fene+wca
-            SUBCASE("FENEWCABond") {
-                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json;
-                b = j;
-                CHECK( j == json(b) );
-                CHECK_THROWS( b = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
-                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
-                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1, "eps":2.48, "sigma":2}} )"_json );
-                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json );
-                CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "sigma":2}} )"_json );
-                j = json::object();
-                CHECK_THROWS( b = j );
-            }
-
             // test fene
             SUBCASE("FENEBond") {
                 json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1 }} )"_json;
@@ -1047,6 +1033,20 @@ namespace Faunus {
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1}} )"_json );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3], "rmax":2.1}} )"_json );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1}} )"_json );
+                j = json::object();
+                CHECK_THROWS( b = j );
+            }
+
+            // test fene+wca
+            SUBCASE("FENEWCABond") {
+                json j = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json;
+                b = j;
+                CHECK( j == json(b) );
+                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3,4], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
+                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
+                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "eps":2.48, "sigma":2}} )"_json );
+                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json );
+                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "sigma":2}} )"_json );
                 j = json::object();
                 CHECK_THROWS( b = j );
             }
@@ -1064,8 +1064,8 @@ namespace Faunus {
             // test bond filter
             SUBCASE("filterBonds()") {
                 std::vector<std::shared_ptr<BondData>> bonds = {
-                    R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 }} )"_json,
-                    R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1} } )"_json
+                    R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1}} )"_json,
+                    R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1}} )"_json
                 };
                 auto filt = filterBonds(bonds, BondData::HARMONIC);
                 CHECK( filt.size() == 1 );

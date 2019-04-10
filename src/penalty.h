@@ -72,12 +72,11 @@ namespace Faunus {
                             };
                         else if (property=="N") // number of particles
                             f = [&groups=spc.groups]() {
-                                double N_sum=0;
+                                int N_sum=0;
                                 for (auto &g : groups) // loops over groups
                                     N_sum += g.size();
                                 return N_sum;
                             };
-
                         if (f==nullptr)
                             throw std::runtime_error(name + ": unknown property '" + property + "'" + usageTip["coords=[system]"]);
                     }
@@ -98,10 +97,19 @@ namespace Faunus {
                         index = j.at("index");
                         property = j.at("property").get<std::string>();
                         if (property=="x") f = [&p=spc.p, i=index]() { return p[i].pos.x(); };
-                        if (property=="y") f = [&p=spc.p, i=index]() { return p[i].pos.y(); };
-                        if (property=="z") f = [&p=spc.p, i=index]() { return p[i].pos.z(); };
-                        if (property=="R") f = [&p=spc.p, i=index]() { return p[i].pos.norm(); };
-                        if (property=="q") f = [&p=spc.p, i=index]() { return p[i].charge; };
+                        else if (property=="y") f = [&p=spc.p, i=index]() { return p[i].pos.y(); };
+                        else if (property=="z") f = [&p=spc.p, i=index]() { return p[i].pos.z(); };
+                        else if (property=="R") f = [&p=spc.p, i=index]() { return p[i].pos.norm(); };
+                        else if (property=="q") f = [&p=spc.p, i=index]() { return p[i].charge; };
+                        else if (property=="N") // number of atom of id=index
+                            f = [&groups=spc.groups, i=index]() {
+                                int N_sum=0;
+                                for (auto &g : groups) // loops over groups
+                                    for (auto &p : g) // loops over particles
+                                        if (p.id == i)
+                                            N_sum++;
+                                return N_sum;
+                            };
                         if (f==nullptr)
                             throw std::runtime_error(name + ": unknown property '" + property + "'" + usageTip["coords=[atom]"]);
                     }

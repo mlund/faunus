@@ -134,11 +134,10 @@ namespace Faunus {
                 PolicyIonIon(Tspace &spc) : spc(&spc) {}
 
                 void updateComplex(EwaldData &data) const {
-                    auto active = spc->activeParticles();
                     if (eigenopt)
                         if (data.ipbc==false) {
-                            auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Tspace::Tparticle::pos); //  Nx3
-                            auto charge = asEigenVector(active.begin().base(), active.end().base(), &Tspace::Tparticle::charge); // Nx1
+                            auto pos = asEigenMatrix(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::pos); //  Nx3
+                            auto charge = asEigenVector(spc->p.begin(), spc->p.end(), &Tspace::Tparticle::charge); // Nx1
                             Eigen::MatrixXd kr = pos.matrix() * data.kVectors; // Nx3 * 3xK = NxK
                             data.Qion.real() = (kr.array().cos().colwise()*charge).colwise().sum();
                             data.Qion.imag() = kr.array().sin().colwise().sum();
@@ -148,10 +147,10 @@ namespace Faunus {
                         const Point& kv = data.kVectors.col(k);
                         EwaldData::Tcomplex Q(0,0);
                         if (data.ipbc)
-                            for (auto &i : active)
+                            for (auto &i : spc->p)
                                 Q += kv.cwiseProduct(i.pos).array().cos().prod() * i.charge;
                         else
-                            for (auto &i : active) {
+                            for (auto &i : spc->p) {
                                 double dot = kv.dot(i.pos);
                                 Q += i.charge * EwaldData::Tcomplex( std::cos(dot), std::sin(dot) );
                             }
@@ -159,72 +158,42 @@ namespace Faunus {
                     }
                 } //!< Update all k vectors
 
-                void updateComplex(EwaldData &data, Change &change) const {
+                void updateComplex(EwaldData &data, iter begin, iter end) const {
                     assert(old!=nullptr);
                     assert(spc->p.size() == old->p.size());
+                    size_t ibeg = std::distance(spc->p.begin(), begin); // it->index
+                    size_t iend = std::distance(spc->p.begin(), end);   // it->index
                     for (int k=0; k<data.kVectors.cols(); k++) {
                         auto& Q = data.Qion[k];
                         Point q = data.kVectors.col(k);
                         if (data.ipbc)
-                            for (auto cg : change.groups) {
-                                auto g_new = spc->groups.at(cg.index);
-                                auto g_old = old->groups.at(cg.index);
-                                for (auto i: cg.atoms) {
-                                    if ( i < g_new.size() )
-                                        Q +=  q.cwiseProduct( (g_new.begin()+i)->pos ).array().cos().prod() * (g_new.begin()+i)->charge;
-                                    if ( i < g_old.size() )
-                                        Q -=  q.cwiseProduct( (g_old.begin()+i)->pos ).array().cos().prod() * (g_old.begin()+i)->charge;
-                                }
+                            for (size_t i=ibeg; i<=iend; i++) {
+                                Q +=  q.cwiseProduct( spc->p[i].pos ).array().cos().prod() * spc->p[i].charge;
+                                Q -=  q.cwiseProduct( old->p[i].pos ).array().cos().prod() * old->p[i].charge;
                             }
                         else
-                            for (auto cg : change.groups) {
-                                auto g_new = spc->groups.at(cg.index);
-                                auto g_old = old->groups.at(cg.index);
-                                for (auto i: cg.atoms)  {
-                                    if ( i < g_new.size() ) {
-                                        double _new = q.dot((g_new.begin()+i)->pos);
-                                        Q += (g_new.begin()+i)->charge * EwaldData::Tcomplex( std::cos(_new), std::sin(_new) );
-                                    }
-                                    if ( i < g_old.size() ) {
-                                        double _old = q.dot((g_old.begin()+i)->pos);
-                                        Q -= (g_old.begin()+i)->charge * EwaldData::Tcomplex( std::cos(_old), std::sin(_old) );
-                                    }
-                                }
+                            for (size_t i=ibeg; i<=iend; i++) {
+                                double _new = q.dot(spc->p[i].pos);
+                                double _old = q.dot(old->p[i].pos);
+                                Q += spc->p[i].charge * EwaldData::Tcomplex( std::cos(_new), std::sin(_new) );
+                                Q -= old->p[i].charge * EwaldData::Tcomplex( std::cos(_old), std::sin(_old) );
                             }
                     }
                 } //!< Optimized update of k subset. Require access to old positions through `old` pointer
 
-                double selfEnergy(const EwaldData &d, Change &change) {
-                    double Eq = 0;
-                    if (change.dN) 
-                        for (auto cg : change.groups) {
-                            auto g = spc->groups.at(cg.index);
-                            for (auto i: cg.atoms) 
-                                if ( i < g.size() )
-                                    Eq += std::pow( (g.begin()+i)->charge, 2);
-                        }
-                    else if (change.all and not change.dV) 
-                        for (auto g : spc->groups ) 
-                            for (auto i : g) 
-                               Eq += i.charge * i.charge;
-                    return -d.alpha * Eq / std::sqrt(pc::pi) * d.lB;
+                double selfEnergy(const EwaldData &d) {
+                    double E = 0;
+                    for (auto& i : spc->p)
+                        E += i.charge * i.charge;
+                    return -d.alpha*E / std::sqrt(pc::pi) * d.lB;
                 }
 
-                double surfaceEnergy(const EwaldData &d, Change &change) {
+                double surfaceEnergy(const EwaldData &d) {
                     if (d.const_inf < 0.5)
                         return 0;
                     Point qr(0,0,0);
-                    if (change.all or change.dV) 
-                        for (auto g : spc->groups ) 
-                            for (auto i : g) 
-                               qr += i.charge * i.pos;
-                    else if (change.groups.size()>0)
-                        for (auto cg : change.groups) {
-                            auto g = spc->groups.at(cg.index);
-                            for (auto i: cg.atoms) 
-                                if ( i < g.size() )
-                                   qr += (g.begin()+i)->charge * (g.begin()+i)->pos;
-                        }
+                    for (auto &i : spc->p)
+                        qr += i.charge*i.pos;
                     return d.const_inf * 2 * pc::pi / ( (2*d.eps_surf+1) * spc->geo.getVolume() ) * qr.dot(qr) * d.lB;
                 }
 
@@ -250,26 +219,24 @@ namespace Faunus {
             spc.geo  = R"( {"type": "cuboid", "length": 10} )"_json;
             spc.p[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
             spc.p[1] = R"( {"pos": [1,0,0], "q": -1.0} )"_json;
-            Group<Particle<Charge,Dipole>> g(spc.p.begin(), spc.p.end());
-            spc.groups.push_back(g);
 
             PolicyIonIon<Tspace> ionion(spc);
             EwaldData data = R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
-            Change c; c.all=true;
+
             data.ipbc = false; // PBC Ewald (http://dx.doi.org/10.1063/1.481216)
             data.update( spc.geo.getLength() );
             ionion.updateComplex( data );
-            CHECK( ionion.selfEnergy(data, c) == Approx(-1.0092530088080642*data.lB) );
-            CHECK( ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952*data.lB) );
+            CHECK( ionion.selfEnergy(data) == Approx(-1.0092530088080642*data.lB) );
+            CHECK( ionion.surfaceEnergy(data) == Approx(0.0020943951023931952*data.lB) );
             CHECK( ionion.reciprocalEnergy(data) == Approx(0.21303063979675319*data.lB) );
 
             data.ipbc = true; // IPBC Ewald
             data.update( spc.geo.getLength() );
             ionion.updateComplex( data );
-            CHECK( ionion.selfEnergy(data, c) == Approx(-1.0092530088080642*data.lB) );
-            CHECK( ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952*data.lB) );
+            CHECK( ionion.selfEnergy(data) == Approx(-1.0092530088080642*data.lB) );
+            CHECK( ionion.surfaceEnergy(data) == Approx(0.0020943951023931952*data.lB) );
             CHECK( ionion.reciprocalEnergy(data) == Approx(0.0865107467*data.lB) );
         }
 #endif
@@ -304,11 +271,18 @@ namespace Faunus {
                                     policy.updateComplex(data);    // update all (expensive!)
                                 }
                                 else {
-                                    if (change.groups.size()>0)
-                                        policy.updateComplex(data, change);
+                                    if (change.groups.size()==1) { // exactly one group is moved
+                                        auto& d = change.groups[0];
+                                        auto& g = spc.groups[d.index];
+                                        if (d.atoms.size()==1)     // exactly one atom is moved
+                                            policy.updateComplex(data, g.begin()+d.atoms[0], g.begin()+d.atoms[0]);
+                                        else
+                                            policy.updateComplex(data, g.begin(), g.end());
+                                    } else
+                                        policy.updateComplex(data);
                                 }
                             }
-                            u = policy.surfaceEnergy(data, change) + policy.reciprocalEnergy(data) + policy.selfEnergy(data, change);
+                            u = policy.selfEnergy(data) + policy.surfaceEnergy(data) + policy.reciprocalEnergy(data);
                         }
                         return u;
                     }
@@ -324,44 +298,6 @@ namespace Faunus {
 
                     void to_json(json &j) const override {
                         j = data;
-                    }
-            };
-
-        /** @brief Self-energy term of electrostatic potentials  */
-        template<class Tspace>
-            class SelfEnergy : public Energybase {
-                private:
-                    std::string type;
-                    double selfenergy_prefactor, epsr, lB, rc;
-                    Tspace& spc;
-
-                public:
-
-                    SelfEnergy(const json &j, Tspace &spc) : spc(spc) {
-                        name = "selfenergy";
-                        type = j.at("type");
-                        rc = j.at("cutoff");
-                        epsr = j.at("epsr");
-                        lB = pc::lB( epsr );
-                        if (type=="fanourgakis") selfenergy_prefactor = 0.875;
-                        if (type=="qpotential") selfenergy_prefactor = 0.5;
-                        if (type=="stenqvist") selfenergy_prefactor = 1;
-                    }
-
-                    double energy(Change &change) override {
-                        double Eq = 0;
-                        if (change.dN) 
-                            for (auto cg : change.groups) {
-                                auto g = spc.groups.at(cg.index);
-                                for (auto i: cg.atoms) 
-                                    if ( i < g.size() )
-                                        Eq += std::pow( (g.begin()+i)->charge, 2);
-                            }
-                        else if (change.all and not change.dV) 
-                            for (auto g : spc.groups ) 
-                                for (auto i : g) 
-                                    Eq += i.charge * i.charge;
-                        return -selfenergy_prefactor*Eq*lB/rc;
                     }
             };
 
@@ -836,96 +772,109 @@ namespace Faunus {
          * @todo Optimize.
          */
         template<typename Tspace>
-            class Bonded : public Energybase {
-                private:
-                    Tspace& spc;
-                    typedef typename Tspace::Tpvec Tpvec;
-                    typedef std::vector<std::shared_ptr<Potential::BondData>> BondVector;
-                    BondVector inter;  // inter-molecular bonds
-                    std::map<int,BondVector> intra; // intra-molecular bonds
+        class Bonded : public Energybase {
+          private:
+            Tspace& spc;
+            typedef typename Tspace::Tpvec Tpvec;
+            typedef std::vector<std::shared_ptr<Potential::BondData>> BondVector;
+            BondVector inter;  // inter-molecular bonds
+            std::map<int, BondVector> intra; // intra-molecular bonds
 
-                    void update() {
-                        using namespace Potential;
-                        intra.clear();
-                        for (size_t i=0; i<spc.groups.size(); i++) {
-                            if (!spc.groups.empty()) {
-                                auto &g = spc.groups[i];
-                                for (auto &b : molecules<Tpvec>.at(g.id).bonds) {
-                                    intra[i].push_back( b->clone() ); // deep copy BondData from MoleculeData
-                                    intra[i].back()->shift( std::distance(spc.p.begin(), g.begin()) );
-                                    Potential::setBondEnergyFunction( intra[i].back(), spc.p );
-                                }
-                            }
-                        }
-                    } // finds and adds all intra-molecular bonds of active molecules
-
-                    double sum( const BondVector &v, int iparticle ) const {
-                        double u=0;
-                        for (auto &b : v)
-                            if (std::find(b->index.begin(), b->index.end(), iparticle) != b->index.end()) {
-                                assert(b->hasEnergyFunction());
-                                u += b->energy(spc.geo.getDistanceFunc());
-                            }
-                        return u;
-                    } // sum energy in vector of BondData for matching particle index
-
-                    double sum( const BondVector &v ) const {
-                        double u=0;
-                        for (auto &b : v) {
-                            assert(b->hasEnergyFunction());
-                            u += b->energy(spc.geo.getDistanceFunc());
-                        }
-                        return u;
-                    } // sum energy in vector of BondData
-
-                public:
-                    Bonded(const json &j, Tspace &spc) : spc(spc) {
-                        name = "bonded";
-                        update();
-                        if (j.is_object())
-                            if (j.count("bondlist")==1)
-                                inter = j["bondlist"].get<BondVector>();
-                        for (auto &i : inter) // set all energy functions
-                            Potential::setBondEnergyFunction( i, spc.p );
+          private:
+            void update_intra() {
+                using namespace Potential;
+                intra.clear();
+                for (size_t i = 0; i < spc.groups.size(); i++) {
+                    auto& group = spc.groups[i];
+                    for (auto& bond : molecules<Tpvec>.at(group.id).bonds) {
+                        intra[i].push_back( bond->clone() ); // deep copy BondData from MoleculeData
+                        intra[i].back()->shift( std::distance(spc.p.begin(), group.begin()) );
+                        Potential::setBondEnergyFunction( intra[i].back(), spc.p );
                     }
+                }
+            } // finds and adds all intra-molecular bonds of active molecules
 
-                    void to_json(json &j) const override {
-                        if (!inter.empty())
-                            j["bondlist"] = inter;
-                        if (!intra.empty()) {
-                            json& _j = j["bondlist-intramolecular"];
-                            _j = json::array();
-                            for (auto &i : intra)
-                                for (auto &b : i.second)
-                                    _j.push_back(b);
+            double sum_energy(const BondVector &bonds) const {
+                double energy = 0;
+                for (auto& bond : bonds) {
+                    assert(bond->hasEnergyFunction());
+                    energy += bond->energy(spc.geo.getDistanceFunc());
+                }
+                return energy;
+            } // sum energy in vector of BondData
+
+            double sum_energy(const BondVector &bonds, const std::vector<int> &particles_ndx) const {
+                double energy = 0;
+                // outer loop over bonds to ensure that each bond is counted at most once
+                for (auto& bond : bonds) {
+                    for (auto particle_ndx : particles_ndx) {
+                        if (std::find(bond->index.begin(), bond->index.end(), particle_ndx) != bond->index.end()) {
+                            assert(bond->hasEnergyFunction());
+                            energy += bond->energy(spc.geo.getDistanceFunc());
+                            break; // count each interaction at most once
                         }
                     }
+                }
+                return energy;
+            } // sum energy in vector of BondData for matching particle indices
 
-                    double energy(Change &c) override {
-                        double u=0;
-                        if (c) {
-                            u = sum(inter); // energy of inter-molecular bonds
-                            if ( c.all or c.dV ) {
-                                for (auto& i : intra) // energy of intra-molecular bonds
-                                    if (not spc.groups[i.first].empty()) // add only if group is active
-                                        u += sum(i.second);
-                            } else
-                                for (auto &d : c.groups) {
-                                    if (d.internal) {
-                                        if (d.all) // all internal positions updated
-                                            u += sum( intra[d.index] );
-                                        else { // only partial update
-                                            // offset = index of first particle in group
-                                            int offset = std::distance(spc.p.begin(), spc.groups[d.index].begin()); 
-                                            for (int i : d.atoms) // d.atoms is relative to group
-                                                u += sum( intra[d.index], i+offset);
-                                        }
-                                    }
-                                }
+          public:
+            Bonded(const json &j, Tspace &spc) : spc(spc) {
+                name = "bonded";
+                update_intra();
+                if (j.is_object())
+                    if (j.count("bondlist")==1)
+                        inter = j["bondlist"].get<BondVector>();
+                for (auto& i : inter) // set all energy functions
+                    Potential::setBondEnergyFunction( i, spc.p );
+            }
+
+            void to_json(json &j) const override {
+                if (!inter.empty())
+                    j["bondlist"] = inter;
+                if (!intra.empty()) {
+                    json& _j = j["bondlist-intramolecular"];
+                    _j = json::array();
+                    for (auto& i : intra)
+                        for (auto& b : i.second)
+                            _j.push_back(b);
+                }
+            }
+
+            double energy(Change &change) override {
+                double energy = 0;
+                if (change) {
+                    energy += sum_energy(inter); // energy of inter-molecular bonds
+
+                    if (change.all || change.dV) { // compute all active groups
+                        for (auto& i : intra) { // energies of intra-molecular bonds
+                            if (! spc.groups[i.first].empty()) { // add only if group is active
+                                energy += sum_energy(i.second);
+                            }
                         }
-                        return u;
-                    }; // brute force -- refine this!
-            };
+                    } else { // compute only the affected groups
+                        for (auto& group : change.groups) {
+                            auto& intra_group = intra[group.index];
+                            if (group.internal) {
+                                if (group.all) { // all internal positions updated
+                                    energy += sum_energy(intra_group);
+                                } else { // only partial update of affected atoms
+                                    std::vector<int> atoms_ndx;
+                                    // an offset is the index of the first particle in the group
+                                    int offset = std::distance(spc.p.begin(), spc.groups[group.index].begin());
+                                    // add an offset to the group atom indices to get the absolute indices
+                                    std::transform(group.atoms.begin(), group.atoms.end(), std::back_inserter(atoms_ndx),
+                                                   [offset](int i) { return i + offset; }
+                                    );
+                                    energy += sum_energy(intra_group, atoms_ndx);
+                                }
+                            }
+                        } // for-loop over groups
+                    }
+                }
+                return energy;
+            }; // brute force -- refine this!
+        };
 
         /**
          * @brief Nonbonded energy using a pair-potential
@@ -1216,15 +1165,14 @@ namespace Faunus {
                                             ); // index of static groups*/
                                 for ( auto cg1 = change.groups.begin(); cg1 < change.groups.end() ; ++cg1 ) { // Loop over all changed groups
                                     std::vector<int> ifiltered, jfiltered; // Active atoms
-                                    auto g1 = &spc.groups.at(cg1->index);
                                     for (auto i: cg1->atoms) {
-                                        if ( i < g1->size() )
+                                        if ( i < spc.groups.at(cg1->index).size() )
                                             ifiltered.push_back(i);
                                     }
                                     // Skip if the group is empty
                                     if ( not ifiltered.empty() )
                                         for ( auto j : fixed )
-                                            u += g2g( *g1, spc.groups[j], ifiltered, jfiltered );
+                                            u += g2g( spc.groups.at(cg1->index), spc.groups[j], ifiltered, jfiltered );
 
                                     for ( auto cg2 = cg1; ++cg2 != change.groups.end(); ) {
                                         for (auto i: cg2->atoms)
@@ -1232,11 +1180,11 @@ namespace Faunus {
                                                 jfiltered.push_back(i);
                                         // Skip if both groups are empty
                                         if ( not (ifiltered.empty() && jfiltered.empty()) )
-                                            u += g2g( *g1,  spc.groups.at(cg2->index), ifiltered, jfiltered );
+                                            u += g2g( spc.groups.at(cg1->index),  spc.groups.at(cg2->index), ifiltered, jfiltered );
                                         jfiltered.clear();
                                     }
-                                    if ( not ifiltered.empty() and not molecules<Tpvec>.at(g1->id).rigid )
-                                        u += g_internal( *g1, ifiltered );
+                                    if ( not ifiltered.empty() && cg1->dNatomic )
+                                        u += g_internal( spc.groups.at( cg1->index ), ifiltered );
                                 }
                                 return u;
                             }
@@ -1817,15 +1765,6 @@ namespace Faunus {
                                     push_back<Energy::Ewald<Tspace>>(j["coulomb"], spc);
                     } //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
 
-                    void addSelfEnergy(const json &j, Tspace &spc) {
-                        std::vector<std::string> methods = {"stenqvist","qpotential","fanourgakis"};
-                        if (j.count("coulomb")==1)
-                            if (j["coulomb"].count("type")==1)
-                                if (std::find(methods.begin(), methods.end(), j["coulomb"].at("type"))!=methods.end())
-                                    push_back<Energy::SelfEnergy<Tspace>>(j["coulomb"], spc);
-                    } //!< Adds an instance of the self term of the electrostatic potential (if appropriate)
-
-
                 public:
                     Hamiltonian(Tspace &spc, const json &j) {
                         using namespace Potential;
@@ -1904,8 +1843,6 @@ namespace Faunus {
                                     // additional energies go here...
 
                                     addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
-
-                                    addSelfEnergy(it.value(), spc); // add self-term of electrostatic potential if appropriate
 
                                     if (it.key()=="maxenergy") {
                                         maxenergy = it.value().get<double>();

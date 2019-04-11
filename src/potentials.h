@@ -303,6 +303,59 @@ namespace Faunus {
         };
 
         /**
+         * @brief Hertz potential
+         * @details This is a repulsive potential describes the change in elasticenergy of two deformable objects when subjected to an axialcompression.
+         * @f[
+         *     u(r) = \epsilon_H \left(1 - \frac{r}{n\sigma}\right)^{5/2}
+         * @f]
+         *
+         * JSON keywords:
+         *
+         * Key     | Description
+         * :-------| :---------------------------
+         * `E`     | Strength, \f$E\f$ [kT]
+         * `n`     | Scale diameter, (optional, default value: 1)
+         *
+         * More info: doi:10.1063/1.3186742
+         *
+         */
+        template<class Tparticle>
+            class Hertz : public PairPotentialBase {
+                private:
+                    double E, n;
+                    std::shared_ptr<PairMatrix<double>> rr, rr2; // matrices of (r1+r2), and (r1+r2)^2
+                public:
+                    Hertz(const std::string &name="hertz") {
+                        PairPotentialBase::name=name;
+                        rr = std::make_shared<PairMatrix<double>>();
+                        rr2 = std::make_shared<PairMatrix<double>>();
+                    }
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        double r2 = r.squaredNorm();
+                        if(r2 <= rr2->operator()(a.id,b.id))
+                            return E*pow((1-(sqrt(r2)/rr->operator()(a.id,b.id))),2.5);
+                        return 0.0;
+                    }
+
+                    void from_json(const json &j) override {
+                        E = j.at("E").get<double>();
+                        n = j.value("n",1.0);
+
+                        for (auto &i : atoms)
+                            for (auto &j : atoms) {
+                                double rirj = (i.sigma+j.sigma)*n/2;
+                                rr->set( i.id(), j.id(), rirj);
+                                rr2->set( i.id(), j.id(), rirj*rirj);
+                            }
+                    }
+
+                    void to_json(json &j) const override { 
+                        j["E"] = E;
+                        j["n"] = n;
+                    }
+            }; //!< Hertz potential
+
+        /**
          * @brief Cosine attraction
          * @details This is an attractive potential used for coarse grained lipids
          * and has the form:
@@ -466,7 +519,6 @@ namespace Faunus {
             void sfQpotential(const json &j);
             void sfYonezawa(const json &j);
             void sfFanourgakis(const json &j);
-            void sfStenqvist(const json &j);
             void sfFennel(const json &j);
             void sfEwald(const json &j);
             void sfWolf(const json &j);
@@ -503,13 +555,13 @@ namespace Faunus {
             /**
              * @brief Self-energy of the potential
              */
-            /*template<class Tpvec, class Tgroup>
+            template<class Tpvec, class Tgroup>
                 double internal(const Tgroup &g) const {
                     double Eq = 0;
                     for (auto i : g)
                         Eq += i.charge * i.charge;
                     return -selfenergy_prefactor*Eq*lB/rc;
-                }*/
+                }
 
             double dielectric_constant(double M2V);
 
@@ -601,10 +653,11 @@ namespace Faunus {
                     SASApotential,    // 6
                     WeeksChandlerAndersen<T>,// 7
                     PrimitiveModel,   // 8
-                    PrimitiveModelWCA // 9
+                    PrimitiveModelWCA, // 9
+                    Hertz<T> // 10
                         > potlist;
 
-                 uFunc combineFunc(const json &j) { 
+                uFunc combineFunc(const json &j) { 
                     uFunc u = [](const T&, const T&, const Point&){return 0.0;};
                     if (j.is_array()) {
                         for (auto &i : j) // loop over all defined potentials in array
@@ -623,6 +676,7 @@ namespace Faunus {
                                         else if (it.key()=="wca") _u = std::get<7>(potlist) = i;
                                         else if (it.key()=="pm") _u = std::get<8>(potlist) = it.value();
                                         else if (it.key()=="pmwca") _u = std::get<9>(potlist) = it.value();
+                                        else if (it.key()=="hertz") _u = std::get<10>(potlist) = it.value();
                                         // place additional potentials here...
                                     } catch (std::exception &e) {
                                         throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
@@ -648,7 +702,7 @@ namespace Faunus {
                 }
 
                 double operator()(const T &a, const T &b, const Point &r) const {
-                        return umatrix(a.id, b.id)(a, b, r); // pc::infty;
+                    return umatrix(a.id, b.id)(a, b, r); // pc::infty;
                 }
 
                 void to_json(json &j) const override { j = _j; }
@@ -719,7 +773,7 @@ namespace Faunus {
                     // to a pair of atom types
                     for (size_t i=0; i<atoms.size(); ++i) {
                         for (size_t k=0; k<=i; ++k) {
-                           if (atoms[i].implicit==false and atoms[k].implicit==false) {
+                            if (atoms[i].implicit==false and atoms[k].implicit==false) {
                                 T a = atoms.at(i);
                                 T b = atoms.at(k);
                                 double rmin2 = .5*(atoms[i].sigma + atoms[k].sigma);
@@ -809,7 +863,7 @@ namespace Faunus {
                  }
                 )"_json;
 
-            Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
+                Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
             WeeksChandlerAndersen<T> wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
             T a = atoms[0];
@@ -831,7 +885,7 @@ namespace Faunus {
          * and potentially also the energy function (nullptr per default).
          */
         struct BondData {
-            enum Variant {HARMONIC=0, FENE, FENEWCA, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
+            enum Variant {HARMONIC=0, FENE, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
             std::vector<int> index;
             bool exclude=false;           //!< True if exclusion of non-bonded interaction should be attempted 
             bool keepelectrostatics=true; //!< If `exclude==true`, try to keep electrostatic interactions
@@ -873,27 +927,6 @@ namespace Faunus {
          * @brief FENE bond
          */
         struct FENEBond : public BondData {
-            std::array<double,2> k = {{0,0}};
-            int numindex() const override;
-            Variant type() const override;
-            std::shared_ptr<BondData> clone() const override;
-            void from_json(const json &j) override;
-            void to_json(json &j) const override;
-            std::string name() const override;
-
-            template<typename Tpvec>
-                void setEnergyFunction(const Tpvec &p) {
-                    energy = [&](Geometry::DistanceFunction dist) {
-                        double d=dist( p[index[0]].pos, p[index[1]].pos ).squaredNorm();
-                        return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]);
-                    };
-                }
-        }; // end of FENE
-
-        /**
-         * @brief FENE+WCA bond
-         */
-        struct FENEWCABond : public BondData {
             std::array<double,4> k = {{0,0,0,0}};
             int numindex() const override;
             Variant type() const override;
@@ -915,7 +948,7 @@ namespace Faunus {
                         return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
                     };
                 }
-        }; // end of FENE+WCA
+        }; // end of FENE
 
         struct HarmonicTorsion : public BondData {
             double k=0, aeq=0;
@@ -994,8 +1027,12 @@ namespace Faunus {
                     std::dynamic_pointer_cast<HarmonicBond>(b)->setEnergyFunction(p);
                 else if (b->type()==BondData::FENE)
                     std::dynamic_pointer_cast<FENEBond>(b)->setEnergyFunction(p);
-                else if (b->type()==BondData::FENEWCA)
-                    std::dynamic_pointer_cast<FENEWCABond>(b)->setEnergyFunction(p);
+                else if (b->type()==BondData::HARMONIC_TORSION)
+                    std::dynamic_pointer_cast<HarmonicTorsion>(b)->setEnergyFunction(p);
+                else if (b->type()==BondData::G96_TORSION)
+                    std::dynamic_pointer_cast<GromosTorsion>(b)->setEnergyFunction(p);
+                else if (b->type()==BondData::PERIODIC_DIHEDRAL)
+                    std::dynamic_pointer_cast<PeriodicDihedral>(b)->setEnergyFunction(p);
                 else {
                     assert(false); // we should never reach here
                 }
@@ -1029,26 +1066,12 @@ namespace Faunus {
 
             // test fene
             SUBCASE("FENEBond") {
-                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1 }} )"_json;
+                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 }} )"_json;
                 b = j;
                 CHECK( j == json(b) );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1}} )"_json );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3], "rmax":2.1}} )"_json );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1}} )"_json );
-                j = json::object();
-                CHECK_THROWS( b = j );
-            }
-
-            // test fene+wca
-            SUBCASE("FENEWCABond") {
-                json j = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json;
-                b = j;
-                CHECK( j == json(b) );
-                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3,4], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
-                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
-                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "eps":2.48, "sigma":2}} )"_json );
-                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json );
-                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "sigma":2}} )"_json );
                 j = json::object();
                 CHECK_THROWS( b = j );
             }
@@ -1066,8 +1089,8 @@ namespace Faunus {
             // test bond filter
             SUBCASE("filterBonds()") {
                 std::vector<std::shared_ptr<BondData>> bonds = {
-                    R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1}} )"_json,
-                    R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1}} )"_json
+                    R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 }} )"_json,
+                    R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1} } )"_json
                 };
                 auto filt = filterBonds(bonds, BondData::HARMONIC);
                 CHECK( filt.size() == 1 );

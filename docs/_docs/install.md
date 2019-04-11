@@ -135,6 +135,23 @@ make clean
 rm -fR CMakeCache.txt CMakeFiles
 ~~~
 
+# Development
+
+## Code Style
+
+If you plan to contribute to Faunus it is recommended to activate the
+pre-commit hook for automatic styling of all changes:
+
+``` bash
+cd faunus
+./scripts/git-pre-commit-format install
+```
+
+This requires `clang-format` which may also be directly used in IDE's
+such as CLion. In the top-level directory of Faunus you will find
+the style configuration file `.clang-format`
+
+
 ## Creating a conda package (development usage)
 
 The basic steps for creating a conda package is outlined below, albeit

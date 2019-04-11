@@ -1200,6 +1200,277 @@ start:
                     }
             };
 
+        /**
+          * @brief An abstract base class for rotational movements of a polymer chain
+        */
+        class ChainRotationMovebase: public Movebase {
+          protected:
+            std::string molname;
+            size_t molid;
+            double dprot;               //!< maximal angle of rotation, ±0.5*dprot
+            double sqdispl;             //!< center-of-mass displacement squared
+            Average<double> msqdispl;   //!< center-of-mass mean squared displacement
+            bool permit_move = true;
+            bool allow_small_box = false;
+            int small_box_encountered = 0;   //!< number of skipped moves due to too small container
+          private:
+            virtual size_t select_segment() = 0; //!< selects a chain segment and return the number of atoms in it
+            virtual void rotate_segment(double angle) = 0; //!< rotates the selected chain segment
+            virtual void store_change(Change &change) = 0; //!< stores changes made to atoms
+            void _move(Change &change) override;
+            void _accept(Change &change) override;
+            void _reject(Change &change) override;
+          protected:
+            void _from_json(const json &j) override;
+            void _to_json(json &j) const override;
+          public:
+            double bias(Change&, double uold, double unew) override;
+        };
+
+        /**
+          * @brief An abstract class that rotates a selected segment of a polymer chain in the given simulation box.
+        */
+        template<typename Tspace>
+        class ChainRotationMove : public ChainRotationMovebase {
+            using Tbase = ChainRotationMovebase;
+          protected:
+            Tspace& spc;
+            typedef typename Tspace::Tpvec Tpvec;
+            typename Tspace::Tgvec::iterator molecule_iter;
+            //! Indices of atoms in the spc.p vector that mark the origin and the direction of the axis of rotation.
+            std::array<size_t, 2> axis_ndx;
+            //! Indices of atoms in the spc.p vector that shall be rotated.
+            std::vector<size_t> segment_ndx;
+
+          public:
+            explicit ChainRotationMove(Tspace &spc) : spc(spc) {
+                repeat = -1;
+            }
+
+          protected:
+            void _from_json(const json &j) override {
+                Tbase::_from_json(j);
+                auto moliter = findName(molecules<Tpvec>, molname);
+                if (moliter == molecules<Tpvec>.end())
+                    throw std::runtime_error("unknown molecule '" + molname + "'");
+                molid = moliter->id();
+            }
+
+          private:
+            /**
+             * @brief Rotates the chain segment around the axes by the given angle.
+             * @param angle
+             */
+            void rotate_segment(double angle) {
+                if( ! segment_ndx.empty() ) {
+                    auto &chain = *molecule_iter;
+                    auto old_cm = chain.cm;
+                    // Uses an implementation from the old Pivot class. The translation of the chain might be unnecessary.
+                    auto shift_pos = spc.p[axis_ndx[0]].pos;
+                    //chain.unwrap(spc.geo.getDistanceFunc()); // remove pbc
+                    chain.translate(-shift_pos, spc.geo.getBoundaryFunc());
+                    auto origin_pos =spc.p[axis_ndx[0]].pos; // != shift_pos because of chain.translate
+                    auto axis_pos = spc.geo.vdist(origin_pos, spc.p[axis_ndx[1]].pos).normalized();
+                    Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, axis_pos));
+                    auto M = Q.toRotationMatrix();
+                    for (auto i : segment_ndx) {
+                        spc.p[i].rotate(Q, M); // internal rot.
+                        spc.p[i].pos = Q * (spc.p[i].pos - origin_pos) + origin_pos; // positional rot.
+                    }
+                    chain.cm = Geometry::massCenter(chain.begin(), chain.end());
+                    chain.translate(shift_pos, spc.geo.getBoundaryFunc());
+                    //chain.wrap(spc.geo.getBoundaryFunc()); // re-apply pbc
+                    if(box_big_enough()) {
+                        sqdispl = spc.geo.sqdist(chain.cm, old_cm); // CM movement
+                    }
+                }
+            }
+
+            /**
+             * Stores changes of atoms after the move attempt.
+             * @param change
+             */
+            void store_change(Change &change) {
+                if( ! segment_ndx.empty() ) {
+                    auto &chain = *molecule_iter;
+                    auto offset = std::distance(spc.p.begin(), chain.begin());
+                    Change::data change_data;
+                    for (int i: segment_ndx) {
+                        change_data.atoms.push_back(i - offset); // `atoms` index are relative to chain
+                    }
+                    change_data.index = Faunus::distance(spc.groups.begin(), &chain); // integer *index* of moved group
+                    change_data.all = false;
+                    change_data.internal = true; // trigger internal interactions
+                    change.groups.push_back(change_data); // add to list of moved groups
+                }
+            }
+
+            /** In periodic systems (cuboid, slit, etc.) a chain rotational move can cause the molecule to be larger
+             *  than half the box length which we catch here.
+             *  @throws std::runtime_error
+             */
+            bool box_big_enough() {
+                auto &chain = *molecule_iter;
+                auto cm_pbc = Geometry::massCenter(chain.begin(), chain.end(), spc.geo.getBoundaryFunc(), -chain.cm);
+                double cm_diff = spc.geo.sqdist(chain.cm, cm_pbc);
+                if (cm_diff > 1e-6) {
+                    small_box_encountered++;
+                    permit_move = false;
+                    if (! allow_small_box) {
+                        throw std::runtime_error("Container too small for the molecule '" + molname + "'");
+                    }
+                    return false;
+                }
+                return true;
+            }
+        };
+
+
+        /**
+          * @brief Performs a crankshaft move of a random segment in a polymer chain.
+          *
+          * Two random atoms are select from a random polymer chain to be the joints of a crankshaft.
+          * The chain segment between the joints is then rotated by a random angle around the axis
+          * determined by the joints. The extend of the angle is limited by dprot.
+        */
+        template<typename Tspace>
+        class CrankshaftMove : public ChainRotationMove<Tspace> {
+            using Tbase = ChainRotationMove<Tspace>;
+
+          public:
+            explicit CrankshaftMove(Tspace &spc) : ChainRotationMove<Tspace>(spc) {
+                this->name = "crankshaft";
+            }
+          protected:
+            void _from_json(const json &j) override {
+                Tbase::_from_json(j);
+                if (this->repeat < 0) {
+                    // set the number of repetitions to the length of the chain (minus 2) times the number of the chains
+                    auto moliter = this->spc.findMolecules(this->molid);
+                    auto &molecule = *moliter.begin();
+                    this->repeat = std::distance(moliter.begin(), moliter.end()) * (molecule.size() - 2);
+                }
+            }
+
+          private:
+            /** Randomly selects two atoms as joints in a random chain. The joints then determine the axis of rotation
+             *  of the chain segment between the joints.
+             *  The member vectors containing atoms' indices of the axis and the segment are populated accordingly.
+             *  Returns the segment size as atom count.
+             *  A non-branched chain is assumed having atom indices in a dense sequence.
+             */
+            size_t select_segment() override {
+                size_t segment_size = 0;
+                this->segment_ndx.clear();
+                this->molecule_iter = this->spc.randomMolecule(this->molid, this->slump); // a random chain
+                if (this->molecule_iter != this->spc.groups.end()) {
+                    auto &molecule = *this->molecule_iter;
+                    if (molecule.size() > 2) { // must have at least three atoms
+                        auto joint0 = this->slump.sample(molecule.begin(), molecule.end());
+                        auto joint1 = this->slump.sample(molecule.begin(), molecule.end());
+                        if (joint0 != molecule.end() && joint1 != molecule.end()) {
+                            auto joint_distance = std::distance(joint0, joint1);
+                            if (joint_distance < 0) {
+                                joint_distance *= -1;
+                                std::swap(joint0, joint1);
+                            }
+                            if (joint_distance > 1) { // at least one atom between the joints
+                                auto joint0_ndx = std::distance(this->spc.p.begin(), joint0);
+                                auto joint1_ndx = std::distance(this->spc.p.begin(), joint1);
+                                if(joint0_ndx < 0 || joint1_ndx < 0) {
+                                    throw std::range_error("A negative index of the atom encountered.");
+                                }
+                                this->axis_ndx = {(size_t) joint0_ndx, (size_t) joint1_ndx}; // joints create the axis
+                                for (size_t i = joint0_ndx + 1; i < joint1_ndx; i++)
+                                    this->segment_ndx.push_back(i);  // add segment's atom indices
+                                segment_size = this->segment_ndx.size();
+                            }
+                        }
+                    }
+                }
+                return segment_size;
+            }
+        };
+
+
+        /**
+          * @brief Performs a pivot move of a random tail part of a polymer chain.
+          *
+          * A random harmonic bond is selected from a random polymer chain. The bond determines the axes the rotation.
+          * A part of the chain either before or after the bond (the selection has an equal probability )
+          * then constitutes a segment which is rotated by a random angle. The extend of the angle is limited by dprot.
+        */
+        template<typename Tspace>
+        class PivotMove : public ChainRotationMove<Tspace> {
+            using Tbase = ChainRotationMove<Tspace>;
+         private:
+            std::vector<std::shared_ptr<Potential::BondData>> bonds;
+
+          public:
+            explicit PivotMove(Tspace &spc) : ChainRotationMove<Tspace>(spc) {
+                this->name = "pivot";
+            }
+
+          protected:
+            void _from_json(const json &j) override {
+                Tbase::_from_json(j);
+                bonds = Potential::filterBonds(
+                        molecules<typename Tbase::Tpvec>[this->molid].bonds, Potential::BondData::HARMONIC);
+
+                if (this->repeat < 0) {
+                    // set the number of repetitions to the length of the chain (minus 2) times the number of the chains
+                    auto moliter = this->spc.findMolecules(this->molid);
+                    this->repeat = std::distance(moliter.begin(), moliter.end());
+                    if(this->repeat > 0) {
+                        this->repeat *= (bonds.size() - 1);
+                    }
+                }
+            }
+
+            /** Selects a random harmonic bond of a random polymer chain which atoms then create an axis of rotation.
+             *  Atoms between the randomly selected chain's end and the bond atom compose a segment to be rotated.
+             *  The member vectors containing atoms' indices of the axis and the segment are populated accordingly.
+             *  Returns the segment size as atom count.
+             *  A non-branched chain is assumed having atom indices in a dense sequence.
+             */
+            size_t select_segment() override {
+                size_t segment_size = 0;
+                this->segment_ndx.clear();
+                this->molecule_iter = this->spc.randomMolecule(this->molid, this->slump);
+                if (this->molecule_iter != this->spc.groups.end()) {
+                    auto &chain = *this->molecule_iter;
+                    if (chain.size() > 2) { // must have at least three atoms
+                        auto bond = this->slump.sample(bonds.begin(), bonds.end()); // a random harmonic bond
+                        if (bond != bonds.end()) {
+                            auto chain_offset = std::distance(this->spc.p.begin(), chain.begin());
+                            auto atom0_ndx = (*bond)->index.at(0) + chain_offset;
+                            auto atom1_ndx = (*bond)->index.at(1) + chain_offset;
+                            if(atom0_ndx < 0 || atom1_ndx < 0) {
+                                throw new std::range_error("A negative index of the atom occured.");
+                            }
+                            if (this->slump() > 0.5) {
+                                for (size_t i = atom1_ndx + 1; i < chain_offset + chain.size(); i++)
+                                    this->segment_ndx.push_back(i);
+                                std::swap(atom0_ndx, atom1_ndx); // the second atom is the origin
+                            } else {
+                                for (size_t i = chain_offset; i < atom0_ndx; i++)
+                                    this->segment_ndx.push_back(i);
+                            }
+                            this->axis_ndx = std::array<size_t, 2> {(size_t) atom0_ndx, (size_t) atom1_ndx};
+                            segment_size = this->segment_ndx.size();
+                        }
+                    }
+                }
+                return segment_size;
+            }
+        };
+
+        /**
+         * A legacy implementation of the pivot move which will be removed in a future revision. Use PivotMove instead
+         * unless you necessarily require this original implementation.
+         *
+         * @deprecated
+         */
         template<typename Tspace>
             class Pivot : public Movebase {
                 private:
@@ -1327,7 +1598,7 @@ start:
 
                 public:
                     Pivot(Tspace &spc) : spc(spc) {
-                        name = "pivot";
+                        name = "pivotlegacy";
                         repeat = -1; // --> repeat=N
                     }
             }; //!< Pivot move around random harmonic bond axis
@@ -1498,7 +1769,9 @@ start:
                                     if (it.key()=="moltransrot") this->template push_back<Move::TranslateRotate<Tspace>>(spc);
                                     else if (it.key()=="conformationswap") this->template push_back<Move::ConformationSwap<Tspace>>(spc);
                                     else if (it.key()=="transrot") this->template push_back<Move::AtomicTranslateRotate<Tspace>>(spc);
-                                    else if (it.key()=="pivot") this->template push_back<Move::Pivot<Tspace>>(spc);
+                                    else if (it.key()=="pivotlegacy") this->template push_back<Move::Pivot<Tspace>>(spc);
+                                    else if (it.key()=="pivot") this->template push_back<Move::PivotMove<Tspace>>(spc);
+                                    else if (it.key()=="crankshaft") this->template push_back<Move::CrankshaftMove<Tspace>>(spc);
                                     else if (it.key()=="volume") this->template push_back<Move::VolumeMove<Tspace>>(spc);
                                     else if (it.key()=="charge") this->template push_back<Move::ChargeMove<Tspace>>(spc);
                                     else if (it.key()=="rcmc") this->template push_back<Move::SpeciationMove<Tspace>>(spc);

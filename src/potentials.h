@@ -519,6 +519,7 @@ namespace Faunus {
             void sfQpotential(const json &j);
             void sfYonezawa(const json &j);
             void sfFanourgakis(const json &j);
+            void sfStenqvist(const json &j);
             void sfFennel(const json &j);
             void sfEwald(const json &j);
             void sfWolf(const json &j);
@@ -885,7 +886,7 @@ namespace Faunus {
          * and potentially also the energy function (nullptr per default).
          */
         struct BondData {
-            enum Variant {HARMONIC=0, FENE, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
+            enum Variant {HARMONIC=0, FENE, FENEWCA, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
             std::vector<int> index;
             bool exclude=false;           //!< True if exclusion of non-bonded interaction should be attempted 
             bool keepelectrostatics=true; //!< If `exclude==true`, try to keep electrostatic interactions
@@ -927,6 +928,27 @@ namespace Faunus {
          * @brief FENE bond
          */
         struct FENEBond : public BondData {
+            std::array<double,2> k = {{0,0}};
+            int numindex() const override;
+            Variant type() const override;
+            std::shared_ptr<BondData> clone() const override;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
+            std::string name() const override;
+
+            template<typename Tpvec>
+                void setEnergyFunction(const Tpvec &p) {
+                    energy = [&](Geometry::DistanceFunction dist) {
+                        double d=dist( p[index[0]].pos, p[index[1]].pos ).squaredNorm();
+                        return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]);
+                    };
+                }
+        }; // end of FENE
+
+        /**
+         * @brief FENE+WCA bond
+         */
+        struct FENEWCABond : public BondData {
             std::array<double,4> k = {{0,0,0,0}};
             int numindex() const override;
             Variant type() const override;
@@ -948,7 +970,7 @@ namespace Faunus {
                         return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
                     };
                 }
-        }; // end of FENE
+        }; // end of FENE+WCA
 
         struct HarmonicTorsion : public BondData {
             double k=0, aeq=0;
@@ -1027,6 +1049,8 @@ namespace Faunus {
                     std::dynamic_pointer_cast<HarmonicBond>(b)->setEnergyFunction(p);
                 else if (b->type()==BondData::FENE)
                     std::dynamic_pointer_cast<FENEBond>(b)->setEnergyFunction(p);
+                else if (b->type()==BondData::FENEWCA)
+                    std::dynamic_pointer_cast<FENEWCABond>(b)->setEnergyFunction(p);
                 else if (b->type()==BondData::HARMONIC_TORSION)
                     std::dynamic_pointer_cast<HarmonicTorsion>(b)->setEnergyFunction(p);
                 else if (b->type()==BondData::G96_TORSION)
@@ -1066,14 +1090,24 @@ namespace Faunus {
 
             // test fene
             SUBCASE("FENEBond") {
-                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 }} )"_json;
+                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1 }} )"_json;
                 b = j;
                 CHECK( j == json(b) );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1}} )"_json );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3], "rmax":2.1}} )"_json );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1}} )"_json );
-                j = json::object();
-                CHECK_THROWS( b = j );
+            }
+
+            // test fene+wca
+            SUBCASE("FENEWCABond") {
+                json j = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json;
+                b = j;
+                CHECK( j == json(b) );
+                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3,4], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
+                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
+                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "eps":2.48, "sigma":2}} )"_json );
+                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json );
+                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "sigma":2}} )"_json );
             }
 
             // test harmonic
@@ -1089,8 +1123,8 @@ namespace Faunus {
             // test bond filter
             SUBCASE("filterBonds()") {
                 std::vector<std::shared_ptr<BondData>> bonds = {
-                    R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 }} )"_json,
-                    R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1} } )"_json
+                    R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json,
+                    R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1}} )"_json
                 };
                 auto filt = filterBonds(bonds, BondData::HARMONIC);
                 CHECK( filt.size() == 1 );

@@ -306,8 +306,8 @@ Faunus::Potential::BondData::Variant Faunus::Potential::FENEWCABond::type() cons
 void Faunus::Potential::FENEWCABond::from_json(const Faunus::json &j) {
     k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
     k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
-    k[2] = j.value("eps", 0.0) * 1.0_kJmol;
-    k[3] = std::pow( j.value("sigma", 0.0)  * 1.0_angstrom, 2);
+    k[2] = j.at("eps").get<double>() * 1.0_kJmol;
+    k[3] = std::pow( j.at("sigma").get<double>() * 1.0_angstrom, 2);
 }
 
 void Faunus::Potential::FENEWCABond::to_json(Faunus::json &j) const {

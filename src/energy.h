@@ -910,11 +910,8 @@ namespace Faunus {
                 if (change) {
                     energy += sum_energy(inter); // energy of inter-molecular bonds
 
-                    if (change.dN) {
-                        if (key==NEW)
-                            update_intra();
-                        return 0;
-                    }
+                    if (change.dN and key==NEW)
+                        update_intra();
 
                     if (change.all || change.dV) { // compute all active groups
                         for (auto& i : intra) { // energies of intra-molecular bonds

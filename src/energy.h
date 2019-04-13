@@ -849,7 +849,7 @@ namespace Faunus {
                 using namespace Potential;
                 intra.clear();
                 for (size_t i = 0; i < spc.groups.size(); i++) {
-                    auto& group = spc.groups[i];
+                    auto& group = spc.groups.at(i);
                     for (auto& bond : molecules<Tpvec>.at(group.id).bonds) {
                         intra[i].push_back( bond->clone() ); // deep copy BondData from MoleculeData
                         intra[i].back()->shift( std::distance(spc.p.begin(), group.begin()) );
@@ -910,9 +910,6 @@ namespace Faunus {
                 if (change) {
                     energy += sum_energy(inter); // energy of inter-molecular bonds
 
-                    if (change.dN and key==NEW)
-                        update_intra();
-
                     if (change.all || change.dV) { // compute all active groups
                         for (auto& i : intra) { // energies of intra-molecular bonds
                             if (! spc.groups[i.first].empty()) { // add only if group is active
@@ -921,25 +918,24 @@ namespace Faunus {
                         }
                     } else { // compute only the affected groups
                         for (auto& group : change.groups) {
-                            if (not spc.groups[group.index].empty()) {
-                                auto& intra_group = intra[group.index];
-                                if (group.internal) {
-                                    if (group.all) { // all internal positions updated
+                            auto& intra_group = intra[group.index];
+                            if (group.internal) {
+                                if (group.all) { // all internal positions updated
+                                    if (not spc.groups[group.index].empty()) 
                                         energy += sum_energy(intra_group);
-                                    } else { // only partial update of affected atoms
-                                        std::vector<int> atoms_ndx;
-                                        // an offset is the index of the first particle in the group
-                                        int offset = std::distance(spc.p.begin(), spc.groups[group.index].begin());
-                                        // add an offset to the group atom indices to get the absolute indices
-                                        std::transform(group.atoms.begin(), group.atoms.end(), std::back_inserter(atoms_ndx),
-                                                       [offset](int i) { return i + offset; }
-                                        );
-                                        energy += sum_energy(intra_group, atoms_ndx);
-                                    }
+                                } else { // only partial update of affected atoms
+                                    std::vector<int> atoms_ndx;
+                                    // an offset is the index of the first particle in the group
+                                    int offset = std::distance(spc.p.begin(), spc.groups[group.index].begin());
+                                    // add an offset to the group atom indices to get the absolute indices
+                                    std::transform(group.atoms.begin(), group.atoms.end(), std::back_inserter(atoms_ndx),
+                                                   [offset](int i) { return i + offset; }
+                                    );
+                                    energy += sum_energy(intra_group, atoms_ndx);
                                 }
                             }
-                        } // for-loop over groups
-                    }
+                        }
+                    } // for-loop over groups
                 }
                 return energy;
             }; // brute force -- refine this!

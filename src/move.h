@@ -638,6 +638,7 @@ namespace Faunus {
                     std::map<std::string, Average<double>> accmap;
 
                     double lnK;
+                    double bondenergy;
                     bool forward;
                     std::vector<int> molDel;                  // index of groups to delete
                     std::vector<int> atomDel;                 // atom index to delete
@@ -687,7 +688,7 @@ namespace Faunus {
                                 return; // Out of material, slip out the back door
 
 
-                            for (auto &m : rit->Molecules2Add( !forward )) { // Delete checks
+                            for (auto &m : rit->Molecules2Add( not forward )) { // Delete checks
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
                                 if ( molecules<Tpvec>[m.first].atomic ) {
                                     if( size(mollist)!=1 ) // There can be only one
@@ -739,6 +740,8 @@ namespace Faunus {
                                 assert(ait->id == m2.begin()->first);
                             }
 
+                            bondenergy = 0;
+
                             change.dN=true; // Attempting to change the number of atoms / molecules
                             for (auto &m : rit->Molecules2Add( not forward )) { // Delete
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
@@ -768,6 +771,12 @@ namespace Faunus {
                                     mollist = spc.findMolecules( m.first, Tspace::ACTIVE);
                                     for ( int N=0; N <m.second; N++ ) {
                                         auto git = slump.sample(mollist.begin(), mollist.end());
+                                        for (auto& bond : molecules<Tpvec>.at(m.first).bonds) {
+                                            auto bondclone = bond->clone();
+                                            bondclone->shift( std::distance(spc.p.begin(), git->begin()) );
+                                            Potential::setBondEnergyFunction( bondclone, spc.p );
+                                            bondenergy += bondclone->energy(spc.geo.getDistanceFunc());
+                                        }
                                         git->deactivate( git->begin(), git->end());
                                         Change::data d;
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // integer *index* of moved group
@@ -809,6 +818,12 @@ namespace Faunus {
                                         Point u = ranunit(slump);
                                         Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*(slump()-0.5), u) );
                                         git->rotate(Q, spc.geo.getBoundaryFunc());
+                                        for (auto& bond : molecules<Tpvec>.at(m.first).bonds) {
+                                            auto bondclone = bond->clone();
+                                            bondclone->shift( std::distance(spc.p.begin(), git->begin()) );
+                                            Potential::setBondEnergyFunction( bondclone, spc.p );
+                                            bondenergy -= bondclone->energy(spc.geo.getDistanceFunc());
+                                        }
                                         Change::data d;
                                         d.index = Faunus::distance( spc.groups.begin(), git ); // Integer *index* of moved group
                                         d.all = true; // All atoms in group were moved
@@ -829,8 +844,8 @@ namespace Faunus {
 
                     double bias(Change&, double, double) override {
                         if (forward)
-                            return -lnK;
-                        return lnK;
+                            return -lnK + bondenergy;
+                        return lnK + bondenergy;
                     } //!< adds extra energy change not captured by the Hamiltonian
 
                     void _accept(Change&) override {
@@ -1958,7 +1973,7 @@ start:
                                     du = 0; // accept
 
                                 double bias = (**mv).bias(change, uold, unew) + IdealTerm( state2.spc, state1.spc , change);
-
+                                
                                 if ( metropolis(du + bias) ) { // accept move
                                     state1.sync( state2, change );
                                     (**mv).accept(change);

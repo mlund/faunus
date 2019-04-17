@@ -184,6 +184,40 @@ namespace Faunus {
         }
 
 
+        // =============== Slit ===============
+
+        Slit::Slit(const Point &p) : Tbase(p) {
+        }
+
+        Slit::Slit(double x, double y, double z) : Tbase(x, y, z) {
+        }
+
+        Slit::Slit(double x) : Tbase(x) {
+        }
+
+        inline Point Slit::vdist(const Point &a, const Point &b) const {
+            // no z-pbc; shall we check points coordinates?
+            Point distance(a - b);
+            if (distance.x() > box_half.x())
+                distance.x() -= box.x();
+            else if (distance.x() < -box_half.x())
+                distance.x() += box.x();
+            if (distance.y() > box_half.y())
+                distance.y() -= box.y();
+            else if (distance.y() < -box_half.y())
+                distance.y() += box.y();
+            return distance;
+        }
+
+        inline void Slit::boundary(Point &a) const {
+            // xy-pbc
+            if (std::fabs(a.x()) > box_half.x())
+                a.x() -= box.x() * anint(a.x() * box_inv.x());
+            if (std::fabs(a.y()) > box_half.y())
+                a.y() -= box.y() * anint(a.y() * box_inv.y());
+        }
+
+
         // =============== Sphere ===============
 
         Sphere::Sphere(double radius) : radius(radius) {

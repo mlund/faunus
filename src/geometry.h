@@ -149,6 +149,18 @@ namespace Faunus {
             Cuboid(double x = 0.0);
         };
 
+
+        class Slit : public Cuboid {
+            using Tbase = Cuboid;
+          public:
+            Point vdist(const Point &a, const Point &b) const override;
+            void boundary(Point &a) const override;
+            Slit(const Point &p);
+            Slit(double x, double y, double z);
+            Slit(double x = 0.0);
+        };
+
+
         class Sphere : public GeometryBase {
           protected:
             double radius;
@@ -226,6 +238,65 @@ namespace Faunus {
             geo.from_json(R"( {"type": "cuboid", "length": [2.5,3.5,4.5]} )"_json);
             CHECK( geo.getVolume() == doctest::Approx(2.5*3.5*4.5) );
         }
+
+
+        SUBCASE("slit") {
+            double x = 2, y = 4, z = 3;
+            Slit geo(x, y, z);
+            CHECK( geo.getVolume() == doctest::Approx(x*y*z) );
+
+            // check boundaries and pbc
+            Point a(1.1, -2.001, 1.499);
+            CHECK( geo.collision(a) == true);
+            geo.getBoundaryFunc()(a);
+            CHECK( geo.collision(a) == false);
+            CHECK( a.x() == Approx(-0.9) );
+            CHECK( a.y() == Approx(1.999) );
+            CHECK( a.z() == Approx(1.499) );
+            Point b = a;
+            geo.boundary(b);
+            CHECK( a == b );
+            Point c(0, 0, -0.51*z);
+
+            // check distances
+            Point distance = geo.vdist({0.1,-1.001,-0.501}, a);
+            CHECK( distance.x() == Approx(1.0));
+            CHECK( distance.y() == Approx(1.0));
+            CHECK( distance.z() == Approx(-2.0));
+            CHECK( geo.vdist({1,2,3}, a) == geo.getDistanceFunc()({1,2,3},a) );
+
+            // check that geometry is properly enscribed in a cuboid
+            Point box = geo.getLength();
+            CHECK( box.x() == Approx(x) );
+            CHECK( box.y() == Approx(y) );
+            CHECK( box.z() == Approx(z) );
+
+            // check random position
+            Point d(x+1, y+1, z+1); // out of the box
+            bool containerOverlap = false;
+            for (int i=0; i<1e4; i++) {
+                geo.randompos(d, slump);
+                if (geo.collision(d))
+                    containerOverlap = true;
+            }
+            CHECK( containerOverlap == false );
+
+            // volume scaling
+            double sf = 2.;
+            auto scaling = geo.setVolume(sf*sf*x*y*z, XY);
+            CHECK( geo.getVolume() == doctest::Approx(sf*sf*x*y*z) );
+            CHECK( geo.getLength().x() == Approx(sf*x) );
+            CHECK( geo.getLength().y() == Approx(sf*y) );
+            CHECK( geo.getLength().z() == Approx(z) );
+            CHECK( scaling.x() == Approx(sf) );
+            CHECK( scaling.y() == Approx(sf) );
+            CHECK( scaling.z() == Approx(1.0) );
+
+            // check json
+            geo.from_json(R"( {"type": "cuboid", "length": [2.5,3.5,4.5]} )"_json);
+            CHECK( geo.getVolume() == doctest::Approx(2.5*3.5*4.5) );
+        }
+
 
         SUBCASE("sphere") {
             double radius = 5.;

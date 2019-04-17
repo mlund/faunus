@@ -75,16 +75,17 @@ namespace Faunus {
         typedef std::function<void(Point&)> BoundaryFunction;
         typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
 
+        enum Variant {CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON};
         enum VolumeMethod {ISOTROPIC, ISOCHORIC, XY, Z};
 
         struct GeometryBase {
-            virtual Point setVolume(double, VolumeMethod=ISOTROPIC)=0; //!< Set volume
-            virtual double getVolume(int=3) const=0; //!< Get volume
-            virtual void randompos( Point&, Random& ) const=0; //!< Generate random position
-            virtual Point vdist( const Point&, const Point& ) const=0; //!< (Minimum) distance between two points
-            virtual void boundary( Point& ) const=0; //!< Apply boundary conditions
-            virtual bool collision(const Point&) const=0; //!< Overlap with boundaries
-            virtual Point getLength() const=0; //!< Side lengths
+            virtual Point setVolume(double, VolumeMethod = ISOTROPIC) = 0; //!< Set volume
+            virtual double getVolume(int = 3) const = 0; //!< Get volume
+            virtual void boundary(Point &) const = 0; //!< Apply boundary conditions
+            virtual bool collision(const Point &) const = 0; //!< Overlap with boundaries
+            virtual void randompos(Point &, Random &) const = 0; //!< Generate random position
+            virtual Point vdist(const Point &, const Point &) const = 0; //!< (Minimum) distance between two points
+            virtual Point getLength() const = 0; //!< Side lengths
 
             inline double sqdist( const Point &a, const Point &b ) const {
                 return vdist(a,b).squaredNorm();
@@ -93,6 +94,8 @@ namespace Faunus {
             std::string name;
 
             virtual ~GeometryBase();
+            virtual void to_json(json &j) const = 0;
+            virtual void from_json(const json &j) = 0;
 
             inline BoundaryFunction getBoundaryFunc() const {
                 return [this](Point &i){boundary(i);};
@@ -101,6 +104,27 @@ namespace Faunus {
             inline DistanceFunction getDistanceFunc() const {
                 return [this](const Point &i, const Point &j){return vdist(i,j);};
             } //!< returns lambda to vdist()
+
+            typedef std::pair<Variant, std::string> VariantName;
+            static const std::map<std::string, Variant> names; //!< geometry names
+
+            inline static VariantName variantName(const std::string &name) {
+                auto it = names.find(name);
+                if (it == names.end()) {
+                    throw std::runtime_error("unknown geometry");
+                }
+                return std::make_pair(it->second, it->first);
+            }
+
+            inline static VariantName variantName(const json &j) {
+                return variantName(j.at("type").get<std::string>());
+            }
+
+          protected:
+            template<typename T=double>
+            inline int anint( T x ) const {
+                return int(x > 0.0 ? x + 0.5 : x - 0.5);
+            } //!< Round to int
 
         }; //!< Base class for all geometries
 
@@ -118,7 +142,6 @@ namespace Faunus {
          */
         class Chameleon : public GeometryBase {
             public:
-                enum Variant {CUBOID=0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON};
                 Variant type;
             private:
                 /**
@@ -126,14 +149,8 @@ namespace Faunus {
                  * by scaling the (internal) box length by a large number.
                  */
                 static constexpr double pbc_disable=100;
-                static const std::map<std::string,Variant> names; //!< geometry names
                 double radius=0, c1, c2;
                 Point len, len_half, len_inv;
-
-                template<typename T=double>
-                    inline int anint( T x ) const {
-                        return int(x > 0.0 ? x + 0.5 : x - 0.5);
-                    } //!< Round to int
 
             public:
                 void setLength(const Point &l);

@@ -48,7 +48,23 @@ namespace Faunus {
 
     namespace Geometry {
 
+        // =============== GeometryBase ===============
+
         GeometryBase::~GeometryBase() {}
+
+        const std::map<std::string, Variant> GeometryBase::names = {
+                {
+                        {"cuboid", CUBOID},
+                        {"cylinder", CYLINDER},
+                        {"slit", SLIT},
+                        {"sphere", SPHERE},
+                        {"hexagonal", HEXAGONAL},
+                        {"octahedron", OCTAHEDRON}
+                }
+        };
+
+
+        // =============== Chameleon==============
 
         void from_json(const json &j, Chameleon &g) {
             try { 
@@ -61,17 +77,6 @@ namespace Faunus {
         void to_json(json &j, const Chameleon &g) {
             g.to_json(j);
         }
-
-        const std::map<std::string,Chameleon::Variant> Chameleon::names = {
-            {
-                {"cuboid", CUBOID},
-                {"cylinder", CYLINDER},
-                {"slit", SLIT},
-                {"sphere", SPHERE},
-                {"hexagonal", HEXAGONAL},
-                {"octahedron", OCTAHEDRON}
-            }
-        };
 
         void Chameleon::setLength(const Point &l) {
             len = l;
@@ -310,8 +315,7 @@ namespace Faunus {
             if (it==names.end())
                 throw std::runtime_error("unknown geometry");
 
-            name = it->first;
-            type = it->second;
+            std::tie(type, name) = variantName(j);
             len.setZero();
 
             if ( type == CUBOID or type == SLIT ) {

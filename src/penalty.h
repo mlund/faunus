@@ -57,7 +57,7 @@ namespace Faunus {
                         else if (property=="Ly") f = [&g=spc.geo]() { return g.getLength().y(); };
                         else if (property=="Lz" or property=="height") f = [&g=spc.geo]() { return g.getLength().z(); };
                         else if (property=="radius") {
-                            if (spc.geo.type==Geometry::Chameleon::CUBOID or spc.geo.type==Geometry::Chameleon::SLIT)
+                            if (spc.geo.type==Geometry::CUBOID or spc.geo.type==Geometry::SLIT)
                                 std::cerr << "`radius` coordinate unavailable for geometry" << endl;
                             else
                                 f = [&g=spc.geo]() { return 0.5*g.getLength().x(); };

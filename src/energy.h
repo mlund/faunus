@@ -47,7 +47,7 @@ namespace Faunus {
                     name = "ContainerOverlap";
                 }
                 double energy(Change &change) override {
-                    //if (spc.geo.type not_eq Geometry::Chameleon::CUBOID) // cuboid have PBC in all directions
+                    //if (spc.geo.type not_eq Geometry::CUBOID) // cuboid have PBC in all directions
                         if (change) {
                             // all groups have been updated
                             if (change.dV or change.all) {
@@ -1834,7 +1834,7 @@ namespace Faunus {
                         Energybase::name="hamiltonian";
 
                         // add container overlap energy for non-cuboidal geometries
-                        if (spc.geo.type not_eq Geometry::Chameleon::CUBOID)
+                        if (spc.geo.type not_eq Geometry::CUBOID)
                             push_back<Energy::ContainerOverlap<Tspace>>(spc);
 
                         for (auto &m : j.at("energy")) {// loop over move list

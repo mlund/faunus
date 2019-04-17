@@ -178,6 +178,25 @@ namespace Faunus {
             Sphere(double radius = 0.0);
         };
 
+
+        class Cylinder : public GeometryBase {
+          protected:
+            double radius, height;
+
+          public:
+            Point getLength() const override;
+            double getVolume(int dim = 3) const override;
+            Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+            Point vdist(const Point &a, const Point &b) const override;
+            void boundary(Point &a) const override;
+            bool collision(const Point &a) const override;
+            void randompos(Point &m, Random &rand) const override;
+            void from_json(const json &j);
+            void to_json(json &j) const;
+            Cylinder(double radius = 0.0, double height = 0.0);
+        };
+
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Geometry") {
         using doctest::Approx;
@@ -342,6 +361,51 @@ namespace Faunus {
             // check json
             geo.from_json(R"( { "type": "sphere", "radius": 2.0 } )"_json);
             CHECK( geo.getVolume() == doctest::Approx(4./3.*pc::pi*2.0*2.0*2.0) );
+        }
+
+
+        SUBCASE("cylinder") {
+            double radius = 1., volume = 1.;
+            double height = volume / (pc::pi * radius * radius);
+            Point box;
+            Cylinder geo(radius, height);
+
+            // check boundaries
+            CHECK( geo.getVolume() == Approx( volume ) );
+            CHECK( geo.collision({-1.01*radius, 0, 0}) == true );
+            CHECK( geo.collision({0.99*radius, 0, 0}) == false );
+            CHECK( geo.collision({-0.99*radius, 0.15*radius, 0}) == true );
+            CHECK( geo.collision({0, 0, -0.51*height}) == true );
+            CHECK( geo.collision({0, 0, 0.49*height}) == false );
+
+            // check that geometry is properly enscribed in a cuboid
+            box = geo.getLength();
+            CHECK( box.x() == Approx(2*radius) );
+            CHECK( box.y() == Approx(2*radius) );
+            CHECK( box.z() == Approx(height) );
+
+            // check random position
+            Point a(2.*radius, 0, 0);  // out of the box
+            bool container_overlap = false;
+            for (int i=0; i<1e4; i++) {
+                geo.randompos(a, slump);
+                if (geo.collision(a))
+                    container_overlap = true;
+            }
+            CHECK( container_overlap == false );
+
+            // volume scaling
+            geo.setVolume(9.0, XY);
+            CHECK( geo.getVolume() == Approx(9.0) );
+            box = geo.getLength();
+            CHECK( box.x() == Approx(3*2*radius) );
+            CHECK( box.y() == Approx(3*2*radius) );
+            CHECK( box.z() == Approx(height) );
+
+            // check json
+            json j = {  {"type","cylinder"}, {"radius",2.0}, {"length", 2/pc::pi} };
+            geo.from_json(j);
+            CHECK( geo.getVolume() == doctest::Approx(8.0) );
         }
     }
 #endif

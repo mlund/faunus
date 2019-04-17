@@ -294,6 +294,92 @@ namespace Faunus {
         }
 
 
+        // =============== Cylinder ===============
+
+        Cylinder::Cylinder(double radius, double height) : radius(radius), height(height) {
+        }
+
+        inline Point Cylinder::getLength() const {
+            return {2 * radius, 2 * radius, height};
+        }
+
+        inline double Cylinder::getVolume(int) const {
+            return pc::pi * radius * radius * height;
+        }
+
+        Point Cylinder::setVolume(double volume, const VolumeMethod method) {
+            const double old_radius = radius;
+            double alpha;
+            Point box_scaling;
+
+            switch (method) {
+                case ISOTROPIC:
+                    alpha = std::cbrt(volume / getVolume());
+                    radius *= alpha;
+                    height *= alpha;
+                    box_scaling.setConstant(alpha);
+                    break;
+                case XY: // earlier wrongly named as ISOTROPIC!
+                    radius = std::sqrt(volume / (pc::pi * height));
+                    box_scaling = {radius / old_radius, radius / old_radius, 1.0};
+                    break;
+                case ISOCHORIC:
+                    // height is scaled by 1/alpha/alpha, radius is scaled by alpha
+                    alpha = std::sqrt(volume / (pc::pi * height)) / radius;
+                    radius *= alpha;
+                    height /= (alpha * alpha);
+                    box_scaling = {alpha, alpha, 1 / (alpha * alpha)};
+                    break;
+                default:
+                    throw std::invalid_argument("unsupported volume scaling method for the cylindrical geometry");
+            }
+            assert(std::fabs(getVolume() - volume) < 1e-6 && "error setting sphere volume");
+            return box_scaling;
+        }
+
+        inline void Cylinder::boundary(Point &a) const {
+            // z-pbc
+            if (std::fabs(a.z()) > 0.5 * height)
+                a.z() -= height * anint(a.z() / height);
+        }
+
+        bool Cylinder::collision(const Point &a) const {
+            bool collision = std::fabs(a.z()) > 0.5 * height || a.x() * a.x() + a.y() * a.y() > radius * radius;
+            return collision;
+        }
+
+        inline Point Cylinder::vdist(const Point &a, const Point &b) const {
+            Point distance(a - b);
+            if (distance.z() > 0.5 * height)
+                distance.z() -= height;
+            else if (distance.z() < -0.5 * height)
+                distance.z() += height;
+            return distance;
+        }
+
+        void Cylinder::randompos(Point &m, Random &rand) const {
+            double r2 = radius * radius, d = 2 * radius;
+            m.z() = (rand() - 0.5) * height;
+            do {
+                // x,y shall be always generated as a pair; 78.5% chance to hit
+                m.x() = (rand() - 0.5) * d;
+                m.y() = (rand() - 0.5) * d;
+            } while (m.x() * m.x() + m.y() * m.y() > r2);
+        }
+
+        void Cylinder::from_json(const json &j) {
+            std::tie(std::ignore, name) = variantName(j);
+            radius = j.at("radius").get<double>();
+            height = j.at("length").get<double>();
+        }
+
+        void Cylinder::to_json(json &j) const {
+            j = {{"type",   name},
+                 {"radius", radius},
+                 {"length", height}};
+        }
+
+
         // =============== Chameleon==============
 
         void from_json(const json &j, Chameleon &g) {

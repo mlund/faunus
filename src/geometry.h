@@ -222,6 +222,22 @@ namespace Faunus {
             HexagonalPrism(double side = 0.0, double height = 0.0);
         };
 
+        class TruncatedOctahedron : public GeometryBase {
+            double side;
+
+          public:
+            Point getLength() const override;
+            double getVolume(int dim = 3) const override;
+            Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+            Point vdist(const Point &a, const Point &b) const override;
+            void boundary(Point &a) const override;
+            bool collision(const Point &a) const override;
+            void randompos(Point &m, Random &rand) const override;
+            void from_json(const json &j);
+            void to_json(json &j) const;
+            TruncatedOctahedron(double side = 0.0);
+        };
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Geometry") {
         using doctest::Approx;

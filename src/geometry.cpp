@@ -506,6 +506,125 @@ namespace Faunus {
         }
 
 
+        // =============== Truncated Octahedron ===============
+
+        TruncatedOctahedron::TruncatedOctahedron(double side) : side(side) {
+        }
+
+        inline Point TruncatedOctahedron::getLength() const {
+            // todo check orientation in xyz
+            return Point::Constant(2. * std::sqrt(2.) * side); // distance between opposite square faces
+        }
+
+        double TruncatedOctahedron::getVolume(int) const {
+            return std::sqrt(128.) * side * side * side;
+        }
+
+        Point TruncatedOctahedron::setVolume(double volume, const VolumeMethod method) {
+            const double old_side = side;
+            Point box_scaling;
+
+            if (method == ISOTROPIC) {
+                side = std::cbrt(volume / std::sqrt(128.));
+                assert(std::fabs(getVolume() - volume) < 1e-6 && "error setting sphere volume");
+            } else {
+                throw std::invalid_argument("unsupported volume scaling method for the truncated-octahedral geometry");
+            }
+            box_scaling.setConstant(side / old_side);
+            assert(fabs(getVolume() - volume) < 1e-6);
+            return box_scaling;
+        }
+
+        inline Point TruncatedOctahedron::vdist(const Point &a, const Point &b) const {
+            Point distance(a - b);
+            boundary(distance);
+            return distance;
+        }
+
+        inline bool TruncatedOctahedron::collision(const Point &a) const {
+            const double sqrtThreeI = 1.0 / std::sqrt(3.0);
+            const double origin_to_square_face = std::sqrt(2.) * side;
+            const double origin_to_hexagonal_face = std::sqrt(1.5) * side;
+
+            // ugly
+            if (std::fabs(a.dot(Point(1.0, 0.0, 0.0))) > origin_to_square_face) return true;
+            if (std::fabs(a.dot(Point(0.0, 1.0, 0.0))) > origin_to_square_face) return true;
+            if (std::fabs(a.dot(Point(0.0, 0.0, 1.0))) > origin_to_square_face) return true;
+            if (std::fabs(a.dot(Point(1.0, 1.0, 1.0) * sqrtThreeI)) > origin_to_hexagonal_face) return true;
+            if (std::fabs(a.dot(Point(1.0, 1.0, -1.0) * sqrtThreeI)) > origin_to_hexagonal_face) return true;
+            if (std::fabs(a.dot(Point(1.0, -1.0, -1.0) * sqrtThreeI)) > origin_to_hexagonal_face) return true;
+            if (std::fabs(a.dot(Point(1.0, -1.0, 1.0) * sqrtThreeI)) > origin_to_hexagonal_face) return true;
+            return false;
+        }
+
+        inline void TruncatedOctahedron::boundary(Point &a) const {
+            const double sqrtThreeI = 1.0 / std::sqrt(3.0);
+            const double square_face_distance = std::sqrt(8.) * side;
+            const double hexagonal_face_distance = std::sqrt(6.) * side;
+            const Point unitvXYZ = Point(1, 1, 1) * sqrtThreeI;
+            const Point unitvXiYZ = Point(1, 1, -1) * sqrtThreeI;
+            const Point unitvXYiZ = Point(1, -1, -1) * sqrtThreeI;
+            const Point unitvXYZi = Point(1, -1, 1) * sqrtThreeI;
+
+            // todo improve
+            bool outside = false;
+            do {
+                outside = false;
+                double tmp = a.dot(unitvXYZ);
+                if (std::fabs(tmp) > hexagonal_face_distance / 2) {
+                    a -= hexagonal_face_distance * anint(tmp / hexagonal_face_distance) * unitvXYZ;
+                    outside = true;
+                }
+                tmp = a.dot(unitvXiYZ);
+                if (std::fabs(tmp) > hexagonal_face_distance / 2) {
+                    a -= hexagonal_face_distance * anint(tmp / hexagonal_face_distance) * unitvXiYZ;
+                    outside = true;
+                }
+                tmp = a.dot(unitvXYiZ);
+                if (std::fabs(tmp) > hexagonal_face_distance / 2) {
+                    a -= hexagonal_face_distance * anint(tmp / hexagonal_face_distance) * unitvXYiZ;
+                    outside = true;
+                }
+                tmp = a.dot(unitvXYZi);
+                if (std::fabs(tmp) > hexagonal_face_distance / 2) {
+                    a -= hexagonal_face_distance * anint(tmp / hexagonal_face_distance) * unitvXYZi;
+                    outside = true;
+                }
+            } while (outside);
+
+            if (std::fabs(a.x()) > square_face_distance / 2)
+                a.x() -= square_face_distance * anint(a.x() / square_face_distance);
+
+            if (std::fabs(a.y()) > square_face_distance / 2)
+                a.y() -= square_face_distance * anint(a.y() / square_face_distance);
+
+            if (std::fabs(a.z()) > square_face_distance / 2)
+                a.z() -= square_face_distance * anint(a.z() / square_face_distance);
+        }
+
+        void TruncatedOctahedron::randompos(Point &m, Random &rand) const {
+            const double d = std::sqrt(10) * side;  // use circumdiameter
+            const double r2 = d * d / 4.;
+            do {
+                do {
+                    m.x() = (rand() - 0.5) * d;
+                    m.y() = (rand() - 0.5) * d;
+                    m.z() = (rand() - 0.5) * d;
+                } while (m.squaredNorm() > r2);
+            } while (collision(m));
+        }
+
+        void TruncatedOctahedron::from_json(const json &j) {
+            std::tie(std::ignore, name) = variantName(j);
+            side = j.at("radius").get<double>();
+        }
+
+        void TruncatedOctahedron::to_json(json &j) const {
+            j = {{"type",   name},
+                 {"radius", side}};
+        }
+
+
         // =============== Chameleon==============
 
         void from_json(const json &j, Chameleon &g) {

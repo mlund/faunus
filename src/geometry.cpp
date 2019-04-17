@@ -294,6 +294,131 @@ namespace Faunus {
         }
 
 
+        // =============== Hexagonal Prism ===============
+
+        const Eigen::Matrix3d HexagonalPrism::rhombic2cartesian = (Eigen::Matrix3d() <<
+                std::cos(-pc::pi/6), 0.0, 0.0,
+                std::sin(-pc::pi/6), 1.0, 0.0,
+                0.0,                 0.0, 1.0).finished();
+
+        const  Eigen::Matrix3d HexagonalPrism::cartesian2rhombic = rhombic2cartesian.inverse();
+
+        HexagonalPrism::HexagonalPrism(double side, double height) {
+            set_box(side, height);
+        }
+
+        inline Point HexagonalPrism::getLength() const {
+            return box;
+        }
+
+        double HexagonalPrism::getVolume(int) const {
+            return 3. / 4. * box.x() * box.y() * box.z(); // 3 * inner_radius * outer_radius * height
+        }
+
+        void HexagonalPrism::set_box(double side, double height) {
+            box = {std::sqrt(3.) * side, 2 * side, height};
+        }
+
+        Point HexagonalPrism::setVolume(double volume, const VolumeMethod method) {
+            double old_volume = getVolume();
+            double alpha;
+            Point box_scaling;
+
+            switch (method) {
+                case ISOTROPIC:
+                    alpha = std::cbrt(volume / old_volume);
+                    box_scaling = {alpha, alpha, alpha};
+                    break;
+                case XY:
+                    alpha = std::sqrt(volume / old_volume);
+                    box_scaling = {alpha, alpha, 1.0};
+                    break;
+                case ISOCHORIC:
+                    // radius is scaled by alpha, z is scaled by 1/alpha/alpha
+                    alpha = std::cbrt(volume / 4.0 / sqrt(3.0) / (box.z() / box.x())) / box.x();
+                    box_scaling = {alpha, alpha, 1 / (alpha * alpha)};
+                    break;
+                default:
+                    throw std::invalid_argument("unsupported volume scaling method for the hexagonal-prism geometry");
+            }
+            box = box.cwiseProduct(box_scaling);
+            assert(fabs(getVolume() - volume) < 1e-6);
+            return box_scaling;
+        }
+
+        inline Point HexagonalPrism::vdist(const Point &a, const Point &b) const {
+            Point distance(a - b);
+            boundary(distance);
+            return distance;
+        }
+
+        inline bool HexagonalPrism::collision(const Point &a) const {
+            const double height = box.z();
+            const double outer_radius = 0.5 * box.y();
+
+            // Hexagon can be divided into three rhombuses. Using natural rhombic coordinates, it can be
+            // straightforwardly determined if the particular point is inside the rhombus. If the point is mirrored to
+            // the first quadrant taking the absolute values of coordinates, only one rhombus needs to be evaluated.
+            Point b = cartesian2rhombic * a.cwiseAbs();
+            bool collision = b.z() > 0.5 * height || b.x() > outer_radius || b.y() > outer_radius;
+            return collision;
+        }
+
+        inline void HexagonalPrism::boundary(Point &a) const {
+            // TODO optimise and add documentation
+            const double sqrtThreeByTwo = sqrt(3.0) / 2.0;
+            const Point unitvX = {1.0, 0.0, 0.0};
+            const Point unitvY = {0.5, sqrtThreeByTwo, 0.0};
+            const Point unitvZ = {-0.5, sqrtThreeByTwo, 0.0};
+
+            double tmp = a.dot(unitvX);
+            if (std::fabs(tmp) > 0.5 * box.x())
+                a -= box.x() * anint(tmp / box.x()) * unitvX;
+
+            if (a.dot(unitvY) > 0.5 * box.x()) {
+                a -= box.x() * unitvY;
+                if (a.dot(unitvX) < -0.5 * box.x()) // Check that point did not get past x-limit
+                    a += box.x() * unitvX;
+            }
+            if (a.dot(unitvY) < -0.5 * box.x()) {
+                a = a + box.x() * unitvY;
+                if (a.dot(unitvX) > 0.5 * box.x()) // Check that point did not get past x-limit
+                    a = a - box.x() * unitvX;
+            }
+
+            tmp = a.dot(unitvZ);
+            if (std::fabs(tmp) > 0.5 * box.x())
+                a -= box.x() * anint(tmp / box.x()) * unitvZ;
+            if (std::fabs(a.z()) > 0.5 * box.z())
+                a.z() -= box.z() * anint(a.z() / box.z());
+        }
+
+        void HexagonalPrism::randompos(Point &m, Random &rand) const {
+            // Generating random points in hexagonal-prism coordinates is not feasible as the space coverage
+            // will not be homogeneous back in the cartesian coordinates.
+            m.z() = (rand() - 0.5) * box.z();
+            do {
+                // x,y shall be always generated as a pair; 75% chance to hit
+                m.x() = (rand() - 0.5) * box.x();
+                m.y() = (rand() - 0.5) * box.y();
+            } while (collision(m));
+        }
+
+        void HexagonalPrism::from_json(const json &j) {
+            std::tie(std::ignore, name) = variantName(j);
+            auto radius = j.at("radius").get<double>(); // inner radius
+            auto height = j.at("length").get<double>();
+            auto edge = 2.0 / std::sqrt(3.0) * radius;
+            set_box(edge, height);
+        }
+
+        void HexagonalPrism::to_json(json &j) const {
+            j = {{"type",   name},
+                 {"radius", box.y()},
+                 {"length", box.z()}};
+        }
+
+
         // =============== Cylinder ===============
 
         Cylinder::Cylinder(double radius, double height) : radius(radius), height(height) {

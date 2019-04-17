@@ -197,6 +197,31 @@ namespace Faunus {
         };
 
 
+        /**
+         * The orientation in the coordinate system ⬢ (x→, y↑).
+         */
+        class HexagonalPrism : public GeometryBase {
+            // Change matrices from rhombic to cartesian coordinates and back.
+            // Y (and Z) axis is identical, X-axis is tilted by -30 deg (i.e., clockwise)
+            static const Eigen::Matrix3d rhombic2cartesian;
+            static const Eigen::Matrix3d cartesian2rhombic;
+            Point box; //< x = inscribed circle diameter, y = circumscribed circle diameter, z = height
+            double volume; //< volume of the prism
+            void set_box(double side, double height);
+
+        public:
+            Point getLength() const override;
+            double getVolume(int dim=3) const override;
+            Point setVolume(double volume, VolumeMethod method=ISOTROPIC) override;
+            Point vdist(const Point &a, const Point &b) const override;
+            void boundary(Point &a) const override;
+            bool collision(const Point &a) const override;
+            void randompos(Point &m, Random &rand) const override;
+            void from_json(const json &j);
+            void to_json(json &j) const;
+            HexagonalPrism(double side = 0.0, double height = 0.0);
+        };
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Geometry") {
         using doctest::Approx;
@@ -407,6 +432,46 @@ namespace Faunus {
             geo.from_json(j);
             CHECK( geo.getVolume() == doctest::Approx(8.0) );
         }
+
+
+        SUBCASE("hexagonal prism") {
+            double side = 1., volume = 1.;
+            double outer_radius = side, inner_radius = side * std::sqrt(3.0) / 2.;
+            double height = volume / (3. * outer_radius * inner_radius);
+            Point box;
+            HexagonalPrism geo(side, height);
+
+            CHECK( geo.getVolume() == Approx(volume) );
+            CHECK( geo.collision({-1.01 * inner_radius, 0, 0}) == true );
+            CHECK( geo.collision({0.99 * inner_radius, 0 ,0}) == false );
+            CHECK( geo.collision({0.0, -1.01 * outer_radius, 0}) == true );
+            CHECK( geo.collision({0.0, 0.99 * outer_radius, 0}) == false );
+            CHECK( geo.collision({0.99 * std::cos(pc::pi/3.) * inner_radius, 0.99 * std::sin(pc::pi/3.) * inner_radius, 0}) == false );
+            CHECK( geo.collision({1.01 * std::cos(pc::pi/3.) * inner_radius, 1.01 * std::sin(pc::pi/3.) * inner_radius, 0}) == true );
+            CHECK( geo.collision({0, 0, -0.51 * height}) == true );
+            CHECK( geo.collision({0, 0, 0.49 * height}) == false );
+
+            // check that geometry is properly inscribed in a cuboid
+            box = geo.getLength();
+            CHECK( box.x() == Approx(2*inner_radius) );
+            CHECK( box.y() == Approx(2*outer_radius) );
+            CHECK( box.z() == Approx(height) );
+
+            // check random position
+            Point a;
+            bool container_overlap=false;
+            for (int i=0; i<1e4; i++) {
+                geo.randompos(a, slump);
+                if (geo.collision(a))
+                    container_overlap = true;
+            }
+            CHECK( container_overlap == false );
+
+            json j = {  {"type","hexagonal"}, {"radius", 3*inner_radius}, {"length", 5*height} };
+            geo.from_json(j);
+            CHECK( geo.getVolume() == Approx(9*5*volume) );
+        }
+
     }
 #endif
         /**

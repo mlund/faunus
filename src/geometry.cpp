@@ -184,6 +184,82 @@ namespace Faunus {
         }
 
 
+        // =============== Sphere ===============
+
+        Sphere::Sphere(double radius) : radius(radius) {
+        }
+
+        Point Sphere::getLength() const {
+            return {2 * radius, 2 * radius, 2 * radius};
+        }
+
+        inline double Sphere::getVolume(int dim) const {
+            double result;
+            switch (dim) {
+                case 3:
+                    result = 4.0 / 3.0 * pc::pi * radius * radius * radius; // volume
+                    break;
+                case 2:
+                    result = 4.0 * pc::pi * radius * radius; // surface area
+                    break;
+                case 1:
+                    result = 2 * radius; // diameter
+                    break;
+                default:
+                    throw std::invalid_argument("unsupported volume dimension for the sphere: " +
+                                             std::to_string(dim));
+            }
+            return result;
+        }
+
+        Point Sphere::setVolume(double volume, const VolumeMethod method) {
+            const double old_radius = radius;
+            Point box_scaling;
+            if (method == ISOTROPIC) {
+                radius = std::cbrt(volume / (4.0 / 3.0 * pc::pi));
+                assert(std::fabs(getVolume() - volume) < 1e-6 && "error setting sphere volume");
+            } else {
+                throw std::invalid_argument("unsupported volume scaling method for the spherical geometry");
+            }
+            box_scaling.setConstant(radius / old_radius);
+            return box_scaling;
+        }
+
+        inline void Sphere::boundary(Point &) const {
+            // no pbc
+        }
+
+        inline bool Sphere::collision(const Point &a) const {
+            bool collision = a.squaredNorm() > radius * radius;
+            return collision;
+        }
+
+        inline Point Sphere::vdist(const Point &a, const Point &b) const {
+            // no pbc; shall we check points coordinates?
+            Point distance(a - b);
+            return distance;
+        }
+
+        void Sphere::randompos(Point &m, Random &rand) const {
+            double r2 = radius * radius, d = 2 * radius;
+            do {
+                m.x() = (rand() - 0.5) * d;
+                m.y() = (rand() - 0.5) * d;
+                m.z() = (rand() - 0.5) * d;
+            } while (m.squaredNorm() > r2);
+        }
+
+        void Sphere::from_json(const json &j) {
+            std::tie(std::ignore, name) = variantName(j);
+            radius = j.at("radius").get<double>();
+        }
+
+        void Sphere::to_json(json &j) const {
+            j = {{"type",   name},
+                 {"radius", radius}};
+        }
+
+
         // =============== Chameleon==============
 
         void from_json(const json &j, Chameleon &g) {

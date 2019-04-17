@@ -149,11 +149,27 @@ namespace Faunus {
             Cuboid(double x = 0.0);
         };
 
+        class Sphere : public GeometryBase {
+          protected:
+            double radius;
+
+          public:
+            Point getLength() const override;
+            double getVolume(int dim=3) const override;
+            Point setVolume(double volume, VolumeMethod method=ISOTROPIC) override;
+            Point vdist(const Point &a, const Point &b) const override;
+            void boundary(Point &a) const override;
+            bool collision(const Point &a) const override;
+            void randompos(Point &m, Random &rand) const override;
+            void from_json(const json &j);
+            void to_json(json &j) const;
+            Sphere(double radius = 0.0);
+        };
+
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Geometry") {
         using doctest::Approx;
         Random slump;
-
 
         SUBCASE("cuboid") {
             double x = 2, y = 3, z = 4;
@@ -209,6 +225,52 @@ namespace Faunus {
             // check json
             geo.from_json(R"( {"type": "cuboid", "length": [2.5,3.5,4.5]} )"_json);
             CHECK( geo.getVolume() == doctest::Approx(2.5*3.5*4.5) );
+        }
+
+        SUBCASE("sphere") {
+            double radius = 5.;
+            Sphere geo(radius);
+            CHECK( geo.getVolume() == doctest::Approx(4./3.*pc::pi*radius*radius*radius) );
+
+            // check boundaries
+            CHECK( geo.collision( { 5.01, 0, 0 } ) == true );
+            CHECK( geo.collision( { 4.99, 0, 0 } ) == false );
+            Point a(radius - 1, 0, -0.5 * radius);
+            Point b = a;
+            geo.boundary(a);
+            CHECK (a == b);
+
+            // check distances
+            Point distance = geo.vdist({3.0,1.0,-2.0}, {-3.0,-1.0,2.0});
+            CHECK( distance.x() == Approx(6.0));
+            CHECK( distance.y() == Approx(2.0));
+            CHECK( distance.z() == Approx(-4.0));
+
+            // check that geometry is properly enscribed in a cuboid
+            Point box = geo.getLength();
+            CHECK( box.x() == Approx(10) );
+            CHECK( box.y() == Approx(10) );
+            CHECK( box.z() == Approx(10) );
+
+            // check random position
+            Point c(radius+1, radius+1, radius+1); // out of the box
+            bool container_overlap = false;
+            for (int i=0; i<1e4; i++) {
+                geo.randompos(c, slump);
+                if (geo.collision(c))
+                    container_overlap = true;
+            }
+            CHECK( container_overlap == false );
+
+            // volume scaling
+            geo.setVolume(123.4);
+            CHECK( geo.getVolume() == Approx(123.4) );
+            CHECK_THROWS_AS( geo.setVolume(100., ISOCHORIC), std::invalid_argument );
+            CHECK_THROWS_AS( geo.setVolume(100., XY), std::invalid_argument );
+
+            // check json
+            geo.from_json(R"( { "type": "sphere", "radius": 2.0 } )"_json);
+            CHECK( geo.getVolume() == doctest::Approx(4./3.*pc::pi*2.0*2.0*2.0) );
         }
     }
 #endif

@@ -530,25 +530,39 @@ namespace Faunus {
                 std::vector<int> ids;
                 std::string file;
                 double dz;
+                bool COM=false; // center at COM of atoms?
 
                 void _from_json(const json &j) override {
                     file = j.at("file").get<std::string>();
                     names = j.at("atoms").get<decltype(names)>(); // molecule names
                     ids = names2ids(atoms, names);     // names --> molids
                     dz = j.value("dz", 0.1);
+                    COM = j.value("com", false);
                     N.setResolution(dz);
                 }
 
                 void _to_json(json &j) const override {
-                    j = {{"atoms", names}, {"file", file}, {"dz", dz}};
+                    j = {{"atoms", names}, {"file", file}, {"dz", dz}, {"com", COM}};
                 }
 
                 void _sample() override {
+                    Group<Tparticle> all(spc.p.begin(), spc.p.end());
+                    std::map<int, Point> cms;
+                    if (COM) // calc. mass center of selected atoms
+                        for (int id : ids) {
+                            auto slice = all.find_id(id);
+                            auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
+                            cms[id] = cm;
+                        }
                     // count atoms in slices
                     for (auto &g : spc.groups) // loop over all groups
                         for (auto &i : g)      // loop over active particles
-                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end())
-                                N( i.pos.z() )++;
+                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end()) {
+                                if (COM)
+                                    N( i.pos.z() - cms[i.id].z() )++;
+                                else
+                                    N( i.pos.z() )++;
+                            }
                 }
 
                 public:
@@ -1048,8 +1062,9 @@ namespace Faunus {
 
                 void _sample() override {
                     V += spc.geo.getVolume( dim );
-                    for ( auto i = spc.p.begin(); i != spc.p.end(); ++i )
-                        for ( auto j=i; ++j != spc.p.end(); )
+                    auto active = spc.activeParticles();
+                    for ( auto i = active.begin(); i != active.end(); ++i )
+                        for ( auto j=i; ++j != active.end(); )
                             if (
                                     ( i->id==id1 && j->id==id2 ) ||
                                     ( i->id==id2 && j->id==id1 )
@@ -1085,8 +1100,11 @@ namespace Faunus {
 
                 void _sample() override {
                     V += spc.geo.getVolume( dim );
-                    for ( auto i = spc.groups.begin(); i != spc.groups.end(); ++i )
-                        for ( auto j=i; ++j != spc.groups.end(); )
+                    auto mollist1 = spc.findMolecules( id1, Tspace::ACTIVE );
+                    auto mollist2 = spc.findMolecules( id2, Tspace::ACTIVE );
+                    auto mollist = ranges::view::concat( mollist1, mollist2 );
+                    for ( auto i = mollist.begin(); i != mollist.end(); ++i )
+                        for ( auto j=i; ++j != mollist.end(); )
                             if (
                                     ( i->id==id1 && j->id==id2 ) ||
                                     ( i->id==id2 && j->id==id1 )

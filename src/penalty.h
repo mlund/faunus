@@ -57,10 +57,10 @@ namespace Faunus {
                         else if (property=="Ly") f = [&g=spc.geo]() { return g.getLength().y(); };
                         else if (property=="Lz" or property=="height") f = [&g=spc.geo]() { return g.getLength().z(); };
                         else if (property=="radius") {
-                            if (spc.geo.type==Geometry::Chameleon::SPHERE or spc.geo.type==Geometry::Chameleon::CYLINDER)
-                                f = [&g=spc.geo]() { return 0.5*g.getLength().x(); };
-                            else
+                            if (spc.geo.type==Geometry::Chameleon::CUBOID or spc.geo.type==Geometry::Chameleon::SLIT)
                                 std::cerr << "`radius` coordinate unavailable for geometry" << endl;
+                            else
+                                f = [&g=spc.geo]() { return 0.5*g.getLength().x(); };
                         }
                         else if (property=="Q") // system net charge
                             f = [&groups=spc.groups]() {
@@ -69,6 +69,13 @@ namespace Faunus {
                                     for (auto &p : g)  // loop over particles
                                         charge_sum += p.charge;
                                 return charge_sum;
+                            };
+                        else if (property=="N") // number of particles
+                            f = [&groups=spc.groups]() {
+                                double N_sum=0;
+                                for (auto &g : groups) // loops over groups
+                                    N_sum += g.size();
+                                return N_sum;
                             };
 
                         if (f==nullptr)

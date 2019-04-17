@@ -72,10 +72,11 @@ etc.
 `atoms=[]`      | List of atom names to sample; `*` selects all 
 `file`          | Output filename with profile
 `dz=0.1`        | Resolution along _z_-axis
+`com=false`     | Use mass center _z_ of selected atoms as origin
 `nstep`         | Interval between samples
 
 Calculates the density in cuboidal slices of thickness _dz_ along the _z_ axis.
-
+If `com=true`, the _z_ position of each atom is calculated with respect to the center of mass of all atoms of the same type in the sampled configuration.
 
 ## Structure
 

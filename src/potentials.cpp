@@ -122,6 +122,7 @@ void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
         rc1i = 1/rc;
         epsr = j.at("epsr");
         lB = pc::lB( epsr );
+	
         depsdt = j.value("depsdt", -0.368*pc::temperature/epsr);
         sf.setTolerance(
                 j.value("utol",1e-5),j.value("ftol",1e-2) );

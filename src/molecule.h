@@ -70,7 +70,7 @@ namespace Faunus {
                             Point cm;                       // new mass center position
                             geo.randompos(cm, random);      // random point in container
                             cm = cm.cwiseProduct(dir);      // apply user defined directions (default: 1,1,1)
-                            Geometry::cm2origo(v.begin(), v.end());// translate to origin
+                            Geometry::cm2origo(v.begin(), v.end()); // translate to origin
                             rot.set(random()*2*pc::pi, ranunit(random)); // random rot around random vector
                             if (rotate) {
                                 Geometry::rotate(v.begin(), v.end(), rot.first);

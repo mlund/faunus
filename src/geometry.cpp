@@ -64,6 +64,129 @@ namespace Faunus {
         };
 
 
+        // =============== Cuboid ===============
+
+        Cuboid::Cuboid(const Point &p) {
+            setLength(p);
+        }
+
+        Cuboid::Cuboid(double x, double y, double z) : Cuboid(Point(x, y, z)) {
+        }
+
+        Cuboid::Cuboid(double x) : Cuboid(x, x, x) {
+        }
+
+        inline Point Cuboid::getLength() const {
+            return box;
+        }
+
+        void Cuboid::setLength(const Point &len) {
+            box = len;
+            box_half = 0.5 * box;
+            box_inv = box.cwiseInverse();
+            ratio_yx = box.y() / box.x();
+            ratio_zx = box.z() / box.x();
+        }
+
+        inline double Cuboid::getVolume(int) const {
+            return box.x() * box.y() * box.z();
+        }
+
+        Point Cuboid::setVolume(double volume, const VolumeMethod method) {
+            //TODO a better implementation shall assign scaling and compute the new box as a product
+            //TODO move out "isochoric" scaling
+            double x, alpha;
+            Point new_box, box_scaling;
+            switch (method) {
+                case ISOTROPIC:
+                    x = std::cbrt(volume / (ratio_yx * ratio_zx)); // keep aspect ratios
+                    new_box = {x, ratio_yx * x, ratio_zx * x};
+                    break;
+                case XY:
+                    x = std::sqrt(volume / (ratio_yx * box.z())); // keep xy aspect ratio
+                    new_box = {x, ratio_yx * x, box.z()};         // z is untouched
+                    break;
+                case ISOCHORIC:
+                    // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
+                    alpha = std::cbrt(volume / (ratio_yx * ratio_zx)) / box.x();
+                    new_box = box.cwiseProduct(Point(alpha, alpha, 1 / (alpha * alpha)));
+                    break;
+                default:
+                    throw std::invalid_argument("unsupported volume scaling method for the cuboid geometry");
+            }
+            box_scaling = new_box.cwiseQuotient(box);
+            setLength(new_box);
+            assert(fabs(getVolume() - volume) < 1e-6);
+            return box_scaling; // this will scale any point to new volume
+        }
+
+        inline void Cuboid::boundary(Point &a) const {
+            // xyz-pbc
+            if (std::fabs(a.x()) > box_half.x())
+                a.x() -= box.x() * anint(a.x() * box_inv.x());
+            if (std::fabs(a.y()) > box_half.y())
+                a.y() -= box.y() * anint(a.y() * box_inv.y());
+            if (std::fabs(a.z()) > box_half.z())
+                a.z() -= box.z() * anint(a.z() * box_inv.z());
+        }
+
+        inline Point Cuboid::vdist(const Point &a, const Point &b) const {
+            // xyz-pbc
+            Point distance(a - b);
+            if (distance.x() > box_half.x())
+                distance.x() -= box.x();
+            else if (distance.x() < -box_half.x())
+                distance.x() += box.x();
+            if (distance.y() > box_half.y())
+                distance.y() -= box.y();
+            else if (distance.y() < -box_half.y())
+                distance.y() += box.y();
+            if (distance.z() > box_half.z())
+                distance.z() -= box.z();
+            else if (distance.z() < -box_half.z())
+                distance.z() += box.z();
+            return distance;
+        }
+
+        inline void Cuboid::randompos(Point &m, Random &rand) const {
+            m.x() = (rand() - 0.5) * box.x();
+            m.y() = (rand() - 0.5) * box.y();
+            m.z() = (rand() - 0.5) * box.z();
+        }
+
+        inline bool Cuboid::collision(const Point &a) const {
+            bool collision =
+                    std::fabs(a.x()) > box_half.x() ||
+                    std::fabs(a.y()) > box_half.y() ||
+                    std::fabs(a.z()) > box_half.z();
+            return collision;
+        }
+
+        void Cuboid::from_json(const json &j) {
+            std::tie(std::ignore, name) = variantName(j);
+            box.setZero();
+
+            auto m = j.at("length");
+            if (m.is_number()) {
+                double l = m.get<double>();
+                setLength({l, l, l});
+            } else if (m.is_array()) {
+                if (m.size() == 3) {
+                    setLength(m.get<Point>());
+                } else {
+                    // TODO warning
+                }
+            } else {
+                // TODO warning
+            }
+        }
+
+        void Cuboid::to_json(json &j) const {
+            j = {{"type",   name},
+                 {"length", box}};
+        }
+
+
         // =============== Chameleon==============
 
         void from_json(const json &j, Chameleon &g) {

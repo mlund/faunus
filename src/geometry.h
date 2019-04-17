@@ -128,6 +128,93 @@ namespace Faunus {
 
         }; //!< Base class for all geometries
 
+
+        class Cuboid : public GeometryBase {
+          protected:
+            Point box, box_half, box_inv;
+
+          private:
+            double ratio_yx, ratio_zx;
+
+          public:
+            Point getLength() const override;
+            double getVolume(int dim = 3) const override;
+            void setLength(const Point &len); // todo shall be protected
+            Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
+            Point vdist(const Point &a, const Point &b) const override;
+            void boundary(Point &a) const override;
+            bool collision(const Point &a) const override;
+            void randompos(Point &m, Random &rand) const override;
+            void from_json(const json &j);
+            void to_json(json &j) const;
+            Cuboid(const Point &p);
+            Cuboid(double x, double y, double z);
+            Cuboid(double x = 0.0);
+        };
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] Geometry") {
+        using doctest::Approx;
+        Random slump;
+
+
+        SUBCASE("cuboid") {
+            double x = 2, y = 3, z = 4;
+            Cuboid geo(x, y, z);
+            CHECK( geo.getVolume() == doctest::Approx(x*y*z) );
+
+            // check boundaries and pbc
+            Point a(1.1, 1.5, -2.001);
+            CHECK( geo.collision(a) == true );
+            geo.getBoundaryFunc()(a);
+            CHECK( geo.collision(a) == false );
+            CHECK( a.x() == Approx(-0.9) );
+            CHECK( a.y() == Approx(1.5) );
+            CHECK( a.z() == Approx(1.999) );
+            Point b = a;
+            geo.boundary(b);
+            CHECK( a == b );
+
+            // check distances
+            Point distance = geo.vdist({0.1,0.5,-1.001}, a);
+            CHECK( distance.x() == Approx(1.0) );
+            CHECK( distance.y() == Approx(-1.0) );
+            CHECK( distance.z() == Approx(1.0) );
+            CHECK( geo.vdist({1,2,3}, a) == geo.getDistanceFunc()({1,2,3},a) );
+
+            // check that geometry is properly enscribed in a cuboid
+            Point box = geo.getLength();
+            CHECK( box.x() == Approx(x) );
+            CHECK( box.y() == Approx(y) );
+            CHECK( box.z() == Approx(z) );
+
+            // check random position
+            Point c(x+1, y+1, z+1); // out of the box
+            bool container_overlap = false;
+            for (int i=0; i<1e4; i++) {
+                geo.randompos(c, slump);
+                if (geo.collision(c))
+                    container_overlap = true;
+            }
+            CHECK( container_overlap == false );
+
+            // volume scaling
+            double sf = 2.;
+            auto scaling = geo.setVolume(sf*sf*sf*x*y*z);
+            CHECK( geo.getVolume() == doctest::Approx(sf*sf*sf*x*y*z) );
+            CHECK( geo.getLength().x() == Approx(sf*x) );
+            CHECK( geo.getLength().y() == Approx(sf*y) );
+            CHECK( geo.getLength().z() == Approx(sf*z) );
+            CHECK( scaling.x() == Approx(sf) );
+            CHECK( scaling.y() == Approx(sf) );
+            CHECK( scaling.z() == Approx(sf) );
+
+            // check json
+            geo.from_json(R"( {"type": "cuboid", "length": [2.5,3.5,4.5]} )"_json);
+            CHECK( geo.getVolume() == doctest::Approx(2.5*3.5*4.5) );
+        }
+    }
+#endif
         /**
          * @brief Geometry class for spheres, cylinders, cuboids, hexagonal prism, truncated octahedron, slits
          *

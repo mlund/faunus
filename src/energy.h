@@ -828,96 +828,109 @@ namespace Faunus {
          * @todo Optimize.
          */
         template<typename Tspace>
-            class Bonded : public Energybase {
-                private:
-                    Tspace& spc;
-                    typedef typename Tspace::Tpvec Tpvec;
-                    typedef std::vector<std::shared_ptr<Potential::BondData>> BondVector;
-                    BondVector inter;  // inter-molecular bonds
-                    std::map<int,BondVector> intra; // intra-molecular bonds
+        class Bonded : public Energybase {
+          private:
+            Tspace& spc;
+            typedef typename Tspace::Tpvec Tpvec;
+            typedef std::vector<std::shared_ptr<Potential::BondData>> BondVector;
+            BondVector inter;  // inter-molecular bonds
+            std::map<int, BondVector> intra; // intra-molecular bonds
 
-                    void update() {
-                        using namespace Potential;
-                        intra.clear();
-                        for (size_t i=0; i<spc.groups.size(); i++) {
-                            if (!spc.groups.empty()) {
-                                auto &g = spc.groups[i];
-                                for (auto &b : molecules<Tpvec>.at(g.id).bonds) {
-                                    intra[i].push_back( b->clone() ); // deep copy BondData from MoleculeData
-                                    intra[i].back()->shift( std::distance(spc.p.begin(), g.begin()) );
-                                    Potential::setBondEnergyFunction( intra[i].back(), spc.p );
-                                }
-                            }
-                        }
-                    } // finds and adds all intra-molecular bonds of active molecules
-
-                    double sum( const BondVector &v, int iparticle ) const {
-                        double u=0;
-                        for (auto &b : v)
-                            if (std::find(b->index.begin(), b->index.end(), iparticle) != b->index.end()) {
-                                assert(b->hasEnergyFunction());
-                                u += b->energy(spc.geo.getDistanceFunc());
-                            }
-                        return u;
-                    } // sum energy in vector of BondData for matching particle index
-
-                    double sum( const BondVector &v ) const {
-                        double u=0;
-                        for (auto &b : v) {
-                            assert(b->hasEnergyFunction());
-                            u += b->energy(spc.geo.getDistanceFunc());
-                        }
-                        return u;
-                    } // sum energy in vector of BondData
-
-                public:
-                    Bonded(const json &j, Tspace &spc) : spc(spc) {
-                        name = "bonded";
-                        update();
-                        if (j.is_object())
-                            if (j.count("bondlist")==1)
-                                inter = j["bondlist"].get<BondVector>();
-                        for (auto &i : inter) // set all energy functions
-                            Potential::setBondEnergyFunction( i, spc.p );
+          private:
+            void update_intra() {
+                using namespace Potential;
+                intra.clear();
+                for (size_t i = 0; i < spc.groups.size(); i++) {
+                    auto& group = spc.groups[i];
+                    for (auto& bond : molecules<Tpvec>.at(group.id).bonds) {
+                        intra[i].push_back( bond->clone() ); // deep copy BondData from MoleculeData
+                        intra[i].back()->shift( std::distance(spc.p.begin(), group.begin()) );
+                        Potential::setBondEnergyFunction( intra[i].back(), spc.p );
                     }
+                }
+            } // finds and adds all intra-molecular bonds of active molecules
 
-                    void to_json(json &j) const override {
-                        if (!inter.empty())
-                            j["bondlist"] = inter;
-                        if (!intra.empty()) {
-                            json& _j = j["bondlist-intramolecular"];
-                            _j = json::array();
-                            for (auto &i : intra)
-                                for (auto &b : i.second)
-                                    _j.push_back(b);
+            double sum_energy(const BondVector &bonds) const {
+                double energy = 0;
+                for (auto& bond : bonds) {
+                    assert(bond->hasEnergyFunction());
+                    energy += bond->energy(spc.geo.getDistanceFunc());
+                }
+                return energy;
+            } // sum energy in vector of BondData
+
+            double sum_energy(const BondVector &bonds, const std::vector<int> &particles_ndx) const {
+                double energy = 0;
+                // outer loop over bonds to ensure that each bond is counted at most once
+                for (auto& bond : bonds) {
+                    for (auto particle_ndx : particles_ndx) {
+                        if (std::find(bond->index.begin(), bond->index.end(), particle_ndx) != bond->index.end()) {
+                            assert(bond->hasEnergyFunction());
+                            energy += bond->energy(spc.geo.getDistanceFunc());
+                            break; // count each interaction at most once
                         }
                     }
+                }
+                return energy;
+            } // sum energy in vector of BondData for matching particle indices
 
-                    double energy(Change &c) override {
-                        double u=0;
-                        if (c) {
-                            u = sum(inter); // energy of inter-molecular bonds
-                            if ( c.all or c.dV ) {
-                                for (auto& i : intra) // energy of intra-molecular bonds
-                                    if (not spc.groups[i.first].empty()) // add only if group is active
-                                        u += sum(i.second);
-                            } else
-                                for (auto &d : c.groups) {
-                                    if (d.internal) {
-                                        if (d.all) // all internal positions updated
-                                            u += sum( intra[d.index] );
-                                        else { // only partial update
-                                            // offset = index of first particle in group
-                                            int offset = std::distance(spc.p.begin(), spc.groups[d.index].begin()); 
-                                            for (int i : d.atoms) // d.atoms is relative to group
-                                                u += sum( intra[d.index], i+offset);
-                                        }
-                                    }
-                                }
+          public:
+            Bonded(const json &j, Tspace &spc) : spc(spc) {
+                name = "bonded";
+                update_intra();
+                if (j.is_object())
+                    if (j.count("bondlist")==1)
+                        inter = j["bondlist"].get<BondVector>();
+                for (auto& i : inter) // set all energy functions
+                    Potential::setBondEnergyFunction( i, spc.p );
+            }
+
+            void to_json(json &j) const override {
+                if (!inter.empty())
+                    j["bondlist"] = inter;
+                if (!intra.empty()) {
+                    json& _j = j["bondlist-intramolecular"];
+                    _j = json::array();
+                    for (auto& i : intra)
+                        for (auto& b : i.second)
+                            _j.push_back(b);
+                }
+            }
+
+            double energy(Change &change) override {
+                double energy = 0;
+                if (change) {
+                    energy += sum_energy(inter); // energy of inter-molecular bonds
+
+                    if (change.all || change.dV) { // compute all active groups
+                        for (auto& i : intra) { // energies of intra-molecular bonds
+                            if (! spc.groups[i.first].empty()) { // add only if group is active
+                                energy += sum_energy(i.second);
+                            }
                         }
-                        return u;
-                    }; // brute force -- refine this!
-            };
+                    } else { // compute only the affected groups
+                        for (auto& group : change.groups) {
+                            auto& intra_group = intra[group.index];
+                            if (group.internal) {
+                                if (group.all) { // all internal positions updated
+                                    energy += sum_energy(intra_group);
+                                } else { // only partial update of affected atoms
+                                    std::vector<int> atoms_ndx;
+                                    // an offset is the index of the first particle in the group
+                                    int offset = std::distance(spc.p.begin(), spc.groups[group.index].begin());
+                                    // add an offset to the group atom indices to get the absolute indices
+                                    std::transform(group.atoms.begin(), group.atoms.end(), std::back_inserter(atoms_ndx),
+                                                   [offset](int i) { return i + offset; }
+                                    );
+                                    energy += sum_energy(intra_group, atoms_ndx);
+                                }
+                            }
+                        } // for-loop over groups
+                    }
+                }
+                return energy;
+            }; // brute force -- refine this!
+        };
 
         /**
          * @brief Nonbonded energy using a pair-potential

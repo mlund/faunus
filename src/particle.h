@@ -60,9 +60,19 @@ namespace Faunus {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };
 
+    struct Polarizable : public ParticlePropertyBase {
+        Point mui={1,0,0}; //!< induced dipole moment unit vector
+        double muilen=0;   //!< induced dipole moment scalar
+        Tensor alpha;     //!< polarizability tensor
+        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m); //!< Rotate polarizability tensor
+        void to_json(json &j) const override;
+        void from_json(const json& j) override;
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    };
+
     struct Quadrupole : public ParticlePropertyBase {
         Tensor Q;      //!< Quadrupole
-        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m); //!< Rotate dipole moment
+        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m); //!< Rotate quadrupole moment
         void to_json(json &j) const override;
         void from_json(const json& j) override;
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW

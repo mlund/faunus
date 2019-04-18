@@ -1075,7 +1075,7 @@ namespace Faunus {
                             }
                 }
 
-                public:
+            public:
                 AtomRDF( const json &j, Tspace &spc ) : PairFunctionBase(j), spc(spc) {
                     typedef typename Tspace::Tparticle Tparticle;
                     name = "atomrdf";
@@ -1115,7 +1115,7 @@ namespace Faunus {
                             }
                 }
 
-                public:
+            public:
                 MoleculeRDF( const json &j, Tspace &spc ) : PairFunctionBase(j), spc(spc) {
                     name = "molrdf";
 

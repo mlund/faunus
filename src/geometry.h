@@ -8,6 +8,12 @@
 namespace Faunus {
 
     /**
+     * @brief Convert cartesian- to cylindrical-coordinates
+     * @note Input (x,y,z), output \f$ (r,\theta, h) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [-\pi,\pi) \f$, and \f$ h\in (-\infty,\infty] \f$.
+     */
+    Point xyz2rth(const Point&, const Point &origin={0,0,0}, const Point &dir={0,0,1}, const Point &dir2={1,0,0});
+
+    /**
      * @brief Convert cartesian- to spherical-coordinates
      * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [-\pi,\pi) \f$, and \f$ \phi\in [0,\pi] \f$.
      */

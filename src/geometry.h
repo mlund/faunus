@@ -133,12 +133,9 @@ namespace Faunus {
           protected:
             Point box, box_half, box_inv;
 
-          private:
-            double ratio_yx, ratio_zx;
-
           public:
             Point getLength() const override;
-            double getVolume(int dim = 3) const override;
+            double getVolume(int dim = 3) const override final; // finalized to help the compiler with inlining
             void setLength(const Point &len); // todo shall be protected
             Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
             Point vdist(const Point &a, const Point &b) const override;

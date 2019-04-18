@@ -84,8 +84,6 @@ namespace Faunus {
             box = len;
             box_half = 0.5 * box;
             box_inv = box.cwiseInverse();
-            ratio_yx = box.y() / box.x();
-            ratio_zx = box.z() / box.x();
         }
 
         inline double Cuboid::getVolume(int) const {
@@ -93,28 +91,27 @@ namespace Faunus {
         }
 
         Point Cuboid::setVolume(double volume, const VolumeMethod method) {
-            //TODO a better implementation shall assign scaling and compute the new box as a product
-            //TODO move out "isochoric" scaling
-            double x, alpha;
+            const double old_volume = getVolume();
+            double alpha;
             Point new_box, box_scaling;
             switch (method) {
                 case ISOTROPIC:
-                    x = std::cbrt(volume / (ratio_yx * ratio_zx)); // keep aspect ratios
-                    new_box = {x, ratio_yx * x, ratio_zx * x};
+                    alpha = std::cbrt(volume / old_volume);
+                    box_scaling = {alpha, alpha, alpha};
                     break;
                 case XY:
-                    x = std::sqrt(volume / (ratio_yx * box.z())); // keep xy aspect ratio
-                    new_box = {x, ratio_yx * x, box.z()};         // z is untouched
+                    alpha = std::sqrt(volume / old_volume);
+                    box_scaling = {alpha, alpha, 1.0};
                     break;
                 case ISOCHORIC:
                     // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
-                    alpha = std::cbrt(volume / (ratio_yx * ratio_zx)) / box.x();
-                    new_box = box.cwiseProduct(Point(alpha, alpha, 1 / (alpha * alpha)));
+                    alpha = std::cbrt(volume / old_volume);
+                    box_scaling = {alpha, alpha, 1 / (alpha * alpha)};
                     break;
                 default:
                     throw std::invalid_argument("unsupported volume scaling method for the cuboid geometry");
             }
-            box_scaling = new_box.cwiseQuotient(box);
+            new_box = box.cwiseProduct(box_scaling);
             setLength(new_box);
             assert(fabs(getVolume() - volume) < 1e-6);
             return box_scaling; // this will scale any point to new volume

@@ -77,6 +77,27 @@ namespace Faunus {
 
         enum Variant {CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON};
         enum VolumeMethod {ISOTROPIC, ISOCHORIC, XY, Z};
+        enum Coordinates {ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL};
+        enum Boundary {FIXED, PERIODIC};
+
+
+        /**
+         * @brief A structure containing a type of boundary condition in each direction.
+         *
+         * A stub. It can be extended to fully json-configurable boundary conditions.
+         */
+        struct BoundaryCondition {
+            typedef Eigen::Matrix<Boundary, 3, 1> BoundaryXYZ;
+            //typedef std::pair<std::string, BoundaryXYZ> BoundaryName;
+            //static const std::map<std::string, BoundaryXYZ> names; //!< boundary names
+
+            Coordinates coordinates;
+            BoundaryXYZ direction;
+
+            BoundaryCondition(Coordinates coordinates = ORTHOGONAL, BoundaryXYZ boundary = {FIXED, FIXED, FIXED}) :
+                coordinates(coordinates), direction(boundary) {};
+        };
+
 
         struct GeometryBase {
             virtual Point setVolume(double, VolumeMethod = ISOTROPIC) = 0; //!< Set volume
@@ -91,7 +112,6 @@ namespace Faunus {
                 return vdist(a,b).squaredNorm();
             } //!< Squared (minimum) distance between two points
 
-            virtual std::unique_ptr<GeometryBase> clone() const = 0; //!< To be used in copy constructors
             virtual ~GeometryBase();
             virtual void to_json(json &j) const = 0;
             virtual void from_json(const json &j) = 0;
@@ -113,7 +133,13 @@ namespace Faunus {
         }; //!< Base class for all geometries
 
 
-        class Cuboid : public GeometryBase {
+        struct GeometryImplementation : public GeometryBase {
+            BoundaryCondition boundary_conditions;
+            virtual std::unique_ptr<GeometryImplementation> clone() const = 0; //!< To be used in copy constructors
+        };
+
+
+        class Cuboid : public GeometryImplementation {
           protected:
             Point box, box_half, box_inv;
 
@@ -132,7 +158,7 @@ namespace Faunus {
             Cuboid(double x, double y, double z);
             Cuboid(double x = 0.0);
 
-            std::unique_ptr<GeometryBase> clone() const override {
+            std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<Cuboid>(*this);
             };
         };
@@ -141,19 +167,17 @@ namespace Faunus {
         class Slit : public Cuboid {
             using Tbase = Cuboid;
           public:
-            Point vdist(const Point &a, const Point &b) const override;
-            void boundary(Point &a) const override;
             Slit(const Point &p);
             Slit(double x, double y, double z);
             Slit(double x = 0.0);
 
-            std::unique_ptr<GeometryBase> clone() const override {
+            std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<Slit>(*this);
             };
         };
 
 
-        class Sphere : public GeometryBase {
+        class Sphere : public GeometryImplementation {
           protected:
             double radius;
 
@@ -169,13 +193,13 @@ namespace Faunus {
             void to_json(json &j) const;
             Sphere(double radius = 0.0);
 
-            std::unique_ptr<GeometryBase> clone() const override {
+            std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<Sphere>(*this);
             };
         };
 
 
-        class Cylinder : public GeometryBase {
+        class Cylinder : public GeometryImplementation {
           protected:
             double radius, height;
 
@@ -191,7 +215,7 @@ namespace Faunus {
             void to_json(json &j) const;
             Cylinder(double radius = 0.0, double height = 0.0);
 
-            std::unique_ptr<GeometryBase> clone() const override {
+            std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<Cylinder>(*this);
             };
         };
@@ -200,7 +224,7 @@ namespace Faunus {
         /**
          * The orientation in the coordinate system ⬢ (x→, y↑).
          */
-        class HexagonalPrism : public GeometryBase {
+        class HexagonalPrism : public GeometryImplementation {
             // Change matrices from rhombic to cartesian coordinates and back.
             // Y (and Z) axis is identical, X-axis is tilted by -30 deg (i.e., clockwise)
             static const Eigen::Matrix3d rhombic2cartesian;
@@ -221,12 +245,12 @@ namespace Faunus {
             void to_json(json &j) const;
             HexagonalPrism(double side = 0.0, double height = 0.0);
 
-            std::unique_ptr<GeometryBase> clone() const override {
+            std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<HexagonalPrism>(*this);
             };
         };
 
-        class TruncatedOctahedron : public GeometryBase {
+        class TruncatedOctahedron : public GeometryImplementation {
             double side;
 
           public:
@@ -241,7 +265,7 @@ namespace Faunus {
             void to_json(json &j) const;
             TruncatedOctahedron(double side = 0.0);
 
-            std::unique_ptr<GeometryBase> clone() const override {
+            std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<TruncatedOctahedron>(*this);
             };
         };
@@ -513,7 +537,7 @@ namespace Faunus {
         class Chameleon : public GeometryBase {
           private:
             Point len, len_half, len_inv;
-            std::unique_ptr<GeometryBase> geometry = nullptr;
+            std::unique_ptr<GeometryImplementation> geometry = nullptr;
             Variant _type; //!< type of contained geometry
             std::string _name; //!< name of contained geometry, e.g., for json
             void makeGeometry(const Variant type = CUBOID);
@@ -546,11 +570,9 @@ namespace Faunus {
                 return variantName(j.at("type").get<std::string>());
             }
 
-            std::unique_ptr<GeometryBase> clone() const override {
-                return std::make_unique<Chameleon>(*this);
+            Chameleon(Variant type = CUBOID) {
+                makeGeometry(type);
             };
-
-            explicit Chameleon() {}
 
             Chameleon(const Chameleon &geo) : GeometryBase(geo),
                                               len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
@@ -571,111 +593,52 @@ namespace Faunus {
                 return *this;
             }
 
-                inline void boundary( Point &a ) const override {
-                    // TODO refactor
-                    if ( type!=HEXAGONAL and type!=OCTAHEDRON and type!=SPHERE) {
-                        if ( std::fabs(a.x()) > len_half.x())
+            inline void boundary(Point &a) const override {
+                const auto &boundary_conditions = geometry->boundary_conditions;
+                if (boundary_conditions.coordinates == ORTHOGONAL) {
+                    if (boundary_conditions.direction.x() == PERIODIC) {
+                        if (std::fabs(a.x()) > len_half.x())
                             a.x() -= len.x() * anint(a.x() * len_inv.x());
-                        if ( std::fabs(a.y()) > len_half.y())
-                            a.y() -= len.y() * anint(a.y() * len_inv.y());
-                        if ( type != SLIT ) {
-                            if ( std::fabs(a.z()) > len_half.z())
-                                a.z() -= len.z() * anint(a.z() * len_inv.z());
-                        }
-                    } else if ( type == HEXAGONAL ) {
-                        const double sqrtThreeByTwo = 0.5*sqrt(3.0);
-                        const Point unitvX = {1,0,0};
-                        const Point unitvY = {0.5,sqrtThreeByTwo,0};
-                        const Point unitvZ = {-0.5,sqrtThreeByTwo,0.0};
-
-                        double tmp = a.dot(unitvX);
-                        if (std::fabs(tmp) > len_half.x())
-                            a -= len.x() * anint(tmp * len_inv.x())*unitvX;
-
-                        if (a.dot(unitvY) > len_half.x()) {
-                            a = a - len.x()*unitvY;
-                            if (a.dot(unitvX) < -len_half.x()) // Check that point did not get past x-limit
-                                a = a + len.x()*unitvX;
-                        }
-                        if (a.dot(unitvY) < -len_half.x()) {
-                            a = a + len.x()*unitvY;
-                            if (a.dot(unitvX) > len_half.x()) // Check that point did not get past x-limit
-                                a = a - len.x()*unitvX;
-                        }
-
-                        tmp = a.dot(unitvZ);
-                        if (std::fabs(tmp) > len_half.x())
-                            a -= len.x() * anint(tmp * len_inv.x())*unitvZ;
-                        if (std::fabs(a.z()) > len_half.z())
-                            a.z() -= len.z() * anint(a.z() * len_inv.z());
-
-                    } else if ( type == OCTAHEDRON ) {
-                        const double sqrtThreeI = 1.0/std::sqrt(3.0);
-                        const Point unitvXYZ  = Point(1, 1, 1)*sqrtThreeI;
-                        const Point unitvXiYZ = Point(1, 1,-1)*sqrtThreeI;
-                        const Point unitvXYiZ = Point(1,-1,-1)*sqrtThreeI;
-                        const Point unitvXYZi = Point(1,-1, 1)*sqrtThreeI;
-
-                        bool outside = false;
-                        do {
-                            outside = false;
-                            double tmp = a.dot(unitvXYZ);
-                            if ( std::fabs(tmp) > len_half.x()) {
-                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXYZ;
-                                outside = true;
-                            }
-                            tmp = a.dot(unitvXiYZ);
-                            if ( std::fabs(tmp) > len_half.x()) {
-                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXiYZ;
-                                outside = true;
-                            }
-                            tmp = a.dot(unitvXYiZ);
-                            if ( std::fabs(tmp) > len_half.x()) {
-                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXYiZ;
-                                outside = true;
-                            }
-                            tmp = a.dot(unitvXYZi);
-                            if ( std::fabs(tmp) > len_half.x()) {
-                                a -= len.x() * anint(tmp * len_inv.x()) * unitvXYZi;
-                                outside = true;
-                            }
-                        } while (outside);
-
-                        if ( std::fabs(a.x()) > len_half.y())
-                            a.x() -= len.y() * anint(a.x() * len_inv.y());
-
-                        if ( std::fabs(a.y()) > len_half.y())
-                            a.y() -= len.y() * anint(a.y() * len_inv.y());
-
-                        if ( std::fabs(a.z()) > len_half.y())
-                            a.z() -= len.y() * anint(a.z() * len_inv.y());
                     }
-                } //!< Apply boundary conditions
+                    if (boundary_conditions.direction.y() == PERIODIC) {
+                        if (std::fabs(a.y()) > len_half.y())
+                            a.y() -= len.y() * anint(a.y() * len_inv.y());
+                    }
+                    if (boundary_conditions.direction.z() == PERIODIC) {
+                        if (std::fabs(a.z()) > len_half.y())
+                            a.z() -= len.z() * anint(a.z() * len_inv.z());
+                    }
+                } else {
+                    geometry->boundary(a);
+                }
+            } //!< Apply boundary conditions
 
                 inline Point vdist(const Point &a, const Point &b) const override {
-                    Point r(a - b);
-                    if (type==CUBOID or type==SLIT) {
-                        if (r.x() > len_half.x())
-                            r.x() -= len.x();
-                        else if (r.x() < -len_half.x())
-                            r.x() += len.x();
-
-                        if (r.y() > len_half.y())
-                            r.y() -= len.y();
-                        else if (r.y() < -len_half.y())
-                            r.y() += len.y();
-
-                        if (type == CUBOID) {
-                            if (r.z() > len_half.z())
-                                r.z() -= len.z();
-                            else if (r.z() < -len_half.z())
-                                r.z() += len.z();
+                    Point distance(a - b);
+                    const auto &boundary_conditions = geometry->boundary_conditions;
+                    if (boundary_conditions.coordinates == ORTHOGONAL) {
+                        if (boundary_conditions.direction.x() == PERIODIC) {
+                            if (distance.x() > len_half.x())
+                                distance.x() -= len.x();
+                            else if (distance.x() < -len_half.x())
+                                distance.x() += len.x();
                         }
-                    } else if (type==SPHERE) {
-                        // do nothing
-                    } else
-                        boundary(r);
-                    return r;
+                        if (boundary_conditions.direction.y() == PERIODIC) {
+                            if (distance.y() > len_half.y())
+                                distance.y() -= len.y();
+                            else if (distance.y() < -len_half.y())
+                                distance.y() += len.y();
+                        }
+                        if (boundary_conditions.direction.z() == PERIODIC) {
+                            if (distance.z() > len_half.z())
+                                distance.z() -= len.z();
+                            else if (distance.z() < -len_half.z())
+                                distance.z() += len.z();
+                        }
+                    } else {
+                        boundary(distance);
+                    }
+                    return distance;
                 }
         };
 

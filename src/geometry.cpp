@@ -56,6 +56,7 @@ namespace Faunus {
         // =============== Cuboid ===============
 
         Cuboid::Cuboid(const Point &p) {
+            boundary_conditions = BoundaryCondition(ORTHOGONAL, {PERIODIC, PERIODIC, PERIODIC});
             setLength(p);
         }
 
@@ -107,30 +108,40 @@ namespace Faunus {
         }
 
         inline void Cuboid::boundary(Point &a) const {
-            // xyz-pbc
-            if (std::fabs(a.x()) > box_half.x())
-                a.x() -= box.x() * anint(a.x() * box_inv.x());
-            if (std::fabs(a.y()) > box_half.y())
-                a.y() -= box.y() * anint(a.y() * box_inv.y());
-            if (std::fabs(a.z()) > box_half.z())
-                a.z() -= box.z() * anint(a.z() * box_inv.z());
+            if (boundary_conditions.direction.x() == PERIODIC) {
+                if (std::fabs(a.x()) > box_half.x())
+                    a.x() -= box.x() * anint(a.x() * box_inv.x());
+            }
+            if (boundary_conditions.direction.y() == PERIODIC) {
+                if (std::fabs(a.y()) > box_half.y())
+                    a.y() -= box.y() * anint(a.y() * box_inv.y());
+            }
+            if (boundary_conditions.direction.z() == PERIODIC) {
+                if (std::fabs(a.z()) > box_half.z())
+                    a.z() -= box.z() * anint(a.z() * box_inv.z());
+            }
         }
 
         inline Point Cuboid::vdist(const Point &a, const Point &b) const {
-            // xyz-pbc
             Point distance(a - b);
-            if (distance.x() > box_half.x())
-                distance.x() -= box.x();
-            else if (distance.x() < -box_half.x())
-                distance.x() += box.x();
-            if (distance.y() > box_half.y())
-                distance.y() -= box.y();
-            else if (distance.y() < -box_half.y())
-                distance.y() += box.y();
-            if (distance.z() > box_half.z())
-                distance.z() -= box.z();
-            else if (distance.z() < -box_half.z())
-                distance.z() += box.z();
+            if (boundary_conditions.direction.x() == PERIODIC) {
+                if (distance.x() > box_half.x())
+                    distance.x() -= box.x();
+                else if (distance.x() < -box_half.x())
+                    distance.x() += box.x();
+            }
+            if (boundary_conditions.direction.y() == PERIODIC) {
+                if (distance.y() > box_half.y())
+                    distance.y() -= box.y();
+                else if (distance.y() < -box_half.y())
+                    distance.y() += box.y();
+            }
+            if (boundary_conditions.direction.z() == PERIODIC) {
+                if (distance.z() > box_half.z())
+                    distance.z() -= box.z();
+                else if (distance.z() < -box_half.z())
+                    distance.z() += box.z();
+            }
             return distance;
         }
 
@@ -174,6 +185,7 @@ namespace Faunus {
         // =============== Slit ===============
 
         Slit::Slit(const Point &p) : Tbase(p) {
+            boundary_conditions = BoundaryCondition(ORTHOGONAL, {PERIODIC, PERIODIC, FIXED});
         }
 
         Slit::Slit(double x, double y, double z) : Slit(Point(x, y, z)) {
@@ -182,32 +194,11 @@ namespace Faunus {
         Slit::Slit(double x) : Slit(x, x, x) {
         }
 
-        inline Point Slit::vdist(const Point &a, const Point &b) const {
-            // no z-pbc; shall we check points coordinates?
-            Point distance(a - b);
-            if (distance.x() > box_half.x())
-                distance.x() -= box.x();
-            else if (distance.x() < -box_half.x())
-                distance.x() += box.x();
-            if (distance.y() > box_half.y())
-                distance.y() -= box.y();
-            else if (distance.y() < -box_half.y())
-                distance.y() += box.y();
-            return distance;
-        }
-
-        inline void Slit::boundary(Point &a) const {
-            // xy-pbc
-            if (std::fabs(a.x()) > box_half.x())
-                a.x() -= box.x() * anint(a.x() * box_inv.x());
-            if (std::fabs(a.y()) > box_half.y())
-                a.y() -= box.y() * anint(a.y() * box_inv.y());
-        }
-
 
         // =============== Sphere ===============
 
         Sphere::Sphere(double radius) : radius(radius) {
+            boundary_conditions = BoundaryCondition(ORTHOGONAL, {FIXED, FIXED, FIXED});
         }
 
         Point Sphere::getLength() const {
@@ -289,6 +280,8 @@ namespace Faunus {
         const  Eigen::Matrix3d HexagonalPrism::cartesian2rhombic = rhombic2cartesian.inverse();
 
         HexagonalPrism::HexagonalPrism(double side, double height) {
+            // the current implementation is hardcoded as bellow and ignores other periodic_directions settings
+            boundary_conditions = BoundaryCondition(ORTHOHEXAGONAL, {PERIODIC, PERIODIC, FIXED});
             set_box(side, height);
         }
 
@@ -405,6 +398,7 @@ namespace Faunus {
         // =============== Cylinder ===============
 
         Cylinder::Cylinder(double radius, double height) : radius(radius), height(height) {
+            boundary_conditions = BoundaryCondition(ORTHOGONAL, {FIXED, FIXED, PERIODIC});
         }
 
         inline Point Cylinder::getLength() const {
@@ -490,6 +484,8 @@ namespace Faunus {
         // =============== Truncated Octahedron ===============
 
         TruncatedOctahedron::TruncatedOctahedron(double side) : side(side) {
+            // the current implementation is hardcoded as bellow and ignores other periodic_directions settings
+            boundary_conditions = BoundaryCondition(TRUNC_OCTAHEDRAL, {PERIODIC, PERIODIC, PERIODIC});
         }
 
         inline Point TruncatedOctahedron::getLength() const {

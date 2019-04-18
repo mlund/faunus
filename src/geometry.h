@@ -93,6 +93,7 @@ namespace Faunus {
 
             std::string name;
 
+            virtual std::unique_ptr<GeometryBase> clone() const = 0; //!< To be used in copy constructors
             virtual ~GeometryBase();
             virtual void to_json(json &j) const = 0;
             virtual void from_json(const json &j) = 0;
@@ -147,6 +148,10 @@ namespace Faunus {
             Cuboid(const Point &p);
             Cuboid(double x, double y, double z);
             Cuboid(double x = 0.0);
+
+            std::unique_ptr<GeometryBase> clone() const override {
+                return std::make_unique<Cuboid>(*this);
+            };
         };
 
 
@@ -158,6 +163,10 @@ namespace Faunus {
             Slit(const Point &p);
             Slit(double x, double y, double z);
             Slit(double x = 0.0);
+
+            std::unique_ptr<GeometryBase> clone() const override {
+                return std::make_unique<Slit>(*this);
+            };
         };
 
 
@@ -176,6 +185,10 @@ namespace Faunus {
             void from_json(const json &j);
             void to_json(json &j) const;
             Sphere(double radius = 0.0);
+
+            std::unique_ptr<GeometryBase> clone() const override {
+                return std::make_unique<Sphere>(*this);
+            };
         };
 
 
@@ -194,6 +207,10 @@ namespace Faunus {
             void from_json(const json &j);
             void to_json(json &j) const;
             Cylinder(double radius = 0.0, double height = 0.0);
+
+            std::unique_ptr<GeometryBase> clone() const override {
+                return std::make_unique<Cylinder>(*this);
+            };
         };
 
 
@@ -220,6 +237,10 @@ namespace Faunus {
             void from_json(const json &j);
             void to_json(json &j) const;
             HexagonalPrism(double side = 0.0, double height = 0.0);
+
+            std::unique_ptr<GeometryBase> clone() const override {
+                return std::make_unique<HexagonalPrism>(*this);
+            };
         };
 
         class TruncatedOctahedron : public GeometryBase {
@@ -236,6 +257,10 @@ namespace Faunus {
             void from_json(const json &j);
             void to_json(json &j) const;
             TruncatedOctahedron(double side = 0.0);
+
+            std::unique_ptr<GeometryBase> clone() const override {
+                return std::make_unique<TruncatedOctahedron>(*this);
+            };
         };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -505,33 +530,59 @@ namespace Faunus {
         class Chameleon : public GeometryBase {
             public:
                 Variant type;
-            private:
-                /**
-                 * `pbc_disable` is used to disable PBC in `sphere`, `cylinder`, `hexagonal`, `octahedron`, `slit` etc.
-                 * by scaling the (internal) box length by a large number.
-                 */
-                static constexpr double pbc_disable=100;
-                double radius=0, c1, c2;
+              private:
                 Point len, len_half, len_inv;
 
-            public:
-                void setLength(const Point &l);
+                std::unique_ptr<GeometryBase> geometry = nullptr;
+                void makeGeometry(const Variant type = CUBOID);
+                void makeGeometry(const json &j);
+                void _setLength(const Point &l);
+
+              public:
                 double getVolume(int dim=3) const override;
                 Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
                 Point getLength() const override; //!< Enscribed box
+                void setLength(const Point &l);
                 void randompos( Point &m, Random &rand ) const override;
                 bool collision(const Point &a) const override;
                 void from_json(const json &j);
                 void to_json(json &j) const;
 
+            std::unique_ptr<GeometryBase> clone() const override {
+                return std::make_unique<Chameleon>(*this);
+            };
+
+            explicit Chameleon() {}
+
+            Chameleon(const Chameleon &geo) : GeometryBase(geo),
+                                              type(geo.type),
+                                              len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv) {
+                geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
+            }
+
+            Chameleon &operator=(const Chameleon &geo) {
+                if (&geo != this) {
+                    GeometryBase::operator=(geo);
+                    type = geo.type;
+                    len = geo.len;
+                    len_half = geo.len_half;
+                    len_inv = geo.len_inv;
+                    geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
+                }
+                return *this;
+            }
+
                 inline void boundary( Point &a ) const override {
-                    if ( type!=HEXAGONAL and type!=OCTAHEDRON ) {
+                    // TODO refactor
+                    if ( type!=HEXAGONAL and type!=OCTAHEDRON and type!=SPHERE) {
                         if ( std::fabs(a.x()) > len_half.x())
                             a.x() -= len.x() * anint(a.x() * len_inv.x());
                         if ( std::fabs(a.y()) > len_half.y())
                             a.y() -= len.y() * anint(a.y() * len_inv.y());
-                        if ( std::fabs(a.z()) > len_half.z())
-                            a.z() -= len.z() * anint(a.z() * len_inv.z());
+                        if ( type != SLIT ) {
+                            if ( std::fabs(a.z()) > len_half.z())
+                                a.z() -= len.z() * anint(a.z() * len_inv.z());
+                        }
                     } else if ( type == HEXAGONAL ) {
                         const double sqrtThreeByTwo = 0.5*sqrt(3.0);
                         const Point unitvX = {1,0,0};
@@ -604,21 +655,25 @@ namespace Faunus {
 
                 inline Point vdist(const Point &a, const Point &b) const override {
                     Point r(a - b);
-                    if (type!=HEXAGONAL and type!=OCTAHEDRON) {
-                        if ( r.x() > len_half.x())
+                    if (type==CUBOID or type==SLIT) {
+                        if (r.x() > len_half.x())
                             r.x() -= len.x();
-                        else if ( r.x() < -len_half.x())
+                        else if (r.x() < -len_half.x())
                             r.x() += len.x();
 
-                        if ( r.y() > len_half.y())
+                        if (r.y() > len_half.y())
                             r.y() -= len.y();
-                        else if ( r.y() < -len_half.y())
+                        else if (r.y() < -len_half.y())
                             r.y() += len.y();
 
-                        if ( r.z() > len_half.z())
-                            r.z() -= len.z();
-                        else if ( r.z() < -len_half.z())
-                            r.z() += len.z();
+                        if (type == CUBOID) {
+                            if (r.z() > len_half.z())
+                                r.z() -= len.z();
+                            else if (r.z() < -len_half.z())
+                                r.z() += len.z();
+                        }
+                    } else if (type==SPHERE) {
+                        // do nothing
                     } else
                         boundary(r);
                     return r;

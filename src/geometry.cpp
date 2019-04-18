@@ -189,10 +189,10 @@ namespace Faunus {
         Slit::Slit(const Point &p) : Tbase(p) {
         }
 
-        Slit::Slit(double x, double y, double z) : Tbase(x, y, z) {
+        Slit::Slit(double x, double y, double z) : Slit(Point(x, y, z)) {
         }
 
-        Slit::Slit(double x) : Tbase(x) {
+        Slit::Slit(double x) : Slit(x, x, x) {
         }
 
         inline Point Slit::vdist(const Point &a, const Point &b) const {
@@ -639,301 +639,91 @@ namespace Faunus {
             g.to_json(j);
         }
 
-        void Chameleon::setLength(const Point &l) {
+        inline Point Chameleon::getLength() const {
+            assert(geometry);
+            return geometry->getLength();
+        }
+
+        inline void Chameleon::_setLength(const Point &l) {
             len = l;
-            len_half = l*0.5;
+            len_half = l * 0.5;
             len_inv = l.cwiseInverse();
-            c1 = l.y()/l.x();
-            c2 = l.z()/l.x();
         }
 
-        double Chameleon::getVolume(int) const {
-            switch (type) {
-                case SPHERE:     return 4*pc::pi/3*radius*radius*radius;
-                case CUBOID:     return len.x()*len.y()*len.z();
-                case SLIT:       return len.x()*len.y()*len.z() / pbc_disable;
-                case CYLINDER:   return pc::pi*radius*radius*len.z();
-                case HEXAGONAL:  return 2.0*std::sqrt(3.0)*radius*radius*len.z();
-                case OCTAHEDRON: return 8.0*std::sqrt(2.0)*radius*radius*radius; // for the truncated octahedron then 'radius' really is the side-length 'a'
+        inline void Chameleon::setLength(const Point &l) {
+            assert(geometry);
+            _setLength(l);
+            if(type == CUBOID) {
+                Cuboid &cuboid = dynamic_cast<Cuboid &>(*geometry);
+                cuboid.setLength(l);
+            } else {
+                throw std::runtime_error("setLength allowed only for the Cuboid geometry");
             }
-            assert(false);
-            return 0;
         }
 
-        Point Chameleon::setVolume(double V, VolumeMethod method) {
-            if (type==CUBOID) {
-                double x, alpha;
-                Point s;
-                switch (method) {
-                    case ISOTROPIC:
-                        x = std::cbrt( V / (c1*c2) ); // keep aspect ratio
-                        s = { x, c1*x, c2*x };
-                        setLength(s);
-                        break;
-                    case XY:
-                        x = std::sqrt( V / (c1*len.z()) ); // keep xy aspect ratio
-                        s = { x, c1*x, len.z() };
-                        setLength(s);  // z is untouched
-                        break;
-                    case ISOCHORIC:
-                        // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
-                        alpha = std::cbrt( V / (c1*c2) ) / len.x();
-                        s = { alpha, alpha, 1/(alpha*alpha) };
-                        setLength( len.cwiseProduct(s) );
-                        return s;
-                    default:
-                        throw std::runtime_error("unknown volume scaling method");
-                }
-                assert( fabs(getVolume()-V)<1e-6 );
-                return s.cwiseQuotient(len); // this will scale any point to new volume
-            }
-
-            if (type==HEXAGONAL) {
-                double alpha, oldradius, ratio;
-                Point s;
-                switch (method) {
-                    case ISOTROPIC:
-                        oldradius = radius;
-                        radius = std::cbrt( V / 4.0 / sqrt(3.0) / c2 ); // keep aspect ratio, note that c2 = h / ( 2*radius )
-                        setLength( { 2.0*radius, 2.0*radius, c2*2.0*radius } );
-                        ratio = radius/oldradius;
-                        return {ratio,ratio,ratio}; // last term comes from keeping the aspect ratio
-                    case XY:
-                        oldradius = radius;
-                        radius = std::sqrt(V/len.z()/2.0/std::sqrt(3.0)); // inner radius
-                        setLength( { 2.0*radius, 2.0*radius, len.z() } );
-                        return {radius/oldradius, radius/oldradius, 1};
-                    case ISOCHORIC:
-                        // z is scaled by 1/alpha/alpha, radius is scaled by alpha
-                        alpha = std::cbrt( V / 4.0 / sqrt(3.0) / c2 ) / radius;
-                        s = { alpha, alpha, 1/(alpha*alpha) };
-                        radius = alpha*radius;
-                        setLength( len.cwiseProduct(s) );
-                        return s;
-                    default:
-                        throw std::runtime_error("unknown volume scaling method");
-                }
-                assert( fabs(getVolume()-V)<1e-6 );
-            }
-
-            if (type==OCTAHEDRON and method==ISOTROPIC) {
-                const double oldradius = radius; // for the truncated octahedron then 'radius' really is the side-length 'a'
-                radius = std::cbrt( V / 8.0 / std::sqrt(2.0) );
-                setLength( 2.0*radius*Point(std::sqrt(1.5),std::sqrt(2.0),std::sqrt(10.0)/2.0) ); // 2*( origin to regular hexagon, origin to square, and circumradius)
-                assert( fabs(getVolume()-V)<1e-6 );
-                const double ratio = radius/oldradius;
-                return {ratio,ratio,ratio};
-            }
-
-            if (type==CYLINDER) {
-                    double oldradius, alpha;
-                    Point s;
-                switch (method) {
-                    case ISOTROPIC:
-                        oldradius = radius;
-                        radius = std::sqrt( V / (pc::pi * len.z()) );
-                        setLength( { pbc_disable*2*radius, pbc_disable*2*radius, len.z() } );
-                        assert( fabs(getVolume()-V)<1e-6 );
-                        return {radius/oldradius, radius/oldradius, 1};
-                    case ISOCHORIC:
-                        // z is scaled by 1/alpha/alpha, radius is scaled by alpha
-                        alpha = std::sqrt( V / (pc::pi * len.z()) ) / radius;
-                        s = { alpha, alpha, 1/(alpha*alpha) };
-                        radius = alpha*radius;
-                        setLength( len.cwiseProduct(s) );
-                        return s;
-                    default:
-                        throw std::runtime_error("unsupported volume move for geometry");
-                }
-            }
-
-            if (type==SPHERE and method==ISOTROPIC) {
-                const double oldradius = radius;
-                radius = std::cbrt(3*V/(4*pc::pi));
-                setLength( pbc_disable*2*Point(radius,radius,radius) ); // disable min. image in xyz
-                assert( std::fabs(getVolume()-V)<1e-6 && "error setting sphere volume");
-                return Point().setConstant(radius/oldradius);
-            }
-
-            throw std::runtime_error("unsupported volume move for geometry");
-
-            return {1,1,1};
+        inline double Chameleon::getVolume(int dim) const {
+            assert(geometry);
+            return geometry->getVolume(dim);
         }
 
-        Point Chameleon::getLength() const {
-            switch (type) {
-                case CUBOID:     return len;
-                case SLIT:       return {len.x(), len.y(), len.z() / pbc_disable};
-                case SPHERE:     return {2*radius,2*radius,2*radius};
-                case CYLINDER:   return {2*radius,2*radius,len.z()};
-                case HEXAGONAL:  return {radius,radius,len.z()};
-                case OCTAHEDRON: return {2.0*std::sqrt(1.5)*radius,2.0*std::sqrt(2.0)*radius,2.0*std::sqrt(10.0)/2.0*radius}; // 2*( origin to regular hexagon, origin to square, and circumradius )
-            }
-            assert(false);
-            return Point();
-        } //!< Enscribe geometry in cuboid
+        inline Point Chameleon::setVolume(double V, VolumeMethod method) {
+            auto scale = geometry->setVolume(V, method);
+            _setLength(geometry->getLength());
+            return scale;
+        }
 
-        void Chameleon::randompos(Point &m, Random &rand) const {
-            double r2 = radius*radius, d=2*radius;
+        inline void Chameleon::randompos(Point &m, Random &rand) const {
+            assert(geometry);
+            geometry->randompos(m, rand);
+        }
+
+        inline bool Chameleon::collision(const Point &a) const {
+            assert(geometry);
+            return geometry->collision(a);
+        }
+
+        void Chameleon::makeGeometry(const Variant type) {
             switch (type) {
-                case SPHERE:
-                    do {
-                        m.x() = (rand() - 0.5) * d;
-                        m.y() = (rand() - 0.5) * d;
-                        m.z() = (rand() - 0.5) * d;
-                    } while ( m.squaredNorm() > r2 );
-                    break;
-                case CYLINDER:
-                    m.z() = (rand()-0.5) * len.z();
-                    do {
-                        m.x() = (rand()-0.5) * d;
-                        m.y() = (rand()-0.5) * d;
-                    } while ( m.x()*m.x() + m.y()*m.y() > r2 );
+                case CUBOID:
+                    geometry = std::make_unique<Cuboid>();
                     break;
                 case SLIT:
-                    m.x() = (rand()-0.5) * len.x();
-                    m.y() = (rand()-0.5) * len.y();
-                    m.z() = (rand()-0.5) * len.z() / pbc_disable;
+                    geometry = std::make_unique<Slit>();
                     break;
-                case CUBOID:
-                    m.x() = (rand()-0.5) * len.x();
-                    m.y() = (rand()-0.5) * len.y();
-                    m.z() = (rand()-0.5) * len.z();
+                case SPHERE:
+                    geometry = std::make_unique<Sphere>();
                     break;
-                case OCTAHEDRON:
-                    d = len.z(); // use circumradius
-                    r2 = len_half.z()*len_half.z();
-                    do {
-                        do {
-                            m.x() = (rand() - 0.5)*d;
-                            m.y() = (rand() - 0.5)*d;
-                            m.z() = (rand() - 0.5)*d;
-                        } while ( m.squaredNorm() > r2 );
-                    } while(Chameleon::collision(m));
+                case CYLINDER:
+                    geometry = std::make_unique<Cylinder>();
                     break;
                 case HEXAGONAL:
-                    double Ra = rand();
-                    double Rb = rand();
-                    const double sqrtThree = sqrt(3.0);
-                    const Point unitvA = Point(sqrtThree/2.0,0.5,0.0);
-                    const Point unitvB = Point(sqrtThree/2.0,-0.5,0.0);
-                    double R = d/sqrtThree;
-                    Point p = R*unitvA*Ra+R*unitvB*Rb;
-                    if(2.0*p.x() > d) p.x() = p.x() - d;
-                    double theta = pc::pi/3.0*std::floor(6.0*rand());
-                    double cosT = std::cos(theta);
-                    double sinT = std::sin(theta);
-                    m.x() = cosT*p.x() - sinT*p.y();
-                    m.y() = cosT*p.y() + sinT*p.x();
-                    m.z() = (rand() - 0.5)*len.z();
+                    geometry = std::make_unique<HexagonalPrism>();
                     break;
+                case OCTAHEDRON:
+                    geometry = std::make_unique<TruncatedOctahedron>();
+                    break;
+                default:
+                    throw std::invalid_argument("unknown geometry");
             }
         }
 
-        bool Chameleon::collision(const Point &a) const {
-            double r2 = radius*radius;
-            double sqrtThreeByTwo = std::sqrt(3.0)/2.0;
-            double sqrtThreeI = 1.0/std::sqrt(3.0);
-            switch (type) {
-                case SPHERE:
-                    return (a.squaredNorm()>r2) ? true : false;
-                    break;
-                case CYLINDER:
-                    if ( std::fabs(a.z()) > len_half.z()) return true;
-                    if ( a.x()*a.x() + a.y()*a.y() > r2 ) return true;
-                    break;
-                case SLIT:
-                    if ( std::fabs(a.x()) > len_half.x()) return true;
-                    if ( std::fabs(a.y()) > len_half.y()) return true;
-                    if ( std::fabs(a.z()) > len_half.z() / pbc_disable ) return true;
-                    break;
-                case CUBOID:
-                    if ( std::fabs(a.x()) > len_half.x()) return true;
-                    if ( std::fabs(a.y()) > len_half.y()) return true;
-                    if ( std::fabs(a.z()) > len_half.z()) return true;
-                    break;
-                case HEXAGONAL:
-                    if(std::fabs(a.z()) > len_half.z()) return true;
-                    if(std::fabs(a.dot(Point(1.0,0.0,0.0))) > len_half.x()) return true;
-                    if(std::fabs(a.dot(Point(0.5,sqrtThreeByTwo,0.0))) > len_half.x()) return true;
-                    if(std::fabs(a.dot(Point(-0.5,sqrtThreeByTwo,0.0))) > len_half.x()) return true;
-                    break;
-                case OCTAHEDRON:
-                    if(std::fabs(a.dot(Point(1.0,0.0,0.0))) > len_half.y()) return true;
-                    if(std::fabs(a.dot(Point(0.0,1.0,0.0))) > len_half.y()) return true;
-                    if(std::fabs(a.dot(Point(0.0,0.0,1.0))) > len_half.y()) return true;
-                    if(std::fabs(a.dot(Point(1.0,1.0,1.0)*sqrtThreeI)) > len_half.x()) return true;
-                    if(std::fabs(a.dot(Point(1.0,1.0,-1.0)*sqrtThreeI)) > len_half.x()) return true;
-                    if(std::fabs(a.dot(Point(1.0,-1.0,-1.0)*sqrtThreeI)) > len_half.x()) return true;
-                    if(std::fabs(a.dot(Point(1.0,-1.0,1.0)*sqrtThreeI)) > len_half.x()) return true;
-                    break;
-            }
-            return false;
+        void Chameleon::makeGeometry(const json &j) {
+            Variant type;
+            std::tie(type, std::ignore) = variantName(j);
+            makeGeometry(type);
+            geometry->from_json(j);
         }
+
 
         void Chameleon::from_json(const json &j) {
-            auto it = names.find( j.at("type").get<std::string>() );
-            if (it==names.end())
-                throw std::runtime_error("unknown geometry");
-
             std::tie(type, name) = variantName(j);
-            len.setZero();
-
-            if ( type == CUBOID or type == SLIT ) {
-                auto m = j.at("length");
-                if (m.is_number()) {
-                    double l = m.get<double>();
-                    setLength( {l,l,l} );
-                } else if (m.is_array())
-                    if (m.size()==3)
-                        setLength( m.get<Point>() );
-            }
-
-            if ( type == SPHERE or type == CYLINDER or type == HEXAGONAL or type == OCTAHEDRON )
-                radius = j.at("radius").get<double>();
-
-            if (type == SLIT)
-                setLength( {len.x(), len.y(), pbc_disable*len.z() } );  // disable min. image in z
-
-            if (type == SPHERE)
-                setLength( pbc_disable*2*Point(radius,radius,radius) ); // disable min. image in xyz
-
-            if (type == OCTAHEDRON)
-                setLength( {2.0*std::sqrt(1.5)*radius,2.0*std::sqrt(2.0)*radius,2.0*std::sqrt(10.0)/2.0*radius} ); // 2*( origin to regular hexagon, origin to square, and circumradius )
-
-            if (type == CYLINDER) {
-                len.z() = j.at("length").get<double>();
-                setLength( {2.0*radius*pbc_disable, 2.0*radius*pbc_disable, len.z() } ); // disable min. image in xy
-            }
-            if (type == HEXAGONAL) {
-                len.z() = j.at("length").get<double>();
-                setLength( {2.0*radius, 2.0*radius, len.z() } );
-            }
+            makeGeometry(j);
+            _setLength(geometry->getLength());
         }
 
         void Chameleon::to_json(json &j) const {
-            assert(!name.empty());
-            switch (type) {
-                case SPHERE:
-                    j = {{"radius",radius}};
-                    break;
-                case CYLINDER:
-                    j = {{"radius",radius}, {"length",len.z()}};
-                    break;
-                case SLIT:
-                    j = {{"length",Point(len.x(), len.y(), len.z() / pbc_disable)}};
-                    break;
-                case CUBOID:
-                    j = {{"length",len}};
-                    break;
-                case HEXAGONAL:
-                    j = {{"radius",radius}, {"length",len.z()}};
-                    break;
-                case OCTAHEDRON:
-                    j = {{"radius",radius}};
-                    break;
-            }
-            j["type"] = name;
+            assert(geometry);
+            geometry->to_json(j);
         }
 
     } // end of Geometry namespace

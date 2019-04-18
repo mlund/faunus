@@ -1262,7 +1262,7 @@ start:
              * @brief Rotates the chain segment around the axes by the given angle.
              * @param angle
              */
-            void rotate_segment(double angle) {
+            void rotate_segment(double angle) override {
                 if( ! segment_ndx.empty() ) {
                     auto &chain = *molecule_iter;
                     auto old_cm = chain.cm;
@@ -1291,7 +1291,7 @@ start:
              * Stores changes of atoms after the move attempt.
              * @param change
              */
-            void store_change(Change &change) {
+            void store_change(Change &change) override {
                 if( ! segment_ndx.empty() ) {
                     auto &chain = *molecule_iter;
                     auto offset = std::distance(spc.p.begin(), chain.begin());

@@ -469,6 +469,52 @@ namespace Faunus {
                     }
             }; //!< Base class for external potentials, acting on particles
 
+            /**
+             * @brief Returns a functor for a Gouy-Chapman electric potential
+             * @details Gouy-Chapman equations:
+             * @f[ \rho = \sqrt{\frac{2 c_0}{\pi l_B} } \sinh ( \beta \phi_0 e / 2 ) @f]
+             * @f[ \beta e \phi_0 = 2\mbox{asinh} \left ( \rho \sqrt{\frac{\pi \lambda_B} {2 c_0}} \right ) @f]
+             * @f[ \Gamma_0=\tanh{ \beta \phi_0 z e / 4 } @f]
+             * where `lB` is the Bjerrum length, `kappa` the inverse Debye length, and `c_0` the
+             * bulk salt concentration.
+             *
+             * @warning: under construction
+             */
+            template <typename Tparticle>
+            std::function<double(const Tparticle &)> createGouyChapmanPotential(const json &j) {
+                double rho;
+                double c0 = j.at("ionicstrength").get<double>() * 1.0_molar; // assuming 1:1 salt, so c0=I
+                double lB = pc::lB(j.at("epsr").get<double>());
+                double k = 1 / (3.04 / sqrt(c0));   // hack!
+                double phi0 = j.value("phi0", 0.0); // Unitless potential = beta*e*phi0
+                if (std::fabs(phi0) > 1e-6)
+                    rho = sqrt(2 * c0 / (pc::pi * lB)) * sinh(.5 * phi0); // Evans&Wennerstrom,Colloidal Domain p
+                                                                          // 138-140
+                else {
+                    rho = 1.0 / j.value("qarea", 0.0);
+                    if (rho > 1e9)
+                        rho = j.at("rho");
+                    phi0 = 2. * std::asinh(rho * std::sqrt(0.5 * lB * pc::pi / c0)); //[Evans..]
+                }
+                double gamma0 = std::tanh(phi0 / 4); // assuming z=1  [Evans..]
+                double surface_z_pos = j.value("zpos", 0.0);
+                bool linearize = j.value("linearize", false);
+
+                // return gamma function for calculation of GC potential on single particle.
+                return [=](const Tparticle &p) {
+                    if (p.charge != 0) {
+                        double x = std::exp(-k * std::fabs(surface_z_pos - p.pos.z()));
+                        if (linearize)
+                            return p.charge * phi0 * x;
+                        else {
+                            x = gamma0 * x;
+                            return 2 * p.charge * std::log((1 + x) / (1 - x));
+                        }
+                    }
+                    return 0.0;
+                };
+            }
+
         /**
          * @brief Custom external potential on molecules
          */
@@ -494,15 +540,25 @@ namespace Faunus {
                         _j["kT"] = pc::kT();
                         _j["Nav"] = pc::Nav;
                         _j["T"] = pc::temperature;
-                        expr.set(jin, {
-                                {"q",&d.q}, {"x",&d.x}, {"y",&d.y}, {"z",&d.z} } );
-                        base::func = [&](const typename Tspace::Tparticle &a) {
-                            d.x = a.pos.x();
-                            d.y = a.pos.y();
-                            d.z = a.pos.z();
-                            d.q = a.charge;
-                            return expr();
-                        };
+                        std::string name = jin.at("function");
+
+                        // check of the custom potential match a name with a
+                        // predefined meaning.
+                        if (name == "gouychapman")
+                            base::func = createGouyChapmanPotential<typename Tspace::Tparticle>(_j);
+                        else if (name == "something") {
+                            // add additional potential here
+                            // base::func = createSomeOtherPotential<base::Tparticle>(_j);
+                        } else {
+                            expr.set(jin, {{"q", &d.q}, {"x", &d.x}, {"y", &d.y}, {"z", &d.z}});
+                            base::func = [&](const typename Tspace::Tparticle &a) {
+                                d.x = a.pos.x();
+                                d.y = a.pos.y();
+                                d.z = a.pos.z();
+                                d.q = a.charge;
+                                return expr();
+                            };
+                        }
                     }
 
                     void to_json(json &j) const override {
@@ -746,7 +802,7 @@ namespace Faunus {
                     }
 
                     void to_json(json &j) const override {
-                        if (type==cuboid)
+                        if (type == cuboid)
                             j = {{"low", low}, {"high", high}};
                         if (type==sphere or type==cylinder)
                             j = {{"radius", radius}};

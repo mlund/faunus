@@ -762,116 +762,6 @@ namespace Faunus {
                     }
             }; //!< Confine particles to a sub-region of the simulation container
 
-        /**
-         * @brief Excludes molecules inside geometric shapes
-         */
-        template<typename Tspace, typename base=ExternalPotential<Tspace>>
-            class ExcludedVolume : public base {
-                public:
-                    enum Variant {sphere, cylinder, cuboid, none};
-                    Variant type=none;
-
-                private:
-                    Point origo={0,0,0}, dir={1.0,0.0,0.0}, dir2={1.0,0.0,0.0};
-                    Point low, high;
-                    double radius, length, volume;
-                    bool scale=false;
-                    std::map<std::string, Variant> m = {
-                        {"sphere", sphere},
-                        {"cylinder", cylinder},
-                        {"cuboid", cuboid}
-                    };
-
-                public:
-                    ExcludedVolume(const json &j, Tspace &spc) : base(j,spc) {
-                        base::name = "excluded volume";
-                        type = m.at( j.at("type") );
-
-                        if (type==sphere) {
-                            radius = j.at("radius");
-                            origo = j.value("origo", origo);
-                            scale = j.value("scale", scale);
-                            volume = 4.0*pc::pi*pow(radius,3.0)/3.0;
-                            base::func = [&radius=radius, origo=origo](const typename base::Tparticle &p) {
-                                if ( (origo-p.pos).squaredNorm() < radius*radius )
-                                    return pc::infty;
-                                return 0.0;
-                            };
-
-                            // If volume is scaled, also scale the confining radius by adding a trigger
-                            // to `Space::scaleVolume()`
-                            if (scale)
-                                spc.scaleVolumeTriggers.push_back( [&radius=radius, &volume=volume](Tspace&, double Vold, double Vnew) {
-                                        radius *= std::cbrt(Vnew/Vold);
-                                        volume = 4.0*pc::pi*pow(radius,3.0)/3.0; } );
-                        }
-
-                        if (type==cylinder) {
-                            radius = j.at("radius");
-                            length = j.at("length");
-                            length /= 2.0; // will always use ( length / 2 ) in calculations
-                            origo = j.value("origo", origo);
-                            scale = j.value("scale", scale);
-                            volume = pc::pi*pow(radius,2.0)*length*2.0; // the scaling by 2 is compensation for earlier modification
-                            dir = {0.0,0.0,1.0};
-                            dir2 = {1.0,1.0,0.0};
-                            assert(std::fabs(dir.dot(dir2)) < 1e-6 && "Vectors are not perpendicular.");
-                            base::func = [&radius=radius, origo=origo, length=length, dir=dir, dir2=dir2](const typename base::Tparticle &p) {
-                                Point r = p.pos - origo;
-                                if( std::fabs(r.dot(dir)) < length )
-                                    if ( r.cwiseProduct(dir2).squaredNorm() < radius*radius )
-                                        return pc::infty;
-                                return 0.0;
-                            };
-
-                            // If volume is scaled, also scale the confining radius by adding a trigger
-                            // to `Space::scaleVolume()`
-                            if (scale)
-                                spc.scaleVolumeTriggers.push_back( [&radius=radius, &length=length, &volume=volume](Tspace&, double Vold, double Vnew) {
-                                        double scaling = std::cbrt(Vnew/Vold);
-                                        radius *= scaling;
-                                        length *= scaling;
-                                        volume = pc::pi*pow(radius,2.0)*length*2.0; // the scaling by 2 is compensation for earlier modification
-                                } );
-                        }
-
-                        if (type==cuboid) {
-                            low = j.at("low").get<Point>();
-                            high = j.at("high").get<Point>();
-                            volume = (high.x() - low.x())*(high.y() - low.y())*(high.z() - low.z());
-                            base::func = [low=low, high=high](const typename base::Tparticle &p) {
-                                if( (p.pos.x() > low.x()) && (p.pos.x() < high.x()) )
-                                    if( (p.pos.y() > low.y()) && (p.pos.y() < high.y()) )
-                                        if( (p.pos.z() > low.z()) && (p.pos.z() < high.z()) )
-                                            return pc::infty;
-                                return 0.0;
-                            };
-                        }
-                    }
-
-                    double getVolume() const {
-                        return volume;
-                    }
-
-                    void to_json(json &j) const override {
-                        if (type==cuboid)
-                            j = {{"low", low}, {"high", high}};
-                        if (type==sphere or type==cylinder) {
-                            j["radius"] = radius;
-                            j["origo"] = origo;
-                        }
-                        if (type==sphere)
-                            j["scale"] = scale;
-                        if (type==cylinder)
-                            j = {{"length", length*2.0}}; // 2 is compensation for earlier modification
-                        for (auto &i : m)
-                            if (i.second==type)
-                                j["type"] = i.first;
-                        base::to_json(j);
-                        _roundjson(j,5);
-                    }
-            }; //!< Excludes particles from a sub-region of the simulation container
-
         /*
          * The keys of the `intra` map are group index and the values
          * is a vector of `BondData`. For bonds between groups, fill
@@ -1916,9 +1806,6 @@ namespace Faunus {
 
                                     if (it.key()=="confine")
                                         push_back<Energy::Confine<Tspace>>(it.value(), spc);
-
-                                    if (it.key()=="excludedvolume")
-                                        push_back<Energy::ExcludedVolume<Tspace>>(it.value(), spc);
 
                                     if (it.key()=="constrain")
                                         push_back<Energy::Constrain>(it.value(), spc);

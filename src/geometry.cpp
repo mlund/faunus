@@ -16,6 +16,20 @@ namespace Faunus {
         return rtp2xyz( {1, 2*pc::pi*rand(), std::acos(2*rand()-1)} );
     }
 
+    Point xyz2rth(const Point &p, const Point &origin, const Point &dir, const Point &dir2) {
+        assert( fabs(dir.norm()-1.0)<1e-6 );
+        assert( fabs(dir2.norm()-1.0)<1e-6 );
+        assert( fabs(dir.dot(dir2))<1e-6 ); // check if unit-vectors are perpendicular
+        Point xyz = p - origin;
+        double h = xyz.dot(dir);
+        Point xy = xyz - dir*h;
+        double x = xy.dot(dir2);
+        Point y = xy - dir2*x;
+        double theta = std::atan2(y.norm(),x);
+        double radius = xy.norm();
+        return {radius,theta,h};
+    }
+
     Point xyz2rtp(const Point &p, const Point &origin) {
         Point xyz = p - origin;
         double radius = xyz.norm();

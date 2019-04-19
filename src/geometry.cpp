@@ -320,7 +320,7 @@ namespace Faunus {
         }
 
         Point HexagonalPrism::setVolume(double volume, const VolumeMethod method) {
-            double old_volume = getVolume();
+            const double old_volume = getVolume();
             double alpha;
             Point box_scaling;
 
@@ -335,7 +335,7 @@ namespace Faunus {
                     break;
                 case ISOCHORIC:
                     // radius is scaled by alpha, z is scaled by 1/alpha/alpha
-                    alpha = std::cbrt(volume / 4.0 / sqrt(3.0) / (box.z() / box.x())) / box.x();
+                    alpha = std::cbrt(volume / old_volume);
                     box_scaling = {alpha, alpha, 1 / (alpha * alpha)};
                     break;
                 default:

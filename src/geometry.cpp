@@ -308,27 +308,28 @@ namespace Faunus {
         }
 
         Point Cylinder::setVolume(double volume, const VolumeMethod method) {
-            const double old_radius = radius;
+            const double old_volume = getVolume();
             double alpha;
             Point box_scaling;
 
             switch (method) {
                 case ISOTROPIC:
-                    alpha = std::cbrt(volume / getVolume());
+                    alpha = std::cbrt(volume / old_volume);
                     radius *= alpha;
                     height *= alpha;
-                    box_scaling.setConstant(alpha);
+                    box_scaling = {alpha, alpha, alpha};
                     break;
                 case XY: // earlier wrongly named as ISOTROPIC!
-                    radius = std::sqrt(volume / (pc::pi * height));
-                    box_scaling = {radius / old_radius, radius / old_radius, 1.0};
+                    alpha = std::sqrt(volume / old_volume);
+                    radius *= alpha;;
+                    box_scaling = {alpha, alpha, 1.0};
                     break;
                 case ISOCHORIC:
                     // height is scaled by 1/alpha/alpha, radius is scaled by alpha
-                    alpha = std::sqrt(volume / (pc::pi * height)) / radius;
+                    alpha = std::sqrt(volume / old_volume); // fixme shall be probably std::cbrt
                     radius *= alpha;
                     height /= (alpha * alpha);
-                    box_scaling = {alpha, alpha, 1 / (alpha * alpha)};
+                    box_scaling = {alpha, alpha, 1.0 / (alpha * alpha)};
                     break;
                 default:
                     throw std::invalid_argument("unsupported volume scaling method for the cylindrical geometry");

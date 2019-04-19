@@ -326,7 +326,7 @@ namespace Faunus {
                     break;
                 case ISOCHORIC:
                     // height is scaled by 1/alpha/alpha, radius is scaled by alpha
-                    alpha = std::sqrt(volume / old_volume); // fixme shall be probably std::cbrt
+                    alpha = std::cbrt(volume / old_volume);
                     radius *= alpha;
                     height /= (alpha * alpha);
                     box_scaling = {alpha, alpha, 1.0 / (alpha * alpha)};

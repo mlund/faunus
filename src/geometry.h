@@ -91,8 +91,6 @@ namespace Faunus {
                 return vdist(a,b).squaredNorm();
             } //!< Squared (minimum) distance between two points
 
-            std::string name;
-
             virtual std::unique_ptr<GeometryBase> clone() const = 0; //!< To be used in copy constructors
             virtual ~GeometryBase();
             virtual void to_json(json &j) const = 0;
@@ -105,21 +103,6 @@ namespace Faunus {
             inline DistanceFunction getDistanceFunc() const {
                 return [this](const Point &i, const Point &j){return vdist(i,j);};
             } //!< returns lambda to vdist()
-
-            typedef std::pair<Variant, std::string> VariantName;
-            static const std::map<std::string, Variant> names; //!< geometry names
-
-            inline static VariantName variantName(const std::string &name) {
-                auto it = names.find(name);
-                if (it == names.end()) {
-                    throw std::runtime_error("unknown geometry");
-                }
-                return std::make_pair(it->second, it->first);
-            }
-
-            inline static VariantName variantName(const json &j) {
-                return variantName(j.at("type").get<std::string>());
-            }
 
           protected:
             template<typename T=double>
@@ -528,25 +511,40 @@ namespace Faunus {
          * @todo Implement unit tests
          */
         class Chameleon : public GeometryBase {
-            public:
-                Variant type;
-              private:
-                Point len, len_half, len_inv;
+          private:
+            Point len, len_half, len_inv;
+            std::unique_ptr<GeometryBase> geometry = nullptr;
+            Variant _type; //!< type of contained geometry
+            std::string _name; //!< name of contained geometry, e.g., for json
+            void makeGeometry(const Variant type = CUBOID);
+            void _setLength(const Point &l);
 
-                std::unique_ptr<GeometryBase> geometry = nullptr;
-                void makeGeometry(const Variant type = CUBOID);
-                void makeGeometry(const json &j);
-                void _setLength(const Point &l);
+          public:
+            const Variant& type = _type; //!< type of contained geometry, read-only
+            const std::string& name = _name; //!< name of contained geometry, e.g., for json, read-only
+            double getVolume(int dim = 3) const override;
+            Point setVolume(double V, VolumeMethod method = ISOTROPIC) override;
+            Point getLength() const override; //!< Enscribed box
+            void setLength(const Point &l);
+            void randompos(Point &m, Random &rand) const override;
+            bool collision(const Point &a) const override;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
 
-              public:
-                double getVolume(int dim=3) const override;
-                Point setVolume(double V, VolumeMethod method=ISOTROPIC) override;
-                Point getLength() const override; //!< Enscribed box
-                void setLength(const Point &l);
-                void randompos( Point &m, Random &rand ) const override;
-                bool collision(const Point &a) const override;
-                void from_json(const json &j);
-                void to_json(json &j) const;
+            static const std::map<std::string, Variant> names; //!< geometry names
+            typedef std::pair<std::string, Variant> VariantName;
+
+            inline static VariantName variantName(const std::string &name) {
+                auto it = names.find(name);
+                if (it == names.end()) {
+                    throw std::runtime_error("unknown geometry: " + name);
+                }
+                return *it;
+            }
+
+            inline static VariantName variantName(const json &j) {
+                return variantName(j.at("type").get<std::string>());
+            }
 
             std::unique_ptr<GeometryBase> clone() const override {
                 return std::make_unique<Chameleon>(*this);
@@ -555,18 +553,19 @@ namespace Faunus {
             explicit Chameleon() {}
 
             Chameleon(const Chameleon &geo) : GeometryBase(geo),
-                                              type(geo.type),
-                                              len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv) {
+                                              len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
+                                              _type(geo._type), _name(geo._name) {
                 geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
             }
 
             Chameleon &operator=(const Chameleon &geo) {
                 if (&geo != this) {
                     GeometryBase::operator=(geo);
-                    type = geo.type;
                     len = geo.len;
                     len_half = geo.len_half;
                     len_inv = geo.len_inv;
+                    _type = geo._type;
+                    _name = geo._name;
                     geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
                 }
                 return *this;

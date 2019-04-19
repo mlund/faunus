@@ -52,17 +52,6 @@ namespace Faunus {
 
         GeometryBase::~GeometryBase() {}
 
-        const std::map<std::string, Variant> GeometryBase::names = {
-                {
-                        {"cuboid", CUBOID},
-                        {"cylinder", CYLINDER},
-                        {"slit", SLIT},
-                        {"sphere", SPHERE},
-                        {"hexagonal", HEXAGONAL},
-                        {"octahedron", OCTAHEDRON}
-                }
-        };
-
 
         // =============== Cuboid ===============
 
@@ -160,7 +149,6 @@ namespace Faunus {
         }
 
         void Cuboid::from_json(const json &j) {
-            std::tie(std::ignore, name) = variantName(j);
             box.setZero();
 
             auto m = j.at("length");
@@ -179,8 +167,7 @@ namespace Faunus {
         }
 
         void Cuboid::to_json(json &j) const {
-            j = {{"type",   name},
-                 {"length", box}};
+            j = {{"length", box}};
         }
 
 
@@ -284,13 +271,11 @@ namespace Faunus {
         }
 
         void Sphere::from_json(const json &j) {
-            std::tie(std::ignore, name) = variantName(j);
             radius = j.at("radius").get<double>();
         }
 
         void Sphere::to_json(json &j) const {
-            j = {{"type",   name},
-                 {"radius", radius}};
+            j = {{"radius", radius}};
         }
 
 
@@ -405,7 +390,6 @@ namespace Faunus {
         }
 
         void HexagonalPrism::from_json(const json &j) {
-            std::tie(std::ignore, name) = variantName(j);
             auto radius = j.at("radius").get<double>(); // inner radius
             auto height = j.at("length").get<double>();
             auto edge = 2.0 / std::sqrt(3.0) * radius;
@@ -413,8 +397,7 @@ namespace Faunus {
         }
 
         void HexagonalPrism::to_json(json &j) const {
-            j = {{"type",   name},
-                 {"radius", box.y()},
+            j = {{"radius", box.y()},
                  {"length", box.z()}};
         }
 
@@ -494,14 +477,12 @@ namespace Faunus {
         }
 
         void Cylinder::from_json(const json &j) {
-            std::tie(std::ignore, name) = variantName(j);
             radius = j.at("radius").get<double>();
             height = j.at("length").get<double>();
         }
 
         void Cylinder::to_json(json &j) const {
-            j = {{"type",   name},
-                 {"radius", radius},
+            j = {{"radius", radius},
                  {"length", height}};
         }
 
@@ -615,17 +596,26 @@ namespace Faunus {
         }
 
         void TruncatedOctahedron::from_json(const json &j) {
-            std::tie(std::ignore, name) = variantName(j);
             side = j.at("radius").get<double>();
         }
 
         void TruncatedOctahedron::to_json(json &j) const {
-            j = {{"type",   name},
-                 {"radius", side}};
+            j = {{"radius", side}};
         }
 
 
         // =============== Chameleon==============
+
+        const std::map<std::string, Variant> Chameleon::names = {
+                {
+                        {"cuboid", CUBOID},
+                        {"cylinder", CYLINDER},
+                        {"slit", SLIT},
+                        {"sphere", SPHERE},
+                        {"hexagonal", HEXAGONAL},
+                        {"octahedron", OCTAHEDRON}
+                }
+        };
 
         void from_json(const json &j, Chameleon &g) {
             try { 
@@ -705,25 +695,20 @@ namespace Faunus {
                 default:
                     throw std::invalid_argument("unknown geometry");
             }
+            _type = type;
         }
-
-        void Chameleon::makeGeometry(const json &j) {
-            Variant type;
-            std::tie(type, std::ignore) = variantName(j);
-            makeGeometry(type);
-            geometry->from_json(j);
-        }
-
 
         void Chameleon::from_json(const json &j) {
-            std::tie(type, name) = variantName(j);
-            makeGeometry(j);
+            std::tie(_name, _type) = variantName(j);
+            makeGeometry(_type);
+            geometry->from_json(j);
             _setLength(geometry->getLength());
         }
 
         void Chameleon::to_json(json &j) const {
             assert(geometry);
             geometry->to_json(j);
+            j["type"] = name;
         }
 
     } // end of Geometry namespace

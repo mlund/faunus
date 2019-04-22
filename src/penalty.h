@@ -258,7 +258,7 @@ namespace Faunus {
         TEST_CASE("[Faunus] MassCenterSeparation")
         {
             using doctest::Approx;
-            typedef Space<Geometry::Chameleon, Particle<>> Tspace;
+            typedef Space<Particle<>> Tspace;
             Tspace spc;
             MassCenterSeparation c( R"({"dir":[1,1,0], "indexes":[0,8,9,18], "type":[] })"_json, spc);
             CHECK( c.dir.x() == 1 );

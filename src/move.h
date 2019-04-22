@@ -543,7 +543,7 @@ namespace Faunus {
         TEST_CASE("[Faunus] TranslateRotate")
         {
             typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
-            typedef Space<Geometry::Chameleon, Tparticle> Tspace;
+            typedef Space<Tparticle> Tspace;
             typedef typename Tspace::Tpvec Tpvec;
 
             CHECK( !atoms.empty() ); // set in a previous test
@@ -1875,10 +1875,10 @@ start:
 
     }//Move namespace
 
-    template<class Tgeometry, class Tparticle>
+    template<class Tparticle>
         class MCSimulation {
             private:
-                typedef Space<Tgeometry, Tparticle> Tspace;
+                typedef Space<Tparticle> Tspace;
                 typedef typename Tspace::Tpvec Tpvec;
 
                 std::string lastMoveName; //!< name of latest move
@@ -2048,8 +2048,8 @@ start:
                 }
         };
 
-    template<class Tgeometry, class Tparticle>
-        void to_json(json &j, MCSimulation<Tgeometry,Tparticle> &mc) {
+    template<class Tparticle>
+        void to_json(json &j, MCSimulation<Tparticle> &mc) {
             mc.to_json(j);
         }
 

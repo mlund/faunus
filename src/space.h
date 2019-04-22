@@ -126,11 +126,12 @@ namespace Faunus {
             getActiveParticles(const Tspace &spc) : spc(spc) {};
         };
 
-    template<class Tgeometry, class Tparticletype>
+    template<class Tparticletype>
         struct Space {
 
+            typedef Geometry::Chameleon Tgeometry;
             typedef Tparticletype Tparticle;
-            typedef Space<Tgeometry,Tparticle> Tspace;
+            typedef Space<Tparticle> Tspace;
             typedef std::vector<Tparticle> Tpvec;
             typedef Group<Tparticle> Tgroup;
             typedef std::vector<Tgroup> Tgvec;
@@ -146,7 +147,7 @@ namespace Faunus {
 
             Tpvec p;       //!< Particle vector
             Tgvec groups;  //!< Group vector
-            Tgeometry geo; //!< Container geometry
+            Tgeometry geo; //!< Container geometry // TODO as a dependency injection in the constructor
 
             auto positions() const {
                return ranges::view::transform(p, [](auto &i) -> const Point& {return i.pos;});
@@ -368,18 +369,18 @@ namespace Faunus {
 
         }; //!< Space for particles, groups, geometry
 
-    template<class Tgeometry, class Tparticle>
-        void to_json(json &j, Space<Tgeometry,Tparticle> &spc) {
-            typedef typename Space<Tgeometry,Tparticle>::Tpvec Tpvec;
+    template<class Tparticle>
+        void to_json(json &j, Space<Tparticle> &spc) {
+            typedef typename Space<Tparticle>::Tpvec Tpvec;
             j["geometry"] = spc.geo;
             j["groups"] = spc.groups;
             j["particles"] = spc.p;
             j["reactionlist"] = reactions<Tpvec>;
         } //!< Serialize Space to json object
 
-    template<class Tgeometry, class Tparticletype>
-        void from_json(const json &j, Space<Tgeometry,Tparticletype> &spc) {
-            typedef typename Space<Tgeometry,Tparticletype>::Tpvec Tpvec;
+    template<class Tparticletype>
+        void from_json(const json &j, Space<Tparticletype> &spc) {
+            typedef typename Space<Tparticletype>::Tpvec Tpvec;
             using namespace std::string_literals;
 
             try {
@@ -505,7 +506,7 @@ namespace Faunus {
     TEST_CASE("[Faunus] Space")
     {
         typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
-        typedef Space<Geometry::Chameleon, Tparticle> Tspace;
+        typedef Space<Tparticle> Tspace;
         Tspace spc1;
         spc1.geo = R"( {"type": "sphere", "radius": 1e9} )"_json;
 

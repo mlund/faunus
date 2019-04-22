@@ -212,7 +212,7 @@ namespace Faunus {
         TEST_CASE("[Faunus] Ewald - IonIonPolicy")
         {
             using doctest::Approx;
-            typedef Space<Geometry::Chameleon, Particle<Charge,Dipole>> Tspace;
+            typedef Space<Particle<Charge,Dipole>> Tspace;
 
             Tspace spc;
             spc.p.resize(2);

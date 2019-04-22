@@ -349,6 +349,50 @@ namespace Faunus {
             }; //!< Hertz potential
 
         /**
+         * @brief Square-well potential
+         * @details This is an attractive potential described by
+         * @f[
+         *     u(r) = -depth
+         * @f]
+         * when r < threshold, and zero otherwise.
+         *
+         * JSON keywords:
+         *
+         * Key         | Description
+         * :-----------| :---------------------------
+         * `threshold` | Threshold, [angstrom]
+         *
+         */
+	template<class Tparticle>
+            class SquareWell : public PairPotentialBase {
+                protected:
+                    std::shared_ptr<SigmaEpsilonTable<Tparticle>> m; // table w. sigma_ij^2 and 4xepsilon
+                private:
+                    double threshold;
+                public:
+                    SquareWell(const std::string &name="square well") {
+                        PairPotentialBase::name=name;
+                        m = std::make_shared<SigmaEpsilonTable<Tparticle>>();
+                    }
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        double d=(atoms[a.id].sigma + atoms[b.id].sigma)/2.0 + threshold;
+                        if ( r.squaredNorm() < d*d )
+                            return -m->eps(a.id,b.id)/4.0;
+                        return 0.0;
+                    }
+
+                    void to_json(json &j) const override {
+                        j = *m;
+                        j["threshold"] = threshold;
+                    }
+
+                    void from_json(const json &j) override {
+                        *m = j;
+                        threshold = j.at("threshold").get<double>() * 1.0_angstrom;
+                    }
+            }; //!< SquareWell potential
+
+        /**
          * @brief Cosine attraction
          * @details This is an attractive potential used for coarse grained lipids
          * and has the form:
@@ -640,17 +684,18 @@ namespace Faunus {
                 // the data. That is *only* put the pair-potential here if you can
                 // share internal (shared) pointers.
                 std::tuple<
-                    CoulombGalore,    // 0
-                    CosAttract,       // 1
-                    Polarizability<T>,// 2
-                    HardSphere<T>,    // 3
-                    LennardJones<T>,  // 4
-                    RepulsionR3,      // 5
-                    SASApotential,    // 6
+                    CoulombGalore,     // 0
+                    CosAttract,        // 1
+                    Polarizability<T>, // 2
+                    HardSphere<T>,     // 3
+                    LennardJones<T>,   // 4
+                    RepulsionR3,       // 5
+                    SASApotential,     // 6
                     WeeksChandlerAndersen<T>,// 7
-                    PrimitiveModel,   // 8
+                    PrimitiveModel,    // 8
                     PrimitiveModelWCA, // 9
-                    Hertz<T> // 10
+                    Hertz<T>,          // 10
+		    SquareWell<T>      // 11
                         > potlist;
 
                 uFunc combineFunc(const json &j) { 
@@ -673,6 +718,7 @@ namespace Faunus {
                                         else if (it.key()=="pm") _u = std::get<8>(potlist) = it.value();
                                         else if (it.key()=="pmwca") _u = std::get<9>(potlist) = it.value();
                                         else if (it.key()=="hertz") _u = std::get<10>(potlist) = it.value();
+                                        else if (it.key()=="squarewell") _u = std::get<11>(potlist) = it.value();
                                         // place additional potentials here...
                                     } catch (std::exception &e) {
                                         throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);

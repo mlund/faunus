@@ -89,7 +89,7 @@ namespace Faunus {
         typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
 
         //! Geometry variant used for Chameleon.
-        enum Variant {CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON};
+        enum Variant {CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON, HYPERSPHERE2D};
 
         //! Various methods of volume scaling, @see GeometryBase::setVolume.
         enum VolumeMethod {ISOTROPIC, ISOCHORIC, XY, Z};
@@ -231,6 +231,20 @@ namespace Faunus {
 
             std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<Sphere>(*this);
+            }; //!< A unique pointer to a copy of self.
+        };
+
+
+        class Hypersphere2d: public Sphere {
+
+          public:
+            Point vdist(const Point &a, const Point &b) const override;
+            bool collision(const Point &a) const override;
+            void randompos(Point &m, Random &rand) const override;
+            Hypersphere2d(double radius = 0.0) : Sphere(radius) {};
+
+            std::unique_ptr<GeometryImplementation> clone() const override {
+                return std::make_unique<Hypersphere2d>(*this);
             }; //!< A unique pointer to a copy of self.
         };
 

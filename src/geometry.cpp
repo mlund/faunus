@@ -270,6 +270,27 @@ namespace Faunus {
         }
 
 
+        // =============== Hypersphere 2D ===============
+
+        inline Point Hypersphere2d::vdist(const Point &a, const Point &b) const {
+            // ugly but works, needs fixing though...
+            Point distance3d(a - b);
+            double angle = std::acos(a.dot(b) / radius / radius);
+            double distance = radius * angle;
+            return distance3d / distance3d.norm() * distance;
+        }
+
+        void Hypersphere2d::randompos(Point &m, Random &rand) const {
+            Sphere::randompos(m, rand);
+            m = m / m.norm() * radius;
+        }
+
+        inline bool Hypersphere2d::collision(const Point &a) const {
+            bool collision = std::fabs(a.norm() - radius) > 1e-6;
+            return collision;
+        }
+
+
         // =============== Hexagonal Prism ===============
 
         const Eigen::Matrix3d HexagonalPrism::rhombic2cartesian = (Eigen::Matrix3d() <<
@@ -609,7 +630,8 @@ namespace Faunus {
                         {"slit", SLIT},
                         {"sphere", SPHERE},
                         {"hexagonal", HEXAGONAL},
-                        {"octahedron", OCTAHEDRON}
+                        {"octahedron", OCTAHEDRON},
+                        {"hypersphere2d", HYPERSPHERE2D}
                 }
         };
 

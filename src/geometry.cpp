@@ -639,6 +639,7 @@ namespace Faunus {
         inline void Chameleon::setLength(const Point &l) {
             assert(geometry);
             _setLength(l);
+            // ugly
             if(type == CUBOID) {
                 Cuboid &cuboid = dynamic_cast<Cuboid &>(*geometry);
                 cuboid.setLength(l);

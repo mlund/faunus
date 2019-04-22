@@ -70,13 +70,30 @@ namespace Faunus {
     }
 #endif
 
-    /** @brief Simulation geometries and related operations */
+    /**
+     * @brief Simulation geometries and related operations.
+     *
+     * Other parts of Faunus use directly only Chameleon geometry which serves as an interface. Based on the provided
+     * configuration, Chameleon initializes an appropriate concrete implementation, which it encapsulates.
+     *
+     * To add a new geometry implementation, a class derived from GeometryImplementation is created. Geometry::Variant
+     * enum type is extended and an initialization within Chameleon::makeGeometry() is provided. In order to make
+     * geometry constructable from a json configuration, the map Chameleon::names is extended. When performance is
+     * an issue, inlineable implementation of vdist and boundary can be added into respective methods of Chameleon.
+     *
+     * All geometry implementation shall be covered by unit tests.
+     *
+     */
     namespace Geometry {
         typedef std::function<void(Point&)> BoundaryFunction;
         typedef std::function<Point(const Point&, const Point&)> DistanceFunction;
 
+        //! Geometry variant used for Chameleon.
         enum Variant {CUBOID = 0, SPHERE, CYLINDER, SLIT, HEXAGONAL, OCTAHEDRON};
+
+        //! Various methods of volume scaling, @see GeometryBase::setVolume.
         enum VolumeMethod {ISOTROPIC, ISOCHORIC, XY, Z};
+
         enum Coordinates {ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL};
         enum Boundary {FIXED, PERIODIC};
 
@@ -99,6 +116,9 @@ namespace Faunus {
         };
 
 
+        /**
+         * @brief An interface for all geometries.
+         */
         struct GeometryBase {
             virtual Point setVolume(double, VolumeMethod = ISOTROPIC) = 0; //!< Set volume
             virtual double getVolume(int = 3) const = 0; //!< Get volume
@@ -133,12 +153,20 @@ namespace Faunus {
         }; //!< Base class for all geometries
 
 
+        /**
+         * @brief A base class for various geometries implementations.
+         */
         struct GeometryImplementation : public GeometryBase {
             BoundaryCondition boundary_conditions;
-            virtual std::unique_ptr<GeometryImplementation> clone() const = 0; //!< To be used in copy constructors
+
+            //! A unique pointer to a copy of self. To be used in copy constructors.
+            virtual std::unique_ptr<GeometryImplementation> clone() const = 0;
         };
 
 
+        /**
+         * @brief The cuboid geometry with periodic boundary conditions possibly applied in all three directions.
+         */
         class Cuboid : public GeometryImplementation {
           protected:
             Point box, box_half, box_inv;
@@ -160,10 +188,15 @@ namespace Faunus {
 
             std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<Cuboid>(*this);
-            };
+            }; //!< A unique pointer to a copy of self.
         };
 
 
+        /**
+         * @brief A legacy class for the cuboid geometry with periodic boundary conditions only in xy directions.
+         *
+         * @deprecated Shall be replaced by Cuboid with a proper periodic boundary set on initialization.
+         */
         class Slit : public Cuboid {
             using Tbase = Cuboid;
           public:
@@ -173,10 +206,13 @@ namespace Faunus {
 
             std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<Slit>(*this);
-            };
+            }; //!< A unique pointer to a copy of itself.
         };
 
 
+        /**
+         * @brief The spherical geometry where no periodic boundary condition could be applied.
+         */
         class Sphere : public GeometryImplementation {
           protected:
             double radius;
@@ -195,10 +231,13 @@ namespace Faunus {
 
             std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<Sphere>(*this);
-            };
+            }; //!< A unique pointer to a copy of self.
         };
 
 
+        /**
+         * @brief The cylindrical geometry with periodic boundary conditions in z-axis (the height of the cylinder).
+         */
         class Cylinder : public GeometryImplementation {
           protected:
             double radius, height;
@@ -217,20 +256,26 @@ namespace Faunus {
 
             std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<Cylinder>(*this);
-            };
+            }; //!< A unique pointer to a copy of self.
         };
 
 
         /**
-         * The orientation in the coordinate system ⬢ (x→, y↑).
+         * @brief The hexagonal prism geometry with periodic boundary conditions.
+         *
+         * The prism is oriented in the coordination system as follows: z height, xy base ⬢ with a shorter length
+         * (the diameter of an inscribed circle d = 2r) in x direction, and a longer length (the diameter of a
+         * circumscribed circle D = 2R) in y direction.
          */
         class HexagonalPrism : public GeometryImplementation {
-            // Change matrices from rhombic to cartesian coordinates and back.
-            // Y (and Z) axis is identical, X-axis is tilted by -30 deg (i.e., clockwise)
+            //! Change matrices from rhombic to cartesian coordinates and back.
+            //! The Y (and Z) axis is identical in both coordination systems, while the X-axis is tilted by -30deg (i.e.,
+            //! clockwise), forming a 120deg angle with the Y axis in the rhombic coordinates.
             static const Eigen::Matrix3d rhombic2cartesian;
             static const Eigen::Matrix3d cartesian2rhombic;
-            Point box; //< x = inscribed circle diameter, y = circumscribed circle diameter, z = height
-            double volume; //< volume of the prism
+
+            Point box; //!< x = inscribed circle diameter, y = circumscribed circle diameter, z = height
+            double volume; //!< volume of the prism
             void set_box(double side, double height);
 
         public:
@@ -247,9 +292,13 @@ namespace Faunus {
 
             std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<HexagonalPrism>(*this);
-            };
+            }; //!< A unique pointer to a copy of self.
         };
 
+
+        /**
+         * @brief The truncated octahedron geoemtry with periodic boundary conditions in all directions.
+         */
         class TruncatedOctahedron : public GeometryImplementation {
             double side;
 
@@ -267,7 +316,7 @@ namespace Faunus {
 
             std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<TruncatedOctahedron>(*this);
-            };
+            }; //!< A unique pointer to a copy of self.
         };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -523,10 +572,15 @@ namespace Faunus {
     }
 #endif
         /**
-         * @brief Geometry class for spheres, cylinders, cuboids, hexagonal prism, truncated octahedron, slits
+         * @brief Geometry class for spheres, cylinders, cuboids, hexagonal prism, truncated octahedron, slits. It is
+         * a wrapper of a concrete geometry implementation.
          *
-         * All geometries shares the same distance calculation where
-         * PBC is disabled by artificially setting long sidelengths.
+         * The class re-implements the time-critical functions vdist and boundary for the orthogonal periodic boundary
+         * conditions. Hence the call can be inlined by the compiler. That would not be possible otherwise due to the
+         * polymorphism of the concrete implementations. Other functions calls are delegated directly to the concrete
+         * implementation.
+         *
+         * Note that the class implements a copy constructor and overloads the assignment operator.
          *
          * @note
          * - [Efficient Coding of the Minimum Image Convention](http://doi.org/kvs)
@@ -536,26 +590,27 @@ namespace Faunus {
          */
         class Chameleon : public GeometryBase {
           private:
-            Point len, len_half, len_inv;
-            std::unique_ptr<GeometryImplementation> geometry = nullptr;
-            Variant _type; //!< type of contained geometry
-            std::string _name; //!< name of contained geometry, e.g., for json
-            void makeGeometry(const Variant type = CUBOID);
+            Point len, len_half, len_inv; //!< Cached box dimensions, their half-values, and reciprocal values.
+            std::unique_ptr<GeometryImplementation> geometry = nullptr; //!< A concrete geometry implementation.
+            Variant _type; //!< Type of concrete geometry.
+            std::string _name; //!< Name of concrete geometry, e.g., for json.
+            void makeGeometry(const Variant type = CUBOID); //!< Creates and assigns a concrete geometry implementation.
             void _setLength(const Point &l);
 
           public:
-            const Variant& type = _type; //!< type of contained geometry, read-only
-            const std::string& name = _name; //!< name of contained geometry, e.g., for json, read-only
+            const Variant& type = _type; //!< Type of concrete geometry, read-only.
+            const std::string& name = _name; //!< Name of concrete geometry, e.g., for json, read-only.
             double getVolume(int dim = 3) const override;
             Point setVolume(double V, VolumeMethod method = ISOTROPIC) override;
-            Point getLength() const override; //!< Enscribed box
-            void setLength(const Point &l);
+            Point getLength() const override; //!< A minimal containing cubic box.
+            // setLength() needed only for IO::FormatXTC::loadnextframe().
+            void setLength(const Point &l); //!< Sets the box dimensions.
             void randompos(Point &m, Random &rand) const override;
             bool collision(const Point &a) const override;
             void from_json(const json &j) override;
             void to_json(json &j) const override;
 
-            static const std::map<std::string, Variant> names; //!< geometry names
+            static const std::map<std::string, Variant> names; //!< Geometry names.
             typedef std::pair<std::string, Variant> VariantName;
 
             inline static VariantName variantName(const std::string &name) {
@@ -574,12 +629,14 @@ namespace Faunus {
                 makeGeometry(type);
             };
 
+            //! Copy everything, but clone the geometry.
             Chameleon(const Chameleon &geo) : GeometryBase(geo),
                                               len(geo.len), len_half(geo.len_half), len_inv(geo.len_inv),
                                               _type(geo._type), _name(geo._name) {
                 geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
             }
 
+            //! During the assignment copy everything, but clone the geometry.
             Chameleon &operator=(const Chameleon &geo) {
                 if (&geo != this) {
                     GeometryBase::operator=(geo);

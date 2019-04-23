@@ -233,7 +233,7 @@ void Faunus::Potential::CoulombGalore::to_json(Faunus::json &j) const {
 Faunus::Potential::Coulomb::Coulomb(const std::string &name) { PairPotentialBase::name=name; }
 
 void Faunus::Potential::Coulomb::to_json(Faunus::json &j) const {
-    j["epsr"] = pc::lB(lB);
+    j["epsr"] = pc::lB2epsr(lB);
     j["lB"] = lB;
 }
 

@@ -15,10 +15,10 @@ namespace Faunus {
             {"dp", a.dp / 1.0_angstrom}, {"dprot", a.dprot / 1.0_rad},
             {"eps", a.eps / 1.0_kJmol}, {"mw", a.mw},
             {"sigma", a.sigma / 1.0_angstrom},
-            {"hdr", a.hdr / 1.0_angstrom},
-            {"squarewell_depth", a.squarewell_depth / 1.0_kJmol},
-            {"hz_eps", a.hz_eps / 1.0_kJmol},
-            {"squarewell_threshold", a.squarewell_threshold / 1.0_angstrom},
+            {"R_hyd", a.hdr / 1.0_angstrom},
+            {"eps_hertz", a.eps_hertz / 1.0_kJmol},
+            {"eps_sw", a.squarewell_depth / 1.0_kJmol},
+            {"sigma_sw", a.squarewell_threshold / 1.0_angstrom},
             {"tension", a.tension * 1.0_angstrom*1.0_angstrom / 1.0_kJmol},
             {"tfe", a.tfe * 1.0_angstrom*1.0_angstrom * 1.0_molar / 1.0_kJmol},
             {"mu", a.mu}, {"mulen",a.mulen},
@@ -59,10 +59,10 @@ namespace Faunus {
             a.sigma    = val.value("sigma", 0.0) * 1.0_angstrom;
             if (fabs(a.sigma)<1e-20)
                 a.sigma = 2.0*val.value("r", 0.0) * 1.0_angstrom;
-            a.hdr      = val.value("hdr", 0.0) * 1.0_angstrom;
-            a.squarewell_depth    = val.value("squarewell_depth", 0.0) * 1.0_kJmol;
-            a.hz_eps       = val.value("hz_eps", 0.0) * 1.0_kJmol;
-            a.squarewell_threshold = val.value("squarewell_threshold", 0.0) * 1.0_angstrom;
+            a.hdr       = val.value("R_hyd", 0.0) * 1.0_angstrom;
+            a.eps_hertz            = val.value("eps_hertz", 0.0) * 1.0_kJmol;
+            a.squarewell_depth     = val.value("eps_sw", 0.0) * 1.0_kJmol;
+            a.squarewell_threshold = val.value("sigma_sw", 0.0) * 1.0_angstrom;
             a.tension  = val.value("tension", a.tension) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom);
             a.tfe      = val.value("tfe", a.tfe) * 1.0_kJmol / (1.0_angstrom*1.0_angstrom*1.0_molar);
             a.hydrophobic = val.value("hydrophobic", false);

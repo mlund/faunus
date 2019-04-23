@@ -136,7 +136,7 @@ namespace Faunus {
                                 break;
                             case ParametersTable<Tparticle>::HE:
                                 double hdd, eh; // mixed values
-                                std::tie( hdd, eh ) = mixerFunc(i.hdr, j.hdr, i.hz_eps, j.hz_eps);
+                                std::tie( hdd, eh ) = mixerFunc(i.hdr, j.hdr, i.eps_hertz, j.eps_hertz);
                                 m.hd.set(  i.id(), j.id(), hdd );
                                 m.ehe.set( i.id(), j.id(), eh ); // should already be in kT
                                 break;
@@ -165,12 +165,12 @@ namespace Faunus {
                                         m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
                                         break;
                                     case ParametersTable<Tparticle>::LBSW:
-                                        m.th.set( id1, id2, it.value().at("squarewell_threshold").get<double>() );
-                                        m.esw.set(id1, id2, it.value().at("squarewell_depth").get<double>() * 1.0_kJmol);
+                                        m.th.set( id1, id2, it.value().at("sigma_sw").get<double>() );
+                                        m.esw.set(id1, id2, it.value().at("eps_sw").get<double>() * 1.0_kJmol);
                                         break;
                                     case ParametersTable<Tparticle>::HE:
                                         m.hd.set( id1, id2, it.value().at("hdd").get<double>() );
-                                        m.ehe.set(id1, id2, it.value().at("hz_eps").get<double>() * 1.0_kJmol);
+                                        m.ehe.set(id1, id2, it.value().at("eps_hertz").get<double>() * 1.0_kJmol);
                                         break;
                                     default:
                                         throw std::runtime_error("unknown mixing rule");
@@ -180,9 +180,9 @@ namespace Faunus {
                                     case ParametersTable<Tparticle>::LB:
                                         throw std::runtime_error("custom epsilon/sigma parameters require exactly two space-separated atoms");
                                     case ParametersTable<Tparticle>::LBSW:
-                                        throw std::runtime_error("custom squarewell_depth/squarewell_threshold parameters require exactly two space-separated atoms");
+                                        throw std::runtime_error("custom eps_sw/sigma_sw parameters require exactly two space-separated atoms");
                                     case ParametersTable<Tparticle>::HE:
-                                        throw std::runtime_error("custom hz_eps/hdd parameters require exactly two space-separated atoms");
+                                        throw std::runtime_error("custom eps_hertz/hdd parameters require exactly two space-separated atoms");
                                     default:
                                         throw std::runtime_error("unknown mixing rule");
                                 }
@@ -193,9 +193,9 @@ namespace Faunus {
                             case ParametersTable<Tparticle>::LB:
                                 throw std::runtime_error("custom sigma/epsilon syntax error");
                             case ParametersTable<Tparticle>::LBSW:
-                                throw std::runtime_error("custom squarewell_depth/squarewell_threshold syntax error");
+                                throw std::runtime_error("custom eps_sw/sigma_sw syntax error");
                             case ParametersTable<Tparticle>::HE:
-                                throw std::runtime_error("custom hz_eps/hdd syntax error");
+                                throw std::runtime_error("custom eps_hertz/hdd syntax error");
                             default:
                                 throw std::runtime_error("unknown mixing rule");
                         }
@@ -225,18 +225,18 @@ namespace Faunus {
                             for (size_t j=0; j<m.esw.size(); j++)
                                 if (i>=j) {
                                     auto str = atoms[i].name+" "+atoms[j].name;
-                                    _j[str] = { {"squarewell_depth", m.esw(i,j)/1.0_kJmol}, {"squarewell_threshold", m.th(i,j)}  };
+                                    _j[str] = { {"eps_sw", m.esw(i,j)/1.0_kJmol}, {"sigma_sw", m.th(i,j)}  };
                                     _roundjson(_j[str], 5);
                                 }
                         break;
                     case ParametersTable<Tparticle>::HE:
                         j["mixing"] = "HE";
-                        j["hz_eps unit"] = "kJ/mol";
+                        j["eps_hertz unit"] = "kJ/mol";
                         for (size_t i=0; i<m.ehe.size(); i++)
                             for (size_t j=0; j<m.ehe.size(); j++)
                                 if (i>=j) {
                                     auto str = atoms[i].name+" "+atoms[j].name;
-                                    _j[str] = { {"hz_eps", m.ehe(i,j)/1.0_kJmol}, {"hdd", m.hd(i,j)}  };
+                                    _j[str] = { {"eps_hertz", m.ehe(i,j)/1.0_kJmol}, {"hdd", m.hd(i,j)}  };
                                     _roundjson(_j[str], 5);
                                 }
                         break;

@@ -1492,7 +1492,7 @@ start:
                     auto moliter = this->spc.findMolecules(this->molid);
                     this->repeat = std::distance(moliter.begin(), moliter.end());
                     if(this->repeat > 0) {
-                        this->repeat *= (bonds.size() - 1);
+                        this->repeat *= bonds.size();
                     }
                 }
             }

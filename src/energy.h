@@ -345,7 +345,6 @@ namespace Faunus {
                         lB = pc::lB( epsr );
                         if (type=="fanourgakis") selfenergy_prefactor = 0.875;
                         if (type=="qpotential") selfenergy_prefactor = 0.5;
-                        if (type=="stenqvist") selfenergy_prefactor = 1;
                     }
 
                     double energy(Change &change) override {
@@ -1891,7 +1890,7 @@ namespace Faunus {
                     } //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
 
                     void addSelfEnergy(const json &j, Tspace &spc) {
-                        std::vector<std::string> methods = {"stenqvist","qpotential","fanourgakis"};
+                        std::vector<std::string> methods = {"qpotential","fanourgakis"};
                         if (j.count("coulomb")==1)
                             if (j["coulomb"].count("type")==1)
                                 if (std::find(methods.begin(), methods.end(), j["coulomb"].at("type"))!=methods.end())

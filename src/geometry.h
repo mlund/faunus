@@ -619,6 +619,8 @@ namespace Faunus {
             Point getLength() const override; //!< A minimal containing cubic box.
             // setLength() needed only for IO::FormatXTC::loadnextframe().
             void setLength(const Point &l); //!< Sets the box dimensions.
+            void boundary(Point &a) const override; //!< Apply boundary conditions
+            Point vdist(const Point &a, const Point &b) const override; //!< (Minimum) distance between two points
             void randompos(Point &m, Random &rand) const override;
             bool collision(const Point &a) const override;
             void from_json(const json &j) override;
@@ -639,9 +641,7 @@ namespace Faunus {
                 return variantName(j.at("type").get<std::string>());
             }
 
-            Chameleon(Variant type = CUBOID) {
-                makeGeometry(type);
-            };
+            Chameleon(const Variant type = CUBOID);
 
             //! Copy everything, but clone the geometry.
             Chameleon(const Chameleon &geo) : GeometryBase(geo),
@@ -663,60 +663,88 @@ namespace Faunus {
                 }
                 return *this;
             }
-
-            inline void boundary(Point &a) const override {
-                const auto &boundary_conditions = geometry->boundary_conditions;
-                if (boundary_conditions.coordinates == ORTHOGONAL) {
-                    if (boundary_conditions.direction.x() == PERIODIC) {
-                        if (std::fabs(a.x()) > len_half.x())
-                            a.x() -= len.x() * anint(a.x() * len_inv.x());
-                    }
-                    if (boundary_conditions.direction.y() == PERIODIC) {
-                        if (std::fabs(a.y()) > len_half.y())
-                            a.y() -= len.y() * anint(a.y() * len_inv.y());
-                    }
-                    if (boundary_conditions.direction.z() == PERIODIC) {
-                        if (std::fabs(a.z()) > len_half.y())
-                            a.z() -= len.z() * anint(a.z() * len_inv.z());
-                    }
-                } else {
-                    geometry->boundary(a);
-                }
-            } //!< Apply boundary conditions
-
-                inline Point vdist(const Point &a, const Point &b) const override {
-                    Point distance;
-                    const auto &boundary_conditions = geometry->boundary_conditions;
-                    if (boundary_conditions.coordinates == ORTHOGONAL) {
-                        distance = a - b;
-                        if (boundary_conditions.direction.x() == PERIODIC) {
-                            if (distance.x() > len_half.x())
-                                distance.x() -= len.x();
-                            else if (distance.x() < -len_half.x())
-                                distance.x() += len.x();
-                        }
-                        if (boundary_conditions.direction.y() == PERIODIC) {
-                            if (distance.y() > len_half.y())
-                                distance.y() -= len.y();
-                            else if (distance.y() < -len_half.y())
-                                distance.y() += len.y();
-                        }
-                        if (boundary_conditions.direction.z() == PERIODIC) {
-                            if (distance.z() > len_half.z())
-                                distance.z() -= len.z();
-                            else if (distance.z() < -len_half.z())
-                                distance.z() += len.z();
-                        }
-                    } else if (boundary_conditions.coordinates == ORTHOHEXAGONAL ||
-                               boundary_conditions.coordinates == TRUNC_OCTAHEDRAL) {
-                        distance = a - b;
-                        boundary(distance);
-                    } else {
-                        distance = geometry->vdist(a, b);
-                    }
-                    return distance;
-                }
         };
+
+        inline void Chameleon::_setLength(const Point &l) {
+            len = l;
+            len_half = l * 0.5;
+            len_inv = l.cwiseInverse();
+        }
+
+        inline double Chameleon::getVolume(int dim) const {
+            assert(geometry);
+            return geometry->getVolume(dim);
+        }
+
+        inline Point Chameleon::setVolume(double V, VolumeMethod method) {
+            auto scale = geometry->setVolume(V, method);
+            _setLength(geometry->getLength());
+            return scale;
+        }
+
+        inline void Chameleon::randompos(Point &m, Random &rand) const {
+            assert(geometry);
+            geometry->randompos(m, rand);
+        }
+
+        inline bool Chameleon::collision(const Point &a) const {
+            assert(geometry);
+            return geometry->collision(a);
+        }
+
+        inline void Chameleon::boundary(Point &a) const {
+            const auto &boundary_conditions = geometry->boundary_conditions;
+            if (boundary_conditions.coordinates == ORTHOGONAL) {
+                if (boundary_conditions.direction.x() == PERIODIC) {
+                    if (std::fabs(a.x()) > len_half.x())
+                        a.x() -= len.x() * anint(a.x() * len_inv.x());
+                }
+                if (boundary_conditions.direction.y() == PERIODIC) {
+                    if (std::fabs(a.y()) > len_half.y())
+                        a.y() -= len.y() * anint(a.y() * len_inv.y());
+                }
+                if (boundary_conditions.direction.z() == PERIODIC) {
+                    if (std::fabs(a.z()) > len_half.y())
+                        a.z() -= len.z() * anint(a.z() * len_inv.z());
+                }
+            } else {
+                geometry->boundary(a);
+            }
+        }
+
+        inline Point Chameleon::vdist(const Point &a, const Point &b) const {
+            Point distance;
+            const auto &boundary_conditions = geometry->boundary_conditions;
+            if (boundary_conditions.coordinates == ORTHOGONAL) {
+                distance = a - b;
+                if (boundary_conditions.direction.x() == PERIODIC) {
+                    if (distance.x() > len_half.x())
+                        distance.x() -= len.x();
+                    else if (distance.x() < -len_half.x())
+                        distance.x() += len.x();
+                }
+                if (boundary_conditions.direction.y() == PERIODIC) {
+                    if (distance.y() > len_half.y())
+                        distance.y() -= len.y();
+                    else if (distance.y() < -len_half.y())
+                        distance.y() += len.y();
+                }
+                if (boundary_conditions.direction.z() == PERIODIC) {
+                    if (distance.z() > len_half.z())
+                        distance.z() -= len.z();
+                    else if (distance.z() < -len_half.z())
+                        distance.z() += len.z();
+                }
+            } else if (boundary_conditions.coordinates == ORTHOHEXAGONAL ||
+                       boundary_conditions.coordinates == TRUNC_OCTAHEDRAL) {
+                distance = a - b;
+                boundary(distance);
+            } else {
+                distance = geometry->vdist(a, b);
+            }
+            return distance;
+        }
+
 
         void to_json(json&, const Chameleon&);
         void from_json(const json&, Chameleon&);

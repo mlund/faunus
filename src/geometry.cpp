@@ -272,6 +272,10 @@ namespace Faunus {
 
         // =============== Hypersphere 2D ===============
 
+        Hypersphere2d::Hypersphere2d(double radius) : Sphere(radius) {
+            boundary_conditions = BoundaryCondition(NON3D);
+        }
+
         inline Point Hypersphere2d::vdist(const Point &a, const Point &b) const {
             // ugly but works, needs fixing though...
             Point distance3d(a - b);

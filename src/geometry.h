@@ -94,7 +94,7 @@ namespace Faunus {
         //! Various methods of volume scaling, @see GeometryBase::setVolume.
         enum VolumeMethod {ISOTROPIC, ISOCHORIC, XY, Z};
 
-        enum Coordinates {ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL};
+        enum Coordinates {ORTHOGONAL, ORTHOHEXAGONAL, TRUNC_OCTAHEDRAL, NON3D};
         enum Boundary {FIXED, PERIODIC};
 
 
@@ -241,7 +241,7 @@ namespace Faunus {
             Point vdist(const Point &a, const Point &b) const override;
             bool collision(const Point &a) const override;
             void randompos(Point &m, Random &rand) const override;
-            Hypersphere2d(double radius = 0.0) : Sphere(radius) {};
+            Hypersphere2d(double radius = 0.0);
 
             std::unique_ptr<GeometryImplementation> clone() const override {
                 return std::make_unique<Hypersphere2d>(*this);
@@ -685,9 +685,10 @@ namespace Faunus {
             } //!< Apply boundary conditions
 
                 inline Point vdist(const Point &a, const Point &b) const override {
-                    Point distance(a - b);
+                    Point distance;
                     const auto &boundary_conditions = geometry->boundary_conditions;
                     if (boundary_conditions.coordinates == ORTHOGONAL) {
+                        distance = a - b;
                         if (boundary_conditions.direction.x() == PERIODIC) {
                             if (distance.x() > len_half.x())
                                 distance.x() -= len.x();
@@ -706,8 +707,12 @@ namespace Faunus {
                             else if (distance.z() < -len_half.z())
                                 distance.z() += len.z();
                         }
-                    } else {
+                    } else if (boundary_conditions.coordinates == ORTHOHEXAGONAL ||
+                               boundary_conditions.coordinates == TRUNC_OCTAHEDRAL) {
+                        distance = a - b;
                         boundary(distance);
+                    } else {
+                        distance = geometry->vdist(a, b);
                     }
                     return distance;
                 }

@@ -180,8 +180,8 @@ namespace Faunus {
             void boundary(Point &a) const override;
             bool collision(const Point &a) const override;
             void randompos(Point &m, Random &rand) const override;
-            void from_json(const json &j);
-            void to_json(json &j) const;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
             Cuboid(const Point &p);
             Cuboid(double x, double y, double z);
             Cuboid(double x = 0.0);
@@ -225,8 +225,8 @@ namespace Faunus {
             void boundary(Point &a) const override;
             bool collision(const Point &a) const override;
             void randompos(Point &m, Random &rand) const override;
-            void from_json(const json &j);
-            void to_json(json &j) const;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
             Sphere(double radius = 0.0);
 
             std::unique_ptr<GeometryImplementation> clone() const override {
@@ -264,8 +264,8 @@ namespace Faunus {
             void boundary(Point &a) const override;
             bool collision(const Point &a) const override;
             void randompos(Point &m, Random &rand) const override;
-            void from_json(const json &j);
-            void to_json(json &j) const;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
             Cylinder(double radius = 0.0, double height = 0.0);
 
             std::unique_ptr<GeometryImplementation> clone() const override {
@@ -300,8 +300,8 @@ namespace Faunus {
             void boundary(Point &a) const override;
             bool collision(const Point &a) const override;
             void randompos(Point &m, Random &rand) const override;
-            void from_json(const json &j);
-            void to_json(json &j) const;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
             HexagonalPrism(double side = 0.0, double height = 0.0);
 
             std::unique_ptr<GeometryImplementation> clone() const override {
@@ -324,8 +324,8 @@ namespace Faunus {
             void boundary(Point &a) const override;
             bool collision(const Point &a) const override;
             void randompos(Point &m, Random &rand) const override;
-            void from_json(const json &j);
-            void to_json(json &j) const;
+            void from_json(const json &j) override;
+            void to_json(json &j) const override;
             TruncatedOctahedron(double side = 0.0);
 
             std::unique_ptr<GeometryImplementation> clone() const override {

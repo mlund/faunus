@@ -289,7 +289,6 @@ namespace Faunus {
             static const Eigen::Matrix3d cartesian2rhombic;
 
             Point box; //!< x = inscribed circle diameter, y = circumscribed circle diameter, z = height
-            double volume; //!< volume of the prism
             void set_box(double side, double height);
 
         public:

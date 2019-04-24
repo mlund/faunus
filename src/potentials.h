@@ -72,37 +72,77 @@ namespace Faunus {
         }; //!< A dummy pair potential that always returns zero
 
         template<typename Tparticle>
-            struct SigmaEpsilonTable {
-                enum Mixers {LB, NONE};
+            struct ParametersTable {
+                enum Mixers {LB, LBSW, HE, NONE};
                 Mixers mixer = NONE;
-                PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and 4*eps_ij
-            }; //!< Table of sigma and epsilons
+                PairMatrix<double> s2,eps; // matrix of sigma_ij^2 and 4*eps_ij (LJ)
+                PairMatrix<double> th,esw; // matrix of squarewell_threshold_ij and squarewell_depth_ij (Square-well)
+                PairMatrix<double> hd,ehe; // matrix of hydrodynamic diameter_ij and energy-strength_ij (Hertz)
+            }; //!< Table of parameters for potential 
 
         template<typename Tparticle>
-            void from_json(const json &j, SigmaEpsilonTable<Tparticle> &m) {
+            void from_json(const json &j, ParametersTable<Tparticle> &m) {
                 std::function<std::pair<double,double>(double,double,double,double)> mixerFunc;
 
                 auto mixer = j.at("mixing").get<std::string>();
                 if (mixer=="LB")
-                    m.mixer=SigmaEpsilonTable<Tparticle>::LB;
+                    m.mixer=ParametersTable<Tparticle>::LB;
+                if (mixer=="LBSW")
+                    m.mixer=ParametersTable<Tparticle>::LBSW;
+                if (mixer=="HE")
+                    m.mixer=ParametersTable<Tparticle>::HE;
+
+                size_t n=atoms.size(); // number of atom types
                 switch(m.mixer) {
-                    case SigmaEpsilonTable<Tparticle>::LB:
+                    case ParametersTable<Tparticle>::LB:
                         mixerFunc = [](double s1, double s2, double e1, double e2) {
                             return std::pair<double,double>( { (s1+s2)/2, std::sqrt(e1*e2) } );
                         };
+                        m.s2.resize(n); // not required...
+                        m.eps.resize(n);// ...but possible reduced mem. fragmentation
+                        break;
+                    case ParametersTable<Tparticle>::LBSW:
+                        mixerFunc = [](double s1, double s2, double e1, double e2) {
+                            return std::pair<double,double>( { s1+s2, std::sqrt(e1*e2) } );
+                        };
+                        m.th.resize(n); // not required...
+                        m.esw.resize(n);// ...but possible reduced mem. fragmentation
+                        break;
+                    case ParametersTable<Tparticle>::HE:
+                        mixerFunc = [](double s1, double s2, double e1, double e2) {
+                            return std::pair<double,double>( { s1+s2, std::sqrt(e1*e2) } );
+                        };
+                        m.hd.resize(n); // not required...
+                        m.ehe.resize(n);// ...but possible reduced mem. fragmentation
                         break;
                     default:
                         throw std::runtime_error("unknown mixing rule");
                 }
-                size_t n=atoms.size(); // number of atom types
-                m.s2.resize(n); // not required...
-                m.eps.resize(n);// ...but possible reduced mem. fragmentation
+
                 for (auto &i : atoms)
                     for (auto &j : atoms) {
-                        double sigma, epsilon; // mixed values
-                        std::tie( sigma, epsilon ) = mixerFunc(i.sigma, j.sigma, i.eps, j.eps);
-                        m.s2.set(  i.id(), j.id(), sigma*sigma );
-                        m.eps.set( i.id(), j.id(), 4*epsilon ); // should already be in kT
+                        switch(m.mixer) {
+                            case ParametersTable<Tparticle>::LB:
+                                double sigma, epsilon; // mixed values
+                                std::tie( sigma, epsilon ) = mixerFunc(i.sigma, j.sigma, i.eps, j.eps);
+                                m.s2.set(  i.id(), j.id(), sigma*sigma );
+                                m.eps.set( i.id(), j.id(), 4*epsilon ); // should already be in kT
+                                break;
+                            case ParametersTable<Tparticle>::LBSW:
+                                double threshold, depth; // mixed values
+                                std::tie( threshold, depth ) = mixerFunc(i.squarewell_threshold, j.squarewell_threshold, i.squarewell_depth, j.squarewell_depth);
+                                m.th.set(  i.id(), j.id(), threshold );
+                                m.esw.set( i.id(), j.id(), depth ); // should already be in kT
+                                break;
+                            case ParametersTable<Tparticle>::HE:
+                                double hdd, eh; // mixed values
+                                std::tie( hdd, eh ) = mixerFunc(i.hdr, j.hdr, i.eps_hertz, j.eps_hertz);
+                                m.hd.set(  i.id(), j.id(), hdd );
+                                m.ehe.set( i.id(), j.id(), eh ); // should already be in kT
+                                break;
+                            default:
+                                throw std::runtime_error("unknown mixing rule");
+                        }
                     }
 
                 // custom eps/sigma for specific pairs
@@ -118,28 +158,91 @@ namespace Faunus {
                                     throw std::runtime_error("unknown atom(s): ["s + v[0] + " " + v[1] + "]");
                                 int id1 = it1->id();
                                 int id2 = it2->id();
-                                m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
-                                m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
-                            } else
-                                throw std::runtime_error("custom epsilon/sigma parameters require exactly two space-separated atoms");
+
+                                switch(m.mixer) {
+                                    case ParametersTable<Tparticle>::LB:
+                                        m.s2.set( id1, id2, std::pow( it.value().at("sigma").get<double>(), 2) );
+                                        m.eps.set(id1, id2, 4*it.value().at("eps").get<double>() * 1.0_kJmol);
+                                        break;
+                                    case ParametersTable<Tparticle>::LBSW:
+                                        m.th.set( id1, id2, it.value().at("sigma_sw").get<double>() );
+                                        m.esw.set(id1, id2, it.value().at("eps_sw").get<double>() * 1.0_kJmol);
+                                        break;
+                                    case ParametersTable<Tparticle>::HE:
+                                        m.hd.set( id1, id2, it.value().at("hdd").get<double>() );
+                                        m.ehe.set(id1, id2, it.value().at("eps_hertz").get<double>() * 1.0_kJmol);
+                                        break;
+                                    default:
+                                        throw std::runtime_error("unknown mixing rule");
+                                }
+                            } else {
+                                switch(m.mixer) {
+                                    case ParametersTable<Tparticle>::LB:
+                                        throw std::runtime_error("custom epsilon/sigma parameters require exactly two space-separated atoms");
+                                    case ParametersTable<Tparticle>::LBSW:
+                                        throw std::runtime_error("custom eps_sw/sigma_sw parameters require exactly two space-separated atoms");
+                                    case ParametersTable<Tparticle>::HE:
+                                        throw std::runtime_error("custom eps_hertz/hdd parameters require exactly two space-separated atoms");
+                                    default:
+                                        throw std::runtime_error("unknown mixing rule");
+                                }
+                            }
                         }
-                    } else
-                        throw std::runtime_error("custom sigma/epsilon syntax error");
+                    } else {
+                        switch(m.mixer) {
+                            case ParametersTable<Tparticle>::LB:
+                                throw std::runtime_error("custom sigma/epsilon syntax error");
+                            case ParametersTable<Tparticle>::LBSW:
+                                throw std::runtime_error("custom eps_sw/sigma_sw syntax error");
+                            case ParametersTable<Tparticle>::HE:
+                                throw std::runtime_error("custom eps_hertz/hdd syntax error");
+                            default:
+                                throw std::runtime_error("unknown mixing rule");
+                        }
+                    }
                 }
             }
 
         template<typename Tparticle>
-            void to_json(json &j, const SigmaEpsilonTable<Tparticle> &m) {
-                j["mixing"] = "LB";
-                j["epsilon unit"] = "kJ/mol";
+            void to_json(json &j, const ParametersTable<Tparticle> &m) {
                 auto& _j = j["custom"];
-                for (size_t i=0; i<m.eps.size(); i++)
-                    for (size_t j=0; j<m.eps.size(); j++)
-                        if (i>=j) {
-                            auto str = atoms[i].name+" "+atoms[j].name;
-                            _j[str] = { {"eps", m.eps(i,j)/4.0_kJmol}, {"sigma", std::sqrt(m.s2(i,j))}  };
-                            _roundjson(_j[str], 5);
-                        }
+                switch(m.mixer) {
+                    case ParametersTable<Tparticle>::LB:
+                        j["mixing"] = "LB";
+                        j["epsilon unit"] = "kJ/mol";
+                        for (size_t i=0; i<m.eps.size(); i++)
+                            for (size_t j=0; j<m.eps.size(); j++)
+                                if (i>=j) {
+                                    auto str = atoms[i].name+" "+atoms[j].name;
+                                    _j[str] = { {"eps", m.eps(i,j)/4.0_kJmol}, {"sigma", std::sqrt(m.s2(i,j))}  };
+                                    _roundjson(_j[str], 5);
+                                }
+                        break;
+                    case ParametersTable<Tparticle>::LBSW:
+                        j["mixing"] = "LBSW";
+                        j["depth unit"] = "kJ/mol";
+                        for (size_t i=0; i<m.esw.size(); i++)
+                            for (size_t j=0; j<m.esw.size(); j++)
+                                if (i>=j) {
+                                    auto str = atoms[i].name+" "+atoms[j].name;
+                                    _j[str] = { {"eps_sw", m.esw(i,j)/1.0_kJmol}, {"sigma_sw", m.th(i,j)}  };
+                                    _roundjson(_j[str], 5);
+                                }
+                        break;
+                    case ParametersTable<Tparticle>::HE:
+                        j["mixing"] = "HE";
+                        j["eps_hertz unit"] = "kJ/mol";
+                        for (size_t i=0; i<m.ehe.size(); i++)
+                            for (size_t j=0; j<m.ehe.size(); j++)
+                                if (i>=j) {
+                                    auto str = atoms[i].name+" "+atoms[j].name;
+                                    _j[str] = { {"eps_hertz", m.ehe(i,j)/1.0_kJmol}, {"hdd", m.hd(i,j)}  };
+                                    _roundjson(_j[str], 5);
+                                }
+                        break;
+                    default:
+                        throw std::runtime_error("unknown mixing rule");
+                }
             }
 
         /**
@@ -149,12 +252,12 @@ namespace Faunus {
         template<typename Tparticle>
             class LennardJones : public PairPotentialBase {
                 protected:
-                    std::shared_ptr<SigmaEpsilonTable<Tparticle>> m; // table w. sigma_ij^2 and 4xepsilon
+                    std::shared_ptr<ParametersTable<Tparticle>> m; // table w. sigma_ij^2 and 4xepsilon
 
                 public:
-                    LennardJones(const std::string &name="lennardjones"s) {
+                    LennardJones(const std::string &name="lennardjones") {
                         PairPotentialBase::name=name;
-                        m = std::make_shared<SigmaEpsilonTable<Tparticle>>();
+                        m = std::make_shared<ParametersTable<Tparticle>>();
                     }
 
                     template<typename... T>
@@ -173,7 +276,12 @@ namespace Faunus {
                         }
 
                     void to_json(json &j) const override { j = *m; }
-                    void from_json(const json &j) override { *m = j; }
+
+                    void from_json(const json &j) override { 
+                        *m = j;
+                        if(m->s2.size() == 0)
+                            throw std::runtime_error("unknown mixing rule for Lennard-Jones potential");
+                    }
             };
 
         /**
@@ -306,54 +414,71 @@ namespace Faunus {
          * @brief Hertz potential
          * @details This is a repulsive potential describes the change in elasticenergy of two deformable objects when subjected to an axialcompression.
          * @f[
-         *     u(r) = \epsilon_H \left(1 - \frac{r}{n\sigma}\right)^{5/2}
+         *     u(r) = \epsilon_H \left(1 - \frac{r}{2r_H}\right)^{5/2}
          * @f]
-         *
-         * JSON keywords:
-         *
-         * Key     | Description
-         * :-------| :---------------------------
-         * `E`     | Strength, \f$E\f$ [kT]
-         * `n`     | Scale diameter, (optional, default value: 1)
-         *
+         * where r_H is the hydrodynamic radius.
+         * 
          * More info: doi:10.1063/1.3186742
          *
          */
         template<class Tparticle>
             class Hertz : public PairPotentialBase {
-                private:
-                    double E, n;
-                    std::shared_ptr<PairMatrix<double>> rr, rr2; // matrices of (r1+r2), and (r1+r2)^2
+                protected:
+                    std::shared_ptr<ParametersTable<Tparticle>> m; // table w. diameter_ij and energy-strength_ij
                 public:
                     Hertz(const std::string &name="hertz") {
                         PairPotentialBase::name=name;
-                        rr = std::make_shared<PairMatrix<double>>();
-                        rr2 = std::make_shared<PairMatrix<double>>();
+                        m = std::make_shared<ParametersTable<Tparticle>>();
                     }
                     double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double r2 = r.squaredNorm();
-                        if(r2 <= rr2->operator()(a.id,b.id))
-                            return E*pow((1-(sqrt(r2)/rr->operator()(a.id,b.id))),2.5);
+                        if(r2 <= m->hd(a.id,b.id))
+                            return m->ehe(a.id,b.id)*pow((1-(sqrt(r2)/m->hd(a.id,b.id))),2.5);
                         return 0.0;
                     }
 
-                    void from_json(const json &j) override {
-                        E = j.at("E").get<double>();
-                        n = j.value("n",1.0);
+                    void to_json(json &j) const override { j = *m; }
 
-                        for (auto &i : atoms)
-                            for (auto &j : atoms) {
-                                double rirj = (i.sigma+j.sigma)*n/2;
-                                rr->set( i.id(), j.id(), rirj);
-                                rr2->set( i.id(), j.id(), rirj*rirj);
-                            }
-                    }
-
-                    void to_json(json &j) const override { 
-                        j["E"] = E;
-                        j["n"] = n;
+                    void from_json(const json &j) override { 
+                        *m = j;
+                        if(m->hd.size() == 0)
+                            throw std::runtime_error("unknown mixing rule for Hertz potential");
                     }
             }; //!< Hertz potential
+
+        /**
+         * @brief Square-well potential
+         * @details This is an attractive potential described by
+         * @f[
+         *     u(r) = -squarewell_depth
+         * @f]
+         * when r < sum of radii + squarewell_threshold, and zero otherwise.
+         *
+         */
+	template<class Tparticle>
+            class SquareWell : public PairPotentialBase {
+                protected:
+                    std::shared_ptr<ParametersTable<Tparticle>> m; // table w. squarewell_threshold_ij and squarewell_depth_ij
+                public:
+                    SquareWell(const std::string &name="square well") {
+                        PairPotentialBase::name=name;
+                        m = std::make_shared<ParametersTable<Tparticle>>();
+                    }
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
+                        double d=(atoms[a.id].sigma + atoms[b.id].sigma)/2.0 + m->th(a.id,b.id);
+                        if ( r.squaredNorm() < d*d )
+                            return -m->esw(a.id,b.id);
+                        return 0.0;
+                    }
+
+                    void to_json(json &j) const override { j = *m; }
+
+                    void from_json(const json &j) override { 
+                        *m = j;
+                        if(m->th.size() == 0)
+                            throw std::runtime_error("unknown mixing rule for Square-well potential");
+                    }
+            }; //!< SquareWell potential
 
         /**
          * @brief Cosine attraction
@@ -506,6 +631,7 @@ namespace Faunus {
 
         /** @brief Coulomb type potentials with spherical cutoff */
         class CoulombGalore : public PairPotentialBase {
+            std::shared_ptr<PairMatrix<double>> ecs; // effective charge-scaling
             Tabulate::Andrea<double> sf; // splitting function
             Tabulate::TabulatorBase<double>::data table; // data for splitting function
             std::function<double(double)> calcDielectric; // function for dielectric const. calc.
@@ -513,13 +639,15 @@ namespace Faunus {
             double selfenergy_prefactor;
             double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
             int order;
+            unsigned int C, D;
 
             void sfYukawa(const json &j);
             void sfReactionField(const json &j);
             void sfQpotential(const json &j);
             void sfYonezawa(const json &j);
             void sfFanourgakis(const json &j);
-            void sfStenqvist(const json &j);
+            void sfYukawaPoisson(const json &j);
+            void sfPoisson(const json &j);
             void sfFennel(const json &j);
             void sfEwald(const json &j);
             void sfWolf(const json &j);
@@ -534,7 +662,7 @@ namespace Faunus {
                 double operator()(const Tparticle &a, const Tparticle &b, double r2) const {
                     if (r2 < rc2) {
                         double r = std::sqrt(r2);
-                        return lB * a.charge * b.charge / r * sf.eval( table, r*rc1i );
+                        return lB * ecs->operator()(a.id,b.id) * a.charge * b.charge / r * sf.eval( table, r*rc1i );
                     }
                     return 0;
                 }
@@ -645,17 +773,18 @@ namespace Faunus {
                 // the data. That is *only* put the pair-potential here if you can
                 // share internal (shared) pointers.
                 std::tuple<
-                    CoulombGalore,    // 0
-                    CosAttract,       // 1
-                    Polarizability<T>,// 2
-                    HardSphere<T>,    // 3
-                    LennardJones<T>,  // 4
-                    RepulsionR3,      // 5
-                    SASApotential,    // 6
+                    CoulombGalore,     // 0
+                    CosAttract,        // 1
+                    Polarizability<T>, // 2
+                    HardSphere<T>,     // 3
+                    LennardJones<T>,   // 4
+                    RepulsionR3,       // 5
+                    SASApotential,     // 6
                     WeeksChandlerAndersen<T>,// 7
-                    PrimitiveModel,   // 8
+                    PrimitiveModel,    // 8
                     PrimitiveModelWCA, // 9
-                    Hertz<T> // 10
+                    Hertz<T>,          // 10
+		    SquareWell<T>      // 11
                         > potlist;
 
                 uFunc combineFunc(const json &j) { 
@@ -678,6 +807,7 @@ namespace Faunus {
                                         else if (it.key()=="pm") _u = std::get<8>(potlist) = it.value();
                                         else if (it.key()=="pmwca") _u = std::get<9>(potlist) = it.value();
                                         else if (it.key()=="hertz") _u = std::get<10>(potlist) = it.value();
+                                        else if (it.key()=="squarewell") _u = std::get<11>(potlist) = it.value();
                                         // place additional potentials here...
                                     } catch (std::exception &e) {
                                         throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
@@ -886,7 +1016,7 @@ namespace Faunus {
          * and potentially also the energy function (nullptr per default).
          */
         struct BondData {
-            enum Variant {HARMONIC=0, FENE, FENEWCA, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
+            enum Variant {HARMONIC=0, FENE, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE};
             std::vector<int> index;
             bool exclude=false;           //!< True if exclusion of non-bonded interaction should be attempted 
             bool keepelectrostatics=true; //!< If `exclude==true`, try to keep electrostatic interactions
@@ -928,27 +1058,6 @@ namespace Faunus {
          * @brief FENE bond
          */
         struct FENEBond : public BondData {
-            std::array<double,2> k = {{0,0}};
-            int numindex() const override;
-            Variant type() const override;
-            std::shared_ptr<BondData> clone() const override;
-            void from_json(const json &j) override;
-            void to_json(json &j) const override;
-            std::string name() const override;
-
-            template<typename Tpvec>
-                void setEnergyFunction(const Tpvec &p) {
-                    energy = [&](Geometry::DistanceFunction dist) {
-                        double d=dist( p[index[0]].pos, p[index[1]].pos ).squaredNorm();
-                        return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]);
-                    };
-                }
-        }; // end of FENE
-
-        /**
-         * @brief FENE+WCA bond
-         */
-        struct FENEWCABond : public BondData {
             std::array<double,4> k = {{0,0,0,0}};
             int numindex() const override;
             Variant type() const override;
@@ -970,7 +1079,7 @@ namespace Faunus {
                         return (d>k[1]) ? pc::infty : -0.5*k[0]*k[1]*std::log(1-d/k[1]) + wca;
                     };
                 }
-        }; // end of FENE+WCA
+        }; // end of FENE
 
         struct HarmonicTorsion : public BondData {
             double k=0, aeq=0;
@@ -1049,8 +1158,6 @@ namespace Faunus {
                     std::dynamic_pointer_cast<HarmonicBond>(b)->setEnergyFunction(p);
                 else if (b->type()==BondData::FENE)
                     std::dynamic_pointer_cast<FENEBond>(b)->setEnergyFunction(p);
-                else if (b->type()==BondData::FENEWCA)
-                    std::dynamic_pointer_cast<FENEWCABond>(b)->setEnergyFunction(p);
                 else if (b->type()==BondData::HARMONIC_TORSION)
                     std::dynamic_pointer_cast<HarmonicTorsion>(b)->setEnergyFunction(p);
                 else if (b->type()==BondData::G96_TORSION)
@@ -1090,24 +1197,14 @@ namespace Faunus {
 
             // test fene
             SUBCASE("FENEBond") {
-                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1 }} )"_json;
+                json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 }} )"_json;
                 b = j;
                 CHECK( j == json(b) );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1}} )"_json );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3], "rmax":2.1}} )"_json );
                 CHECK_THROWS( b = R"({"fene": { "index":[2,3], "k":1}} )"_json );
-            }
-
-            // test fene+wca
-            SUBCASE("FENEWCABond") {
-                json j = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json;
-                b = j;
-                CHECK( j == json(b) );
-                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3,4], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
-                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "rmax":2.1, "eps":2.48, "sigma":2}} )"_json );
-                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "eps":2.48, "sigma":2}} )"_json );
-                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json );
-                CHECK_THROWS( b = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "sigma":2}} )"_json );
+                j = json::object();
+                CHECK_THROWS( b = j );
             }
 
             // test harmonic
@@ -1123,8 +1220,8 @@ namespace Faunus {
             // test bond filter
             SUBCASE("filterBonds()") {
                 std::vector<std::shared_ptr<BondData>> bonds = {
-                    R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json,
-                    R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1}} )"_json
+                    R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2 }} )"_json,
+                    R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1} } )"_json
                 };
                 auto filt = filterBonds(bonds, BondData::HARMONIC);
                 CHECK( filt.size() == 1 );

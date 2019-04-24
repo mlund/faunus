@@ -697,6 +697,9 @@ namespace Faunus {
                 case OCTAHEDRON:
                     geometry = std::make_unique<TruncatedOctahedron>();
                     break;
+                case HYPERSPHERE2D:
+                    geometry = std::make_unique<Hypersphere2d>();
+                    break;
                 default:
                     throw std::invalid_argument("unknown geometry");
             }

@@ -12,14 +12,13 @@
 namespace py = pybind11;
 using namespace Faunus;
 
-typedef Geometry::Chameleon Tgeometry;
 typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
 
-typedef Space<Tgeometry, Tparticle> Tspace;
+typedef Space<Tparticle> Tspace;
 typedef typename Tspace::Tpvec Tpvec;
 typedef typename Tspace::Tgroup Tgroup;
 typedef Energy::Hamiltonian<Tspace> Thamiltonian;
-typedef MCSimulation<Tgeometry,Tparticle> Tmcsimulation;
+typedef MCSimulation<Tparticle> Tmcsimulation;
 
 inline json dict2json(py::dict dict) {
     py::object dumps = py::module::import("json").attr("dumps");

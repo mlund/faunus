@@ -459,14 +459,15 @@ In addition to user-defined `constants`, the following symbols are available:
 `T`        | temperature [K]
 
 If `com=true`, charge refers to the molecular net-charge, and `x,y,z` the mass-center coordinates.
-The following illustrates how to confine molecules in a spherical shell:
+The following illustrates how to confine molecules in a spherical shell of radius, _r_, and
+thickness _dr_:
 
 ~~~ yaml
 customexternal:
     molecules: [water]
     com: true
     constants: {radius: 15, dr: 3}
-    function:
+    function: >
         var r2 := x^2 + y^2 + z^2;
         if ( r2 < radius^2 )
            1000 * ( radius-sqrt(r2) )^2;

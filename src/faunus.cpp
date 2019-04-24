@@ -17,7 +17,6 @@ using namespace std;
 #define FAUNUS_TIPSFILE ""
 #endif
 
-typedef Geometry::Chameleon Tgeometry;
 typedef Particle<Charge> Tparticle;
 
 static const char USAGE[] =
@@ -94,7 +93,7 @@ int main( int argc, char **argv )
 
         {
             pc::temperature = j.at("temperature").get<double>() * 1.0_K;
-            MCSimulation<Tgeometry,Tparticle> sim(j, mpi);
+            MCSimulation<Tparticle> sim(j, mpi);
 
             // --state
             if (args["--state"]) {

@@ -22,8 +22,12 @@ namespace Faunus {
             Point  scdir={1,0,0}; //!< Sphero-cylinder direction
             double sclen=0;       //!< Sphere-cylinder length [angstrom]
             double sigma=0;       //!< Diameter for e.g Lennard-Jones etc. [angstrom]
+            double hdr=0;         //!< Hydrodynamic radius [angstrom]
             double tension=0;     //!< Surface tension [kT/Å^2]
             double tfe=0;         //!< Transfer free energy [J/mol/angstrom^2/M]
+            double squarewell_depth=0;     //!< Depth of square-well potential [kJ/mol] (pair potentials should convert to kT)
+            double eps_hertz=0;            //!< Strength of Hertz potential [kJ/mol] (pair potentials should convert to kT)
+            double squarewell_threshold=0; //!< Threshold for square-well potential [angstrom]
             int& id(); //!< Type id
             const int& id() const; //!< Type id
             bool hydrophobic=false;  //!< Is the particle hydrophobic?

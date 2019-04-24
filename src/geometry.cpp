@@ -655,6 +655,11 @@ namespace Faunus {
             makeGeometry(type);
         }
 
+        Chameleon::Chameleon(const GeometryImplementation &geo, const Variant type) :
+                geometry(geo.clone()), _type(type) {
+            _setLength(geometry->getLength());
+        }
+
         Point Chameleon::getLength() const {
             assert(geometry);
             return geometry->getLength();

@@ -37,6 +37,24 @@ void Faunus::Potential::CoulombGalore::sfYukawa(const Faunus::json &j) {
     // we could also fill in some info std::string or JSON output...
 }
 
+void Faunus::Potential::CoulombGalore::sfYukawaPoisson(const Faunus::json &j) {
+    kappa = 1.0 / j.at("debyelength").get<double>();
+    I = kappa*kappa / ( 8.0*lB*pc::pi*pc::Nav/1e27 );
+    C = j.value("C",3);
+    D = j.value("D",3);
+    if( (C < 1) || (D < 1) )
+      throw std::runtime_error("`C` and `D` must be larger than zero");
+    table = sf.generate( [&](double q) {
+      double qt = (1.0 -exp(2.0*kappa*rc*q))/(1.0-exp(2.0*kappa*rc));
+      double tmp = 0.0;
+      for(int c = 0; c < C; c++)
+	tmp += double(factorial(D -1 + c))/double(factorial(D -1))/double(factorial(c))*double(C-c)/double(C)*pow(qt,double(c));
+      return pow(1.0-qt,double(D)+1.0)*tmp;
+    }, 0, 1 );
+    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+    selfenergy_prefactor = -double(C+D)/double(C);
+}
+
 void Faunus::Potential::CoulombGalore::sfReactionField(const Faunus::json &j) {
     epsrf = j.at("eps_rf");
     table = sf.generate( [&](double q) { return 1 + (( epsrf - epsr ) / ( 2 * epsrf + epsr ))*q*q*q
@@ -76,10 +94,19 @@ void Faunus::Potential::CoulombGalore::sfFanourgakis(const Faunus::json&) {
     selfenergy_prefactor = 0.875;
 }
 
-void Faunus::Potential::CoulombGalore::sfStenqvist(const Faunus::json&) {
-    table = sf.generate( [&](double q) { return 1 - 2*q + 5*pow(q,4) - 6*pow(q,5) + 2*pow(q,6); }, 0, 1 );
+void Faunus::Potential::CoulombGalore::sfPoisson(const Faunus::json &j) {
+    C = j.value("C",3);
+    D = j.value("D",3);
+    if( (C < 1) || (D < 1) )
+      throw std::runtime_error("`C` and `D` must be larger than zero");
+    table = sf.generate( [&](double q) {
+      double tmp = 0.0;
+      for(int c = 0; c < C; c++)
+          tmp += double(factorial(D -1 + c))/double(factorial(D -1))/double(factorial(c))*double(C-c)/double(C)*pow(q,double(c));
+      return pow(1.0-q,double(D)+1.0)*tmp;
+    }, 0, 1 );
     calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
-    selfenergy_prefactor = 1;
+    selfenergy_prefactor = -double(C+D)/double(C);
 }
 
 void Faunus::Potential::CoulombGalore::sfFennel(const Faunus::json &j) {
@@ -122,28 +149,45 @@ Faunus::Potential::CoulombGalore::CoulombGalore(const std::string &name) { PairP
 
 void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
     try {
+        kappa = 0.0;
         type = j.at("type");
         rc = j.at("cutoff");
         rc2 = rc*rc;
         rc1i = 1/rc;
         epsr = j.at("epsr");
         lB = pc::lB( epsr );
-	
+
         depsdt = j.value("depsdt", -0.368*pc::temperature/epsr);
         sf.setTolerance(
                 j.value("utol",1e-5),j.value("ftol",1e-2) );
 
+        if (type=="yukawapoisson") sfYukawaPoisson(j);
         if (type=="reactionfield") sfReactionField(j);
         if (type=="fanourgakis") sfFanourgakis(j);
         if (type=="qpotential") sfQpotential(j);
-        if (type=="stenqvist") sfStenqvist(j);
         if (type=="yonezawa") sfYonezawa(j);
+        if (type=="poisson") sfPoisson(j);
         if (type=="yukawa") sfYukawa(j);
         if (type=="fennel") sfFennel(j);
         if (type=="plain") sfPlain(j,1);
         if (type=="ewald") sfEwald(j);
         if (type=="none") sfPlain(j,0);
         if (type=="wolf") sfWolf(j);
+
+        ecs = std::make_shared<PairMatrix<double>>();
+        for (auto &i : atoms)
+            for (auto &j : atoms) {
+                double tmpi = kappa*i.sigma/2.0;
+                double tmpj = kappa*j.sigma/2.0;
+                double ecsi = 1.0;
+                double ecsj = 1.0;
+                if(tmpi > 1e-6)
+                    ecsi = std::sinh(tmpi)/tmpi;
+                if(tmpj > 1e-6)
+                    ecsj = std::sinh(tmpj)/tmpj;
+                ecs->set( i.id(), j.id(), ecsi*ecsj);
+            }
+            
         if ( table.empty() )
             throw std::runtime_error(name + ": unknown coulomb type '" + type + "'" );
     }
@@ -165,9 +209,13 @@ void Faunus::Potential::CoulombGalore::to_json(Faunus::json &j) const {
     j["lB"] = lB;
     j["cutoff"] = rc;
     j["type"] = type;
-    if (type=="yukawa") {
+    if (type=="yukawa" || type=="yukawapoisson") {
         j["debyelength"] = 1.0/kappa;
         j["ionic strength"] = I;
+    }
+    if (type=="yukawapoisson" || type=="poisson") {
+        j["C"] = C;
+        j["D"] = D;
     }
     if (type=="qpotential")
         j["order"] = order;
@@ -184,7 +232,10 @@ void Faunus::Potential::CoulombGalore::to_json(Faunus::json &j) const {
 
 Faunus::Potential::Coulomb::Coulomb(const std::string &name) { PairPotentialBase::name=name; }
 
-void Faunus::Potential::Coulomb::to_json(Faunus::json &j) const { j["epsr"] = pc::lB(lB); }
+void Faunus::Potential::Coulomb::to_json(Faunus::json &j) const {
+    j["epsr"] = pc::lB2epsr(lB);
+    j["lB"] = lB;
+}
 
 void Faunus::Potential::Coulomb::from_json(const Faunus::json &j) { lB = pc::lB( j.at("epsr") ); }
 
@@ -232,7 +283,6 @@ void Faunus::Potential::from_json(const Faunus::json &j, std::shared_ptr<Faunus:
             const auto& val = j.begin().value();
             if ( key==HarmonicBond().name() )  b = std::make_shared<HarmonicBond>();
             else if ( key==FENEBond().name() ) b = std::make_shared<FENEBond>();
-            else if ( key==FENEWCABond().name() ) b = std::make_shared<FENEWCABond>();
             else if ( key==HarmonicTorsion().name() ) b = std::make_shared<HarmonicTorsion>();
             else if ( key==GromosTorsion().name() ) b = std::make_shared<GromosTorsion>();
             else if ( key==PeriodicDihedral().name() ) b = std::make_shared<PeriodicDihedral>();
@@ -287,30 +337,11 @@ Faunus::Potential::BondData::Variant Faunus::Potential::FENEBond::type() const {
 void Faunus::Potential::FENEBond::from_json(const Faunus::json &j) {
     k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
     k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
+    k[2] = j.value("eps", 0.0) * 1.0_kJmol;
+    k[3] = std::pow( j.value("sigma", 0.0)  * 1.0_angstrom, 2);
 }
 
 void Faunus::Potential::FENEBond::to_json(Faunus::json &j) const {
-    j = {
-        { "k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
-        { "rmax", std::sqrt(k[1]) / 1.0_angstrom } };
-}
-
-std::string Faunus::Potential::FENEBond::name() const { return "fene"; }
-
-std::shared_ptr<Faunus::Potential::BondData> Faunus::Potential::FENEWCABond::clone() const { return std::make_shared<FENEWCABond>(*this); }
-
-int Faunus::Potential::FENEWCABond::numindex() const { return 2; }
-
-Faunus::Potential::BondData::Variant Faunus::Potential::FENEWCABond::type() const { return BondData::FENEWCA; }
-
-void Faunus::Potential::FENEWCABond::from_json(const Faunus::json &j) {
-    k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
-    k[1] = std::pow( j.at("rmax").get<double>() * 1.0_angstrom, 2);
-    k[2] = j.at("eps").get<double>() * 1.0_kJmol;
-    k[3] = std::pow( j.at("sigma").get<double>() * 1.0_angstrom, 2);
-}
-
-void Faunus::Potential::FENEWCABond::to_json(Faunus::json &j) const {
     j = {
         { "k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2)) },
         { "rmax", std::sqrt(k[1]) / 1.0_angstrom },
@@ -318,7 +349,7 @@ void Faunus::Potential::FENEWCABond::to_json(Faunus::json &j) const {
         { "sigma", std::sqrt(k[3]) / 1.0_angstrom } };
 }
 
-std::string Faunus::Potential::FENEWCABond::name() const { return "fene+wca"; }
+std::string Faunus::Potential::FENEBond::name() const { return "fene"; }
 
 int Faunus::Potential::HarmonicTorsion::numindex() const { return 3; }
 

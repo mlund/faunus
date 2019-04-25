@@ -153,7 +153,9 @@ void Faunus::Analysis::PairFunctionBase::_to_json(Faunus::json &j) const {
         {"name1", name1},
         {"name2", name2},
         {"file", file},
-        {"dim", dim}
+        {"dim", dim},
+        {"slicedir", slicedir},
+        {"thickness",thickness}
     };
     if (Rhypersphere>0)
         j["Rhyper"] = Rhypersphere;
@@ -161,13 +163,15 @@ void Faunus::Analysis::PairFunctionBase::_to_json(Faunus::json &j) const {
 
 void Faunus::Analysis::PairFunctionBase::_from_json(const Faunus::json &j) {
     assertKeys(j, {
-            "file", "name1", "name2", "dim", "dr", "Rhyper", "nstep", "nskip"
+            "file", "name1", "name2", "dim", "dr", "Rhyper", "nstep", "nskip", "slicedir", "thickness"
             });
     file = j.at("file");
     name1 = j.at("name1");
     name2 = j.at("name2");
     dim = j.value("dim", 3);
     dr = j.value("dr", 0.1) * 1.0_angstrom;
+    slicedir = j.value("slicedir", slicedir);
+    thickness = j.value("thickness", 0);
     hist.setResolution(dr, 0);
     Rhypersphere = j.value("Rhyper", -1.0);
 }

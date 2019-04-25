@@ -633,11 +633,11 @@ namespace Faunus {
                 "atomlist" :
                     [ {"a": { "r":1.1 } } ],
                 "moleculelist": [
-                    { "A": { "atomic":false } },
-                    { "B": { "activity":0.2, "atomic":true, "atoms":["a"] } }
+                    { "A": { "atomic":false, "activity":0.2 } },
+                    { "B": { "atomic":true, "atoms":["a"] } }
                 ],
                 "reactionlist": [
-                    {"A = B": {"lnK": -10.051, "canonic": true, "N": 100 } }
+                    {"A = B": {"lnK":-10.051, "canonic":true, "N":100 } }
                 ]
             } )"_json;
 
@@ -651,7 +651,7 @@ namespace Faunus {
 
         CHECK( r.size()==1 );
         CHECK( r.front().name=="A = B" );
-        CHECK( r.front().lnK==Approx( -10.051+std::log(0.2)) );
+        CHECK( r.front().lnK==Approx( -10.051-std::log(0.2)) );
     }
 #endif
 

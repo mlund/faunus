@@ -530,39 +530,37 @@ namespace Faunus {
                 std::vector<int> ids;
                 std::string file;
                 double dz;
-                bool COM=false; // center at COM of atoms?
+                std::string atomCOM;
+                int idCOM = -1; // center at COM of idCOM atoms?
 
                 void _from_json(const json &j) override {
                     file = j.at("file").get<std::string>();
                     names = j.at("atoms").get<decltype(names)>(); // molecule names
                     ids = names2ids(atoms, names);     // names --> molids
                     dz = j.value("dz", 0.1);
-                    COM = j.value("com", false);
+                    if (j.count("atomcom") == 1) {
+                        atomCOM = j.at("atomcom");
+                        idCOM = findName(atoms, atomCOM)->id();
+                    }
                     N.setResolution(dz);
                 }
 
                 void _to_json(json &j) const override {
-                    j = {{"atoms", names}, {"file", file}, {"dz", dz}, {"com", COM}};
+                    j = {{"atoms", names}, {"file", file}, {"dz", dz}, {"atomcom", atomCOM}};
                 }
 
                 void _sample() override {
                     Group<Tparticle> all(spc.p.begin(), spc.p.end());
-                    std::map<int, Point> cms;
-                    if (COM) // calc. mass center of selected atoms
-                        for (int id : ids) {
-                            auto slice = all.find_id(id);
-                            auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
-                            cms[id] = cm;
-                        }
+                    double zcm = 0;
+                    if (idCOM >= 0) { // calc. mass center of selected atoms
+                        auto slice = all.find_id(idCOM);
+                        zcm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc()).z();
+                    }
                     // count atoms in slices
                     for (auto &g : spc.groups) // loop over all groups
                         for (auto &i : g)      // loop over active particles
-                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end()) {
-                                if (COM)
-                                    N( i.pos.z() - cms[i.id].z() )++;
-                                else
-                                    N( i.pos.z() )++;
-                            }
+                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end())
+                                N( i.pos.z() - zcm )++;
                 }
 
                 public:
@@ -967,6 +965,7 @@ namespace Faunus {
             private:
                 std::function<void(std::string)> writeFunc = nullptr;
                 std::string file;
+                bool saverandom;
                 void _to_json(json &j) const override;
                 void _sample() override;
             public:
@@ -977,6 +976,7 @@ namespace Faunus {
                         from_json(j);
                         name = "savestate";
                         steps = j.value("nstep", -1);
+                        saverandom = j.value("saverandom", false);
                         file = j.at("file");
                         std::string suffix = file.substr(file.find_last_of(".") + 1);
                         file = MPI::prefix + file;
@@ -1002,25 +1002,29 @@ namespace Faunus {
                                     _1, std::ref(spc));
 
                         else if ( suffix == "json" ) // JSON state file
-                            writeFunc = [&spc](const std::string &file) {
+                            writeFunc = [&spc,this](const std::string &file) {
                                 std::ofstream f(file);
                                 if (f) {
                                     json j;
                                     Faunus::to_json(j, spc);
-                                    j["random-move"] = Move::Movebase::slump;
-                                    j["random-global"] = Faunus::random;
+                                    if (this->saverandom) {
+                                        j["random-move"] = Move::Movebase::slump;
+                                        j["random-global"] = Faunus::random;
+                                    }
                                     f << std::setw(2) << j;
                                 }
                             };
 
                         else if ( suffix == "ubj" ) // Universal Binary JSON state file
-                            writeFunc = [&spc](const std::string &file) {
+                            writeFunc = [&spc,this](const std::string &file) {
                                 std::ofstream f(file, std::ios::binary);
                                 if (f) {
                                     json j;
                                     Faunus::to_json(j, spc);
-                                    j["random-move"] = Move::Movebase::slump;
-                                    j["random-global"] = Faunus::random;
+                                    if (this->saverandom) {
+                                        j["random-move"] = Move::Movebase::slump;
+                                        j["random-global"] = Faunus::random;
+                                    }
                                     auto v = json::to_ubjson(j); // json --> binary
                                     f.write( (const char*)v.data(), v.size()*sizeof(decltype(v)::value_type));
                                 }
@@ -1041,6 +1045,8 @@ namespace Faunus {
                 int dim=3;
                 int id1=-1, id2=-1; // particle id (mol or atom)
                 double dr=0;
+                Eigen::Vector3i slicedir={0,0,0};
+                double thickness=0;
                 Equidistant2DTable<double,double> hist;
                 std::string name1, name2, file;
                 double Rhypersphere=-1; // Radius of 2D hypersphere
@@ -1070,8 +1076,15 @@ namespace Faunus {
                                     ( i->id==id2 && j->id==id1 )
                                )
                             {
-                                double r = std::sqrt( spc.geo.sqdist( i->pos, j->pos ) );
-                                hist(r)++;
+                                Point rvec = spc.geo.vdist( i->pos, j->pos );
+                                if (slicedir.sum()>0) {
+                                    if (rvec.cwiseProduct( slicedir.cast<double>() ).norm() < thickness) {
+                                        // rvec = rvec.cwiseProduct( Point(1.,1.,1.) - slice.cast<double>() );
+                                        hist( rvec.norm() )++;
+                                    }
+                                } else {
+                                    hist( rvec.norm() )++;
+                                }
                             }
                 }
 

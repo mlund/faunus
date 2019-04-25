@@ -522,12 +522,35 @@ $$
 -------------- | ----------------------------------------------------------------------
 `k`            | Bond stiffness (kJ/mol/Å²)
 `rmax`         | Maximum separation, $r_m$ (Å)
+`index`        | Array with _exactly two_ indices (relative to molecule)
+
+Finite extensible nonlinear elastic potential long range repulsive potential.
+
+$$
+     u(r) =
+  \begin{cases} 
+   -\frac{1}{2} k r_{\mathrm{max}}^2 \ln \left [ 1-(r/r_{\mathrm{max}})^2 \right ],       & \text{if } r < r_{\mathrm{max}} \\
+   \infty, & \text{if } r \geq r_{\mathrm{max}}
+  \end{cases}
+$$
+
+**Note:**
+It is recommend to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
+Should one insist on conducting simulations far from equilibrium, a large displacement parameter is recommended to reach finite energies.
+{: .notice--info}
+
+### Finite Extensible Nonlinear Elastic + WCA
+
+`fene+wca`     | [Finite Extensible Nonlinear Elastic Potential + WCA](http://doi.org/c78x6m)
+-------------- | ----------------------------------------------------------------------
+`k`            | Bond stiffness (kJ/mol/Å²)
+`rmax`         | Maximum separation, $r_m$ (Å)
 `eps=0`        | Epsilon energy scaling (kJ/mol)
 `sigma=0`      | Particle diameter (Å)
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
 Finite extensible nonlinear elastic potential long range repulsive potential combined
-with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential.
+with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` nobonded energy.
 
 $$
      u(r) =
@@ -542,7 +565,6 @@ $$
 It is recommend to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
 Should one insist on conducting simulations far from equilibrium, a large displacement parameter is recommended to reach finite energies.
 {: .notice--info}
-
 
 ### Harmonic torsion
 
@@ -738,11 +760,12 @@ be used when analysing the system (see Analysis).
 `property`     | `x`, `y`, `z`, `q`
 `range`        | Array w. [min:max] value
 `resolution`   | Resolution along coordinate
+`N`            | Number of atoms of ID=`index`
 
 #### Molecule Properties
 
 `coords=[molecule]`       | Single molecule properties
-------------------------- | ----------------------------------
+------------------------- | --------------------------------------------------------------------------------------------------------------------------------
 `index`                   | Molecule index
 `range`                   | Array w. [min:max] value
 `resolution`              | Resolution along coordinate
@@ -756,6 +779,10 @@ be used when analysing the system (see Analysis).
 `muangle`                 | Angle between dipole moment and given `dir` vector
 `N`                       | Number of atoms in group
 `Q`                       | Monopole moment (net charge)
+`atomatom`                | Distance along `dir` between 2 atoms specified by the `indexes` array
+`cmcm`                    | Absolute mass-center separation between groups defined by the intervals `indexes[0]:indexes[1]` and `indexes[2]:indexes[3]`
+`cmcm_z`                  | _z_-component of `cmcm`
+`L/R`                     | Ratio between height and radius of a cylindrical lipid vesicle (ad-hoc RC for bending modulus calculations)
 
 Notes:
 
@@ -787,6 +814,7 @@ interacting molecular groups.
 `Lx`,`Ly`,`Lz`    | Side lengths of enclosing cuboid
 `height`          | Alias for `Lz`
 `radius`          | Radius of spherical or cylindrical geometries
+`N`               | Number of active particles
 
 The enclosing cuboid is the smallest cuboid that can contain the geometry.
 For example, for a cylindrical simulation container, `Lz` is the height

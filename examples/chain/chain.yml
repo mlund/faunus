@@ -68,4 +68,4 @@ moves:
 
 analysis:
     - polymershape: {nstep: 10, molecules: [POL]}
-#    - savestate: {file: chain.state.json}
+    - savestate: {file: state.json}

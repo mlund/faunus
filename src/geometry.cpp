@@ -66,7 +66,7 @@ namespace Faunus {
         Cuboid::Cuboid(double x) : Cuboid(x, x, x) {
         }
 
-        inline Point Cuboid::getLength() const {
+        Point Cuboid::getLength() const {
             return box;
         }
 
@@ -76,7 +76,7 @@ namespace Faunus {
             box_inv = box.cwiseInverse();
         }
 
-        inline double Cuboid::getVolume(int) const {
+        double Cuboid::getVolume(int) const {
             return box.x() * box.y() * box.z();
         }
 
@@ -107,7 +107,7 @@ namespace Faunus {
             return box_scaling; // this will scale any point to new volume
         }
 
-        inline void Cuboid::boundary(Point &a) const {
+        void Cuboid::boundary(Point &a) const {
             if (boundary_conditions.direction.x() == PERIODIC) {
                 if (std::fabs(a.x()) > box_half.x())
                     a.x() -= box.x() * anint(a.x() * box_inv.x());
@@ -122,7 +122,7 @@ namespace Faunus {
             }
         }
 
-        inline Point Cuboid::vdist(const Point &a, const Point &b) const {
+        Point Cuboid::vdist(const Point &a, const Point &b) const {
             Point distance(a - b);
             if (boundary_conditions.direction.x() == PERIODIC) {
                 if (distance.x() > box_half.x())
@@ -145,13 +145,13 @@ namespace Faunus {
             return distance;
         }
 
-        inline void Cuboid::randompos(Point &m, Random &rand) const {
+        void Cuboid::randompos(Point &m, Random &rand) const {
             m.x() = (rand() - 0.5) * box.x();
             m.y() = (rand() - 0.5) * box.y();
             m.z() = (rand() - 0.5) * box.z();
         }
 
-        inline bool Cuboid::collision(const Point &a) const {
+        bool Cuboid::collision(const Point &a) const {
             bool collision =
                     std::fabs(a.x()) > box_half.x() ||
                     std::fabs(a.y()) > box_half.y() ||
@@ -205,7 +205,7 @@ namespace Faunus {
             return {2 * radius, 2 * radius, 2 * radius};
         }
 
-        inline double Sphere::getVolume(int dim) const {
+        double Sphere::getVolume(int dim) const {
             double result;
             switch (dim) {
                 case 3:
@@ -237,16 +237,16 @@ namespace Faunus {
             return box_scaling;
         }
 
-        inline void Sphere::boundary(Point &) const {
+        void Sphere::boundary(Point &) const {
             // no pbc
         }
 
-        inline bool Sphere::collision(const Point &a) const {
+        bool Sphere::collision(const Point &a) const {
             bool collision = a.squaredNorm() > radius * radius;
             return collision;
         }
 
-        inline Point Sphere::vdist(const Point &a, const Point &b) const {
+        Point Sphere::vdist(const Point &a, const Point &b) const {
             // no pbc; shall we check points coordinates?
             Point distance(a - b);
             return distance;
@@ -276,7 +276,7 @@ namespace Faunus {
             boundary_conditions = BoundaryCondition(NON3D);
         }
 
-        inline Point Hypersphere2d::vdist(const Point &a, const Point &b) const {
+        Point Hypersphere2d::vdist(const Point &a, const Point &b) const {
             // ugly but works, needs fixing though...
             Point distance3d(a - b);
             double angle = std::acos(a.dot(b) / radius / radius);
@@ -289,7 +289,7 @@ namespace Faunus {
             m = m / m.norm() * radius;
         }
 
-        inline bool Hypersphere2d::collision(const Point &a) const {
+        bool Hypersphere2d::collision(const Point &a) const {
             bool collision = std::fabs(a.norm() - radius) > 1e-6;
             return collision;
         }
@@ -310,7 +310,7 @@ namespace Faunus {
             set_box(side, height);
         }
 
-        inline Point HexagonalPrism::getLength() const {
+        Point HexagonalPrism::getLength() const {
             return box;
         }
 
@@ -349,13 +349,13 @@ namespace Faunus {
             return box_scaling;
         }
 
-        inline Point HexagonalPrism::vdist(const Point &a, const Point &b) const {
+        Point HexagonalPrism::vdist(const Point &a, const Point &b) const {
             Point distance(a - b);
             boundary(distance);
             return distance;
         }
 
-        inline bool HexagonalPrism::collision(const Point &a) const {
+        bool HexagonalPrism::collision(const Point &a) const {
             const double height = box.z();
             const double outer_radius = 0.5 * box.y();
 
@@ -367,7 +367,7 @@ namespace Faunus {
             return collision;
         }
 
-        inline void HexagonalPrism::boundary(Point &a) const {
+        void HexagonalPrism::boundary(Point &a) const {
             // TODO optimise and add documentation
             const double sqrtThreeByTwo = sqrt(3.0) / 2.0;
             const Point unitvX = {1.0, 0.0, 0.0};
@@ -426,11 +426,11 @@ namespace Faunus {
             boundary_conditions = BoundaryCondition(ORTHOGONAL, {FIXED, FIXED, PERIODIC});
         }
 
-        inline Point Cylinder::getLength() const {
+        Point Cylinder::getLength() const {
             return {2 * radius, 2 * radius, height};
         }
 
-        inline double Cylinder::getVolume(int) const {
+        double Cylinder::getVolume(int) const {
             return pc::pi * radius * radius * height;
         }
 
@@ -465,7 +465,7 @@ namespace Faunus {
             return box_scaling;
         }
 
-        inline void Cylinder::boundary(Point &a) const {
+        void Cylinder::boundary(Point &a) const {
             // z-pbc
             if (std::fabs(a.z()) > 0.5 * height)
                 a.z() -= height * anint(a.z() / height);
@@ -476,7 +476,7 @@ namespace Faunus {
             return collision;
         }
 
-        inline Point Cylinder::vdist(const Point &a, const Point &b) const {
+        Point Cylinder::vdist(const Point &a, const Point &b) const {
             Point distance(a - b);
             if (distance.z() > 0.5 * height)
                 distance.z() -= height;
@@ -513,7 +513,7 @@ namespace Faunus {
             boundary_conditions = BoundaryCondition(TRUNC_OCTAHEDRAL, {PERIODIC, PERIODIC, PERIODIC});
         }
 
-        inline Point TruncatedOctahedron::getLength() const {
+        Point TruncatedOctahedron::getLength() const {
             // todo check orientation in xyz
             return Point::Constant(2. * std::sqrt(2.) * side); // distance between opposite square faces
         }
@@ -537,13 +537,13 @@ namespace Faunus {
             return box_scaling;
         }
 
-        inline Point TruncatedOctahedron::vdist(const Point &a, const Point &b) const {
+        Point TruncatedOctahedron::vdist(const Point &a, const Point &b) const {
             Point distance(a - b);
             boundary(distance);
             return distance;
         }
 
-        inline bool TruncatedOctahedron::collision(const Point &a) const {
+        bool TruncatedOctahedron::collision(const Point &a) const {
             const double sqrtThreeI = 1.0 / std::sqrt(3.0);
             const double origin_to_square_face = std::sqrt(2.) * side;
             const double origin_to_hexagonal_face = std::sqrt(1.5) * side;
@@ -559,7 +559,7 @@ namespace Faunus {
             return false;
         }
 
-        inline void TruncatedOctahedron::boundary(Point &a) const {
+        void TruncatedOctahedron::boundary(Point &a) const {
             const double sqrtThreeI = 1.0 / std::sqrt(3.0);
             const double square_face_distance = std::sqrt(8.) * side;
             const double hexagonal_face_distance = std::sqrt(6.) * side;
@@ -651,18 +651,21 @@ namespace Faunus {
             g.to_json(j);
         }
 
-        inline Point Chameleon::getLength() const {
+        Chameleon::Chameleon(const Variant type) {
+            makeGeometry(type);
+        }
+
+        Chameleon::Chameleon(const GeometryImplementation &geo, const Variant type) :
+                geometry(geo.clone()), _type(type) {
+            _setLength(geometry->getLength());
+        }
+
+        Point Chameleon::getLength() const {
             assert(geometry);
             return geometry->getLength();
         }
 
-        inline void Chameleon::_setLength(const Point &l) {
-            len = l;
-            len_half = l * 0.5;
-            len_inv = l.cwiseInverse();
-        }
-
-        inline void Chameleon::setLength(const Point &l) {
+        void Chameleon::setLength(const Point &l) {
             assert(geometry);
             _setLength(l);
             // ugly
@@ -672,27 +675,6 @@ namespace Faunus {
             } else {
                 throw std::runtime_error("setLength allowed only for the Cuboid geometry");
             }
-        }
-
-        inline double Chameleon::getVolume(int dim) const {
-            assert(geometry);
-            return geometry->getVolume(dim);
-        }
-
-        inline Point Chameleon::setVolume(double V, VolumeMethod method) {
-            auto scale = geometry->setVolume(V, method);
-            _setLength(geometry->getLength());
-            return scale;
-        }
-
-        inline void Chameleon::randompos(Point &m, Random &rand) const {
-            assert(geometry);
-            geometry->randompos(m, rand);
-        }
-
-        inline bool Chameleon::collision(const Point &a) const {
-            assert(geometry);
-            return geometry->collision(a);
         }
 
         void Chameleon::makeGeometry(const Variant type) {
@@ -714,6 +696,9 @@ namespace Faunus {
                     break;
                 case OCTAHEDRON:
                     geometry = std::make_unique<TruncatedOctahedron>();
+                    break;
+                case HYPERSPHERE2D:
+                    geometry = std::make_unique<Hypersphere2d>();
                     break;
                 default:
                     throw std::invalid_argument("unknown geometry");

@@ -170,11 +170,12 @@ an exising molecule. That is, there is no mass center movement.
 ---------------- | ----------------------------
 `molecule`       | Molecule name to operate on
 `dprot`          | Rotational displacement
-`repeat=N`       | Number of repeats per MC sweep per bond
+`repeat=N`       | Number of repeats per MC sweep
 `skiplarge=true` | Skip too large molecules
 
 Performs a rotation around a random, harmonic bond vector in `molecule`, moving all atoms
-either before _or_ after the bond with equal probability.
+either before _or_ after the bond with equal probability. Current implementation assumes
+unbranched chains with all atoms as links, i.e., no side chains are present.
 For long polymers (compared to the box size), a large displacement parameter may cause
 problems with mass center calculation in periodic systems.
 This can be caught with the `sanity` analysis and should it occur, try one of the following:
@@ -186,6 +187,29 @@ This can be caught with the `sanity` analysis and should it occur, try one of th
 The first option will simply reject troublesome configurations and the
 final output contains information of the skipped fraction. Skipping is
 unphysical so make sure the skipped fraction is small.
+
+The default value of `repeat` is the number of harmonic bonds in the `molecule`
+(multiplied by the number of molecules).
+
+*Known limitations:* Chain bonds have to be ordered sequentially in the topology.
+
+
+### Crankshaft
+
+`crankshaft`     | Description
+---------------- | ----------------------------
+`molecule`       | Molecule name to operate on
+`dprot`          | Rotational displacement
+`repeat=N`       | Number of repeats per MC sweep
+`skiplarge=true` | Skip too large molecules
+
+
+Performs a rotation of a chain segment between two randomly selected atoms in the `molecule`.
+
+The default value of `repeat` is the number of atoms in the `molecule` minus two
+(multiplied by the number of molecules).
+
+See also [Pivot move](#pivot).
 
 
 ## Parallel Tempering

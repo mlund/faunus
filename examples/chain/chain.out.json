@@ -4,22 +4,27 @@
             "Polymer Shape": {
                 "molecules": {
                     "POL": {
-                        "√⟨Re²⟩": 29.903264137807533,
+                        "√⟨Re²⟩": 30.387232516527064,
                         "√⟨Rgxyz²⟩": [
-                            7.123585234945941,
-                            7.112840938871071,
-                            7.119867252326358
+                            7.247120419685892,
+                            7.206100630467096,
+                            7.318438222332662
                         ],
-                        "√⟨Rg²⟩": 12.330064173067694,
-                        "⟨Re²⟩/⟨Rg²⟩": 5.881749444721366,
-                        "⟨Re⟩": 27.601746893223858,
-                        "⟨Rg²⟩": 152.0304825119675,
-                        "⟨Rg²⟩-⟨Rg⟩²": 8.29484758245195,
-                        "⟨Rg⟩": 11.988979728463784
+                        "√⟨Rg²⟩": 12.570130416505075,
+                        "⟨Re²⟩/⟨Rg²⟩": 5.843899396100828,
+                        "⟨Re⟩": 28.022877879978147,
+                        "⟨Rg²⟩": 158.00817868794604,
+                        "⟨Rg²⟩-⟨Rg⟩²": 8.443426174897724,
+                        "⟨Rg⟩": 12.229666901148548
                     }
                 },
                 "nstep": 10,
-                "samples": 100000
+                "samples": 3000
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
             }
         }
     ],
@@ -382,7 +387,7 @@
                             }
                         ]
                     },
-                    "relative time": 0.05160229343921442
+                    "relative time": 0.0221342807818572
                 },
                 {
                     "nonbonded": {
@@ -395,7 +400,7 @@
                             ]
                         }
                     },
-                    "relative time": 0.2812048526749479
+                    "relative time": 0.31697299526722467
                 }
             ]
         }
@@ -408,7 +413,7 @@
         ],
         "type": "cuboid"
     },
-    "git revision": "f976cddb (2019-03-22)",
+    "git revision": "affc7063 (2019-04-24)",
     "groups": [
         {
             "POL": {
@@ -424,7 +429,7 @@
     "moves": [
         {
             "transrot": {
-                "acceptance": 0.211,
+                "acceptance": 0.21,
                 "dir": [
                     1.0,
                     1.0,
@@ -432,23 +437,22 @@
                 ],
                 "molecule": "POL",
                 "molid": 0,
-                "moves": 100000367,
-                "relative time": 0.397,
-                "relative time (without energy calc)": 0.103,
+                "moves": 3000081,
+                "relative time": 0.398,
                 "repeat": 100,
-                "√⟨r²⟩": 0.277
+                "√⟨r²⟩": 0.276
             }
         },
         {
             "crankshaft": {
-                "acceptance": 0.918,
+                "acceptance": 0.919,
                 "dprot": 0.5,
                 "molecule": "POL",
-                "moves": 10002228,
+                "moves": 299977,
                 "relative time": 0.236,
-                "relative time (without energy calc)": 0.0128,
+                "relative time (without energy calc)": 0.0139,
                 "repeat": 10,
-                "√⟨r_cm²⟩": 0.339
+                "√⟨r_cm²⟩": 0.348
             }
         },
         {
@@ -456,17 +460,17 @@
                 "acceptance": 0.971,
                 "dprot": 0.5,
                 "molecule": "POL",
-                "moves": 9997405,
-                "relative time": 0.314,
-                "relative time (without energy calc)": 0.0155,
+                "moves": 299942,
+                "relative time": 0.312,
+                "relative time (without energy calc)": 0.0168,
                 "repeat": 10,
-                "√⟨r_cm²⟩": 0.999
+                "√⟨r_cm²⟩": 1.02
             }
         }
     ],
     "number of groups": 1,
     "number of particles": 36,
     "reactionlist": null,
-    "relative drift": 5.684347352774713e-14,
+    "relative drift": 2.6109862322788243e-14,
     "temperature": 300.0
 }

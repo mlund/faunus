@@ -548,7 +548,7 @@ namespace Faunus {
                             if (rc==0)
                             {
                                 Geometry::Chameleon* geo = dynamic_cast<Geometry::Chameleon*>(&c.geo);
-                                if (geo==nullptr or geo->type not_eq Geometry::Chameleon::CUBOID)
+                                if (geo==nullptr or geo->type not_eq Geometry::CUBOID)
                                     throw std::runtime_error("Cuboid-like geometry required");
                                 Point len_half = 0.5*geo->getLength();
                                 if (setbox)

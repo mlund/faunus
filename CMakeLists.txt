@@ -392,7 +392,7 @@ add_test(
     NAME chain
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} chain.yml\
     | $<TARGET_FILE:faunus> --nobar --state chain.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} chain.cmp.json out.json --tol 0.05"
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} chain.out.json out.json --tol 0.05"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/chain)
 
 add_test(

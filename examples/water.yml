@@ -29,7 +29,7 @@ analysis:
     - sanity: {nstep: 100}
     - atomrdf: {file: rdf.dat, nstep: 50, dr: 0.15, name1: OW, name2: OW}
     - systemenergy: {file: energy.dat, nstep: 50}
-    - xtcfile: {file: traj.xtc, nstep: 50}
+    - xtcfile: {file: traj.xtc, nstep: 5}
     - savestate: {file: confout.pqr}
     - savestate: {file: state.ubj}
     - density: {nstep: 50}

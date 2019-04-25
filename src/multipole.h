@@ -66,6 +66,13 @@ namespace Faunus {
     namespace Potential {
 
         /**
+         * @brief Returns the factorial of 'n'. Note that 'n' must be positive semidefinite.
+         */
+        inline unsigned int factorial( unsigned int number ) {
+	  return number > 1 ? factorial(number-1)*number : 1;
+        }
+
+        /**
          * @brief Help-function for the q-potential in class CoulombGalore
          */
         inline double qPochhammerSymbol(double q, int k=1, int P=300) {

@@ -33,14 +33,14 @@ random:              # seed for pseudo random number generator
 
 Below is a list of possible geometries, specified by `type`, for the simulation container,
 indicating if and in which directions periodic boundary conditions (PBC) are applied.
-Origo ($0,0,0$) is always placed in the geometric _center_ of the simulation container.
+Origin ($0,0,0$) is always placed in the geometric _center_ of the simulation container.
 
 `geometry` | PBC      | Required keywords
 ---------- | -------- | --------------------------------------
 `type`:    |          |
 `cuboid`   | $x,y,z$  | `length` (array or single float)
 `slit`     | $x,y$    | `length` (array or single float)
-`hexagonal`| $x,y$    | `radius`, `length` (along _z_)
+`hexagonal`| $x,y$    | `radius` (inscribed), `length` (along _z_)
 `cylinder` | $z$      | `radius`, `length` (along _z_)
 `sphere`   | none     | `radius`
 

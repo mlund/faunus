@@ -25,6 +25,23 @@ namespace Faunus {
         mulen = j.value("mulen", mulen);
     }
 
+    void Polarizable::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
+        mui = q * mui;
+        alpha.rotate(m);
+    }
+
+    void Polarizable::to_json(json &j) const {
+        j["alpha"] = alpha;
+        j["mui"] = mui;
+        j["muilen"] = muilen;
+    }
+
+    void Polarizable::from_json(const json &j) {
+        alpha = j.value("alpha", alpha);
+        mui = j.value("mui", Point(1,0,0) );
+        muilen = j.value("mulen", muilen);
+    }
+
     void Quadrupole::rotate(const Eigen::Quaterniond&, const Eigen::Matrix3d &m) { Q.rotate(m); }
 
     void Quadrupole::to_json(json &j) const { j["Q"] = Q; }

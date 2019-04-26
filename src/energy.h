@@ -1722,21 +1722,21 @@ namespace Faunus {
                             // at this point, *all* penalty functions shall be identical
 
                             // save penalty function to disk
-                            if (mpi.isMaster()) {
+                            /*if (mpi.isMaster()) {
                                 std::ofstream f(file + ".walkersync" + std::to_string(nconv));
                                 if (f) {
                                     f.precision(16);
                                     f << "# " << f0 << " " << samplings << " " << nconv << "\n"
                                         << penalty.array() << endl;
                                 }
-                            }
+                            }*/
 
                             // save histogram to disk
-                            std::ofstream f(MPI::prefix + hisfile + ".walkersync" + std::to_string(nconv));
+                            /*std::ofstream f(MPI::prefix + hisfile + ".walkersync" + std::to_string(nconv));
                             if (f) {
                                 f << histo << endl;
                                 f.close();
-                            }
+                            }*/
 
                             // print information to console
                             if (min>0 and not quiet) {

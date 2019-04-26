@@ -702,6 +702,8 @@ namespace Faunus {
          */
         class CustomPairPotential : public PairPotentialBase {
             private:
+                // Only ExprFunction<double> is explicitly instantiated in functionparser.cpp. Other types as well as
+                // the implicit template instantiation is disabled to save reasources during the compilation/build.
                 ExprFunction<double> expr;
                 struct Data {
                     double r=0, q1=0, q2=0, s1=0, s2=0;

@@ -198,32 +198,38 @@ namespace Faunus {
                         return spc.p.end();
                     }
 
+                    /**
+                     * @brief translates a single particle.
+                     */
+                    virtual void translateParticle(typename Tpvec::iterator p, double dp) {
+                        auto &g = spc.groups[cdata.index];
+                        Point oldpos = p->pos;
+                        p->pos += ranunit(slump, dir) * dp * slump();
+
+                        spc.geo.boundary(p->pos);
+                        _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
+                        if (not g.atomic) {                    // recalc mass-center for non-molecular groups
+                            g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
+#ifndef NDEBUG
+                            Point cmbak = g.cm;                             // backup mass center
+                            g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
+                            double should_be_zero = spc.geo.sqdist({0, 0, 0}, Geometry::massCenter(g.begin(), g.end()));
+                            if (should_be_zero > 1e-6)
+                                throw std::runtime_error("atomic move too large");
+                            else
+                                g.translate(cmbak, spc.geo.getBoundaryFunc());
+#endif
+                        }
+                    }
+
                     void _move(Change &change) override {
                         auto p = randomAtom();
                         if (p not_eq spc.p.end()) {
                             double dp = atoms.at(p->id).dp;
                             double dprot = atoms.at(p->id).dprot;
-                            auto& g = spc.groups[cdata.index];
 
-                            if (dp>0) { // translate
-                                Point oldpos = p->pos;
-                                p->pos += ranunit(slump,dir) * dp * slump();
-
-                                spc.geo.boundary(p->pos);
-                                _sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
-                                if (not g.atomic) { // recalc mass-center for non-molecular groups
-                                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
-#ifndef NDEBUG
-                                    Point cmbak = g.cm; // backup mass center
-                                    g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
-                                    double should_be_zero = spc.geo.sqdist( {0,0,0}, Geometry::massCenter(g.begin(), g.end()) );
-                                    if (should_be_zero>1e-6)
-                                        throw std::runtime_error("atomic move too large");
-                                    else
-                                        g.translate(cmbak, spc.geo.getBoundaryFunc());
-#endif
-                                }
-                            }
+                            if (dp > 0) // translate
+                                translateParticle(p, dp);
 
                             if (dprot>0) { // rotate
                                 Point u = ranunit(slump);
@@ -235,8 +241,6 @@ namespace Faunus {
                             if (dp>0 or dprot>0)
                                 change.groups.push_back( cdata ); // add to list of moved groups
                         }
-                        // else
-                        //    std::cerr << name << ": no atoms found" << std::endl;
                     }
 
                     void _accept(Change&) override { msqd += _sqd; }
@@ -258,65 +262,45 @@ namespace Faunus {
             class Atomic2dTranslateRotate : public AtomicTranslateRotate<Tspace> {
                 protected:
                     typedef AtomicTranslateRotate<Tspace> base;
+                    using base::spc;
 
-                    void _move(Change &change) override {
-                        auto p = base::randomAtom();
-                        if (p not_eq base::spc.p.end()) {
-                            double dp = atoms.at(p->id).dp;
-                            double dprot = atoms.at(p->id).dprot;
-                            auto& g = base::spc.groups[base::cdata.index];
+                    void translateParticle(typename base::Tpvec::iterator p, double dp) override {
+                        auto &g = spc.groups[base::cdata.index];
+                        Point oldpos = p->pos;
 
-                            if (dp>0) { // translate
-                                Point oldpos = p->pos;
+                        Point rtp = xyz2rtp(p->pos); // Get the spherical coordinates of the particle
+                        double slump_theta = dp * (base::slump() - 0.5); // Get random theta-move
+                        double slump_phi = dp * (base::slump() - 0.5);   // Get random phi-move
 
-                                Point rtp = xyz2rtp(p->pos); // Get the spherical coordinates of the particle
-                                double slump_theta = dp*(base::slump()-0.5);  // Get random theta-move
-                                double slump_phi = dp*(base::slump()-0.5);   // Get random phi-move
+                        double scalefactor_theta = spc.geo.getRadius() * sin(rtp.z()); // Scale-factor for theta
+                        double scalefactor_phi = spc.geo.getRadius();                  // Scale-factor for phi
 
-                                double scalefactor_theta = base::spc.geo.getRadius()*sin(rtp.z()); // Scale-factor for theta
-                                double scalefactor_phi = base::spc.geo.getRadius();                // Scale-factor for phi
+                        Point theta_dir = Point(-sin(rtp.y()), cos(rtp.y()), 0); // Unit-vector in theta-direction
+                        Point phi_dir = Point(cos(rtp.y()) * cos(rtp.z()), sin(rtp.y()) * cos(rtp.z()),
+                                              -sin(rtp.z())); // Unit-vector in phi-direction
+                        Point xyz = oldpos + scalefactor_theta * theta_dir * slump_theta +
+                                    scalefactor_phi * phi_dir * slump_phi; // New position
+                        p->pos = spc.geo.getRadius() * xyz / xyz.norm();   // Convert to cartesian coordinates
 
-                                Point theta_dir = Point(-sin(rtp.y()),cos(rtp.y()),0);    // Unit-vector in theta-direction
-                                Point phi_dir = Point(cos(rtp.y())*cos(rtp.z()),sin(rtp.y())*cos(rtp.z()),-sin(rtp.z()));  // Unit-vector in phi-direction
-                                Point xyz = oldpos + scalefactor_theta*theta_dir*slump_theta + scalefactor_phi*phi_dir*slump_phi; // New position
-                                p->pos = base::spc.geo.getRadius()*xyz/xyz.norm(); // Convert to cartesian coordinates
-
-                                base::spc.geo.boundary(p->pos);
-                                base::_sqd = base::spc.geo.sqdist(oldpos, p->pos); // squared displacement
-                                if (not g.atomic) { // recalc mass-center for non-molecular groups
-                                    g.cm = Geometry::massCenter(g.begin(), g.end(), base::spc.geo.getBoundaryFunc(), -g.cm);
+                        spc.geo.boundary(p->pos);
+                        base::_sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
+                        if (not g.atomic) {                          // recalc mass-center for non-molecular groups
+                            g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
 #ifndef NDEBUG
-                                    Point cmbak = g.cm; // backup mass center
-                                    g.translate(-cmbak, base::spc.geo.getBoundaryFunc()); // translate to {0,0,0}
-                                    double should_be_zero = base::spc.geo.sqdist( {0,0,0}, Geometry::massCenter(g.begin(), g.end()) );
-                                    if (should_be_zero>1e-6)
-                                        throw std::runtime_error("atomic move too large");
-                                    else
-                                        g.translate(cmbak, base::spc.geo.getBoundaryFunc());
+                            Point cmbak = g.cm;                             // backup mass center
+                            g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
+                            double should_be_zero = spc.geo.sqdist({0, 0, 0}, Geometry::massCenter(g.begin(), g.end()));
+                            if (should_be_zero > 1e-6)
+                                throw std::runtime_error("atomic move too large");
+                            else
+                                g.translate(cmbak, spc.geo.getBoundaryFunc());
 #endif
-                                }
-                            }
-
-                            if (dprot>0) { // rotate
-                                Point u = ranunit(base::slump);
-                                double angle = dprot * (base::slump()-0.5);
-                                Eigen::Quaterniond Q( Eigen::AngleAxisd(angle, u) );
-                                p->rotate(Q, Q.toRotationMatrix());
-                            }
-
-                            if (dp>0 or dprot>0)
-                                change.groups.push_back( base::cdata ); // add to list of moved groups
                         }
-                        // else
-                        //    std::cerr << name << ": no atoms found" << std::endl;
                     }
 
                 public:
                     Atomic2dTranslateRotate(Tspace &spc) : base(spc) {
                         base::name = "transrot 2d";
-                        base::repeat = -1; // meaning repeat N times
-                        base::cdata.atoms.resize(1);
-                        base::cdata.internal=true;
                     }
             };
 

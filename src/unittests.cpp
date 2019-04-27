@@ -17,4 +17,4 @@
 #include "move.h"
 #include "penalty.h"
 #include "celllist.h"
-
+#include "functionparser.h"

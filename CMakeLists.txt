@@ -197,6 +197,7 @@ include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjso
 
 # faunus cpp files
 set(objs
+    ${CMAKE_SOURCE_DIR}/src/functionparser.cpp
     ${CMAKE_SOURCE_DIR}/src/random.cpp
     ${CMAKE_SOURCE_DIR}/src/mpi.cpp
     ${CMAKE_SOURCE_DIR}/src/core.cpp
@@ -221,6 +222,7 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/auxiliary.h
     ${CMAKE_SOURCE_DIR}/src/core.h
     ${CMAKE_SOURCE_DIR}/src/energy.h
+    ${CMAKE_SOURCE_DIR}/src/functionparser.h
     ${CMAKE_SOURCE_DIR}/src/geometry.h
     ${CMAKE_SOURCE_DIR}/src/group.h
     ${CMAKE_SOURCE_DIR}/src/io.h

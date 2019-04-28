@@ -225,3 +225,19 @@ void Faunus::Analysis::CombinedAnalysis::sample() {
 Faunus::Analysis::CombinedAnalysis::~CombinedAnalysis() {
     for (auto i : this->vec) i->to_disk();
 }
+void Faunus::Analysis::FileReactionCoordinate::_to_json(Faunus::json &j) const {
+    j = *rc;
+    j["type"] = type;
+    j["file"] = filename;
+    j.erase("range");      // these are for penalty function
+    j.erase("resolution"); // use only, so no need to show
+    if (cnt > 0)
+        j["average"] = avg.avg();
+}
+void Faunus::Analysis::FileReactionCoordinate::_sample() {
+    if (file) {
+        double val = (*rc)();
+        avg += val;
+        file << cnt * steps << " " << val << " " << avg.avg() << "\n";
+    }
+}

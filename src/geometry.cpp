@@ -50,14 +50,13 @@ namespace Faunus {
 
         // =============== GeometryBase ===============
 
-        GeometryBase::~GeometryBase() {}
+    GeometryBase::~GeometryBase() = default;
 
+    // =============== Cuboid ===============
 
-        // =============== Cuboid ===============
-
-        Cuboid::Cuboid(const Point &p) {
-            boundary_conditions = BoundaryCondition(ORTHOGONAL, {PERIODIC, PERIODIC, PERIODIC});
-            setLength(p);
+    Cuboid::Cuboid(const Point &p) {
+        boundary_conditions = BoundaryCondition(ORTHOGONAL, {PERIODIC, PERIODIC, PERIODIC});
+        setLength(p);
         }
 
         Cuboid::Cuboid(double x, double y, double z) : Cuboid(Point(x, y, z)) {
@@ -448,7 +447,7 @@ namespace Faunus {
                     break;
                 case XY: // earlier wrongly named as ISOTROPIC!
                     alpha = std::sqrt(volume / old_volume);
-                    radius *= alpha;;
+                    radius *= alpha;
                     box_scaling = {alpha, alpha, 1.0};
                     break;
                 case ISOCHORIC:
@@ -718,7 +717,29 @@ namespace Faunus {
             geometry->to_json(j);
             j["type"] = name;
         }
+        Chameleon::VariantName Chameleon::variantName(const std::string &name) {
+            auto it = names.find(name);
+            if (it == names.end()) {
+                throw std::runtime_error("unknown geometry: " + name);
+            }
+            return *it;
+        }
+        Chameleon::VariantName Chameleon::variantName(const json &j) {
+            return variantName(j.at("type").get<std::string>());
+        }
+        Chameleon &Chameleon::operator=(const Chameleon &geo) {
+            if (&geo != this) {
+                GeometryBase::operator=(geo);
+                len = geo.len;
+                len_half = geo.len_half;
+                len_inv = geo.len_inv;
+                _type = geo._type;
+                _name = geo._name;
+                geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
+            }
+            return *this;
+        }
 
-    } // end of Geometry namespace
+        } // namespace Geometry
 
 } // end of Faunus namespace

@@ -20,7 +20,7 @@ namespace Faunus {
      */
     struct Change {
         bool dV=false;    //!< Set to true if there's a volume change
-        double all=false; //!< Set to true if *everything* has changed
+        bool all = false; //!< Set to true if *everything* has changed
         bool dN=false;    //!< True if the number of atomic or molecular species has changed
         bool moved2moved=true; //!< If several groups are moved, should they interact with each other?
 
@@ -126,8 +126,16 @@ namespace Faunus {
             getActiveParticles(const Tspace &spc) : spc(spc) {};
         };
 
-    template<class Tparticletype>
-        struct Space {
+        /**
+         * @brief Placeholder for atoms and molecules
+         * @tparam Tparticletype Particle type for the space
+         *
+         * @todo
+         * Split definitions into cpp file and forward instatiate
+         * an instance of `Space<Tparticle>` where `Tparticle` has
+         * been defined as `typedef Particle<Charge> Tparticle`.
+         */
+        template <class Tparticletype> struct Space {
 
             typedef Geometry::Chameleon Tgeometry;
             typedef Tparticletype Tparticle;

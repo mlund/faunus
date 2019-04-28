@@ -34,7 +34,7 @@ namespace Faunus {
                 void accept(Change &c);
                 void reject(Change &c);
                 virtual double bias(Change&, double uold, double unew); //!< adds extra energy change not captured by the Hamiltonian
-                inline virtual ~Movebase() {};
+                inline virtual ~Movebase() = default;
         };
 
         void from_json(const json &j, Movebase &m); //!< Configure any move via json
@@ -514,8 +514,8 @@ namespace Faunus {
             class ForceMove : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
-                    void _to_json(json&) const {};
-                    void _from_json(const json&) {};
+                    void _to_json(json &) const override{};
+                    void _from_json(const json &) override{};
                     std::vector<Point> forces, velocities;
                 public:
                     ForceMove() {
@@ -729,8 +729,6 @@ namespace Faunus {
                         otherspc = &ospc;
                     }
 
-                    double energy(); //!< Returns intrinsic energy of the process
-
                     void _move(Change &change) override {
                         if ( reactions<Tpvec>.size()>0 ) {
                             auto rit = slump.sample( reactions<Tpvec>.begin(), reactions<Tpvec>.end() );
@@ -904,7 +902,7 @@ namespace Faunus {
                     void _accept(Change&) override {
                         accmap[ trialprocess->name ] += 1;
                         trialprocess->N_reservoir += (forward == true) ? -1 : 1;
-                        if( trialprocess->N_reservoir < 0 && trialprocess->canonic == true )
+                        if (trialprocess->N_reservoir < 0 && trialprocess->canonic)
                             throw std::runtime_error("There are no negative number of molecules");
                     }
 
@@ -1514,7 +1512,7 @@ start:
                             auto atom0_ndx = (*bond)->index.at(0) + chain_offset;
                             auto atom1_ndx = (*bond)->index.at(1) + chain_offset;
                             if(atom0_ndx < 0 || atom1_ndx < 0) {
-                                throw new std::range_error("A negative index of the atom occured.");
+                                throw std::range_error("A negative index of the atom occured.");
                             }
                             if (this->slump() > 0.5) {
                                 for (size_t i = atom1_ndx + 1; i < chain_offset + chain.size(); i++)
@@ -1683,7 +1681,7 @@ start:
 
                 public:
                     using BasePointerVector<Movebase>::vec;
-                    inline Propagator() {}
+                    inline Propagator() = default;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
                     inline Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi) {

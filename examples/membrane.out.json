@@ -12,21 +12,22 @@
         },
         {
             "systemenergy": {
-                "Cv/kB": 1801.5,
+                "Cv/kB": 543.36,
                 "file": "energy.dat",
                 "final": [
                     0.0,
-                    8148.169418353171,
-                    -2742.1809009260746
+                    8153.556670057056,
+                    -2743.075101012148
                 ],
                 "init": 5407.5,
-                "mean": 5391.9,
+                "mean": 5372.8,
                 "nstep": 100,
                 "samples": 20
             }
         },
         {
             "sliceddensity": {
+                "atomcom": "",
                 "atoms": [
                     "HD"
                 ],
@@ -38,6 +39,7 @@
         },
         {
             "sliceddensity": {
+                "atomcom": "",
                 "atoms": [
                     "TL"
                 ],
@@ -77,7 +79,7 @@
                         ],
                         "type": "cuboid"
                     },
-                    "relative time": 0.00023885338515840297
+                    "relative time": 0.00014415254763542717
                 },
                 {
                     "bonded": {
@@ -5184,7 +5186,7 @@
                             }
                         ]
                     },
-                    "relative time": 0.003412513302334855
+                    "relative time": 0.0020275069105624758
                 },
                 {
                     "nonbondedEM": {
@@ -5245,24 +5247,23 @@
                                         "mixing": "LB"
                                     }
                                 }
-                            ],
-                            "rmax": 25
+                            ]
                         }
                     },
-                    "relative time": 0.013862660518783033
+                    "relative time": 0.008121758716304274
                 }
             ]
         }
     ],
     "geometry": {
         "length": [
-            85.96861446282875,
-            85.96861446282875,
-            166.1907769096929
+            86.950851824517,
+            86.950851824517,
+            162.45724753990243
         ],
         "type": "cuboid"
     },
-    "git revision": "083bdeba (2019-03-12)",
+    "git revision": "31c1ffce (2019-04-03)",
     "groups": [
         {
             "lipid": {
@@ -6619,7 +6620,7 @@
     "moves": [
         {
             "moltransrot": {
-                "acceptance": 0.295,
+                "acceptance": 0.293,
                 "dir": [
                     1.0,
                     1.0,
@@ -6629,11 +6630,11 @@
                 "dprot": 0.5,
                 "molecule": "lipid",
                 "molid": 0,
-                "moves": 200260,
-                "relative time": 0.361,
-                "relative time (without energy calc)": 0.0194,
+                "moves": 200254,
+                "relative time": 0.365,
+                "relative time (without energy calc)": 0.012,
                 "repeat": 100,
-                "√⟨r²⟩": 0.268
+                "√⟨r²⟩": 0.265
             }
         },
         {
@@ -6646,23 +6647,23 @@
                 ],
                 "molecule": "lipid",
                 "molid": 0,
-                "moves": 199762,
-                "relative time": 0.366,
-                "relative time (without energy calc)": 0.0185,
+                "moves": 199763,
+                "relative time": 0.365,
+                "relative time (without energy calc)": 0.0107,
                 "repeat": 100,
-                "√⟨r²⟩": 0.484
+                "√⟨r²⟩": 0.483
             }
         },
         {
             "volume": {
-                "acceptance": 0.334,
+                "acceptance": 0.458,
                 "dV": 0.03,
                 "method": "isochoric",
-                "moves": 1978,
-                "relative time": 0.248,
+                "moves": 1983,
+                "relative time": 0.256,
                 "repeat": 1,
-                "√⟨ΔV²⟩": 0.305,
-                "∛√⟨ΔV²⟩": 0.673,
+                "√⟨ΔV²⟩": 5140.0,
+                "∛√⟨ΔV²⟩": 17.3,
                 "⟨V⟩": 1230000.0
             }
         }
@@ -6670,6 +6671,6 @@
     "number of groups": 150,
     "number of particles": 450,
     "reactionlist": null,
-    "relative drift": 3.1956549424635283e-15,
+    "relative drift": -3.5320270809996265e-15,
     "temperature": 298.0
 }

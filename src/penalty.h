@@ -72,12 +72,11 @@ namespace Faunus {
                             };
                         else if (property=="N") // number of particles
                             f = [&groups=spc.groups]() {
-                                double N_sum=0;
+                                int N_sum=0;
                                 for (auto &g : groups) // loops over groups
                                     N_sum += g.size();
                                 return N_sum;
                             };
-
                         if (f==nullptr)
                             throw std::runtime_error(name + ": unknown property '" + property + "'" + usageTip["coords=[system]"]);
                     }
@@ -98,10 +97,19 @@ namespace Faunus {
                         index = j.at("index");
                         property = j.at("property").get<std::string>();
                         if (property=="x") f = [&p=spc.p, i=index]() { return p[i].pos.x(); };
-                        if (property=="y") f = [&p=spc.p, i=index]() { return p[i].pos.y(); };
-                        if (property=="z") f = [&p=spc.p, i=index]() { return p[i].pos.z(); };
-                        if (property=="R") f = [&p=spc.p, i=index]() { return p[i].pos.norm(); };
-                        if (property=="q") f = [&p=spc.p, i=index]() { return p[i].charge; };
+                        else if (property=="y") f = [&p=spc.p, i=index]() { return p[i].pos.y(); };
+                        else if (property=="z") f = [&p=spc.p, i=index]() { return p[i].pos.z(); };
+                        else if (property=="R") f = [&p=spc.p, i=index]() { return p[i].pos.norm(); };
+                        else if (property=="q") f = [&p=spc.p, i=index]() { return p[i].charge; };
+                        else if (property=="N") // number of atom of id=index
+                            f = [&groups=spc.groups, i=index]() {
+                                int N_sum=0;
+                                for (auto &g : groups) // loops over groups
+                                    for (auto &p : g) // loops over particles
+                                        if (p.id == i)
+                                            N_sum++;
+                                return N_sum;
+                            };
                         if (f==nullptr)
                             throw std::runtime_error(name + ": unknown property '" + property + "'" + usageTip["coords=[atom]"]);
                     }
@@ -114,6 +122,7 @@ namespace Faunus {
             public:
                 template<class Tspace>
                     MoleculeProperty(const json &j, Tspace &spc) {
+                        typedef typename Tspace::Tparticle Tparticle;
                         name = "molecule";
                         from_json(j, *this);
                         index = j.value("index", 0);
@@ -188,6 +197,30 @@ namespace Faunus {
                                 auto cm1 = Geometry::massCenter(spc.p.begin()+i, spc.p.begin()+j, spc.geo.getBoundaryFunc());
                                 auto cm2 = Geometry::massCenter(spc.p.begin()+k, spc.p.begin()+l, spc.geo.getBoundaryFunc());
                                 return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm(); 
+                            };
+                        }
+
+                        else if (property=="L/R") {
+                            dir = j.at("dir"); 
+                            indexes = j.value("indexes", decltype(indexes)());
+                            assert(indexes.size()==2 && "An array of 2 indexes should be specified.");
+                            f = [&spc, &dir=dir, i=indexes[0], j=indexes[1]]() {
+                                Average<double> Rj, Rin, Rout;
+                                Group<Tparticle> g(spc.p.begin(), spc.p.end());
+                                auto slicei = g.find_id(i);
+                                auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
+                                auto slicej = g.find_id(j);
+                                for (auto p : slicej)
+                                    Rj += spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
+                                double Rjavg = Rj.avg();
+                                for (auto p : slicei) {
+                                    double d = spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
+                                    if (d < Rjavg)
+                                        Rin += d;
+                                    else if (d > Rjavg)
+                                        Rout += d;
+                                }
+                                return 2 * spc.geo.getLength().z() / ( Rin.avg() + Rout.avg() ); 
                             };
                         }
 

@@ -153,7 +153,9 @@ void Faunus::Analysis::PairFunctionBase::_to_json(Faunus::json &j) const {
         {"name1", name1},
         {"name2", name2},
         {"file", file},
-        {"dim", dim}
+        {"dim", dim},
+        {"slicedir", slicedir},
+        {"thickness",thickness}
     };
     if (Rhypersphere>0)
         j["Rhyper"] = Rhypersphere;
@@ -161,13 +163,15 @@ void Faunus::Analysis::PairFunctionBase::_to_json(Faunus::json &j) const {
 
 void Faunus::Analysis::PairFunctionBase::_from_json(const Faunus::json &j) {
     assertKeys(j, {
-            "file", "name1", "name2", "dim", "dr", "Rhyper", "nstep", "nskip"
+            "file", "name1", "name2", "dim", "dr", "Rhyper", "nstep", "nskip", "slicedir", "thickness"
             });
     file = j.at("file");
     name1 = j.at("name1");
     name2 = j.at("name2");
     dim = j.value("dim", 3);
     dr = j.value("dr", 0.1) * 1.0_angstrom;
+    slicedir = j.value("slicedir", slicedir);
+    thickness = j.value("thickness", 0);
     hist.setResolution(dr, 0);
     Rhypersphere = j.value("Rhyper", -1.0);
 }
@@ -220,4 +224,20 @@ void Faunus::Analysis::CombinedAnalysis::sample() {
 
 Faunus::Analysis::CombinedAnalysis::~CombinedAnalysis() {
     for (auto i : this->vec) i->to_disk();
+}
+void Faunus::Analysis::FileReactionCoordinate::_to_json(Faunus::json &j) const {
+    j = *rc;
+    j["type"] = type;
+    j["file"] = filename;
+    j.erase("range");      // these are for penalty function
+    j.erase("resolution"); // use only, so no need to show
+    if (cnt > 0)
+        j["average"] = avg.avg();
+}
+void Faunus::Analysis::FileReactionCoordinate::_sample() {
+    if (file) {
+        double val = (*rc)();
+        avg += val;
+        file << cnt * steps << " " << val << " " << avg.avg() << "\n";
+    }
 }

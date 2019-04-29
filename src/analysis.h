@@ -51,25 +51,10 @@ namespace Faunus {
                 std::ofstream file;
                 std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
 
-                inline void _to_json(json &j) const override {
-                    j = *rc;
-                    j["type"] = type;
-                    j["file"] = filename;
-                    j.erase("range");     // these are for penalty function
-                    j.erase("resolution");// use only, so no need to show
-                    if (cnt>0)
-                        j["average"] = avg.avg();
-                }
+                void _to_json(json &j) const override;
+                void _sample() override;
 
-                inline void _sample() override {
-                    if (file) {
-                        double val = (*rc)();
-                        avg += val;
-                        file << cnt*steps << " " << val << " " << avg.avg() << "\n";
-                    }
-                }
-
-            public:
+              public:
                 template<class Tspace>
                     FileReactionCoordinate(const json &j, Tspace &spc) {
                         using namespace Faunus::ReactionCoordinate;
@@ -190,270 +175,6 @@ namespace Faunus {
                     }
             };
 
-            /**
-             * @brief Single particle hard sphere Widom insertion with charge scaling
-             *
-             * This will calculate excess chemical potentials for single particles
-             * in the primitive model of electrolytes. Use the `add()` functions
-             * to add test or *ghost* particles and call `sample()` to perform single
-             * particle insertions.
-             * Inserted particles are *non-perturbing* and thus removed again after
-             * sampling. Electroneutrality for insertions of charged species is
-             * maintaing by charge re-scaling according to
-             *
-             * - [Svensson and Woodward, Mol. Phys. 1988, 64:247]
-             *   (http://doi.org/ft9bv9)
-             *
-             * Currently this works **only** for the primitive model of electrolytes, i.e.
-             * hard, charged spheres interacting with a Coulomb potential.
-             *
-             * JSON input:
-             *
-             *  Keyword    | Description
-             *  ---------- | ---------------------------------------
-             *  `lB`       | Bjerrum length (angstrom)
-             *  `ninsert`  | Number of intertions per sampling event
-             *  `nstep`    | Sample every n'th step
-             *
-             * @warning Works only for the primitive model
-             * @note This is a conversion of the Widom routine found in the `bulk.f`
-             *       fortran program by Bolhuis/Jonsson/Akesson at Lund University.
-             * @author Martin Trulsson and Mikael Lund
-             * @date Lund / Prague 2007-2008.
-             */
-            // template<class Tspace>
-            //     class WidomScaled : public AnalysisBase
-            // {
-            //
-            //     private:
-            //
-                    // typedef typename Tspace::Tparticle Tparticle;
-                    // typedef typename Tspace::Tpvec Tpvec;
-                    // typedef MoleculeData<Tpvec> TMoleculeData;
-            //
-            //         Tspace &spc;
-            //         Energy::Energybase* pot;
-            //         RandomInserter<TMoleculeData> rins;
-            //
-            //         Tvec chel;          //!< electrostatic
-            //         Tvec chhc;          //!< hard collision
-            //         Tvec chex;          //!< excess
-            //         Tvec chexw;         //!< excess
-            //         Tvec chtot;         //!< total
-            //         vector <Tvec> ewden; //!< charging denominator
-            //         vector <Tvec> ewnom; //!< charging nominator
-            //         vector <Tvec> chint; //!< charging integrand
-            //         Tvec chid;          //!< ideal term
-            //         Tvec expuw;
-            //         vector<int> ihc, irej;
-            //         int ghostin;        //< ghost insertions
-            //         double lB;          //!< Bjerrum length
-            //
-            //         void init()
-            //         {
-            //             int gspec = g.size();
-            //             chel.resize(gspec);
-            //             chhc.resize(gspec);
-            //             chex.resize(gspec);
-            //             chtot.resize(gspec);
-            //             ewden.resize(gspec);
-            //             ewnom.resize(gspec);
-            //             chint.resize(gspec);
-            //             expuw.resize(gspec);
-            //             chexw.resize(gspec);
-            //             ihc.resize(gspec);
-            //             irej.resize(gspec);
-            //
-            //             for ( int i = 0; i < gspec; i++ )
-            //             {
-            //                 chel[i] = 0;
-            //                 chhc[i] = 0;
-            //                 chex[i] = 0;
-            //                 chtot[i] = 0;
-            //                 ihc[i] = 0;
-            //                 ewden[i].resize(11);
-            //                 ewnom[i].resize(11);
-            //                 chint[i].resize(11);
-            //                 for ( int j = 0; j < 11; j++ )
-            //                     ewden[i][j] = ewnom[i][j] = chint[i][j] = 0;
-            //             }
-            //         }
-            //
-            //         template<class Tgeo>
-            //             bool overlap( const Tparticle &a, const Tparticle &b, const Tgeo &geo )
-            //             {
-            //                 double s = a.radius + b.radius;
-            //                 return (geo.sqdist(a, b) < s * s) ? true : false;
-            //             }
-            //
-            //         string _info() override
-            //         {
-            //             using namespace textio;
-            //             std::ostringstream o;
-            //             double aint4, aint2, aint1;
-            //             for ( size_t i = 0; i < g.size(); i++ )
-            //             {
-            //                 for ( int cint = 0; cint < 11; cint++ )
-            //                 {
-            //                     if ( ewden[i][cint] == 0 )
-            //                         std::cerr << "# WARNING: Widom denominator equals zero" << endl;
-            //                     else
-            //                         chint[i][cint] = ewnom[i][cint] / ewden[i][cint];
-            //                 }
-            //                 aint4 = chint[i][1] + chint[i][3] + chint[i][5] + chint[i][7] + chint[i][9];
-            //                 aint2 = chint[i][2] + chint[i][4] + chint[i][6] + chint[i][8];
-            //                 aint1 = chint[i][0] + chint[i][10];
-            //                 chel[i] = 1. / 30. * (aint1 + 2 * aint2 + 4 * aint4);
-            //             }
-            //
-            //             int cnttot = cnt * ghostin;
-            //             o << pad(SUB, w, "Number of insertions") << cnttot << endl
-            //                 << pad(SUB, w, "Excess chemical potentials (kT)") << endl
-            //                 << "             total    elec.   hs             z        r" << endl;
-            //             char w = 10;
-            //             for ( size_t i = 0; i < g.size(); i++ )
-            //             {
-            //                 chhc[i] = -log(double(cnttot - ihc[i]) / cnttot);
-            //                 chexw[i] = -log(expuw[i]);
-            //                 chex[i] = chhc[i] + chel[i];
-            //                 o.unsetf(std::ios_base::floatfield);
-            //                 o << "    [" << i << "] "
-            //                     << std::setprecision(4)
-            //                     << std::setw(w) << chex[i]
-            //                     << std::setw(w) << chel[i]
-            //                     << std::setw(w) << chhc[i]
-            //                     << std::setprecision(2) << std::fixed
-            //                     << std::setw(w) << g[i].charge
-            //                     << std::setw(w) << g[i].radius << endl;
-            //             }
-            //             return o.str();
-            //         }
-            //
-            //         Tmjson _json() override
-            //         {
-            //             if ( cnt * ghostin>0 )
-            //                 return {
-            //                     { name,
-            //                         {
-            //                             { "number of insertions", cnt*ghostin },
-            //                             { "ninsert", ghostin },
-            //                             { "lB", lB }
-            //                         }
-            //                     }
-            //                 };
-            //             return Tmjson();
-            //         }
-            //
-            //
-            //         void _sample() override
-            //         {
-            //             auto &geo = spc.geo;
-            //             auto &p = spc.p;
-            //             if ( !g.empty())
-            //                 if ( !p.empty())
-            //                 {
-            //                     Tparticle ghost;
-            //                     double u, cu;
-            //                     for ( int i = 0; i < ghostin; i++ )
-            //                     {
-            //                         geo.randompos(ghost);
-            //                         int goverlap = 0;
-            //                         for ( size_t k = 0; k < g.size(); k++ )
-            //                         {
-            //                             ghost.radius = g[k].radius;
-            //                             irej[k] = 0;
-            //                             int j = 0;
-            //                             while ( !overlap(ghost, p[j], geo) && j < (int) p.size())
-            //                                 j++;
-            //                             if ( j != (int) p.size())
-            //                             {
-            //                                 ihc[k]++;
-            //                                 irej[k] = 1;
-            //                                 goverlap++;
-            //                             }
-            //                         }
-            //
-            //                         if ( goverlap != (int) g.size())
-            //                         {
-            //                             cu = 0;
-            //                             u = 0;  //elelectric potential (Coulomb only!)
-            //                             for ( auto &i : p )
-            //                             {
-            //                                 double invdi = 1 / geo.dist(ghost, i);
-            //                                 cu += invdi;
-            //                                 u += invdi * i.charge;
-            //                             }
-            //                             cu = cu * lB;
-            //                             u = u * lB;
-            //                             double ew, ewla, ewd;
-            //                             for ( size_t k = 0; k < g.size(); k++ )
-            //                             {
-            //                                 if ( irej[k] == 0 )
-            //                                 {
-            //                                     expuw[k] += exp(-u * g[k].charge);
-            //                                     for ( int cint = 0; cint < 11; cint++ )
-            //                                     {
-            //                                         ew = g[k].charge *
-            //                                             (u - double(cint) * 0.1 * g[k].charge * cu / double(p.size()));
-            //                                         ewla = ew * double(cint) * 0.1;
-            //                                         ewd = exp(-ewla);
-            //                                         ewden[k][cint] += ewd;
-            //                                         ewnom[k][cint] += ew * ewd;
-            //                                     }
-            //                                 }
-            //                             }
-            //                         }
-            //                     }
-            //                 }
-            //         }
-            //
-            //     public:
-            //
-            //         WidomScaled( Tmjson &j, Tspace &spc ) : spc(spc), AnalysisBase(j)
-            //     {
-            //         lB = j.value("lB", 7.0);
-            //         ghostin = j.value("ninsert", 10);
-            //         name = "Single particle Widom insertion w. charge scaling";
-            //         cite = "doi:10/ft9bv9 + doi:10/dkv4s6";
-            //
-            //         add(spc.p);
-            //     }
-            //
-            //         /**
-            //          * @brief Add ghost particle
-            //          *
-            //          * This will add particle `p` to the list of ghost particles
-            //          * to insert.
-            //          */
-            //         void add( const Tparticle &p )
-            //         {
-            //             g.push_back(p);
-            //             init();
-            //         }
-            //
-            //         /**
-            //          * @brief Add ghost particles
-            //          *
-            //          * This will scan the particle vector for particles and each unique type
-            //          * will be added to the list a ghost particles to insert.
-            //          */
-            //         template<class Tpvec>
-            //             void add( const Tpvec &p )
-            //             {
-            //                 std::set<typename Tparticle::Tid> ids;
-            //                 for ( auto &i : p )
-            //                     ids.insert(i.id);
-            //                 for ( auto i : ids )
-            //                 {
-            //                     Tparticle a;
-            //                     a = atom[i];
-            //                     add(a);
-            //                 }
-            //             }
-            //
-            // }; // end of WidomScaled
-
-
         template<class Tspace>
             class AtomProfile : public Analysisbase {
                 Tspace &spc;
@@ -530,39 +251,37 @@ namespace Faunus {
                 std::vector<int> ids;
                 std::string file;
                 double dz;
-                bool COM=false; // center at COM of atoms?
+                std::string atomCOM;
+                int idCOM = -1; // center at COM of idCOM atoms?
 
                 void _from_json(const json &j) override {
                     file = j.at("file").get<std::string>();
                     names = j.at("atoms").get<decltype(names)>(); // molecule names
                     ids = names2ids(atoms, names);     // names --> molids
                     dz = j.value("dz", 0.1);
-                    COM = j.value("com", false);
+                    if (j.count("atomcom") == 1) {
+                        atomCOM = j.at("atomcom");
+                        idCOM = findName(atoms, atomCOM)->id();
+                    }
                     N.setResolution(dz);
                 }
 
                 void _to_json(json &j) const override {
-                    j = {{"atoms", names}, {"file", file}, {"dz", dz}, {"com", COM}};
+                    j = {{"atoms", names}, {"file", file}, {"dz", dz}, {"atomcom", atomCOM}};
                 }
 
                 void _sample() override {
                     Group<Tparticle> all(spc.p.begin(), spc.p.end());
-                    std::map<int, Point> cms;
-                    if (COM) // calc. mass center of selected atoms
-                        for (int id : ids) {
-                            auto slice = all.find_id(id);
-                            auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
-                            cms[id] = cm;
-                        }
+                    double zcm = 0;
+                    if (idCOM >= 0) { // calc. mass center of selected atoms
+                        auto slice = all.find_id(idCOM);
+                        zcm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc()).z();
+                    }
                     // count atoms in slices
                     for (auto &g : spc.groups) // loop over all groups
                         for (auto &i : g)      // loop over active particles
-                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end()) {
-                                if (COM)
-                                    N( i.pos.z() - cms[i.id].z() )++;
-                                else
-                                    N( i.pos.z() )++;
-                            }
+                            if (std::find(ids.begin(), ids.end(), i.id) not_eq ids.end())
+                                N( i.pos.z() - zcm )++;
                 }
 
                 public:
@@ -967,6 +686,7 @@ namespace Faunus {
             private:
                 std::function<void(std::string)> writeFunc = nullptr;
                 std::string file;
+                bool saverandom;
                 void _to_json(json &j) const override;
                 void _sample() override;
             public:
@@ -977,6 +697,7 @@ namespace Faunus {
                         from_json(j);
                         name = "savestate";
                         steps = j.value("nstep", -1);
+                        saverandom = j.value("saverandom", false);
                         file = j.at("file");
                         std::string suffix = file.substr(file.find_last_of(".") + 1);
                         file = MPI::prefix + file;
@@ -1002,25 +723,29 @@ namespace Faunus {
                                     _1, std::ref(spc));
 
                         else if ( suffix == "json" ) // JSON state file
-                            writeFunc = [&spc](const std::string &file) {
+                            writeFunc = [&spc,this](const std::string &file) {
                                 std::ofstream f(file);
                                 if (f) {
                                     json j;
                                     Faunus::to_json(j, spc);
-                                    j["random-move"] = Move::Movebase::slump;
-                                    j["random-global"] = Faunus::random;
+                                    if (this->saverandom) {
+                                        j["random-move"] = Move::Movebase::slump;
+                                        j["random-global"] = Faunus::random;
+                                    }
                                     f << std::setw(2) << j;
                                 }
                             };
 
                         else if ( suffix == "ubj" ) // Universal Binary JSON state file
-                            writeFunc = [&spc](const std::string &file) {
+                            writeFunc = [&spc,this](const std::string &file) {
                                 std::ofstream f(file, std::ios::binary);
                                 if (f) {
                                     json j;
                                     Faunus::to_json(j, spc);
-                                    j["random-move"] = Move::Movebase::slump;
-                                    j["random-global"] = Faunus::random;
+                                    if (this->saverandom) {
+                                        j["random-move"] = Move::Movebase::slump;
+                                        j["random-global"] = Faunus::random;
+                                    }
                                     auto v = json::to_ubjson(j); // json --> binary
                                     f.write( (const char*)v.data(), v.size()*sizeof(decltype(v)::value_type));
                                 }
@@ -1041,6 +766,8 @@ namespace Faunus {
                 int dim=3;
                 int id1=-1, id2=-1; // particle id (mol or atom)
                 double dr=0;
+                Eigen::Vector3i slicedir={0,0,0};
+                double thickness=0;
                 Equidistant2DTable<double,double> hist;
                 std::string name1, name2, file;
                 double Rhypersphere=-1; // Radius of 2D hypersphere
@@ -1070,8 +797,15 @@ namespace Faunus {
                                     ( i->id==id2 && j->id==id1 )
                                )
                             {
-                                double r = std::sqrt( spc.geo.sqdist( i->pos, j->pos ) );
-                                hist(r)++;
+                                Point rvec = spc.geo.vdist( i->pos, j->pos );
+                                if (slicedir.sum()>0) {
+                                    if (rvec.cwiseProduct( slicedir.cast<double>() ).norm() < thickness) {
+                                        // rvec = rvec.cwiseProduct( Point(1.,1.,1.) - slice.cast<double>() );
+                                        hist( rvec.norm() )++;
+                                    }
+                                } else {
+                                    hist( rvec.norm() )++;
+                                }
                             }
                 }
 

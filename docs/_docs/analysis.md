@@ -68,15 +68,15 @@ etc.
 ### Density Slice
 
 `sliceddensity` | Description
---------------- | ---------------------------------------------
+--------------- | --------------------------------------------------------------
 `atoms=[]`      | List of atom names to sample; `*` selects all 
 `file`          | Output filename with profile
 `dz=0.1`        | Resolution along _z_-axis
-`com=false`     | Use mass center _z_ of selected atoms as origin
+`atomcom`       | Atom name; use the mass center _z_ of these atoms as origin
 `nstep`         | Interval between samples
 
 Calculates the density in cuboidal slices of thickness _dz_ along the _z_ axis.
-If `com=true`, the _z_ position of each atom is calculated with respect to the center of mass of all atoms of the same type in the sampled configuration.
+If an atom name is specified for the option `atomcom`, the _z_-position of each atom is calculated with respect to the center of mass of the atoms of the given type.
 
 ## Structure
 
@@ -101,12 +101,16 @@ which depends on dimensionality, `dim`.
 `dr=0.1`       |  $g(r)$ resolution
 `dim=3`        |  Dimensions for volume element
 `nstep=0`      |  Interval between samples
+`slicedir`     |  Direction of the slice for quasi-2D RDFs
+`thickness`    |  Thickness of the slice for quasi-2D RDFs
 
 `dim` |  $V(r)$        
 ----- | ---------------
 3     |  $4\pi r^2 dr$ 
 2     |  $2\pi r dr$   
 1     |  $dr$          
+
+By specifying `slicedir`, the RDF is calculated only for atoms within a slice of given `thickness`. For example, with `slicedir=[0,0,1]` and `thickness=2`, the RDF is calculated for atoms with _z_-coordinates differing by less than 2 Å. This quasi-2D RDF in the _xy_-plane should be normalized with `dim=2`.
 
 ### Molecular $g(r)$
 
@@ -372,10 +376,11 @@ keyword when inserting the initial molecules in the topology.
 
 ### Save State
 
-`savestate`    |  Description
--------------- | ------------------------------------------------------------------------------------------
-`file`         |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `json`/`ubj`
-`nstep=-1`     |  Interval between samples. If -1, save at end of simulation
+`savestate`        |  Description
+------------------ | ------------------------------------------------------------------------------------------
+`file`             |  File to save; format detected by file extension: `pqr`, `aam`, `gro`, `xyz`, `json`/`ubj`
+`saverandom=false` |  Save the state of the random number generator
+`nstep=-1`         |  Interval between samples. If -1, save at end of simulation
 
 Saves the current configuration or the system state to file.
 
@@ -385,8 +390,8 @@ with the following information:
 
 - topology: atom, molecule, and reaction definitions
 - particle and group properties incl. positions
-- state of random number generator
 - geometry
+- state of random number generator (if `saverandom=true`)
 
 
 ### XTC trajectory

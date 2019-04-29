@@ -173,7 +173,7 @@ namespace Faunus {
 
           public:
             Point getLength() const override;
-            double getVolume(int dim = 3) const override final; // finalized to help the compiler with inlining
+            double getVolume(int dim = 3) const final; // finalized to help the compiler with inlining
             void setLength(const Point &len); // todo shall be protected
             Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
             Point vdist(const Point &a, const Point &b) const override;
@@ -628,17 +628,9 @@ namespace Faunus {
             static const std::map<std::string, Variant> names; //!< Geometry names.
             typedef std::pair<std::string, Variant> VariantName;
 
-            inline static VariantName variantName(const std::string &name) {
-                auto it = names.find(name);
-                if (it == names.end()) {
-                    throw std::runtime_error("unknown geometry: " + name);
-                }
-                return *it;
-            }
+            static VariantName variantName(const std::string &name);
 
-            inline static VariantName variantName(const json &j) {
-                return variantName(j.at("type").get<std::string>());
-            }
+            static VariantName variantName(const json &j);
 
             Chameleon(const Variant type = CUBOID);
             Chameleon(const GeometryImplementation &geo, const Variant type);
@@ -651,18 +643,7 @@ namespace Faunus {
             }
 
             //! During the assignment copy everything, but clone the geometry.
-            Chameleon &operator=(const Chameleon &geo) {
-                if (&geo != this) {
-                    GeometryBase::operator=(geo);
-                    len = geo.len;
-                    len_half = geo.len_half;
-                    len_inv = geo.len_inv;
-                    _type = geo._type;
-                    _name = geo._name;
-                    geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
-                }
-                return *this;
-            }
+            Chameleon &operator=(const Chameleon &geo);
         };
 
         inline void Chameleon::_setLength(const Point &l) {

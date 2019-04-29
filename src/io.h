@@ -113,7 +113,7 @@ namespace Faunus {
                     keepcharges = _keepcharges;
                     std::vector<std::string> v;
                     target.clear();
-                    if (IO::readFile(file,v)==true) {
+                    if (IO::readFile(file, v)) {
                         IO::strip(v,"#");
                         unsigned int n=atoi(v[0].c_str());
                         target.resize(n);
@@ -234,7 +234,7 @@ namespace Faunus {
                             std::stringstream o(line);
                             while ( o >> key )
                                 if ( key=="ATOM" or key=="HETATM" ) {
-                                    double radius;
+                                    double radius = 0;
                                     o >> iatom >> aname;
                                     auto it = findName( atoms, aname );
                                     if (it==atoms.end())
@@ -389,7 +389,7 @@ namespace Faunus {
                 static bool load(const std::string &file, Tpvec &p, Tpoint &len) {
                     std::stringstream o;
                     std::vector<std::string> v;
-                    if (IO::readFile(file,v)==true) {
+                    if (IO::readFile(file, v)) {
                         IO::strip(v,"#");
                         size_t n=atoi(v[0].c_str());
                         if (p.size() != n)
@@ -440,7 +440,7 @@ namespace Faunus {
                 bool load(const std::string &file, std::vector<Tparticle,Talloc> &p) {
                     p.clear();
                     v.resize(0);
-                    if (IO::readFile(file,v)==true) {
+                    if (IO::readFile(file, v)) {
                         int last=atoi(v[1].c_str())+1;
                         for (int i=2; i<=last; i++) {
                             Tparticle a;

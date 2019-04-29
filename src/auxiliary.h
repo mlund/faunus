@@ -597,7 +597,7 @@ namespace Faunus
                 void resize(size_t n) {
                     m.resize(n);
                     for (size_t i=0; i<m.size(); i++)
-                        if (triangular==true)
+                        if (triangular)
                             m[i].resize(i+1, __val);
                         else
                             m[i].resize(n, __val);
@@ -610,7 +610,7 @@ namespace Faunus
                 auto size() const { return m.size(); }
 
                 const T& operator()(size_t i, size_t j) const {
-                    if (triangular==true)
+                    if (triangular)
                         if (j>i)
                             std::swap(i,j);
                     assert(i < m.size());

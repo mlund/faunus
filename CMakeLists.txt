@@ -210,7 +210,8 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/move.cpp
     ${CMAKE_SOURCE_DIR}/src/particle.cpp
     ${CMAKE_SOURCE_DIR}/src/penalty.cpp
-    ${CMAKE_SOURCE_DIR}/src/potentials.cpp)
+    ${CMAKE_SOURCE_DIR}/src/potentials.cpp
+    ${CMAKE_SOURCE_DIR}/src/space.cpp)
 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 

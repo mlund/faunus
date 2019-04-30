@@ -12,7 +12,7 @@
 namespace py = pybind11;
 using namespace Faunus;
 
-typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
+typedef ParticleTemplate<Radius, Charge, Dipole, Cigar> Tparticle;
 
 typedef Space<Tparticle> Tspace;
 typedef typename Tspace::Tpvec Tpvec;

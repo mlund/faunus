@@ -17,7 +17,7 @@ using namespace std;
 #define FAUNUS_TIPSFILE ""
 #endif
 
-typedef Particle<Charge> Tparticle;
+typedef ParticleTemplate<Charge> Tparticle;
 
 static const char USAGE[] =
 R"(Faunus - the Monte Carlo code you're looking for!

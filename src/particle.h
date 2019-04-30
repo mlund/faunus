@@ -91,55 +91,54 @@ namespace Faunus {
     }; //!< Sphero-cylinder properties
 
     /** @brief Particle */
-    template<typename... Properties>
-        class Particle : public Properties... {
-            private:
-                // rotate internal coordinates
-                template <typename... Ts>
-                    auto _rotate(const Eigen::Quaterniond&, const Eigen::Matrix3d&) -> typename std::enable_if<sizeof...(Ts) == 0>::type {}
-                template<typename T, typename... Ts>
-                    void _rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m, T &a, Ts&... rest) {
-                        a.rotate(q,m);
-                        _rotate<Ts...>(q, m, rest...);
-                    }
-
-            public:
-                int id=-1;         //!< Particle id/type
-                Point pos={0,0,0}; //!< Particle position vector
-
-                Particle() : Properties()... {}
-
-                Particle(const AtomData &a) : Properties()... {
-                    *this = json(a).front();
-                    assert(id>=0);
-                }
-
-                const AtomData& traits() {
-                    assert(id>=0 and id<atoms.size());
-                    return atoms.at(id);
-                }
-
-                void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
-                    _rotate<Properties...>(q, m, dynamic_cast<Properties&>(*this)...);
-                } //!< Rotate all internal coordinates if needed
-
-                EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-        };
-
-    template<typename... Properties>
-        void to_json(json& j, const Particle<Properties...> &a) {
-            j = { {"id", a.id}, {"pos", a.pos} };
-            to_json<Properties...>(j, Properties(a)... );
+    template <typename... Properties> class ParticleTemplate : public Properties... {
+      private:
+        // rotate internal coordinates
+        template <typename... Ts>
+        auto _rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &) ->
+            typename std::enable_if<sizeof...(Ts) == 0>::type {}
+        template <typename T, typename... Ts>
+        void _rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m, T &a, Ts &... rest) {
+            a.rotate(q, m);
+            _rotate<Ts...>(q, m, rest...);
         }
 
-    template<typename... Properties>
-        void from_json(const json& j, Particle<Properties...> &a) {
-            a.id = j.value("id", a.id);
-            a.pos = j.value("pos", a.pos);
-            from_json<Properties...>(j, dynamic_cast<Properties&>(a)...);
+      public:
+        int id = -1;           //!< Particle id/type
+        Point pos = {0, 0, 0}; //!< Particle position vector
+
+        ParticleTemplate() : Properties()... {}
+
+        ParticleTemplate(const AtomData &a) : Properties()... {
+            *this = json(a).front();
+            assert(id >= 0);
         }
 
-    using ParticleAllProperties = Particle<Radius,Dipole,Charge,Quadrupole,Cigar>;
+        const AtomData &traits() {
+            assert(id >= 0 and id < atoms.size());
+            return atoms.at(id);
+        }
+
+        void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
+            _rotate<Properties...>(q, m, dynamic_cast<Properties &>(*this)...);
+        } //!< Rotate all internal coordinates if needed
+
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    };
+
+    template <typename... Properties> void to_json(json &j, const ParticleTemplate<Properties...> &a) {
+        j = {{"id", a.id}, {"pos", a.pos}};
+        to_json<Properties...>(j, Properties(a)...);
+    }
+
+    template <typename... Properties> void from_json(const json &j, ParticleTemplate<Properties...> &a) {
+        a.id = j.value("id", a.id);
+        a.pos = j.value("pos", a.pos);
+        from_json<Properties...>(j, dynamic_cast<Properties &>(a)...);
+    }
+
+    using Particle = ParticleTemplate<Charge>;
+    using ParticleAllProperties = ParticleTemplate<Radius, Dipole, Charge, Quadrupole, Cigar>;
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Particle") {

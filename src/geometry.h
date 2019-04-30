@@ -1009,15 +1009,15 @@ namespace Faunus {
 
         template<class Tgroup>
             auto toMultipole(const Tgroup &g, BoundaryFunction boundary=[](const Point&){}, double cutoff=pc::infty) {
-                Particle<Charge,Dipole,Quadrupole> m;
-                m.pos = g.cm;
-                m.charge = Geometry::monopoleMoment(g.begin(), g.end());                   // monopole
-                m.mu = Geometry::dipoleMoment(g.begin(), g.end(), boundary, cutoff);   // dipole
-                m.Q = Geometry::quadrupoleMoment(g.begin(), g.end(), boundary, cutoff);// quadrupole
-                m.mulen = m.mu.norm();
-                if (m.mulen>1e-9)
-                    m.mu.normalize();
-                return m;
+            ParticleTemplate<Charge, Dipole, Quadrupole> m;
+            m.pos = g.cm;
+            m.charge = Geometry::monopoleMoment(g.begin(), g.end());                // monopole
+            m.mu = Geometry::dipoleMoment(g.begin(), g.end(), boundary, cutoff);    // dipole
+            m.Q = Geometry::quadrupoleMoment(g.begin(), g.end(), boundary, cutoff); // quadrupole
+            m.mulen = m.mu.norm();
+            if (m.mulen > 1e-9)
+                m.mu.normalize();
+            return m;
             } //<! Group --> Multipole
 
     } //geometry namespace

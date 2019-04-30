@@ -32,9 +32,7 @@ namespace Faunus {
             bool all=false;         //!< True if all particles in group have been updated
             std::vector<int> atoms; //!< Touched atom index w. respect to `Group::begin()`
 
-            inline bool operator<( const data & a ) const{
-                return index < a.index;
-            }
+            bool operator<( const data & a ) const;
         }; //!< Properties of changed groups
 
         std::vector<data> groups; //!< Touched groups by index in group vector
@@ -43,29 +41,9 @@ namespace Faunus {
             return ranges::view::transform(groups, [](data &i) -> int {return i.index;});
         } //!< List of moved groups (index)
 
-        inline void clear()
-        {
-            dV=false;
-            all=false;
-            dN=false;
-            moved2moved=true;
-            groups.clear();
-            assert(empty());
-        } //!< Clear all change data
-
-        inline bool empty() const
-        {
-            if (dV==false)
-                if (all==false)
-                    if (groups.empty())
-                        if (dN==false)
-                            return true;
-            return false;
-        } //!< Check if change object is empty
-
-        inline explicit operator bool() const {
-            return not empty();
-        }
+        void clear(); //!< Clear all change data
+        bool empty() const; //!< Check if change object is empty
+        explicit operator bool() const;
     };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
@@ -163,10 +141,7 @@ namespace Faunus {
 
             enum Selection {ALL, ACTIVE, INACTIVE};
 
-            void clear() {
-                p.clear();
-                groups.clear();
-            } //!< Clears particle and molecule list
+            void clear(); //!< Clears particle and molecule list
 
             /*
              * The following is considered:
@@ -175,31 +150,7 @@ namespace Faunus {
              * - if the particle vector is relocated, all existing group
              *   iterators are updated to reflect the new memory positions
              */
-            void push_back(int molid, const Tpvec &in) {
-                if (!in.empty()) {
-                    auto oldbegin = p.begin();
-                    p.insert( p.end(), in.begin(), in.end() );
-                    if (p.begin() != oldbegin) {// update group iterators if `p` is relocated
-                        for (auto &g : groups) {
-                            g.relocate(oldbegin, p.begin());
-                        }
-                    }
-                    Tgroup g( p.end()-in.size(), p.end() );
-                    g.id = molid;
-                    g.atomic = molecules<Tpvec>.at(molid).atomic;
-
-                    if (g.atomic==false) {
-                        g.cm = Geometry::massCenter(in.begin(), in.end(), geo.getBoundaryFunc(), -in.begin()->pos);
-                        Point cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
-                        if (geo.sqdist(g.cm, cm)>1e-6)
-                            throw std::runtime_error("space: mass center error upon insertion. "s+molecules<Tpvec>.at(molid).name+" molecule too large?\n");
-                    }
-
-                    groups.push_back(g);
-                    assert( groups.back().begin() == g.begin());
-                    assert( in.size() == groups.back().capacity() );
-                }
-            } //!< Safely add particles and corresponding group to back
+            void push_back(int molid, const Tpvec &in); //!< Safely add particles and corresponding group to back
 
             auto findMolecules(int molid, Selection sel=ACTIVE) {
                 std::function<bool(Tgroup&)> f;
@@ -253,43 +204,7 @@ namespace Faunus {
                 return ranges::view::filter(p, f);
             } //!< Returns range with all *active* particles in space
 
-            void sync(Tspace &other, const Tchange &change) {
-
-                assert(&other != this);
-                assert( p.begin() != other.p.begin());
-
-                if (change.dV or change.all)
-                    geo = other.geo;
-
-                // deep copy *everything*
-                if (change.all) {
-                    p = other.p; // copy all positions
-                    assert( p.begin() != other.p.begin() && "deep copy problem");
-                    groups = other.groups;
-
-                    if (not groups.empty())
-                        if (groups.front().begin() == other.p.begin())
-                            for (auto &i : groups)
-                                i.relocate( other.p.begin(), p.begin() );
-                }
-                else {
-                    for (auto &m : change.groups) {
-
-                        auto &g = groups.at(m.index);  // old group
-                        auto &gother = other.groups.at(m.index);// new group
-
-                        g.shallowcopy(gother); // copy group data but *not* particles
-
-                        if (m.all) // copy all particles
-                            std::copy( gother.begin(), gother.trueend(), g.begin() );
-                        else // copy only a subset
-                            for (auto i : m.atoms)
-                                *(g.begin()+i) = *(gother.begin()+i);
-                    }
-                }
-                assert( p.size() == other.p.size() );
-                assert( p.begin() != other.p.begin());
-            } //!< Copy differing data from other (o) Space using Change object
+            void sync(Tspace &other, const Tchange &change); //!< Copy differing data from other (o) Space using Change object
 
             /*
              * Scales:
@@ -297,85 +212,156 @@ namespace Faunus {
              * - positions of molecular masscenters
              * - simulation container
              */
-            void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC) {
-                for (auto &g: groups) // remove periodic boundaries
-                    if (not g.atomic)
-                        g.unwrap(geo.getDistanceFunc());
+            void scaleVolume(double Vnew, Geometry::VolumeMethod method=Geometry::ISOTROPIC); //!< scale space to new volume
 
-                Point scale = geo.setVolume(Vnew, method);
 
-                for (auto& g : groups) {
-                    if (not g.empty()) {
-                        if (g.atomic) // scale all atoms
-                            for (auto& i : g)
-                                i.pos = i.pos.cwiseProduct(scale);
-                        else { // scale mass center and translate
-#ifndef NDEBUG
-                            Point oldcm = g.cm;
-#endif
-                            Point delta = g.cm.cwiseProduct(scale) - g.cm;
-                            g.cm = g.cm.cwiseProduct(scale);
-                            for (auto &i : g) {
-                                i.pos += delta;
-                                geo.boundary(i.pos);
-                            }
-#ifndef NDEBUG
-                            Point recalc_cm =  Geometry::massCenter( g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
-                            double cm_error = std::fabs( geo.sqdist(g.cm, recalc_cm) );
-                            if (cm_error>1e-6) {
-                                std::cerr
-                                    << "error: " << cm_error << endl
-                                    << "scale: " << scale.transpose() << endl
-                                    << "delta: " << delta.transpose() << " norm = " << delta.norm() << endl
-                                    << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << endl
-                                    << "oldcm: " << oldcm.transpose() << endl
-                                    << "newcm: " << g.cm.transpose() << endl
-                                    << "actual cm: " << recalc_cm.transpose() << endl;
-                                assert(false);
-                            }
-#endif
-                        }
+            json info();
+
+        };
+        template <class Tparticletype> void Space<Tparticletype>::clear() {
+            p.clear();
+            groups.clear();
+        }
+        template <class Tparticletype> void Space<Tparticletype>::push_back(int molid, const Space::Tpvec &in) {
+            if (!in.empty()) {
+                auto oldbegin = p.begin();
+                p.insert( p.end(), in.begin(), in.end() );
+                if (p.begin() != oldbegin) {// update group iterators if `p` is relocated
+                    for (auto &g : groups) {
+                        g.relocate(oldbegin, p.begin());
                     }
                 }
-                double Vold = geo.getVolume();
-                // if isochoric, the volume is constant
-                if (method==Geometry::ISOCHORIC)
-                    Vold = std::pow(Vold,1./3.);
+                Tgroup g( p.end()-in.size(), p.end() );
+                g.id = molid;
+                g.atomic = molecules<Tpvec>.at(molid).atomic;
 
-                for (auto f : scaleVolumeTriggers)
-                    f(*this, Vold, Vnew);
-            } //!< scale space to new volume
-
-
-            json info() {
-                json j = {
-                    {"number of particles", p.size()},
-                    {"number of groups", groups.size()},
-                    {"geometry", geo}
-                };
-                auto& _j = j["groups"];
-                for (auto &i : groups) {
-                    auto& name = molecules<decltype(p)>.at(i.id).name;
-                    json tmp, d=i;
-                    d.erase("cm");
-                    d.erase("id");
-                    d.erase("atomic");
-                    auto ndx = i.to_index(p.begin());
-                    if (not i.empty())
-                        d["index"] = { ndx.first, ndx.second };
-                        //d["index"] = std::to_string(ndx.first)+"-"+std::to_string(ndx.second);
-                    tmp[name] = d;
-                    _j.push_back( tmp );
+                if (g.atomic==false) {
+                    g.cm = Geometry::massCenter(in.begin(), in.end(), geo.getBoundaryFunc(), -in.begin()->pos);
+                    Point cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
+                    if (geo.sqdist(g.cm, cm)>1e-6)
+                        throw std::runtime_error("space: mass center error upon insertion. "s+molecules<Tpvec>.at(molid).name+" molecule too large?\n");
                 }
-                auto& _j2 = j["reactionlist"];
-                for (auto &i : reactions<decltype(p)>) {
-                    json tmp, d = i;
-                    _j2.push_back( i );
-                }
-                return j;
+
+                groups.push_back(g);
+                assert( groups.back().begin() == g.begin());
+                assert( in.size() == groups.back().capacity() );
             }
+        }
+        template <class Tparticletype>
+        void Space<Tparticletype>::sync(Space::Tspace &other, const Space::Tchange &change) {
 
-        }; //!< Space for particles, groups, geometry
+            assert(&other != this);
+            assert( p.begin() != other.p.begin());
+
+            if (change.dV or change.all)
+                geo = other.geo;
+
+            // deep copy *everything*
+            if (change.all) {
+                p = other.p; // copy all positions
+                assert( p.begin() != other.p.begin() && "deep copy problem");
+                groups = other.groups;
+
+                if (not groups.empty())
+                    if (groups.front().begin() == other.p.begin())
+                        for (auto &i : groups)
+                            i.relocate( other.p.begin(), p.begin() );
+            }
+            else {
+                for (auto &m : change.groups) {
+
+                    auto &g = groups.at(m.index);  // old group
+                    auto &gother = other.groups.at(m.index);// new group
+
+                    g.shallowcopy(gother); // copy group data but *not* particles
+
+                    if (m.all) // copy all particles
+                        std::copy( gother.begin(), gother.trueend(), g.begin() );
+                    else // copy only a subset
+                        for (auto i : m.atoms)
+                            *(g.begin()+i) = *(gother.begin()+i);
+                }
+            }
+            assert( p.size() == other.p.size() );
+            assert( p.begin() != other.p.begin());
+        }
+        template <class Tparticletype>
+        void Space<Tparticletype>::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
+            for (auto &g: groups) // remove periodic boundaries
+                if (not g.atomic)
+                    g.unwrap(geo.getDistanceFunc());
+
+            Point scale = geo.setVolume(Vnew, method);
+
+            for (auto& g : groups) {
+                if (not g.empty()) {
+                    if (g.atomic) // scale all atoms
+                        for (auto& i : g)
+                            i.pos = i.pos.cwiseProduct(scale);
+                    else { // scale mass center and translate
+#ifndef NDEBUG
+                        Point oldcm = g.cm;
+#endif
+                        Point delta = g.cm.cwiseProduct(scale) - g.cm;
+                        g.cm = g.cm.cwiseProduct(scale);
+                        for (auto &i : g) {
+                            i.pos += delta;
+                            geo.boundary(i.pos);
+                        }
+#ifndef NDEBUG
+                        Point recalc_cm =  Geometry::massCenter( g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
+                        double cm_error = std::fabs( geo.sqdist(g.cm, recalc_cm) );
+                        if (cm_error>1e-6) {
+                            std::cerr
+                                << "error: " << cm_error << endl
+                                << "scale: " << scale.transpose() << endl
+                                << "delta: " << delta.transpose() << " norm = " << delta.norm() << endl
+                                << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << endl
+                                << "oldcm: " << oldcm.transpose() << endl
+                                << "newcm: " << g.cm.transpose() << endl
+                                << "actual cm: " << recalc_cm.transpose() << endl;
+                            assert(false);
+                        }
+#endif
+                    }
+                }
+            }
+            double Vold = geo.getVolume();
+            // if isochoric, the volume is constant
+            if (method==Geometry::ISOCHORIC)
+                Vold = std::pow(Vold,1./3.);
+
+            for (auto f : scaleVolumeTriggers)
+                f(*this, Vold, Vnew);
+        }
+        template <class Tparticletype> json Space<Tparticletype>::info() {
+            json j = {
+                {"number of particles", p.size()},
+                {"number of groups", groups.size()},
+                {"geometry", geo}
+            };
+            auto& _j = j["groups"];
+            for (auto &i : groups) {
+                auto& name = molecules<decltype(p)>.at(i.id).name;
+                json tmp, d=i;
+                d.erase("cm");
+                d.erase("id");
+                d.erase("atomic");
+                auto ndx = i.to_index(p.begin());
+                if (not i.empty())
+                    d["index"] = { ndx.first, ndx.second };
+                //d["index"] = std::to_string(ndx.first)+"-"+std::to_string(ndx.second);
+                tmp[name] = d;
+                _j.push_back( tmp );
+            }
+            auto& _j2 = j["reactionlist"];
+            for (auto &i : reactions<decltype(p)>) {
+                json tmp, d = i;
+                _j2.push_back( i );
+            }
+            return j;
+        }
+        //!< Space for particles, groups, geometry
 
     template<class Tparticle>
         void to_json(json &j, Space<Tparticle> &spc) {

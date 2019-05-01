@@ -490,7 +490,7 @@ namespace Faunus {
                         name="external";
                         COM = j.value("com", false);
                         _names = j.at("molecules").get<decltype(_names)>(); // molecule names
-                        auto _ids = names2ids(molecules<Tpvec>, _names);     // names --> molids
+                        auto _ids = names2ids(molecules, _names);           // names --> molids
                         molids = std::set<int>(_ids.begin(), _ids.end());    // vector --> set
                         if (molids.empty() || molids.size()!=_names.size() )
                             throw std::runtime_error(name + ": molecule list is empty");
@@ -905,7 +905,7 @@ namespace Faunus {
                 intra.clear();
                 for (size_t i = 0; i < spc.groups.size(); i++) {
                     auto& group = spc.groups.at(i);
-                    for (auto& bond : molecules<Tpvec>.at(group.id).bonds) {
+                    for (auto &bond : molecules.at(group.id).bonds) {
                         intra[i].push_back( bond->clone() ); // deep copy BondData from MoleculeData
                         intra[i].back()->shift( std::distance(spc.p.begin(), group.begin()) );
                         Potential::setBondEnergyFunction( intra[i].back(), spc.p );
@@ -1027,8 +1027,8 @@ namespace Faunus {
                         }
                         j["cutoff_g2g"] = json::object();
                         auto &_j = j["cutoff_g2g"];
-                        for (auto &a : Faunus::molecules<typename Tspace::Tpvec>)
-                            for (auto &b : Faunus::molecules<typename Tspace::Tpvec>)
+                        for (auto &a : Faunus::molecules)
+                            for (auto &b : Faunus::molecules)
                                 if (a.id()>=b.id())
                                     _j[a.name+" "+b.name] = sqrt( cutoff2(a.id(), b.id()) );
                     }
@@ -1058,7 +1058,7 @@ namespace Faunus {
                     double g_internal(const Tgroup &g, const std::vector<int> &index=std::vector<int>()) {
                         using namespace ranges;
                         double u = 0;
-                        if (index.empty() and not molecules<Tpvec>.at(g.id).rigid) // assume that all atoms have changed
+                        if (index.empty() and not molecules.at(g.id).rigid) // assume that all atoms have changed
                             for ( auto i = g.begin(); i != g.end(); ++i )
                                 for ( auto j=i; ++j != g.end(); )
                                     u += i2i(*i, *j);
@@ -1169,8 +1169,8 @@ namespace Faunus {
                                 }
 
                         // disable all group-to-group cutoffs by setting infinity
-                        for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
-                            for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                        for (auto &i : Faunus::molecules)
+                            for (auto &j : Faunus::molecules)
                                 cutoff2.set(i.id(), j.id(), pc::infty);
 
                         it = j.find("cutoff_g2g");
@@ -1178,23 +1178,23 @@ namespace Faunus {
                             // old style input w. only a single cutoff
                             if (it->is_number()) {
                                 Rc2_g2g = std::pow( it->get<double>(), 2 );
-                                for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
-                                    for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                for (auto &i : Faunus::molecules)
+                                    for (auto &j : Faunus::molecules)
                                         cutoff2.set(i.id(), j.id(), Rc2_g2g);
                             }
                             // new style input w. multiple cutoffs between molecules
                             else if (it->is_object()) {
                                 // ensure that there is a default, fallback cutoff
                                 Rc2_g2g = std::pow( it->at("default").get<double>(), 2);
-                                for (auto &i : Faunus::molecules<typename Tspace::Tpvec>)
-                                    for (auto &j : Faunus::molecules<typename Tspace::Tpvec>)
+                                for (auto &i : Faunus::molecules)
+                                    for (auto &j : Faunus::molecules)
                                         cutoff2.set(i.id(), j.id(), Rc2_g2g);
                                 // loop for space separated molecule pairs in keys
                                 for (auto& i : it->items()) {
                                     auto v = words2vec<std::string>( i.key() );
                                     if (v.size()==2) {
-                                        int id1 = (*findName( Faunus::molecules<typename Tspace::Tpvec>, v[0])).id();
-                                        int id2 = (*findName( Faunus::molecules<typename Tspace::Tpvec>, v[1])).id();
+                                        int id1 = (*findName(Faunus::molecules, v[0])).id();
+                                        int id2 = (*findName(Faunus::molecules, v[1])).id();
                                         cutoff2.set( id1, id2, std::pow(i.value().get<double>(),2) );
                                     }
                                 }
@@ -1304,7 +1304,7 @@ namespace Faunus {
                                             u += g2g( *g1,  spc.groups.at(cg2->index), ifiltered, jfiltered );
                                         jfiltered.clear();
                                     }
-                                    if (not ifiltered.empty() and not molecules<Tpvec>.at(g1->id).rigid) {
+                                    if (not ifiltered.empty() and not molecules.at(g1->id).rigid) {
                                         if ( cg1->all ) {
                                             u += g_internal( *g1 );
                                         } else u += g_internal( *g1, ifiltered );

@@ -207,6 +207,7 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/energy.cpp
     ${CMAKE_SOURCE_DIR}/src/geometry.cpp
     ${CMAKE_SOURCE_DIR}/src/io.cpp
+    ${CMAKE_SOURCE_DIR}/src/molecule.cpp
     ${CMAKE_SOURCE_DIR}/src/move.cpp
     ${CMAKE_SOURCE_DIR}/src/particle.cpp
     ${CMAKE_SOURCE_DIR}/src/penalty.cpp

@@ -1,0 +1,306 @@
+#include "molecule.h"
+
+namespace Faunus {
+
+std::vector<MoleculeData> molecules; // global instance
+
+int &MoleculeData::id() { return _id; }
+
+const int &MoleculeData::id() const { return _id; }
+
+MoleculeData::Tpvec MoleculeData::getRandomConformation(Geometry::GeometryBase &geo,
+                                                        MoleculeData::Tpvec otherparticles) {
+    assert(inserterFunctor != nullptr);
+    return inserterFunctor(geo, otherparticles, *this);
+}
+
+void MoleculeData::loadConformation(const std::string &file, bool keepcharges) {
+    Tpvec v;
+    if (loadStructure<Tpvec>()(file, v, false, keepcharges)) {
+        if (keeppos == false)
+            Geometry::cm2origo(v.begin(), v.end()); // move to origo
+        conformations.push_back(v);
+        for (auto &p : v) // add atoms to atomlist
+            atoms.push_back(p.id);
+    }
+    if (v.empty())
+        throw std::runtime_error("Structure " + structure + " not loaded. Filetype must be .aam/.pqr/.xyz");
+}
+
+void MoleculeData::setInserter(const MoleculeData::TinserterFunc &ifunc) { inserterFunctor = ifunc; }
+
+MoleculeData::MoleculeData() { setInserter(RandomInserter()); }
+
+void to_json(json &j, const MoleculeData &a) {
+    j[a.name] = {{"activity", a.activity / 1.0_molar},
+                 {"atomic", a.atomic},
+                 {"id", a.id()},
+                 {"insdir", a.insdir},
+                 {"insoffset", a.insoffset},
+                 {"keeppos", a.keeppos},
+                 {"keepcharges", a.keepcharges},
+                 {"bondlist", a.bonds},
+                 {"rigid", a.rigid},
+                 {"rotate", a.rotate}};
+    if (not a.structure.empty())
+        j[a.name]["structure"] = a.structure;
+
+    j[a.name]["atoms"] = json::array();
+    for (auto id : a.atoms)
+        j[a.name]["atoms"].push_back(atoms.at(id).name);
+}
+
+/**
+ * @todo make more readable be splitting into lambdas (c++ function in function impossible)
+ */
+void from_json(const json &j, MoleculeData &a) {
+    try {
+        if (j.is_object() == false || j.size() != 1)
+            throw std::runtime_error("invalid json");
+        for (auto it : j.items()) {
+            a.name = it.key();
+            xjson val = it.value(); // keys are deleted after access
+            a.insoffset = val.value("insoffset", a.insoffset);
+            a.activity = val.value("activity", a.activity) * 1.0_molar;
+            a.keeppos = val.value("keeppos", a.keeppos);
+            a.keepcharges = val.value("keepcharges", a.keepcharges);
+            a.atomic = val.value("atomic", a.atomic);
+            a.insdir = val.value("insdir", a.insdir);
+            a.bonds = val.value("bondlist", a.bonds);
+            a.rigid = val.value("rigid", a.rigid);
+            a.rotate = val.value("rotate", true);
+            a.id() = val.value("id", a.id());
+
+            if (a.atomic) {
+                // read `atoms` list of atom names and convert to atom id's
+                for (auto &i : val.at("atoms").get<std::vector<std::string>>()) {
+                    auto it = findName(atoms, i);
+                    if (it == atoms.end())
+                        throw std::runtime_error("unknown atoms in 'atoms'\n");
+                    a.atoms.push_back(it->id());
+                }
+                assert(!a.atoms.empty());
+                assert(a.bonds.empty() && "bonds undefined for atomic groups");
+
+                // generate config
+                MoleculeData::Tpvec v;
+                v.reserve(a.atoms.size());
+                for (auto id : a.atoms) {
+                    Particle _p;
+                    _p = atoms.at(id);
+                    v.push_back(_p);
+                }
+                if (!v.empty())
+                    a.conformations.push_back(v);
+            }      // done handling atomic groups
+            else { // molecular groups
+                if (val.count("structure") > 0) {
+                    json _struct = val["structure"s];
+
+                    // `structure` is a file name
+                    if (_struct.is_string()) // structure from file
+                        a.loadConformation(_struct.get<std::string>(), a.keepcharges);
+
+                    else if (_struct.is_object()) {
+                        // `structure` is a fasta sequence
+                        if (_struct.count("fasta")) {
+                            Potential::HarmonicBond bond; // harmonic bond
+                            bond.from_json(_struct);      // read 'k' and 'req' from json
+                            std::string fasta = _struct.at("fasta").get<std::string>();
+                            auto v = Faunus::fastaToParticles<std::vector<Particle>>(fasta, bond.req);
+                            if (not v.empty()) {
+                                a.conformations.push_back(v);
+                                for (auto &p : v)
+                                    a.atoms.push_back(p.id);
+                                // connect all atoms with harmonic bonds
+                                for (int i = 0; i < (int)v.size() - 1; i++) {
+                                    bond.index = {i, i + 1};
+                                    a.bonds.push_back(bond.clone());
+                                }
+                            }
+                        } // end of fasta handling
+                    }
+
+                    // `structure` is a list of atom positions
+                    else if (_struct.is_array()) { // structure is defined inside json
+                        std::vector<Particle> v;
+                        a.atoms.clear();
+                        v.reserve(_struct.size());
+                        for (auto &m : _struct)
+                            if (m.is_object())
+                                if (m.size() == 1)
+                                    for (auto &i : m.items()) {
+                                        auto it = findName(atoms, i.key());
+                                        if (it == atoms.end())
+                                            throw std::runtime_error("unknown atoms in 'structure'");
+                                        v.push_back(*it);         // set properties from atomlist
+                                        v.back().pos = i.value(); // set position
+                                        a.atoms.push_back(it->id());
+                                    }
+                        if (v.empty())
+                            throw std::runtime_error("invalid 'structure' format");
+                        a.conformations.push_back(v);
+                    } // end of position parser
+                }     // end of `structure`
+
+                // read tracjectory w. conformations from disk
+                std::string traj = val.value("traj", std::string());
+                if (not traj.empty()) {
+                    a.conformations.clear();
+                    FormatPQR::load(traj, a.conformations.vec);
+                    if (not a.conformations.empty()) {
+                        // create atom list
+                        a.atoms.clear();
+                        a.atoms.reserve(a.conformations.vec.front().size());
+                        for (auto &p : a.conformations.vec.front()) // add atoms to atomlist
+                            a.atoms.push_back(p.id);
+
+                        // center mass center for each frame to origo assuming whole molecules
+                        if (val.value("trajcenter", false)) {
+                            cout << "Centering conformations in trajectory file " + traj + ". ";
+                            for (auto &p : a.conformations.vec) // loop over conformations
+                                Geometry::cm2origo(p.begin(), p.end());
+                            cout << "Done.\n";
+                        }
+
+                        // set default uniform weight
+                        std::vector<float> w(a.conformations.size(), 1);
+                        a.conformations.setWeight(w);
+
+                        // look for weight file
+                        std::string weightfile = val.value("trajweight", std::string());
+                        if (not weightfile.empty()) {
+                            std::ifstream f(weightfile.c_str());
+                            if (f) {
+                                w.clear();
+                                w.reserve(a.conformations.size());
+                                double _val;
+                                while (f >> _val)
+                                    w.push_back(_val);
+                                if (w.size() == a.conformations.size())
+                                    a.conformations.setWeight(w);
+                                else
+                                    throw std::runtime_error("Number of weights does not match conformations.");
+                            } else
+                                throw std::runtime_error("Weight file " + weightfile + " not found.");
+                        }
+                    } else
+                        throw std::runtime_error("Trajectory " + traj + " not loaded or empty.");
+                } // done handling conformations
+
+            } // done handling molecular groups
+
+            // pass information to inserter
+            auto ins = RandomInserter();
+            ins.dir = a.insdir;
+            ins.rotate = a.rotate;
+            ins.offset = a.insoffset;
+            ins.keeppos = a.keeppos;
+            a.setInserter(ins);
+
+            // assert that all bonds are *internal*
+            for (auto &bond : a.bonds)
+                for (int i : bond->index)
+                    if (i >= a.atoms.size() || i < 0)
+                        throw std::runtime_error("bonded atom index " + std::to_string(i) + " out of range");
+            // at this stage all given keys should have been accessed. If any are
+            // left, an exception will be thrown.
+            if (not val.empty())
+                throw std::runtime_error("unused key(s):\n"s + val.dump() + usageTip["moleculelist"]);
+        }
+    } catch (std::exception &e) {
+        throw std::runtime_error("JSON->molecule: " + a.name + ": " + e.what());
+    }
+}
+
+void from_json(const json &j, std::vector<MoleculeData> &v) {
+    v.reserve(v.size() + j.size());
+    for (auto &i : j) {
+        v.push_back(i);
+        v.back().id() = v.size() - 1; // id always match vector index
+    }
+}
+
+RandomInserter::Tpvec RandomInserter::operator()(Geometry::GeometryBase &geo, const RandomInserter::Tpvec &,
+                                                 MoleculeData &mol) {
+    int cnt = 0;
+    QuaternionRotate rot;
+    bool containerOverlap; // true if container overlap detected
+
+    if (std::fabs(geo.getVolume()) < 1e-20)
+        throw std::runtime_error("geometry has zero volume");
+
+    Tpvec v = mol.conformations.get();   // get random, weighted conformation
+    confindex = mol.conformations.index; // lastest index
+
+    do {
+        if (cnt++ > maxtrials)
+            throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
+
+        if (mol.atomic) {       // insert atomic species
+            for (auto &i : v) { // for each atom type id
+                if (rotate) {
+                    rot.set(2 * pc::pi * random(), ranunit(random));
+                    i.rotate(rot.first, rot.second);
+                }
+                geo.randompos(i.pos, random);
+                i.pos = i.pos.cwiseProduct(dir) + offset;
+                geo.boundary(i.pos);
+            }
+        } else {                  // insert molecule
+            if (keeppos) {        // keep original positions (no rotation/trans)
+                for (auto &i : v) // ...but let's make sure it fits
+                    if (geo.collision(i.pos))
+                        throw std::runtime_error("Error: Inserted molecule does not fit in container");
+            } else {
+                Point cm;                                        // new mass center position
+                geo.randompos(cm, random);                       // random point in container
+                cm = cm.cwiseProduct(dir);                       // apply user defined directions (default: 1,1,1)
+                Geometry::cm2origo(v.begin(), v.end());          // translate to origin
+                rot.set(random() * 2 * pc::pi, ranunit(random)); // random rot around random vector
+                if (rotate) {
+                    Geometry::rotate(v.begin(), v.end(), rot.first);
+                    assert(Geometry::massCenter(v.begin(), v.end()).norm() < 1e-6); // cm shouldn't move
+                }
+                for (auto &i : v) {
+                    i.pos += cm + offset;
+                    geo.boundary(i.pos);
+                }
+            }
+        }
+
+        if (v.empty())
+            throw std::runtime_error("Nothing to load/insert for molecule '"s + mol.name + "'");
+
+        // check if molecules / atoms fit inside simulation container
+        containerOverlap = false;
+        if (allowoverlap == false)
+            for (auto &i : v)
+                if (geo.collision(i.pos)) {
+                    containerOverlap = true;
+                    break;
+                }
+    } while (containerOverlap);
+    return v;
+}
+bool Conformation::empty() const {
+    if (positions.empty())
+        if (charges.empty())
+            return true;
+    return false;
+}
+
+Conformation::Tpvec &Conformation::toParticleVector(Conformation::Tpvec &p) const {
+    assert(not p.empty() and not empty());
+    // copy positions
+    if (positions.size() == p.size())
+        for (size_t i = 0; i < p.size(); i++)
+            p[i].pos = positions[i];
+    // copy charges
+    if (charges.size() == p.size())
+        for (size_t i = 0; i < p.size(); i++)
+            p[i].charge = charges[i];
+    return p;
+}
+
+} // namespace Faunus

@@ -69,11 +69,11 @@ namespace Faunus {
                     }
 
                     void _from_json(const json &j) override {
-                        assert(!molecules<Tpvec>.empty());
+                        assert(!molecules.empty());
                         try {
                             molname = j.at("molecule");
-                            auto it = findName(molecules<Tpvec>, molname);
-                            if (it == molecules<Tpvec>.end())
+                            auto it = findName(molecules, molname);
+                            if (it == molecules.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
                             molid = it->id();
                             pH = j.at("pH").get<double>();
@@ -161,12 +161,12 @@ namespace Faunus {
                     }
 
                     void _from_json(const json &j) override {
-                        assert(!molecules<Tpvec>.empty());
+                        assert(!molecules.empty());
                         try {
                             assertKeys(j, {"molecule", "dir", "repeat"});
                             molname = j.at("molecule");
-                            auto it = findName(molecules<Tpvec>, molname);
-                            if (it == molecules<Tpvec>.end())
+                            auto it = findName(molecules, molname);
+                            if (it == molecules.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
                             molid = it->id();
                             dir = j.value("dir", Point(1,1,1));
@@ -320,21 +320,21 @@ namespace Faunus {
                     Average<double> msqd; // mean squared displacement
 
                     void _to_json(json &j) const override {
-                        j = {
-                            {"dir", dir}, {"dp", dptrans}, {"dprot", dprot},
-                            {"molid", molid},
-                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"molecule", molecules<Tpvec>[molid].name}
-                        };
+                        j = {{"dir", dir},
+                             {"dp", dptrans},
+                             {"dprot", dprot},
+                             {"molid", molid},
+                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+                             {"molecule", molecules[molid].name}};
                         _roundjson(j,3);
                     }
 
                     void _from_json(const json &j) override {
-                        assert(!molecules<Tpvec>.empty());
+                        assert(!molecules.empty());
                         try {
                             std::string molname = j.at("molecule");
-                            auto it = findName(molecules<Tpvec>, molname);
-                            if (it == molecules<Tpvec>.end())
+                            auto it = findName(molecules, molname);
+                            if (it == molecules.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
                             molid = it->id();
                             dir = j.value("dir", Point(1,1,1));
@@ -421,29 +421,26 @@ namespace Faunus {
             class ConformationSwap : public Movebase {
                 private:
                     typedef typename Tspace::Tpvec Tpvec;
-                    typedef MoleculeData<Tpvec> Tmoldata;
-                    RandomInserter<Tmoldata> inserter;
+                    typedef MoleculeData Tmoldata;
+                    RandomInserter inserter;
                     Tspace& spc; // Space to operate on
                     int molid=-1;
                     int newconfid=-1;
 
                     void _to_json(json &j) const override {
-                        j = {
-                            {"molid", molid},
-                            {"molecule", molecules<Tpvec>[molid].name}
-                        };
+                        j = {{"molid", molid}, {"molecule", molecules[molid].name}};
                         _roundjson(j,3);
                     }
 
                     void _from_json(const json &j) override {
-                        assert(!molecules<Tpvec>.empty());
+                        assert(!molecules.empty());
                         try {
                             std::string molname = j.at("molecule");
-                            auto it = findName(molecules<Tpvec>, molname);
-                            if (it == molecules<Tpvec>.end())
+                            auto it = findName(molecules, molname);
+                            if (it == molecules.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
                             molid = it->id();
-                            if ( molecules<Tpvec>[molid].conformations.size()<2)
+                            if (molecules[molid].conformations.size() < 2)
                                 throw std::runtime_error("minimum two conformations required");
                             if (repeat<0) {
                                 auto v = spc.findMolecules(molid);
@@ -467,11 +464,11 @@ namespace Faunus {
 
                                 // Get a new conformation that should be properly wrapped around the boundaries
                                 // (if applicable) and have the same mass-center as "g->cm".
-                                Tpvec p = inserter(spc.geo, spc.p, molecules<Tpvec>[molid]);
+                                Tpvec p = inserter(spc.geo, spc.p, molecules[molid]);
                                 if (p.size() not_eq g->size())
                                     throw std::runtime_error(name + ": conformation atom count mismatch");
 
-                                newconfid = molecules<Tpvec>[molid].conformations.index;
+                                newconfid = molecules[molid].conformations.index;
 
                                 std::copy( p.begin(), p.end(), g->begin() ); // override w. new conformation
 #ifndef NDEBUG
@@ -530,7 +527,7 @@ namespace Faunus {
             typedef typename Tspace::Tpvec Tpvec;
 
             CHECK( !atoms.empty() ); // set in a previous test
-            CHECK( !molecules<Tpvec>.empty() ); // set in a previous test
+            CHECK(!molecules.empty()); // set in a previous test
 
             Tspace spc;
             TranslateRotate<Tspace> mv(spc);
@@ -740,7 +737,7 @@ namespace Faunus {
 
                             for (auto &m : rit->Molecules2Add( not forward )) { // Delete checks
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
-                                if ( molecules<Tpvec>[m.first].atomic ) {
+                                if (molecules[m.first].atomic) {
                                     if( size(mollist)!=1 ) // There can be only one
                                         throw std::runtime_error("Bad definition: One group per atomic molecule!");
                                     auto git = mollist.begin();
@@ -754,7 +751,7 @@ namespace Faunus {
                             }
                             for (auto &m : rit->Molecules2Add( forward )) { // Addition checks
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
-                                if ( molecules<Tpvec>[m.first].atomic ) {
+                                if (molecules[m.first].atomic) {
                                     if( size(mollist)!=1 ) // There can be only one
                                         throw std::runtime_error("Bad definition: One group per atomic molecule!");
                                     auto git = mollist.begin();
@@ -795,7 +792,7 @@ namespace Faunus {
                             change.dN=true; // Attempting to change the number of atoms / molecules
                             for (auto &m : rit->Molecules2Add( not forward )) { // Delete
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
-                                if ( molecules<Tpvec>[m.first].atomic ) {
+                                if (molecules[m.first].atomic) {
                                     auto git = mollist.begin();
                                     auto othermollist = otherspc->findMolecules(m.first, Tspace::ALL);  // implies that new and old are in sync
                                     auto othergit = othermollist.begin();
@@ -821,7 +818,7 @@ namespace Faunus {
                                     mollist = spc.findMolecules( m.first, Tspace::ACTIVE);
                                     for ( int N=0; N <m.second; N++ ) {
                                         auto git = slump.sample(mollist.begin(), mollist.end());
-                                        for (auto& bond : molecules<Tpvec>.at(m.first).bonds) {
+                                        for (auto &bond : molecules.at(m.first).bonds) {
                                             auto bondclone = bond->clone();
                                             bondclone->shift( std::distance(spc.p.begin(), git->begin()) );
                                             Potential::setBondEnergyFunction( bondclone, spc.p );
@@ -841,7 +838,7 @@ namespace Faunus {
 
                             for (auto &m : rit->Molecules2Add( forward )) { // Add
                                 auto mollist = spc.findMolecules( m.first, Tspace::ALL);
-                                if ( molecules<Tpvec>[m.first].atomic ) {
+                                if (molecules[m.first].atomic) {
                                     auto git = mollist.begin();
                                     Change::data d;
                                     d.index = Faunus::distance( spc.groups.begin(), git);
@@ -868,7 +865,7 @@ namespace Faunus {
                                         Point u = ranunit(slump);
                                         Eigen::Quaterniond Q( Eigen::AngleAxisd(2*pc::pi*(slump()-0.5), u) );
                                         git->rotate(Q, spc.geo.getBoundaryFunc());
-                                        for (auto& bond : molecules<Tpvec>.at(m.first).bonds) {
+                                        for (auto &bond : molecules.at(m.first).bonds) {
                                             auto bondclone = bond->clone();
                                             bondclone->shift( std::distance(spc.p.begin(), git->begin()) );
                                             Potential::setBondEnergyFunction( bondclone, spc.p );
@@ -883,7 +880,6 @@ namespace Faunus {
                                         change.groups.push_back( d ); // Add to list of moved groups
                                         assert( spc.geo.sqdist( git->cm, Geometry::massCenter(git->begin(),git->end(),spc.geo.getBoundaryFunc(), -git->cm ) ) < 1e-9 );
                                     }
-
                                 }
                             }
 
@@ -929,21 +925,19 @@ namespace Faunus {
                     Average<double> msqd; // mean squared displacement
 
                     void _to_json(json &j) const override {
-                        j = {
-                            {"dir", dir},
-                            {"molid", molid},
-                            {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
-                            {"molecule", molecules<Tpvec>[molid].name}
-                        };
+                        j = {{"dir", dir},
+                             {"molid", molid},
+                             {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
+                             {"molecule", molecules[molid].name}};
                         _roundjson(j,3);
                     }
 
                     void _from_json(const json &j) override {
-                        assert(!molecules<Tpvec>.empty());
+                        assert(!molecules.empty());
                         try {
                             std::string molname = j.at("molecule");
-                            auto it = findName(molecules<Tpvec>, molname);
-                            if (it == molecules<Tpvec>.end())
+                            auto it = findName(molecules, molname);
+                            if (it == molecules.end())
                                 throw std::runtime_error("unknown molecule '" + molname + "'");
                             molid = it->id();
                             dir = j.value("dir", Point(1,1,1));
@@ -1048,7 +1042,7 @@ namespace Faunus {
                         for (auto i : ids)
                             for (auto j : ids)
                                 if (i>=j) {
-                                    auto str = Faunus::molecules<Tpvec>[i].name+" "+Faunus::molecules<Tpvec>[j].name;
+                                    auto str = Faunus::molecules[i].name + " " + Faunus::molecules[j].name;
                                     _j[str] = std::sqrt( thresholdsq(i,j) );
                                     _roundjson(_j[str], 3);
                                 }
@@ -1058,7 +1052,7 @@ namespace Faunus {
                             auto &_j = j["satellites"];
                             _j = json::array();
                             for (auto id : satellites)
-                                _j.push_back( Faunus::molecules<Tpvec>[id].name );
+                                _j.push_back(Faunus::molecules[id].name);
                         }
                     }
 
@@ -1068,7 +1062,7 @@ namespace Faunus {
                         dir = j.value("dir", Point(1,1,1));
                         dprot = j.at("dprot");
                         names = j.at("molecules").get<decltype(names)>(); // molecule names
-                        ids = names2ids(molecules<Tpvec>, names);     // names --> molids
+                        ids = names2ids(molecules, names);                // names --> molids
                         index.clear();
                         for (auto &g : spc.groups) // loop over all groups
                             if (not g.atomic) // only molecular groups
@@ -1080,7 +1074,7 @@ namespace Faunus {
 
                         // read satellite ids (molecules NOT to be considered as cluster centers)
                         auto satnames = j.value("satellites", std::vector<std::string>()); // molecule names
-                        auto vec = names2ids(Faunus::molecules<Tpvec>, satnames);     // names --> molids
+                        auto vec = names2ids(Faunus::molecules, satnames);                 // names --> molids
                         satellites = std::set<int>(vec.begin(), vec.end());
                         
                         for (auto id : satellites)
@@ -1102,9 +1096,9 @@ namespace Faunus {
                                 for (auto it=_j.begin(); it!=_j.end(); ++it) {
                                     auto v = words2vec<std::string>( it.key() );
                                     if (v.size()==2) {
-                                        auto it1 = findName(Faunus::molecules<Tpvec>, v[0]);
-                                        auto it2 = findName(Faunus::molecules<Tpvec>, v[1]);
-                                        if (it1==Faunus::molecules<Tpvec>.end() or it2==Faunus::molecules<Tpvec>.end())
+                                        auto it1 = findName(Faunus::molecules, v[0]);
+                                        auto it2 = findName(Faunus::molecules, v[1]);
+                                        if (it1 == Faunus::molecules.end() or it2 == Faunus::molecules.end())
                                             throw std::runtime_error("unknown molecule(s): ["s + v[0] + " " + v[1] + "]");
                                         thresholdsq.set(it1->id(), it2->id(), std::pow( it.value().get<double>(), 2) );
                                     } else
@@ -1315,8 +1309,8 @@ start:
           protected:
             void _from_json(const json &j) override {
                 Tbase::_from_json(j);
-                auto moliter = findName(molecules<Tpvec>, molname);
-                if (moliter == molecules<Tpvec>.end())
+                auto moliter = findName(molecules, molname);
+                if (moliter == molecules.end())
                     throw std::runtime_error("unknown molecule '" + molname + "'");
                 molid = moliter->id();
             }
@@ -1479,8 +1473,7 @@ start:
           protected:
             void _from_json(const json &j) override {
                 Tbase::_from_json(j);
-                bonds = Potential::filterBonds(
-                        molecules<typename Tbase::Tpvec>[this->molid].bonds, Potential::BondData::HARMONIC);
+                bonds = Potential::filterBonds(molecules[this->molid].bonds, Potential::BondData::HARMONIC);
 
                 if (this->repeat < 0) {
                     // set the number of repetitions to the length of the chain (minus 2) times the number of the chains
@@ -1963,7 +1956,7 @@ start:
                             auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
                             if ( size(mollist_n) > 1 || size(mollist_o) > 1 )
                                 throw std::runtime_error("Bad definition: One group per atomic molecule!");
-                            if ( not molecules<Tpvec>[ spc_n.groups[m.index].id ].atomic)
+                            if (not molecules[spc_n.groups[m.index].id].atomic)
                                 throw std::runtime_error("Only atomic molecules!");
                             // Below is safe due to the catches above
                             // add consistency criteria with m.atoms.size() == N

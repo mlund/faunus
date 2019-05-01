@@ -233,13 +233,14 @@ namespace Faunus {
                 }
                 Tgroup g( p.end()-in.size(), p.end() );
                 g.id = molid;
-                g.atomic = molecules<Tpvec>.at(molid).atomic;
+                g.atomic = molecules.at(molid).atomic;
 
                 if (g.atomic==false) {
                     g.cm = Geometry::massCenter(in.begin(), in.end(), geo.getBoundaryFunc(), -in.begin()->pos);
                     Point cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
                     if (geo.sqdist(g.cm, cm)>1e-6)
-                        throw std::runtime_error("space: mass center error upon insertion. "s+molecules<Tpvec>.at(molid).name+" molecule too large?\n");
+                        throw std::runtime_error("space: mass center error upon insertion. "s +
+                                                 molecules.at(molid).name + " molecule too large?\n");
                 }
 
                 groups.push_back(g);
@@ -342,7 +343,7 @@ namespace Faunus {
             };
             auto& _j = j["groups"];
             for (auto &i : groups) {
-                auto& name = molecules<decltype(p)>.at(i.id).name;
+                auto &name = molecules.at(i.id).name;
                 json tmp, d=i;
                 d.erase("cm");
                 d.erase("id");
@@ -380,8 +381,8 @@ namespace Faunus {
             try {
                 if (atoms.empty())
                     atoms = j.at("atomlist").get<decltype(atoms)>();
-                if (molecules<Tpvec>.empty())
-                    molecules<Tpvec> = j.at("moleculelist").get<decltype(molecules<Tpvec>)>();
+                if (molecules.empty())
+                    molecules = j.at("moleculelist").get<decltype(molecules)>();
                 if (reactions<Tpvec>.empty())
                     if (j.count("reactionlist")>0)
                         reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
@@ -434,7 +435,7 @@ namespace Faunus {
             typedef typename Tspace::Tpvec Tpvec;
             spc.clear();
             assert(spc.geo.getVolume()>0);
-            auto &molvec = molecules<Tpvec>;
+            auto &molvec = molecules;
             if (j.is_array()) {
                 for (auto &m : j) { // loop over array of molecules
                     if (m.is_object() && m.size()==1)

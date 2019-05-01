@@ -158,9 +158,7 @@ namespace Faunus {
             Point cm={0,0,0};    //!< Mass center
             bool atomic=false;   //!< Is it an atomic group?
 
-            const auto& traits() const {
-                return molecules<Tpvec>.at(id);
-            } //!< Convenient access to molecule properties
+            const auto &traits() const { return molecules.at(id); } //!< Convenient access to molecule properties
 
             template<class Trange>
                 Group(Trange &rng) : base(rng.begin(), rng.end()) {

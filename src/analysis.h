@@ -85,11 +85,11 @@ namespace Faunus {
             class WidomInsertion : public Analysisbase {
                 typedef typename Tspace::Tparticle Tparticle;
                 typedef typename Tspace::Tpvec Tpvec;
-                typedef MoleculeData<Tpvec> TMoleculeData;
+                typedef MoleculeData TMoleculeData;
 
                 Tspace& spc;
                 Energy::Energybase* pot;
-                RandomInserter<TMoleculeData> rins;
+                RandomInserter rins;
                 std::string molname; // molecule name
                 int ninsert;
                 int molid;        // molecule id
@@ -105,7 +105,7 @@ namespace Faunus {
                         g.resize(g.capacity()); // active group
                         for ( int i = 0; i < ninsert; ++i )
                         {
-                            pin = rins(spc.geo, spc.p, molecules<Tpvec>.at(molid));
+                            pin = rins(spc.geo, spc.p, molecules.at(molid));
                             if (!pin.empty()) {
                                 if (absolute_z)
                                     for (auto &p : pin)
@@ -146,8 +146,8 @@ namespace Faunus {
                     absolute_z = j.value("absz", false);
                     rins.dir = j.value("dir", Point({1,1,1}) );
 
-                    auto it = findName( molecules<Tpvec>, molname); // loop for molecule in topology
-                    if (it!=molecules<Tpvec>.end()) {
+                    auto it = findName(molecules, molname); // loop for molecule in topology
+                    if (it != molecules.end()) {
                         molid = it->id();
                         auto m = spc.findMolecules(molid, Tspace::INACTIVE); // look for molecules in space
                         if (size(m)>0) { // did we find any?
@@ -388,7 +388,7 @@ namespace Faunus {
                     auto &_jj = j["molecular"];
                     for (auto &i : rho_mol)
                         if (i.second.cnt>0)
-                            _jj[ molecules<Tpvec>.at(i.first).name ] = json({{ "c/M", i.second.avg() / 1.0_molar }});
+                            _jj[molecules.at(i.first).name] = json({{"c/M", i.second.avg() / 1.0_molar}});
                     _roundjson(j,4);
                 }
 
@@ -396,7 +396,7 @@ namespace Faunus {
                 Density( const json &j, Tspace &spc ) : spc(spc) {
                     from_json(j);
                     name = "density";
-                    for (auto &m: molecules<Tpvec>) {
+                    for (auto &m : molecules) {
                         if (m.atomic)
                             atmdhist[m.id()].setResolution(1,0);
                         else
@@ -415,7 +415,7 @@ namespace Faunus {
                 }
                 virtual ~Density() {
                     for ( auto &m: atmdhist) { // atomic molecules
-                        std::string file = "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat";
+                        std::string file = "rho-"s + molecules.at(m.first).name + ".dat";
                         std::ofstream f(MPI::prefix + file);
                         if (f) {
                             m.second.stream_decorator = [&](std::ostream &o, int N, double samplings) {
@@ -427,7 +427,7 @@ namespace Faunus {
                         }
                     }
                     for ( auto &m: moldhist) { // polyatomic molecules
-                        std::string file = "rho-"s + molecules<Tpvec>.at(m.first).name + ".dat";
+                        std::string file = "rho-"s + molecules.at(m.first).name + ".dat";
                         std::ofstream f(MPI::prefix + file);
                         if (f) {
                             m.second.stream_decorator = [&](std::ostream &o, int N, double samplings) {
@@ -474,7 +474,7 @@ namespace Faunus {
                 private:
                     Tspace& spc;
                     typedef typename Tspace::Tpvec Tpvec;
-                    typename decltype(Faunus::molecules<Tpvec>)::const_iterator mol_iter; // selected molecule type
+                    typename decltype(Faunus::molecules)::const_iterator mol_iter; // selected molecule type
 
                     std::vector< std::map<int,int> > idcnt; // populations of types of atomic indexes
                     std::vector< Average<double> > charge; // average charges of atomic indexes
@@ -544,8 +544,8 @@ namespace Faunus {
                         file = j.value("pqrfile", ""s);
                         verbose = j.value("verbose", true);
                         auto molname = j.at("molecule").get<std::string>(); // molecule name
-                        mol_iter = findName(Faunus::molecules<Tpvec>, molname);
-                        if (mol_iter == Faunus::molecules<Tpvec>.end())
+                        mol_iter = findName(Faunus::molecules, molname);
+                        if (mol_iter == Faunus::molecules.end())
                             throw std::runtime_error("unknown species '" + molname + "'");
                         if (mol_iter->atomic)
                             throw std::runtime_error("only molecular groups allowed");
@@ -576,11 +576,11 @@ namespace Faunus {
                 void _to_json(json &j) const override {
                     json &k = j["molecules"];
                     for (auto &d : _map)
-                        k[ molecules<typename Tspace::Tpvec>[d.first].name ] = {
-                            {"Z", d.second.Z.avg()}, {"Z2", d.second.Z2.avg()},
-                            {"C", d.second.Z2.avg() - std::pow(d.second.Z.avg(),2)},
-                            {u8::mu, d.second.mu.avg()}, {u8::mu+u8::squared, d.second.mu2.avg()}
-                        };
+                        k[molecules[d.first].name] = {{"Z", d.second.Z.avg()},
+                                                      {"Z2", d.second.Z2.avg()},
+                                                      {"C", d.second.Z2.avg() - std::pow(d.second.Z.avg(), 2)},
+                                                      {u8::mu, d.second.mu.avg()},
+                                                      {u8::mu + u8::squared, d.second.mu2.avg()}};
                 }
 
                 public:
@@ -853,13 +853,13 @@ namespace Faunus {
                 MoleculeRDF( const json &j, Tspace &spc ) : PairFunctionBase(j), spc(spc) {
                     name = "molrdf";
 
-                    auto it = findName( molecules<Tpvec>, name1 );
-                    if (it == molecules<Tpvec>.end())
+                    auto it = findName(molecules, name1);
+                    if (it == molecules.end())
                         throw std::runtime_error(name + ": unknown molecule '" + name1 + "'\n");
                     id1 = it->id();
 
-                    it = findName( molecules<Tpvec>, name2 );
-                    if (it == molecules<Tpvec>.end())
+                    it = findName(molecules, name2);
+                    if (it == molecules.end())
                         throw std::runtime_error(name + ": unknown molecule '" + name2 + "'\n");
                     id2 = it->id();
                     assert(id1>=0 && id2>=0);
@@ -884,7 +884,7 @@ namespace Faunus {
                     file = MPI::prefix + j.at("file").get<std::string>();
                     names = j.value("molecules", std::vector<std::string>());
                     if (not names.empty()) {
-                        molids = Faunus::names2ids(Faunus::molecules<typename Tspace::Tpvec>, names);
+                        molids = Faunus::names2ids(Faunus::molecules, names);
                         if (not molids.empty())
                             filter = [&](Tparticle& i) {
                                 for (auto& g : spc.groups)
@@ -1024,7 +1024,7 @@ namespace Faunus {
                     dr = j.value("dr", 0.2);
                     filename = j.at("file").get<std::string>();
                     names = j.at("molecules").get<decltype(names)>(); // molecule names
-                    ids = names2ids(molecules<typename Tspace::Tpvec>, names);// names --> molids
+                    ids = names2ids(molecules, names);                // names --> molids
                     if (ids.size()!=2)
                         throw std::runtime_error("specify exactly two molecules");
                 }
@@ -1069,7 +1069,7 @@ namespace Faunus {
                     usecom = j.value("com", true);
                     filename = j.at("file").get<std::string>();
                     names = j.at("molecules").get<decltype(names)>(); // molecule names
-                    ids = names2ids(molecules<typename Tspace::Tpvec>, names);// names --> molids
+                    ids = names2ids(molecules, names);                // names --> molids
                 }
                 catch( std::exception &e ) {
                     std::cerr << "Debye Formula Scattering: ";
@@ -1100,22 +1100,18 @@ namespace Faunus {
                     using namespace u8;
                     json &k = j["molecules"];
                     for (int i : ids)
-                        k[ molecules<typename Tspace::Tpvec>[i].name ] = {
-                            { bracket("Rg"), Rg.at(i).avg() },
-                            { bracket("Re"), Re.at(i).avg() },
-                            { bracket("Rg" + squared), Rg2.at(i).avg() },
-                            { bracket("Rg" + squared) + "-" + bracket("Rg") + squared, Rg2.at(i).avg() - std::pow(Rg.at(i).avg(), 2.0) },
-                            { bracket("Re" + squared) + "/" + bracket("Rg" + squared), Re2.at(i).avg() / Rg2.at(i).avg() },
-                            { rootof + bracket("Rg"  + squared), sqrt( Rg2.at(i).avg() ) },
-                            { rootof + bracket("Re"  + squared), sqrt( Re2.at(i).avg() )  },
-                            { rootof + bracket("Rgxyz" + squared),
-                                { 
-                                    sqrt( Rg2x.at(i).avg() ),
-                                    sqrt( Rg2y.at(i).avg() ),
-                                    sqrt( Rg2z.at(i).avg() )
-                                }
-                            }
-                        };
+                        k[molecules[i].name] = {
+                            {bracket("Rg"), Rg.at(i).avg()},
+                            {bracket("Re"), Re.at(i).avg()},
+                            {bracket("Rg" + squared), Rg2.at(i).avg()},
+                            {bracket("Rg" + squared) + "-" + bracket("Rg") + squared,
+                             Rg2.at(i).avg() - std::pow(Rg.at(i).avg(), 2.0)},
+                            {bracket("Re" + squared) + "/" + bracket("Rg" + squared),
+                             Re2.at(i).avg() / Rg2.at(i).avg()},
+                            {rootof + bracket("Rg" + squared), sqrt(Rg2.at(i).avg())},
+                            {rootof + bracket("Re" + squared), sqrt(Re2.at(i).avg())},
+                            {rootof + bracket("Rgxyz" + squared),
+                             {sqrt(Rg2x.at(i).avg()), sqrt(Rg2y.at(i).avg()), sqrt(Rg2z.at(i).avg())}}};
                 }
 
                 Point vectorgyrationRadiusSquared(typename Tspace::Tgroup &g) const {
@@ -1160,7 +1156,7 @@ namespace Faunus {
                     from_json(j);
                     name = "Polymer Shape";
                     auto names = j.at("molecules").get<std::vector<std::string>>(); // molecule names
-                    ids = names2ids(molecules<typename Tspace::Tpvec>, names);// names --> molids
+                    ids = names2ids(molecules, names);                              // names --> molids
                 }
 
             };

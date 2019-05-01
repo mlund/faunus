@@ -62,4 +62,27 @@ void PositionAndID::from_json(const json &j) {
     id = j.value("id", id);
     pos = j.value("pos", pos);
 }
+const AtomData &Particle::traits() {
+    assert(id >= 0 and id < atoms.size());
+    return atoms.at(id);
+}
+Particle::Particle(const AtomData &a) { *this = json(a).front(); }
+void Particle::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
+    if (shape != nullptr)
+        shape->rotate(q, m);
+}
+void from_json(const json &j, Particle &p) {
+    p.id = j.value("id", -1);
+    p.pos = j.value("pos", Point(0, 0, 0));
+    p.charge = j.value("q", 0.0);
+    if (p.shape != nullptr)
+        from_json(j, *p.shape);
+}
+void to_json(json &j, const Particle &p) {
+    if (p.shape != nullptr)
+        to_json(j, *p.shape);
+    j["id"] = p.id;
+    j["pos"] = p.pos;
+    j["charge"] = p.charge;
+}
 } // namespace Faunus

@@ -107,11 +107,12 @@ PYBIND11_MODULE(pyfaunus, m)
         .def(py::init<>())
         .def_readwrite("charge", &Charge::charge, "Particle charge (monopole)");
 
-    py::class_<Particle, Charge>(m, "Particle")
+    py::class_<Particle>(m, "Particle")
         .def(py::init<>())
         .def("traits", &Particle::traits)
         .def_readwrite("id", &Particle::id, "Particle ID")
-        .def_readwrite("pos", &Particle::pos, "Particle position");
+        .def_readwrite("pos", &Particle::pos, "Particle position")
+        .def_readwrite("charge", &Particle::charge, "Particle charge (monopole)");
 
     // Particle vector and it's iterator
     py::class_<typename Tpvec::iterator>(m, "ParticleVectorIterator")

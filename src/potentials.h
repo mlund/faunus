@@ -36,15 +36,13 @@ namespace Faunus {
                 CombinedPairPotential(const std::string &name="") {
                     this->name = name;
                 }
-                template <typename... T>
-                inline double operator()(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b,
-                                         const Point &r) const {
+                template <class Tparticle>
+                inline double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                     return first(a, b, r) + second(a, b, r);
                 } //!< Combine pair energy
 
-                template <typename... T>
-                inline Point force(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b, double r2,
-                                   const Point &p) {
+                template <typename Tparticle>
+                inline Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) {
                     return first.force(a, b, r2, p) + second.force(a, b, r2, p);
                 } //!< Combine force
 
@@ -65,8 +63,7 @@ namespace Faunus {
 
         struct Dummy : public PairPotentialBase {
             Dummy();
-            template <typename... T>
-            double operator()(const ParticleTemplate<T...> &, const ParticleTemplate<T...> &, const Point &) const {
+            template <typename Tparticle> double operator()(const Tparticle &, const Tparticle &, const Point &) const {
                 return 0;
             }
             void from_json(const json&) override {}
@@ -262,18 +259,14 @@ namespace Faunus {
                         m = std::make_shared<ParametersTable<Tparticle>>();
                     }
 
-                    template <typename... T>
-                    Point force(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b, double r2,
-                                const Point &p) const {
+                    Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) const {
                         double s6 = powi<3>(m->s2(a.id, b.id));
                         double r6 = r2 * r2 * r2;
                         double r14 = r6 * r6 * r2;
                         return 6. * m->eps(a.id, b.id) * s6 * (2 * s6 - r6) / r14 * p;
                     }
 
-                    template <typename... T>
-                    double operator()(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b,
-                                      const Point &r) const {
+                    double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                         double x = m->s2(a.id, b.id) / r.squaredNorm(); // s2/r2
                         x = x * x * x;                                  // s6/r6
                         return m->eps(a.id, b.id) * (x * x - x);
@@ -313,9 +306,7 @@ namespace Faunus {
                         base::cite="doi:ct4kh9";
                     }
 
-                    template <typename... T>
-                    inline double operator()(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b,
-                                             double r2) const {
+                    inline double operator()(const Particle &a, const Particle &b, double r2) const {
                         double x = m->s2(a.id, b.id); // s^2
                         if (r2 > x * twototwosixth)
                             return 0;
@@ -324,15 +315,11 @@ namespace Faunus {
                         return m->eps(a.id, b.id) * (x * x - x + onefourth);
                     }
 
-                    template <typename... T>
-                    double operator()(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b,
-                                      const Point &r) const {
+                    double operator()(const Particle &a, const Particle &b, const Point &r) const {
                         return operator()(a, b, r.squaredNorm());
                     }
 
-                    template <typename... T>
-                    Point force(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b, double r2,
-                                const Point &p) const {
+                    Point force(const Particle &a, const Particle &b, double r2, const Point &p) const {
                         double x = m->s2(a.id, b.id); // s^2
                         if (r2 > x * twototwosixth)
                             return Point(0, 0, 0);
@@ -372,8 +359,8 @@ namespace Faunus {
         struct Coulomb : public PairPotentialBase {
             Coulomb(const std::string &name="coulomb");
             double lB; //!< Bjerrum length
-            template <typename... T>
-            double operator()(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b, const Point &r) const {
+            template <typename Tparticle>
+            double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                 return lB * a.charge * b.charge / r.norm();
             }
             void to_json(json &j) const override;
@@ -525,8 +512,8 @@ namespace Faunus {
              * C(%, resultname = "x")
              * ~~~
              */
-            template <typename... T>
-            double operator()(const ParticleTemplate<T...> &, const ParticleTemplate<T...> &, const Point &r) const {
+            template <typename Tparticle>
+            double operator()(const Tparticle &, const Tparticle &, const Point &r) const {
                 double r2 = r.squaredNorm();
                 if (r2 < rc2)
                     return -eps;
@@ -674,15 +661,13 @@ namespace Faunus {
                     return 0;
                 }
 
-                template <typename... T>
-                double operator()(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b,
-                                  const Point &r) const {
+                template <typename Tparticle>
+                double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                     return operator()(a,b,r.squaredNorm());
                 }
 
-                template <typename... T>
-                Point force(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b, double r2,
-                            const Point &p) const {
+                template <typename Tparticle>
+                Point force(const Tparticle &a, const Tparticle &b, double r2, const Point &p) const {
                     if (r2 < rc2) {
                         double r = sqrt(r2);
                         return lB * a.charge * b.charge * ( -sf.eval( table, r*rc1i )/r2 + sf.evalDer( table, r*rc1i )/r )*p;
@@ -721,9 +706,8 @@ namespace Faunus {
                 std::shared_ptr<Data> d;
                 json jin; // initial json input
             public:
-              template <typename... T>
-              inline double operator()(const ParticleTemplate<T...> &a, const ParticleTemplate<T...> &b,
-                                       const Point &r) const {
+              template <typename Tparticle>
+              inline double operator()(const Tparticle &a, const Tparticle &b, const Point &r) const {
                   double r2 = r.squaredNorm();
                   if (r2 > Rc2)
                       return 0;

@@ -356,7 +356,7 @@ namespace Faunus {
                 _j.push_back( tmp );
             }
             auto& _j2 = j["reactionlist"];
-            for (auto &i : reactions<decltype(p)>) {
+            for (auto &i : Faunus::reactions) {
                 json tmp, d = i;
                 _j2.push_back( i );
             }
@@ -370,7 +370,7 @@ namespace Faunus {
             j["geometry"] = spc.geo;
             j["groups"] = spc.groups;
             j["particles"] = spc.p;
-            j["reactionlist"] = reactions<Tpvec>;
+            j["reactionlist"] = reactions;
         } //!< Serialize Space to json object
 
     template<class Tparticletype>
@@ -383,9 +383,9 @@ namespace Faunus {
                     atoms = j.at("atomlist").get<decltype(atoms)>();
                 if (molecules.empty())
                     molecules = j.at("moleculelist").get<decltype(molecules)>();
-                if (reactions<Tpvec>.empty())
+                if (reactions.empty())
                     if (j.count("reactionlist")>0)
-                        reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>();
+                        reactions = j.at("reactionlist").get<decltype(reactions)>();
 
                 spc.clear();
                 spc.geo = j.at("geometry");

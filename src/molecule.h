@@ -169,15 +169,13 @@ TEST_CASE("[Faunus] MoleculeData") {
 /*
  * @brief General properties of reactions
  */
-template <class Tpvec> class ReactionData {
-  private:
-    int _id = -1;
-
+class ReactionData {
   public:
-    std::vector<std::string> _reag, _prod;
-
+    typedef std::vector<Particle> Tpvec;
     typedef typename Tpvec::value_type Tparticle;
     typedef std::map<int, int> Tmap;
+
+    std::vector<std::string> _reag, _prod;
 
     Tmap _reagid_m; // Molecular change, groups. Atomic as Groupwise
     Tmap _reagid_a; // Atomic change, equivalent of swap/titration
@@ -194,38 +192,15 @@ template <class Tpvec> class ReactionData {
     std::string formula;  //!< Chemical formula
     double weight;        //!< Statistical weight to be given to reaction in speciation
 
-    bool empty(bool forward) const {
-        if (forward)
-            if (canonic)
-                if (N_reservoir <= 0)
-                    return true;
-        return false;
-    }
+    bool empty(bool forward) const;
 
-    std::vector<int> participatingMolecules() const {
-        std::vector<int> v;
-        v.reserve(_reagid_m.size() + _prodid_m.size());
-        for (auto i : _reagid_m)
-            v.push_back(i.first);
-        for (auto i : _prodid_m)
-            v.push_back(i.first);
-        return v;
-    } //!< Returns molids of participating molecules
+    std::vector<int> participatingMolecules() const; //!< Returns molids of participating molecules
 
-    bool containsMolecule(int molid) const {
-        if (_reagid_m.count(molid) == 0)
-            if (_prodid_m.count(molid) == 0)
-                return false;
-        return true;
-    } //!< True of molecule id is part of process
+    bool containsMolecule(int molid) const; //!< True of molecule id is part of process
 
-    const Tmap &Molecules2Add(bool forward) const {
-        return (forward) ? _prodid_m : _reagid_m;
-    } //!< Map for addition depending on direction
+    const Tmap &Molecules2Add(bool forward) const; //!< Map for addition depending on direction
 
-    const Tmap &Atoms2Add(bool forward) const {
-        return (forward) ? _prodid_a : _reagid_a;
-    } //!< Map for addition depending on direction
+    const Tmap &Atoms2Add(bool forward) const; //!< Map for addition depending on direction
 
     auto findAtomOrMolecule(const std::string &name) const {
         auto it_a = findName(Faunus::atoms, name);
@@ -252,95 +227,11 @@ inline auto parseProcess(const std::string &process) {
     return std::make_pair(Tvec(v.begin(), it), Tvec(it + 1, v.end()));
 } //!< Parse process string to pair of vectors containing reactant/product species
 
-template <class Tparticle, class Talloc>
-void from_json(const json &j, ReactionData<std::vector<Tparticle, Talloc>> &a) {
+void from_json(const json &j, ReactionData &a);
 
-    typedef std::vector<Tparticle, Talloc> Tpvec; // alias for particle vector
+void to_json(json &j, const ReactionData &a);
 
-    if (j.is_object() == false || j.size() != 1)
-        throw std::runtime_error("Invalid JSON data for ReactionData");
-
-    for (auto &m : Faunus::molecules)
-        for (auto &a : Faunus::atoms)
-            if (m.name == a.name)
-                throw std::runtime_error("Molecules and atoms nust have different names");
-
-    for (auto it = j.begin(); it != j.end(); ++it) {
-        a.name = it.key();
-        auto &val = it.value();
-        a.canonic = val.value("canonic", false);
-        if (val.count("lnK") == 1)
-            a.lnK = val.at("lnK").get<double>();
-        else if (val.count("pK") == 1)
-            a.lnK = -std::log(10) * val.at("pK").get<double>();
-        a.pK = -a.lnK / std::log(10);
-        a.N_reservoir = val.value("N_reservoir", a.N_reservoir);
-
-        // get pair of vectors containing reactant and product species
-        auto process = parseProcess(a.name);
-        a._reag = process.first;
-        a._prod = process.second;
-
-        for (auto &name : a._reag) {                // loop over reactants
-            auto pair = a.findAtomOrMolecule(name); // {iterator to atom, iterator to mol.}
-            if (pair.first != atoms.end()) {
-                a.swap = true; // if the reaction involves atoms, identify it as swap move
-            }
-        }
-
-        for (auto &name : a._reag) {                // loop over reactants
-            auto pair = a.findAtomOrMolecule(name); // {iterator to atom, iterator to mol.}
-            if (pair.first != atoms.end()) {
-                if (pair.first->implicit) {
-                    // implicit reagent? K is multiplied by its activity
-                    a.lnK += std::log(pair.first->activity / 1.0_molar);
-                } else {
-                    a._reagid_a[pair.first->id()]++;
-                }
-            }
-            if (pair.second != molecules.end()) {
-                a._reagid_m[pair.second->id()]++;
-                if (pair.second->activity > 0) {
-                    // explicit reagent?
-                    // its activity is not part of K?
-                    // K is divided by its activity
-                    a.lnK -= std::log(pair.second->activity / 1.0_molar);
-                }
-            }
-        }
-
-        for (auto &name : a._prod) { // loop over products
-            auto pair = a.findAtomOrMolecule(name);
-            if (pair.first != atoms.end()) {
-                if (pair.first->implicit) {
-                    // implicit product? K is divided by its activity
-                    a.lnK -= std::log(pair.first->activity / 1.0_molar);
-                } else {
-                    a._prodid_a[pair.first->id()]++;
-                }
-            }
-            if (pair.second != molecules.end()) {
-                a._prodid_m[pair.second->id()]++;
-                if (pair.second->activity > 0) {
-                    // explicit product?
-                    // its activity is not part of K?
-                    // K is multiplied by its activity
-                    a.lnK += std::log(pair.second->activity / 1.0_molar);
-                }
-            }
-        }
-    }
-}
-
-template <class Tparticle, class Talloc> void to_json(json &j, const ReactionData<std::vector<Tparticle, Talloc>> &a) {
-    j[a.name] = {{"pK", a.pK},
-                 {"pK'", -a.lnK / std::log(10)},
-                 //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
-                 {"products", a._prod},
-                 {"reactants", a._reag}};
-} //!< Serialize to JSON object
-
-template <typename Tpvec> static std::vector<ReactionData<Tpvec>> reactions = {}; //!< Global instance of reaction list
+extern std::vector<ReactionData> reactions; // global instance
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] ReactionData") {
@@ -364,8 +255,8 @@ TEST_CASE("[Faunus] ReactionData") {
     Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
     molecules = j["moleculelist"].get<decltype(molecules)>(); // fill global instance
 
-    auto &r = reactions<Tpvec>; // reference to global reaction list
-    r = j["reactionlist"].get<decltype(reactions<Tpvec>)>();
+    auto &r = reactions; // reference to global reaction list
+    r = j["reactionlist"].get<decltype(reactions)>();
 
     CHECK(r.size() == 1);
     CHECK(r.front().name == "A = B");

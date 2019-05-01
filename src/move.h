@@ -683,7 +683,7 @@ namespace Faunus {
 
                     Tspace& spc;
                     Tspace *otherspc;
-                    ReactionData<Tpvec> *trialprocess;
+                    ReactionData *trialprocess;
                     std::map<std::string, Average<double>> accmap;
 
                     double lnK;
@@ -726,8 +726,8 @@ namespace Faunus {
                     }
 
                     void _move(Change &change) override {
-                        if ( reactions<Tpvec>.size()>0 ) {
-                            auto rit = slump.sample( reactions<Tpvec>.begin(), reactions<Tpvec>.end() );
+                        if (reactions.size() > 0) {
+                            auto rit = slump.sample(reactions.begin(), reactions.end());
                             lnK = rit->lnK;
                             forward = (bool)slump.range(0,1); // random boolean
                             trialprocess = &(*rit);
@@ -1833,7 +1833,7 @@ start:
                             Move::Movebase::slump = j["random-move"]; // restore move random number generator
                         if (j.count("random-global")==1)
                             Faunus::random = j["random-global"];      // restore global random number generator
-                        reactions<Tpvec> = j.at("reactionlist").get<decltype(reactions<Tpvec>)>(); // should be handled by space
+                        reactions = j.at("reactionlist").get<decltype(reactions)>(); // should be handled by space
                         init();
                     } catch (std::exception &e) {
                         throw std::runtime_error("error initialising simulation: "s + e.what());

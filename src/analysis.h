@@ -359,8 +359,8 @@ namespace Faunus {
                     for (auto &i : Natom)
                         rho_atom[i.first] += i.second/V;
 
-                    if ( Faunus::reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
-                        for (auto &rit : reactions<Tpvec> ) {
+                    if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
+                        for (auto &rit : reactions) {
                             for (auto pid : rit._prodid_a) {
                                 auto atomlist = spc.findAtoms(pid.first);
                                 swpdhist[ pid.first ]( size(atomlist) )++;
@@ -402,8 +402,8 @@ namespace Faunus {
                         else
                             moldhist[m.id()].setResolution(1,0);
                     }
-                    if ( Faunus::reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
-                        for (auto &rit : reactions<Tpvec> ) {
+                    if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
+                        for (auto &rit : reactions) {
                             for (auto pid : rit._prodid_a) {
                                 swpdhist[pid.first].setResolution(1,0);
                             }
@@ -438,8 +438,8 @@ namespace Faunus {
                             f << "# N samplings P\n" << m.second;
                         }
                     }
-                    if ( Faunus::reactions<Tpvec>.size()>0 ) { // in case of reactions involving atoms (swap moves)
-                        for (auto &rit : reactions<Tpvec> ) {
+                    if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
+                        for (auto &rit : reactions) {
                             for (auto pid : rit._prodid_a) {
                                 std::string file = "rho-"s + atoms.at( pid.first ).name + ".dat";
                                 std::ofstream f(MPI::prefix + file);

@@ -1362,7 +1362,7 @@ start:
 
                 struct State {
                     Tspace spc;
-                    Energy::Hamiltonian<Tspace> pot;
+                    Energy::Hamiltonian pot;
                     State(const json &j);
 
                     void sync(State &other, Change &change);

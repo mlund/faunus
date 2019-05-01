@@ -1,5 +1,7 @@
 
+#include "mpi.h"
 #include "energy.h"
+#include "penalty.h"
 
 namespace Faunus {
 namespace Energy {
@@ -349,6 +351,145 @@ double Bonded::energy(Change &change) {
         } // for-loop over groups
     }
     return energy;
+}
+void Hamiltonian::to_json(json &j) const {
+    for (auto i : this->vec)
+        j.push_back(*i);
+}
+void Hamiltonian::addEwald(const json &j, Tspace &spc) {
+    if (j.count("coulomb") == 1)
+        if (j["coulomb"].count("type") == 1)
+            if (j["coulomb"].at("type") == "ewald")
+                push_back<Energy::Ewald<Tspace>>(j["coulomb"], spc);
+}
+void Hamiltonian::addSelfEnergy(const json &j, Tspace &spc) {
+    std::vector<std::string> methods = {"qpotential", "fanourgakis"};
+    if (j.count("coulomb") == 1)
+        if (j["coulomb"].count("type") == 1)
+            if (std::find(methods.begin(), methods.end(), j["coulomb"].at("type")) != methods.end())
+                push_back<Energy::SelfEnergy>(j["coulomb"], spc);
+}
+Hamiltonian::Hamiltonian(Tspace &spc, const json &j) {
+    using namespace Potential;
+
+    typedef CombinedPairPotential<CoulombGalore, LennardJones<Particle>> CoulombLJ;
+    typedef CombinedPairPotential<CoulombGalore, HardSphere<Particle>> CoulombHS;
+    typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen<Particle>> CoulombWCA;
+    typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen<Particle>> PrimitiveModelWCA;
+    typedef CombinedPairPotential<Coulomb, HardSphere<Particle>> PrimitiveModel;
+
+    Energybase::name = "hamiltonian";
+
+    // add container overlap energy for non-cuboidal geometries
+    if (spc.geo.type not_eq Geometry::CUBOID)
+        push_back<Energy::ContainerOverlap>(spc);
+
+    for (auto &m : j.at("energy")) { // loop over move list
+        size_t oldsize = vec.size();
+        for (auto it = m.begin(); it != m.end(); ++it) {
+            try {
+                if (it.key() == "nonbonded_coulomblj")
+                    push_back<Energy::Nonbonded<Tspace, CoulombLJ>>(it.value(), spc);
+
+                if (it.key() == "nonbonded_coulomblj_EM")
+                    push_back<Energy::NonbondedCached<Tspace, CoulombLJ>>(it.value(), spc);
+
+                if (it.key() == "nonbonded")
+                    push_back<Energy::Nonbonded<Tspace, TabulatedPotential<typename Tspace::Tparticle>>>(it.value(),
+                                                                                                         spc);
+
+                if (it.key() == "nonbonded_exact")
+                    push_back<Energy::Nonbonded<Tspace, FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+
+                if (it.key() == "nonbonded_cached")
+                    push_back<Energy::NonbondedCached<Tspace, TabulatedPotential<typename Tspace::Tparticle>>>(
+                        it.value(), spc);
+
+                if (it.key() == "nonbonded_coulombwca")
+                    push_back<Energy::Nonbonded<Tspace, CoulombWCA>>(it.value(), spc);
+
+                if (it.key() == "nonbonded_pm" or it.key() == "nonbonded_coulombhs")
+                    push_back<Energy::Nonbonded<Tspace, PrimitiveModel>>(it.value(), spc);
+
+                if (it.key() == "nonbonded_pmwca")
+                    push_back<Energy::Nonbonded<Tspace, PrimitiveModelWCA>>(it.value(), spc);
+
+                if (it.key() == "bonded")
+                    push_back<Energy::Bonded>(it.value(), spc);
+
+                if (it.key() == "customexternal")
+                    push_back<Energy::CustomExternal<Tspace>>(it.value(), spc);
+
+                if (it.key() == "akesson")
+                    push_back<Energy::ExternalAkesson<Tspace>>(it.value(), spc);
+
+                if (it.key() == "confine")
+                    push_back<Energy::Confine<Tspace>>(it.value(), spc);
+
+                if (it.key() == "constrain")
+                    push_back<Energy::Constrain>(it.value(), spc);
+
+                if (it.key() == "example2d")
+                    push_back<Energy::Example2D>(it.value(), spc);
+
+                if (it.key() == "isobaric")
+                    push_back<Energy::Isobaric>(it.value(), spc);
+
+                if (it.key() == "penalty")
+#ifdef ENABLE_MPI
+                    push_back<Energy::PenaltyMPI>(it.value(), spc);
+#else
+                    push_back<Energy::Penalty>(it.value(), spc);
+#endif
+#ifdef ENABLE_POWERSASA
+                if (it.key() == "sasa")
+                    push_back<Energy::SASAEnergy<Tspace>>(it.value(), spc);
+#endif
+                // additional energies go here...
+
+                addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
+
+                addSelfEnergy(it.value(), spc); // add self-term of electrostatic potential if appropriate
+
+                if (it.key() == "maxenergy") {
+                    maxenergy = it.value().get<double>();
+                    continue;
+                }
+
+                if (vec.size() == oldsize)
+                    throw std::runtime_error("unknown term");
+
+            } catch (std::exception &e) {
+                throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
+            }
+        }
+    }
+}
+double Hamiltonian::energy(Change &change) {
+    double du = 0;
+    for (auto i : this->vec) {
+        i->key = key;
+        i->timer.start();
+        du += i->energy(change);
+        i->timer.stop();
+        if (du >= maxenergy)
+            break; // stop summing energies
+    }
+    return du;
+}
+void Hamiltonian::init() {
+    for (auto i : this->vec)
+        i->init();
+}
+void Hamiltonian::sync(Energybase *basePtr, Change &change) {
+    auto other = dynamic_cast<decltype(this)>(basePtr);
+    if (other)
+        if (other->size() == size()) {
+            for (size_t i = 0; i < size(); i++)
+                this->vec[i]->sync(other->vec[i].get(), change);
+            return;
+        }
+    throw std::runtime_error("hamiltonian mismatch");
 }
 } // end of namespace Energy
 } // end of namespace Faunus

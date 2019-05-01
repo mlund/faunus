@@ -526,8 +526,7 @@ namespace Faunus {
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] TranslateRotate")
         {
-            typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
-            typedef Space<Tparticle> Tspace;
+            typedef Space<Particle> Tspace;
             typedef typename Tspace::Tpvec Tpvec;
 
             CHECK( !atoms.empty() ); // set in a previous test

@@ -743,14 +743,13 @@ namespace Faunus {
         TEST_CASE("[Faunus] CustomPairPotential")
         {
             using doctest::Approx;
-            typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
             json j = R"({ "atomlist" : [
                  {"A": { "q":1.0,  "r":3, "eps":0.1 }},
                  {"B": { "q":-1.0, "r":4, "eps":0.05 }} ]})"_json;
 
             atoms = j["atomlist"].get<decltype(atoms)>();
 
-            Tparticle a,b;
+            Particle a, b;
             a = atoms[0];
             b = atoms[1];
 
@@ -982,7 +981,6 @@ namespace Faunus {
         TEST_CASE("[Faunus] FunctorPotential")
         {
             using doctest::Approx;
-            typedef Particle<Radius, Charge, Dipole, Cigar> T;
 
             json j = R"({ "atomlist" : [
                  {"A": { "q":1.0,  "r":1.1, "eps":0.1 }},
@@ -991,7 +989,7 @@ namespace Faunus {
 
             atoms = j["atomlist"].get<decltype(atoms)>();
 
-            FunctorPotential<T> u = R"(
+            FunctorPotential<Particle> u = R"(
                 {
                   "default": [
                     { "coulomb" : {"epsr": 80.0, "type": "plain", "cutoff":20} }
@@ -1006,12 +1004,12 @@ namespace Faunus {
                  }
                 )"_json;
 
-                Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
-            WeeksChandlerAndersen<T> wca = R"({ "wca" : {"mixing": "LB"} })"_json;
+            Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
+            WeeksChandlerAndersen<Particle> wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
-            T a = atoms[0];
-            T b = atoms[1];
-            T c = atoms[2];
+            Particle a = atoms[0];
+            Particle b = atoms[1];
+            Particle c = atoms[2];
             Point r={2,0,0};
             CHECK( u(a,a,r) == Approx( coulomb(a,a,r) ) );
             CHECK( u(b,b,r) == Approx( coulomb(b,b,r) ) );
@@ -1288,9 +1286,8 @@ namespace Faunus {
                  { "A": { "r": 1.5, "tension": 0.023} },
                  { "B": { "r": 2.1, "tfe": 0.98 } }]})"_json;
 
-            typedef Particle<Radius> T;
             atoms = j["atomlist"].get<decltype(atoms)>();
-            T a,b;
+            Particle a, b;
             a.id = 0;
             b.id = 1;
 

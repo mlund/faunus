@@ -499,15 +499,14 @@ namespace Faunus {
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Space")
     {
-        typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
-        typedef Space<Tparticle> Tspace;
+        typedef Space<Particle> Tspace;
         Tspace spc1;
         spc1.geo = R"( {"type": "sphere", "radius": 1e9} )"_json;
 
         // check molecule insertion
         atoms.resize(2);
         CHECK( atoms.at(0).mw == 1);
-        Tparticle a;
+        Particle a;
         a.id=0;
         a.pos.setZero();
         Tspace::Tpvec p(2, a);
@@ -554,7 +553,7 @@ namespace Faunus {
             // add three groups to space
             Tspace spc;
             spc.geo = R"( {"type": "sphere", "radius": 1e9} )"_json;
-            Tparticle a;
+            Particle a;
             a.pos.setZero();
             a.id=0;
             typename Tspace::Tpvec pvec({a,a,a});
@@ -564,7 +563,7 @@ namespace Faunus {
             spc.push_back(0, pvec);
 
             for (size_t i=0; i<spc.p.size(); i++)
-                spc.p[i].radius = double(i);
+                spc.p[i].charge = double(i);
 
             CHECK( spc.p.size()==9 );
             CHECK( spc.groups.size()==3 );
@@ -581,7 +580,7 @@ namespace Faunus {
             std::vector<int> vals;
             for (const auto &i : p) {
                 size++;
-                vals.push_back( int(i.radius) );
+                vals.push_back(int(i.charge));
             }
 
             CHECK( vals == std::vector<int>({1,2,6,7,8}) );
@@ -593,7 +592,7 @@ namespace Faunus {
             CHECK( std::distance(p2.begin(), p2.end()) == size );
             vals.clear();
             for (const auto &i : p2) {
-                vals.push_back( int(i.radius) );
+                vals.push_back(int(i.charge));
             }
             CHECK( vals == std::vector<int>({1,2,6,7,8}) );
         }

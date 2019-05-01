@@ -129,7 +129,7 @@ namespace Faunus {
     };
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Conformation") {
-        typedef std::vector<Particle<Charge>> Tpvec;
+        typedef std::vector<Particle> Tpvec;
         Tpvec p(1);
         Conformation c;
         CHECK(c.empty());
@@ -423,8 +423,7 @@ namespace Faunus {
                 { "A": { "atomic":false } }
             ]})"_json;
 
-        typedef Particle<Radius, Charge, Dipole, Cigar> T;
-        typedef std::vector<T> Tpvec;
+        typedef std::vector<Particle> Tpvec;
 
         molecules<Tpvec> = j["moleculelist"].get<decltype(molecules<Tpvec>)>(); // fill global instance
         auto &v = molecules<Tpvec>; // reference to global molecule vector
@@ -641,7 +640,7 @@ namespace Faunus {
                 ]
             } )"_json;
 
-        typedef std::vector<Particle<Radius, Charge, Dipole, Cigar>> Tpvec;
+        typedef std::vector<Particle> Tpvec;
 
         Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
         molecules<Tpvec> = j["moleculelist"].get<decltype(molecules<Tpvec>)>(); // fill global instance

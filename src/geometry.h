@@ -868,10 +868,8 @@ namespace Faunus {
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] anyCenter") {
-            typedef Particle<Radius, Charge, Dipole, Cigar> T;
-
             Chameleon cyl = json( {{"type","cuboid"}, {"length",100}, {"radius",20}} );
-            std::vector<T> p;
+            std::vector<Particle> p;
 
             CHECK( !atoms.empty() ); // set in a previous test
             p.push_back( atoms[0] );

@@ -1,9 +1,7 @@
 #pragma once
 
 #include "space.h"
-#include "potentials.h"
 #include <Eigen/Dense>
-#include <set>
 
 #ifdef ENABLE_POWERSASA
 #include <power_sasa.h>

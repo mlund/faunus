@@ -1,4 +1,5 @@
 #include "molecule.h"
+#include "geometry.h"
 
 namespace Faunus {
 

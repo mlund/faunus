@@ -3,13 +3,16 @@
 #include <set>
 #include "core.h"
 #include "io.h"
-#include "geometry.h"
 #include "potentials.h"
 
 namespace Faunus {
 
 namespace Potential {
 struct BondData;
+}
+
+namespace Geometry {
+struct GeometryBase;
 }
 
 class MoleculeData;

@@ -96,4 +96,4 @@ namespace Faunus {
 
     std::vector<AtomData> atoms;
 
-} // end of Faunus
+    } // namespace Faunus

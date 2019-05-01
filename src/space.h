@@ -217,7 +217,8 @@ namespace Faunus {
 
             json info();
 
-        };
+        }; // end of space
+
         template <class Tparticletype> void Space<Tparticletype>::clear() {
             p.clear();
             groups.clear();
@@ -496,6 +497,8 @@ namespace Faunus {
                 }
             } else throw std::runtime_error("'insertmolecules' json entry must be of array type" + usageTip["insertmolecule"]);
         } //!< Insert `N` molecules into space as defined in `insert`
+
+        using Tspace = Space<Particle>; // global alias for the common space
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Space")

@@ -206,6 +206,7 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/atomdata.cpp
     ${CMAKE_SOURCE_DIR}/src/energy.cpp
     ${CMAKE_SOURCE_DIR}/src/geometry.cpp
+    ${CMAKE_SOURCE_DIR}/src/group.cpp
     ${CMAKE_SOURCE_DIR}/src/io.cpp
     ${CMAKE_SOURCE_DIR}/src/molecule.cpp
     ${CMAKE_SOURCE_DIR}/src/move.cpp

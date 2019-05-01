@@ -109,7 +109,7 @@ void from_json(const json &j, MoleculeData &a) {
                             Potential::HarmonicBond bond; // harmonic bond
                             bond.from_json(_struct);      // read 'k' and 'req' from json
                             std::string fasta = _struct.at("fasta").get<std::string>();
-                            auto v = Faunus::fastaToParticles<std::vector<Particle>>(fasta, bond.req);
+                            auto v = Faunus::fastaToParticles(fasta, bond.req);
                             if (not v.empty()) {
                                 a.conformations.push_back(v);
                                 for (auto &p : v)

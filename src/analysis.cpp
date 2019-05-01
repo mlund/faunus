@@ -1,3 +1,5 @@
+#include <numeric>
+#include <cerrno>
 #include "analysis.h"
 #include "reactioncoordinate.h"
 #include "multipole.h"
@@ -466,6 +468,13 @@ void WidomInsertion::_from_json(const json &j) {
     }
     throw std::runtime_error(name + ": no inactive '" + molname + "' groups found");
 }
+
+WidomInsertion::WidomInsertion(const json &j, Tspace &spc, Energy::Hamiltonian &pot) : spc(spc), pot(&pot) {
+    from_json(j);
+    name = "widom";
+    cite = "doi:10/dkv4s6";
+}
+
 void Density::_sample() {
     // count atom and groups of individual id's
     Nmol.clear();

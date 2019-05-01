@@ -1,15 +1,16 @@
 #pragma once
 
-#include <numeric>
-#include <cerrno>
 #include "move.h"
 #include "space.h"
 #include "io.h"
-#include "energy.h"
 #include "mpi.h"
 #include "scatter.h"
 
 namespace Faunus {
+
+namespace Energy {
+class Hamiltonian;
+}
 
 namespace Analysis {
 
@@ -65,7 +66,7 @@ class WidomInsertion : public Analysisbase {
     typedef typename Tspace::Tpvec Tpvec;
 
     Tspace &spc;
-    Energy::Energybase *pot;
+    Energy::Hamiltonian *pot;
     RandomInserter rins;
     std::string molname; // molecule name
     int ninsert;
@@ -79,11 +80,7 @@ class WidomInsertion : public Analysisbase {
     void _from_json(const json &j) override;
 
   public:
-    template <class Tenergy> WidomInsertion(const json &j, Tspace &spc, Tenergy &pot) : spc(spc), pot(&pot) {
-        from_json(j);
-        name = "widom";
-        cite = "doi:10/dkv4s6";
-    }
+    WidomInsertion(const json &j, Tspace &spc, Energy::Hamiltonian &pot);
 };
 
 class AtomProfile : public Analysisbase {

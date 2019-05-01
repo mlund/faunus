@@ -12,9 +12,8 @@
 namespace py = pybind11;
 using namespace Faunus;
 
-typedef Space<Particle> Tspace;
-typedef typename Tspace::Tpvec Tpvec;
-typedef typename Tspace::Tgroup Tgroup;
+typedef typename Space::Tpvec Tpvec;
+typedef typename Space::Tgroup Tgroup;
 typedef Energy::Hamiltonian Thamiltonian;
 typedef MCSimulation Tmcsimulation;
 
@@ -194,21 +193,21 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("groups", &Change::groups);
 
     // Space
-    py::class_<Tspace>(m, "Space")
+    py::class_<Space>(m, "Space")
         .def(py::init<>())
-        .def_readwrite("geo", &Tspace::geo)
-        .def_readwrite("p", &Tspace::p)
-        .def_readwrite("groups", &Tspace::groups)
-        .def("findMolecules", &Tspace::findMolecules)
-        .def("from_dict", [](Tspace &spc, py::dict dict) { from_json(dict2json(dict), spc); } );
+        .def_readwrite("geo", &Space::geo)
+        .def_readwrite("p", &Space::p)
+        .def_readwrite("groups", &Space::groups)
+        .def("findMolecules", &Space::findMolecules)
+        .def("from_dict", [](Space &spc, py::dict dict) { from_json(dict2json(dict), spc); });
 
     // Hamiltonian
     py::class_<Thamiltonian>(m, "Hamiltonian")
-        .def(py::init<Tspace&, const json&>())
-        .def(py::init([](Tspace &spc, py::dict dict) {
-                    json j = dict2json(dict);
-                    return std::unique_ptr<Thamiltonian>(new Thamiltonian(spc,j));
-                    }))
+        .def(py::init<Space &, const json &>())
+        .def(py::init([](Space &spc, py::dict dict) {
+            json j = dict2json(dict);
+            return std::unique_ptr<Thamiltonian>(new Thamiltonian(spc, j));
+        }))
         .def("init", &Thamiltonian::init)
         .def("energy", &Thamiltonian::energy);
 
@@ -228,14 +227,15 @@ PYBIND11_MODULE(pyfaunus, m)
 
     // CombinedAnalysis
     py::class_<Analysis::CombinedAnalysis>(m, "Analysis")
-        .def(py::init([](Tspace &spc, Thamiltonian &pot, py::dict dict) {
-                    json j = dict2json(dict);
-                    return std::unique_ptr<Analysis::CombinedAnalysis>(new Analysis::CombinedAnalysis(j,spc,pot));
-                    }))
-        .def("to_dict", [](Analysis::CombinedAnalysis &self) {
-                json j;
-                Faunus::to_json(j, self);
-                return json2dict(j);
-                } )
+        .def(py::init([](Space &spc, Thamiltonian &pot, py::dict dict) {
+            json j = dict2json(dict);
+            return std::unique_ptr<Analysis::CombinedAnalysis>(new Analysis::CombinedAnalysis(j, spc, pot));
+        }))
+        .def("to_dict",
+             [](Analysis::CombinedAnalysis &self) {
+                 json j;
+                 Faunus::to_json(j, self);
+                 return json2dict(j);
+             })
         .def("sample", &Analysis::CombinedAnalysis::sample);
 }

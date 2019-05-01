@@ -1,5 +1,6 @@
 #include "analysis.h"
 #include "reactioncoordinate.h"
+#include "multipole.h"
 
 namespace Faunus {
 

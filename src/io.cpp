@@ -382,4 +382,19 @@ std::vector<Particle> fastaToParticles(const std::string &fasta, double spacing,
     return vec;
 }
 
+bool loadStructure(const std::string &file, std::vector<Particle> &dst, bool append, bool keepcharges) {
+    if (append == false)
+        dst.clear();
+    std::string suffix = file.substr(file.find_last_of(".") + 1);
+    if (suffix == "aam")
+        FormatAAM::load(file, dst, keepcharges);
+    if (suffix == "pqr")
+        FormatPQR::load(file, dst, keepcharges);
+    if (suffix == "xyz")
+        FormatXYZ::load(file, dst);
+    if (not dst.empty())
+        return true;
+    return false;
+}
+
 } // namespace Faunus

@@ -202,6 +202,7 @@ std::vector<Particle>::iterator AtomicTranslateRotate::randomAtom() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 Propagator::Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi) {
+#pragma GCC diagnostic pop
 
     if (j.count("random") == 1) {
         Movebase::slump = j["random"]; // slump is static --> shared for all moves
@@ -235,7 +236,7 @@ Propagator::Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi) {
                     // new moves go here...
 #ifdef ENABLE_MPI
                 else if (it.key() == "temper")
-                    this->template push_back<Move::ParallelTempering<Tspace>>(spc, mpi);
+                    this->template push_back<Move::ParallelTempering>(spc, mpi);
                     // new moves requiring MPI go here...
 #endif
                 if (vec.size() == oldsize + 1) {
@@ -249,7 +250,99 @@ Propagator::Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi) {
         }
     }
 }
-#pragma GCC diagnostic pop
+
+void Propagator::addWeight(double weight) {
+    w.push_back(weight);
+    dist = std::discrete_distribution<>(w.begin(), w.end());
+    _repeat = int(std::accumulate(w.begin(), w.end(), 0.0));
+}
+
+#ifdef ENABLE_MPI
+
+void ParallelTempering::findPartner() {
+    int dr = 0;
+    partner = mpi.rank();
+    (mpi.random() > 0.5) ? dr++ : dr--;
+    (mpi.rank() % 2 == 0) ? partner += dr : partner -= dr;
+}
+bool ParallelTempering::goodPartner() {
+    assert(partner != mpi.rank() && "Selfpartner! This is not supposed to happen.");
+    if (partner >= 0)
+        if (partner < mpi.nproc())
+            if (partner != mpi.rank())
+                return true;
+    return false;
+}
+void ParallelTempering::_to_json(json &j) const {
+    j = {{"replicas", mpi.nproc()}, {"datasize", pt.getFormat()}};
+    json &_j = j["exchange"];
+    _j = json::object();
+    for (auto &m : accmap)
+        _j[m.first] = {{"attempts", m.second.cnt}, {"acceptance", m.second.avg()}};
+}
+void ParallelTempering::_move(Change &change) {
+    double Vold = spc.geo.getVolume();
+    findPartner();
+    Tpvec p; // temperary storage
+    p.resize(spc.p.size());
+    if (goodPartner()) {
+        change.all = true;
+        pt.sendExtra[VOLUME] = Vold;  // copy current volume for sending
+        pt.recv(mpi, partner, p);     // receive particles
+        pt.send(mpi, spc.p, partner); // send everything
+        pt.waitrecv();
+        pt.waitsend();
+
+        double Vnew = pt.recvExtra[VOLUME];
+        if (Vnew < 1e-9 || spc.p.size() != p.size())
+            MPI_Abort(mpi.comm, 1);
+
+        if (std::fabs(Vnew - Vold) > 1e-9)
+            change.dV = true;
+
+        spc.p = p;
+        spc.geo.setVolume(Vnew);
+
+        // update mass centers
+        for (auto &g : spc.groups)
+            if (g.atomic == false)
+                g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
+    }
+}
+double ParallelTempering::exchangeEnergy(double mydu) {
+    std::vector<MPI::FloatTransmitter::floatp> duSelf(1), duPartner;
+    duSelf[0] = mydu;
+    duPartner = ft.swapf(mpi, duSelf, partner);
+    return duPartner.at(0); // return partner energy change
+}
+double ParallelTempering::bias(Change &, double uold, double unew) {
+    return exchangeEnergy(unew - uold); // Exchange dU with partner (MPI)
+}
+std::string ParallelTempering::id() {
+    std::ostringstream o;
+    if (mpi.rank() < partner)
+        o << mpi.rank() << " <-> " << partner;
+    else
+        o << partner << " <-> " << mpi.rank();
+    return o.str();
+}
+void ParallelTempering::_accept(Change &) {
+    if (goodPartner())
+        accmap[id()] += 1;
+}
+void ParallelTempering::_reject(Change &) {
+    if (goodPartner())
+        accmap[id()] += 0;
+}
+void ParallelTempering::_from_json(const json &j) { pt.setFormat(j.value("format", std::string("XYZQI"))); }
+ParallelTempering::ParallelTempering(Tspace &spc, MPI::MPIController &mpi) : spc(spc), mpi(mpi) {
+    name = "temper";
+    partner = -1;
+    pt.recvExtra.resize(1);
+    pt.sendExtra.resize(1);
+}
+#endif
+
 } // end of namespace Move
 
 bool MCSimulation::metropolis(double du) const {
@@ -398,4 +491,67 @@ void MCSimulation::State::sync(MCSimulation::State &other, Change &change) {
 }
 
 void to_json(json &j, MCSimulation &mc) { mc.to_json(j); }
+
+double IdealTerm(Tspace &spc_n, Tspace &spc_o, const Change &change) {
+    using Tpvec = typename Tspace::Tpvec;
+    double NoverO = 0;
+    if (change.dN) { // Has the number of any molecules changed?
+        for (auto &m : change.groups) {
+            int N_o = 0;
+            int N_n = 0;
+            if (m.dNswap) {
+                assert(m.atoms.size() == 1);
+                auto &g_n = spc_n.groups.at(m.index);
+                int id1 = (g_n.begin() + m.atoms.front())->id;
+                auto &g_o = spc_o.groups.at(m.index);
+                int id2 = (g_o.begin() + m.atoms.front())->id;
+                for (int id : {id1, id2}) {
+                    auto atomlist_n = spc_n.findAtoms(id);
+                    auto atomlist_o = spc_o.findAtoms(id);
+                    N_n = size(atomlist_n);
+                    N_o = size(atomlist_o);
+                    int dN = N_n - N_o;
+                    double V_n = spc_n.geo.getVolume();
+                    double V_o = spc_o.geo.getVolume();
+                    if (dN > 0)
+                        for (int n = 0; n < dN; n++)
+                            NoverO += std::log((N_o + 1 + n) / (V_n * 1.0_molar));
+                    else
+                        for (int n = 0; n < (-dN); n++)
+                            NoverO -= std::log((N_o - n) / (V_o * 1.0_molar));
+                }
+            } else {
+                if (m.dNatomic) {
+                    auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ALL);
+                    auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
+                    if (size(mollist_n) > 1 || size(mollist_o) > 1)
+                        throw std::runtime_error("Bad definition: One group per atomic molecule!");
+                    if (not molecules[spc_n.groups[m.index].id].atomic)
+                        throw std::runtime_error("Only atomic molecules!");
+                    // Below is safe due to the catches above
+                    // add consistency criteria with m.atoms.size() == N
+                    N_n = mollist_n.begin()->size();
+                    N_o = mollist_o.begin()->size();
+                } else {
+                    auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ACTIVE);
+                    auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ACTIVE);
+                    N_n = size(mollist_n);
+                    N_o = size(mollist_o);
+                }
+                int dN = N_n - N_o;
+                if (dN != 0) {
+                    double V_n = spc_n.geo.getVolume();
+                    double V_o = spc_o.geo.getVolume();
+                    if (dN > 0)
+                        for (int n = 0; n < dN; n++)
+                            NoverO += std::log((N_o + 1 + n) / (V_n * 1.0_molar));
+                    else
+                        for (int n = 0; n < (-dN); n++)
+                            NoverO -= std::log((N_o - n) / (V_o * 1.0_molar));
+                }
+            }
+        }
+    }
+    return NoverO;
+}
 } // namespace Faunus

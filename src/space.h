@@ -470,7 +470,7 @@ namespace Faunus {
                                     std::string file = it.value().value("positions", "");
                                     if (!file.empty()) {
                                         Tpvec p;
-                                        if (loadStructure<Tpvec>()(file, p, false)) {
+                                        if (loadStructure(file, p, false)) {
                                             if (p.size() == N*mol->atoms.size()) {
                                                 Point offset = it.value().value("translate", Point(0,0,0));
                                                 size_t j = spc.p.size() - p.size();
@@ -486,7 +486,8 @@ namespace Faunus {
                                                         g->cm = Geometry::massCenter(g->begin(), g->end(), spc.geo.getBoundaryFunc(), -g->begin()->pos);
                                                 }
                                             } else std::cerr << file + ": wrong number of atoms" << endl;
-                                        } else std::cerr << "error opening file '" + file + "'" << endl;
+                                        } else
+                                            std::cerr << "error opening file '" + file + "'" << endl;
                                         if (success==false)
                                             throw std::runtime_error("error loading positions from '" + file + "'");
                                     }

@@ -205,6 +205,7 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/analysis.cpp
     ${CMAKE_SOURCE_DIR}/src/atomdata.cpp
     ${CMAKE_SOURCE_DIR}/src/energy.cpp
+    ${CMAKE_SOURCE_DIR}/src/external_potential.cpp
     ${CMAKE_SOURCE_DIR}/src/geometry.cpp
     ${CMAKE_SOURCE_DIR}/src/group.cpp
     ${CMAKE_SOURCE_DIR}/src/io.cpp
@@ -227,6 +228,7 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/auxiliary.h
     ${CMAKE_SOURCE_DIR}/src/core.h
     ${CMAKE_SOURCE_DIR}/src/energy.h
+    ${CMAKE_SOURCE_DIR}/src/external_potential.h
     ${CMAKE_SOURCE_DIR}/src/functionparser.h
     ${CMAKE_SOURCE_DIR}/src/geometry.h
     ${CMAKE_SOURCE_DIR}/src/group.h

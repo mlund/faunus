@@ -1,11 +1,7 @@
 #pragma once
 
-#include "core.h"
-#include "geometry.h"
 #include "space.h"
 #include "potentials.h"
-#include "multipole.h"
-//#include "penalty.h"
 #include <Eigen/Dense>
 #include <set>
 
@@ -96,7 +92,7 @@ TEST_CASE("[Faunus] Ewald - EwaldData") {
 #endif
 
 /** @brief recipe or policies for ion-ion ewald */
-template <class Tspace, bool eigenopt = false /** use Eigen matrix ops where possible */> struct PolicyIonIon {
+template <bool eigenopt = false /** use Eigen matrix ops where possible */> struct PolicyIonIon {
     typedef typename Tspace::Tpvec::iterator iter;
     Tspace *spc;
     Tspace *old = nullptr; // set only if key==NEW at first call to `sync()`
@@ -225,7 +221,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     Group<Particle> g(spc.p.begin(), spc.p.end());
     spc.groups.push_back(g);
 
-    PolicyIonIon<Tspace> ionion(spc);
+    PolicyIonIon<> ionion(spc);
     EwaldData data = R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
@@ -248,7 +244,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
 #endif
 
 /** @brief Ewald summation reciprocal energy */
-template <class Tspace, class Policy = PolicyIonIon<Tspace>> class Ewald : public Energybase {
+template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
   private:
     EwaldData data;
     Policy policy;
@@ -335,391 +331,6 @@ class Constrain : public Energybase {
     void to_json(json &j) const override;
 };
 
-/**
- * @brief Base class for external potentials
- *
- * This will apply an external energy to a defined
- * list of molecules, either acting on individual
- * atoms or the mass-center. The specific energy
- * function, `func` is injected in derived classes.
- */
-template <typename Tspace> class ExternalPotential : public Energybase {
-  protected:
-    typedef typename Tspace::Tpvec Tpvec;
-    typedef typename Tspace::Tparticle Tparticle;
-    bool COM = false; // apply on center-of-mass
-    Tspace &spc;
-    std::set<int> molids;                                    // molecules to act upon
-    std::function<double(const Tparticle &)> func = nullptr; // energy of single particle
-    std::vector<std::string> _names;
-
-    template <class Tparticle> double _energy(const Group<Tparticle> &g) const {
-        double u = 0;
-        if (molids.find(g.id) != molids.end()) {
-            if (COM and g.atomic == false) { // apply only to center of mass
-                Tparticle cm;                // fake particle representin molecule
-                cm.charge = Geometry::monopoleMoment(g.begin(), g.end());
-                cm.pos = g.cm;
-                u = func(cm);
-            } else {
-                for (auto &p : g) {
-                    u += func(p);
-                    if (std::isnan(u))
-                        break;
-                }
-            }
-        }
-        return u;
-    } //!< External potential on a single particle
-  public:
-    ExternalPotential(const json &j, Tspace &spc) : spc(spc) {
-        name = "external";
-        COM = j.value("com", false);
-        _names = j.at("molecules").get<decltype(_names)>(); // molecule names
-        auto _ids = names2ids(molecules, _names);           // names --> molids
-        molids = std::set<int>(_ids.begin(), _ids.end());   // vector --> set
-        if (molids.empty() || molids.size() != _names.size())
-            throw std::runtime_error(name + ": molecule list is empty");
-    }
-
-    /*
-     * @todo The `dN` check is very inefficient
-     * as it calculates the external potential on *all*
-     * particles.
-     */
-    double energy(Change &change) override {
-        assert(func != nullptr);
-        double u = 0;
-        if (change.dV or change.all or change.dN) {
-            for (auto &g : spc.groups) { // check all groups
-                u += _energy(g);
-                if (std::isnan(u))
-                    break;
-            }
-        } else
-            for (auto &d : change.groups) {
-                auto &g = spc.groups.at(d.index); // check specified groups
-                if (d.all or COM)                 // check all atoms in group
-                    u += _energy(g);              // _energy also checks for molecule id
-                else {                            // check only specified atoms in group
-                    if (molids.find(g.id) != molids.end())
-                        for (auto i : d.atoms)
-                            u += func(*(g.begin() + i));
-                }
-                if (std::isnan(u))
-                    break;
-            }
-        return u;
-    }
-
-    void to_json(json &j) const override {
-        j["molecules"] = _names;
-        j["com"] = COM;
-    }
-}; //!< Base class for external potentials, acting on particles
-
-/**
- * @brief Returns a functor for a Gouy-Chapman electric potential
- * @details Gouy-Chapman equations:
- * @f[ \rho = \sqrt{\frac{2 c_0}{\pi l_B} } \sinh ( \beta \phi_0 e / 2 ) @f]
- * @f[ \beta e \phi_0 = 2\mbox{asinh} \left ( \rho \sqrt{\frac{\pi \lambda_B} {2 c_0}} \right ) @f]
- * @f[ \Gamma_0=\tanh{ \beta \phi_0 z e / 4 } @f]
- * where `lB` is the Bjerrum length, `kappa` the inverse Debye length, and `c_0` the
- * bulk salt concentration.
- *
- * @warning: under construction
- */
-std::function<double(const Particle &)> createGouyChapmanPotential(const json &j);
-
-/**
- * @brief Custom external potential on molecules
- */
-template <typename Tspace, typename base = ExternalPotential<Tspace>> class CustomExternal : public base {
-  private:
-    ExprFunction<double> expr;
-    struct Data { // variables
-        double q = 0, x = 0, y = 0, z = 0;
-    };
-    Data d;
-    json jin; // initial json input
-
-  public:
-    CustomExternal(const json &j, Tspace &spc) : base(j, spc) {
-        base::name = "customexternal";
-        jin = j;
-        auto &_j = jin["constants"];
-        if (_j == nullptr)
-            _j = json::object();
-        _j["e0"] = pc::e0;
-        _j["kB"] = pc::kB;
-        _j["kT"] = pc::kT();
-        _j["Nav"] = pc::Nav;
-        _j["T"] = pc::temperature;
-        std::string name = jin.at("function");
-
-        // check of the custom potential match a name with a
-        // predefined meaning.
-        if (name == "gouychapman")
-            base::func = createGouyChapmanPotential(_j);
-        else if (name == "something") {
-            // add additional potential here
-            // base::func = createSomeOtherPotential(_j);
-        } else {
-            expr.set(jin, {{"q", &d.q}, {"x", &d.x}, {"y", &d.y}, {"z", &d.z}});
-            base::func = [&](const Particle &a) {
-                d.x = a.pos.x();
-                d.y = a.pos.y();
-                d.z = a.pos.z();
-                d.q = a.charge;
-                return expr();
-            };
-        }
-    }
-
-    void to_json(json &j) const override {
-        j = jin;
-        base::to_json(j);
-    }
-};
-
-/**
- * @brief Mean field electric potential from outside rectangular simulation box.
- * @date Asljunga, December 2010.
- *
- * Calculates the average potential outside a simulation box due to ion
- * densities inside the box, extended to infinity.
- * The update() function calculates the average charge densities in slits in the xy-plane
- * and with a spacing dz. This is used to evaluate the electric potential along
- * the z-axis by using the method by Torbjorn and CO (Mol. Phys. 1996, 87:407). To avoid
- * energy drifts, update() returns the energy change brought about by updating the charge profile.
- */
-template <typename Tspace, typename base = ExternalPotential<Tspace>> class ExternalAkesson : public base {
-  private:
-    using base::spc;
-    std::string filename; //!< File name for average charge
-    bool fixed;
-    unsigned int nstep = 0;       //!< Internal between samples
-    unsigned int nphi = 0;        //!< Distance between phi updating
-    unsigned int updatecnt = 0;   //!< Number of time rho has been updated
-    double epsr;                  //!< Relative dielectric constant
-    double dz;                    //!< z spacing between slits (A)
-    double lB;                    //!< Bjerrum length (A)
-    double halfz;                 //!< Half box length in z direction
-    Equidistant2DTable<double> Q; //!< instantaneous net charge
-
-  public:
-    unsigned int cnt = 0;                            //!< Number of charge density updates
-    Equidistant2DTable<double, Average<double>> rho; //!< Charge density at z (unit A^-2)
-    Equidistant2DTable<double> phi;                  //!< External potential at z (unit: beta*e)
-
-  private:
-    void to_json(json &j) const override {
-        j = {{"lB", lB},         {"dz", dz},       {"nphi", nphi},          {"epsr", epsr},
-             {"file", filename}, {"nstep", nstep}, {"Nupdates", updatecnt}, {"fixed", fixed}};
-        base::to_json(j);
-        _roundjson(j, 5);
-    }
-
-    void save() {
-        std::ofstream f(filename);
-        if (f) {
-            f.precision(16);
-            f << rho;
-        } else
-            throw std::runtime_error("cannot save file '"s + filename + "'");
-    }
-
-    void load() {
-        std::ifstream f(filename);
-        if (f) {
-            rho << f;
-            update_phi();
-        } else
-            std::cerr << "density file '" << filename << "' not loaded." << endl;
-    }
-
-    /*
-     * This is Eq. 15 of the mol. phys. 1996 paper by Greberg et al.
-     * (sign typo in manuscript: phi^infty(z) should be "-2*pi*z" on page 413, middle)
-     */
-    inline double phi_ext(double z, double a) const {
-        double a2 = a * a, z2 = z * z;
-        return -2 * pc::pi * z - 8 * a * std::log((std::sqrt(2 * a2 + z2) + a) / std::sqrt(a2 + z2)) +
-               2 * z * (0.5 * pc::pi + std::asin((a2 * a2 - z2 * z2 - 2 * a2 * z2) / std::pow(a2 + z2, 2)));
-    }
-
-    void sync(Energybase *basePtr, Change &) override {
-        if (not fixed) {
-            auto other = dynamic_cast<decltype(this)>(basePtr);
-            assert(other);
-            // only trial energy (new) require sync
-            if (other->key == Energybase::OLD)
-                if (cnt != other->cnt) {
-                    assert(cnt < other->cnt && "trial cnt's must be smaller");
-                    cnt = other->cnt;
-                    rho = other->rho;
-                    phi = other->phi;
-                }
-        }
-    }
-
-    // update average charge density
-    void update_rho() {
-        updatecnt++;
-        Point L = spc.geo.getLength();
-        double area = L.x() * L.y();
-        if (L.x() not_eq L.y() or 0.5 * L.z() != halfz)
-            throw std::runtime_error("Requires box Lx=Ly and Lz=const.");
-
-        Q.clear();
-        for (auto &g : spc.groups) // loop over all groups
-            for (auto &p : g)      // ...and their active particles
-                Q(p.pos.z()) += p.charge;
-        for (double z = -halfz; z <= halfz; z += dz)
-            rho(z) += Q(z) / area;
-    }
-
-    // update average external potential
-    void update_phi() {
-        Point L = spc.geo.getLength();
-        double a = 0.5 * L.x();
-        for (double z = -halfz; z <= halfz; z += dz) {
-            double s = 0;
-            for (double zn = -halfz; zn <= halfz; zn += dz)
-                if (rho(zn).cnt > 0)
-                    s += rho(zn).avg() * phi_ext(std::fabs(z - zn), a); // Eq. 14 in Greberg paper
-            phi(z) = lB * s;
-        }
-    }
-
-  public:
-    ExternalAkesson(const json &j, Tspace &spc) : base(j, spc) {
-        base::name = "akesson";
-        base::cite = "doi:10/dhb9mj";
-
-        xjson _j = j; // json variant where items are deleted after access
-        _j.erase("com");
-        _j.erase("molecules");
-
-        nstep = _j.at("nstep").get<unsigned int>();
-        epsr = _j.at("epsr").get<double>();
-        fixed = _j.value("fixed", false);
-        nphi = _j.value("nphi", 10);
-
-        halfz = 0.5 * spc.geo.getLength().z();
-        lB = pc::lB(epsr);
-
-        dz = _j.value("dz", 0.2); // read z resolution
-        Q.setResolution(dz, -halfz, halfz);
-        rho.setResolution(dz, -halfz, halfz);
-        phi.setResolution(dz, -halfz, halfz);
-
-        filename = _j.value("file", "mfcorr.dat"s);
-        load();
-
-        base::func = [&phi = phi](const typename Tspace::Tparticle &p) { return p.charge * phi(p.pos.z()); };
-
-        if (not _j.empty()) // throw exception of unused/unknown keys are passed
-            throw std::runtime_error("unused key(s) for '"s + base::name + "':\n" + _j.dump());
-    }
-
-    double energy(Change &change) override {
-        if (not fixed)                          // pho(z) unconverged, keep sampling
-            if (base::key == Energybase::OLD) { // only sample on accepted configs
-                cnt++;
-                if (cnt % nstep == 0)
-                    update_rho();
-                if (cnt % nstep * nphi == 0)
-                    update_phi();
-            }
-        return base::energy(change);
-    }
-
-    ~ExternalAkesson() {
-        // save only if still updating and if energy type is "OLD",
-        // that is, accepted configurations (not trial)
-        if (not fixed and base::key == Energybase::OLD)
-            save();
-    }
-};
-
-/**
- * @brief Confines molecules inside geometric shapes
- */
-template <typename Tspace, typename base = ExternalPotential<Tspace>> class Confine : public base {
-  public:
-    enum Variant { sphere, cylinder, cuboid, none };
-    Variant type = none;
-
-  private:
-    Point origo = {0, 0, 0}, dir = {1, 1, 1};
-    Point low, high;
-    double radius, k;
-    bool scale = false;
-    std::map<std::string, Variant> m = {{"sphere", sphere}, {"cylinder", cylinder}, {"cuboid", cuboid}};
-
-  public:
-    Confine(const json &j, Tspace &spc) : base(j, spc) {
-        base::name = "confine";
-        k = value_inf(j, "k") * 1.0_kJmol; // get floating point; allow inf/-inf
-        type = m.at(j.at("type"));
-
-        if (type == sphere or type == cylinder) {
-            radius = j.at("radius");
-            origo = j.value("origo", origo);
-            scale = j.value("scale", scale);
-            if (type == cylinder)
-                dir = {1, 1, 0};
-            base::func = [&radius = radius, origo = origo, k = k, dir = dir](const typename base::Tparticle &p) {
-                double d2 = (origo - p.pos).cwiseProduct(dir).squaredNorm() - radius * radius;
-                if (d2 > 0)
-                    return 0.5 * k * d2;
-                return 0.0;
-            };
-
-            // If volume is scaled, also scale the confining radius by adding a trigger
-            // to `Space::scaleVolume()`
-            if (scale)
-                spc.scaleVolumeTriggers.push_back(
-                    [&radius = radius](Tspace &, double Vold, double Vnew) { radius *= std::cbrt(Vnew / Vold); });
-        }
-
-        if (type == cuboid) {
-            low = j.at("low").get<Point>();
-            high = j.at("high").get<Point>();
-            base::func = [low = low, high = high, k = k](const typename base::Tparticle &p) {
-                double u = 0;
-                Point d = low - p.pos;
-                for (int i = 0; i < 3; ++i)
-                    if (d[i] > 0)
-                        u += d[i] * d[i];
-                d = p.pos - high;
-                for (int i = 0; i < 3; ++i)
-                    if (d[i] > 0)
-                        u += d[i] * d[i];
-                return 0.5 * k * u;
-            };
-        }
-    }
-
-    void to_json(json &j) const override {
-        if (type == cuboid)
-            j = {{"low", low}, {"high", high}};
-        if (type == sphere or type == cylinder)
-            j = {{"radius", radius}};
-        if (type == sphere) {
-            j["origo"] = origo;
-            j["scale"] = scale;
-        }
-        for (auto &i : m)
-            if (i.second == type)
-                j["type"] = i.first;
-        j["k"] = k / 1.0_kJmol;
-        base::to_json(j);
-        _roundjson(j, 5);
-    }
-}; //!< Confine particles to a sub-region of the simulation container
-
 /*
  * The keys of the `intra` map are group index and the values
  * is a vector of `BondData`. For bonds between groups, fill
@@ -751,7 +362,7 @@ class Bonded : public Energybase {
 /**
  * @brief Nonbonded energy using a pair-potential
  */
-template <typename Tspace, typename Tpairpot> class Nonbonded : public Energybase {
+template <typename Tpairpot> class Nonbonded : public Energybase {
   private:
     double g2gcnt = 0, g2gskip = 0;
     PairMatrix<double> cutoff2; // matrix w. group-to-group cutoff
@@ -1093,9 +704,9 @@ template <typename Tspace, typename Tpairpot> class Nonbonded : public Energybas
 
 }; //!< Nonbonded, pair-wise additive energy term
 
-template <typename Tspace, typename Tpairpot> class NonbondedCached : public Nonbonded<Tspace, Tpairpot> {
+template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> {
   private:
-    typedef Nonbonded<Tspace, Tpairpot> base;
+    typedef Nonbonded<Tpairpot> base;
     typedef typename Tspace::Tgroup Tgroup;
     Eigen::MatrixXf cache;
     Tspace &spc;
@@ -1221,7 +832,6 @@ template <typename Tspace, typename Tpairpot> class NonbondedCached : public Non
     } //!< Copy energy matrix from other
 };    //!< Nonbonded with cached energies (Energy Matrix)
 
-
 #ifdef ENABLE_POWERSASA
 /*
  * @todo:
@@ -1229,12 +839,11 @@ template <typename Tspace, typename Tpairpot> class NonbondedCached : public Non
  *   `update_coord()` function that takes up most time.
  * - delegate to GPU? In the PowerSasa paper this is mentioned
  */
-template <class Tspace> class SASAEnergy : public Energybase {
+class SASAEnergy : public Energybase {
   public:
     std::vector<float> sasa, radii;
 
   private:
-    typedef typename Tspace::Tparticle Tparticle;
     typedef typename Tspace::Tpvec Tpvec;
     Tspace &spc;
     double probe;            // sasa probe radius (angstrom)
@@ -1242,30 +851,8 @@ template <class Tspace> class SASAEnergy : public Energybase {
     Average<double> avgArea; // average surface area
     std::shared_ptr<POWERSASA::PowerSasa<float, Point>> ps = nullptr;
 
-    void updateSASA(const Tpvec &p) {
-        assert(ps != nullptr);
-        radii.resize(p.size());
-        std::transform(p.begin(), p.end(), radii.begin(),
-                       [this](auto &a) { return atoms[a.id].sigma * 0.5 + this->probe; });
-
-        ps->update_coords(spc.positions(), radii); // slowest step!
-
-        for (size_t i = 0; i < p.size(); i++) {
-            auto &a = atoms[p[i].id];
-            if (std::fabs(a.tfe) > 1e-9 || std::fabs(a.tension) > 1e-9)
-                ps->calc_sasa_single(i);
-        }
-        sasa = ps->getSasa();
-        assert(sasa.size() == p.size());
-    }
-
-    void to_json(json &j) const override {
-        using namespace u8;
-        j["molarity"] = conc / 1.0_molar;
-        j["radius"] = probe / 1.0_angstrom;
-        j[bracket("SASA") + "/" + angstrom + squared] = avgArea.avg() / 1.0_angstrom;
-        _roundjson(j, 5);
-    }
+    void updateSASA(const Tpvec &p);
+    void to_json(json &j) const override;
 
     /*
      * @note
@@ -1273,66 +860,18 @@ template <class Tspace> class SASAEnergy : public Energybase {
      * that also need syncing. It works due to the `update` (expensive!)
      * call in `energy`.
      */
-    void sync(Energybase *basePtr, Change &c) override {
-        auto other = dynamic_cast<decltype(this)>(basePtr);
-        if (other) {
-            if (c.all || c.dV) {
-                radii = other->radii;
-                sasa = other->sasa;
-            } else {
-                for (auto &d : c.groups) {
-                    int offset = std::distance(spc.p.begin(), spc.groups.at(d.index).begin());
-                    for (int j : d.atoms) {
-                        int i = j + offset;
-                        radii[i] = other->radii[i];
-                        sasa[i] = other->sasa[i];
-                    }
-                }
-            }
-        }
-    }
+    void sync(Energybase *basePtr, Change &c) override;
 
   public:
-    SASAEnergy(const json &j, Tspace &spc) : spc(spc) {
-        name = "sasa";
-        cite = "doi:10.1002/jcc.21844";
-        probe = j.value("radius", 1.4) * 1.0_angstrom;
-        conc = j.at("molarity").get<double>() * 1.0_molar;
-        init();
-    }
-
-    void init() override {
-        radii.resize(spc.p.size());
-        std::transform(spc.p.begin(), spc.p.end(), radii.begin(),
-                       [this](auto &a) { return atoms[a.id].sigma * 0.5 + this->probe; });
-
-        if (ps == nullptr)
-            ps = std::make_shared<POWERSASA::PowerSasa<float, Point>>(spc.positions(), radii);
-        updateSASA(spc.p);
-    }
-
-    double energy(Change &) override {
-        double u = 0, A = 0;
-        /*
-         * ideally we want to call `update` only if `key==NEW` but
-         * syncronising the PowerSasa object is difficult since it's
-         * non-copyable.
-         */
-        updateSASA(spc.p); // ideally we want
-        for (size_t i = 0; i < spc.p.size(); ++i) {
-            auto &a = atoms[spc.p[i].id];
-            u += sasa[i] * (a.tension + conc * a.tfe);
-            A += sasa[i];
-        }
-        avgArea += A; // sample average area for accepted confs. only
-        return u;
-    }
+    SASAEnergy(const json &j, Tspace &spc);
+    void init() override;
+    double energy(Change &) override;
 }; //!< SASA energy from transfer free energies
 #endif
 
 struct Example2D : public Energybase {
     Point &i; // reference to 1st particle in the system
-    template <typename Tspace> Example2D(const json &, Tspace &spc) : i(spc.p.at(0).pos) { name = "Example2D"; }
+    Example2D(const json &, Tspace &spc);
     double energy(Change &change) override;
 };
 

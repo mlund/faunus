@@ -15,7 +15,7 @@ using namespace Faunus;
 typedef Space<Particle> Tspace;
 typedef typename Tspace::Tpvec Tpvec;
 typedef typename Tspace::Tgroup Tgroup;
-typedef Energy::Hamiltonian<Tspace> Thamiltonian;
+typedef Energy::Hamiltonian Thamiltonian;
 typedef MCSimulation Tmcsimulation;
 
 inline json dict2json(py::dict dict) {
@@ -213,7 +213,7 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("energy", &Thamiltonian::energy);
 
     // IdealTerm
-    m.def("IdealTerm", &IdealTerm<Tspace>);
+    m.def("IdealTerm", &IdealTerm);
 
     // MCSimulation
     py::class_<Tmcsimulation>(m, "MCSimulation")

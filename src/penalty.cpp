@@ -153,5 +153,77 @@ void Penalty::sync(Energybase *basePtr, Change &) {
     assert(cnt == other->cnt);
     assert(udelta == other->udelta);
 }
-} // end of Energy namespace
-} // end of Faunus namespace
+
+#ifdef ENABLE_MPI
+
+PenaltyMPI::PenaltyMPI(const json &j, Tspace &spc) : Penalty(j, spc) {
+    weights.resize(MPI::mpi.nproc());
+    buffer.resize(penalty.size() * MPI::mpi.nproc()); // recieve buffer for penalty func
+}
+
+void PenaltyMPI::update(const std::vector<double> &c) {
+    using namespace Faunus::MPI;
+    double uold = penalty[c];
+    if (++cnt % this->nupdate == 0 and f0 > 0) {
+
+        int min = histo.minCoeff(); // if min>0 --> all RC's visited
+        MPI_Barrier(mpi.comm);      // wait for all walkers to reach here
+        MPI_Allgather(&min, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
+
+        // if at least one walker has sampled full RC space at least `samplings` times
+        if (weights.maxCoeff() > samplings) { // change to minCoeff()?
+            // master collects penalty from all slaves
+            MPI_Gather(penalty.data(), penalty.size(), MPI_DOUBLE, buffer.data(), penalty.size(), MPI_DOUBLE, 0,
+                       mpi.comm);
+
+            // master performs the average
+            if (mpi.isMaster()) {
+                penalty.setZero();
+                for (int i = 0; i < mpi.nproc(); i++)
+                    penalty +=
+                        Eigen::Map<Eigen::MatrixXd>(buffer.data() + i * penalty.size(), penalty.rows(), penalty.cols());
+                penalty = (penalty.array() - penalty.minCoeff()) / double(mpi.nproc());
+            }
+
+            // master sends the averaged penalty function to all slaves
+            MPI_Bcast(penalty.data(), penalty.size(), MPI_DOUBLE, 0, mpi.comm);
+            nconv += 1;
+
+            // at this point, *all* penalty functions shall be identical
+
+            // save penalty function to disk
+            if (mpi.isMaster()) {
+                std::ofstream f(file + ".walkersync" + std::to_string(nconv));
+                if (f) {
+                    f.precision(16);
+                    f << "# " << f0 << " " << samplings << " " << nconv << "\n" << penalty.array() << endl;
+                }
+            }
+
+            // save histogram to disk
+            std::ofstream f(MPI::prefix + hisfile + ".walkersync" + std::to_string(nconv));
+            if (f) {
+                f << histo << endl;
+                f.close();
+            }
+
+            // print information to console
+            if (min > 0 and not quiet) {
+                cout << "Barriers/kT: penalty = " << penalty.maxCoeff()
+                     << " histogram = " << std::log(double(histo.maxCoeff()) / histo.minCoeff()) << endl;
+            }
+
+            histo.setZero();
+            f0 = f0 * scale; // reduce penalty energy
+            samplings = std::ceil(samplings / scale);
+        }
+    }
+    coord = c;
+    histo[coord]++;
+    penalty[coord] += f0;
+    udelta += penalty[coord] - uold;
+}
+
+#endif
+} // namespace Energy
+} // namespace Faunus

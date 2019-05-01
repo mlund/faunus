@@ -18,7 +18,7 @@ MoleculeData::Tpvec MoleculeData::getRandomConformation(Geometry::GeometryBase &
 
 void MoleculeData::loadConformation(const std::string &file, bool keepcharges) {
     Tpvec v;
-    if (loadStructure<Tpvec>()(file, v, false, keepcharges)) {
+    if (loadStructure(file, v, false, keepcharges)) {
         if (keeppos == false)
             Geometry::cm2origo(v.begin(), v.end()); // move to origo
         conformations.push_back(v);
@@ -53,7 +53,7 @@ void to_json(json &j, const MoleculeData &a) {
 }
 
 /**
- * @todo make more readable be splitting into lambdas (c++ function in function impossible)
+ * @todo make more readable be splitting into lambdas (since c++ function in function is impossible)
  */
 void from_json(const json &j, MoleculeData &a) {
     try {

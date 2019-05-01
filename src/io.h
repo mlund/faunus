@@ -241,9 +241,9 @@ class FormatGRO {
  */
 class FormatXTC {
   private:
-    XDRFILE *xd = NULL; //!< file handle
-    matrix xdbox;       //!< box dimensions
-    rvec *x_xtc;        //!< vector of particle coordinates
+    XDRFILE *xd = nullptr; //!< file handle
+    matrix xdbox;          //!< box dimensions
+    rvec *x_xtc;           //!< vector of particle coordinates
     float time_xtc, prec_xtc = 1000;
     int natoms_xtc, step_xtc;
 
@@ -268,7 +268,7 @@ class FormatXTC {
      *       periodic boundaries are used.
      */
     template <class Tspace> bool loadnextframe(Tspace &c, bool setbox = true, bool applypbc = false) {
-        if (xd != NULL) {
+        if (xd != nullptr) {
             if (natoms_xtc == (int)c.p.size()) {
                 int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
                 if (rc == 0) {
@@ -308,9 +308,9 @@ class FormatXTC {
     template <class Titer1, class Titer2 /** particle vector iterator */>
     bool save(const std::string &file, Titer1 begin, Titer2 end) {
         if (begin != end) {
-            if (xd == NULL)
+            if (xd == nullptr)
                 xd = xdrfile_open(&file[0], "w");
-            if (xd != NULL) {
+            if (xd != nullptr) {
                 rvec *x = new rvec[ranges::distance(begin, end)];
                 size_t N = 0;
                 for (auto j = begin; j != end; ++j) {
@@ -393,35 +393,14 @@ inline auto fastaToAtomIds(const std::string &fasta) {
  */
 std::vector<Particle> fastaToParticles(const std::string &fasta, double spacing = 7, const Point &origin = {0, 0, 0});
 
-template <class Tpvec, class Enable = void> struct loadStructure {
-    bool operator()(const std::string &file, Tpvec &dst, bool append) {
-        if (append == false)
-            dst.clear();
-        std::string suffix = file.substr(file.find_last_of(".") + 1);
-        if (suffix == "xyz")
-            FormatXYZ::load(file, dst);
-        if (!dst.empty())
-            return true;
-        return false;
-    }
-}; //!< XYZ file into given particle vector (fallback if charges not available)
-
-template <class Tpvec>
-struct loadStructure<Tpvec, std::enable_if_t<std::is_base_of<Charge, typename Tpvec::value_type>::value>> {
-    bool operator()(const std::string &file, Tpvec &dst, bool append, bool keepcharges = true) {
-        if (append == false)
-            dst.clear();
-        std::string suffix = file.substr(file.find_last_of(".") + 1);
-        if (suffix == "aam")
-            FormatAAM::load(file, dst, keepcharges);
-        if (suffix == "pqr")
-            FormatPQR::load(file, dst, keepcharges);
-        if (suffix == "xyz")
-            FormatXYZ::load(file, dst);
-        if (!dst.empty())
-            return true;
-        return false;
-    }
-}; //!< Load AAM/PQR/XYZ file into given particle vector
+/**
+ * @brief Load structure file into particle vector
+ * @param file filename to load (aam, pqr, xyz, ...)
+ * @param dst destination particle vector
+ * @param append if true, expand dst vector
+ * @param keepcharges if true, ignore AtomData charges
+ * @return true if successfully loaded
+ */
+bool loadStructure(const std::string &file, std::vector<Particle> &dst, bool append, bool keepcharges = true);
 
 } // namespace Faunus

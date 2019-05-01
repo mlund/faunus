@@ -1,4 +1,4 @@
-#include "penalty.h"
+#include "reactioncoordinate.h"
 
 namespace Faunus {
     namespace ReactionCoordinate {

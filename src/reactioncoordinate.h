@@ -301,5 +301,5 @@ namespace Faunus {
         }
 #endif
 
-    } // namespace
-} // namespace
+        } // namespace ReactionCoordinate
+        } // namespace Faunus

@@ -91,7 +91,7 @@ int main( int argc, char **argv )
 
         {
             pc::temperature = j.at("temperature").get<double>() * 1.0_K;
-            MCSimulation<Particle> sim(j, mpi);
+            MCSimulation sim(j, mpi);
 
             // --state
             if (args["--state"]) {

@@ -16,7 +16,7 @@ typedef Space<Particle> Tspace;
 typedef typename Tspace::Tpvec Tpvec;
 typedef typename Tspace::Tgroup Tgroup;
 typedef Energy::Hamiltonian<Tspace> Thamiltonian;
-typedef MCSimulation<Particle> Tmcsimulation;
+typedef MCSimulation Tmcsimulation;
 
 inline json dict2json(py::dict dict) {
     py::object dumps = py::module::import("json").attr("dumps");

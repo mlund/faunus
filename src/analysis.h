@@ -45,135 +45,48 @@ namespace Faunus {
          * @brief Sample and save reaction coordinates to a file
          */
         class FileReactionCoordinate : public Analysisbase {
-            private:
-                Average<double> avg;
-                std::string type, filename;
-                std::ofstream file;
-                std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc=nullptr;
+          private:
+            Average<double> avg;
+            std::string type, filename;
+            std::ofstream file;
+            std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc = nullptr;
 
-                void _to_json(json &j) const override;
-                void _sample() override;
+            void _to_json(json &j) const override;
+            void _sample() override;
 
-              public:
-                template<class Tspace>
-                    FileReactionCoordinate(const json &j, Tspace &spc) {
-                        using namespace Faunus::ReactionCoordinate;
-                        from_json(j);
-                        name = "reactioncoordinate";
-                        filename = MPI::prefix + j.at("file").get<std::string>();
-                        file.open(filename); // output file
-                        type = j.at("type").get<std::string>();
-                        try {
-                            if      (type=="atom")     rc = std::make_shared<AtomProperty>(j, spc);
-                            else if (type=="molecule") rc = std::make_shared<MoleculeProperty>(j, spc);
-                            else if (type=="system")   rc = std::make_shared<SystemProperty>(j, spc);
-                            else if (type=="cmcm")     rc = std::make_shared<MassCenterSeparation>(j, spc);
-                            if (rc==nullptr)
-                                throw std::runtime_error("unknown coordinate type");
-
-                        } catch (std::exception &e) {
-                            throw std::runtime_error("error for reaction coordinate '"
-                                    + type + "': " + e.what() + usageTip["coords=["+type+"]"]  );
-                        }
-                    }
+          public:
+            FileReactionCoordinate(const json &j, Tspace &spc);
         };
 
         /**
          * @brief Excess chemical potential of molecules
          */
-        template<typename Tspace>
-            class WidomInsertion : public Analysisbase {
-                typedef typename Tspace::Tparticle Tparticle;
-                typedef typename Tspace::Tpvec Tpvec;
-                typedef MoleculeData TMoleculeData;
+        class WidomInsertion : public Analysisbase {
+            typedef typename Tspace::Tpvec Tpvec;
 
-                Tspace& spc;
-                Energy::Energybase* pot;
-                RandomInserter rins;
-                std::string molname; // molecule name
-                int ninsert;
-                int molid;        // molecule id
-                bool absolute_z=false;
-                Average<double> expu;
-                Change change;
+            Tspace &spc;
+            Energy::Energybase *pot;
+            RandomInserter rins;
+            std::string molname; // molecule name
+            int ninsert;
+            int molid; // molecule id
+            bool absolute_z = false;
+            Average<double> expu;
+            Change change;
 
-                void _sample() override {
-                    if (!change.empty()) {
-                        Tpvec pin;
-                        auto &g = spc.groups.at( change.groups.at(0).index );
-                        assert(g.empty());
-                        g.resize(g.capacity()); // active group
-                        for ( int i = 0; i < ninsert; ++i )
-                        {
-                            pin = rins(spc.geo, spc.p, molecules.at(molid));
-                            if (!pin.empty()) {
-                                if (absolute_z)
-                                    for (auto &p : pin)
-                                        p.pos.z() = std::fabs(p.pos.z());
+            void _sample() override;
 
-                                assert(pin.size() == g.size());
-                                spc.geo.randompos( pin[0].pos, random );
-                                spc.geo.randompos( pin[1].pos, random );
+            void _to_json(json &j) const override;
 
-                                std::copy(pin.begin(), pin.end(), g.begin()); // copy into ghost group
-                                if (!g.atomic) // update molecular mass-center
-                                    g.cm = Geometry::massCenter(g.begin(), g.end(),
-                                            spc.geo.getBoundaryFunc(), -g.begin()->pos);
+            void _from_json(const json &j) override;
 
-                                expu += exp( -pot->energy(change) ); // widom average
-                            }
-                        }
-                        g.resize(0); // deactive molecule
-                    }
-                }
-
-                void _to_json(json &j) const override {
-                    double excess = -std::log(expu.avg());
-                    j = {
-                        { "dir", rins.dir }, { "molecule", molname },
-                        { "insertions", expu.cnt }, { "absz", absolute_z },
-                        { u8::mu+"/kT",
-                            {
-                                { "excess", excess }
-                            }
-                        }
-                    };
-                }
-
-                void _from_json(const json &j) override {
-                    ninsert = j.at("ninsert");
-                    molname = j.at("molecule");
-                    absolute_z = j.value("absz", false);
-                    rins.dir = j.value("dir", Point({1,1,1}) );
-
-                    auto it = findName(molecules, molname); // loop for molecule in topology
-                    if (it != molecules.end()) {
-                        molid = it->id();
-                        auto m = spc.findMolecules(molid, Tspace::INACTIVE); // look for molecules in space
-                        if (size(m)>0) { // did we find any?
-                            if (m.begin()->size()==0) { // pick the first and check if it's really inactive
-                                change.clear();
-                                Change::data d; // construct change object
-                                d.index = distance(spc.groups.begin(), m.begin()); // group index
-                                d.all = true;
-                                d.internal = m.begin()->atomic;
-                                change.groups.push_back(d); // add to change object
-                                return;
-                            }
-                        }
-                    }
-                    throw std::runtime_error(name+": no inactive '" + molname + "' groups found");
-                }
-
-                public:
-
-                template<class Tenergy>
-                    WidomInsertion( const json &j, Tspace &spc, Tenergy &pot ) : spc(spc), pot(&pot) {
-                        from_json(j);
-                        name = "widom";
-                        cite = "doi:10/dkv4s6";
-                    }
-            };
+          public:
+            template <class Tenergy> WidomInsertion(const json &j, Tspace &spc, Tenergy &pot) : spc(spc), pot(&pot) {
+                from_json(j);
+                name = "widom";
+                cite = "doi:10/dkv4s6";
+            }
+        };
 
         template<class Tspace>
             class AtomProfile : public Analysisbase {
@@ -307,166 +220,27 @@ namespace Faunus {
         /**
          * @brief Analysis of particle densities
          */
-        template<class Tspace>
             class Density : public Analysisbase {
-                Tspace& spc;
-                typedef typename Tspace::Tparticle Tparticle;
+                Tspace &spc;
                 typedef typename Tspace::Tpvec Tpvec;
                 typedef Equidistant2DTable<unsigned int, double> Ttable; // why double?
 
-                std::map<int, Ttable> swpdhist;  // Probability density of swapping atoms
-                std::map<int, Ttable> atmdhist;  // Probability density of atomic molecules
-                std::map<int, Ttable> moldhist;  // Probability density of polyatomic molecules
+                std::map<int, Ttable> swpdhist; // Probability density of swapping atoms
+                std::map<int, Ttable> atmdhist; // Probability density of atomic molecules
+                std::map<int, Ttable> moldhist; // Probability density of polyatomic molecules
                 std::map<int, Average<double>> rho_mol, rho_atom;
-                std::map<int,int> Nmol, Natom;
+                std::map<int, int> Nmol, Natom;
                 Average<double> Lavg, Vavg, invVavg;
 
-                int capacity_limit=10; // issue warning if capacity get lower than this
+                // int capacity_limit = 10; // issue warning if capacity get lower than this
 
-                void _sample() override {
-                    // count atom and groups of individual id's
-                    Nmol.clear();
-                    Natom.clear();
+                void _sample() override;
 
-                    // make sure all atom counts are initially zero
-                    for (auto &g : spc.groups) {
-                        if (g.atomic)
-                            for (auto p = g.begin(); p < g.trueend() ; ++p)
-                                Natom[p->id] = 0;
-                        else
-                            Nmol[g.id] = 0;
-                    }
+                void _to_json(json &j) const override;
 
-                    double V = spc.geo.getVolume();
-                    Vavg += V;
-                    Lavg += std::cbrt(V);
-                    invVavg += 1/V;
-
-                    for (auto &g : spc.groups)
-                        if (g.atomic) {
-                            for (auto &p : g)
-                                Natom[p.id]++;
-                            atmdhist[g.id]( g.size() )++;
-                        }
-                        else if (not g.empty())
-                            Nmol[g.id]++;
-
-                    for (auto &i : Nmol) {
-                        rho_mol[i.first] += i.second/V;
-                        moldhist[i.first](i.second)++;
-                    }
-
-                    for (auto &i : Natom)
-                        rho_atom[i.first] += i.second/V;
-
-                    if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
-                        for (auto &rit : reactions) {
-                            for (auto pid : rit._prodid_a) {
-                                auto atomlist = spc.findAtoms(pid.first);
-                                swpdhist[ pid.first ]( size(atomlist) )++;
-                            }
-                            for (auto rid : rit._reagid_a) {
-                                auto atomlist = spc.findAtoms(rid.first);
-                                swpdhist[ rid.first ]( size(atomlist) )++;
-                            }
-                        }
-                    }
-                }
-
-                void _to_json(json &j) const override {
-                    using namespace u8;
-                    j[ bracket( "V" ) ] = Vavg.avg();
-                    j[ bracket( "1/V" ) ] = invVavg.avg();
-                    j[ bracket( cuberoot + "V" ) ] = Lavg.avg();
-                    j[ cuberoot + bracket("V") ] = std::cbrt(Vavg.avg());
-
-                    auto &_j = j["atomic"];
-                    for (auto &i : rho_atom)
-                        if (i.second.cnt>0)
-                            _j[ atoms.at(i.first).name ] = json({{ "c/M", i.second.avg() / 1.0_molar }});
-
-                    auto &_jj = j["molecular"];
-                    for (auto &i : rho_mol)
-                        if (i.second.cnt>0)
-                            _jj[molecules.at(i.first).name] = json({{"c/M", i.second.avg() / 1.0_molar}});
-                    _roundjson(j,4);
-                }
-
-                public:
-                Density( const json &j, Tspace &spc ) : spc(spc) {
-                    from_json(j);
-                    name = "density";
-                    for (auto &m : molecules) {
-                        if (m.atomic)
-                            atmdhist[m.id()].setResolution(1,0);
-                        else
-                            moldhist[m.id()].setResolution(1,0);
-                    }
-                    if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
-                        for (auto &rit : reactions) {
-                            for (auto pid : rit._prodid_a) {
-                                swpdhist[pid.first].setResolution(1,0);
-                            }
-                            for (auto rid : rit._reagid_a) {
-                                swpdhist[rid.first].setResolution(1,0);
-                            }
-                        }
-                    }
-                }
-                virtual ~Density() {
-                    for ( auto &m: atmdhist) { // atomic molecules
-                        std::string file = "rho-"s + molecules.at(m.first).name + ".dat";
-                        std::ofstream f(MPI::prefix + file);
-                        if (f) {
-                            m.second.stream_decorator = [&](std::ostream &o, int N, double samplings) {
-                                double sum = m.second.sumy();
-                                if (samplings>0)
-                                    o << N << " " << samplings << " " << samplings / sum << "\n";
-                            };
-                            f << "# N samplings P\n" << m.second;
-                        }
-                    }
-                    for ( auto &m: moldhist) { // polyatomic molecules
-                        std::string file = "rho-"s + molecules.at(m.first).name + ".dat";
-                        std::ofstream f(MPI::prefix + file);
-                        if (f) {
-                            m.second.stream_decorator = [&](std::ostream &o, int N, double samplings) {
-                                double sum = m.second.sumy();
-                                if (samplings>0)
-                                    o << N << " " << samplings << " " << samplings / sum << "\n";
-                            };
-                            f << "# N samplings P\n" << m.second;
-                        }
-                    }
-                    if (Faunus::reactions.size() > 0) { // in case of reactions involving atoms (swap moves)
-                        for (auto &rit : reactions) {
-                            for (auto pid : rit._prodid_a) {
-                                std::string file = "rho-"s + atoms.at( pid.first ).name + ".dat";
-                                std::ofstream f(MPI::prefix + file);
-                                if (f) {
-                                    swpdhist.at( pid.first ).stream_decorator = [&](std::ostream &o, int N, double samplings) {
-                                        double sum = swpdhist.at( pid.first ).sumy();
-                                        if (samplings>0)
-                                            o << N << " " << samplings << " " << samplings / sum << "\n";
-                                    };
-                                    f << "# N samplings P\n" << swpdhist.at( pid.first );
-                                }
-                            }
-                            for (auto rid : rit._reagid_a) {
-                                std::string file = "rho-"s + atoms.at( rid.first ).name + ".dat";
-                                std::ofstream f(MPI::prefix + file);
-                                if (f) {
-                                    swpdhist.at( rid.first ).stream_decorator = [&](std::ostream &o, int N, double samplings) {
-                                        double sum = swpdhist.at( rid.first ).sumy();
-                                        if (samplings>0)
-                                            o << N << " " << samplings << " " << samplings / sum << "\n";
-                                    };
-                                    f << "# N samplings P\n" << swpdhist.at( rid.first );
-                                }
-                            }
-                        }
-                    }
-                }
+              public:
+                Density(const json &j, Tspace &spc);
+                virtual ~Density();
             };
 
         template<class Tspace>
@@ -1207,7 +981,8 @@ namespace Faunus {
                                         size_t oldsize = this->vec.size();
                                         if      (it.key()=="atomprofile") push_back<AtomProfile<Tspace>>(it.value(), spc);
                                         else if (it.key()=="atomrdf") push_back<AtomRDF<Tspace>>(it.value(), spc);
-                                        else if (it.key()=="density") push_back<Density<Tspace>>(it.value(), spc);
+                                        else if (it.key() == "density")
+                                            push_back<Density>(it.value(), spc);
                                         else if (it.key()=="chargefluctuations") push_back<ChargeFluctuations<Tspace>>(it.value(), spc);
                                         else if (it.key()=="molrdf") push_back<MoleculeRDF<Tspace>>(it.value(), spc);
                                         else if (it.key()=="multipole") push_back<Multipole<Tspace>>(it.value(), spc);
@@ -1221,7 +996,8 @@ namespace Faunus {
                                         else if (it.key()=="sliceddensity") push_back<SlicedDensity<Tspace>>(it.value(), spc);
                                         else if (it.key()=="systemenergy") push_back<SystemEnergy>(it.value(), pot);
                                         else if (it.key()=="virtualvolume") push_back<VirtualVolume>(it.value(), spc, pot);
-                                        else if (it.key()=="widom") push_back<WidomInsertion<Tspace>>(it.value(), spc, pot);
+                                        else if (it.key() == "widom")
+                                            push_back<WidomInsertion>(it.value(), spc, pot);
                                         else if (it.key()=="xtcfile") push_back<XTCtraj<Tspace>>(it.value(), spc);
                                         // additional analysis go here...
  

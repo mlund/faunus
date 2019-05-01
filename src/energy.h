@@ -211,8 +211,6 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     using doctest::Approx;
-    typedef Space<Particle> Tspace;
-
     Tspace spc;
     spc.p.resize(2);
     spc.geo = R"( {"type": "cuboid", "length": 10} )"_json;

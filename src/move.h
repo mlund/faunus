@@ -421,8 +421,7 @@ template <typename Tspace> class ForceMove : public Movebase {
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] TranslateRotate") {
-    typedef Space<Particle> Tspace;
-    typedef typename Tspace::Tpvec Tpvec;
+    typedef typename Space::Tpvec Tpvec;
 
     CHECK(!atoms.empty());     // set in a previous test
     CHECK(!molecules.empty()); // set in a previous test

@@ -110,7 +110,7 @@ template<typename Tspace>
            typedef AtomicTranslateRotate base;
            using base::spc;
 
-           void translateParticle(typename base::Tpvec::iterator p, double dp) override {
+           void translateParticle(Space::Tpvec::iterator p, double dp) override {
                auto &g = spc.groups[base::cdata.index];
                Point oldpos = p->pos;
 

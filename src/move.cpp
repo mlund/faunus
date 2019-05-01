@@ -93,7 +93,7 @@ void AtomicTranslateRotate::_from_json(const json &j) {
         molid = it->id();
         dir = j.value("dir", Point(1, 1, 1));
         if (repeat < 0) {
-            auto v = spc.findMolecules(molid, Tspace::ALL);
+            auto v = spc.findMolecules(molid, Space::ALL);
             repeat = std::distance(v.begin(), v.end()); // repeat for each molecule...
             if (repeat > 0)
                 repeat = repeat * v.front().size(); // ...and for each atom
@@ -103,10 +103,7 @@ void AtomicTranslateRotate::_from_json(const json &j) {
         throw;
     }
 }
-void AtomicTranslateRotate::translateParticle(
-    std::vector<Faunus::ParticleTemplate<Faunus::Charge>,
-                std::__1::allocator<Faunus::ParticleTemplate<Faunus::Charge>>>::iterator p,
-    double dp) {
+void AtomicTranslateRotate::translateParticle(Tpvec::iterator p, double dp) {
     auto &g = spc.groups[cdata.index];
     Point oldpos = p->pos;
     p->pos += ranunit(slump, dir) * dp * slump();
@@ -148,7 +145,7 @@ void AtomicTranslateRotate::_move(Change &change) {
 }
 void AtomicTranslateRotate::_accept(Change &) { msqd += _sqd; }
 void AtomicTranslateRotate::_reject(Change &) { msqd += 0; }
-AtomicTranslateRotate::AtomicTranslateRotate(Tspace &spc) : spc(spc) {
+AtomicTranslateRotate::AtomicTranslateRotate(Space &spc) : spc(spc) {
     name = "transrot";
     repeat = -1; // meaning repeat N times
     cdata.atoms.resize(1);
@@ -156,7 +153,7 @@ AtomicTranslateRotate::AtomicTranslateRotate(Tspace &spc) : spc(spc) {
 }
 std::vector<Particle>::iterator AtomicTranslateRotate::randomAtom() {
     assert(molid >= 0);
-    auto mollist = spc.findMolecules(molid, Tspace::ALL); // all `molid` groups
+    auto mollist = spc.findMolecules(molid, Space::ALL); // all `molid` groups
     if (size(mollist) > 0) {
         auto git = slump.sample(mollist.begin(), mollist.end()); // random molecule iterator
         if (not git->empty()) {
@@ -170,7 +167,7 @@ std::vector<Particle>::iterator AtomicTranslateRotate::randomAtom() {
 }
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-Propagator::Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi) {
+Propagator::Propagator(const json &j, Space &spc, MPI::MPIController &mpi) {
 #pragma GCC diagnostic pop
 
     if (j.count("random") == 1) {
@@ -304,7 +301,7 @@ void ParallelTempering::_reject(Change &) {
         accmap[id()] += 0;
 }
 void ParallelTempering::_from_json(const json &j) { pt.setFormat(j.value("format", std::string("XYZQI"))); }
-ParallelTempering::ParallelTempering(Tspace &spc, MPI::MPIController &mpi) : spc(spc), mpi(mpi) {
+ParallelTempering::ParallelTempering(Space &spc, MPI::MPIController &mpi) : spc(spc), mpi(mpi) {
     name = "temper";
     partner = -1;
     pt.recvExtra.resize(1);
@@ -384,7 +381,7 @@ void ChargeMove::_move(Change &change) {
 }
 void ChargeMove::_accept(Change &) { msqd += deltaq * deltaq; }
 void ChargeMove::_reject(Change &) { msqd += 0; }
-ChargeMove::ChargeMove(Tspace &spc) : spc(spc) {
+ChargeMove::ChargeMove(Space &spc) : spc(spc) {
     name = "charge";
     repeat = 1;
     cdata.internal = true; // the group is internally changed
@@ -422,7 +419,7 @@ void QuadrantJump::_move(Change &change) {
 
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
-    auto mollist = spc.findMolecules(molid, Tspace::ACTIVE); // list of molecules w. 'molid'
+    auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
     if (size(mollist) > 0) {
         auto it = slump.sample(mollist.begin(), mollist.end());
         if (not it->empty()) {
@@ -550,7 +547,7 @@ void TranslateRotate::_move(Change &change) {
 
     // pick random group from the system matching molecule type
     // TODO: This can be slow -- implement look-up-table in Space
-    auto mollist = spc.findMolecules(molid, Tspace::ACTIVE); // list of molecules w. 'molid'
+    auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
     if (size(mollist) > 0) {
         auto it = slump.sample(mollist.begin(), mollist.end());
         if (not it->empty()) {
@@ -612,7 +609,7 @@ void ConformationSwap::_move(Change &change) {
     assert(molid >= 0);
     assert(change.empty());
 
-    auto mollist = spc.findMolecules(molid, Tspace::ACTIVE); // list of molecules w. 'molid'
+    auto mollist = spc.findMolecules(molid, Space::ACTIVE); // list of molecules w. 'molid'
     if (size(mollist) > 0) {
         auto g = slump.sample(mollist.begin(), mollist.end());
         if (not g->empty()) {
@@ -806,8 +803,8 @@ void MCSimulation::State::sync(MCSimulation::State &other, Change &change) {
 
 void to_json(json &j, MCSimulation &mc) { mc.to_json(j); }
 
-double IdealTerm(Tspace &spc_n, Tspace &spc_o, const Change &change) {
-    using Tpvec = typename Tspace::Tpvec;
+double IdealTerm(Space &spc_n, Space &spc_o, const Change &change) {
+    using Tpvec = typename Space::Tpvec;
     double NoverO = 0;
     if (change.dN) { // Has the number of any molecules changed?
         for (auto &m : change.groups) {
@@ -836,8 +833,8 @@ double IdealTerm(Tspace &spc_n, Tspace &spc_o, const Change &change) {
                 }
             } else {
                 if (m.dNatomic) {
-                    auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ALL);
-                    auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ALL);
+                    auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Space::ALL);
+                    auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Space::ALL);
                     if (size(mollist_n) > 1 || size(mollist_o) > 1)
                         throw std::runtime_error("Bad definition: One group per atomic molecule!");
                     if (not molecules[spc_n.groups[m.index].id].atomic)
@@ -847,8 +844,8 @@ double IdealTerm(Tspace &spc_n, Tspace &spc_o, const Change &change) {
                     N_n = mollist_n.begin()->size();
                     N_o = mollist_o.begin()->size();
                 } else {
-                    auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Tspace::ACTIVE);
-                    auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Tspace::ACTIVE);
+                    auto mollist_n = spc_n.findMolecules(spc_n.groups[m.index].id, Space::ACTIVE);
+                    auto mollist_o = spc_o.findMolecules(spc_o.groups[m.index].id, Space::ACTIVE);
                     N_n = size(mollist_n);
                     N_o = size(mollist_o);
                 }

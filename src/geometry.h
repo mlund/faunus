@@ -1007,7 +1007,7 @@ namespace Faunus {
 
         template<class Tgroup>
             auto toMultipole(const Tgroup &g, BoundaryFunction boundary=[](const Point&){}, double cutoff=pc::infty) {
-            ParticleTemplate<Charge, Dipole, Quadrupole> m;
+            ParticleTemplate<PositionAndID, Charge, Dipole, Quadrupole> m;
             m.pos = g.cm;
             m.charge = Geometry::monopoleMoment(g.begin(), g.end());                // monopole
             m.mu = Geometry::dipoleMoment(g.begin(), g.end(), boundary, cutoff);    // dipole

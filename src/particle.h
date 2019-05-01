@@ -29,6 +29,15 @@ namespace Faunus {
             from_json<Ts...>(j, rest...);
         }
 
+        struct PositionAndID : public ParticlePropertyBase {
+            int id = -1;           //!< Particle id/type
+            Point pos = {0, 0, 0}; //!< Particle position vector
+            const AtomData &traits();
+            void to_json(json &j) const;
+            void from_json(const json &j);
+            EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+        }; //!< Position and ID property
+
     struct Radius : public ParticlePropertyBase {
         double radius=0; //!< Particle radius
         void to_json(json &j) const override;
@@ -90,7 +99,15 @@ namespace Faunus {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     }; //!< Sphero-cylinder properties
 
-    /** @brief Particle */
+    /**
+     * @brief Particle
+     *
+     * This is the Particle class used to store information about
+     * particles. In addition to charge, positionn and ID, the particle
+     * can store auxiliary information via the `shape` pointer. This
+     * can is typically anisotropic properties which in this way
+     * is stored in an alternative memory location.
+     * */
     template <typename... Properties> class ParticleTemplate : public Properties... {
       private:
         // rotate internal coordinates
@@ -104,22 +121,18 @@ namespace Faunus {
         }
 
       public:
-        int id = -1;           //!< Particle id/type
-        Point pos = {0, 0, 0}; //!< Particle position vector
 
         ParticleTemplate() : Properties()... {}
 
         ParticleTemplate(const AtomData &a) : Properties()... {
             *this = json(a).front();
-            assert(id >= 0);
         }
 
-        const AtomData &traits() {
-            assert(id >= 0 and id < atoms.size());
-            return atoms.at(id);
-        }
+        std::shared_ptr<ParticleTemplate<Dipole, Quadrupole, Cigar>> shape = nullptr;
 
         void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
+            if (shape != nullptr)
+                shape->rotate(q, m);
             _rotate<Properties...>(q, m, dynamic_cast<Properties &>(*this)...);
         } //!< Rotate all internal coordinates if needed
 
@@ -127,18 +140,15 @@ namespace Faunus {
     };
 
     template <typename... Properties> void to_json(json &j, const ParticleTemplate<Properties...> &a) {
-        j = {{"id", a.id}, {"pos", a.pos}};
         to_json<Properties...>(j, Properties(a)...);
     }
 
     template <typename... Properties> void from_json(const json &j, ParticleTemplate<Properties...> &a) {
-        a.id = j.value("id", a.id);
-        a.pos = j.value("pos", a.pos);
         from_json<Properties...>(j, dynamic_cast<Properties &>(a)...);
     }
 
-    using Particle = ParticleTemplate<Charge>;
-    using ParticleAllProperties = ParticleTemplate<Radius, Dipole, Charge, Quadrupole, Cigar>;
+    using Particle = ParticleTemplate<PositionAndID, Charge>;
+    using ParticleAllProperties = ParticleTemplate<PositionAndID, Radius, Dipole, Charge, Quadrupole, Cigar>;
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Particle") {

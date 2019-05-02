@@ -147,6 +147,10 @@ class Particle {
     Particle() = default;
     Particle(const AtomData &a);
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m);
+    auto &operator-> () {
+        assert(shape != nullptr);
+        return *shape;
+    }
 };
 
 void from_json(const json &j, Particle &p);

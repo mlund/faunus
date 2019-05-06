@@ -1,4 +1,5 @@
 #include "geometry.h"
+#include "atomdata.h"
 
 namespace Faunus {
     Point ranunit(Random &rand, const Point &dir) {

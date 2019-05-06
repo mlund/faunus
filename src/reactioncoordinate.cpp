@@ -1,3 +1,5 @@
+#include <Eigen/Dense>
+#include "space.h"
 #include "reactioncoordinate.h"
 
 namespace Faunus {
@@ -32,7 +34,7 @@ void from_json(const json &j, ReactionCoordinateBase &r) {
 }
 
 void SystemProperty::_to_json(json &j) const { j["property"] = property; }
-SystemProperty::SystemProperty(const json &j, Tspace &spc) {
+SystemProperty::SystemProperty(const json &j, Space &spc) {
     name = "system";
     from_json(j, *this);
     property = j.at("property").get<std::string>();
@@ -74,7 +76,7 @@ void AtomProperty::_to_json(json &j) const {
     if (dir.squaredNorm() > 1e-9)
         j["dir"] = dir;
 }
-AtomProperty::AtomProperty(const json &j, Tspace &spc) {
+AtomProperty::AtomProperty(const json &j, Space &spc) {
     name = "atom";
     from_json(j, *this);
     index = j.at("index");
@@ -110,8 +112,8 @@ void MoleculeProperty::_to_json(json &j) const {
     if (indexes.size() >= 2)
         j["indexes"] = indexes;
 }
-MoleculeProperty::MoleculeProperty(const json &j, Tspace &spc) {
-    typedef typename Tspace::Tparticle Tparticle;
+MoleculeProperty::MoleculeProperty(const json &j, Space &spc) {
+    typedef typename Space::Tparticle Tparticle;
     name = "molecule";
     from_json(j, *this);
     index = j.value("index", 0);
@@ -253,8 +255,8 @@ void MassCenterSeparation::_to_json(json &j) const {
     j["indexes"] = indexes;
     j["type"] = type;
 }
-MassCenterSeparation::MassCenterSeparation(const json &j, Tspace &spc) {
-    typedef typename Tspace::Tparticle Tparticle;
+MassCenterSeparation::MassCenterSeparation(const json &j, Space &spc) {
+    typedef typename Space::Tparticle Tparticle;
     name = "cmcm";
     from_json(j, *this);
     dir = j.value("dir", dir);

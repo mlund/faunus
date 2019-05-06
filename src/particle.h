@@ -89,10 +89,7 @@ struct Cigar : public ParticlePropertyBase {
     double sclen = 0;                                                  //!< Length
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &); //!< Rotate sphero-cylinder
     void to_json(json &j) const override;
-    void from_json(const json &j) override {
-        scdir = j.value("scdir", scdir);
-        sclen = j.value("sclen", sclen);
-    }
+    void from_json(const json &j) override;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }; //!< Sphero-cylinder properties
 

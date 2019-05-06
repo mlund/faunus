@@ -1,4 +1,5 @@
 #include "atomdata.h"
+#include "units.h"
 
 namespace Faunus {
 

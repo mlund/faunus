@@ -65,23 +65,41 @@ namespace Potential {
 
 /**
  * @brief Returns the factorial of 'n'. Note that 'n' must be positive semidefinite.
+ * @note Calculated at compile time and thus have no run-time overhead.
  */
-inline unsigned int factorial(unsigned int number) { return number > 1 ? factorial(number - 1) * number : 1; }
+constexpr unsigned int factorial(unsigned int n) { return n == 0 ? 1 : n * factorial(n - 1); }
+#ifdef DOCTEST_LIBRARY_INCLUDED
+TEST_CASE("[Faunus] Factorial") {
+    CHECK(factorial(0) == 1);
+    CHECK(factorial(1) == 1);
+    CHECK(factorial(2) == 2);
+    CHECK(factorial(3) == 6);
+    CHECK(factorial(10) == 3628800);
+}
+#endif
 
 /**
  * @brief Help-function for the q-potential in class CoulombGalore
+ *
+ * More information here: http://mathworld.wolfram.com/q-PochhammerSymbol.html
+ * P = 300 gives an error of about 10^-17 for k < 4
  */
 inline double qPochhammerSymbol(double q, int k = 1, int P = 300) {
-    // P = 300 gives an error of about 10^-17 for k < 4
-
     double value = 1.0;
-    double temp = pow(q, k);
+    double temp = std::pow(q, k);
     for (int i = 0; i < P; i++) {
         value *= (1.0 - temp);
         temp *= q;
     }
     return value;
 }
+#ifdef DOCTEST_LIBRARY_INCLUDED
+TEST_CASE("[Faunus] qPochhammerSymbol") {
+    double q = 0.5;
+    CHECK(qPochhammerSymbol(q, 0, 0) == 1);
+    // add tests...
+}
+#endif
 
 } // namespace Potential
 } // namespace Faunus

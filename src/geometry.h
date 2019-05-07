@@ -1,7 +1,7 @@
 #pragma once
 
+#include "units.h"
 #include "core.h"
-#include "atomdata.h"
 #include "particle.h"
 
 /** @brief Faunus main namespace */

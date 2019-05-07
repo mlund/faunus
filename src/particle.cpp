@@ -52,6 +52,10 @@ void Cigar::to_json(json &j) const {
     j["scdir"] = scdir;
     j["sclen"] = sclen;
 }
+void Cigar::from_json(const json &j) {
+    scdir = j.value("scdir", scdir);
+    sclen = j.value("sclen", sclen);
+}
 
 const AtomData &PositionAndID::traits() {
     assert(id >= 0 and id < atoms.size());

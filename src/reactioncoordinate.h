@@ -2,10 +2,10 @@
 
 #include "core.h"
 #include "group.h"
-#include "space.h"
-#include <Eigen/Dense>
 
 namespace Faunus {
+
+class Space;
 
 namespace ReactionCoordinate {
 
@@ -47,7 +47,7 @@ class SystemProperty : public ReactionCoordinateBase {
     std::string property;
 
   public:
-    SystemProperty(const json &j, Tspace &spc);
+    SystemProperty(const json &j, Space &spc);
     void _to_json(json &j) const override;
 };
 
@@ -59,7 +59,7 @@ class AtomProperty : public ReactionCoordinateBase {
   public:
     std::string property;
     AtomProperty() = default;
-    AtomProperty(const json &j, Tspace &spc);
+    AtomProperty(const json &j, Space &spc);
     void _to_json(json &j) const override;
 };
 
@@ -68,7 +68,7 @@ struct MoleculeProperty : public AtomProperty {
     std::vector<size_t> indexes;
 
   public:
-    MoleculeProperty(const json &j, Tspace &spc);
+    MoleculeProperty(const json &j, Space &spc);
     void _to_json(json &j) const override;
 };
 
@@ -79,7 +79,7 @@ struct MassCenterSeparation : public ReactionCoordinateBase {
     Eigen::Vector3i dir = {1, 1, 1};
     std::vector<size_t> indexes;
     std::vector<std::string> type;
-    MassCenterSeparation(const json &j, Tspace &spc);
+    MassCenterSeparation(const json &j, Space &spc);
     double normalize(double coord) const override; // normalize by volume element
     void _to_json(json &j) const override;
 };
@@ -87,7 +87,7 @@ struct MassCenterSeparation : public ReactionCoordinateBase {
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] MassCenterSeparation") {
     using doctest::Approx;
-    Tspace spc;
+    Space spc;
     MassCenterSeparation c(R"({"dir":[1,1,0], "indexes":[0,8,9,18], "type":[] })"_json, spc);
     CHECK(c.dir.x() == 1);
     CHECK(c.dir.y() == 1);

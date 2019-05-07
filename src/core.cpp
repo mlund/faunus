@@ -1,4 +1,6 @@
 #include "core.h"
+#include <iomanip>
+#include <fstream>
 
 namespace Faunus {
 

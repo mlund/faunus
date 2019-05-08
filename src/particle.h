@@ -159,6 +159,8 @@ class Particle {
     }
 };
 
+typedef std::vector<Particle> ParticleVector;
+
 void from_json(const json &j, Particle &p);
 
 void to_json(json &j, const Particle &p);

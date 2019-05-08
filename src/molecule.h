@@ -2,8 +2,7 @@
 
 #include <set>
 #include "core.h"
-#include "io.h"
-#include "bonds.h"
+#include "particle.h"
 #include "random.h"
 
 namespace Faunus {

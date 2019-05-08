@@ -1,6 +1,8 @@
+#include "io.h"
 #include "molecule.h"
 #include "geometry.h"
 #include "rotate.h"
+#include "bonds.h"
 #include <fstream>
 
 namespace Faunus {

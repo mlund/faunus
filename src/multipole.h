@@ -97,6 +97,9 @@ inline double qPochhammerSymbol(double q, int k = 1, int P = 300) {
 TEST_CASE("[Faunus] qPochhammerSymbol") {
     double q = 0.5;
     CHECK(qPochhammerSymbol(q, 0, 0) == 1);
+    CHECK(qPochhammerSymbol(0, 0, 1) == 0);
+    CHECK(qPochhammerSymbol(1, 0, 1) == 0);
+    CHECK(qPochhammerSymbol(1, 1, 2) == 0);
     // add tests...
 }
 #endif

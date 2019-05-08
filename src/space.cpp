@@ -1,4 +1,5 @@
 #include "space.h"
+#include "io.h"
 
 namespace Faunus {
 

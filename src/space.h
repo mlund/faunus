@@ -68,7 +68,7 @@ TEST_CASE("[Faunus] Change") {
 struct Space {
     typedef Geometry::Chameleon Tgeometry;
     typedef Particle Tparticle; // remove
-    typedef std::vector<Particle> Tpvec;
+    typedef Faunus::ParticleVector Tpvec;
     typedef Group<Particle> Tgroup;
     typedef std::vector<Tgroup> Tgvec;
     typedef Change Tchange;

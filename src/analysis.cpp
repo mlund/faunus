@@ -411,7 +411,7 @@ FileReactionCoordinate::FileReactionCoordinate(const json &j, Space &spc) {
 
 void WidomInsertion::_sample() {
     if (!change.empty()) {
-        Tpvec pin;
+        ParticleVector pin;
         auto &g = spc.groups.at(change.groups.at(0).index);
         assert(g.empty());
         g.resize(g.capacity()); // active group
@@ -971,7 +971,7 @@ void ChargeFluctuations::_to_disk() {
         auto molecules = spc.findMolecules(mol_iter->id(), Space::ALL);
         if (Faunus::size(molecules) > 0) {
             auto &g = *molecules.begin();
-            Tpvec pvec;                 // temporary particle vector
+            ParticleVector pvec;        // temporary particle vector
             pvec.reserve(g.capacity()); // allocate required memory already now
             size_t cnt = 0;
             for (auto p = g.begin(); p < g.trueend(); ++p) {

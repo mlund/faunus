@@ -42,7 +42,7 @@ void from_json(const Faunus::json &j, std::shared_ptr<BondData> &b) {
         }
     throw std::runtime_error("invalid bond data");
 }
-void setBondEnergyFunction(std::shared_ptr<BondData> &b, const std::vector<Particle> &p) {
+void setBondEnergyFunction(std::shared_ptr<BondData> &b, const ParticleVector &p) {
     if (b->type() == BondData::HARMONIC)
         std::dynamic_pointer_cast<HarmonicBond>(b)->setEnergyFunction(p);
     else if (b->type() == BondData::FENE)
@@ -86,7 +86,7 @@ int HarmonicBond::numindex() const { return 2; }
 
 BondData::Variant HarmonicBond::type() const { return BondData::HARMONIC; }
 
-void HarmonicBond::setEnergyFunction(const std::vector<Particle> &p) {
+void HarmonicBond::setEnergyFunction(const ParticleVector &p) {
     energy = [&](Geometry::DistanceFunction dist) {
         double d = req - dist(p[index[0]].pos, p[index[1]].pos).norm();
         return k * d * d;
@@ -109,7 +109,7 @@ void FENEBond::to_json(Faunus::json &j) const {
 }
 
 std::string FENEBond::name() const { return "fene"; }
-void FENEBond::setEnergyFunction(const std::vector<Particle> &p) {
+void FENEBond::setEnergyFunction(const ParticleVector &p) {
     energy = [&](Geometry::DistanceFunction dist) {
         double wca = 0, d = dist(p[index[0]].pos, p[index[1]].pos).squaredNorm();
         double x = k[3];
@@ -143,7 +143,7 @@ void FENEWCABond::to_json(Faunus::json &j) const {
 }
 
 std::string FENEWCABond::name() const { return "fene+wca"; }
-void FENEWCABond::setEnergyFunction(const std::vector<Particle> &p) {
+void FENEWCABond::setEnergyFunction(const ParticleVector &p) {
     energy = [&](Geometry::DistanceFunction dist) {
         double wca = 0, d = dist(p[index[0]].pos, p[index[1]].pos).squaredNorm();
         double x = k[3];
@@ -173,7 +173,7 @@ BondData::Variant HarmonicTorsion::type() const { return BondData::HARMONIC_TORS
 std::string HarmonicTorsion::name() const { return "harmonic_torsion"; }
 
 std::shared_ptr<BondData> HarmonicTorsion::clone() const { return std::make_shared<HarmonicTorsion>(*this); }
-void HarmonicTorsion::setEnergyFunction(const std::vector<Particle> &p) {
+void HarmonicTorsion::setEnergyFunction(const ParticleVector &p) {
     energy = [&](Geometry::DistanceFunction dist) {
         Point ray1 = dist(p[index[0]].pos, p[index[1]].pos);
         Point ray2 = dist(p[index[2]].pos, p[index[1]].pos);
@@ -198,7 +198,7 @@ BondData::Variant GromosTorsion::type() const { return BondData::G96_TORSION; }
 std::string GromosTorsion::name() const { return "gromos_torsion"; }
 
 std::shared_ptr<BondData> GromosTorsion::clone() const { return std::make_shared<GromosTorsion>(*this); }
-void GromosTorsion::setEnergyFunction(const std::vector<Particle> &p) {
+void GromosTorsion::setEnergyFunction(const ParticleVector &p) {
     energy = [&](Geometry::DistanceFunction dist) {
         Point ray1 = dist(p[index[0]].pos, p[index[1]].pos);
         Point ray2 = dist(p[index[2]].pos, p[index[1]].pos);
@@ -224,7 +224,7 @@ void PeriodicDihedral::to_json(Faunus::json &j) const {
 BondData::Variant PeriodicDihedral::type() const { return BondData::PERIODIC_DIHEDRAL; }
 
 std::string PeriodicDihedral::name() const { return "periodic_dihedral"; }
-void PeriodicDihedral::setEnergyFunction(const std::vector<Particle> &p) {
+void PeriodicDihedral::setEnergyFunction(const ParticleVector &p) {
     energy = [&](Geometry::DistanceFunction dist) {
         Point vec1 = dist(p[index[1]].pos, p[index[0]].pos);
         Point vec2 = dist(p[index[2]].pos, p[index[1]].pos);

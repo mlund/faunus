@@ -47,7 +47,7 @@ struct HarmonicBond : public BondData {
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     std::string name() const override;
-    void setEnergyFunction(const std::vector<Particle> &p);
+    void setEnergyFunction(const ParticleVector &p);
 };
 
 /**
@@ -61,7 +61,7 @@ struct FENEBond : public BondData {
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     std::string name() const override;
-    void setEnergyFunction(const std::vector<Particle> &p);
+    void setEnergyFunction(const ParticleVector &p);
 }; // end of FENE
 
 /**
@@ -75,7 +75,7 @@ struct FENEWCABond : public BondData {
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     std::string name() const override;
-    void setEnergyFunction(const std::vector<Particle> &p);
+    void setEnergyFunction(const ParticleVector &p);
 }; // end of FENE+WCA
 
 struct HarmonicTorsion : public BondData {
@@ -86,7 +86,7 @@ struct HarmonicTorsion : public BondData {
     void to_json(json &j) const override;
     Variant type() const override;
     std::string name() const override;
-    void setEnergyFunction(const std::vector<Particle> &p);
+    void setEnergyFunction(const ParticleVector &p);
 }; // end of HarmonicTorsion
 
 struct GromosTorsion : public BondData {
@@ -97,7 +97,7 @@ struct GromosTorsion : public BondData {
     void to_json(json &j) const override;
     Variant type() const override;
     std::string name() const override;
-    void setEnergyFunction(const std::vector<Particle> &p);
+    void setEnergyFunction(const ParticleVector &p);
 }; // end of GromosTorsion
 
 struct PeriodicDihedral : public BondData {
@@ -108,7 +108,7 @@ struct PeriodicDihedral : public BondData {
     void to_json(json &j) const override;
     Variant type() const override;
     std::string name() const override;
-    void setEnergyFunction(const std::vector<Particle> &p);
+    void setEnergyFunction(const ParticleVector &p);
 }; // end of PeriodicDihedral
 
 /*
@@ -119,8 +119,8 @@ void to_json(json &j, const std::shared_ptr<BondData> &b);
 void from_json(const json &j, std::shared_ptr<BondData> &b);
 
 void setBondEnergyFunction(std::shared_ptr<BondData> &b,
-                           const std::vector<Particle> &p); //!< Set the bond energy function of `BondData` which
-                                                            //!< require a reference to the particle vector
+                           const ParticleVector &p); //!< Set the bond energy function of `BondData` which
+                                                     //!< require a reference to the particle vector
 
 inline auto filterBonds(const std::vector<std::shared_ptr<BondData>> &bonds, BondData::Variant bondtype) {
     std::vector<std::shared_ptr<BondData>> filt;

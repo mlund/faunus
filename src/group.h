@@ -3,7 +3,15 @@
 #include "core.h"
 #include "molecule.h"
 #include "geometry.h"
-#include <range/v3/view.hpp>
+#include <range/v3/view/filter.hpp>
+#include <range/v3/view/transform.hpp>
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+#include "units.h"
+#include <Eigen/Geometry>
+#include <range/v3/view/sample.hpp>
+#include <range/v3/view/bounded.hpp>
+#endif
 
 namespace Faunus {
 
@@ -65,39 +73,53 @@ namespace Faunus {
                 using base::end;
                 using base::size;
 
-                ElasticRange(Titer begin, Titer end) : base({begin,end}), _trueend(end) {}
-
-                size_t capacity() const { return std::distance(begin(), _trueend); }
-
-                auto inactive() const {
-                    return base({ end(), _trueend});
-                } //!< Range of inactive elements
-
-                void deactivate(Titer first, Titer last) {
-                    size_t n = std::distance(first,last);
-                    assert(n>=0);
-                    assert(first>=begin() && last<=end() );
-                    std::rotate( begin(), last, end() );
-                    end() -= n;
-                    assert(size() + inactive().size() == capacity());
-                } //!< Deactivate particles by moving to end, reducing the effective size
-
-                void activate(Titer first, Titer last) {
-                    size_t n = std::distance(first,last);
-                    std::rotate( end(), first, _trueend );
-                    end() += n;
-                    assert(size() + inactive().size() == capacity());
-                } //!< Activate previously deactivated elements
-
-                Titer& trueend() { return _trueend; }
-                const Titer& trueend() const { return _trueend; }
-
-                void relocate(Titer oldorigin, Titer neworigin) {
-                    begin() = neworigin + std::distance(oldorigin, begin());
-                    end() = neworigin + std::distance(oldorigin, end());
-                    trueend() = neworigin + std::distance(oldorigin, trueend());
-                } //!< Shift all iterators to new underlying container; useful when resizing vectors
+                ElasticRange(Titer begin, Titer end);
+                size_t capacity() const;
+                auto inactive() const; //!< Range of inactive elements
+                void deactivate(Titer first,
+                                Titer last); //!< Deactivate particles by moving to end, reducing the effective size
+                void activate(Titer first, Titer last); //!< Activate previously deactivated elements
+                Titer &trueend();
+                const Titer &trueend() const;
+                void relocate(
+                    Titer oldorigin,
+                    Titer neworigin); //!< Shift all iterators to new underlying container; useful when resizing vectors
         };
+
+        template <class T>
+        ElasticRange<T>::ElasticRange(ElasticRange::Titer begin, ElasticRange::Titer end)
+            : base({begin, end}), _trueend(end) {}
+
+        template <class T> size_t ElasticRange<T>::capacity() const { return std::distance(begin(), _trueend); }
+
+        template <class T> auto ElasticRange<T>::inactive() const { return base({end(), _trueend}); }
+
+        template <class T> void ElasticRange<T>::deactivate(ElasticRange::Titer first, ElasticRange::Titer last) {
+            size_t n = std::distance(first, last);
+            assert(n >= 0);
+            assert(first >= begin() && last <= end());
+            std::rotate(begin(), last, end());
+            end() -= n;
+            assert(size() + inactive().size() == capacity());
+        }
+
+        template <class T> void ElasticRange<T>::activate(ElasticRange::Titer first, ElasticRange::Titer last) {
+            size_t n = std::distance(first, last);
+            std::rotate(end(), first, _trueend);
+            end() += n;
+            assert(size() + inactive().size() == capacity());
+        }
+
+        template <class T> typename ElasticRange<T>::Titer &ElasticRange<T>::trueend() { return _trueend; }
+
+        template <class T> const typename ElasticRange<T>::Titer &ElasticRange<T>::trueend() const { return _trueend; }
+
+        template <class T>
+        void ElasticRange<T>::relocate(ElasticRange::Titer oldorigin, ElasticRange::Titer neworigin) {
+            begin() = neworigin + std::distance(oldorigin, begin());
+            end() = neworigin + std::distance(oldorigin, end());
+            trueend() = neworigin + std::distance(oldorigin, trueend());
+        }
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] ElasticRange") {

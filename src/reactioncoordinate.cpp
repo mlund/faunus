@@ -114,7 +114,6 @@ void MoleculeProperty::_to_json(json &j) const {
         j["indexes"] = indexes;
 }
 MoleculeProperty::MoleculeProperty(const json &j, Space &spc) {
-    typedef typename Space::Tparticle Tparticle;
     name = "molecule";
     from_json(j, *this);
     index = j.value("index", 0);
@@ -201,7 +200,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) {
         assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
         f = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
             Average<double> Rj, Rin, Rout;
-            Group<Tparticle> g(spc.p.begin(), spc.p.end());
+            Space::Tgroup g(spc.p.begin(), spc.p.end());
             auto slicei = g.find_id(i);
             auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
             auto slicej = g.find_id(j);
@@ -257,7 +256,6 @@ void MassCenterSeparation::_to_json(json &j) const {
     j["type"] = type;
 }
 MassCenterSeparation::MassCenterSeparation(const json &j, Space &spc) {
-    typedef typename Space::Tparticle Tparticle;
     name = "cmcm";
     from_json(j, *this);
     dir = j.value("dir", dir);
@@ -271,7 +269,7 @@ MassCenterSeparation::MassCenterSeparation(const json &j, Space &spc) {
         };
     } else if (type.size() == 2) {
         f = [&spc, dir = dir, type1 = type[0], type2 = type[1]]() {
-            Group<Tparticle> g(spc.p.begin(), spc.p.end());
+            Space::Tgroup g(spc.p.begin(), spc.p.end());
             auto slice1 = g.find_id(findName(atoms, type1)->id());
             auto slice2 = g.find_id(findName(atoms, type2)->id());
             auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.getBoundaryFunc());

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
-#include <range/v3/view.hpp>
+#include <range/v3/view/filter.hpp>
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "units.h"

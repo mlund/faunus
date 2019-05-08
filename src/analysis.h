@@ -1,15 +1,17 @@
 #pragma once
 
-#include "move.h"
 #include "space.h"
 #include "io.h"
 #include "mpi.h"
 #include "scatter.h"
+#include "reactioncoordinate.h"
+#include "auxiliary.h"
 
 namespace Faunus {
 
 namespace Energy {
 class Hamiltonian;
+class Energybase;
 }
 
 namespace Analysis {

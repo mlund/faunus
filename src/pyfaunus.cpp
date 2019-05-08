@@ -8,6 +8,7 @@
 #include <src/space.h>
 #include <src/move.h>
 #include <src/analysis.h>
+#include <src/potentials.h>
 
 namespace py = pybind11;
 using namespace Faunus;

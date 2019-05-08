@@ -200,6 +200,7 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/functionparser.cpp
     ${CMAKE_SOURCE_DIR}/src/random.cpp
     ${CMAKE_SOURCE_DIR}/src/mpi.cpp
+    ${CMAKE_SOURCE_DIR}/src/bonds.cpp
     ${CMAKE_SOURCE_DIR}/src/chainmove.cpp
     ${CMAKE_SOURCE_DIR}/src/clustermove.cpp
     ${CMAKE_SOURCE_DIR}/src/core.cpp
@@ -217,6 +218,7 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/penalty.cpp
     ${CMAKE_SOURCE_DIR}/src/potentials.cpp
     ${CMAKE_SOURCE_DIR}/src/reactioncoordinate.cpp
+    ${CMAKE_SOURCE_DIR}/src/rotate.cpp
     ${CMAKE_SOURCE_DIR}/src/space.cpp
     ${CMAKE_SOURCE_DIR}/src/speciation.cpp)
 
@@ -228,6 +230,7 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/average.h
     ${CMAKE_SOURCE_DIR}/src/atomdata.h
     ${CMAKE_SOURCE_DIR}/src/auxiliary.h
+    ${CMAKE_SOURCE_DIR}/src/bonds.h
     ${CMAKE_SOURCE_DIR}/src/chainmove.h
     ${CMAKE_SOURCE_DIR}/src/clustermove.h
     ${CMAKE_SOURCE_DIR}/src/core.h
@@ -244,6 +247,7 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/penalty.h
     ${CMAKE_SOURCE_DIR}/src/potentials.h
     ${CMAKE_SOURCE_DIR}/src/reactioncoordinate.h
+    ${CMAKE_SOURCE_DIR}/src/rotate.h
     ${CMAKE_SOURCE_DIR}/src/space.h
     ${CMAKE_SOURCE_DIR}/src/speciation.h
     ${CMAKE_SOURCE_DIR}/src/random.h

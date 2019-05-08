@@ -2,6 +2,7 @@
 #include "mpi.h"
 #include "energy.h"
 #include "penalty.h"
+#include "potentials.h"
 #include "externalpotential.h"
 
 namespace Faunus {

@@ -1,4 +1,5 @@
 #include "particle.h"
+#include <Eigen/Geometry>
 
 namespace Faunus {
 void ParticlePropertyBase::rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &) {}

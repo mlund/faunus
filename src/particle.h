@@ -2,6 +2,15 @@
 #include "core.h"
 #include "atomdata.h"
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
+#include "rotate.h"
+#endif
+
+namespace Eigen {
+typedef Matrix<double, 3, 3> Matrix3d;
+typedef Quaternion<double> Quaterniond;
+} // namespace Eigen
+
 namespace Faunus {
 
 /** @brief Base class for particle properties */

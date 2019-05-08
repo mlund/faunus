@@ -1,6 +1,7 @@
 #include <Eigen/Dense>
 #include "space.h"
 #include "reactioncoordinate.h"
+#include "average.h"
 
 namespace Faunus {
 namespace ReactionCoordinate {

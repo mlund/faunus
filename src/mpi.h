@@ -6,6 +6,7 @@
 #include <iostream>
 #include <cstdio>
 #include "core.h"
+#include "random.h"
 
 #ifdef ENABLE_MPI
 #include <mpi.h>

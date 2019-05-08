@@ -1,4 +1,6 @@
 #include "core.h"
+#include "random.h"
+#include "units.h"
 #include <iomanip>
 #include <fstream>
 
@@ -87,7 +89,6 @@ namespace Faunus {
      * tips. If no file can be opened, the database is left empty.
      */
     void TipFromTheManual::load(const std::vector<std::string> &files) {
-        slump.seed();
         // try loading `files`; stop of not empty
         for (auto &i : files) {
             db = openjson(i, false); // allow for file not found
@@ -121,7 +122,7 @@ namespace Faunus {
                 it = db.find("ascii");
                 if (it!=db.end())
                     if (not it->empty() and it->is_array())
-                        t += slump.sample(it->begin(), it->end()) -> get<std::string>() + "\n";
+                        t += random.sample(it->begin(), it->end())->get<std::string>() + "\n";
             }
         }
         return t; // empty string of no tip available
@@ -139,6 +140,7 @@ namespace Faunus {
 
     void Tensor::eye() { *this = base::Identity(3, 3); }
 
+    /*
     QuaternionRotate::QuaternionRotate() {}
 
     QuaternionRotate::QuaternionRotate(double angle, Point u) { set(angle,u); }
@@ -169,7 +171,7 @@ namespace Faunus {
     auto QuaternionRotate::operator()(const Eigen::Matrix3d &a) const {
         return second * a * second.transpose();
     }
-
+*/
     std::string addGrowingSuffix(const std::string& file) {
         //using std::experimental::filesystem; // exp. c++17 feature, not available on MacOS (Dec. 2018)
         size_t cnt=0;
@@ -206,4 +208,42 @@ namespace Faunus {
     void xjson::erase(const std::string &key) {
         json::erase(key);
     }
+
+    Point xyz2rth(const Point &p, const Point &origin, const Point &dir, const Point &dir2) {
+        assert(fabs(dir.norm() - 1.0) < 1e-6);
+        assert(fabs(dir2.norm() - 1.0) < 1e-6);
+        assert(fabs(dir.dot(dir2)) < 1e-6); // check if unit-vectors are perpendicular
+        Point xyz = p - origin;
+        double h = xyz.dot(dir);
+        Point xy = xyz - dir * h;
+        double x = xy.dot(dir2);
+        Point y = xy - dir2 * x;
+        double theta = std::atan2(y.norm(), x);
+        double radius = xy.norm();
+        return {radius, theta, h};
+    }
+
+    Point xyz2rtp(const Point &p, const Point &origin) {
+        Point xyz = p - origin;
+        double radius = xyz.norm();
+        return {radius, std::atan2(xyz.y(), xyz.x()), std::acos(xyz.z() / radius)};
+    }
+
+    Point rtp2xyz(const Point &rtp, const Point &origin) {
+        return origin + rtp.x() * Point(std::cos(rtp.y()) * std::sin(rtp.z()), std::sin(rtp.y()) * std::sin(rtp.z()),
+                                        std::cos(rtp.z()));
+    }
+    Point ranunit(Random &rand, const Point &dir) {
+        double r2;
+        Point p;
+        do {
+            for (size_t i = 0; i < 3; i++)
+                p[i] = (rand() - 0.5) * dir[i];
+            r2 = p.squaredNorm();
+        } while (r2 > 0.25);
+        return p / std::sqrt(r2);
+    }
+
+    Point ranunit_polar(Random &rand) { return rtp2xyz({1, 2 * pc::pi * rand(), std::acos(2 * rand() - 1)}); }
+
 } // end of namespace

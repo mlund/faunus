@@ -1,5 +1,6 @@
 #include <iomanip>
 #include "analysis.h"
+#include "move.h"
 #include "reactioncoordinate.h"
 #include "multipole.h"
 

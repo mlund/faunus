@@ -1,6 +1,8 @@
 #pragma once
 
 #include "space.h"
+#include "bonds.h"
+#include "auxiliary.h"
 #include <Eigen/Dense>
 
 #ifdef ENABLE_POWERSASA

@@ -88,6 +88,6 @@ void to_json(json &j, const Particle &p) {
         to_json(j, *p.shape);
     j["id"] = p.id;
     j["pos"] = p.pos;
-    j["charge"] = p.charge;
+    j["q"] = p.charge;
 }
 } // namespace Faunus

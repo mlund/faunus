@@ -72,22 +72,53 @@ const AtomData &Particle::traits() {
     return atoms.at(id);
 }
 Particle::Particle(const AtomData &a) { *this = json(a).front(); }
+
+Particle::Particle(const Particle &p) {
+    if (&p == this)
+        return;
+    charge = p.charge;
+    pos = p.pos;
+    id = p.id;
+    if (p.ext != nullptr) {
+        if (ext != nullptr)
+            *ext = *p.ext; // deep copy
+        else
+            ext = std::make_shared<Particle::ParticleExtension>(*p.ext); // create new
+    } else
+        ext = nullptr;
+}
+
 void Particle::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
-    if (shape != nullptr)
-        shape->rotate(q, m);
+    if (ext != nullptr)
+        ext->rotate(q, m);
 }
 void from_json(const json &j, Particle &p) {
     p.id = j.value("id", -1);
     p.pos = j.value("pos", Point(0, 0, 0));
     p.charge = j.value("q", 0.0);
-    if (p.shape != nullptr)
-        from_json(j, *p.shape);
+
+    // if json contains extended particle properties,
+    // then create and save the properties in the particle.
+    // If not, leave ext as a nullptr.
+    if (p.ext != nullptr) {
+        assert(false && "nein!");
+        std::cout << "!" << endl;
+        from_json(j, *p.ext);
+    } else {
+        return;
+        assert(false && "we shouldn't reach here at this stage");
+        p.ext = std::make_shared<Particle::ParticleExtension>();
+        Particle::ParticleExtension empty_particle;
+        from_json(j, *p.ext);
+        // if (*p.ext == *p.ext)
+        p.ext = nullptr; // nothing was found, forget about it
+    }
 }
 void to_json(json &j, const Particle &p) {
-    if (p.shape != nullptr)
-        to_json(j, *p.shape);
+    if (p.ext != nullptr)
+        to_json(j, *p.ext);
     j["id"] = p.id;
     j["pos"] = p.pos;
-    j["charge"] = p.charge;
+    j["q"] = p.charge;
 }
 } // namespace Faunus

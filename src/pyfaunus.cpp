@@ -169,10 +169,11 @@ PYBIND11_MODULE(pyfaunus, m)
     m.def("setTemperature", [](double T) { pc::temperature = T; } );
 
     // Potentials
-    py::class_<Potential::FunctorPotential<Particle>>(m, "FunctorPotential")
-        .def(py::init([](py::dict dict) { return from_dict<Potential::FunctorPotential<Particle>>(dict); }))
-        .def("energy", [](Potential::FunctorPotential<Particle> &pot, const Particle &a, const Particle &b,
-                          const Point &r) { return pot(a, b, r); });
+    py::class_<Potential::FunctorPotential>(m, "FunctorPotential")
+        .def(py::init([](py::dict dict) { return from_dict<Potential::FunctorPotential>(dict); }))
+        .def("energy", [](Potential::FunctorPotential &pot, const Particle &a, const Particle &b, const Point &r) {
+            return pot(a, b, r);
+        });
 
     // Change::Data
     py::class_<Change::data>(m, "ChangeData")

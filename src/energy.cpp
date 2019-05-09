@@ -343,11 +343,11 @@ void Hamiltonian::addSelfEnergy(const json &j, Space &spc) {
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
-    typedef CombinedPairPotential<CoulombGalore, LennardJones<Particle>> CoulombLJ;
-    typedef CombinedPairPotential<CoulombGalore, HardSphere<Particle>> CoulombHS;
-    typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen<Particle>> CoulombWCA;
-    typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen<Particle>> PrimitiveModelWCA;
-    typedef CombinedPairPotential<Coulomb, HardSphere<Particle>> PrimitiveModel;
+    typedef CombinedPairPotential<CoulombGalore, LennardJones> CoulombLJ;
+    typedef CombinedPairPotential<CoulombGalore, HardSphere> CoulombHS;
+    typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen> CoulombWCA;
+    typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
+    typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
 
     name = "hamiltonian";
 
@@ -366,13 +366,13 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                     push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc);
 
                 if (it.key() == "nonbonded")
-                    push_back<Energy::Nonbonded<TabulatedPotential<typename Space::Tparticle>>>(it.value(), spc);
+                    push_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_exact")
-                    push_back<Energy::Nonbonded<FunctorPotential<typename Space::Tparticle>>>(it.value(), spc);
+                    push_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_cached")
-                    push_back<Energy::NonbondedCached<TabulatedPotential<typename Space::Tparticle>>>(it.value(), spc);
+                    push_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_coulombwca")
                     push_back<Energy::Nonbonded<CoulombWCA>>(it.value(), spc);

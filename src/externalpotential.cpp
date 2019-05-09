@@ -1,4 +1,5 @@
 #include "externalpotential.h"
+#include "multipole.h"
 
 namespace Faunus {
 namespace Energy {
@@ -8,7 +9,7 @@ double ExternalPotential::_energy(const Group<Particle> &g) const {
     if (molids.find(g.id) != molids.end()) {
         if (COM and g.atomic == false) { // apply only to center of mass
             Particle cm;                 // fake particle representin molecule
-            cm.charge = Geometry::monopoleMoment(g.begin(), g.end());
+            cm.charge = Faunus::monopoleMoment(g.begin(), g.end());
             cm.pos = g.cm;
             u = func(cm);
         } else {

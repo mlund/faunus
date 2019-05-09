@@ -2,6 +2,7 @@
 #include "space.h"
 #include "reactioncoordinate.h"
 #include "average.h"
+#include "multipole.h"
 
 namespace Faunus {
 namespace ReactionCoordinate {
@@ -131,19 +132,19 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) {
     else if (property == "N")
         f = [&g = spc.groups, i = index]() { return g[i].size(); };
     else if (property == "Q")
-        f = [&g = spc.groups, i = index]() { return Geometry::monopoleMoment(g[i].begin(), g[i].end()); };
+        f = [&g = spc.groups, i = index]() { return monopoleMoment(g[i].begin(), g[i].end()); };
 
     else if (property == "mu_x")
-        f = [&g = spc.groups, i = index, b]() { return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).x(); };
+        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).x(); };
 
     else if (property == "mu_y")
-        f = [&g = spc.groups, i = index, b]() { return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).y(); };
+        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).y(); };
 
     else if (property == "mu_z")
-        f = [&g = spc.groups, i = index, b]() { return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).z(); };
+        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).z(); };
 
     else if (property == "mu")
-        f = [&g = spc.groups, i = index, b]() { return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).norm(); };
+        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).norm(); };
 
     else if (property == "end2end")
         f = [&spc, i = index]() {
@@ -155,7 +156,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) {
         dir = j.at("dir").get<Point>().normalized();
         if (not spc.groups.at(index).atomic)
             f = [&g = spc.groups, i = index, b, &dir = dir]() {
-                Point mu = Geometry::dipoleMoment(g[i].begin(), g[i].end(), b);
+                Point mu = dipoleMoment(g[i].begin(), g[i].end(), b);
                 return std::acos(mu.dot(dir)) * 180 / pc::pi;
             };
     }

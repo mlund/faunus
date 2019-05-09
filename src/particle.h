@@ -1,6 +1,7 @@
 #pragma once
 #include "core.h"
 #include "atomdata.h"
+#include "tensor.h"
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "rotate.h"

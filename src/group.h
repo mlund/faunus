@@ -315,13 +315,12 @@ namespace Faunus {
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Group") {
         Random rand;
-        typedef ParticleAllProperties particle;
-        std::vector<particle> p(3);
+        std::vector<Particle> p(3);
         p.reserve(10);
         p[0].id=0;
         p[1].id=1;
         p[2].id=1;
-        Group<particle> g(p.begin(), p.end());
+        Group<Particle> g(p.begin(), p.end());
 
         SUBCASE("contains()") {
             CHECK( g.contains(p[0]) );
@@ -341,16 +340,16 @@ namespace Faunus {
         // check rotation
         Eigen::Quaterniond q;
         q = Eigen::AngleAxisd(pc::pi/2, Point(1,0,0));
-        p.at(0).pos = p.at(0).mu = p.at(0).scdir = {0,1,0};
+        p.at(0).pos = p.at(0).getExt().mu = p.at(0).getExt().scdir = {0, 1, 0};
 
         Geometry::Chameleon geo = R"({"type":"cuboid", "length": [2,2,2]})"_json;
         g.rotate(q, geo.getBoundaryFunc());
         CHECK( p[0].pos.y() == doctest::Approx(0) );
         CHECK( p[0].pos.z() == doctest::Approx(1) );
-        CHECK( p[0].mu.y() == doctest::Approx(0) );
-        CHECK( p[0].mu.z() == doctest::Approx(1) );
-        CHECK( p[0].scdir.y() == doctest::Approx(0) );
-        CHECK( p[0].scdir.z() == doctest::Approx(1) );
+        CHECK(p[0].getExt().mu.y() == doctest::Approx(0));
+        CHECK(p[0].getExt().mu.z() == doctest::Approx(1));
+        CHECK(p[0].getExt().scdir.y() == doctest::Approx(0));
+        CHECK(p[0].getExt().scdir.z() == doctest::Approx(1));
 
         p[0].pos = {1,2,3};
         p[1].pos = {4,5,6};
@@ -425,7 +424,6 @@ namespace Faunus {
         // new groups point to same particles as original
         auto gvec3 = gvec1;
         CHECK( gvec1[0].begin() == gvec3[0].begin());
-
     }
 #endif
 

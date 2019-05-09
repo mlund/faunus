@@ -145,12 +145,19 @@ template <typename... Properties> void from_json(const json &j, ParticleTemplate
 }
 
 /*
- * @todo rename "shape"
+ * @brief Particle class for storing positions, id, and other properties
+ *
+ * Particles carry `id`, `pos`, `charge` by default but can have additional
+ * or _extended_ data stored using a different memory model. When serializing
+ * from a json object, extended properties are automatically detected and
+ * memory is automatically allocated
+ *
+ * @warning: memory model for extended properties is still in alpha phase
  */
 class Particle {
   public:
     typedef ParticleTemplate<Dipole, Quadrupole, Cigar> ParticleExtension;
-    std::shared_ptr<ParticleExtension> ext = nullptr;
+    std::shared_ptr<ParticleExtension> ext = nullptr; //!< Point to extended properties
     int id = -1;           //!< Particle id/type
     double charge = 0;     //!< Particle charge
     Point pos = {0, 0, 0}; //!< Particle position vector
@@ -158,21 +165,20 @@ class Particle {
     const AtomData &traits();
     Particle() = default;
     Particle(const AtomData &a);
-    Particle(const Particle &);
+    Particle(const Particle &);            //!< copy constructor
+    Particle &operator=(const Particle &); //!< assignment operator
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m);
 
-    inline bool hasExtension() const { return ext != nullptr; } //!< check if particle has extensions (dipole etc.)
+    bool hasExtension() const; //!< check if particle has extensions (dipole etc.)
 
-    inline ParticleExtension &createExtension() {
-        assert(ext == nullptr && "extension already created");
-        ext = std::make_shared<ParticleExtension>();
-        return *ext;
-    } //!< Create extension
+    ParticleExtension &createExtension(); //!< Create extension
 
-    ParticleExtension &getExt() {
+    inline const ParticleExtension &getExt() const {
         assert(ext != nullptr);
         return *ext;
-    } //!< get extension
+    } //!< get/create extension
+
+    inline ParticleExtension &getExt() { return ext == nullptr ? createExtension() : *ext; } //!< get/create extension
 };
 
 typedef std::vector<Particle> ParticleVector;
@@ -180,8 +186,6 @@ typedef std::vector<Particle> ParticleVector;
 void from_json(const json &j, Particle &p);
 
 void to_json(json &j, const Particle &p);
-
-using ParticleAllProperties = ParticleTemplate<PositionAndID, Radius, Dipole, Charge, Quadrupole, Cigar>;
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 // convert test to use `Particle::shape`
@@ -200,7 +204,6 @@ TEST_CASE("[Faunus] Particle") {
     p2.createExtension();
     CHECK(p2.hasExtension() == true);
 
-    // p1.radius = 7.1;
     p1.getExt().mu = {0, 0, 1};
     p1.getExt().mulen = 2.8;
     p1.getExt().scdir = {-0.1, 0.3, 1.9};
@@ -208,36 +211,35 @@ TEST_CASE("[Faunus] Particle") {
     p1.getExt().Q = Tensor(1, 2, 3, 4, 5, 6);
 
     p2 = json(p1); // p1 --> json --> p2
-    // CHECK( p2.hasExtension() == true);
+    CHECK(p2.hasExtension() == true);
 
-    // CHECK(json(p1) == json(p2)); // p1 --> json == json <-- p2 ?
+    CHECK(json(p1) == json(p2)); // p1 --> json == json <-- p2 ?
 
     CHECK(p2.id == 100);
     CHECK(p2.pos == Point(1, 2, 3));
     CHECK(p2.charge == -0.8);
-    // CHECK(p2.radius == 7.1);
-    // CHECK(p2->mu == Point(0, 0, 1));
-    // CHECK(p2->mulen == 2.8);
-    // CHECK(p2->scdir == Point(-0.1, 0.3, 1.9));
-    // CHECK(p2->sclen == 0.5);
-    // CHECK(p2->Q == Tensor(1, 2, 3, 4, 5, 6));
+    CHECK(p2.getExt().mu == Point(0, 0, 1));
+    CHECK(p2.getExt().mulen == 2.8);
+    CHECK(p2.getExt().scdir == Point(-0.1, 0.3, 1.9));
+    CHECK(p2.getExt().sclen == 0.5);
+    CHECK(p2.getExt().Q == Tensor(1, 2, 3, 4, 5, 6));
 
     // check of all properties are rotated
     QuaternionRotate qrot(pc::pi / 2, {0, 1, 0});
-    // p1.mu = p1->scdir = {1, 0, 0};
-    // p1.rotate(qrot.first, qrot.second);
+    p1.getExt().mu = p1.getExt().scdir = {1, 0, 0};
+    p1.rotate(qrot.first, qrot.second);
 
-    // CHECK(p1->mu.x() == Approx(0));
-    // CHECK(p1->mu.z() == Approx(-1));
-    // CHECK(p1->scdir.x() == Approx(0));
-    // CHECK(p1->scdir.z() == Approx(-1));
+    CHECK(p1.getExt().mu.x() == Approx(0));
+    CHECK(p1.getExt().mu.z() == Approx(-1));
+    CHECK(p1.getExt().scdir.x() == Approx(0));
+    CHECK(p1.getExt().scdir.z() == Approx(-1));
 
-    // CHECK(p1->Q(0, 0) == Approx(6));
-    // CHECK(p1->Q(0, 1) == Approx(5));
-    // CHECK(p1->Q(0, 2) == Approx(-3));
-    // CHECK(p1->Q(1, 1) == Approx(4));
-    // CHECK(p1->Q(1, 2) == Approx(-2));
-    // CHECK(p1->Q(2, 2) == Approx(1));
+    CHECK(p1.getExt().Q(0, 0) == Approx(6));
+    CHECK(p1.getExt().Q(0, 1) == Approx(5));
+    CHECK(p1.getExt().Q(0, 2) == Approx(-3));
+    CHECK(p1.getExt().Q(1, 1) == Approx(4));
+    CHECK(p1.getExt().Q(1, 2) == Approx(-2));
+    CHECK(p1.getExt().Q(2, 2) == Approx(1));
 }
 #endif
 

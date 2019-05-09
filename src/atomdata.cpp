@@ -12,7 +12,8 @@ namespace Faunus {
         _j = {
             {"activity", a.activity / 1.0_molar},
             {"pactivity", -std::log10( a.activity / 1.0_molar )},
-            {"alphax", a.alphax}, {"q", a.charge},
+            {"alphax", a.alphax},
+            {"q", a.charge},
             {"dp", a.dp / 1.0_angstrom}, {"dprot", a.dprot / 1.0_rad},
             {"eps", a.eps / 1.0_kJmol}, {"mw", a.mw},
             {"sigma", a.sigma / 1.0_angstrom},

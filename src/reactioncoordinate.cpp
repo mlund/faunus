@@ -1,4 +1,8 @@
+#include <Eigen/Dense>
+#include "space.h"
 #include "reactioncoordinate.h"
+#include "average.h"
+#include "multipole.h"
 
 namespace Faunus {
 namespace ReactionCoordinate {
@@ -32,7 +36,7 @@ void from_json(const json &j, ReactionCoordinateBase &r) {
 }
 
 void SystemProperty::_to_json(json &j) const { j["property"] = property; }
-SystemProperty::SystemProperty(const json &j, Tspace &spc) {
+SystemProperty::SystemProperty(const json &j, Space &spc) {
     name = "system";
     from_json(j, *this);
     property = j.at("property").get<std::string>();
@@ -74,7 +78,7 @@ void AtomProperty::_to_json(json &j) const {
     if (dir.squaredNorm() > 1e-9)
         j["dir"] = dir;
 }
-AtomProperty::AtomProperty(const json &j, Tspace &spc) {
+AtomProperty::AtomProperty(const json &j, Space &spc) {
     name = "atom";
     from_json(j, *this);
     index = j.at("index");
@@ -110,8 +114,7 @@ void MoleculeProperty::_to_json(json &j) const {
     if (indexes.size() >= 2)
         j["indexes"] = indexes;
 }
-MoleculeProperty::MoleculeProperty(const json &j, Tspace &spc) {
-    typedef typename Tspace::Tparticle Tparticle;
+MoleculeProperty::MoleculeProperty(const json &j, Space &spc) {
     name = "molecule";
     from_json(j, *this);
     index = j.value("index", 0);
@@ -129,19 +132,19 @@ MoleculeProperty::MoleculeProperty(const json &j, Tspace &spc) {
     else if (property == "N")
         f = [&g = spc.groups, i = index]() { return g[i].size(); };
     else if (property == "Q")
-        f = [&g = spc.groups, i = index]() { return Geometry::monopoleMoment(g[i].begin(), g[i].end()); };
+        f = [&g = spc.groups, i = index]() { return monopoleMoment(g[i].begin(), g[i].end()); };
 
     else if (property == "mu_x")
-        f = [&g = spc.groups, i = index, b]() { return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).x(); };
+        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).x(); };
 
     else if (property == "mu_y")
-        f = [&g = spc.groups, i = index, b]() { return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).y(); };
+        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).y(); };
 
     else if (property == "mu_z")
-        f = [&g = spc.groups, i = index, b]() { return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).z(); };
+        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).z(); };
 
     else if (property == "mu")
-        f = [&g = spc.groups, i = index, b]() { return Geometry::dipoleMoment(g[i].begin(), g[i].end(), b).norm(); };
+        f = [&g = spc.groups, i = index, b]() { return dipoleMoment(g[i].begin(), g[i].end(), b).norm(); };
 
     else if (property == "end2end")
         f = [&spc, i = index]() {
@@ -153,7 +156,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Tspace &spc) {
         dir = j.at("dir").get<Point>().normalized();
         if (not spc.groups.at(index).atomic)
             f = [&g = spc.groups, i = index, b, &dir = dir]() {
-                Point mu = Geometry::dipoleMoment(g[i].begin(), g[i].end(), b);
+                Point mu = dipoleMoment(g[i].begin(), g[i].end(), b);
                 return std::acos(mu.dot(dir)) * 180 / pc::pi;
             };
     }
@@ -198,7 +201,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Tspace &spc) {
         assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
         f = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
             Average<double> Rj, Rin, Rout;
-            Group<Tparticle> g(spc.p.begin(), spc.p.end());
+            Space::Tgroup g(spc.p.begin(), spc.p.end());
             auto slicei = g.find_id(i);
             auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
             auto slicej = g.find_id(j);
@@ -253,8 +256,7 @@ void MassCenterSeparation::_to_json(json &j) const {
     j["indexes"] = indexes;
     j["type"] = type;
 }
-MassCenterSeparation::MassCenterSeparation(const json &j, Tspace &spc) {
-    typedef typename Tspace::Tparticle Tparticle;
+MassCenterSeparation::MassCenterSeparation(const json &j, Space &spc) {
     name = "cmcm";
     from_json(j, *this);
     dir = j.value("dir", dir);
@@ -268,7 +270,7 @@ MassCenterSeparation::MassCenterSeparation(const json &j, Tspace &spc) {
         };
     } else if (type.size() == 2) {
         f = [&spc, dir = dir, type1 = type[0], type2 = type[1]]() {
-            Group<Tparticle> g(spc.p.begin(), spc.p.end());
+            Space::Tgroup g(spc.p.begin(), spc.p.end());
             auto slice1 = g.find_id(findName(atoms, type1)->id());
             auto slice2 = g.find_id(findName(atoms, type2)->id());
             auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.getBoundaryFunc());

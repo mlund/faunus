@@ -1,4 +1,7 @@
+#include <fstream>
 #include "io.h"
+#include "units.h"
+#include "random.h"
 
 namespace Faunus {
 

@@ -2,8 +2,8 @@
 
 #include <set>
 #include "core.h"
-#include "io.h"
-#include "potentials.h"
+#include "particle.h"
+#include "random.h"
 
 namespace Faunus {
 
@@ -30,7 +30,6 @@ class MoleculeData;
  * a geometry, particle vector, and molecule data.
  */
 struct RandomInserter {
-    typedef typename std::vector<Particle> Tpvec;
     Point dir = {1, 1, 1};     //!< Scalars for random mass center position. Default (1,1,1)
     Point offset = {0, 0, 0};  //!< Added to random position. Default (0,0,0)
     bool rotate = true;        //!< Set to true to randomly rotate molecule when inserted. Default: true
@@ -39,25 +38,24 @@ struct RandomInserter {
     int maxtrials = 2e4;       //!< Maximum number of container overlap checks
     int confindex = -1;        //!< Index of last used conformation
 
-    Tpvec operator()(Geometry::GeometryBase &geo, const Tpvec &, MoleculeData &mol);
+    ParticleVector operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol);
 };
 
 /**
  * Possible structure for molecular conformations
  */
 struct Conformation {
-    typedef std::vector<Particle> Tpvec;
     std::vector<Point> positions;
     std::vector<double> charges;
 
     bool empty() const;
 
-    Tpvec &toParticleVector(Tpvec &p) const; // copy conformation into particle vector
+    ParticleVector &toParticleVector(ParticleVector &p) const; // copy conformation into particle vector
 };
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] Conformation") {
-    Conformation::Tpvec p(1);
+    ParticleVector p(1);
     Conformation c;
     CHECK(c.empty());
 
@@ -80,11 +78,8 @@ class MoleculeData {
     int _id = -1;
 
   public:
-    typedef typename std::vector<Particle> Tpvec;
-    typedef Tpvec TParticleVector;
-    typedef typename Tpvec::value_type Tparticle;
-
-    typedef std::function<Tpvec(Geometry::GeometryBase &, const Tpvec &, MoleculeData &)> TinserterFunc;
+    typedef std::function<ParticleVector(Geometry::GeometryBase &, const ParticleVector &, MoleculeData &)>
+        TinserterFunc;
 
     TinserterFunc inserterFunctor = nullptr; //!< Function for insertion into space
 
@@ -104,7 +99,7 @@ class MoleculeData {
 
     std::vector<std::shared_ptr<Potential::BondData>> bonds;
     std::vector<int> atoms;                    //!< Sequence of atoms in molecule (atom id's)
-    WeightedDistribution<Tpvec> conformations; //!< Conformations of molecule
+    WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
 
     MoleculeData();
 
@@ -124,7 +119,7 @@ class MoleculeData {
      * no container overlap using the `RandomInserter` class. This behavior can
      * be changed by specifying another inserter using `setInserter()`.
      */
-    Tpvec getRandomConformation(Geometry::GeometryBase &geo, Tpvec otherparticles = Tpvec());
+    ParticleVector getRandomConformation(Geometry::GeometryBase &geo, ParticleVector otherparticles = ParticleVector());
 
     void loadConformation(const std::string &file, bool keepcharges);
 }; // end of class
@@ -147,8 +142,6 @@ TEST_CASE("[Faunus] MoleculeData") {
                 { "B": {"activity":0.2, "atomic":true, "insdir": [0.5,0,0], "insoffset": [-1.1, 0.5, 10], "atoms":["A"] } },
                 { "A": { "atomic":false } }
             ]})"_json;
-
-    typedef std::vector<Particle> Tpvec;
 
     molecules = j["moleculelist"].get<decltype(molecules)>(); // fill global instance
     auto &v = molecules;                                      // reference to global molecule vector
@@ -174,8 +167,6 @@ TEST_CASE("[Faunus] MoleculeData") {
  */
 class ReactionData {
   public:
-    typedef std::vector<Particle> Tpvec;
-    typedef typename Tpvec::value_type Tparticle;
     typedef std::map<int, int> Tmap;
 
     std::vector<std::string> _reag, _prod;
@@ -252,8 +243,6 @@ TEST_CASE("[Faunus] ReactionData") {
                     {"A = B": {"lnK":-10.051, "canonic":true, "N":100 } }
                 ]
             } )"_json;
-
-    typedef std::vector<Particle> Tpvec;
 
     Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
     molecules = j["moleculelist"].get<decltype(molecules)>(); // fill global instance

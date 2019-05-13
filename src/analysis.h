@@ -1,15 +1,17 @@
 #pragma once
 
-#include "move.h"
 #include "space.h"
 #include "io.h"
 #include "mpi.h"
 #include "scatter.h"
+#include "reactioncoordinate.h"
+#include "auxiliary.h"
 
 namespace Faunus {
 
 namespace Energy {
 class Hamiltonian;
+class Energybase;
 }
 
 namespace Analysis {
@@ -56,16 +58,14 @@ class FileReactionCoordinate : public Analysisbase {
     void _sample() override;
 
   public:
-    FileReactionCoordinate(const json &j, Tspace &spc);
+    FileReactionCoordinate(const json &j, Space &spc);
 };
 
 /**
  * @brief Excess chemical potential of molecules
  */
 class WidomInsertion : public Analysisbase {
-    typedef typename Tspace::Tpvec Tpvec;
-
-    Tspace &spc;
+    Space &spc;
     Energy::Hamiltonian *pot;
     RandomInserter rins;
     std::string molname; // molecule name
@@ -80,11 +80,11 @@ class WidomInsertion : public Analysisbase {
     void _from_json(const json &j) override;
 
   public:
-    WidomInsertion(const json &j, Tspace &spc, Energy::Hamiltonian &pot);
+    WidomInsertion(const json &j, Space &spc, Energy::Hamiltonian &pot);
 };
 
 class AtomProfile : public Analysisbase {
-    Tspace &spc;
+    Space &spc;
     Equidistant2DTable<double, double> tbl;
     std::vector<std::string> names; // atom names to analyse
     std::set<int> ids;              // atom ids to analyse
@@ -99,7 +99,7 @@ class AtomProfile : public Analysisbase {
     void _sample() override;
 
   public:
-    AtomProfile(const json &j, Tspace &spc);
+    AtomProfile(const json &j, Space &spc);
     ~AtomProfile();
 };
 
@@ -107,7 +107,7 @@ class AtomProfile : public Analysisbase {
  * @brief Measures the density of atoms along z axis
  */
 class SlicedDensity : public Analysisbase {
-    Tspace &spc;
+    Space &spc;
     Table2D<double, unsigned int> N; // N(z)
     std::vector<std::string> names;
     std::vector<int> ids;
@@ -121,7 +121,7 @@ class SlicedDensity : public Analysisbase {
     void _sample() override;
 
   public:
-    SlicedDensity(const json &j, Tspace &spc);
+    SlicedDensity(const json &j, Space &spc);
     ~SlicedDensity();
 };
 
@@ -129,8 +129,7 @@ class SlicedDensity : public Analysisbase {
  * @brief Analysis of particle densities
  */
 class Density : public Analysisbase {
-    Tspace &spc;
-    typedef typename Tspace::Tpvec Tpvec;
+    Space &spc;
     typedef Equidistant2DTable<unsigned int, double> Ttable; // why double?
 
     std::map<int, Ttable> swpdhist; // Probability density of swapping atoms
@@ -146,14 +145,13 @@ class Density : public Analysisbase {
     void _to_json(json &j) const override;
 
   public:
-    Density(const json &j, Tspace &spc);
+    Density(const json &j, Space &spc);
     virtual ~Density();
 };
 
 class ChargeFluctuations : public Analysisbase {
   private:
-    Tspace &spc;
-    typedef typename Tspace::Tpvec Tpvec;
+    Space &spc;
     typename decltype(Faunus::molecules)::const_iterator mol_iter; // selected molecule type
 
     std::vector<std::map<int, int>> idcnt; // populations of types of atomic indexes
@@ -171,11 +169,11 @@ class ChargeFluctuations : public Analysisbase {
     void _to_disk() override;
 
   public:
-    ChargeFluctuations(const json &j, Tspace &spc);
+    ChargeFluctuations(const json &j, Space &spc);
 }; // Fluctuations of atomic charges
 
 class Multipole : public Analysisbase {
-    const Tspace &spc;
+    const Space &spc;
     struct data {
         Average<double> Z, Z2, mu, mu2;
     };
@@ -185,7 +183,7 @@ class Multipole : public Analysisbase {
     void _to_json(json &j) const override;
 
   public:
-    Multipole(const json &j, const Tspace &spc);
+    Multipole(const json &j, const Space &spc);
 }; // Molecular multipoles and their fluctuations
 
 class SystemEnergy : public Analysisbase {
@@ -211,11 +209,11 @@ class SystemEnergy : public Analysisbase {
  */
 class SanityCheck : public Analysisbase {
   private:
-    Tspace &spc;
+    Space &spc;
     void _sample() override;
 
   public:
-    SanityCheck(const json &j, Tspace &spc);
+    SanityCheck(const json &j, Space &spc);
 };
 
 class SaveState : public Analysisbase {
@@ -227,7 +225,7 @@ class SaveState : public Analysisbase {
     void _sample() override;
 
   public:
-    SaveState(const json &j, Tspace &spc);
+    SaveState(const json &j, Space &spc);
     ~SaveState();
 };
 
@@ -257,43 +255,39 @@ class PairFunctionBase : public Analysisbase {
 
 /** @brief Atomic radial distribution function, g(r) */
 class AtomRDF : public PairFunctionBase {
-    Tspace &spc;
+    Space &spc;
 
     void _sample() override;
 
   public:
-    AtomRDF(const json &j, Tspace &spc);
+    AtomRDF(const json &j, Space &spc);
 };
 
 /** @brief Same as `AtomRDF` but for molecules. Identical input. */
 class MoleculeRDF : public PairFunctionBase {
-    typedef typename Tspace::Tpvec Tpvec;
-    Tspace &spc;
-
+    Space &spc;
     void _sample() override;
-
   public:
-    MoleculeRDF(const json &j, Tspace &spc);
+    MoleculeRDF(const json &j, Space &spc);
 };
 
 /** @brief Write XTC trajectory file */
 class XTCtraj : public Analysisbase {
-    typedef typename Tspace::Tparticle Tparticle;
     std::vector<int> molids;        // molecule ids to save to disk
     std::vector<std::string> names; // molecule names of above
-    std::function<bool(Tparticle &)> filter = [](Tparticle &) { return true; };
+    std::function<bool(Particle &)> filter = [](Particle &) { return true; };
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;
 
     FormatXTC xtc;
-    Tspace &spc;
+    Space &spc;
     std::string file;
 
     void _sample() override;
 
   public:
-    XTCtraj(const json &j, Tspace &s);
+    XTCtraj(const json &j, Space &s);
 };
 
 class VirtualVolume : public Analysisbase {
@@ -309,7 +303,7 @@ class VirtualVolume : public Analysisbase {
     void _to_json(json &j) const override;
 
   public:
-    VirtualVolume(const json &j, Tspace &spc, Energy::Energybase &pot);
+    VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot);
 }; //!< Excess pressure using virtual volume move
 
 /**
@@ -318,8 +312,7 @@ class VirtualVolume : public Analysisbase {
  * @todo Add option to use charge center instead of mass center
  */
 class MultipoleDistribution : public Analysisbase {
-    typedef typename Tspace::Tgroup Tgroup;
-    typedef typename Tspace::Tparticle Tparticle;
+    typedef typename Space::Tgroup Tgroup;
 
     struct data {
         Average<double> tot, ii, id, iq, dd, mucorr;
@@ -331,7 +324,7 @@ class MultipoleDistribution : public Analysisbase {
     // int id1, id2;                   //!< pair of molecular id's to analyse
     double dr;             //!< distance resolution
     std::map<int, data> m; //!< Energy distributions
-    Tspace &spc;
+    Space &spc;
 
     double g2g(const Tgroup &g1, const Tgroup &g2); //<! exact ion-ion energy between particles
     void save() const;                              //!< save to disk
@@ -339,14 +332,14 @@ class MultipoleDistribution : public Analysisbase {
     void _to_json(json &j) const override;
 
   public:
-    MultipoleDistribution(const json &j, Tspace &spc);
+    MultipoleDistribution(const json &j, Space &spc);
     ~MultipoleDistribution();
 
 }; // end of multipole distribution
 
 /** @brief Sample scattering intensity */
 class ScatteringFunction : public Analysisbase {
-    Tspace &spc;
+    Space &spc;
     bool usecom;                    // scatter from mass center, only?
     std::string filename;           // output file name
     std::vector<Point> p;           // vector of scattering points
@@ -359,7 +352,7 @@ class ScatteringFunction : public Analysisbase {
     void _to_json(json &j) const override;
 
   public:
-    ScatteringFunction(const json &j, Tspace &spc);
+    ScatteringFunction(const json &j, Space &spc);
     ~ScatteringFunction();
 };
 
@@ -372,16 +365,16 @@ class ScatteringFunction : public Analysisbase {
  * *name* and sampled individually.
  */
 class PolymerShape : public Analysisbase {
-    Tspace &spc;
+    Space &spc;
     std::map<int, Average<double>> Rg2, Rg, Re2, Re, Rs, Rs2, Rg2x, Rg2y, Rg2z;
     std::vector<int> ids; // molecule id's to analyse
 
     void _to_json(json &j) const override;
-    Point vectorgyrationRadiusSquared(typename Tspace::Tgroup &g) const;
+    Point vectorgyrationRadiusSquared(typename Space::Tgroup &g) const;
     void _sample() override;
 
   public:
-    PolymerShape(const json &j, Tspace &spc);
+    PolymerShape(const json &j, Space &spc);
 };
 
 /**
@@ -398,11 +391,11 @@ class QRtraj : public Analysisbase {
     void _to_json(json &j) const override;
 
   public:
-    QRtraj(const json &j, Tspace &spc);
+    QRtraj(const json &j, Space &spc);
 };
 
 struct CombinedAnalysis : public BasePointerVector<Analysisbase> {
-    CombinedAnalysis(const json &j, Tspace &spc, Energy::Hamiltonian &pot);
+    CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonian &pot);
     void sample();
     ~CombinedAnalysis();
 }; //!< Aggregates analysis

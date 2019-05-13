@@ -1,5 +1,9 @@
+#include "io.h"
 #include "molecule.h"
 #include "geometry.h"
+#include "rotate.h"
+#include "bonds.h"
+#include <fstream>
 
 namespace Faunus {
 
@@ -11,14 +15,13 @@ int &MoleculeData::id() { return _id; }
 
 const int &MoleculeData::id() const { return _id; }
 
-MoleculeData::Tpvec MoleculeData::getRandomConformation(Geometry::GeometryBase &geo,
-                                                        MoleculeData::Tpvec otherparticles) {
+ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase &geo, ParticleVector otherparticles) {
     assert(inserterFunctor != nullptr);
     return inserterFunctor(geo, otherparticles, *this);
 }
 
 void MoleculeData::loadConformation(const std::string &file, bool keepcharges) {
-    Tpvec v;
+    ParticleVector v;
     if (loadStructure(file, v, false, keepcharges)) {
         if (keeppos == false)
             Geometry::cm2origo(v.begin(), v.end()); // move to origo
@@ -86,7 +89,7 @@ void from_json(const json &j, MoleculeData &a) {
                 assert(a.bonds.empty() && "bonds undefined for atomic groups");
 
                 // generate config
-                MoleculeData::Tpvec v;
+                ParticleVector v;
                 v.reserve(a.atoms.size());
                 for (auto id : a.atoms) {
                     Particle _p;
@@ -224,8 +227,7 @@ void from_json(const json &j, std::vector<MoleculeData> &v) {
     }
 }
 
-RandomInserter::Tpvec RandomInserter::operator()(Geometry::GeometryBase &geo, const RandomInserter::Tpvec &,
-                                                 MoleculeData &mol) {
+ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol) {
     int cnt = 0;
     QuaternionRotate rot;
     bool containerOverlap; // true if container overlap detected
@@ -233,7 +235,7 @@ RandomInserter::Tpvec RandomInserter::operator()(Geometry::GeometryBase &geo, co
     if (std::fabs(geo.getVolume()) < 1e-20)
         throw std::runtime_error("geometry has zero volume");
 
-    Tpvec v = mol.conformations.get();   // get random, weighted conformation
+    ParticleVector v = mol.conformations.get(); // get random, weighted conformation
     confindex = mol.conformations.index; // lastest index
 
     do {
@@ -293,7 +295,7 @@ bool Conformation::empty() const {
     return false;
 }
 
-Conformation::Tpvec &Conformation::toParticleVector(Conformation::Tpvec &p) const {
+ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
     assert(not p.empty() and not empty());
     // copy positions
     if (positions.size() == p.size())

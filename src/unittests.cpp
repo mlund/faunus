@@ -18,3 +18,4 @@
 #include "penalty.h"
 #include "celllist.h"
 #include "functionparser.h"
+#include "multipole.h"

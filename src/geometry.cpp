@@ -54,6 +54,7 @@ namespace Faunus {
                     // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
                     alpha = std::cbrt(volume / old_volume);
                     box_scaling = {alpha, alpha, 1 / (alpha * alpha)};
+                    volume = old_volume;
                     break;
                 default:
                     throw std::invalid_argument("unsupported volume scaling method for the cuboid geometry");
@@ -297,6 +298,7 @@ namespace Faunus {
                     // radius is scaled by alpha, z is scaled by 1/alpha/alpha
                     alpha = std::cbrt(volume / old_volume);
                     box_scaling = {alpha, alpha, 1 / (alpha * alpha)};
+                    volume = old_volume;
                     break;
                 default:
                     throw std::invalid_argument("unsupported volume scaling method for the hexagonal-prism geometry");
@@ -414,6 +416,7 @@ namespace Faunus {
                     radius *= alpha;
                     height /= (alpha * alpha);
                     box_scaling = {alpha, alpha, 1.0 / (alpha * alpha)};
+                    volume = old_volume;
                     break;
                 default:
                     throw std::invalid_argument("unsupported volume scaling method for the cylindrical geometry");

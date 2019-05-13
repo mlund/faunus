@@ -36,15 +36,6 @@ template <typename T, typename... Ts> void from_json(const json &j, ParticleProp
     from_json<Ts...>(j, rest...);
 }
 
-struct PositionAndID : public ParticlePropertyBase {
-    int id = -1;           //!< Particle id/type
-    Point pos = {0, 0, 0}; //!< Particle position vector
-    const AtomData &traits();
-    void to_json(json &j) const;
-    void from_json(const json &j);
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-}; //!< Position and ID property
-
 struct Radius : public ParticlePropertyBase {
     double radius = 0; //!< Particle radius
     void to_json(json &j) const override;

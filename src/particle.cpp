@@ -58,15 +58,6 @@ void Cigar::from_json(const json &j) {
     sclen = j.value("sclen", sclen);
 }
 
-const AtomData &PositionAndID::traits() {
-    assert(id >= 0 and id < atoms.size());
-    return atoms.at(id);
-}
-void PositionAndID::to_json(json &j) const { j = {{"id", id}, {"pos", pos}}; }
-void PositionAndID::from_json(const json &j) {
-    id = j.value("id", id);
-    pos = j.value("pos", pos);
-}
 const AtomData &Particle::traits() {
     assert(id >= 0 and id < atoms.size());
     return atoms.at(id);

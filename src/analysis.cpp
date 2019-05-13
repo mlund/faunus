@@ -781,10 +781,10 @@ void MultipoleDistribution::_sample() {
                 auto &d = m[to_bin(R.norm(), dr)];
                 d.tot += g2g(gi, gj);
                 d.ii += a.charge * b.charge / R.norm();
-                d.id += q2mu(a.charge * b.mulen, b.mu, b.charge * a.mulen, a.mu, R);
-                d.dd += mu2mu(a.mu, b.mu, a.mulen * b.mulen, R);
-                d.iq += q2quad(a.charge, b.Q, b.charge, a.Q, R);
-                d.mucorr += a.mu.dot(b.mu);
+                d.id += q2mu(a.charge * b.getExt().mulen, b.getExt().mu, b.charge * a.getExt().mulen, a.getExt().mu, R);
+                d.dd += mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen * b.getExt().mulen, R);
+                d.iq += q2quad(a.charge, b.getExt().Q, b.charge, a.getExt().Q, R);
+                d.mucorr += a.getExt().mu.dot(b.getExt().mu);
             }
 }
 void MultipoleDistribution::_to_json(json &j) const { j = {{"molecules", names}, {"file", filename}, {"dr", dr}}; }
@@ -1006,11 +1006,11 @@ void Multipole::_sample() {
     for (auto &g : spc.groups)
         if (!g.atomic) {
             auto &d = _map[g.id];
-            auto p = Faunus::toMultipole(g, spc.geo.getBoundaryFunc());
+            Particle p = Faunus::toMultipole(g, spc.geo.getBoundaryFunc());
             d.Z += p.charge;
-            d.mu += p.mulen;
+            d.mu += p.getExt().mulen;
             d.Z2 += p.charge * p.charge;
-            d.mu2 += p.mulen * p.mulen;
+            d.mu2 += p.getExt().mulen * p.getExt().mulen;
         }
 }
 void Multipole::_to_json(json &j) const {

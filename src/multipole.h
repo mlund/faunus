@@ -144,14 +144,14 @@ Tensor quadrupoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](c
 
 template <class Tgroup, class BoundaryFunction>
 auto toMultipole(const Tgroup &g, BoundaryFunction boundary = [](const Point &) {}, double cutoff = pc::infty) {
-    ParticleTemplate<PositionAndID, Charge, Dipole, Quadrupole> m;
+    Particle m;
     m.pos = g.cm;
     m.charge = Faunus::monopoleMoment(g.begin(), g.end());                // monopole
-    m.mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, cutoff);    // dipole
-    m.Q = Faunus::quadrupoleMoment(g.begin(), g.end(), boundary, cutoff); // quadrupole
-    m.mulen = m.mu.norm();
-    if (m.mulen > 1e-9)
-        m.mu.normalize();
+    m.getExt().mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, cutoff);    // dipole
+    m.getExt().Q = Faunus::quadrupoleMoment(g.begin(), g.end(), boundary, cutoff); // quadrupole
+    m.getExt().mulen = m.getExt().mu.norm();
+    if (m.getExt().mulen > 1e-9)
+        m.getExt().mu.normalize();
     return m;
 } //<! Group --> Multipole
 

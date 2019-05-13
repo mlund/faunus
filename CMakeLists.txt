@@ -79,8 +79,8 @@ endif()
 # RANGE-V3
 FetchContent_Declare(
     rangev3
-    URL "https://github.com/ericniebler/range-v3/archive/0.4.0.tar.gz"
-    URL_HASH MD5=f835637e23b09a65863fca26e07fb8fa)
+    URL "https://github.com/ericniebler/range-v3/archive/0.5.0.tar.gz"
+    URL_HASH MD5=42f932808ef51df9f1732a3d5b0ae06c)
 FetchContent_GetProperties(rangev3)
 if(NOT rangev3_POPULATED)
     FetchContent_Populate(rangev3)
@@ -197,19 +197,31 @@ include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjso
 
 # faunus cpp files
 set(objs
+    ${CMAKE_SOURCE_DIR}/src/functionparser.cpp
     ${CMAKE_SOURCE_DIR}/src/random.cpp
     ${CMAKE_SOURCE_DIR}/src/mpi.cpp
+    ${CMAKE_SOURCE_DIR}/src/bonds.cpp
+    ${CMAKE_SOURCE_DIR}/src/chainmove.cpp
+    ${CMAKE_SOURCE_DIR}/src/clustermove.cpp
     ${CMAKE_SOURCE_DIR}/src/core.cpp
     ${CMAKE_SOURCE_DIR}/src/units.cpp
     ${CMAKE_SOURCE_DIR}/src/analysis.cpp
     ${CMAKE_SOURCE_DIR}/src/atomdata.cpp
     ${CMAKE_SOURCE_DIR}/src/energy.cpp
+    ${CMAKE_SOURCE_DIR}/src/externalpotential.cpp
     ${CMAKE_SOURCE_DIR}/src/geometry.cpp
+    ${CMAKE_SOURCE_DIR}/src/group.cpp
     ${CMAKE_SOURCE_DIR}/src/io.cpp
+    ${CMAKE_SOURCE_DIR}/src/molecule.cpp
     ${CMAKE_SOURCE_DIR}/src/move.cpp
     ${CMAKE_SOURCE_DIR}/src/particle.cpp
     ${CMAKE_SOURCE_DIR}/src/penalty.cpp
-    ${CMAKE_SOURCE_DIR}/src/potentials.cpp)
+    ${CMAKE_SOURCE_DIR}/src/potentials.cpp
+    ${CMAKE_SOURCE_DIR}/src/reactioncoordinate.cpp
+    ${CMAKE_SOURCE_DIR}/src/rotate.cpp
+    ${CMAKE_SOURCE_DIR}/src/space.cpp
+    ${CMAKE_SOURCE_DIR}/src/speciation.cpp
+    ${CMAKE_SOURCE_DIR}/src/tensor.cpp)
 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
@@ -219,8 +231,13 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/average.h
     ${CMAKE_SOURCE_DIR}/src/atomdata.h
     ${CMAKE_SOURCE_DIR}/src/auxiliary.h
+    ${CMAKE_SOURCE_DIR}/src/bonds.h
+    ${CMAKE_SOURCE_DIR}/src/chainmove.h
+    ${CMAKE_SOURCE_DIR}/src/clustermove.h
     ${CMAKE_SOURCE_DIR}/src/core.h
     ${CMAKE_SOURCE_DIR}/src/energy.h
+    ${CMAKE_SOURCE_DIR}/src/externalpotential.h
+    ${CMAKE_SOURCE_DIR}/src/functionparser.h
     ${CMAKE_SOURCE_DIR}/src/geometry.h
     ${CMAKE_SOURCE_DIR}/src/group.h
     ${CMAKE_SOURCE_DIR}/src/io.h
@@ -230,8 +247,12 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/particle.h
     ${CMAKE_SOURCE_DIR}/src/penalty.h
     ${CMAKE_SOURCE_DIR}/src/potentials.h
+    ${CMAKE_SOURCE_DIR}/src/reactioncoordinate.h
+    ${CMAKE_SOURCE_DIR}/src/rotate.h
     ${CMAKE_SOURCE_DIR}/src/space.h
+    ${CMAKE_SOURCE_DIR}/src/speciation.h
     ${CMAKE_SOURCE_DIR}/src/random.h
+    ${CMAKE_SOURCE_DIR}/src/tensor.h
     ${CMAKE_SOURCE_DIR}/src/units.h
     )
 

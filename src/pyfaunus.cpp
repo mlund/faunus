@@ -8,17 +8,15 @@
 #include <src/space.h>
 #include <src/move.h>
 #include <src/analysis.h>
+#include <src/potentials.h>
 
 namespace py = pybind11;
 using namespace Faunus;
 
-typedef Particle<Radius, Charge, Dipole, Cigar> Tparticle;
-
-typedef Space<Tparticle> Tspace;
-typedef typename Tspace::Tpvec Tpvec;
-typedef typename Tspace::Tgroup Tgroup;
-typedef Energy::Hamiltonian<Tspace> Thamiltonian;
-typedef MCSimulation<Tparticle> Tmcsimulation;
+typedef typename Space::Tpvec Tpvec;
+typedef typename Space::Tgroup Tgroup;
+typedef Energy::Hamiltonian Thamiltonian;
+typedef MCSimulation Tmcsimulation;
 
 inline json dict2json(py::dict dict) {
     py::object dumps = py::module::import("json").attr("dumps");
@@ -106,19 +104,16 @@ PYBIND11_MODULE(pyfaunus, m)
                     } ) );
 
     // Particle properties
-    py::class_<Radius>(m, "Radius")
-        .def(py::init<>())
-        .def_readwrite("radius", &Radius::radius);
-
     py::class_<Charge>(m, "Charge")
         .def(py::init<>())
         .def_readwrite("charge", &Charge::charge, "Particle charge (monopole)");
 
-    py::class_<Tparticle, Radius, Charge>(m, "Particle")
+    py::class_<Particle>(m, "Particle")
         .def(py::init<>())
-        .def("traits", &Tparticle::traits)
-        .def_readwrite("id", &Tparticle::id, "Particle ID")
-        .def_readwrite("pos", &Tparticle::pos, "Particle position");
+        .def("traits", &Particle::traits)
+        .def_readwrite("id", &Particle::id, "Particle ID")
+        .def_readwrite("pos", &Particle::pos, "Particle position")
+        .def_readwrite("charge", &Particle::charge, "Particle charge (monopole)");
 
     // Particle vector and it's iterator
     py::class_<typename Tpvec::iterator>(m, "ParticleVectorIterator")
@@ -126,11 +121,10 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("__sub__", [](typename Tpvec::iterator it, int i){ return it-i; } );
 
     auto _pvec = py::bind_vector<Tpvec>(m, "ParticleVector");
-    _pvec
-        .def("positions", [](Tpvec &p){ return asEigenMatrix(p.begin(), p.end(), &Tparticle::pos); })
-        .def("charges", [](Tpvec &p){ return asEigenVector(p.begin(), p.end(), &Tparticle::charge); })
-        .def("begin", [](Tpvec &p){ return p.begin(); })
-        .def("end", [](Tpvec &p){ return p.end(); });
+    _pvec.def("positions", [](Tpvec &p) { return asEigenMatrix(p.begin(), p.end(), &Particle::pos); })
+        .def("charges", [](Tpvec &p) { return asEigenVector(p.begin(), p.end(), &Particle::charge); })
+        .def("begin", [](Tpvec &p) { return p.begin(); })
+        .def("end", [](Tpvec &p) { return p.end(); });
 
     // Group
     py::class_<Tgroup>(m, "Group")
@@ -175,13 +169,11 @@ PYBIND11_MODULE(pyfaunus, m)
     m.def("setTemperature", [](double T) { pc::temperature = T; } );
 
     // Potentials
-    py::class_<Potential::FunctorPotential<Tparticle>>(m, "FunctorPotential")
-        .def(py::init( [](py::dict dict) {
-                    return from_dict<Potential::FunctorPotential<Tparticle>>(dict);
-                    } ) )
-    .def("energy", [](Potential::FunctorPotential<Tparticle> &pot, const Tparticle &a, const Tparticle &b, const Point &r){
-            return pot(a,b,r); 
-            });
+    py::class_<Potential::FunctorPotential>(m, "FunctorPotential")
+        .def(py::init([](py::dict dict) { return from_dict<Potential::FunctorPotential>(dict); }))
+        .def("energy", [](Potential::FunctorPotential &pot, const Particle &a, const Particle &b, const Point &r) {
+            return pot(a, b, r);
+        });
 
     // Change::Data
     py::class_<Change::data>(m, "ChangeData")
@@ -204,26 +196,26 @@ PYBIND11_MODULE(pyfaunus, m)
         .def_readwrite("groups", &Change::groups);
 
     // Space
-    py::class_<Tspace>(m, "Space")
+    py::class_<Space>(m, "Space")
         .def(py::init<>())
-        .def_readwrite("geo", &Tspace::geo)
-        .def_readwrite("p", &Tspace::p)
-        .def_readwrite("groups", &Tspace::groups)
-        .def("findMolecules", &Tspace::findMolecules)
-        .def("from_dict", [](Tspace &spc, py::dict dict) { from_json(dict2json(dict), spc); } );
+        .def_readwrite("geo", &Space::geo)
+        .def_readwrite("p", &Space::p)
+        .def_readwrite("groups", &Space::groups)
+        .def("findMolecules", &Space::findMolecules)
+        .def("from_dict", [](Space &spc, py::dict dict) { from_json(dict2json(dict), spc); });
 
     // Hamiltonian
     py::class_<Thamiltonian>(m, "Hamiltonian")
-        .def(py::init<Tspace&, const json&>())
-        .def(py::init([](Tspace &spc, py::dict dict) {
-                    json j = dict2json(dict);
-                    return std::unique_ptr<Thamiltonian>(new Thamiltonian(spc,j));
-                    }))
+        .def(py::init<Space &, const json &>())
+        .def(py::init([](Space &spc, py::dict dict) {
+            json j = dict2json(dict);
+            return std::unique_ptr<Thamiltonian>(new Thamiltonian(spc, j));
+        }))
         .def("init", &Thamiltonian::init)
         .def("energy", &Thamiltonian::energy);
 
     // IdealTerm
-    m.def("IdealTerm", &IdealTerm<Tspace>);
+    m.def("IdealTerm", &IdealTerm);
 
     // MCSimulation
     py::class_<Tmcsimulation>(m, "MCSimulation")
@@ -238,14 +230,15 @@ PYBIND11_MODULE(pyfaunus, m)
 
     // CombinedAnalysis
     py::class_<Analysis::CombinedAnalysis>(m, "Analysis")
-        .def(py::init([](Tspace &spc, Thamiltonian &pot, py::dict dict) {
-                    json j = dict2json(dict);
-                    return std::unique_ptr<Analysis::CombinedAnalysis>(new Analysis::CombinedAnalysis(j,spc,pot));
-                    }))
-        .def("to_dict", [](Analysis::CombinedAnalysis &self) {
-                json j;
-                Faunus::to_json(j, self);
-                return json2dict(j);
-                } )
+        .def(py::init([](Space &spc, Thamiltonian &pot, py::dict dict) {
+            json j = dict2json(dict);
+            return std::unique_ptr<Analysis::CombinedAnalysis>(new Analysis::CombinedAnalysis(j, spc, pot));
+        }))
+        .def("to_dict",
+             [](Analysis::CombinedAnalysis &self) {
+                 json j;
+                 Faunus::to_json(j, self);
+                 return json2dict(j);
+             })
         .def("sample", &Analysis::CombinedAnalysis::sample);
 }

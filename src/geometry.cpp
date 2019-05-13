@@ -1,63 +1,20 @@
 #include "geometry.h"
+#include "atomdata.h"
+#include "random.h"
 
 namespace Faunus {
-    Point ranunit(Random &rand, const Point &dir) {
-        double r2;
-        Point p;
-        do {
-            for (size_t i=0; i<3; i++)
-                p[i] = ( rand()-0.5 ) * dir[i];
-            r2 = p.squaredNorm();
-        } while ( r2 > 0.25 );
-        return p / std::sqrt(r2);
-    }
-
-    Point ranunit_polar(Random &rand) {
-        return rtp2xyz( {1, 2*pc::pi*rand(), std::acos(2*rand()-1)} );
-    }
-
-    Point xyz2rth(const Point &p, const Point &origin, const Point &dir, const Point &dir2) {
-        assert( fabs(dir.norm()-1.0)<1e-6 );
-        assert( fabs(dir2.norm()-1.0)<1e-6 );
-        assert( fabs(dir.dot(dir2))<1e-6 ); // check if unit-vectors are perpendicular
-        Point xyz = p - origin;
-        double h = xyz.dot(dir);
-        Point xy = xyz - dir*h;
-        double x = xy.dot(dir2);
-        Point y = xy - dir2*x;
-        double theta = std::atan2(y.norm(),x);
-        double radius = xy.norm();
-        return {radius,theta,h};
-    }
-
-    Point xyz2rtp(const Point &p, const Point &origin) {
-        Point xyz = p - origin;
-        double radius = xyz.norm();
-        return {
-            radius,
-                std::atan2( xyz.y(), xyz.x() ),
-                std::acos( xyz.z()/radius) };
-    }
-
-    Point rtp2xyz(const Point &rtp, const Point &origin) {
-        return origin + rtp.x() * Point(
-                std::cos(rtp.y()) * std::sin(rtp.z()),
-                std::sin(rtp.y()) * std::sin(rtp.z()),
-                std::cos(rtp.z()) );
-    }
 
     namespace Geometry {
 
         // =============== GeometryBase ===============
 
-        GeometryBase::~GeometryBase() {}
+    GeometryBase::~GeometryBase() = default;
 
+    // =============== Cuboid ===============
 
-        // =============== Cuboid ===============
-
-        Cuboid::Cuboid(const Point &p) {
-            boundary_conditions = BoundaryCondition(ORTHOGONAL, {PERIODIC, PERIODIC, PERIODIC});
-            setLength(p);
+    Cuboid::Cuboid(const Point &p) {
+        boundary_conditions = BoundaryCondition(ORTHOGONAL, {PERIODIC, PERIODIC, PERIODIC});
+        setLength(p);
         }
 
         Cuboid::Cuboid(double x, double y, double z) : Cuboid(Point(x, y, z)) {
@@ -448,7 +405,7 @@ namespace Faunus {
                     break;
                 case XY: // earlier wrongly named as ISOTROPIC!
                     alpha = std::sqrt(volume / old_volume);
-                    radius *= alpha;;
+                    radius *= alpha;
                     box_scaling = {alpha, alpha, 1.0};
                     break;
                 case ISOCHORIC:
@@ -718,7 +675,29 @@ namespace Faunus {
             geometry->to_json(j);
             j["type"] = name;
         }
+        Chameleon::VariantName Chameleon::variantName(const std::string &name) {
+            auto it = names.find(name);
+            if (it == names.end()) {
+                throw std::runtime_error("unknown geometry: " + name);
+            }
+            return *it;
+        }
+        Chameleon::VariantName Chameleon::variantName(const json &j) {
+            return variantName(j.at("type").get<std::string>());
+        }
+        Chameleon &Chameleon::operator=(const Chameleon &geo) {
+            if (&geo != this) {
+                GeometryBase::operator=(geo);
+                len = geo.len;
+                len_half = geo.len_half;
+                len_inv = geo.len_inv;
+                _type = geo._type;
+                _name = geo._name;
+                geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
+            }
+            return *this;
+        }
 
-    } // end of Geometry namespace
+        } // namespace Geometry
 
 } // end of Faunus namespace

@@ -1,30 +1,15 @@
 #pragma once
 
+#include "units.h"
 #include "core.h"
-#include "atomdata.h"
 #include "particle.h"
+#include "tensor.h"
+#include <Eigen/Geometry>
 
 /** @brief Faunus main namespace */
 namespace Faunus {
 
-    /**
-     * @brief Convert cartesian- to cylindrical-coordinates
-     * @note Input (x,y,z), output \f$ (r,\theta, h) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [-\pi,\pi) \f$, and \f$ h\in (-\infty,\infty] \f$.
-     */
-    Point xyz2rth(const Point&, const Point &origin={0,0,0}, const Point &dir={0,0,1}, const Point &dir2={1,0,0});
-
-    /**
-     * @brief Convert cartesian- to spherical-coordinates
-     * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [-\pi,\pi) \f$, and \f$ \phi\in [0,\pi] \f$.
-     */
-    Point xyz2rtp(const Point&, const Point &origin={0,0,0});
-
-    /**
-     * @brief Convert spherical- to cartesian-coordinates
-     * @param origin The origin to be added (optional)
-     * @note Input \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in [0,\pi] \f$, and output (x,y,z).
-     */
-    Point rtp2xyz(const Point &rtp, const Point &origin = {0,0,0});
+struct Random;
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] spherical coordinates") {
@@ -38,35 +23,6 @@ namespace Faunus {
         CHECK( sph1.x() == Approx(sph2.x()));
         //CHECK( sph1.y() == Approx(sph2.y()));
         //CHECK( sph1.z() == Approx(sph2.z()));
-    }
-#endif
-
-    Point ranunit(Random&, const Point &dir={1,1,1}); //!< Random unit vector using Neuman's method ("sphere picking")
-    Point ranunit_polar(Random&); //!< Random unit vector using polar coordinates ("sphere picking")
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] ranunit") {
-        Random r;
-        int n=2e5;
-        Point rtp(0,0,0);
-        for (int i=0; i<n; i++)
-            rtp += xyz2rtp( ranunit(r) );
-        rtp = rtp / n;
-        CHECK( rtp.x() == doctest::Approx(1) );
-        CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
-        CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
-    }
-
-    TEST_CASE("[Faunus] ranunit_polar") {
-        Random r;
-        int n=2e5;
-        Point rtp(0,0,0);
-        for (int i=0; i<n; i++)
-            rtp += xyz2rtp( ranunit_polar(r) );
-        rtp = rtp / n;
-        CHECK( rtp.x() == doctest::Approx(1) );
-        CHECK( rtp.y() == doctest::Approx(0).epsilon(0.005) ); // theta [-pi:pi] --> <theta>=0
-        CHECK( rtp.z() == doctest::Approx(pc::pi/2).epsilon(0.005) );// phi [0:pi] --> <phi>=pi/2
     }
 #endif
 
@@ -173,7 +129,7 @@ namespace Faunus {
 
           public:
             Point getLength() const override;
-            double getVolume(int dim = 3) const override final; // finalized to help the compiler with inlining
+            double getVolume(int dim = 3) const final; // finalized to help the compiler with inlining
             void setLength(const Point &len); // todo shall be protected
             Point setVolume(double volume, VolumeMethod method = ISOTROPIC) override;
             Point vdist(const Point &a, const Point &b) const override;
@@ -628,17 +584,9 @@ namespace Faunus {
             static const std::map<std::string, Variant> names; //!< Geometry names.
             typedef std::pair<std::string, Variant> VariantName;
 
-            inline static VariantName variantName(const std::string &name) {
-                auto it = names.find(name);
-                if (it == names.end()) {
-                    throw std::runtime_error("unknown geometry: " + name);
-                }
-                return *it;
-            }
+            static VariantName variantName(const std::string &name);
 
-            inline static VariantName variantName(const json &j) {
-                return variantName(j.at("type").get<std::string>());
-            }
+            static VariantName variantName(const json &j);
 
             Chameleon(const Variant type = CUBOID);
             Chameleon(const GeometryImplementation &geo, const Variant type);
@@ -651,18 +599,7 @@ namespace Faunus {
             }
 
             //! During the assignment copy everything, but clone the geometry.
-            Chameleon &operator=(const Chameleon &geo) {
-                if (&geo != this) {
-                    GeometryBase::operator=(geo);
-                    len = geo.len;
-                    len_half = geo.len_half;
-                    len_inv = geo.len_inv;
-                    _type = geo._type;
-                    _name = geo._name;
-                    geometry = geo.geometry != nullptr ? geo.geometry->clone() : nullptr;
-                }
-                return *this;
-            }
+            Chameleon &operator=(const Chameleon &geo);
         };
 
         inline void Chameleon::_setLength(const Point &l) {
@@ -887,10 +824,8 @@ namespace Faunus {
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
         TEST_CASE("[Faunus] anyCenter") {
-            typedef Particle<Radius, Charge, Dipole, Cigar> T;
-
             Chameleon cyl = json( {{"type","cuboid"}, {"length",100}, {"radius",20}} );
-            std::vector<T> p;
+            std::vector<Particle> p;
 
             CHECK( !atoms.empty() ); // set in a previous test
             p.push_back( atoms[0] );
@@ -992,52 +927,6 @@ namespace Faunus {
                 }
                 return S;
             }
-
-        template<class Titer>
-            double monopoleMoment( Titer begin, Titer end ) {
-                double z=0;
-                for (auto it=begin; it!=end; ++it)
-                    z += it->charge;
-                return z;
-            } //!< Calculates dipole moment vector
-
-        template<class Titer>
-            Point dipoleMoment( Titer begin, Titer end, BoundaryFunction boundary=[](const Point&){}, double cutoff=pc::infty) {
-                Point mu(0,0,0);
-                for (auto it=begin; it!=end; ++it) {
-                    Point t = it->pos - begin->pos;
-                    boundary(t);
-                    if (t.squaredNorm() < cutoff*cutoff)
-                        mu += t * it->charge;
-                }
-                return mu;
-            } //!< Calculates dipole moment vector
-
-        template<class Titer>
-            Tensor quadrupoleMoment( Titer begin, Titer end, BoundaryFunction boundary=[](const Point&){}, double cutoff=pc::infty) {
-                Tensor theta;
-                theta.setZero();
-                for (auto it=begin; it!=end; ++it) {
-                    Point t = it->pos - begin->pos;
-                    boundary(t);
-                    if (t.squaredNorm() < cutoff*cutoff)
-                        theta += t * t.transpose() * it->charge;
-                }
-                return 0.5 * theta;
-            } //!< Calculates quadrupole moment tensor (with trace)
-
-        template<class Tgroup>
-            auto toMultipole(const Tgroup &g, BoundaryFunction boundary=[](const Point&){}, double cutoff=pc::infty) {
-                Particle<Charge,Dipole,Quadrupole> m;
-                m.pos = g.cm;
-                m.charge = Geometry::monopoleMoment(g.begin(), g.end());                   // monopole
-                m.mu = Geometry::dipoleMoment(g.begin(), g.end(), boundary, cutoff);   // dipole
-                m.Q = Geometry::quadrupoleMoment(g.begin(), g.end(), boundary, cutoff);// quadrupole
-                m.mulen = m.mu.norm();
-                if (m.mulen>1e-9)
-                    m.mu.normalize();
-                return m;
-            } //<! Group --> Multipole
 
     } //geometry namespace
 }//end of faunus namespace

@@ -1,5 +1,4 @@
 #pragma once
-#include <unordered_map>
 #include <functional>
 #include <iostream>
 #include <fstream>
@@ -251,35 +250,35 @@ namespace Faunus
      * @brief n'th integer power of float
      *
      * On GCC/Clang this will use the fast `__builtin_powi` function.
-     * If not, and `n<7`, a simple loop (that can be unrolled at compile
-     * time) is performed. If none of the above, `std::pow` is used.
      *
      * See also:
      * - https://martin.ankerl.com/2012/01/25/optimized-approximative-pow-in-c-and-cpp
      * - https://martin.ankerl.com/2007/10/04/optimized-pow-approximation-for-java-and-c-c/
      */
-    template<int n, typename T=double>
-        T powi( T &x )
-        {
+        template <class T> inline constexpr T powi(T x, unsigned int n) {
 #if defined(__GNUG__)
             return __builtin_powi(x, n);
 #else
-            if (n>6)
-                return std::pow(x,n);
-            while (--n>0)
-                x*=x;
-            return x;
+            return n > 0 ? x * powi(x, n - 1) : 1;
 #endif
         }
+#ifdef DOCTEST_LIBRARY_INCLUDED
+        TEST_CASE("[Faunus] powi") {
+            using doctest::Approx;
+            double x = 3.1;
+            CHECK(powi(x, 0) == Approx(1));
+            CHECK(powi(x, 1) == Approx(x));
+            CHECK(powi(x, 2) == Approx(x * x));
+            CHECK(powi(x, 4) == Approx(x * x * x * x));
+        }
+#endif
 
-    /**
-     * @brief Approximate exp() function
-     * @note see [Cawley 2000](http://dx.doi.org/10.1162/089976600300015033)
-     * @warning Does not work in big endian systems!
-     */
-    template<class Tint=std::int32_t>
-        double exp_cawley( double y )
-        {
+        /**
+         * @brief Approximate exp() function
+         * @note see [Cawley 2000](http://dx.doi.org/10.1162/089976600300015033)
+         * @warning Does not work in big endian systems!
+         */
+        template <class Tint = std::int32_t> double exp_cawley(double y) {
             static_assert(2 * sizeof(Tint) == sizeof(double), "Approximate exp() requires 4-byte integer");
             union
             {
@@ -597,7 +596,7 @@ namespace Faunus
                 void resize(size_t n) {
                     m.resize(n);
                     for (size_t i=0; i<m.size(); i++)
-                        if (triangular==true)
+                        if (triangular)
                             m[i].resize(i+1, __val);
                         else
                             m[i].resize(n, __val);
@@ -610,7 +609,7 @@ namespace Faunus
                 auto size() const { return m.size(); }
 
                 const T& operator()(size_t i, size_t j) const {
-                    if (triangular==true)
+                    if (triangular)
                         if (j>i)
                             std::swap(i,j);
                     assert(i < m.size());

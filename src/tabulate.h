@@ -273,8 +273,7 @@ namespace Faunus
                             ubuft = SetUBuffer(rlow, zlow, rupp, zupp, u0low, u1low, u2low, u0upp, u1upp, u2upp);
                             std::vector<bool> vb = CheckUBuffer(ubuft, rlow, rupp, f);
                             repul = vb[1];
-                            if ( vb[0] == true )
-                            {
+                            if (vb[0]) {
                                 rupp = rlow;
                                 break;
                             }
@@ -291,12 +290,11 @@ namespace Faunus
                             td.c.push_back(ubuft.at(k));
 
                         // Entered a highly repulsive part, stop tabulation
-                        if ( repul == true )
-                        {
+                        if (repul) {
                             rumin = rlow;
                             td.rmin2 = rlow * rlow;
                         }
-                        if ( rlow <= rumin || repul == true )
+                        if (rlow <= rumin || repul)
                             break;
                     }
 

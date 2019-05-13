@@ -1,3 +1,5 @@
+#include <iomanip>
+
 #include "core.h"
 #include "mpi.h"
 #include "move.h"
@@ -16,8 +18,6 @@ using namespace std;
 #ifndef FAUNUS_TIPSFILE
 #define FAUNUS_TIPSFILE ""
 #endif
-
-typedef Particle<Charge> Tparticle;
 
 static const char USAGE[] =
 R"(Faunus - the Monte Carlo code you're looking for!
@@ -93,7 +93,7 @@ int main( int argc, char **argv )
 
         {
             pc::temperature = j.at("temperature").get<double>() * 1.0_K;
-            MCSimulation<Tparticle> sim(j, mpi);
+            MCSimulation sim(j, mpi);
 
             // --state
             if (args["--state"]) {

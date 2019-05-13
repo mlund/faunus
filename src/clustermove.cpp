@@ -158,14 +158,14 @@ void Cluster::_move(Change &change) {
 
         // lambda function to calculate cluster COM
         auto clusterCOM = [&]() {
-            double m, sum_m = 0;
+            double sum_m = 0;
             Point cm(0, 0, 0);
             Point O = spc.groups[*cluster.begin()].cm;
             for (auto i : cluster) {
                 auto &g = spc.groups[i];
                 Point t = g.cm - O;
                 boundary(t);
-                m = g.mass();
+                double m = g.mass();
                 cm += m * t;
                 sum_m += m;
             }

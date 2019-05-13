@@ -1,6 +1,7 @@
 #pragma once
 
 #include "energy.h"
+#include "functionparser.h"
 
 namespace Faunus {
 namespace Energy {

@@ -1,25 +1,14 @@
 #pragma once
-#include <iomanip>
-#include <limits>
 #include <vector>
-#include <map>
 #include <iostream>
-#include <sstream>
-#include <fstream>
-#include <type_traits>
-#include <string>
-#include <cmath>
-#include <random>
-#include <memory>
-#include <chrono>
-#include <Eigen/Geometry>
+#include <Eigen/Core>
 #include <nlohmann/json.hpp>
-#include <range/v3/view.hpp>
+#include <range/v3/view/filter.hpp>
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "units.h"
+#include <Eigen/Geometry>
 #endif
-#include "random.h"
 
 // Eigen<->JSON (de)serialization
 namespace Eigen {
@@ -48,6 +37,7 @@ namespace Faunus {
 
     typedef Eigen::Vector3d Point; //!< 3d vector
     typedef nlohmann::json json;  //!< Json object
+    struct Random;
 
     using std::cout;
     using std::endl;
@@ -121,7 +111,6 @@ namespace Faunus {
     class TipFromTheManual {
         private:
             json db; // database
-            Random slump;
         public:
             bool tip_already_given=false;
             void load(const std::vector<std::string>&);
@@ -129,94 +118,6 @@ namespace Faunus {
     };
 
     extern TipFromTheManual usageTip; // global instance
-
-    struct Tensor : public Eigen::Matrix3d {
-        typedef Eigen::Matrix3d base;
-
-        Tensor() {
-            base::setZero();
-        } //!< Constructor, clear data
-
-        Tensor( double xx, double xy, double xz, double yy, double yz, double zz ); //!< Construct from input
-        void rotate( const base &m ); //!< Rotate using rotation matrix. Remove?
-        void eye();
-
-        template<typename T>
-            Tensor( const Eigen::MatrixBase<T> &other ) : base(other) {}
-
-        template<typename T>
-            Tensor &operator=( const Eigen::MatrixBase<T> &other )
-            {
-                base::operator=(other);
-                return *this;
-            }
-    }; //!< Tensor class
-
-    void to_json(nlohmann::json& j, const Tensor &t); //!< Tensor -> Json
-    void from_json(const nlohmann::json& j, Tensor &t); //!< Json -> Tensor
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] Tensor") {
-        using doctest::Approx;
-        Tensor Q1 = Tensor(1,2,3,4,5,6);
-        Tensor Q2 = json(Q1); // Q1 --> json --> Q2
-        CHECK( json(Q1) == json(Q2) ); // Q1 --> json == json <-- Q2 ?
-        CHECK( Q2 == Tensor(1,2,3,4,5,6) );
-
-        auto m = Eigen::AngleAxisd( pc::pi/2, Point(0,1,0) ).toRotationMatrix();
-        Q1.rotate(m);
-        CHECK( Q1(0,0) == Approx(6) );
-        CHECK( Q1(0,1) == Approx(5) );
-        CHECK( Q1(0,2) == Approx(-3) );
-        CHECK( Q1(1,1) == Approx(4) );
-        CHECK( Q1(1,2) == Approx(-2) );
-        CHECK( Q1(2,2) == Approx(1) );
-    }
-#endif
-
-    /**
-     * @brief Quaternion rotation routine using the Eigen library
-     */
-    struct QuaternionRotate : public std::pair<Eigen::Quaterniond, Eigen::Matrix3d> {
-
-        typedef std::pair<Eigen::Quaterniond, Eigen::Matrix3d> base;
-        //using base::pair;
-        using base::first;
-        using base::second;
-
-        double angle=0; //!< Rotation angle
-
-        QuaternionRotate();
-        QuaternionRotate(double angle, Point u);
-        void set(double angle, Point u);
-        Point operator()( Point a, std::function<void(Point&)> boundary = [](Point&){}, const Point &shift={0,0,0} ) const; //!< Rotate point w. optional PBC boundaries
-        auto operator()( const Eigen::Matrix3d &a ) const; //!< Rotate matrix/tensor
-    };
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-    TEST_CASE("[Faunus] QuaternionRotate")
-    {
-        using doctest::Approx;
-        QuaternionRotate qrot;
-        Point a = {1,0,0};
-        qrot.set( pc::pi/2, {0,1,0} ); // rotate around y-axis
-        CHECK( qrot.angle == Approx(pc::pi/2) );
-
-        SUBCASE("rotate using quaternion") {
-            a = qrot(a); // rot. 90 deg.
-            CHECK( a.x() == Approx(0) );
-            a = qrot(a); // rot. 90 deg.
-            CHECK( a.x() == Approx(-1) );
-        }
-
-        SUBCASE("rotate using rotation matrix") {
-            a = qrot.second * a;
-            CHECK( a.x() == Approx(0) );
-            a = qrot.second * a;
-            CHECK( a.x() == Approx(-1) );
-        }
-    }
-#endif
 
     /**
      * @brief Generate reference view to data members in container
@@ -295,8 +196,60 @@ namespace Faunus {
     }
 #endif
 
+    /**
+     * @brief Convert cartesian- to cylindrical-coordinates
+     * @note Input (x,y,z), output \f$ (r,\theta, h) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [-\pi,\pi) \f$,
+     * and \f$ h\in (-\infty,\infty] \f$.
+     */
+    Point xyz2rth(const Point &, const Point &origin = {0, 0, 0}, const Point &dir = {0, 0, 1},
+                  const Point &dir2 = {1, 0, 0});
+
+    /**
+     * @brief Convert cartesian- to spherical-coordinates
+     * @note Input (x,y,z), output \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [-\pi,\pi) \f$,
+     * and \f$ \phi\in [0,\pi] \f$.
+     */
+    Point xyz2rtp(const Point &, const Point &origin = {0, 0, 0});
+
+    /**
+     * @brief Convert spherical- to cartesian-coordinates
+     * @param origin The origin to be added (optional)
+     * @note Input \f$ (r,\theta,\phi) \f$  where \f$ r\in [0,\infty) \f$, \f$ \theta\in [0,2\pi) \f$, and \f$ \phi\in
+     * [0,\pi] \f$, and output (x,y,z).
+     */
+    Point rtp2xyz(const Point &rtp, const Point &origin = {0, 0, 0});
+
     /** Add growing suffix filename until non-existing name is found */
     std::string addGrowingSuffix(const std::string&);
 
+    Point ranunit(Random &,
+                  const Point &dir = {1, 1, 1}); //!< Random unit vector using Neuman's method ("sphere picking")
+    Point ranunit_polar(Random &);               //!< Random unit vector using polar coordinates ("sphere picking")
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+    TEST_CASE("[Faunus] ranunit") {
+        Random r;
+        int n = 2e5;
+        Point rtp(0, 0, 0);
+        for (int i = 0; i < n; i++)
+            rtp += xyz2rtp(ranunit(r));
+        rtp = rtp / n;
+        CHECK(rtp.x() == doctest::Approx(1));
+        CHECK(rtp.y() == doctest::Approx(0).epsilon(0.005));          // theta [-pi:pi] --> <theta>=0
+        CHECK(rtp.z() == doctest::Approx(pc::pi / 2).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
+    }
+
+    TEST_CASE("[Faunus] ranunit_polar") {
+        Random r;
+        int n = 2e5;
+        Point rtp(0, 0, 0);
+        for (int i = 0; i < n; i++)
+            rtp += xyz2rtp(ranunit_polar(r));
+        rtp = rtp / n;
+        CHECK(rtp.x() == doctest::Approx(1));
+        CHECK(rtp.y() == doctest::Approx(0).epsilon(0.005));          // theta [-pi:pi] --> <theta>=0
+        CHECK(rtp.z() == doctest::Approx(pc::pi / 2).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
+    }
+#endif
 
 }//end of faunus namespace

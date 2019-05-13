@@ -79,8 +79,8 @@ endif()
 # RANGE-V3
 FetchContent_Declare(
     rangev3
-    URL "https://github.com/ericniebler/range-v3/archive/0.4.0.tar.gz"
-    URL_HASH MD5=f835637e23b09a65863fca26e07fb8fa)
+    URL "https://github.com/ericniebler/range-v3/archive/0.5.0.tar.gz"
+    URL_HASH MD5=42f932808ef51df9f1732a3d5b0ae06c)
 FetchContent_GetProperties(rangev3)
 if(NOT rangev3_POPULATED)
     FetchContent_Populate(rangev3)
@@ -200,6 +200,7 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/functionparser.cpp
     ${CMAKE_SOURCE_DIR}/src/random.cpp
     ${CMAKE_SOURCE_DIR}/src/mpi.cpp
+    ${CMAKE_SOURCE_DIR}/src/bonds.cpp
     ${CMAKE_SOURCE_DIR}/src/chainmove.cpp
     ${CMAKE_SOURCE_DIR}/src/clustermove.cpp
     ${CMAKE_SOURCE_DIR}/src/core.cpp
@@ -217,8 +218,10 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/penalty.cpp
     ${CMAKE_SOURCE_DIR}/src/potentials.cpp
     ${CMAKE_SOURCE_DIR}/src/reactioncoordinate.cpp
+    ${CMAKE_SOURCE_DIR}/src/rotate.cpp
     ${CMAKE_SOURCE_DIR}/src/space.cpp
-    ${CMAKE_SOURCE_DIR}/src/speciation.cpp)
+    ${CMAKE_SOURCE_DIR}/src/speciation.cpp
+    ${CMAKE_SOURCE_DIR}/src/tensor.cpp)
 
 set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
@@ -228,6 +231,7 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/average.h
     ${CMAKE_SOURCE_DIR}/src/atomdata.h
     ${CMAKE_SOURCE_DIR}/src/auxiliary.h
+    ${CMAKE_SOURCE_DIR}/src/bonds.h
     ${CMAKE_SOURCE_DIR}/src/chainmove.h
     ${CMAKE_SOURCE_DIR}/src/clustermove.h
     ${CMAKE_SOURCE_DIR}/src/core.h
@@ -244,9 +248,11 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/penalty.h
     ${CMAKE_SOURCE_DIR}/src/potentials.h
     ${CMAKE_SOURCE_DIR}/src/reactioncoordinate.h
+    ${CMAKE_SOURCE_DIR}/src/rotate.h
     ${CMAKE_SOURCE_DIR}/src/space.h
     ${CMAKE_SOURCE_DIR}/src/speciation.h
     ${CMAKE_SOURCE_DIR}/src/random.h
+    ${CMAKE_SOURCE_DIR}/src/tensor.h
     ${CMAKE_SOURCE_DIR}/src/units.h
     )
 

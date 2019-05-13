@@ -18,10 +18,8 @@ namespace Move {
  */
 class SpeciationMove : public Movebase {
   private:
-    typedef typename Tspace::Tpvec Tpvec;
-
-    Tspace &spc;
-    Tspace *otherspc;
+    Space &spc;
+    Space *otherspc;
     ReactionData *trialprocess;
     std::map<std::string, Average<double>> accmap;
 
@@ -32,7 +30,7 @@ class SpeciationMove : public Movebase {
     std::vector<int> atomDel; // atom index to delete
     std::map<int, int> molcnt_ins, atomcnt_ins, molcnt_del, atomcnt_del, molcnt,
         atomcnt;                    // id's and number of inserted/deleted mols and atoms
-    std::multimap<int, Tpvec> pmap; // coordinates of mols and atoms to be inserted
+    std::multimap<int, ParticleVector> pmap; // coordinates of mols and atoms to be inserted
     // unsigned int Ndeleted, Ninserted; // Number of accepted deletions and insertions
 
     void _to_json(json &j) const override;
@@ -40,9 +38,9 @@ class SpeciationMove : public Movebase {
     void _from_json(const json &) override{};
 
   public:
-    SpeciationMove(Tspace &spc);
+    SpeciationMove(Space &spc);
 
-    void setOther(Tspace &ospc);
+    void setOther(Space &ospc);
 
     void _move(Change &change) override;
 

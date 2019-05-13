@@ -1,4 +1,5 @@
 #include "space.h"
+#include "io.h"
 
 namespace Faunus {
 
@@ -203,9 +204,9 @@ void insertMolecules(const json &j, Space &spc) {
                                     spc.groups.back().resize(0);
                             }
                             // load specific positions for the N added molecules
-                            bool success = false;
                             std::string file = it.value().value("positions", "");
                             if (!file.empty()) {
+                                bool success = false;
                                 Tpvec p;
                                 if (loadStructure(file, p, false)) {
                                     if (p.size() == N * mol->atoms.size()) {

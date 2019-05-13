@@ -1,6 +1,9 @@
 #pragma once
 
 #include "space.h"
+#include "bonds.h"
+#include "auxiliary.h"
+#include <range/v3/view.hpp>
 #include <Eigen/Dense>
 
 #ifdef ENABLE_POWERSASA
@@ -39,8 +42,8 @@ void to_json(json &j, const Energybase &base); //!< Converts any energy class to
  * as there's nover any overlap due to PBC.
  */
 struct ContainerOverlap : public Energybase {
-    const Tspace &spc;
-    ContainerOverlap(const Tspace &spc) : spc(spc) { name = "ContainerOverlap"; }
+    const Space &spc;
+    ContainerOverlap(const Space &spc) : spc(spc) { name = "ContainerOverlap"; }
     double energy(Change &change) override;
 };
 
@@ -91,19 +94,19 @@ TEST_CASE("[Faunus] Ewald - EwaldData") {
 
 /** @brief recipe or policies for ion-ion ewald */
 template <bool eigenopt = false /** use Eigen matrix ops where possible */> struct PolicyIonIon {
-    typedef typename Tspace::Tpvec::iterator iter;
-    Tspace *spc;
-    Tspace *old = nullptr; // set only if key==NEW at first call to `sync()`
+    typedef typename ParticleVector::iterator iter;
+    Space *spc;
+    Space *old = nullptr; // set only if key==NEW at first call to `sync()`
 
-    PolicyIonIon(Tspace &spc) : spc(&spc) {}
+    PolicyIonIon(Space &spc) : spc(&spc) {}
 
     void updateComplex(EwaldData &data) const {
         auto active = spc->activeParticles();
         if (eigenopt)
             if (data.ipbc == false) {
-                auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Tspace::Tparticle::pos); //  Nx3
+                auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Space::Tparticle::pos); //  Nx3
                 auto charge =
-                    asEigenVector(active.begin().base(), active.end().base(), &Tspace::Tparticle::charge); // Nx1
+                    asEigenVector(active.begin().base(), active.end().base(), &Space::Tparticle::charge); // Nx1
                 Eigen::MatrixXd kr = pos.matrix() * data.kVectors; // Nx3 * 3xK = NxK
                 data.Qion.real() = (kr.array().cos().colwise() * charge).colwise().sum();
                 data.Qion.imag() = kr.array().sin().colwise().sum();
@@ -209,7 +212,7 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     using doctest::Approx;
-    Tspace spc;
+    Space spc;
     spc.p.resize(2);
     spc.geo = R"( {"type": "cuboid", "length": 10} )"_json;
     spc.p[0] = R"( {"pos": [0,0,0], "q": 1.0} )"_json;
@@ -244,10 +247,10 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
   private:
     EwaldData data;
     Policy policy;
-    Tspace &spc;
+    Space &spc;
 
   public:
-    Ewald(const json &j, Tspace &spc) : policy(spc), spc(spc) {
+    Ewald(const json &j, Space &spc) : policy(spc), spc(spc) {
         name = "ewald";
         data = j;
         init();
@@ -294,20 +297,20 @@ class SelfEnergy : public Energybase {
     std::string type;
     double selfenergy_prefactor, epsr, lB, rc, alpha, kappa;
     int C, D;
-    Tspace &spc;
+    Space &spc;
 
   public:
-    SelfEnergy(const json &j, Tspace &spc);
+    SelfEnergy(const json &j, Space &spc);
 
     double energy(Change &change) override;
 };
 
 class Isobaric : public Energybase {
   private:
-    Tspace &spc;
+    Space &spc;
     double P; // P/kT
   public:
-    Isobaric(const json &j, Tspace &spc);
+    Isobaric(const json &j, Space &spc);
     double energy(Change &change) override;
     void to_json(json &j) const override;
 };
@@ -323,7 +326,7 @@ class Constrain : public Energybase {
     std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc = nullptr;
 
   public:
-    Constrain(const json &j, Tspace &spc);
+    Constrain(const json &j, Space &spc);
     double energy(Change &change) override;
     void to_json(json &j) const override;
 };
@@ -338,8 +341,7 @@ class Constrain : public Energybase {
  */
 class Bonded : public Energybase {
   private:
-    Tspace &spc;
-    typedef typename Tspace::Tpvec Tpvec;
+    Space &spc;
     typedef std::vector<std::shared_ptr<Potential::BondData>> BondVector;
     BondVector inter;                // inter-molecular bonds
     std::map<int, BondVector> intra; // intra-molecular bonds
@@ -351,7 +353,7 @@ class Bonded : public Energybase {
         const; // sum energy in vector of BondData for matching particle indices
 
   public:
-    Bonded(const json &j, Tspace &spc);
+    Bonded(const json &j, Space &spc);
     void to_json(json &j) const override;
     double energy(Change &change) override; // brute force -- refine this!
 };
@@ -365,8 +367,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
     PairMatrix<double> cutoff2; // matrix w. group-to-group cutoff
 
   protected:
-    typedef typename Tspace::Tpvec Tpvec;
-    typedef typename Tspace::Tgroup Tgroup;
+    typedef typename Space::Tgroup Tgroup;
     double Rc2_g2g = pc::infty;
 
     // control of when OpenMP should be used
@@ -443,7 +444,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
      * and checks (1) if it is already part of Space, or (2)
      * external to space.
      */
-    double i2all(const typename Tspace::Tparticle &i) {
+    double i2all(const typename Space::Tparticle &i) {
         double u = 0;
         auto it = spc.findGroupContaining(i); // iterator to group
         if (it != spc.groups.end()) {         // check if i belongs to group in space
@@ -501,10 +502,10 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
     }
 
   public:
-    Tspace &spc;      //!< Space to operate on
+    Space &spc;       //!< Space to operate on
     Tpairpot pairpot; //!< Pair potential
 
-    Nonbonded(const json &j, Tspace &spc) : spc(spc) {
+    Nonbonded(const json &j, Space &spc) : spc(spc) {
         name = "nonbonded";
         pairpot = j;
 
@@ -704,9 +705,9 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
 template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> {
   private:
     typedef Nonbonded<Tpairpot> base;
-    typedef typename Tspace::Tgroup Tgroup;
+    typedef typename Space::Tgroup Tgroup;
     Eigen::MatrixXf cache;
-    Tspace &spc;
+    Space &spc;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
     double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index = std::vector<int>(),
@@ -729,7 +730,7 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
     }
 
   public:
-    NonbondedCached(const json &j, Tspace &spc) : base(j, spc), spc(spc) {
+    NonbondedCached(const json &j, Space &spc) : base(j, spc), spc(spc) {
         base::name += "EM";
         init();
     }
@@ -841,14 +842,13 @@ class SASAEnergy : public Energybase {
     std::vector<float> sasa, radii;
 
   private:
-    typedef typename Tspace::Tpvec Tpvec;
-    Tspace &spc;
+    Space &spc;
     double probe;            // sasa probe radius (angstrom)
     double conc = 0;         // co-solute concentration (mol/l)
     Average<double> avgArea; // average surface area
     std::shared_ptr<POWERSASA::PowerSasa<float, Point>> ps = nullptr;
 
-    void updateSASA(const Tpvec &p);
+    void updateSASA(const ParticleVector &p);
     void to_json(json &j) const override;
 
     /*
@@ -860,7 +860,7 @@ class SASAEnergy : public Energybase {
     void sync(Energybase *basePtr, Change &c) override;
 
   public:
-    SASAEnergy(const json &j, Tspace &spc);
+    SASAEnergy(const json &j, Space &spc);
     void init() override;
     double energy(Change &) override;
 }; //!< SASA energy from transfer free energies
@@ -868,7 +868,7 @@ class SASAEnergy : public Energybase {
 
 struct Example2D : public Energybase {
     Point &i; // reference to 1st particle in the system
-    Example2D(const json &, Tspace &spc);
+    Example2D(const json &, Space &spc);
     double energy(Change &change) override;
 };
 
@@ -876,13 +876,13 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
   protected:
     double maxenergy = pc::infty; //!< Maximum allowed energy change
     void to_json(json &j) const override;
-    void addEwald(const json &j, Tspace &spc); //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
+    void addEwald(const json &j, Space &spc); //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
     void
     addSelfEnergy(const json &j,
-                  Tspace &spc); //!< Adds an instance of the self term of the electrostatic potential (if appropriate)
+                  Space &spc); //!< Adds an instance of the self term of the electrostatic potential (if appropriate)
 
   public:
-    Hamiltonian(Tspace &spc, const json &j);
+    Hamiltonian(Space &spc, const json &j);
     double energy(Change &change) override; //!< Energy due to changes
     void init() override;
     void sync(Energybase *basePtr, Change &change) override;

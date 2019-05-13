@@ -1,4 +1,5 @@
 #include "particle.h"
+#include <Eigen/Geometry>
 
 namespace Faunus {
 void ParticlePropertyBase::rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &) {}
@@ -52,37 +53,71 @@ void Cigar::to_json(json &j) const {
     j["scdir"] = scdir;
     j["sclen"] = sclen;
 }
+void Cigar::from_json(const json &j) {
+    scdir = j.value("scdir", scdir);
+    sclen = j.value("sclen", sclen);
+}
 
-const AtomData &PositionAndID::traits() {
-    assert(id >= 0 and id < atoms.size());
-    return atoms.at(id);
-}
-void PositionAndID::to_json(json &j) const { j = {{"id", id}, {"pos", pos}}; }
-void PositionAndID::from_json(const json &j) {
-    id = j.value("id", id);
-    pos = j.value("pos", pos);
-}
 const AtomData &Particle::traits() {
     assert(id >= 0 and id < atoms.size());
     return atoms.at(id);
 }
 Particle::Particle(const AtomData &a) { *this = json(a).front(); }
-void Particle::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
-    if (shape != nullptr)
-        shape->rotate(q, m);
+
+// copy constructor
+Particle::Particle(const Particle &p) : id(p.id), charge(p.charge), pos(p.pos) {
+    if (p.ext != nullptr)
+        ext = std::make_shared<Particle::ParticleExtension>(*p.ext); // deep copy
 }
+
+// assignment operator
+Particle &Particle::operator=(const Particle &p) {
+    if (&p != this) {
+        charge = p.charge;
+        pos = p.pos;
+        id = p.id;
+        if (p.ext != nullptr) { // if particle has
+            if (ext != nullptr) // extension, then
+                *ext = *p.ext;  // deep copy
+            else                // else if *this is empty, create new based on p
+                ext = std::make_shared<Particle::ParticleExtension>(*p.ext); // create new
+        } else                                                               // p doesn't have extended properties
+            ext = nullptr;
+    }
+    return *this;
+}
+
+void Particle::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
+    if (ext != nullptr)
+        ext->rotate(q, m);
+}
+bool Particle::hasExtension() const { return ext != nullptr; }
+
+Particle::ParticleExtension &Particle::createExtension() {
+    assert(ext == nullptr && "extension already created");
+    ext = std::make_shared<ParticleExtension>();
+    return *ext;
+}
+
 void from_json(const json &j, Particle &p) {
     p.id = j.value("id", -1);
     p.pos = j.value("pos", Point(0, 0, 0));
     p.charge = j.value("q", 0.0);
-    if (p.shape != nullptr)
-        from_json(j, *p.shape);
+
+    p.ext = std::make_shared<Particle::ParticleExtension>();
+    from_json(j, *p.ext);
+    Particle::ParticleExtension empty_extended_particle;
+    // why can't we compare ParticleExtension directly?!
+    // (slow and ugly)
+    if (json(*p.ext) == json(empty_extended_particle))
+        p.ext = nullptr; // no extended features found in json
 }
 void to_json(json &j, const Particle &p) {
-    if (p.shape != nullptr)
-        to_json(j, *p.shape);
+    if (p.ext != nullptr)
+        to_json(j, *p.ext);
     j["id"] = p.id;
     j["pos"] = p.pos;
     j["q"] = p.charge;
 }
+
 } // namespace Faunus

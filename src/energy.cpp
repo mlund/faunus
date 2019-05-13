@@ -2,6 +2,7 @@
 #include "mpi.h"
 #include "energy.h"
 #include "penalty.h"
+#include "potentials.h"
 #include "externalpotential.h"
 
 namespace Faunus {
@@ -115,7 +116,7 @@ double Example2D::energy(Change &) {
         return 5 * s;
     return 1e10;
 }
-Example2D::Example2D(const json &, Tspace &spc) : i(spc.p.at(0).pos) { name = "Example2D"; }
+Example2D::Example2D(const json &, Space &spc) : i(spc.p.at(0).pos) { name = "Example2D"; }
 
 double ContainerOverlap::energy(Change &change) {
     // if (spc.geo.type not_eq Geometry::CUBOID) // cuboid have PBC in all directions
@@ -147,7 +148,7 @@ double ContainerOverlap::energy(Change &change) {
     return 0;
 }
 
-SelfEnergy::SelfEnergy(const json &j, Tspace &spc) : spc(spc) {
+SelfEnergy::SelfEnergy(const json &j, Space &spc) : spc(spc) {
     name = "selfenergy";
     type = j.at("type");
     rc = j.at("cutoff");
@@ -181,7 +182,7 @@ double SelfEnergy::energy(Change &change) {
                 Eq += i.charge * i.charge;
     return -selfenergy_prefactor * Eq * lB / rc;
 }
-Isobaric::Isobaric(const json &j, Tspace &spc) : spc(spc) {
+Isobaric::Isobaric(const json &j, Space &spc) : spc(spc) {
     name = "isobaric";
     cite = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
     P = j.value("P/mM", 0.0) * 1.0_mM;
@@ -212,7 +213,7 @@ void Isobaric::to_json(json &j) const {
     j["P/Pa"] = P / 1.0_Pa;
     _roundjson(j, 5);
 }
-Constrain::Constrain(const json &j, Tspace &spc) {
+Constrain::Constrain(const json &j, Space &spc) {
     using namespace Faunus::ReactionCoordinate;
     name = "constrain";
     type = j.at("type").get<std::string>();
@@ -280,7 +281,7 @@ double Bonded::sum_energy(const Bonded::BondVector &bonds, const std::vector<int
     }
     return energy;
 }
-Bonded::Bonded(const json &j, Tspace &spc) : spc(spc) {
+Bonded::Bonded(const json &j, Space &spc) : spc(spc) {
     name = "bonded";
     update_intra();
     if (j.is_object())
@@ -337,27 +338,27 @@ void Hamiltonian::to_json(json &j) const {
     for (auto i : this->vec)
         j.push_back(*i);
 }
-void Hamiltonian::addEwald(const json &j, Tspace &spc) {
+void Hamiltonian::addEwald(const json &j, Space &spc) {
     if (j.count("coulomb") == 1)
         if (j["coulomb"].count("type") == 1)
             if (j["coulomb"].at("type") == "ewald")
                 push_back<Energy::Ewald<>>(j["coulomb"], spc);
 }
-void Hamiltonian::addSelfEnergy(const json &j, Tspace &spc) {
+void Hamiltonian::addSelfEnergy(const json &j, Space &spc) {
     std::vector<std::string> methods = {"qpotential", "fanourgakis"};
     if (j.count("coulomb") == 1)
         if (j["coulomb"].count("type") == 1)
             if (std::find(methods.begin(), methods.end(), j["coulomb"].at("type")) != methods.end())
                 push_back<Energy::SelfEnergy>(j["coulomb"], spc);
 }
-Hamiltonian::Hamiltonian(Tspace &spc, const json &j) {
+Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
-    typedef CombinedPairPotential<CoulombGalore, LennardJones<Particle>> CoulombLJ;
-    typedef CombinedPairPotential<CoulombGalore, HardSphere<Particle>> CoulombHS;
-    typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen<Particle>> CoulombWCA;
-    typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen<Particle>> PrimitiveModelWCA;
-    typedef CombinedPairPotential<Coulomb, HardSphere<Particle>> PrimitiveModel;
+    typedef CombinedPairPotential<CoulombGalore, LennardJones> CoulombLJ;
+    typedef CombinedPairPotential<CoulombGalore, HardSphere> CoulombHS;
+    typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen> CoulombWCA;
+    typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
+    typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
 
     name = "hamiltonian";
 
@@ -376,13 +377,13 @@ Hamiltonian::Hamiltonian(Tspace &spc, const json &j) {
                     push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc);
 
                 if (it.key() == "nonbonded")
-                    push_back<Energy::Nonbonded<TabulatedPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+                    push_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_exact")
-                    push_back<Energy::Nonbonded<FunctorPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+                    push_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_cached")
-                    push_back<Energy::NonbondedCached<TabulatedPotential<typename Tspace::Tparticle>>>(it.value(), spc);
+                    push_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_coulombwca")
                     push_back<Energy::Nonbonded<CoulombWCA>>(it.value(), spc);
@@ -470,7 +471,7 @@ void Hamiltonian::sync(Energybase *basePtr, Change &change) {
         }
     throw std::runtime_error("hamiltonian mismatch");
 }
-void SASAEnergy::updateSASA(const SASAEnergy::Tpvec &p) {
+void SASAEnergy::updateSASA(const ParticleVector &p) {
     assert(ps != nullptr);
     radii.resize(p.size());
     std::transform(p.begin(), p.end(), radii.begin(),
@@ -511,7 +512,7 @@ void SASAEnergy::sync(Energybase *basePtr, Change &c) {
         }
     }
 }
-SASAEnergy::SASAEnergy(const json &j, Tspace &spc) : spc(spc) {
+SASAEnergy::SASAEnergy(const json &j, Space &spc) : spc(spc) {
     name = "sasa";
     cite = "doi:10.1002/jcc.21844";
     probe = j.value("radius", 1.4) * 1.0_angstrom;

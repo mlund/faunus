@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core.h"
-#include "geometry.h"
+#include "particle.h"
 
 namespace Faunus {
 
@@ -272,20 +272,20 @@ class FormatXTC {
             if (natoms_xtc == (int)c.p.size()) {
                 int rc = read_xtc(xd, natoms_xtc, &step_xtc, &time_xtc, xdbox, x_xtc, &prec_xtc);
                 if (rc == 0) {
-                    Geometry::Chameleon *geo = dynamic_cast<Geometry::Chameleon *>(&c.geo);
-                    if (geo == nullptr or geo->type not_eq Geometry::CUBOID)
-                        throw std::runtime_error("Cuboid-like geometry required");
-                    Point len_half = 0.5 * geo->getLength();
+                    // Geometry::Chameleon *geo = dynamic_cast<Geometry::Chameleon *>(&c.geo);
+                    // if (geo == nullptr or geo->type not_eq Geometry::CUBOID)
+                    //    throw std::runtime_error("Cuboid-like geometry required");
+                    Point len_half = 0.5 * c.geo.getLength();
                     if (setbox)
-                        geo->setLength(Point(10.0 * xdbox[0][0], 10.0 * xdbox[1][1], 10.0 * xdbox[2][2]));
+                        c.geo.setLength(Point(10.0 * xdbox[0][0], 10.0 * xdbox[1][1], 10.0 * xdbox[2][2]));
                     for (size_t i = 0; i < c.p.size(); i++) {
                         c.p[i].pos.x() = 10.0 * x_xtc[i][0];
                         c.p[i].pos.y() = 10.0 * x_xtc[i][1];
                         c.p[i].pos.z() = 10.0 * x_xtc[i][2];
                         c.p[i].pos -= len_half;
                         if (applypbc)
-                            geo->boundary(c.p[i].pos);
-                        if (geo->collision(c.p[i].pos, 0))
+                            c.geo.boundary(c.p[i].pos);
+                        if (c.geo.collision(c.p[i].pos, 0))
                             throw std::runtime_error("particle-container collision");
                     }
                     return true;

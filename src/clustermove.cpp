@@ -13,6 +13,7 @@ void Cluster::_to_json(json &j) const {
     j = {{"dir", dir},
          {"dp", dptrans},
          {"dprot", dprot},
+         {"spread", spread},
          {rootof + bracket("r" + squared), std::sqrt(msqd.avg())},
          {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
          {bracket("N"), N.avg()},
@@ -43,6 +44,7 @@ void Cluster::_from_json(const json &j) {
     dptrans = j.at("dp");
     dir = j.value("dir", Point(1, 1, 1));
     dprot = j.at("dprot");
+    spread = j.value("spread", true);
     names = j.at("molecules").get<decltype(names)>(); // molecule names
     ids = names2ids(molecules, names);                // names --> molids
     index.clear();
@@ -113,7 +115,8 @@ void Cluster::findCluster(Space &spc, size_t first, std::set<size_t> &cluster) {
                             if (Movebase::slump() <= P) {
                                 cluster.insert(j);
                                 pool.erase(j);
-                                goto start; // wow, first goto ever!
+				if(spread)
+				  goto start; // wow, first goto ever!
                             }
                         }
     } while (cluster.size() != n);

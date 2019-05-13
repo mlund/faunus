@@ -106,7 +106,7 @@ void Faunus::Potential::CoulombGalore::sfPoisson(const Faunus::json &j) {
       return pow(1.0-q,double(D)+1.0)*tmp;
     }, 0, 1 );
     calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
-    selfenergy_prefactor = -double(C+D)/double(C);
+    selfenergy_prefactor = double(C+D)/double(C);
 }
 
 void Faunus::Potential::CoulombGalore::sfFennel(const Faunus::json &j) {
@@ -119,9 +119,11 @@ void Faunus::Potential::CoulombGalore::sfFennel(const Faunus::json &j) {
     selfenergy_prefactor = ( erfc(alpha*rc)/2.0 + alpha*rc/sqrt(pc::pi) );
 }
 
-void Faunus::Potential::CoulombGalore::sfEwald(const Faunus::json &j) {
+void Faunus::Potential::CoulombGalore::sfEwald(const Faunus::json &j) { // is all this true for kappa \ne 0 ?
     alpha = j.at("alpha");
-    table = sf.generate( [&](double q) { return std::erfc(alpha*rc*q); }, 0, 1 );
+    kappa = j.value("kappa",0.0);
+    table = sf.generate( [&](double q) { return (std::erfc(alpha*rc*q + kappa/2.0/alpha)*std::exp(kappa*rc*q) + std::erfc(alpha*rc*q - kappa/2.0/alpha)*std::exp(-kappa*rc*q)  )/2.0; }, 0, 1 ); // Yukawa potential
+    //table = sf.generate( [&](double q) { return std::erfc(alpha*rc*q); }, 0, 1 ); // pure Coulomb potential
     calcDielectric = [&](double M2V) {
         double T = std::erf(alpha*rc) - (2 / (3 * sqrt(pc::pi)))
             * std::exp(-alpha*alpha*rc*rc) * ( 2*alpha*alpha*rc*rc + 3);

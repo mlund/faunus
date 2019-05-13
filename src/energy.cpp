@@ -57,7 +57,7 @@ void EwaldData::update(const Point &box) {
                         factor *= 2;
                     double dkz2 = double(kz * kz);
                     Point kv = 2 * pc::pi * Point(kx / L.x(), ky / L.y(), kz / L.z());
-                    double k2 = kv.dot(kv);
+                    double k2 = kv.dot(kv) + kappa2; // last term is only for Yukawa-Ewald
                     if (k2 < check_k2_zero) // Check if k2 != 0
                         continue;
                     if (spherical_sum)
@@ -85,6 +85,8 @@ void from_json(const json &j, EwaldData &d) {
     d.lB = pc::lB(j.at("epsr"));
     d.eps_surf = j.value("epss", 0.0);
     d.const_inf = (d.eps_surf < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium
+    d.kappa = j.value("kappa", 0.0);
+    d.kappa2 = d.kappa*d.kappa;
 }
 
 void to_json(json &j, const EwaldData &d) {
@@ -95,7 +97,8 @@ void to_json(json &j, const EwaldData &d) {
          {"cutoff", d.rc},
          {"kcutoff", d.kc},
          {"wavefunctions", d.kVectors.cols()},
-         {"spherical_sum", d.spherical_sum}};
+         {"spherical_sum", d.spherical_sum},
+         {"kappa", d.kappa}};
 }
 
 double Example2D::energy(Change &) {
@@ -148,12 +151,20 @@ SelfEnergy::SelfEnergy(const json &j, Tspace &spc) : spc(spc) {
     name = "selfenergy";
     type = j.at("type");
     rc = j.at("cutoff");
+    alpha = j.at("alpha");
+    kappa = j.at("kappa");
+    C = j.at("C");
+    D = j.at("D");
     epsr = j.at("epsr");
     lB = pc::lB(epsr);
     if (type == "fanourgakis")
         selfenergy_prefactor = 0.875;
+    if (type == "poisson")
+        selfenergy_prefactor = double(C+D)/double(C);
     if (type == "qpotential")
         selfenergy_prefactor = 0.5;
+    if (type == "ewald")
+        selfenergy_prefactor = (2.0*alpha/std::sqrt(pc::pi)*std::exp(-kappa*kappa/4.0/alpha/alpha) - kappa*std::erfc(kappa/2.0/alpha));
 }
 double SelfEnergy::energy(Change &change) {
     double Eq = 0;

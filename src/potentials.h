@@ -121,9 +121,6 @@ class WeeksChandlerAndersen : public LennardJones {
   private:
     static constexpr double onefourth = 0.25, twototwosixth = 1.2599210498948732;
 
-  public:
-    WeeksChandlerAndersen(const std::string &name = "wca");
-
     inline double operator()(const Particle &a, const Particle &b, double r2) const {
         double x = m->s2(a.id, b.id); // s^2
         if (r2 > x * twototwosixth)
@@ -132,6 +129,9 @@ class WeeksChandlerAndersen : public LennardJones {
         x = x * x * x; // (s/r)^6
         return m->eps(a.id, b.id) * (x * x - x + onefourth);
     }
+
+  public:
+    WeeksChandlerAndersen(const std::string &name = "wca");
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return operator()(a, b, r.squaredNorm());
@@ -419,11 +419,6 @@ class CoulombGalore : public PairPotentialBase {
     void sfWolf(const json &j);
     void sfPlain(const json &j, double val = 1);
 
-  public:
-    CoulombGalore(const std::string &name = "coulomb");
-
-    void from_json(const json &j) override;
-
     inline double operator()(const Particle &a, const Particle &b, double r2) const {
         if (r2 < rc2) {
             double r = std::sqrt(r2);
@@ -431,6 +426,11 @@ class CoulombGalore : public PairPotentialBase {
         }
         return 0;
     }
+
+  public:
+    CoulombGalore(const std::string &name = "coulomb");
+
+    void from_json(const json &j) override;
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return operator()(a, b, r.squaredNorm());

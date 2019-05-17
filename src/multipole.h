@@ -69,7 +69,7 @@ namespace Potential {
  * @brief Returns the factorial of 'n'. Note that 'n' must be positive semidefinite.
  * @note Calculated at compile time and thus have no run-time overhead.
  */
-constexpr unsigned int factorial(unsigned int n) { return n == 0 ? 1 : n * factorial(n - 1); }
+constexpr unsigned int factorial(unsigned int n) { return n <= 1 ? 1 : n * factorial(n - 1); }
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] Factorial") {
     CHECK(factorial(0) == 1);

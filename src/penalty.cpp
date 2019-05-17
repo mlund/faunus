@@ -167,7 +167,6 @@ void PenaltyMPI::update(const std::vector<double> &c) {
     if (++cnt % this->nupdate == 0 and f0 > 0) {
 
         int min = histo.minCoeff(); // if min>0 --> all RC's visited
-        MPI_Barrier(mpi.comm);      // wait for all walkers to reach here
         MPI_Allgather(&min, 1, MPI_INT, weights.data(), 1, MPI_INT, mpi.comm);
 
         // if at least one walker has sampled full RC space at least `samplings` times
@@ -191,21 +190,21 @@ void PenaltyMPI::update(const std::vector<double> &c) {
 
             // at this point, *all* penalty functions shall be identical
 
-            // save penalty function to disk
+            /* save penalty function to disk
             if (mpi.isMaster()) {
                 std::ofstream f(file + ".walkersync" + std::to_string(nconv));
                 if (f) {
                     f.precision(16);
                     f << "# " << f0 << " " << samplings << " " << nconv << "\n" << penalty.array() << endl;
                 }
-            }
+            }*/
 
-            // save histogram to disk
+            /* save histogram to disk
             std::ofstream f(MPI::prefix + hisfile + ".walkersync" + std::to_string(nconv));
             if (f) {
                 f << histo << endl;
                 f.close();
-            }
+            }*/
 
             // print information to console
             if (min > 0 and not quiet) {

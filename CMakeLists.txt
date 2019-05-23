@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.11.4 FATAL_ERROR)
 
 project(faunus)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 find_package(PythonInterp 3 REQUIRED)

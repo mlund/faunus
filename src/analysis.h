@@ -39,7 +39,7 @@ class Analysisbase {
     void from_json(const json &j); //!< configure from json object
     void to_disk();                //!< Save data to disk (if defined)
     virtual void sample();
-    virtual ~Analysisbase();
+    virtual ~Analysisbase() = default;
 };
 
 void to_json(json &j, const Analysisbase &base);
@@ -275,7 +275,7 @@ class MoleculeRDF : public PairFunctionBase {
 class XTCtraj : public Analysisbase {
     std::vector<int> molids;        // molecule ids to save to disk
     std::vector<std::string> names; // molecule names of above
-    std::function<bool(Particle &)> filter = [](Particle &) { return true; };
+    std::function<bool(Particle &)> filter; // function to filter molecule ids
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;

@@ -24,6 +24,8 @@ void SpeciationMove::_move(Change &change) {
         if (rit->empty(forward)) // Enforce canonic constraint if invoked
             return;              // Out of material, slip out the back door
 
+        change.dN = true;                                 // Attempting to change the number of atoms / molecules
+
         for (auto &m : rit->Molecules2Add(not forward)) { // Delete checks
             auto mollist = spc.findMolecules(m.first, Tspace::ALL);
             if (molecules[m.first].atomic) {
@@ -79,7 +81,7 @@ void SpeciationMove::_move(Change &change) {
 
         bondenergy = 0;
 
-        change.dN = true;                                 // Attempting to change the number of atoms / molecules
+        // change.dN = true;                                 // Attempting to change the number of atoms / molecules
         for (auto &m : rit->Molecules2Add(not forward)) { // Delete
             auto mollist = spc.findMolecules(m.first, Tspace::ALL);
             if (molecules[m.first].atomic) {

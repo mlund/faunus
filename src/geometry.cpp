@@ -59,7 +59,6 @@ namespace Faunus {
                 default:
                     throw std::invalid_argument("unsupported volume scaling method for the cuboid geometry");
             }
-            
             new_box = box.cwiseProduct(box_scaling);
             setLength(new_box);
             assert(fabs(getVolume() - volume) < 1e-6);

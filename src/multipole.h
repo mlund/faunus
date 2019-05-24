@@ -69,7 +69,7 @@ namespace Potential {
  * @brief Returns the factorial of 'n'. Note that 'n' must be positive semidefinite.
  * @note Calculated at compile time and thus have no run-time overhead.
  */
-constexpr unsigned int factorial(unsigned int n) { return n == 0 ? 1 : n * factorial(n - 1); }
+constexpr unsigned int factorial(unsigned int n) { return n <= 1 ? 1 : n * factorial(n - 1); }
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] Factorial") {
     CHECK(factorial(0) == 1);
@@ -79,6 +79,53 @@ TEST_CASE("[Faunus] Factorial") {
     CHECK(factorial(10) == 3628800);
 }
 #endif
+
+/**
+ * @brief Help-function for `sfQpotential` using order 3.
+*/
+inline void _DipoleDipoleQ2Help_3(double &a3, double &b3, double q) {
+    double q2 = q*q;
+    a3 = ( ( (-5.0 * q2 + 8.0 / 3.0 * q)*q + q)*q + 1.0 / 3.0)*q2 + 1.0;
+    b3 = -2.0 / 3.0 * (  (15.0 * q2 - 10.0 * q - 5.0 )*q2 + 1.0) * q2;
+}
+
+/**
+ * @brief Help-function for `sfQpotential` using order 4.
+*/
+inline void _DipoleDipoleQ2Help_4(double &a4, double &b4, double q) {
+    double q2 = q*q;
+    double q3 = q2*q;
+    a4 = ( ( (10.0 * q2 - 9.0 * q - 8.0 )*q3 + 10.0 )*q3 - 2.0 )*q - 1.0;
+    b4 = ( ( ( 21.0 * q2 - 16.0 * q - 35.0 / 3.0 )*q3 + 16.0 / 3.0 )*q3 + 1.0 / 3.0 )*q2 + 1.0;
+}
+
+/**
+* @brief Help-function for `sfQpotential`.
+*/
+inline double _DipoleDipoleQ2Help(double q, int l=0, int P=300, bool all=true) {
+    if(q >= 1.0 - (1.0/2400.0))
+        return 0.0;
+    if(q <= (1.0/2400.0) && all)
+        return 1.0;
+    if(q <= (1.0/2400.0) && !all)
+        return 0.0;
+
+    double Q = 0.0;
+    double T = 0.0;
+    double qP = 1.0; // Will end as q-Pochhammer Symbol, (q^l;q)_P
+    double fac = pow(q,l);
+    for( int n = 1; n <= P; n++) {
+        double temp2 = (n + l)/(1.0 - pow(q,(n+l)));
+        fac *= q;
+        Q -= temp2*fac;
+        T -= temp2*temp2*fac;
+        qP *= (1.0 - fac);
+    }
+
+    if(!all)
+        return qP*(-Q + T + Q*Q)/3.0;
+    return qP*(-Q + T + Q*Q - 3.0*Q + 3.0)/3.0;
+}
 
 /**
  * @brief Help-function for the q-potential in class CoulombGalore
@@ -108,6 +155,11 @@ TEST_CASE("[Faunus] qPochhammerSymbol") {
 
 } // namespace Potential
 
+/**
+ * @brief Returns the total charge for a set of particles
+ * @param begin First particle
+ * @param end Last particle
+ */
 template <class Titer> double monopoleMoment(Titer begin, Titer end) {
     double z = 0;
     for (auto it = begin; it != end; ++it)
@@ -115,6 +167,13 @@ template <class Titer> double monopoleMoment(Titer begin, Titer end) {
     return z;
 } //!< Calculates dipole moment vector for a set of particles
 
+/**
+ * @brief Returns the total dipole-moment for a set of particles
+ * @param begin First particle
+ * @param end Last particle
+ * @param boundary Function to use for boundary
+ * @param cutoff Cut-off for included particles with regard to origin, default value is infinite
+ */
 template <class Titer, class BoundaryFunction>
 Point dipoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {},
                    double cutoff = pc::infty) {
@@ -128,13 +187,21 @@ Point dipoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](const 
     return mu;
 } //!< Calculates dipole moment vector
 
+/**
+ * @brief Returns the total quadrupole-moment for a set of particles, note with trace!
+ * @param begin First particle
+ * @param end Last particle
+ * @param boundary Function to use for boundary
+ * @param origin Origin for quadrupole-moment, default (0,0,0)
+ * @param cutoff Cut-off for included particles with regard to origin, default value is infinite
+ */
 template <class Titer, class BoundaryFunction>
-Tensor quadrupoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {},
+Tensor quadrupoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](const Point &) {}, Point origin={0,0,0},
                         double cutoff = pc::infty) {
     Tensor theta;
     theta.setZero();
     for (auto it = begin; it != end; ++it) {
-        Point t = it->pos - begin->pos;
+        Point t = it->pos - begin->pos - origin;
         boundary(t);
         if (t.squaredNorm() < cutoff * cutoff)
             theta += t * t.transpose() * it->charge;
@@ -142,13 +209,19 @@ Tensor quadrupoleMoment(Titer begin, Titer end, BoundaryFunction boundary = [](c
     return 0.5 * theta;
 } //!< Calculates quadrupole moment tensor (with trace)
 
+/**
+ * @brief Converts a group to a multipole-particle
+ * @param g Group
+ * @param boundary Function to use for boundary
+ * @param cutoff Cut-off for included particles with regard to origin, default value is infinite
+ */
 template <class Tgroup, class BoundaryFunction>
 auto toMultipole(const Tgroup &g, BoundaryFunction boundary = [](const Point &) {}, double cutoff = pc::infty) {
     Particle m;
     m.pos = g.cm;
     m.charge = Faunus::monopoleMoment(g.begin(), g.end());                // monopole
     m.getExt().mu = Faunus::dipoleMoment(g.begin(), g.end(), boundary, cutoff);    // dipole
-    m.getExt().Q = Faunus::quadrupoleMoment(g.begin(), g.end(), boundary, cutoff); // quadrupole
+    m.getExt().Q = Faunus::quadrupoleMoment(g.begin(), g.end(), boundary, m.pos, cutoff); // quadrupole
     m.getExt().mulen = m.getExt().mu.norm();
     if (m.getExt().mulen > 1e-9)
         m.getExt().mu.normalize();

@@ -51,7 +51,7 @@ moves:
 analysis:
     - savestate: {file: state.json}
     - savestate: {file: confout.pqr}
-    - systemenergy: {file: energy.dat, nstep: 1e2}
-    - sliceddensity: {file: HD.dat, nstep: 1e2, atoms: [HD], dz: 0.5}
-    - sliceddensity: {file: TL.dat, nstep: 1e2, atoms: [TL], dz: 0.5}
-    - sanity: {nstep: 1e2}
+    - systemenergy: {file: energy.dat, nstep: 100}
+    - sliceddensity: {file: HD.dat, nstep: 100, atoms: [HD], dz: 0.5}
+    - sliceddensity: {file: TL.dat, nstep: 100, atoms: [TL], dz: 0.5}
+    - sanity: {nstep: 100}

@@ -295,7 +295,7 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
 class SelfEnergy : public Energybase {
   private:
     std::string type;
-    double selfenergy_prefactor, epsr, lB, rc, alpha, kappa;
+    double selfenergy_ion_prefactor, selfenergy_dipole_prefactor, epsr, lB, rc, alpha, kappa, epsrf;
     int C, D;
     Space &spc;
 

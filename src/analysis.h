@@ -39,7 +39,7 @@ class Analysisbase {
     void from_json(const json &j); //!< configure from json object
     void to_disk();                //!< Save data to disk (if defined)
     virtual void sample();
-    virtual ~Analysisbase();
+    virtual ~Analysisbase() = default;
 };
 
 void to_json(json &j, const Analysisbase &base);
@@ -253,6 +253,18 @@ class PairFunctionBase : public Analysisbase {
     virtual ~PairFunctionBase();
 };
 
+class PairAngleFunctionBase : public PairFunctionBase {
+  protected:
+    Equidistant2DTable<double, Average<double>> hist2;
+
+  private:
+    void _from_json(const json &j);
+
+  public:
+    PairAngleFunctionBase(const json &j);
+    virtual ~PairAngleFunctionBase();
+};
+
 /** @brief Atomic radial distribution function, g(r) */
 class AtomRDF : public PairFunctionBase {
     Space &spc;
@@ -271,11 +283,19 @@ class MoleculeRDF : public PairFunctionBase {
     MoleculeRDF(const json &j, Space &spc);
 };
 
+/** @brief Dipole-dipole correlation function, <\boldsymbol{\mu}(0)\cdot\boldsymbol{\mu}(r)> */
+class AtomDipDipCorr : public PairAngleFunctionBase {
+    Space &spc;
+    void _sample() override;
+  public:
+    AtomDipDipCorr(const json &j, Space &spc);
+};
+
 /** @brief Write XTC trajectory file */
 class XTCtraj : public Analysisbase {
     std::vector<int> molids;        // molecule ids to save to disk
     std::vector<std::string> names; // molecule names of above
-    std::function<bool(Particle &)> filter = [](Particle &) { return true; };
+    std::function<bool(Particle &)> filter; // function to filter molecule ids
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override;

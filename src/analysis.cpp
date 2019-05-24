@@ -10,8 +10,6 @@ namespace Analysis {
 
 void to_json(json &j, const Analysisbase &base) { base.to_json(j); }
 
-Analysisbase::~Analysisbase() {}
-
 /*
  * This is always called by the destructor, but may be called
  * any number of times earlier.
@@ -240,6 +238,21 @@ void PairFunctionBase::_from_json(const json &j) {
     Rhypersphere = j.value("Rhyper", -1.0);
 }
 
+PairAngleFunctionBase::PairAngleFunctionBase(const json &j) : PairFunctionBase(j) { from_json(j); }
+
+PairAngleFunctionBase::~PairAngleFunctionBase() {
+    std::ofstream f(MPI::prefix + file);
+    if (f) {
+        hist2.stream_decorator = [&](std::ostream &o, double r, double N) {
+            o << r << " " << N << "\n";
+        };
+        f << hist2;
+    }
+    file = file+".hist.dat"; // make sure that the file is not overwritten by base-destructor
+}
+
+void PairAngleFunctionBase::_from_json(const json &j) { hist2.setResolution(dr, 0); }
+
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {
         double Vold = getVolume(), Uold = pot.energy(c);
@@ -326,6 +339,8 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             push_back<AtomProfile>(it.value(), spc);
                         else if (it.key() == "atomrdf")
                             push_back<AtomRDF>(it.value(), spc);
+                        else if (it.key() == "atomdipdipcorr")
+                            push_back<AtomDipDipCorr>(it.value(), spc);
                         else if (it.key() == "density")
                             push_back<Density>(it.value(), spc);
                         else if (it.key() == "chargefluctuations")
@@ -711,20 +726,69 @@ MoleculeRDF::MoleculeRDF(const json &j, Space &spc) : PairFunctionBase(j), spc(s
     id2 = it->id();
     assert(id1 >= 0 && id2 >= 0);
 }
+
+void AtomDipDipCorr::_sample() {
+    V += spc.geo.getVolume(dim);
+    auto active = spc.activeParticles();
+    for (auto i = active.begin(); i != active.end(); ++i)
+        for (auto j = i; ++j != active.end();)
+            if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
+                Point rvec = spc.geo.vdist(i->pos, j->pos);
+                if (slicedir.sum() > 0) {
+                    if (rvec.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
+                        // rvec = rvec.cwiseProduct( Point(1.,1.,1.) - slice.cast<double>() );
+                        double dipdip = i->getExt().mu.dot(j->getExt().mu);
+                        double r1 = rvec.norm();
+                        hist2(r1) += dipdip;
+                        hist(r1)++; // get g(r) for free
+                    }
+                } else {
+                    double dipdip = i->getExt().mu.dot(j->getExt().mu);
+                    double r1 = rvec.norm();
+                    hist2(r1) += dipdip;
+                    hist(r1)++; // get g(r) for free
+                }
+            }
+}
+AtomDipDipCorr::AtomDipDipCorr(const json &j, Space &spc) : PairAngleFunctionBase(j), spc(spc) {
+    name = "atomdipdipcorr";
+    auto it = findName(atoms, name1);
+    if (it == atoms.end())
+        throw std::runtime_error("unknown atom '" + name1 + "'");
+    id1 = it->id();
+
+    it = findName(atoms, name2);
+    if (it == atoms.end())
+        throw std::runtime_error("unknown atom '" + name2 + "'");
+    id2 = it->id();
+}
+
+// =============== XTCtraj ===============
+
+XTCtraj::XTCtraj(const json &j, Space &s) : filter([](Particle &) { return true; }), xtc(1e6), spc(s) {
+    from_json(j);
+    name = "xtcfile";
+    assert(filter); // filter must be callable
+}
+
 void XTCtraj::_to_json(json &j) const {
     j["file"] = file;
     if (not names.empty())
         j["molecules"] = names;
 }
+
 void XTCtraj::_from_json(const json &j) {
     file = MPI::prefix + j.at("file").get<std::string>();
+
+    // By default, *all* active and inactive groups are saved,
+    // but here allow for a user defined list of molecule ids
     names = j.value("molecules", std::vector<std::string>());
     if (not names.empty()) {
-        molids = Faunus::names2ids(Faunus::molecules, names);
+        molids = Faunus::names2ids(Faunus::molecules, names); // molecule types to save
         if (not molids.empty())
             filter = [&](Particle &i) {
-                for (auto &g : spc.groups)
-                    if (g.contains(i, true)) { // does group contain particle? (include inactive part)
+                for (auto &g : spc.groups)     // loop over all active and inactive groups
+                    if (g.contains(i, true)) { // does group contain particle?
                         if (std::find(molids.begin(), molids.end(), g.id) != molids.end())
                             return true;
                         else
@@ -734,17 +798,18 @@ void XTCtraj::_from_json(const json &j) {
             };
     };
 }
+
 void XTCtraj::_sample() {
-    xtc.setbox(spc.geo.getLength());
+    xtc.setbox(spc.geo.getLength()); // set box dimensions for frame
+    assert(filter);                  // filter must be callable
     auto particles = ranges::view::filter(spc.p, filter);
     bool rc = xtc.save(file, particles.begin(), particles.end());
     if (rc == false)
-        std::cerr << "error saving xtc\n";
+        std::cerr << "error saving xtc" << std::endl;
 }
-XTCtraj::XTCtraj(const json &j, Space &s) : xtc(1e6), spc(s) {
-    from_json(j);
-    name = "xtcfile";
-}
+
+// =============== MultipoleDistribution ===============
+
 double MultipoleDistribution::g2g(const MultipoleDistribution::Tgroup &g1, const MultipoleDistribution::Tgroup &g2) {
     double u = 0;
     for (auto &i : g1)
@@ -772,8 +837,8 @@ void MultipoleDistribution::save() const {
     }
 }
 void MultipoleDistribution::_sample() {
-    for (auto &gi : spc.findMolecules(ids[0]))
-        for (auto &gj : spc.findMolecules(ids[1]))
+    for (auto &gi : spc.findMolecules(ids[0]))     // find active molecules
+        for (auto &gj : spc.findMolecules(ids[1])) // find active molecules
             if (gi != gj) {
                 auto a = Faunus::toMultipole(gi, spc.geo.getBoundaryFunc());
                 auto b = Faunus::toMultipole(gj, spc.geo.getBoundaryFunc());
@@ -787,7 +852,9 @@ void MultipoleDistribution::_sample() {
                 d.mucorr += a.getExt().mu.dot(b.getExt().mu);
             }
 }
+
 void MultipoleDistribution::_to_json(json &j) const { j = {{"molecules", names}, {"file", filename}, {"dr", dr}}; }
+
 MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(spc) {
     from_json(j);
     name = "Multipole Distribution";
@@ -798,7 +865,11 @@ MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(sp
     if (ids.size() != 2)
         throw std::runtime_error("specify exactly two molecules");
 }
+
 MultipoleDistribution::~MultipoleDistribution() { save(); }
+
+// =============== PolymerShape ===============
+
 void PolymerShape::_to_json(json &j) const {
     using namespace u8;
     json &k = j["molecules"];

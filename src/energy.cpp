@@ -154,33 +154,61 @@ SelfEnergy::SelfEnergy(const json &j, Space &spc) : spc(spc) {
     rc = j.at("cutoff");
     alpha = j.at("alpha");
     kappa = j.at("kappa");
+    epsrf = j.at("epsrf");
     C = j.at("C");
     D = j.at("D");
     epsr = j.at("epsr");
     lB = pc::lB(epsr);
-    if (type == "fanourgakis")
-        selfenergy_prefactor = 0.875;
-    if (type == "poisson")
-        selfenergy_prefactor = double(C+D)/double(C);
-    if (type == "qpotential")
-        selfenergy_prefactor = 0.5;
-    if (type == "ewald")
-        selfenergy_prefactor = (2.0*alpha/std::sqrt(pc::pi)*std::exp(-kappa*kappa/4.0/alpha/alpha) - kappa*std::erfc(kappa/2.0/alpha));
+    selfenergy_ion_prefactor = 0.0;
+    selfenergy_dipole_prefactor = 0.0;
+    if (type == "reactionfield") {
+        selfenergy_ion_prefactor = 1.5 * epsrf / (2.0 * epsrf + epsr); // Correct?!, see Eq.14 in DOI: 10.1021/jp510612w
+        selfenergy_dipole_prefactor = 2.0*(epsr - epsrf)/(2.0*epsrf + epsr); // Preliminary, needs to be checked!
+    }
+    if (type == "fanourgakis") {
+        selfenergy_ion_prefactor = -0.875;
+        selfenergy_dipole_prefactor = 0.0; // check this!
+    }
+    if (type == "poisson") {
+        selfenergy_ion_prefactor = -double(C+D)/double(C);
+        selfenergy_dipole_prefactor = 0.0; // check this!
+    }
+    if (type == "qpotential" || type == "q2potential") {
+        selfenergy_ion_prefactor = -1.0;
+        selfenergy_dipole_prefactor = -1.0;
+    }
+    if (type == "fennell") {
+        selfenergy_ion_prefactor = -(erfc(alpha*rc) + alpha*rc / sqrt(pc::pi) * (1.0 + exp(-alpha*alpha*rc*rc)));
+        selfenergy_dipole_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) + (4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
+    }
+    if (type == "wolf") {
+        selfenergy_ion_prefactor = -0.5*(erfc(alpha*rc) + 2.0*alpha*rc / sqrt(pc::pi));
+        selfenergy_dipole_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) + (4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
+    }
+    if (type == "ewald") {
+        selfenergy_ion_prefactor = -alpha*rc/std::sqrt(pc::pi);
+        selfenergy_dipole_prefactor = -2.0*pow(alpha*rc,3.0)/3.0/std::sqrt(pc::pi);
+    }
 }
 double SelfEnergy::energy(Change &change) {
     double Eq = 0;
+    double Emu = 0;
     if (change.dN)
         for (auto cg : change.groups) {
             auto g = spc.groups.at(cg.index);
             for (auto i : cg.atoms)
-                if (i < g.size())
+                if (i < g.size()) {
                     Eq += std::pow((g.begin() + i)->charge, 2);
+                    Emu += std::pow((g.begin() + i)->getExt().mulen, 2);
+                }
         }
     else if (change.all and not change.dV)
         for (auto g : spc.groups)
-            for (auto i : g)
+            for (auto i : g) {
                 Eq += i.charge * i.charge;
-    return -selfenergy_prefactor * Eq * lB / rc;
+                Emu += i.getExt().mulen * i.getExt().mulen;
+            }
+    return ( selfenergy_ion_prefactor * Eq / rc + selfenergy_dipole_prefactor*Emu/pow(rc,3.0) )*lB;
 }
 Isobaric::Isobaric(const json &j, Space &spc) : spc(spc) {
     name = "isobaric";
@@ -355,6 +383,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
     typedef CombinedPairPotential<CoulombGalore, LennardJones> CoulombLJ;
+    typedef CombinedPairPotential<DipoleDipoleGalore, LennardJones> Stockmayer;
     typedef CombinedPairPotential<CoulombGalore, HardSphere> CoulombHS;
     typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen> CoulombWCA;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
@@ -372,6 +401,9 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
             try {
                 if (it.key() == "nonbonded_coulomblj")
                     push_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc);
+
+                if (it.key() == "nonbonded_stockmayer")
+                    push_back<Energy::Nonbonded<Stockmayer>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_coulomblj_EM")
                     push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc);

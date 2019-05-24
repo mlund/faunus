@@ -82,21 +82,21 @@ void Faunus::Potential::CoulombGalore::sfQpotential(const Faunus::json &j) {
     order = j.value("order", 300);
     table = sf.generate([&](double q) { return qPochhammerSymbol(q, 1, order); }, 0, 1);
     calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = 0.5;
+    selfenergy_prefactor = -1.0;
 }
 
 void Faunus::Potential::CoulombGalore::sfYonezawa(const Faunus::json &j) {
     alpha = j.at("alpha");
     table = sf.generate([&](double q) { return 1 - std::erfc(alpha * rc) * q + q * q; }, 0, 1);
     calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = erf(alpha * rc);
+    selfenergy_prefactor = -0.5*(erfc(alpha*rc) + 2.0*alpha*rc / sqrt(pc::pi));
 }
 
 void Faunus::Potential::CoulombGalore::sfFanourgakis(const Faunus::json &) {
     table =
         sf.generate([&](double q) { return 1 - 1.75 * q + 5.25 * pow(q, 5) - 7 * pow(q, 6) + 2.5 * pow(q, 7); }, 0, 1);
     calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = 0.875;
+    selfenergy_prefactor = -0.875;
 }
 
 void Faunus::Potential::CoulombGalore::sfPoisson(const Faunus::json &j) {
@@ -133,7 +133,7 @@ void Faunus::Potential::CoulombGalore::sfFennel(const Faunus::json &j) {
                        (alpha * alpha * rc * rc * alpha * alpha * rc * rc + 2.0 * alpha * alpha * rc * rc + 3.0);
         return (((T + 2.0) * M2V + 1.0) / ((T - 1.0) * M2V + 1.0));
     };
-    selfenergy_prefactor = (erfc(alpha * rc) / 2.0 + alpha * rc / sqrt(pc::pi));
+    selfenergy_prefactor = -(erfc(alpha*rc) + alpha*rc / sqrt(pc::pi) * (1.0 + exp(-alpha*alpha*rc*rc)));
 }
 
 void Faunus::Potential::CoulombGalore::sfEwald(const Faunus::json &j) { // is all this true for kappa \ne 0 ?
@@ -146,7 +146,7 @@ void Faunus::Potential::CoulombGalore::sfEwald(const Faunus::json &j) { // is al
                    (2 / (3 * sqrt(pc::pi))) * std::exp(-alpha * alpha * rc * rc) * (2 * alpha * alpha * rc * rc + 3);
         return ((T + 2.0) * M2V + 1) / ((T - 1) * M2V + 1);
     };
-    selfenergy_prefactor = (erfc(alpha * rc) + alpha * rc / sqrt(pc::pi) * (1.0 + std::exp(-alpha * alpha * rc2)));
+    selfenergy_prefactor = alpha * rc / sqrt(pc::pi);
 }
 
 void Faunus::Potential::CoulombGalore::sfWolf(const Faunus::json &j) {
@@ -157,7 +157,7 @@ void Faunus::Potential::CoulombGalore::sfWolf(const Faunus::json &j) {
                    (2 / (3 * sqrt(pc::pi))) * exp(-alpha * alpha * rc * rc) * (2.0 * alpha * alpha * rc * rc + 3.0);
         return (((T + 2.0) * M2V + 1.0) / ((T - 1.0) * M2V + 1.0));
     };
-    selfenergy_prefactor = (erfc(alpha * rc) + alpha * rc / sqrt(pc::pi) * (1.0 + exp(-alpha * alpha * rc2)));
+    selfenergy_prefactor = -0.5*(erfc(alpha*rc) + 2.0*alpha*rc / sqrt(pc::pi));
 }
 
 void Faunus::Potential::CoulombGalore::sfPlain(const Faunus::json &, double val) {
@@ -260,6 +260,165 @@ void Faunus::Potential::CoulombGalore::to_json(Faunus::json &j) const {
     _roundjson(j, 5);
 }
 
+void Faunus::Potential::DipoleDipoleGalore::sfReactionField(const Faunus::json &j) { // Preliminary, needs to be checked!
+    epsrf = j.at("epsrf");
+    tableA = sfA.generate( [&](double q) { return 1.0;  },0,1 );
+    tableB = sfB.generate( [&](double q) { return -(2*(epsrf-epsr)/(2*epsrf+epsr))/epsr*q*q*q; },0,1 );
+    calcDielectric = [&](double M2V) {
+        if(epsrf > 1e10)
+            return 1 + 3*M2V;
+        if(fabs(epsrf-epsr) < 1e-6)
+            return 2.25*M2V + 0.25 + 0.75*sqrt(9*M2V*M2V + 2*M2V + 1);
+        if(fabs(epsrf-1.0) < 1e-6)
+            return ( 2*M2V + 1 ) / ( 1 - M2V );
+        return 0.5 * ( 2*epsrf - 1 + sqrt( -72*M2V*M2V*epsrf + 4*epsrf*epsrf + 4*epsrf + 1) ) / ( 3*M2V-1 ); // Needs to be checked!
+        //return (6*M2V*epsrf + 2*epsrf + 1.0)/(1.0 + 2*epsrf - 3*M2V); // Is OK when epsr=1.0
+        };
+    selfenergy_prefactor = 2.0*(epsr - epsrf)/(2.0*epsrf + epsr); // Preliminary, needs to be checked!
+}
+
+void Faunus::Potential::DipoleDipoleGalore::sfQ2potential(const Faunus::json &j) { // Preliminary, needs to be checked!
+    order = j.at("order");
+    tableA = sfA.generate( [&](double q) { return qPochhammerSymbol(q,3,order);  },0,1 );
+    tableB = sfB.generate( [&](double q) { return 0.0; },0,1 );
+    calcDielectric = [&](double M2V) { return (2*M2V + 1.0)/(1.0 - M2V); };
+    selfenergy_prefactor = -1.0;
+}
+
+void Faunus::Potential::DipoleDipoleGalore::sfQpotential(const Faunus::json &j) { // Preliminary, needs to be checked!
+    order = j.at("order");
+    tableA = sfA.generate( [&](double q) { return _DipoleDipoleQ2Help(q,0,order); },0,1 );
+    tableB = sfB.generate( [&](double q) { return _DipoleDipoleQ2Help(q,0,order,false); },0,1 );
+    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+    selfenergy_prefactor = -1.0;
+}
+
+void Faunus::Potential::DipoleDipoleGalore::sfFanourgakis(const Faunus::json &j) { // Preliminary, needs to be checked!
+    tableA = sfA.generate( [&](double q) { return ( 1.0 + 14.0*pow(q,5) - 35.0*pow(q,6) + 20.0*pow(q,7) ); },0,1 );
+    tableB = sfB.generate( [&](double q) { return 35.0*pow(q,5)*( 1.0 - 2.0*q + q*q ); },0,1 );
+    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+    selfenergy_prefactor = 0.0; // Seems so but is it really correct? Check!
+}
+
+void Faunus::Potential::DipoleDipoleGalore::sfFennell(const Faunus::json &j) {
+    alpha = j.at("alpha");
+    double ar = alpha*rc;
+
+    tableA = sfA.generate( [&](double q) {
+      double a = erfc(ar*q) + 2.0/std::sqrt(pc::pi)*exp(-ar*ar*q*q)*ar*q*(1.0 + ar*ar*q*q*2.0/3.0);
+      double ac = erfc(ar) + 2.0/std::sqrt(pc::pi)*exp(-ar*ar)*ar*(1.0 + ar*ar*2.0/3.0);
+      double dac = 3.0*erf(ar)-3.0-(6.0 + 4.0*pow(ar,2.0) + 8.0/3.0*pow(ar,4.0))*ar*exp(-ar*ar)/std::sqrt(pc::pi);
+      return ( a - ac - (q-1.0)*dac ); },0,1 );
+    tableB = sfB.generate( [&](double q) {
+      double b = 4.0/3.0/std::sqrt(pc::pi)*pow(ar*q,3.0)*exp(-ar*ar*q*q);
+      double bc = 4.0/3.0/std::sqrt(pc::pi)*pow(ar,3.0)*exp(-ar*ar);
+      double dbc = -8.0/3.0/std::sqrt(pc::pi)*pow(ar,5.0)*exp(-ar*ar);
+      return ( b - bc - (q-1.0)*dbc ); },0,1 );
+    calcDielectric = [&](double M2V) { double T = erf(ar) - (2 / (3 * sqrt(pc::pi))) * exp(-ar*ar) * ar * (ar*ar*ar*ar + 2.0 * ar*ar + 3.0);
+        return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0)); };
+    selfenergy_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) + (4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
+}
+
+void Faunus::Potential::DipoleDipoleGalore::sfWolf(const Faunus::json &j) {
+    alpha = j.at("alpha");
+    double ar = alpha*rc;
+
+    tableA = sfA.generate( [&](double q) {
+      double a = erfc(ar*q) + 2.0/std::sqrt(pc::pi)*exp(-ar*ar*q*q)*ar*q*(1.0 + ar*ar*q*q*2.0/3.0);
+      double ac = erfc(ar) + 2.0/std::sqrt(pc::pi)*exp(-ar*ar)*ar*(1.0 + ar*ar*2.0/3.0);
+      return ( a - ac ); },0,1 );
+    tableB = sfB.generate( [&](double q) {
+      double b = 4.0/3.0/std::sqrt(pc::pi)*pow(ar*q,3.0)*exp(-ar*ar*q*q);
+      double bc = 4.0/3.0/std::sqrt(pc::pi)*pow(ar,3.0)*exp(-ar*ar);
+      return ( b - bc ); },0,1 );
+    calcDielectric = [&](double M2V) {
+        double T = erf(ar) - (2 / (3 * sqrt(pc::pi))) * exp(-ar*ar) * (2.0 * ar*ar + 3.0); // check!
+        return (((T + 2.0) * M2V + 1.0) / ((T - 1.0) * M2V + 1.0));
+    };
+    selfenergy_prefactor = -0.5*( erfc(ar) + 2.0*ar/sqrt(pc::pi)*exp(-ar*ar) + (4.0/3.0)*pow(ar,3.0)/sqrt(pc::pi) );
+}
+
+void Faunus::Potential::DipoleDipoleGalore::sfEwald(const Faunus::json &j) {
+    alpha = j.at("alpha");
+    double ar = alpha*rc;
+
+    tableA = sfA.generate( [&](double q) { return ( erfc(ar*q) + 2.0*exp(-ar*ar*q*q)*ar*q*(1.0 + ar*ar*q*q*2.0/3.0)/std::sqrt(pc::pi) ); },0,1 );
+    tableB = sfB.generate( [&](double q) { return exp(-ar*ar*q*q)*4.0/3.0*pow(ar*q,3.0)/std::sqrt(pc::pi); },0,1 );
+    calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
+    selfenergy_prefactor = -2.0/3.0*pow(alpha,3.0)/std::sqrt(pc::pi);
+}
+
+void Faunus::Potential::DipoleDipoleGalore::sfPlain(const Faunus::json &, double val) {
+    tableA = sfA.generate([&](double) { return val; }, 0, 1);
+    tableB = sfB.generate([&](double) { return 0; }, 0, 1);
+    calcDielectric = [&](double M2V) { return (2.0 * M2V + 1.0) / (1.0 - M2V); };
+    selfenergy_prefactor = 0.0;
+}
+
+Faunus::Potential::DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) { PairPotentialBase::name = name; }
+
+void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
+    try {
+        kappa = 0.0;
+        type = j.at("type");
+        rc = j.at("cutoff");
+        rc2 = rc * rc;
+        rc1i = 1 / rc;
+        epsr = j.at("epsr");
+        lB = pc::lB(epsr);
+
+        depsdt = j.value("depsdt", -0.368 * pc::temperature / epsr);
+        sfA.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
+        sfB.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
+
+        if (type == "plain")
+            sfPlain(j, 1);
+        if (type == "none")
+            sfPlain(j, 0);
+        if (type == "ewald")
+            sfEwald(j);
+        if (type == "wolf")
+            sfWolf(j);
+        if (type == "fennell")
+            sfFennell(j);
+        if (type == "fanourgakis")
+            sfFanourgakis(j);
+        if (type == "qpotential")
+            sfQpotential(j);
+        if (type == "q2potential")
+            sfQ2potential(j);
+        if (type=="reactionfield")
+            sfReactionField(j);
+
+        if (tableA.empty() || tableB.empty())
+            throw std::runtime_error(name + ": unknown dipole-dipole type '" + type + "'");
+    }
+
+    catch (std::exception &e) {
+        std::cerr << "DipoleDipoleGalore error: " << e.what();
+        throw;
+    }
+}
+
+double Faunus::Potential::DipoleDipoleGalore::dielectric_constant(double M2V) { return calcDielectric(M2V); }
+
+void Faunus::Potential::DipoleDipoleGalore::to_json(Faunus::json &j) const {
+    using namespace u8;
+    j["epsr"] = epsr;
+    j["T" + partial + epsilon_m + "/" + partial + "T"] = depsdt;
+    j["lB"] = lB;
+    j["cutoff"] = rc;
+    j["type"] = type;
+    if (type == "wolf" || type == "fennell" || type == "ewald")
+        j["alpha"] = alpha;
+    if (type == "qpotential" || type == "q2potential")
+        j["order"] = order;
+    if (type == "reactionfield")
+        j["epsrf"] = epsrf;
+
+    _roundjson(j, 5);
+}
+
 Faunus::Potential::Coulomb::Coulomb(const std::string &name) { PairPotentialBase::name = name; }
 
 void Faunus::Potential::Coulomb::to_json(Faunus::json &j) const {
@@ -268,6 +427,15 @@ void Faunus::Potential::Coulomb::to_json(Faunus::json &j) const {
 }
 
 void Faunus::Potential::Coulomb::from_json(const Faunus::json &j) { lB = pc::lB(j.at("epsr")); }
+
+Faunus::Potential::DipoleDipole::DipoleDipole(const std::string &name) { PairPotentialBase::name = name; }
+
+void Faunus::Potential::DipoleDipole::to_json(Faunus::json &j) const {
+    j["epsr"] = pc::lB2epsr(lB);
+    j["lB"] = lB;
+}
+
+void Faunus::Potential::DipoleDipole::from_json(const Faunus::json &j) { lB = pc::lB(j.at("epsr")); }
 
 Faunus::Potential::FENE::FENE(const std::string &name) { PairPotentialBase::name = name; }
 
@@ -616,9 +784,13 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
                         else if (it.key() == "pmwca")
                             _u = std::get<9>(potlist) = it.value();
                         else if (it.key() == "hertz")
-                            _u = std::get<10>(potlist) = it.value();
+                            _u = std::get<10>(potlist) = i;
                         else if (it.key() == "squarewell")
-                            _u = std::get<11>(potlist) = it.value();
+                            _u = std::get<11>(potlist) = i;
+                        else if (it.key() == "dipoledipole")
+                            _u = std::get<12>(potlist) = i;
+                        else if (it.key() == "stockmayer")
+                            _u = std::get<13>(potlist) = it.value();
                         // place additional potentials here...
                     } catch (std::exception &e) {
                         throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() +

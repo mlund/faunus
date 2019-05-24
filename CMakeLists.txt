@@ -464,6 +464,12 @@ add_test(
     WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(
+    NAME stockmayer
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} stockmayer.yml\
+    | $<TARGET_FILE:faunus> --quiet"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
+
+add_test(
     NAME membrane
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} membrane.yml\
     | $<TARGET_FILE:faunus> --quiet --state membrane.state.json\
@@ -536,6 +542,7 @@ install(FILES
     ${EXAMPLES_DIR}/speciation.yml
     ${EXAMPLES_DIR}/speciation.out.json
     ${EXAMPLES_DIR}/speciation.state.json
+    ${EXAMPLES_DIR}/stockmayer.yml
     ${EXAMPLES_DIR}/swapconf.yml
     ${EXAMPLES_DIR}/swapconf.out.json
     ${EXAMPLES_DIR}/swapconf.state.json

@@ -305,13 +305,13 @@ QRtraj::QRtraj(const json &j, Space &spc) {
 }
 
 void CombinedAnalysis::sample() {
-    for (auto i : this->vec)
-        i->sample();
+    for (auto &ptr : this->vec)
+        ptr->sample();
 }
 
 CombinedAnalysis::~CombinedAnalysis() {
-    for (auto i : this->vec)
-        i->to_disk();
+    for (auto &ptr : this->vec)
+        ptr->to_disk();
 }
 CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonian &pot) {
     if (j.is_array())
@@ -748,8 +748,13 @@ void XTCtraj::_from_json(const json &j) {
 
 void XTCtraj::_sample() {
     xtc.setbox(spc.geo.getLength()); // set box dimensions for frame
-    assert(filter);                  // filter must be callable
-    auto particles = ranges::view::filter(spc.p, filter);
+
+    // On some gcc/clang and certain ubuntu/macos combinations,
+    // the ranges::view::filter(rng,unaryp) clears the `filter` function.
+    // Using the ranges piping seem to solve the issue.
+    assert(filter);
+    auto particles = spc.p | ranges::view::filter(filter);
+    assert(filter);
     bool rc = xtc.save(file, particles.begin(), particles.end());
     if (rc == false)
         std::cerr << "error saving xtc" << std::endl;

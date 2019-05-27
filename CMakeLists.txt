@@ -544,6 +544,8 @@ install(FILES
     ${EXAMPLES_DIR}/speciation.out.json
     ${EXAMPLES_DIR}/speciation.state.json
     ${EXAMPLES_DIR}/stockmayer.yml
+    ${EXAMPLES_DIR}/stockmayer.out.json
+    ${EXAMPLES_DIR}/stockmayer.state.json
     ${EXAMPLES_DIR}/swapconf.yml
     ${EXAMPLES_DIR}/swapconf.out.json
     ${EXAMPLES_DIR}/swapconf.state.json

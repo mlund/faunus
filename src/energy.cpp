@@ -152,25 +152,36 @@ SelfEnergy::SelfEnergy(const json &j, Space &spc) : spc(spc) {
     name = "selfenergy";
     type = j.at("type");
     rc = j.at("cutoff");
-    alpha = j.at("alpha");
-    kappa = j.at("kappa");
-    epsrf = j.at("epsrf");
-    C = j.at("C");
-    D = j.at("D");
     epsr = j.at("epsr");
     lB = pc::lB(epsr);
+
     selfenergy_ion_prefactor = 0.0;
     selfenergy_dipole_prefactor = 0.0;
     if (type == "reactionfield") {
+        epsrf = j.at("epsrf");
         selfenergy_ion_prefactor = 1.5 * epsrf / (2.0 * epsrf + epsr); // Correct?!, see Eq.14 in DOI: 10.1021/jp510612w
         selfenergy_dipole_prefactor = 2.0*(epsr - epsrf)/(2.0*epsrf + epsr); // Preliminary, needs to be checked!
     }
     if (type == "fanourgakis") {
         selfenergy_ion_prefactor = -0.875;
-        selfenergy_dipole_prefactor = 0.0; // check this!
+        selfenergy_dipole_prefactor = 0.0;
     }
     if (type == "poisson") {
+        C = j.at("C");
+        D = j.at("D");
         selfenergy_ion_prefactor = -double(C+D)/double(C);
+        selfenergy_dipole_prefactor = 0.0; // check this!
+    }
+    if (type == "yukawapoisson") {
+        C = j.at("C");
+        D = j.at("D");
+        kappa = j.at("kappa");
+        selfenergy_ion_prefactor = -double(C+D)/double(C);
+        selfenergy_dipole_prefactor = 0.0; // check this!
+    }
+    if (type == "yukawa") {
+        kappa = j.at("kappa");
+        selfenergy_ion_prefactor = 0.0; // check this!
         selfenergy_dipole_prefactor = 0.0; // check this!
     }
     if (type == "qpotential" || type == "q2potential") {
@@ -178,14 +189,17 @@ SelfEnergy::SelfEnergy(const json &j, Space &spc) : spc(spc) {
         selfenergy_dipole_prefactor = -1.0;
     }
     if (type == "fennell") {
+        alpha = j.at("alpha");
         selfenergy_ion_prefactor = -(erfc(alpha*rc) + alpha*rc / sqrt(pc::pi) * (1.0 + exp(-alpha*alpha*rc*rc)));
         selfenergy_dipole_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) + (4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
     }
     if (type == "wolf") {
+        alpha = j.at("alpha");
         selfenergy_ion_prefactor = -0.5*(erfc(alpha*rc) + 2.0*alpha*rc / sqrt(pc::pi));
         selfenergy_dipole_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) + (4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
     }
     if (type == "ewald") {
+        alpha = j.at("alpha");
         selfenergy_ion_prefactor = -alpha*rc/std::sqrt(pc::pi);
         selfenergy_dipole_prefactor = -2.0*pow(alpha*rc,3.0)/3.0/std::sqrt(pc::pi);
     }

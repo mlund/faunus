@@ -3,21 +3,21 @@
         {
             "sanity": {
                 "nstep": 100,
-                "samples": 10
+                "samples": 5
             }
         },
         {
             "systemenergy": {
-                "Cv/kB": 2501.9,
+                "Cv/kB": 1152.3,
                 "file": "energy.dat",
                 "final": [
-                    -8172.358185322463
+                    -8183.879293460568
                 ],
-                "init": -8264.3,
-                "mean": -8211.0,
+                "init": -8174.7,
+                "mean": -8177.8,
                 "nstep": 10,
-                "relative time": 0.0182,
-                "samples": 100
+                "relative time": 0.0181,
+                "samples": 50
             }
         },
         {
@@ -28,8 +28,8 @@
                 "name1": "dip",
                 "name2": "dip",
                 "nstep": 1,
-                "relative time": 0.0833,
-                "samples": 1000,
+                "relative time": 0.083,
+                "samples": 500,
                 "slicedir": [
                     0,
                     0,
@@ -46,8 +46,8 @@
                 "name1": "dip",
                 "name2": "dip",
                 "nstep": 1,
-                "relative time": 0.111,
-                "samples": 1000,
+                "relative time": 0.11,
+                "samples": 500,
                 "slicedir": [
                     0,
                     0,
@@ -95,7 +95,7 @@
                             ]
                         }
                     },
-                    "relative time": 0.37815463755620327
+                    "relative time": 0.385705557127526
                 }
             ]
         }
@@ -108,7 +108,7 @@
         ],
         "type": "cuboid"
     },
-    "git revision": "03cd568 (2019-05-24)",
+    "git revision": "ca2335e (2019-05-27)",
     "groups": [
         {
             "sol": {
@@ -132,8 +132,8 @@
                 ],
                 "molecule": "sol",
                 "molid": 0,
-                "moves": 1000000,
-                "relative time": 0.782,
+                "moves": 500000,
+                "relative time": 0.783,
                 "repeat": 1000,
                 "√⟨r²⟩": 0.108
             }
@@ -142,6 +142,6 @@
     "number of groups": 1,
     "number of particles": 1000,
     "reactionlist": null,
-    "relative drift": -4.402029673889988e-14,
+    "relative drift": -1.7022298020807828e-14,
     "temperature": 315.8
 }

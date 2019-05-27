@@ -20,7 +20,7 @@ struct PairPotentialBase {
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
-    virtual double selfEnergy(Particle&);
+    virtual double selfEnergy(const Particle &) const; //!< Some potentials may give rise to a self energy (default: 0)
 }; //!< Base for all pair-potentials
 
 void to_json(json &j, const PairPotentialBase &base);   //!< Serialize any pair potential to json
@@ -44,7 +44,7 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
         return first.force(a, b, r2, p) + second.force(a, b, r2, p);
     } //!< Combine force
 
-    inline Point selfEnergy(const Particle &a) {
+    inline double selfEnergy(const Particle &a) const override {
         return first.selfEnergy(a) + second.selfEnergy(a);
     } //!< Combine self-energies
 
@@ -423,7 +423,6 @@ class CoulombGalore : public PairPotentialBase {
     int order;
     unsigned int C, D;
 
-    double selfEnergy(Particle &a);
     void sfYukawa(const json &j);
     void sfReactionField(const json &j);
     void sfQpotential(const json &j);
@@ -446,8 +445,8 @@ class CoulombGalore : public PairPotentialBase {
 
   public:
     CoulombGalore(const std::string &name = "coulomb");
-
     void from_json(const json &j) override;
+    double selfEnergy(const Particle &) const override;
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return operator()(a, b, r.squaredNorm());
@@ -483,11 +482,10 @@ class DipoleDipoleGalore : public PairPotentialBase {
     std::function<double(double)> calcDielectric; // function for dielectric const. calc.
     std::string type;
     double selfenergy_prefactor;
-    double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
+    double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa;
     int order;
-    unsigned int C, D;
+    // unsigned int C, D;
 
-    double selfEnergy(Particle &a);
     void sfEwald(const json &j);
     void sfReactionField(const json &j);
     void sfQ0potential(const json &j);
@@ -499,8 +497,8 @@ class DipoleDipoleGalore : public PairPotentialBase {
 
   public:
     DipoleDipoleGalore(const std::string &name = "dipoledipole");
-
     void from_json(const json &j) override;
+    double selfEnergy(const Particle &) const override;
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         double r1 = r.norm();
@@ -512,9 +510,7 @@ class DipoleDipoleGalore : public PairPotentialBase {
         return 0.0;
     }
 
-    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const {
-        return Point(0, 0, 0);
-    }
+    inline Point force(const Particle &, const Particle &, double, const Point &) const { return {0, 0, 0}; }
 
     /**
      * @brief Self-energy of the potential
@@ -600,6 +596,10 @@ class FunctorPotential : public PairPotentialBase {
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     typedef CombinedPairPotential<DipoleDipole, LennardJones> Stockmayer;
 
+    std::function<double(const Particle &)> self_energy_functor = [](const Particle &) { return 0; };
+    bool have_monopole_self_energy = false;
+    bool have_dipole_self_energy = false;
+
     // List of pair-potential instances used when constructing functors.
     // Note that potentials w. large memory requirements (LJ, WCA etc.)
     // typically use `shared_ptr` so that the created functors _share_
@@ -629,14 +629,13 @@ class FunctorPotential : public PairPotentialBase {
 
   public:
     FunctorPotential(const std::string &name = "") { PairPotentialBase::name = name; }
+    void to_json(json &j) const override;
+    void from_json(const json &j) override;
+    double selfEnergy(const Particle &) const override;
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return umatrix(a.id, b.id)(a, b, r); // pc::infty;
     }
-
-    void to_json(json &j) const override;
-
-    void from_json(const json &j) override;
 };
 
 /**
@@ -794,6 +793,19 @@ TEST_CASE("[Faunus] Pair Potentials") {
     }
 }
 #endif
+
+/**
+ * @brief Sum self-energies for a particle range
+ *
+ * Pair potentials may give rise to self-energies, for example
+ * cut-off based schemes for electrostatic interactions.
+ */
+template <typename Titer> double sumPairPotentialSelfEnergy(Titer begin, Titer end, const PairPotentialBase &pairpot) {
+    double u = 0;
+    for (auto it = begin; it != end; ++it)
+        u += pairpot.selfEnergy(*it);
+    return u;
+}
 
 } // end of namespace Potential
 } // end of namespace Faunus

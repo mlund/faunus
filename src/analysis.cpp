@@ -251,7 +251,7 @@ PairAngleFunctionBase::~PairAngleFunctionBase() {
     file = file+".hist.dat"; // make sure that the file is not overwritten by base-destructor
 }
 
-void PairAngleFunctionBase::_from_json(const json &j) { hist2.setResolution(dr, 0); }
+void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0); }
 
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {

@@ -253,6 +253,18 @@ class PairFunctionBase : public Analysisbase {
     virtual ~PairFunctionBase();
 };
 
+class PairAngleFunctionBase : public PairFunctionBase {
+  protected:
+    Equidistant2DTable<double, Average<double>> hist2;
+
+  private:
+    void _from_json(const json &j);
+
+  public:
+    PairAngleFunctionBase(const json &j);
+    virtual ~PairAngleFunctionBase();
+};
+
 /** @brief Atomic radial distribution function, g(r) */
 class AtomRDF : public PairFunctionBase {
     Space &spc;
@@ -269,6 +281,14 @@ class MoleculeRDF : public PairFunctionBase {
     void _sample() override;
   public:
     MoleculeRDF(const json &j, Space &spc);
+};
+
+/** @brief Dipole-dipole correlation function, <\boldsymbol{\mu}(0)\cdot\boldsymbol{\mu}(r)> */
+class AtomDipDipCorr : public PairAngleFunctionBase {
+    Space &spc;
+    void _sample() override;
+  public:
+    AtomDipDipCorr(const json &j, Space &spc);
 };
 
 /** @brief Write XTC trajectory file */

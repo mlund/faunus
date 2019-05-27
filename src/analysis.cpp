@@ -238,6 +238,21 @@ void PairFunctionBase::_from_json(const json &j) {
     Rhypersphere = j.value("Rhyper", -1.0);
 }
 
+PairAngleFunctionBase::PairAngleFunctionBase(const json &j) : PairFunctionBase(j) { from_json(j); }
+
+PairAngleFunctionBase::~PairAngleFunctionBase() {
+    std::ofstream f(MPI::prefix + file);
+    if (f) {
+        hist2.stream_decorator = [&](std::ostream &o, double r, double N) {
+            o << r << " " << N << "\n";
+        };
+        f << hist2;
+    }
+    file = file+".hist.dat"; // make sure that the file is not overwritten by base-destructor
+}
+
+void PairAngleFunctionBase::_from_json(const json &j) { hist2.setResolution(dr, 0); }
+
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {
         double Vold = getVolume(), Uold = pot.energy(c);
@@ -324,6 +339,8 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             push_back<AtomProfile>(it.value(), spc);
                         else if (it.key() == "atomrdf")
                             push_back<AtomRDF>(it.value(), spc);
+                        else if (it.key() == "atomdipdipcorr")
+                            push_back<AtomDipDipCorr>(it.value(), spc);
                         else if (it.key() == "density")
                             push_back<Density>(it.value(), spc);
                         else if (it.key() == "chargefluctuations")
@@ -708,6 +725,42 @@ MoleculeRDF::MoleculeRDF(const json &j, Space &spc) : PairFunctionBase(j), spc(s
         throw std::runtime_error(name + ": unknown molecule '" + name2 + "'\n");
     id2 = it->id();
     assert(id1 >= 0 && id2 >= 0);
+}
+
+void AtomDipDipCorr::_sample() {
+    V += spc.geo.getVolume(dim);
+    auto active = spc.activeParticles();
+    for (auto i = active.begin(); i != active.end(); ++i)
+        for (auto j = i; ++j != active.end();)
+            if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
+                Point rvec = spc.geo.vdist(i->pos, j->pos);
+                if (slicedir.sum() > 0) {
+                    if (rvec.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
+                        // rvec = rvec.cwiseProduct( Point(1.,1.,1.) - slice.cast<double>() );
+                        double dipdip = i->getExt().mu.dot(j->getExt().mu);
+                        double r1 = rvec.norm();
+                        hist2(r1) += dipdip;
+                        hist(r1)++; // get g(r) for free
+                    }
+                } else {
+                    double dipdip = i->getExt().mu.dot(j->getExt().mu);
+                    double r1 = rvec.norm();
+                    hist2(r1) += dipdip;
+                    hist(r1)++; // get g(r) for free
+                }
+            }
+}
+AtomDipDipCorr::AtomDipDipCorr(const json &j, Space &spc) : PairAngleFunctionBase(j), spc(spc) {
+    name = "atomdipdipcorr";
+    auto it = findName(atoms, name1);
+    if (it == atoms.end())
+        throw std::runtime_error("unknown atom '" + name1 + "'");
+    id1 = it->id();
+
+    it = findName(atoms, name2);
+    if (it == atoms.end())
+        throw std::runtime_error("unknown atom '" + name2 + "'");
+    id2 = it->id();
 }
 
 // =============== XTCtraj ===============

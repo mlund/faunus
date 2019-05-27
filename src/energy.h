@@ -56,7 +56,7 @@ struct EwaldData {
     Eigen::VectorXd Aks;         // 1xK, to minimize computational effort (Eq.24,DOI:10.1063/1.481216)
     Eigen::VectorXcd Qion, Qdip; // 1xK
     double alpha, rc, kc, check_k2_zero, lB;
-    double const_inf, eps_surf;
+    double const_inf, eps_surf, kappa, kappa2;
     bool spherical_sum = true;
     bool ipbc = false;
     int kVectorsInUse = 0;
@@ -295,7 +295,8 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
 class SelfEnergy : public Energybase {
   private:
     std::string type;
-    double selfenergy_prefactor, epsr, lB, rc;
+    double selfenergy_ion_prefactor, selfenergy_dipole_prefactor, epsr, lB, rc, alpha, kappa, epsrf;
+    int C, D;
     Space &spc;
 
   public:

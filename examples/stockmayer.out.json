@@ -1,0 +1,147 @@
+{
+    "analysis": [
+        {
+            "sanity": {
+                "nstep": 100,
+                "samples": 5
+            }
+        },
+        {
+            "systemenergy": {
+                "Cv/kB": 1152.3,
+                "file": "energy.dat",
+                "final": [
+                    -8183.879293460568
+                ],
+                "init": -8174.7,
+                "mean": -8177.8,
+                "nstep": 10,
+                "relative time": 0.0181,
+                "samples": 50
+            }
+        },
+        {
+            "atomrdf": {
+                "dim": 3,
+                "dr": 0.1,
+                "file": "rdf.dat",
+                "name1": "dip",
+                "name2": "dip",
+                "nstep": 1,
+                "relative time": 0.083,
+                "samples": 500,
+                "slicedir": [
+                    0,
+                    0,
+                    0
+                ],
+                "thickness": 0.0
+            }
+        },
+        {
+            "atomdipdipcorr": {
+                "dim": 3,
+                "dr": 0.1,
+                "file": "mumu.dat",
+                "name1": "dip",
+                "name2": "dip",
+                "nstep": 1,
+                "relative time": 0.11,
+                "samples": 500,
+                "slicedir": [
+                    0,
+                    0,
+                    0
+                ],
+                "thickness": 0.0
+            }
+        },
+        {
+            "savestate": {
+                "file": "confout.pqr"
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        }
+    ],
+    "compiler": "5.4.0 20160609",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": {
+                            "sol sol": null
+                        },
+                        "pairpot": {
+                            "default": [
+                                {
+                                    "dipoledipole": {
+                                        "alpha": 0.231,
+                                        "cutoff": 14.4315,
+                                        "epsr": 1,
+                                        "epsrf": 130,
+                                        "type": "fennell"
+                                    }
+                                },
+                                {
+                                    "lennardjones": {
+                                        "mixing": "LB"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "relative time": 0.385705557127526
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            29.6336,
+            29.6336,
+            29.6336
+        ],
+        "type": "cuboid"
+    },
+    "git revision": "ca2335e (2019-05-27)",
+    "groups": [
+        {
+            "sol": {
+                "index": [
+                    0,
+                    999
+                ],
+                "size": 1000
+            }
+        }
+    ],
+    "last move": "transrot",
+    "moves": [
+        {
+            "transrot": {
+                "acceptance": 0.155,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "sol",
+                "molid": 0,
+                "moves": 500000,
+                "relative time": 0.783,
+                "repeat": 1000,
+                "√⟨r²⟩": 0.108
+            }
+        }
+    ],
+    "number of groups": 1,
+    "number of particles": 1000,
+    "reactionlist": null,
+    "relative drift": -1.7022298020807828e-14,
+    "temperature": 315.8
+}

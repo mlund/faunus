@@ -56,7 +56,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 `dp=0`        | Translational displacement parameter [Å]
 `dprot=0`     | Rotational displacement parameter [degrees] (will be converted to radians)
 `eps=0`       | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol]
-`mu=[1,0,0]`  | Dipole moment unit vector
+`mu=[0,0,0]`  | Dipole moment vector
 `mulen=0`     | Dipole moment scalar [eÅ]
 `mw=1`        | Molecular weight [g/mol]
 `q=0`         | Valency / partial charge number [$e$]

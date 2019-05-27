@@ -389,7 +389,10 @@ double Faunus::Potential::DipoleDipoleGalore::selfEnergy(const Faunus::Particle 
     return a.getExt().mulen * a.getExt().mulen * selfenergy_prefactor * lB / (rc * rc2);
 }
 
-Faunus::Potential::DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) { PairPotentialBase::name = name; }
+Faunus::Potential::DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) {
+    PairPotentialBase::name = name;
+    isotropic = false; // potential is angular dependent
+}
 
 void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
     try {
@@ -461,7 +464,10 @@ void Faunus::Potential::Coulomb::to_json(Faunus::json &j) const {
 
 void Faunus::Potential::Coulomb::from_json(const Faunus::json &j) { lB = pc::lB(j.at("epsr")); }
 
-Faunus::Potential::DipoleDipole::DipoleDipole(const std::string &name) { PairPotentialBase::name = name; }
+Faunus::Potential::DipoleDipole::DipoleDipole(const std::string &name) {
+    PairPotentialBase::name = name;
+    isotropic = false;
+}
 
 void Faunus::Potential::DipoleDipole::to_json(Faunus::json &j) const {
     j["epsr"] = pc::lB2epsr(lB);
@@ -830,6 +836,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
                         else if (it.key() == "squarewell")
                             _u = std::get<11>(potlist) = i;
                         else if (it.key() == "dipoledipole") {
+                            isotropic = false; // potential is now angular dependent
                             _u = std::get<12>(potlist) = i;
                             if (not have_dipole_self_energy) {
                                 self_energy_functor = [&](const Particle &a) {
@@ -837,8 +844,10 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
                                 };
                                 have_dipole_self_energy = true;
                             }
-                        } else if (it.key() == "stockmayer")
+                        } else if (it.key() == "stockmayer") {
                             _u = std::get<13>(potlist) = it.value();
+                            isotropic = true; // potential is now angular dependent
+                        }
                         // place additional potentials here...
                     } catch (std::exception &e) {
                         throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() +
@@ -876,8 +885,14 @@ void FunctorPotential::from_json(const json &j) {
     }
 }
 TabulatedPotential::TabulatedPotential(const std::string &name) { PairPotentialBase::name = name; }
+
 void TabulatedPotential::from_json(const json &j) {
     FunctorPotential::from_json(j);
+
+    // if user specifies an anisotropic potential, make sure to bail out
+    if (not isotropic)
+        throw std::runtime_error("only isotropic pair-potentials can be splined");
+
     tblt.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
     double u_at_rmin = j.value("u_at_rmin", 20);
     double u_at_rmax = j.value("u_at_rmax", 1e-6);

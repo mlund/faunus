@@ -17,6 +17,7 @@ using namespace std::string_literals;
 struct PairPotentialBase {
     std::string name;
     std::string cite;
+    bool isotropic = true; //!< True if pair-potential is independent of particle orientation
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
@@ -793,19 +794,6 @@ TEST_CASE("[Faunus] Pair Potentials") {
     }
 }
 #endif
-
-/**
- * @brief Sum self-energies for a particle range
- *
- * Pair potentials may give rise to self-energies, for example
- * cut-off based schemes for electrostatic interactions.
- */
-template <typename Titer> double sumPairPotentialSelfEnergy(Titer begin, Titer end, const PairPotentialBase &pairpot) {
-    double u = 0;
-    for (auto it = begin; it != end; ++it)
-        u += pairpot.selfEnergy(*it);
-    return u;
-}
 
 } // end of namespace Potential
 } // end of namespace Faunus

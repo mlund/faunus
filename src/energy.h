@@ -16,6 +16,10 @@ namespace ReactionCoordinate {
 struct ReactionCoordinateBase;
 }
 
+namespace Potential {
+struct PairPotentialBase;
+}
+
 namespace Energy {
 
 class Energybase {
@@ -301,7 +305,16 @@ class SelfEnergy : public Energybase {
 
   public:
     SelfEnergy(const json &j, Space &spc);
+    double energy(Change &change) override;
+};
 
+class ParticleSelfEnergy : public Energybase {
+  private:
+    Space &spc;
+    Potential::PairPotentialBase &pairpot;
+
+  public:
+    ParticleSelfEnergy(Space &, Potential::PairPotentialBase &);
     double energy(Change &change) override;
 };
 

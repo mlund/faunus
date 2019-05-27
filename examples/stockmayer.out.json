@@ -8,7 +8,6 @@
         },
         {
             "systemenergy": {
-                "Cv/kB": 1152.3,
                 "file": "energy.dat",
                 "final": [
                     -8183.879293460568

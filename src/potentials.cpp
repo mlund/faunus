@@ -285,7 +285,7 @@ void Faunus::Potential::DipoleDipoleGalore::sfQ2potential(const Faunus::json &j)
     selfenergy_prefactor = -1.0;
 }
 
-void Faunus::Potential::DipoleDipoleGalore::sfQpotential(const Faunus::json &j) { // Preliminary, needs to be checked!
+void Faunus::Potential::DipoleDipoleGalore::sfQ0potential(const Faunus::json &j) { // Preliminary, needs to be checked!
     order = j.at("order");
     tableA = sfA.generate( [&](double q) { return _DipoleDipoleQ2Help(q,0,order); },0,1 );
     tableB = sfB.generate( [&](double q) { return _DipoleDipoleQ2Help(q,0,order,false); },0,1 );
@@ -295,7 +295,7 @@ void Faunus::Potential::DipoleDipoleGalore::sfQpotential(const Faunus::json &j) 
 
 void Faunus::Potential::DipoleDipoleGalore::sfFanourgakis(const Faunus::json &j) { // Preliminary, needs to be checked!
     tableA = sfA.generate( [&](double q) { return ( 1.0 + 14.0*pow(q,5) - 35.0*pow(q,6) + 20.0*pow(q,7) ); },0,1 );
-    tableB = sfB.generate( [&](double q) { return 35.0*pow(q,5)*( 1.0 - 2.0*q + q*q ); },0,1 );
+    tableB = sfB.generate( [&](double q) { return 35.0*pow(q,5)*pow( 1.0 - q,2.0 ); },0,1 );
     calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
     selfenergy_prefactor = 0.0; // Seems so but is it really correct? Check!
 }
@@ -305,15 +305,29 @@ void Faunus::Potential::DipoleDipoleGalore::sfFennell(const Faunus::json &j) {
     double ar = alpha*rc;
 
     tableA = sfA.generate( [&](double q) {
-      double a = erfc(ar*q) + 2.0/std::sqrt(pc::pi)*exp(-ar*ar*q*q)*ar*q*(1.0 + ar*ar*q*q*2.0/3.0);
-      double ac = erfc(ar) + 2.0/std::sqrt(pc::pi)*exp(-ar*ar)*ar*(1.0 + ar*ar*2.0/3.0);
-      double dac = 3.0*erf(ar)-3.0-(6.0 + 4.0*pow(ar,2.0) + 8.0/3.0*pow(ar,4.0))*ar*exp(-ar*ar)/std::sqrt(pc::pi);
-      return ( a - ac - (q-1.0)*dac ); },0,1 );
+      double kq = ar*q;
+      double a = erfc(kq) + 4.0*kq*exp(-kq*kq)*(kq*kq + 1.5)/(3*std::sqrt(pc::pi));
+
+      double kqc = ar; // using q=1 (i.e. r=Rc)
+      double kqc2 = kqc*kqc;
+      double ac = erfc(kqc) + 4.0*kqc*exp(-kqc2)*(kqc2 + 1.5)/(3*std::sqrt(pc::pi));
+
+      double dac = -( 8.0 * ( kqc * ( kqc2*kqc2 + 1.5*kqc2 + 2.25 ) * exp(-kqc2) + 9.0 * 0.125 * std::sqrt(pc::pi) * erfc(kqc) ) ) / ( 3.0 * std::sqrt(pc::pi) );
+
+      double q3 = q*q*q;
+      return ( a - ac*q3 - (q-1.0)*dac*q3 ); },0,1 );
     tableB = sfB.generate( [&](double q) {
-      double b = 4.0/3.0/std::sqrt(pc::pi)*pow(ar*q,3.0)*exp(-ar*ar*q*q);
-      double bc = 4.0/3.0/std::sqrt(pc::pi)*pow(ar,3.0)*exp(-ar*ar);
-      double dbc = -8.0/3.0/std::sqrt(pc::pi)*pow(ar,5.0)*exp(-ar*ar);
-      return ( b - bc - (q-1.0)*dbc ); },0,1 );
+      double kq = ar*q;
+      double b = 4.0*kq*kq*kq*exp(-kq*kq)/(3.0*std::sqrt(pc::pi));
+
+      double kqc = ar; // using q=1 (i.e. r=Rc)
+      double kqc2 = kqc*kqc;
+      double bc = 4.0*kqc2*kqc*exp(-kqc2)/(3.0*std::sqrt(pc::pi));
+
+      double dbc = -8.0*kqc2*kqc2*kqc*exp(-kqc2)/(3.0*std::sqrt(pc::pi));
+
+      double q3 = q*q*q; // compensate for later multiplication with r^-3
+      return ( b - bc*q3 - (q-1.0)*dbc*q3 ); },0,1 );
     calcDielectric = [&](double M2V) { double T = erf(ar) - (2 / (3 * sqrt(pc::pi))) * exp(-ar*ar) * ar * (ar*ar*ar*ar + 2.0 * ar*ar + 3.0);
         return (((T + 2.0) * M2V + 1.0)/ ((T - 1.0) * M2V + 1.0)); };
     selfenergy_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) + (4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
@@ -324,13 +338,23 @@ void Faunus::Potential::DipoleDipoleGalore::sfWolf(const Faunus::json &j) {
     double ar = alpha*rc;
 
     tableA = sfA.generate( [&](double q) {
-      double a = erfc(ar*q) + 2.0/std::sqrt(pc::pi)*exp(-ar*ar*q*q)*ar*q*(1.0 + ar*ar*q*q*2.0/3.0);
-      double ac = erfc(ar) + 2.0/std::sqrt(pc::pi)*exp(-ar*ar)*ar*(1.0 + ar*ar*2.0/3.0);
-      return ( a - ac ); },0,1 );
+      double kq = ar*q;
+      double a = erfc(kq) + 4.0*kq*exp(-kq*kq)*(kq*kq + 1.5)/(3*std::sqrt(pc::pi));
+
+      double kqc = ar; // using q=1 (i.e. r=Rc)
+      double ac = erfc(kqc) + 4.0*kqc*exp(-kqc*kqc)*(kqc*kqc + 1.5)/(3*std::sqrt(pc::pi));
+
+      double q3 = q*q*q;
+      return ( a - ac*q3 ); },0,1 );
     tableB = sfB.generate( [&](double q) {
-      double b = 4.0/3.0/std::sqrt(pc::pi)*pow(ar*q,3.0)*exp(-ar*ar*q*q);
-      double bc = 4.0/3.0/std::sqrt(pc::pi)*pow(ar,3.0)*exp(-ar*ar);
-      return ( b - bc ); },0,1 );
+      double kq = ar*q;
+      double b = 4.0*kq*kq*kq*exp(-kq*kq)/(3.0*std::sqrt(pc::pi));
+
+      double kqc = ar; // using q=1 (i.e. r=Rc)
+      double bc = 4.0*kqc*kqc*kqc*exp(-kqc*kqc)/(3.0*std::sqrt(pc::pi));
+
+      double q3 = q*q*q; // compensate for later multiplication with r^-3
+      return ( b - bc*q3 ); },0,1 );
     calcDielectric = [&](double M2V) {
         double T = erf(ar) - (2 / (3 * sqrt(pc::pi))) * exp(-ar*ar) * (2.0 * ar*ar + 3.0); // check!
         return (((T + 2.0) * M2V + 1.0) / ((T - 1.0) * M2V + 1.0));
@@ -342,8 +366,8 @@ void Faunus::Potential::DipoleDipoleGalore::sfEwald(const Faunus::json &j) {
     alpha = j.at("alpha");
     double ar = alpha*rc;
 
-    tableA = sfA.generate( [&](double q) { return ( erfc(ar*q) + 2.0*exp(-ar*ar*q*q)*ar*q*(1.0 + ar*ar*q*q*2.0/3.0)/std::sqrt(pc::pi) ); },0,1 );
-    tableB = sfB.generate( [&](double q) { return exp(-ar*ar*q*q)*4.0/3.0*pow(ar*q,3.0)/std::sqrt(pc::pi); },0,1 );
+    tableA = sfA.generate( [&](double q) { return ( erfc(ar*q) + 4.0*ar*q*exp(-ar*q*ar*q)*(ar*q*ar*q + 1.5)/(3*std::sqrt(pc::pi)) ); },0,1 );
+    tableB = sfB.generate( [&](double q) { return ( 4.0*ar*q*ar*q*ar*q*exp(-ar*q*ar*q)/(3.0*std::sqrt(pc::pi)) ); },0,1 );
     calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
     selfenergy_prefactor = -2.0/3.0*pow(alpha,3.0)/std::sqrt(pc::pi);
 }
@@ -384,7 +408,7 @@ void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
         if (type == "fanourgakis")
             sfFanourgakis(j);
         if (type == "qpotential")
-            sfQpotential(j);
+            sfQ0potential(j);
         if (type == "q2potential")
             sfQ2potential(j);
         if (type=="reactionfield")

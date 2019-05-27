@@ -373,7 +373,7 @@ void Hamiltonian::addEwald(const json &j, Space &spc) {
                 push_back<Energy::Ewald<>>(j["coulomb"], spc);
 }
 void Hamiltonian::addSelfEnergy(const json &j, Space &spc) {
-    std::vector<std::string> methods = {"qpotential", "fanourgakis"};
+    std::vector<std::string> methods = {"qpotential", "fanourgakis", "wolf", "fennell", "reactionfield", "poisson", "yonezawa", "yukawapoisson", "yukawa"};
     if (j.count("coulomb") == 1)
         if (j["coulomb"].count("type") == 1)
             if (std::find(methods.begin(), methods.end(), j["coulomb"].at("type")) != methods.end())

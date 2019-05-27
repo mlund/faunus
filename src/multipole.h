@@ -100,31 +100,47 @@ inline void _DipoleDipoleQ2Help_4(double &a4, double &b4, double q) {
 }
 
 /**
-* @brief Help-function for `sfQpotential`.
+* @brief Help-function for `sfQ0potential`.
 */
-inline double _DipoleDipoleQ2Help(double q, int l=0, int P=300, bool all=true) {
+inline double _DipoleDipoleQ2Help(double q, int l=0, int P=300, bool a=true) {
     if(q >= 1.0 - (1.0/2400.0))
         return 0.0;
-    if(q <= (1.0/2400.0) && all)
+    if(q <= (1.0/2400.0) && a)
         return 1.0;
-    if(q <= (1.0/2400.0) && !all)
+    if(q <= (1.0/2400.0) && !a)
         return 0.0;
 
-    double Q = 0.0;
-    double T = 0.0;
+    //double Q = 0.0;
+    //double T = 0.0;
     double qP = 1.0; // Will end as q-Pochhammer Symbol, (q^l;q)_P
     double fac = pow(q,l);
-    for( int n = 1; n <= P; n++) {
-        double temp2 = (n + l)/(1.0 - pow(q,(n+l)));
-        fac *= q;
-        Q -= temp2*fac;
-        T -= temp2*temp2*fac;
-        qP *= (1.0 - fac);
-    }
 
-    if(!all)
-        return qP*(-Q + T + Q*Q)/3.0;
-    return qP*(-Q + T + Q*Q - 3.0*Q + 3.0)/3.0;
+    double sum1 = 0.0;
+    double sum2 = 0.0;
+    double sum4 = 0.0;
+    for( int n = 1; n <= P; n++) {
+        //double temp2 = (n + l)/(1.0 - pow(q,(n+l)));
+        //fac *= q; // q^(l+n)
+        //Q -= temp2*fac;
+        //T -= temp2*temp2*fac;
+        qP *= (1.0 - fac);
+
+        double tmp0 = (l+n)*fac/(1.0 - fac);
+        sum2 += tmp0;
+        sum1 += tmp0*(fac + l + n -1.0)/(1 - fac);
+        sum4 += tmp0*(4.0*fac + l + n - 4.0)/(1.0 - fac);
+    }
+    sum2 = sum2*sum2;
+    double ac = qP/3.0*(3.0 - sum4 + sum2);
+    double bc = qP/3.0*(sum2 - sum1);
+
+    if(a)
+        return ac;
+    return bc;
+
+    //if(!a)
+    //    return qP*(-Q + T + Q*Q)/3.0;
+    //return qP*(-Q + T + Q*Q - 3.0*Q + 3.0)/3.0;
 }
 
 /**

@@ -483,7 +483,7 @@ class DipoleDipoleGalore : public PairPotentialBase {
 
     void sfEwald(const json &j);
     void sfReactionField(const json &j);
-    void sfQpotential(const json &j);
+    void sfQ0potential(const json &j);
     void sfQ2potential(const json &j);
     void sfFanourgakis(const json &j);
     void sfFennell(const json &j);
@@ -700,7 +700,7 @@ TEST_CASE("[Faunus] FunctorPotential") {
                 )"_json;
 
     Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
-    WeeksChandlerAndersen<Particle> wca = R"({ "wca" : {"mixing": "LB"} })"_json;
+    WeeksChandlerAndersen wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
     Particle a = atoms[0];
     Particle b = atoms[1];
@@ -717,8 +717,8 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
     using doctest::Approx;
 
     json j = R"({ "atomlist" : [
-                 {"A": { mu: [3.0,0.0,0.0] }},
-                 {"B": { mu: [0.0,3.0,0.0] }} ]})"_json;
+                 {"A": { "mu":[3.0,0.0,0.0] }},
+                 {"B": { "mu":[0.0,3.0,0.0] }} ]})"_json;
 
     atoms = j["atomlist"].get<decltype(atoms)>();
 
@@ -742,7 +742,7 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
     CHECK(u(b, b, r ) == 1.125*dipoledipole.lB);
     CHECK(u(a, b, r ) == 0);
 
-    Point r = {3, 0, 0};
+    r = {3, 0, 0};
     CHECK(u(a, a, r) == Approx(dipoledipole(a, a, r))); // interaction between two parallell dipoles, directed parallell to their seperation
     CHECK(u(b, b, r) == Approx(dipoledipole(b, b, r))); // interaction between two parallell dipoles, directed perpendicular to their seperation
     CHECK(u(a, b, r) == Approx(dipoledipole(a, b, r))); // interaction between two perpendicular dipoles

@@ -466,7 +466,8 @@ add_test(
 add_test(
     NAME stockmayer
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} stockmayer.yml\
-    | $<TARGET_FILE:faunus> --quiet"
+    | $<TARGET_FILE:faunus> --quiet --state stockmayer.state.json\
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} stockmayer.out.json out.json --tol 0.065"
     WORKING_DIRECTORY ${EXAMPLES_DIR})
 
 add_test(

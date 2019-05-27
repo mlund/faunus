@@ -7,6 +7,10 @@ void Faunus::Potential::RepulsionR3::from_json(const Faunus::json &j) {
     s = j.value("sigma", 1.0);
 }
 
+double Faunus::Potential::PairPotentialBase::selfEnergy(Faunus::Particle&) {
+    return 0;
+}
+
 Faunus::Potential::RepulsionR3::RepulsionR3(const std::string &name) { PairPotentialBase::name = name; }
 
 void Faunus::Potential::RepulsionR3::to_json(Faunus::json &j) const {
@@ -166,6 +170,10 @@ void Faunus::Potential::CoulombGalore::sfPlain(const Faunus::json &, double val)
     selfenergy_prefactor = 0.0;
 }
 
+double Faunus::Potential::CoulombGalore::selfEnergy(Faunus::Particle &a) {
+    return a.charge*a.charge*selfenergy_prefactor*lB/rc;
+}
+
 Faunus::Potential::CoulombGalore::CoulombGalore(const std::string &name) { PairPotentialBase::name = name; }
 
 void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
@@ -287,8 +295,8 @@ void Faunus::Potential::DipoleDipoleGalore::sfQ2potential(const Faunus::json &j)
 
 void Faunus::Potential::DipoleDipoleGalore::sfQ0potential(const Faunus::json &j) { // Preliminary, needs to be checked!
     order = j.at("order");
-    tableA = sfA.generate( [&](double q) { return _DipoleDipoleQ2Help(q,0,order); },0,1 );
-    tableB = sfB.generate( [&](double q) { return _DipoleDipoleQ2Help(q,0,order,false); },0,1 );
+    tableA = sfA.generate( [&](double q) { return dipoleDipoleQ2Help(q,0,order); },0,1 );
+    tableB = sfB.generate( [&](double q) { return dipoleDipoleQ2Help(q,0,order,false); },0,1 );
     calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
     selfenergy_prefactor = -1.0;
 }
@@ -379,6 +387,10 @@ void Faunus::Potential::DipoleDipoleGalore::sfPlain(const Faunus::json &, double
     selfenergy_prefactor = 0.0;
 }
 
+double Faunus::Potential::DipoleDipoleGalore::selfEnergy(Faunus::Particle &a) {
+    return a.getExt().mulen*a.getExt().mulen*selfenergy_prefactor*lB/rc/rc2;
+}
+
 Faunus::Potential::DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) { PairPotentialBase::name = name; }
 
 void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
@@ -419,8 +431,7 @@ void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
     }
 
     catch (std::exception &e) {
-        std::cerr << "DipoleDipoleGalore error: " << e.what();
-        throw;
+        throw std::runtime_error(name + ": " + e.what());
     }
 }
 
@@ -435,9 +446,9 @@ void Faunus::Potential::DipoleDipoleGalore::to_json(Faunus::json &j) const {
     j["type"] = type;
     if (type == "wolf" || type == "fennell" || type == "ewald")
         j["alpha"] = alpha;
-    if (type == "qpotential" || type == "q2potential")
+    else if (type == "qpotential" || type == "q2potential")
         j["order"] = order;
-    if (type == "reactionfield")
+    else if (type == "reactionfield")
         j["epsrf"] = epsrf;
 
     _roundjson(j, 5);

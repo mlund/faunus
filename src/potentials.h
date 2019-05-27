@@ -20,6 +20,7 @@ struct PairPotentialBase {
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
+    virtual double selfEnergy(Particle&);
 }; //!< Base for all pair-potentials
 
 void to_json(json &j, const PairPotentialBase &base);   //!< Serialize any pair potential to json
@@ -42,6 +43,10 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) {
         return first.force(a, b, r2, p) + second.force(a, b, r2, p);
     } //!< Combine force
+
+    inline Point selfEnergy(const Particle &a) {
+        return first.selfEnergy(a) + second.selfEnergy(a);
+    } //!< Combine self-energies
 
     void from_json(const json &j) override {
         first = j;
@@ -418,6 +423,7 @@ class CoulombGalore : public PairPotentialBase {
     int order;
     unsigned int C, D;
 
+    double selfEnergy(Particle &a);
     void sfYukawa(const json &j);
     void sfReactionField(const json &j);
     void sfQpotential(const json &j);
@@ -481,6 +487,7 @@ class DipoleDipoleGalore : public PairPotentialBase {
     int order;
     unsigned int C, D;
 
+    double selfEnergy(Particle &a);
     void sfEwald(const json &j);
     void sfReactionField(const json &j);
     void sfQ0potential(const json &j);
@@ -717,8 +724,9 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
     using doctest::Approx;
 
     json j = R"({ "atomlist" : [
-                 {"A": { "mu":[3.0,0.0,0.0] }},
-                 {"B": { "mu":[0.0,3.0,0.0] }} ]})"_json;
+                 {"A": { "mu":[1.0,0.0,0.0], "mulen":3.0 }},
+                 {"B": { "mu":[0.0,1.0,0.0], "mulen":3.0 }},
+                 {"C": { "mu":[1.0,1.0,0.0] }} ]})"_json;
 
     atoms = j["atomlist"].get<decltype(atoms)>();
 
@@ -734,12 +742,15 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
 
     Particle a = atoms[0];
     Particle b = atoms[1];
+    Particle c = atoms[2];
     Point r = {2, 0, 0};
     CHECK(u(a, a, r) == Approx(dipoledipole(a, a, r))); // interaction between two parallell dipoles, directed parallell to their seperation
     CHECK(u(b, b, r) == Approx(dipoledipole(b, b, r))); // interaction between two parallell dipoles, directed perpendicular to their seperation
     CHECK(u(a, b, r) == Approx(dipoledipole(a, b, r))); // interaction between two perpendicular dipoles
     CHECK(u(a, a, r ) == -2.25*dipoledipole.lB);
     CHECK(u(b, b, r ) == 1.125*dipoledipole.lB);
+    CHECK(u(a, c, r ) == -0.75*dipoledipole.lB);
+    CHECK(u(b, c, r ) == 0.375*dipoledipole.lB);
     CHECK(u(a, b, r ) == 0);
 
     r = {3, 0, 0};
@@ -748,6 +759,8 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
     CHECK(u(a, b, r) == Approx(dipoledipole(a, b, r))); // interaction between two perpendicular dipoles
     CHECK(u(a, a, r ) == -(2.0/3.0)*dipoledipole.lB);
     CHECK(u(b, b, r ) == (1.0/3.0)*dipoledipole.lB);
+    CHECK(u(a, c, r ) == -2.0/9.0*dipoledipole.lB);
+    CHECK(u(b, c, r ) == 1.0/9.0*dipoledipole.lB);
     CHECK(u(a, b, r ) == 0);
 }
 

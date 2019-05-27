@@ -397,7 +397,6 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
     typedef CombinedPairPotential<CoulombGalore, LennardJones> CoulombLJ;
-    typedef CombinedPairPotential<DipoleDipoleGalore, LennardJones> Stockmayer;
     typedef CombinedPairPotential<CoulombGalore, HardSphere> CoulombHS;
     typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen> CoulombWCA;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
@@ -415,9 +414,6 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
             try {
                 if (it.key() == "nonbonded_coulomblj")
                     push_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc);
-
-                if (it.key() == "nonbonded_stockmayer")
-                    push_back<Energy::Nonbonded<Stockmayer>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_coulomblj_EM")
                     push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc);

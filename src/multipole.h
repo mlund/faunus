@@ -83,7 +83,7 @@ TEST_CASE("[Faunus] Factorial") {
 /**
  * @brief Help-function for `sfQpotential` using order 3.
 */
-inline void _DipoleDipoleQ2Help_3(double &a3, double &b3, double q) {
+inline void dipoleDipoleQ2Help_3(double &a3, double &b3, double q) {
     double q2 = q*q;
     a3 = ( ( (-5.0 * q2 + 8.0 / 3.0 * q)*q + q)*q + 1.0 / 3.0)*q2 + 1.0;
     b3 = -2.0 / 3.0 * (  (15.0 * q2 - 10.0 * q - 5.0 )*q2 + 1.0) * q2;
@@ -92,7 +92,7 @@ inline void _DipoleDipoleQ2Help_3(double &a3, double &b3, double q) {
 /**
  * @brief Help-function for `sfQpotential` using order 4.
 */
-inline void _DipoleDipoleQ2Help_4(double &a4, double &b4, double q) {
+inline void dipoleDipoleQ2Help_4(double &a4, double &b4, double q) {
     double q2 = q*q;
     double q3 = q2*q;
     a4 = ( ( (10.0 * q2 - 9.0 * q - 8.0 )*q3 + 10.0 )*q3 - 2.0 )*q - 1.0;
@@ -102,7 +102,7 @@ inline void _DipoleDipoleQ2Help_4(double &a4, double &b4, double q) {
 /**
 * @brief Help-function for `sfQ0potential`.
 */
-inline double _DipoleDipoleQ2Help(double q, int l=0, int P=300, bool a=true) {
+inline double dipoleDipoleQ2Help(double q, int l=0, int P=300, bool a=true) {
     if(q >= 1.0 - (1.0/2400.0))
         return 0.0;
     if(q <= (1.0/2400.0) && a)
@@ -110,8 +110,6 @@ inline double _DipoleDipoleQ2Help(double q, int l=0, int P=300, bool a=true) {
     if(q <= (1.0/2400.0) && !a)
         return 0.0;
 
-    //double Q = 0.0;
-    //double T = 0.0;
     double qP = 1.0; // Will end as q-Pochhammer Symbol, (q^l;q)_P
     double fac = pow(q,l);
 
@@ -119,15 +117,12 @@ inline double _DipoleDipoleQ2Help(double q, int l=0, int P=300, bool a=true) {
     double sum2 = 0.0;
     double sum4 = 0.0;
     for( int n = 1; n <= P; n++) {
-        //double temp2 = (n + l)/(1.0 - pow(q,(n+l)));
-        //fac *= q; // q^(l+n)
-        //Q -= temp2*fac;
-        //T -= temp2*temp2*fac;
+        fac *= q; // q^(l+n)
         qP *= (1.0 - fac);
 
         double tmp0 = (l+n)*fac/(1.0 - fac);
         sum2 += tmp0;
-        sum1 += tmp0*(fac + l + n -1.0)/(1 - fac);
+        sum1 += tmp0*(fac + l + n - 1.0)/(1.0 - fac);
         sum4 += tmp0*(4.0*fac + l + n - 4.0)/(1.0 - fac);
     }
     sum2 = sum2*sum2;
@@ -137,10 +132,6 @@ inline double _DipoleDipoleQ2Help(double q, int l=0, int P=300, bool a=true) {
     if(a)
         return ac;
     return bc;
-
-    //if(!a)
-    //    return qP*(-Q + T + Q*Q)/3.0;
-    //return qP*(-Q + T + Q*Q - 3.0*Q + 3.0)/3.0;
 }
 
 /**

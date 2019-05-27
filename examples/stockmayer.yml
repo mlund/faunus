@@ -15,7 +15,7 @@ insertmolecules:
 energy:
  - nonbonded_exact:
     default:
-    - dipoledipole: {type: fennell, epsr: 1, cutoff: 14.4315, alpha: 0.2310, epsrf: 130}
+    - dipoledipole: {type: qpotential, order: 5, epsr: 1, cutoff: 14.4315, alpha: 0.2310, epsrf: 130}
     - lennardjones: {mixing: LB}
 
 moves:

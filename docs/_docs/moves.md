@@ -91,16 +91,12 @@ atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 
 `cluster`      | Description
 -------------- | -----------------------
-<<<<<<< HEAD
 `molecules`    | Array of molecule names; `[*]` selects all 
 `threshold`    | Mass-center threshold for forming a cluster
-=======
-`molecules`    | List of molecule names; `*` selects all 
-`threshold`    | Mass-center threshold for forming a cluster (number or object)
->>>>>>> f976cddb753b7ee6e0ddec696e6760390eadaee1
 `dir=[1,1,1]`  | Directions to translate
 `dprot`        | Rotational displacement (radians)
 `dp`           | Translational displacement
+`spread`       | If false, stops cluster-growth after one layer around centered molecule. Untested!
 `satellites`   | Subset of `molecules` that cannot be cluster centers
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`

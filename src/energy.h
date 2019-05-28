@@ -22,6 +22,8 @@ struct PairPotentialBase;
 
 namespace Energy {
 
+class Hamiltonian;
+
 class Energybase {
   public:
     enum keys { OLD, NEW, NONE };
@@ -514,15 +516,13 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
         return u;
     }
 
-  public:
-    Space &spc;       //!< Space to operate on
-    Tpairpot pairpot; //!< Pair potential
+    // add self energy if appropriate
+    void addPairPotentialSelfEnergy() {
+        if (pairpot.selfEnergy) // only add if self energy is defined
+            pot.push_back<Energy::ParticleSelfEnergy>(spc, pairpot);
+    }
 
-    Nonbonded(const json &j, Space &spc) : spc(spc) {
-        name = "nonbonded";
-        pairpot = j;
-
-        // controls for OpenMP
+    void configureOpenMP(const json &j) {
         auto it = j.find("openmp");
         if (it != j.end())
             if (it->is_array())
@@ -539,13 +539,29 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                     std::cerr << "warning: nonbonded requests unavailable OpenMP." << endl;
 #endif
                 }
+    }
+
+  public:
+    Space &spc; //!< Space to operate on
+    BasePointerVector<Energybase> &pot;
+    Tpairpot pairpot; //!< Pair potential
+
+    Nonbonded(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : spc(spc), pot(pot) {
+        name = "nonbonded";
+        pairpot = j;
+
+        // some pair-potentials give rise to self-energies (Wolf etc.)
+        // which are added here if needed
+        addPairPotentialSelfEnergy();
+
+        configureOpenMP(j);
 
         // disable all group-to-group cutoffs by setting infinity
         for (auto &i : Faunus::molecules)
             for (auto &j : Faunus::molecules)
                 cutoff2.set(i.id(), j.id(), pc::infty);
 
-        it = j.find("cutoff_g2g");
+        auto it = j.find("cutoff_g2g");
         if (it != j.end()) {
             // old style input w. only a single cutoff
             if (it->is_number()) {
@@ -743,7 +759,7 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
     }
 
   public:
-    NonbondedCached(const json &j, Space &spc) : base(j, spc), spc(spc) {
+    NonbondedCached(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : base(j, spc, pot), spc(spc) {
         base::name += "EM";
         init();
     }
@@ -890,10 +906,6 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
     double maxenergy = pc::infty; //!< Maximum allowed energy change
     void to_json(json &j) const override;
     void addEwald(const json &j, Space &spc); //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
-    void
-    addSelfEnergy(const json &j,
-                  Space &spc); //!< Adds an instance of the self term of the electrostatic potential (if appropriate)
-
   public:
     Hamiltonian(Space &spc, const json &j);
     double energy(Change &change) override; //!< Energy due to changes

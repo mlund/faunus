@@ -224,6 +224,30 @@ double SelfEnergy::energy(Change &change) {
             }
     return ( selfenergy_ion_prefactor * Eq / rc + selfenergy_dipole_prefactor*Emu/pow(rc,3.0) )*lB;
 }
+
+// ------------- ParticleSelfEnergy ---------------
+
+ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, Potential::PairPotentialBase &pairpot)
+    : spc(spc), pairpot(pairpot){};
+
+double ParticleSelfEnergy::energy(Change &change) {
+    double u = 0;
+    if (change.dN)
+        for (auto &cg : change.groups) {
+            auto &g = spc.groups.at(cg.index);
+            for (auto i : cg.atoms)
+                if (i < g.size())
+                    u += pairpot.selfEnergy(*(g.begin() + i));
+        }
+    else if (change.all and not change.dV)
+        for (auto &g : spc.groups)
+            for (auto &i : g)
+                u += pairpot.selfEnergy(i);
+    return u;
+}
+
+// ------------- Isobaric ---------------
+
 Isobaric::Isobaric(const json &j, Space &spc) : spc(spc) {
     name = "isobaric";
     cite = "Frenkel & Smith 2nd Ed (Eq. 5.4.13)";
@@ -410,8 +434,12 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
 
     for (auto &m : j.at("energy")) { // loop over move list
         size_t oldsize = vec.size();
+        bool have_nonbonded = false;
         for (auto it = m.begin(); it != m.end(); ++it) {
             try {
+                if (it.key().find("nonbonded") != std::string::npos)
+                    have_nonbonded = true;
+
                 if (it.key() == "nonbonded_coulomblj")
                     push_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc);
 
@@ -484,7 +512,11 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
             } catch (std::exception &e) {
                 throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
             }
-        }
+        } // end of loop over energy input terms
+
+        // if (have_nonbonded) {
+        //    push_back<Energy::ParticleSelfEnergy>(spc);
+        //}
     }
 }
 double Hamiltonian::energy(Change &change) {

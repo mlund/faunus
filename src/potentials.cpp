@@ -7,9 +7,7 @@ void Faunus::Potential::RepulsionR3::from_json(const Faunus::json &j) {
     s = j.value("sigma", 1.0);
 }
 
-double Faunus::Potential::PairPotentialBase::selfEnergy(Faunus::Particle&) {
-    return 0;
-}
+double Faunus::Potential::PairPotentialBase::selfEnergy(const Faunus::Particle &) const { return 0.0; }
 
 Faunus::Potential::RepulsionR3::RepulsionR3(const std::string &name) { PairPotentialBase::name = name; }
 
@@ -170,8 +168,8 @@ void Faunus::Potential::CoulombGalore::sfPlain(const Faunus::json &, double val)
     selfenergy_prefactor = 0.0;
 }
 
-double Faunus::Potential::CoulombGalore::selfEnergy(Faunus::Particle &a) {
-    return a.charge*a.charge*selfenergy_prefactor*lB/rc;
+double Faunus::Potential::CoulombGalore::selfEnergy(const Faunus::Particle &a) const {
+    return a.charge * a.charge * selfenergy_prefactor * lB / rc;
 }
 
 Faunus::Potential::CoulombGalore::CoulombGalore(const std::string &name) { PairPotentialBase::name = name; }
@@ -270,7 +268,7 @@ void Faunus::Potential::CoulombGalore::to_json(Faunus::json &j) const {
 
 void Faunus::Potential::DipoleDipoleGalore::sfReactionField(const Faunus::json &j) { // Preliminary, needs to be checked!
     epsrf = j.at("epsrf");
-    tableA = sfA.generate( [&](double q) { return 1.0;  },0,1 );
+    tableA = sfA.generate([&](double) { return 1.0; }, 0, 1);
     tableB = sfB.generate( [&](double q) { return -(2*(epsrf-epsr)/(2*epsrf+epsr))/epsr*q*q*q; },0,1 );
     calcDielectric = [&](double M2V) {
         if(epsrf > 1e10)
@@ -288,7 +286,7 @@ void Faunus::Potential::DipoleDipoleGalore::sfReactionField(const Faunus::json &
 void Faunus::Potential::DipoleDipoleGalore::sfQ2potential(const Faunus::json &j) { // Preliminary, needs to be checked!
     order = j.at("order");
     tableA = sfA.generate( [&](double q) { return qPochhammerSymbol(q,3,order);  },0,1 );
-    tableB = sfB.generate( [&](double q) { return 0.0; },0,1 );
+    tableB = sfB.generate([&](double) { return 0.0; }, 0, 1);
     calcDielectric = [&](double M2V) { return (2*M2V + 1.0)/(1.0 - M2V); };
     selfenergy_prefactor = -1.0;
 }
@@ -301,7 +299,7 @@ void Faunus::Potential::DipoleDipoleGalore::sfQ0potential(const Faunus::json &j)
     selfenergy_prefactor = -1.0;
 }
 
-void Faunus::Potential::DipoleDipoleGalore::sfFanourgakis(const Faunus::json &j) { // Preliminary, needs to be checked!
+void Faunus::Potential::DipoleDipoleGalore::sfFanourgakis(const Faunus::json &) { // Preliminary, needs to be checked!
     tableA = sfA.generate( [&](double q) { return ( 1.0 + 14.0*pow(q,5) - 35.0*pow(q,6) + 20.0*pow(q,7) ); },0,1 );
     tableB = sfB.generate( [&](double q) { return 35.0*pow(q,5)*pow( 1.0 - q,2.0 ); },0,1 );
     calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
@@ -387,11 +385,14 @@ void Faunus::Potential::DipoleDipoleGalore::sfPlain(const Faunus::json &, double
     selfenergy_prefactor = 0.0;
 }
 
-double Faunus::Potential::DipoleDipoleGalore::selfEnergy(Faunus::Particle &a) {
-    return a.getExt().mulen*a.getExt().mulen*selfenergy_prefactor*lB/rc/rc2;
+double Faunus::Potential::DipoleDipoleGalore::selfEnergy(const Faunus::Particle &a) const {
+    return a.getExt().mulen * a.getExt().mulen * selfenergy_prefactor * lB / (rc * rc2);
 }
 
-Faunus::Potential::DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) { PairPotentialBase::name = name; }
+Faunus::Potential::DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) {
+    PairPotentialBase::name = name;
+    isotropic = false; // potential is angular dependent
+}
 
 void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
     try {
@@ -463,7 +464,10 @@ void Faunus::Potential::Coulomb::to_json(Faunus::json &j) const {
 
 void Faunus::Potential::Coulomb::from_json(const Faunus::json &j) { lB = pc::lB(j.at("epsr")); }
 
-Faunus::Potential::DipoleDipole::DipoleDipole(const std::string &name) { PairPotentialBase::name = name; }
+Faunus::Potential::DipoleDipole::DipoleDipole(const std::string &name) {
+    PairPotentialBase::name = name;
+    isotropic = false;
+}
 
 void Faunus::Potential::DipoleDipole::to_json(Faunus::json &j) const {
     j["epsr"] = pc::lB2epsr(lB);
@@ -798,9 +802,18 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
                     try {
                         if (it.key() == "custom")
                             _u = CustomPairPotential() = it.value();
-                        else if (it.key() == "coulomb")
+
+                        // add Coulomb potential and self-energy
+                        // terms if not already added
+                        else if (it.key() == "coulomb") {
                             _u = std::get<0>(potlist) = i;
-                        else if (it.key() == "cos2")
+                            if (not have_monopole_self_energy) {
+                                self_energy_functor = [&](const Particle &a) {
+                                    return self_energy_functor(a) + std::get<0>(potlist).selfEnergy(a);
+                                };
+                                have_monopole_self_energy = true;
+                            }
+                        } else if (it.key() == "cos2")
                             _u = std::get<1>(potlist) = i;
                         else if (it.key() == "polar")
                             _u = std::get<2>(potlist) = i;
@@ -822,10 +835,19 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
                             _u = std::get<10>(potlist) = i;
                         else if (it.key() == "squarewell")
                             _u = std::get<11>(potlist) = i;
-                        else if (it.key() == "dipoledipole")
+                        else if (it.key() == "dipoledipole") {
+                            isotropic = false; // potential is now angular dependent
                             _u = std::get<12>(potlist) = i;
-                        else if (it.key() == "stockmayer")
+                            if (not have_dipole_self_energy) {
+                                self_energy_functor = [&](const Particle &a) {
+                                    return self_energy_functor(a) + std::get<12>(potlist).selfEnergy(a);
+                                };
+                                have_dipole_self_energy = true;
+                            }
+                        } else if (it.key() == "stockmayer") {
                             _u = std::get<13>(potlist) = it.value();
+                            isotropic = true; // potential is now angular dependent
+                        }
                         // place additional potentials here...
                     } catch (std::exception &e) {
                         throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() +
@@ -843,7 +865,14 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
         throw std::runtime_error("dictionary of potentials required");
     return u;
 }
-void FunctorPotential::to_json(json &j) const { j = _j; }
+
+double FunctorPotential::selfEnergy(const Particle &p) const { return self_energy_functor(p); }
+
+void FunctorPotential::to_json(json &j) const {
+    j = _j;
+    j["selfenergy"] = {{"monopole", have_monopole_self_energy}, {"dipole", have_dipole_self_energy}};
+}
+
 void FunctorPotential::from_json(const json &j) {
     _j = j;
     umatrix = decltype(umatrix)(atoms.size(), combineFunc(j.at("default")));
@@ -856,8 +885,14 @@ void FunctorPotential::from_json(const json &j) {
     }
 }
 TabulatedPotential::TabulatedPotential(const std::string &name) { PairPotentialBase::name = name; }
+
 void TabulatedPotential::from_json(const json &j) {
     FunctorPotential::from_json(j);
+
+    // if user specifies an anisotropic potential, make sure to bail out
+    if (not isotropic)
+        throw std::runtime_error("only isotropic pair-potentials can be splined");
+
     tblt.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
     double u_at_rmin = j.value("u_at_rmin", 20);
     double u_at_rmax = j.value("u_at_rmax", 1e-6);

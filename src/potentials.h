@@ -18,10 +18,10 @@ struct PairPotentialBase {
     std::string name;
     std::string cite;
     bool isotropic = true; //!< True if pair-potential is independent of particle orientation
-    std::function<double(Particle &)> selfEnergy; //!< Some potentials may give rise to a self energy
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
+    virtual double selfEnergy(const Particle &) const; //!< Some potentials may give rise to a self energy (default: 0)
 }; //!< Base for all pair-potentials
 
 void to_json(json &j, const PairPotentialBase &base);   //!< Serialize any pair potential to json
@@ -36,19 +36,7 @@ void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair 
 template <class T1, class T2> struct CombinedPairPotential : public PairPotentialBase {
     T1 first;  //!< First pair potential of type T1
     T2 second; //!< Second pair potential of type T2
-    CombinedPairPotential(const std::string &name = "") {
-        this->name = name;
-        if (first.selfEnergy or second.selfEnergy) {
-            selfEnergy = [&](Particle &p) {
-                if (first.selfEnergy and second.selfEnergy)
-                    return first.selfEnergy(p) + second.selfEnergy(p);
-                if (first.selfEnergy)
-                    return first.selfEnergy(p);
-                return second.selfEnergy(p);
-            };
-        } else
-            selfEnergy = nullptr;
-    }
+    CombinedPairPotential(const std::string &name = "") { this->name = name; }
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return first(a, b, r) + second(a, b, r);
     } //!< Combine pair energy
@@ -56,6 +44,10 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) {
         return first.force(a, b, r2, p) + second.force(a, b, r2, p);
     } //!< Combine force
+
+    inline double selfEnergy(const Particle &a) const override {
+        return first.selfEnergy(a) + second.selfEnergy(a);
+    } //!< Combine self-energies
 
     void from_json(const json &j) override {
         first = j;
@@ -455,6 +447,7 @@ class CoulombGalore : public PairPotentialBase {
   public:
     CoulombGalore(const std::string &name = "coulomb");
     void from_json(const json &j) override;
+    double selfEnergy(const Particle &) const override;
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return operator()(a, b, r.squaredNorm());
@@ -506,6 +499,7 @@ class DipoleDipoleGalore : public PairPotentialBase {
   public:
     DipoleDipoleGalore(const std::string &name = "dipoledipole");
     void from_json(const json &j) override;
+    double selfEnergy(const Particle &) const override;
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         double r1 = r.norm();
@@ -603,10 +597,9 @@ class FunctorPotential : public PairPotentialBase {
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     typedef CombinedPairPotential<DipoleDipole, LennardJones> Stockmayer;
 
-    std::vector<std::function<double(Particle &)>> self_energy_vector;
+    std::function<double(const Particle &)> self_energy_functor = [](const Particle &) { return 0; };
     bool have_monopole_self_energy = false;
     bool have_dipole_self_energy = false;
-    void registerSelfEnergy(PairPotentialBase *); //!< helper func to add to selv_energy_vector
 
     // List of pair-potential instances used when constructing functors.
     // Note that potentials w. large memory requirements (LJ, WCA etc.)
@@ -636,9 +629,10 @@ class FunctorPotential : public PairPotentialBase {
     PairMatrix<uFunc, true> umatrix; // matrix with potential for each atom pair
 
   public:
-    FunctorPotential(const std::string &name = "");
+    FunctorPotential(const std::string &name = "") { PairPotentialBase::name = name; }
     void to_json(json &j) const override;
     void from_json(const json &j) override;
+    double selfEnergy(const Particle &) const override;
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return umatrix(a.id, b.id)(a, b, r); // pc::infty;

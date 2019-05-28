@@ -148,7 +148,6 @@ double ContainerOverlap::energy(Change &change) {
     return 0;
 }
 
-// Remove?
 SelfEnergy::SelfEnergy(const json &j, Space &spc) : spc(spc) {
     name = "selfenergy";
     type = j.at("type");
@@ -228,25 +227,22 @@ double SelfEnergy::energy(Change &change) {
 
 // ------------- ParticleSelfEnergy ---------------
 
-ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, Potential::PairPotentialBase &pairpot) : spc(spc), pairpot(pairpot) {
-    name = "selfenergy";
-};
+ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, Potential::PairPotentialBase &pairpot)
+    : spc(spc), pairpot(pairpot){};
 
 double ParticleSelfEnergy::energy(Change &change) {
     double u = 0;
-    if (pairpot.selfEnergy) {
-        if (change.dN)
-            for (auto &cg : change.groups) {
-                auto &g = spc.groups.at(cg.index);
-                for (auto i : cg.atoms)
-                    if (i < g.size())
-                        u += pairpot.selfEnergy(*(g.begin() + i));
-            }
-        else if (change.all and not change.dV)
-            for (auto &g : spc.groups)
-                for (auto &i : g)
-                    u += pairpot.selfEnergy(i);
-    }
+    if (change.dN)
+        for (auto &cg : change.groups) {
+            auto &g = spc.groups.at(cg.index);
+            for (auto i : cg.atoms)
+                if (i < g.size())
+                    u += pairpot.selfEnergy(*(g.begin() + i));
+        }
+    else if (change.all and not change.dV)
+        for (auto &g : spc.groups)
+            for (auto &i : g)
+                u += pairpot.selfEnergy(i);
     return u;
 }
 
@@ -409,14 +405,18 @@ void Hamiltonian::to_json(json &j) const {
         j.push_back(*i);
 }
 void Hamiltonian::addEwald(const json &j, Space &spc) {
-    // note this will not find deeper placed coulomb potentials
-    // in FunctorPotential etc. Nor dipolar energies
     if (j.count("coulomb") == 1)
         if (j["coulomb"].count("type") == 1)
             if (j["coulomb"].at("type") == "ewald")
                 push_back<Energy::Ewald<>>(j["coulomb"], spc);
 }
-
+void Hamiltonian::addSelfEnergy(const json &j, Space &spc) {
+    std::vector<std::string> methods = {"qpotential", "fanourgakis", "wolf", "fennell", "reactionfield", "poisson", "yonezawa", "yukawapoisson", "yukawa"};
+    if (j.count("coulomb") == 1)
+        if (j["coulomb"].count("type") == 1)
+            if (std::find(methods.begin(), methods.end(), j["coulomb"].at("type")) != methods.end())
+                push_back<Energy::SelfEnergy>(j["coulomb"], spc);
+}
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
@@ -434,36 +434,35 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
 
     for (auto &m : j.at("energy")) { // loop over move list
         size_t oldsize = vec.size();
+        bool have_nonbonded = false;
         for (auto it = m.begin(); it != m.end(); ++it) {
             try {
+                if (it.key().find("nonbonded") != std::string::npos)
+                    have_nonbonded = true;
+
                 if (it.key() == "nonbonded_coulomblj")
-                    push_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
+                    push_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_coulomblj_EM")
-                    push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
+                    push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc);
 
                 if (it.key() == "nonbonded")
-                    push_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc, *this);
+                    push_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_exact")
-                    push_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);
+                    push_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_cached")
-                    push_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc, *this);
+                    push_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_coulombwca")
-                    push_back<Energy::Nonbonded<CoulombWCA>>(it.value(), spc, *this);
+                    push_back<Energy::Nonbonded<CoulombWCA>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_pm" or it.key() == "nonbonded_coulombhs")
-                    push_back<Energy::Nonbonded<PrimitiveModel>>(it.value(), spc, *this);
+                    push_back<Energy::Nonbonded<PrimitiveModel>>(it.value(), spc);
 
                 if (it.key() == "nonbonded_pmwca")
-                    push_back<Energy::Nonbonded<PrimitiveModelWCA>>(it.value(), spc, *this);
-
-                // this should be moved into `Nonbonded` and added when appropriate
-                // Nonbonded now has access to Hamiltonian (*this) and can therefore
-                // add energy terms
-                addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
+                    push_back<Energy::Nonbonded<PrimitiveModelWCA>>(it.value(), spc);
 
                 if (it.key() == "bonded")
                     push_back<Energy::Bonded>(it.value(), spc);
@@ -497,6 +496,10 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                     push_back<Energy::SASAEnergy>(it.value(), spc);
 #endif
                 // additional energies go here...
+
+                addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
+
+                addSelfEnergy(it.value(), spc); // add self-term of electrostatic potential if appropriate
 
                 if (it.key() == "maxenergy") {
                     maxenergy = it.value().get<double>();

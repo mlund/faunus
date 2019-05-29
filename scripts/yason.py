@@ -12,8 +12,8 @@ import warnings
 try:
     import jinja2
 except ImportError:
-    warnings.warn("warning: missing jinja2 module");
-    jinja2 = None 
+    warnings.warn("warning: missing jinja2 module")
+    jinja2 = None
 
 try:
     # API compatibility between pyyaml and ruamel.yaml might break in the future
@@ -46,32 +46,32 @@ if pygments:
     else:
         formatter = NullFormatter
 
-try: # ... to read json
+try:  # ... to read json
     i = args.infile.read()
     if jinja2:
         # additional files can be used with {% include "file" %}
         dirs = [os.getcwd(), os.path.dirname(os.path.realpath(__file__)) + "/../top"]
         loader = jinja2.FileSystemLoader(dirs)
         env = jinja2.Environment(loader=loader)
-        i = env.from_string(i).render() # render jinja2
-        #i = jinja2.Template(i).render() # render jinja2 
+        i = env.from_string(i).render()  # render jinja2
+        # i = jinja2.Template(i).render() # render jinja2
 
-    d = json.loads( i )
+    d = json.loads(i)
     if args.alwaysjson:
         if pygments:
-            i = highlight( out, JsonLexer(), formatter() )
-        print( i )
+            i = highlight(out, JsonLexer(), formatter())
+        print(i)
     else:
-        out = yaml.safe_dump(d, indent=args.indent, allow_unicode=True )
+        out = yaml.safe_dump(d, indent=args.indent, allow_unicode=True)
         if pygments:
-            out = highlight( out, YamlLexer(), formatter() )
-        print( out )
+            out = highlight(out, YamlLexer(), formatter())
+        print(out)
 except json.decoder.JSONDecodeError:
-    try: # ... to read yaml
-        d = yaml.safe_load( i )  # plain load was deprecated in PyYAML
+    try:  # ... to read yaml
+        d = yaml.safe_load(i)  # plain load was deprecated in PyYAML
         out = json.dumps(d, indent=args.indent)
         if pygments:
-            out = highlight(out, JsonLexer(), formatter() )
+            out = highlight(out, JsonLexer(), formatter())
         print(out)
     except yaml.parser.ParserError as exception:
         print("input error: invalid json or yaml format", file=sys.stderr)

@@ -536,7 +536,6 @@ install(FILES
     ${EXAMPLES_DIR}/chain/chain.xyz
     ${EXAMPLES_DIR}/chain/chain.state.json
     ${EXAMPLES_DIR}/chain/chain.out.json
-    ${EXAMPLES_DIR}/chain/chain.cmp.json
     ${EXAMPLES_DIR}/polymers.yml
     ${EXAMPLES_DIR}/polymers.readme
     ${EXAMPLES_DIR}/polymers.pdf

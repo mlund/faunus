@@ -16,8 +16,9 @@ except ImportError:
     jinja2 = None 
 
 try:
+    # API compatibility between pyyaml and ruamel.yaml might break in the future
+    # https://yaml.readthedocs.io/en/latest/api.html
     import ruamel_yaml as yaml
-    warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
 except ImportError:
     import yaml
 
@@ -65,13 +66,13 @@ try: # ... to read json
         if pygments:
             out = highlight( out, YamlLexer(), formatter() )
         print( out )
-except:
+except json.decoder.JSONDecodeError:
     try: # ... to read yaml
-        d = yaml.load( i )
+        d = yaml.safe_load( i )  # plain load was deprecated in PyYAML
         out = json.dumps(d, indent=args.indent)
         if pygments:
             out = highlight(out, JsonLexer(), formatter() )
         print(out)
-    except:
-        print("input error: invalid json or yaml format")
-
+    except yaml.parser.ParserError as exception:
+        print("input error: invalid json or yaml format", file=sys.stderr)
+        print(exception, file=sys.stderr)

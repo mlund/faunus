@@ -234,9 +234,11 @@ double SelfEnergy::energy(Change &change) {
 
 ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, Potential::PairPotentialBase &pairpot) : spc(spc), pairpot(pairpot) {
     name = "selfenergy";
-};
+}
 
 double ParticleSelfEnergy::energy(Change &change) {
+    return 0;
+    // code below is buggy
     double u = 0;
     if (pairpot.selfEnergy) {
         if (change.dN)

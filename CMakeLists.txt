@@ -20,6 +20,7 @@ if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
         CACHE STRING "Flags used by the compiler during Release with Debug Info builds" FORCE)
 endif()
 
+option(BUILD_STATIC "Build statically linked binaries" off)
 option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" on)
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 
@@ -276,6 +277,9 @@ add_test(NAME unittests COMMAND unittests)
 # target: faunus
 add_executable(faunus src/faunus.cpp ${objs} ${hdrs})
 target_link_libraries(faunus PRIVATE xdrfile docopt)
+if(BUILD_STATIC)
+    target_link_libraries(faunus PRIVATE -static-libgcc -static-libstdc++ -static)
+endif()
 target_compile_definitions(faunus PRIVATE
     FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
 
@@ -532,7 +536,6 @@ install(FILES
     ${EXAMPLES_DIR}/chain/chain.xyz
     ${EXAMPLES_DIR}/chain/chain.state.json
     ${EXAMPLES_DIR}/chain/chain.out.json
-    ${EXAMPLES_DIR}/chain/chain.cmp.json
     ${EXAMPLES_DIR}/polymers.yml
     ${EXAMPLES_DIR}/polymers.readme
     ${EXAMPLES_DIR}/polymers.pdf

@@ -298,6 +298,7 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
 };
 
 /** @brief Self-energy term of electrostatic potentials  */
+/*
 class SelfEnergy : public Energybase {
   private:
     std::string type;
@@ -308,7 +309,7 @@ class SelfEnergy : public Energybase {
   public:
     SelfEnergy(const json &j, Space &spc);
     double energy(Change &change) override;
-};
+};*/
 
 class ParticleSelfEnergy : public Energybase {
   private:

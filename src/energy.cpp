@@ -149,6 +149,7 @@ double ContainerOverlap::energy(Change &change) {
 }
 
 // Remove?
+/*
 SelfEnergy::SelfEnergy(const json &j, Space &spc) : spc(spc) {
     name = "selfenergy";
     type = j.at("type");
@@ -192,12 +193,14 @@ SelfEnergy::SelfEnergy(const json &j, Space &spc) : spc(spc) {
     if (type == "fennell") {
         alpha = j.at("alpha");
         selfenergy_ion_prefactor = -(erfc(alpha*rc) + alpha*rc / sqrt(pc::pi) * (1.0 + exp(-alpha*alpha*rc*rc)));
-        selfenergy_dipole_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) + (4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
+        selfenergy_dipole_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) +
+(4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
     }
     if (type == "wolf") {
         alpha = j.at("alpha");
         selfenergy_ion_prefactor = -0.5*(erfc(alpha*rc) + 2.0*alpha*rc / sqrt(pc::pi));
-        selfenergy_dipole_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) + (4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
+        selfenergy_dipole_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) +
+(4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
     }
     if (type == "ewald") {
         alpha = j.at("alpha");
@@ -205,6 +208,7 @@ SelfEnergy::SelfEnergy(const json &j, Space &spc) : spc(spc) {
         selfenergy_dipole_prefactor = -2.0*pow(alpha*rc,3.0)/3.0/std::sqrt(pc::pi);
     }
 }
+
 double SelfEnergy::energy(Change &change) {
     double Eq = 0;
     double Emu = 0;
@@ -224,7 +228,7 @@ double SelfEnergy::energy(Change &change) {
                 Emu += i.getExt().mulen * i.getExt().mulen;
             }
     return ( selfenergy_ion_prefactor * Eq / rc + selfenergy_dipole_prefactor*Emu/pow(rc,3.0) )*lB;
-}
+}*/
 
 // ------------- ParticleSelfEnergy ---------------
 
@@ -406,6 +410,9 @@ double Bonded::energy(Change &change) {
     }
     return energy;
 }
+
+//---------- Hamiltonian ------------
+
 void Hamiltonian::to_json(json &j) const {
     for (auto i : this->vec)
         j.push_back(*i);

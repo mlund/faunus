@@ -263,6 +263,8 @@ void Faunus::Potential::CoulombGalore::to_json(Faunus::json &j) const {
     _roundjson(j, 5);
 }
 
+//-------------- DipoleDipoleGalore ----------------
+
 void Faunus::Potential::DipoleDipoleGalore::sfReactionField(const Faunus::json &j) { // Preliminary, needs to be checked!
     epsrf = j.at("epsrf");
     tableA = sfA.generate([&](double) { return 1.0; }, 0, 1);
@@ -794,8 +796,10 @@ void Polarizability::from_json(const json &j) {
 FunctorPotential::FunctorPotential(const std::string &name) { PairPotentialBase::name = name; }
 
 void FunctorPotential::registerSelfEnergy(PairPotentialBase *pot) {
-    if (pot->selfEnergy)
+    if (pot->selfEnergy) {
         self_energy_vector.push_back(pot->selfEnergy);
+        assert(self_energy_vector.back());
+    }
 }
 
 FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
@@ -875,12 +879,13 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
         selfEnergy = nullptr;
     else
         selfEnergy = [&](Particle &p) {
-            double u = 0;
-            for (auto &func : self_energy_vector)
-                u += func(p);
-            return u;
+            double sum = 0;
+            for (auto &func : self_energy_vector) {
+                assert(func);
+                sum += func(p);
+            }
+            return sum;
         };
-
     return u;
 }
 

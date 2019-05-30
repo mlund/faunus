@@ -38,16 +38,6 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     T2 second; //!< Second pair potential of type T2
     CombinedPairPotential(const std::string &name = "") {
         this->name = name;
-        if (first.selfEnergy or second.selfEnergy) {
-            selfEnergy = [&](Particle &p) {
-                if (first.selfEnergy and second.selfEnergy)
-                    return first.selfEnergy(p) + second.selfEnergy(p);
-                if (first.selfEnergy)
-                    return first.selfEnergy(p);
-                return second.selfEnergy(p);
-            };
-        } else
-            selfEnergy = nullptr;
     }
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return first(a, b, r) + second(a, b, r);
@@ -60,6 +50,18 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     void from_json(const json &j) override {
         first = j;
         second = j;
+
+        // combine self-energies
+        if (first.selfEnergy or second.selfEnergy) {
+            selfEnergy = [&](Particle &p) {
+                if (first.selfEnergy and second.selfEnergy)
+                    return first.selfEnergy(p) + second.selfEnergy(p);
+                if (first.selfEnergy)
+                    return first.selfEnergy(p);
+                return second.selfEnergy(p);
+            };
+        } else
+            selfEnergy = nullptr;
     }
 
     void to_json(json &j) const override { j = {first, second}; }

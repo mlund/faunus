@@ -55,6 +55,11 @@ namespace Faunus {
             a.id()     = val.value("id", a.id());
             a.mu       = val.value("mu", a.mu);
             a.mulen    = val.value("mulen", a.mulen);
+            if(a.mu.norm() > 1e-6) { // if mu is given...
+                if(std::fabs(a.mulen) < 1e-6) // if mulen is not given ...
+                    a.mulen = a.mu.norm(); // ... then set mulen
+                a.mu = a.mu/a.mu.norm(); // normalize mu
+            }
             a.scdir    = val.value("scdir", a.scdir);
             a.sclen    = val.value("sclen", a.sclen);
             a.mw       = val.value("mw", a.mw);

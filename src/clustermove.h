@@ -18,6 +18,7 @@ class Cluster : public Movebase {
     double dptrans = 0, dprot = 0, angle = 0, _bias = 0;
     size_t bias_rejected = 0;
     bool rotate; // true if cluster should be rotated
+    bool spread; // true if cluster should spread outside of the first layer of surrounding molecules
     Point dir = {1, 1, 1}, dp;
     std::vector<std::string> names; // names of molecules to be considered
     std::vector<int> ids;           // molecule id's of molecules to be considered

@@ -16,7 +16,13 @@ namespace ReactionCoordinate {
 struct ReactionCoordinateBase;
 }
 
+namespace Potential {
+struct PairPotentialBase;
+}
+
 namespace Energy {
+
+class Hamiltonian;
 
 class Energybase {
   public:
@@ -56,7 +62,7 @@ struct EwaldData {
     Eigen::VectorXd Aks;         // 1xK, to minimize computational effort (Eq.24,DOI:10.1063/1.481216)
     Eigen::VectorXcd Qion, Qdip; // 1xK
     double alpha, rc, kc, check_k2_zero, lB;
-    double const_inf, eps_surf;
+    double const_inf, eps_surf, kappa, kappa2;
     bool spherical_sum = true;
     bool ipbc = false;
     int kVectorsInUse = 0;
@@ -292,15 +298,26 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
 };
 
 /** @brief Self-energy term of electrostatic potentials  */
+/*
 class SelfEnergy : public Energybase {
   private:
     std::string type;
-    double selfenergy_prefactor, epsr, lB, rc;
+    double selfenergy_ion_prefactor, selfenergy_dipole_prefactor, epsr, lB, rc, alpha, kappa, epsrf;
+    int C, D;
     Space &spc;
 
   public:
     SelfEnergy(const json &j, Space &spc);
+    double energy(Change &change) override;
+};*/
 
+class ParticleSelfEnergy : public Energybase {
+  private:
+    Space &spc;
+    Potential::PairPotentialBase &pairpot;
+
+  public:
+    ParticleSelfEnergy(Space &, Potential::PairPotentialBase &);
     double energy(Change &change) override;
 };
 
@@ -500,15 +517,13 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
         return u;
     }
 
-  public:
-    Space &spc;       //!< Space to operate on
-    Tpairpot pairpot; //!< Pair potential
+    // add self energy if appropriate
+    void addPairPotentialSelfEnergy() {
+        if (pairpot.selfEnergy) // only add if self energy is defined
+            pot.push_back<Energy::ParticleSelfEnergy>(spc, pairpot);
+    }
 
-    Nonbonded(const json &j, Space &spc) : spc(spc) {
-        name = "nonbonded";
-        pairpot = j;
-
-        // controls for OpenMP
+    void configureOpenMP(const json &j) {
         auto it = j.find("openmp");
         if (it != j.end())
             if (it->is_array())
@@ -525,13 +540,29 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                     std::cerr << "warning: nonbonded requests unavailable OpenMP." << endl;
 #endif
                 }
+    }
+
+  public:
+    Space &spc; //!< Space to operate on
+    BasePointerVector<Energybase> &pot;
+    Tpairpot pairpot; //!< Pair potential
+
+    Nonbonded(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : spc(spc), pot(pot) {
+        name = "nonbonded";
+        pairpot = j;
+
+        // some pair-potentials give rise to self-energies (Wolf etc.)
+        // which are added here if needed
+        addPairPotentialSelfEnergy();
+
+        configureOpenMP(j);
 
         // disable all group-to-group cutoffs by setting infinity
         for (auto &i : Faunus::molecules)
             for (auto &j : Faunus::molecules)
                 cutoff2.set(i.id(), j.id(), pc::infty);
 
-        it = j.find("cutoff_g2g");
+        auto it = j.find("cutoff_g2g");
         if (it != j.end()) {
             // old style input w. only a single cutoff
             if (it->is_number()) {
@@ -729,7 +760,7 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
     }
 
   public:
-    NonbondedCached(const json &j, Space &spc) : base(j, spc), spc(spc) {
+    NonbondedCached(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : base(j, spc, pot), spc(spc) {
         base::name += "EM";
         init();
     }
@@ -876,10 +907,6 @@ class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
     double maxenergy = pc::infty; //!< Maximum allowed energy change
     void to_json(json &j) const override;
     void addEwald(const json &j, Space &spc); //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
-    void
-    addSelfEnergy(const json &j,
-                  Space &spc); //!< Adds an instance of the self term of the electrostatic potential (if appropriate)
-
   public:
     Hamiltonian(Space &spc, const json &j);
     double energy(Change &change) override; //!< Energy due to changes

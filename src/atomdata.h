@@ -15,7 +15,7 @@ namespace Faunus {
             double charge=0;      //!< Particle charge [e]
             double dp=0;          //!< Translational displacement parameter [angstrom]
             double dprot=0;       //!< Rotational displacement parameter [degrees]
-            Point  mu={1,0,0};    //!< Dipole moment unit vector
+            Point  mu={0,0,0};    //!< Dipole moment unit vector
             double mulen=0;       //!< Dipole moment scalar [eÃ]
             double mw=1;          //!< Weight
             Point  scdir={1,0,0}; //!< Sphero-cylinder direction

@@ -90,6 +90,7 @@ class AtomProfile : public Analysisbase {
     std::set<int> ids;              // atom ids to analyse
     std::string file;               // output filename
     Point ref = {0, 0, 0};
+    Eigen::Vector3i dir = {1, 1, 1};
     double dr; // radial resolution
     bool count_charge = false;
     // bool Vnormalise = true;

@@ -413,8 +413,6 @@ FileReactionCoordinate::FileReactionCoordinate(const json &j, Space &spc) {
             rc = std::make_shared<MoleculeProperty>(j, spc);
         else if (type == "system")
             rc = std::make_shared<SystemProperty>(j, spc);
-        else if (type == "cmcm")
-            rc = std::make_shared<MassCenterSeparation>(j, spc);
         if (rc == nullptr)
             throw std::runtime_error("unknown coordinate type");
 
@@ -932,6 +930,7 @@ PolymerShape::PolymerShape(const json &j, Space &spc) : spc(spc) {
 }
 void AtomProfile::_from_json(const json &j) {
     ref = j.value("origo", Point(0, 0, 0));
+    dir = j.value("dir", dir);
     file = j.at("file").get<std::string>();
     names = j.at("atoms").get<decltype(names)>();              // atom names
     auto vec_of_ids = names2ids(Faunus::atoms, names);         // names --> molids
@@ -941,13 +940,14 @@ void AtomProfile::_from_json(const json &j) {
     count_charge = j.value("charge", false);
 }
 void AtomProfile::_to_json(json &j) const {
-    j = {{"origo", ref}, {"atoms", names}, {"file", file}, {"dr", dr}, {"charge", count_charge}};
+    j = {{"origo", ref}, {"dir", dir}, {"atoms", names}, {"file", file}, {"dr", dr}, {"charge", count_charge}};
 }
 void AtomProfile::_sample() {
     for (auto &g : spc.groups)
         for (auto &p : g)
             if (ids.count(p.id) != 0) {
-                double r = spc.geo.vdist(p.pos, ref).norm();
+                Point rvec = spc.geo.vdist(p.pos, ref);
+                double r = rvec.cwiseProduct(dir.cast<double>()).norm();
                 if (count_charge)
                     tbl(r) += p.charge; // count charge
                 else
@@ -961,11 +961,17 @@ AtomProfile::AtomProfile(const json &j, Space &spc) : spc(spc) {
 AtomProfile::~AtomProfile() {
     std::ofstream f(MPI::prefix + file);
     if (f) {
+        double Vr = 1;
         tbl.stream_decorator = [&](std::ostream &o, double r, double N) {
-            if (r > 0) {
-                double V = 4 * pc::pi * r * r * dr;
+            if (dir.sum() == 3)
+                Vr = 4 * pc::pi * std::pow(r, 2) * dr;
+            else if (dir.sum() == 2) {
+                Vr = 2 * pc::pi * r * dr;
+            } else if (dir.sum() == 1)
+                Vr = dr;
+            if (Vr > 0) {
                 N = N / double(cnt);
-                o << r << " " << N << " " << N / V * 1e27 / pc::Nav << "\n";
+                o << r << " " << N << " " << N / Vr * 1e27 / pc::Nav << "\n";
             }
         };
         f << "# r N rho/M\n" << tbl;

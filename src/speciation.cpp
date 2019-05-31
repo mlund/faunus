@@ -24,8 +24,7 @@ void SpeciationMove::_move(Change &change) {
         if (rit->empty(forward)) // Enforce canonic constraint if invoked
             return;              // Out of material, slip out the back door
 
-        change.dN = true;                                 // Attempting to change the number of atoms / molecules
-
+        // Check whether it is possible to deactivate reagents (are there any active ones?)
         for (auto &m : rit->Molecules2Add(not forward)) { // Delete checks
             auto mollist = spc.findMolecules(m.first, Tspace::ALL);
             if (molecules[m.first].atomic) {
@@ -40,6 +39,8 @@ void SpeciationMove::_move(Change &change) {
                     return; // Not possible to perform change, escape through the back door
             }
         }
+
+        // Check whether it is possible to insert products (are there any inactive ones?)
         for (auto &m : rit->Molecules2Add(forward)) { // Addition checks
             auto mollist = spc.findMolecules(m.first, Tspace::ALL);
             if (molecules[m.first].atomic) {
@@ -57,6 +58,7 @@ void SpeciationMove::_move(Change &change) {
             }
         }
 
+        // Perform a swap reaction, e.g., the (de)protonation of an atomic species
         if (rit->swap == true) {
             auto m1 = rit->Atoms2Add(not forward); // Swap checks
             auto m2 = rit->Atoms2Add(forward);
@@ -81,9 +83,12 @@ void SpeciationMove::_move(Change &change) {
 
         bondenergy = 0;
 
-        // change.dN = true;                                 // Attempting to change the number of atoms / molecules
+        change.dN = true; // Attempting to change the number of atoms / molecules
+
+        // Deactivate reagents
         for (auto &m : rit->Molecules2Add(not forward)) { // Delete
             auto mollist = spc.findMolecules(m.first, Tspace::ALL);
+            // The reagents is an atom
             if (molecules[m.first].atomic) {
                 auto git = mollist.begin();
                 auto othermollist =
@@ -93,6 +98,7 @@ void SpeciationMove::_move(Change &change) {
                 d.index = Faunus::distance(spc.groups.begin(), git); // integer *index* of moved group
                 d.internal = true;
                 d.dNatomic = true;
+                // m.second is the stoichiometric coefficient
                 for (int N = 0; N < m.second; N++) {                   // deactivate m.second m.first atoms
                     auto ait = slump.sample(git->begin(), git->end()); // iterator to random atom
                     // Shuffle back to end, both in trial and new
@@ -107,10 +113,13 @@ void SpeciationMove::_move(Change &change) {
                 }
                 std::sort(d.atoms.begin(), d.atoms.end());
                 change.groups.push_back(d); // add to list of moved groups
-            } else {
+            } else { // The reagent is a molecule
                 mollist = spc.findMolecules(m.first, Tspace::ACTIVE);
+                // m.second is the stoichiometric coefficient
                 for (int N = 0; N < m.second; N++) {
                     auto git = slump.sample(mollist.begin(), mollist.end());
+                    // We store the bonded energy of the deactivated molecule
+                    // The change in bonded energy should not affect the acceptance/rejection of the move
                     for (auto &bond : molecules.at(m.first).bonds) {
                         auto bondclone = bond->clone();
                         bondclone->shift(std::distance(spc.p.begin(), git->begin()));
@@ -129,14 +138,18 @@ void SpeciationMove::_move(Change &change) {
             }
         }
 
+        // Activate products
         for (auto &m : rit->Molecules2Add(forward)) { // Add
             auto mollist = spc.findMolecules(m.first, Tspace::ALL);
+            // The product is an atom
             if (molecules[m.first].atomic) {
                 auto git = mollist.begin();
                 Change::data d;
                 d.index = Faunus::distance(spc.groups.begin(), git);
                 d.internal = true;
                 d.dNatomic = true;
+                // We insert the atomic product at a random position
+                // m.second is the stoichiometric coefficient
                 for (int N = 0; N < m.second; N++) { // Activate m.second m.first atoms
                     git->activate(git->end(), git->end() + 1);
                     auto ait = git->end() - 1;
@@ -146,11 +159,13 @@ void SpeciationMove::_move(Change &change) {
                 }
                 std::sort(d.atoms.begin(), d.atoms.end());
                 change.groups.push_back(d); // Add to list of moved groups
-            } else {
+            } else { // The product is a molecule
                 mollist = spc.findMolecules(m.first, Tspace::INACTIVE);
+                // m.second is the stoichiometric coefficient
                 for (int N = 0; N < m.second; N++) {
                     auto git = slump.sample(mollist.begin(), mollist.end());
                     git->activate(git->inactive().begin(), git->inactive().end());
+                    // We insert the molecule with random mass center and orientation
                     Point cm = git->cm;
                     git->translate(-cm, spc.geo.getBoundaryFunc());
                     spc.geo.randompos(cm, slump);
@@ -158,6 +173,8 @@ void SpeciationMove::_move(Change &change) {
                     Point u = ranunit(slump);
                     Eigen::Quaterniond Q(Eigen::AngleAxisd(2 * pc::pi * (slump() - 0.5), u));
                     git->rotate(Q, spc.geo.getBoundaryFunc());
+                    // We store the bonded energy of the activated molecule
+                    // The change in bonded energy should not affect the acceptance/rejection of the move
                     for (auto &bond : molecules.at(m.first).bonds) {
                         auto bondclone = bond->clone();
                         bondclone->shift(std::distance(spc.p.begin(), git->begin()));
@@ -182,6 +199,8 @@ void SpeciationMove::_move(Change &change) {
         throw std::runtime_error("No reactions in list, disable rcmc or add reactions");
 }
 double SpeciationMove::bias(Change &, double, double) {
+    // The acceptance/rejection of the move is affected by the equilibrium constant
+    // but unaffected by the change in bonded energy
     if (forward)
         return -lnK + bondenergy;
     return lnK + bondenergy;

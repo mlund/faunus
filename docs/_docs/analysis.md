@@ -47,20 +47,27 @@ The filename format is `rho-@name.dat`.
 ### Density Profile
 
 `atomprofile`  | Description
--------------- | ---------------------------------------------
+-------------- | ---------------------------------------------––––
 `nstep=0`      | Interval between samples
 `atoms=[]`     | List of atom names to sample; `*` selects all
 `charge=false` | Calc. charge density instead of density
 `file`         | Output filename with profile
 `dr=0.1`       | Radial resolution
 `origo=[0,0,0]`| Center of the profile ($r=0$)
+`dir=[1,1,1]`  | Direction along which the profile is calculated
 
-Calculates the summed density of `atoms` in spherical shells around
+Calculates the summed density of `atoms` in spherical, cylindrical or planar shells around
 `origo` which by default is the center of the simulation box:
 
 $$
-\rho(r) = \frac{\langle N(r) \rangle}{4\pi r^2dr}
+\rho(r) = \frac{\langle N(r) \rangle}{V(r)}
 $$
+
+`dir.sum()` |  $V(r)$        
+-----–––––– | ---------------
+3           |  $4\pi r^2 dr$ 
+2           |  $2\pi r dr$   
+1           |  $dr$          
 
 This can be used to obtain charge profiles, measure excess pressure
 etc.

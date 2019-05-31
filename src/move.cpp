@@ -781,7 +781,7 @@ void MCSimulation::move() {
                     du = 0;
                 }
                 dusum += du; // sum of all energy changes
-            }
+            } else state2.sync(state1, change);
         }
     }
 }

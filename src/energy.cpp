@@ -300,8 +300,6 @@ Constrain::Constrain(const json &j, Space &spc) {
             rc = std::make_shared<MoleculeProperty>(j, spc);
         else if (type == "system")
             rc = std::make_shared<SystemProperty>(j, spc);
-        else if (type == "cmcm")
-            rc = std::make_shared<MassCenterSeparation>(j, spc);
         if (rc == nullptr)
             throw std::runtime_error("unknown coordinate type");
 

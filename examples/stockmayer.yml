@@ -1,3 +1,4 @@
+#!/usr/bin/env yason.py
 temperature: 315.8
 random: {seed: fixed}
 geometry: {type: cuboid, length: 29.6336}

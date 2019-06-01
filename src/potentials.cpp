@@ -28,6 +28,8 @@ void Faunus::Potential::CosAttract::from_json(const Faunus::json &j) {
 
 Faunus::Potential::CosAttract::CosAttract(const std::string &name) { PairPotentialBase::name = name; }
 
+// -------------- CoulombGalore ---------------
+
 void Faunus::Potential::CoulombGalore::sfYukawa(const Faunus::json &j) {
     kappa = 1.0 / j.at("debyelength").get<double>();
     I = kappa * kappa / (8.0 * lB * pc::pi * pc::Nav / 1e27);
@@ -501,6 +503,7 @@ void Faunus::Potential::from_json(const Faunus::json &j, Faunus::Potential::Pair
         throw std::runtime_error("pairpotential error for " + base.name + ": " + e.what() + usageTip[base.name]);
     }
 }
+
 void Faunus::Potential::from_json(const Faunus::json &j, Faunus::Potential::ParametersTable &m) {
     std::function<std::pair<double, double>(double, double, double, double)> mixerFunc;
 
@@ -878,9 +881,11 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
     if (self_energy_vector.empty())
         selfEnergy = nullptr;
     else
-        selfEnergy = [&](Particle &p) {
+        // why must self_energy_vector be copied? Using [=] or [&]
+        // lambda capturing causes bad access on copied objects
+        selfEnergy = [vec = self_energy_vector](Particle &p) {
             double sum = 0;
-            for (auto &func : self_energy_vector) {
+            for (auto &func : vec) {
                 assert(func);
                 sum += func(p);
             }

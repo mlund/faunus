@@ -314,11 +314,12 @@ class SelfEnergy : public Energybase {
 class ParticleSelfEnergy : public Energybase {
   private:
     Space &spc;
-    Potential::PairPotentialBase &pairpot;
+    std::function<double(Particle &)> selfEnergy; //!< Some potentials may give rise to a self energy
 
   public:
-    ParticleSelfEnergy(Space &, Potential::PairPotentialBase &);
+    ParticleSelfEnergy(Space &, std::function<double(Particle &)>);
     double energy(Change &change) override;
+    void sync(Energybase *basePtr, Change &c) override;
 };
 
 class Isobaric : public Energybase {
@@ -517,10 +518,10 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
         return u;
     }
 
-    // add self energy if appropriate
+    // add self energy term to Hamiltonian if appropriate
     void addPairPotentialSelfEnergy() {
         if (pairpot.selfEnergy) // only add if self energy is defined
-            pot.push_back<Energy::ParticleSelfEnergy>(spc, pairpot);
+            pot.push_back<Energy::ParticleSelfEnergy>(spc, pairpot.selfEnergy);
     }
 
     void configureOpenMP(const json &j) {

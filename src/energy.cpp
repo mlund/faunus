@@ -232,28 +232,41 @@ double SelfEnergy::energy(Change &change) {
 
 // ------------- ParticleSelfEnergy ---------------
 
-ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, Potential::PairPotentialBase &pairpot) : spc(spc), pairpot(pairpot) {
+ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(Particle &)> selfEnergy)
+    : spc(spc), selfEnergy(selfEnergy) {
     name = "selfenergy";
+#ifndef NDEBUG
+    // test if self energy can be called
+    Particle myparticle;
+    if (this->selfEnergy)
+        this->selfEnergy(myparticle);
+#endif
 }
 
 double ParticleSelfEnergy::energy(Change &change) {
-    return 0;
-    // code below is buggy
     double u = 0;
-    if (pairpot.selfEnergy) {
+    if (selfEnergy) {
         if (change.dN)
             for (auto &cg : change.groups) {
                 auto &g = spc.groups.at(cg.index);
                 for (auto i : cg.atoms)
                     if (i < g.size())
-                        u += pairpot.selfEnergy(*(g.begin() + i));
+                        u += selfEnergy(*(g.begin() + i));
             }
         else if (change.all and not change.dV)
             for (auto &g : spc.groups)
                 for (auto &i : g)
-                    u += pairpot.selfEnergy(i);
+                    u += selfEnergy(i);
     }
     return u;
+}
+
+void ParticleSelfEnergy::sync(Energybase *basePtr, Change &change) {
+    if (change.all) {
+        auto other = dynamic_cast<decltype(this)>(basePtr);
+        assert(other);
+        selfEnergy = other->selfEnergy;
+    }
 }
 
 // ------------- Isobaric ---------------

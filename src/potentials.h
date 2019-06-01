@@ -18,7 +18,7 @@ struct PairPotentialBase {
     std::string name;
     std::string cite;
     bool isotropic = true; //!< True if pair-potential is independent of particle orientation
-    std::function<double(Particle &)> selfEnergy; //!< Some potentials may give rise to a self energy
+    std::function<double(Particle &)> selfEnergy;
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
@@ -50,15 +50,14 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     void from_json(const json &j) override {
         first = j;
         second = j;
-
         // combine self-energies
         if (first.selfEnergy or second.selfEnergy) {
-            selfEnergy = [&](Particle &p) {
-                if (first.selfEnergy and second.selfEnergy)
-                    return first.selfEnergy(p) + second.selfEnergy(p);
-                if (first.selfEnergy)
-                    return first.selfEnergy(p);
-                return second.selfEnergy(p);
+            selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](Particle &p) {
+                if (u1 and u2)
+                    return u1(p) + u2(p);
+                if (u1)
+                    return u1(p);
+                return u2(p);
             };
         } else
             selfEnergy = nullptr;
@@ -221,8 +220,8 @@ class HardSphere : public PairPotentialBase {
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return r.squaredNorm() < d2->operator()(a.id, b.id) ? pc::infty : 0;
     }
-    void to_json(json &) const override {}
-    void from_json(const json &) override {}
+    inline void to_json(json &) const override {}
+    inline void from_json(const json &) override {}
 }; //!< Hardsphere potential
 
 struct RepulsionR3 : public PairPotentialBase {
@@ -429,7 +428,7 @@ class CoulombGalore : public PairPotentialBase {
     Tabulate::TabulatorBase<double>::data table;  // data for splitting function
     std::function<double(double)> calcDielectric; // function for dielectric const. calc.
     std::string type;
-    double selfenergy_prefactor;
+    double selfenergy_prefactor = 0;
     double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
     int order;
     unsigned int C, D;

@@ -59,8 +59,8 @@ add_definitions("-Dexprtk_disable_rtl_io_file")
 # PROGRESS BAR
 FetchContent_Declare(
     progressbar
-    URL https://github.com/prakhar1989/progress-cpp/archive/06fdda086eb06b462faff7a917984062bc15b61e.zip
-    URL_HASH MD5=a5bc9375399eb80e37f03a3e32dcde0f)
+    URL https://github.com/mlund/progress-cpp/archive/5ecc63ac263f7fa65b7c5559151328199f9fc5d5.zip
+    URL_HASH MD5=788e8e35930ba66e4dc647890f9c0530)
 FetchContent_GetProperties(progressbar)
 if(NOT progressbar_POPULATED)
     FetchContent_Populate(progressbar)

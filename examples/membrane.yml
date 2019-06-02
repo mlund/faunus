@@ -20,8 +20,8 @@ moleculelist:
 insertmolecules:
     - lipid: {N: 150}
 energy:
-    - confine: {type: cuboid, low: [-1e5,-1e5,-30], 
-                 high: [1e5,1e5,30], k: 0,
+    - confine: {type: cuboid, low: [-100000,-100000,-30],
+                 high: [100000,100000,30], k: 0,
                  molecules: [lipid], com: True}
     - bonded: {}
     - nonbonded_cached:

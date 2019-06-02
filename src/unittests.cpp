@@ -13,6 +13,7 @@
 #include "geometry.h"
 #include "space.h"
 #include "average.h"
+#include "potentials.h"
 #include "tabulate.h"
 #include "move.h"
 #include "penalty.h"

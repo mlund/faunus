@@ -147,7 +147,7 @@ struct Space {
                     return true;
             return false;
         };
-        return ranges::view::filter(p, f);
+        return p | ranges::view::filter(f);
     } //!< Returns range with all *active* particles in space
 
     void sync(Space &other, const Tchange &change); //!< Copy differing data from other (o) Space using Change object

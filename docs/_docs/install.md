@@ -80,6 +80,7 @@ CMake Option                         | Description
 `-DENABLE_OPENMP=ON`                 | Enable OpenMP support
 `-DENABLE_PYTHON=ON`                 | Build python bindings (experimental)
 `-DENABLE_POWERSASA=ON`              | Enable SASA routines (external download)
+`-DBUILD_STATIC=OFF`                 | Build statically linked binaries
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`  | Alternatives: `Debug` or `Release` (faster)
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode

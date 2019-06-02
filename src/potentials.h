@@ -6,6 +6,7 @@
 #include "auxiliary.h"
 #include "tabulate.h"
 #include "functionparser.h"
+#include "multipole.h"
 #include <array>
 
 namespace Faunus {
@@ -16,6 +17,8 @@ using namespace std::string_literals;
 struct PairPotentialBase {
     std::string name;
     std::string cite;
+    bool isotropic = true; //!< True if pair-potential is independent of particle orientation
+    std::function<double(Particle &)> selfEnergy;
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
@@ -33,7 +36,9 @@ void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair 
 template <class T1, class T2> struct CombinedPairPotential : public PairPotentialBase {
     T1 first;  //!< First pair potential of type T1
     T2 second; //!< Second pair potential of type T2
-    CombinedPairPotential(const std::string &name = "") { this->name = name; }
+    CombinedPairPotential(const std::string &name = "") {
+        this->name = name;
+    }
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return first(a, b, r) + second(a, b, r);
     } //!< Combine pair energy
@@ -45,6 +50,17 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     void from_json(const json &j) override {
         first = j;
         second = j;
+        // combine self-energies
+        if (first.selfEnergy or second.selfEnergy) {
+            selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](Particle &p) {
+                if (u1 and u2)
+                    return u1(p) + u2(p);
+                if (u1)
+                    return u1(p);
+                return u2(p);
+            };
+        } else
+            selfEnergy = nullptr;
     }
 
     void to_json(json &j) const override { j = {first, second}; }
@@ -182,6 +198,16 @@ struct Coulomb : public PairPotentialBase {
     void from_json(const json &j) override;
 };
 
+struct DipoleDipole : public PairPotentialBase {
+    DipoleDipole(const std::string &name = "dipoledipole");
+    double lB; //!< Bjerrum length
+    inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
+        return lB*mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen*b.getExt().mulen, r,1.0,0.0);
+    }
+    void to_json(json &j) const override;
+    void from_json(const json &j) override;
+};
+
 /**
  * @brief Hardsphere potential
  * @note `PairMatrix` is _shared_ upon copying
@@ -194,8 +220,8 @@ class HardSphere : public PairPotentialBase {
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return r.squaredNorm() < d2->operator()(a.id, b.id) ? pc::infty : 0;
     }
-    void to_json(json &) const override {}
-    void from_json(const json &) override {}
+    inline void to_json(json &) const override {}
+    inline void from_json(const json &) override {}
 }; //!< Hardsphere potential
 
 struct RepulsionR3 : public PairPotentialBase {
@@ -402,7 +428,7 @@ class CoulombGalore : public PairPotentialBase {
     Tabulate::TabulatorBase<double>::data table;  // data for splitting function
     std::function<double(double)> calcDielectric; // function for dielectric const. calc.
     std::string type;
-    double selfenergy_prefactor;
+    double selfenergy_prefactor = 0;
     double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
     int order;
     unsigned int C, D;
@@ -429,7 +455,6 @@ class CoulombGalore : public PairPotentialBase {
 
   public:
     CoulombGalore(const std::string &name = "coulomb");
-
     void from_json(const json &j) override;
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
@@ -451,7 +476,58 @@ class CoulombGalore : public PairPotentialBase {
         double Eq = 0;
         for (auto i : g)
             Eq += i.charge * i.charge;
-        return -selfenergy_prefactor * Eq * lB / rc;
+        return selfenergy_prefactor * Eq * lB / rc;
+    }
+
+    double dielectric_constant(double M2V);
+
+    void to_json(json &j) const override;
+};
+
+/** @brief Dipole-dipole type potentials with spherical cutoff */
+class DipoleDipoleGalore : public PairPotentialBase {
+    Tabulate::Andrea<double> sfA, sfB;            // splitting functions
+    Tabulate::TabulatorBase<double>::data tableA, tableB;  // data for splitting function
+    std::function<double(double)> calcDielectric; // function for dielectric const. calc.
+    std::string type;
+    double selfenergy_prefactor;
+    double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa;
+    int order;
+    // unsigned int C, D;
+
+    void sfEwald(const json &j);
+    void sfReactionField(const json &j);
+    void sfQ0potential(const json &j);
+    void sfQ2potential(const json &j);
+    void sfFanourgakis(const json &j);
+    void sfFennell(const json &j);
+    void sfWolf(const json &j);
+    void sfPlain(const json &j, double val = 1);
+
+  public:
+    DipoleDipoleGalore(const std::string &name = "dipoledipole");
+    void from_json(const json &j) override;
+
+    inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
+        double r1 = r.norm();
+        if (r1 < rc) {
+            double af = sfA.eval(tableA,r1*rc1i);
+            double bf = sfB.eval(tableB,r1*rc1i);
+            return lB*mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen*b.getExt().mulen, r,af,bf);
+        }
+        return 0.0;
+    }
+
+    inline Point force(const Particle &, const Particle &, double, const Point &) const { return {0, 0, 0}; }
+
+    /**
+     * @brief Self-energy of the potential
+     */
+    template <class Tpvec, class Tgroup> double internal(const Tgroup &g) const {
+        double Emu = 0;
+        for (auto i : g)
+            Emu += i.getExt().mulen * i.getExt().mulen;
+        return selfenergy_prefactor * Emu * lB / pow(rc,3.0);
     }
 
     double dielectric_constant(double M2V);
@@ -526,6 +602,12 @@ class FunctorPotential : public PairPotentialBase {
     json _j; // storage for input json
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
+    typedef CombinedPairPotential<DipoleDipole, LennardJones> Stockmayer;
+
+    std::vector<std::function<double(Particle &)>> self_energy_vector;
+    bool have_monopole_self_energy = false;
+    bool have_dipole_self_energy = false;
+    void registerSelfEnergy(PairPotentialBase *); //!< helper func to add to selv_energy_vector
 
     // List of pair-potential instances used when constructing functors.
     // Note that potentials w. large memory requirements (LJ, WCA etc.)
@@ -543,7 +625,9 @@ class FunctorPotential : public PairPotentialBase {
                PrimitiveModel,        // 8
                PrimitiveModelWCA,     // 9
                Hertz,                 // 10
-               SquareWell             // 11
+               SquareWell,            // 11
+               DipoleDipoleGalore,    // 12
+               Stockmayer             // 13
                >
         potlist;
 
@@ -553,15 +637,13 @@ class FunctorPotential : public PairPotentialBase {
     PairMatrix<uFunc, true> umatrix; // matrix with potential for each atom pair
 
   public:
-    FunctorPotential(const std::string &name = "") { PairPotentialBase::name = name; }
+    FunctorPotential(const std::string &name = "");
+    void to_json(json &j) const override;
+    void from_json(const json &j) override;
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
         return umatrix(a.id, b.id)(a, b, r); // pc::infty;
     }
-
-    void to_json(json &j) const override;
-
-    void from_json(const json &j) override;
 };
 
 /**
@@ -632,7 +714,7 @@ TEST_CASE("[Faunus] FunctorPotential") {
                 )"_json;
 
     Coulomb coulomb = R"({ "coulomb": {"epsr": 80.0, "type": "plain", "cutoff":20} } )"_json;
-    WeeksChandlerAndersen<Particle> wca = R"({ "wca" : {"mixing": "LB"} })"_json;
+    WeeksChandlerAndersen wca = R"({ "wca" : {"mixing": "LB"} })"_json;
 
     Particle a = atoms[0];
     Particle b = atoms[1];
@@ -643,6 +725,50 @@ TEST_CASE("[Faunus] FunctorPotential") {
     CHECK(u(a, b, r) == Approx(coulomb(a, b, r) + wca(a, b, r)));
     CHECK(u(c, c, r * 1.01) == 0);
     CHECK(u(c, c, r * 0.99) == pc::infty);
+}
+
+TEST_CASE("[Faunus] Dipole-dipole interactions") {
+    using doctest::Approx;
+
+    json j = R"({ "atomlist" : [
+                 {"A": { "mu":[1.0,0.0,0.0], "mulen":3.0 }},
+                 {"B": { "mu":[0.0,1.0,0.0], "mulen":3.0 }},
+                 {"C": { "mu":[1.0,1.0,0.0] }} ]})"_json;
+
+    atoms = j["atomlist"].get<decltype(atoms)>();
+
+    FunctorPotential u = R"(
+                {
+                  "default": [
+                    { "dipoledipole" : {"epsr": 1.0, "type": "plain", "cutoff":20} }
+                  ]
+                 }
+                )"_json;
+
+    DipoleDipole dipoledipole = R"({ "dipoledipole": {"epsr": 1.0, "type": "plain", "cutoff":20} } )"_json;
+
+    Particle a = atoms[0];
+    Particle b = atoms[1];
+    Particle c = atoms[2];
+    Point r = {2, 0, 0};
+    CHECK(u(a, a, r) == Approx(dipoledipole(a, a, r))); // interaction between two parallell dipoles, directed parallell to their seperation
+    CHECK(u(b, b, r) == Approx(dipoledipole(b, b, r))); // interaction between two parallell dipoles, directed perpendicular to their seperation
+    CHECK(u(a, b, r) == Approx(dipoledipole(a, b, r))); // interaction between two perpendicular dipoles
+    CHECK(u(a, a, r ) == -2.25*dipoledipole.lB);
+    CHECK(u(b, b, r ) == 1.125*dipoledipole.lB);
+    CHECK(u(a, c, r ) == -0.75*dipoledipole.lB);
+    CHECK(u(b, c, r ) == 0.375*dipoledipole.lB);
+    CHECK(u(a, b, r ) == 0);
+
+    r = {3, 0, 0};
+    CHECK(u(a, a, r) == Approx(dipoledipole(a, a, r))); // interaction between two parallell dipoles, directed parallell to their seperation
+    CHECK(u(b, b, r) == Approx(dipoledipole(b, b, r))); // interaction between two parallell dipoles, directed perpendicular to their seperation
+    CHECK(u(a, b, r) == Approx(dipoledipole(a, b, r))); // interaction between two perpendicular dipoles
+    CHECK(u(a, a, r ) == -(2.0/3.0)*dipoledipole.lB);
+    CHECK(u(b, b, r ) == (1.0/3.0)*dipoledipole.lB);
+    CHECK(u(a, c, r ) == -2.0/9.0*dipoledipole.lB);
+    CHECK(u(b, c, r ) == 1.0/9.0*dipoledipole.lB);
+    CHECK(u(a, b, r ) == 0);
 }
 
 TEST_CASE("[Faunus] Pair Potentials") {

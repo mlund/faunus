@@ -683,11 +683,12 @@ void MCSimulation::init() {
     double u2 = state2.pot.energy(c);
 
     // check that the energies in state1 and state2 are *identical*
-    if (std::isfinite(u1) and std::isfinite(u2))
+    if (std::isfinite(u1) and std::isfinite(u2)) {
         if (std::fabs((u1 - u2) / u1) > 1e-3) {
             std::cerr << "u1 = " << u1 << "  u2 = " << u2 << endl;
             throw std::runtime_error("error aligning energies - this could be a bug...");
         }
+    }
 
     // inject reference to state1 in SpeciationMove (needed to calc. *differences*
     // in ideal excess chem. potentials)

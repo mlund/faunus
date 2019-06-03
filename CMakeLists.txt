@@ -114,7 +114,7 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 ExternalProject_Add(project_cppsid
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-    BUILD_COMMAND make cppsid player
+    BUILD_COMMAND make ""#cppsid player
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
     URL_MD5 2d989c5dde42173ab4eba6374aabf042

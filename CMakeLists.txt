@@ -42,6 +42,12 @@ if (ENABLE_MPI)
     find_package(MPI REQUIRED)
 endif()
 
+option(ENABLE_SID "Enable SID emulation" off)
+if (ENABLE_SID)
+   list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
+   find_package(SDL2 REQUIRED)
+endif()
+
 include(ExternalProject)
 include(FetchContent)
 
@@ -103,6 +109,22 @@ set(DocoptIncludeDir ${source_dir})
 add_library(docopt STATIC IMPORTED GLOBAL)
 add_dependencies(docopt project_docopt)
 set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
+
+# CPPSID
+ExternalProject_Add(project_cppsid
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    BUILD_COMMAND make cppsid player
+    INSTALL_COMMAND "" LOG_DOWNLOAD ON
+    UPDATE_DISCONNECTED ON
+    URL_MD5 2d989c5dde42173ab4eba6374aabf042
+    URL "https://github.com/mlund/cppsid//archive/8d18d8e4109518c15725326f90cef879a161e03f.zip")
+ExternalProject_Get_Property(project_cppsid binary_dir)
+ExternalProject_Get_Property(project_cppsid source_dir)
+set(CppsidIncludeDir ${source_dir}/include)
+add_library(cppsid STATIC IMPORTED GLOBAL)
+add_dependencies(cppsid project_cppsid)
+set_property(TARGET cppsid PROPERTY IMPORTED_LOCATION ${binary_dir}/libcppsid.a)
 
 # PYBIND11
 FetchContent_Declare(
@@ -194,7 +216,7 @@ endif ()
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
-    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR} ${exprtk_SOURCE_DIR})
+	${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR} ${exprtk_SOURCE_DIR})
 
 # faunus cpp files
 set(objs
@@ -275,11 +297,19 @@ target_link_libraries(unittests xdrfile)
 add_test(NAME unittests COMMAND unittests)
 
 # target: faunus
+
 add_executable(faunus src/faunus.cpp ${objs} ${hdrs})
 target_link_libraries(faunus PRIVATE xdrfile docopt)
+
+if(ENABLE_SID)
+    target_compile_definitions(faunus PRIVATE ENABLE_SID)
+    target_link_libraries(faunus PRIVATE SDL2::Main cppsid)
+endif()
+
 if(BUILD_STATIC)
     target_link_libraries(faunus PRIVATE -static-libgcc -static-libstdc++ -static)
 endif()
+
 target_compile_definitions(faunus PRIVATE
     FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
 

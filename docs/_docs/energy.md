@@ -781,26 +781,13 @@ be used when analysing the system (see Analysis).
 `Q`                       | Monopole moment (net charge)
 `atomatom`                | Distance along `dir` between 2 atoms specified by the `indexes` array
 `cmcm`                    | Absolute mass-center separation between groups defined by the intervals `indexes[0]:indexes[1]` and `indexes[2]:indexes[3]`
-`cmcm_z`                  | _z_-component of `cmcm`
+`cmcm_z`                  | _z_-component of mass-center separation between groups defined by the intervals `indexes[0]:indexes[1]` and `indexes[2]:indexes[3]`
 `L/R`                     | Ratio between height and radius of a cylindrical lipid vesicle (ad-hoc RC for bending modulus calculations)
 
 Notes:
 
 - the molecular dipole moment is defined w. respect to the mass-center
-- for `angle`, the principle axis is calculated by diagonalising the gyration tensor
-
-#### Molecule Separation
-
-This returns the minimum distance between the mass centers of two molecules.
-Useful for calculating i.e. the potential of mean force between strongly
-interacting molecular groups.
-
-`coords=[cmcm]` | Mass-center separation
---------------- | -----------------------------------
-`indexes`       | Array w. exactly two molecule index
-`range`         | Array w. [min:max] separation
-`resolution`    | Resolution along coordinate
-`dir=[1,1,1]`   | Directions for distance calc.
+- for `angle`, the principal axis is the eigenvector corresponding to the smallest eigenvalue of the gyration tensor
 
 #### System Properties
 

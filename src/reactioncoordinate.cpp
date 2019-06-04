@@ -241,45 +241,5 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) {
         throw std::runtime_error(name + ": unknown or impossible property '" + property + "'" +
                                  usageTip["coords=[molecule]"]);
 }
-
-double MassCenterSeparation::normalize(double coord) const {
-    int dim = dir.sum();
-    if (dim == 2)
-        return 1 / (2 * pc::pi * coord);
-    if (dim == 3)
-        return 1 / (4 * pc::pi * coord * coord);
-    return 1.0;
-}
-
-void MassCenterSeparation::_to_json(json &j) const {
-    j["dir"] = dir;
-    j["indexes"] = indexes;
-    j["type"] = type;
-}
-MassCenterSeparation::MassCenterSeparation(const json &j, Space &spc) {
-    name = "cmcm";
-    from_json(j, *this);
-    dir = j.value("dir", dir);
-    indexes = j.value("indexes", decltype(indexes)());
-    type = j.value("type", decltype(type)());
-    if (indexes.size() == 4) {
-        f = [&spc, dir = dir, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
-            auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geo.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geo.getBoundaryFunc());
-            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
-        };
-    } else if (type.size() == 2) {
-        f = [&spc, dir = dir, type1 = type[0], type2 = type[1]]() {
-            Space::Tgroup g(spc.p.begin(), spc.p.end());
-            auto slice1 = g.find_id(findName(atoms, type1)->id());
-            auto slice2 = g.find_id(findName(atoms, type2)->id());
-            auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.getBoundaryFunc());
-            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
-        };
-    } else
-        throw std::runtime_error(name + ": specify 4 indexes or two atom types");
-}
-
 } // namespace ReactionCoordinate
 } // namespace Faunus

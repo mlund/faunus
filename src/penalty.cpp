@@ -33,8 +33,6 @@ Penalty::Penalty(const json &j, Tspace &spc) : spc(spc) {
                             rc = std::make_shared<MoleculeProperty>(it.value(), spc);
                         else if (it.key() == "system")
                             rc = std::make_shared<SystemProperty>(it.value(), spc);
-                        else if (it.key() == "cmcm")
-                            rc = std::make_shared<MassCenterSeparation>(it.value(), spc);
                         if (rc != nullptr) {
                             if (rc->min >= rc->max || rc->binwidth <= 0)
                                 throw std::runtime_error("min<max and binwidth>0 required");

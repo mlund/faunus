@@ -72,29 +72,5 @@ struct MoleculeProperty : public AtomProperty {
     void _to_json(json &j) const override;
 };
 
-/**
- * @brief Reaction coordinate: molecule-molecule mass-center separation
- */
-struct MassCenterSeparation : public ReactionCoordinateBase {
-    Eigen::Vector3i dir = {1, 1, 1};
-    std::vector<size_t> indexes;
-    std::vector<std::string> type;
-    MassCenterSeparation(const json &j, Space &spc);
-    double normalize(double coord) const override; // normalize by volume element
-    void _to_json(json &j) const override;
-};
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] MassCenterSeparation") {
-    using doctest::Approx;
-    Space spc;
-    MassCenterSeparation c(R"({"dir":[1,1,0], "indexes":[0,8,9,18], "type":[] })"_json, spc);
-    CHECK(c.dir.x() == 1);
-    CHECK(c.dir.y() == 1);
-    CHECK(c.dir.z() == 0);
-    CHECK(c.indexes == decltype(c.indexes)({0, 8, 9, 18}));
-}
-#endif
-
 } // namespace ReactionCoordinate
 } // namespace Faunus

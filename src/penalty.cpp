@@ -94,11 +94,8 @@ void Penalty::to_json(json &j) const {
     j["f0_final"] = f0;
     j["overwrite"] = overwrite_penalty;
     auto &_j = j["coords"] = json::array();
-    for (auto rc : rcvec) {
-        json t;
-        t[rc->name] = *rc;
-        _j.push_back(t);
-    }
+    for (auto rc : rcvec)
+        _j.push_back(*rc); // `ReactionCoordinateBase` --> `json`
 }
 double Penalty::energy(Change &change) {
     assert(rcvec.size() <= coord.size());

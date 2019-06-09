@@ -13,6 +13,7 @@ namespace ReactionCoordinate {
  * @brief Base class for reaction coordinates
  */
 struct ReactionCoordinateBase {
+    ReactionCoordinateBase(const json &); // constructor reads binwidth, min, max
     std::function<double()> f = nullptr; // returns reaction coordinate
     virtual void _to_json(json &j) const;
     virtual double normalize(double) const;
@@ -25,13 +26,14 @@ struct ReactionCoordinateBase {
     virtual ~ReactionCoordinateBase() = default;
 };
 
-void to_json(json &j, const ReactionCoordinateBase &r);
-void from_json(const json &j, ReactionCoordinateBase &r);
+void to_json(json &j, const ReactionCoordinateBase &r); //!< Serialize any reaction coordinate to json
+std::shared_ptr<ReactionCoordinateBase>
+createReactionCoordinate(const json &, Space &); //!< Factory function to create all known penalty functions
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] ReactionCoordinateBase") {
     using doctest::Approx;
-    ReactionCoordinateBase c = R"({"range":[-1.5, 2.1], "resolution":0.2})"_json;
+    ReactionCoordinateBase c(R"({"range":[-1.5, 2.1], "resolution":0.2})"_json);
     CHECK(c.min == Approx(-1.5));
     CHECK(c.max == Approx(2.1));
     CHECK(c.binwidth == Approx(0.2));
@@ -63,11 +65,14 @@ class AtomProperty : public ReactionCoordinateBase {
     void _to_json(json &j) const override;
 };
 
-struct MoleculeProperty : public AtomProperty {
+struct MoleculeProperty : public ReactionCoordinateBase {
   protected:
+    size_t index; // molecule index
+    Point dir = {0, 0, 0};
     std::vector<size_t> indexes;
 
   public:
+    std::string property;
     MoleculeProperty(const json &j, Space &spc);
     void _to_json(json &j) const override;
 };

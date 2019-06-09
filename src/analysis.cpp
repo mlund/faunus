@@ -383,8 +383,12 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                                                  "\n\n: " + e.what() + usageTip[it.key()]);
                     }
 }
+
 void FileReactionCoordinate::_to_json(json &j) const {
-    j = *rc;
+    json rcjson = *rc; // envoke to_json(...)
+    if (rcjson.count(type) == 0)
+        throw std::runtime_error("error writing json for reaction coordinate");
+    j = rcjson[type];
     j["type"] = type;
     j["file"] = filename;
     j.erase("range");      // these are for penalty function
@@ -392,6 +396,7 @@ void FileReactionCoordinate::_to_json(json &j) const {
     if (cnt > 0)
         j["average"] = avg.avg();
 }
+
 void FileReactionCoordinate::_sample() {
     if (file) {
         double val = (*rc)();

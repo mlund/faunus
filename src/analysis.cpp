@@ -404,27 +404,14 @@ void FileReactionCoordinate::_sample() {
         file << cnt * steps << " " << val << " " << avg.avg() << "\n";
     }
 }
+
 FileReactionCoordinate::FileReactionCoordinate(const json &j, Space &spc) {
-    using namespace ReactionCoordinate;
     from_json(j);
     name = "reactioncoordinate";
     filename = MPI::prefix + j.at("file").get<std::string>();
     file.open(filename); // output file
     type = j.at("type").get<std::string>();
-    try {
-        if (type == "atom")
-            rc = std::make_shared<AtomProperty>(j, spc);
-        else if (type == "molecule")
-            rc = std::make_shared<MoleculeProperty>(j, spc);
-        else if (type == "system")
-            rc = std::make_shared<SystemProperty>(j, spc);
-        if (rc == nullptr)
-            throw std::runtime_error("unknown coordinate type");
-
-    } catch (std::exception &e) {
-        throw std::runtime_error("error for reaction coordinate '" + type + "': " + e.what() +
-                                 usageTip["coords=[" + type + "]"]);
-    }
+    rc = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
 
 void WidomInsertion::_sample() {

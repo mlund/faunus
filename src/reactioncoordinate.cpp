@@ -58,12 +58,8 @@ std::shared_ptr<ReactionCoordinateBase> createReactionCoordinate(const json &j, 
                 rc = std::make_shared<MoleculeProperty>(it.value(), spc);
             else if (it.key() == "system")
                 rc = std::make_shared<SystemProperty>(it.value(), spc);
-            if (rc) {
-                if (rc->min >= rc->max or rc->binwidth <= 0)
-                    throw std::runtime_error("min<max and binwidth>0 required");
-            } else
-                throw std::runtime_error("unknown coordinate type");
-
+            else
+                throw std::runtime_error("unknown type");
         } catch (std::exception &e) {
             throw std::runtime_error("error creating reaction coordinate '" + it.key() + "': " + e.what() +
                                      usageTip["coords=[" + it.key() + "]"]);

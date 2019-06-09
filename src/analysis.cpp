@@ -423,9 +423,10 @@ void WidomInsertion::_sample() {
         for (int i = 0; i < ninsert; ++i) {
             pin = rins(spc.geo, spc.p, molecules.at(molid));
             if (!pin.empty()) {
-                if (absolute_z)
+                if (absolute_z) {
                     for (auto &p : pin)
                         p.pos.z() = std::fabs(p.pos.z());
+                }
 
                 assert(pin.size() == g.size());
                 spc.geo.randompos(pin[0].pos, random);
@@ -499,13 +500,14 @@ void Density::_sample() {
     Lavg += std::cbrt(V);
     invVavg += 1 / V;
 
-    for (auto &g : spc.groups)
+    for (auto &g : spc.groups) {
         if (g.atomic) {
             for (auto &p : g)
                 Natom[p.id]++;
             atmdhist[g.id](g.size())++;
         } else if (not g.empty())
             Nmol[g.id]++;
+    }
 
     for (auto &i : Nmol) {
         rho_mol[i.first] += i.second / V;

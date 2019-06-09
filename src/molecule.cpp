@@ -132,9 +132,9 @@ void from_json(const json &j, MoleculeData &a) {
                         std::vector<Particle> v;
                         a.atoms.clear();
                         v.reserve(_struct.size());
-                        for (auto &m : _struct)
-                            if (m.is_object())
-                                if (m.size() == 1)
+                        for (auto &m : _struct) {
+                            if (m.is_object()) {
+                                if (m.size() == 1) {
                                     for (auto &i : m.items()) {
                                         auto it = findName(atoms, i.key());
                                         if (it == atoms.end())
@@ -143,6 +143,9 @@ void from_json(const json &j, MoleculeData &a) {
                                         v.back().pos = i.value(); // set position
                                         a.atoms.push_back(it->id());
                                     }
+                                }
+                            }
+                        }
                         if (v.empty())
                             throw std::runtime_error("invalid 'structure' format");
                         a.conformations.push_back(v);
@@ -205,10 +208,12 @@ void from_json(const json &j, MoleculeData &a) {
             a.setInserter(ins);
 
             // assert that all bonds are *internal*
-            for (auto &bond : a.bonds)
-                for (int i : bond->index)
+            for (auto &bond : a.bonds) {
+                for (int i : bond->index) {
                     if (i >= a.atoms.size() || i < 0)
                         throw std::runtime_error("bonded atom index " + std::to_string(i) + " out of range");
+                }
+            }
             // at this stage all given keys should have been accessed. If any are
             // left, an exception will be thrown.
             if (not val.empty())
@@ -279,12 +284,14 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
 
         // check if molecules / atoms fit inside simulation container
         containerOverlap = false;
-        if (allowoverlap == false)
-            for (auto &i : v)
+        if (allowoverlap == false) {
+            for (auto &i : v) {
                 if (geo.collision(i.pos)) {
                     containerOverlap = true;
                     break;
                 }
+            }
+        }
     } while (containerOverlap);
     return v;
 }

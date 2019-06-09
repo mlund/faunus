@@ -170,45 +170,44 @@ void Faunus::Potential::CoulombGalore::sfPlain(const Faunus::json &, double val)
 
 Faunus::Potential::CoulombGalore::CoulombGalore(const std::string &name) {
     PairPotentialBase::name = name;
-    selfEnergy = [&](Particle &a) { return a.charge * a.charge * selfenergy_prefactor * lB / rc; };
 }
 
 void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
     try {
         kappa = 0.0;
         type = j.at("type");
-        rc = j.at("cutoff");
+        rc = j.at("cutoff").get<double>();
         rc2 = rc * rc;
         rc1i = 1 / rc;
-        epsr = j.at("epsr");
-        lB = pc::lB(epsr);
+        epsr = j.at("epsr").get<double>();
+        lB = pc::lB(epsr); // Bjerrum length
 
         depsdt = j.value("depsdt", -0.368 * pc::temperature / epsr);
         sf.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
 
         if (type == "yukawapoisson")
             sfYukawaPoisson(j);
-        if (type == "reactionfield")
+        else if (type == "reactionfield")
             sfReactionField(j);
-        if (type == "fanourgakis")
+        else if (type == "fanourgakis")
             sfFanourgakis(j);
-        if (type == "qpotential")
+        else if (type == "qpotential")
             sfQpotential(j);
-        if (type == "yonezawa")
+        else if (type == "yonezawa")
             sfYonezawa(j);
-        if (type == "poisson")
+        else if (type == "poisson")
             sfPoisson(j);
-        if (type == "yukawa")
+        else if (type == "yukawa")
             sfYukawa(j);
-        if (type == "fennel")
+        else if (type == "fennel")
             sfFennel(j);
-        if (type == "plain")
+        else if (type == "plain")
             sfPlain(j, 1);
-        if (type == "ewald")
+        else if (type == "ewald")
             sfEwald(j);
-        if (type == "none")
+        else if (type == "none")
             sfPlain(j, 0);
-        if (type == "wolf")
+        else if (type == "wolf")
             sfWolf(j);
 
         ecs = std::make_shared<PairMatrix<double>>();
@@ -227,6 +226,11 @@ void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
 
         if (table.empty())
             throw std::runtime_error(name + ": unknown coulomb type '" + type + "'");
+
+        // Set particle self-energy function. For reasons yet to be understood,
+        // rc etc. cannot be lambda captured by reference, but must be hard-copied,
+        // here into `factor`
+        selfEnergy = [factor = selfenergy_prefactor * lB / rc](Particle &a) { return a.charge * a.charge * factor; };
     }
 
     catch (std::exception &e) {
@@ -389,19 +393,16 @@ void Faunus::Potential::DipoleDipoleGalore::sfPlain(const Faunus::json &, double
 Faunus::Potential::DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) {
     PairPotentialBase::name = name;
     isotropic = false; // potential is angular dependent
-    selfEnergy = [&](Particle &a) {
-        return a.getExt().mulen * a.getExt().mulen * selfenergy_prefactor * lB / (rc * rc2);
-    };
 }
 
 void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
     try {
         kappa = 0.0;
         type = j.at("type");
-        rc = j.at("cutoff");
+        rc = j.at("cutoff").get<double>();
         rc2 = rc * rc;
         rc1i = 1 / rc;
-        epsr = j.at("epsr");
+        epsr = j.at("epsr").get<double>();
         lB = pc::lB(epsr);
 
         depsdt = j.value("depsdt", -0.368 * pc::temperature / epsr);
@@ -410,25 +411,32 @@ void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
 
         if (type == "plain")
             sfPlain(j, 1);
-        if (type == "none")
+        else if (type == "none")
             sfPlain(j, 0);
-        if (type == "ewald")
+        else if (type == "ewald")
             sfEwald(j);
-        if (type == "wolf")
+        else if (type == "wolf")
             sfWolf(j);
-        if (type == "fennell")
+        else if (type == "fennell")
             sfFennell(j);
-        if (type == "fanourgakis")
+        else if (type == "fanourgakis")
             sfFanourgakis(j);
-        if (type == "qpotential")
+        else if (type == "qpotential")
             sfQ0potential(j);
-        if (type == "q2potential")
+        else if (type == "q2potential")
             sfQ2potential(j);
-        if (type=="reactionfield")
+        else if (type == "reactionfield")
             sfReactionField(j);
 
         if (tableA.empty() || tableB.empty())
             throw std::runtime_error(name + ": unknown dipole-dipole type '" + type + "'");
+
+        // Set particle self-energy function. For reasons yet to be understood,
+        // rc, rc2 etc. cannot be captured to reference, but must be hard-copied,
+        // here into `factor`
+        selfEnergy = [factor = selfenergy_prefactor * lB / (rc * rc2)](Particle &a) {
+            return a.getExt().mulen * a.getExt().mulen * factor;
+        };
     }
 
     catch (std::exception &e) {

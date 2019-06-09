@@ -56,10 +56,10 @@ Atoms are the smallest possible particle entities with properties defined below.
 `dp=0`        | Translational displacement parameter [Å]
 `dprot=0`     | Rotational displacement parameter [degrees] (will be converted to radians)
 `eps=0`       | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol]
-`mu=[0,0,0]`  | Dipole moment vector
-`mulen=0`     | Dipole moment scalar [eÅ]
+`mu=[0,0,0]`  | Dipole moment vector [eÅ]
+`mulen=|mu|`  | Dipole moment scalar [eÅ]
 `mw=1`        | Molecular weight [g/mol]
-`q=0`         | Valency / partial charge number [$e$]
+`q=0`         | Valency or partial charge number [$e$]
 `r=0`         | Radius = `sigma/2` [Å]
 `sigma=0`     | `2r` [Å] (overrides radius)
 `tension=0`   | Surface tension [kJ/mol/Å$^2$]
@@ -78,10 +78,6 @@ atomlist:
   - my-external-atomlist.json
   - ...
 ~~~
-
-### Anisotropic Atoms
-
-By default, Faunus is currently compiled with centro-symmetric atoms, only. To add _i.e._ dipolar properties, modify the particle definition at the top of `src/faunus.cpp`.
 
 
 ## Molecule Properties

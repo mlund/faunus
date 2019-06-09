@@ -18,7 +18,7 @@ struct PairPotentialBase {
     std::string name;
     std::string cite;
     bool isotropic = true; //!< True if pair-potential is independent of particle orientation
-    std::function<double(Particle &)> selfEnergy;
+    std::function<double(Particle &)> selfEnergy; //!< self energy of particle (kT)
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;

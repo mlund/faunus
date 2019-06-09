@@ -67,7 +67,6 @@ class AtomProperty : public ReactionCoordinateBase {
 
   public:
     std::string property;
-    AtomProperty() = default;
     AtomProperty(const json &j, Space &spc);
     void _to_json(json &j) const override;
 };

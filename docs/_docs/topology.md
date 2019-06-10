@@ -40,7 +40,7 @@ Origin ($0,0,0$) is always placed in the geometric _center_ of the simulation co
 `type`:    |          |
 `cuboid`   | $x,y,z$  | `length` (array or single float)
 `slit`     | $x,y$    | `length` (array or single float)
-`hexagonal`| $x,y$    | `radius` (inscribed), `length` (along _z_)
+`hexagonal`| $x,y$    | `radius` (inscribed/inner), `length` (along _z_)
 `cylinder` | $z$      | `radius`, `length` (along _z_)
 `sphere`   | none     | `radius`
 

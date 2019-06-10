@@ -59,7 +59,7 @@ struct Charge : public ParticlePropertyBase {
  * ```
  */
 struct Dipole : public ParticlePropertyBase {
-    Point mu = {1, 0, 0};                                              //!< dipole moment unit vector
+    Point mu = {0, 0, 0};                                              //!< dipole moment unit vector
     double mulen = 0;                                                  //!< dipole moment scalar
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &); //!< Rotate dipole moment
     void to_json(json &j) const override;

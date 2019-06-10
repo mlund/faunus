@@ -308,21 +308,9 @@ Constrain::Constrain(const json &j, Space &spc) {
     using namespace Faunus::ReactionCoordinate;
     name = "constrain";
     type = j.at("type").get<std::string>();
-    try {
-        if (type == "atom")
-            rc = std::make_shared<AtomProperty>(j, spc);
-        else if (type == "molecule")
-            rc = std::make_shared<MoleculeProperty>(j, spc);
-        else if (type == "system")
-            rc = std::make_shared<SystemProperty>(j, spc);
-        if (rc == nullptr)
-            throw std::runtime_error("unknown coordinate type");
-
-    } catch (std::exception &e) {
-        throw std::runtime_error("error for reaction coordinate '" + type + "': " + e.what() +
-                                 usageTip["coords=[" + type + "]"]);
-    }
+    rc = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
+
 double Constrain::energy(Change &change) {
     if (change) {
         double val = (*rc)();     // calculate reaction coordinate
@@ -332,9 +320,9 @@ double Constrain::energy(Change &change) {
     return 0;
 }
 void Constrain::to_json(json &j) const {
-    j = *rc;
-    j["type"] = type;
+    j = json(*rc).at(type);
     j.erase("resolution");
+    j["type"] = type;
 }
 void Bonded::update_intra() {
     using namespace Potential;

@@ -319,7 +319,7 @@ class ParticleSelfEnergy : public Energybase {
   public:
     ParticleSelfEnergy(Space &, std::function<double(Particle &)>);
     double energy(Change &change) override;
-    void sync(Energybase *basePtr, Change &c) override;
+    void sync(Energybase *, Change &) override;
 };
 
 class Isobaric : public Energybase {
@@ -327,9 +327,9 @@ class Isobaric : public Energybase {
     Space &spc;
     double P; // P/kT
   public:
-    Isobaric(const json &j, Space &spc);
-    double energy(Change &change) override;
-    void to_json(json &j) const override;
+    Isobaric(const json &, Space &);
+    double energy(Change &) override;
+    void to_json(json &) const override;
 };
 
 /**
@@ -343,9 +343,9 @@ class Constrain : public Energybase {
     std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc = nullptr;
 
   public:
-    Constrain(const json &j, Space &spc);
-    double energy(Change &change) override;
-    void to_json(json &j) const override;
+    Constrain(const json &, Space &);
+    double energy(Change &) override;
+    void to_json(json &) const override;
 };
 
 /*
@@ -365,14 +365,14 @@ class Bonded : public Energybase {
 
   private:
     void update_intra();                              // finds and adds all intra-molecular bonds of active molecules
-    double sum_energy(const BondVector &bonds) const; // sum energy in vector of BondData
-    double sum_energy(const BondVector &bonds, const std::vector<int> &particles_ndx)
-        const; // sum energy in vector of BondData for matching particle indices
+    double sum_energy(const BondVector &) const;      // sum energy in vector of BondData
+    double sum_energy(const BondVector &,
+                      const std::vector<int> &) const; // sum energy in vector of BondData for matching particle indices
 
   public:
-    Bonded(const json &j, Space &spc);
-    void to_json(json &j) const override;
-    double energy(Change &change) override; // brute force -- refine this!
+    Bonded(const json &, Space &);
+    void to_json(json &) const override;
+    double energy(Change &) override; // brute force -- refine this!
 };
 
 /**

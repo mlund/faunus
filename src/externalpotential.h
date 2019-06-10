@@ -23,17 +23,17 @@ class ExternalPotential : public Energybase {
     std::function<double(const Particle &)> func = nullptr; // energy of single particle
     std::vector<std::string> _names;
 
-    double _energy(const Group<Particle> &g) const; //!< External potential on a single particle
+    double _energy(const Group<Particle> &) const; //!< External potential on a single particle
   public:
-    ExternalPotential(const json &j, Tspace &spc);
+    ExternalPotential(const json &, Tspace &);
 
     /*
      * @todo The `dN` check is very inefficient
      * as it calculates the external potential on *all*
      * particles.
      */
-    double energy(Change &change) override;
-    void to_json(json &j) const override;
+    double energy(Change &) override;
+    void to_json(json &) const override;
 }; //!< Base class for external potentials, acting on particles
 
 /**
@@ -47,7 +47,7 @@ class ExternalPotential : public Energybase {
  *
  * @warning: under construction
  */
-std::function<double(const Particle &)> createGouyChapmanPotential(const json &j);
+std::function<double(const Particle &)> createGouyChapmanPotential(const json &);
 
 /**
  * @brief Custom external potential on molecules
@@ -62,8 +62,8 @@ class CustomExternal : public ExternalPotential {
     json jin; // initial json input
 
   public:
-    CustomExternal(const json &j, Tspace &spc);
-    void to_json(json &j) const override;
+    CustomExternal(const json &, Tspace &);
+    void to_json(json &) const override;
 };
 
 /**
@@ -96,7 +96,7 @@ class ExternalAkesson : public ExternalPotential {
     Equidistant2DTable<double> phi;                  //!< External potential at z (unit: beta*e)
 
   private:
-    void to_json(json &j) const override;
+    void to_json(json &) const override;
     void save();
     void load();
 
@@ -104,8 +104,8 @@ class ExternalAkesson : public ExternalPotential {
      * This is Eq. 15 of the mol. phys. 1996 paper by Greberg et al.
      * (sign typo in manuscript: phi^infty(z) should be "-2*pi*z" on page 413, middle)
      */
-    double phi_ext(double z, double a) const;
-    void sync(Energybase *basePtr, Change &) override;
+    double phi_ext(double, double) const;
+    void sync(Energybase *, Change &) override;
 
     // update average charge density
     void update_rho();
@@ -114,8 +114,8 @@ class ExternalAkesson : public ExternalPotential {
     void update_phi();
 
   public:
-    ExternalAkesson(const json &j, Tspace &spc);
-    double energy(Change &change) override;
+    ExternalAkesson(const json &, Tspace &);
+    double energy(Change &) override;
     ~ExternalAkesson();
 };
 
@@ -135,8 +135,8 @@ class Confine : public ExternalPotential {
     std::map<std::string, Variant> m = {{"sphere", sphere}, {"cylinder", cylinder}, {"cuboid", cuboid}};
 
   public:
-    Confine(const json &j, Tspace &spc);
-    void to_json(json &j) const override;
+    Confine(const json &, Tspace &);
+    void to_json(json &) const override;
 }; //!< Confine particles to a sub-region of the simulation container
 
 } // namespace Energy

@@ -285,13 +285,14 @@ double Isobaric::energy(Change &change) {
     if (change.dV || change.all || change.dN) {
         double V = spc.geo.getVolume();
         size_t N = 0;
-        for (auto &g : spc.groups)
+        for (auto &g : spc.groups) {
             if (!g.empty()) {
                 if (g.atomic)
                     N += g.size();
                 else
                     N++;
             }
+        }
         return P * V - (N + 1) * std::log(V);
     } else
         return 0;
@@ -302,6 +303,7 @@ void Isobaric::to_json(json &j) const {
     j["P/Pa"] = P / 1.0_Pa;
     _roundjson(j, 5);
 }
+
 Constrain::Constrain(const json &j, Space &spc) {
     using namespace Faunus::ReactionCoordinate;
     name = "constrain";

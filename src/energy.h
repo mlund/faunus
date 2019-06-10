@@ -592,16 +592,21 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
         }
     }
 
+    /**
+     * Calculates the force on all particles
+     * @todo Change to reflect only active particle, see Space::activeParticles()
+     */
     void force(std::vector<Point> &forces) override {
         auto &p = spc.p; // alias to particle vector (reference)
         assert(forces.size() == p.size() && "the forces size must match the particle size");
-        for (size_t i = 0; i < p.size() - 1; i++)
+        for (size_t i = 0; i < p.size() - 1; i++) {
             for (size_t j = i + 1; j < p.size(); j++) {
-                // Point r = spc.geo.vdist(p[i].pos, p[j].pos); // minimum distance vector
-                Point f; //= pairpot.force( p[i], p[j], r.squaredNorm(), r );
+                Point r = spc.geo.vdist(p[i].pos, p[j].pos); // minimum distance vector
+                Point f = pairpot.force(p[i], p[j], r.squaredNorm(), r);
                 forces[i] += f;
                 forces[j] -= f;
             }
+        }
     }
 
     double energy(Change &change) override {
@@ -610,6 +615,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
 
         if (change) {
 
+            // there's a change in system volume
             if (change.dV) {
 #pragma omp parallel for reduction(+ : u) schedule(dynamic) if (omp_enable and omp_g2g)
                 for (auto i = spc.groups.begin(); i < spc.groups.end(); ++i) {

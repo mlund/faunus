@@ -14,11 +14,13 @@ typedef Quaternion<double> Quaterniond;
 
 namespace Faunus {
 
-/** @brief Base class for particle properties */
+/**
+ * @brief Base class for particle properties
+ */
 struct ParticlePropertyBase {
     virtual void to_json(json &j) const = 0;   //!< Convert to JSON object
     virtual void from_json(const json &j) = 0; //!< Convert from JSON object
-    void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &);
+    void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &); //!< Internal rotation
     virtual ~ParticlePropertyBase() = default;
 };
 

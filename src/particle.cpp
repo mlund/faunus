@@ -2,6 +2,12 @@
 #include <Eigen/Geometry>
 
 namespace Faunus {
+
+/**
+ * @todo Inefficient to pass both Quaternion and rotation matrix. This is currently
+ * done since tensors are rotated using the latter. Could these be rotated using
+ * quaternions?
+ */
 void ParticlePropertyBase::rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &) {}
 
 void Radius::to_json(json &j) const { j["r"] = radius; }

@@ -2,6 +2,12 @@
 #include <Eigen/Geometry>
 
 namespace Faunus {
+
+/**
+ * @todo Inefficient to pass both Quaternion and rotation matrix. This is currently
+ * done since tensors are rotated using the latter. Could these be rotated using
+ * quaternions?
+ */
 void ParticlePropertyBase::rotate(const Eigen::Quaterniond &, const Eigen::Matrix3d &) {}
 
 void Radius::to_json(json &j) const { j["r"] = radius; }
@@ -62,6 +68,10 @@ const AtomData &Particle::traits() {
     assert(id >= 0 and id < atoms.size());
     return atoms.at(id);
 }
+
+/**
+ * @warning Performance is sub-optimal as conversion is done through a json object
+ */
 Particle::Particle(const AtomData &a) { *this = json(a).front(); }
 
 // copy constructor
@@ -91,6 +101,7 @@ void Particle::rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m) {
     if (ext != nullptr)
         ext->rotate(q, m);
 }
+
 bool Particle::hasExtension() const { return ext != nullptr; }
 
 Particle::ParticleExtension &Particle::createExtension() {

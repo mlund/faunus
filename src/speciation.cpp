@@ -69,13 +69,17 @@ void SpeciationMove::_move(Change &change) {
                 return;             // Slip out the back door
             auto ait = slump.sample(atomlist.begin(), atomlist.end()); // Random particle iterator
             auto git = spc.findGroupContaining(*ait);
+
             Change::data d;
             d.atoms.push_back(Faunus::distance(git->begin(), ait)); // Index of particle rel. to group
             d.index = Faunus::distance(spc.groups.begin(), git);
             d.internal = true;
             d.dNswap = true;
             change.groups.push_back(d); // Add to list of moved groups
+
+            // AtomData --> json --> Particle (performance warning!)
             Particle p = atoms.at(m2.begin()->first);
+
             p.pos = ait->pos;
             *ait = p;
             assert(ait->id == m2.begin()->first);

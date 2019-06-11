@@ -314,11 +314,12 @@ class SelfEnergy : public Energybase {
 class ParticleSelfEnergy : public Energybase {
   private:
     Space &spc;
-    Potential::PairPotentialBase &pairpot;
+    std::function<double(Particle &)> selfEnergy; //!< Some potentials may give rise to a self energy
 
   public:
-    ParticleSelfEnergy(Space &, Potential::PairPotentialBase &);
+    ParticleSelfEnergy(Space &, std::function<double(Particle &)>);
     double energy(Change &change) override;
+    void sync(Energybase *, Change &) override;
 };
 
 class Isobaric : public Energybase {
@@ -326,9 +327,9 @@ class Isobaric : public Energybase {
     Space &spc;
     double P; // P/kT
   public:
-    Isobaric(const json &j, Space &spc);
-    double energy(Change &change) override;
-    void to_json(json &j) const override;
+    Isobaric(const json &, Space &);
+    double energy(Change &) override;
+    void to_json(json &) const override;
 };
 
 /**
@@ -342,9 +343,9 @@ class Constrain : public Energybase {
     std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> rc = nullptr;
 
   public:
-    Constrain(const json &j, Space &spc);
-    double energy(Change &change) override;
-    void to_json(json &j) const override;
+    Constrain(const json &, Space &);
+    double energy(Change &) override;
+    void to_json(json &) const override;
 };
 
 /*
@@ -364,14 +365,14 @@ class Bonded : public Energybase {
 
   private:
     void update_intra();                              // finds and adds all intra-molecular bonds of active molecules
-    double sum_energy(const BondVector &bonds) const; // sum energy in vector of BondData
-    double sum_energy(const BondVector &bonds, const std::vector<int> &particles_ndx)
-        const; // sum energy in vector of BondData for matching particle indices
+    double sum_energy(const BondVector &) const;      // sum energy in vector of BondData
+    double sum_energy(const BondVector &,
+                      const std::vector<int> &) const; // sum energy in vector of BondData for matching particle indices
 
   public:
-    Bonded(const json &j, Space &spc);
-    void to_json(json &j) const override;
-    double energy(Change &change) override; // brute force -- refine this!
+    Bonded(const json &, Space &);
+    void to_json(json &) const override;
+    double energy(Change &) override; // brute force -- refine this!
 };
 
 /**
@@ -517,10 +518,10 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
         return u;
     }
 
-    // add self energy if appropriate
+    // add self energy term to Hamiltonian if appropriate
     void addPairPotentialSelfEnergy() {
         if (pairpot.selfEnergy) // only add if self energy is defined
-            pot.push_back<Energy::ParticleSelfEnergy>(spc, pairpot);
+            pot.push_back<Energy::ParticleSelfEnergy>(spc, pairpot.selfEnergy);
     }
 
     void configureOpenMP(const json &j) {
@@ -591,16 +592,21 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
         }
     }
 
+    /**
+     * Calculates the force on all particles
+     * @todo Change to reflect only active particle, see Space::activeParticles()
+     */
     void force(std::vector<Point> &forces) override {
         auto &p = spc.p; // alias to particle vector (reference)
         assert(forces.size() == p.size() && "the forces size must match the particle size");
-        for (size_t i = 0; i < p.size() - 1; i++)
+        for (size_t i = 0; i < p.size() - 1; i++) {
             for (size_t j = i + 1; j < p.size(); j++) {
-                // Point r = spc.geo.vdist(p[i].pos, p[j].pos); // minimum distance vector
-                Point f; //= pairpot.force( p[i], p[j], r.squaredNorm(), r );
+                Point r = spc.geo.vdist(p[i].pos, p[j].pos); // minimum distance vector
+                Point f = pairpot.force(p[i], p[j], r.squaredNorm(), r);
                 forces[i] += f;
                 forces[j] -= f;
             }
+        }
     }
 
     double energy(Change &change) override {
@@ -609,6 +615,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
 
         if (change) {
 
+            // there's a change in system volume
             if (change.dV) {
 #pragma omp parallel for reduction(+ : u) schedule(dynamic) if (omp_enable and omp_g2g)
                 for (auto i = spc.groups.begin(); i < spc.groups.end(); ++i) {

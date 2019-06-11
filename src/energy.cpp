@@ -232,28 +232,41 @@ double SelfEnergy::energy(Change &change) {
 
 // ------------- ParticleSelfEnergy ---------------
 
-ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, Potential::PairPotentialBase &pairpot) : spc(spc), pairpot(pairpot) {
+ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(Particle &)> selfEnergy)
+    : spc(spc), selfEnergy(selfEnergy) {
     name = "selfenergy";
+#ifndef NDEBUG
+    // test if self energy can be called
+    Particle myparticle;
+    if (this->selfEnergy)
+        this->selfEnergy(myparticle);
+#endif
 }
 
 double ParticleSelfEnergy::energy(Change &change) {
-    return 0;
-    // code below is buggy
     double u = 0;
-    if (pairpot.selfEnergy) {
+    if (selfEnergy) {
         if (change.dN)
             for (auto &cg : change.groups) {
                 auto &g = spc.groups.at(cg.index);
                 for (auto i : cg.atoms)
                     if (i < g.size())
-                        u += pairpot.selfEnergy(*(g.begin() + i));
+                        u += selfEnergy(*(g.begin() + i));
             }
         else if (change.all and not change.dV)
             for (auto &g : spc.groups)
                 for (auto &i : g)
-                    u += pairpot.selfEnergy(i);
+                    u += selfEnergy(i);
     }
     return u;
+}
+
+void ParticleSelfEnergy::sync(Energybase *basePtr, Change &change) {
+    if (change.all) {
+        auto other = dynamic_cast<decltype(this)>(basePtr);
+        assert(other);
+        selfEnergy = other->selfEnergy;
+    }
 }
 
 // ------------- Isobaric ---------------
@@ -272,13 +285,14 @@ double Isobaric::energy(Change &change) {
     if (change.dV || change.all || change.dN) {
         double V = spc.geo.getVolume();
         size_t N = 0;
-        for (auto &g : spc.groups)
+        for (auto &g : spc.groups) {
             if (!g.empty()) {
                 if (g.atomic)
                     N += g.size();
                 else
                     N++;
             }
+        }
         return P * V - (N + 1) * std::log(V);
     } else
         return 0;
@@ -289,25 +303,14 @@ void Isobaric::to_json(json &j) const {
     j["P/Pa"] = P / 1.0_Pa;
     _roundjson(j, 5);
 }
+
 Constrain::Constrain(const json &j, Space &spc) {
     using namespace Faunus::ReactionCoordinate;
     name = "constrain";
     type = j.at("type").get<std::string>();
-    try {
-        if (type == "atom")
-            rc = std::make_shared<AtomProperty>(j, spc);
-        else if (type == "molecule")
-            rc = std::make_shared<MoleculeProperty>(j, spc);
-        else if (type == "system")
-            rc = std::make_shared<SystemProperty>(j, spc);
-        if (rc == nullptr)
-            throw std::runtime_error("unknown coordinate type");
-
-    } catch (std::exception &e) {
-        throw std::runtime_error("error for reaction coordinate '" + type + "': " + e.what() +
-                                 usageTip["coords=[" + type + "]"]);
-    }
+    rc = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
+
 double Constrain::energy(Change &change) {
     if (change) {
         double val = (*rc)();     // calculate reaction coordinate
@@ -317,9 +320,9 @@ double Constrain::energy(Change &change) {
     return 0;
 }
 void Constrain::to_json(json &j) const {
-    j = *rc;
-    j["type"] = type;
+    j = json(*rc).at(type);
     j.erase("resolution");
+    j["type"] = type;
 }
 void Bonded::update_intra() {
     using namespace Potential;

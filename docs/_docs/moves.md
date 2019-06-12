@@ -1,5 +1,3 @@
----
----
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
   tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
@@ -209,8 +207,6 @@ Performs a rotation of a chain segment between two randomly selected atoms in th
 The default value of `repeat` is the number of atoms in the `molecule` minus two
 (multiplied by the number of molecules).
 
-See also [Pivot move](#pivot).
-
 
 ## Parallel Tempering
 
@@ -247,7 +243,7 @@ constant number of particles, $N$.
 {: .notice--info}
 
 
-## Volume Move <a name="volumemove"></a>
+## Volume Move
 
 `volume`          |  Description
 ----------------- |  ----------------------------------------------
@@ -284,7 +280,7 @@ Untested for cylinders, slits.
 {: .notice--warning}
 
 
-## Reactive Canonical Monte Carlo (beta) <a name="rcmc"></a>
+## Reactive Canonical Monte Carlo
 
 The speciation move handles density fluctuations and particle transformations and is the main move
 for particle insertion, deletion, and swapping used in (semi)-grand canonical ensembles.

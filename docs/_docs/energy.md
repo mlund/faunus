@@ -6,9 +6,8 @@ MathJax.Hub.Config({
 });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
-[![](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
 
-# Energy <a name="energy"></a>
+# Energy
 
 The system energy, or Hamiltonian, consists of a sum of potential energy terms,
 
@@ -61,7 +60,7 @@ These conditions should be carefully considered if equilibrating a system far fr
 {: .notice--notice}
 
 
-## External Pressure <a name="isobaric"></a>
+## External Pressure
 
 This adds the following pressure term[^frenkel] to the Hamiltonian, appropriate for
 MC moves in $\ln V$:
@@ -79,7 +78,7 @@ where $N$ is the total number of molecules and atomic species.
 `P/unit`     | External pressure where unit can be `mM`, `atm`, or `Pa`.
 
 
-## Nonbonded Interactions <a name="nonbonded"></a>
+## Nonbonded Interactions
 
 This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise additive potential, $u_{ij}$,
 

@@ -6,7 +6,6 @@ MathJax.Hub.Config({
 });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
-[![Edit](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
 
 # Topology
 
@@ -24,7 +23,7 @@ geometry:
   length: [40,40,40] # cuboid dimensions (array or number)
 mcloop:              # number of MC steps (macro x micro)
   macro: 5           # Number of outer MC steps
-  micro: 100         # ...inner MC steps; total steps: 5x100=5000
+  micro: 100         # Number of inner MC steps; total: 5 x 100 = 5000
 random:              # seed for pseudo random number generator
   seed: fixed        # "fixed" (default) or "hardware" (non-deterministic)
 ~~~

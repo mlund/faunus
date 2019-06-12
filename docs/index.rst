@@ -7,7 +7,7 @@ Welcome to Faunus's documentation!
 =====================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    _docs/install
    _doct/running

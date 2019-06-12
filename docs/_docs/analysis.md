@@ -213,15 +213,22 @@ $$
 $$
 
 $$
-\begin{aligned}
-    u_{\text{dip-dip}}  = & \frac{\boldsymbol{\mu_a}\boldsymbol{\mu_b}   }{ R^3  }
-        - \frac{3 (\boldsymbol{\mu_a} \cdot \boldsymbol{R}) ( \boldsymbol{\mu_b}\cdot\boldsymbol{R})  }{R^5}   \\
-    u_{\text{ion-quad}} = & \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}
-        - \frac{  q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3} + ... \\
-    u_{\text{total}}    = & u_{\text{ion-ion}} + u_{\text{ion-dip}} + u_{\text{dip-dip}} + u_{\text{ion-quad}}\\
-    u_{\text{exact}}    = & \sum_i^a\sum_j^b \frac{q_iq_j}{ | \boldsymbol{r_i} - \boldsymbol{r_j}  |    }
-\end{aligned}
+    u_{\text{dip-dip}}  =  \frac{\boldsymbol{\mu_a}\boldsymbol{\mu_b}   }{ R^3  }
+        - \frac{3 (\boldsymbol{\mu_a} \cdot \boldsymbol{R}) ( \boldsymbol{\mu_b}\cdot\boldsymbol{R})  }{R^5} 
 $$
+
+$$
+    u_{\text{ion-quad}} =  \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}-\frac{q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3}+ ...
+$$
+
+$$
+    u_{\text{total}} =  u_{\text{ion-ion}} + u_{\text{ion-dip}} + u_{\text{dip-dip}} + u_{\text{ion-quad}}
+$$
+
+$$
+    u_{\text{exact}} =  \sum_i^a\sum_j^b \frac{q_iq_j}{ | \boldsymbol{r_i} - \boldsymbol{r_j} | }
+$$
+
 
 During simulation, the above terms are thermally averaged over angles, co-solute degrees of freedom etc.
 Note also that the moments are defined with respect to the *mass* center, not *charge* center.

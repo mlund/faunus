@@ -46,7 +46,7 @@ The filename format is `rho-@name.dat`.
 ### Density Profile
 
 `atomprofile`  | Description
--------------- | ---------------------------------------------––––
+-------------- | -----------------------------------------------------
 `nstep=0`      | Interval between samples
 `atoms=[]`     | List of atom names to sample; `*` selects all
 `charge=false` | Calc. charge density instead of density
@@ -63,7 +63,7 @@ $$
 $$
 
 `dir.sum()` |  $V(r)$        
------–––––– | ---------------
+----------- | ----------------
 3           |  $4\pi r^2 dr$ 
 2           |  $2\pi r dr$   
 1           |  $dr$          

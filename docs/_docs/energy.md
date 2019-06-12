@@ -191,8 +191,12 @@ $$
 \small
 \begin{aligned}
 U =& \overbrace{\frac{2\pi f}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\vert Q^{q\mu} \vert^2}^{\text{reciprocal}}
-- \overbrace{ f \sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2   \right)}^{\text{self}}\\
-&+ \underbrace{\frac{2\pi f}{(2\varepsilon_{surf} + 1)V}\left(  \vert \sum_{j}q_j{\bf r}_j   \vert^2 + 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j + \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )}_{\text{surface}}\\
+- \overbrace{ f \sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2
++ \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2
+\right)}^{\text{self}}\\
+&+ \underbrace{\frac{2\pi f}{(2\varepsilon_{surf} + 1)V}\left(  \vert \sum_{j}q_j{\bf r}_j   \vert^2
++ 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j
++ \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )}_{\text{surface}}\\
 \end{aligned}
 $$
 
@@ -223,7 +227,8 @@ $$
 while for point dipoles (currently unimplemented),
 
 $$
-Q^{\mu} = \sum_j\boldsymbol{\mu}_j\cdot\nabla_j\left(\prod_{\alpha \in\{x,y,z\}}\cos\left(\frac{2\pi}{L_{\alpha}}n_{\alpha}r_{\alpha,j}\right)\right).
+Q^{\mu} = \sum_j \boldsymbol{\mu}_j \cdot \nabla_j \left ( \prod_{ \alpha \in \{ x,y,z \} } \cos \left (
+   \frac{2\pi}{L_{\alpha}} n_{\alpha} r_{\alpha,j} \right ) \right ).
 $$
 
 **Limitations:** Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles

@@ -9,6 +9,7 @@ Welcome to Faunus's documentation!
 .. toctree::
    :maxdepth: 3
 
+   _docs/docs
    _docs/install
    _doct/running
    _docs/topology

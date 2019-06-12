@@ -62,11 +62,13 @@ $$
 \rho(r) = \frac{\langle N(r) \rangle}{V(r)}
 $$
 
-`dir.sum()` |  $V(r)$        
------------ | ----------------
-3           |  $4\pi r^2 dr$ 
-2           |  $2\pi r dr$   
-1           |  $dr$          
+The sum of coefficients in `dir` determines the volume element normalisation:
+
+$d_x+d_y_d_z$  | $V(r)$
+-------------- | ----------------
+3              | $4\pi r^2 dr$
+2              | $2\pi r dr$
+1              | $dr$
 
 This can be used to obtain charge profiles, measure excess pressure
 etc.

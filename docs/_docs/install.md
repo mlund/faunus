@@ -146,7 +146,15 @@ cd faunus
 
 This requires `clang-format` which may also be directly used in IDE's
 such as CLion. In the top-level directory of Faunus you will find
-the style configuration file `.clang-format`
+the style configuration file [`.clang-format`](https://github.com/mlund/faunus/blob/master/.clang-format)
+
+Also, adhere to the following naming conventions:
+
+Style        | Elements
+------------ | -------------------------
+`PascalCase` | classes, namespaces
+`camelCase`  | functions
+`snake_case` | variables
 
 
 ## Creating a conda package (development usage)

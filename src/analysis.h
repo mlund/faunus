@@ -244,13 +244,14 @@ class SaveState : public Analysisbase {
  */
 class PairFunctionBase : public Analysisbase {
   protected:
-    int dim = 3;
+    int dim = 3;            // dimentions to use when normalizing
     int id1 = -1, id2 = -1; // particle id (mol or atom)
-    double dr = 0;
+    double dr = 0;          // distance resolution
     Eigen::Vector3i slicedir = {0, 0, 0};
     double thickness = 0;
     Equidistant2DTable<double, double> hist;
-    std::string name1, name2, file;
+    std::string name1, name2; // atom/molecule names
+    std::string file;         // output filename
     double Rhypersphere = -1; // Radius of 2D hypersphere
     Average<double> V;        // average volume (angstrom^3)
 

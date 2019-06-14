@@ -255,13 +255,17 @@ void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0
 
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {
+        // store old volume and energy
         double Vold = getVolume(), Uold = pot.energy(c);
+        // scale entire system to new volume
         scaleVolume(Vold + dV);
         double Unew = pot.energy(c);
+        // restore saved system
         scaleVolume(Vold);
 
         // check if energy change is too big for exp()
-        double x = pc::infty, du = Unew - Uold;
+        double x = pc::infty;
+        double du = Unew - Uold; // system energy change
         if (-du < pc::max_exp_argument)
             x = std::exp(-du);
         if (std::isinf(x)) {
@@ -309,12 +313,14 @@ QRtraj::QRtraj(const json &j, Space &spc) {
         throw std::runtime_error("error opening "s + file);
     f.precision(6);
     write_to_file = [&groups = spc.groups, &f = f]() {
-        for (auto &g : groups)
-            for (auto it = g.begin(); it != g.trueend(); ++it) // loop over *all* particles
+        for (auto &g : groups) {
+            for (auto it = g.begin(); it != g.trueend(); ++it) { // loop over *all* particles
                 if (it < g.end())
                     f << it->charge << " " << atoms[it->id].sigma * 0.5 << " ";
                 else
                     f << "0 0 "; // zero charge and radii for inactive particles
+            }
+        }
         f << "\n";               // newline for every frame
     };
 }
@@ -329,10 +335,10 @@ CombinedAnalysis::~CombinedAnalysis() {
         ptr->to_disk();
 }
 CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonian &pot) {
-    if (j.is_array())
-        for (auto &m : j)
-            for (auto it = m.begin(); it != m.end(); ++it)
-                if (it->is_object())
+    if (j.is_array()) {
+        for (auto &m : j) {
+            for (auto it = m.begin(); it != m.end(); ++it) {
+                if (it->is_object()) {
                     try {
                         size_t oldsize = this->vec.size();
                         if (it.key() == "atomprofile")
@@ -382,7 +388,10 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                         throw std::runtime_error("Error adding analysis,\n\n\"" + it.key() + "\": " + it->dump() +
                                                  "\n\n: " + e.what() + usageTip[it.key()]);
                     }
-}
+                }
+            }
+        }
+    }
 
 void FileReactionCoordinate::_to_json(json &j) const {
     json rcjson = *rc; // envoke to_json(...)
@@ -697,12 +706,14 @@ void MoleculeRDF::_sample() {
     auto mollist1 = spc.findMolecules(id1, Space::ACTIVE);
     auto mollist2 = spc.findMolecules(id2, Space::ACTIVE);
     auto mollist = ranges::view::concat(mollist1, mollist2);
-    for (auto i = mollist.begin(); i != mollist.end(); ++i)
-        for (auto j = i; ++j != mollist.end();)
+    for (auto i = mollist.begin(); i != mollist.end(); ++i) {
+        for (auto j = i; ++j != mollist.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
                 double r = std::sqrt(spc.geo.sqdist(i->cm, j->cm));
                 hist(r)++;
             }
+        }
+    }
 }
 MoleculeRDF::MoleculeRDF(const json &j, Space &spc) : PairFunctionBase(j), spc(spc) {
     name = "molrdf";
@@ -722,13 +733,12 @@ MoleculeRDF::MoleculeRDF(const json &j, Space &spc) : PairFunctionBase(j), spc(s
 void AtomDipDipCorr::_sample() {
     V += spc.geo.getVolume(dim);
     auto active = spc.activeParticles();
-    for (auto i = active.begin(); i != active.end(); ++i)
-        for (auto j = i; ++j != active.end();)
+    for (auto i = active.begin(); i != active.end(); ++i) {
+        for (auto j = i; ++j != active.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
                 Point rvec = spc.geo.vdist(i->pos, j->pos);
                 if (slicedir.sum() > 0) {
                     if (rvec.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
-                        // rvec = rvec.cwiseProduct( Point(1.,1.,1.) - slice.cast<double>() );
                         double dipdip = i->getExt().mu.dot(j->getExt().mu);
                         double r1 = rvec.norm();
                         hist2(r1) += dipdip;
@@ -741,6 +751,8 @@ void AtomDipDipCorr::_sample() {
                     hist(r1)++; // get g(r) for free
                 }
             }
+        }
+    }
 }
 AtomDipDipCorr::AtomDipDipCorr(const json &j, Space &spc) : PairAngleFunctionBase(j), spc(spc) {
     name = "atomdipdipcorr";

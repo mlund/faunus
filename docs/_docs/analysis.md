@@ -64,7 +64,7 @@ $$
 
 The sum of coefficients in `dir` determines the volume element normalisation:
 
-$d_x+d_y_d_z$  | $V(r)$
+$d_x+d_y+d_z$  | $V(r)$
 -------------- | ----------------
 3              | $4\pi r^2 dr$
 2              | $2\pi r dr$

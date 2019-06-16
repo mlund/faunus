@@ -3,6 +3,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/eigen.h>
 #include <pybind11/operators.h>
+#include <pybind11/functional.h>
 
 #include <src/core.h>
 #include <src/space.h>
@@ -168,12 +169,22 @@ PYBIND11_MODULE(pyfaunus, m)
     m.def("getTemperature", []() { return pc::temperature; } );
     m.def("setTemperature", [](double T) { pc::temperature = T; } );
 
-    // Potentials
-    py::class_<Potential::FunctorPotential>(m, "FunctorPotential")
-        .def(py::init([](py::dict dict) { return from_dict<Potential::FunctorPotential>(dict); }))
-        .def("energy", [](Potential::FunctorPotential &pot, const Particle &a, const Particle &b, const Point &r) {
+    // --------- Pair Potentials ---------
+
+    // Base
+    py::class_<Potential::PairPotentialBase>(m, "PairPotentialBase")
+        .def_readwrite("name", &Potential::PairPotentialBase::name)
+        .def_readwrite("cite", &Potential::PairPotentialBase::cite)
+        .def_readwrite("isotropic", &Potential::PairPotentialBase::isotropic)
+        .def_readwrite("selfEnergy", &Potential::PairPotentialBase::selfEnergy)
+        .def("force", &Potential::PairPotentialBase::force)
+        .def("energy", [](Potential::PairPotentialBase &pot, const Particle &a, const Particle &b, const Point &r) {
             return pot(a, b, r);
         });
+
+    // Potentials::FunctorPotential
+    py::class_<Potential::FunctorPotential, Potential::PairPotentialBase>(m, "FunctorPotential")
+        .def(py::init([](py::dict dict) { return from_dict<Potential::FunctorPotential>(dict); }));
 
     // Change::Data
     py::class_<Change::data>(m, "ChangeData")

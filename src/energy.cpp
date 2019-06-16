@@ -77,17 +77,17 @@ void EwaldData::update(const Point &box) {
     }
 }
 
-void from_json(const json &j, EwaldData &d) {
-    d.alpha = j.at("alpha");
-    d.rc = j.at("cutoff");
-    d.kc = j.at("kcutoff");
-    d.ipbc = j.value("ipbc", false);
-    d.spherical_sum = j.value("spherical_sum", true);
-    d.lB = pc::lB(j.at("epsr"));
-    d.eps_surf = j.value("epss", 0.0);
-    d.const_inf = (d.eps_surf < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium
-    d.kappa = j.value("kappa", 0.0);
-    d.kappa2 = d.kappa*d.kappa;
+EwaldData::EwaldData(const json &j) {
+    alpha = j.at("alpha");
+    rc = j.at("cutoff");
+    kc = j.at("kcutoff");
+    ipbc = j.value("ipbc", false);
+    spherical_sum = j.value("spherical_sum", true);
+    lB = pc::lB(j.at("epsr"));
+    eps_surf = j.value("epss", 0.0);
+    const_inf = (eps_surf < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium
+    kappa = j.value("kappa", 0.0);
+    kappa2 = kappa * kappa;
 }
 
 void to_json(json &j, const EwaldData &d) {

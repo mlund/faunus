@@ -68,20 +68,19 @@ struct EwaldData {
     int kVectorsInUse = 0;
     Point L; //!< Box dimensions
 
+    EwaldData(const json &);
     void update(const Point &box);
 };
 
-void from_json(const json &j, EwaldData &d);
-
-void to_json(json &j, const EwaldData &d);
+void to_json(json &, const EwaldData &);
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] Ewald - EwaldData") {
     using doctest::Approx;
 
-    EwaldData data = R"({
+    EwaldData data(R"({
                 "ipbc": false, "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
+                "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
 
     data.update(Point(10, 10, 10));
 
@@ -256,9 +255,8 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
     Space &spc;
 
   public:
-    Ewald(const json &j, Space &spc) : policy(spc), spc(spc) {
+    Ewald(const json &j, Space &spc) : data(j), policy(spc), spc(spc) {
         name = "ewald";
-        data = j;
         init();
     }
 
@@ -296,20 +294,6 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
 
     void to_json(json &j) const override { j = data; }
 };
-
-/** @brief Self-energy term of electrostatic potentials  */
-/*
-class SelfEnergy : public Energybase {
-  private:
-    std::string type;
-    double selfenergy_ion_prefactor, selfenergy_dipole_prefactor, epsr, lB, rc, alpha, kappa, epsrf;
-    int C, D;
-    Space &spc;
-
-  public:
-    SelfEnergy(const json &j, Space &spc);
-    double energy(Change &change) override;
-};*/
 
 class ParticleSelfEnergy : public Energybase {
   private:

@@ -40,6 +40,21 @@ class TestGlobals(unittest.TestCase):
 for i in atoms:
     print("atom name and diameter:", i.name, i.sigma)
 
+
+# Test Coulomb
+
+class TestCoulomb(unittest.TestCase):
+
+    # this doesn't test anything yet
+    def test_pairpot(self):
+        d = { 'default' : [
+            { 'coulomb': { 'epsr': 80, 'type': 'qpotential', 'cutoff': 100 } }
+            ] }
+        pot = FunctorPotential( d )
+        r = np.linspace(1,10,5)
+        u = np.array( [pot.energy( spc.p[0], spc.p[1], [0,0,i] ) for i in r] )
+        pot.selfEnergy(spc.p[0])
+
 # Test SASA calculations
 
 class TestSASA(unittest.TestCase):

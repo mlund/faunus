@@ -334,6 +334,7 @@ CombinedAnalysis::~CombinedAnalysis() {
     for (auto &ptr : this->vec)
         ptr->to_disk();
 }
+
 CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonian &pot) {
     if (j.is_array()) {
         for (auto &m : j) {
@@ -392,6 +393,7 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
             }
         }
     }
+}
 
 void FileReactionCoordinate::_to_json(json &j) const {
     json rcjson = *rc; // envoke to_json(...)

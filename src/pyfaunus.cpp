@@ -24,6 +24,11 @@ inline json dict2json(py::dict dict) {
     return json::parse( dumps(dict).cast<std::string>() );
 } // python dict --> c++ json
 
+inline json list2json(py::list list) {
+    py::object dumps = py::module::import("json").attr("dumps");
+    return json::parse(dumps(list).cast<std::string>());
+} // python list --> c++ json
+
 inline py::dict json2dict(const json &j) {
     py::object loads = py::module::import("json").attr("loads");
     return loads( j.dump() ) ;
@@ -218,8 +223,8 @@ PYBIND11_MODULE(pyfaunus, m)
     // Hamiltonian
     py::class_<Thamiltonian>(m, "Hamiltonian")
         .def(py::init<Space &, const json &>())
-        .def(py::init([](Space &spc, py::dict dict) {
-            json j = dict2json(dict);
+        .def(py::init([](Space &spc, py::list list) {
+            json j = list2json(list);
             return std::unique_ptr<Thamiltonian>(new Thamiltonian(spc, j));
         }))
         .def("init", &Thamiltonian::init)
@@ -239,12 +244,27 @@ PYBIND11_MODULE(pyfaunus, m)
                     return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j,mpi));
                     }));
 
+    // Analysisbase
+    py::class_<Analysis::Analysisbase>(m, "Analysisbase")
+        .def_readwrite("name", &Analysis::Analysisbase::name)
+        .def_readwrite("cite", &Analysis::Analysisbase::cite)
+        .def("to_disk", &Analysis::Analysisbase::to_disk)
+        .def("sample", &Analysis::Analysisbase::sample)
+        .def("to_dict", [](Analysis::Analysisbase &self) {
+            json j;
+            Analysis::to_json(j, self);
+            return json2dict(j);
+        });
+
+    py::bind_vector<std::vector<std::shared_ptr<Analysis::Analysisbase>>>(m, "AnalysisVector");
+
     // CombinedAnalysis
     py::class_<Analysis::CombinedAnalysis>(m, "Analysis")
-        .def(py::init([](Space &spc, Thamiltonian &pot, py::dict dict) {
-            json j = dict2json(dict);
+        .def(py::init([](Space &spc, Thamiltonian &pot, py::list list) {
+            json j = list2json(list);
             return std::unique_ptr<Analysis::CombinedAnalysis>(new Analysis::CombinedAnalysis(j, spc, pot));
         }))
+        .def_readwrite("vector", &Analysis::CombinedAnalysis::vec)
         .def("to_dict",
              [](Analysis::CombinedAnalysis &self) {
                  json j;

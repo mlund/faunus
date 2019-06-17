@@ -860,14 +860,14 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
  */
 class SASAEnergy : public Energybase {
   public:
-    std::vector<float> sasa, radii;
+    std::vector<double> sasa, radii;
 
   private:
     Space &spc;
     double probe;            // sasa probe radius (angstrom)
     double conc = 0;         // co-solute concentration (mol/l)
     Average<double> avgArea; // average surface area
-    std::shared_ptr<POWERSASA::PowerSasa<float, Point>> ps = nullptr;
+    std::shared_ptr<POWERSASA::PowerSasa<double, Point>> ps = nullptr;
 
     void updateSASA(const ParticleVector &p);
     void to_json(json &j) const override;

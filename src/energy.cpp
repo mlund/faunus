@@ -436,13 +436,16 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
 
+    if (not j.is_array())
+        throw std::runtime_error("json array expected for energy");
+
     name = "hamiltonian";
 
     // add container overlap energy for non-cuboidal geometries
     if (spc.geo.type not_eq Geometry::CUBOID)
         push_back<Energy::ContainerOverlap>(spc);
 
-    for (auto &m : j.at("energy")) { // loop over move list
+    for (auto &m : j) { // loop over move list
         size_t oldsize = vec.size();
         for (auto it = m.begin(); it != m.end(); ++it) {
             try {
@@ -606,7 +609,7 @@ void SASAEnergy::init() {
                    [this](auto &a) { return atoms[a.id].sigma * 0.5 + this->probe; });
 
     if (ps == nullptr)
-        ps = std::make_shared<POWERSASA::PowerSasa<float, Point>>(spc.positions(), radii);
+        ps = std::make_shared<POWERSASA::PowerSasa<double, Point>>(spc.positions(), radii);
     updateSASA(spc.p);
 }
 double SASAEnergy::energy(Change &) {

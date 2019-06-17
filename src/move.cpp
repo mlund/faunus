@@ -795,7 +795,7 @@ void MCSimulation::to_json(json &j) {
     j["last move"] = lastMoveName;
 }
 
-MCSimulation::State::State(const json &j) : spc(j), pot(spc, j) {}
+MCSimulation::State::State(const json &j) : spc(j), pot(spc, j.at("energy")) {}
 
 void MCSimulation::State::sync(MCSimulation::State &other, Change &change) {
     spc.sync(other.spc, change);

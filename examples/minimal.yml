@@ -1,6 +1,6 @@
 #!/usr/bin/env yason.py
 energy:
-    - nonbonded:
+    - nonbonded_splined:
         default:
             - lennardjones: {mixing: LB}
             - coulomb: {type: yukawa, epsr: 80, debyelength: 7, cutoff: 100}

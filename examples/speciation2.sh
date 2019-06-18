@@ -65,7 +65,7 @@ reactionlist:
 #    - Test2: {log_k: 3.43, reactants: [ID2_m, ID4_m], products: [ID3_m], N_reservoir: 0, canonic: false}
 
 energy:
-    - nonbonded:
+    - nonbonded_splined:
         default:
             - wca: {mixing: LB}
             - coulomb: {type: plain, epsr: 80, cutoff: 100}

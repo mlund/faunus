@@ -1,6 +1,6 @@
 #!/usr/bin/env yason.py
 energy:
-    - nonbonded:
+    - nonbonded_splined:
         default:
             - wca: {mixing: LB}
 atomlist:

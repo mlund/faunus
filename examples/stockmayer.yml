@@ -14,7 +14,7 @@ insertmolecules:
     - sol: {N: 1000}
 
 energy:
- - nonbonded_exact:
+ - nonbonded:
     default:
     - dipoledipole: {type: qpotential, order: 5, epsr: 1, cutoff: 14.4315, alpha: 0.2310, epsrf: 130}
     - lennardjones: {mixing: LB}

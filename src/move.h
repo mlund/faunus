@@ -244,7 +244,7 @@ class ForceMove : public Movebase {
 class VolumeMove : public Movebase {
   private:
     const std::map<std::string, Geometry::VolumeMethod> methods = {
-        {"xy", Geometry::XY}, {"isotropic", Geometry::ISOTROPIC}, {"isochoric", Geometry::ISOCHORIC}};
+        {"z", Geometry::Z}, {"xy", Geometry::XY}, {"isotropic", Geometry::ISOTROPIC}, {"isochoric", Geometry::ISOCHORIC}};
     typename decltype(methods)::const_iterator method;
     typedef typename Space::Tpvec Tpvec;
     Space &spc;

@@ -9,6 +9,14 @@
 #include <cstdlib>
 #include "ProgressBar.hpp"
 
+#ifdef ENABLE_SID
+#include "cppsid.h"
+#include <thread>
+using namespace std::this_thread;     // sleep_for, sleep_until
+using namespace std::chrono_literals; // ns, us, ms, s, h, etc.
+using std::chrono::system_clock;
+#endif
+
 using namespace Faunus;
 using namespace std;
 
@@ -171,6 +179,15 @@ int main( int argc, char **argv )
 
     } catch (std::exception &e) {
         std::cerr << e.what() << endl;
+#ifdef ENABLE_SID
+        // easter egg...
+        CPPSID::Player player;
+        player.load("Beyond_the_Zero.sid", 0);
+        player.start();
+        sleep_for(10ns);
+        sleep_until(system_clock::now() + 120s);
+        player.stop();
+#endif
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;

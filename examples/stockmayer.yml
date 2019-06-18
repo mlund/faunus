@@ -1,3 +1,4 @@
+#!/usr/bin/env yason.py
 temperature: 315.8
 random: {seed: fixed}
 geometry: {type: cuboid, length: 29.6336}
@@ -22,7 +23,7 @@ moves:
     - transrot: {molecule: sol}
 
 analysis:
-    - sanity: {nstep: 1e2}
+    - sanity: {nstep: 100}
     - systemenergy: {file: energy.dat, nstep: 10}
     - atomrdf: {file: rdf.dat, nstep: 1, dr: 0.1, name1: dip, name2: dip}
     - atomdipdipcorr: {file: mumu.dat, nstep: 1, dr: 0.1, name1: dip, name2: dip}

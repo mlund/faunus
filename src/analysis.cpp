@@ -383,8 +383,12 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                                                  "\n\n: " + e.what() + usageTip[it.key()]);
                     }
 }
+
 void FileReactionCoordinate::_to_json(json &j) const {
-    j = *rc;
+    json rcjson = *rc; // envoke to_json(...)
+    if (rcjson.count(type) == 0)
+        throw std::runtime_error("error writing json for reaction coordinate");
+    j = rcjson[type];
     j["type"] = type;
     j["file"] = filename;
     j.erase("range");      // these are for penalty function
@@ -392,6 +396,7 @@ void FileReactionCoordinate::_to_json(json &j) const {
     if (cnt > 0)
         j["average"] = avg.avg();
 }
+
 void FileReactionCoordinate::_sample() {
     if (file) {
         double val = (*rc)();
@@ -399,27 +404,14 @@ void FileReactionCoordinate::_sample() {
         file << cnt * steps << " " << val << " " << avg.avg() << "\n";
     }
 }
+
 FileReactionCoordinate::FileReactionCoordinate(const json &j, Space &spc) {
-    using namespace ReactionCoordinate;
     from_json(j);
     name = "reactioncoordinate";
     filename = MPI::prefix + j.at("file").get<std::string>();
     file.open(filename); // output file
     type = j.at("type").get<std::string>();
-    try {
-        if (type == "atom")
-            rc = std::make_shared<AtomProperty>(j, spc);
-        else if (type == "molecule")
-            rc = std::make_shared<MoleculeProperty>(j, spc);
-        else if (type == "system")
-            rc = std::make_shared<SystemProperty>(j, spc);
-        if (rc == nullptr)
-            throw std::runtime_error("unknown coordinate type");
-
-    } catch (std::exception &e) {
-        throw std::runtime_error("error for reaction coordinate '" + type + "': " + e.what() +
-                                 usageTip["coords=[" + type + "]"]);
-    }
+    rc = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
 
 void WidomInsertion::_sample() {
@@ -431,9 +423,10 @@ void WidomInsertion::_sample() {
         for (int i = 0; i < ninsert; ++i) {
             pin = rins(spc.geo, spc.p, molecules.at(molid));
             if (!pin.empty()) {
-                if (absolute_z)
+                if (absolute_z) {
                     for (auto &p : pin)
                         p.pos.z() = std::fabs(p.pos.z());
+                }
 
                 assert(pin.size() == g.size());
                 spc.geo.randompos(pin[0].pos, random);
@@ -507,13 +500,14 @@ void Density::_sample() {
     Lavg += std::cbrt(V);
     invVavg += 1 / V;
 
-    for (auto &g : spc.groups)
+    for (auto &g : spc.groups) {
         if (g.atomic) {
             for (auto &p : g)
                 Natom[p.id]++;
             atmdhist[g.id](g.size())++;
         } else if (not g.empty())
             Nmol[g.id]++;
+    }
 
     for (auto &i : Nmol) {
         rho_mol[i.first] += i.second / V;

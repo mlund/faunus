@@ -381,11 +381,7 @@ namespace Faunus {
             set_box(edge, height);
         }
 
-        void HexagonalPrism::to_json(json &j) const {
-            j = {{"radius", box.y()},
-                 {"length", box.z()}};
-        }
-
+        void HexagonalPrism::to_json(json &j) const { j = {{"radius", 0.5 * box.x()}, {"length", box.z()}}; }
 
         // =============== Cylinder ===============
 

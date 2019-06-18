@@ -86,7 +86,7 @@ This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise add
 $$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
 
 Using `nonbonded`, potentials can be arbitrarily mixed and customized for specific particle
-combinations. Internally, the potential is _splined_ in an interval [`rmin`,`rmax`] determined
+combinations. `nonbonded_splined` internally _splines_ the combined potential in an interval [`rmin`,`rmax`] determined
 by the following policies:
 
 - `rmin` is decreased towards zero until the potential reaches `u_at_rmin=20` kT
@@ -96,13 +96,14 @@ If outside the interval, infinity or zero is returned, respectively.
 Finally, the spline precision can be controlled with `utol=1e-5` kT.
 
 Below is a description of possible nonbonded methods. For simple potentials, the hard coded
-variants are often the fastest option. 
+variants are often the fastest option. For better performance, it is recommended to use `nonbonded_splined` in place of the more robust `nonbonded` method. To check that the combined potential is splined correctly, set `to_disk=true` to print to `A-B_tabulated.dat` the exact and splined combined potentials between species A and B.
 
 `energy`               | $u_{ij}$
 ---------------------- | ------------------------------------------------------
-`nonbonded`            | Any combination of pair potentials (splined)
+`nonbonded`            | Any combination of pair potentials (slower, but exact)
+`nonbonded_exact`      | An alias for `nonbonded`
+`nonbonded_splined`    | Any combination of pair potentials (splined)
 `nonbonded_cached`     | Any combination of pair potentials (splined, only intergroup!)
-`nonbonded_exact`      | Any combination of pair potentials (slower, but exact)
 `nonbonded_coulomblj`  | `coulomb`+`lennardjones` (hard coded)
 `nonbonded_coulombwca` | `coulomb`+`wca` (hard coded)
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)

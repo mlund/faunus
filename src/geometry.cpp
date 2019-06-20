@@ -50,6 +50,10 @@ namespace Faunus {
                     alpha = std::sqrt(volume / old_volume);
                     box_scaling = {alpha, alpha, 1.0};
                     break;
+                case Z:
+                    alpha = volume / old_volume;
+                    box_scaling = {1.0, 1.0, alpha};
+                    break;
                 case ISOCHORIC:
                     // z is scaled by 1/alpha/alpha, x and y are scaled by alpha
                     alpha = std::cbrt(volume / old_volume);
@@ -294,6 +298,10 @@ namespace Faunus {
                     alpha = std::sqrt(volume / old_volume);
                     box_scaling = {alpha, alpha, 1.0};
                     break;
+                case Z:
+                    alpha = volume / old_volume;
+                    box_scaling = {1.0, 1.0, alpha};
+                    break;
                 case ISOCHORIC:
                     // radius is scaled by alpha, z is scaled by 1/alpha/alpha
                     alpha = std::cbrt(volume / old_volume);
@@ -401,10 +409,15 @@ namespace Faunus {
                     height *= alpha;
                     box_scaling = {alpha, alpha, alpha};
                     break;
-                case XY: // earlier wrongly named as ISOTROPIC!
+                case XY: // earlier wrongly named ISOTROPIC!
                     alpha = std::sqrt(volume / old_volume);
                     radius *= alpha;
                     box_scaling = {alpha, alpha, 1.0};
+                    break;
+                case Z:
+                    alpha = volume / old_volume;
+                    height *= alpha;
+                    box_scaling = {1.0, 1.0, alpha};
                     break;
                 case ISOCHORIC:
                     // height is scaled by 1/alpha/alpha, radius is scaled by alpha

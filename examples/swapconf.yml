@@ -17,7 +17,7 @@ insertmolecules:
     - water: {N: 2}
 
 energy:
-    - nonbonded_exact: 
+    - nonbonded: 
         default:
             - lennardjones: {mixing: LB} # we just want a simple non-bonded potential
 

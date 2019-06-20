@@ -57,7 +57,7 @@ insertmolecules:
 
 energy:
     - bonded: {}
-    - nonbonded:
+    - nonbonded_splined:
         default:
         - hardsphere
 

@@ -447,33 +447,30 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
 
     for (auto &m : j) { // loop over move list
         size_t oldsize = vec.size();
-        for (auto it = m.begin(); it != m.end(); ++it) {
+        for (auto it : m.items()) {
             try {
                 if (it.key() == "nonbonded_coulomblj")
                     push_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
 
-                if (it.key() == "nonbonded_coulomblj_EM")
+                else if (it.key() == "nonbonded_coulomblj_EM")
                     push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
 
-                if (it.key() == "nonbonded_splined")
+                else if (it.key() == "nonbonded_splined")
                     push_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc, *this);
 
-                if (it.key() == "nonbonded")
+                else if (it.key() == "nonbonded" or it.key() == "nonbonded_exact")
                     push_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);
 
-                if (it.key() == "nonbonded_exact")
-                    push_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);
-
-                if (it.key() == "nonbonded_cached")
+                else if (it.key() == "nonbonded_cached")
                     push_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc, *this);
 
-                if (it.key() == "nonbonded_coulombwca")
+                else if (it.key() == "nonbonded_coulombwca")
                     push_back<Energy::Nonbonded<CoulombWCA>>(it.value(), spc, *this);
 
-                if (it.key() == "nonbonded_pm" or it.key() == "nonbonded_coulombhs")
+                else if (it.key() == "nonbonded_pm" or it.key() == "nonbonded_coulombhs")
                     push_back<Energy::Nonbonded<PrimitiveModel>>(it.value(), spc, *this);
 
-                if (it.key() == "nonbonded_pmwca")
+                else if (it.key() == "nonbonded_pmwca")
                     push_back<Energy::Nonbonded<PrimitiveModelWCA>>(it.value(), spc, *this);
 
                 // this should be moved into `Nonbonded` and added when appropriate
@@ -484,37 +481,37 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                 if (it.key() == "bonded")
                     push_back<Energy::Bonded>(it.value(), spc);
 
-                if (it.key() == "customexternal")
+                else if (it.key() == "customexternal")
                     push_back<Energy::CustomExternal>(it.value(), spc);
 
-                if (it.key() == "akesson")
+                else if (it.key() == "akesson")
                     push_back<Energy::ExternalAkesson>(it.value(), spc);
 
-                if (it.key() == "confine")
+                else if (it.key() == "confine")
                     push_back<Energy::Confine>(it.value(), spc);
 
-                if (it.key() == "constrain")
+                else if (it.key() == "constrain")
                     push_back<Energy::Constrain>(it.value(), spc);
 
-                if (it.key() == "example2d")
+                else if (it.key() == "example2d")
                     push_back<Energy::Example2D>(it.value(), spc);
 
-                if (it.key() == "isobaric")
+                else if (it.key() == "isobaric")
                     push_back<Energy::Isobaric>(it.value(), spc);
 
-                if (it.key() == "penalty")
+                else if (it.key() == "penalty")
 #ifdef ENABLE_MPI
                     push_back<Energy::PenaltyMPI>(it.value(), spc);
 #else
                     push_back<Energy::Penalty>(it.value(), spc);
 #endif
 #ifdef ENABLE_POWERSASA
-                if (it.key() == "sasa")
+                else if (it.key() == "sasa")
                     push_back<Energy::SASAEnergy>(it.value(), spc);
 #endif
                 // additional energies go here...
 
-                if (it.key() == "maxenergy") {
+                else if (it.key() == "maxenergy") {
                     maxenergy = it.value().get<double>();
                     continue;
                 }
@@ -526,17 +523,13 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                 throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
             }
         } // end of loop over energy input terms
-
-        // if (have_nonbonded) {
-        //    push_back<Energy::ParticleSelfEnergy>(spc);
-        //}
     }
 }
 double Hamiltonian::energy(Change &change) {
     double du = 0;
-    for (auto i : this->vec) {
+    for (auto i : this->vec) { // loop over terms in Hamiltonian
         i->key = key;
-        i->timer.start();
+        i->timer.start(); // time each term
         du += i->energy(change);
         i->timer.stop();
         if (du >= maxenergy)
@@ -579,7 +572,7 @@ void SASAEnergy::to_json(json &j) const {
     j["molarity"] = conc / 1.0_molar;
     j["radius"] = probe / 1.0_angstrom;
     j[bracket("SASA") + "/" + angstrom + squared] = avgArea.avg() / 1.0_angstrom;
-    _roundjson(j, 5);
+    _roundjson(j, 5); // set json output precision
 }
 void SASAEnergy::sync(Energybase *basePtr, Change &c) {
     auto other = dynamic_cast<decltype(this)>(basePtr);

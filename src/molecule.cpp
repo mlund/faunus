@@ -56,7 +56,7 @@ void to_json(json &j, const MoleculeData &a) {
         j[a.name]["atoms"].push_back(atoms.at(id).name);
 }
 
-void MoleculeData::createMolecularConformations(xjson &val) {
+void MoleculeData::createMolecularConformations(SingleUseJSON &val) {
     assert(val.is_object());
 
     std::string traj = val.value("traj", std::string());
@@ -115,7 +115,7 @@ void from_json(const json &j, MoleculeData &a) {
             throw std::runtime_error("invalid json");
         for (auto it : j.items()) {
             a.name = it.key();
-            xjson val = it.value(); // keys are deleted after access
+            SingleUseJSON val = it.value(); // keys are deleted after access
             a.insoffset = val.value("insoffset", a.insoffset);
             a.activity = val.value("activity", a.activity) * 1.0_molar;
             a.keeppos = val.value("keeppos", a.keeppos);

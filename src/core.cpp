@@ -135,27 +135,23 @@ namespace Faunus {
         return newfile;
     }
 
-    json::size_type xjson::count(const std::string &key) const { return json::count(key); }
+    json::size_type SingleUseJSON::count(const std::string &key) const { return json::count(key); }
 
-    bool xjson::empty() const { return json::empty(); }
+    bool SingleUseJSON::empty() const { return json::empty(); }
 
-    xjson::xjson(const json &j) : json(j) {}
+    SingleUseJSON::SingleUseJSON(const json &j) : json(j) {}
 
-    void xjson::clear() { json::clear(); }
+    void SingleUseJSON::clear() { json::clear(); }
 
-    json xjson::at(const std::string &key) {
+    json SingleUseJSON::at(const std::string &key) {
         json val = json::at(key);
         json::erase(key);
         return val;
     }
 
-    json xjson::operator[](const std::string &key) {
-        return at(key);
-    }
+    json SingleUseJSON::operator[](const std::string &key) { return at(key); }
 
-    void xjson::erase(const std::string &key) {
-        json::erase(key);
-    }
+    void SingleUseJSON::erase(const std::string &key) { json::erase(key); }
 
     Point xyz2rth(const Point &p, const Point &origin, const Point &dir, const Point &dir2) {
         assert(fabs(dir.norm() - 1.0) < 1e-6);

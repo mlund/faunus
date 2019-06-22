@@ -130,7 +130,7 @@ ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential
     name = "akesson";
     cite = "doi:10/dhb9mj";
 
-    xjson _j = j; // json variant where items are deleted after access
+    SingleUseJSON _j = j; // json variant where items are deleted after access
     _j.erase("com");
     _j.erase("molecules");
 

@@ -85,7 +85,7 @@ class MoleculeData {
 
     int &id();             //!< Type id
     const int &id() const; //!< Type id
-    void createMolecularConformations(xjson &); //!< Add conformations if appropriate
+    void createMolecularConformations(SingleUseJSON &); //!< Add conformations if appropriate
 
     std::string name;            //!< Molecule name
     std::string structure;       //!< Structure file (pqr|aam|xyz)

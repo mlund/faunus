@@ -18,6 +18,12 @@ namespace Analysis {
 
 /**
  * @brief Base class for all analysis functions
+ *
+ * Analysis classes are used to perform system analysis
+ * over the course or a simulations or for post-analysis
+ * of an existing trajectory. The base class adds basic
+ * functionality such as timing, number of steps, json IO
+ * and enforce a common interface.
  */
 class Analysisbase {
   private:

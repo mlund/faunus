@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 from math import pi
 import sys
+sys.path.insert(0,'../')
 from pyfaunus import *
 
 # Dictionary defining input

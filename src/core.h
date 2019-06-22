@@ -85,6 +85,7 @@ namespace Faunus {
         bool empty() const;
         size_type count(const std::string &key) const;
         inline auto dump(int w=-1) const { return json::dump(w); }
+        inline bool is_object() const { return json::is_object(); }
 
         void clear();
         json at(const std::string &key);

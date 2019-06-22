@@ -50,7 +50,7 @@ void EwaldData::update(const Point &box) {
                 double dky2 = double(ky * ky);
                 for (int kz = -kcc * startValue; kz <= kcc; kz++) {
                     double factor = 1.0;
-                    if (kx > 0)
+                    if (kx > 0) // missing && ipbc?
                         factor *= 2;
                     if (ky > 0 && ipbc)
                         factor *= 2;

@@ -97,7 +97,12 @@ TEST_CASE("[Faunus] Ewald - EwaldData") {
 }
 #endif
 
-/** @brief recipe or policies for ion-ion ewald */
+/**
+ * @brief recipe or policies for ion-ion ewald
+ * @todo
+ * - eliminate raw pointers
+ * - undefined bahevior if ipbc==true adn eigenopt==true
+ */
 template <bool eigenopt = false /** use Eigen matrix ops where possible */> struct PolicyIonIon {
     typedef typename ParticleVector::iterator iter;
     Space *spc;
@@ -107,7 +112,7 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
 
     void updateComplex(EwaldData &data) const {
         auto active = spc->activeParticles();
-        if (eigenopt)
+        if (eigenopt) { // calculate using Eigen operations. Faster for large systems?
             if (data.ipbc == false) {
                 auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Space::Tparticle::pos); //  Nx3
                 auto charge =
@@ -115,20 +120,22 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
                 Eigen::MatrixXd kr = pos.matrix() * data.kVectors; // Nx3 * 3xK = NxK
                 data.Qion.real() = (kr.array().cos().colwise() * charge).colwise().sum();
                 data.Qion.imag() = kr.array().sin().colwise().sum();
-                return;
             }
-        for (int k = 0; k < data.kVectors.cols(); k++) {
-            const Point &kv = data.kVectors.col(k);
-            EwaldData::Tcomplex Q(0, 0);
-            if (data.ipbc)
-                for (auto &i : active)
-                    Q += kv.cwiseProduct(i.pos).array().cos().prod() * i.charge;
-            else
-                for (auto &i : active) {
-                    double dot = kv.dot(i.pos);
-                    Q += i.charge * EwaldData::Tcomplex(std::cos(dot), std::sin(dot));
+        } else { // calculate using generic loops
+            for (int k = 0; k < data.kVectors.cols(); k++) {
+                const Point &kv = data.kVectors.col(k);
+                EwaldData::Tcomplex Q(0, 0);
+                if (data.ipbc)
+                    for (auto &i : active)
+                        Q += kv.cwiseProduct(i.pos).array().cos().prod() * i.charge;
+                else {
+                    for (auto &i : active) {
+                        double dot = kv.dot(i.pos);
+                        Q += i.charge * EwaldData::Tcomplex(std::cos(dot), std::sin(dot));
+                    }
                 }
-            data.Qion[k] = Q;
+                data.Qion[k] = Q;
+            }
         }
     } //!< Update all k vectors
 
@@ -138,7 +145,7 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
         for (int k = 0; k < data.kVectors.cols(); k++) {
             auto &Q = data.Qion[k];
             Point q = data.kVectors.col(k);
-            if (data.ipbc)
+            if (data.ipbc) {
                 for (auto cg : change.groups) {
                     auto g_new = spc->groups.at(cg.index);
                     auto g_old = old->groups.at(cg.index);
@@ -151,7 +158,7 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
                                  (g_old.begin() + i)->charge;
                     }
                 }
-            else
+            } else {
                 for (auto cg : change.groups) {
                     auto g_new = spc->groups.at(cg.index);
                     auto g_old = old->groups.at(cg.index);
@@ -166,22 +173,25 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
                         }
                     }
                 }
+            }
         }
     } //!< Optimized update of k subset. Require access to old positions through `old` pointer
 
+    // selfEnergies should be handled by the real-space pair-potential
     double selfEnergy(const EwaldData &d, Change &change) {
         double Eq = 0;
-        if (change.dN)
+        if (change.dN) {
             for (auto cg : change.groups) {
                 auto g = spc->groups.at(cg.index);
                 for (auto i : cg.atoms)
                     if (i < g.size())
                         Eq += std::pow((g.begin() + i)->charge, 2);
             }
-        else if (change.all and not change.dV)
+        } else if (change.all and not change.dV) {
             for (auto g : spc->groups)
                 for (auto i : g)
                     Eq += i.charge * i.charge;
+        }
         return -d.alpha * Eq / std::sqrt(pc::pi) * d.lB;
     }
 
@@ -193,13 +203,14 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
             for (auto g : spc->groups)
                 for (auto i : g)
                     qr += i.charge * i.pos;
-        else if (change.groups.size() > 0)
+        else if (change.groups.size() > 0) {
             for (auto cg : change.groups) {
                 auto g = spc->groups.at(cg.index);
                 for (auto i : cg.atoms)
                     if (i < g.size())
                         qr += (g.begin() + i)->charge * (g.begin() + i)->pos;
             }
+        }
         return d.const_inf * 2 * pc::pi / ((2 * d.eps_surf + 1) * spc->geo.getVolume()) * qr.dot(qr) * d.lB;
     }
 
@@ -225,7 +236,6 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     Group<Particle> g(spc.p.begin(), spc.p.end());
     spc.groups.push_back(g);
 
-    PolicyIonIon<> ionion(spc);
     EwaldData data = R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
                 "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
@@ -233,17 +243,31 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
     c.all = true;
     data.ipbc = false; // PBC Ewald (http://dx.doi.org/10.1063/1.481216)
     data.update(spc.geo.getLength());
-    ionion.updateComplex(data);
-    CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.lB));
-    CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.lB));
-    CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.lB));
 
-    data.ipbc = true; // IPBC Ewald
-    data.update(spc.geo.getLength());
-    ionion.updateComplex(data);
-    CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.lB));
-    CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.lB));
-    CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.lB));
+    SUBCASE("standard loop") {
+        PolicyIonIon<false> ionion(spc);
+        ionion.updateComplex(data);
+        CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.lB));
+        CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.lB));
+        CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.lB));
+
+        data.ipbc = true; // IPBC Ewald
+        data.update(spc.geo.getLength());
+        ionion.updateComplex(data);
+        CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.lB));
+        CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.lB));
+        CHECK(ionion.reciprocalEnergy(data) == Approx(0.0865107467 * data.lB));
+    }
+
+    SUBCASE("eigen operations") {
+        data.ipbc = false;
+        data.update(spc.geo.getLength());
+        PolicyIonIon<true> ionion(spc);
+        ionion.updateComplex(data);
+        CHECK(ionion.selfEnergy(data, c) == Approx(-1.0092530088080642 * data.lB));
+        CHECK(ionion.surfaceEnergy(data, c) == Approx(0.0020943951023931952 * data.lB));
+        CHECK(ionion.reciprocalEnergy(data) == Approx(0.21303063979675319 * data.lB));
+    }
 }
 #endif
 

@@ -56,6 +56,56 @@ void to_json(json &j, const MoleculeData &a) {
         j[a.name]["atoms"].push_back(atoms.at(id).name);
 }
 
+void MoleculeData::createMolecularConformations(xjson &val) {
+    assert(val.is_object());
+
+    std::string traj = val.value("traj", std::string());
+    if (traj.empty())
+        return;
+
+    conformations.clear(); // remove all previous conformations
+    // read tracjectory w. conformations from disk
+    FormatPQR::load(traj, conformations.vec);
+    if (not conformations.empty()) {
+        // create atom list
+        atoms.clear();
+        atoms.reserve(conformations.vec.front().size());
+        for (auto &p : conformations.vec.front()) // add atoms to atomlist
+            atoms.push_back(p.id);
+
+        // center mass center for each frame to origo assuming whole molecules
+        if (val.value("trajcenter", false)) {
+            cout << "Centering conformations in trajectory file " + traj + ". ";
+            for (auto &p : conformations.vec) // loop over conformations
+                Geometry::cm2origo(p.begin(), p.end());
+            cout << "Done.\n";
+        }
+
+        // set default uniform weight
+        std::vector<float> w(conformations.size(), 1);
+        conformations.setWeight(w);
+
+        // look for weight file
+        std::string weightfile = val.value("trajweight", std::string());
+        if (not weightfile.empty()) {
+            std::ifstream f(weightfile.c_str());
+            if (f) {
+                w.clear();
+                w.reserve(conformations.size());
+                double _val;
+                while (f >> _val)
+                    w.push_back(_val);
+                if (w.size() == conformations.size())
+                    conformations.setWeight(w);
+                else
+                    throw std::runtime_error("Number of weights does not match conformations.");
+            } else
+                throw std::runtime_error("Weight file " + weightfile + " not found.");
+        }
+    } else
+        throw std::runtime_error("Trajectory " + traj + " not loaded or empty.");
+} // done handling conformations
+
 /**
  * @todo make more readable be splitting into lambdas (since c++ function in function is impossible)
  */
@@ -152,52 +202,9 @@ void from_json(const json &j, MoleculeData &a) {
                     } // end of position parser
                 }     // end of `structure`
 
-                // read tracjectory w. conformations from disk
-                std::string traj = val.value("traj", std::string());
-                if (not traj.empty()) {
-                    a.conformations.clear();
-                    FormatPQR::load(traj, a.conformations.vec);
-                    if (not a.conformations.empty()) {
-                        // create atom list
-                        a.atoms.clear();
-                        a.atoms.reserve(a.conformations.vec.front().size());
-                        for (auto &p : a.conformations.vec.front()) // add atoms to atomlist
-                            a.atoms.push_back(p.id);
-
-                        // center mass center for each frame to origo assuming whole molecules
-                        if (val.value("trajcenter", false)) {
-                            cout << "Centering conformations in trajectory file " + traj + ". ";
-                            for (auto &p : a.conformations.vec) // loop over conformations
-                                Geometry::cm2origo(p.begin(), p.end());
-                            cout << "Done.\n";
-                        }
-
-                        // set default uniform weight
-                        std::vector<float> w(a.conformations.size(), 1);
-                        a.conformations.setWeight(w);
-
-                        // look for weight file
-                        std::string weightfile = val.value("trajweight", std::string());
-                        if (not weightfile.empty()) {
-                            std::ifstream f(weightfile.c_str());
-                            if (f) {
-                                w.clear();
-                                w.reserve(a.conformations.size());
-                                double _val;
-                                while (f >> _val)
-                                    w.push_back(_val);
-                                if (w.size() == a.conformations.size())
-                                    a.conformations.setWeight(w);
-                                else
-                                    throw std::runtime_error("Number of weights does not match conformations.");
-                            } else
-                                throw std::runtime_error("Weight file " + weightfile + " not found.");
-                        }
-                    } else
-                        throw std::runtime_error("Trajectory " + traj + " not loaded or empty.");
-                } // done handling conformations
-
             } // done handling molecular groups
+
+            a.createMolecularConformations(val);
 
             // pass information to inserter
             auto ins = RandomInserter();
@@ -214,7 +221,7 @@ void from_json(const json &j, MoleculeData &a) {
                         throw std::runtime_error("bonded atom index " + std::to_string(i) + " out of range");
                 }
             }
-            // at this stage all given keys should have been accessed. If any are
+            // at this stage all given keys should have been accessed or "spend". If any are
             // left, an exception will be thrown.
             if (not val.empty())
                 throw std::runtime_error("unused key(s):\n"s + val.dump() + usageTip["moleculelist"]);

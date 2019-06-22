@@ -21,7 +21,7 @@ moleculelist:
 insertmolecules:
     - mymol: { N: {{ N }} }
 energy:
-    - nonbonded:
+    - nonbonded_splined:
         default:
             - custom: # custom pair-potential
                 cutoff: 2.5 # shell size

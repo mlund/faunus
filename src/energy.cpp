@@ -455,8 +455,11 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                 if (it.key() == "nonbonded_coulomblj_EM")
                     push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
 
-                if (it.key() == "nonbonded")
+                if (it.key() == "nonbonded_splined")
                     push_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc, *this);
+
+                if (it.key() == "nonbonded")
+                    push_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);
 
                 if (it.key() == "nonbonded_exact")
                     push_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);

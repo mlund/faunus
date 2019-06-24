@@ -18,19 +18,12 @@ struct PairPotentialBase {
     std::string name;
     std::string cite;
     bool isotropic = true; //!< True if pair-potential is independent of particle orientation
-<<<<<<< HEAD
-    virtual void to_json(json &) const = 0;
-    virtual void from_json(const json &) = 0;
-    virtual ~PairPotentialBase() = default;
-    virtual double selfEnergy(const Particle &) const; //!< Some potentials may give rise to a self energy (default: 0)
-=======
     std::function<double(Particle &)> selfEnergy; //!< self energy of particle (kT)
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
     virtual Point force(const Particle &, const Particle &, double, const Point &);
     virtual double operator()(const Particle &a, const Particle &b, const Point &r) const = 0;
->>>>>>> 71248be38cd9605b5956d62e1e7028076e1e1029
 }; //!< Base for all pair-potentials
 
 void to_json(json &j, const PairPotentialBase &base);   //!< Serialize any pair potential to json
@@ -45,15 +38,10 @@ void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair 
 template <class T1, class T2> struct CombinedPairPotential : public PairPotentialBase {
     T1 first;  //!< First pair potential of type T1
     T2 second; //!< Second pair potential of type T2
-<<<<<<< HEAD
-    CombinedPairPotential(const std::string &name = "") { this->name = name; }
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const {
-=======
     CombinedPairPotential(const std::string &name = "") {
         this->name = name;
     }
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
->>>>>>> 71248be38cd9605b5956d62e1e7028076e1e1029
         return first(a, b, r) + second(a, b, r);
     } //!< Combine pair energy
 
@@ -656,11 +644,7 @@ class FunctorPotential : public PairPotentialBase {
     PairMatrix<uFunc, true> umatrix; // matrix with potential for each atom pair
 
   public:
-<<<<<<< HEAD
-    FunctorPotential(const std::string &name = "") { PairPotentialBase::name = name; }
-=======
     FunctorPotential(const std::string &name = "functor");
->>>>>>> 71248be38cd9605b5956d62e1e7028076e1e1029
     void to_json(json &j) const override;
     void from_json(const json &j) override;
     double selfEnergy(const Particle &) const override;

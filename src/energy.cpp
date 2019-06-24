@@ -50,11 +50,11 @@ void EwaldData::update(const Point &box) {
                 double dky2 = double(ky * ky);
                 for (int kz = -kcc * startValue; kz <= kcc; kz++) {
                     double factor = 1.0;
-                    if (kx > 0)
+                    if (kx > 0) // optimization of PBC Ewald (and always the case for IPBC Ewald)
                         factor *= 2;
-                    if (ky > 0 && ipbc)
+                    if (ky > 0 && ipbc) // only for IPBC Ewald
                         factor *= 2;
-                    if (kz > 0 && ipbc)
+                    if (kz > 0 && ipbc) // only for IPBC Ewald
                         factor *= 2;
                     double dkz2 = double(kz * kz);
                     Point kv = 2 * pc::pi * Point(kx / L.x(), ky / L.y(), kz / L.z());

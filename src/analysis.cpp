@@ -255,13 +255,17 @@ void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0
 
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {
+        // store old volume and energy
         double Vold = getVolume(), Uold = pot.energy(c);
+        // scale entire system to new volume
         scaleVolume(Vold + dV);
         double Unew = pot.energy(c);
+        // restore saved system
         scaleVolume(Vold);
 
         // check if energy change is too big for exp()
-        double x = pc::infty, du = Unew - Uold;
+        double x = pc::infty;
+        double du = Unew - Uold; // system energy change
         if (-du < pc::max_exp_argument)
             x = std::exp(-du);
         if (std::isinf(x)) {
@@ -309,12 +313,14 @@ QRtraj::QRtraj(const json &j, Space &spc) {
         throw std::runtime_error("error opening "s + file);
     f.precision(6);
     write_to_file = [&groups = spc.groups, &f = f]() {
-        for (auto &g : groups)
-            for (auto it = g.begin(); it != g.trueend(); ++it) // loop over *all* particles
+        for (auto &g : groups) {
+            for (auto it = g.begin(); it != g.trueend(); ++it) { // loop over *all* particles
                 if (it < g.end())
                     f << it->charge << " " << atoms[it->id].sigma * 0.5 << " ";
                 else
                     f << "0 0 "; // zero charge and radii for inactive particles
+            }
+        }
         f << "\n";               // newline for every frame
     };
 }
@@ -328,11 +334,12 @@ CombinedAnalysis::~CombinedAnalysis() {
     for (auto &ptr : this->vec)
         ptr->to_disk();
 }
+
 CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonian &pot) {
-    if (j.is_array())
-        for (auto &m : j)
-            for (auto it = m.begin(); it != m.end(); ++it)
-                if (it->is_object())
+    if (j.is_array()) {
+        for (auto &m : j) {
+            for (auto it = m.begin(); it != m.end(); ++it) {
+                if (it->is_object()) {
                     try {
                         size_t oldsize = this->vec.size();
                         if (it.key() == "atomprofile")
@@ -382,9 +389,17 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                         throw std::runtime_error("Error adding analysis,\n\n\"" + it.key() + "\": " + it->dump() +
                                                  "\n\n: " + e.what() + usageTip[it.key()]);
                     }
+                }
+            }
+        }
+    }
 }
+
 void FileReactionCoordinate::_to_json(json &j) const {
-    j = *rc;
+    json rcjson = *rc; // envoke to_json(...)
+    if (rcjson.count(type) == 0)
+        throw std::runtime_error("error writing json for reaction coordinate");
+    j = rcjson[type];
     j["type"] = type;
     j["file"] = filename;
     j.erase("range");      // these are for penalty function
@@ -392,6 +407,7 @@ void FileReactionCoordinate::_to_json(json &j) const {
     if (cnt > 0)
         j["average"] = avg.avg();
 }
+
 void FileReactionCoordinate::_sample() {
     if (file) {
         double val = (*rc)();
@@ -399,29 +415,14 @@ void FileReactionCoordinate::_sample() {
         file << cnt * steps << " " << val << " " << avg.avg() << "\n";
     }
 }
+
 FileReactionCoordinate::FileReactionCoordinate(const json &j, Space &spc) {
-    using namespace ReactionCoordinate;
     from_json(j);
     name = "reactioncoordinate";
     filename = MPI::prefix + j.at("file").get<std::string>();
     file.open(filename); // output file
     type = j.at("type").get<std::string>();
-    try {
-        if (type == "atom")
-            rc = std::make_shared<AtomProperty>(j, spc);
-        else if (type == "molecule")
-            rc = std::make_shared<MoleculeProperty>(j, spc);
-        else if (type == "system")
-            rc = std::make_shared<SystemProperty>(j, spc);
-        else if (type == "cmcm")
-            rc = std::make_shared<MassCenterSeparation>(j, spc);
-        if (rc == nullptr)
-            throw std::runtime_error("unknown coordinate type");
-
-    } catch (std::exception &e) {
-        throw std::runtime_error("error for reaction coordinate '" + type + "': " + e.what() +
-                                 usageTip["coords=[" + type + "]"]);
-    }
+    rc = ReactionCoordinate::createReactionCoordinate({{type, j}}, spc);
 }
 
 void WidomInsertion::_sample() {
@@ -433,9 +434,10 @@ void WidomInsertion::_sample() {
         for (int i = 0; i < ninsert; ++i) {
             pin = rins(spc.geo, spc.p, molecules.at(molid));
             if (!pin.empty()) {
-                if (absolute_z)
+                if (absolute_z) {
                     for (auto &p : pin)
                         p.pos.z() = std::fabs(p.pos.z());
+                }
 
                 assert(pin.size() == g.size());
                 spc.geo.randompos(pin[0].pos, random);
@@ -509,13 +511,14 @@ void Density::_sample() {
     Lavg += std::cbrt(V);
     invVavg += 1 / V;
 
-    for (auto &g : spc.groups)
+    for (auto &g : spc.groups) {
         if (g.atomic) {
             for (auto &p : g)
                 Natom[p.id]++;
             atmdhist[g.id](g.size())++;
         } else if (not g.empty())
             Nmol[g.id]++;
+    }
 
     for (auto &i : Nmol) {
         rho_mol[i.first] += i.second / V;
@@ -705,12 +708,14 @@ void MoleculeRDF::_sample() {
     auto mollist1 = spc.findMolecules(id1, Space::ACTIVE);
     auto mollist2 = spc.findMolecules(id2, Space::ACTIVE);
     auto mollist = ranges::view::concat(mollist1, mollist2);
-    for (auto i = mollist.begin(); i != mollist.end(); ++i)
-        for (auto j = i; ++j != mollist.end();)
+    for (auto i = mollist.begin(); i != mollist.end(); ++i) {
+        for (auto j = i; ++j != mollist.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
                 double r = std::sqrt(spc.geo.sqdist(i->cm, j->cm));
                 hist(r)++;
             }
+        }
+    }
 }
 MoleculeRDF::MoleculeRDF(const json &j, Space &spc) : PairFunctionBase(j), spc(spc) {
     name = "molrdf";
@@ -730,13 +735,12 @@ MoleculeRDF::MoleculeRDF(const json &j, Space &spc) : PairFunctionBase(j), spc(s
 void AtomDipDipCorr::_sample() {
     V += spc.geo.getVolume(dim);
     auto active = spc.activeParticles();
-    for (auto i = active.begin(); i != active.end(); ++i)
-        for (auto j = i; ++j != active.end();)
+    for (auto i = active.begin(); i != active.end(); ++i) {
+        for (auto j = i; ++j != active.end();) {
             if ((i->id == id1 && j->id == id2) || (i->id == id2 && j->id == id1)) {
                 Point rvec = spc.geo.vdist(i->pos, j->pos);
                 if (slicedir.sum() > 0) {
                     if (rvec.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
-                        // rvec = rvec.cwiseProduct( Point(1.,1.,1.) - slice.cast<double>() );
                         double dipdip = i->getExt().mu.dot(j->getExt().mu);
                         double r1 = rvec.norm();
                         hist2(r1) += dipdip;
@@ -749,6 +753,8 @@ void AtomDipDipCorr::_sample() {
                     hist(r1)++; // get g(r) for free
                 }
             }
+        }
+    }
 }
 AtomDipDipCorr::AtomDipDipCorr(const json &j, Space &spc) : PairAngleFunctionBase(j), spc(spc) {
     name = "atomdipdipcorr";
@@ -932,6 +938,7 @@ PolymerShape::PolymerShape(const json &j, Space &spc) : spc(spc) {
 }
 void AtomProfile::_from_json(const json &j) {
     ref = j.value("origo", Point(0, 0, 0));
+    dir = j.value("dir", dir);
     file = j.at("file").get<std::string>();
     names = j.at("atoms").get<decltype(names)>();              // atom names
     auto vec_of_ids = names2ids(Faunus::atoms, names);         // names --> molids
@@ -941,13 +948,14 @@ void AtomProfile::_from_json(const json &j) {
     count_charge = j.value("charge", false);
 }
 void AtomProfile::_to_json(json &j) const {
-    j = {{"origo", ref}, {"atoms", names}, {"file", file}, {"dr", dr}, {"charge", count_charge}};
+    j = {{"origo", ref}, {"dir", dir}, {"atoms", names}, {"file", file}, {"dr", dr}, {"charge", count_charge}};
 }
 void AtomProfile::_sample() {
     for (auto &g : spc.groups)
         for (auto &p : g)
             if (ids.count(p.id) != 0) {
-                double r = spc.geo.vdist(p.pos, ref).norm();
+                Point rvec = spc.geo.vdist(p.pos, ref);
+                double r = rvec.cwiseProduct(dir.cast<double>()).norm();
                 if (count_charge)
                     tbl(r) += p.charge; // count charge
                 else
@@ -961,11 +969,17 @@ AtomProfile::AtomProfile(const json &j, Space &spc) : spc(spc) {
 AtomProfile::~AtomProfile() {
     std::ofstream f(MPI::prefix + file);
     if (f) {
+        double Vr = 1;
         tbl.stream_decorator = [&](std::ostream &o, double r, double N) {
-            if (r > 0) {
-                double V = 4 * pc::pi * r * r * dr;
+            if (dir.sum() == 3)
+                Vr = 4 * pc::pi * std::pow(r, 2) * dr;
+            else if (dir.sum() == 2) {
+                Vr = 2 * pc::pi * r * dr;
+            } else if (dir.sum() == 1)
+                Vr = dr;
+            if (Vr > 0) {
                 N = N / double(cnt);
-                o << r << " " << N << " " << N / V * 1e27 / pc::Nav << "\n";
+                o << r << " " << N << " " << N / Vr * 1e27 / pc::Nav << "\n";
             }
         };
         f << "# r N rho/M\n" << tbl;

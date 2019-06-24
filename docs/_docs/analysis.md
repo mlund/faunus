@@ -6,7 +6,6 @@ MathJax.Hub.Config({
 });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
-[![Edit](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
 
 # Analysis
 
@@ -47,20 +46,29 @@ The filename format is `rho-@name.dat`.
 ### Density Profile
 
 `atomprofile`  | Description
--------------- | ---------------------------------------------
+-------------- | -----------------------------------------------------
 `nstep=0`      | Interval between samples
 `atoms=[]`     | List of atom names to sample; `*` selects all
 `charge=false` | Calc. charge density instead of density
 `file`         | Output filename with profile
 `dr=0.1`       | Radial resolution
 `origo=[0,0,0]`| Center of the profile ($r=0$)
+`dir=[1,1,1]`  | Direction along which the profile is calculated
 
-Calculates the summed density of `atoms` in spherical shells around
+Calculates the summed density of `atoms` in spherical, cylindrical or planar shells around
 `origo` which by default is the center of the simulation box:
 
 $$
-\rho(r) = \frac{\langle N(r) \rangle}{4\pi r^2dr}
+\rho(r) = \frac{\langle N(r) \rangle}{V(r)}
 $$
+
+The sum of coefficients in `dir` determines the volume element normalisation:
+
+$d_x+d_y+d_z$  | $V(r)$
+-------------- | ----------------
+3              | $4\pi r^2 dr$
+2              | $2\pi r dr$
+1              | $dr$
 
 This can be used to obtain charge profiles, measure excess pressure
 etc.
@@ -207,15 +215,22 @@ $$
 $$
 
 $$
-\begin{aligned}
-    u_{\text{dip-dip}}  = & \frac{\boldsymbol{\mu_a}\boldsymbol{\mu_b}   }{ R^3  }
-        - \frac{3 (\boldsymbol{\mu_a} \cdot \boldsymbol{R}) ( \boldsymbol{\mu_b}\cdot\boldsymbol{R})  }{R^5}   \\
-    u_{\text{ion-quad}} = & \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}
-        - \frac{  q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3} + ... \\
-    u_{\text{total}}    = & u_{\text{ion-ion}} + u_{\text{ion-dip}} + u_{\text{dip-dip}} + u_{\text{ion-quad}}\\
-    u_{\text{exact}}    = & \sum_i^a\sum_j^b \frac{q_iq_j}{ | \boldsymbol{r_i} - \boldsymbol{r_j}  |    }
-\end{aligned}
+    u_{\text{dip-dip}}  =  \frac{\boldsymbol{\mu_a}\boldsymbol{\mu_b}   }{ R^3  }
+        - \frac{3 (\boldsymbol{\mu_a} \cdot \boldsymbol{R}) ( \boldsymbol{\mu_b}\cdot\boldsymbol{R})  }{R^5} 
 $$
+
+$$
+    u_{\text{ion-quad}} =  \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}-\frac{q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3}+ ...
+$$
+
+$$
+    u_{\text{total}} =  u_{\text{ion-ion}} + u_{\text{ion-dip}} + u_{\text{dip-dip}} + u_{\text{ion-quad}}
+$$
+
+$$
+    u_{\text{exact}} =  \sum_i^a\sum_j^b \frac{q_iq_j}{ | \boldsymbol{r_i} - \boldsymbol{r_j} | }
+$$
+
 
 During simulation, the above terms are thermally averaged over angles, co-solute degrees of freedom etc.
 Note also that the moments are defined with respect to the *mass* center, not *charge* center.

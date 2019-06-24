@@ -6,7 +6,6 @@ MathJax.Hub.Config({
 });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
-[![Edit](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
 
 # Topology
 
@@ -24,7 +23,7 @@ geometry:
   length: [40,40,40] # cuboid dimensions (array or number)
 mcloop:              # number of MC steps (macro x micro)
   macro: 5           # Number of outer MC steps
-  micro: 100         # ...inner MC steps; total steps: 5x100=5000
+  micro: 100         # Number of inner MC steps; total: 5 x 100 = 5000
 random:              # seed for pseudo random number generator
   seed: fixed        # "fixed" (default) or "hardware" (non-deterministic)
 ~~~
@@ -40,7 +39,7 @@ Origin ($0,0,0$) is always placed in the geometric _center_ of the simulation co
 `type`:    |          |
 `cuboid`   | $x,y,z$  | `length` (array or single float)
 `slit`     | $x,y$    | `length` (array or single float)
-`hexagonal`| $x,y$    | `radius` (inscribed), `length` (along _z_)
+`hexagonal`| $x,y$    | `radius` (inscribed/inner), `length` (along _z_)
 `cylinder` | $z$      | `radius`, `length` (along _z_)
 `sphere`   | none     | `radius`
 
@@ -56,10 +55,10 @@ Atoms are the smallest possible particle entities with properties defined below.
 `dp=0`        | Translational displacement parameter [Å]
 `dprot=0`     | Rotational displacement parameter [degrees] (will be converted to radians)
 `eps=0`       | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol]
-`mu=[0,0,0]`  | Dipole moment vector
-`mulen=0`     | Dipole moment scalar [eÅ]
+`mu=[0,0,0]`  | Dipole moment vector [eÅ]
+`mulen=|mu|`  | Dipole moment scalar [eÅ]
 `mw=1`        | Molecular weight [g/mol]
-`q=0`         | Valency / partial charge number [$e$]
+`q=0`         | Valency or partial charge number [$e$]
 `r=0`         | Radius = `sigma/2` [Å]
 `sigma=0`     | `2r` [Å] (overrides radius)
 `tension=0`   | Surface tension [kJ/mol/Å$^2$]
@@ -78,10 +77,6 @@ atomlist:
   - my-external-atomlist.json
   - ...
 ~~~
-
-### Anisotropic Atoms
-
-By default, Faunus is currently compiled with centro-symmetric atoms, only. To add _i.e._ dipolar properties, modify the particle definition at the top of `src/faunus.cpp`.
 
 
 ## Molecule Properties

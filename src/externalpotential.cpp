@@ -4,6 +4,8 @@
 namespace Faunus {
 namespace Energy {
 
+// ------------ ExternalPotential -------------
+
 double ExternalPotential::_energy(const Group<Particle> &g) const {
     double u = 0;
     if (molids.find(g.id) != molids.end()) {
@@ -60,6 +62,8 @@ void ExternalPotential::to_json(json &j) const {
     j["molecules"] = _names;
     j["com"] = COM;
 }
+
+// ------------ Confine -------------
 
 Confine::Confine(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
     name = "confine";
@@ -119,11 +123,14 @@ void Confine::to_json(json &j) const {
     ExternalPotential::to_json(j);
     _roundjson(j, 5);
 }
+
+// ------------ ExternalAkesson -------------
+
 ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
     name = "akesson";
     cite = "doi:10/dhb9mj";
 
-    xjson _j = j; // json variant where items are deleted after access
+    SingleUseJSON _j = j; // json variant where items are deleted after access
     _j.erase("com");
     _j.erase("molecules");
 
@@ -148,6 +155,7 @@ ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential
     if (not _j.empty()) // throw exception of unused/unknown keys are passed
         throw std::runtime_error("unused key(s) for '"s + name + "':\n" + _j.dump());
 }
+
 double ExternalAkesson::energy(Change &change) {
     if (not fixed)                    // pho(z) unconverged, keep sampling
         if (key == Energybase::OLD) { // only sample on accepted configs
@@ -159,12 +167,88 @@ double ExternalAkesson::energy(Change &change) {
         }
     return ExternalPotential::energy(change);
 }
+
 ExternalAkesson::~ExternalAkesson() {
     // save only if still updating and if energy type is "OLD",
     // that is, accepted configurations (not trial)
     if (not fixed and key == Energybase::OLD)
         save();
 }
+
+void ExternalAkesson::to_json(json &j) const {
+    j = {{"lB", lB},         {"dz", dz},       {"nphi", nphi},          {"epsr", epsr},
+         {"file", filename}, {"nstep", nstep}, {"Nupdates", updatecnt}, {"fixed", fixed}};
+    ExternalPotential::to_json(j);
+    _roundjson(j, 5);
+}
+
+void ExternalAkesson::save() {
+    std::ofstream f(filename);
+    if (f) {
+        f.precision(16);
+        f << rho;
+    } else
+        throw std::runtime_error("cannot save file '"s + filename + "'");
+}
+
+void ExternalAkesson::load() {
+    std::ifstream f(filename);
+    if (f) {
+        rho << f;
+        update_phi();
+    } else
+        std::cerr << "density file '" << filename << "' not loaded." << endl;
+}
+
+double ExternalAkesson::phi_ext(double z, double a) const {
+    double a2 = a * a, z2 = z * z;
+    return -2 * pc::pi * z - 8 * a * std::log((std::sqrt(2 * a2 + z2) + a) / std::sqrt(a2 + z2)) +
+           2 * z * (0.5 * pc::pi + std::asin((a2 * a2 - z2 * z2 - 2 * a2 * z2) / std::pow(a2 + z2, 2)));
+}
+
+void ExternalAkesson::sync(Energybase *basePtr, Change &) {
+    if (not fixed) {
+        auto other = dynamic_cast<decltype(this)>(basePtr);
+        assert(other);
+        // only trial energy (new) require sync
+        if (other->key == Energybase::OLD)
+            if (cnt != other->cnt) {
+                assert(cnt < other->cnt && "trial cnt's must be smaller");
+                cnt = other->cnt;
+                rho = other->rho;
+                phi = other->phi;
+            }
+    }
+}
+
+void ExternalAkesson::update_rho() {
+    updatecnt++;
+    Point L = spc.geo.getLength();
+    double area = L.x() * L.y();
+    if (L.x() not_eq L.y() or 0.5 * L.z() != halfz)
+        throw std::runtime_error("Requires box Lx=Ly and Lz=const.");
+
+    Q.clear();
+    for (auto &g : spc.groups) // loop over all groups
+        for (auto &p : g)      // ...and their active particles
+            Q(p.pos.z()) += p.charge;
+    for (double z = -halfz; z <= halfz; z += dz)
+        rho(z) += Q(z) / area;
+}
+
+void ExternalAkesson::update_phi() {
+    Point L = spc.geo.getLength();
+    double a = 0.5 * L.x();
+    for (double z = -halfz; z <= halfz; z += dz) {
+        double s = 0;
+        for (double zn = -halfz; zn <= halfz; zn += dz)
+            if (rho(zn).cnt > 0)
+                s += rho(zn).avg() * phi_ext(std::fabs(z - zn), a); // Eq. 14 in Greberg paper
+        phi(z) = lB * s;
+    }
+}
+
+// ------------ createGouyChapman -------------
 
 std::function<double(const Particle &)> createGouyChapmanPotential(const json &j) {
     double rho;
@@ -200,6 +284,8 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
     };
 }
 
+// ------------ CustomExternal -------------
+
 CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
     name = "customexternal";
     jin = j;
@@ -234,73 +320,6 @@ CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j
 void CustomExternal::to_json(json &j) const {
     j = jin;
     ExternalPotential::to_json(j);
-}
-
-void ExternalAkesson::to_json(json &j) const {
-    j = {{"lB", lB},         {"dz", dz},       {"nphi", nphi},          {"epsr", epsr},
-         {"file", filename}, {"nstep", nstep}, {"Nupdates", updatecnt}, {"fixed", fixed}};
-    ExternalPotential::to_json(j);
-    _roundjson(j, 5);
-}
-void ExternalAkesson::save() {
-    std::ofstream f(filename);
-    if (f) {
-        f.precision(16);
-        f << rho;
-    } else
-        throw std::runtime_error("cannot save file '"s + filename + "'");
-}
-void ExternalAkesson::load() {
-    std::ifstream f(filename);
-    if (f) {
-        rho << f;
-        update_phi();
-    } else
-        std::cerr << "density file '" << filename << "' not loaded." << endl;
-}
-double ExternalAkesson::phi_ext(double z, double a) const {
-    double a2 = a * a, z2 = z * z;
-    return -2 * pc::pi * z - 8 * a * std::log((std::sqrt(2 * a2 + z2) + a) / std::sqrt(a2 + z2)) +
-           2 * z * (0.5 * pc::pi + std::asin((a2 * a2 - z2 * z2 - 2 * a2 * z2) / std::pow(a2 + z2, 2)));
-}
-void ExternalAkesson::sync(Energybase *basePtr, Change &) {
-    if (not fixed) {
-        auto other = dynamic_cast<decltype(this)>(basePtr);
-        assert(other);
-        // only trial energy (new) require sync
-        if (other->key == Energybase::OLD)
-            if (cnt != other->cnt) {
-                assert(cnt < other->cnt && "trial cnt's must be smaller");
-                cnt = other->cnt;
-                rho = other->rho;
-                phi = other->phi;
-            }
-    }
-}
-void ExternalAkesson::update_rho() {
-    updatecnt++;
-    Point L = spc.geo.getLength();
-    double area = L.x() * L.y();
-    if (L.x() not_eq L.y() or 0.5 * L.z() != halfz)
-        throw std::runtime_error("Requires box Lx=Ly and Lz=const.");
-
-    Q.clear();
-    for (auto &g : spc.groups) // loop over all groups
-        for (auto &p : g)      // ...and their active particles
-            Q(p.pos.z()) += p.charge;
-    for (double z = -halfz; z <= halfz; z += dz)
-        rho(z) += Q(z) / area;
-}
-void ExternalAkesson::update_phi() {
-    Point L = spc.geo.getLength();
-    double a = 0.5 * L.x();
-    for (double z = -halfz; z <= halfz; z += dz) {
-        double s = 0;
-        for (double zn = -halfz; zn <= halfz; zn += dz)
-            if (rho(zn).cnt > 0)
-                s += rho(zn).avg() * phi_ext(std::fabs(z - zn), a); // Eq. 14 in Greberg paper
-        phi(z) = lB * s;
-    }
 }
 
 } // namespace Energy

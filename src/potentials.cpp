@@ -1,25 +1,28 @@
 #include "potentials.h"
 #include "multipole.h"
 
-void Faunus::Potential::RepulsionR3::from_json(const Faunus::json &j) {
+namespace Faunus {
+namespace Potential {
+
+Point PairPotentialBase::force(const Particle &, const Particle &, double, const Point &) {
+    assert(false && "We should never reach this point!");
+}
+
+void RepulsionR3::from_json(const json &j) {
     f = j.value("prefactor", 1.0);
     e = j.value("lj-prefactor", 1.0);
     s = j.value("sigma", 1.0);
 }
 
-double Faunus::Potential::PairPotentialBase::selfEnergy(const Faunus::Particle &) const { return 0.0; }
+RepulsionR3::RepulsionR3(const std::string &name) { PairPotentialBase::name = name; }
 
-Faunus::Potential::RepulsionR3::RepulsionR3(const std::string &name) { PairPotentialBase::name = name; }
+void RepulsionR3::to_json(json &j) const { j = {{"prefactor", f}, {"lj-prefactor", e}, {"sigma", s}}; }
 
-void Faunus::Potential::RepulsionR3::to_json(Faunus::json &j) const {
-    j = {{"prefactor", f}, {"lj-prefactor", e}, {"sigma", s}};
-}
-
-void Faunus::Potential::CosAttract::to_json(Faunus::json &j) const {
+void CosAttract::to_json(json &j) const {
     j = {{"eps", eps / 1.0_kJmol}, {"rc", rc / 1.0_angstrom}, {"wc", wc / 1.0_angstrom}};
 }
 
-void Faunus::Potential::CosAttract::from_json(const Faunus::json &j) {
+void CosAttract::from_json(const json &j) {
     eps = j.at("eps").get<double>() * 1.0_kJmol;
     rc = j.at("rc").get<double>() * 1.0_angstrom;
     wc = j.at("wc").get<double>() * 1.0_angstrom;
@@ -28,16 +31,18 @@ void Faunus::Potential::CosAttract::from_json(const Faunus::json &j) {
     rcwc2 = pow((rc + wc), 2);
 }
 
-Faunus::Potential::CosAttract::CosAttract(const std::string &name) { PairPotentialBase::name = name; }
+CosAttract::CosAttract(const std::string &name) { PairPotentialBase::name = name; }
 
-void Faunus::Potential::CoulombGalore::sfYukawa(const Faunus::json &j) {
+// -------------- CoulombGalore ---------------
+
+void CoulombGalore::sfYukawa(const json &j) {
     kappa = 1.0 / j.at("debyelength").get<double>();
     I = kappa * kappa / (8.0 * lB * pc::pi * pc::Nav / 1e27);
     table = sf.generate([&](double q) { return std::exp(-q * rc * kappa) - std::exp(-kappa * rc); }, 0, 1); // q=r/Rc
     // we could also fill in some info std::string or JSON output...
 }
 
-void Faunus::Potential::CoulombGalore::sfYukawaPoisson(const Faunus::json &j) {
+void CoulombGalore::sfYukawaPoisson(const json &j) {
     kappa = 1.0 / j.at("debyelength").get<double>();
     I = kappa * kappa / (8.0 * lB * pc::pi * pc::Nav / 1e27);
     C = j.value("C", 3);
@@ -58,7 +63,7 @@ void Faunus::Potential::CoulombGalore::sfYukawaPoisson(const Faunus::json &j) {
     selfenergy_prefactor = -double(C + D) / double(C);
 }
 
-void Faunus::Potential::CoulombGalore::sfReactionField(const Faunus::json &j) {
+void CoulombGalore::sfReactionField(const json &j) {
     epsrf = j.at("eps_rf");
     table = sf.generate(
         [&](double q) {
@@ -80,28 +85,28 @@ void Faunus::Potential::CoulombGalore::sfReactionField(const Faunus::json &j) {
     // we could also fill in some info std::string or JSON output...
 }
 
-void Faunus::Potential::CoulombGalore::sfQpotential(const Faunus::json &j) {
+void CoulombGalore::sfQpotential(const json &j) {
     order = j.value("order", 300);
     table = sf.generate([&](double q) { return qPochhammerSymbol(q, 1, order); }, 0, 1);
     calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
     selfenergy_prefactor = -1.0;
 }
 
-void Faunus::Potential::CoulombGalore::sfYonezawa(const Faunus::json &j) {
+void CoulombGalore::sfYonezawa(const json &j) {
     alpha = j.at("alpha");
     table = sf.generate([&](double q) { return 1 - std::erfc(alpha * rc) * q + q * q; }, 0, 1);
     calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
     selfenergy_prefactor = -0.5*(erfc(alpha*rc) + 2.0*alpha*rc / sqrt(pc::pi));
 }
 
-void Faunus::Potential::CoulombGalore::sfFanourgakis(const Faunus::json &) {
+void CoulombGalore::sfFanourgakis(const json &) {
     table =
         sf.generate([&](double q) { return 1 - 1.75 * q + 5.25 * pow(q, 5) - 7 * pow(q, 6) + 2.5 * pow(q, 7); }, 0, 1);
     calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
     selfenergy_prefactor = -0.875;
 }
 
-void Faunus::Potential::CoulombGalore::sfPoisson(const Faunus::json &j) {
+void CoulombGalore::sfPoisson(const json &j) {
     C = j.value("C", 3);
     D = j.value("D", 3);
     if ((C < 1) || (D < 1))
@@ -119,7 +124,7 @@ void Faunus::Potential::CoulombGalore::sfPoisson(const Faunus::json &j) {
     selfenergy_prefactor = -double(C + D) / double(C);
 }
 
-void Faunus::Potential::CoulombGalore::sfFennel(const Faunus::json &j) {
+void CoulombGalore::sfFennel(const json &j) {
     alpha = j.at("alpha");
     table = sf.generate(
         [&](double q) {
@@ -138,7 +143,7 @@ void Faunus::Potential::CoulombGalore::sfFennel(const Faunus::json &j) {
     selfenergy_prefactor = -(erfc(alpha*rc) + alpha*rc / sqrt(pc::pi) * (1.0 + exp(-alpha*alpha*rc*rc)));
 }
 
-void Faunus::Potential::CoulombGalore::sfEwald(const Faunus::json &j) { // is all this true for kappa \ne 0 ?
+void CoulombGalore::sfEwald(const json &j) { // is all this true for kappa \ne 0 ?
     alpha = j.at("alpha");
     kappa = j.value("kappa",0.0);
     table = sf.generate( [&](double q) { return (std::erfc(alpha*rc*q + kappa/2.0/alpha)*std::exp(kappa*rc*q) + std::erfc(alpha*rc*q - kappa/2.0/alpha)*std::exp(-kappa*rc*q)  )/2.0; }, 0, 1 ); // Yukawa potential
@@ -151,7 +156,7 @@ void Faunus::Potential::CoulombGalore::sfEwald(const Faunus::json &j) { // is al
     selfenergy_prefactor = alpha * rc / sqrt(pc::pi);
 }
 
-void Faunus::Potential::CoulombGalore::sfWolf(const Faunus::json &j) {
+void CoulombGalore::sfWolf(const json &j) {
     alpha = j.at("alpha");
     table = sf.generate([&](double q) { return (erfc(alpha * rc * q) - erfc(alpha * rc) * q); }, 0, 1);
     calcDielectric = [&](double M2V) {
@@ -162,54 +167,50 @@ void Faunus::Potential::CoulombGalore::sfWolf(const Faunus::json &j) {
     selfenergy_prefactor = -0.5*(erfc(alpha*rc) + 2.0*alpha*rc / sqrt(pc::pi));
 }
 
-void Faunus::Potential::CoulombGalore::sfPlain(const Faunus::json &, double val) {
+void CoulombGalore::sfPlain(const json &, double val) {
     table = sf.generate([&](double) { return val; }, 0, 1);
     calcDielectric = [&](double M2V) { return (2.0 * M2V + 1.0) / (1.0 - M2V); };
     selfenergy_prefactor = 0.0;
 }
 
-double Faunus::Potential::CoulombGalore::selfEnergy(const Faunus::Particle &a) const {
-    return a.charge * a.charge * selfenergy_prefactor * lB / rc;
-}
+CoulombGalore::CoulombGalore(const std::string &name) { PairPotentialBase::name = name; }
 
-Faunus::Potential::CoulombGalore::CoulombGalore(const std::string &name) { PairPotentialBase::name = name; }
-
-void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
+void CoulombGalore::from_json(const json &j) {
     try {
         kappa = 0.0;
         type = j.at("type");
-        rc = j.at("cutoff");
+        rc = j.at("cutoff").get<double>();
         rc2 = rc * rc;
         rc1i = 1 / rc;
-        epsr = j.at("epsr");
-        lB = pc::lB(epsr);
+        epsr = j.at("epsr").get<double>();
+        lB = pc::lB(epsr); // Bjerrum length
 
         depsdt = j.value("depsdt", -0.368 * pc::temperature / epsr);
         sf.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
 
         if (type == "yukawapoisson")
             sfYukawaPoisson(j);
-        if (type == "reactionfield")
+        else if (type == "reactionfield")
             sfReactionField(j);
-        if (type == "fanourgakis")
+        else if (type == "fanourgakis")
             sfFanourgakis(j);
-        if (type == "qpotential")
+        else if (type == "qpotential")
             sfQpotential(j);
-        if (type == "yonezawa")
+        else if (type == "yonezawa")
             sfYonezawa(j);
-        if (type == "poisson")
+        else if (type == "poisson")
             sfPoisson(j);
-        if (type == "yukawa")
+        else if (type == "yukawa")
             sfYukawa(j);
-        if (type == "fennel")
+        else if (type == "fennel")
             sfFennel(j);
-        if (type == "plain")
+        else if (type == "plain")
             sfPlain(j, 1);
-        if (type == "ewald")
+        else if (type == "ewald")
             sfEwald(j);
-        if (type == "none")
+        else if (type == "none")
             sfPlain(j, 0);
-        if (type == "wolf")
+        else if (type == "wolf")
             sfWolf(j);
 
         ecs = std::make_shared<PairMatrix<double>>();
@@ -228,6 +229,11 @@ void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
 
         if (table.empty())
             throw std::runtime_error(name + ": unknown coulomb type '" + type + "'");
+
+        // Set particle self-energy function. For reasons yet to be understood,
+        // rc etc. cannot be lambda captured by reference, but must be hard-copied,
+        // here into `factor`
+        selfEnergy = [factor = selfenergy_prefactor * lB / rc](Particle &a) { return a.charge * a.charge * factor; };
     }
 
     catch (std::exception &e) {
@@ -236,9 +242,9 @@ void Faunus::Potential::CoulombGalore::from_json(const Faunus::json &j) {
     }
 }
 
-double Faunus::Potential::CoulombGalore::dielectric_constant(double M2V) { return calcDielectric(M2V); }
+double CoulombGalore::dielectric_constant(double M2V) { return calcDielectric(M2V); }
 
-void Faunus::Potential::CoulombGalore::to_json(Faunus::json &j) const {
+void CoulombGalore::to_json(json &j) const {
     using namespace u8;
     j["epsr"] = epsr;
     j["T" + partial + epsilon_m + "/" + partial + "T"] = depsdt;
@@ -266,7 +272,9 @@ void Faunus::Potential::CoulombGalore::to_json(Faunus::json &j) const {
     _roundjson(j, 5);
 }
 
-void Faunus::Potential::DipoleDipoleGalore::sfReactionField(const Faunus::json &j) { // Preliminary, needs to be checked!
+//-------------- DipoleDipoleGalore ----------------
+
+void DipoleDipoleGalore::sfReactionField(const json &j) { // Preliminary, needs to be checked!
     epsrf = j.at("epsrf");
     tableA = sfA.generate([&](double) { return 1.0; }, 0, 1);
     tableB = sfB.generate( [&](double q) { return -(2*(epsrf-epsr)/(2*epsrf+epsr))/epsr*q*q*q; },0,1 );
@@ -283,7 +291,7 @@ void Faunus::Potential::DipoleDipoleGalore::sfReactionField(const Faunus::json &
     selfenergy_prefactor = 2.0*(epsr - epsrf)/(2.0*epsrf + epsr); // Preliminary, needs to be checked!
 }
 
-void Faunus::Potential::DipoleDipoleGalore::sfQ2potential(const Faunus::json &j) { // Preliminary, needs to be checked!
+void DipoleDipoleGalore::sfQ2potential(const json &j) { // Preliminary, needs to be checked!
     order = j.at("order");
     tableA = sfA.generate( [&](double q) { return qPochhammerSymbol(q,3,order);  },0,1 );
     tableB = sfB.generate([&](double) { return 0.0; }, 0, 1);
@@ -291,7 +299,7 @@ void Faunus::Potential::DipoleDipoleGalore::sfQ2potential(const Faunus::json &j)
     selfenergy_prefactor = -1.0;
 }
 
-void Faunus::Potential::DipoleDipoleGalore::sfQ0potential(const Faunus::json &j) { // Preliminary, needs to be checked!
+void DipoleDipoleGalore::sfQ0potential(const json &j) { // Preliminary, needs to be checked!
     order = j.at("order");
     tableA = sfA.generate( [&](double q) { return dipoleDipoleQ2Help(q,0,order); },0,1 );
     tableB = sfB.generate( [&](double q) { return dipoleDipoleQ2Help(q,0,order,false); },0,1 );
@@ -299,14 +307,14 @@ void Faunus::Potential::DipoleDipoleGalore::sfQ0potential(const Faunus::json &j)
     selfenergy_prefactor = -1.0;
 }
 
-void Faunus::Potential::DipoleDipoleGalore::sfFanourgakis(const Faunus::json &) { // Preliminary, needs to be checked!
+void DipoleDipoleGalore::sfFanourgakis(const json &) { // Preliminary, needs to be checked!
     tableA = sfA.generate( [&](double q) { return ( 1.0 + 14.0*pow(q,5) - 35.0*pow(q,6) + 20.0*pow(q,7) ); },0,1 );
     tableB = sfB.generate( [&](double q) { return 35.0*pow(q,5)*pow( 1.0 - q,2.0 ); },0,1 );
     calcDielectric = [&](double M2V) { return 1 + 3*M2V; };
     selfenergy_prefactor = 0.0; // Seems so but is it really correct? Check!
 }
 
-void Faunus::Potential::DipoleDipoleGalore::sfFennell(const Faunus::json &j) {
+void DipoleDipoleGalore::sfFennell(const json &j) {
     alpha = j.at("alpha");
     double ar = alpha*rc;
 
@@ -339,7 +347,7 @@ void Faunus::Potential::DipoleDipoleGalore::sfFennell(const Faunus::json &j) {
     selfenergy_prefactor = -0.5*( erfc(alpha*rc) + 2.0*alpha*rc/sqrt(pc::pi)*exp(-alpha*alpha*rc*rc) + (4.0/3.0)*pow(alpha*rc,3.0)/sqrt(pc::pi) );
 }
 
-void Faunus::Potential::DipoleDipoleGalore::sfWolf(const Faunus::json &j) {
+void DipoleDipoleGalore::sfWolf(const json &j) {
     alpha = j.at("alpha");
     double ar = alpha*rc;
 
@@ -368,7 +376,7 @@ void Faunus::Potential::DipoleDipoleGalore::sfWolf(const Faunus::json &j) {
     selfenergy_prefactor = -0.5*( erfc(ar) + 2.0*ar/sqrt(pc::pi)*exp(-ar*ar) + (4.0/3.0)*pow(ar,3.0)/sqrt(pc::pi) );
 }
 
-void Faunus::Potential::DipoleDipoleGalore::sfEwald(const Faunus::json &j) {
+void DipoleDipoleGalore::sfEwald(const json &j) {
     alpha = j.at("alpha");
     double ar = alpha*rc;
 
@@ -378,30 +386,26 @@ void Faunus::Potential::DipoleDipoleGalore::sfEwald(const Faunus::json &j) {
     selfenergy_prefactor = -2.0/3.0*pow(alpha,3.0)/std::sqrt(pc::pi);
 }
 
-void Faunus::Potential::DipoleDipoleGalore::sfPlain(const Faunus::json &, double val) {
+void DipoleDipoleGalore::sfPlain(const json &, double val) {
     tableA = sfA.generate([&](double) { return val; }, 0, 1);
     tableB = sfB.generate([&](double) { return 0; }, 0, 1);
     calcDielectric = [&](double M2V) { return (2.0 * M2V + 1.0) / (1.0 - M2V); };
     selfenergy_prefactor = 0.0;
 }
 
-double Faunus::Potential::DipoleDipoleGalore::selfEnergy(const Faunus::Particle &a) const {
-    return a.getExt().mulen * a.getExt().mulen * selfenergy_prefactor * lB / (rc * rc2);
-}
-
-Faunus::Potential::DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) {
+DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) {
     PairPotentialBase::name = name;
     isotropic = false; // potential is angular dependent
 }
 
-void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
+void DipoleDipoleGalore::from_json(const json &j) {
     try {
         kappa = 0.0;
         type = j.at("type");
-        rc = j.at("cutoff");
+        rc = j.at("cutoff").get<double>();
         rc2 = rc * rc;
         rc1i = 1 / rc;
-        epsr = j.at("epsr");
+        epsr = j.at("epsr").get<double>();
         lB = pc::lB(epsr);
 
         depsdt = j.value("depsdt", -0.368 * pc::temperature / epsr);
@@ -410,25 +414,32 @@ void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
 
         if (type == "plain")
             sfPlain(j, 1);
-        if (type == "none")
+        else if (type == "none")
             sfPlain(j, 0);
-        if (type == "ewald")
+        else if (type == "ewald")
             sfEwald(j);
-        if (type == "wolf")
+        else if (type == "wolf")
             sfWolf(j);
-        if (type == "fennell")
+        else if (type == "fennell")
             sfFennell(j);
-        if (type == "fanourgakis")
+        else if (type == "fanourgakis")
             sfFanourgakis(j);
-        if (type == "qpotential")
+        else if (type == "qpotential")
             sfQ0potential(j);
-        if (type == "q2potential")
+        else if (type == "q2potential")
             sfQ2potential(j);
-        if (type=="reactionfield")
+        else if (type == "reactionfield")
             sfReactionField(j);
 
         if (tableA.empty() || tableB.empty())
             throw std::runtime_error(name + ": unknown dipole-dipole type '" + type + "'");
+
+        // Set particle self-energy function. For reasons yet to be understood,
+        // rc, rc2 etc. cannot be captured to reference, but must be hard-copied,
+        // here into `factor`
+        selfEnergy = [factor = selfenergy_prefactor * lB / (rc * rc2)](Particle &a) {
+            return a.getExt().mulen * a.getExt().mulen * factor;
+        };
     }
 
     catch (std::exception &e) {
@@ -436,9 +447,9 @@ void Faunus::Potential::DipoleDipoleGalore::from_json(const Faunus::json &j) {
     }
 }
 
-double Faunus::Potential::DipoleDipoleGalore::dielectric_constant(double M2V) { return calcDielectric(M2V); }
+double DipoleDipoleGalore::dielectric_constant(double M2V) { return calcDielectric(M2V); }
 
-void Faunus::Potential::DipoleDipoleGalore::to_json(Faunus::json &j) const {
+void DipoleDipoleGalore::to_json(json &j) const {
     using namespace u8;
     j["epsr"] = epsr;
     j["T" + partial + epsilon_m + "/" + partial + "T"] = depsdt;
@@ -455,42 +466,42 @@ void Faunus::Potential::DipoleDipoleGalore::to_json(Faunus::json &j) const {
     _roundjson(j, 5);
 }
 
-Faunus::Potential::Coulomb::Coulomb(const std::string &name) { PairPotentialBase::name = name; }
+Coulomb::Coulomb(const std::string &name) { PairPotentialBase::name = name; }
 
-void Faunus::Potential::Coulomb::to_json(Faunus::json &j) const {
+void Coulomb::to_json(json &j) const {
     j["epsr"] = pc::lB2epsr(lB);
     j["lB"] = lB;
 }
 
-void Faunus::Potential::Coulomb::from_json(const Faunus::json &j) { lB = pc::lB(j.at("epsr")); }
+void Coulomb::from_json(const json &j) { lB = pc::lB(j.at("epsr")); }
 
-Faunus::Potential::DipoleDipole::DipoleDipole(const std::string &name) {
+DipoleDipole::DipoleDipole(const std::string &name) {
     PairPotentialBase::name = name;
     isotropic = false;
 }
 
-void Faunus::Potential::DipoleDipole::to_json(Faunus::json &j) const {
+void DipoleDipole::to_json(json &j) const {
     j["epsr"] = pc::lB2epsr(lB);
     j["lB"] = lB;
 }
 
-void Faunus::Potential::DipoleDipole::from_json(const Faunus::json &j) { lB = pc::lB(j.at("epsr")); }
+void DipoleDipole::from_json(const json &j) { lB = pc::lB(j.at("epsr")); }
 
-Faunus::Potential::FENE::FENE(const std::string &name) { PairPotentialBase::name = name; }
+FENE::FENE(const std::string &name) { PairPotentialBase::name = name; }
 
-void Faunus::Potential::FENE::from_json(const Faunus::json &j) {
+void FENE::from_json(const json &j) {
     k = j.at("stiffness");
     r02 = std::pow(double(j.at("maxsep")), 2);
     r02inv = 1 / r02;
 }
 
-void Faunus::Potential::FENE::to_json(Faunus::json &j) const { j = {{"stiffness", k}, {"maxsep", std::sqrt(r02)}}; }
+void FENE::to_json(json &j) const { j = {{"stiffness", k}, {"maxsep", std::sqrt(r02)}}; }
 
-void Faunus::Potential::to_json(Faunus::json &j, const Faunus::Potential::PairPotentialBase &base) {
+void to_json(json &j, const PairPotentialBase &base) {
     base.name.empty() ? base.to_json(j) : base.to_json(j[base.name]);
 }
 
-void Faunus::Potential::from_json(const Faunus::json &j, Faunus::Potential::PairPotentialBase &base) {
+void from_json(const json &j, PairPotentialBase &base) {
     try {
         if (not base.name.empty()) {
             if (j.count(base.name) == 1) {
@@ -503,7 +514,8 @@ void Faunus::Potential::from_json(const Faunus::json &j, Faunus::Potential::Pair
         throw std::runtime_error("pairpotential error for " + base.name + ": " + e.what() + usageTip[base.name]);
     }
 }
-void Faunus::Potential::from_json(const Faunus::json &j, Faunus::Potential::ParametersTable &m) {
+
+void from_json(const json &j, ParametersTable &m) {
     std::function<std::pair<double, double>(double, double, double, double)> mixerFunc;
 
     auto mixer = j.at("mixing").get<std::string>();
@@ -628,7 +640,7 @@ void Faunus::Potential::from_json(const Faunus::json &j, Faunus::Potential::Para
         }
     }
 }
-void Faunus::Potential::to_json(Faunus::json &j, const Faunus::Potential::ParametersTable &m) {
+void to_json(json &j, const ParametersTable &m) {
     auto &_j = j["custom"];
     switch (m.mixer) {
     case ParametersTable::LB:
@@ -669,22 +681,22 @@ void Faunus::Potential::to_json(Faunus::json &j, const Faunus::Potential::Parame
     }
 }
 
-Faunus::Potential::SASApotential::SASApotential(const std::string &name) { PairPotentialBase::name = name; }
+SASApotential::SASApotential(const std::string &name) { PairPotentialBase::name = name; }
 
-void Faunus::Potential::SASApotential::from_json(const Faunus::json &j) {
+void SASApotential::from_json(const json &j) {
     assertKeys(j, {"shift", "molarity", "radius"});
     shift = j.value("shift", true);
     conc = j.at("molarity").get<double>() * 1.0_molar;
     proberadius = j.value("radius", 1.4) * 1.0_angstrom;
 }
 
-void Faunus::Potential::SASApotential::to_json(Faunus::json &j) const {
+void SASApotential::to_json(json &j) const {
     j["molarity"] = conc / 1.0_molar;
     j["radius"] = proberadius / 1.0_angstrom;
     j["shift"] = shift;
 }
 
-double Faunus::Potential::SASApotential::area(double R, double r, double d_squared) const {
+double SASApotential::area(double R, double r, double d_squared) const {
     R += proberadius;
     r += proberadius;
     double area = 4 * pc::pi * (R * R + r * r); // full volume of both spheres
@@ -700,9 +712,6 @@ double Faunus::Potential::SASApotential::area(double R, double r, double d_squar
     double h2 = (R - r + d) * (R + r - d) / (2 * d); // comprising intersecting lens
     return area - 2 * pc::pi * (R * h1 + r * h2) - offset;
 }
-
-namespace Faunus {
-namespace Potential {
 
 CustomPairPotential::CustomPairPotential(const std::string &name) : d(std::make_shared<Data>()) {
     PairPotentialBase::name = name;
@@ -792,11 +801,23 @@ void Polarizability::from_json(const json &j) {
         }
     }
 }
+
+//----------------- FunctorPotential ---------------------
+
+FunctorPotential::FunctorPotential(const std::string &name) { PairPotentialBase::name = name; }
+
+void FunctorPotential::registerSelfEnergy(PairPotentialBase *pot) {
+    if (pot->selfEnergy) {
+        self_energy_vector.push_back(pot->selfEnergy);
+        assert(self_energy_vector.back());
+    }
+}
+
 FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
     uFunc u = [](const Particle &, const Particle &, const Point &) { return 0.0; };
     if (j.is_array()) {
-        for (auto &i : j) // loop over all defined potentials in array
-            if (i.is_object() and (i.size() == 1))
+        for (auto &i : j) { // loop over all defined potentials in array
+            if (i.is_object() and (i.size() == 1)) {
                 for (auto it : i.items()) {
                     uFunc _u = nullptr;
                     try {
@@ -861,8 +882,25 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
                     else
                         throw std::runtime_error("unknown pair-potential: " + it.key());
                 }
+            }
+        }
     } else
         throw std::runtime_error("dictionary of potentials required");
+
+    // set self energy function
+    if (self_energy_vector.empty())
+        selfEnergy = nullptr;
+    else
+        // why must self_energy_vector be copied? Using [=] or [&]
+        // lambda capturing causes bad access on copied objects
+        selfEnergy = [vec = self_energy_vector](Particle &p) {
+            double sum = 0;
+            for (auto &func : vec) {
+                assert(func);
+                sum += func(p);
+            }
+            return sum;
+        };
     return u;
 }
 

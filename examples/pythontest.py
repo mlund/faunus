@@ -4,6 +4,8 @@ import json
 import unittest
 import numpy as np
 from math import pi
+import sys
+sys.path.insert(0,'../')
 from pyfaunus import *
 
 # Dictionary defining input
@@ -19,6 +21,12 @@ d['moleculelist'] = [
 d['insertmolecules'] = [
         { 'salt': dict( N=1 ) }
         ]
+d['energy'] = [
+        { 'isobaric' : {'P/atm': 0.1} }
+        ]
+d['analysis'] = [
+        { 'sanity' : dict( Nstep=10 ) }
+        ]
 
 # Create a simulation Space
 #   this will:
@@ -30,6 +38,9 @@ setTemperature(300) # must be set before atom/molecule properties are read
 spc = Space()
 spc.from_dict(d)
 
+pot = Hamiltonian(spc, d['energy'])
+analysis = Analysis(spc, pot, d['analysis'])
+
 # Test temperature
 
 class TestGlobals(unittest.TestCase):
@@ -39,6 +50,21 @@ class TestGlobals(unittest.TestCase):
 # Loop over atom types
 for i in atoms:
     print("atom name and diameter:", i.name, i.sigma)
+
+
+# Test Coulomb
+
+class TestCoulomb(unittest.TestCase):
+
+    # this doesn't test anything yet
+    def test_pairpot(self):
+        d = { 'default' : [
+            { 'coulomb': { 'epsr': 80, 'type': 'qpotential', 'cutoff': 100 } }
+            ] }
+        pot = FunctorPotential( d )
+        r = np.linspace(1,10,5)
+        u = np.array( [pot.energy( spc.p[0], spc.p[1], [0,0,i] ) for i in r] )
+        pot.selfEnergy(spc.p[0])
 
 # Test SASA calculations
 
@@ -53,8 +79,7 @@ class TestSASA(unittest.TestCase):
         np.testing.assert_almost_equal(u, [87.3576,100.4613,127.3487,138.4422,138.4422], 4)
 
     def test_powersasa_hamiltonian(self):
-        d['energy'] = [ { 'sasa': { 'molarity': 1.5, 'radius': 1.4 } } ]
-        H = Hamiltonian(spc, d)
+        H = Hamiltonian(spc, [ {'sasa' : {'molarity': 1.5, 'radius': 1.4}} ] )
         spc.p[0].pos = [0,0,0] # fix 1st particle in origin
         c = Change()           # change object telling that a full energy calculation
         c.all = True;          # should be performed when calling `energy()`

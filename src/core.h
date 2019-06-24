@@ -80,11 +80,21 @@ namespace Faunus {
      */
     bool assertKeys(const json&, const std::vector<std::string>&, bool=true);
 
-    struct xjson : private json {
-        xjson(const json &j);
+    /**
+     * @brief Like json, but delete entries after access
+     *
+     * Only selected functions from the json class is exposed and
+     * and accessing a key it will be deleted afterwards, i.e. a key
+     * can be used only once. This can be used to check for unknown
+     * keys as the object should be zero after being processed by
+     * i.e. `from_json` or similar.
+     */
+    struct SingleUseJSON : private json {
+        SingleUseJSON(const json &j);
         bool empty() const;
         size_type count(const std::string &key) const;
         inline auto dump(int w=-1) const { return json::dump(w); }
+        inline bool is_object() const { return json::is_object(); }
 
         void clear();
         json at(const std::string &key);

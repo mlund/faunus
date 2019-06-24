@@ -16,10 +16,19 @@ class Energybase;
 
 namespace Analysis {
 
+/**
+ * @brief Base class for all analysis functions
+ *
+ * Analysis classes are used to perform system analysis
+ * over the course or a simulations or for post-analysis
+ * of an existing trajectory. The base class adds basic
+ * functionality such as timing, number of steps, json IO
+ * and enforce a common interface.
+ */
 class Analysisbase {
   private:
-    virtual void _to_json(json &j) const;
-    virtual void _from_json(const json &j);
+    virtual void _to_json(json &) const;
+    virtual void _from_json(const json &);
     virtual void _sample() = 0;
     virtual void _to_disk(); //!< save data to disk
     int stepcnt = 0;
@@ -33,10 +42,10 @@ class Analysisbase {
 
   public:
     std::string name; //!< descriptive name
-    std::string cite; //!< reference, url, doi etc. describing the analysis
+    std::string cite; //!< url, doi etc. describing the analysis
 
-    void to_json(json &j) const;   //!< JSON report w. statistics, output etc.
-    void from_json(const json &j); //!< configure from json object
+    void to_json(json &) const;    //!< JSON report w. statistics, output etc.
+    void from_json(const json &);  //!< configure from json object
     void to_disk();                //!< Save data to disk (if defined)
     virtual void sample();
     virtual ~Analysisbase() = default;
@@ -83,6 +92,12 @@ class WidomInsertion : public Analysisbase {
     WidomInsertion(const json &j, Space &spc, Energy::Hamiltonian &pot);
 };
 
+/**
+ * @brief Density of atom along axis
+ *
+ * Calculates the summed density of `atoms` in spherical, cylindrical or planar shells around
+ * `origo` which by default is the center of the simulation box
+ */
 class AtomProfile : public Analysisbase {
     Space &spc;
     Equidistant2DTable<double, double> tbl;
@@ -90,6 +105,7 @@ class AtomProfile : public Analysisbase {
     std::set<int> ids;              // atom ids to analyse
     std::string file;               // output filename
     Point ref = {0, 0, 0};
+    Eigen::Vector3i dir = {1, 1, 1};
     double dr; // radial resolution
     bool count_charge = false;
     // bool Vnormalise = true;
@@ -142,10 +158,10 @@ class Density : public Analysisbase {
     // int capacity_limit = 10; // issue warning if capacity get lower than this
 
     void _sample() override;
-    void _to_json(json &j) const override;
+    void _to_json(json &) const override;
 
   public:
-    Density(const json &j, Space &spc);
+    Density(const json &, Space &);
     virtual ~Density();
 };
 
@@ -161,7 +177,7 @@ class ChargeFluctuations : public Analysisbase {
 
     void _sample() override;
 
-    void _to_json(json &j) const override;
+    void _to_json(json &) const override;
 
     /**
      * @brief Saves average PQR file to disk if `pqrfile` input is given
@@ -180,10 +196,10 @@ class Multipole : public Analysisbase {
     std::map<int, data> _map; //!< Molecular moments and their fluctuations
 
     void _sample() override;
-    void _to_json(json &j) const override;
+    void _to_json(json &) const override;
 
   public:
-    Multipole(const json &j, const Space &spc);
+    Multipole(const json &, const Space &);
 }; // Molecular multipoles and their fluctuations
 
 class SystemEnergy : public Analysisbase {
@@ -197,11 +213,11 @@ class SystemEnergy : public Analysisbase {
 
     void normalize();
     void _sample() override;
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
+    void _to_json(json &) const override;
+    void _from_json(const json &) override;
 
   public:
-    SystemEnergy(const json &j, Energy::Hamiltonian &pot);
+    SystemEnergy(const json &, Energy::Hamiltonian &);
 }; //!< Save system energy to disk. Keywords: `nstep`, `file`.
 
 /**
@@ -213,7 +229,7 @@ class SanityCheck : public Analysisbase {
     void _sample() override;
 
   public:
-    SanityCheck(const json &j, Space &spc);
+    SanityCheck(const json &, Space &);
 };
 
 class SaveState : public Analysisbase {
@@ -221,11 +237,11 @@ class SaveState : public Analysisbase {
     std::function<void(std::string)> writeFunc = nullptr;
     std::string file;
     bool saverandom;
-    void _to_json(json &j) const override;
+    void _to_json(json &) const override;
     void _sample() override;
 
   public:
-    SaveState(const json &j, Space &spc);
+    SaveState(const json &, Space &);
     ~SaveState();
 };
 
@@ -234,22 +250,23 @@ class SaveState : public Analysisbase {
  */
 class PairFunctionBase : public Analysisbase {
   protected:
-    int dim = 3;
+    int dim = 3;            // dimentions to use when normalizing
     int id1 = -1, id2 = -1; // particle id (mol or atom)
-    double dr = 0;
+    double dr = 0;          // distance resolution
     Eigen::Vector3i slicedir = {0, 0, 0};
     double thickness = 0;
     Equidistant2DTable<double, double> hist;
-    std::string name1, name2, file;
+    std::string name1, name2; // atom/molecule names
+    std::string file;         // output filename
     double Rhypersphere = -1; // Radius of 2D hypersphere
     Average<double> V;        // average volume (angstrom^3)
 
   private:
-    void _from_json(const json &j) override;
-    void _to_json(json &j) const override;
+    void _from_json(const json &) override;
+    void _to_json(json &) const override;
 
   public:
-    PairFunctionBase(const json &j);
+    PairFunctionBase(const json &);
     virtual ~PairFunctionBase();
 };
 
@@ -258,10 +275,10 @@ class PairAngleFunctionBase : public PairFunctionBase {
     Equidistant2DTable<double, Average<double>> hist2;
 
   private:
-    void _from_json(const json &j);
+    void _from_json(const json &);
 
   public:
-    PairAngleFunctionBase(const json &j);
+    PairAngleFunctionBase(const json &);
     virtual ~PairAngleFunctionBase();
 };
 
@@ -272,7 +289,7 @@ class AtomRDF : public PairFunctionBase {
     void _sample() override;
 
   public:
-    AtomRDF(const json &j, Space &spc);
+    AtomRDF(const json &, Space &);
 };
 
 /** @brief Same as `AtomRDF` but for molecules. Identical input. */
@@ -280,7 +297,7 @@ class MoleculeRDF : public PairFunctionBase {
     Space &spc;
     void _sample() override;
   public:
-    MoleculeRDF(const json &j, Space &spc);
+    MoleculeRDF(const json &, Space &);
 };
 
 /** @brief Dipole-dipole correlation function, <\boldsymbol{\mu}(0)\cdot\boldsymbol{\mu}(r)> */
@@ -288,7 +305,7 @@ class AtomDipDipCorr : public PairAngleFunctionBase {
     Space &spc;
     void _sample() override;
   public:
-    AtomDipDipCorr(const json &j, Space &spc);
+    AtomDipDipCorr(const json &, Space &);
 };
 
 /** @brief Write XTC trajectory file */
@@ -297,8 +314,8 @@ class XTCtraj : public Analysisbase {
     std::vector<std::string> names; // molecule names of above
     std::function<bool(Particle &)> filter; // function to filter molecule ids
 
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override;
+    void _to_json(json &) const override;
+    void _from_json(const json &) override;
 
     FormatXTC xtc;
     Space &spc;
@@ -310,8 +327,11 @@ class XTCtraj : public Analysisbase {
     XTCtraj(const json &j, Space &s);
 };
 
+/**
+ * @brief Excess pressure using virtual volume move
+ */
 class VirtualVolume : public Analysisbase {
-    double dV;
+    double dV; // volume perturbation
     Change c;
     Energy::Energybase &pot;
     std::function<double()> getVolume;
@@ -324,7 +344,7 @@ class VirtualVolume : public Analysisbase {
 
   public:
     VirtualVolume(const json &j, Space &spc, Energy::Energybase &pot);
-}; //!< Excess pressure using virtual volume move
+};
 
 /**
  * @brief Multipolar decomposition between groups as a function of separation

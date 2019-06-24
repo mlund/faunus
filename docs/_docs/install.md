@@ -1,7 +1,3 @@
----
----
-[![Edit](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
-
 # Installing
 
 ## Using Conda
@@ -80,6 +76,7 @@ CMake Option                         | Description
 `-DENABLE_OPENMP=ON`                 | Enable OpenMP support
 `-DENABLE_PYTHON=ON`                 | Build python bindings (experimental)
 `-DENABLE_POWERSASA=ON`              | Enable SASA routines (external download)
+`-DBUILD_STATIC=OFF`                 | Build statically linked binaries
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`  | Alternatives: `Debug` or `Release` (faster)
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode
 `-DCMAKE_CXX_FLAGS_DEBUG="..."`      | Compiler options for Debug mode
@@ -149,7 +146,15 @@ cd faunus
 
 This requires `clang-format` which may also be directly used in IDE's
 such as CLion. In the top-level directory of Faunus you will find
-the style configuration file `.clang-format`
+the style configuration file [`.clang-format`](https://github.com/mlund/faunus/blob/master/.clang-format)
+
+Also, adhere to the following naming conventions:
+
+Style        | Elements
+------------ | -------------------------
+`PascalCase` | classes, namespaces
+`camelCase`  | functions
+`snake_case` | variables
 
 
 ## Creating a conda package (development usage)

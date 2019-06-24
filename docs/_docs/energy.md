@@ -6,9 +6,8 @@ MathJax.Hub.Config({
 });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
-[![](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
 
-# Energy <a name="energy"></a>
+# Energy
 
 The system energy, or Hamiltonian, consists of a sum of potential energy terms,
 
@@ -61,7 +60,7 @@ These conditions should be carefully considered if equilibrating a system far fr
 {: .notice--notice}
 
 
-## External Pressure <a name="isobaric"></a>
+## External Pressure
 
 This adds the following pressure term[^frenkel] to the Hamiltonian, appropriate for
 MC moves in $\ln V$:
@@ -79,14 +78,14 @@ where $N$ is the total number of molecules and atomic species.
 `P/unit`     | External pressure where unit can be `mM`, `atm`, or `Pa`.
 
 
-## Nonbonded Interactions <a name="nonbonded"></a>
+## Nonbonded Interactions
 
 This term loops over pairs of atoms, $i$, and $j$, summing a given pair-wise additive potential, $u_{ij}$,
 
 $$ U = \sum_{i=0}^{N-1}\sum_{j=i+1}^N u_{ij}(\textbf{r}_j-\textbf{r}_i)$$
 
 Using `nonbonded`, potentials can be arbitrarily mixed and customized for specific particle
-combinations. Internally, the potential is _splined_ in an interval [`rmin`,`rmax`] determined
+combinations. `nonbonded_splined` internally _splines_ the combined potential in an interval [`rmin`,`rmax`] determined
 by the following policies:
 
 - `rmin` is decreased towards zero until the potential reaches `u_at_rmin=20` kT
@@ -96,13 +95,14 @@ If outside the interval, infinity or zero is returned, respectively.
 Finally, the spline precision can be controlled with `utol=1e-5` kT.
 
 Below is a description of possible nonbonded methods. For simple potentials, the hard coded
-variants are often the fastest option. 
+variants are often the fastest option. For better performance, it is recommended to use `nonbonded_splined` in place of the more robust `nonbonded` method. To check that the combined potential is splined correctly, set `to_disk=true` to print to `A-B_tabulated.dat` the exact and splined combined potentials between species A and B.
 
 `energy`               | $u_{ij}$
 ---------------------- | ------------------------------------------------------
-`nonbonded`            | Any combination of pair potentials (splined)
+`nonbonded`            | Any combination of pair potentials (slower, but exact)
+`nonbonded_exact`      | An alias for `nonbonded`
+`nonbonded_splined`    | Any combination of pair potentials (splined)
 `nonbonded_cached`     | Any combination of pair potentials (splined, only intergroup!)
-`nonbonded_exact`      | Any combination of pair potentials (slower, but exact)
 `nonbonded_coulomblj`  | `coulomb`+`lennardjones` (hard coded)
 `nonbonded_coulombwca` | `coulomb`+`wca` (hard coded)
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)
@@ -191,9 +191,13 @@ The added energy terms are:
 $$
 \small
 \begin{aligned}
-U =& \overbrace{\frac{2\pi f}{V}\sum_{ {\bf k} \ne {\bf 0}} A_k\vert Q^{q\mu} \vert^2}^{\text{reciprocal}}
-- \overbrace{ f \sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2 + \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2   \right)}^{\text{self}}\\
-&+ \underbrace{\frac{2\pi f}{(2\varepsilon_{surf} + 1)V}\left(  \vert \sum_{j}q_j{\bf r}_j   \vert^2 + 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j + \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )}_{\text{surface}}\\
+U =& \overbrace{ \frac{2\pi f}{V} \sum_{ {\bf k} \ne {\bf 0}} A_k \vert Q^{q\mu} \vert^2 }^{\text{reciprocal}}
+- \overbrace{ f \sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2
++ \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2
+\right)}^{\text{self}}\\
+&+ \underbrace{ \frac{2\pi f}{(2\varepsilon_{surf} + 1)V} \left( \vert \sum_{j}q_j{\bf r}_j   \vert^2
++ 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j
++ \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )}_{\text{surface}}\\
 \end{aligned}
 $$
 
@@ -224,7 +228,8 @@ $$
 while for point dipoles (currently unimplemented),
 
 $$
-Q^{\mu} = \sum_j\boldsymbol{\mu}_j\cdot\nabla_j\left(\prod_{\alpha \in\{x,y,z\}}\cos\left(\frac{2\pi}{L_{\alpha}}n_{\alpha}r_{\alpha,j}\right)\right).
+Q^{\mu} = \sum_j \boldsymbol{\mu}_j \cdot \nabla_j \left ( \prod_{ \alpha \in \{ x,y,z \} } \cos \left (
+   \frac{2\pi}{L_{\alpha}} n_{\alpha} r_{\alpha,j} \right ) \right ).
 $$
 
 **Limitations:** Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles
@@ -781,26 +786,13 @@ be used when analysing the system (see Analysis).
 `Q`                       | Monopole moment (net charge)
 `atomatom`                | Distance along `dir` between 2 atoms specified by the `indexes` array
 `cmcm`                    | Absolute mass-center separation between groups defined by the intervals `indexes[0]:indexes[1]` and `indexes[2]:indexes[3]`
-`cmcm_z`                  | _z_-component of `cmcm`
+`cmcm_z`                  | _z_-component of mass-center separation between groups defined by the intervals `indexes[0]:indexes[1]` and `indexes[2]:indexes[3]`
 `L/R`                     | Ratio between height and radius of a cylindrical lipid vesicle (ad-hoc RC for bending modulus calculations)
 
 Notes:
 
 - the molecular dipole moment is defined w. respect to the mass-center
-- for `angle`, the principle axis is calculated by diagonalising the gyration tensor
-
-#### Molecule Separation
-
-This returns the minimum distance between the mass centers of two molecules.
-Useful for calculating i.e. the potential of mean force between strongly
-interacting molecular groups.
-
-`coords=[cmcm]` | Mass-center separation
---------------- | -----------------------------------
-`indexes`       | Array w. exactly two molecule index
-`range`         | Array w. [min:max] separation
-`resolution`    | Resolution along coordinate
-`dir=[1,1,1]`   | Directions for distance calc.
+- for `angle`, the principal axis is the eigenvector corresponding to the smallest eigenvalue of the gyration tensor
 
 #### System Properties
 

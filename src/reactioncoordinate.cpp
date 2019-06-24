@@ -7,6 +7,19 @@
 namespace Faunus {
 namespace ReactionCoordinate {
 
+ReactionCoordinateBase::ReactionCoordinateBase(const json &j) {
+    binwidth = j.value("resolution", 0.5);
+    auto range = j.value("range", std::vector<double>({0, 0}));
+    if (range.size() == 2) {
+        if (range[0] <= range[1]) {
+            min = range[0];
+            max = range[1];
+            return;
+        }
+    }
+    throw std::runtime_error(name + ": 'range' require two numbers: [min, max>=min]");
+}
+
 void ReactionCoordinateBase::_to_json(json &) const {}
 
 double ReactionCoordinateBase::normalize(double) const { return 1.; }
@@ -18,27 +31,47 @@ double ReactionCoordinateBase::operator()() {
 
 bool ReactionCoordinateBase::inRange(double coord) const { return (coord >= min && coord <= max); }
 
-void to_json(json &j, const ReactionCoordinateBase &r) {
-    j = {{"range", {r.min, r.max}}, {"resolution", r.binwidth}};
-    r._to_json(j);
+void to_json(json &j, const ReactionCoordinateBase &rc) {
+    assert(!rc.name.empty());
+    auto &_j = j[rc.name];
+    _j = {{"range", {rc.min, rc.max}}, {"resolution", rc.binwidth}};
+    rc._to_json(_j);
 }
 
-void from_json(const json &j, ReactionCoordinateBase &r) {
-    r.binwidth = j.value("resolution", 0.5);
-    auto range = j.value("range", std::vector<double>({0, 0}));
-    if (range.size() == 2)
-        if (range[0] <= range[1]) {
-            r.min = range[0];
-            r.max = range[1];
-            return;
+/**
+ * Factory function for all known penalty functions. The json instance
+ * must be an object of exact size one, for example:
+ *
+ *     atom: {resolution: 0.1, ... }
+ */
+std::shared_ptr<ReactionCoordinateBase> createReactionCoordinate(const json &j, Space &spc) {
+    assert(j.is_object());
+    assert(j.size() == 1);
+
+    std::shared_ptr<ReactionCoordinateBase> rc;
+
+    for (auto it : j.items()) {
+        try {
+            if (it.key() == "atom")
+                rc = std::make_shared<AtomProperty>(it.value(), spc);
+            else if (it.key() == "molecule")
+                rc = std::make_shared<MoleculeProperty>(it.value(), spc);
+            else if (it.key() == "system")
+                rc = std::make_shared<SystemProperty>(it.value(), spc);
+            else
+                throw std::runtime_error("unknown type");
+        } catch (std::exception &e) {
+            throw std::runtime_error("error creating reaction coordinate '" + it.key() + "': " + e.what() +
+                                     usageTip["coords=[" + it.key() + "]"]);
         }
-    throw std::runtime_error(r.name + ": 'range' require two numbers: [min, max>=min]");
+    }
+    return rc;
 }
 
 void SystemProperty::_to_json(json &j) const { j["property"] = property; }
-SystemProperty::SystemProperty(const json &j, Space &spc) {
+
+SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBase(j) {
     name = "system";
-    from_json(j, *this);
     property = j.at("property").get<std::string>();
     if (property == "V")
         f = [&g = spc.geo]() { return g.getVolume(); };
@@ -78,9 +111,9 @@ void AtomProperty::_to_json(json &j) const {
     if (dir.squaredNorm() > 1e-9)
         j["dir"] = dir;
 }
-AtomProperty::AtomProperty(const json &j, Space &spc) {
+
+AtomProperty::AtomProperty(const json &j, Space &spc) : ReactionCoordinateBase(j) {
     name = "atom";
-    from_json(j, *this);
     index = j.at("index");
     property = j.at("property").get<std::string>();
     if (property == "x")
@@ -114,9 +147,9 @@ void MoleculeProperty::_to_json(json &j) const {
     if (indexes.size() >= 2)
         j["indexes"] = indexes;
 }
-MoleculeProperty::MoleculeProperty(const json &j, Space &spc) {
+
+MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordinateBase(j) {
     name = "molecule";
-    from_json(j, *this);
     index = j.value("index", 0);
     auto b = spc.geo.getBoundaryFunc();
     property = j.at("property").get<std::string>();
@@ -154,11 +187,12 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) {
 
     else if (property == "muangle") {
         dir = j.at("dir").get<Point>().normalized();
-        if (not spc.groups.at(index).atomic)
+        if (not spc.groups.at(index).atomic) {
             f = [&g = spc.groups, i = index, b, &dir = dir]() {
                 Point mu = dipoleMoment(g[i].begin(), g[i].end(), b);
                 return std::acos(mu.dot(dir)) * 180 / pc::pi;
             };
+        }
     }
 
     else if (property == "atomatom") {
@@ -241,45 +275,5 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) {
         throw std::runtime_error(name + ": unknown or impossible property '" + property + "'" +
                                  usageTip["coords=[molecule]"]);
 }
-
-double MassCenterSeparation::normalize(double coord) const {
-    int dim = dir.sum();
-    if (dim == 2)
-        return 1 / (2 * pc::pi * coord);
-    if (dim == 3)
-        return 1 / (4 * pc::pi * coord * coord);
-    return 1.0;
-}
-
-void MassCenterSeparation::_to_json(json &j) const {
-    j["dir"] = dir;
-    j["indexes"] = indexes;
-    j["type"] = type;
-}
-MassCenterSeparation::MassCenterSeparation(const json &j, Space &spc) {
-    name = "cmcm";
-    from_json(j, *this);
-    dir = j.value("dir", dir);
-    indexes = j.value("indexes", decltype(indexes)());
-    type = j.value("type", decltype(type)());
-    if (indexes.size() == 4) {
-        f = [&spc, dir = dir, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
-            auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geo.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geo.getBoundaryFunc());
-            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
-        };
-    } else if (type.size() == 2) {
-        f = [&spc, dir = dir, type1 = type[0], type2 = type[1]]() {
-            Space::Tgroup g(spc.p.begin(), spc.p.end());
-            auto slice1 = g.find_id(findName(atoms, type1)->id());
-            auto slice2 = g.find_id(findName(atoms, type2)->id());
-            auto cm1 = Geometry::massCenter(slice1.begin(), slice1.end(), spc.geo.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(slice2.begin(), slice2.end(), spc.geo.getBoundaryFunc());
-            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
-        };
-    } else
-        throw std::runtime_error(name + ": specify 4 indexes or two atom types");
-}
-
 } // namespace ReactionCoordinate
 } // namespace Faunus

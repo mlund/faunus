@@ -1,8 +1,7 @@
 #pragma once
 
-#include "space.h"
 #include "bonds.h"
-#include "auxiliary.h"
+#include "externalpotential.h" // Energybase implemented here
 #include <range/v3/view.hpp>
 #include <Eigen/Dense>
 
@@ -23,23 +22,6 @@ struct PairPotentialBase;
 namespace Energy {
 
 class Hamiltonian;
-
-class Energybase {
-  public:
-    enum keys { OLD, NEW, NONE };
-    keys key = NONE;
-    std::string name;
-    std::string cite;
-    TimeRelativeOfTotal<std::chrono::microseconds> timer;
-    virtual double energy(Change &) = 0; //!< energy due to change
-    virtual void to_json(json &j) const; //!< json output
-    virtual void sync(Energybase *, Change &);
-    virtual void init();                               //!< reset and initialize
-    virtual inline void force(std::vector<Point> &){}; // update forces on all particles
-    inline virtual ~Energybase(){};
-};
-
-void to_json(json &j, const Energybase &base); //!< Converts any energy class to json object
 
 /**
  * @brief Check for overlap between atoms and the simulation container
@@ -317,17 +299,6 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
     } //!< Called after a move is rejected/accepted as well as before simulation
 
     void to_json(json &j) const override { j = data; }
-};
-
-class ParticleSelfEnergy : public Energybase {
-  private:
-    Space &spc;
-    std::function<double(Particle &)> selfEnergy; //!< Some potentials may give rise to a self energy
-
-  public:
-    ParticleSelfEnergy(Space &, std::function<double(Particle &)>);
-    double energy(Change &change) override;
-    void sync(Energybase *, Change &) override;
 };
 
 class Isobaric : public Energybase {

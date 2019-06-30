@@ -18,7 +18,7 @@ struct PairPotentialBase {
     std::string name;
     std::string cite;
     bool isotropic = true; //!< True if pair-potential is independent of particle orientation
-    std::function<double(Particle &)> selfEnergy; //!< self energy of particle (kT)
+    std::function<double(const Particle &)> selfEnergy; //!< self energy of particle (kT)
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
@@ -54,7 +54,7 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
         second = j;
         // combine self-energies
         if (first.selfEnergy or second.selfEnergy) {
-            selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](Particle &p) {
+            selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](const Particle &p) {
                 if (u1 and u2)
                     return u1(p) + u2(p);
                 if (u1)
@@ -606,7 +606,7 @@ class FunctorPotential : public PairPotentialBase {
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     typedef CombinedPairPotential<DipoleDipole, LennardJones> Stockmayer;
 
-    std::vector<std::function<double(Particle &)>> self_energy_vector;
+    std::vector<std::function<double(const Particle &)>> self_energy_vector;
     bool have_monopole_self_energy = false;
     bool have_dipole_self_energy = false;
     void registerSelfEnergy(PairPotentialBase *); //!< helper func to add to selv_energy_vector

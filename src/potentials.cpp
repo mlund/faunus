@@ -233,7 +233,9 @@ void CoulombGalore::from_json(const json &j) {
         // Set particle self-energy function. For reasons yet to be understood,
         // rc etc. cannot be lambda captured by reference, but must be hard-copied,
         // here into `factor`
-        selfEnergy = [factor = selfenergy_prefactor * lB / rc](Particle &a) { return a.charge * a.charge * factor; };
+        selfEnergy = [factor = selfenergy_prefactor * lB / rc](const Particle &a) {
+            return a.charge * a.charge * factor;
+        };
     }
 
     catch (std::exception &e) {
@@ -437,7 +439,7 @@ void DipoleDipoleGalore::from_json(const json &j) {
         // Set particle self-energy function. For reasons yet to be understood,
         // rc, rc2 etc. cannot be captured to reference, but must be hard-copied,
         // here into `factor`
-        selfEnergy = [factor = selfenergy_prefactor * lB / (rc * rc2)](Particle &a) {
+        selfEnergy = [factor = selfenergy_prefactor * lB / (rc * rc2)](const Particle &a) {
             return a.getExt().mulen * a.getExt().mulen * factor;
         };
     }
@@ -893,7 +895,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(const json &j) {
     else
         // why must self_energy_vector be copied? Using [=] or [&]
         // lambda capturing causes bad access on copied objects
-        selfEnergy = [vec = self_energy_vector](Particle &p) {
+        selfEnergy = [vec = self_energy_vector](const Particle &p) {
             double sum = 0;
             for (auto &func : vec) {
                 assert(func);

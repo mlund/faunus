@@ -10,6 +10,7 @@
 #include <src/move.h>
 #include <src/analysis.h>
 #include <src/potentials.h>
+#include <src/regions.h>
 
 namespace py = pybind11;
 using namespace Faunus;
@@ -153,6 +154,14 @@ PYBIND11_MODULE(pyfaunus, m)
         .def("end", (Tpvec::iterator& (Tgroup::*)() ) &Tgroup::end);
 
     py::bind_vector<std::vector<Tgroup>>(m, "GroupVector");
+
+    // Region
+    /*
+    py::class_<Region::RegionBase>(m, "RegionBase")
+        .def(py::init<>())
+        .def_readwrite("name", &Region::RegionBase::name)
+        .def("isInside", &Region::RegionBase::isInside);
+        */
 
     // AtomData
     py::class_<AtomData>(m, "AtomData")

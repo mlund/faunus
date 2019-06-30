@@ -11,6 +11,7 @@
 #include "molecule.h"
 #include "group.h"
 #include "geometry.h"
+#include "regions.h"
 #include "space.h"
 #include "average.h"
 #include "potentials.h"

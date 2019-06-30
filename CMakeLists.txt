@@ -241,6 +241,7 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/penalty.cpp
     ${CMAKE_SOURCE_DIR}/src/potentials.cpp
     ${CMAKE_SOURCE_DIR}/src/reactioncoordinate.cpp
+    ${CMAKE_SOURCE_DIR}/src/regions.cpp
     ${CMAKE_SOURCE_DIR}/src/rotate.cpp
     ${CMAKE_SOURCE_DIR}/src/space.cpp
     ${CMAKE_SOURCE_DIR}/src/speciation.cpp
@@ -275,6 +276,7 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/space.h
     ${CMAKE_SOURCE_DIR}/src/speciation.h
     ${CMAKE_SOURCE_DIR}/src/random.h
+    ${CMAKE_SOURCE_DIR}/src/regions.h
     ${CMAKE_SOURCE_DIR}/src/tensor.h
     ${CMAKE_SOURCE_DIR}/src/units.h
     )

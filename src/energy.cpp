@@ -78,13 +78,13 @@ void EwaldData::update(const Point &box) {
 }
 
 EwaldData::EwaldData(const json &j) {
-    alpha = j.at("alpha");
-    rc = j.at("cutoff");
-    kc = j.at("kcutoff");
-    ipbc = j.value("ipbc", false);
-    spherical_sum = j.value("spherical_sum", true);
+    alpha = j.at("alpha"); // damping-parameter
+    rc = j.at("cutoff");   // real space cut-off
+    kc = j.at("kcutoff");  // reciprocal space cut-off
+    ipbc = j.value("ipbc", false); // using PBC or IPBC?
+    spherical_sum = j.value("spherical_sum", true); // Using spherical summation of k-vectors in reciprocal space?
     lB = pc::lB(j.at("epsr"));
-    eps_surf = j.value("epss", 0.0);
+    eps_surf = j.value("epss", 0.0); // dielectric constant of surrounding medium
     const_inf = (eps_surf < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium
     kappa = j.value("kappa", 0.0);
     kappa2 = kappa * kappa;

@@ -110,16 +110,24 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
 
     PolicyIonIon(Space &spc) : spc(&spc) {}
 
+    /**
+     * @brief Updates the reciprocal space terms 'Q^q' and 'A_k'. See eqs. 24 and 25 in ref. for PBC Ewald, and eq. 2 in doi:10/css8 for IPBC Ewald.
+     */
     void updateComplex(EwaldData &data) const {
         auto active = spc->activeParticles();
         if (eigenopt) { // calculate using Eigen operations. Faster for large systems?
-            if (data.ipbc == false) {
-                auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Space::Tparticle::pos); //  Nx3
+            if(data.ipbc) {
+                auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Space::Tparticle::pos); //  N x 3
                 auto charge =
-                    asEigenVector(active.begin().base(), active.end().base(), &Space::Tparticle::charge); // Nx1
-                Eigen::MatrixXd kr = pos.matrix() * data.kVectors; // Nx3 * 3xK = NxK
-                data.Qion.real() = (kr.array().cos().colwise() * charge).colwise().sum();
-                data.Qion.imag() = kr.array().sin().colwise().sum();
+                    asEigenVector(active.begin().base(), active.end().base(), &Space::Tparticle::charge); // N x 1
+                data.Qion.real() = ( data.kVectors.array().cwiseProduct(pos).array().cos().prod() * charge ).colwise().sum(); // see eq. 2 in doi:10/css8
+            } else {
+                auto pos = asEigenMatrix(active.begin().base(), active.end().base(), &Space::Tparticle::pos); //  N x 3
+                auto charge =
+                    asEigenVector(active.begin().base(), active.end().base(), &Space::Tparticle::charge); // N x 1
+                Eigen::MatrixXd kr = pos.matrix() * data.kVectors; // ( N x 3 ) * ( 3 x K ) = N x K
+                data.Qion.real() = (kr.array().cos().colwise() * charge).colwise().sum(); // real part of 'Q^q', see eq. 25 in ref.
+                data.Qion.imag() = kr.array().sin().colwise().sum();                      // imaginary part of 'Q^q', see eq. 25 in ref.
             }
         } else { // calculate using generic loops
             for (int k = 0; k < data.kVectors.cols(); k++) {
@@ -127,11 +135,11 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
                 EwaldData::Tcomplex Q(0, 0);
                 if (data.ipbc)
                     for (auto &i : active)
-                        Q += kv.cwiseProduct(i.pos).array().cos().prod() * i.charge;
+                        Q += kv.cwiseProduct(i.pos).array().cos().prod() * i.charge; // see eq. 2 in doi:10/css8
                 else {
                     for (auto &i : active) {
                         double dot = kv.dot(i.pos);
-                        Q += i.charge * EwaldData::Tcomplex(std::cos(dot), std::sin(dot));
+                        Q += i.charge * EwaldData::Tcomplex(std::cos(dot), std::sin(dot)); // 'Q^q', see eq. 25 in ref.
                     }
                 }
                 data.Qion[k] = Q;
@@ -281,6 +289,7 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
   public:
     Ewald(const json &j, Space &spc) : data(j), policy(spc), spc(spc) {
         name = "ewald";
+	cite = "doi:10.1063/1.481216";
         init();
     }
 

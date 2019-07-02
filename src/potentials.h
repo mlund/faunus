@@ -297,15 +297,15 @@ class SquareWell : public PairPotentialBase {
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] SquareWell") {
     using doctest::Approx;
-    atoms = R"([{"A": { "sigma_sw":4, "eps_sw":0.2 }},
-                 {"B": { "sigma_sw":2, "eps_sw":0.1 }} ])"_json.get<decltype(atoms)>();
+    atoms = R"([{"A": { "r": 5, "sigma_sw":4, "eps_sw":0.2 }},
+                 {"B": { "r": 10, "sigma_sw":2, "eps_sw":0.1 }} ])"_json.get<decltype(atoms)>();
     Particle a, b;
     a = atoms[0];
     b = atoms[1];
     SquareWell pot = R"({"mixing": "LBSW"})"_json;
 
-    CHECK(pot(a, b, {0, 0, 5.99}) == Approx(-std::sqrt(0.2_kJmol * 0.1_kJmol)));
-    CHECK(pot(a, b, {0, 0, 6.01}) == Approx(0));
+    CHECK(pot(a, b, {0, 0, 5 + 10 + 5.99}) == Approx(-std::sqrt(0.2_kJmol * 0.1_kJmol)));
+    CHECK(pot(a, b, {0, 0, 5 + 10 + 6.01}) == Approx(0));
 }
 #endif
 

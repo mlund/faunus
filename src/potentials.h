@@ -283,8 +283,7 @@ class SquareWell : public PairPotentialBase {
   public:
     SquareWell(const std::string &name = "squarewell");
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        double d = (atoms[a.id].sigma + atoms[b.id].sigma) / 2.0 + m->th(a.id, b.id);
-        if (r.squaredNorm() < d * d)
+        if (r.squaredNorm() < m->th(a.id, b.id)) // threshold squared
             return -m->esw(a.id, b.id);
         return 0.0;
     }

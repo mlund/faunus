@@ -567,8 +567,9 @@ void from_json(const json &j, ParametersTable &m) {
             case ParametersTable::LBSW:
                 double threshold, depth; // mixed values
                 std::tie(threshold, depth) =
-                    mixerFunc(i.squarewell_threshold, j.squarewell_threshold, i.squarewell_depth, j.squarewell_depth);
-                m.th.set(i.id(), j.id(), threshold);
+                    mixerFunc(0.5 * i.sigma + i.squarewell_threshold, 0.5 * j.sigma + j.squarewell_threshold,
+                              i.squarewell_depth, j.squarewell_depth);
+                m.th.set(i.id(), j.id(), threshold * threshold);
                 m.esw.set(i.id(), j.id(), depth); // should already be in kT
                 break;
             case ParametersTable::HE:

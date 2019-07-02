@@ -281,7 +281,7 @@ class SquareWell : public PairPotentialBase {
   protected:
     std::shared_ptr<ParametersTable> m; // table w. squarewell_threshold_ij and squarewell_depth_ij
   public:
-    SquareWell(const std::string &name = "square well");
+    SquareWell(const std::string &name = "squarewell");
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         double d = (atoms[a.id].sigma + atoms[b.id].sigma) / 2.0 + m->th(a.id, b.id);
         if (r.squaredNorm() < d * d)
@@ -293,6 +293,21 @@ class SquareWell : public PairPotentialBase {
 
     void from_json(const json &j) override;
 }; //!< SquareWell potential
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+TEST_CASE("[Faunus] SquareWell") {
+    using doctest::Approx;
+    atoms = R"([{"A": { "sigma_sw":4, "eps_sw":0.2 }},
+                 {"B": { "sigma_sw":2, "eps_sw":0.1 }} ])"_json.get<decltype(atoms)>();
+    Particle a, b;
+    a = atoms[0];
+    b = atoms[1];
+    SquareWell pot = R"({"mixing": "LBSW"})"_json;
+
+    CHECK(pot(a, b, {0, 0, 5.99}) == Approx(-std::sqrt(0.2_kJmol * 0.1_kJmol)));
+    CHECK(pot(a, b, {0, 0, 6.01}) == Approx(0));
+}
+#endif
 
 /**
  * @brief Cosine attraction

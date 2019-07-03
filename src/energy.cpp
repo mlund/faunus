@@ -35,11 +35,11 @@ void EwaldData::update(const Point &box) {
                 double dky2 = double(ky * ky);
                 for (int kz = -kcc * startValue; kz <= kcc; kz++) {
                     double factor = 1.0;
-                    if (kx > 0) // missing && ipbc?
+                    if (kx > 0) // optimization of PBC Ewald (and always the case for IPBC Ewald)
                         factor *= 2;
-                    if (ky > 0 && ipbc)
+                    if (ky > 0 && ipbc) // only for IPBC Ewald
                         factor *= 2;
-                    if (kz > 0 && ipbc)
+                    if (kz > 0 && ipbc) // only for IPBC Ewald
                         factor *= 2;
                     double dkz2 = double(kz * kz);
                     Point kv = 2 * pc::pi * Point(kx / L.x(), ky / L.y(), kz / L.z());
@@ -63,13 +63,13 @@ void EwaldData::update(const Point &box) {
 }
 
 EwaldData::EwaldData(const json &j) {
-    alpha = j.at("alpha");
-    rc = j.at("cutoff");
-    kc = j.at("kcutoff");
-    ipbc = j.value("ipbc", false);
-    spherical_sum = j.value("spherical_sum", true);
+    alpha = j.at("alpha"); // damping-parameter
+    rc = j.at("cutoff");   // real space cut-off
+    kc = j.at("kcutoff");  // reciprocal space cut-off
+    ipbc = j.value("ipbc", false); // using PBC or IPBC?
+    spherical_sum = j.value("spherical_sum", true); // Using spherical summation of k-vectors in reciprocal space?
     lB = pc::lB(j.at("epsr"));
-    eps_surf = j.value("epss", 0.0);
+    eps_surf = j.value("epss", 0.0); // dielectric constant of surrounding medium
     const_inf = (eps_surf < 1) ? 0 : 1; // if unphysical (<1) use epsr infinity for surrounding medium
     kappa = j.value("kappa", 0.0);
     kappa2 = kappa * kappa;

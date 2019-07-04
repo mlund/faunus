@@ -433,7 +433,7 @@ void WidomInsertion::_sample() {
         g.resize(g.capacity()); // active group
         for (int i = 0; i < ninsert; ++i) {
             pin = rins(spc.geo, spc.p, molecules.at(molid));
-            if (!pin.empty()) {
+            if (not pin.empty()) {
                 if (absolute_z) {
                     for (auto &p : pin)
                         p.pos.z() = std::fabs(p.pos.z());
@@ -444,7 +444,7 @@ void WidomInsertion::_sample() {
                 spc.geo.randompos(pin[1].pos, random);
 
                 std::copy(pin.begin(), pin.end(), g.begin()); // copy into ghost group
-                if (!g.atomic)                                // update molecular mass-center
+                if (not g.atomic)                             // update molecular mass-center
                     g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
 
                 expu += exp(-pot->energy(change)); // widom average
@@ -453,6 +453,7 @@ void WidomInsertion::_sample() {
         g.resize(0); // deactive molecule
     }
 }
+
 void WidomInsertion::_to_json(json &j) const {
     double excess = -std::log(expu.avg());
     j = {{"dir", rins.dir},
@@ -461,6 +462,7 @@ void WidomInsertion::_to_json(json &j) const {
          {"absz", absolute_z},
          {u8::mu + "/kT", {{"excess", excess}}}};
 }
+
 void WidomInsertion::_from_json(const json &j) {
     ninsert = j.at("ninsert");
     molname = j.at("molecule");
@@ -470,16 +472,18 @@ void WidomInsertion::_from_json(const json &j) {
     auto it = findName(molecules, molname); // loop for molecule in topology
     if (it != molecules.end()) {
         molid = it->id();
-        auto m = spc.findMolecules(molid, Space::INACTIVE);  // look for molecules in space
+        auto m = spc.findMolecules(molid, Space::INACTIVE);  // look for inactive molecules in space
         if (size(m) > 0) {                                   // did we find any?
             if (m.begin()->size() == 0) {                    // pick the first and check if it's really inactive
-                change.clear();
-                Change::data d;                                    // construct change object
-                d.index = distance(spc.groups.begin(), m.begin()); // group index
-                d.all = true;
-                d.internal = m.begin()->atomic;
-                change.groups.push_back(d); // add to change object
-                return;
+                if (m.begin()->capacity() > 0) {             // and it must have a non-zero capacity
+                    change.clear();
+                    Change::data d;                                    // construct change object
+                    d.index = distance(spc.groups.begin(), m.begin()); // group index
+                    d.all = true;
+                    d.internal = m.begin()->atomic; // calculate internal energy of non-molecular groups only
+                    change.groups.push_back(d);     // add to change object
+                    return;
+                }
             }
         }
     }

@@ -50,7 +50,7 @@ ExternalPotential::ExternalPotential(const json &j, Tspace &spc) : spc(spc) {
     _names = j.at("molecules").get<decltype(_names)>(); // molecule names
     auto _ids = names2ids(molecules, _names);           // names --> molids
     molids = std::set<int>(_ids.begin(), _ids.end());   // vector --> set
-    if (molids.empty() || molids.size() != _names.size())
+    if (molids.empty())
         throw std::runtime_error(name + ": molecule list is empty");
 }
 double ExternalPotential::energy(Change &change) {

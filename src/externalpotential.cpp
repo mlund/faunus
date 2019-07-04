@@ -15,7 +15,7 @@ void Energybase::init() {}
 void to_json(json &j, const Energybase &base) {
     assert(not base.name.empty());
     if (base.timer)
-        j["relative time"] = base.timer.result();
+        j[base.name]["relative time"] = base.timer.result();
     if (not base.cite.empty())
         j[base.name]["reference"] = base.cite;
     base.to_json(j[base.name]);
@@ -358,7 +358,7 @@ ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(const Pa
     if (this->func)
         this->func(myparticle);
 #endif
-    name = "selfenergy";
+    name = "particle-self-energy";
 }
 
 } // namespace Energy

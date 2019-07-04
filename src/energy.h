@@ -168,6 +168,7 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
     } //!< Optimized update of k subset. Require access to old positions through `old` pointer
 
     // selfEnergies should be handled by the real-space pair-potential
+    // todo: this should not be used, but replaced by selfEnergy in PairPotential
     double selfEnergy(const EwaldData &d, Change &change) {
         double Eq = 0;
         if (change.dN) {
@@ -285,7 +286,7 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
         if (change) {
             // If the state is NEW (trial state), then update all k-vectors
             if (key == NEW) {
-                if (change.all || change.dV) { // everything changes
+                if (change.all or change.dV) { // everything changes
                     data.update(spc.geo.getLength());
                     policy.updateComplex(data); // update all (expensive!)
                 } else {
@@ -293,6 +294,7 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
                         policy.updateComplex(data, change);
                 }
             }
+            // todo: omit selfEnergy() call as this should be added as a separate term in `Hamiltonian`
             u = policy.surfaceEnergy(data, change) + policy.reciprocalEnergy(data) + policy.selfEnergy(data, change);
         }
         return u;

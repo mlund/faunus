@@ -350,7 +350,7 @@ void CustomExternal::to_json(json &j) const {
  * over all groups and particles (com=false)
  */
 ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(const Particle &)> selfEnergy)
-    : ExternalPotential({{"molecules", "*"}, {"com", false}}, spc) {
+    : ExternalPotential({{"molecules", {"*"}}, {"com", false}}, spc) {
     func = selfEnergy;
 #ifndef NDEBUG
     // test if self energy can be called

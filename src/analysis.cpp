@@ -429,7 +429,7 @@ void WidomInsertion::_sample() {
     if (!change.empty()) {
         ParticleVector pin;
         auto &g = spc.groups.at(change.groups.at(0).index);
-        assert(g.empty());
+        assert(g.empty() && g.capacity() > 0);
         g.resize(g.capacity()); // active group
         for (int i = 0; i < ninsert; ++i) {
             pin = rins(spc.geo, spc.p, molecules.at(molid));
@@ -440,8 +440,6 @@ void WidomInsertion::_sample() {
                 }
 
                 assert(pin.size() == g.size());
-                spc.geo.randompos(pin[0].pos, random);
-                spc.geo.randompos(pin[1].pos, random);
 
                 std::copy(pin.begin(), pin.end(), g.begin()); // copy into ghost group
                 if (not g.atomic)                             // update molecular mass-center

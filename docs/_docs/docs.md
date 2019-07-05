@@ -33,7 +33,10 @@ Martin Trulsson, Björn Persson,
 Should you find Faunus useful, please consider supporting us by crediting:
 
 - Stenqvist _et al._ [_Molecular Simulation 2013, 39:1233_](http://dx.doi.org/10/nvn)
+  [[citing articles]](https://scholar.google.com/scholar?cites=5469022701720095838).
+
 - Lund, M. _et al._ [_Source Code Biol. Med., 2008, 3:1_](http://dx.doi.org/10/dfqgch)
+  [[citing articles]](https://scholar.google.com/scholar?cites=1996529474573979195).
 
 ## Quick Start
 

@@ -1,5 +1,3 @@
----
----
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
   tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
@@ -62,16 +60,14 @@ These conditions should be carefully considered if equilibrating a system far fr
 
 ## External Pressure
 
-This adds the following pressure term[^frenkel] to the Hamiltonian, appropriate for
-MC moves in $\ln V$:
+This adds the following pressure term (see i.e. [Frenkel and Smith, Chapter 5.4](http://doi.org/c7zg))
+to the Hamiltonian, appropriate for MC moves in $\ln V$:
 
 $$
     U = PV - k_BT\left ( N + 1 \right ) \ln V
 $$
 
 where $N$ is the total number of molecules and atomic species.
-
-[^frenkel]: _Frenkel and Smith, 2nd Ed., Chapter 5.4_.
 
 `isobaric`   | Description
 -------------|-------------------------------------------------------
@@ -117,9 +113,9 @@ combinations:
 
 ~~~ yaml
 - nonbonded:
-      cutoff_g2g:
-          default: 40
-          "protein water": 60
+    cutoff_g2g:
+      default: 40
+      protein water: 60
 ~~~
 
 ### OpenMP Control
@@ -267,7 +263,7 @@ At the end of simulation, `file` is overwritten unless `fixed=true`.
 ## Pair Potentials
 
 In addition to the Coulombic pair-potentials described above, a number of other pair-potentials can be
-used. Through the C++ API, it is easy to add new potentials.
+used. Through the C++ API or the custom potential explained below, it is easy to add new potentials.
 
 ### Charge-Nonpolar
 
@@ -310,10 +306,12 @@ while zero for $r>r_c+w_c$.
 `wc`   | Decay range, $w_c$ (Å)
 
 ### Hard Sphere
-`hardsphere`
 
 The hard sphere potential does not take any input. Radii are read from the atomlist at the beginning of the simulation.
 
+~~~ yaml
+  hardsphere: {}
+~~~
 
 ### Lennard-Jones
 
@@ -340,10 +338,10 @@ The mixing rule can be overridden for specific pairs of atoms:
 
 ~~~ yaml
 lennardjones:
-    mixing: LB
-    custom:
-        "Na Cl": {eps: 0.2, sigma: 2}
-        "K Cl": {eps: 0.1, sigma: 3}
+  mixing: LB
+  custom:
+    Na Cl: {eps: 0.2, sigma: 2}
+    K Cl: {eps: 0.1, sigma: 3}
 ~~~
 
 ### Weeks-Chandler-Andersen
@@ -397,7 +395,7 @@ and hydrophobic/hydrophilic interactions.
 This takes a user-defined expression and a list of constants to produce a runtime,
 custom pair-potential.
 While perhaps not as computationally efficient as hard-coded potentials, it is a
-convenient way to access alien potentials. Further, used in combination with `nonbonded`
+convenient way to access alien potentials. Further, used in combination with `nonbonded_splined`
 there is no overhead since all potentials are splined.
 
 `custom`     | Description
@@ -437,7 +435,7 @@ In addition to user-defined constants, the following symbols are defined:
 
 ## Custom External Potential
 
-This applies a custom expernal potential to atoms or molecular mass centra
+This applies a custom external potential to atoms or molecular mass centra
 using the [ExprTk library](http://www.partow.net/programming/exprtk/index.html)
 syntax.
 
@@ -555,7 +553,7 @@ Should one insist on conducting simulations far from equilibrium, a large displa
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
 Finite extensible nonlinear elastic potential long range repulsive potential combined
-with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` nobonded energy.
+with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` non-bonded energy.
 
 $$
      u(r) =

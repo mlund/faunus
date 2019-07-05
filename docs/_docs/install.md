@@ -20,7 +20,7 @@ conda search faunus   # show (new) revisions
 conda upgrade faunus
 ~~~
 
-For the adventurous, the latest development version is available with `conda install -c teokem faunus`. 
+For the adventurous, sporadically updated development versions can be installed with `conda install -c teokem faunus`. 
 
 Starting from version 2.1, we adhere to [semantic versioning](https://semver.org).
 

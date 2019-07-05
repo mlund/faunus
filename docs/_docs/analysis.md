@@ -1,5 +1,3 @@
----
----
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
   tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
@@ -48,7 +46,7 @@ The filename format is `rho-@name.dat`.
 `atomprofile`  | Description
 -------------- | -----------------------------------------------------
 `nstep=0`      | Interval between samples
-`atoms=[]`     | List of atom names to sample; `*` selects all
+`atoms=[]`     | List of atom names to sample; `[*]` selects all
 `charge=false` | Calc. charge density instead of density
 `file`         | Output filename with profile
 `dr=0.1`       | Radial resolution
@@ -77,7 +75,7 @@ etc.
 
 `sliceddensity` | Description
 --------------- | --------------------------------------------------------------
-`atoms=[]`      | List of atom names to sample; `*` selects all 
+`atoms=[]`      | List of atom names to sample; `[*]` selects all 
 `file`          | Output filename with profile
 `dz=0.1`        | Resolution along _z_-axis
 `atomcom`       | Atom name; use the mass center _z_ of these atoms as origin
@@ -153,7 +151,7 @@ form factor of unity.
 ----------- | ------------------------------------------
 `nstep`     | Interval with which to sample
 `file`      | Output filename for $I(q)$
-`molecules` | List of molecule names to sample (array); `*` selects all 
+`molecules` | List of molecule names to sample (array); `[*]` selects all 
 `qmin`      | Minimum _q_ value (1/Å)
 `qmax`      | Maximum _q_ value (1/Å)
 `dq`        | _q_ spacing (1/Å)
@@ -168,7 +166,7 @@ fluctuations for all groups defined in `molecules`.
 `polymershape`   | Description
 ---------------- | ----------------------------------------
 `nstep`          | Interval with which to sample
-`molecules`      | List of molecule names to sample (array); `*` selects all 
+`molecules`      | List of molecule names to sample (array); `[*]` selects all 
 
 
 ## Molecular Multipoles

@@ -170,6 +170,11 @@ Space::Tgvec::iterator Space::randomMolecule(int molid, Random &rand, Space::Sel
     return groups.end();
 }
 
+/**
+ * This takes a json array of objects where each item corresponds
+ * to a molecule. An `N` number of molecules is inserted according
+ * to user-defined rules
+ */
 void insertMolecules(const json &j, Space &spc) {
     typedef typename Space::Tpvec Tpvec;
     spc.clear();
@@ -195,6 +200,7 @@ void insertMolecules(const json &j, Space &spc) {
                             }
                             assert(!p.empty());
                             spc.push_back(mol->id(), p);
+                            // add_to_log("Added {0} {1} molecules", N, mol->name)
                             if (inactive)
                                 spc.groups.back().resize(0);
                         } else {

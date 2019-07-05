@@ -6,6 +6,7 @@ namespace Potential {
 
 Point PairPotentialBase::force(const Particle &, const Particle &, double, const Point &) {
     assert(false && "We should never reach this point!");
+    return {0, 0, 0};
 }
 
 void RepulsionR3::from_json(const json &j) {

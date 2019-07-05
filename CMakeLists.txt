@@ -73,6 +73,26 @@ if(NOT progressbar_POPULATED)
     FetchContent_Populate(progressbar)
 endif()
 
+# SPDLOG
+ExternalProject_Add(
+    project_spdlog
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    LOG_DOWNLOAD ON
+    #GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    #GIT_TAG bb0f3839c1e52948f2ecb66e4e0aa79740a30205
+    URL https://github.com/gabime/spdlog/archive/bb0f3839c1e52948f2ecb66e4e0aa79740a30205.zip
+    URL_HASH SHA256=dece1767c33da47dbfdf60673af40b04a1557f22b6f4db4e1de8f99c2fb0a609
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DSPDLOG_INSTALL=off
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} spdlog
+    INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(project_spdlog source_dir)
+ExternalProject_Get_Property(project_spdlog binary_dir)
+set(SpdlogIncludeDir ${source_dir}/include)
+add_library(spdlog STATIC IMPORTED)
+set_property(TARGET spdlog PROPERTY IMPORTED_LOCATION ${binary_dir}/libspdlog.a)
+add_dependencies(spdlog project_spdlog)
+
 # MODERN JSON
 FetchContent_Declare(
     modernjson
@@ -97,7 +117,7 @@ endif()
 ExternalProject_Add(project_docopt
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-    BUILD_COMMAND make docopt_s
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} docopt_s
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
     URL_MD5 79cfe2f0f057d8e2231ce6969e42d760
@@ -114,7 +134,7 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 ExternalProject_Add(project_cppsid
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-    BUILD_COMMAND make ""#cppsid player
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} ""#cppsid player
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
     URL_MD5 2d989c5dde42173ab4eba6374aabf042
@@ -149,7 +169,7 @@ ExternalProject_Add(
     URL "https://github.com/wesbarnett/libxdrfile/archive/2.1.2.tar.gz"
     URL_MD5 ee114404b4a01613b2f0167a2ad92536
     PATCH_COMMAND echo "add_library(xdrfile-static STATIC \${SRCS})" >> CMakeLists.txt
-    BUILD_COMMAND make xdrfile-static
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} xdrfile-static
     UPDATE_DISCONNECTED ON
     CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
     LOG_DOWNLOAD ON INSTALL_COMMAND "")
@@ -216,7 +236,7 @@ endif ()
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
-	${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR} ${exprtk_SOURCE_DIR})
+	${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR} ${SpdlogIncludeDir} ${exprtk_SOURCE_DIR})
 
 # faunus cpp files
 set(objs
@@ -295,13 +315,15 @@ endif()
 
 # target: unittests
 add_executable(unittests src/unittests.cpp ${objs} ${hdrs})
-target_link_libraries(unittests xdrfile)
+target_link_libraries(unittests xdrfile spdlog)
+target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
 add_test(NAME unittests COMMAND unittests)
 
 # target: faunus
 
 add_executable(faunus src/faunus.cpp ${objs} ${hdrs})
-target_link_libraries(faunus PRIVATE xdrfile docopt)
+target_link_libraries(faunus PRIVATE xdrfile spdlog docopt)
+target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 
 if(ENABLE_SID)
     target_compile_definitions(faunus PRIVATE ENABLE_SID)
@@ -343,7 +365,7 @@ if (ENABLE_PYTHON)
             FetchContent_Populate(pybind11)
             add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
             pybind11_add_module(pyfaunus src/pyfaunus.cpp ${objs})
-            target_link_libraries(pyfaunus PUBLIC xdrfile)
+            target_link_libraries(pyfaunus PUBLIC xdrfile spdlog)
         endif()
     endif ()
 endif ()

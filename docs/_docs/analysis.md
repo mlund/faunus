@@ -24,7 +24,6 @@ analysis:
 **Note:** all analysis methods support the `nstep` keyword that defines the interval between
 sampling points and the `nskip` keyword that defines the number of initial steps that are excluded from the analysis. In addition all analysis provide output statistics of number of sample
 points, and the relative run-time spent on the analysis.
-{: .notice--info}
 
 ## Density
 
@@ -375,7 +374,6 @@ half-sphere.
 **Important:**
 Exactly _one inactive_ `molecule` must be added to the simulation using the `inactive`
 keyword when inserting the initial molecules in the topology.
-{: .notice--info}
 
 `widom`       | Description
 ------------- | -----------------------------------------

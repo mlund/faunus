@@ -82,7 +82,6 @@ the atom properties defined in the [topology](../topology).
 
 **note:**
 atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
-{: .notice--info}
 
 ### Cluster Move
 
@@ -124,7 +123,6 @@ cluster:
 **Restrictions:**
 Currently, the number of `molecules` must be constant throughout simulation, i.e.
 grand canonical schemes are unsupported.
-{: .notice--info}
 
 
 
@@ -143,7 +141,6 @@ This performs a fractional charge move on a specific atom.
 This move changes the particle charge and therefore cannot be used with
 splined pair-potentials where the initial charges from are read from `atomlist`.
 Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
-{: .notice--info}
 
 
 ### Conformational Swap
@@ -240,7 +237,6 @@ etc. and only exchange between neighboring processes is performed.
 **Note:**
 Parallel tempering is currently limited to systems with
 constant number of particles, $N$.
-{: .notice--info}
 
 
 ## Volume Move
@@ -277,7 +273,6 @@ The table below explains the scaling behavior in different geometries:
 
 **Warning:**
 Untested for cylinders, slits.
-{: .notice--warning}
 
 
 ## Reactive Canonical Monte Carlo
@@ -315,5 +310,4 @@ For more information, see the Topology section and [doi:10/fqcpg3](https://doi.o
 
 **Warning:**
 The speciation move is under construction and subject to change.
-{: .notice--warning}
 

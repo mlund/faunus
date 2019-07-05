@@ -389,6 +389,7 @@ if (PANDOC)
         analysis.md |
         grep -v ".notice--" |
         grep -v "Github-Improve_this_page" |
+        sed 's.\\\\_._.g' | # this allows us to use \_ in markdown math
         ${PANDOC} --self-contained --highlight-style=tango --template ../pandoc.tex
         -V date:${GIT_LATEST_TAG}""
         -N --toc -o ${CMAKE_BINARY_DIR}/manual.pdf

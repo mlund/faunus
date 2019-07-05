@@ -51,7 +51,6 @@ CMake can be installed with an
 [MacPorts](http://www.macports.org),
 [Homebrew](https://brew.sh), or
 [(mini)conda](https://conda.io/docs/user-guide/install/index.html)
-{: .notice--info}
 
 ### Compiling
 

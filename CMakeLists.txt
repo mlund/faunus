@@ -73,6 +73,26 @@ if(NOT progressbar_POPULATED)
     FetchContent_Populate(progressbar)
 endif()
 
+# SPDLOG
+ExternalProject_Add(
+    project_spdlog
+    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    LOG_DOWNLOAD ON
+    #GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    #GIT_TAG bb0f3839c1e52948f2ecb66e4e0aa79740a30205
+    URL https://github.com/gabime/spdlog/archive/bb0f3839c1e52948f2ecb66e4e0aa79740a30205.zip
+    URL_HASH SHA256=dece1767c33da47dbfdf60673af40b04a1557f22b6f4db4e1de8f99c2fb0a609
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DSPDLOG_INSTALL=off
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} spdlog
+    INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(project_spdlog source_dir)
+ExternalProject_Get_Property(project_spdlog binary_dir)
+set(SpdlogIncludeDir ${source_dir}/include)
+add_library(spdlog STATIC IMPORTED)
+set_property(TARGET spdlog PROPERTY IMPORTED_LOCATION ${binary_dir}/libspdlog.a)
+add_dependencies(spdlog project_spdlog)
+
 # MODERN JSON
 FetchContent_Declare(
     modernjson
@@ -216,7 +236,7 @@ endif ()
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
-	${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR} ${exprtk_SOURCE_DIR})
+	${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR} ${SpdlogIncludeDir} ${exprtk_SOURCE_DIR})
 
 # faunus cpp files
 set(objs
@@ -295,13 +315,15 @@ endif()
 
 # target: unittests
 add_executable(unittests src/unittests.cpp ${objs} ${hdrs})
-target_link_libraries(unittests xdrfile)
+target_link_libraries(unittests xdrfile spdlog)
+target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
 add_test(NAME unittests COMMAND unittests)
 
 # target: faunus
 
 add_executable(faunus src/faunus.cpp ${objs} ${hdrs})
-target_link_libraries(faunus PRIVATE xdrfile docopt)
+target_link_libraries(faunus PRIVATE xdrfile spdlog docopt)
+target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 
 if(ENABLE_SID)
     target_compile_definitions(faunus PRIVATE ENABLE_SID)
@@ -343,7 +365,7 @@ if (ENABLE_PYTHON)
             FetchContent_Populate(pybind11)
             add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
             pybind11_add_module(pyfaunus src/pyfaunus.cpp ${objs})
-            target_link_libraries(pyfaunus PUBLIC xdrfile)
+            target_link_libraries(pyfaunus PUBLIC xdrfile spdlog)
         endif()
     endif ()
 endif ()

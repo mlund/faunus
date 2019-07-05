@@ -97,7 +97,7 @@ endif()
 ExternalProject_Add(project_docopt
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-    BUILD_COMMAND make docopt_s
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} docopt_s
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
     URL_MD5 79cfe2f0f057d8e2231ce6969e42d760
@@ -114,7 +114,7 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 ExternalProject_Add(project_cppsid
     PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
     CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-    BUILD_COMMAND make ""#cppsid player
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} ""#cppsid player
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
     URL_MD5 2d989c5dde42173ab4eba6374aabf042
@@ -149,7 +149,7 @@ ExternalProject_Add(
     URL "https://github.com/wesbarnett/libxdrfile/archive/2.1.2.tar.gz"
     URL_MD5 ee114404b4a01613b2f0167a2ad92536
     PATCH_COMMAND echo "add_library(xdrfile-static STATIC \${SRCS})" >> CMakeLists.txt
-    BUILD_COMMAND make xdrfile-static
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} xdrfile-static
     UPDATE_DISCONNECTED ON
     CMAKE_ARGS -Wno-dev -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
     LOG_DOWNLOAD ON INSTALL_COMMAND "")

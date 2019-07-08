@@ -167,7 +167,7 @@ Point FormatPQR::load(const std::string &file, FormatPQR::Tpvec &p, bool keepcha
                     if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl) {
                         std::cerr << "charge mismatch on atom " << aname << " " << ires;
                         if (keepcharges)
-                            std::cerr << "; using " << it->charge << " instead of `atomlist`s " << a.charge << "."
+                            std::cerr << "; using " << a.charge << " instead of `atomlist`s " << it->charge << "."
                                       << endl;
                         else {
                             std::cerr << "; using `atomlist`s " << it->charge << " over " << a.charge << "." << endl;

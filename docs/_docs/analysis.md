@@ -167,8 +167,9 @@ fluctuations for all groups defined in `molecules`.
 `nstep`          | Interval with which to sample
 `molecules`      | List of molecule names to sample (array); `[*]` selects all 
 
+## Charge Properties
 
-## Molecular Multipoles
+### Molecular Multipoles
 
 Calculates average molecular multipolar moments and their fluctuations.
 
@@ -176,7 +177,7 @@ Calculates average molecular multipolar moments and their fluctuations.
 -------------- | ----------------------
 `nstep`        | Interval between samples.
 
-## Electric Multipole Distribution
+### Electric Multipole Distribution
 
 This will analyse the electrostatic energy between two groups as
 a function of their mass center separation. Sampling consists of
@@ -243,7 +244,7 @@ The input keywords are:
 `molecules`      | Array with exactly two molecule names, $a$ and $b$
 `dr=0.2`         | Distance resolution (Å) along _R_.
 
-## Charge Fluctuations
+### Charge Fluctuations
 
 For a given molecule, this calculates the average charge and standard deviation per atom, 
 and the most probable species (atom name) averaged over all present molecules.
@@ -257,6 +258,7 @@ atomic species can be saved.
 `molecule`           | Name of molecular group
 `pqrfile`            | Output PQR file (optional)
 `verbose=True`       | If `True`, add results to general output
+
 
 ## Reaction Coordinate
 
@@ -373,7 +375,7 @@ half-sphere.
 
 **Important:**
 Exactly _one inactive_ `molecule` must be added to the simulation using the `inactive`
-keyword when inserting the initial molecules in the topology.
+keyword when inserting the initial molecules in the [topology](topology).
 
 `widom`       | Description
 ------------- | -----------------------------------------
@@ -425,9 +427,9 @@ of particles. For each `nstep`, this analysis files charge and
 radius information for all particles.
 Inactive particles are included with _zero_ charge and radius.
 
-Using a TCL helper script for VMD (see `scripts/`) this information
+Using a helper script for VMD (see `scripts/`) this information
 can be loaded to visualise flutuating charges and or number of particles.
-The script should be `source`d from the VMD console after loading the trajectory,
+The script should be sourced from the VMD console after loading the trajectory,
 or invoked when launching VMD:
 
 ~~~ bash

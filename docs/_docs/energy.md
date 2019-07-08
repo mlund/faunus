@@ -20,8 +20,7 @@ For example:
 energy:
     - isobaric: {P/atm: 1}
     - sasa: {molarity: 0.2, radius: 1.4 }
-    - confine: {type: sphere, radius: 10,
-                 molecules: [water]}
+    - confine: {type: sphere, radius: 10, molecules: [water]}
     - nonbonded:
         default: # applied to all atoms
         - lennardjones: {mixing: LB}
@@ -185,8 +184,6 @@ $$
 U_{\text{reciprocal}} = \frac{2\pi f}{V} \sum_{ {\bf k} \ne {\bf 0}} A_k \vert Q^{q\mu} \vert^2 
 $$
 
-hejsa
-
 $$
 U_{\text{surface}} = \frac{ 2\pi f }{ (2\varepsilon_{surf} + 1) V }
 \left(
@@ -206,7 +203,7 @@ A_k = \frac{e^{-k^2/4\alpha^2}}{k^2}
 $$
 
 $$
-{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
+{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right), {\bf n} \in \mathbb{Z}^3
 $$
 
 Like many other electrostatic methods, the Ewald scheme also adds a self-energy term, please see separate Table.

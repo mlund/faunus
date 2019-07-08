@@ -1,10 +1,31 @@
 #pragma once
 
-#include "energy.h"
+#include "space.h"
+#include "auxiliary.h"
 #include "functionparser.h"
 
 namespace Faunus {
 namespace Energy {
+
+/**
+ * All energies inherit from this class
+ */
+class Energybase {
+  public:
+    enum keys { OLD, NEW, NONE };
+    keys key = NONE;
+    std::string name;                                     //!< Meaningful name
+    std::string cite;                                     //!< Possible reference. May be left empty
+    TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measure speed of each term
+    virtual double energy(Change &) = 0;                  //!< energy due to change
+    virtual void to_json(json &j) const;                  //!< json output
+    virtual void sync(Energybase *, Change &);
+    virtual void init();                               //!< reset and initialize
+    virtual inline void force(std::vector<Point> &){}; // update forces on all particles
+    inline virtual ~Energybase(){};
+};
+
+void to_json(json &j, const Energybase &base); //!< Converts any energy class to json object
 
 /**
  * @brief Base class for external potentials
@@ -138,6 +159,21 @@ class Confine : public ExternalPotential {
     Confine(const json &, Tspace &);
     void to_json(json &) const override;
 }; //!< Confine particles to a sub-region of the simulation container
+
+/**
+ * @brief Used to add self energies to atoms from i.e. electrostatic schemes
+ *
+ * The energy class "Nonbonded" detects if a pair-potential carries a self-energy
+ * and will automatically inject an instance of ParticleSelfEnergy into the
+ * Hamiltonian.
+ *
+ * The constructor requires a functor the operators on each particle
+ * and returns the resulting energy (kT)
+ */
+class ParticleSelfEnergy : public ExternalPotential {
+  public:
+    ParticleSelfEnergy(Space &, std::function<double(const Particle &)>);
+};
 
 } // namespace Energy
 } // namespace Faunus

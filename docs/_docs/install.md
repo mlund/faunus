@@ -1,7 +1,3 @@
----
----
-[![Edit](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
-
 # Installing
 
 ## Using Conda
@@ -24,7 +20,7 @@ conda search faunus   # show (new) revisions
 conda upgrade faunus
 ~~~
 
-For the adventurous, the latest development version is available with `conda install -c teokem faunus`. 
+For the adventurous, sporadically updated development versions can be installed with `conda install -c teokem faunus`. 
 
 Starting from version 2.1, we adhere to [semantic versioning](https://semver.org).
 
@@ -55,7 +51,6 @@ CMake can be installed with an
 [MacPorts](http://www.macports.org),
 [Homebrew](https://brew.sh), or
 [(mini)conda](https://conda.io/docs/user-guide/install/index.html)
-{: .notice--info}
 
 ### Compiling
 
@@ -150,7 +145,15 @@ cd faunus
 
 This requires `clang-format` which may also be directly used in IDE's
 such as CLion. In the top-level directory of Faunus you will find
-the style configuration file `.clang-format`
+the style configuration file [`.clang-format`](https://github.com/mlund/faunus/blob/master/.clang-format)
+
+Also, adhere to the following naming conventions:
+
+Style        | Elements
+------------ | -------------------------
+`PascalCase` | classes, namespaces
+`camelCase`  | functions
+`snake_case` | variables
 
 
 ## Creating a conda package (development usage)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mpi.h"
-#include "energy.h"
+#include "externalpotential.h"
 #include "reactioncoordinate.h"
 
 namespace Faunus {

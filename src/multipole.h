@@ -1,6 +1,7 @@
 #pragma once
 
 #include "units.h"
+#include "auxiliary.h"
 
 namespace Faunus {
 /**
@@ -85,8 +86,9 @@ TEST_CASE("[Faunus] Factorial") {
 */
 inline void dipoleDipoleQ2Help_3(double &a3, double &b3, double q) {
     double q2 = q*q;
-    a3 = ( ( (-5.0 * q2 + 8.0 / 3.0 * q)*q + q)*q + 1.0 / 3.0)*q2 + 1.0;
-    b3 = -2.0 / 3.0 * (  (15.0 * q2 - 10.0 * q - 5.0 )*q2 + 1.0) * q2;
+    constexpr double one_third = 1.0 / 3.0, two_third = 2.0 / 3.0, eight_third = 8.0 / 3.0;
+    a3 = (((-5.0 * q2 + eight_third * q) * q + q) * q + one_third) * q2 + 1.0;
+    b3 = -two_third * ((15.0 * q2 - 10.0 * q - 5.0) * q2 + 1.0) * q2;
 }
 
 /**
@@ -111,11 +113,9 @@ inline double dipoleDipoleQ2Help(double q, int l=0, int P=300, bool a=true) {
         return 0.0;
 
     double qP = 1.0; // Will end as q-Pochhammer Symbol, (q^l;q)_P
-    double fac = pow(q,l);
+    double fac = Faunus::powi(q, l);
+    double sum1 = 0.0, sum2 = 0.0, sum4 = 0.0;
 
-    double sum1 = 0.0;
-    double sum2 = 0.0;
-    double sum4 = 0.0;
     for( int n = 1; n <= P; n++) {
         fac *= q; // q^(l+n)
         qP *= (1.0 - fac);
@@ -142,7 +142,7 @@ inline double dipoleDipoleQ2Help(double q, int l=0, int P=300, bool a=true) {
  */
 inline double qPochhammerSymbol(double q, int k = 1, int P = 300) {
     double value = 1.0;
-    double temp = std::pow(q, k);
+    double temp = Faunus::powi(q, k);
     for (int i = 0; i < P; i++) {
         value *= (1.0 - temp);
         temp *= q;

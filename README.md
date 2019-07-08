@@ -1,4 +1,4 @@
-[![Documentation](https://img.shields.io/badge/documentation-brightgreen.svg)](http://mlund.github.io/faunus/)
+[![Documentation](https://readthedocs.org/projects/faunus/badge/?version=latest)](https://faunus.readthedocs.io/en/latest/?badge=latest)
 [![Build Status](https://travis-ci.org/mlund/faunus.svg?branch=master)](https://travis-ci.org/mlund/faunus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/faunus/badges/installer/conda.svg)](https://anaconda.org/conda-forge/faunus)
@@ -7,7 +7,7 @@
 Welcome to Faunus
 =================
 
-Faunus is a C++14 framework for Metropolis Monte Carlo simulations of
+Faunus is a molecular simulation package for Metropolis Monte Carlo simulations of
 molecular systems. Below is a brief overview of features:
 
 - Canonical, Grand Canonical, Isobaric-Isothermal statistical mechanical ensembles
@@ -31,7 +31,7 @@ Documentation
 =============
 
 - manual for latest stable release: https://github.com/mlund/faunus/releases/latest
-- manual for development branch: http://mlund.github.io/faunus
+- manual for development branch: https://faunus.readthedocs.io/en/latest/?badge=latest
 - manual for installed version: type `faunus-manual`
 
 Licence

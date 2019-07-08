@@ -1,12 +1,9 @@
----
----
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
   tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
 });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
-[![Edit](https://img.shields.io/badge/Github-Improve_this_page-orange.svg)]({{site.github.repository_url}}/blob/master/docs/{{page.path}})
 
 # Analysis
 
@@ -27,7 +24,6 @@ analysis:
 **Note:** all analysis methods support the `nstep` keyword that defines the interval between
 sampling points and the `nskip` keyword that defines the number of initial steps that are excluded from the analysis. In addition all analysis provide output statistics of number of sample
 points, and the relative run-time spent on the analysis.
-{: .notice--info}
 
 ## Density
 
@@ -47,9 +43,9 @@ The filename format is `rho-@name.dat`.
 ### Density Profile
 
 `atomprofile`  | Description
--------------- | ---------------------------------------------––––
+-------------- | -----------------------------------------------------
 `nstep=0`      | Interval between samples
-`atoms=[]`     | List of atom names to sample; `*` selects all
+`atoms=[]`     | List of atom names to sample; `[*]` selects all
 `charge=false` | Calc. charge density instead of density
 `file`         | Output filename with profile
 `dr=0.1`       | Radial resolution
@@ -63,11 +59,13 @@ $$
 \rho(r) = \frac{\langle N(r) \rangle}{V(r)}
 $$
 
-`dir.sum()` |  $V(r)$        
------–––––– | ---------------
-3           |  $4\pi r^2 dr$ 
-2           |  $2\pi r dr$   
-1           |  $dr$          
+The sum of coefficients in `dir` determines the volume element normalisation:
+
+$d_x+d_y+d_z$  | $V(r)$
+-------------- | ----------------
+3              | $4\pi r^2 dr$
+2              | $2\pi r dr$
+1              | $dr$
 
 This can be used to obtain charge profiles, measure excess pressure
 etc.
@@ -76,7 +74,7 @@ etc.
 
 `sliceddensity` | Description
 --------------- | --------------------------------------------------------------
-`atoms=[]`      | List of atom names to sample; `*` selects all 
+`atoms=[]`      | List of atom names to sample; `[*]` selects all 
 `file`          | Output filename with profile
 `dz=0.1`        | Resolution along _z_-axis
 `atomcom`       | Atom name; use the mass center _z_ of these atoms as origin
@@ -152,7 +150,7 @@ form factor of unity.
 ----------- | ------------------------------------------
 `nstep`     | Interval with which to sample
 `file`      | Output filename for $I(q)$
-`molecules` | List of molecule names to sample (array); `*` selects all 
+`molecules` | List of molecule names to sample (array); `[*]` selects all 
 `qmin`      | Minimum _q_ value (1/Å)
 `qmax`      | Maximum _q_ value (1/Å)
 `dq`        | _q_ spacing (1/Å)
@@ -167,10 +165,11 @@ fluctuations for all groups defined in `molecules`.
 `polymershape`   | Description
 ---------------- | ----------------------------------------
 `nstep`          | Interval with which to sample
-`molecules`      | List of molecule names to sample (array); `*` selects all 
+`molecules`      | List of molecule names to sample (array); `[*]` selects all 
 
+## Charge Properties
 
-## Molecular Multipoles
+### Molecular Multipoles
 
 Calculates average molecular multipolar moments and their fluctuations.
 
@@ -178,7 +177,7 @@ Calculates average molecular multipolar moments and their fluctuations.
 -------------- | ----------------------
 `nstep`        | Interval between samples.
 
-## Electric Multipole Distribution
+### Electric Multipole Distribution
 
 This will analyse the electrostatic energy between two groups as
 a function of their mass center separation. Sampling consists of
@@ -214,15 +213,22 @@ $$
 $$
 
 $$
-\begin{aligned}
-    u_{\text{dip-dip}}  = & \frac{\boldsymbol{\mu_a}\boldsymbol{\mu_b}   }{ R^3  }
-        - \frac{3 (\boldsymbol{\mu_a} \cdot \boldsymbol{R}) ( \boldsymbol{\mu_b}\cdot\boldsymbol{R})  }{R^5}   \\
-    u_{\text{ion-quad}} = & \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}
-        - \frac{  q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3} + ... \\
-    u_{\text{total}}    = & u_{\text{ion-ion}} + u_{\text{ion-dip}} + u_{\text{dip-dip}} + u_{\text{ion-quad}}\\
-    u_{\text{exact}}    = & \sum_i^a\sum_j^b \frac{q_iq_j}{ | \boldsymbol{r_i} - \boldsymbol{r_j}  |    }
-\end{aligned}
+    u_{\text{dip-dip}}  =  \frac{\boldsymbol{\mu_a}\boldsymbol{\mu_b}   }{ R^3  }
+        - \frac{3 (\boldsymbol{\mu_a} \cdot \boldsymbol{R}) ( \boldsymbol{\mu_b}\cdot\boldsymbol{R})  }{R^5} 
 $$
+
+$$
+    u_{\text{ion-quad}} =  \frac{ q_a \boldsymbol{R}^T \boldsymbol{Q}_b \boldsymbol{R} }{R^5}-\frac{q_a \mbox{tr}(\boldsymbol{Q}_b) }{R^3}+ ...
+$$
+
+$$
+    u_{\text{total}} =  u_{\text{ion-ion}} + u_{\text{ion-dip}} + u_{\text{dip-dip}} + u_{\text{ion-quad}}
+$$
+
+$$
+    u_{\text{exact}} =  \sum_i^a\sum_j^b \frac{q_iq_j}{ | \boldsymbol{r_i} - \boldsymbol{r_j} | }
+$$
+
 
 During simulation, the above terms are thermally averaged over angles, co-solute degrees of freedom etc.
 Note also that the moments are defined with respect to the *mass* center, not *charge* center.
@@ -238,7 +244,7 @@ The input keywords are:
 `molecules`      | Array with exactly two molecule names, $a$ and $b$
 `dr=0.2`         | Distance resolution (Å) along _R_.
 
-## Charge Fluctuations
+### Charge Fluctuations
 
 For a given molecule, this calculates the average charge and standard deviation per atom, 
 and the most probable species (atom name) averaged over all present molecules.
@@ -252,6 +258,7 @@ atomic species can be saved.
 `molecule`           | Name of molecular group
 `pqrfile`            | Output PQR file (optional)
 `verbose=True`       | If `True`, add results to general output
+
 
 ## Reaction Coordinate
 
@@ -368,8 +375,7 @@ half-sphere.
 
 **Important:**
 Exactly _one inactive_ `molecule` must be added to the simulation using the `inactive`
-keyword when inserting the initial molecules in the topology.
-{: .notice--info}
+keyword when inserting the initial molecules in the [topology](topology).
 
 `widom`       | Description
 ------------- | -----------------------------------------
@@ -421,9 +427,9 @@ of particles. For each `nstep`, this analysis files charge and
 radius information for all particles.
 Inactive particles are included with _zero_ charge and radius.
 
-Using a TCL helper script for VMD (see `scripts/`) this information
+Using a helper script for VMD (see `scripts/`) this information
 can be loaded to visualise flutuating charges and or number of particles.
-The script should be `source`d from the VMD console after loading the trajectory,
+The script should be sourced from the VMD console after loading the trajectory,
 or invoked when launching VMD:
 
 ~~~ bash

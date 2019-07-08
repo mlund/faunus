@@ -3,12 +3,14 @@
 #include <pybind11/numpy.h>
 #include <pybind11/eigen.h>
 #include <pybind11/operators.h>
+#include <pybind11/functional.h>
 
 #include <src/core.h>
 #include <src/space.h>
 #include <src/move.h>
 #include <src/analysis.h>
 #include <src/potentials.h>
+#include <src/regions.h>
 
 namespace py = pybind11;
 using namespace Faunus;
@@ -22,6 +24,11 @@ inline json dict2json(py::dict dict) {
     py::object dumps = py::module::import("json").attr("dumps");
     return json::parse( dumps(dict).cast<std::string>() );
 } // python dict --> c++ json
+
+inline json list2json(py::list list) {
+    py::object dumps = py::module::import("json").attr("dumps");
+    return json::parse(dumps(list).cast<std::string>());
+} // python list --> c++ json
 
 inline py::dict json2dict(const json &j) {
     py::object loads = py::module::import("json").attr("loads");
@@ -148,6 +155,20 @@ PYBIND11_MODULE(pyfaunus, m)
 
     py::bind_vector<std::vector<Tgroup>>(m, "GroupVector");
 
+    // Region
+    py::enum_<Region::RegionBase::RegionType>(m, "RegionType")
+        .value("SPHERE", Region::RegionBase::RegionType::SPHERE)
+        .value("CUBOID", Region::RegionBase::RegionType::CUBOID)
+        .value("WITHIN", Region::RegionBase::RegionType::WITHIN)
+        .value("NONE", Region::RegionBase::RegionType::NONE)
+        .export_values();
+
+    py::class_<Region::RegionBase>(m, "RegionBase")
+        .def_readwrite("name", &Region::RegionBase::name)
+        .def_readwrite("type", &Region::RegionBase::type)
+        .def("volume", &Region::RegionBase::isInside)
+        .def("isInside", &Region::RegionBase::isInside);
+
     // AtomData
     py::class_<AtomData>(m, "AtomData")
         .def(py::init<>())
@@ -168,12 +189,22 @@ PYBIND11_MODULE(pyfaunus, m)
     m.def("getTemperature", []() { return pc::temperature; } );
     m.def("setTemperature", [](double T) { pc::temperature = T; } );
 
-    // Potentials
-    py::class_<Potential::FunctorPotential>(m, "FunctorPotential")
-        .def(py::init([](py::dict dict) { return from_dict<Potential::FunctorPotential>(dict); }))
-        .def("energy", [](Potential::FunctorPotential &pot, const Particle &a, const Particle &b, const Point &r) {
+    // --------- Pair Potentials ---------
+
+    // Base
+    py::class_<Potential::PairPotentialBase>(m, "PairPotentialBase")
+        .def_readwrite("name", &Potential::PairPotentialBase::name)
+        .def_readwrite("cite", &Potential::PairPotentialBase::cite)
+        .def_readwrite("isotropic", &Potential::PairPotentialBase::isotropic)
+        .def_readwrite("selfEnergy", &Potential::PairPotentialBase::selfEnergy)
+        .def("force", &Potential::PairPotentialBase::force)
+        .def("energy", [](Potential::PairPotentialBase &pot, const Particle &a, const Particle &b, const Point &r) {
             return pot(a, b, r);
         });
+
+    // Potentials::FunctorPotential
+    py::class_<Potential::FunctorPotential, Potential::PairPotentialBase>(m, "FunctorPotential")
+        .def(py::init([](py::dict dict) { return from_dict<Potential::FunctorPotential>(dict); }));
 
     // Change::Data
     py::class_<Change::data>(m, "ChangeData")
@@ -207,8 +238,8 @@ PYBIND11_MODULE(pyfaunus, m)
     // Hamiltonian
     py::class_<Thamiltonian>(m, "Hamiltonian")
         .def(py::init<Space &, const json &>())
-        .def(py::init([](Space &spc, py::dict dict) {
-            json j = dict2json(dict);
+        .def(py::init([](Space &spc, py::list list) {
+            json j = list2json(list);
             return std::unique_ptr<Thamiltonian>(new Thamiltonian(spc, j));
         }))
         .def("init", &Thamiltonian::init)
@@ -228,12 +259,27 @@ PYBIND11_MODULE(pyfaunus, m)
                     return std::unique_ptr<Tmcsimulation>(new Tmcsimulation(j,mpi));
                     }));
 
+    // Analysisbase
+    py::class_<Analysis::Analysisbase>(m, "Analysisbase")
+        .def_readwrite("name", &Analysis::Analysisbase::name)
+        .def_readwrite("cite", &Analysis::Analysisbase::cite)
+        .def("to_disk", &Analysis::Analysisbase::to_disk)
+        .def("sample", &Analysis::Analysisbase::sample)
+        .def("to_dict", [](Analysis::Analysisbase &self) {
+            json j;
+            Analysis::to_json(j, self);
+            return json2dict(j);
+        });
+
+    py::bind_vector<std::vector<std::shared_ptr<Analysis::Analysisbase>>>(m, "AnalysisVector");
+
     // CombinedAnalysis
     py::class_<Analysis::CombinedAnalysis>(m, "Analysis")
-        .def(py::init([](Space &spc, Thamiltonian &pot, py::dict dict) {
-            json j = dict2json(dict);
+        .def(py::init([](Space &spc, Thamiltonian &pot, py::list list) {
+            json j = list2json(list);
             return std::unique_ptr<Analysis::CombinedAnalysis>(new Analysis::CombinedAnalysis(j, spc, pot));
         }))
+        .def_readwrite("vector", &Analysis::CombinedAnalysis::vec)
         .def("to_dict",
              [](Analysis::CombinedAnalysis &self) {
                  json j;

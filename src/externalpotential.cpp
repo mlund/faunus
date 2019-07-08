@@ -4,18 +4,37 @@
 namespace Faunus {
 namespace Energy {
 
+// ------------ Energybase -------------
+
+void Energybase::to_json(json &) const {}
+
+void Energybase::sync(Energybase *, Change &) {}
+
+void Energybase::init() {}
+
+void to_json(json &j, const Energybase &base) {
+    assert(not base.name.empty());
+    if (base.timer)
+        j[base.name]["relative time"] = base.timer.result();
+    if (not base.cite.empty())
+        j[base.name]["reference"] = base.cite;
+    base.to_json(j[base.name]);
+}
+
 // ------------ ExternalPotential -------------
 
+// this calculates the interaction of a whole group
+// with the applied external potential.
 double ExternalPotential::_energy(const Group<Particle> &g) const {
     double u = 0;
     if (molids.find(g.id) != molids.end()) {
         if (COM and g.atomic == false) { // apply only to center of mass
-            Particle cm;                 // fake particle representin molecule
+            Particle cm;                 // temp. particle representing molecule
             cm.charge = Faunus::monopoleMoment(g.begin(), g.end());
             cm.pos = g.cm;
-            u = func(cm);
+            return func(cm);
         } else {
-            for (auto &p : g) {
+            for (auto &p : g) { // loop over active particles
                 u += func(p);
                 if (std::isnan(u))
                     break;
@@ -31,7 +50,7 @@ ExternalPotential::ExternalPotential(const json &j, Tspace &spc) : spc(spc) {
     _names = j.at("molecules").get<decltype(_names)>(); // molecule names
     auto _ids = names2ids(molecules, _names);           // names --> molids
     molids = std::set<int>(_ids.begin(), _ids.end());   // vector --> set
-    if (molids.empty() || molids.size() != _names.size())
+    if (molids.empty())
         throw std::runtime_error(name + ": molecule list is empty");
 }
 double ExternalPotential::energy(Change &change) {
@@ -130,7 +149,7 @@ ExternalAkesson::ExternalAkesson(const json &j, Tspace &spc) : ExternalPotential
     name = "akesson";
     cite = "doi:10/dhb9mj";
 
-    xjson _j = j; // json variant where items are deleted after access
+    SingleUseJSON _j = j; // json variant where items are deleted after access
     _j.erase("com");
     _j.erase("molecules");
 
@@ -307,6 +326,8 @@ CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j
         // add additional potential here
         // base::func = createSomeOtherPotential(_j);
     } else {
+        // if nothing found above, it is assumed that `function`
+        // is a valid expression.
         expr.set(jin, {{"q", &d.q}, {"x", &d.x}, {"y", &d.y}, {"z", &d.z}});
         func = [&](const Particle &a) {
             d.x = a.pos.x();
@@ -320,6 +341,24 @@ CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j
 void CustomExternal::to_json(json &j) const {
     j = jin;
     ExternalPotential::to_json(j);
+}
+
+// ------------- ParticleSelfEnergy ---------------
+
+/*
+ * Upon construction, make sure the ExternalPotential base class loop
+ * over all groups and particles (com=false)
+ */
+ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(const Particle &)> selfEnergy)
+    : ExternalPotential({{"molecules", {"*"}}, {"com", false}}, spc) {
+    func = selfEnergy;
+#ifndef NDEBUG
+    // test if self energy can be called
+    Particle myparticle;
+    if (this->func)
+        this->func(myparticle);
+#endif
+    name = "particle-self-energy";
 }
 
 } // namespace Energy

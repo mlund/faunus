@@ -38,7 +38,7 @@ namespace Faunus {
             throw std::runtime_error("Invalid JSON data for AtomData");
         for (auto it : j.items()) {
             a.name = it.key();
-            xjson val = it.value();
+            SingleUseJSON val = it.value();
             if (val.count("activity")==1)
                 a.activity = val.at("activity").get<double>() * 1.0_molar;
             if (val.count("pactivity")==1) {

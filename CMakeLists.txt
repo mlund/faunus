@@ -313,6 +313,10 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Wstrict-aliasing -Wno-sign-compare -Wno-unused-local-typedef -Wno-unknown-pragmas)
 endif()
 
+# in Debug mode, all warnings are treated as errors and we want no optimisations
+add_compile_options($<$<CONFIG:Debug>:-Werror>)
+add_compile_options($<$<CONFIG:Debug>:-O0>)
+
 # target: unittests
 add_executable(unittests src/unittests.cpp ${objs} ${hdrs})
 target_link_libraries(unittests xdrfile spdlog)

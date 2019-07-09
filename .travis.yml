@@ -28,5 +28,4 @@ script:
     ./faunus --version || travis_terminate 1;
     make unittests -j
     ./unittests || travis_terminate 1;
-    make pyfaunus -j
-
+    make pyfaunus -j || travis_terminate 1;

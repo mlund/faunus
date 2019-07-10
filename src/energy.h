@@ -372,6 +372,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
   private:
     double g2gcnt = 0, g2gskip = 0;
     PairMatrix<double> cutoff2; // matrix w. group-to-group cutoff
+    std::vector<const Particle *> i_interact_with_these;
 
   protected:
     typedef typename Space::Tgroup Tgroup;
@@ -452,10 +453,11 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
      * external to space.
      */
     double i2all(const typename Space::Tparticle &i) {
+        if (omp_enable and omp_i2all)
+            return i2all_parallel(i);
         double u = 0;
         auto it = spc.findGroupContaining(i); // iterator to group
         if (it != spc.groups.end()) {         // check if i belongs to group in space
-#pragma omp parallel for reduction(+ : u) if (omp_enable and omp_i2all)
             for (size_t ig = 0; ig < spc.groups.size(); ig++) {
                 auto &g = spc.groups[ig];
                 if (&g != &(*it))         // avoid self-interaction
@@ -470,6 +472,31 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
             for (auto &g : spc.groups) // i with all other *active* particles
                 for (auto &j : g)      // (this will include only active particles)
                     u += i2i(i, j);
+        return u;
+    }
+
+    double i2all_parallel(const typename Space::Tparticle &i) {
+        i_interact_with_these.clear();
+        double u = 0;
+        auto it = spc.findGroupContaining(i); // iterator to group
+        if (it != spc.groups.end()) {         // check if i belongs to group in space
+            for (size_t ig = 0; ig < spc.groups.size(); ig++) {
+                auto &g = spc.groups[ig];
+                if (&g != &(*it))                                // avoid self-interaction
+                    if (not cut(g, *it))                         // check g2g cut-off
+                        for (auto &j : g)                        // loop over particles in other group
+                            i_interact_with_these.push_back(&j); // u += i2i(i, j);
+            }
+            for (auto &j : *it) // i with all particles in own group
+                if (&j != &i)
+                    i_interact_with_these.push_back(&j); // u += i2i(i, j);
+        } else                                           // particle does not belong to any group
+            for (auto &g : spc.groups)                   // i with all other *active* particles
+                for (auto &j : g)                        // (this will include only active particles)
+                    i_interact_with_these.push_back(&j); // u += i2i(i, j);
+#pragma omp parallel for reduction(+ : u) if (omp_enable and omp_i2all)
+        for (size_t k = 0; k < i_interact_with_these.size(); k++)
+            u += i2i(i, *i_interact_with_these[k]);
         return u;
     }
 

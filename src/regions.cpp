@@ -4,7 +4,7 @@
 namespace Faunus {
 namespace Region {
 
-RegionBase::RegionBase(RegionType type) : type(type){};
+RegionBase::RegionBase(RegionType type) : type(type) {}
 
 /**
  * The opposite of `createRegion()`

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 find_package(PythonInterp 3 REQUIRED)
+find_package(Threads REQUIRED)
 enable_testing()
 
 # Default build is "RelWithDebInfo"
@@ -319,14 +320,14 @@ add_compile_options($<$<CONFIG:Debug>:-O0>)
 
 # target: unittests
 add_executable(unittests src/unittests.cpp ${objs} ${hdrs})
-target_link_libraries(unittests xdrfile spdlog)
+target_link_libraries(unittests ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog)
 target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
 add_test(NAME unittests COMMAND unittests)
 
 # target: faunus
 
 add_executable(faunus src/faunus.cpp ${objs} ${hdrs})
-target_link_libraries(faunus PRIVATE xdrfile spdlog docopt)
+target_link_libraries(faunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog docopt)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 
 if(ENABLE_SID)
@@ -369,7 +370,7 @@ if (ENABLE_PYTHON)
             FetchContent_Populate(pybind11)
             add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
             pybind11_add_module(pyfaunus src/pyfaunus.cpp ${objs})
-            target_link_libraries(pyfaunus PUBLIC xdrfile spdlog)
+            target_link_libraries(pyfaunus PUBLIC ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog)
         endif()
     endif ()
 endif ()

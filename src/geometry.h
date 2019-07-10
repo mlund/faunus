@@ -5,6 +5,7 @@
 #include "particle.h"
 #include "tensor.h"
 #include <Eigen/Geometry>
+#include "spdlog/spdlog.h"
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -112,8 +113,18 @@ struct Random;
         /**
          * @brief A base class for various geometries implementations.
          */
-        struct GeometryImplementation : public GeometryBase {
+        class GeometryImplementation : public GeometryBase {
+          protected:
+            std::shared_ptr<spdlog::logger> faunus_logger, mcloop_logger;
+
+            GeometryImplementation() :
+                    faunus_logger(spdlog::get("faunus")),
+                    mcloop_logger(spdlog::get("mcloop")) {};
+
+          public:
             BoundaryCondition boundary_conditions;
+
+            virtual ~GeometryImplementation();
 
             //! A unique pointer to a copy of self. To be used in copy constructors.
             virtual std::unique_ptr<GeometryImplementation> clone() const = 0;

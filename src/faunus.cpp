@@ -8,6 +8,8 @@
 #include "docopt.h"
 #include <cstdlib>
 #include "ProgressBar.hpp"
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 #ifdef ENABLE_SID
 #include "cppsid.h"
@@ -70,6 +72,15 @@ int main( int argc, char **argv )
                 { argv + 1, argv + argc }, true, version);
 
         mpi.init(); // initialize MPI, if available
+
+        // prepare loggers
+        // TODO refactor to a standalone function and use cmd line options for different sinks, etc.
+        auto faunus_logger = spdlog::stderr_color_mt("faunus");
+        faunus_logger->set_pattern("[%n %P] %^%L: %v%$");
+        faunus_logger->set_level(spdlog::level::info);
+        auto mcloop_logger = spdlog::stderr_color_mt("mcloop");
+        mcloop_logger->set_pattern("[%n %P] [%E.%f] %L: %v");
+        mcloop_logger->set_level(spdlog::level::warn);
 
         // --notips
         if (not args["--notips"].asBool())
@@ -153,8 +164,10 @@ int main( int argc, char **argv )
             if (showProgress and mpi.isMaster())
                 progressBar.done();
 
-            if (not quiet)
-                mpi.cout() << "relative drift = " << sim.drift() << endl;
+            if (not quiet) {
+                faunus_logger->log((sim.drift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
+                        "relative drift = {}", sim.drift());
+            }
 
             // --output
             std::ofstream f(Faunus::MPI::prefix + args["--output"].asString());

@@ -6,9 +6,13 @@ namespace Faunus {
 
     namespace Geometry {
 
-        // =============== GeometryBase ===============
+    // =============== GeometryBase ===============
 
     GeometryBase::~GeometryBase() = default;
+
+    // =============== GeometryImplementation ===============
+
+    GeometryImplementation::~GeometryImplementation() = default;
 
     // =============== Cuboid ===============
 

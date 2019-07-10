@@ -25,7 +25,10 @@ script:
   - |
     cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug
     make faunus -j
-    ./faunus --version || travis_terminate 1;
-    make unittests -j
-    ./unittests || travis_terminate 1;
-    make pyfaunus -j || travis_terminate 1;
+    ./faunus --version || travis_terminate 1
+    make unittests -j || travis_terminate 1
+    ./unittests || travis_terminate 1
+    if [ "$TRAVIS_OS_NAME" = "linux" ] ; then
+        make pyfaunus -j || travis_terminate 1
+    fi
+

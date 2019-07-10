@@ -132,6 +132,7 @@ template<typename Tspace>
                base::_sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
                if (not g.atomic) {                          // recalc mass-center for non-molecular groups
                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
+
 #ifndef NDEBUG
                    Point cmbak = g.cm;                             // backup mass center
                    g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}

@@ -955,11 +955,11 @@ void AtomProfile::_to_json(json &j) const {
 void AtomProfile::_sample() {
     for (auto &g : spc.groups)
         for (auto &p : g)
-            if (ids.count(p.id) != 0) {
+            if (ids.count(p.id) > 0) {
                 Point rvec = spc.geo.vdist(p.pos, ref);
                 double r = rvec.cwiseProduct(dir.cast<double>()).norm();
                 if (count_charge)
-                    tbl(r) += p.charge; // count charge
+                    tbl(r) += p.charge; // count charges
                 else
                     tbl(r) += 1; // count atoms
             }
@@ -971,18 +971,27 @@ AtomProfile::AtomProfile(const json &j, Space &spc) : spc(spc) {
 AtomProfile::~AtomProfile() {
     std::ofstream f(MPI::prefix + file);
     if (f) {
-        double Vr = 1;
         tbl.stream_decorator = [&](std::ostream &o, double r, double N) {
-            if (dir.sum() == 3)
+            double Vr = 1;
+            int dim = dir.sum();
+            switch (dim) {
+            case 3:
                 Vr = 4 * pc::pi * std::pow(r, 2) * dr;
-            else if (dir.sum() == 2) {
+                break;
+            case 2:
                 Vr = 2 * pc::pi * r * dr;
-            } else if (dir.sum() == 1)
+                break;
+            case 1:
                 Vr = dr;
-            if (Vr > 0) {
-                N = N / double(cnt);
-                o << r << " " << N << " " << N / Vr * 1e27 / pc::Nav << "\n";
+                break;
+            default:
+                throw std::runtime_error("bad dimension");
             }
+            if (Vr < dr) // take care of the case where Vr=0
+                Vr = dr; // then the volume element is simply dr
+
+            N = N / double(cnt);                                          // average number of particles/charges
+            o << r << " " << N << " " << N / Vr * 1e27 / pc::Nav << "\n"; // ... and molar concentration
         };
         f << "# r N rho/M\n" << tbl;
     }

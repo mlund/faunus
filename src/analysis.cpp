@@ -331,6 +331,7 @@ void CombinedAnalysis::sample() {
 }
 
 CombinedAnalysis::~CombinedAnalysis() {
+    // this is really a hack; the constructor should not be in charge of this
     for (auto &ptr : this->vec)
         ptr->to_disk();
 }
@@ -968,7 +969,7 @@ AtomProfile::AtomProfile(const json &j, Space &spc) : spc(spc) {
     name = "atomprofile";
     from_json(j);
 }
-AtomProfile::~AtomProfile() {
+void AtomProfile::_to_disk() {
     std::ofstream f(MPI::prefix + file);
     if (f) {
         tbl.stream_decorator = [&](std::ostream &o, double r, double N) {

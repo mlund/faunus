@@ -1,0 +1,193 @@
+{
+    "analysis": [
+        {
+            "reactioncoordinate": {
+                "average": 15.766666666666667,
+                "file": "N_NaCl.dat",
+                "nstep": 100,
+                "property": "N",
+                "samples": 600,
+                "type": "system"
+            }
+        },
+        {
+            "systemenergy": {
+                "Cv/kB": 0.00074546,
+                "file": "energy_NaCl.dat",
+                "final": [
+                    0.0
+                ],
+                "init": 0.0,
+                "mean": 0.0092899,
+                "nstep": 1000,
+                "samples": 60
+            }
+        },
+        {
+            "density": {
+                "atomic": {
+                    "CL": {
+                        "c/M": 0.1048465021636008
+                    },
+                    "NA": {
+                        "c/M": 0.1048465021636008
+                    }
+                },
+                "molecular": null,
+                "nskip": 20000,
+                "nstep": 100,
+                "samples": 400,
+                "∛⟨V⟩": 50.0,
+                "⟨1/V⟩": 8e-06,
+                "⟨V⟩": 125000.0,
+                "⟨∛V⟩": 50.0
+            }
+        },
+        {
+            "sanity": {
+                "nstep": 1000,
+                "samples": 60
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Apple LLVM 10.0.0 (clang-1000.11.45.5)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": {
+                            "Cl Cl": null,
+                            "Cl Na": null,
+                            "Na Na": null
+                        },
+                        "pairpot": {
+                            "functor": {
+                                "default": [
+                                    {
+                                        "wca": {
+                                            "mixing": "LB"
+                                        }
+                                    },
+                                    {
+                                        "constants": {
+                                            "cutoff": 300,
+                                            "lB": 7.145,
+                                            "rc": 300
+                                        },
+                                        "custom": null,
+                                        "function": "lB * q1 * q2 * ( 1.0 / r - 1.0 / rc )"
+                                    }
+                                ],
+                                "selfenergy": {
+                                    "dipole": false,
+                                    "monopole": false
+                                }
+                            }
+                        },
+                        "relative time": 0.06698751368820913
+                    }
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            50.0,
+            50.0,
+            50.0
+        ],
+        "type": "cuboid"
+    },
+    "git revision": "d1364c8c (2019-07-10)",
+    "groups": [
+        {
+            "Na": {
+                "capacity": 30,
+                "index": [
+                    0,
+                    8
+                ],
+                "size": 9
+            }
+        },
+        {
+            "Cl": {
+                "capacity": 30,
+                "index": [
+                    30,
+                    38
+                ],
+                "size": 9
+            }
+        }
+    ],
+    "last move": "transrot",
+    "moves": [
+        {
+            "rcmc": {
+                "acceptance": 0.791,
+                "cite": "doi:10/fqcpg3",
+                "moves": 1321700,
+                "reactions": {
+                    "= Na + Cl": {
+                        "acceptance": 0.7905810698343043,
+                        "attempts": 1321700
+                    }
+                },
+                "relative time": 0.369,
+                "relative time (without energy calc)": 0.0258,
+                "repeat": 22
+            }
+        },
+        {
+            "transrot": {
+                "acceptance": 0.985,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "Na",
+                "molid": 0,
+                "moves": 1319989,
+                "relative time": 0.164,
+                "repeat": 22,
+                "√⟨r²⟩": 5.72
+            }
+        },
+        {
+            "transrot": {
+                "acceptance": 0.985,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "Cl",
+                "molid": 1,
+                "moves": 1318311,
+                "relative time": 0.165,
+                "repeat": 22,
+                "√⟨r²⟩": 5.72
+            }
+        }
+    ],
+    "number of groups": 2,
+    "number of particles": 60,
+    "reactionlist": [
+        {
+            "= Na + Cl": {
+                "pK": -0.0,
+                "pK'": 1.9023398269432998,
+                "products": [
+                    "Na",
+                    "Cl"
+                ],
+                "reactants": []
+            }
+        }
+    ],
+    "relative drift": 0.0,
+    "temperature": 298.0
+}

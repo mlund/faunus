@@ -540,6 +540,13 @@ add_test(
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} membrane.out.json out.json --tol 0.065"
     WORKING_DIRECTORY ${EXAMPLES_DIR})
 
+add_test(
+    NAME nacl
+    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} nacl.yml\
+    | $<TARGET_FILE:faunus> --quiet\
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} nacl.out.json out.json --tol 0.065"
+    WORKING_DIRECTORY ${EXAMPLES_DIR})
+
 # INSTALL TARGETS
 
 install(TARGETS faunus DESTINATION bin)

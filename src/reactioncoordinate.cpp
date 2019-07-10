@@ -257,7 +257,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         };
     }
 
-    else if (property == "Rhex") {
+    else if (property == "Rcyl") {
         dir = j.at("dir");
         indexes = j.value("indexes", decltype(indexes)());
         assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");

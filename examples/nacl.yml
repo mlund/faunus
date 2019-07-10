@@ -1,0 +1,43 @@
+comment: "Sodium Chloride in Implicit Water."
+temperature: 298
+random: {seed: hardware}
+geometry: {type: cuboid, length: [50,50,50]}
+mcloop: {macro: 10, micro: 6000}
+
+atomlist:
+    - NA:  {sigma: 4.6, eps: 0.01, dp: 10, q: 1}
+    - CL:  {sigma: 4.6, eps: 0.01, dp: 10, q: -1}
+
+moleculelist:
+    - Na: {atoms: [NA], atomic: True, activity: 0.1119}
+    - Cl: {atoms: [CL], atomic: True, activity: 0.1119}
+
+insertmolecules:
+    - Na: {N: 30, inactive: True}
+    - Cl: {N: 30, inactive: True}
+
+energy:
+    - nonbonded:
+        default:
+            - wca:
+                mixing: LB
+            - custom: 
+              function: lB * q1 * q2 * ( 1.0 / r - 1.0 / rc ) 
+              constants:
+                  lB: 7.145
+                  rc: 300
+                  cutoff: 300
+
+reactionlist:
+    - "= Na + Cl": {}
+
+moves:
+    - rcmc: {repeat: 22}
+    - transrot: {molecule: Na, repeat: 22}
+    - transrot: {molecule: Cl, repeat: 22}
+
+analysis:
+    - reactioncoordinate: {file: N_NaCl.dat, nstep: 1e2, type: system, property: N}
+    - systemenergy: {file: energy_NaCl.dat, nstep: 1e3}
+    - density: {nstep: 1e2, nskip: 2e4}
+    - sanity: {nstep: 1e3}

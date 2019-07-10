@@ -195,7 +195,9 @@ Propagator::Propagator(const json &j, Space &spc, MPI::MPIController &mpi) {
                     this->template push_back<Move::VolumeMove>(spc);
                 else if (it.key() == "charge")
                     this->template push_back<Move::ChargeMove>(spc);
-                else if (it.key() == "rcmc")
+                else if (it.key() == "chargetransfer")
+                    this->template push_back<Move::ChargeTransfer>(spc);
+		else if (it.key() == "rcmc")
                     this->template push_back<Move::SpeciationMove>(spc);
                 else if (it.key() == "quadrantjump")
                     this->template push_back<Move::QuadrantJump>(spc);
@@ -389,6 +391,198 @@ ChargeMove::ChargeMove(Space &spc) : spc(spc) {
     cdata.internal = true; // the group is internally changed
     cdata.atoms.resize(1); // we change exactly one atom
 }
+
+void ChargeTransfer::_to_json(json &j) const {
+    using namespace u8;
+    j = {{"dq", dq},
+         {rootof + bracket(Delta + "q" + squared), std::sqrt(msqd.avg())},
+         {cuberoot + rootof + bracket(Delta + "q" + squared), std::cbrt(std::sqrt(msqd.avg()))}};
+    _roundjson(j, 3);
+}
+void ChargeTransfer::_from_json(const json &j) {
+    try {
+        dq = j.at("dq").get<double>();
+        std::string molname1 = j.at("mol1");
+        std::string molname2 = j.at("mol2");
+        molrange1 = j.at("molrange1").get<std::vector<double>>();
+        molrange2 = j.at("molrange2").get<std::vector<double>>();
+        min1 = j.at("min1").get<std::vector<double>>();
+        max1 = j.at("max1").get<std::vector<double>>();
+        min2 = j.at("min2").get<std::vector<double>>();
+        max2 = j.at("max2").get<std::vector<double>>();
+        auto git1 = findName(molecules, molname1);
+        auto git2 = findName(molecules, molname2);                    // group containing atomIndex
+
+        //molratio = (molrange2[1]-molrange2[0])/(molrange1[1]-molrange1[0]); // ratio of charge range, molecule 2 and charge range, molecule 1
+
+        if (git1 == molecules.end())
+            throw std::runtime_error("unknown molecule '" + molname1 + "'");
+        molid1 = git1->id();
+        molid2 = git2->id();
+
+        if (repeat < 0) {
+            auto v = spc.findMolecules(molid1);
+            repeat = std::distance(v.begin(), v.end());
+        }
+
+        if (git2 == molecules.end())
+            throw std::runtime_error("unknown molecule '" + molname2 + "'");
+
+
+        molid2 = git2->id();
+
+        if (repeat < 0) {
+            auto v = spc.findMolecules(molid2);
+            repeat = std::distance(v.begin(), v.end());
+        }
+
+    } catch (std::exception &e) {
+          throw std::runtime_error(name +  ": " + e.what());
+    }    
+}
+
+void ChargeTransfer::_move(Change &change) {
+     
+    auto mollist1 = spc.findMolecules(molid1, Space::ACTIVE);
+    auto mollist2 = spc.findMolecules(molid2, Space::ACTIVE);
+    if (size(mollist1) > 0 && size(mollist2) > 0) { 
+        auto git1 = slump.sample(mollist1.begin(), mollist1.end());
+        auto git2 = slump.sample(mollist2.begin(), mollist2.end());
+     
+        if (!git1->empty() && !git2->empty()) {
+            //auto p = git2->begin();
+            //cout << atomid << endl;
+
+            if (dq > 0) { 
+                change.chargeMove = true;
+                numOfAtoms1 = Faunus::distance(git1->begin(), git1->end());
+                numOfAtoms2 = Faunus::distance(git2->begin(), git2->end());
+     
+                ratio1.clear();
+                ratio2.clear(); 
+
+                for (i=0; i < numOfAtoms1; i++) {
+                    ratio1.push_back((max1[i]-min1[i])/(molrange1[1]-molrange1[0]));
+                }    
+     
+                for (i=0; i < numOfAtoms2; i++) {
+                    ratio2.push_back((max2[i]-min2[i])/(molrange2[1]-molrange2[0]));
+                }    
+
+                sumCharges1 = 0; 
+                sumChanges1 = 0; 
+                sumCharges2 = 0; 
+                sumChanges2 = 0; 
+                deltaq = dq * (slump() - 0.5);
+                changeQ1.clear();
+                changeQ2.clear();
+                cdata1.index = Faunus::distance(spc.groups.begin(), git1);
+                cdata2.index = Faunus::distance(spc.groups.begin(), git2);
+                for (i=0; i < numOfAtoms1; i++) {
+                    auto p = git1->begin()+i;
+                    //atomid = Faunus::distance(git2->begin(), p);
+                    changeQ1.push_back(deltaq*ratio1[i]);
+                    //cout << "Change, first atom: " << changeQ[0] << endl;
+                    sumChanges1 += changeQ1[i];
+                    sumCharges1 += p->charge+changeQ1[i]; 
+
+                }    
+                for (i=0; i < numOfAtoms2; i++) {
+                    auto p = git2->begin()+i;
+                    //atomid = Faunus::distance(git2->begin(), p);
+                    changeQ2.push_back(-deltaq*ratio2[i]);
+                    //cout << "Change, first atom: " << changeQ[0] << endl;
+                    sumChanges2 += changeQ2[i];
+                    sumCharges2 += p->charge+changeQ2[i]; 
+                //change.chargeMove = true;
+                }    
+		if (sumCharges1 < molrange1[0]) {
+                    sumTemp = 0;
+                    for (i=0; i < numOfAtoms1; i++) {
+                        auto p = git1->begin()+i;
+                        sumTemp += p->charge-(2*min1[i]-(p->charge+changeQ1[i]));
+                        p->charge = 2*min1[i]-(p->charge+changeQ1[i]);
+                    }
+                    for (i=0; i < numOfAtoms2; i++) {
+                        auto p = git2->begin()+i;
+                        p->charge += sumTemp*ratio2[i];
+                    }
+                }
+
+                else if (sumCharges1 > molrange1[1]) {
+                    sumTemp = 0;
+                    for (i=0; i < numOfAtoms1; i++) {
+                        auto p = git1->begin()+i;
+                        sumTemp += p->charge-(2*max1[i]-(p->charge+changeQ1[i]));
+                        p->charge = 2*max1[i]-(p->charge+changeQ1[i]);
+                    }
+                    for (i=0; i < numOfAtoms2; i++) {
+                        auto p = git2->begin()+i;
+                        p->charge += sumTemp*ratio2[i];
+                    }
+                }
+
+                else if (sumCharges2 < molrange2[0]) {
+                    sumTemp = 0;
+                    for (i=0; i < numOfAtoms2; i++) {
+                        auto p = git2->begin()+i;
+                        sumTemp += p->charge-(2*min2[i]-(p->charge+changeQ2[i]));
+                        p->charge = 2*min2[i]-(p->charge+changeQ2[i]);
+                    }
+                    for (i=0; i < numOfAtoms1; i++) {
+                        auto p = git1->begin()+i;
+                        p->charge += sumTemp*ratio1[i];
+                    }
+                }
+
+                else if (sumCharges2 > molrange2[1]) {
+                    sumTemp = 0;
+                    for (i=0; i < numOfAtoms2; i++) {
+                        auto p = git2->begin()+i;
+                        sumTemp += p->charge-(2*max2[i]-(p->charge+changeQ2[i]));
+                        p->charge = 2*max2[i]-(p->charge+changeQ2[i]);
+                    }
+                    for (i=0; i < numOfAtoms1; i++) {
+                        auto p = git1->begin()+i;
+                        p->charge += sumTemp*ratio1[i];
+                    }
+                }
+
+                else {
+                    for (i=0; i < numOfAtoms1; i++) {
+                        auto p = git1->begin()+i;
+                        p->charge += changeQ1[i];
+
+                    }
+                    for (i=0; i < numOfAtoms2; i++) {
+                        auto p = git2->begin()+i;
+                        p->charge += changeQ2[i];
+                    }
+                }
+                cdata1.all = true;
+                cdata2.all = true;
+                change.groups.push_back(cdata1); // add to list of moved groups
+                change.groups.push_back(cdata2); // add to list of moved groups
+                //cout << "New charge, artificial ion not accepted: " << git1.charge+deltaq << endl;
+                //cout << "Sum of charges outside loop: " << sumCharges << endl;                                                                                                                                            
+            } else                                                                                                                                                                                                          
+                deltaq = 0;                                                                                                                                                                                                 
+        }                                                                                                                                                                                                                   
+    }                                                                                                                                                                                                                       
+}                             
+
+void ChargeTransfer::_accept(Change &) { msqd += deltaq * deltaq; }
+void ChargeTransfer::_reject(Change &) { msqd += 0; }
+ChargeTransfer::ChargeTransfer(Space &spc) : spc(spc) {
+
+    name = "chargetransfer";
+    repeat = -1;
+    cdata1.internal = true;
+    cdata2.internal = true;
+    //cdata1.atoms.resize(numOfAtoms1);
+    //cdata2.atoms.resize(numOfAtoms2);
+}
+
 void QuadrantJump::_to_json(json &j) const {
     j = {{"dir", dir},
          {"molid", molid},

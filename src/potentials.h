@@ -18,7 +18,7 @@ struct PairPotentialBase {
     std::string name;
     std::string cite;
     bool isotropic = true; //!< True if pair-potential is independent of particle orientation
-    std::function<double(Particle &)> selfEnergy; //!< self energy of particle (kT)
+    std::function<double(const Particle &)> selfEnergy; //!< self energy of particle (kT)
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
@@ -54,7 +54,7 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
         second = j;
         // combine self-energies
         if (first.selfEnergy or second.selfEnergy) {
-            selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](Particle &p) {
+            selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](const Particle &p) {
                 if (u1 and u2)
                     return u1(p) + u2(p);
                 if (u1)
@@ -281,10 +281,9 @@ class SquareWell : public PairPotentialBase {
   protected:
     std::shared_ptr<ParametersTable> m; // table w. squarewell_threshold_ij and squarewell_depth_ij
   public:
-    SquareWell(const std::string &name = "square well");
+    SquareWell(const std::string &name = "squarewell");
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        double d = (atoms[a.id].sigma + atoms[b.id].sigma) / 2.0 + m->th(a.id, b.id);
-        if (r.squaredNorm() < d * d)
+        if (r.squaredNorm() < m->th(a.id, b.id)) // threshold squared
             return -m->esw(a.id, b.id);
         return 0.0;
     }
@@ -293,6 +292,21 @@ class SquareWell : public PairPotentialBase {
 
     void from_json(const json &j) override;
 }; //!< SquareWell potential
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+TEST_CASE("[Faunus] SquareWell") {
+    using doctest::Approx;
+    atoms = R"([{"A": { "r": 5, "sigma_sw":4, "eps_sw":0.2 }},
+                 {"B": { "r": 10, "sigma_sw":2, "eps_sw":0.1 }} ])"_json.get<decltype(atoms)>();
+    Particle a, b;
+    a = atoms[0];
+    b = atoms[1];
+    SquareWell pot = R"({"mixing": "LBSW"})"_json;
+
+    CHECK(pot(a, b, {0, 0, 5 + 10 + 5.99}) == Approx(-std::sqrt(0.2_kJmol * 0.1_kJmol)));
+    CHECK(pot(a, b, {0, 0, 5 + 10 + 6.01}) == Approx(0));
+}
+#endif
 
 /**
  * @brief Cosine attraction
@@ -606,7 +620,7 @@ class FunctorPotential : public PairPotentialBase {
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     typedef CombinedPairPotential<DipoleDipole, LennardJones> Stockmayer;
 
-    std::vector<std::function<double(Particle &)>> self_energy_vector;
+    std::vector<std::function<double(const Particle &)>> self_energy_vector;
     bool have_monopole_self_energy = false;
     bool have_dipole_self_energy = false;
     void registerSelfEnergy(PairPotentialBase *); //!< helper func to add to selv_energy_vector

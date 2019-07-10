@@ -1,5 +1,3 @@
----
----
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
   tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
@@ -23,7 +21,7 @@ geometry:
   length: [40,40,40] # cuboid dimensions (array or number)
 mcloop:              # number of MC steps (macro x micro)
   macro: 5           # Number of outer MC steps
-  micro: 100         # Number of inner MC steps; total: 5 x 100 = 5000
+  micro: 100         # Number of inner MC steps; total = 5 x 100 = 5000
 random:              # seed for pseudo random number generator
   seed: fixed        # "fixed" (default) or "hardware" (non-deterministic)
 ~~~
@@ -54,7 +52,7 @@ Atoms are the smallest possible particle entities with properties defined below.
 `alphax=0`    | Excess polarizability (unit-less)
 `dp=0`        | Translational displacement parameter [Å]
 `dprot=0`     | Rotational displacement parameter [degrees] (will be converted to radians)
-`eps=0`       | Epsilon energy scaling commonly used for Lennard-Jones interactions etc. [kJ/mol]
+`eps=0`       | Lennard-Jones/WCA energy parameter [kJ/mol]
 `mu=[0,0,0]`  | Dipole moment vector [eÅ]
 `mulen=|mu|`  | Dipole moment scalar [eÅ]
 `mw=1`        | Molecular weight [g/mol]
@@ -181,20 +179,13 @@ container boundaries. Overlap between particles is ignored and for
 i.e. hard-sphere potentials the initial energy may be infinite.
 
 
-## Equilibrium Reactions (beta)
+## Equilibrium Reactions
 
 Faunus supports density fluctuations, coupled to chemical equilibria with
 explicit and/or implicit particles via their chemical potentials as
 defined in the `reactionlist` detailed below, as well as in `atomlist` and
 `moleculelist`.
-
-~~~ yaml
-reactionlist:
-  - "AH = A + H": { pK: 4.8 }
-  - "Mg(OH)2 = Mg + OH + OH": { lnK: -25.9 }
-~~~
-
-The initial string describes a transformation of reactants (left of `=`)
+The initial key describes a transformation of reactants (left of `=`)
 into products (right of `=`) that may be a mix of atomic and molecular species.
 
 An implicit reactant or product is an atom which is included in the equilibrium constant but it is not represented
@@ -206,7 +197,7 @@ reactionlist:
   - "HASP = ASP + H": { pK: 4.0 }
 ~~~
 
-where H is included in the `atomlist` as
+where H is defined as _implicit_ in the `atomlist`:
 
 ~~~ yaml
   - H: { implicit: true, activity: 1e-7 }
@@ -243,7 +234,7 @@ $$
 In an ideal system, the involvement of Cl in the acid-base reaction does not affect the equilibrium since the grand canonical ensemble
 ensures that the activity of Cl matches its concentration in the simulation cell.
 
-Note that:
+Reaction format:
 
 - all species, `+`, and `=` must be surrounded by white-space
 - atom and molecule names cannot overlap
@@ -254,8 +245,4 @@ Available keywords:
 `reactionlist`  | Description
 --------------- | ---------------------------------------------------------------
 `lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log_{10}(K)$
-
-**Warning:**
-This functionality is under construction and subject to change.
-{: .notice--warning}
 

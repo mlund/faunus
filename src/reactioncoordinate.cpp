@@ -115,6 +115,8 @@ void AtomProperty::_to_json(json &j) const {
 AtomProperty::AtomProperty(const json &j, Space &spc) : ReactionCoordinateBase(j) {
     name = "atom";
     index = j.at("index");
+    if (index >= spc.p.size())
+        throw std::runtime_error("invalid index");
     property = j.at("property").get<std::string>();
     if (property == "x")
         f = [&p = spc.p, i = index]() { return p[i].pos.x(); };
@@ -151,6 +153,8 @@ void MoleculeProperty::_to_json(json &j) const {
 MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordinateBase(j) {
     name = "molecule";
     index = j.value("index", 0);
+    if (index >= spc.groups.size())
+        throw std::runtime_error("invalid index");
     auto b = spc.geo.getBoundaryFunc();
     property = j.at("property").get<std::string>();
 

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "space.h"
 #include "bonds.h"
-#include "auxiliary.h"
+#include "externalpotential.h" // Energybase implemented here
 #include <range/v3/view.hpp>
 #include <Eigen/Dense>
 
@@ -23,23 +22,6 @@ struct PairPotentialBase;
 namespace Energy {
 
 class Hamiltonian;
-
-class Energybase {
-  public:
-    enum keys { OLD, NEW, NONE };
-    keys key = NONE;
-    std::string name;
-    std::string cite;
-    TimeRelativeOfTotal<std::chrono::microseconds> timer;
-    virtual double energy(Change &) = 0; //!< energy due to change
-    virtual void to_json(json &j) const; //!< json output
-    virtual void sync(Energybase *, Change &);
-    virtual void init();                               //!< reset and initialize
-    virtual inline void force(std::vector<Point> &){}; // update forces on all particles
-    inline virtual ~Energybase(){};
-};
-
-void to_json(json &j, const Energybase &base); //!< Converts any energy class to json object
 
 /**
  * @brief Check for overlap between atoms and the simulation container
@@ -186,6 +168,7 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
     } //!< Optimized update of k subset. Require access to old positions through `old` pointer
 
     // selfEnergies should be handled by the real-space pair-potential
+    // todo: this should not be used, but replaced by selfEnergy in PairPotential
     double selfEnergy(const EwaldData &d, Change &change) {
         double Eq = 0;
         if (change.dN) {
@@ -303,7 +286,7 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
         if (change) {
             // If the state is NEW (trial state), then update all k-vectors
             if (key == NEW) {
-                if (change.all || change.dV) { // everything changes
+                if (change.all or change.dV) { // everything changes
                     data.update(spc.geo.getLength());
                     policy.updateComplex(data); // update all (expensive!)
                 } else {
@@ -311,6 +294,7 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
                         policy.updateComplex(data, change);
                 }
             }
+            // todo: omit selfEnergy() call as this should be added as a separate term in `Hamiltonian`
             u = policy.surfaceEnergy(data, change) + policy.reciprocalEnergy(data) + policy.selfEnergy(data, change);
         }
         return u;
@@ -326,17 +310,6 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
     } //!< Called after a move is rejected/accepted as well as before simulation
 
     void to_json(json &j) const override { j = data; }
-};
-
-class ParticleSelfEnergy : public Energybase {
-  private:
-    Space &spc;
-    std::function<double(Particle &)> selfEnergy; //!< Some potentials may give rise to a self energy
-
-  public:
-    ParticleSelfEnergy(Space &, std::function<double(Particle &)>);
-    double energy(Change &change) override;
-    void sync(Energybase *, Change &) override;
 };
 
 class Isobaric : public Energybase {
@@ -399,6 +372,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
   private:
     double g2gcnt = 0, g2gskip = 0;
     PairMatrix<double> cutoff2; // matrix w. group-to-group cutoff
+    std::vector<const Particle *> i_interact_with_these;
 
   protected:
     typedef typename Space::Tgroup Tgroup;
@@ -479,10 +453,11 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
      * external to space.
      */
     double i2all(const typename Space::Tparticle &i) {
+        if (omp_enable and omp_i2all)
+            return i2all_parallel(i);
         double u = 0;
         auto it = spc.findGroupContaining(i); // iterator to group
         if (it != spc.groups.end()) {         // check if i belongs to group in space
-#pragma omp parallel for reduction(+ : u) if (omp_enable and omp_i2all)
             for (size_t ig = 0; ig < spc.groups.size(); ig++) {
                 auto &g = spc.groups[ig];
                 if (&g != &(*it))         // avoid self-interaction
@@ -497,6 +472,31 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
             for (auto &g : spc.groups) // i with all other *active* particles
                 for (auto &j : g)      // (this will include only active particles)
                     u += i2i(i, j);
+        return u;
+    }
+
+    double i2all_parallel(const typename Space::Tparticle &i) {
+        i_interact_with_these.clear();
+        double u = 0;
+        auto it = spc.findGroupContaining(i); // iterator to group
+        if (it != spc.groups.end()) {         // check if i belongs to group in space
+            for (size_t ig = 0; ig < spc.groups.size(); ig++) {
+                auto &g = spc.groups[ig];
+                if (&g != &(*it))                                // avoid self-interaction
+                    if (not cut(g, *it))                         // check g2g cut-off
+                        for (auto &j : g)                        // loop over particles in other group
+                            i_interact_with_these.push_back(&j); // u += i2i(i, j);
+            }
+            for (auto &j : *it) // i with all particles in own group
+                if (&j != &i)
+                    i_interact_with_these.push_back(&j); // u += i2i(i, j);
+        } else                                           // particle does not belong to any group
+            for (auto &g : spc.groups)                   // i with all other *active* particles
+                for (auto &j : g)                        // (this will include only active particles)
+                    i_interact_with_these.push_back(&j); // u += i2i(i, j);
+#pragma omp parallel for reduction(+ : u) if (omp_enable and omp_i2all)
+        for (size_t k = 0; k < i_interact_with_these.size(); k++)
+            u += i2i(i, *i_interact_with_these[k]);
         return u;
     }
 

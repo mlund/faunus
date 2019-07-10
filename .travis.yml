@@ -2,49 +2,30 @@ language: cpp
 dist: xenial
 sudo: required
 group: edge
+compiler: clang
+
+python:
+    - "3.7"
+
+addons:
+    apt:
+        packages:
+            - python-ruamel.yaml
+            - python-jinja2
 
 matrix:
   include:
-
-  # Python 3.7
   - os: linux
-    env: [COMPILER=gcc, CONDA_PY=37]
+    python: 3.7
   - os: osx
-    env: [COMPILER=clang, CONDA_PY=37]
-    osx_image: xcode9.2
-
-  # Python 3.6
-  #- os: linux
-  #  env: [COMPILER=gcc, CONDA_PY=36]
-  #- os: osx
-  #  env: [COMPILER=clang, CONDA_PY=36]
-  #  osx_image: xcode9.2
-
-install:
-  - |
-    # conda
-    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
-    else
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    fi
-    bash miniconda.sh -b -p $HOME/miniconda
-    export PATH="$HOME/miniconda/bin:$PATH"
-    hash -r
-    conda config --set always_yes yes --set changeps1 no
-    conda config --add channels conda-forge/label/gcc7
-    conda update -q conda
-    conda install conda-build=3 anaconda-client
-    conda update -q conda-build
+    osx_image: xcode10.2
+    python: 3.7
 
 script:
   - |
-    cd scripts/
-    conda config --set anaconda_upload yes
-    #travis_wait 20 conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
-    while sleep 540; do echo "=====[ $SECONDS seconds still running ]====="; done &
-    conda-build --user teokem --token "${CONDA_UPLOAD_TOKEN}" .
-    conda_exit_code=$?
-    kill %1
-    exit "$conda_exit_code"
-
+    cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug
+    make faunus -j
+    ./faunus --version || travis_terminate 1;
+    make unittests -j
+    ./unittests || travis_terminate 1;
+    make pyfaunus -j || travis_terminate 1;

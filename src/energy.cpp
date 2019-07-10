@@ -8,21 +8,6 @@
 namespace Faunus {
 namespace Energy {
 
-void Energybase::to_json(json &) const {}
-
-void Energybase::sync(Energybase *, Change &) {}
-
-void Energybase::init() {}
-
-void to_json(json &j, const Energybase &base) {
-    assert(not base.name.empty());
-    if (base.timer)
-        j["relative time"] = base.timer.result();
-    if (not base.cite.empty())
-        j[base.name]["reference"] = base.cite;
-    base.to_json(j[base.name]);
-}
-
 void EwaldData::update(const Point &box) {
     L = box;
     int kcc = std::ceil(kc);
@@ -230,44 +215,6 @@ double SelfEnergy::energy(Change &change) {
     return ( selfenergy_ion_prefactor * Eq / rc + selfenergy_dipole_prefactor*Emu/pow(rc,3.0) )*lB;
 }*/
 
-// ------------- ParticleSelfEnergy ---------------
-
-ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(Particle &)> selfEnergy)
-    : spc(spc), selfEnergy(selfEnergy) {
-    name = "selfenergy";
-#ifndef NDEBUG
-    // test if self energy can be called
-    Particle myparticle;
-    if (this->selfEnergy)
-        this->selfEnergy(myparticle);
-#endif
-}
-
-double ParticleSelfEnergy::energy(Change &change) {
-    double u = 0;
-    if (selfEnergy) {
-        if (change.dN)
-            for (auto &cg : change.groups) {
-                auto &g = spc.groups.at(cg.index);
-                for (auto i : cg.atoms)
-                    if (i < g.size())
-                        u += selfEnergy(*(g.begin() + i));
-            }
-        else if (change.all and not change.dV)
-            for (auto &g : spc.groups)
-                for (auto &i : g)
-                    u += selfEnergy(i);
-    }
-    return u;
-}
-
-void ParticleSelfEnergy::sync(Energybase *basePtr, Change &change) {
-    if (change.all) {
-        auto other = dynamic_cast<decltype(this)>(basePtr);
-        assert(other);
-        selfEnergy = other->selfEnergy;
-    }
-}
 
 // ------------- Isobaric ---------------
 
@@ -281,6 +228,7 @@ Isobaric::Isobaric(const json &j, Space &spc) : spc(spc) {
             P = j.at("P/atm").get<double>() * 1.0_atm;
     }
 }
+
 double Isobaric::energy(Change &change) {
     if (change.dV || change.all || change.dN) {
         double V = spc.geo.getVolume();

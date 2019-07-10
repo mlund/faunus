@@ -19,6 +19,9 @@ copyright = '2019, Mikael Lund'
 author = 'Mikael Lund'
 source_suffix = ['.rst', '.md']
 master_doc = 'index'
-extensions = ['recommonmark', 'sphinx_markdown_tables']
+extensions = ['recommonmark', 'sphinx_markdown_tables', 'sphinx.ext.autosectionlabel']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+
+autosectionlabel_prefix_document = True
 

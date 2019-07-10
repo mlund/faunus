@@ -13,7 +13,7 @@ at the top level input. For example:
 
 ~~~ yaml
 moves:
-    - moltransrot: { molecule: water, dp: 2.0, repeat: N
+    - moltransrot: { molecule: water, dp: 2.0, repeat: N,
                     dprot: 1.0, dir: [1,1,0] }
     - volume: { dV: 0.01 }
     - ...
@@ -52,12 +52,12 @@ and if `dir=[0,0,1]` on a line (here $z$).
 `dir=[1,1,1]`    |  Translational directions
 `dp`             |  Translational displacement parameter
 `dprot`          |  Rotational displacement parameter (radians)
-`repeat=N`       |  Number of repeats per MC sweep. `N` equals $N_{molid}$ times.
+`repeat=N`       |  Number of repeats per MC sweep. `N` equals $N\_{molid}$ times.
 
 This will simultaneously translate and rotate a molecular group by the following operation
 
 $$
-\textbf{r}^N_{trial} = \mbox{Rot}(\textbf{r}^N) + \delta
+\textbf{r}^N\_{trial} = \mbox{Rot}(\textbf{r}^N) + \delta
 $$
 
 where $\mbox{Rot}$ rotates `dprot`$\cdot \left (\zeta-\frac{1}{2} \right )$ radians around a random unit vector
@@ -78,17 +78,16 @@ will be tracked.
 As `moltransrot` but instead of operating on the molecular mass center, this translates
 and rotates individual atoms in the group. The repeat is set to the number of atoms in the specified group and the
 displacement parameters `dp` and `dprot` for the individual atoms are taken from
-the atom properties defined in the [topology](../topology).
+the atom properties defined in the [topology](topology).
 
 **note:**
 atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
-{: .notice--info}
 
 ### Cluster Move
 
 `cluster`      | Description
 -------------- | -----------------------
-`molecules`    | Array of molecule names; `[*]` selects all 
+`molecules`    | Array of molecule names; `[*]` selects all
 `threshold`    | Mass-center threshold for forming a cluster
 `dir=[1,1,1]`  | Directions to translate
 `dprot`        | Rotational displacement (radians)
@@ -124,18 +123,15 @@ cluster:
 **Restrictions:**
 Currently, the number of `molecules` must be constant throughout simulation, i.e.
 grand canonical schemes are unsupported.
-{: .notice--info}
-
-
 
 ## Internal Degrees of Freedom
 
 ### Charge Move
 
-`charge`         |  Description
----------------- |  ---------------------------------
-`index`          |  Atom index to operate on
-`dq`             |  Charge displacement
+`charge`         | Description
+---------------- | ---------------------------------
+`index`          | Atom index to operate on
+`dq`             | Charge displacement
 
 This performs a fractional charge move on a specific atom.
 
@@ -143,7 +139,6 @@ This performs a fractional charge move on a specific atom.
 This move changes the particle charge and therefore cannot be used with
 splined pair-potentials where the initial charges from are read from `atomlist`.
 Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
-{: .notice--info}
 
 
 ### Conformational Swap
@@ -154,13 +149,12 @@ Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
 `repeat=N`         |  Number of repeats per MC sweep
 
 This will swap between different molecular conformations
-as defined in the topology with `traj` and `trajweight`
+as defined in the [Molecule Properties](topology.html#molecule-properties) with `traj` and `trajweight`
 If defined, the weight
 distribution is respected, otherwise all conformations
 have equal intrinsic weight. Upon insertion, the new conformation
 is randomly oriented and placed on top of the mass-center of
 an exising molecule. That is, there is no mass center movement.
-
 
 ### Pivot
 
@@ -240,7 +234,6 @@ etc. and only exchange between neighboring processes is performed.
 **Note:**
 Parallel tempering is currently limited to systems with
 constant number of particles, $N$.
-{: .notice--info}
 
 
 ## Volume Move
@@ -277,7 +270,6 @@ The table below explains the scaling behavior in different geometries:
 
 **Warning:**
 Untested for cylinders, slits.
-{: .notice--warning}
 
 
 ## Reactive Canonical Monte Carlo
@@ -291,10 +283,10 @@ Thus, it is important that the _capacity_ or reservoir of particles (active plus
 sufficiently large to allow for fluctuations.
 This is ensured using `insertmolecules` (see Topology).
 A runtime warning will be given, should you run low on particles.<br>
-Besides deleting/inserting molecules (mono- or polyatomic), the speciation move performs reactions involving a 
+Besides deleting/inserting molecules (mono- or polyatomic), the speciation move performs reactions involving a
 single-atom ID transformation (_e.g._, acid-base reactions).
-In this case, an particle of type A (part of a mono- or polyatomic molecule) is randomly picked from the system 
-and all its properties, except its position, are replaced with those of an atom of type B. 
+In this case, an particle of type A (part of a mono- or polyatomic molecule) is randomly picked from the system
+and all its properties, except its position, are replaced with those of an atom of type B.
 Such ID transormations can also involve the addition/deletion of molecules or _implicit_ atoms.<br>
 For a reaction
 $$
@@ -315,5 +307,3 @@ For more information, see the Topology section and [doi:10/fqcpg3](https://doi.o
 
 **Warning:**
 The speciation move is under construction and subject to change.
-{: .notice--warning}
-

@@ -331,6 +331,7 @@ void CombinedAnalysis::sample() {
 }
 
 CombinedAnalysis::~CombinedAnalysis() {
+    // this is really a hack; the constructor should not be in charge of this
     for (auto &ptr : this->vec)
         ptr->to_disk();
 }
@@ -429,22 +430,20 @@ void WidomInsertion::_sample() {
     if (!change.empty()) {
         ParticleVector pin;
         auto &g = spc.groups.at(change.groups.at(0).index);
-        assert(g.empty());
+        assert(g.empty() && g.capacity() > 0);
         g.resize(g.capacity()); // active group
         for (int i = 0; i < ninsert; ++i) {
             pin = rins(spc.geo, spc.p, molecules.at(molid));
-            if (!pin.empty()) {
+            if (not pin.empty()) {
                 if (absolute_z) {
                     for (auto &p : pin)
                         p.pos.z() = std::fabs(p.pos.z());
                 }
 
                 assert(pin.size() == g.size());
-                spc.geo.randompos(pin[0].pos, random);
-                spc.geo.randompos(pin[1].pos, random);
 
                 std::copy(pin.begin(), pin.end(), g.begin()); // copy into ghost group
-                if (!g.atomic)                                // update molecular mass-center
+                if (not g.atomic)                             // update molecular mass-center
                     g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
 
                 expu += exp(-pot->energy(change)); // widom average
@@ -453,6 +452,7 @@ void WidomInsertion::_sample() {
         g.resize(0); // deactive molecule
     }
 }
+
 void WidomInsertion::_to_json(json &j) const {
     double excess = -std::log(expu.avg());
     j = {{"dir", rins.dir},
@@ -461,6 +461,7 @@ void WidomInsertion::_to_json(json &j) const {
          {"absz", absolute_z},
          {u8::mu + "/kT", {{"excess", excess}}}};
 }
+
 void WidomInsertion::_from_json(const json &j) {
     ninsert = j.at("ninsert");
     molname = j.at("molecule");
@@ -470,16 +471,18 @@ void WidomInsertion::_from_json(const json &j) {
     auto it = findName(molecules, molname); // loop for molecule in topology
     if (it != molecules.end()) {
         molid = it->id();
-        auto m = spc.findMolecules(molid, Space::INACTIVE);  // look for molecules in space
+        auto m = spc.findMolecules(molid, Space::INACTIVE);  // look for inactive molecules in space
         if (size(m) > 0) {                                   // did we find any?
             if (m.begin()->size() == 0) {                    // pick the first and check if it's really inactive
-                change.clear();
-                Change::data d;                                    // construct change object
-                d.index = distance(spc.groups.begin(), m.begin()); // group index
-                d.all = true;
-                d.internal = m.begin()->atomic;
-                change.groups.push_back(d); // add to change object
-                return;
+                if (m.begin()->capacity() > 0) {             // and it must have a non-zero capacity
+                    change.clear();
+                    Change::data d;                                    // construct change object
+                    d.index = distance(spc.groups.begin(), m.begin()); // group index
+                    d.all = true;
+                    d.internal = m.begin()->atomic; // calculate internal energy of non-molecular groups only
+                    change.groups.push_back(d);     // add to change object
+                    return;
+                }
             }
         }
     }
@@ -953,11 +956,11 @@ void AtomProfile::_to_json(json &j) const {
 void AtomProfile::_sample() {
     for (auto &g : spc.groups)
         for (auto &p : g)
-            if (ids.count(p.id) != 0) {
+            if (ids.count(p.id) > 0) {
                 Point rvec = spc.geo.vdist(p.pos, ref);
                 double r = rvec.cwiseProduct(dir.cast<double>()).norm();
                 if (count_charge)
-                    tbl(r) += p.charge; // count charge
+                    tbl(r) += p.charge; // count charges
                 else
                     tbl(r) += 1; // count atoms
             }
@@ -966,21 +969,30 @@ AtomProfile::AtomProfile(const json &j, Space &spc) : spc(spc) {
     name = "atomprofile";
     from_json(j);
 }
-AtomProfile::~AtomProfile() {
+void AtomProfile::_to_disk() {
     std::ofstream f(MPI::prefix + file);
     if (f) {
-        double Vr = 1;
         tbl.stream_decorator = [&](std::ostream &o, double r, double N) {
-            if (dir.sum() == 3)
+            double Vr = 1;
+            int dim = dir.sum();
+            switch (dim) {
+            case 3:
                 Vr = 4 * pc::pi * std::pow(r, 2) * dr;
-            else if (dir.sum() == 2) {
+                break;
+            case 2:
                 Vr = 2 * pc::pi * r * dr;
-            } else if (dir.sum() == 1)
+                break;
+            case 1:
                 Vr = dr;
-            if (Vr > 0) {
-                N = N / double(cnt);
-                o << r << " " << N << " " << N / Vr * 1e27 / pc::Nav << "\n";
+                break;
+            default:
+                throw std::runtime_error("bad dimension");
             }
+            if (Vr < dr) // take care of the case where Vr=0
+                Vr = dr; // then the volume element is simply dr
+
+            N = N / double(cnt);                                          // average number of particles/charges
+            o << r << " " << N << " " << N / Vr * 1e27 / pc::Nav << "\n"; // ... and molar concentration
         };
         f << "# r N rho/M\n" << tbl;
     }

@@ -1,5 +1,3 @@
----
----
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
   tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
@@ -22,8 +20,7 @@ For example:
 energy:
     - isobaric: {P/atm: 1}
     - sasa: {molarity: 0.2, radius: 1.4 }
-    - confine: {type: sphere, radius: 10,
-                 molecules: [water]}
+    - confine: {type: sphere, radius: 10, molecules: [water]}
     - nonbonded:
         default: # applied to all atoms
         - lennardjones: {mixing: LB}
@@ -44,7 +41,6 @@ _Energies_ in MC may contain implicit degrees of freedom, _i.e._ be temperature-
 effective potentials. This is inconsequential for sampling
 density of states, but care should be taken when interpreting derived functions such as
 energies, entropies, pressure etc.
-{: .notice--info}
 
 ## Infinite and NaN Energies
 
@@ -57,21 +53,18 @@ a set of conditions exists to evaluate the acceptance of the proposed move:
 
 **Note:**
 These conditions should be carefully considered if equilibrating a system far from equilibrium.
-{: .notice--notice}
 
 
 ## External Pressure
 
-This adds the following pressure term[^frenkel] to the Hamiltonian, appropriate for
-MC moves in $\ln V$:
+This adds the following pressure term (see i.e. [Frenkel and Smith, Chapter 5.4](http://doi.org/c7zg))
+to the Hamiltonian, appropriate for MC moves in $\ln V$:
 
 $$
     U = PV - k_BT\left ( N + 1 \right ) \ln V
 $$
 
 where $N$ is the total number of molecules and atomic species.
-
-[^frenkel]: _Frenkel and Smith, 2nd Ed., Chapter 5.4_.
 
 `isobaric`   | Description
 -------------|-------------------------------------------------------
@@ -117,9 +110,9 @@ combinations:
 
 ~~~ yaml
 - nonbonded:
-      cutoff_g2g:
-          default: 40
-          "protein water": 60
+    cutoff_g2g:
+      default: 40
+      protein water: 60
 ~~~
 
 ### OpenMP Control
@@ -172,7 +165,6 @@ coulomb types                            | Keywords      | $\mathcal{S}(q)$
 [`fennel`](http://doi.org/bqgmv2)        | `alpha`       | $\scriptstyle\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q+(q-1)q \left( \text{erfc}(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right)$
 
 **Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
-{: .notice--info}
 
 ### Ewald Summation
 
@@ -189,16 +181,14 @@ self energies are automatically added to the Hamiltonian, activating additional 
 The added energy terms are:
 
 $$
-\small
-\begin{aligned}
-U =& \overbrace{ \frac{2\pi f}{V} \sum_{ {\bf k} \ne {\bf 0}} A_k \vert Q^{q\mu} \vert^2 }^{\text{reciprocal}}
-- \overbrace{ f \sum_{j} \left( \frac{\alpha}{\sqrt{\pi}}q_j^2
-+ \frac{2\alpha^3}{3\sqrt{\pi}}\vert{\boldsymbol{\mu}}_j\vert^2
-\right)}^{\text{self}}\\
-&+ \underbrace{ \frac{2\pi f}{(2\varepsilon_{surf} + 1)V} \left( \vert \sum_{j}q_j{\bf r}_j   \vert^2
-+ 2\sum_{j}q_i{\bf r}_j \cdot \sum_{j}{\boldsymbol{\mu}}_j
-+ \vert \sum_{j}{\boldsymbol{\mu}}_j \vert^2 \right )}_{\text{surface}}\\
-\end{aligned}
+U_{\text{reciprocal}} = \frac{2\pi f}{V} \sum_{ {\bf k} \ne {\bf 0}} A_k \vert Q^{q\mu} \vert^2 
+$$
+
+$$
+U_{\text{surface}} = \frac{ 2\pi f }{ (2\varepsilon_{surf} + 1) V }
+\left(
+|\sum_{j}q_j{\bf r}_j|^2 + 2 \sum_j q_i {\bf r}_j \cdot \sum_j \boldsymbol{\mu}_j + \vert \sum_j \boldsymbol{\mu}_j \vert^2
+\right )
 $$
 
 where
@@ -213,28 +203,30 @@ A_k = \frac{e^{-k^2/4\alpha^2}}{k^2}
 $$
 
 $$
-{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right),\;\; {\bf n} \in \mathbb{Z}^3
+{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right), {\bf n} \in \mathbb{Z}^3
 $$
 
+Like many other electrostatic methods, the Ewald scheme also adds a self-energy term, please see separate Table.
 In the case of isotropic periodic boundaries (`ipbc=true`), the orientational degeneracy of the
 periodic unit cell is exploited to mimic an isotropic environment, reducing the number
 of wave-vectors by one fourth compared with PBC Ewald.
 For point charges, [IPBC](http://doi.org/css8) introduce the modification,
 
 $$
-Q^q = \sum_jq_j\prod_{\alpha\in\{x,y,z\}}\cos\left(\frac{2\pi}{L_{\alpha}}n_{\alpha} r_{\alpha,j}\right)
+Q^q = \sum_j q_j \prod\_{\alpha\in\{x,y,z\}} \cos \left( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right)
 $$
 
-while for point dipoles (currently unimplemented),
+while for point dipoles (currently unavailable),
 
 $$
-Q^{\mu} = \sum_j \boldsymbol{\mu}_j \cdot \nabla_j \left ( \prod_{ \alpha \in \{ x,y,z \} } \cos \left (
-   \frac{2\pi}{L_{\alpha}} n_{\alpha} r_{\alpha,j} \right ) \right ).
+Q^{\mu} = \sum\_j \boldsymbol{\mu}\_j
+\cdot \nabla\_j
+\left( \prod\_{ \alpha \in \{ x,y,z \} } \cos \left ( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right ) \right )
 $$
 
 **Limitations:** Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles
 and Widom insertion are currently unsupported.
-{: .notice--info}
+
 
 ### Mean-Field Correction
 
@@ -267,7 +259,7 @@ At the end of simulation, `file` is overwritten unless `fixed=true`.
 ## Pair Potentials
 
 In addition to the Coulombic pair-potentials described above, a number of other pair-potentials can be
-used. Through the C++ API, it is easy to add new potentials.
+used. Through the C++ API or the custom potential explained below, it is easy to add new potentials.
 
 ### Charge-Nonpolar
 
@@ -290,7 +282,6 @@ For more information, see
 **Limitations:**
 Charge-polarizability products for each pair of species is evaluated once during
 construction and based on the defined atom types.
-{: .notice--info}
 
 ### Cosine Attraction
 
@@ -310,10 +301,12 @@ while zero for $r>r_c+w_c$.
 `wc`   | Decay range, $w_c$ (Å)
 
 ### Hard Sphere
-`hardsphere`
 
 The hard sphere potential does not take any input. Radii are read from the atomlist at the beginning of the simulation.
 
+~~~ yaml
+  hardsphere: {}
+~~~
 
 ### Lennard-Jones
 
@@ -340,10 +333,10 @@ The mixing rule can be overridden for specific pairs of atoms:
 
 ~~~ yaml
 lennardjones:
-    mixing: LB
-    custom:
-        "Na Cl": {eps: 0.2, sigma: 2}
-        "K Cl": {eps: 0.1, sigma: 3}
+  mixing: LB
+  custom:
+    Na Cl: {eps: 0.2, sigma: 2}
+    K Cl: {eps: 0.1, sigma: 3}
 ~~~
 
 ### Weeks-Chandler-Andersen
@@ -397,7 +390,7 @@ and hydrophobic/hydrophilic interactions.
 This takes a user-defined expression and a list of constants to produce a runtime,
 custom pair-potential.
 While perhaps not as computationally efficient as hard-coded potentials, it is a
-convenient way to access alien potentials. Further, used in combination with `nonbonded`
+convenient way to access alien potentials. Further, used in combination with `nonbonded_splined`
 there is no overhead since all potentials are splined.
 
 `custom`     | Description
@@ -437,7 +430,7 @@ In addition to user-defined constants, the following symbols are defined:
 
 ## Custom External Potential
 
-This applies a custom expernal potential to atoms or molecular mass centra
+This applies a custom external potential to atoms or molecular mass centra
 using the [ExprTk library](http://www.partow.net/programming/exprtk/index.html)
 syntax.
 
@@ -507,7 +500,6 @@ Bonded potential types:
 
 **Note:**
 $\mu V T$ ensembles and Widom insertion are currently unsupported for molecules with bonds.
-{: .notice--info}
 
 ### Harmonic
 
@@ -542,7 +534,6 @@ $$
 **Note:**
 It is recommend to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
 Should one insist on conducting simulations far from equilibrium, a large displacement parameter is recommended to reach finite energies.
-{: .notice--info}
 
 ### Finite Extensible Nonlinear Elastic + WCA
 
@@ -555,7 +546,7 @@ Should one insist on conducting simulations far from equilibrium, a large displa
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
 Finite extensible nonlinear elastic potential long range repulsive potential combined
-with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` nobonded energy.
+with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` non-bonded energy.
 
 $$
      u(r) =
@@ -569,7 +560,6 @@ $$
 **Note:**
 It is recommend to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
 Should one insist on conducting simulations far from equilibrium, a large displacement parameter is recommended to reach finite energies.
-{: .notice--info}
 
 ### Harmonic torsion
 
@@ -632,7 +622,6 @@ During equilibration it is advised to use a _finite_ spring constant to drive ex
 
 **Note:**
 Should you insist on equilibrating with $k=\infty$, ensure that displacement parameters are large enough to transport molecules inside the allowed region, or all moves may be rejected. Further, some analysis routines have undefined behavior for configurations with infinite energies.
-{: .notice--danger}
 
 Available values for `type` and their additional keywords:
 

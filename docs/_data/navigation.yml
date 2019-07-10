@@ -1,26 +1,9 @@
 # main links
 main:
   - title: "Docs"
-    url: /docs
+    url: https://faunus.readthedocs.io
   - title: "Gallery"
     url: /gallery/
   - title: "Support"
     url: http://github.com/mlund/faunus/issues
 
-docs:
- - title: Introduction
-   url: /docs
- - title: Installing
-   url: /docs/install/
- - title: Running simulations
-   url: /docs/running/
- - title: Configuration
-   children:
-       - title: Topology
-         url: /docs/topology/
-       - title: Energy
-         url: /docs/energy/
-       - title: Moves
-         url: /docs/moves/
-       - title: Analysis
-         url: /docs/analysis/

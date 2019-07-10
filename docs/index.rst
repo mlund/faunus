@@ -16,10 +16,3 @@ Welcome to Faunus!
    _docs/energy
    _docs/moves
    _docs/analysis
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

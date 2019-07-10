@@ -108,15 +108,14 @@ class AtomProfile : public Analysisbase {
     Eigen::Vector3i dir = {1, 1, 1};
     double dr; // radial resolution
     bool count_charge = false;
-    // bool Vnormalise = true;
 
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
+    void _to_disk() override;
     void _sample() override;
 
   public:
     AtomProfile(const json &j, Space &spc);
-    ~AtomProfile();
 };
 
 /**

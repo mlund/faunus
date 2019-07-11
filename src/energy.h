@@ -767,6 +767,9 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
     double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index = std::vector<int>(),
                const std::vector<int> &jndex = std::vector<int>()) override {
 #pragma GCC diagnostic pop
+        assert(index.empty() && "unimplemented");
+        assert(jndex.empty() && "unimplemented");
+
         int i = &g1 - &base::spc.groups.front();
         int j = &g2 - &base::spc.groups.front();
         if (j < i)

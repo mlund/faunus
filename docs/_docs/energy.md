@@ -291,8 +291,8 @@ $$
     \beta u(r) = -\epsilon \cos^2 \left ( \frac{\pi(r-r_c)}{2w_c} \right )
 $$
 
-for $r_c\leq r \leq r_c+w_c$. For $r<r_c$, $\beta u=-\epsilon$,
-while zero for $r>r_c+w_c$.
+for $r\_c\leq r \leq r\_c+w\_c$. For $r<r\_c$, $\beta u=-\epsilon$,
+while zero for $r>r\_c+w\_c$.
 
 `cos2` | Description
 ------ | --------------------------
@@ -300,58 +300,35 @@ while zero for $r>r_c+w_c$.
 `rc`   | Width, $r_c$ (Å)
 `wc`   | Decay range, $w_c$ (Å)
 
-### Hard Sphere
+### Assorted Short Ranged Potentials
 
-The hard sphere potential does not take any input. Radii are read from the atomlist at the beginning of the simulation.
+The potentials below are often used to keep particles apart and/or to introduce stickiness.
+The atomic interaction parameters, $\epsilon\_i$, are taken from the topology according to the naming scheme
+shown in the table.
 
-~~~ yaml
-  hardsphere: {}
-~~~
+type           | $\epsilon$       | $u(r)$
+-------------- | ---------------- | --------------------------------------------------------
+`hardsphere`   |                  | $\infty$ for $r < \sigma\_{ij}$
+`hertz`        | `eps_hertz`      | $\epsilon\_{ij} \left ( 1-r / \sigma\_{ij}\right )^{5/2}$ for $r<\sigma\_{ij}$
+`lennardjones` | `eps`            | $4\epsilon\_{ij} \left ( (\sigma\_{ij}/r\_{ij})^{12} - (\sigma\_{ij}/r\_{ij})^6\right )$
+`squarewell`   | `eps_sw`         | $-\epsilon\_{ij}$ for $r<\sigma\_{ij}$ 
+[`wca`](http://dx.doi.org/ct4kh9) | `eps` | $u\_{ij}^{\text{LJ}} + \epsilon\_{ij}$ for $r < 2^{1/6}\sigma\_{ij}$
 
-### Lennard-Jones
-
-`lennardjones` | Description
--------------- | -------------------------------------------
-`mixing`       | Mixing rule (`LB`)
-`custom`       | Custom $\epsilon$ and $\sigma$ combinations
-
-The Lennard-Jones potential consists of a repulsive and attractive term,
-
-$$
-u_{ij}^{\text{LJ}} = 4\epsilon_{ij} \left (
-    \left ( \frac{\sigma_{ij}} {r_{ij})} \right )^{12} - \left ( \frac{\sigma_{ij}}{r_{ij})}\right )^6 \right )
-$$
-
-and currently only the Lorentz-Berthelot (`LB`) mixing rule is available:
-
-$$
-\sigma_{ij} = \frac{\sigma_i+\sigma_j}{2} \quad \textrm{and} \quad
-\epsilon_{ij} = \sqrt{\epsilon_i \epsilon_j}
-$$
-
-The mixing rule can be overridden for specific pairs of atoms:
+Mixing of $\sigma$ and $\epsilon$ is done using a mixing rule, and
+can be defined for specific pairs. Currently the Lorentz-Berthelot (`LB`) mixing rule is available.
 
 ~~~ yaml
-lennardjones:
-  mixing: LB
-  custom:
-    Na Cl: {eps: 0.2, sigma: 2}
-    K Cl: {eps: 0.1, sigma: 3}
+- lennardjones:
+    mixing: LB
+    custom:
+      Na Cl: {eps: 0.2, sigma: 2}
+      K Cl: { ... }
+
+- hertz:
+    mixing: LB
+    custom:
+      Na Cl: {eps_hertz: 0.2, sigma: 2}
 ~~~
-
-### Weeks-Chandler-Andersen
-
-Like Lennard-Jones but cut and shifted to zero at the minimum, forming a
-purely [repulsive potential](http://dx.doi.org/ct4kh9),
-
-$$
-    u_{ij} = u_{ij}^{\text{LJ}} + \epsilon_{ij} \quad \textrm{for} \quad r<2^{1/6}\sigma_{ij}
-$$
-
-`wca`        | Description
------------- | -------------------------------------------
-`mixing=LB`  | Mixing rule; only `LB` available.
-`custom`     | Custom $\epsilon$ and $\sigma$ combinations
 
 ### SASA
 
@@ -363,7 +340,7 @@ $$
     A = 4\pi \left ( R^2 + r^2 \right ) - 2\pi \left (  Rh_1 + rh_2  \right )
 $$
 
-where $h_1$ and $h_2$ are the heights of the spherical caps comprising the lens
+where $h\_1$ and $h\_2$ are the heights of the spherical caps comprising the lens
 formed by the overlapping spheres. For complete overlap, or when far apart, the
 full area of the bigger sphere or the sum of both spheres are returned.
 The pair-energy is calculated as:
@@ -372,7 +349,7 @@ $$
     u_{ij} = A \left ( \gamma_{ij} + c_s \varepsilon_{\text{tfe},ij} \right )
 $$
 
-where $\gamma_{ij}$ and $\varepsilon_{\text{tfe},ij}$ are the arithmetic means of
+where $\gamma\_{ij}$ and $\varepsilon\_{\text{tfe},ij}$ are the arithmetic means of
  `tension` and `tfe` provided in the atomlist.
 
 Note that SASA is strictly not additive and this
@@ -390,7 +367,7 @@ and hydrophobic/hydrophilic interactions.
 This takes a user-defined expression and a list of constants to produce a runtime,
 custom pair-potential.
 While perhaps not as computationally efficient as hard-coded potentials, it is a
-convenient way to access alien potentials. Further, used in combination with `nonbonded_splined`
+convenient way to access alien potentials. Used in combination with `nonbonded_splined`
 there is no overhead since all potentials are splined.
 
 `custom`     | Description

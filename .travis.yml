@@ -16,19 +16,24 @@ addons:
 matrix:
   include:
   - os: linux
-    python: 3.7
+    compiler: gcc
   - os: osx
     osx_image: xcode11
-    python: 3.7
+    compiler: clang
 
 script:
   - |
     cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug
-    make faunus -j
+    make faunus || travis_terminate 1
     ./faunus --version || travis_terminate 1
-    make unittests -j || travis_terminate 1
-    ./unittests || travis_terminate 1
+
     if [ "$TRAVIS_OS_NAME" = "linux" ] ; then
-        make pyfaunus -j || travis_terminate 1
+        ctest -R minimal || travis_terminate 1
+
+        make pyfaunus || travis_terminate 1
+        ctest -R pythontest || travis_terminate 1
+
+        make unittests || travis_terminate 1
+        ctest -R unittests || travis_terminate 1
     fi
 

@@ -31,7 +31,6 @@ script:
         ctest -R minimal || travis_terminate 1
 
         make pyfaunus || travis_terminate 1
-        ctest -R pythontest || travis_terminate 1
 
         make unittests || travis_terminate 1
         ctest -R unittests || travis_terminate 1

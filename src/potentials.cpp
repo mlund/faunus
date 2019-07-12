@@ -154,7 +154,7 @@ void CoulombGalore::sfEwald(const json &j) { // is all this true for kappa \ne 0
                    (2 / (3 * sqrt(pc::pi))) * std::exp(-alpha * alpha * rc * rc) * (2 * alpha * alpha * rc * rc + 3);
         return ((T + 2.0) * M2V + 1) / ((T - 1) * M2V + 1);
     };
-    selfenergy_prefactor = alpha * rc / sqrt(pc::pi);
+    selfenergy_prefactor = - alpha * rc / sqrt(pc::pi);
 }
 
 void CoulombGalore::sfWolf(const json &j) {

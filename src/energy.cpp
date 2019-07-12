@@ -367,12 +367,17 @@ void Hamiltonian::to_json(json &j) const {
         j.push_back(*i);
 }
 void Hamiltonian::addEwald(const json &j, Space &spc) {
-    // note this will not find deeper placed coulomb potentials
-    // in FunctorPotential etc. Nor dipolar energies
-    if (j.count("coulomb") == 1)
+    if (j.count("coulomb") == 1) {
         if (j["coulomb"].count("type") == 1)
             if (j["coulomb"].at("type") == "ewald")
                 push_back<Energy::Ewald<>>(j["coulomb"], spc);
+    } else {
+        for (auto &m : j)
+            for (auto it : m.items())
+                if (it.value().count("coulomb") == 1)
+                    if (it.value()["coulomb"].at("type") == "ewald")
+                        push_back<Energy::Ewald<>>(it.value()["coulomb"], spc);
+    }
 }
 
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {
@@ -393,7 +398,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     if (spc.geo.type not_eq Geometry::CUBOID)
         push_back<Energy::ContainerOverlap>(spc);
 
-    for (auto &m : j) { // loop over move list
+    for (auto &m : j) { // loop over energy list
         size_t oldsize = vec.size();
         for (auto it : m.items()) {
             try {

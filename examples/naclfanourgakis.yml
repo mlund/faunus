@@ -21,11 +21,7 @@ energy:
         default:
             - wca:
                 mixing: LB
-            - custom: 
-                cutoff: 300
-                function: lB * q1 * q2 * ( 1.0 / r - 1.0 / Rc )
-                constants:
-                    lB: 7.145
+            - coulomb: {type: fanourgakis, epsr: 78.48, cutoff: 43.3}
 
 reactionlist:
     - "= Na + Cl": {}

@@ -180,8 +180,8 @@ PYBIND11_MODULE(pyfaunus, m)
 
     auto _atomdatavec = py::bind_vector<std::vector<AtomData>>(m, "AtomDataVector");
     _atomdatavec
-        .def("from_dict", [](std::vector<AtomData> &a, py::dict dict) {
-                Faunus::from_json(dict2json(dict), a); } );
+        .def("from_list", [](std::vector<AtomData> &a, py::list list) {
+                Faunus::from_json(list2json(list), a); } );
 
     m.attr("atoms") = &Faunus::atoms; // global instance
 

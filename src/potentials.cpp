@@ -841,6 +841,32 @@ void LennardJones::to_json(json &j) const {
     }
 }
 
+
+// =============== HardSphere ===============
+
+void HardSphere::initPairMatrices() {
+    auto faunus_logger = spdlog::get("faunus");
+    faunus_logger->debug("Arithmetic mean combination rule in effect for the {} potential.", name);
+    sigma_squared = PairMixer([](const AtomData &a) -> double { return a.sigma; }, &PairMixer::combArithmeticSquared).
+            createPairMatrix(atoms, custom_pairs);
+    faunus_logger->debug("Pair matrix for {} sigma ({}×{}) created using {} custom pairs.", name,
+                         sigma_squared->rows(), sigma_squared->cols(), custom_pairs.size());
+}
+
+void HardSphere::from_json(const json &j) {
+    if (j.count("custom") == 1) {
+        custom_pairs = j;
+    }
+    initPairMatrices();
+}
+
+void HardSphere::to_json(json &j) const {
+    if (!custom_pairs.empty()) {
+        j["custom"] = custom_pairs;
+    }
+}
+
+
 void Hertz::to_json(json &j) const { j = *m; }
 void Hertz::from_json(const json &j) {
     *m = j;

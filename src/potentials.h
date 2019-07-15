@@ -281,22 +281,22 @@ struct DipoleDipole : public PairPotentialBase {
  * @note `PairMatrix` is _shared_ upon copying
  */
 class HardSphere : public PairPotentialBase {
-  private:
-    std::shared_ptr<PairMatrix<double>> d2; // matrix of (r1+r2)^2
-  public:
-    HardSphere(const std::string &name = "hardsphere") : PairPotentialBase(name) {
-        d2 = std::make_shared<PairMatrix<double>>();
-        for (auto &i : atoms)
-            for (auto &j : atoms)
-                d2->set(i.id(), j.id(), std::pow((i.sigma + j.sigma) / 2, 2));
+    std::vector<InteractionData> custom_pairs;
 
-    };
+  protected:
+    TPairMatrixPtr sigma_squared; // (r_i * r_j)^2
+    void initPairMatrices();
+
+  public:
+    HardSphere(const std::string &name = "hardsphere") : PairPotentialBase(name) {};
+
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return r.squaredNorm() < d2->operator()(a.id, b.id) ? pc::infty : 0;
+        return r.squaredNorm() < (*sigma_squared)(a.id, b.id) ? pc::infty : 0;
     }
-    inline void to_json(json &) const override {}
-    inline void from_json(const json &) override {}
-}; //!< Hardsphere potential
+
+    void from_json(const json &) override;
+    void to_json(json &) const override;
+};
 
 struct RepulsionR3 : public PairPotentialBase {
     double f = 0, s = 0, e = 0;

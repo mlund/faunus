@@ -8,11 +8,62 @@
 #include "functionparser.h"
 #include "multipole.h"
 #include <array>
+#include <functional>
 
 namespace Faunus {
 namespace Potential {
 
 using namespace std::string_literals;
+
+//! type of a matrix containing pair potential coefficients
+typedef Eigen::MatrixXd TPairMatrix;
+typedef std::shared_ptr<TPairMatrix> TPairMatrixPtr;
+//! type of a function extracting a potential coefficient from the AtomData, e.g., sigma or eps
+typedef std::function<double(const AtomData&)> TExtractorFunc;
+//! type of a function defining a combination rule of a heterogeneous pair interaction
+typedef std::function<double(double, double)> TCombinatorFunc;
+
+/**
+ * @brief Data for a custom (heterogeneous) interaction between two given atom types.
+ *
+ * The very same format is used as for a homogeneous interaction specified directly on an atom type.
+ */
+struct InteractionData {
+    std::array<AtomData::Tid, 2> atom_id;
+    AtomData interaction;
+};
+
+/**
+ * @brief Exception for handling custom parameters in pair potentials.
+ */
+struct CustomInteractionException : public std::runtime_error {
+    CustomInteractionException(const std::string msg) : std::runtime_error (msg) {};
+};
+
+/**
+ * @brief PairMixer creates a matrix of pair potential coefficients based on the atom properties
+ * and/or custom values using an arbitrary combination rule.
+ */
+class PairMixer {
+    TExtractorFunc extractor;
+    TCombinatorFunc combinator;
+
+  public:
+    PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator) :
+            extractor(extractor), combinator(combinator) {};
+
+    //! @return a square matrix of atoms.size()
+    TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms);
+    //! @return a square matrix of atoms.size()
+    TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms, const std::vector<InteractionData> &interactions);
+
+    inline static double combArithmetic(double a, double b) { return 0.5*(a+b); }
+    inline static double combArithmeticSquared(double a, double b) { return 0.25*(a+b)*(a+b); }
+};
+
+void from_json(const json &j, std::vector<InteractionData> &interactions);
+void to_json(json &j, const std::vector<InteractionData> &interactions);
+
 
 struct PairPotentialBase {
     std::string name;

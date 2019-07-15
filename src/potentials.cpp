@@ -4,6 +4,73 @@
 namespace Faunus {
 namespace Potential {
 
+// =============== PairMixer ===============
+
+TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
+    size_t n = atoms.size(); // number of atom types
+    TPairMatrixPtr matrix = std::make_shared<TPairMatrix>(n, n);
+    for (auto &i : atoms) {
+        for (auto &j : atoms) {
+            (*matrix)(i.id(), j.id()) = combinator(extractor(i), extractor(j));
+        }
+    }
+    return matrix;
+}
+
+TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
+        const std::vector<InteractionData> &interactions) {
+    TPairMatrixPtr matrix = PairMixer::createPairMatrix(atoms);
+    auto dimension = std::min(matrix->rows(), matrix->cols());
+    for (auto &i : interactions) {
+        if (i.atom_id[0] >= 0 && i.atom_id[1] >= 0 && i.atom_id[0] < dimension && i.atom_id[1] < dimension) {
+            // interaction is always symmetric
+            // treat it as a homogeneous interaction if some extra transformation is supposed,
+            // e.g., to square or multiply by a constant
+            (*matrix)(i.atom_id[0], i.atom_id[1]) = (*matrix)(i.atom_id[1], i.atom_id[0]) =
+                    combinator(extractor(i.interaction), extractor(i.interaction));
+        } else {
+            throw std::runtime_error("atomtype index out of range");
+        }
+    }
+    return matrix;
+}
+
+void from_json(const json &j, std::vector<InteractionData> &interactions) {
+    auto &custom_list = j.at("custom");
+    if(! custom_list.is_object() && ! custom_list.is_array()) {
+        throw CustomInteractionException("custom parameters syntax error");
+    }
+
+    for (auto custom_pair = custom_list.begin(); custom_pair != custom_list.end(); ++custom_pair) {
+        // atomdata is an array with items ecapsulated as objects hence we emulate here
+        AtomData a = custom_list.is_object() ? json::object({{custom_pair.key(), *custom_pair}}) : (*custom_pair);
+        auto atoms_name = words2vec<std::string>(a.name);
+        if (atoms_name.size() == 2) {
+            auto atom0 = findName(atoms, atoms_name[0]);
+            auto atom1 = findName(atoms, atoms_name[1]);
+            if (atom0 == atoms.end() or atom1 == atoms.end()) {
+                throw CustomInteractionException(
+                    ("unknown atom(s): ["s + atoms_name[0] + " " + atoms_name[1] + "]"));
+            }
+            interactions.push_back({{atom0->id(), atom1->id()}, a});
+        } else {
+            throw CustomInteractionException("custom parameters require exactly two space-separated atoms");
+        }
+    }
+}
+
+void to_json(json &j, const std::vector<InteractionData> &interactions) {
+    if(! interactions.empty()) {
+        auto &j_custom = j["custom"];
+        for (auto &i : interactions) {
+            j_custom = i.interaction;
+        }
+    }
+}
+
+
+// =============== PairPotentialBase ===============
+
 Point PairPotentialBase::force(const Particle &, const Particle &, double, const Point &) {
     assert(false && "We should never reach this point!");
     return {0, 0, 0};

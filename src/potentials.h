@@ -59,8 +59,10 @@ class PairMixer {
     //! @return a square matrix of atoms.size()
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms, const std::vector<InteractionData> &interactions);
 
+    inline static double combSum(double a, double b) { return (a+b); }
     inline static double combArithmetic(double a, double b) { return 0.5*(a+b); }
     inline static double combArithmeticSquared(double a, double b) { return 0.25*(a+b)*(a+b); }
+    inline static double combGeometric(double a, double b) { return std::sqrt(a*b); }
 };
 
 void from_json(const json &j, std::vector<InteractionData> &interactions);
@@ -324,23 +326,25 @@ struct RepulsionR3 : public PairPotentialBase {
  *
  */
 class Hertz : public PairPotentialBase {
+    std::vector<InteractionData> custom_pairs;
+
   protected:
-    std::shared_ptr<ParametersTable> m; // table w. diameter_ij and energy-strength_ij
+    TPairMatrixPtr hydrodynamic_diameter; // rhe_i + rhe_j
+    TPairMatrixPtr epsilon_hertz; // geometric mean of epsilon_i and epsilon_j
+    void initPairMatrices();
+
   public:
-    Hertz(const std::string &name = "hertz") : PairPotentialBase(name) {
-        m = std::make_shared<ParametersTable>();
-    };
+    Hertz(const std::string &name = "hertz") : PairPotentialBase(name) {};
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         double r2 = r.squaredNorm();
-        if (r2 <= m->hd(a.id, b.id))
-            return m->ehe(a.id, b.id) * pow((1 - (sqrt(r2) / m->hd(a.id, b.id))), 2.5);
+        if (r2 <= (*hydrodynamic_diameter)(a.id, b.id))
+            return (*epsilon_hertz)(a.id, b.id) * pow((1 - (sqrt(r2) / (*hydrodynamic_diameter)(a.id, b.id))), 2.5);
         return 0.0;
     }
 
-    void to_json(json &j) const override;
-
     void from_json(const json &j) override;
-}; //!< Hertz potential
+    void to_json(json &j) const override;
+};
 
 /**
  * @brief Square-well potential

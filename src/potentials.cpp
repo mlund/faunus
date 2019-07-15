@@ -867,11 +867,32 @@ void HardSphere::to_json(json &j) const {
 }
 
 
-void Hertz::to_json(json &j) const { j = *m; }
+// =============== Hertz ===============
+
+void Hertz::initPairMatrices() {
+    auto faunus_logger = spdlog::get("faunus");
+    faunus_logger->debug("Hertz combination rules in effect for the {} potential.", name);
+    hydrodynamic_diameter = PairMixer([](const AtomData &a) -> double { return a.hdr; }, &PairMixer::combSum).
+            createPairMatrix(atoms, custom_pairs);
+    epsilon_hertz = PairMixer([](const AtomData &a) -> double { return a.eps_hertz; }, &PairMixer::combGeometric).
+            createPairMatrix(atoms, custom_pairs);
+    faunus_logger->debug(
+            "Pair matrix for {} hydrodynamic radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
+            hydrodynamic_diameter->rows(), hydrodynamic_diameter->cols(), epsilon_hertz->rows(), epsilon_hertz->cols(),
+            custom_pairs.size());
+}
+
 void Hertz::from_json(const json &j) {
-    *m = j;
-    if (m->hd.size() == 0)
-        throw std::runtime_error("unknown mixing rule for Hertz potential");
+    if (j.count("custom") == 1) {
+        custom_pairs = j;
+    }
+    initPairMatrices();
+}
+
+void Hertz::to_json(json &j) const {
+    if (!custom_pairs.empty()) {
+        j["custom"] = custom_pairs;
+    }
 }
 
 void SquareWell::to_json(json &j) const { j = *m; }

@@ -7,7 +7,8 @@ namespace Faunus {
      */
     struct AtomData {
         public:
-            int _id=-1;
+            typedef int Tid;
+            Tid _id=-1;
             std::string name;     //!< Name
             double eps=0;         //!< LJ epsilon [kJ/mol] (pair potentials should convert to kT)
             double activity=0;    //!< Chemical activity [mol/l]
@@ -27,8 +28,8 @@ namespace Faunus {
             double squarewell_depth=0;     //!< Depth of square-well potential [kJ/mol] (pair potentials should convert to kT)
             double eps_hertz=0;            //!< Strength of Hertz potential [kJ/mol] (pair potentials should convert to kT)
             double squarewell_threshold=0; //!< Threshold for square-well potential [angstrom]
-            int& id(); //!< Type id
-            const int& id() const; //!< Type id
+            Tid& id(); //!< Type id
+            const Tid& id() const; //!< Type id
             bool hydrophobic=false;  //!< Is the particle hydrophobic?
             bool implicit=false; //!< Is the particle implicit (e.g. proton)?
     };
@@ -53,7 +54,7 @@ namespace Faunus {
 
     template<class Trange>
         std::vector<int> names2ids(Trange &rng, const std::vector<std::string> &names) {
-            std::vector<int> index;
+            std::vector<AtomData::Tid> index;
             index.reserve(names.size());
             for (auto &n : names) {
                 // wildcard selecting all id's

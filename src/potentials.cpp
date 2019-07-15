@@ -792,12 +792,53 @@ void CustomPairPotential::to_json(json &j) const {
 Dummy::Dummy() { name = "dummy"; }
 void Dummy::from_json(const json &) {}
 void Dummy::to_json(json &) const {}
-void LennardJones::to_json(json &j) const { j = *m; }
+
+// =============== LennardJones ===============
+
+void LennardJones::initPairMatrices() {
+    TCombinatorFunc func_sigma_squared, func_epsilon_quadrupled;
+    auto faunus_logger = spdlog::get("faunus");
+    if (combination_rule == LorentzBerthelot) {
+        faunus_logger->debug("Lorentz-Berthelot combination rules in effect for the {} potential.", name);
+        func_sigma_squared = &PairMixer::combArithmeticSquared;
+        func_epsilon_quadrupled = [](double e1, double e2) -> double { return 4 * std::sqrt(e1 * e2); };
+    } else {
+        throw std::runtime_error("Undefined combination rule for the Lennard-Jones potential.");
+        // todo error
+    }
+
+    sigma_squared = PairMixer([](const AtomData &a) -> double { return a.sigma; }, func_sigma_squared).
+            createPairMatrix(atoms, custom_pairs);
+    epsilon_quadrupled = PairMixer([](const AtomData &a) -> double { return a.eps; }, func_epsilon_quadrupled).
+            createPairMatrix(atoms, custom_pairs);
+    faunus_logger->debug("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
+                         sigma_squared->rows(), sigma_squared->cols(),
+                         epsilon_quadrupled->rows(), epsilon_quadrupled->cols(), custom_pairs.size());
+}
 
 void LennardJones::from_json(const json &j) {
-    *m = j;
-    if (m->s2.size() == 0)
+    auto mixing = j.at("mixing").get<std::string>();
+    if (mixing == "LB") {
+        combination_rule = LorentzBerthelot;
+    } else {
         throw std::runtime_error("unknown mixing rule for Lennard-Jones potential");
+        // todo error
+    }
+    if (j.count("custom") == 1) {
+        custom_pairs = j;
+    }
+    initPairMatrices();
+}
+
+void LennardJones::to_json(json &j) const {
+    if (combination_rule == LorentzBerthelot) {
+        j["mixing"] = "LB";
+    } else {
+        //todo error
+    }
+    if (!custom_pairs.empty()) {
+        j["custom"] = custom_pairs;
+    }
 }
 
 void Hertz::to_json(json &j) const { j = *m; }

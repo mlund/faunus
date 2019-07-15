@@ -9,6 +9,8 @@
 #include "multipole.h"
 #include <array>
 #include <functional>
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/null_sink.h"
 
 namespace Faunus {
 namespace Potential {
@@ -147,35 +149,42 @@ void from_json(const json &j, ParametersTable &m);
 
 void to_json(json &j, const ParametersTable &m);
 
+
 /**
- * @brief Lennard-Jones with arbitrary mixing rule
+ * @brief Lennard-Jones potential with an arbitrary combination rule.
  * @note Mixing data is _shared_ upon copying
  */
 class LennardJones : public PairPotentialBase {
+    enum CombinationRule {undefined, LorentzBerthelot}; // todo json enum static map
+    CombinationRule combination_rule = undefined;
+    std::vector<InteractionData> custom_pairs;
+
   protected:
-    std::shared_ptr<ParametersTable> m; // table w. sigma_ij^2 and 4xepsilon
+    TPairMatrixPtr sigma_squared; // sigma_ij * sigma_ij
+    TPairMatrixPtr epsilon_quadrupled; // 4 * epsilon_ij
+    void initPairMatrices();
 
   public:
     LennardJones(const std::string &name = "lennardjones", const std::string &cite = std::string()) :
-            PairPotentialBase(name, cite), m(std::make_shared<ParametersTable>()) {};
+            PairPotentialBase(name, cite) {};
 
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
-        double s6 = powi(m->s2(a.id, b.id), 3);
+        double s6 = powi((*sigma_squared)(a.id, b.id), 3);
         double r6 = r2 * r2 * r2;
         double r14 = r6 * r6 * r2;
-        return 6. * m->eps(a.id, b.id) * s6 * (2 * s6 - r6) / r14 * p;
+        return 6. * (*epsilon_quadrupled)(a.id, b.id) * s6 * (2 * s6 - r6) / r14 * p;
     }
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        double x = m->s2(a.id, b.id) / r.squaredNorm(); // s2/r2
-        x = x * x * x;                                  // s6/r6
-        return m->eps(a.id, b.id) * (x * x - x);
+        double x = (*sigma_squared)(a.id, b.id) / r.squaredNorm(); // s2/r2
+        x = x * x * x; // s6/r6
+        return (*epsilon_quadrupled)(a.id, b.id) * (x * x - x);
     }
 
-    void to_json(json &j) const override;
-
     void from_json(const json &j) override;
+    void to_json(json &j) const override;
 };
+
 
 /**
  * @brief Weeks-Chandler-Andersen pair potential
@@ -195,12 +204,12 @@ class WeeksChandlerAndersen : public LennardJones {
     static constexpr double onefourth = 0.25, twototwosixth = 1.2599210498948732;
 
     inline double operator()(const Particle &a, const Particle &b, double r2) const {
-        double x = m->s2(a.id, b.id); // s^2
+        double x = (*sigma_squared)(a.id, b.id); // s^2
         if (r2 > x * twototwosixth)
             return 0;
         x = x / r2;    // (s/r)^2
         x = x * x * x; // (s/r)^6
-        return m->eps(a.id, b.id) * (x * x - x + onefourth);
+        return (*epsilon_quadrupled)(a.id, b.id) * (x * x - x + onefourth);
     }
 
   public:
@@ -212,12 +221,12 @@ class WeeksChandlerAndersen : public LennardJones {
     }
 
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
-        double x = m->s2(a.id, b.id); // s^2
+        double x = (*sigma_squared)(a.id, b.id); // s^2
         if (r2 > x * twototwosixth)
             return Point(0, 0, 0);
         x = x / r2;    // (s/r)^2
         x = x * x * x; // (s/r)^6
-        return m->eps(a.id, b.id) * 6 * (2 * x * x - x) / r2 * p;
+        return (*epsilon_quadrupled)(a.id, b.id) * 6 * (2 * x * x - x) / r2 * p;
     }
 }; // Weeks-Chandler-Andersen potential
 
@@ -778,6 +787,8 @@ class TabulatedPotential : public FunctorPotential {
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] FunctorPotential") {
     using doctest::Approx;
+
+    spdlog::create<spdlog::sinks::null_sink_st>("faunus");
 
     json j = R"({ "atomlist" : [
                  {"A": { "q":1.0,  "r":1.1, "eps":0.1 }},

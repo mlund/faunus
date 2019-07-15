@@ -220,7 +220,7 @@ namespace Faunus
                                 dz * (3.0*d.c[pos6 + 3] +
                                     dz * (4.0*d.c[pos6 + 4] +
                                         dz * (5.0*d.c[pos6 + 5])))));
-                    return fsum/1000.0; // Gives correct result, though not certain why /1000.0
+                    return fsum;
                 }
 
                 /**
@@ -323,13 +323,37 @@ namespace Faunus
 
             auto f = [](double x){return 0.5*x*std::sin(x)+2;};
             Andrea<double> spline;
-            spline.setTolerance(2e-4, 1e-2);
+            spline.setTolerance(2e-6, 1e-4); // ftol carries no meaning
             auto d = spline.generate(f, 0, 10);
 
             CHECK( spline.eval(d,1e-9) == Approx(f(1e-9)) );
             CHECK( spline.eval(d,5) == Approx(f(5)) );
             CHECK( spline.eval(d,10) == Approx(f(10)) );
             CHECK( spline.eval(d,10+1e-9) != Approx(10+1e-9));
+
+            // Check if numerical derivation of *splined* function
+            // matches the analytical solution in `evalDer()`.
+            auto f_prime = [&](double x, double dx=1e-10){
+                return ( spline.eval(d, x+dx) - spline.eval(d, x-dx) ) / (2*dx);
+            };
+            double x = 1e-9;
+            CHECK( spline.evalDer(d,x) == Approx( f_prime(x) ));
+            x=1;
+            CHECK( spline.evalDer(d,x) == Approx( f_prime(x) ));
+            x=5;
+            CHECK( spline.evalDer(d,x) == Approx( f_prime(x) ));
+
+            // Check if analytical spline derivative matches
+            // derivative of original function
+            auto f_prime_exact = [&](double x, double dx=1e-10){
+                return ( f(x+dx) - f(x-dx) ) / (2*dx);
+            };
+            x = 1e-9;
+            CHECK( spline.evalDer(d,x) == Approx( f_prime_exact(x) ));
+            x=1;
+            CHECK( spline.evalDer(d,x) == Approx( f_prime_exact(x) ));
+            x=5;
+            CHECK( spline.evalDer(d,x) == Approx( f_prime_exact(x) ));
         }
 #endif
 

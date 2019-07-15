@@ -82,8 +82,6 @@ void RepulsionR3::from_json(const json &j) {
     s = j.value("sigma", 1.0);
 }
 
-RepulsionR3::RepulsionR3(const std::string &name) { PairPotentialBase::name = name; }
-
 void RepulsionR3::to_json(json &j) const { j = {{"prefactor", f}, {"lj-prefactor", e}, {"sigma", s}}; }
 
 void CosAttract::to_json(json &j) const {
@@ -98,8 +96,6 @@ void CosAttract::from_json(const json &j) {
     c = pc::pi / 2 / wc;
     rcwc2 = pow((rc + wc), 2);
 }
-
-CosAttract::CosAttract(const std::string &name) { PairPotentialBase::name = name; }
 
 // -------------- CoulombGalore ---------------
 
@@ -240,8 +236,6 @@ void CoulombGalore::sfPlain(const json &, double val) {
     calcDielectric = [&](double M2V) { return (2.0 * M2V + 1.0) / (1.0 - M2V); };
     selfenergy_prefactor = 0.0;
 }
-
-CoulombGalore::CoulombGalore(const std::string &name) { PairPotentialBase::name = name; }
 
 void CoulombGalore::from_json(const json &j) {
     try {
@@ -463,11 +457,6 @@ void DipoleDipoleGalore::sfPlain(const json &, double val) {
     selfenergy_prefactor = 0.0;
 }
 
-DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) {
-    PairPotentialBase::name = name;
-    isotropic = false; // potential is angular dependent
-}
-
 void DipoleDipoleGalore::from_json(const json &j) {
     try {
         kappa = 0.0;
@@ -538,8 +527,6 @@ void DipoleDipoleGalore::to_json(json &j) const {
     _roundjson(j, 5);
 }
 
-Coulomb::Coulomb(const std::string &name) { PairPotentialBase::name = name; }
-
 void Coulomb::to_json(json &j) const {
     j["epsr"] = pc::lB2epsr(lB);
     j["lB"] = lB;
@@ -547,19 +534,12 @@ void Coulomb::to_json(json &j) const {
 
 void Coulomb::from_json(const json &j) { lB = pc::lB(j.at("epsr")); }
 
-DipoleDipole::DipoleDipole(const std::string &name) {
-    PairPotentialBase::name = name;
-    isotropic = false;
-}
-
 void DipoleDipole::to_json(json &j) const {
     j["epsr"] = pc::lB2epsr(lB);
     j["lB"] = lB;
 }
 
 void DipoleDipole::from_json(const json &j) { lB = pc::lB(j.at("epsr")); }
-
-FENE::FENE(const std::string &name) { PairPotentialBase::name = name; }
 
 void FENE::from_json(const json &j) {
     k = j.at("stiffness");
@@ -754,8 +734,6 @@ void to_json(json &j, const ParametersTable &m) {
     }
 }
 
-SASApotential::SASApotential(const std::string &name) { PairPotentialBase::name = name; }
-
 void SASApotential::from_json(const json &j) {
     assertKeys(j, {"shift", "molarity", "radius"});
     shift = j.value("shift", true);
@@ -786,10 +764,6 @@ double SASApotential::area(double R, double r, double d_squared) const {
     return area - 2 * pc::pi * (R * h1 + r * h2) - offset;
 }
 
-CustomPairPotential::CustomPairPotential(const std::string &name) : d(std::make_shared<Data>()) {
-    PairPotentialBase::name = name;
-}
-
 void CustomPairPotential::from_json(const json &j) {
     Rc2 = j.value("cutoff", pc::infty);
     Rc2 = Rc2 * Rc2;
@@ -812,54 +786,32 @@ void CustomPairPotential::to_json(json &j) const {
         j["cutoff"] = std::sqrt(Rc2);
 }
 
+
+// =============== Dummy ===============
+
 Dummy::Dummy() { name = "dummy"; }
 void Dummy::from_json(const json &) {}
 void Dummy::to_json(json &) const {}
-LennardJones::LennardJones(const std::string &name) {
-    PairPotentialBase::name = name;
-    m = std::make_shared<ParametersTable>();
-}
 void LennardJones::to_json(json &j) const { j = *m; }
+
 void LennardJones::from_json(const json &j) {
     *m = j;
     if (m->s2.size() == 0)
         throw std::runtime_error("unknown mixing rule for Lennard-Jones potential");
 }
-WeeksChandlerAndersen::WeeksChandlerAndersen(const std::string &name) {
-    LennardJones::name = name;
-    cite = "doi:ct4kh9";
-}
-HardSphere::HardSphere(const std::string &name) {
-    PairPotentialBase::name = name;
-    d2 = std::make_shared<PairMatrix<double>>();
-    for (auto &i : atoms)
-        for (auto &j : atoms)
-            d2->set(i.id(), j.id(), std::pow((i.sigma + j.sigma) / 2, 2));
-}
-Hertz::Hertz(const std::string &name) {
-    PairPotentialBase::name = name;
-    m = std::make_shared<ParametersTable>();
-}
+
 void Hertz::to_json(json &j) const { j = *m; }
 void Hertz::from_json(const json &j) {
     *m = j;
     if (m->hd.size() == 0)
         throw std::runtime_error("unknown mixing rule for Hertz potential");
 }
-SquareWell::SquareWell(const std::string &name) {
-    PairPotentialBase::name = name;
-    m = std::make_shared<ParametersTable>();
-}
+
 void SquareWell::to_json(json &j) const { j = *m; }
 void SquareWell::from_json(const json &j) {
     *m = j;
     if (m->th.size() == 0)
         throw std::runtime_error("unknown mixing rule for Square-well potential");
-}
-Polarizability::Polarizability(const std::string &name) {
-    PairPotentialBase::name = name;
-    m_neutral = std::make_shared<PairMatrix<double>>();
-    m_charged = std::make_shared<PairMatrix<double>>();
 }
 void Polarizability::from_json(const json &j) {
     epsr = j.at("epsr").get<double>();
@@ -876,8 +828,6 @@ void Polarizability::from_json(const json &j) {
 }
 
 //----------------- FunctorPotential ---------------------
-
-FunctorPotential::FunctorPotential(const std::string &name) { PairPotentialBase::name = name; }
 
 void FunctorPotential::registerSelfEnergy(PairPotentialBase *pot) {
     if (pot->selfEnergy) {
@@ -995,8 +945,6 @@ void FunctorPotential::from_json(const json &j) {
 }
 
 //---------------- TabulatedPotential ---------------------
-
-TabulatedPotential::TabulatedPotential(const std::string &name) { PairPotentialBase::name = name; }
 
 void TabulatedPotential::from_json(const json &j) {
     FunctorPotential::from_json(j);

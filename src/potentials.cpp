@@ -69,6 +69,14 @@ void to_json(json &j, const std::vector<InteractionData> &interactions) {
 
 // =============== PairPotentialBase ===============
 
+PairPotentialBase::PairPotentialBase(const std::string &name, const std::string &cite, bool isotropic) :
+        name(name), cite(cite), isotropic(isotropic), faunus_logger(spdlog::get("faunus")) {
+    // if not available, e.g., in unittests, create a dummy
+    if (faunus_logger == nullptr) {
+        faunus_logger = spdlog::create<spdlog::sinks::null_sink_st>("faunus");
+    }
+}
+
 Point PairPotentialBase::force(const Particle &, const Particle &, double, const Point &) {
     assert(false && "We should never reach this point!");
     return {0, 0, 0};
@@ -795,9 +803,8 @@ void Dummy::to_json(json &) const {}
 
 void LennardJones::initPairMatrices() {
     TCombinatorFunc comb_sigma, comb_epsilon;
-    auto faunus_logger = spdlog::get("faunus");
     if (combination_rule == undefined) {
-        faunus_logger->debug("Undefined combination rules in effect for the {} potential.", name);
+        faunus_logger->warn("Undefined combination rules in effect for the {} potential.", name);
         comb_sigma = &PairMixer::combUndefined;
         comb_epsilon = &PairMixer::combUndefined;
     } else if (combination_rule == LorentzBerthelot) {
@@ -809,8 +816,7 @@ void LennardJones::initPairMatrices() {
         comb_sigma = &PairMixer::combGeometric;
         comb_epsilon = &PairMixer::combGeometric;
     } else {
-        throw std::runtime_error("Missing implementation of a combination rule for the Lennard-Jones potential.");
-        // todo error
+        throw std::logic_error("missing implementation of a combination rule");
     }
     auto sigma_mixer = PairMixer(
             [](const AtomData &a) -> double { return a.sigma; },
@@ -832,12 +838,18 @@ void LennardJones::from_json(const json &j) {
     auto mixing = j.at("mixing").get<std::string>();
     if (mixing == "LB") {
         combination_rule = LorentzBerthelot;
+    } else if (mixing == "geometric") {
+        combination_rule = GeometricMean;
     } else {
-        throw std::runtime_error("unknown mixing rule for Lennard-Jones potential");
-        // todo error
+        throw std::runtime_error("unknown mixing rule for the " + name + " potential");
     }
     if (j.count("custom") == 1) {
-        custom_pairs = j;
+        try {
+            custom_pairs = j;
+        } catch(const CustomInteractionException& e) {
+            faunus_logger->error(std::string(e.what()) + " in potential " + name);
+            throw std::runtime_error("error deserialising potential " + name + " from json");
+        }
     }
     initPairMatrices();
 }
@@ -845,8 +857,10 @@ void LennardJones::from_json(const json &j) {
 void LennardJones::to_json(json &j) const {
     if (combination_rule == LorentzBerthelot) {
         j["mixing"] = "LB";
+    } else if (combination_rule == GeometricMean) {
+        j["mixing"] = "geometric";
     } else {
-        //todo error
+        throw std::logic_error("error serialising to json");
     }
     if (!custom_pairs.empty()) {
         j["custom"] = custom_pairs;
@@ -857,7 +871,6 @@ void LennardJones::to_json(json &j) const {
 // =============== HardSphere ===============
 
 void HardSphere::initPairMatrices() {
-    auto faunus_logger = spdlog::get("faunus");
     faunus_logger->debug("Arithmetic mean combination rule in effect for the {} potential.", name);
     auto sigma_mixer = PairMixer(
             [](const AtomData &a) -> double { return a.sigma; },
@@ -885,7 +898,6 @@ void HardSphere::to_json(json &j) const {
 // =============== Hertz ===============
 
 void Hertz::initPairMatrices() {
-    auto faunus_logger = spdlog::get("faunus");
     faunus_logger->debug("Hertz combination rules in effect for the {} potential.", name);
     auto radius_mixer = PairMixer(
             [](const AtomData &a) -> double { return a.hdr; },
@@ -919,7 +931,6 @@ void Hertz::to_json(json &j) const {
 // =============== SquareWell ===============
 
 void SquareWell::initPairMatrices() {
-    auto faunus_logger = spdlog::get("faunus");
     faunus_logger->debug("SquareWell combination rules in effect for the {} potential.", name);
 
     auto diameter_mixer = PairMixer(

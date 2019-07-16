@@ -93,9 +93,11 @@ struct PairPotentialBase {
     virtual Point force(const Particle &, const Particle &, double, const Point &);
     virtual double operator()(const Particle &a, const Particle &b, const Point &r) const = 0;
   protected:
+    std::shared_ptr<spdlog::logger> faunus_logger;
+
     PairPotentialBase(const std::string &name = std::string(), const std::string &cite = std::string(),
-                      bool isotropic = true) : name(name), cite(cite), isotropic(isotropic) {};
-}; //!< Base for all pair-potentials
+                      bool isotropic = true);
+};
 
 void to_json(json &j, const PairPotentialBase &base);   //!< Serialize any pair potential to json
 void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair potential from json
@@ -388,7 +390,6 @@ class SquareWell : public PairPotentialBase {
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] SquareWell") {
     using doctest::Approx;
-    spdlog::create<spdlog::sinks::null_sink_st>("faunus");
     atoms = R"([{"A": { "r": 5, "sigma_sw":4, "eps_sw":0.2 }},
                  {"B": { "r": 10, "sigma_sw":2, "eps_sw":0.1 }} ])"_json.get<decltype(atoms)>();
     Particle a, b;
@@ -804,8 +805,6 @@ class TabulatedPotential : public FunctorPotential {
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] FunctorPotential") {
     using doctest::Approx;
-
-    spdlog::create<spdlog::sinks::null_sink_st>("faunus");
 
     json j = R"({ "atomlist" : [
                  {"A": { "q":1.0,  "r":1.1, "eps":0.1 }},

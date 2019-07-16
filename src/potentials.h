@@ -152,18 +152,6 @@ struct Dummy : public PairPotentialBase {
     void to_json(json &) const override;
 }; //!< A dummy pair potential that always returns zero
 
-struct ParametersTable {
-    enum Mixers { LB, LBSW, HE, NONE };
-    Mixers mixer = NONE;
-    PairMatrix<double> s2, eps; // matrix of sigma_ij^2 and 4*eps_ij (LJ)
-    PairMatrix<double> th, esw; // matrix of squarewell_threshold_ij and squarewell_depth_ij (Square-well)
-    PairMatrix<double> hd, ehe; // matrix of hydrodynamic diameter_ij and energy-strength_ij (Hertz)
-};                              //!< Table of parameters for potential
-
-void from_json(const json &j, ParametersTable &m);
-
-void to_json(json &j, const ParametersTable &m);
-
 
 /**
  * @brief Lennard-Jones potential with an arbitrary combination rule.

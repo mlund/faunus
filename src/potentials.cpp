@@ -11,7 +11,7 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
     TPairMatrixPtr matrix = std::make_shared<TPairMatrix>(n, n);
     for (auto &i : atoms) {
         for (auto &j : atoms) {
-            (*matrix)(i.id(), j.id()) = combinator(extractor(i), extractor(j));
+            (*matrix)(i.id(), j.id()) = modifier(combinator(extractor(i), extractor(j)));
         }
     }
     return matrix;
@@ -24,10 +24,8 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
     for (auto &i : interactions) {
         if (i.atom_id[0] >= 0 && i.atom_id[1] >= 0 && i.atom_id[0] < dimension && i.atom_id[1] < dimension) {
             // interaction is always symmetric
-            // treat it as a homogeneous interaction if some extra transformation is supposed,
-            // e.g., to square or multiply by a constant
             (*matrix)(i.atom_id[0], i.atom_id[1]) = (*matrix)(i.atom_id[1], i.atom_id[0]) =
-                    combinator(extractor(i.interaction), extractor(i.interaction));
+                    modifier(extractor(i.interaction));
         } else {
             throw std::runtime_error("atomtype index out of range");
         }
@@ -796,21 +794,35 @@ void Dummy::to_json(json &) const {}
 // =============== LennardJones ===============
 
 void LennardJones::initPairMatrices() {
-    TCombinatorFunc func_sigma_squared, func_epsilon_quadrupled;
+    TCombinatorFunc comb_sigma, comb_epsilon;
     auto faunus_logger = spdlog::get("faunus");
-    if (combination_rule == LorentzBerthelot) {
+    if (combination_rule == undefined) {
+        faunus_logger->debug("Undefined combination rules in effect for the {} potential.", name);
+        comb_sigma = &PairMixer::combUndefined;
+        comb_epsilon = &PairMixer::combUndefined;
+    } else if (combination_rule == LorentzBerthelot) {
         faunus_logger->debug("Lorentz-Berthelot combination rules in effect for the {} potential.", name);
-        func_sigma_squared = &PairMixer::combArithmeticSquared;
-        func_epsilon_quadrupled = [](double e1, double e2) -> double { return 4 * std::sqrt(e1 * e2); };
+        comb_sigma = &PairMixer::combArithmetic;
+        comb_epsilon = &PairMixer::combGeometric;
+    } else if (combination_rule == GeometricMean) {
+        faunus_logger->debug("Geometric mean combination rules in effect for the {} potential.", name);
+        comb_sigma = &PairMixer::combGeometric;
+        comb_epsilon = &PairMixer::combGeometric;
     } else {
-        throw std::runtime_error("Undefined combination rule for the Lennard-Jones potential.");
+        throw std::runtime_error("Missing implementation of a combination rule for the Lennard-Jones potential.");
         // todo error
     }
+    auto sigma_mixer = PairMixer(
+            [](const AtomData &a) -> double { return a.sigma; },
+            comb_sigma,
+            &PairMixer::modSquared);
+    auto epsilon_mixer = PairMixer(
+            [](const AtomData &a) -> double { return a.eps; },
+            comb_epsilon,
+            [](double x) { return 4*x; });
+    sigma_squared = sigma_mixer.createPairMatrix(atoms, custom_pairs);
+    epsilon_quadrupled = epsilon_mixer.createPairMatrix(atoms, custom_pairs);
 
-    sigma_squared = PairMixer([](const AtomData &a) -> double { return a.sigma; }, func_sigma_squared).
-            createPairMatrix(atoms, custom_pairs);
-    epsilon_quadrupled = PairMixer([](const AtomData &a) -> double { return a.eps; }, func_epsilon_quadrupled).
-            createPairMatrix(atoms, custom_pairs);
     faunus_logger->debug("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(),
                          epsilon_quadrupled->rows(), epsilon_quadrupled->cols(), custom_pairs.size());
@@ -847,8 +859,11 @@ void LennardJones::to_json(json &j) const {
 void HardSphere::initPairMatrices() {
     auto faunus_logger = spdlog::get("faunus");
     faunus_logger->debug("Arithmetic mean combination rule in effect for the {} potential.", name);
-    sigma_squared = PairMixer([](const AtomData &a) -> double { return a.sigma; }, &PairMixer::combArithmeticSquared).
-            createPairMatrix(atoms, custom_pairs);
+    auto sigma_mixer = PairMixer(
+            [](const AtomData &a) -> double { return a.sigma; },
+            &PairMixer::combArithmetic,
+            &PairMixer::modSquared);
+    sigma_squared = sigma_mixer.createPairMatrix(atoms, custom_pairs);
     faunus_logger->debug("Pair matrix for {} sigma ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(), custom_pairs.size());
 }
@@ -872,10 +887,15 @@ void HardSphere::to_json(json &j) const {
 void Hertz::initPairMatrices() {
     auto faunus_logger = spdlog::get("faunus");
     faunus_logger->debug("Hertz combination rules in effect for the {} potential.", name);
-    hydrodynamic_diameter = PairMixer([](const AtomData &a) -> double { return a.hdr; }, &PairMixer::combSum).
-            createPairMatrix(atoms, custom_pairs);
-    epsilon_hertz = PairMixer([](const AtomData &a) -> double { return a.eps_hertz; }, &PairMixer::combGeometric).
-            createPairMatrix(atoms, custom_pairs);
+    auto radius_mixer = PairMixer(
+            [](const AtomData &a) -> double { return a.hdr; },
+            &PairMixer::combArithmetic,
+            [](double x){ return 2*x; });
+    auto epsilon_mixer = PairMixer(
+            [](const AtomData &a) -> double { return a.eps_hertz; },
+            &PairMixer::combGeometric);
+    hydrodynamic_diameter = radius_mixer.createPairMatrix(atoms, custom_pairs);
+    epsilon_hertz = epsilon_mixer.createPairMatrix(atoms, custom_pairs);
     faunus_logger->debug(
             "Pair matrix for {} hydrodynamic radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
             hydrodynamic_diameter->rows(), hydrodynamic_diameter->cols(), epsilon_hertz->rows(), epsilon_hertz->cols(),
@@ -901,10 +921,16 @@ void Hertz::to_json(json &j) const {
 void SquareWell::initPairMatrices() {
     auto faunus_logger = spdlog::get("faunus");
     faunus_logger->debug("SquareWell combination rules in effect for the {} potential.", name);
-    diameter_sw_squared = PairMixer([](const AtomData &a) -> double { return a.sigma + 2 * a.squarewell_threshold ; },
-                            &PairMixer::combArithmeticSquared).createPairMatrix(atoms, custom_pairs);
-    depth_sw = PairMixer([](const AtomData &a) -> double { return a.squarewell_depth; },
-                           &PairMixer::combGeometric).createPairMatrix(atoms, custom_pairs);
+
+    auto diameter_mixer = PairMixer(
+            [](const AtomData &a) -> double { return a.sigma + 2 * a.squarewell_threshold; },
+            &PairMixer::combArithmetic,
+            &PairMixer::modSquared);
+    auto depth_mixer = PairMixer(
+            [](const AtomData &a) -> double { return a.squarewell_depth; },
+            &PairMixer::combGeometric);
+    diameter_sw_squared = diameter_mixer.createPairMatrix(atoms, custom_pairs);
+    depth_sw = depth_mixer.createPairMatrix(atoms, custom_pairs);
     faunus_logger->debug(
             "Pair matrix for {} diameter ({}×{}) and depth ({}×{}) created using {} custom pairs.",
             name,

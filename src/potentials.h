@@ -24,6 +24,8 @@ typedef std::shared_ptr<TPairMatrix> TPairMatrixPtr;
 typedef std::function<double(const AtomData&)> TExtractorFunc;
 //! type of a function defining a combination rule of a heterogeneous pair interaction
 typedef std::function<double(double, double)> TCombinatorFunc;
+//! type of a function modifying combinator's output
+typedef std::function<double(double)> TModifierFunc;
 
 /**
  * @brief Data for a custom (heterogeneous) interaction between two given atom types.
@@ -35,6 +37,9 @@ struct InteractionData {
     AtomData interaction;
 };
 
+void from_json(const json &j, std::vector<InteractionData> &interactions);
+void to_json(json &j, const std::vector<InteractionData> &interactions);
+
 /**
  * @brief Exception for handling custom parameters in pair potentials.
  */
@@ -45,28 +50,34 @@ struct CustomInteractionException : public std::runtime_error {
 /**
  * @brief PairMixer creates a matrix of pair potential coefficients based on the atom properties
  * and/or custom values using an arbitrary combination rule.
+ *
+ * PairMixer holds three functions that are applied in order extractor → combinator → modifier to create
+ * a parameter matrix for all possible interactions. The function createPairMatrix applies the functions
+ * on all atom type pairs, and optionally also on list of custom pair parameters (not the combinator
+ * function).
  */
 class PairMixer {
-    TExtractorFunc extractor;
-    TCombinatorFunc combinator;
+    TExtractorFunc extractor;   //!< Function extracting the parameter value from AtomData structure
+    TCombinatorFunc combinator; //!< Function combining two values
+    TModifierFunc modifier;     //!< Function modifying the result for fast computations, e.g., a square of
 
   public:
-    PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator) :
-            extractor(extractor), combinator(combinator) {};
+    PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator, TModifierFunc modifier = &modIdentity) :
+            extractor(extractor), combinator(combinator), modifier(modifier) {};
 
     //! @return a square matrix of atoms.size()
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms);
     //! @return a square matrix of atoms.size()
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms, const std::vector<InteractionData> &interactions);
 
+    // when explicit custom pairs are the only option
+    inline static double combUndefined(double, double) { return std::numeric_limits<double>::signaling_NaN(); };
     inline static double combSum(double a, double b) { return (a+b); }
     inline static double combArithmetic(double a, double b) { return 0.5*(a+b); }
-    inline static double combArithmeticSquared(double a, double b) { return 0.25*(a+b)*(a+b); }
     inline static double combGeometric(double a, double b) { return std::sqrt(a*b); }
+    inline static double modIdentity(double x) { return x; }
+    inline static double modSquared(double x) { return x*x; }
 };
-
-void from_json(const json &j, std::vector<InteractionData> &interactions);
-void to_json(json &j, const std::vector<InteractionData> &interactions);
 
 /**
  * @brief Base for all pair-potentials
@@ -157,7 +168,7 @@ void to_json(json &j, const ParametersTable &m);
  * @note Mixing data is _shared_ upon copying
  */
 class LennardJones : public PairPotentialBase {
-    enum CombinationRule {undefined, LorentzBerthelot}; // todo json enum static map
+    enum CombinationRule {undefined, LorentzBerthelot, GeometricMean}; // todo json enum static map
     CombinationRule combination_rule = undefined;
     std::vector<InteractionData> custom_pairs;
 
@@ -377,6 +388,7 @@ class SquareWell : public PairPotentialBase {
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] SquareWell") {
     using doctest::Approx;
+    spdlog::create<spdlog::sinks::null_sink_st>("faunus");
     atoms = R"([{"A": { "r": 5, "sigma_sw":4, "eps_sw":0.2 }},
                  {"B": { "r": 10, "sigma_sw":2, "eps_sw":0.1 }} ])"_json.get<decltype(atoms)>();
     Particle a, b;

@@ -200,6 +200,32 @@ class LennardJones : public PairPotentialBase {
     void to_json(json &j) const override;
 };
 
+#ifdef DOCTEST_LIBRARY_INCLUDED
+TEST_CASE("[Faunus] LennardJones") {
+    using doctest::Approx;
+    atoms = R"([{"A": {"sigma":2, "eps":0.9}},
+                 {"B": {"sigma":8, "eps":0.1}}])"_json.get<decltype(atoms)>();
+    Particle a, b;
+    a = atoms[0];
+    b = atoms[1];
+    LennardJones lj_lb = R"({"mixing": "LB"})"_json;
+    LennardJones lj_geom = R"({"mixing": "geometric"})"_json;
+    LennardJones lj_custom = R"({"mixing": "LB", "custom": {"A B": {"eps": 0.5, "sigma": 8}}})"_json;
+    double d = 0.9_nm;
+    auto lj_func = [d](double sigma, double eps) -> double {
+        return 4*eps * (std::pow(sigma/d, 12) - std::pow(sigma/d, 6));
+    };
+
+    CHECK(lj_lb(a, a, {0, 0, d}) == Approx(lj_func(0.2_nm, 0.9_kJmol)));
+    CHECK(lj_lb(a, b, {0, 0, d}) == Approx(lj_func(0.5_nm, 0.3_kJmol)));
+    CHECK(lj_geom(a, b, {0, 0, d}) == Approx(lj_func(0.4_nm, 0.3_kJmol)));
+    CHECK(lj_custom(a, b, {0, 0, d}) == Approx(lj_func(0.8_nm, 0.5_kJmol)));
+    CHECK(lj_lb(a, a, {0, 0, d}) == lj_custom(a, a, {0, 0, d}));
+    CHECK_THROWS_AS(LennardJones lj_unknown = R"({"mixing": "unknown"})"_json, std::runtime_error);
+    // alternative notation for custom as an array: custom: []
+    CHECK_NOTHROW(LennardJones lj_custom_alt = R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json);
+}
+#endif
 
 /**
  * @brief Weeks-Chandler-Andersen pair potential
@@ -312,6 +338,27 @@ class HardSphere : public PairPotentialBase {
     void from_json(const json &) override;
     void to_json(json &) const override;
 };
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
+TEST_CASE("[Faunus] HardSphere") {
+    using doctest::Approx;
+    atoms = R"([{"A": {"sigma": 2}}, {"B": {"sigma": 8}}])"_json.get<decltype(atoms)>();
+    Particle a, b;
+    a = atoms[0];
+    b = atoms[1];
+    HardSphere hs = R"({})"_json;
+    HardSphere hs_custom = R"({"custom": {"A B": {"sigma": 6}}})"_json;
+
+    CHECK(hs(a, a, {0, 0, 2.1_angstrom}) == 0);
+    CHECK(hs(a, a, {0, 0, 1.9_angstrom}) == pc::infty);
+    CHECK(hs(a, b, {0, 0, 5.1_angstrom}) == 0);
+    CHECK(hs(a, b, {0, 0, 4.9_angstrom}) == pc::infty);
+    CHECK(hs_custom(a, b, {0, 0, 6.1_angstrom}) == 0);
+    CHECK(hs_custom(a, b, {0, 0, 5.9_angstrom}) == pc::infty);
+
+//    CHECK_THROWS_AS(HardSphere hs_unknown = R"({"mixing": "unknown"})"_json, std::runtime_error);
+}
+#endif
 
 struct RepulsionR3 : public PairPotentialBase {
     double f = 0, s = 0, e = 0;

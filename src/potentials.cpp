@@ -895,12 +895,38 @@ void Hertz::to_json(json &j) const {
     }
 }
 
-void SquareWell::to_json(json &j) const { j = *m; }
-void SquareWell::from_json(const json &j) {
-    *m = j;
-    if (m->th.size() == 0)
-        throw std::runtime_error("unknown mixing rule for Square-well potential");
+
+// =============== SquareWell ===============
+
+void SquareWell::initPairMatrices() {
+    auto faunus_logger = spdlog::get("faunus");
+    faunus_logger->debug("SquareWell combination rules in effect for the {} potential.", name);
+    diameter_sw_squared = PairMixer([](const AtomData &a) -> double { return a.sigma + 2 * a.squarewell_threshold ; },
+                            &PairMixer::combArithmeticSquared).createPairMatrix(atoms, custom_pairs);
+    depth_sw = PairMixer([](const AtomData &a) -> double { return a.squarewell_depth; },
+                           &PairMixer::combGeometric).createPairMatrix(atoms, custom_pairs);
+    faunus_logger->debug(
+            "Pair matrix for {} diameter ({}×{}) and depth ({}×{}) created using {} custom pairs.",
+            name,
+            diameter_sw_squared->rows(), diameter_sw_squared->cols(), depth_sw->rows(), depth_sw->cols(),
+            custom_pairs.size());
 }
+
+void SquareWell::from_json(const json &j) {
+    if (j.count("custom") == 1) {
+        custom_pairs = j;
+    }
+    initPairMatrices();
+}
+
+void SquareWell::to_json(json &j) const {
+    if (!custom_pairs.empty()) {
+        j["custom"] = custom_pairs;
+    }
+}
+
+// =============== Polarizability ===============
+
 void Polarizability::from_json(const json &j) {
     epsr = j.at("epsr").get<double>();
     double lB = pc::lB(epsr);

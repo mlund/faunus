@@ -356,21 +356,22 @@ class Hertz : public PairPotentialBase {
  *
  */
 class SquareWell : public PairPotentialBase {
+    std::vector<InteractionData> custom_pairs;
+
   protected:
-    std::shared_ptr<ParametersTable> m; // table w. squarewell_threshold_ij and squarewell_depth_ij
+    TPairMatrixPtr diameter_sw_squared; // 0.25 * (sigma_i + 2*threshold_i + sigma_j + 2*threshold_j)^2
+    TPairMatrixPtr depth_sw; // geometric mean of epsilon_i and epsilon_j
+    void initPairMatrices();
   public:
-    SquareWell(const std::string &name = "squarewell") : PairPotentialBase(name) {
-        m = std::make_shared<ParametersTable>();
-    };
+    SquareWell(const std::string &name = "squarewell") : PairPotentialBase(name) {};
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        if (r.squaredNorm() < m->th(a.id, b.id)) // threshold squared
-            return -m->esw(a.id, b.id);
+        if (r.squaredNorm() < (*diameter_sw_squared)(a.id, b.id))
+            return -(*depth_sw)(a.id, b.id);
         return 0.0;
     }
 
-    void to_json(json &j) const override;
-
     void from_json(const json &j) override;
+    void to_json(json &j) const override;
 }; //!< SquareWell potential
 
 #ifdef DOCTEST_LIBRARY_INCLUDED

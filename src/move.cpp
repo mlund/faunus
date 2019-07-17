@@ -181,8 +181,8 @@ Propagator::Propagator(const json &j, Space &spc, MPI::MPIController &mpi) {
             try {
                 if (it.key() == "moltransrot")
                     this->template push_back<Move::TranslateRotate>(spc);
-                else if (it.key() == "biasedmoltransrot")
-                    this->template push_back<Move::BiasedTranslateRotate>(spc);
+                else if (it.key() == "smartmoltransrot")
+                    this->template push_back<Move::SmartTranslateRotate>(spc);
                 else if (it.key() == "conformationswap")
                     this->template push_back<Move::ConformationSwap>(spc);
                 else if (it.key() == "transrot")
@@ -402,39 +402,47 @@ void ChargeTransfer::_to_json(json &j) const {
 void ChargeTransfer::_from_json(const json &j) {
     try {
         dq = j.at("dq").get<double>();
-        std::string molname1 = j.at("mol1");
-        std::string molname2 = j.at("mol2");
-        molrange1 = j.at("molrange1").get<std::vector<double>>();
-        molrange2 = j.at("molrange2").get<std::vector<double>>();
-        min1 = j.at("min1").get<std::vector<double>>();
-        max1 = j.at("max1").get<std::vector<double>>();
-        min2 = j.at("min2").get<std::vector<double>>();
-        max2 = j.at("max2").get<std::vector<double>>();
-        auto git1 = findName(molecules, molname1);
-        auto git2 = findName(molecules, molname2);                    // group containing atomIndex
+        mol1.molname = j.at("mol1"); // string containing name of molecule 1
+        mol2.molname = j.at("mol2"); // string containing name of molecule 2
+        mol1.molrange = j.at("molrange1").get<std::vector<double>>(); // vector containing lower and upper limit of total charge of molecule 1
+        mol2.molrange = j.at("molrange2").get<std::vector<double>>(); // vector containing lower and upper limit of total charge of molecule 2
+        mol1.min = j.at("min1").get<std::vector<double>>(); // vector containing lower limits of atomic charges in molecule 1 
+        mol1.max = j.at("max1").get<std::vector<double>>(); // vector containing upper limits of atomic charges in molecule 1
+        mol2.min = j.at("min2").get<std::vector<double>>(); // vector containing lower limits of atomic charges in molecule 2
+        mol2.max = j.at("max2").get<std::vector<double>>(); // vector containing upper limits of atomic charges in molecule 2
+        auto git1 = findName(molecules, mol1.molname); // group containing mol1.molname
+        auto git2 = findName(molecules, mol2.molname); // group containing mol2.molname
 
-        //molratio = (molrange2[1]-molrange2[0])/(molrange1[1]-molrange1[0]); // ratio of charge range, molecule 2 and charge range, molecule 1
-
-        if (git1 == molecules.end())
-            throw std::runtime_error("unknown molecule '" + molname1 + "'");
-        molid1 = git1->id();
-        molid2 = git2->id();
+        if (git1 == molecules.end()) // checking so that molecule1 exists
+            throw std::runtime_error("unknown molecule '" + mol1.molname + "'");
+        
+        mol1.id = git1->id();
+        mol2.id = git2->id();
 
         if (repeat < 0) {
-            auto v = spc.findMolecules(molid1);
+            auto v = spc.findMolecules(mol1.id);
             repeat = std::distance(v.begin(), v.end());
         }
 
-        if (git2 == molecules.end())
-            throw std::runtime_error("unknown molecule '" + molname2 + "'");
+        if (git2 == molecules.end()) // checking so that molecule2 exists
+            throw std::runtime_error("unknown molecule '" + mol2.molname + "'");
 
-
-        molid2 = git2->id();
-
-        if (repeat < 0) {
-            auto v = spc.findMolecules(molid2);
+        if (repeat < 0) { 
+            auto v = spc.findMolecules(mol2.id);
             repeat = std::distance(v.begin(), v.end());
         }
+        
+        if (mol1.min.size() != mol1.max.size()) // checking so that mol1.min and mol1.max contains equal number of entries
+            throw std::runtime_error("mol1.min and mol1.max need to have the same number of entries. mol1.min has " + std::to_string(mol1.min.size()) + " and mol1.max has " + std::to_string(mol1.max.size()) + " entries");
+        
+        if (mol1.min.size() == 0 || mol1.max.size() == 0) // checking so that mol1.min and mol1.max are not empty
+            throw std::runtime_error("mol1.min and mol1.max both need to have nonzero number of entries. mol1.min has " + std::to_string(mol1.min.size()) + " and mol1.max has " + std::to_string(mol1.max.size()) + " entries");
+        
+        if (mol2.min.size() != mol2.max.size()) // checking so that mol2.min and mol2.max contains equal number of entries
+            throw std::runtime_error("mol2.min and mol2.max need to have the same number of entries. mol2.min has " + std::to_string(mol2.min.size()) + " and mol2.max has " + std::to_string(mol2.max.size()) + " entries");
+        
+        if (mol2.min.size() == 0 || mol2.max.size() == 0) // checking so that mol2.min and mol2.max are not empty
+            throw std::runtime_error("mol2.min and mol2.max both need to have nonzero number of entries. mol2.min has " + std::to_string(mol2.min.size()) + " and mol2.max has " + std::to_string(mol2.max.size()) + " entries");
 
     } catch (std::exception &e) {
           throw std::runtime_error(name +  ": " + e.what());
@@ -443,128 +451,121 @@ void ChargeTransfer::_from_json(const json &j) {
 
 void ChargeTransfer::_move(Change &change) {
      
-    auto mollist1 = spc.findMolecules(molid1, Space::ACTIVE);
-    auto mollist2 = spc.findMolecules(molid2, Space::ACTIVE);
+    auto mollist1 = spc.findMolecules(mol1.id, Space::ACTIVE);
+    auto mollist2 = spc.findMolecules(mol2.id, Space::ACTIVE);
     if (size(mollist1) > 0 && size(mollist2) > 0) { 
-        auto git1 = slump.sample(mollist1.begin(), mollist1.end());
-        auto git2 = slump.sample(mollist2.begin(), mollist2.end());
+        auto git1 = slump.sample(mollist1.begin(), mollist1.end()); // selecting a random molecule of type molecule1
+        auto git2 = slump.sample(mollist2.begin(), mollist2.end()); // selecting a random molecule of type molecule2
      
-        if (!git1->empty() && !git2->empty()) {
-            //auto p = git2->begin();
-            //cout << atomid << endl;
+        if (!git1->empty() && !git2->empty()) { // check that both molecule1 and molecule 2 exist
 
             if (dq > 0) { 
-                change.chargeMove = true;
-                numOfAtoms1 = Faunus::distance(git1->begin(), git1->end());
-                numOfAtoms2 = Faunus::distance(git2->begin(), git2->end());
+                change.chargeMove = true;  // setting to true makes the self-energy being computed and added to the total energy
+                mol1.numOfAtoms = Faunus::distance(git1->begin(), git1->end());
+                mol2.numOfAtoms = Faunus::distance(git2->begin(), git2->end());
      
-                ratio1.clear();
-                ratio2.clear(); 
+                mol1.ratio.clear(); // clearing vector containing ratio of atomic charge ranges and the charge range of the whole molecule1
+                mol2.ratio.clear(); // clearing vector containing ratio of atomic charge ranges and the charge range of the whole molecule2 
 
-                for (i=0; i < numOfAtoms1; i++) {
-                    ratio1.push_back((max1[i]-min1[i])/(molrange1[1]-molrange1[0]));
+                for (i=0; i < mol1.numOfAtoms; i++) {
+                    mol1.ratio.push_back((mol1.max[i]-mol1.min[i])/(mol1.molrange[1]-mol1.molrange[0])); // calculating ratio of atom i in molecule 1
                 }    
      
-                for (i=0; i < numOfAtoms2; i++) {
-                    ratio2.push_back((max2[i]-min2[i])/(molrange2[1]-molrange2[0]));
+                for (i=0; i < mol2.numOfAtoms; i++) {
+                    mol2.ratio.push_back((mol2.max[i]-mol2.min[i])/(mol2.molrange[1]-mol2.molrange[0])); // calculating ratio of atom i in molecule 2
                 }    
 
-                sumCharges1 = 0; 
-                sumChanges1 = 0; 
-                sumCharges2 = 0; 
-                sumChanges2 = 0; 
+                mol1.charges = 0; // setting sum of all atomic charges in molecule1 to zero 
+                mol2.charges = 0; // setting sum of all atomic charges in molecule2 to zero 
                 deltaq = dq * (slump() - 0.5);
-                changeQ1.clear();
-                changeQ2.clear();
-                cdata1.index = Faunus::distance(spc.groups.begin(), git1);
-                cdata2.index = Faunus::distance(spc.groups.begin(), git2);
-                for (i=0; i < numOfAtoms1; i++) {
-                    auto p = git1->begin()+i;
-                    //atomid = Faunus::distance(git2->begin(), p);
-                    changeQ1.push_back(deltaq*ratio1[i]);
-                    //cout << "Change, first atom: " << changeQ[0] << endl;
-                    sumChanges1 += changeQ1[i];
-                    sumCharges1 += p->charge+changeQ1[i]; 
+                mol1.changeQ.clear(); // clearing vector containing attempted charge moves on all atoms in molecule1
+                mol2.changeQ.clear(); // clearing vector containing attempted charge moves on all atoms in molecule2
+                mol1.cdata.index = Faunus::distance(spc.groups.begin(), git1);
+                mol2.cdata.index = Faunus::distance(spc.groups.begin(), git2);
+                
+                for (i=0; i < mol1.numOfAtoms; i++) { 
+                    auto p = git1->begin()+i; // object containing atom i in molecule1
+                    mol1.changeQ.push_back(deltaq*mol1.ratio[i]); // assigning attempted charge move of atom i in molecule1 to vector 
+                    //sumChanges1 += changeQ1[i];
+                    mol1.charges += p->charge+mol1.changeQ[i]; // adding new attempted charge of atom i in molecule1 to sum 
 
                 }    
-                for (i=0; i < numOfAtoms2; i++) {
+                for (i=0; i < mol2.numOfAtoms; i++) { // Doing the same as above loop but for molecule2
                     auto p = git2->begin()+i;
-                    //atomid = Faunus::distance(git2->begin(), p);
-                    changeQ2.push_back(-deltaq*ratio2[i]);
-                    //cout << "Change, first atom: " << changeQ[0] << endl;
-                    sumChanges2 += changeQ2[i];
-                    sumCharges2 += p->charge+changeQ2[i]; 
-                //change.chargeMove = true;
+                    mol2.changeQ.push_back(-deltaq*mol2.ratio[i]);
+                    //sumMoves2 += changeQ2[i];
+                    mol2.charges += p->charge+mol2.changeQ[i]; 
                 }    
-		if (sumCharges1 < molrange1[0]) {
+
+                // Torodial boundary conditions
+		if (mol1.charges < mol1.molrange[0]) { // Checking if sum of new attempted atomic charges in molecule1 will fall below lower limit in molrange1
+                    sumTemp = 0; // resetting temporary sum of atomic charges
+                    for (i=0; i < mol1.numOfAtoms; i++) {
+                        auto p = git1->begin()+i;
+                        sumTemp += p->charge-(2*mol1.min[i]-(p->charge+mol1.changeQ[i])); // temporary sum of charge moves attempted on all atoms in molecule1
+                        p->charge = 2*mol1.min[i]-(p->charge+mol1.changeQ[i]); // new attempted charge of atom i in molecule1, obeying torodial boundary conditions
+                    }
+                    for (i=0; i < mol2.numOfAtoms; i++) {
+                        auto p = git2->begin()+i;
+                        p->charge += sumTemp*mol2.ratio[i]; // new attempted charge of atom i in molecule2, obeying torodial boundary conditions
+                    }
+                }
+
+                else if (mol1.charges > mol1.molrange[1]) { // same procedure as above if statement, but if sum of new atempted charges in molecule1 falls above upper limit in molrange1
                     sumTemp = 0;
-                    for (i=0; i < numOfAtoms1; i++) {
+                    for (i=0; i < mol1.numOfAtoms; i++) {
                         auto p = git1->begin()+i;
-                        sumTemp += p->charge-(2*min1[i]-(p->charge+changeQ1[i]));
-                        p->charge = 2*min1[i]-(p->charge+changeQ1[i]);
+                        sumTemp += p->charge-(2*mol1.max[i]-(p->charge+mol1.changeQ[i]));
+                        p->charge = 2*mol1.max[i]-(p->charge+mol1.changeQ[i]);
                     }
-                    for (i=0; i < numOfAtoms2; i++) {
+                    for (i=0; i < mol2.numOfAtoms; i++) {
                         auto p = git2->begin()+i;
-                        p->charge += sumTemp*ratio2[i];
+                        p->charge += sumTemp*mol2.ratio[i];
                     }
                 }
 
-                else if (sumCharges1 > molrange1[1]) {
+                else if (mol2.charges < mol2.molrange[0]) { // same as first if statement, but with respect to molecule2 and its molrange
                     sumTemp = 0;
-                    for (i=0; i < numOfAtoms1; i++) {
-                        auto p = git1->begin()+i;
-                        sumTemp += p->charge-(2*max1[i]-(p->charge+changeQ1[i]));
-                        p->charge = 2*max1[i]-(p->charge+changeQ1[i]);
-                    }
-                    for (i=0; i < numOfAtoms2; i++) {
+                    for (i=0; i < mol2.numOfAtoms; i++) {
                         auto p = git2->begin()+i;
-                        p->charge += sumTemp*ratio2[i];
+                        sumTemp += p->charge-(2*mol2.min[i]-(p->charge+mol2.changeQ[i]));
+                        p->charge = 2*mol2.min[i]-(p->charge+mol2.changeQ[i]);
+                    }
+                    for (i=0; i < mol1.numOfAtoms; i++) {
+                        auto p = git1->begin()+i;
+                        p->charge += sumTemp*mol1.ratio[i];
                     }
                 }
 
-                else if (sumCharges2 < molrange2[0]) {
+                else if (mol2.charges > mol2.molrange[1]) { // same as previous if statement, but if sum of new attempted charges in molecule2 falls above upper limit in molrange2
                     sumTemp = 0;
-                    for (i=0; i < numOfAtoms2; i++) {
+                    for (i=0; i < mol2.numOfAtoms; i++) {
                         auto p = git2->begin()+i;
-                        sumTemp += p->charge-(2*min2[i]-(p->charge+changeQ2[i]));
-                        p->charge = 2*min2[i]-(p->charge+changeQ2[i]);
+                        sumTemp += p->charge-(2*mol2.max[i]-(p->charge+mol2.changeQ[i]));
+                        p->charge = 2*mol2.max[i]-(p->charge+mol2.changeQ[i]);
                     }
-                    for (i=0; i < numOfAtoms1; i++) {
+                    for (i=0; i < mol1.numOfAtoms; i++) {
                         auto p = git1->begin()+i;
-                        p->charge += sumTemp*ratio1[i];
+                        p->charge += sumTemp*mol1.ratio[i];
                     }
                 }
 
-                else if (sumCharges2 > molrange2[1]) {
-                    sumTemp = 0;
-                    for (i=0; i < numOfAtoms2; i++) {
-                        auto p = git2->begin()+i;
-                        sumTemp += p->charge-(2*max2[i]-(p->charge+changeQ2[i]));
-                        p->charge = 2*max2[i]-(p->charge+changeQ2[i]);
-                    }
-                    for (i=0; i < numOfAtoms1; i++) {
+                else { // in case no boundaries were crossed, i.e. all new charges lies within their respective ranges
+                    for (i=0; i < mol1.numOfAtoms; i++) {
                         auto p = git1->begin()+i;
-                        p->charge += sumTemp*ratio1[i];
-                    }
-                }
-
-                else {
-                    for (i=0; i < numOfAtoms1; i++) {
-                        auto p = git1->begin()+i;
-                        p->charge += changeQ1[i];
+                        p->charge += mol1.changeQ[i];
 
                     }
-                    for (i=0; i < numOfAtoms2; i++) {
+                    for (i=0; i < mol2.numOfAtoms; i++) {
                         auto p = git2->begin()+i;
-                        p->charge += changeQ2[i];
+                        p->charge += mol2.changeQ[i];
                     }
                 }
-                cdata1.all = true;
-                cdata2.all = true;
-                change.groups.push_back(cdata1); // add to list of moved groups
-                change.groups.push_back(cdata2); // add to list of moved groups
-                //cout << "New charge, artificial ion not accepted: " << git1.charge+deltaq << endl;
-                //cout << "Sum of charges outside loop: " << sumCharges << endl;                                                                                                                                            
+                mol1.cdata.all = true; // change all atoms in molecule1
+                mol2.cdata.all = true; // change all atoms in molecule2
+                change.groups.push_back(mol1.cdata); // add to list of moved groups
+                change.groups.push_back(mol2.cdata); // add to list of moved groups
+            
             } else                                                                                                                                                                                                          
                 deltaq = 0;                                                                                                                                                                                                 
         }                                                                                                                                                                                                                   
@@ -576,9 +577,9 @@ void ChargeTransfer::_reject(Change &) { msqd += 0; }
 ChargeTransfer::ChargeTransfer(Space &spc) : spc(spc) {
 
     name = "chargetransfer";
-    repeat = -1;
-    cdata1.internal = true;
-    cdata2.internal = true;
+    repeat = -1; // meaning repeat N times
+    mol1.cdata.internal = true;
+    mol2.cdata.internal = true;
     //cdata1.atoms.resize(numOfAtoms1);
     //cdata2.atoms.resize(numOfAtoms2);
 }
@@ -780,15 +781,16 @@ TranslateRotate::TranslateRotate(Space &spc) : spc(spc) {
     repeat = -1; // meaning repeat N times
 }
 
-void BiasedTranslateRotate::_to_json(json &j) const {
-    j = {{"dir", dir},
+void SmartTranslateRotate::_to_json(json &j) const {
+    j = {{"Number of counts inside geometry", cntInner},
+         {"Number of counts outside geometry", cnt-cntInner},
+         {"dir", dir},
          {"dp", dptrans},
          {"dprot", dprot},
          {"p", p},
          {"origo", origo},
-         {"apad", apad},
-         {"b", b},
-         {"c", c},
+         {"rx", r_x},
+         {"ry", r_y},
          {"molid", molid},
          {"refid", refid1},
          {"refid", refid2},
@@ -799,7 +801,7 @@ void BiasedTranslateRotate::_to_json(json &j) const {
     };
     _roundjson(j, 3);
 }
-void BiasedTranslateRotate::_from_json(const json &j) {
+void SmartTranslateRotate::_from_json(const json &j) {
     assert(!molecules.empty());
     try {
         std::string molname = j.at("molecule");
@@ -821,10 +823,9 @@ void BiasedTranslateRotate::_from_json(const json &j) {
         dprot = j.at("dprot");
         dptrans = j.at("dp");
         p = j.at("p");
-        apad = j.at("apad");
-        b = j.at("b");
-        c = j.at("c");
-        rsd = j.at("rsd");
+        r_x = j.at("rx"); // length of ellipsoidal radius along axis connecting reference atoms (in Å)
+        r_y = j.at("ry"); // length of ellipsoidal radius perpendicular to axis connecting reference atoms (in Å)
+        rsd = j.at("rsd"); // threshold for relative standard deviation of molecules inside geometry. When it goes below this value, a constant bias is used 
 
         if (repeat < 0) {
             auto v = spc.findMolecules(molid);
@@ -835,7 +836,7 @@ void BiasedTranslateRotate::_from_json(const json &j) {
     }
 }
 
-void BiasedTranslateRotate::_move(Change &change) {
+void SmartTranslateRotate::_move(Change &change) {
     assert(molid >= 0);
     assert(!spc.groups.empty());
     assert(spc.geo.getVolume() > 0);
@@ -847,61 +848,68 @@ void BiasedTranslateRotate::_move(Change &change) {
     auto reflist1 = spc.findAtoms(refid1); // list of atoms w. 'refid1'
     auto reflist2 = spc.findAtoms(refid2); // list of atoms w. 'refid2'
     if (size(mollist) > 0) {
-        auto it = slump.sample(mollist.begin(), mollist.end());
+        auto it = slump.sample(mollist.begin(), mollist.end()); // chosing random molecule in group of type molname
         auto ref1 = slump.sample(reflist1.begin(), reflist1.end());
         auto ref2 = slump.sample(reflist2.begin(), reflist2.end());
         cylAxis = spc.geo.vdist( ref2->pos, ref1->pos )*0.5; // half vector between reference atoms
         origo = ref2->pos - cylAxis;                         // coordinates of middle point between reference atoms: new origo
-        a = cylAxis.norm()+apad;                             // Length of a axis of sphere/ellipsoid
-
-        if (not it->empty()) {
+        if (r_x < cylAxis.norm()) // checking so that a is larger than length of cylAxis
+            throw std::runtime_error("specified radius of ellipsoid along the axis connecting reference atoms (rx) must be larger or equal to half the distance between reference atoms. Specified radius is " + std::to_string(r_x) + " Å whereas half the distance between reference atoms is " + std::to_string(cylAxis.norm()) + "Å");
+        
+        if (not it->empty()) { // checking so that molecule exists
             assert(it->id == molid);
 
-            randNbr = slump();
-            molV = spc.geo.vdist( it->cm, origo ); // vector between selected atom and center of geometry
-            cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
-            theta = acos(cosTheta);
-            x = cosTheta*molV.norm();
-            y = sin(theta)*molV.norm();
-            coord = x*x/(a*a)+y*y/(b*b);
+            randNbr = slump(); // assigning random number in range [0,1]
+            molV = spc.geo.vdist( it->cm, origo ); // vector between selected molecule and center of geometry
+            cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm(); // cosinus of angle between coordinate vector of selected molecule and axis connecting reference atoms
+            theta = acos(cosTheta); // angle between coordinate vector of selected molecule and axis connecting reference atoms
+            x = cosTheta*molV.norm(); // x coordinate of selected molecule with respect to center of geometry (in plane including vectors molV and cylAxis)
+            y = sin(theta)*molV.norm(); // y coordinate of selected molecule with respect to center of geometry (in plane including vectors molV and cylAxis)
+            coord = x * x / (r_x * r_x) + y * y / (r_y * r_y); // calculating normalized coordinate with respect to dimensions of geometry (> 1.0 -> outside, < 1.0 -> inside)
 
             if ( not ( coord > 1.0 && p < randNbr ) ) {
 
                 if (coord <= 1.0)
-                    cntInner += 1;
+                    cntInner += 1; // counting number of times a molecule is found inside geometry
 
-                cnt += 1;
+                cnt += 1; // total number of counts
 
-                if (findBias == true) {
-                    countNin = 0.0;
-                    countNout = 0.0;
-                    Ntot = 0.0;
+                if (findBias == true) { // continuing to adjust bias according to number of molecules inside and outside geometry
+                    countNin = 0.0; // counter keeping track of number of molecules inside geometry
+                    countNout = 0.0; // counter keeping track of number of molecules outside geometry
+                    Ntot = 0.0; // total number of particles
                     for ( auto &g : mollist) {
                         Ntot += 1.0;
-                        molV = spc.geo.vdist( g.cm, origo );
+                        molV = spc.geo.vdist( g.cm, origo ); 
                         cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
                         theta = acos(cosTheta);
                         x = cosTheta*molV.norm();
                         y = sin(theta)*molV.norm();
-                        coordTemp = x*x/(a*a)+y*y/(b*b);
+                        coordTemp = x * x / (r_x * r_x) + y * y / (r_y * r_y);
                         if (coordTemp <= 1.0)
                             countNin += 1.0;
                         else
                             countNout += 1.0;
                     }
 
-                    countNin_avg += countNin;
-                    countNout_avg += countNout;
+                    countNin_avg += countNin; // appending number of molecules inside geometry (since it has type Average)
+                    countNout_avg += countNout; // appending number of molecules outside geometry (since it has type Average)
 
-                    if (cnt%1000000 == 0) {
-                        Nin = countNin_avgBlocks.avg();
-                        if (countNin_avgBlocks.stdev()/Nin < rsd) {
+                    if(cnt%100==0) {
+                    	countNin_avgBlocks += countNin_avg.avg(); // appending average number of molecules inside geometry (type Average)
+                        countNout_avgBlocks += countNout_avg.avg(); // appending average number of molecules outside geometry (type Average)
+                    }    
+
+                    if (cnt%100000 == 0) { 
+                        Nin = countNin_avgBlocks.avg(); // block average number of molecules inside geometry 
+                        if ( countNin_avgBlocks.stdev()/Nin < rsd) { // if block standard deviation is below specified threshold
                             cout << "Bias found with rsd = " << countNin_avgBlocks.stdev()/Nin << " < " << rsd << "\n\n";
-                            findBias = false;
-                        }
-                    }
-                }
+                            cout << "Average # of water molecules inside sphere: " << Nin << "\n";
+                            findBias = false; // stop updating bias, use constant value
+			}
+		    }   
 
+                }
                 if (dptrans > 0) { // translate
                     Point oldcm = it->cm;
                     Point dp = ranunit(slump, dir) * dptrans * slump();
@@ -925,36 +933,35 @@ void BiasedTranslateRotate::_move(Change &change) {
                 }
                 assert(spc.geo.sqdist(it->cm, Geometry::massCenter(it->begin(), it->end(), spc.geo.getBoundaryFunc(),
                                                                -it->cm)) < 1e-6);
-
                 molV = spc.geo.vdist( it->cm, origo );
                 cosTheta = molV.dot(cylAxis)/molV.norm()/cylAxis.norm();
                 theta = acos(cosTheta);
                 x = cosTheta*molV.norm();
                 y = sin(theta)*molV.norm();
-                coordNew = x*x/(a*a)+y*y/(b*b);
+                coordNew = x * x / (r_x * r_x) + y * y / (r_y * r_y);
 
-                if (findBias == true) {
-                    if ( coord <= 1.0 && coordNew > 1.0 )
-                        _bias = -log(p/(1-(1-p)/(p*Ntot+(1-p)*countNin)));
-                    else if ( coord > 1.0 && coordNew <= 1.0 )
-                        _bias = -log(1/(1+(1-p)/(p*Ntot+(1-p)*countNin)));
+                if (findBias == true) { // if using constantly updated bias
+                    if ( coord <= 1.0 && coordNew > 1.0 ) // if molecule goes from inside to outside geometry
+                        _bias = -log(p/(1-(1-p)/(p*Ntot+(1-p)*countNin))); // use corresponding bias, based on this cycle's number of molecules inside 
+                    else if ( coord > 1.0 && coordNew <= 1.0 ) // if molecules goes from outside to inside geometry
+                        _bias = -log(1/(1+(1-p)/(p*Ntot+(1-p)*countNin))); // use corresponding bias, based on this cycle's number of molecules inside
                 }
 
-                else {
-                    if ( coord <= 1.0 && coordNew > 1.0 )
-                        _bias = -log(p/(1-(1-p)/(p*Ntot+(1-p)*Nin)));
-                    else if ( coord > 1.0 && coordNew <= 1.0 )
-                        _bias = -log(1/(1+(1-p)/(p*Ntot+(1-p)*Nin)));
+                else { // if constant bias has been found
+                    if ( coord <= 1.0 && coordNew > 1.0 ) // if molecule goes from inside to outside geometry
+                        _bias = -log(p/(1-(1-p)/(p*Ntot+(1-p)*Nin))); // use corresponding bias based on average, constant value Nin
+                    else if ( coord > 1.0 && coordNew <= 1.0 ) // if molecule goes from outside to inside geometry
+                        _bias = -log(1/(1+(1-p)/(p*Ntot+(1-p)*Nin))); // use corresponding bias based on average, constant value Nin 
                 }
             }
         }
     }
 }
 
-double BiasedTranslateRotate::bias(Change &, double, double) { return _bias; }
+double SmartTranslateRotate::bias(Change &, double, double) { return _bias; }
 
-BiasedTranslateRotate::BiasedTranslateRotate(Space &spc) : spc(spc) {
-    name = "biasedmoltransrot";
+SmartTranslateRotate::SmartTranslateRotate(Space &spc) : spc(spc) {
+    name = "smartmoltransrot";
     repeat = -1; // meaning repeat N times
 }
 

@@ -6,6 +6,36 @@ namespace Potential {
 
 // =============== PairMixer ===============
 
+TCombinatorFunc PairMixer::getCombinator(ECombinationRule combination_rule, EParameterName parameter_name) {
+    TCombinatorFunc combinator;
+    switch (combination_rule) {
+    case undefined:
+        combinator = &combUndefined;
+        break;
+    case ArithmeticMean:
+        combinator = &combArithmetic;
+        break;
+    case GeometricMean:
+        combinator = &combGeometric;
+        break;
+    case LorentzBerthelot:
+        switch (parameter_name) {
+        case sigma:
+            combinator = &combArithmetic;
+            break;
+        case epsilon:
+            combinator = &combGeometric;
+            break;
+        default:
+            throw std::logic_error("unsupported mixer initialization");
+        }
+        break;
+    default:
+        throw std::logic_error("unsupported mixer initialization");
+    }
+    return combinator;
+}
+
 TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
     size_t n = atoms.size(); // number of atom types
     TPairMatrixPtr matrix = std::make_shared<TPairMatrix>(n, n);
@@ -667,32 +697,17 @@ void Dummy::to_json(json &) const {}
 // =============== LennardJones ===============
 
 void LennardJones::initPairMatrices() {
-    TCombinatorFunc comb_sigma, comb_epsilon;
-    if (combination_rule == undefined) {
-        faunus_logger->warn("Undefined combination rules in effect for the {} potential.", name);
-        comb_sigma = &PairMixer::combUndefined;
-        comb_epsilon = &PairMixer::combUndefined;
-    } else if (combination_rule == LorentzBerthelot) {
-        faunus_logger->debug("Lorentz-Berthelot combination rules in effect for the {} potential.", name);
-        comb_sigma = &PairMixer::combArithmetic;
-        comb_epsilon = &PairMixer::combGeometric;
-    } else if (combination_rule == GeometricMean) {
-        faunus_logger->debug("Geometric mean combination rules in effect for the {} potential.", name);
-        comb_sigma = &PairMixer::combGeometric;
-        comb_epsilon = &PairMixer::combGeometric;
-    } else {
-        throw std::logic_error("missing implementation of a combination rule");
-    }
-    auto sigma_mixer = PairMixer(
-            [](const AtomData &a) -> double { return a.sigma; },
-            comb_sigma,
-            &PairMixer::modSquared);
-    auto epsilon_mixer = PairMixer(
-            [](const AtomData &a) -> double { return a.eps; },
-            comb_epsilon,
-            [](double x) { return 4*x; });
-    sigma_squared = sigma_mixer.createPairMatrix(atoms, custom_pairs);
-    epsilon_quadrupled = epsilon_mixer.createPairMatrix(atoms, custom_pairs);
+    faunus_logger->debug("Combination rule {} in effect for the {} potential.",
+                         combination_rule_name[combination_rule], name);
+    const TExtractorFunc extract_sigma = [](const AtomData &a) -> double { return a.sigma; };
+    const TExtractorFunc extract_epsilon = [](const AtomData &a) -> double { return a.eps; };
+    const TCombinatorFunc comb_sigma = PairMixer::getCombinator(combination_rule, PairMixer::sigma);
+    const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::epsilon);
+
+    sigma_squared = PairMixer(extract_sigma, comb_sigma, &PairMixer::modSquared)
+        .createPairMatrix(atoms, custom_pairs);
+    epsilon_quadrupled = PairMixer(extract_epsilon, comb_epsilon, [](double x) -> double { return 4*x; })
+        .createPairMatrix(atoms, custom_pairs);
 
     faunus_logger->debug("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(),
@@ -702,12 +717,11 @@ void LennardJones::initPairMatrices() {
 // =============== HardSphere ===============
 
 void HardSphere::initPairMatrices() {
-    faunus_logger->debug("Arithmetic mean combination rule in effect for the {} potential.", name);
-    auto sigma_mixer = PairMixer(
-            [](const AtomData &a) -> double { return a.sigma; },
-            &PairMixer::combArithmetic,
-            &PairMixer::modSquared);
-    sigma_squared = sigma_mixer.createPairMatrix(atoms, custom_pairs);
+    faunus_logger->debug("Combination rule {} in effect for the {} potential.",
+        combination_rule_name[combination_rule], name);
+    const TExtractorFunc extract_sigma = [](const AtomData &a) -> double { return a.sigma; };
+    sigma_squared = PairMixer(extract_sigma, PairMixer::getCombinator(combination_rule), &PairMixer::modSquared)
+        .createPairMatrix(atoms, custom_pairs);
     faunus_logger->debug("Pair matrix for {} sigma ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(), custom_pairs.size());
 }
@@ -715,16 +729,17 @@ void HardSphere::initPairMatrices() {
 // =============== Hertz ===============
 
 void Hertz::initPairMatrices() {
-    faunus_logger->debug("Hertz combination rules in effect for the {} potential.", name);
-    auto radius_mixer = PairMixer(
-            [](const AtomData &a) -> double { return a.hdr; },
-            &PairMixer::combArithmetic,
-            [](double x){ return 2*x; });
-    auto epsilon_mixer = PairMixer(
-            [](const AtomData &a) -> double { return a.eps_hertz; },
-            &PairMixer::combGeometric);
-    hydrodynamic_diameter = radius_mixer.createPairMatrix(atoms, custom_pairs);
-    epsilon_hertz = epsilon_mixer.createPairMatrix(atoms, custom_pairs);
+    faunus_logger->debug("Combination rule {} in effect for the {} potential.",
+                         combination_rule_name[combination_rule], name);
+    const TExtractorFunc extract_radius = [](const AtomData &a) -> double { return a.hdr; };
+    const TExtractorFunc extract_epsilon = [](const AtomData &a) -> double { return a.eps_hertz; };
+    const TCombinatorFunc comb_radius = PairMixer::getCombinator(combination_rule, PairMixer::sigma);
+    const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::epsilon);
+
+    hydrodynamic_diameter = PairMixer(extract_radius, comb_radius, [](double x) -> double { return 2*x; })
+        .createPairMatrix(atoms, custom_pairs);
+    epsilon_hertz = PairMixer(extract_epsilon, comb_epsilon).createPairMatrix(atoms, custom_pairs);
+
     faunus_logger->debug(
             "Pair matrix for {} hydrodynamic radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
             hydrodynamic_diameter->rows(), hydrodynamic_diameter->cols(), epsilon_hertz->rows(), epsilon_hertz->cols(),
@@ -735,17 +750,19 @@ void Hertz::initPairMatrices() {
 // =============== SquareWell ===============
 
 void SquareWell::initPairMatrices() {
-    faunus_logger->debug("SquareWell combination rules in effect for the {} potential.", name);
+    faunus_logger->debug("Combination rule {} in effect for the {} potential.",
+                         combination_rule_name[combination_rule], name);
+    const TExtractorFunc extract_diameter =
+        [](const AtomData &a) -> double { return a.sigma + 2 * a.squarewell_threshold; };
+    const TExtractorFunc extract_depth = [](const AtomData &a) -> double { return a.squarewell_depth; };
+    const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::sigma);
+    const TCombinatorFunc comb_depth = PairMixer::getCombinator(combination_rule, PairMixer::epsilon);
 
-    auto diameter_mixer = PairMixer(
-            [](const AtomData &a) -> double { return a.sigma + 2 * a.squarewell_threshold; },
-            &PairMixer::combArithmetic,
-            &PairMixer::modSquared);
-    auto depth_mixer = PairMixer(
-            [](const AtomData &a) -> double { return a.squarewell_depth; },
-            &PairMixer::combGeometric);
-    diameter_sw_squared = diameter_mixer.createPairMatrix(atoms, custom_pairs);
-    depth_sw = depth_mixer.createPairMatrix(atoms, custom_pairs);
+    diameter_sw_squared = PairMixer(extract_diameter, comb_diameter, &PairMixer::modSquared)
+        .createPairMatrix(atoms, custom_pairs);
+    depth_sw = PairMixer(extract_depth, comb_depth)
+        .createPairMatrix(atoms, custom_pairs);
+
     faunus_logger->debug(
             "Pair matrix for {} diameter ({}×{}) and depth ({}×{}) created using {} custom pairs.",
             name,

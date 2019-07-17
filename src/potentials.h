@@ -49,6 +49,10 @@ NLOHMANN_JSON_SERIALIZE_ENUM( ECombinationRule, {
     {LorentzBerthelot, "LBSW"},
     {LorentzBerthelot, "HE"},
 })
+// for text messages
+const std::vector<std::string> combination_rule_name = {
+    "undefined", "arithmetic mean", "geometric mean", "Lorentz-Berthelot"
+};
 
 
 /**
@@ -80,6 +84,9 @@ class PairMixer {
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms);
     //! @return a square matrix of atoms.size()
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms, const std::vector<InteractionData> &interactions);
+
+    enum EParameterName {any, sigma, epsilon};
+    static TCombinatorFunc getCombinator(ECombinationRule combination_rule, EParameterName = any);
 
     // when explicit custom pairs are the only option
     inline static double combUndefined(double, double) { return std::numeric_limits<double>::signaling_NaN(); };
@@ -336,7 +343,8 @@ class HardSphere : public MixerPairPotentialBase {
     void initPairMatrices() override;
 
   public:
-    HardSphere(const std::string &name = "hardsphere") : MixerPairPotentialBase(name) {};
+    HardSphere(const std::string &name = "hardsphere")
+        : MixerPairPotentialBase(name, std::string(), ArithmeticMean){};
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         return r.squaredNorm() < (*sigma_squared)(a.id, b.id) ? pc::infty : 0;

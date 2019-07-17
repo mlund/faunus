@@ -36,7 +36,7 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
 void from_json(const json &j, std::vector<InteractionData> &interactions) {
     auto &custom_list = j.at("custom");
     if(! custom_list.is_object() && ! custom_list.is_array()) {
-        throw CustomInteractionException("custom parameters syntax error");
+        throw PairPotentialException("custom parameters syntax error");
     }
 
     for (auto custom_pair = custom_list.begin(); custom_pair != custom_list.end(); ++custom_pair) {
@@ -47,12 +47,12 @@ void from_json(const json &j, std::vector<InteractionData> &interactions) {
             auto atom0 = findName(atoms, atoms_name[0]);
             auto atom1 = findName(atoms, atoms_name[1]);
             if (atom0 == atoms.end() or atom1 == atoms.end()) {
-                throw CustomInteractionException(
+                throw PairPotentialException(
                     ("unknown atom(s): ["s + atoms_name[0] + " " + atoms_name[1] + "]"));
             }
             interactions.push_back({{atom0->id(), atom1->id()}, a});
         } else {
-            throw CustomInteractionException("custom parameters require exactly two space-separated atoms");
+            throw PairPotentialException("custom parameters require exactly two space-separated atoms");
         }
     }
 }
@@ -81,6 +81,37 @@ Point PairPotentialBase::force(const Particle &, const Particle &, double, const
     assert(false && "We should never reach this point!");
     return {0, 0, 0};
 }
+
+
+// =============== MixerPairPotentialBase ===============
+
+void MixerPairPotentialBase::from_json(const json &j) {
+    try {
+        if (j.count("mixing") == 1) {
+            json mixing = j.at("mixing");
+            combination_rule = mixing.get<ECombinationRule>();
+            if(combination_rule == undefined && mixing != "undefined") {
+                // ugly hack because first pair in is silently selected by default
+                throw PairPotentialException("unknown combination rule " + mixing.get<std::string>());
+            }
+        }
+        if (j.count("custom") == 1) {
+            custom_pairs = j;
+        }
+    } catch (const PairPotentialException &e) {
+        faunus_logger->error(std::string(e.what()) + " in potential " + name);
+        throw std::runtime_error("error deserialising potential " + name + " from json");
+    }
+    initPairMatrices();
+}
+
+void MixerPairPotentialBase::to_json(json &j) const {
+    j["mixing"] = combination_rule;
+    if (!custom_pairs.empty()) {
+        j["custom"] = custom_pairs;
+    }
+}
+
 
 void RepulsionR3::from_json(const json &j) {
     f = j.value("prefactor", 1.0);
@@ -632,6 +663,7 @@ Dummy::Dummy() { name = "dummy"; }
 void Dummy::from_json(const json &) {}
 void Dummy::to_json(json &) const {}
 
+
 // =============== LennardJones ===============
 
 void LennardJones::initPairMatrices() {
@@ -667,40 +699,6 @@ void LennardJones::initPairMatrices() {
                          epsilon_quadrupled->rows(), epsilon_quadrupled->cols(), custom_pairs.size());
 }
 
-void LennardJones::from_json(const json &j) {
-    auto mixing = j.at("mixing").get<std::string>();
-    if (mixing == "LB") {
-        combination_rule = LorentzBerthelot;
-    } else if (mixing == "geometric") {
-        combination_rule = GeometricMean;
-    } else {
-        throw std::runtime_error("unknown mixing rule for the " + name + " potential");
-    }
-    if (j.count("custom") == 1) {
-        try {
-            custom_pairs = j;
-        } catch(const CustomInteractionException& e) {
-            faunus_logger->error(std::string(e.what()) + " in potential " + name);
-            throw std::runtime_error("error deserialising potential " + name + " from json");
-        }
-    }
-    initPairMatrices();
-}
-
-void LennardJones::to_json(json &j) const {
-    if (combination_rule == LorentzBerthelot) {
-        j["mixing"] = "LB";
-    } else if (combination_rule == GeometricMean) {
-        j["mixing"] = "geometric";
-    } else {
-        throw std::logic_error("error serialising to json");
-    }
-    if (!custom_pairs.empty()) {
-        j["custom"] = custom_pairs;
-    }
-}
-
-
 // =============== HardSphere ===============
 
 void HardSphere::initPairMatrices() {
@@ -713,20 +711,6 @@ void HardSphere::initPairMatrices() {
     faunus_logger->debug("Pair matrix for {} sigma ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(), custom_pairs.size());
 }
-
-void HardSphere::from_json(const json &j) {
-    if (j.count("custom") == 1) {
-        custom_pairs = j;
-    }
-    initPairMatrices();
-}
-
-void HardSphere::to_json(json &j) const {
-    if (!custom_pairs.empty()) {
-        j["custom"] = custom_pairs;
-    }
-}
-
 
 // =============== Hertz ===============
 
@@ -745,19 +729,6 @@ void Hertz::initPairMatrices() {
             "Pair matrix for {} hydrodynamic radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
             hydrodynamic_diameter->rows(), hydrodynamic_diameter->cols(), epsilon_hertz->rows(), epsilon_hertz->cols(),
             custom_pairs.size());
-}
-
-void Hertz::from_json(const json &j) {
-    if (j.count("custom") == 1) {
-        custom_pairs = j;
-    }
-    initPairMatrices();
-}
-
-void Hertz::to_json(json &j) const {
-    if (!custom_pairs.empty()) {
-        j["custom"] = custom_pairs;
-    }
 }
 
 
@@ -780,19 +751,6 @@ void SquareWell::initPairMatrices() {
             name,
             diameter_sw_squared->rows(), diameter_sw_squared->cols(), depth_sw->rows(), depth_sw->cols(),
             custom_pairs.size());
-}
-
-void SquareWell::from_json(const json &j) {
-    if (j.count("custom") == 1) {
-        custom_pairs = j;
-    }
-    initPairMatrices();
-}
-
-void SquareWell::to_json(json &j) const {
-    if (!custom_pairs.empty()) {
-        j["custom"] = custom_pairs;
-    }
 }
 
 // =============== Polarizability ===============

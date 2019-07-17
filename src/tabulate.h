@@ -156,11 +156,10 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
     /**
      * @brief Get tabulated value at f(x)
      * @param d Table data
-     * @param r2 x value
+     * @param r2 value
      */
     inline T eval(const typename base::data &d, T r2) const {
-        auto low = std::lower_bound(d.r2.begin(), d.r2.end(), r2);
-        size_t pos = (low - d.r2.begin() - 1);
+        size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;
         size_t pos6 = 6 * pos;
         T dz = r2 - d.r2[pos];
         return d.c[pos6] +
@@ -171,18 +170,15 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
     /**
      * @brief Get tabulated value at df(x)/dx
      * @param d Table data
-     * @param r2 x value
+     * @param r2 value
      */
     T evalDer(const typename base::data &d, T r2) const {
-        auto low = std::lower_bound(d.r2.begin(), d.r2.end(), r2);
-        size_t pos = (low - d.r2.begin() - 1);
-        T min = d.r2[pos];
-        T dz = r2 - min;
-        int pos6 = 6 * pos;
-        T fsum = (d.c[pos6 + 1] +
+        size_t pos = std::lower_bound(d.r2.begin(), d.r2.end(), r2) - d.r2.begin() - 1;
+        size_t pos6 = 6 * pos;
+        T dz = r2 - d.r2[pos];
+        return (d.c[pos6 + 1] +
                   dz * (2.0 * d.c[pos6 + 2] +
                         dz * (3.0 * d.c[pos6 + 3] + dz * (4.0 * d.c[pos6 + 4] + dz * (5.0 * d.c[pos6 + 5])))));
-        return fsum;
     }
 
     /**
@@ -260,16 +256,35 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
         if (i >= mngrid)
             throw std::runtime_error("Andrea spline: try to increase utol/ftol");
 
-        // Sort td
+        // create final reversed c and r2
+#ifdef ONCE_CPP17_IS_ENABLED
+        assert( td.c.size() % 6 == 0 );
+        assert( td.c.size() / (td.r2.size()-1) == 6 );
+        assert( std::is_sorted(td.r2.rbegin(), td.r2.rend()));
+        std::reverse(td.r2.begin(), td.r2.end());
+        for (size_t i=0; i<td.c.size()/2; i+=6)
+            std::swap_ranges(td.c.begin()+i, td.c.begin()+i+6, td.c.end()-i-6); // c++17 only
+        return td;
+#endif
         typename base::data tdsort;
         tdsort.rmax2 = td.rmax2;
         tdsort.rmin2 = td.rmin2;
-        tdsort.r2.push_back(td.r2.at(td.r2.size() - 1));
-        for (int i = (int)td.r2.size() - 2; i >= 0; i--) {
-            tdsort.r2.push_back(td.r2.at(i));
-            for (size_t j = 0; j < 6; j++)
-                tdsort.c.push_back(td.c.at(6 * i + j));
-        }
+
+        // reverse copy all elements in r2
+        tdsort.r2.resize( td.r2.size() );
+        std::reverse_copy(td.r2.begin(), td.r2.end(), tdsort.r2.begin());
+
+        // sanity check before reverse knot copy
+        assert( std::is_sorted(td.r2.rbegin(), td.r2.rend()));
+        assert( td.c.size() % 6 == 0 );
+        assert( td.c.size() / (td.r2.size()-1) == 6 );
+
+        // reverse copy knots
+        tdsort.c.resize( td.c.size() );
+        auto dst = tdsort.c.end();
+        for (auto src=td.c.begin(); src!=td.c.end(); src+=6)
+            std::copy(src, src+6, dst-=6);
+
         return tdsort;
     }
 };

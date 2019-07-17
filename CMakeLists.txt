@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.11.4 FATAL_ERROR)
 
 project(faunus)
 
+include(CheckIPOSupported)
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
@@ -325,10 +327,13 @@ target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
 add_test(NAME unittests COMMAND unittests)
 
 # target: faunus
-
 add_executable(faunus src/faunus.cpp ${objs} ${hdrs})
 target_link_libraries(faunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog docopt)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
+check_ipo_supported(RESULT result)
+if(result)
+    set_property(TARGET faunus PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 
 if(ENABLE_SID)
     target_compile_definitions(faunus PRIVATE ENABLE_SID)

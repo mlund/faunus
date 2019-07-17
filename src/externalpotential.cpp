@@ -354,7 +354,9 @@ ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(const Pa
     func = selfEnergy;
 #ifndef NDEBUG
     // test if self energy can be called
+    assert(not Faunus::atoms.empty());
     Particle myparticle;
+    myparticle.id=0;
     if (this->func)
         this->func(myparticle);
 #endif

@@ -440,8 +440,10 @@ void DipoleDipoleGalore::from_json(const json &j) {
         // Set particle self-energy function. For reasons yet to be understood,
         // rc, rc2 etc. cannot be captured to reference, but must be hard-copied,
         // here into `factor`
-        selfEnergy = [factor = selfenergy_prefactor * lB / (rc * rc2)](const Particle &a) {
-            return a.getExt().mulen * a.getExt().mulen * factor;
+        selfEnergy = [factor = selfenergy_prefactor * lB / (rc * rc2)](const Particle &a) -> double {
+            if (a.hasExtension())
+                return a.getExt().mulen * a.getExt().mulen * factor;
+            return 0.0;
         };
     }
 

@@ -14,7 +14,7 @@
 #include "regions.h"
 #include "space.h"
 #include "average.h"
-#include "potentials.h"
+#include "potentials_test.h"
 #include "tabulate.h"
 #include "move.h"
 #include "penalty.h"

@@ -304,6 +304,11 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/units.h
     )
 
+# faunus header files
+set(tsts
+    ${CMAKE_SOURCE_DIR}/src/potentials_test.h
+    )
+
 # Compiler specific flags
 
 ## GCC
@@ -321,7 +326,7 @@ add_compile_options($<$<CONFIG:Debug>:-Werror>)
 add_compile_options($<$<CONFIG:Debug>:-O0>)
 
 # target: unittests
-add_executable(unittests src/unittests.cpp ${objs} ${hdrs})
+add_executable(unittests src/unittests.cpp ${objs} ${hdrs} ${tsts})
 target_link_libraries(unittests ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog)
 target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
 add_test(NAME unittests COMMAND unittests)

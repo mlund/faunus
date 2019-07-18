@@ -731,18 +731,18 @@ void HardSphere::initPairMatrices() {
 // =============== Hertz ===============
 
 void Hertz::initPairMatrices() {
-    const TExtractorFunc extract_radius = [](const AtomData &a) -> double { return a.hdr; };
+    const TExtractorFunc extract_diameter = [](const AtomData &a) -> double { return 2*a.hdr; };
     const TExtractorFunc extract_epsilon = [](const AtomData &a) -> double { return a.eps_hertz; };
-    const TCombinatorFunc comb_radius = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
+    const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
     const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
 
-    hydrodynamic_diameter = PairMixer(extract_radius, comb_radius, [](double x) -> double { return 2*x; })
+    diameter_squared = PairMixer(extract_diameter, comb_diameter, &PairMixer::modSquared)
         .createPairMatrix(atoms, custom_pairs);
     epsilon_hertz = PairMixer(extract_epsilon, comb_epsilon).createPairMatrix(atoms, custom_pairs);
 
     faunus_logger->debug(
-            "Pair matrix for {} hydrodynamic radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
-            hydrodynamic_diameter->rows(), hydrodynamic_diameter->cols(), epsilon_hertz->rows(), epsilon_hertz->cols(),
+            "Pair matrix for {} radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
+            diameter_squared->rows(), diameter_squared->cols(), epsilon_hertz->rows(), epsilon_hertz->cols(),
             custom_pairs.size());
 }
 

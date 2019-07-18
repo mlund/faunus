@@ -185,9 +185,10 @@ CombinedPairPotential<T1, T2> &operator+(const T1 &pot1, const T2 &) {
     return *(new CombinedPairPotential<T1, T2>(pot1.name));
 } //!< Statically add two pair potentials at compile-time
 
+
 struct Dummy : public PairPotentialBase {
     Dummy();
-    inline double operator()(const Particle &, const Particle &, const Point &) const override { return 0; }
+    inline double operator()(const Particle &, const Particle &, const Point &) const override { return 0.0; }
     void from_json(const json &) override;
     void to_json(json &) const override;
 }; //!< A dummy pair potential that always returns zero
@@ -396,20 +397,19 @@ struct RepulsionR3 : public PairPotentialBase {
 
 /**
  * @brief Hertz potential
- * @details This is a repulsive potential describes the change in elasticenergy of two deformable objects when subjected
- * to an axialcompression.
+ * @details This is a repulsive potential, that for example, describes the change in elastic energy
+ * of two deformable objects when subjected to an axial compression.
  * @f[
  *     u(r) = \epsilon_H \left(1 - \frac{r}{2r_H}\right)^{5/2}
  * @f]
- * where r_H is the hydrodynamic radius.
+ * where r_H corresponds to the particle's radius.
  *
  * More info: doi:10.1063/1.3186742
- *
  */
 class Hertz : public MixerPairPotentialBase {
   protected:
-    TPairMatrixPtr hydrodynamic_diameter; // 4 * r_ij * r_ij
-    TPairMatrixPtr epsilon_hertz;         // epsilon_ij
+    TPairMatrixPtr diameter_squared; // 4 * r_ij * r_ij
+    TPairMatrixPtr epsilon_hertz;    // epsilon_ij
     void initPairMatrices() override;
 
   public:
@@ -417,8 +417,8 @@ class Hertz : public MixerPairPotentialBase {
         : MixerPairPotentialBase(name) {};
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         double r2 = r.squaredNorm();
-        if (r2 <= (*hydrodynamic_diameter)(a.id, b.id))
-            return (*epsilon_hertz)(a.id, b.id) * pow((1 - (sqrt(r2) / (*hydrodynamic_diameter)(a.id, b.id))), 2.5);
+        if (r2 <= (*diameter_squared)(a.id, b.id))
+            return (*epsilon_hertz)(a.id, b.id) * pow((1 - (sqrt(r2 / (*diameter_squared)(a.id, b.id)))), 2.5);
         return 0.0;
     }
 };
@@ -430,7 +430,6 @@ class Hertz : public MixerPairPotentialBase {
  *     u(r) = -squarewell_depth
  * @f]
  * when r < sum of radii + squarewell_threshold, and zero otherwise.
- *
  */
 class SquareWell : public MixerPairPotentialBase {
   protected:

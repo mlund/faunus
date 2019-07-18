@@ -8,8 +8,7 @@
 #include "docopt.h"
 #include <cstdlib>
 #include "ProgressBar.hpp"
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 #ifdef ENABLE_SID
 #include "cppsid.h"
@@ -75,10 +74,10 @@ int main( int argc, char **argv )
 
         // prepare loggers
         // TODO refactor to a standalone function and use cmd line options for different sinks, etc.
-        auto faunus_logger = spdlog::stderr_color_mt("faunus");
+        faunus_logger = spdlog::stderr_color_mt("faunus");
         faunus_logger->set_pattern("[%n %P] %^%L: %v%$");
         faunus_logger->set_level(spdlog::level::info);
-        auto mcloop_logger = spdlog::stderr_color_mt("mcloop");
+        mcloop_logger = spdlog::stderr_color_mt("mcloop");
         mcloop_logger->set_pattern("[%n %P] [%E.%f] %L: %v");
         mcloop_logger->set_level(spdlog::level::warn);
 

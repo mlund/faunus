@@ -100,12 +100,7 @@ void to_json(json &j, const std::vector<InteractionData> &interactions) {
 // =============== PairPotentialBase ===============
 
 PairPotentialBase::PairPotentialBase(const std::string &name, const std::string &cite, bool isotropic) :
-        name(name), cite(cite), isotropic(isotropic), faunus_logger(spdlog::get("faunus")) {
-    // if not available, e.g., in unittests, create a dummy
-    if (faunus_logger == nullptr) {
-        faunus_logger = spdlog::create<spdlog::sinks::null_sink_st>("faunus");
-    }
-}
+        name(name), cite(cite), isotropic(isotropic) {}
 
 Point PairPotentialBase::force(const Particle &, const Particle &, double, const Point &) {
     assert(false && "We should never reach this point!");

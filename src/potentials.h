@@ -113,8 +113,6 @@ struct PairPotentialBase {
     virtual Point force(const Particle &, const Particle &, double, const Point &);
     virtual double operator()(const Particle &a, const Particle &b, const Point &r) const = 0;
   protected:
-    std::shared_ptr<spdlog::logger> faunus_logger;
-
     PairPotentialBase(const std::string &name = std::string(), const std::string &cite = std::string(),
                       bool isotropic = true);
 };

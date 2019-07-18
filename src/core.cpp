@@ -3,6 +3,8 @@
 #include "units.h"
 #include <iomanip>
 #include <fstream>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/null_sink.h>
 
 namespace Faunus {
 
@@ -119,6 +121,11 @@ namespace Faunus {
     }
 
     TipFromTheManual usageTip; // Global instance
+
+    // global loggers as a dummy instance
+    // they should be replaced with proper instances in faunus, pyfaunus and unittests if desired
+    std::shared_ptr<spdlog::logger> faunus_logger = spdlog::create<spdlog::sinks::null_sink_st>("null");
+    std::shared_ptr<spdlog::logger> mcloop_logger = faunus_logger;
 
     std::string addGrowingSuffix(const std::string& file) {
         //using std::experimental::filesystem; // exp. c++17 feature, not available on MacOS (Dec. 2018)

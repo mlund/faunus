@@ -132,6 +132,7 @@ template<typename Tspace>
                base::_sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
                if (not g.atomic) {                          // recalc mass-center for non-molecular groups
                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
+
 #ifndef NDEBUG
                    Point cmbak = g.cm;                             // backup mass center
                    g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
@@ -191,6 +192,54 @@ TEST_CASE("[Faunus] TranslateRotate") {
     CHECK(j.at("dprot") == 0.5);
 }
 #endif
+
+/**
+ * @brief Move that preferentially displaces molecules within a specified region around a specified atom type
+ * Idea based on the chapter 'Smarter Monte Carlo' in 'Computer Simulation of Liquids' by Allen & Tildesley (p. 317)
+ * The current region implemented is an ellipsoid for which you specify radii along length and width of ellipsoid
+ *
+ */
+
+class SmartTranslateRotate : public Movebase {
+  protected:
+    typedef typename Space::Tpvec Tpvec;
+    Space &spc;
+
+    int molid = -1, refid1 = -1, refid2 = -1; // molecule to displace, reference atoms 1 and 2 defining geometry
+    unsigned long cnt;
+    double dptrans = 0, dprot = 0;
+    double p = 1; // initializing probability that a molecule outside geometry is kept as selected molecule
+    double r_x = 0,
+           r_y = 0; // defining lengths of perpendicular radii defining the ellipsoid (or sphere if a and b are equal)
+    double _sqd;    // squared displacement
+    Average<double> msqd, countNin_avg, countNin_avgBlocks, countNout_avg,
+        countNout_avgBlocks; // mean squared displacement and particle counters
+
+    double cosTheta, theta;            // geometrical variables
+    double x, y;                       // x and y coordinate relative to center of geometry of chosen molecule
+    double coord, coordNew, coordTemp; // normalized coordinates to decide if molecule is inside or outside geometry
+    double randNbr;
+    double _bias = 0, rsd = 0.01, Nin, countNin, countNout, Ntot = 0,
+           cntInner = 0; // bias to add when crossing boundary between in and out, counters keeping track of molecules
+                         // inside, outside geomtry etc...
+
+    Point dir = {1, 1, 1};
+    Point cylAxis = {0, 0, 0}; // axis/vector connecting the two reference atoms
+    Point origo = {0, 0, 0};
+    Point molV = {0, 0, 0}; // coordinate vector of chosen molecule
+
+    bool findBias = true;
+
+    void _to_json(json &j) const override;
+    void _from_json(const json &j) override; //!< Configure via json object
+    void _move(Change &change) override;
+    double bias(Change &, double, double) override;
+    void _accept(Change &) override { msqd += _sqd; }
+    void _reject(Change &) override { msqd += 0; }
+
+  public:
+    SmartTranslateRotate(Space &spc);
+};
 
 /**
  * @brief Move that will swap conformation of a molecule
@@ -281,6 +330,44 @@ class ChargeMove : public Movebase {
 
   public:
     ChargeMove(Tspace &spc);
+};
+
+/**
+ * @brief Transfers charge between two molecules
+ */
+class ChargeTransfer : public Movebase {
+  private:
+    typedef typename Space::Tpvec Tpvec;
+    Space &spc;           // Space to operate on
+    Average<double> msqd; // mean squared displacement
+    double dq = 0, deltaq = 0;
+
+    struct moldata {
+        double charges = 0;
+        double moves = 0;
+        int numOfAtoms = 0;
+        int id = 0;
+        std::string molname;
+        std::vector<double> min, max;
+        std::vector<double> molrange;
+        std::vector<double> ratio;
+        std::vector<double> changeQ;
+        Change::data cdata;
+    };
+
+    moldata mol1, mol2;
+
+    double sumTemp = 0;
+    int i = 0;
+
+    void _to_json(json &j) const override;
+    void _from_json(const json &j) override;
+    void _move(Change &change) override;
+    void _accept(Change &) override;
+    void _reject(Change &) override;
+
+  public:
+    ChargeTransfer(Tspace &spc);
 };
 
 /**

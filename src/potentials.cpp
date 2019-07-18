@@ -6,24 +6,24 @@ namespace Potential {
 
 // =============== PairMixer ===============
 
-TCombinatorFunc PairMixer::getCombinator(ECombinationRule combination_rule, EParameterName parameter_name) {
+TCombinatorFunc PairMixer::getCombinator(ECombinationRule combination_rule, ECoefficient parameter_name) {
     TCombinatorFunc combinator;
     switch (combination_rule) {
-    case undefined:
+    case COMB_UNDEFINED:
         combinator = &combUndefined;
         break;
-    case ArithmeticMean:
+    case COMB_ARITHMETIC:
         combinator = &combArithmetic;
         break;
-    case GeometricMean:
+    case COMB_GEOMETRIC:
         combinator = &combGeometric;
         break;
-    case LorentzBerthelot:
+    case COMB_LORENTZ_BERTHELOT:
         switch (parameter_name) {
-        case sigma:
+        case COEF_SIGMA:
             combinator = &combArithmetic;
             break;
-        case epsilon:
+        case COEF_EPSILON:
             combinator = &combGeometric;
             break;
         default:
@@ -115,12 +115,18 @@ Point PairPotentialBase::force(const Particle &, const Particle &, double, const
 
 // =============== MixerPairPotentialBase ===============
 
+void MixerPairPotentialBase::init() {
+    json j_combination_rule = combination_rule;
+    faunus_logger->debug("Combination rule {} in effect for the {} potential.", j_combination_rule, name);
+    initPairMatrices();
+}
+
 void MixerPairPotentialBase::from_json(const json &j) {
     try {
         if (j.count("mixing") == 1) {
             json mixing = j.at("mixing");
             combination_rule = mixing.get<ECombinationRule>();
-            if(combination_rule == undefined && mixing != "undefined") {
+            if(combination_rule == COMB_UNDEFINED && mixing != "undefined") {
                 // ugly hack because first pair in is silently selected by default
                 throw PairPotentialException("unknown combination rule " + mixing.get<std::string>());
             }
@@ -132,7 +138,7 @@ void MixerPairPotentialBase::from_json(const json &j) {
         faunus_logger->error(std::string(e.what()) + " in potential " + name);
         throw std::runtime_error("error deserialising potential " + name + " from json");
     }
-    initPairMatrices();
+    init();
 }
 
 void MixerPairPotentialBase::to_json(json &j) const {
@@ -697,12 +703,10 @@ void Dummy::to_json(json &) const {}
 // =============== LennardJones ===============
 
 void LennardJones::initPairMatrices() {
-    faunus_logger->debug("Combination rule {} in effect for the {} potential.",
-                         combination_rule_name[combination_rule], name);
     const TExtractorFunc extract_sigma = [](const AtomData &a) -> double { return a.sigma; };
     const TExtractorFunc extract_epsilon = [](const AtomData &a) -> double { return a.eps; };
-    const TCombinatorFunc comb_sigma = PairMixer::getCombinator(combination_rule, PairMixer::sigma);
-    const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::epsilon);
+    const TCombinatorFunc comb_sigma = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
+    const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
 
     sigma_squared = PairMixer(extract_sigma, comb_sigma, &PairMixer::modSquared)
         .createPairMatrix(atoms, custom_pairs);
@@ -717,8 +721,6 @@ void LennardJones::initPairMatrices() {
 // =============== HardSphere ===============
 
 void HardSphere::initPairMatrices() {
-    faunus_logger->debug("Combination rule {} in effect for the {} potential.",
-        combination_rule_name[combination_rule], name);
     const TExtractorFunc extract_sigma = [](const AtomData &a) -> double { return a.sigma; };
     sigma_squared = PairMixer(extract_sigma, PairMixer::getCombinator(combination_rule), &PairMixer::modSquared)
         .createPairMatrix(atoms, custom_pairs);
@@ -729,12 +731,10 @@ void HardSphere::initPairMatrices() {
 // =============== Hertz ===============
 
 void Hertz::initPairMatrices() {
-    faunus_logger->debug("Combination rule {} in effect for the {} potential.",
-                         combination_rule_name[combination_rule], name);
     const TExtractorFunc extract_radius = [](const AtomData &a) -> double { return a.hdr; };
     const TExtractorFunc extract_epsilon = [](const AtomData &a) -> double { return a.eps_hertz; };
-    const TCombinatorFunc comb_radius = PairMixer::getCombinator(combination_rule, PairMixer::sigma);
-    const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::epsilon);
+    const TCombinatorFunc comb_radius = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
+    const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
 
     hydrodynamic_diameter = PairMixer(extract_radius, comb_radius, [](double x) -> double { return 2*x; })
         .createPairMatrix(atoms, custom_pairs);
@@ -750,13 +750,11 @@ void Hertz::initPairMatrices() {
 // =============== SquareWell ===============
 
 void SquareWell::initPairMatrices() {
-    faunus_logger->debug("Combination rule {} in effect for the {} potential.",
-                         combination_rule_name[combination_rule], name);
     const TExtractorFunc extract_diameter =
         [](const AtomData &a) -> double { return a.sigma + 2 * a.squarewell_threshold; };
     const TExtractorFunc extract_depth = [](const AtomData &a) -> double { return a.squarewell_depth; };
-    const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::sigma);
-    const TCombinatorFunc comb_depth = PairMixer::getCombinator(combination_rule, PairMixer::epsilon);
+    const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
+    const TCombinatorFunc comb_depth = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
 
     diameter_sw_squared = PairMixer(extract_diameter, comb_diameter, &PairMixer::modSquared)
         .createPairMatrix(atoms, custom_pairs);

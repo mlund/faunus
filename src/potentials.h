@@ -40,20 +40,20 @@ struct InteractionData {
 void from_json(const json &j, std::vector<InteractionData> &interactions);
 void to_json(json &j, const std::vector<InteractionData> &interactions);
 
-enum ECombinationRule {undefined = 0, ArithmeticMean, GeometricMean, LorentzBerthelot};
+/**
+ * @brief Known named combination rules for parameters of pair potential interaction.
+ *
+ * When adding a new one, add a json mapping. Also consider appending the PairMixer::getCombinator()
+ * method to recognize the new rule.
+ */
+enum ECombinationRule {COMB_UNDEFINED = 0, COMB_ARITHMETIC, COMB_GEOMETRIC, COMB_LORENTZ_BERTHELOT};
 NLOHMANN_JSON_SERIALIZE_ENUM( ECombinationRule, {
-    {undefined, "undefined"},
-    {ArithmeticMean, "average"},
-    {GeometricMean, "geometric"},
-    {LorentzBerthelot, "LB"},
-    {LorentzBerthelot, "LBSW"},
-    {LorentzBerthelot, "HE"},
+    {COMB_UNDEFINED, "undefined"},
+    {COMB_ARITHMETIC, "arithmetic"},
+    {COMB_GEOMETRIC, "geometric"},
+    {COMB_LORENTZ_BERTHELOT, "lorentz_berthelot"},
+    {COMB_LORENTZ_BERTHELOT, "LB"}, // alternative non-canonical name
 })
-// for text messages
-const std::vector<std::string> combination_rule_name = {
-    "undefined", "arithmetic mean", "geometric mean", "Lorentz-Berthelot"
-};
-
 
 /**
  * @brief Exception for handling pair potential initialization.
@@ -67,12 +67,12 @@ struct PairPotentialException : public std::runtime_error {
  * and/or custom values using an arbitrary combination rule.
  *
  * PairMixer holds three functions that are applied in order extractor → combinator → modifier to create
- * a parameter matrix for all possible interactions. The function createPairMatrix applies the functions
- * on all atom type pairs, and optionally also on list of custom pair parameters (not the combinator
+ * a coefficient matrix for all possible interactions. The function createPairMatrix applies the functions
+ * on all atom type pairs, and optionally also on the list of custom pair parameters (not the combinator
  * function).
  */
 class PairMixer {
-    TExtractorFunc extractor;   //!< Function extracting the parameter value from AtomData structure
+    TExtractorFunc extractor;   //!< Function extracting the coefficient from the AtomData structure
     TCombinatorFunc combinator; //!< Function combining two values
     TModifierFunc modifier;     //!< Function modifying the result for fast computations, e.g., a square of
 
@@ -83,10 +83,11 @@ class PairMixer {
     //! @return a square matrix of atoms.size()
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms);
     //! @return a square matrix of atoms.size()
-    TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms, const std::vector<InteractionData> &interactions);
+    TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms,
+                                    const std::vector<InteractionData> &interactions);
 
-    enum EParameterName {any, sigma, epsilon};
-    static TCombinatorFunc getCombinator(ECombinationRule combination_rule, EParameterName = any);
+    enum ECoefficient {COEF_ANY, COEF_SIGMA, COEF_EPSILON};
+    static TCombinatorFunc getCombinator(ECombinationRule combination_rule, ECoefficient = COEF_ANY);
 
     // when explicit custom pairs are the only option
     inline static double combUndefined(double, double) { return std::numeric_limits<double>::signaling_NaN(); };
@@ -126,12 +127,13 @@ void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair 
  */
 class MixerPairPotentialBase : public PairPotentialBase {
   protected:
-    ECombinationRule combination_rule = undefined;
+    ECombinationRule combination_rule = COMB_UNDEFINED;
     std::vector<InteractionData> custom_pairs;
-    virtual void initPairMatrices() = 0;
+    void init();  //!< initialize the potential when data, e.g., atom parameters, are available
+    virtual void initPairMatrices() = 0; //!< potential-specific initialization of parameter matrices
   public:
     MixerPairPotentialBase(const std::string &name = std::string(), const std::string &cite = std::string(),
-                           ECombinationRule combination_rule = undefined, bool isotropic = true)
+                           ECombinationRule combination_rule = COMB_UNDEFINED, bool isotropic = true)
         : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule) {
     };
     void from_json(const json &) override;
@@ -200,8 +202,9 @@ class LennardJones : public MixerPairPotentialBase {
     void initPairMatrices() override;
 
   public:
-    LennardJones(const std::string &name = "lennardjones", const std::string &cite = std::string()) :
-        MixerPairPotentialBase(name, cite) {};
+    LennardJones(const std::string &name = "lennardjones", const std::string &cite = std::string(),
+                 ECombinationRule combination_rule = COMB_LORENTZ_BERTHELOT)
+        : MixerPairPotentialBase(name, cite, combination_rule) {};
 
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
         double s6 = powi((*sigma_squared)(a.id, b.id), 3);
@@ -270,8 +273,9 @@ class WeeksChandlerAndersen : public LennardJones {
     }
 
   public:
-    WeeksChandlerAndersen(const std::string &name = "wca", const std::string &cite = "doi:ct4kh9") :
-            LennardJones(name, cite) {};
+    WeeksChandlerAndersen(const std::string &name = "wca", const std::string &cite = "doi:ct4kh9",
+                          ECombinationRule combination_rule = COMB_LORENTZ_BERTHELOT)
+        : LennardJones(name, cite, combination_rule) {};
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         return operator()(a, b, r.squaredNorm());
@@ -335,6 +339,8 @@ struct DipoleDipole : public PairPotentialBase {
 
 /**
  * @brief Hardsphere potential
+ *
+ * Uses arithmetic mean for sigma as a default combination rule.
  * @note `PairMatrix` is _shared_ upon copying
  */
 class HardSphere : public MixerPairPotentialBase {
@@ -344,7 +350,7 @@ class HardSphere : public MixerPairPotentialBase {
 
   public:
     HardSphere(const std::string &name = "hardsphere")
-        : MixerPairPotentialBase(name, std::string(), ArithmeticMean){};
+        : MixerPairPotentialBase(name, std::string(), COMB_ARITHMETIC) {};
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         return r.squaredNorm() < (*sigma_squared)(a.id, b.id) ? pc::infty : 0;
@@ -358,7 +364,7 @@ TEST_CASE("[Faunus] HardSphere") {
     Particle a, b;
     a = atoms[0];
     b = atoms[1];
-    HardSphere hs = R"({"mixing": "average"})"_json;
+    HardSphere hs = R"({"mixing": "arithmetic"})"_json;
     HardSphere hs_custom = R"({"custom": {"A B": {"sigma": 6}}})"_json;
 
     CHECK(hs(a, a, {0, 0, 2.1_angstrom}) == 0);
@@ -405,7 +411,8 @@ class Hertz : public MixerPairPotentialBase {
     void initPairMatrices() override;
 
   public:
-    Hertz(const std::string &name = "hertz") : MixerPairPotentialBase(name) {};
+    Hertz(const std::string &name = "hertz")
+        : MixerPairPotentialBase(name) {};
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         double r2 = r.squaredNorm();
         if (r2 <= (*hydrodynamic_diameter)(a.id, b.id))
@@ -430,7 +437,8 @@ class SquareWell : public MixerPairPotentialBase {
     void initPairMatrices() override;
 
   public:
-    SquareWell(const std::string &name = "squarewell") : MixerPairPotentialBase(name) {};
+    SquareWell(const std::string &name = "squarewell")
+        : MixerPairPotentialBase(name) {};
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         if (r.squaredNorm() < (*diameter_sw_squared)(a.id, b.id))
             return -(*depth_sw)(a.id, b.id);
@@ -446,7 +454,7 @@ TEST_CASE("[Faunus] SquareWell") {
     Particle a, b;
     a = atoms[0];
     b = atoms[1];
-    SquareWell pot = R"({"mixing": "LBSW"})"_json;
+    SquareWell pot = R"({"mixing": "LB"})"_json;
 
     CHECK(pot(a, b, {0, 0, 5 + 10 + 5.99}) == Approx(-std::sqrt(0.2_kJmol * 0.1_kJmol)));
     CHECK(pot(a, b, {0, 0, 5 + 10 + 6.01}) == Approx(0));

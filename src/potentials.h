@@ -46,8 +46,8 @@ void to_json(json &j, const std::vector<InteractionData> &interactions);
  * When adding a new one, add a json mapping. Also consider appending the PairMixer::getCombinator()
  * method to recognize the new rule.
  */
-enum ECombinationRule {COMB_UNDEFINED = 0, COMB_ARITHMETIC, COMB_GEOMETRIC, COMB_LORENTZ_BERTHELOT};
-NLOHMANN_JSON_SERIALIZE_ENUM( ECombinationRule, {
+enum CombinationRuleType {COMB_UNDEFINED, COMB_ARITHMETIC, COMB_GEOMETRIC, COMB_LORENTZ_BERTHELOT};
+NLOHMANN_JSON_SERIALIZE_ENUM(CombinationRuleType, {
     {COMB_UNDEFINED, "undefined"},
     {COMB_ARITHMETIC, "arithmetic"},
     {COMB_GEOMETRIC, "geometric"},
@@ -59,7 +59,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM( ECombinationRule, {
  * @brief Exception for handling pair potential initialization.
  */
 struct PairPotentialException : public std::runtime_error {
-    PairPotentialException(const std::string msg) : std::runtime_error (msg) {};
+    PairPotentialException(const std::string msg) : std::runtime_error(msg) {};
 };
 
 /**
@@ -77,8 +77,8 @@ class PairMixer {
     TModifierFunc modifier;     //!< Function modifying the result for fast computations, e.g., a square of
 
   public:
-    PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator, TModifierFunc modifier = &modIdentity) :
-            extractor(extractor), combinator(combinator), modifier(modifier) {};
+    PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator, TModifierFunc modifier = &modIdentity)
+        : extractor(extractor), combinator(combinator), modifier(modifier) {};
 
     //! @return a square matrix of atoms.size()
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms);
@@ -86,12 +86,13 @@ class PairMixer {
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms,
                                     const std::vector<InteractionData> &interactions);
 
-    enum ECoefficient {COEF_ANY, COEF_SIGMA, COEF_EPSILON};
-    static TCombinatorFunc getCombinator(ECombinationRule combination_rule, ECoefficient = COEF_ANY);
+    enum CoefficientType {COEF_ANY, COEF_SIGMA, COEF_EPSILON};
+    static TCombinatorFunc getCombinator(CombinationRuleType combination_rule, CoefficientType coefficient = COEF_ANY);
 
     // when explicit custom pairs are the only option
-    inline static double combUndefined(double, double) { return std::numeric_limits<double>::signaling_NaN(); };
-    inline static double combSum(double a, double b) { return (a+b); }
+    inline static constexpr double combUndefined(double, double) {
+        return std::numeric_limits<double>::signaling_NaN();
+    };
     inline static double combArithmetic(double a, double b) { return 0.5*(a+b); }
     inline static double combGeometric(double a, double b) { return std::sqrt(a*b); }
     inline static double modIdentity(double x) { return x; }
@@ -127,15 +128,16 @@ void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair 
  */
 class MixerPairPotentialBase : public PairPotentialBase {
   protected:
-    ECombinationRule combination_rule = COMB_UNDEFINED;
+    CombinationRuleType combination_rule;
     std::vector<InteractionData> custom_pairs;
     void init();  //!< initialize the potential when data, e.g., atom parameters, are available
     virtual void initPairMatrices() = 0; //!< potential-specific initialization of parameter matrices
   public:
     MixerPairPotentialBase(const std::string &name = std::string(), const std::string &cite = std::string(),
-                           ECombinationRule combination_rule = COMB_UNDEFINED, bool isotropic = true)
+                           CombinationRuleType combination_rule = COMB_UNDEFINED, bool isotropic = true)
         : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule) {
     };
+    virtual ~MixerPairPotentialBase() = default;
     void from_json(const json &) override;
     void to_json(json &) const override;
 };
@@ -197,26 +199,26 @@ struct Dummy : public PairPotentialBase {
  */
 class LennardJones : public MixerPairPotentialBase {
   protected:
-    TPairMatrixPtr sigma_squared; // sigma_ij * sigma_ij
-    TPairMatrixPtr epsilon_quadrupled; // 4 * epsilon_ij
+    TPairMatrixPtr sigma_squared;     // sigma_ij * sigma_ij
+    TPairMatrixPtr epsilon_quadruple; // 4 * epsilon_ij
     void initPairMatrices() override;
 
   public:
     LennardJones(const std::string &name = "lennardjones", const std::string &cite = std::string(),
-                 ECombinationRule combination_rule = COMB_LORENTZ_BERTHELOT)
+                 CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT)
         : MixerPairPotentialBase(name, cite, combination_rule) {};
 
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
         double s6 = powi((*sigma_squared)(a.id, b.id), 3);
         double r6 = r2 * r2 * r2;
         double r14 = r6 * r6 * r2;
-        return 6. * (*epsilon_quadrupled)(a.id, b.id) * s6 * (2 * s6 - r6) / r14 * p;
+        return 6. * (*epsilon_quadruple)(a.id, b.id) * s6 * (2 * s6 - r6) / r14 * p;
     }
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         double x = (*sigma_squared)(a.id, b.id) / r.squaredNorm(); // s2/r2
         x = x * x * x; // s6/r6
-        return (*epsilon_quadrupled)(a.id, b.id) * (x * x - x);
+        return (*epsilon_quadruple)(a.id, b.id) * (x * x - x);
     }
 };
 
@@ -269,12 +271,12 @@ class WeeksChandlerAndersen : public LennardJones {
             return 0;
         x = x / r2;    // (s/r)^2
         x = x * x * x; // (s/r)^6
-        return (*epsilon_quadrupled)(a.id, b.id) * (x * x - x + onefourth);
+        return (*epsilon_quadruple)(a.id, b.id) * (x * x - x + onefourth);
     }
 
   public:
     WeeksChandlerAndersen(const std::string &name = "wca", const std::string &cite = "doi:ct4kh9",
-                          ECombinationRule combination_rule = COMB_LORENTZ_BERTHELOT)
+                          CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT)
         : LennardJones(name, cite, combination_rule) {};
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
@@ -287,7 +289,7 @@ class WeeksChandlerAndersen : public LennardJones {
             return Point(0, 0, 0);
         x = x / r2;    // (s/r)^2
         x = x * x * x; // (s/r)^6
-        return (*epsilon_quadrupled)(a.id, b.id) * 6 * (2 * x * x - x) / r2 * p;
+        return (*epsilon_quadruple)(a.id, b.id) * 6 * (2 * x * x - x) / r2 * p;
     }
 }; // Weeks-Chandler-Andersen potential
 
@@ -345,7 +347,7 @@ struct DipoleDipole : public PairPotentialBase {
  */
 class HardSphere : public MixerPairPotentialBase {
   protected:
-    TPairMatrixPtr sigma_squared; // (r_i * r_j)^2
+    TPairMatrixPtr sigma_squared; // sigma_ij * sigma_ij
     void initPairMatrices() override;
 
   public:
@@ -406,8 +408,8 @@ struct RepulsionR3 : public PairPotentialBase {
  */
 class Hertz : public MixerPairPotentialBase {
   protected:
-    TPairMatrixPtr hydrodynamic_diameter; // rhe_i + rhe_j
-    TPairMatrixPtr epsilon_hertz; // geometric mean of epsilon_i and epsilon_j
+    TPairMatrixPtr hydrodynamic_diameter; // 4 * r_ij * r_ij
+    TPairMatrixPtr epsilon_hertz;         // epsilon_ij
     void initPairMatrices() override;
 
   public:
@@ -432,8 +434,8 @@ class Hertz : public MixerPairPotentialBase {
  */
 class SquareWell : public MixerPairPotentialBase {
   protected:
-    TPairMatrixPtr diameter_sw_squared; // 0.25 * (sigma_i + 2*threshold_i + sigma_j + 2*threshold_j)^2
-    TPairMatrixPtr depth_sw; // geometric mean of epsilon_i and epsilon_j
+    TPairMatrixPtr diameter_sw_squared; // ((sigma + 2*threshold)_ij)^2
+    TPairMatrixPtr depth_sw;            // epsilon_ij
     void initPairMatrices() override;
 
   public:

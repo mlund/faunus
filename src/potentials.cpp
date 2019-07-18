@@ -6,7 +6,7 @@ namespace Potential {
 
 // =============== PairMixer ===============
 
-TCombinatorFunc PairMixer::getCombinator(ECombinationRule combination_rule, ECoefficient parameter_name) {
+TCombinatorFunc PairMixer::getCombinator(CombinationRuleType combination_rule, CoefficientType coefficient) {
     TCombinatorFunc combinator;
     switch (combination_rule) {
     case COMB_UNDEFINED:
@@ -19,7 +19,7 @@ TCombinatorFunc PairMixer::getCombinator(ECombinationRule combination_rule, ECoe
         combinator = &combGeometric;
         break;
     case COMB_LORENTZ_BERTHELOT:
-        switch (parameter_name) {
+        switch (coefficient) {
         case COEF_SIGMA:
             combinator = &combArithmetic;
             break;
@@ -125,9 +125,9 @@ void MixerPairPotentialBase::from_json(const json &j) {
     try {
         if (j.count("mixing") == 1) {
             json mixing = j.at("mixing");
-            combination_rule = mixing.get<ECombinationRule>();
+            combination_rule = mixing.get<CombinationRuleType>();
             if(combination_rule == COMB_UNDEFINED && mixing != "undefined") {
-                // ugly hack because first pair in is silently selected by default
+                // an ugly hack because the first pair in the json ↔ enum mapping is silently selected by default
                 throw PairPotentialException("unknown combination rule " + mixing.get<std::string>());
             }
         }
@@ -710,12 +710,12 @@ void LennardJones::initPairMatrices() {
 
     sigma_squared = PairMixer(extract_sigma, comb_sigma, &PairMixer::modSquared)
         .createPairMatrix(atoms, custom_pairs);
-    epsilon_quadrupled = PairMixer(extract_epsilon, comb_epsilon, [](double x) -> double { return 4*x; })
+    epsilon_quadruple = PairMixer(extract_epsilon, comb_epsilon, [](double x) -> double { return 4*x; })
         .createPairMatrix(atoms, custom_pairs);
 
     faunus_logger->debug("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(),
-                         epsilon_quadrupled->rows(), epsilon_quadrupled->cols(), custom_pairs.size());
+                         epsilon_quadruple->rows(), epsilon_quadruple->cols(), custom_pairs.size());
 }
 
 // =============== HardSphere ===============

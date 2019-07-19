@@ -114,13 +114,6 @@ struct Random;
          * @brief A base class for various geometries implementations.
          */
         class GeometryImplementation : public GeometryBase {
-          protected:
-            std::shared_ptr<spdlog::logger> faunus_logger, mcloop_logger;
-
-            GeometryImplementation() :
-                    faunus_logger(spdlog::get("faunus")),
-                    mcloop_logger(spdlog::get("mcloop")) {};
-
           public:
             BoundaryCondition boundary_conditions;
 

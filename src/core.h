@@ -4,6 +4,7 @@
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
 #include <range/v3/view/filter.hpp>
+#include <spdlog/spdlog.h>
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "units.h"
@@ -128,6 +129,9 @@ namespace Faunus {
     };
 
     extern TipFromTheManual usageTip; // global instance
+
+    extern std::shared_ptr<spdlog::logger> faunus_logger; // global instance
+    extern std::shared_ptr<spdlog::logger> mcloop_logger; // global instance
 
     /**
      * @brief Generate reference view to data members in container

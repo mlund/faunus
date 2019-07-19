@@ -41,7 +41,12 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
     TPairMatrixPtr matrix = std::make_shared<TPairMatrix>(n, n);
     for (auto &i : atoms) {
         for (auto &j : atoms) {
-            (*matrix)(i.id(), j.id()) = modifier(combinator(extractor(i), extractor(j)));
+            if(i.id() == j.id()) {
+                // if the combinator is "undefined" the homogeneous interaction is still well defined
+                (*matrix)(i.id(), j.id()) = modifier(extractor(i));
+            } else {
+                (*matrix)(i.id(), j.id()) = modifier(combinator(extractor(i), extractor(j)));
+            }
         }
     }
     return matrix;

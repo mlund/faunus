@@ -3,9 +3,9 @@
 
 namespace Faunus {
 
-    int &AtomData::id() { return _id; }
+    AtomData::Tid &AtomData::id() { return _id; }
 
-    const int &AtomData::id() const { return _id; }
+    const AtomData::Tid &AtomData::id() const { return _id; }
 
     void to_json(json &j, const AtomData &a) {
         auto& _j = j[a.name];
@@ -97,8 +97,12 @@ namespace Faunus {
                     *it = a;
             }
         }
-        for (size_t i=0; i<v.size(); i++)
+        for (size_t i = 0; i < v.size(); i++) {
+            if (std::numeric_limits<AtomData::Tid>::max() < i) {
+                throw std::overflow_error("Number of atoms to high.");
+            }
             v[i].id() = i; // id must match position in vector
+        }
     }
 
     std::vector<AtomData> atoms;

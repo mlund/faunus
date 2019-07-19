@@ -4,18 +4,156 @@
 namespace Faunus {
 namespace Potential {
 
+// =============== PairMixer ===============
+
+TCombinatorFunc PairMixer::getCombinator(CombinationRuleType combination_rule, CoefficientType coefficient) {
+    TCombinatorFunc combinator;
+    switch (combination_rule) {
+    case COMB_UNDEFINED:
+        combinator = &combUndefined;
+        break;
+    case COMB_ARITHMETIC:
+        combinator = &combArithmetic;
+        break;
+    case COMB_GEOMETRIC:
+        combinator = &combGeometric;
+        break;
+    case COMB_LORENTZ_BERTHELOT:
+        switch (coefficient) {
+        case COEF_SIGMA:
+            combinator = &combArithmetic;
+            break;
+        case COEF_EPSILON:
+            combinator = &combGeometric;
+            break;
+        default:
+            throw std::logic_error("unsupported mixer initialization");
+        }
+        break;
+    default:
+        throw std::logic_error("unsupported mixer initialization");
+    }
+    return combinator;
+}
+
+TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
+    size_t n = atoms.size(); // number of atom types
+    TPairMatrixPtr matrix = std::make_shared<TPairMatrix>(n, n);
+    for (auto &i : atoms) {
+        for (auto &j : atoms) {
+            (*matrix)(i.id(), j.id()) = modifier(combinator(extractor(i), extractor(j)));
+        }
+    }
+    return matrix;
+}
+
+TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
+        const std::vector<InteractionData> &interactions) {
+    TPairMatrixPtr matrix = PairMixer::createPairMatrix(atoms);
+    auto dimension = std::min(matrix->rows(), matrix->cols());
+    for (auto &i : interactions) {
+        if (i.atom_id[0] >= 0 && i.atom_id[1] >= 0 && i.atom_id[0] < dimension && i.atom_id[1] < dimension) {
+            // interaction is always symmetric
+            (*matrix)(i.atom_id[0], i.atom_id[1]) = (*matrix)(i.atom_id[1], i.atom_id[0]) =
+                    modifier(extractor(i.interaction));
+        } else {
+            throw std::runtime_error("atomtype index out of range");
+        }
+    }
+    return matrix;
+}
+
+void from_json(const json &j, std::vector<InteractionData> &interactions) {
+    auto &custom_list = j.at("custom");
+    if(! custom_list.is_object() && ! custom_list.is_array()) {
+        throw PairPotentialException("custom parameters syntax error");
+    }
+
+    for (auto custom_pair = custom_list.begin(); custom_pair != custom_list.end(); ++custom_pair) {
+        // atomdata is an array with items ecapsulated as objects hence we emulate here
+        AtomData a = custom_list.is_object() ? json::object({{custom_pair.key(), *custom_pair}}) : (*custom_pair);
+        auto atoms_name = words2vec<std::string>(a.name);
+        if (atoms_name.size() == 2) {
+            auto atom0 = findName(atoms, atoms_name[0]);
+            auto atom1 = findName(atoms, atoms_name[1]);
+            if (atom0 == atoms.end() or atom1 == atoms.end()) {
+                throw PairPotentialException(
+                    ("unknown atom(s): ["s + atoms_name[0] + " " + atoms_name[1] + "]"));
+            }
+            interactions.push_back({{atom0->id(), atom1->id()}, a});
+        } else {
+            throw PairPotentialException("custom parameters require exactly two space-separated atoms");
+        }
+    }
+}
+
+void to_json(json &j, const std::vector<InteractionData> &interactions) {
+    if(! interactions.empty()) {
+        auto &j_custom = j["custom"];
+        for (auto &i : interactions) {
+            j_custom = i.interaction;
+        }
+    }
+}
+
+
+// =============== PairPotentialBase ===============
+
+PairPotentialBase::PairPotentialBase(const std::string &name, const std::string &cite, bool isotropic) :
+        name(name), cite(cite), isotropic(isotropic), faunus_logger(spdlog::get("faunus")) {
+    // if not available, e.g., in unittests, create a dummy
+    if (faunus_logger == nullptr) {
+        faunus_logger = spdlog::create<spdlog::sinks::null_sink_st>("faunus");
+    }
+}
+
 Point PairPotentialBase::force(const Particle &, const Particle &, double, const Point &) {
     assert(false && "We should never reach this point!");
     return {0, 0, 0};
 }
+
+
+// =============== MixerPairPotentialBase ===============
+
+void MixerPairPotentialBase::init() {
+    json j_combination_rule = combination_rule;
+    faunus_logger->debug("Combination rule {} in effect for the {} potential.", j_combination_rule, name);
+    initPairMatrices();
+}
+
+void MixerPairPotentialBase::from_json(const json &j) {
+    try {
+        if (j.count("mixing") == 1) {
+            json mixing = j.at("mixing");
+            combination_rule = mixing.get<CombinationRuleType>();
+            if(combination_rule == COMB_UNDEFINED && mixing != "undefined") {
+                // an ugly hack because the first pair in the json ↔ enum mapping is silently selected by default
+                throw PairPotentialException("unknown combination rule " + mixing.get<std::string>());
+            }
+        }
+        if (j.count("custom") == 1) {
+            custom_pairs = j;
+        }
+    } catch (const PairPotentialException &e) {
+        faunus_logger->error(std::string(e.what()) + " in potential " + name);
+        throw std::runtime_error("error deserialising potential " + name + " from json");
+    }
+    init();
+}
+
+void MixerPairPotentialBase::to_json(json &j) const {
+    j["mixing"] = combination_rule;
+    if (!custom_pairs.empty()) {
+        j["custom"] = custom_pairs;
+    }
+}
+
 
 void RepulsionR3::from_json(const json &j) {
     f = j.value("prefactor", 1.0);
     e = j.value("lj-prefactor", 1.0);
     s = j.value("sigma", 1.0);
 }
-
-RepulsionR3::RepulsionR3(const std::string &name) { PairPotentialBase::name = name; }
 
 void RepulsionR3::to_json(json &j) const { j = {{"prefactor", f}, {"lj-prefactor", e}, {"sigma", s}}; }
 
@@ -31,8 +169,6 @@ void CosAttract::from_json(const json &j) {
     c = pc::pi / 2 / wc;
     rcwc2 = pow((rc + wc), 2);
 }
-
-CosAttract::CosAttract(const std::string &name) { PairPotentialBase::name = name; }
 
 // -------------- CoulombGalore ---------------
 
@@ -173,8 +309,6 @@ void CoulombGalore::sfPlain(const json &, double val) {
     calcDielectric = [&](double M2V) { return (2.0 * M2V + 1.0) / (1.0 - M2V); };
     selfenergy_prefactor = 0.0;
 }
-
-CoulombGalore::CoulombGalore(const std::string &name) { PairPotentialBase::name = name; }
 
 void CoulombGalore::from_json(const json &j) {
     try {
@@ -396,11 +530,6 @@ void DipoleDipoleGalore::sfPlain(const json &, double val) {
     selfenergy_prefactor = 0.0;
 }
 
-DipoleDipoleGalore::DipoleDipoleGalore(const std::string &name) {
-    PairPotentialBase::name = name;
-    isotropic = false; // potential is angular dependent
-}
-
 void DipoleDipoleGalore::from_json(const json &j) {
     try {
         kappa = 0.0;
@@ -471,8 +600,6 @@ void DipoleDipoleGalore::to_json(json &j) const {
     _roundjson(j, 5);
 }
 
-Coulomb::Coulomb(const std::string &name) { PairPotentialBase::name = name; }
-
 void Coulomb::to_json(json &j) const {
     j["epsr"] = pc::lB2epsr(lB);
     j["lB"] = lB;
@@ -480,19 +607,12 @@ void Coulomb::to_json(json &j) const {
 
 void Coulomb::from_json(const json &j) { lB = pc::lB(j.at("epsr")); }
 
-DipoleDipole::DipoleDipole(const std::string &name) {
-    PairPotentialBase::name = name;
-    isotropic = false;
-}
-
 void DipoleDipole::to_json(json &j) const {
     j["epsr"] = pc::lB2epsr(lB);
     j["lB"] = lB;
 }
 
 void DipoleDipole::from_json(const json &j) { lB = pc::lB(j.at("epsr")); }
-
-FENE::FENE(const std::string &name) { PairPotentialBase::name = name; }
 
 void FENE::from_json(const json &j) {
     k = j.at("stiffness");
@@ -516,178 +636,9 @@ void from_json(const json &j, PairPotentialBase &base) {
         }
         base.from_json(j);
     } catch (std::exception &e) {
-        throw std::runtime_error("pairpotential error for " + base.name + ": " + e.what() + usageTip[base.name]);
+        throw std::runtime_error(base.name + " potential error: " + e.what() + usageTip[base.name]);
     }
 }
-
-void from_json(const json &j, ParametersTable &m) {
-    std::function<std::pair<double, double>(double, double, double, double)> mixerFunc;
-
-    auto mixer = j.at("mixing").get<std::string>();
-    if (mixer == "LB")
-        m.mixer = ParametersTable::LB;
-    if (mixer == "LBSW")
-        m.mixer = ParametersTable::LBSW;
-    if (mixer == "HE")
-        m.mixer = ParametersTable::HE;
-
-    size_t n = atoms.size(); // number of atom types
-    switch (m.mixer) {
-    case ParametersTable::LB:
-        mixerFunc = [](double s1, double s2, double e1, double e2) {
-            return std::pair<double, double>({(s1 + s2) / 2, std::sqrt(e1 * e2)});
-        };
-        m.s2.resize(n);  // not required...
-        m.eps.resize(n); // ...but possible reduced mem. fragmentation
-        break;
-    case ParametersTable::LBSW:
-        mixerFunc = [](double s1, double s2, double e1, double e2) {
-            return std::pair<double, double>({s1 + s2, std::sqrt(e1 * e2)});
-        };
-        m.th.resize(n);  // not required...
-        m.esw.resize(n); // ...but possible reduced mem. fragmentation
-        break;
-    case ParametersTable::HE:
-        mixerFunc = [](double s1, double s2, double e1, double e2) {
-            return std::pair<double, double>({s1 + s2, std::sqrt(e1 * e2)});
-        };
-        m.hd.resize(n);  // not required...
-        m.ehe.resize(n); // ...but possible reduced mem. fragmentation
-        break;
-    default:
-        throw std::runtime_error("unknown mixing rule");
-    }
-
-    for (auto &i : atoms)
-        for (auto &j : atoms) {
-            switch (m.mixer) {
-            case ParametersTable::LB:
-                double sigma, epsilon; // mixed values
-                std::tie(sigma, epsilon) = mixerFunc(i.sigma, j.sigma, i.eps, j.eps);
-                m.s2.set(i.id(), j.id(), sigma * sigma);
-                m.eps.set(i.id(), j.id(), 4 * epsilon); // should already be in kT
-                break;
-            case ParametersTable::LBSW:
-                double threshold, depth; // mixed values
-                std::tie(threshold, depth) =
-                    mixerFunc(0.5 * i.sigma + i.squarewell_threshold, 0.5 * j.sigma + j.squarewell_threshold,
-                              i.squarewell_depth, j.squarewell_depth);
-                m.th.set(i.id(), j.id(), threshold * threshold);
-                m.esw.set(i.id(), j.id(), depth); // should already be in kT
-                break;
-            case ParametersTable::HE:
-                double hdd, eh; // mixed values
-                std::tie(hdd, eh) = mixerFunc(i.hdr, j.hdr, i.eps_hertz, j.eps_hertz);
-                m.hd.set(i.id(), j.id(), hdd);
-                m.ehe.set(i.id(), j.id(), eh); // should already be in kT
-                break;
-            default:
-                throw std::runtime_error("unknown mixing rule");
-            }
-        }
-
-    // custom eps/sigma for specific pairs
-    if (j.count("custom") == 1) {
-        auto &_j = j.at("custom");
-        if (_j.is_object()) {
-            for (auto it = _j.begin(); it != _j.end(); ++it) {
-                auto v = words2vec<std::string>(it.key());
-                if (v.size() == 2) {
-                    auto it1 = findName(atoms, v[0]);
-                    auto it2 = findName(atoms, v[1]);
-                    if (it1 == atoms.end() or it2 == atoms.end())
-                        throw std::runtime_error("unknown atom(s): ["s + v[0] + " " + v[1] + "]");
-                    int id1 = it1->id();
-                    int id2 = it2->id();
-
-                    switch (m.mixer) {
-                    case ParametersTable::LB:
-                        m.s2.set(id1, id2, std::pow(it.value().at("sigma").get<double>(), 2));
-                        m.eps.set(id1, id2, 4 * it.value().at("eps").get<double>() * 1.0_kJmol);
-                        break;
-                    case ParametersTable::LBSW:
-                        m.th.set(id1, id2, it.value().at("sigma_sw").get<double>());
-                        m.esw.set(id1, id2, it.value().at("eps_sw").get<double>() * 1.0_kJmol);
-                        break;
-                    case ParametersTable::HE:
-                        m.hd.set(id1, id2, it.value().at("hdd").get<double>());
-                        m.ehe.set(id1, id2, it.value().at("eps_hertz").get<double>() * 1.0_kJmol);
-                        break;
-                    default:
-                        throw std::runtime_error("unknown mixing rule");
-                    }
-                } else {
-                    switch (m.mixer) {
-                    case ParametersTable::LB:
-                        throw std::runtime_error(
-                            "custom epsilon/sigma parameters require exactly two space-separated atoms");
-                    case ParametersTable::LBSW:
-                        throw std::runtime_error(
-                            "custom eps_sw/sigma_sw parameters require exactly two space-separated atoms");
-                    case ParametersTable::HE:
-                        throw std::runtime_error(
-                            "custom eps_hertz/hdd parameters require exactly two space-separated atoms");
-                    default:
-                        throw std::runtime_error("unknown mixing rule");
-                    }
-                }
-            }
-        } else {
-            switch (m.mixer) {
-            case ParametersTable::LB:
-                throw std::runtime_error("custom sigma/epsilon syntax error");
-            case ParametersTable::LBSW:
-                throw std::runtime_error("custom eps_sw/sigma_sw syntax error");
-            case ParametersTable::HE:
-                throw std::runtime_error("custom eps_hertz/hdd syntax error");
-            default:
-                throw std::runtime_error("unknown mixing rule");
-            }
-        }
-    }
-}
-void to_json(json &j, const ParametersTable &m) {
-    auto &_j = j["custom"];
-    switch (m.mixer) {
-    case ParametersTable::LB:
-        j["mixing"] = "LB";
-        j["epsilon unit"] = "kJ/mol";
-        for (size_t i = 0; i < m.eps.size(); i++)
-            for (size_t j = 0; j < m.eps.size(); j++)
-                if (i >= j) {
-                    auto str = atoms[i].name + " " + atoms[j].name;
-                    _j[str] = {{"eps", m.eps(i, j) / 4.0_kJmol}, {"sigma", std::sqrt(m.s2(i, j))}};
-                    _roundjson(_j[str], 5);
-                }
-        break;
-    case ParametersTable::LBSW:
-        j["mixing"] = "LBSW";
-        j["depth unit"] = "kJ/mol";
-        for (size_t i = 0; i < m.esw.size(); i++)
-            for (size_t j = 0; j < m.esw.size(); j++)
-                if (i >= j) {
-                    auto str = atoms[i].name + " " + atoms[j].name;
-                    _j[str] = {{"eps_sw", m.esw(i, j) / 1.0_kJmol}, {"sigma_sw", m.th(i, j)}};
-                    _roundjson(_j[str], 5);
-                }
-        break;
-    case ParametersTable::HE:
-        j["mixing"] = "HE";
-        j["eps_hertz unit"] = "kJ/mol";
-        for (size_t i = 0; i < m.ehe.size(); i++)
-            for (size_t j = 0; j < m.ehe.size(); j++)
-                if (i >= j) {
-                    auto str = atoms[i].name + " " + atoms[j].name;
-                    _j[str] = {{"eps_hertz", m.ehe(i, j) / 1.0_kJmol}, {"hdd", m.hd(i, j)}};
-                    _roundjson(_j[str], 5);
-                }
-        break;
-    default:
-        throw std::runtime_error("unknown mixing rule");
-    }
-}
-
-SASApotential::SASApotential(const std::string &name) { PairPotentialBase::name = name; }
 
 void SASApotential::from_json(const json &j) {
     assertKeys(j, {"shift", "molarity", "radius"});
@@ -719,10 +670,6 @@ double SASApotential::area(double R, double r, double d_squared) const {
     return area - 2 * pc::pi * (R * h1 + r * h2) - offset;
 }
 
-CustomPairPotential::CustomPairPotential(const std::string &name) : d(std::make_shared<Data>()) {
-    PairPotentialBase::name = name;
-}
-
 void CustomPairPotential::from_json(const json &j) {
     Rc2 = j.value("cutoff", pc::infty);
     Rc2 = Rc2 * Rc2;
@@ -745,55 +692,84 @@ void CustomPairPotential::to_json(json &j) const {
         j["cutoff"] = std::sqrt(Rc2);
 }
 
+
+// =============== Dummy ===============
+
 Dummy::Dummy() { name = "dummy"; }
 void Dummy::from_json(const json &) {}
 void Dummy::to_json(json &) const {}
-LennardJones::LennardJones(const std::string &name) {
-    PairPotentialBase::name = name;
-    m = std::make_shared<ParametersTable>();
+
+
+// =============== LennardJones ===============
+
+void LennardJones::initPairMatrices() {
+    const TExtractorFunc extract_sigma = [](const AtomData &a) -> double { return a.sigma; };
+    const TExtractorFunc extract_epsilon = [](const AtomData &a) -> double { return a.eps; };
+    const TCombinatorFunc comb_sigma = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
+    const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
+
+    sigma_squared = PairMixer(extract_sigma, comb_sigma, &PairMixer::modSquared)
+        .createPairMatrix(atoms, custom_pairs);
+    epsilon_quadruple = PairMixer(extract_epsilon, comb_epsilon, [](double x) -> double { return 4*x; })
+        .createPairMatrix(atoms, custom_pairs);
+
+    faunus_logger->debug("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
+                         sigma_squared->rows(), sigma_squared->cols(),
+                         epsilon_quadruple->rows(), epsilon_quadruple->cols(), custom_pairs.size());
 }
-void LennardJones::to_json(json &j) const { j = *m; }
-void LennardJones::from_json(const json &j) {
-    *m = j;
-    if (m->s2.size() == 0)
-        throw std::runtime_error("unknown mixing rule for Lennard-Jones potential");
+
+// =============== HardSphere ===============
+
+void HardSphere::initPairMatrices() {
+    const TExtractorFunc extract_sigma = [](const AtomData &a) -> double { return a.sigma; };
+    sigma_squared = PairMixer(extract_sigma, PairMixer::getCombinator(combination_rule), &PairMixer::modSquared)
+        .createPairMatrix(atoms, custom_pairs);
+    faunus_logger->debug("Pair matrix for {} sigma ({}×{}) created using {} custom pairs.", name,
+                         sigma_squared->rows(), sigma_squared->cols(), custom_pairs.size());
 }
-WeeksChandlerAndersen::WeeksChandlerAndersen(const std::string &name) {
-    LennardJones::name = name;
-    cite = "doi:ct4kh9";
+
+// =============== Hertz ===============
+
+void Hertz::initPairMatrices() {
+    const TExtractorFunc extract_radius = [](const AtomData &a) -> double { return a.hdr; };
+    const TExtractorFunc extract_epsilon = [](const AtomData &a) -> double { return a.eps_hertz; };
+    const TCombinatorFunc comb_radius = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
+    const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
+
+    hydrodynamic_diameter = PairMixer(extract_radius, comb_radius, [](double x) -> double { return 2*x; })
+        .createPairMatrix(atoms, custom_pairs);
+    epsilon_hertz = PairMixer(extract_epsilon, comb_epsilon).createPairMatrix(atoms, custom_pairs);
+
+    faunus_logger->debug(
+            "Pair matrix for {} hydrodynamic radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
+            hydrodynamic_diameter->rows(), hydrodynamic_diameter->cols(), epsilon_hertz->rows(), epsilon_hertz->cols(),
+            custom_pairs.size());
 }
-HardSphere::HardSphere(const std::string &name) {
-    PairPotentialBase::name = name;
-    d2 = std::make_shared<PairMatrix<double>>();
-    for (auto &i : atoms)
-        for (auto &j : atoms)
-            d2->set(i.id(), j.id(), std::pow((i.sigma + j.sigma) / 2, 2));
+
+
+// =============== SquareWell ===============
+
+void SquareWell::initPairMatrices() {
+    const TExtractorFunc extract_diameter =
+        [](const AtomData &a) -> double { return a.sigma + 2 * a.squarewell_threshold; };
+    const TExtractorFunc extract_depth = [](const AtomData &a) -> double { return a.squarewell_depth; };
+    const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
+    const TCombinatorFunc comb_depth = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
+
+    diameter_sw_squared = PairMixer(extract_diameter, comb_diameter, &PairMixer::modSquared)
+        .createPairMatrix(atoms, custom_pairs);
+    depth_sw = PairMixer(extract_depth, comb_depth)
+        .createPairMatrix(atoms, custom_pairs);
+
+    faunus_logger->debug(
+            "Pair matrix for {} diameter ({}×{}) and depth ({}×{}) created using {} custom pairs.",
+            name,
+            diameter_sw_squared->rows(), diameter_sw_squared->cols(), depth_sw->rows(), depth_sw->cols(),
+            custom_pairs.size());
 }
-Hertz::Hertz(const std::string &name) {
-    PairPotentialBase::name = name;
-    m = std::make_shared<ParametersTable>();
-}
-void Hertz::to_json(json &j) const { j = *m; }
-void Hertz::from_json(const json &j) {
-    *m = j;
-    if (m->hd.size() == 0)
-        throw std::runtime_error("unknown mixing rule for Hertz potential");
-}
-SquareWell::SquareWell(const std::string &name) {
-    PairPotentialBase::name = name;
-    m = std::make_shared<ParametersTable>();
-}
-void SquareWell::to_json(json &j) const { j = *m; }
-void SquareWell::from_json(const json &j) {
-    *m = j;
-    if (m->th.size() == 0)
-        throw std::runtime_error("unknown mixing rule for Square-well potential");
-}
-Polarizability::Polarizability(const std::string &name) {
-    PairPotentialBase::name = name;
-    m_neutral = std::make_shared<PairMatrix<double>>();
-    m_charged = std::make_shared<PairMatrix<double>>();
-}
+
+// =============== Polarizability ===============
+
 void Polarizability::from_json(const json &j) {
     epsr = j.at("epsr").get<double>();
     double lB = pc::lB(epsr);
@@ -809,8 +785,6 @@ void Polarizability::from_json(const json &j) {
 }
 
 //----------------- FunctorPotential ---------------------
-
-FunctorPotential::FunctorPotential(const std::string &name) { PairPotentialBase::name = name; }
 
 void FunctorPotential::registerSelfEnergy(PairPotentialBase *pot) {
     if (pot->selfEnergy) {
@@ -928,8 +902,6 @@ void FunctorPotential::from_json(const json &j) {
 }
 
 //---------------- TabulatedPotential ---------------------
-
-TabulatedPotential::TabulatedPotential(const std::string &name) { PairPotentialBase::name = name; }
 
 void TabulatedPotential::from_json(const json &j) {
     FunctorPotential::from_json(j);

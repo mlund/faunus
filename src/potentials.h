@@ -327,7 +327,7 @@ class HardSphere : public MixerPairPotentialBase {
         : MixerPairPotentialBase(name, std::string(), COMB_ARITHMETIC) {};
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return r.squaredNorm() < (*sigma_squared)(a.id, b.id) ? pc::infty : 0;
+        return r.squaredNorm() < (*sigma_squared)(a.id, b.id) ? pc::infty : 0.0;
     }
 };
 
@@ -390,9 +390,7 @@ class SquareWell : public MixerPairPotentialBase {
     SquareWell(const std::string &name = "squarewell")
         : MixerPairPotentialBase(name) {};
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        if (r.squaredNorm() < (*diameter_sw_squared)(a.id, b.id))
-            return -(*depth_sw)(a.id, b.id);
-        return 0.0;
+        return (r.squaredNorm() < (*diameter_sw_squared)(a.id, b.id)) ? -(*depth_sw)(a.id, b.id) : 0.0;
     }
 };
 

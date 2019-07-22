@@ -1,5 +1,7 @@
 #include "potentials.h"
 #include "multipole.h"
+#include "spdlog/spdlog.h"
+#include <spdlog/sinks/null_sink.h>
 
 namespace Faunus {
 namespace Potential {

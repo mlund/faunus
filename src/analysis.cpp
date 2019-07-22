@@ -1,8 +1,10 @@
-#include <iomanip>
 #include "analysis.h"
 #include "move.h"
 #include "reactioncoordinate.h"
 #include "multipole.h"
+
+#include <iomanip>
+#include <iostream>
 
 namespace Faunus {
 
@@ -477,7 +479,7 @@ void WidomInsertion::_from_json(const json &j) {
                 if (m.begin()->capacity() > 0) {             // and it must have a non-zero capacity
                     change.clear();
                     Change::data d;                                    // construct change object
-                    d.index = distance(spc.groups.begin(), m.begin()); // group index
+                    d.index = Faunus::distance(spc.groups.begin(), m.begin()); // group index
                     d.all = true;
                     d.internal = m.begin()->atomic; // calculate internal energy of non-molecular groups only
                     change.groups.push_back(d);     // add to change object
@@ -661,11 +663,11 @@ void SanityCheck::_sample() {
                 Point cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
                 double sqd = spc.geo.sqdist(g.cm, cm);
                 if (sqd > 1e-6) {
-                    std::cerr << "step:      " << cnt << endl
-                              << "molecule:  " << &g - &*spc.groups.begin() << endl
-                              << "dist:      " << sqrt(sqd) << endl
-                              << "g.cm:      " << g.cm.transpose() << endl
-                              << "actual cm: " << cm.transpose() << endl;
+                    std::cerr << "step:      " << cnt << std::endl
+                              << "molecule:  " << &g - &*spc.groups.begin() << std::endl
+                              << "dist:      " << sqrt(sqd) << std::endl
+                              << "g.cm:      " << g.cm.transpose() << std::endl
+                              << "actual cm: " << cm.transpose() << std::endl;
                     FormatPQR::save(MPI::prefix + "sanity-" + std::to_string(cnt) + ".pqr", spc.p, spc.geo.getLength());
                     throw std::runtime_error("mass center-out-of-sync");
                 }

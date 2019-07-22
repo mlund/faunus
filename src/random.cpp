@@ -1,9 +1,9 @@
+#include "random.h"
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <iostream>
 #include <string>
 #include <sstream>
-
-#include "random.h"
 
 namespace Faunus {
 

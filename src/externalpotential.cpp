@@ -216,7 +216,7 @@ void ExternalAkesson::load() {
         rho << f;
         update_phi();
     } else
-        std::cerr << "density file '" << filename << "' not loaded." << endl;
+        std::cerr << "density file '" << filename << "' not loaded." << std::endl;
 }
 
 double ExternalAkesson::phi_ext(double z, double a) const {

@@ -959,9 +959,9 @@ void SmartTranslateRotate::_move(Change &change) {
                         Nin = countNin_avgBlocks.avg(); // block average number of molecules inside geometry
                         if (countNin_avgBlocks.stdev() / Nin <
                             rsd) { // if block standard deviation is below specified threshold
-                            cout << "Bias found with rsd = " << countNin_avgBlocks.stdev() / Nin << " < " << rsd
+                            std::cout << "Bias found with rsd = " << countNin_avgBlocks.stdev() / Nin << " < " << rsd
                                  << "\n\n";
-                            cout << "Average # of water molecules inside sphere: " << Nin << "\n";
+                            std::cout << "Average # of water molecules inside sphere: " << Nin << "\n";
                             findBias = false; // stop updating bias, use constant value
                         }
                     }
@@ -1129,7 +1129,7 @@ void MCSimulation::init() {
     // check that the energies in state1 and state2 are *identical*
     if (std::isfinite(u1) and std::isfinite(u2)) {
         if (std::fabs((u1 - u2) / u1) > 1e-3) {
-            std::cerr << "u1 = " << u1 << "  u2 = " << u2 << endl;
+            std::cerr << "u1 = " << u1 << "  u2 = " << u2 << std::endl;
             throw std::runtime_error("error aligning energies - this could be a bug...");
         }
     }

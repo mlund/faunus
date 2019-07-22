@@ -4,6 +4,7 @@
 #include "rotate.h"
 #include "bonds.h"
 #include <fstream>
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 
@@ -75,10 +76,9 @@ void MoleculeData::createMolecularConformations(SingleUseJSON &val) {
 
         // center mass center for each frame to origo assuming whole molecules
         if (val.value("trajcenter", false)) {
-            cout << "Centering conformations in trajectory file " + traj + ". ";
+            faunus_logger->debug("Centering conformations in trajectory file {}", traj);
             for (auto &p : conformations.vec) // loop over conformations
                 Geometry::cm2origo(p.begin(), p.end());
-            cout << "Done.\n";
         }
 
         // set default uniform weight

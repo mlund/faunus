@@ -3,10 +3,14 @@
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 
 #include <doctest/doctest.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
+#include "atomdata_test.h"
 #include "random.h"
-#include "core.h"
+#include "core_test.h"
 #include "mpi.h"
 #include "auxiliary.h"
 #include "molecule.h"

@@ -196,5 +196,4 @@ namespace Faunus {
     }
 
     Point ranunit_polar(Random &rand) { return rtp2xyz({1, 2 * pc::pi * rand(), std::acos(2 * rand() - 1)}); }
-
 } // end of namespace

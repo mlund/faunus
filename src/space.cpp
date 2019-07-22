@@ -1,5 +1,6 @@
 #include "space.h"
 #include "io.h"
+#include <iostream>
 
 namespace Faunus {
 
@@ -117,13 +118,13 @@ void Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
                 Point recalc_cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
                 double cm_error = std::fabs(geo.sqdist(g.cm, recalc_cm));
                 if (cm_error > 1e-6) {
-                    std::cerr << "error: " << cm_error << endl
-                              << "scale: " << scale.transpose() << endl
-                              << "delta: " << delta.transpose() << " norm = " << delta.norm() << endl
-                              << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << endl
-                              << "oldcm: " << oldcm.transpose() << endl
-                              << "newcm: " << g.cm.transpose() << endl
-                              << "actual cm: " << recalc_cm.transpose() << endl;
+                    std::cerr << "error: " << cm_error << std::endl
+                              << "scale: " << scale.transpose() << std::endl
+                              << "delta: " << delta.transpose() << " norm = " << delta.norm() << std::endl
+                              << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << std::endl
+                              << "oldcm: " << oldcm.transpose() << std::endl
+                              << "newcm: " << g.cm.transpose() << std::endl
+                              << "actual cm: " << recalc_cm.transpose() << std::endl;
                     assert(false);
                 }
 #endif
@@ -223,7 +224,7 @@ void insertMolecules(const json &j, Space &spc) {
                                             if (spc.geo.collision(i.pos) == false)
                                                 spc.p.at(j++).pos = i.pos;
                                             else
-                                                std::cerr << "position outside box" << endl;
+                                                std::cerr << "position outside box" << std::endl;
                                         }
                                         if (j == p.size()) {
                                             success = true;
@@ -232,9 +233,9 @@ void insertMolecules(const json &j, Space &spc) {
                                                     g->begin(), g->end(), spc.geo.getBoundaryFunc(), -g->begin()->pos);
                                         }
                                     } else
-                                        std::cerr << file + ": wrong number of atoms" << endl;
+                                        std::cerr << file + ": wrong number of atoms" << std::endl;
                                 } else
-                                    std::cerr << "error opening file '" + file + "'" << endl;
+                                    std::cerr << "error opening file '" + file + "'" << std::endl;
                                 if (success == false)
                                     throw std::runtime_error("error loading positions from '" + file + "'");
                             }

@@ -5,7 +5,6 @@
 #include "particle.h"
 #include "tensor.h"
 #include <Eigen/Geometry>
-#include "spdlog/spdlog.h"
 
 /** @brief Faunus main namespace */
 namespace Faunus {

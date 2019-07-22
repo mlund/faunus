@@ -2,7 +2,12 @@
 
 #include <string>
 #include <exprtk.hpp> // https://github.com/ArashPartow/exprtk
+
+#ifdef DOCTEST_LIBRARY_INCLUDED
 #include <nlohmann/json.hpp>
+#else
+#include <nlohmann/json_fwd.hpp>
+#endif
 
 /**
  * Since parser<T> is non-copyable we instantiate it
@@ -19,7 +24,7 @@ class ExprFunction {
 
   public:
     void set(const std::string &exprstr, const Tvarvec &vars = {}, const Tconstvec &consts = {});
-    void set(const nlohmann::json &j, const Tvarvec &vars = {});
+    void set(const nlohmann::json &, const Tvarvec &vars = {});
     T operator()() const;
 };
 

@@ -9,8 +9,6 @@
 #include "multipole.h"
 #include <array>
 #include <functional>
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/null_sink.h"
 
 namespace Faunus {
 namespace Potential {

@@ -5,6 +5,7 @@
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include "rotate.h"
+#include "units.h"
 #endif
 
 namespace Eigen {

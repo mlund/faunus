@@ -1,4 +1,5 @@
 #include "functionparser.h"
+#include <nlohmann/json.hpp>
 
 template<typename T>
 void ExprFunction<T>::set(const std::string &exprstr, const Tvarvec &vars, const Tconstvec &consts) {

@@ -2,6 +2,9 @@
 
 #include <nlohmann/json.hpp>
 #include <Eigen/Geometry>
+#ifdef DOCTEST_LIBRARY_INCLUDED
+#include "units.h"
+#endif
 
 namespace Faunus {
 /**

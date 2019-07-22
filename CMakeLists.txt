@@ -306,6 +306,8 @@ set(hdrs
 
 # faunus header files
 set(tsts
+    ${CMAKE_SOURCE_DIR}/src/atomdata_test.h
+    ${CMAKE_SOURCE_DIR}/src/core_test.h
     ${CMAKE_SOURCE_DIR}/src/potentials_test.h
     )
 

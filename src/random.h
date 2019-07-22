@@ -1,6 +1,7 @@
 #pragma once
 
 #include <random>
+#include <vector>
 #include <nlohmann/json.hpp>
 
 namespace Faunus {

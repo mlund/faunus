@@ -1,12 +1,12 @@
 #pragma once
+#include "random.h"
+#include "core.h"
 
 #include <vector>
 #include <string>
 #include <fstream>
 #include <iostream>
 #include <cstdio>
-#include "core.h"
-#include "random.h"
 
 #ifdef ENABLE_MPI
 #include <mpi.h>

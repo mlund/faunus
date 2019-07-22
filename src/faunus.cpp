@@ -8,6 +8,8 @@
 #include "docopt.h"
 #include <cstdlib>
 #include "ProgressBar.hpp"
+#include "spdlog/spdlog.h"
+#include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #ifdef ENABLE_SID

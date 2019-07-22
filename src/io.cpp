@@ -1,7 +1,8 @@
-#include <fstream>
 #include "io.h"
 #include "units.h"
 #include "random.h"
+#include <fstream>
+#include <iostream>
 
 namespace Faunus {
 
@@ -57,14 +58,14 @@ Particle &FormatAAM::s2p(const std::string &s, Particle &a) {
     // does charge match AtomData?
     if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl) {
         std::cerr << "charge mismatch on atom " << num << name << ": " << ((keepcharges) ? "ignoring" : "using")
-                  << " `atomlist` value" << endl;
+                  << " `atomlist` value" << std::endl;
         if (not keepcharges)
             a.charge = it->charge; // let's use atomdata charge
     }
 
     // does radius match AtomData?
     if (std::fabs(it->sigma - 2 * radius) > pc::epsilon_dbl)
-        std::cerr << "radius mismatch on atom " << num << name << ": using `atomlist` value" << endl;
+        std::cerr << "radius mismatch on atom " << num << name << ": using `atomlist` value" << std::endl;
 
     return a;
 }
@@ -86,7 +87,7 @@ bool FormatAAM::load(const std::string &file, FormatAAM::Tpvec &target, bool _ke
 }
 bool FormatAAM::save(const std::string &file, const FormatAAM::Tpvec &pv) {
     std::ostringstream o;
-    o << pv.size() << endl;
+    o << pv.size() << std::endl;
     for (size_t i = 0; i < pv.size(); i++)
         o << p2s(pv[i], i);
     return IO::writeFile(file, o.str());
@@ -103,7 +104,7 @@ bool FormatXTC::open(std::string s) {
             return true;
         }
     } else
-        std::cerr << "# ioxtc error: xtc file could not be opened." << endl;
+        std::cerr << "# ioxtc error: xtc file could not be opened." << std::endl;
     return false;
 }
 
@@ -168,9 +169,9 @@ Point FormatPQR::load(const std::string &file, FormatPQR::Tpvec &p, bool keepcha
                         std::cerr << "charge mismatch on atom " << aname << " " << ires;
                         if (keepcharges)
                             std::cerr << "; using " << it->charge << " instead of `atomlist`s " << a.charge << "."
-                                      << endl;
+                                      << std::endl;
                         else {
-                            std::cerr << "; using `atomlist`s " << it->charge << " over " << a.charge << "." << endl;
+                            std::cerr << "; using `atomlist`s " << it->charge << " over " << a.charge << "." << std::endl;
                             a.charge = it->charge;
                         }
                     }
@@ -178,7 +179,7 @@ Point FormatPQR::load(const std::string &file, FormatPQR::Tpvec &p, bool keepcha
                     // does radius match AtomData?
                     if (std::fabs(it->sigma - 2 * radius) > pc::epsilon_dbl)
                         std::cerr << "radius mismatch on atom " << aname << " " << ires << "; using `atomdata`s "
-                                  << it->sigma / 2 << " over " << radius << "." << endl;
+                                  << it->sigma / 2 << " over " << radius << "." << std::endl;
 
                     p.push_back(a);
 
@@ -309,7 +310,7 @@ bool FormatMXYZ::load(const std::string &file, FormatMXYZ::Tpvec &p, Point &len)
         size_t n = atoi(v[0].c_str());
         if (p.size() != n)
             std::cerr << "# mxyz load error: number of particles in xyz file " << n << " does not match input file ("
-                      << p.size() << ")!" << endl;
+                      << p.size() << ")!" << std::endl;
         o << v[1].erase(0, v[1].find_last_of("x") + 1);
         o >> len.x() >> len.y() >> len.z();
         for (size_t i = 2; i < n + 2; i++)

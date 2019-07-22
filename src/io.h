@@ -68,7 +68,7 @@ class FormatAAM {
         o.precision(5);
         auto &atom = Faunus::atoms.at(a.id);
         o << atom.name << " " << i + 1 << " " << a.pos.transpose() << " " << a.charge << " " << atom.mw << " "
-          << atom.sigma / 2 << endl;
+          << atom.sigma / 2 << std::endl;
         return o.str();
     }
 

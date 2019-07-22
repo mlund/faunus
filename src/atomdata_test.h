@@ -44,4 +44,5 @@ TEST_CASE("[Faunus] AtomData") {
     it = findName(v, "unknown atom");
     CHECK(it == v.end());
 }
+TEST_SUITE_END();
 } // namespace Faunus

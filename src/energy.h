@@ -555,7 +555,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                         else if (k == "i2all")
                             omp_i2all = true;
 #ifndef _OPENMP
-                    std::cerr << "warning: nonbonded requests unavailable OpenMP." << endl;
+                    std::cerr << "warning: nonbonded requests unavailable OpenMP." << std::endl;
 #endif
                 }
     }

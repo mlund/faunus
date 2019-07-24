@@ -10,13 +10,47 @@
 
 namespace Faunus {
 
+// dynamic 3d matrix with contiguous memory
+// https://eli.thegreenplace.net/2015/memory-layout-of-multi-dimensional-arrays
+template <typename T, typename Tindices = Eigen::Vector3i> class RowMajor3DMatrix {
+  public:
+    std::vector<T> data; // contiguous data block; row-column-depth layout
+    Tindices dim;        // matrix size
+    void resize(const Tindices &dimensions) {
+        dim = dimensions;
+        data.resize(dim[0] * dim[1] * dim[2], T());
+    }
+    inline size_t index(const Tindices &i) { return i[2] + dim[2] * (i[1] + dim[1] * i[0]); }
+    inline T &operator()(const Tindices &i) { return data[i[2] + dim[2] * (i[1] + dim[1] * i[0])]; }
+    inline const T &operator()(const Tindices &i) const { return data[i[2] + dim[2] * (i[1] + dim[1] * i[0])]; }
+};
+#ifdef DOCTEST_LIBRARY_INCLUDED
+TEST_CASE("[Faunus] RowMajor3DMatrix") {
+    RowMajor3DMatrix<double> m;
+    Eigen::Vector3i dim = {4, 10, 2};
+    Eigen::Vector3i one = {1, 1, 1};
+    m.resize(dim);
+    m({2, 3, 1}) = 0.1;
+    assert(m.data[m.index({2, 3, 1})] == 0.1);       // access element via index
+    assert(&m({0, 0, 0}) == &m.data.front());        // access first element
+    assert(&m(dim - one) == &m.data.back());         // access last element
+    assert(m.index(dim - one) == m.data.size() - 1); // index of last element
+    int cnt = 0;
+    for (int k = 0; k < dim[0]; k++)
+        for (int l = 0; l < dim[1]; l++)
+            for (int m = 0; m < dim[2]; m++)
+                cnt++;
+    assert(cnt == m.data.size()); // count number of elements
+}
+#endif
+
 /**
  * @brief Cuboidal cell list with periodic boundaries
  *
  * Maps cartesian points to a grid of arbitrary resolution that
  * stores particle index.
  *
- * - cartesian space is assume to use all 8 octants (i.e. +/i round 0,0,0)
+ * - cartesian space is assumed to use all 8 octants (i.e. +/i round 0,0,0)
  * - grid space use only the first octant (all +)
  * - resolution and size is set by `resize`
  * - index of neighbors to a grid point
@@ -33,15 +67,24 @@ namespace Faunus {
  * @date Malmo, March 2018
  */
 template <typename CellPoint = Eigen::Vector3i> class CellList {
+    typedef size_t Tindex;
     typedef Eigen::Vector3d Point;
     Point halfbox;
-    double cellsize = 0; // cell side length (angstrom)
-    std::vector<std::vector<std::vector<std::set<int>>>> cells;
+    double cellsize = 0;                                           // cell side length (angstrom)
+    std::vector<std::vector<std::vector<std::set<Tindex>>>> cells; // dense storage
+
+    std::vector<std::set<Tindex>> cells_dense;    // dense storage (to replace `cells`)
+    std::map<int, std::set<Tindex>> cells_sparse; // sparse storage
+
+    inline std::set<Tindex> &row_major(const CellPoint &c) {
+        return cells_dense[c[0] * KLM[0] * KLM[2] + c[1] * KLM[2] + c[2]]; // to replace operator[] below
+    }                                                                      // row-major ordering of dense storage
 
   public:
+    bool sparse = false;
     CellPoint KLM = {0, 0, 0}; // max cell index K,L,M
 
-    auto &operator[](const CellPoint &c) {
+    std::set<Tindex> &operator[](const CellPoint &c) {
         return cells[c[0]][c[1]][c[2]];
     } //!< returns set with all index in given cell (complexity: constant)
 
@@ -53,12 +96,12 @@ template <typename CellPoint = Eigen::Vector3i> class CellList {
         return (c.template cast<double>()) * cellsize - halfbox;
     } //!< cell point --> cartesian point
 
-    void move(int i, const CellPoint &src, const CellPoint &dst) {
+    void move(Tindex i, const CellPoint &src, const CellPoint &dst) {
         assert((*this)[src].count(i) == 1 && "i not present in old cell");
         assert((*this)[dst].count(i) == 0 && "i already in new cell");
         (*this)[src].erase(i);
         (*this)[dst].insert(i);
-    } //!< move particle index i from one cell to another (complexity: N log N)
+    } //!< move particle index i from one cell to another (complexity: log N)
 
     void resize(const Point &box, double cutoff) {
         clear();
@@ -87,11 +130,11 @@ template <typename CellPoint = Eigen::Vector3i> class CellList {
     void update(
         const Tpvec &p, T getpos = [](auto &i) { return i; }) {
         clear();
-        for (size_t i = 0; i < p.size(); i++)
+        for (Tindex i = 0; i < p.size(); i++)
             (*this)[p2c(getpos(p[i]))].insert(i);
     }
 
-    void neighbors(const Eigen::Vector3i &c, std::vector<int> &index, bool clear = true) const {
+    void neighbors(const Eigen::Vector3i &c, std::vector<Tindex> &index, bool clear = true) const {
         if (clear)
             index.clear();
         int cnt = 0;
@@ -131,8 +174,8 @@ TEST_CASE("[Faunus] CellList") {
     CHECK(l.p2c({-5, -10, -3}) == Eigen::Vector3i(0, 0, 0));
     CHECK(l.p2c({0, 0, 0}) == Eigen::Vector3i(3, 5, 2));
 
-    std::vector<int> index; // index of neighbors (and self) in...
-    std::vector<Point> vec; // ...array of points
+    std::vector<size_t> index; // index of neighbors (and self) in...
+    std::vector<Point> vec;    // ...array of points
 
     vec = {{0, 0, 0}, {0, 3, 0}};
     l.update(vec);

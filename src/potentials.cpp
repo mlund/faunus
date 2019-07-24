@@ -703,7 +703,6 @@ Dummy::Dummy() { name = "dummy"; }
 void Dummy::from_json(const json &) {}
 void Dummy::to_json(json &) const {}
 
-
 // =============== LennardJones ===============
 
 void LennardJones::initPairMatrices() {
@@ -759,7 +758,6 @@ void Hertz::initPairMatrices() {
             sigma_squared->rows(), sigma_squared->cols(), epsilon->rows(), epsilon->cols(),
             custom_pairs->size());
 }
-
 
 void Hertz::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");

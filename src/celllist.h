@@ -12,7 +12,7 @@ namespace Faunus {
 
 // dynamic 3d matrix with contiguous memory
 // https://eli.thegreenplace.net/2015/memory-layout-of-multi-dimensional-arrays
-template <typename T, typename Tindices = Eigen::Vector3i> class RowMajor3DMatrix {
+template <typename T, typename Tindices = std::array<int, 3>> class DymamicArray3D {
   public:
     std::vector<T> data; // contiguous data block; row-column-depth layout
     Tindices dim;        // matrix size
@@ -26,7 +26,7 @@ template <typename T, typename Tindices = Eigen::Vector3i> class RowMajor3DMatri
 };
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] RowMajor3DMatrix") {
-    RowMajor3DMatrix<double> m;
+    DymamicArray3D<double, Eigen::Vector3i> m;
     Eigen::Vector3i dim = {4, 10, 2};
     Eigen::Vector3i one = {1, 1, 1};
     m.resize(dim);

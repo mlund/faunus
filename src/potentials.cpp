@@ -134,7 +134,7 @@ void MixerPairPotentialBase::from_json(const json &j) {
             }
         }
         if (j.count("custom") == 1) {
-            custom_pairs = j;
+            *custom_pairs = j;
         }
     } catch (const PairPotentialException &e) {
         faunus_logger->error(std::string(e.what()) + " in potential " + name);
@@ -145,8 +145,8 @@ void MixerPairPotentialBase::from_json(const json &j) {
 
 void MixerPairPotentialBase::to_json(json &j) const {
     j["mixing"] = combination_rule;
-    if (!custom_pairs.empty()) {
-        j["custom"] = custom_pairs;
+    if (!custom_pairs->empty()) {
+        j["custom"] = *custom_pairs;
     }
 }
 
@@ -711,13 +711,13 @@ void LennardJones::initPairMatrices() {
     const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
 
     sigma_squared = PairMixer(extract_sigma, comb_sigma, &PairMixer::modSquared)
-        .createPairMatrix(atoms, custom_pairs);
+        .createPairMatrix(atoms, *custom_pairs);
     epsilon_quadruple = PairMixer(extract_epsilon, comb_epsilon, [](double x) -> double { return 4*x; })
-        .createPairMatrix(atoms, custom_pairs);
+        .createPairMatrix(atoms, *custom_pairs);
 
     faunus_logger->debug("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(),
-                         epsilon_quadruple->rows(), epsilon_quadruple->cols(), custom_pairs.size());
+                         epsilon_quadruple->rows(), epsilon_quadruple->cols(), custom_pairs->size());
 }
 
 // =============== HardSphere ===============
@@ -725,9 +725,9 @@ void LennardJones::initPairMatrices() {
 void HardSphere::initPairMatrices() {
     const TExtractorFunc extract_sigma = [](const AtomData &a) -> double { return a.sigma; };
     sigma_squared = PairMixer(extract_sigma, PairMixer::getCombinator(combination_rule), &PairMixer::modSquared)
-        .createPairMatrix(atoms, custom_pairs);
+        .createPairMatrix(atoms, *custom_pairs);
     faunus_logger->debug("Pair matrix for {} sigma ({}×{}) created using {} custom pairs.", name,
-                         sigma_squared->rows(), sigma_squared->cols(), custom_pairs.size());
+                         sigma_squared->rows(), sigma_squared->cols(), custom_pairs->size());
 }
 
 // =============== Hertz ===============
@@ -739,13 +739,13 @@ void Hertz::initPairMatrices() {
     const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
 
     diameter_squared = PairMixer(extract_diameter, comb_diameter, &PairMixer::modSquared)
-        .createPairMatrix(atoms, custom_pairs);
-    epsilon_hertz = PairMixer(extract_epsilon, comb_epsilon).createPairMatrix(atoms, custom_pairs);
+        .createPairMatrix(atoms, *custom_pairs);
+    epsilon_hertz = PairMixer(extract_epsilon, comb_epsilon).createPairMatrix(atoms, *custom_pairs);
 
     faunus_logger->debug(
             "Pair matrix for {} radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
             diameter_squared->rows(), diameter_squared->cols(), epsilon_hertz->rows(), epsilon_hertz->cols(),
-            custom_pairs.size());
+            custom_pairs->size());
 }
 
 
@@ -759,15 +759,15 @@ void SquareWell::initPairMatrices() {
     const TCombinatorFunc comb_depth = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
 
     diameter_sw_squared = PairMixer(extract_diameter, comb_diameter, &PairMixer::modSquared)
-        .createPairMatrix(atoms, custom_pairs);
+        .createPairMatrix(atoms, *custom_pairs);
     depth_sw = PairMixer(extract_depth, comb_depth)
-        .createPairMatrix(atoms, custom_pairs);
+        .createPairMatrix(atoms, *custom_pairs);
 
     faunus_logger->debug(
             "Pair matrix for {} diameter ({}×{}) and depth ({}×{}) created using {} custom pairs.",
             name,
             diameter_sw_squared->rows(), diameter_sw_squared->cols(), depth_sw->rows(), depth_sw->cols(),
-            custom_pairs.size());
+            custom_pairs->size());
 }
 
 // =============== Polarizability ===============

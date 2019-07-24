@@ -125,14 +125,13 @@ void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair 
 class MixerPairPotentialBase : public PairPotentialBase {
   protected:
     CombinationRuleType combination_rule;
-    std::vector<InteractionData> custom_pairs;
+    std::shared_ptr<std::vector<InteractionData>> custom_pairs = std::make_shared<std::vector<InteractionData>>();
     void init();  //!< initialize the potential when data, e.g., atom parameters, are available
     virtual void initPairMatrices() = 0; //!< potential-specific initialization of parameter matrices
   public:
     MixerPairPotentialBase(const std::string &name = std::string(), const std::string &cite = std::string(),
                            CombinationRuleType combination_rule = COMB_UNDEFINED, bool isotropic = true)
-        : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule) {
-    };
+        : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule) {};
     virtual ~MixerPairPotentialBase() = default;
     void from_json(const json &) override;
     void to_json(json &) const override;

@@ -79,7 +79,7 @@ endif()
 # SPDLOG
 ExternalProject_Add(
     project_spdlog
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
     LOG_DOWNLOAD ON
     #GIT_REPOSITORY https://github.com/gabime/spdlog.git
     #GIT_TAG bb0f3839c1e52948f2ecb66e4e0aa79740a30205
@@ -118,7 +118,7 @@ endif()
 
 # DOCOPT.CPP
 ExternalProject_Add(project_docopt
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
     CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} docopt_s
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
@@ -135,7 +135,7 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 
 # CPPSID
 ExternalProject_Add(project_cppsid
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
     CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} ""#cppsid player
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
@@ -168,7 +168,7 @@ endif()
 # XRDFILE
 ExternalProject_Add(
     project_xdrfile
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
     URL "https://github.com/wesbarnett/libxdrfile/archive/2.1.2.tar.gz"
     URL_MD5 ee114404b4a01613b2f0167a2ad92536
     PATCH_COMMAND echo "add_library(xdrfile-static STATIC \${SRCS})" >> CMakeLists.txt

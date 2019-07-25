@@ -26,6 +26,7 @@ endif()
 option(BUILD_STATIC "Build statically linked binaries" off)
 option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" on)
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
+option(ENABLE_LTO "Enable Link-Time Optimizations if available" off)
 
 option(ENABLE_APPROXMATH "Use approximate math" off)
 if (ENABLE_APPROXMATH)
@@ -309,6 +310,7 @@ set(tsts
     ${CMAKE_SOURCE_DIR}/src/atomdata_test.h
     ${CMAKE_SOURCE_DIR}/src/core_test.h
     ${CMAKE_SOURCE_DIR}/src/potentials_test.h
+    ${CMAKE_SOURCE_DIR}/src/tensor_test.h
     )
 
 # Compiler specific flags
@@ -337,9 +339,12 @@ add_test(NAME unittests COMMAND unittests)
 add_executable(faunus src/faunus.cpp ${objs} ${hdrs})
 target_link_libraries(faunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog docopt)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
-check_ipo_supported(RESULT result)
-if(result)
-    set_property(TARGET faunus PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+if (ENABLE_LTO)
+    check_ipo_supported(RESULT result)
+    if(result)
+        set_property(TARGET faunus PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
 endif()
 
 if(ENABLE_SID)

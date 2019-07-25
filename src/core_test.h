@@ -67,5 +67,5 @@ TEST_CASE("[Faunus] ranunit_polar") {
     CHECK(rtp.y() == doctest::Approx(0).epsilon(0.005));          // theta [-pi:pi] --> <theta>=0
     CHECK(rtp.z() == doctest::Approx(pc::pi / 2).epsilon(0.005)); // phi [0:pi] --> <phi>=pi/2
 }
-
+TEST_SUITE_END();
 } // namespace Faunus

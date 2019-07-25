@@ -27,8 +27,9 @@ TEST_CASE("[Faunus] PairMixer") {
         SUBCASE("") {
             atoms =
                 R"([{"A": {"sigma":2.0}}, {"B": {"sigma":8.0}}, {"C": {"sigma":18.0}}])"_json.get<decltype(atoms)>();
+            REQUIRE(atoms.front().getProperty("sigma") == Approx(2.0));
             std::vector<InteractionData> pairs = R"({"custom": {"A C": {"sigma": 9.5}, "C B": {"sigma": 12.5}}})"_json;
-            TExtractorFunc sigma = [](AtomData a) -> double { return a.sigma; };
+            TExtractorFunc sigma = [](AtomData a) -> double { return a.getProperty("sigma"); };
 
             SUBCASE("") {
                 PairMixer mixer(sigma, &PairMixer::combArithmetic);
@@ -93,6 +94,51 @@ TEST_CASE("[Faunus] LennardJones") {
     }
 }
 
+TEST_CASE("[Faunus] WeeksChandlerAndersen") {
+    SUBCASE("JSON initilization") {
+        atoms = R"([{"A": {"sigma":2.0, "eps":0.9}},
+                    {"B": {"sigma":8.0, "eps":0.1}}])"_json.get<decltype(atoms)>();
+        Particle a = atoms[0], b = atoms[1];
+
+        CHECK_THROWS_AS(WeeksChandlerAndersen wca = R"({"mixing": "unknown"})"_json, std::runtime_error);
+        CHECK_NOTHROW(WeeksChandlerAndersen wca = R"({})"_json);
+        CHECK_NOTHROW(WeeksChandlerAndersen wca = R"({"mixing": "LB", "custom": {"A B": {"eps": 0.5, "sigma": 8}}})"_json);
+
+        SUBCASE("Missing coefficient") {
+            WeeksChandlerAndersen wca = R"({"mixing": "LB", "sigma": "sigma_wca"})"_json;
+            CHECK_EQ(std::isnan(wca(a, a, {0, 0, 10.0})), true);
+            CHECK_EQ(std::isnan(wca(a, a, {0, 0, 1.0})), true);
+        }
+    }
+    SUBCASE("JSON initilization custom coefficient names") {
+        atoms = R"([{"A": {"sigma_wca":2.0, "eps":0.9}},
+                    {"B": {"sigma_wca":8.0, "eps":0.1}}])"_json.get<decltype(atoms)>();
+        Particle a = atoms[0], b = atoms[1];
+
+        CHECK_NOTHROW(WeeksChandlerAndersen wca = R"({"mixing": "LB", "sigma": "sigma_wca"})"_json);
+        // Shall throw after non-default potentials are created properly,
+        // i.e., not needed pairs are not evaluated at all for the matrices
+        // CHECK_THROWS_AS_MESSAGE(WeeksChandlerAndersen wca = R"({"mixing": "LB"})"_json, std::runtime_error,
+        //                         "unknown atom property");
+        // CHECK_THROWS_AS_MESSAGE(WeeksChandlerAndersen wca = R"({"mixing": "LB", "sigma": "unknown"})"_json,
+        //                         std::runtime_error, "unknown atom property");
+        // different atom and custom coefficient names are not allowed
+        // CHECK_THROWS_AS_MESSAGE(
+        //     WeeksChandlerAndersen wca =
+        //         R"({"mixing": "LB", "sigma": "sigma_wca", "custom": {"A B": {"eps": 0.5, "sigma": 8}}})"_json,
+        //     std::runtime_error, "unknown atom property");
+    }
+    SUBCASE("JSON serialization") {
+        WeeksChandlerAndersen wca;
+        wca = R"({"mixing": "LB", "sigma": "sigma_wca"})"_json;
+        json j = wca;
+        json &j_wca(j["wca"]);
+        CHECK_EQ(j_wca["mixing"], "lorentz_berthelot");
+        CHECK_EQ(j_wca["sigma"], "sigma_wca");
+        CHECK_EQ(j_wca["eps"], "eps");
+    }
+}
+
 TEST_CASE("[Faunus] HardSphere") {
     atoms = R"([{"A": {"sigma": 2}}, {"B": {"sigma": 8}}])"_json.get<decltype(atoms)>();
     Particle a = atoms[0], b = atoms[1];
@@ -105,8 +151,8 @@ TEST_CASE("[Faunus] HardSphere") {
         HardSphere hs = R"({"mixing": "undefined"})"_json;
         CHECK(hs(a, a, {0, 0, 1.99}) == pc::infty);
         CHECK(hs(a, a, {0, 0, 2.01}) == 0.0);
-        //CHECK(std::isnan(hs(a, b, {0, 0, 4.99}))); // fails
-        //CHECK(std::isnan(hs(a, b, {0, 0, 5.01}))); // fails
+        // CHECK(std::isnan(hs(a, b, {0, 0, 4.99}))); // fails
+        // CHECK(std::isnan(hs(a, b, {0, 0, 5.01}))); // fails
     }
     SUBCASE("Arithmetic mixing") {
         HardSphere hs = R"({"mixing": "arithmetic"})"_json;
@@ -125,8 +171,8 @@ TEST_CASE("[Faunus] HardSphere") {
 }
 
 TEST_CASE("[Faunus] SquareWell") {
-    atoms = R"([{"A": { "r":5,  "sigma_sw":4, "eps_sw":0.2 }},
-                {"B": { "r":10, "sigma_sw":2, "eps_sw":0.1 }} ])"_json.get<decltype(atoms)>();
+    atoms = R"([{"A": { "r":5,  "sigma":4, "eps":0.2 }},
+                {"B": { "r":10, "sigma":2, "eps":0.1 }} ])"_json.get<decltype(atoms)>();
     Particle a = atoms[0], b = atoms[1];
 
     SUBCASE("JSON initilization") {
@@ -135,20 +181,19 @@ TEST_CASE("[Faunus] SquareWell") {
     }
     SUBCASE("Undefined mixing") {
         SquareWell sw = R"({"mixing": "undefined"})"_json;
-        CHECK(sw(a, a, {0, 0, 2*5 + 7.99}) == Approx(-0.2_kJmol));
-        CHECK(sw(a, a, {0, 0, 2*5 + 8.01}) == Approx(0.0));
-        //CHECK(std::isnan(sw(a, b, {0, 0, 5 + 10 + 5.99}))); // fails
-        //CHECK(std::isnan(sw(a, b, {0, 0, 5 + 10 + 6.01}))); // fails
+        CHECK(sw(a, a, {0, 0, 3.99}) == Approx(-0.2_kJmol));
+        CHECK(sw(a, a, {0, 0, 4.01}) == Approx(0.0));
+        // CHECK(std::isnan(sw(a, b, {0, 0, 5.99}))); // fails
+        // CHECK(std::isnan(sw(a, b, {0, 0, 6.01}))); // fails
     }
     SUBCASE("Lorentz-Berthelot mixing") {
         SquareWell sw = R"({"mixing": "LB"})"_json;
-        CHECK(sw(a, b, {0, 0, 5 + 10 + 5.99}) == Approx(-std::sqrt(0.2_kJmol * 0.1_kJmol)));
-        CHECK(sw(a, b, {0, 0, 5 + 10 + 6.01}) == Approx(0));
+        CHECK(sw(a, b, {0, 0, 2.99}) == Approx(-std::sqrt(0.2_kJmol * 0.1_kJmol)));
+        CHECK(sw(a, b, {0, 0, 3.01}) == Approx(0));
     }
 }
 
 TEST_SUITE_END();
-
 
 TEST_CASE("[Faunus] CustomPairPotential") {
     json j = R"({ "atomlist" : [

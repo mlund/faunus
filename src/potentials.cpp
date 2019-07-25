@@ -1,7 +1,7 @@
 #include "potentials.h"
 #include "multipole.h"
+#include "units.h"
 #include "spdlog/spdlog.h"
-#include <spdlog/sinks/null_sink.h>
 
 namespace Faunus {
 namespace Potential {
@@ -134,19 +134,21 @@ void MixerPairPotentialBase::from_json(const json &j) {
             }
         }
         if (j.count("custom") == 1) {
-            custom_pairs = j;
+            *custom_pairs = j;
         }
     } catch (const PairPotentialException &e) {
         faunus_logger->error(std::string(e.what()) + " in potential " + name);
         throw std::runtime_error("error deserialising potential " + name + " from json");
     }
+    extractorsFromJson(j);
     init();
 }
 
 void MixerPairPotentialBase::to_json(json &j) const {
     j["mixing"] = combination_rule;
-    if (!custom_pairs.empty()) {
-        j["custom"] = custom_pairs;
+    j.update(json_extra_params);
+    if (!custom_pairs->empty()) {
+        j["custom"] = *custom_pairs;
     }
 }
 
@@ -701,74 +703,99 @@ Dummy::Dummy() { name = "dummy"; }
 void Dummy::from_json(const json &) {}
 void Dummy::to_json(json &) const {}
 
-
 // =============== LennardJones ===============
 
 void LennardJones::initPairMatrices() {
-    const TExtractorFunc extract_sigma = [](const AtomData &a) -> double { return a.sigma; };
-    const TExtractorFunc extract_epsilon = [](const AtomData &a) -> double { return a.eps; };
     const TCombinatorFunc comb_sigma = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
     const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
 
     sigma_squared = PairMixer(extract_sigma, comb_sigma, &PairMixer::modSquared)
-        .createPairMatrix(atoms, custom_pairs);
+        .createPairMatrix(atoms, *custom_pairs);
     epsilon_quadruple = PairMixer(extract_epsilon, comb_epsilon, [](double x) -> double { return 4*x; })
-        .createPairMatrix(atoms, custom_pairs);
+        .createPairMatrix(atoms, *custom_pairs);
 
     faunus_logger->debug("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(),
-                         epsilon_quadruple->rows(), epsilon_quadruple->cols(), custom_pairs.size());
+                         epsilon_quadruple->rows(), epsilon_quadruple->cols(), custom_pairs->size());
+}
+
+void LennardJones::extractorsFromJson(const json &j) {
+    auto sigma_name = j.value("sigma", "sigma");
+    json_extra_params["sigma"] = sigma_name;
+    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
+    auto epsilon_name = j.value("eps", "eps");
+    json_extra_params["eps"] = epsilon_name;
+    extract_epsilon = [epsilon_name](const AtomData &a) -> double { return a.getProperty(epsilon_name) * 1.0_kJmol; };
 }
 
 // =============== HardSphere ===============
 
 void HardSphere::initPairMatrices() {
-    const TExtractorFunc extract_sigma = [](const AtomData &a) -> double { return a.sigma; };
     sigma_squared = PairMixer(extract_sigma, PairMixer::getCombinator(combination_rule), &PairMixer::modSquared)
-        .createPairMatrix(atoms, custom_pairs);
+        .createPairMatrix(atoms, *custom_pairs);
     faunus_logger->debug("Pair matrix for {} sigma ({}×{}) created using {} custom pairs.", name,
-                         sigma_squared->rows(), sigma_squared->cols(), custom_pairs.size());
+                         sigma_squared->rows(), sigma_squared->cols(), custom_pairs->size());
+}
+
+void HardSphere::extractorsFromJson(const json &j) {
+    auto sigma_name = j.value("sigma", "sigma");
+    json_extra_params["sigma"] = sigma_name;
+    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
 }
 
 // =============== Hertz ===============
 
 void Hertz::initPairMatrices() {
-    const TExtractorFunc extract_diameter = [](const AtomData &a) -> double { return 2*a.hdr; };
-    const TExtractorFunc extract_epsilon = [](const AtomData &a) -> double { return a.eps_hertz; };
     const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
     const TCombinatorFunc comb_epsilon = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
 
-    diameter_squared = PairMixer(extract_diameter, comb_diameter, &PairMixer::modSquared)
-        .createPairMatrix(atoms, custom_pairs);
-    epsilon_hertz = PairMixer(extract_epsilon, comb_epsilon).createPairMatrix(atoms, custom_pairs);
+    sigma_squared = PairMixer(extract_sigma, comb_diameter, &PairMixer::modSquared)
+        .createPairMatrix(atoms, *custom_pairs);
+    epsilon = PairMixer(extract_epsilon, comb_epsilon).createPairMatrix(atoms, *custom_pairs);
 
     faunus_logger->debug(
             "Pair matrix for {} radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
-            diameter_squared->rows(), diameter_squared->cols(), epsilon_hertz->rows(), epsilon_hertz->cols(),
-            custom_pairs.size());
+            sigma_squared->rows(), sigma_squared->cols(), epsilon->rows(), epsilon->cols(),
+            custom_pairs->size());
+}
+
+void Hertz::extractorsFromJson(const json &j) {
+    auto sigma_name = j.value("sigma", "sigma");
+    json_extra_params["sigma"] = sigma_name;
+    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
+    auto epsilon_name = j.value("eps", "eps");
+    json_extra_params["eps"] = epsilon_name;
+    extract_epsilon = [epsilon_name](const AtomData &a) -> double { return a.getProperty(epsilon_name) * 1.0_kJmol; };
 }
 
 
 // =============== SquareWell ===============
 
 void SquareWell::initPairMatrices() {
-    const TExtractorFunc extract_diameter =
-        [](const AtomData &a) -> double { return a.sigma + 2 * a.squarewell_threshold; };
-    const TExtractorFunc extract_depth = [](const AtomData &a) -> double { return a.squarewell_depth; };
     const TCombinatorFunc comb_diameter = PairMixer::getCombinator(combination_rule, PairMixer::COEF_SIGMA);
     const TCombinatorFunc comb_depth = PairMixer::getCombinator(combination_rule, PairMixer::COEF_EPSILON);
 
-    diameter_sw_squared = PairMixer(extract_diameter, comb_diameter, &PairMixer::modSquared)
-        .createPairMatrix(atoms, custom_pairs);
-    depth_sw = PairMixer(extract_depth, comb_depth)
-        .createPairMatrix(atoms, custom_pairs);
+    sigma_squared = PairMixer(extract_sigma, comb_diameter, &PairMixer::modSquared)
+        .createPairMatrix(atoms, *custom_pairs);
+    epsilon = PairMixer(extract_epsilon, comb_depth)
+        .createPairMatrix(atoms, *custom_pairs);
 
     faunus_logger->debug(
             "Pair matrix for {} diameter ({}×{}) and depth ({}×{}) created using {} custom pairs.",
             name,
-            diameter_sw_squared->rows(), diameter_sw_squared->cols(), depth_sw->rows(), depth_sw->cols(),
-            custom_pairs.size());
+            sigma_squared->rows(), sigma_squared->cols(), epsilon->rows(), epsilon->cols(),
+            custom_pairs->size());
 }
+
+void SquareWell::extractorsFromJson(const json &j) {
+    auto sigma_name = j.value("sigma", "sigma");
+    json_extra_params["sigma"] = sigma_name;
+    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom ; };
+    auto epsilon_name = j.value("eps", "eps");
+    json_extra_params["eps"] = epsilon_name;
+    extract_epsilon = [epsilon_name](const AtomData &a) -> double { return a.getProperty(epsilon_name) * 1.0_kJmol; };
+}
+
 
 // =============== Polarizability ===============
 

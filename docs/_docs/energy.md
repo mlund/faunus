@@ -303,19 +303,39 @@ while zero for $r>r\_c+w\_c$.
 ### Assorted Short Ranged Potentials
 
 The potentials below are often used to keep particles apart and/or to introduce stickiness.
-The atomic interaction parameters, $\epsilon\_i$, are taken from the topology according to the naming scheme
-shown in the table.
+The atomic interaction parameters, e.g., $\sigma_i$ and $\epsilon\_i$, are taken from the
+topology.
 
-type           | $\epsilon$       | $u(r)$
--------------- | ---------------- | --------------------------------------------------------
-`hardsphere`   |                  | $\infty$ for $r < \sigma\_{ij}$
-`hertz`        | `eps_hertz`      | $\epsilon\_{ij} \left ( 1-r / \sigma\_{ij}\right )^{5/2}$ for $r<\sigma\_{ij}$
-`lennardjones` | `eps`            | $4\epsilon\_{ij} \left ( (\sigma\_{ij}/r\_{ij})^{12} - (\sigma\_{ij}/r\_{ij})^6\right )$
-`squarewell`   | `eps_sw`         | $-\epsilon\_{ij}$ for $r<\sigma\_{ij}$ 
-[`wca`](http://dx.doi.org/ct4kh9) | `eps` | $u\_{ij}^{\text{LJ}} + \epsilon\_{ij}$ for $r < 2^{1/6}\sigma\_{ij}$
+type             | atomic parameters | $u(r)$ (non-zero part)
+---------------- | ----------------- | --------------------------------------------------------
+`hardsphere`     | `sigma`           | $\infty$ for $r < \sigma\_{ij}$
+`hertz`          | `sigma`, `eps`    | $\epsilon\_{ij} \left ( 1-r / \sigma\_{ij}\right )^{5/2}$ for $r<\sigma\_{ij}$
+`lennardjones`   | `sigma`, `eps`    | $4\epsilon\_{ij} \left ( (\sigma\_{ij}/r\_{ij})^{12} - (\sigma\_{ij}/r\_{ij})^6\right )$
+`squarewell`     | `sigma`, `eps`    | $-\epsilon\_{ij}$ for $r<\sigma\_{ij}$
+[`wca`](http://dx.doi.org/ct4kh9) | `sigma`, `eps` | $u\_{ij}^{\text{LJ}} + \epsilon\_{ij}$ for $r < 2^{1/6}\sigma\_{ij}$
 
-Mixing of $\sigma$ and $\epsilon$ is done using a mixing rule, and
-can be defined for specific pairs. Currently the Lorentz-Berthelot (`LB`) mixing rule is available.
+If several potentials are used together and different values for the coefficients are desired,
+an aliasing of the parameters' names can be introduced. For example by specifying `sigma: sigma_hs`,
+the potential uses the atomic value `sigma_hs` instead of `sigma`, as shown in example below.
+To avoid possible conflicts of parameters' names with future keywords of Faunus, we recommend
+following naming scheme: `property_pot`, where `property` is either `sigma` or `eps` and
+`pot` stands for the potential abbreviation, i.e, `hs`, `hz`, `lj`, `sw`, and `wca`.
+
+Mixing (combination) rules can be specified to automatically parametrize heterogeneous interactions.
+If not described otherwise, the same rule is applied to all atomic parameters used by the potential.
+No meaningful defaults are defined yet, hence always specify the mixing rule explicitly, e.g.,
+`arithmetic` for `hardsphere`.
+
+rule                  | description        | formula
+--------------------- | ------------------ | ------------------------------------------------------
+`arithmetic`          | arithmetic mean    | $a\_{ij} = \frac 12 \left( a\_{ii} + a_{jj} \right)$
+`geometric`           | geometric mean     | $a\_{ij} = \sqrt{a\_{ii} a_{jj}}$
+`lorentz_berthelot`   | Lorentz-Berthelot  | `arithmetic` for `sigma`, `geometric` for `eps`
+
+For convenience, the abbreviation `LB` can be used instead of `lorentz_berthelot`.
+
+Custom parameter values can be specified to override the mixing rule for a given pair,
+as shown in the example bellow.
 
 ~~~ yaml
 - lennardjones:
@@ -326,8 +346,15 @@ can be defined for specific pairs. Currently the Lorentz-Berthelot (`LB`) mixing
 
 - hertz:
     mixing: LB
+    eps: eps_hz
     custom:
-      Na Cl: {eps_hertz: 0.2, sigma: 2}
+      Na Cl: {eps_hz: 0.2, sigma: 2}
+
+- hardsphere:
+    mixing: arithmetic
+    sigma: sigma_hs
+    custom:
+      Na Cl: {sigma_hs: 2}
 ~~~
 
 ### SASA

@@ -19,7 +19,7 @@ using namespace std::string_literals;
 typedef Eigen::MatrixXd TPairMatrix;
 typedef std::shared_ptr<TPairMatrix> TPairMatrixPtr;
 //! type of a function extracting a potential coefficient from the AtomData, e.g., sigma or eps
-typedef std::function<double(const AtomData&)> TExtractorFunc;
+typedef std::function<double(const AtomData &)> TExtractorFunc;
 //! type of a function defining a combination rule of a heterogeneous pair interaction
 typedef std::function<double(double, double)> TCombinatorFunc;
 //! type of a function modifying combinator's output
@@ -44,20 +44,20 @@ void to_json(json &j, const std::vector<InteractionData> &interactions);
  * When adding a new one, add a json mapping. Also consider appending the PairMixer::getCombinator()
  * method to recognize the new rule.
  */
-enum CombinationRuleType {COMB_UNDEFINED, COMB_ARITHMETIC, COMB_GEOMETRIC, COMB_LORENTZ_BERTHELOT};
+enum CombinationRuleType { COMB_UNDEFINED, COMB_ARITHMETIC, COMB_GEOMETRIC, COMB_LORENTZ_BERTHELOT };
 NLOHMANN_JSON_SERIALIZE_ENUM(CombinationRuleType, {
-    {COMB_UNDEFINED, "undefined"},
-    {COMB_ARITHMETIC, "arithmetic"},
-    {COMB_GEOMETRIC, "geometric"},
-    {COMB_LORENTZ_BERTHELOT, "lorentz_berthelot"},
-    {COMB_LORENTZ_BERTHELOT, "LB"}, // alternative non-canonical name
-})
+                                                      {COMB_UNDEFINED, "undefined"},
+                                                      {COMB_ARITHMETIC, "arithmetic"},
+                                                      {COMB_GEOMETRIC, "geometric"},
+                                                      {COMB_LORENTZ_BERTHELOT, "lorentz_berthelot"},
+                                                      {COMB_LORENTZ_BERTHELOT, "LB"}, // alternative non-canonical name
+                                                  })
 
 /**
  * @brief Exception for handling pair potential initialization.
  */
 struct PairPotentialException : public std::runtime_error {
-    PairPotentialException(const std::string msg) : std::runtime_error(msg) {};
+    PairPotentialException(const std::string msg) : std::runtime_error(msg){};
 };
 
 /**
@@ -76,7 +76,7 @@ class PairMixer {
 
   public:
     PairMixer(TExtractorFunc extractor, TCombinatorFunc combinator, TModifierFunc modifier = &modIdentity)
-        : extractor(extractor), combinator(combinator), modifier(modifier) {};
+        : extractor(extractor), combinator(combinator), modifier(modifier){};
 
     //! @return a square matrix of atoms.size()
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms);
@@ -91,10 +91,10 @@ class PairMixer {
     inline static constexpr double combUndefined(double, double) {
         return std::numeric_limits<double>::signaling_NaN();
     };
-    inline static double combArithmetic(double a, double b) { return 0.5*(a+b); }
-    inline static double combGeometric(double a, double b) { return std::sqrt(a*b); }
+    inline static double combArithmetic(double a, double b) { return 0.5 * (a + b); }
+    inline static double combGeometric(double a, double b) { return std::sqrt(a * b); }
     inline static double modIdentity(double x) { return x; }
-    inline static double modSquared(double x) { return x*x; }
+    inline static double modSquared(double x) { return x * x; }
 };
 
 /**
@@ -110,6 +110,7 @@ struct PairPotentialBase {
     virtual ~PairPotentialBase() = default;
     virtual Point force(const Particle &, const Particle &, double, const Point &);
     virtual double operator()(const Particle &a, const Particle &b, const Point &r) const = 0;
+
   protected:
     PairPotentialBase(const std::string &name = std::string(), const std::string &cite = std::string(),
                       bool isotropic = true);
@@ -121,18 +122,22 @@ void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair 
 /**
  * @brief A common ancestor for potentials that use parameter matrices computed from atomic
  * properties and/or custom atom pair properties.
+ *
+ * The class and their descendants have now also a responsibility to create themselves from a json object
+ * and store back. This is gradually becoming a complex task which shall be moved into other class.
  */
 class MixerPairPotentialBase : public PairPotentialBase {
   protected:
     CombinationRuleType combination_rule;
-    std::vector<InteractionData> custom_pairs;
-    void init();  //!< initialize the potential when data, e.g., atom parameters, are available
+    std::shared_ptr<std::vector<InteractionData>> custom_pairs = std::make_shared<std::vector<InteractionData>>();
+    json json_extra_params;              //!< pickled extra parameters like a coefficient names mapping
+    void init();                         //!< initialize the potential when data, e.g., atom parameters, are available
     virtual void initPairMatrices() = 0; //!< potential-specific initialization of parameter matrices
+    virtual void extractorsFromJson(const json &) {}; //!< potential-specific assignment of coefficient extracting functions
   public:
     MixerPairPotentialBase(const std::string &name = std::string(), const std::string &cite = std::string(),
                            CombinationRuleType combination_rule = COMB_UNDEFINED, bool isotropic = true)
-        : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule) {
-    };
+        : PairPotentialBase(name, cite, isotropic), combination_rule(combination_rule) {};
     virtual ~MixerPairPotentialBase() = default;
     void from_json(const json &) override;
     void to_json(json &) const override;
@@ -189,21 +194,23 @@ struct Dummy : public PairPotentialBase {
     void to_json(json &) const override;
 }; //!< A dummy pair potential that always returns zero
 
-
 /**
  * @brief Lennard-Jones potential with an arbitrary combination rule.
  * @note Mixing data is _shared_ upon copying
  */
 class LennardJones : public MixerPairPotentialBase {
+    TExtractorFunc extract_sigma, extract_epsilon;
+
   protected:
     TPairMatrixPtr sigma_squared;     // sigma_ij * sigma_ij
     TPairMatrixPtr epsilon_quadruple; // 4 * epsilon_ij
     void initPairMatrices() override;
+    void extractorsFromJson(const json &j) override;
 
   public:
     LennardJones(const std::string &name = "lennardjones", const std::string &cite = std::string(),
                  CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT)
-        : MixerPairPotentialBase(name, cite, combination_rule) {};
+        : MixerPairPotentialBase(name, cite, combination_rule){};
 
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
         double s6 = powi((*sigma_squared)(a.id, b.id), 3);
@@ -214,7 +221,7 @@ class LennardJones : public MixerPairPotentialBase {
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         double x = (*sigma_squared)(a.id, b.id) / r.squaredNorm(); // s2/r2
-        x = x * x * x; // s6/r6
+        x = x * x * x;                                             // s6/r6
         return (*epsilon_quadruple)(a.id, b.id) * (x * x - x);
     }
 };
@@ -264,61 +271,18 @@ class WeeksChandlerAndersen : public LennardJones {
 }; // Weeks-Chandler-Andersen potential
 
 /**
- * @brief Pairwise SASA potential calculating the surface area of inter-secting spheres
- */
-class SASApotential : public PairPotentialBase {
-  private:
-    bool shift = true; // shift potential to zero at large separations?
-    double proberadius = 0, conc = 0;
-
-    double area(double R, double r, double d_squared)
-        const; //!< Total surface area of two intersecting spheres or radii R and r as a function of separation
-
-  public:
-    inline double operator()(const Particle &a, const Particle &b, const Point &r_ab) const override {
-        double tfe = 0.5 * (atoms[a.id].tfe + atoms[b.id].tfe);
-        double tension = 0.5 * (atoms[a.id].tension + atoms[b.id].tension);
-        if (fabs(tfe) > 1e-6 or fabs(tension) > 1e-6)
-            return (tension + conc * tfe) * area(0.5 * atoms[a.id].sigma, 0.5 * atoms[b.id].sigma, r_ab.squaredNorm());
-        return 0;
-    }
-    SASApotential(const std::string &name = "sasa", const std::string &cite = std::string()) :
-            PairPotentialBase(name, cite) {};
-    void to_json(json &j) const override;
-    void from_json(const json &j) override;
-};
-
-struct Coulomb : public PairPotentialBase {
-    Coulomb(const std::string &name = "coulomb") : PairPotentialBase(name) {};
-    double lB; //!< Bjerrum length
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return lB * a.charge * b.charge / r.norm();
-    }
-    void to_json(json &j) const override;
-    void from_json(const json &j) override;
-};
-
-struct DipoleDipole : public PairPotentialBase {
-    DipoleDipole(const std::string &name = "dipoledipole", const std::string &cite = std::string()) :
-    PairPotentialBase(name, cite, false) {};
-    double lB; //!< Bjerrum length
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return lB*mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen*b.getExt().mulen, r,1.0,0.0);
-    }
-    void to_json(json &j) const override;
-    void from_json(const json &j) override;
-};
-
-/**
  * @brief Hardsphere potential
  *
  * Uses arithmetic mean for sigma as a default combination rule.
  * @note `PairMatrix` is _shared_ upon copying
  */
 class HardSphere : public MixerPairPotentialBase {
+    TExtractorFunc extract_sigma;
+
   protected:
     TPairMatrixPtr sigma_squared; // sigma_ij * sigma_ij
     void initPairMatrices() override;
+    void extractorsFromJson(const json &j) override;
 
   public:
     HardSphere(const std::string &name = "hardsphere")
@@ -326,6 +290,62 @@ class HardSphere : public MixerPairPotentialBase {
 
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         return r.squaredNorm() < (*sigma_squared)(a.id, b.id) ? pc::infty : 0.0;
+    }
+};
+
+/**
+ * @brief Hertz potential
+ * @details This is a repulsive potential, that for example, describes the change in elastic energy
+ * of two deformable objects when subjected to an axial compression.
+ * @f[
+ *     u(r) = \epsilon \left(1 - \frac{r}{\sigma}\right)^{5/2}
+ * @f]
+ * where r_H corresponds to the particle's radius.
+ *
+ * More info: doi:10.1063/1.3186742
+ */
+class Hertz : public MixerPairPotentialBase {
+    TExtractorFunc extract_sigma, extract_epsilon;
+
+  protected:
+    TPairMatrixPtr sigma_squared; // sigma_ij * sigma_ij
+    TPairMatrixPtr epsilon;       // epsilon_ij
+    void initPairMatrices() override;
+    void extractorsFromJson(const json &j) override;
+
+  public:
+    Hertz(const std::string &name = "hertz")
+        : MixerPairPotentialBase(name) {};
+    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
+        double r2 = r.squaredNorm();
+        if (r2 <= (*sigma_squared)(a.id, b.id))
+            return (*epsilon)(a.id, b.id) * pow((1 - (sqrt(r2 / (*sigma_squared)(a.id, b.id)))), 2.5);
+        return 0.0;
+    }
+};
+
+/**
+ * @brief Square-well potential
+ * @details This is an attractive potential described by
+ * @f[
+ *     u(r) = -\epsilon
+ * @f]
+ * when r < \sigma, and zero otherwise.
+ */
+class SquareWell : public MixerPairPotentialBase {
+    TExtractorFunc extract_sigma, extract_epsilon;
+
+  protected:
+    TPairMatrixPtr sigma_squared; // sigma_ij * sigma_ij
+    TPairMatrixPtr epsilon;       // epsilon_ij
+    void extractorsFromJson(const json &j) override;
+    void initPairMatrices() override;
+
+  public:
+    SquareWell(const std::string &name = "squarewell")
+        : MixerPairPotentialBase(name) {};
+    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
+        return (r.squaredNorm() < (*sigma_squared)(a.id, b.id)) ? -(*epsilon)(a.id, b.id) : 0.0;
     }
 };
 
@@ -339,56 +359,6 @@ struct RepulsionR3 : public PairPotentialBase {
     inline double operator()(const Particle &, const Particle &, const Point &_r) const override {
         double r2 = _r.squaredNorm(), r = sqrt(r2);
         return f / (r * r2) + e * std::pow(s / r, 12);
-    }
-};
-
-/**
- * @brief Hertz potential
- * @details This is a repulsive potential, that for example, describes the change in elastic energy
- * of two deformable objects when subjected to an axial compression.
- * @f[
- *     u(r) = \epsilon_H \left(1 - \frac{r}{2r_H}\right)^{5/2}
- * @f]
- * where r_H corresponds to the particle's radius.
- *
- * More info: doi:10.1063/1.3186742
- */
-class Hertz : public MixerPairPotentialBase {
-  protected:
-    TPairMatrixPtr diameter_squared; // 4 * r_ij * r_ij
-    TPairMatrixPtr epsilon_hertz;    // epsilon_ij
-    void initPairMatrices() override;
-
-  public:
-    Hertz(const std::string &name = "hertz")
-        : MixerPairPotentialBase(name) {};
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        double r2 = r.squaredNorm();
-        if (r2 <= (*diameter_squared)(a.id, b.id))
-            return (*epsilon_hertz)(a.id, b.id) * pow((1 - (sqrt(r2 / (*diameter_squared)(a.id, b.id)))), 2.5);
-        return 0.0;
-    }
-};
-
-/**
- * @brief Square-well potential
- * @details This is an attractive potential described by
- * @f[
- *     u(r) = -squarewell_depth
- * @f]
- * when r < sum of radii + squarewell_threshold, and zero otherwise.
- */
-class SquareWell : public MixerPairPotentialBase {
-  protected:
-    TPairMatrixPtr diameter_sw_squared; // ((sigma + 2*threshold)_ij)^2
-    TPairMatrixPtr depth_sw;            // epsilon_ij
-    void initPairMatrices() override;
-
-  public:
-    SquareWell(const std::string &name = "squarewell")
-        : MixerPairPotentialBase(name) {};
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return (r.squaredNorm() < (*diameter_sw_squared)(a.id, b.id)) ? -(*depth_sw)(a.id, b.id) : 0.0;
     }
 };
 
@@ -450,6 +420,52 @@ class CosAttract : public PairPotentialBase {
         return -2 * c * eps * x1 * x2 / r * p;
     }
 
+    void to_json(json &j) const override;
+    void from_json(const json &j) override;
+};
+
+/**
+ * @brief Pairwise SASA potential calculating the surface area of inter-secting spheres
+ */
+class SASApotential : public PairPotentialBase {
+  private:
+    bool shift = true; // shift potential to zero at large separations?
+    double proberadius = 0, conc = 0;
+
+    double area(double R, double r, double d_squared)
+    const; //!< Total surface area of two intersecting spheres or radii R and r as a function of separation
+
+  public:
+    inline double operator()(const Particle &a, const Particle &b, const Point &r_ab) const override {
+        double tfe = 0.5 * (atoms[a.id].tfe + atoms[b.id].tfe);
+        double tension = 0.5 * (atoms[a.id].tension + atoms[b.id].tension);
+        if (fabs(tfe) > 1e-6 or fabs(tension) > 1e-6)
+            return (tension + conc * tfe) * area(0.5 * atoms[a.id].sigma, 0.5 * atoms[b.id].sigma, r_ab.squaredNorm());
+        return 0;
+    }
+    SASApotential(const std::string &name = "sasa", const std::string &cite = std::string()) :
+        PairPotentialBase(name, cite) {};
+    void to_json(json &j) const override;
+    void from_json(const json &j) override;
+};
+
+struct Coulomb : public PairPotentialBase {
+    Coulomb(const std::string &name = "coulomb") : PairPotentialBase(name) {};
+    double lB; //!< Bjerrum length
+    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
+        return lB * a.charge * b.charge / r.norm();
+    }
+    void to_json(json &j) const override;
+    void from_json(const json &j) override;
+};
+
+struct DipoleDipole : public PairPotentialBase {
+    DipoleDipole(const std::string &name = "dipoledipole", const std::string &cite = std::string()) :
+        PairPotentialBase(name, cite, false) {};
+    double lB; //!< Bjerrum length
+    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
+        return lB*mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen*b.getExt().mulen, r,1.0,0.0);
+    }
     void to_json(json &j) const override;
     void from_json(const json &j) override;
 };

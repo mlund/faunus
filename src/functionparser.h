@@ -28,6 +28,7 @@ class ExprFunction {
     T operator()() const;
 };
 
+extern template class ExprFunction<double>;
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 TEST_CASE("[Faunus] ExprFunction") {

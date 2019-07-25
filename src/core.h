@@ -75,7 +75,7 @@ namespace Faunus {
      * keys as the object should be zero after being processed by
      * i.e. `from_json` or similar.
      */
-    struct SingleUseJSON : private json {
+    struct SingleUseJSON : public json {
         SingleUseJSON(const json &j);
         bool empty() const;
         size_type count(const std::string &key) const;

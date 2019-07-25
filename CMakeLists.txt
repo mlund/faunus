@@ -476,7 +476,8 @@ add_test(
     NAME penalty
     COMMAND sh -c "jupyter nbconvert --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
     WORKING_DIRECTORY ${EXAMPLES_DIR})
-set_tests_properties(penalty PROPERTIES ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
+set_property(TEST penalty APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
+set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 
 add_test(
     NAME minimal

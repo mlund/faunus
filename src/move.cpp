@@ -3,6 +3,9 @@
 #include "speciation.h"
 #include "clustermove.h"
 #include "chainmove.h"
+#include <thread>
+using namespace std::this_thread;     // sleep_for, sleep_until
+using namespace std::chrono_literals; // ns, us, ms, s, h, etc.
 
 namespace Faunus {
 namespace Move {
@@ -232,12 +235,35 @@ void ParallelTempering::findPartner() {
     (mpi.rank() % 2 == 0) ? partner += dr : partner -= dr;
 }
 bool ParallelTempering::goodPartner() {
+    int ready = 0;
+    int flag = 0;
+    int n = 0;
+    MPI_Status status;
+    MPI_Request request;
     assert(partner != mpi.rank() && "Selfpartner! This is not supposed to happen.");
-    if (partner >= 0)
-        if (partner < mpi.nproc())
-            if (partner != mpi.rank())
-                return true;
-    return false;
+    if (partner >= 0) {
+        if (partner < mpi.nproc()) {
+            if (partner != mpi.rank()) {
+                if (mpi.rank() % 2 == 0) {
+                    ready = 1;
+                    MPI_Isend(&ready, 1, MPI_INT, partner, 1111, mpi.comm, &request);
+                    while (not flag and n<1e5) {
+                        MPI_Test(&request, &flag, &status);
+                        n++;
+                    }
+                    if (not flag)
+                        ready = 0;
+                } else {
+                    MPI_Irecv(&ready, 1, MPI_INT, partner, 1111, mpi.comm, &request);
+                    while (not flag and n<1e5) {
+                        MPI_Test(&request, &flag, &status);
+                        n++;
+                    }
+                }
+            }
+        }
+    }
+    return ready;
 }
 void ParallelTempering::_to_json(json &j) const {
     j = {{"replicas", mpi.nproc()}, {"datasize", pt.getFormat()}};
@@ -247,32 +273,41 @@ void ParallelTempering::_to_json(json &j) const {
         _j[m.first] = {{"attempts", m.second.cnt}, {"acceptance", m.second.avg()}};
 }
 void ParallelTempering::_move(Change &change) {
+    bool flagsend, flagrecv;
     double Vold = spc.geo.getVolume();
     findPartner();
-    Tpvec p; // temperary storage
+    Tpvec p; // temporary storage
     p.resize(spc.p.size());
     if (goodPartner()) {
-        change.all = true;
         pt.sendExtra[VOLUME] = Vold;  // copy current volume for sending
-        pt.recv(mpi, partner, p);     // receive particles
         pt.send(mpi, spc.p, partner); // send everything
-        pt.waitrecv();
-        pt.waitsend();
+        pt.recv(mpi, partner, p);     // receive particles
+        flagsend = pt.testsend();
+        flagrecv = pt.testrecv();
+        if (flagsend and flagrecv) {
+            pt.waitsend();
+            pt.waitrecv();
 
-        double Vnew = pt.recvExtra[VOLUME];
-        if (Vnew < 1e-9 || spc.p.size() != p.size())
-            MPI_Abort(mpi.comm, 1);
+            change.all = true;
 
-        if (std::fabs(Vnew - Vold) > 1e-9)
-            change.dV = true;
+            double Vnew = pt.recvExtra[VOLUME];
+            // if (Vnew < 1e-9 || spc.p.size() != p.size())
+            //    MPI_Abort(mpi.comm, 1);
 
-        spc.p = p;
-        spc.geo.setVolume(Vnew);
+            if (std::fabs(Vnew - Vold) > 1e-9)
+                change.dV = true;
 
-        // update mass centers
-        for (auto &g : spc.groups)
-            if (g.atomic == false)
-                g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
+            // if (spc.p.size() != p.size())
+            //    change.dN = true;
+
+            spc.p = p;
+            spc.geo.setVolume(Vnew);
+
+            // update mass centers
+            for (auto &g : spc.groups)
+                if (g.atomic == false)
+                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
+        }
     }
 }
 double ParallelTempering::exchangeEnergy(double mydu) {
@@ -584,14 +619,14 @@ TranslateRotate::TranslateRotate(Space &spc) : spc(spc) {
     repeat = -1; // meaning repeat N times
 }
 void ConformationSwap::_to_json(json &j) const {
-    j = {{"molid", molid}, {"molecule", molecules[molid].name},{"keeppos", keeppos}};
+    j = {{"molid", molid}, {"molecule", molecules[molid].name}, {"keeppos", inserter.keeppos}};
     _roundjson(j, 3);
 }
 void ConformationSwap::_from_json(const json &j) {
     assert(!molecules.empty());
     try {
-        keeppos = j.value("keeppos", keeppos);
         std::string molname = j.at("molecule");
+        keeppos = j.value("keeppos", false);
         auto it = findName(molecules, molname);
         if (it == molecules.end())
             throw std::runtime_error("unknown molecule '" + molname + "'");
@@ -778,10 +813,14 @@ void MCSimulation::move() {
                 if (metropolis(du + bias)) { // accept move
                     state1.sync(state2, change);
                     (**mv).accept(change);
+                    //if ((**mv).name == "temper")
+                    //    cout << (**mv).name << " " << "acc" << endl;
                 } else { // reject move
                     state2.sync(state1, change);
                     (**mv).reject(change);
                     du = 0;
+                    //if ((**mv).name == "temper")
+                    //    cout << (**mv).name << " " << "rej" << endl;
                 }
                 dusum += du; // sum of all energy changes
             } else state2.sync(state1, change);

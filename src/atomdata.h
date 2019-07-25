@@ -39,6 +39,7 @@ class AtomData { // has to be a class when a constant reference is used
     Tid &id();                //!< Type id
     const Tid &id() const;    //!< Type id
     double getProperty(const TPropertyName name) const;
+    double &getProperty(const TPropertyName name);
     void setProperty(const TPropertyName name, const double value);
 };
 

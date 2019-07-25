@@ -26,6 +26,13 @@ double AtomData::getProperty(const TPropertyName name) const {
         return std::numeric_limits<double>::signaling_NaN();
     }
 }
+double &AtomData::getProperty(const TPropertyName name) {
+    if(property.count(name) == 0) {
+        setProperty(name, std::numeric_limits<double>::signaling_NaN());
+    }
+    return property.at(name);
+}
+
 
 void to_json(json &j, const AtomData &a) {
     auto &_j = j[a.name];

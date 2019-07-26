@@ -159,6 +159,7 @@ namespace Faunus {
     json SingleUseJSON::operator[](const std::string &key) { return at(key); }
 
     void SingleUseJSON::erase(const std::string &key) { json::erase(key); }
+    bool SingleUseJSON::is_object() const { return json::is_object(); }
 
     Point xyz2rth(const Point &p, const Point &origin, const Point &dir, const Point &dir2) {
         assert(fabs(dir.norm() - 1.0) < 1e-6);
@@ -196,4 +197,8 @@ namespace Faunus {
     }
 
     Point ranunit_polar(Random &rand) { return rtp2xyz({1, 2 * pc::pi * rand(), std::acos(2 * rand() - 1)}); }
-} // end of namespace
+
+} // end of Faunus namespace
+
+template class nlohmann::basic_json<>;
+

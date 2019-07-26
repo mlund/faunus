@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core.h"
+#include "particle.h"
 #include "molecule.h"
 #include "geometry.h"
 #include <range/v3/view/filter.hpp>
@@ -311,6 +312,8 @@ namespace Faunus {
         auto positions(Trange &r) {
             return ranges::view::transform(r, [](auto &i) -> Point& {return i.pos;});
         } //!< Iterable range with positions (works for groups and particle vectors)
+
+extern template struct Group<Particle>;
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Group") {

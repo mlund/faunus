@@ -1,3 +1,5 @@
 #include "group.h"
 
-namespace Faunus {} // namespace Faunus
+namespace Faunus {
+template struct Group<Particle>;
+} // namespace Faunus

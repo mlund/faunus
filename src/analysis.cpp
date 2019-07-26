@@ -2,6 +2,7 @@
 #include "move.h"
 #include "reactioncoordinate.h"
 #include "multipole.h"
+#include "iteratorsupport.h"
 
 #include <iomanip>
 #include <iostream>

@@ -289,6 +289,7 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/geometry.h
     ${CMAKE_SOURCE_DIR}/src/group.h
     ${CMAKE_SOURCE_DIR}/src/io.h
+    ${CMAKE_SOURCE_DIR}/src/iteratorsupport.h
     ${CMAKE_SOURCE_DIR}/src/molecule.h
     ${CMAKE_SOURCE_DIR}/src/move.h
     ${CMAKE_SOURCE_DIR}/src/mpi.h

@@ -177,9 +177,8 @@ class Particle {
 
 typedef std::vector<Particle> ParticleVector;
 
-void from_json(const json &j, Particle &p);
-
-void to_json(json &j, const Particle &p);
+void from_json(const json &, Particle &);
+void to_json(json &, const Particle &);
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 // convert test to use `Particle::shape`

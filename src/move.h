@@ -14,7 +14,7 @@ class Movebase {
     virtual void _accept(Change &);                            //!< Call after move is accepted
     virtual void _reject(Change &);                            //!< Call after move is rejected
     virtual void _to_json(json &j) const = 0;                  //!< Extra info for report if needed
-    virtual void _from_json(const json &j) = 0;                //!< Extra info for report if needed
+    virtual void _from_json(const json &) = 0;                 //!< Extra info for report if needed
     TimeRelativeOfTotal<std::chrono::microseconds> timer;      //!< Timer for whole move
     TimeRelativeOfTotal<std::chrono::microseconds> timer_move; //!< Timer for _move() only
   protected:
@@ -38,8 +38,8 @@ class Movebase {
     inline virtual ~Movebase() = default;
 };
 
-void from_json(const json &j, Movebase &m); //!< Configure any move via json
-void to_json(json &j, const Movebase &m);
+void from_json(const json &, Movebase &); //!< Configure any move via json
+void to_json(json &, const Movebase &);
 
 /**
  * @brief Swap the charge of a single atom
@@ -57,8 +57,8 @@ class AtomicSwapCharge : public Movebase {
     std::string molname;  // name of molecule to operate on
     Change::data cdata;
 
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override; //!< Configure via json object
+    void _to_json(json &) const override;
+    void _from_json(const json &) override; //!< Configure via json object
     typename Tpvec::iterator randomAtom();
     void _move(Change &change) override;
     double bias(Change &, double, double) override; //!< adds extra energy change not captured by the Hamiltonian
@@ -66,7 +66,7 @@ class AtomicSwapCharge : public Movebase {
     void _reject(Change &) override;
 
   public:
-    AtomicSwapCharge(Space &spc);
+    AtomicSwapCharge(Space &);
 };
 
 /**

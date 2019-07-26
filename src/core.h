@@ -2,12 +2,13 @@
 #include <vector>
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
-#include <range/v3/distance.hpp>
 
 // forward declare logger
 namespace spdlog {
     class logger;
 }
+
+extern template class nlohmann::basic_json<>;
 
 // Eigen<->JSON (de)serialization
 namespace Eigen {
@@ -45,16 +46,6 @@ namespace Faunus {
 
     using namespace std::string_literals;
 
-    template<class T1, class T2>
-        int distance(T1 first, T2 last) {
-            return std::distance( &(*first), &(*last) );
-        } //!< Distance between two arbitrary contiguous iterators
-
-    template<class T>
-        int size(T &rng) {
-            return ranges::distance(rng.begin(), rng.end());
-        } //!< Size of arbitrary range
-
     json merge( const json &a, const json &b ); //!< Merge two json objects
     json openjson( const std::string &file, bool=true); //!< Read json file into json object (w. syntax check)
 
@@ -76,25 +67,25 @@ namespace Faunus {
      * i.e. `from_json` or similar.
      */
     struct SingleUseJSON : public json {
-        SingleUseJSON(const json &j);
+        SingleUseJSON(const json &);
         bool empty() const;
-        size_type count(const std::string &key) const;
+        size_type count(const std::string &) const;
         inline auto dump(int w=-1) const { return json::dump(w); }
-        inline bool is_object() const { return json::is_object(); }
+        bool is_object() const;
 
         void clear();
-        json at(const std::string &key);
-        json operator[](const std::string &key);
-        void erase(const std::string &key);
+        json at(const std::string &);
+        json operator[](const std::string &);
+        void erase(const std::string &);
 
         template<class T> T value(const std::string &key, const T &fallback) {
             return (count(key)>0) ? at(key).get<T>() : fallback;
         }
     }; //!< Like json, but delete entries after access
 
-    double _round(double x, int n=3); //!< Round to n number of significant digits
-    void _roundjson(json &j, int n=3); // round float objects to n number of significant digits
-    double value_inf(const json &j, const std::string &key); //!< Extract floating point from json and allow for 'inf' and '-inf'
+    double _round(double, int n=3); //!< Round to n number of significant digits
+    void _roundjson(json &, int n=3); // round float objects to n number of significant digits
+    double value_inf(const json &, const std::string &); //!< Extract floating point from json and allow for 'inf' and '-inf'
 
     /**
      * @brief Class for showing help based on input errors

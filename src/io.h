@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "particle.h"
+#include <range/v3/distance.hpp>
 
 namespace Faunus {
 

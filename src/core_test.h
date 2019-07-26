@@ -1,6 +1,7 @@
 #include "core.h"
 #include "units.h"
 #include "particle.h"
+#include "iteratorsupport.h"
 #include <range/v3/view/filter.hpp>
 
 namespace Faunus {

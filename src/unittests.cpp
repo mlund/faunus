@@ -8,6 +8,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+#include "aux/eigensupport.h"
 #include "atomdata_test.h"
 #include "random.h"
 #include "core_test.h"
@@ -15,7 +16,7 @@
 #include "mpi.h"
 #include "auxiliary.h"
 #include "molecule.h"
-#include "group.h"
+#include "group_test.h"
 #include "geometry.h"
 #include "regions.h"
 #include "space.h"

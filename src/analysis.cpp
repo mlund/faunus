@@ -1,8 +1,10 @@
 #include "analysis.h"
 #include "move.h"
+#include "energy.h"
 #include "reactioncoordinate.h"
 #include "multipole.h"
-#include "iteratorsupport.h"
+#include "aux/iteratorsupport.h"
+#include "aux/eigensupport.h"
 
 #include <iomanip>
 #include <iostream>

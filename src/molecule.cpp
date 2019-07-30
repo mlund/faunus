@@ -5,6 +5,7 @@
 #include "bonds.h"
 #include <fstream>
 #include "spdlog/spdlog.h"
+#include "aux/eigensupport.h"
 
 namespace Faunus {
 

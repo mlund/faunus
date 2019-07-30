@@ -10,39 +10,6 @@
 
 namespace Faunus {
 
-// dynamic 3d matrix with contiguous memory
-// https://eli.thegreenplace.net/2015/memory-layout-of-multi-dimensional-arrays
-template <typename T, typename Tindices = std::array<int, 3>> class DymamicArray3D {
-  public:
-    std::vector<T> data; // contiguous data block; row-column-depth layout
-    Tindices dim;        // matrix size
-    void resize(const Tindices &dimensions) {
-        dim = dimensions;
-        data.resize(dim[0] * dim[1] * dim[2], T());
-    }
-    inline size_t index(const Tindices &i) { return i[2] + dim[2] * (i[1] + dim[1] * i[0]); }
-    inline T &operator()(const Tindices &i) { return data[i[2] + dim[2] * (i[1] + dim[1] * i[0])]; }
-    inline const T &operator()(const Tindices &i) const { return data[i[2] + dim[2] * (i[1] + dim[1] * i[0])]; }
-};
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] RowMajor3DMatrix") {
-    DymamicArray3D<double, Eigen::Vector3i> m;
-    Eigen::Vector3i dim = {4, 10, 2};
-    Eigen::Vector3i one = {1, 1, 1};
-    m.resize(dim);
-    m({2, 3, 1}) = 0.1;
-    assert(m.data[m.index({2, 3, 1})] == 0.1);       // access element via index
-    assert(&m({0, 0, 0}) == &m.data.front());        // access first element
-    assert(&m(dim - one) == &m.data.back());         // access last element
-    assert(m.index(dim - one) == m.data.size() - 1); // index of last element
-    int cnt = 0;
-    for (int k = 0; k < dim[0]; k++)
-        for (int l = 0; l < dim[1]; l++)
-            for (int m = 0; m < dim[2]; m++)
-                cnt++;
-    assert(cnt == m.data.size()); // count number of elements
-}
-#endif
 
 /**
  * @brief Cuboidal cell list with periodic boundaries

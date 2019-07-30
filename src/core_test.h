@@ -1,7 +1,7 @@
 #include "core.h"
 #include "units.h"
 #include "particle.h"
-#include "iteratorsupport.h"
+#include "src/aux/iteratorsupport.h"
 #include <range/v3/view/filter.hpp>
 
 namespace Faunus {
@@ -18,15 +18,24 @@ TEST_CASE("[Faunus] distance") {
     CHECK(Faunus::distance(v.begin(), ++it) == 4);
 }
 
-/*
+TEST_CASE("[Faunus] member_view") {
+    struct data { int N=0; };
+    std::vector<data> v(2);               // original vector
+    auto Nvec = member_view(v.begin(), v.end(), &data::N); // ref. to all N's in vec
+    int cnt=1;
+    for (int &i : Nvec)                     // modify N values
+        i=cnt++;
+    CHECK( v[0].N == 1 );    // original vector was changed
+    CHECK( v[1].N == 2 );    // original vector was changed
+}
+
 TEST_CASE("[Faunus] asEigenMatrix") {
     using doctest::Approx;
-    typedef Particle<Radius, Charge, Dipole, Cigar> T;
-    std::vector<T> v(4);
+    std::vector<Particle> v(4);
     v[0].pos.x()=5;
     v[1].pos.y()=10;
     v[2].pos.z()=2;
-    auto m = asEigenMatrix(v.begin(), v.end(), &T::pos);
+    auto m = asEigenMatrix(v.begin(), v.end(), &Particle::pos);
 
     CHECK( m.cols()==3 );
     CHECK( m.rows()==4 );
@@ -39,11 +48,11 @@ TEST_CASE("[Faunus] asEigenMatrix") {
 
     v[2].charge = 2;
     v[3].charge = -12;
-    auto m2 = asEigenVector(v.begin()+1, v.end(), &T::charge);
+    auto m2 = asEigenVector(v.begin()+1, v.end(), &Particle::charge);
     CHECK( m2.cols()==1 );
     CHECK( m2.rows()==3 );
     CHECK( m2.col(0).sum() == Approx(-10) );
-}*/
+}
 
 TEST_CASE("[Faunus] ranunit") {
     Random r;

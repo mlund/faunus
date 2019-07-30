@@ -1,7 +1,8 @@
 #include "space.h"
 #include "io.h"
-#include "iteratorsupport.h"
+#include "aux/iteratorsupport.h"
 #include <iostream>
+#include "aux/eigensupport.h"
 
 namespace Faunus {
 

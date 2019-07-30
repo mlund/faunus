@@ -3,6 +3,7 @@
 #include "average.h"
 #include "multipole.h"
 #include <Eigen/Dense>
+#include "aux/eigensupport.h"
 
 namespace Faunus {
 namespace ReactionCoordinate {

@@ -272,7 +272,7 @@ namespace Faunus {
                     x=recvBuf[i++];
                 assert( (size_t)i==recvBuf.size() );
                 if ( (size_t)i!=recvBuf.size() )
-                    std::cerr << "Particle transmitter says: !!!!!!!!!!!" << endl;
+                    std::cerr << "Particle transmitter says: !!!!!!!!!!!" << std::endl;
             }
 
         /*

@@ -1,11 +1,14 @@
 #pragma once
 
-#include "core.h"
-#include "energy.h"
 #include "average.h"
 #include "mpi.h"
+#include "molecule.h"
+#include "geometry.h"
+#include "auxiliary.h"
+#include "space.h"
 
 namespace Faunus {
+
 namespace Move {
 
 class Movebase {
@@ -46,8 +49,6 @@ void to_json(json &, const Movebase &);
  */
 class AtomicSwapCharge : public Movebase {
   private:
-    typedef typename Space::Tpvec Tpvec;
-    typedef typename Space::Tparticle Tparticle;
     Space &spc; // Space to operate on
     int molid = -1;
     double ln10 = log(10);
@@ -59,7 +60,7 @@ class AtomicSwapCharge : public Movebase {
 
     void _to_json(json &) const override;
     void _from_json(const json &) override; //!< Configure via json object
-    typename Tpvec::iterator randomAtom();
+    typename ParticleVector::iterator randomAtom();
     void _move(Change &change) override;
     double bias(Change &, double, double) override; //!< adds extra energy change not captured by the Hamiltonian
     void _accept(Change &) override;
@@ -74,7 +75,6 @@ class AtomicSwapCharge : public Movebase {
  */
 class AtomicTranslateRotate : public Movebase {
   protected:
-    typedef typename Space::Tpvec Tpvec;
     Space &spc; // Space to operate on
     int molid = -1;
     Point dir = {1, 1, 1};
@@ -90,7 +90,7 @@ class AtomicTranslateRotate : public Movebase {
     /**
      * @brief translates a single particle.
      */
-    virtual void translateParticle(typename Tpvec::iterator p, double dp);
+    virtual void translateParticle(typename ParticleVector::iterator p, double dp);
     void _move(Change &change) override;
     void _accept(Change &) override;
     void _reject(Change &) override;
@@ -329,7 +329,7 @@ class ChargeMove : public Movebase {
     void _reject(Change &) override;
 
   public:
-    ChargeMove(Tspace &spc);
+    ChargeMove(Space &spc);
 };
 
 /**
@@ -367,7 +367,7 @@ class ChargeTransfer : public Movebase {
     void _reject(Change &) override;
 
   public:
-    ChargeTransfer(Tspace &spc);
+    ChargeTransfer(Space &spc);
 };
 
 /**
@@ -447,7 +447,7 @@ class Propagator : public BasePointerVector<Movebase> {
   public:
     using BasePointerVector<Movebase>::vec;
     Propagator() = default;
-    Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi);
+    Propagator(const json &j, Space &spc, MPI::MPIController &mpi);
     int repeat() { return _repeat; }
     auto sample() {
         if (!vec.empty()) {
@@ -460,72 +460,5 @@ class Propagator : public BasePointerVector<Movebase> {
 
 } // namespace Move
 
-class MCSimulation {
-  private:
-    typedef typename Space::Tpvec Tpvec;
-
-    std::string lastMoveName; //!< name of latest move
-
-    bool metropolis(double du) const; //!< Metropolis criterion (true=accept)
-
-    struct State {
-        Space spc;
-        Energy::Hamiltonian pot;
-        State(const json &j);
-
-        void sync(State &other, Change &change);
-    }; //!< Contains everything to describe a state
-
-    State state1, // old state (accepted)
-        state2;   // new state (trial)
-    double uinit = 0, dusum = 0;
-    Average<double> uavg;
-
-    void init();
-
-  public:
-    Move::Propagator moves;
-
-    auto &pot() { return state1.pot; }
-    auto &space() { return state1.spc; }
-    const auto &pot() const { return state1.pot; }
-    const auto &space() const { return state1.spc; }
-    const auto &geometry() const { return state1.spc.geo; }
-    const auto &particles() const { return state1.spc.p; }
-
-    MCSimulation(const json &j, MPI::MPIController &mpi);
-    double drift(); //!< Calculates the relative energy drift from initial configuration
-
-    /* currently unused -- see Analysis::SaveState.
-                    void store(json &j) const {
-                        j = state1.spc;
-                        j["random-move"] = Move::Movebase::slump;
-                        j["random-global"] = Faunus::random;
-                    } // store system to json object
-    */
-    void restore(const json &j); //!< restore system from previously store json object
-    void move();
-    void to_json(json &j);
-};
-
-void to_json(json &j, MCSimulation &mc);
-
-/**
- * @brief Ideal energy contribution of a speciation move
- * This funciton calculates the contribution to the energy change arising from the
- * change in concentration of reactant and products in the current and in the trial state.
- *
- * @f[
- *     \beta \Delta U = - \sum \ln ( N_o!/N_n! V^{N_n - N_o} )
- * @f]
- *
- * where the sum runs over all products and reactants.
- *
- * @todo
- * - use exception message to suggest how to fix the problem
- * - seems out of place; move to another file?
- * - find a better name
- */
-double IdealTerm(Space &spc_n, Space &spc_o, const Change &change);
 
 } // namespace Faunus

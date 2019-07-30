@@ -11,6 +11,7 @@
 #include <src/analysis.h>
 #include <src/potentials.h>
 #include <src/regions.h>
+#include <src/montecarlo.h>
 
 namespace py = pybind11;
 using namespace Faunus;

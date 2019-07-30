@@ -103,6 +103,12 @@ struct Space {
      */
     void push_back(int molid, const Tpvec &in); //!< Safely add particles and corresponding group to back
 
+    /**
+     * @brief Find all groups of type `molid` (complexity: order N)
+     * @param molid Molecular id to look for
+     * @param sel Selection
+     * @return range with all groups of molid
+     */
     auto findMolecules(int molid, Selection sel = ACTIVE) {
         std::function<bool(Tgroup &)> f;
         switch (sel) {
@@ -117,7 +123,7 @@ struct Space {
             break;
         }
         return groups | ranges::view::filter(f);
-    } //!< Range with all groups of type `molid` (complexity: order N)
+    }
 
     typename Tgvec::iterator randomMolecule(int molid, Random &rand,
                                             Selection sel = ACTIVE); //!< Random group; groups.end() if not found

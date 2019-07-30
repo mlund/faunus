@@ -1,6 +1,7 @@
 #include <spdlog/spdlog.h>
 #include "atomdata.h"
 #include "units.h"
+#include "aux/eigensupport.h"
 
 namespace Faunus {
 

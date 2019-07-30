@@ -9,7 +9,7 @@ int distance(T1 first, T2 last) {
     return std::distance( &(*first), &(*last) );
 } //!< Distance between two arbitrary contiguous iterators
 
-template<class T>
+template<class T /** Range */>
 int size(T &rng) {
     return ranges::distance(rng.begin(), rng.end());
 } //!< Size of arbitrary range

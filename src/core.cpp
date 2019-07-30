@@ -148,6 +148,8 @@ namespace Faunus {
 
     SingleUseJSON::SingleUseJSON(const json &j) : json(j) {}
 
+    std::string SingleUseJSON::dump(int w) const { return json::dump(w); }
+
     void SingleUseJSON::clear() { json::clear(); }
 
     json SingleUseJSON::at(const std::string &key) {

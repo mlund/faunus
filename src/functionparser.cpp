@@ -1,18 +1,22 @@
 #include "functionparser.h"
+#include <exprtk.hpp> // https://github.com/ArashPartow/exprtk
 #include <nlohmann/json.hpp>
 
 template<typename T>
 void ExprFunction<T>::set(const std::string &exprstr, const Tvarvec &vars, const Tconstvec &consts) {
-    if (not parser)
+    if (not parser) {
         parser = std::make_shared<exprtk::parser<T>>();
-    symbols.clear();
+        symbols = std::make_shared<exprtk::symbol_table<T>>();
+        expression = std::make_shared<exprtk::expression<T>>();
+    }
+    symbols->clear();
     for (auto &v : vars)
-        symbols.add_variable(v.first, *v.second);
+        symbols->add_variable(v.first, *v.second);
     for (auto &v : consts)
-        symbols.add_constant(v.first, v.second);
-    symbols.add_constants();
-    expression.register_symbol_table(symbols);
-    if (! parser->compile(exprstr, expression))
+        symbols->add_constant(v.first, v.second);
+    symbols->add_constants();
+    expression->register_symbol_table(*symbols);
+    if (! parser->compile(exprstr, *expression))
         throw std::runtime_error("error passing function/expression");
 }
 
@@ -28,7 +32,7 @@ void ExprFunction<T>::set(const nlohmann::json &j, const Tvarvec &vars) {
 
 template<typename T>
 T ExprFunction<T>::operator()() const {
-    return expression.value();
+    return expression->value();
 }
 
 template class ExprFunction<double>;

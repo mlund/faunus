@@ -3,6 +3,7 @@
 #include "core.h"
 #include "mpi.h"
 #include "move.h"
+#include "montecarlo.h"
 #include "analysis.h"
 #include "multipole.h"
 #include "docopt.h"

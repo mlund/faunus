@@ -1,7 +1,13 @@
 #pragma once
 
 #include <string>
-#include <exprtk.hpp> // https://github.com/ArashPartow/exprtk
+#include <nlohmann/json_fwd.hpp>
+
+namespace exprtk { // exprtk.hpp
+template <typename T> class parser;
+template <typename T> class expression;
+template <typename T> class symbol_table;
+}
 
 #ifdef DOCTEST_LIBRARY_INCLUDED
 #include <nlohmann/json.hpp>
@@ -17,8 +23,8 @@
 template<typename T=double>
 class ExprFunction {
     std::shared_ptr<exprtk::parser<T>> parser;
-    exprtk::expression <T> expression;
-    exprtk::symbol_table <T> symbols;
+    std::shared_ptr<exprtk::expression<T>> expression;
+    std::shared_ptr<exprtk::symbol_table<T>> symbols;
     typedef std::vector<std::pair<std::string, T*>> Tvarvec;
     typedef std::vector<std::pair<std::string, T>> Tconstvec;
 

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <vector>
 #include <Eigen/Core>
 #include <nlohmann/json.hpp>
@@ -9,28 +10,6 @@ namespace spdlog {
 }
 
 extern template class nlohmann::basic_json<>;
-
-// Eigen<->JSON (de)serialization
-namespace Eigen {
-
-    template<typename T>
-        void to_json(nlohmann::json& j, const T &p) {
-            auto d = p.data();
-            for (int i=0; i<(int)p.size(); ++i)
-                j.push_back( d[i] );
-        }
-
-    template<class T>
-        void from_json(const nlohmann::json& j, Eigen::Matrix<T,3,1> &p) {
-            if ( j.size()==3 ) {
-                int i=0;
-                for (auto d : j.get<std::vector<T>>())
-                    p[i++] = d;
-                return;
-            }
-            throw std::runtime_error("JSON->Eigen conversion error");
-        }
-}
 
 /** @brief Faunus main namespace */
 namespace Faunus {
@@ -70,7 +49,7 @@ namespace Faunus {
         SingleUseJSON(const json &);
         bool empty() const;
         size_type count(const std::string &) const;
-        inline auto dump(int w=-1) const { return json::dump(w); }
+        std::string dump(int=-1) const;
         bool is_object() const;
 
         void clear();
@@ -113,17 +92,17 @@ namespace Faunus {
      * @brief Generate reference view to data members in container
      *
      *     struct data { int N=0; };
-     *     std::vector<data> vec(2);               // original vector
-     *     auto Nvec = member_view(vec, &data::N); // ref. to all N's in vec
+     *     std::vector<data> v(2);               // original vector
+     *     auto Nvec = member_view(v.begin(), v.end(), &data::N); // ref. to all N's in vec
      *     for (int &i : Nvec)                     // modify N values
      *        i=1;
-     *     assert( vec[0].N == vec[1].N == 1 );    // original vector was changed
+     *     assert( v[0].N == v[1].N == 1 );    // original vector was changed
      */
-    template<typename Container, typename Value, typename Member>
-        auto member_view(Container &p, Value Member::*m) {
-            std::vector<std::reference_wrapper<Value>> v;
-            v.reserve( p.size() );
-            std::transform(p.begin(), p.end(), std::back_inserter(v), [&](auto &i) -> Value& {return i.*m;});
+    template<typename iter, typename T, typename Member>
+        auto member_view(iter begin, iter end, T Member::*m) {
+            std::vector<std::reference_wrapper<T>> v;
+            v.reserve( std::distance(begin, end));
+            std::transform(begin, end, std::back_inserter(v), [&](auto &i) -> T& {return i.*m;});
             return v;
         }
 
@@ -157,6 +136,17 @@ namespace Faunus {
             static_assert( std::is_same<dbl&, decltype(((T *) 0)->*m)>::value, "member must be a scalar");
             return asEigenMatrix<dbl>(begin, end, m).col(0);
         }
+/**
+ * @brief Returns filtered *view* of iterator range
+ */
+template<typename iter, typename T=typename std::iterator_traits<iter>::value_type>
+auto filter(iter begin, iter end, std::function<bool(T&)> unarypredicate) {
+    std::vector<std::reference_wrapper<T>> v;
+    for (auto& i=begin; i!=end; i++)
+        if (unarypredicate(i))
+            v.push_back(i);
+    return v;
+}
 
     /**
      * @brief Convert cartesian- to cylindrical-coordinates

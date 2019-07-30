@@ -1,5 +1,8 @@
 #include "externalpotential.h"
 #include "multipole.h"
+#include "aux/eigensupport.h"
+#include "functionparser.h"
+#include "space.h"
 
 namespace Faunus {
 namespace Energy {
@@ -44,7 +47,7 @@ double ExternalPotential::_energy(const Group<Particle> &g) const {
     return u;
 }
 
-ExternalPotential::ExternalPotential(const json &j, Tspace &spc) : spc(spc) {
+ExternalPotential::ExternalPotential(const json &j, Space &spc) : spc(spc) {
     name = "external";
     COM = j.value("com", false);
     _names = j.at("molecules").get<decltype(_names)>(); // molecule names
@@ -306,6 +309,7 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
 // ------------ CustomExternal -------------
 
 CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
+    expr = std::make_unique<ExprFunction<double>>();
     name = "customexternal";
     jin = j;
     auto &_j = jin["constants"];
@@ -328,13 +332,13 @@ CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j
     } else {
         // if nothing found above, it is assumed that `function`
         // is a valid expression.
-        expr.set(jin, {{"q", &d.q}, {"x", &d.x}, {"y", &d.y}, {"z", &d.z}});
+        expr->set(jin, {{"q", &d.q}, {"x", &d.x}, {"y", &d.y}, {"z", &d.z}});
         func = [&](const Particle &a) {
             d.x = a.pos.x();
             d.y = a.pos.y();
             d.z = a.pos.z();
             d.q = a.charge;
-            return expr();
+            return expr->operator()();
         };
     }
 }

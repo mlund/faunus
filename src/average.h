@@ -1,5 +1,8 @@
 #pragma once
 
+#include <ostream>
+#include <cmath>
+
 namespace Faunus
 {
 

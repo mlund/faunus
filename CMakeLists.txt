@@ -200,14 +200,14 @@ endif()
 # POWERSASA
 if (ENABLE_POWERSASA)
     foreach (powf array.hpp power_diagram.h power_sasa.h LICENSE)
-        if (NOT EXISTS "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}")
+        if (NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/_deps/sasa/${powf}")
             file(DOWNLOAD
                 "https://raw.githubusercontent.com/yesint/pteros/d0b65b7/thirdparty/powersasa/${powf}"
-                "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}" STATUS status)
+                "${CMAKE_CURRENT_BINARY_DIR}/_deps/sasa/${powf}" STATUS status)
         endif ()
     endforeach ()
     add_definitions("-DENABLE_POWERSASA")
-    include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/include/faunus/sasa")
+    include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/_deps/sasa")
 endif ()
 
 # GIT
@@ -244,7 +244,6 @@ include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjso
 
 # faunus cpp files
 set(objs
-    ${CMAKE_SOURCE_DIR}/src/functionparser.cpp
     ${CMAKE_SOURCE_DIR}/src/random.cpp
     ${CMAKE_SOURCE_DIR}/src/mpi.cpp
     ${CMAKE_SOURCE_DIR}/src/bonds.cpp
@@ -260,6 +259,7 @@ set(objs
     ${CMAKE_SOURCE_DIR}/src/group.cpp
     ${CMAKE_SOURCE_DIR}/src/io.cpp
     ${CMAKE_SOURCE_DIR}/src/molecule.cpp
+    ${CMAKE_SOURCE_DIR}/src/montecarlo.cpp
     ${CMAKE_SOURCE_DIR}/src/move.cpp
     ${CMAKE_SOURCE_DIR}/src/particle.cpp
     ${CMAKE_SOURCE_DIR}/src/penalty.cpp
@@ -275,6 +275,9 @@ set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
 
 # faunus header files
 set(hdrs
+    ${CMAKE_SOURCE_DIR}/src/aux/eigensupport.h
+    ${CMAKE_SOURCE_DIR}/src/aux/iteratorsupport.h
+    ${CMAKE_SOURCE_DIR}/src/aux/multimatrix.h
     ${CMAKE_SOURCE_DIR}/src/analysis.h
     ${CMAKE_SOURCE_DIR}/src/average.h
     ${CMAKE_SOURCE_DIR}/src/atomdata.h
@@ -285,12 +288,11 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/core.h
     ${CMAKE_SOURCE_DIR}/src/energy.h
     ${CMAKE_SOURCE_DIR}/src/externalpotential.h
-    ${CMAKE_SOURCE_DIR}/src/functionparser.h
     ${CMAKE_SOURCE_DIR}/src/geometry.h
     ${CMAKE_SOURCE_DIR}/src/group.h
     ${CMAKE_SOURCE_DIR}/src/io.h
-    ${CMAKE_SOURCE_DIR}/src/iteratorsupport.h
     ${CMAKE_SOURCE_DIR}/src/molecule.h
+    ${CMAKE_SOURCE_DIR}/src/montecarlo.h
     ${CMAKE_SOURCE_DIR}/src/move.h
     ${CMAKE_SOURCE_DIR}/src/mpi.h
     ${CMAKE_SOURCE_DIR}/src/particle.h
@@ -310,6 +312,7 @@ set(hdrs
 set(tsts
     ${CMAKE_SOURCE_DIR}/src/atomdata_test.h
     ${CMAKE_SOURCE_DIR}/src/core_test.h
+    ${CMAKE_SOURCE_DIR}/src/group_test.h
     ${CMAKE_SOURCE_DIR}/src/potentials_test.h
     ${CMAKE_SOURCE_DIR}/src/tensor_test.h
     )
@@ -330,16 +333,34 @@ endif()
 add_compile_options($<$<CONFIG:Debug>:-Werror>)
 add_compile_options($<$<CONFIG:Debug>:-O0>)
 
+# target: functionparser - exprtk very slow, so split out to separate target
+add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
+
+# targer: libfaunus - main functionality of faunus
+add_library(libfaunus STATIC ${objs} ${hdrs})
+target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
+target_link_libraries(libfaunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser)
+if (MPI_CXX_FOUND)
+    target_link_libraries(libfaunus PRIVATE MPI::MPI_CXX)
+    target_compile_definitions(libfaunus PRIVATE ENABLE_MPI)
+endif()
+
 # target: unittests
-add_executable(unittests src/unittests.cpp ${objs} ${hdrs} ${tsts})
-target_link_libraries(unittests ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog)
+add_executable(unittests src/unittests.cpp ${tsts})
+#target_link_libraries(unittests ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser libfaunus)
+target_link_libraries(unittests libfaunus)
 target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
 add_test(NAME unittests COMMAND unittests)
 
 # target: faunus
-add_executable(faunus src/faunus.cpp ${objs} ${hdrs})
-target_link_libraries(faunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog docopt)
+add_executable(faunus src/faunus.cpp)
+#target_link_libraries(faunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog docopt functionparser libfaunus)
+target_link_libraries(faunus PRIVATE libfaunus docopt)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
+if (MPI_CXX_FOUND)
+    target_link_libraries(faunus PRIVATE MPI::MPI_CXX)
+    target_compile_definitions(faunus PRIVATE ENABLE_MPI)
+endif()
 
 if (ENABLE_LTO)
     check_ipo_supported(RESULT result)
@@ -359,11 +380,6 @@ endif()
 
 target_compile_definitions(faunus PRIVATE
     FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
-
-if (MPI_CXX_FOUND)
-    target_link_libraries(faunus PRIVATE MPI::MPI_CXX)
-    target_compile_definitions(faunus PRIVATE ENABLE_MPI)
-endif()
 
 # python bindings
 if (ENABLE_PYTHON)
@@ -387,8 +403,9 @@ if (ENABLE_PYTHON)
         if(NOT pybind11_POPULATED)
             FetchContent_Populate(pybind11)
             add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
-            pybind11_add_module(pyfaunus src/pyfaunus.cpp ${objs})
-            target_link_libraries(pyfaunus PUBLIC ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog)
+            pybind11_add_module(pyfaunus src/pyfaunus.cpp)
+            #target_link_libraries(pyfaunus PUBLIC ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser libfaunus)
+            target_link_libraries(pyfaunus PUBLIC libfaunus)
         endif()
     endif ()
 endif ()

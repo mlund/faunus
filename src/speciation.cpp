@@ -1,4 +1,6 @@
+#include "bonds.h"
 #include "speciation.h"
+#include "src/aux/iteratorsupport.h"
 
 namespace Faunus {
 namespace Move {

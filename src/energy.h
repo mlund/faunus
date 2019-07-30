@@ -2,7 +2,8 @@
 
 #include "bonds.h"
 #include "externalpotential.h" // Energybase implemented here
-#include "iteratorsupport.h"
+#include "space.h"
+#include "src/aux/iteratorsupport.h"
 #include <range/v3/view.hpp>
 #include <Eigen/Dense>
 

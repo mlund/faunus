@@ -1,10 +1,11 @@
 #include "penalty.h"
+#include "space.h"
 #include "spdlog/spdlog.h"
 
 namespace Faunus {
 namespace Energy {
 
-Penalty::Penalty(const json &j, Tspace &spc) : spc(spc) {
+Penalty::Penalty(const json &j, Space &spc) : spc(spc) {
     using namespace ReactionCoordinate;
     name = "penalty";
     overwrite_penalty = j.value("overwrite", true);
@@ -135,7 +136,7 @@ void Penalty::sync(Energybase *basePtr, Change &) {
 
 #ifdef ENABLE_MPI
 
-PenaltyMPI::PenaltyMPI(const json &j, Tspace &spc) : Penalty(j, spc) {
+PenaltyMPI::PenaltyMPI(const json &j, Space &spc) : Penalty(j, spc) {
     weights.resize(MPI::mpi.nproc());
     buffer.resize(penalty.size() * MPI::mpi.nproc()); // recieve buffer for penalty func
 }

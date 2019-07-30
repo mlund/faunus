@@ -1,6 +1,7 @@
 #include "geometry.h"
 #include "atomdata.h"
 #include "random.h"
+#include "aux/eigensupport.h"
 
 namespace Faunus {
 

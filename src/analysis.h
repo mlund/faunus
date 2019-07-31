@@ -395,6 +395,23 @@ class ScatteringFunction : public Analysisbase {
     ~ScatteringFunction();
 };
 
+/*
+ * @brief Sample and save inertia tensor of a particle to a file
+ */
+class InertiaTensor : public Analysisbase {
+  private:
+    Space &spc;
+    std::string filename;
+    int index; // index of an atomic species
+    std::ofstream file;
+
+    void _to_json(json &j) const override;
+    void _sample() override;
+
+  public:
+    InertiaTensor(const json &j, Space &spc);
+};
+
 /**
  * @brief Analysis of polymer shape - radius of gyration, shape factor etc.
  * @date November, 2011

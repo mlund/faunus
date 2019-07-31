@@ -357,6 +357,8 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             push_back<MoleculeRDF>(it.value(), spc);
                         else if (it.key() == "multipole")
                             push_back<Multipole>(it.value(), spc);
+                        else if (it.key() == "inertiatensor")
+                            push_back<InertiaTensor>(it.value(), spc);
                         else if (it.key() == "multipoledist")
                             push_back<MultipoleDistribution>(it.value(), spc);
                         else if (it.key() == "polymershape")
@@ -881,6 +883,30 @@ MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(sp
 }
 
 MultipoleDistribution::~MultipoleDistribution() { save(); }
+
+// =============== InertiaTensor ===============
+
+void InertiaTensor::_to_json(json &j) const {
+    j["index"] = index;
+}
+void InertiaTensor::_sample() {
+     Space::Tgroup g(spc.p.begin(), spc.p.end());
+     auto slice = g.find_id(index);
+     auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
+     auto S = Geometry::gyration(slice.begin(), slice.end(), spc.geo.getBoundaryFunc(), cm);
+     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+     Point eivals = esf.eigenvalues();
+     if (file) {
+         file << cnt * steps << " " << eivals.transpose() << "\n";
+     }
+}
+InertiaTensor::InertiaTensor(const json &j, Space &spc) : spc(spc) {
+    from_json(j);
+    name = "Inertia Tensor";
+    filename = MPI::prefix + j.at("file").get<std::string>();
+    file.open(filename); // output file
+    index = j.at("index").get<int>();
+}
 
 // =============== PolymerShape ===============
 

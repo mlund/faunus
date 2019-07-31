@@ -196,12 +196,36 @@ int main( int argc, char **argv )
         std::cerr << e.what() << endl;
 #ifdef ENABLE_SID
         // easter egg...
-        CPPSID::Player player;
-        player.load("Beyond_the_Zero.sid", 0);
-        player.start();
-        sleep_for(10ns);
-        sleep_until(system_clock::now() + 120s);
-        player.stop();
+        Faunus::random.seed(); // give global random a hardware seed
+        std::string pfx;
+        json j;
+        for (std::string dir :
+             {FAUNUS_INSTALL_PREFIX "/share/faunus/", FAUNUS_BINARY_DIR}) { // installed and uninstalled cmake builds
+            j = Faunus::openjson(dir + "/sids/music.json", false);
+            if (not j.empty()) {
+                pfx = dir + "/";
+                break;
+            }
+        }
+        if (not j.empty()) {
+            j = j.at("songs");                                                            // load playlist
+            auto it = Faunus::random.sample(j.begin(), j.end());                          // pick a random song
+            auto subsongs = (*it).at("subsongs").get<std::vector<int>>();                 // all subsongs
+            int subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
+
+            CPPSID::Player player; // let's emulate a Commodore 64...
+
+            if (player.load(pfx + it->at("file").get<std::string>(), subsong)) {
+                std::cout << "-~> C64 SID music '" << player.title() << "' by " << player.author() << ", "
+                          << player.info() << " <~-\n\n"
+                          << "Press ctrl-c to quit." << std::flush;
+                player.start();
+                sleep_for(10ns);
+                sleep_until(system_clock::now() + 240s); // play for 4 minutes, then exit
+                player.stop();
+                std::cout << std::endl;
+            }
+        }
 #endif
         return EXIT_FAILURE;
     }

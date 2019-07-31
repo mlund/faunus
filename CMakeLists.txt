@@ -47,10 +47,6 @@ if (ENABLE_MPI)
 endif()
 
 option(ENABLE_SID "Enable SID emulation" off)
-if (ENABLE_SID)
-   list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
-   find_package(SDL2 REQUIRED)
-endif()
 
 include(ExternalProject)
 include(FetchContent)
@@ -141,8 +137,8 @@ ExternalProject_Add(project_cppsid
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} ""#cppsid player
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
-    URL_MD5 2d989c5dde42173ab4eba6374aabf042
-    URL "https://github.com/mlund/cppsid//archive/8d18d8e4109518c15725326f90cef879a161e03f.zip")
+    URL_MD5 6f43e86ab83dcde0a1be3578ef696614
+    URL "https://github.com/mlund/cppsid//archive/32e2a1b76637ac06d242426b1895d3443ba92105.zip")
 ExternalProject_Get_Property(project_cppsid binary_dir)
 ExternalProject_Get_Property(project_cppsid source_dir)
 set(CppsidIncludeDir ${source_dir}/include)
@@ -347,14 +343,12 @@ endif()
 
 # target: unittests
 add_executable(unittests src/unittests.cpp ${tsts})
-#target_link_libraries(unittests ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser libfaunus)
 target_link_libraries(unittests libfaunus)
 target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
 add_test(NAME unittests COMMAND unittests)
 
 # target: faunus
 add_executable(faunus src/faunus.cpp)
-#target_link_libraries(faunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog docopt functionparser libfaunus)
 target_link_libraries(faunus PRIVATE libfaunus docopt)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 if (MPI_CXX_FOUND)
@@ -370,16 +364,25 @@ if (ENABLE_LTO)
 endif()
 
 if(ENABLE_SID)
+    find_package(SDL2 CONFIG REQUIRED)
+    include_directories(${SDL2_INCLUDE_DIRS})
+    target_link_libraries(faunus PRIVATE ${SDL2_LIBRARIES} cppsid)
     target_compile_definitions(faunus PRIVATE ENABLE_SID)
-    target_link_libraries(faunus PRIVATE SDL2::Main cppsid)
-endif()
+    if (PYTHONINTERP_FOUND)
+        execute_process(
+            COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extractsids.py
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR} ERROR_QUIET OUTPUT_QUIET)
+    endif()
+ endif()
 
 if(BUILD_STATIC)
     target_link_libraries(faunus PRIVATE -static-libgcc -static-libstdc++ -static)
 endif()
 
 target_compile_definitions(faunus PRIVATE
-    FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
+    FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_BINARY_DIR}/tips.json\")
+target_compile_definitions(faunus PRIVATE FAUNUS_INSTALL_PREFIX=\"${CMAKE_INSTALL_PREFIX}\")
+target_compile_definitions(faunus PRIVATE FAUNUS_BINARY_DIR=\"${CMAKE_BINARY_DIR}\")
 
 # python bindings
 if (ENABLE_PYTHON)
@@ -594,10 +597,11 @@ if (TARGET pyfaunus)
     install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE} OPTIONAL)
 endif()
 
-install(FILES ${CMAKE_BINARY_DIR}/LICENSE DESTINATION share/faunus)
+install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION share/faunus)
 install(FILES ${CMAKE_BINARY_DIR}/tips.json DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_BINARY_DIR}/manual.html DESTINATION share/faunus OPTIONAL)
+install(DIRECTORY ${CMAKE_BINARY_DIR}/sids DESTINATION share/faunus OPTIONAL)
 install(FILES
     ${CMAKE_SOURCE_DIR}/scripts/yason.py
     ${CMAKE_SOURCE_DIR}/scripts/ob2aam.py

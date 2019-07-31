@@ -121,8 +121,6 @@ namespace Faunus {
                 void recvf(MPIController&, int, std::vector<floatp>&); //!< Receive vector of floats
                 void waitsend(); //!< Wait for send to finish              
                 void waitrecv(); //!< Wait for reception to finish
-                bool testrecv();
-                bool testsend();
         };
 
         /**

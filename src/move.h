@@ -364,9 +364,15 @@ class Propagator : public BasePointerVector<Movebase> {
     Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi);
     int repeat() { return _repeat; }
     auto sample() {
+        int d;
         if (!vec.empty()) {
             assert(w.size() == vec.size());
-            return vec.begin() + dist(Move::Movebase::slump.engine);
+#ifdef ENABLE_MPI
+            d = dist(MPI::mpi.random.engine);
+#else
+            d = dist(Move::Movebase::slump.engine);
+#endif
+            return vec.begin() + d;
         }
         return vec.end();
     } //!< Pick move from a weighted, random distribution

@@ -80,32 +80,12 @@ namespace Faunus {
             MPI_Wait(&sendReq, &sendStat);
         }
 
-        bool FloatTransmitter::testsend() {
-            int flag = 0;
-            int n = 0;
-            while (not flag and n<1e5) {
-                MPI_Test(&sendReq, &flag, &sendStat);
-                n++;
-            }
-            return flag;
-        }
-
         void FloatTransmitter::recvf(MPIController &mpi, int src, std::vector<floatp> &dst) {
             MPI_Irecv(&dst[0], dst.size(), MPI_DOUBLE, src, tag, mpi.comm, &recvReq);
         }
 
         void FloatTransmitter::waitrecv() {
             MPI_Wait(&recvReq, &recvStat);
-        }
-
-        bool FloatTransmitter::testrecv() {
-            int flag = 0;
-            int n = 0;
-            while (not flag and n<1e5) {
-                MPI_Test(&recvReq, &flag, &recvStat);
-                n++;
-            }
-            return flag;
         }
 
         /**

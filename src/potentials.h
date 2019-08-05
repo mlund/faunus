@@ -440,14 +440,14 @@ class FENE : public PairPotentialBase {
 /** @brief Coulomb type potentials with spherical cutoff */
 class CoulombGalore : public PairPotentialBase {
     std::shared_ptr<PairMatrix<double>> ecs;      // effective charge-scaling
-    Tabulate::Andrea<double> sf;                  // splitting function
-    Tabulate::TabulatorBase<double>::data table;  // data for splitting function
+    Tabulate::Andrea<double> sf_energy, sf_force;        // splitting function
+    Tabulate::TabulatorBase<double>::data table_energy, table_force;  // data for splitting function
     std::function<double(double)> calcDielectric; // function for dielectric const. calc.
     std::string type;
     double selfenergy_prefactor = 0;
-    double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
+    double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, alpha_red, kappa, kappa_red, I;
     int order;
-    unsigned int C, D;
+    int C, D;
 
     void sfYukawa(const json &j);
     void sfReactionField(const json &j);
@@ -464,7 +464,7 @@ class CoulombGalore : public PairPotentialBase {
     inline double operator()(const Particle &a, const Particle &b, double r2) const {
         if (r2 < rc2) {
             double r = std::sqrt(r2);
-            return lB * ecs->operator()(a.id, b.id) * a.charge * b.charge / r * sf.eval(table, r * rc1i);
+            return lB * ecs->operator()(a.id, b.id) * a.charge * b.charge / r * sf_energy.eval(table_energy, r * rc1i);
         }
         return 0;
     }
@@ -478,9 +478,11 @@ class CoulombGalore : public PairPotentialBase {
     }
 
     inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
+        assert(std::fabs(p.norm()-1.0) < 1e-9 && "Normalized distance-vector is not a unit-vector!");
         if (r2 < rc2) {
             double r = sqrt(r2);
-            return lB * a.charge * b.charge * (-sf.eval(table, r * rc1i) / r2 + sf.evalDer(table, r * rc1i) / r) * p;
+            //return lB * a.charge * b.charge * (-sf_energy.eval(table_energy, r * rc1i) / r2 + sf_energy.evalDer(table_energy, r * rc1i) / r) * p;
+            return lB * ecs->operator()(a.id, b.id) * a.charge * b.charge / r2 * sf_force.eval(table_force, r * rc1i)*p;
         }
         return Point(0, 0, 0);
     }

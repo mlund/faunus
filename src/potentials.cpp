@@ -38,21 +38,28 @@ CosAttract::CosAttract(const std::string &name) { PairPotentialBase::name = name
 
 void CoulombGalore::sfYukawa(const json &j) {
     kappa = 1.0 / j.at("debyelength").get<double>();
+    kappa_red = kappa*rc; // reduced inverse Debye-length
     I = kappa * kappa / (8.0 * lB * pc::pi * pc::Nav / 1e27);
-    table = sf.generate([&](double q) { return std::exp(-q * rc * kappa) - std::exp(-kappa * rc); }, 0, 1); // q=r/Rc
+    std::function<double( double )> sf_energy = [&](double q) { return std::exp(-q * kappa_red) - std::exp(-kappa_red); }; // short-ranged function for energy
+    std::function<double( double )> dsf = [&](double q) { return -kappa_red * std::exp(-q * kappa_red); };                 // derivative of short-ranged function
+    
+    std::function<double( double )> sf_force = [&](double q) { return sf_energy(q) - q*dsf(q); };            // short-ranged function for force
+    //table_energy = sf_energy.generate(sf_energy, 0, 1); // q=r/Rc
+    //table_force = sf_force.generate(sf_force, 0, 1); // q=r/Rc
     // we could also fill in some info std::string or JSON output...
 }
 
 void CoulombGalore::sfYukawaPoisson(const json &j) {
     kappa = 1.0 / j.at("debyelength").get<double>();
+    kappa_red = kappa*rc; // reduced inverse Debye-length
     I = kappa * kappa / (8.0 * lB * pc::pi * pc::Nav / 1e27);
     C = j.value("C", 3);
     D = j.value("D", 3);
     if ((C < 1) || (D < 1))
         throw std::runtime_error("`C` and `D` must be larger than zero");
-    table = sf.generate(
+    table_energy = sf_energy.generate(
         [&](double q) {
-            double qt = (1.0 - exp(2.0 * kappa * rc * q)) / (1.0 - exp(2.0 * kappa * rc));
+            double qt = (1.0 - exp(2.0 * kappa_red * q)) / (1.0 - exp(2.0 * kappa_red));
             double tmp = 0.0;
             for (int c = 0; c < C; c++)
                 tmp += double(factorial(D - 1 + c)) / double(factorial(D - 1)) / double(factorial(c)) * double(C - c) /
@@ -66,7 +73,7 @@ void CoulombGalore::sfYukawaPoisson(const json &j) {
 
 void CoulombGalore::sfReactionField(const json &j) {
     epsrf = j.at("eps_rf");
-    table = sf.generate(
+    table_energy = sf_energy.generate(
         [&](double q) {
             return 1 + ((epsrf - epsr) / (2 * epsrf + epsr)) * q * q * q - 3 * (epsrf / (2 * epsrf + epsr)) * q;
         },
@@ -88,21 +95,22 @@ void CoulombGalore::sfReactionField(const json &j) {
 
 void CoulombGalore::sfQpotential(const json &j) {
     order = j.value("order", 300);
-    table = sf.generate([&](double q) { return qPochhammerSymbol(q, 1, order); }, 0, 1);
+    table_energy = sf_energy.generate([&](double q) { return qPochhammerSymbol(q, 1, order); }, 0, 1);
     calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
     selfenergy_prefactor = -1.0;
 }
 
 void CoulombGalore::sfYonezawa(const json &j) {
     alpha = j.at("alpha");
-    table = sf.generate([&](double q) { return 1 - std::erfc(alpha * rc) * q + q * q; }, 0, 1);
+    alpha_red = alpha*rc; // reduced damping-parameter
+    table_energy = sf_energy.generate([&](double q) { return 1 - std::erfc(alpha_red) * q + q * q; }, 0, 1);
     calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = -0.5*(erfc(alpha*rc) + 2.0*alpha*rc / sqrt(pc::pi));
+    selfenergy_prefactor = -0.5*(erfc(alpha_red) + 2.0*alpha_red / sqrt(pc::pi));
 }
 
 void CoulombGalore::sfFanourgakis(const json &) {
-    table =
-        sf.generate([&](double q) { return 1 - 1.75 * q + 5.25 * pow(q, 5) - 7 * pow(q, 6) + 2.5 * pow(q, 7); }, 0, 1);
+    table_energy =
+        sf_energy.generate([&](double q) { return 1 - 1.75 * q + 5.25 * pow(q, 5) - 7 * pow(q, 6) + 2.5 * pow(q, 7); }, 0, 1);
     calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
     selfenergy_prefactor = -0.875;
 }
@@ -110,66 +118,77 @@ void CoulombGalore::sfFanourgakis(const json &) {
 void CoulombGalore::sfPoisson(const json &j) {
     C = j.value("C", 3);
     D = j.value("D", 3);
-    if ((C < 1) || (D < 1))
+    if ((C < 1) || (D < 0))
         throw std::runtime_error("`C` and `D` must be larger than zero");
-    table = sf.generate(
+    kappa = j.value("kappa",0.0);
+    kappa_red = kappa*rc; // reduced inverse Debye-length
+    table_energy = sf_energy.generate(
         [&](double q) {
             double tmp = 0.0;
+	    double qp = q;
+	    if(std::fabs(kappa) > 1e-6)
+	      qp = ( 1.0 - std::exp(2.0*kappa_red*q) ) / ( 1.0 - std::exp(2.0*kappa_red) );
             for (int c = 0; c < C; c++)
                 tmp += double(factorial(D - 1 + c)) / double(factorial(D - 1)) / double(factorial(c)) * double(C - c) /
-                       double(C) * pow(q, double(c));
-            return pow(1.0 - q, double(D) + 1.0) * tmp;
+                       double(C) * pow(qp, double(c));
+            return pow(1.0 - qp, double(D) + 1.0) * tmp;
         },
         0, 1);
     calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
     selfenergy_prefactor = -double(C + D) / double(C);
+    if(std::fabs(kappa) > 1e-6)
+        selfenergy_prefactor *= -2.0 * kappa_red / (1.0 - std::exp(2.0 * kappa_red));
 }
 
 void CoulombGalore::sfFennel(const json &j) {
     alpha = j.at("alpha");
-    table = sf.generate(
+    alpha_red = alpha*rc; // reduced damping-parameter
+    table_energy = sf_energy.generate(
         [&](double q) {
             return (
-                erfc(alpha * rc * q) - std::erfc(alpha * rc) * q +
+                erfc(alpha_red * q) - std::erfc(alpha_red) * q +
                 (q - 1.0) * q *
-                    (std::erfc(alpha * rc) + 2 * alpha * rc / std::sqrt(pc::pi) * std::exp(-alpha * alpha * rc * rc)));
+                    (std::erfc(alpha_red) + 2 * alpha_red / std::sqrt(pc::pi) * std::exp(-alpha_red * alpha_red)));
         },
         0, 1);
     calcDielectric = [&](double M2V) {
-        double T = erf(alpha * rc) -
-                   (2 / (3 * sqrt(pc::pi))) * exp(-alpha * alpha * rc * rc) *
-                       (alpha * alpha * rc * rc * alpha * alpha * rc * rc + 2.0 * alpha * alpha * rc * rc + 3.0);
+        double T = erf(alpha_red) -
+                   (2 / (3 * sqrt(pc::pi))) * exp(-alpha_red * alpha_red) *
+                       (pow(alpha_red,4.0) + 2.0 * pow(alpha_red,2.0) + 3.0);
         return (((T + 2.0) * M2V + 1.0) / ((T - 1.0) * M2V + 1.0));
     };
-    selfenergy_prefactor = -(erfc(alpha*rc) + alpha*rc / sqrt(pc::pi) * (1.0 + exp(-alpha*alpha*rc*rc)));
+    selfenergy_prefactor = -(erfc(alpha_red) + alpha_red / sqrt(pc::pi) * (1.0 + exp(-alpha_red*alpha_red)));
 }
 
 void CoulombGalore::sfEwald(const json &j) { // is all this true for kappa \ne 0 ?
     alpha = j.at("alpha");
+    alpha_red = alpha*rc; // reduced damping-parameter
     kappa = j.value("kappa",0.0);
-    table = sf.generate( [&](double q) { return (std::erfc(alpha*rc*q + kappa/2.0/alpha)*std::exp(kappa*rc*q) + std::erfc(alpha*rc*q - kappa/2.0/alpha)*std::exp(-kappa*rc*q)  )/2.0; }, 0, 1 ); // Yukawa potential
-    //table = sf.generate( [&](double q) { return std::erfc(alpha*rc*q); }, 0, 1 ); // pure Coulomb potential
+    kappa_red = kappa*rc; // reduced inverse Debye-length
+    table_energy = sf_energy.generate( [&](double q) { return (std::erfc(alpha_red*q + kappa_red/2.0/alpha_red)*std::exp(kappa_red*q) + std::erfc(alpha_red*q - kappa_red/2.0/alpha_red)*std::exp(-kappa_red*q)  )/2.0; }, 0, 1 ); // Yukawa potential
+    //table = sf.generate( [&](double q) { return std::erfc(alpha_red*q); }, 0, 1 ); // pure Coulomb potential
     calcDielectric = [&](double M2V) {
-        double T = std::erf(alpha * rc) -
-                   (2 / (3 * sqrt(pc::pi))) * std::exp(-alpha * alpha * rc * rc) * (2 * alpha * alpha * rc * rc + 3);
+        double T = std::erf(alpha_red) -
+                   (2 / (3 * sqrt(pc::pi))) * std::exp(-alpha_red*alpha_red) * (2 * alpha_red * alpha_red + 3);
         return ((T + 2.0) * M2V + 1) / ((T - 1) * M2V + 1);
     };
-    selfenergy_prefactor = alpha * rc / sqrt(pc::pi);
+    selfenergy_prefactor = alpha_red / sqrt(pc::pi) * ( std::exp( -kappa*kappa / ( 4.0 * alpha * alpha ) ) - std::erfc( kappa / ( 2.0 * alpha ) ) * std::sqrt(pc::pi) * kappa / ( 2.0 * alpha ) );
 }
 
 void CoulombGalore::sfWolf(const json &j) {
     alpha = j.at("alpha");
-    table = sf.generate([&](double q) { return (erfc(alpha * rc * q) - erfc(alpha * rc) * q); }, 0, 1);
+    alpha_red = alpha*rc; // reduced damping-parameter
+    table_energy = sf_energy.generate([&](double q) { return (erfc(alpha_red * q) - erfc(alpha_red) * q); }, 0, 1);
     calcDielectric = [&](double M2V) {
-        double T = erf(alpha * rc) -
-                   (2 / (3 * sqrt(pc::pi))) * exp(-alpha * alpha * rc * rc) * (2.0 * alpha * alpha * rc * rc + 3.0);
+        double T = erf(alpha_red) -
+                   (2 / (3 * sqrt(pc::pi))) * exp(-alpha_red * alpha_red) * (2.0 * alpha_red * alpha_red + 3.0);
         return (((T + 2.0) * M2V + 1.0) / ((T - 1.0) * M2V + 1.0));
     };
-    selfenergy_prefactor = -0.5*(erfc(alpha*rc) + 2.0*alpha*rc / sqrt(pc::pi));
+    selfenergy_prefactor = -0.5*(erfc(alpha_red) + 2.0*alpha_red / sqrt(pc::pi));
 }
 
 void CoulombGalore::sfPlain(const json &, double val) {
-    table = sf.generate([&](double) { return val; }, 0, 1);
+    table_energy = sf_energy.generate([&](double) { return val; }, 0, 1);
     calcDielectric = [&](double M2V) { return (2.0 * M2V + 1.0) / (1.0 - M2V); };
     selfenergy_prefactor = 0.0;
 }
@@ -187,7 +206,7 @@ void CoulombGalore::from_json(const json &j) {
         lB = pc::lB(epsr); // Bjerrum length
 
         depsdt = j.value("depsdt", -0.368 * pc::temperature / epsr);
-        sf.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
+        sf_energy.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
 
         if (type == "yukawapoisson")
             sfYukawaPoisson(j);
@@ -228,7 +247,7 @@ void CoulombGalore::from_json(const json &j) {
                 ecs->set(i.id(), j.id(), ecsi * ecsj);
             }
 
-        if (table.empty())
+        if (table_energy.empty())
             throw std::runtime_error(name + ": unknown coulomb type '" + type + "'");
 
         // Set particle self-energy function. For reasons yet to be understood,

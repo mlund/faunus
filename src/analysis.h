@@ -108,6 +108,8 @@ class AtomProfile : public Analysisbase {
     Eigen::Vector3i dir = {1, 1, 1};
     double dr; // radial resolution
     bool count_charge = false;
+    std::string atomCOM;
+    int idCOM = -1; // center at COM of idCOM atoms?
 
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
@@ -396,9 +398,9 @@ class ScatteringFunction : public Analysisbase {
 };
 
 /*
- * @brief Sample and save inertia tensor of a particle to a file
+ * @brief Sample and save gyration tensor of a particle to a file
  */
-class InertiaTensor : public Analysisbase {
+class GyrationTensor : public Analysisbase {
   private:
     Space &spc;
     std::string filename;
@@ -409,7 +411,7 @@ class InertiaTensor : public Analysisbase {
     void _sample() override;
 
   public:
-    InertiaTensor(const json &j, Space &spc);
+    GyrationTensor(const json &j, Space &spc);
 };
 
 /**

@@ -357,8 +357,8 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             push_back<MoleculeRDF>(it.value(), spc);
                         else if (it.key() == "multipole")
                             push_back<Multipole>(it.value(), spc);
-                        else if (it.key() == "inertiatensor")
-                            push_back<InertiaTensor>(it.value(), spc);
+                        else if (it.key() == "gyrationtensor")
+                            push_back<GyrationTensor>(it.value(), spc);
                         else if (it.key() == "multipoledist")
                             push_back<MultipoleDistribution>(it.value(), spc);
                         else if (it.key() == "polymershape")
@@ -884,12 +884,12 @@ MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(sp
 
 MultipoleDistribution::~MultipoleDistribution() { save(); }
 
-// =============== InertiaTensor ===============
+// =============== GyrationTensor ===============
 
-void InertiaTensor::_to_json(json &j) const {
+void GyrationTensor::_to_json(json &j) const {
     j["index"] = index;
 }
-void InertiaTensor::_sample() {
+void GyrationTensor::_sample() {
      Space::Tgroup g(spc.p.begin(), spc.p.end());
      auto slice = g.find_id(index);
      auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
@@ -900,9 +900,9 @@ void InertiaTensor::_sample() {
          file << cnt * steps << " " << eivals.transpose() << "\n";
      }
 }
-InertiaTensor::InertiaTensor(const json &j, Space &spc) : spc(spc) {
+GyrationTensor::GyrationTensor(const json &j, Space &spc) : spc(spc) {
     from_json(j);
-    name = "Inertia Tensor";
+    name = "Gyration Tensor";
     filename = MPI::prefix + j.at("file").get<std::string>();
     file.open(filename); // output file
     index = j.at("index").get<int>();
@@ -975,15 +975,24 @@ void AtomProfile::_from_json(const json &j) {
     dr = j.value("dr", 0.1);
     tbl.setResolution(dr, 0);
     count_charge = j.value("charge", false);
+    if (j.count("atomcom") == 1) {
+        atomCOM = j.at("atomcom");
+        idCOM = findName(atoms, atomCOM)->id();
+    }
 }
 void AtomProfile::_to_json(json &j) const {
     j = {{"origo", ref}, {"dir", dir}, {"atoms", names}, {"file", file}, {"dr", dr}, {"charge", count_charge}};
 }
 void AtomProfile::_sample() {
+    Group<Particle> all(spc.p.begin(), spc.p.end());
+    if (idCOM >= 0) { // calc. mass center of selected atoms
+        auto slice = all.find_id(idCOM);
+        ref = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
+    }
     for (auto &g : spc.groups)
         for (auto &p : g)
             if (ids.count(p.id) > 0) {
-                Point rvec = spc.geo.vdist(p.pos, ref);
+		Point rvec = spc.geo.vdist(p.pos, ref);
                 double r = rvec.cwiseProduct(dir.cast<double>()).norm();
                 if (count_charge)
                     tbl(r) += p.charge; // count charges

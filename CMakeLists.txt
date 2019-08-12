@@ -206,6 +206,16 @@ if (ENABLE_POWERSASA)
     include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/_deps/sasa")
 endif ()
 
+# Download CoulombGalore header
+foreach (file coulombgalore.h LICENSE)
+    if (NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/_deps/coulombgalore/${file}")
+        file(DOWNLOAD
+            "https://raw.githubusercontent.com/mlund/coulombgalore/master/${file}"
+            "${CMAKE_CURRENT_BINARY_DIR}/_deps/coulombgalore/${file}" STATUS status)
+    endif ()
+endforeach ()
+include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/_deps/coulombgalore")
+
 # GIT
 if (VERSION_STRING)
     set(GIT_LATEST_TAG ${VERSION_STRING})

@@ -257,15 +257,16 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
             throw std::runtime_error("Andrea spline: try to increase utol/ftol");
 
         // create final reversed c and r2
-#ifdef ONCE_CPP17_IS_ENABLED
+#if __cplusplus >= 201703L
+        // C++17 only code
         assert( td.c.size() % 6 == 0 );
         assert( td.c.size() / (td.r2.size()-1) == 6 );
         assert( std::is_sorted(td.r2.rbegin(), td.r2.rend()));
-        std::reverse(td.r2.begin(), td.r2.end());
-        for (size_t i=0; i<td.c.size()/2; i+=6)
+        std::reverse(td.r2.begin(), td.r2.end());                               // reverse all elements
+        for (size_t i = 0; i < td.c.size() / 2; i += 6)                         // reverse knot order in packets of six
             std::swap_ranges(td.c.begin()+i, td.c.begin()+i+6, td.c.end()-i-6); // c++17 only
         return td;
-#endif
+#else
         typename base::data tdsort;
         tdsort.rmax2 = td.rmax2;
         tdsort.rmin2 = td.rmin2;
@@ -284,8 +285,8 @@ template <typename T = double> class Andrea : public TabulatorBase<T> {
         auto dst = tdsort.c.end();
         for (auto src=td.c.begin(); src!=td.c.end(); src+=6)
             std::copy(src, src+6, dst-=6);
-
         return tdsort;
+#endif
     }
 };
 

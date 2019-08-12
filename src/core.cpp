@@ -72,6 +72,11 @@ namespace Faunus {
         return true;
     }
 
+    TipFromTheManual::TipFromTheManual() {
+        random = std::make_shared<Random>();
+        random->seed();
+    }
+
     /**
      * @brief Load JSON tips database
      * @param files vector of file names
@@ -111,10 +116,12 @@ namespace Faunus {
                 tip_already_given = true;
 
                 // add ascii art
-                it = db.find("ascii");
-                if (it!=db.end())
-                    if (not it->empty() and it->is_array())
-                        t += random.sample(it->begin(), it->end())->get<std::string>() + "\n";
+                if (asciiart) {
+                    it = db.find("ascii");
+                    if (it != db.end())
+                        if (not it->empty() and it->is_array())
+                            t += random->sample(it->begin(), it->end())->get<std::string>() + "\n";
+                }
             }
         }
         return t; // empty string of no tip available

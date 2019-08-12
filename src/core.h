@@ -77,7 +77,11 @@ namespace Faunus {
     class TipFromTheManual {
         private:
             json db; // database
-        public:
+            std::shared_ptr<Random> random;
+
+          public:
+            TipFromTheManual();
+            bool asciiart = true;
             bool tip_already_given=false;
             void load(const std::vector<std::string>&);
             std::string operator[](const std::string&);

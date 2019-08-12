@@ -32,12 +32,12 @@ using namespace std;
 #endif
 
 static const char USAGE[] =
-R"(Faunus - the Monte Carlo code you're looking for!
+    R"(Faunus - the Monte Carlo code you're looking for!
 
     http://github.com/mlund/faunus
 
     Usage:
-      faunus [-q] [--nobar] [--nopfx] [--notips] [--state=<file>] [--input=<file>] [--output=<file>]
+      faunus [-q] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>]
       faunus (-h | --help)
       faunus --version
 
@@ -50,6 +50,7 @@ R"(Faunus - the Monte Carlo code you're looking for!
       --nobar                    No progress bar.
       --nopfx                    Do not prefix input file with MPI rank.
       --notips                   Do not give input assistance
+      --nofun                    No fun
       --version                  Show version.
 
     Multiple processes using MPI:
@@ -59,19 +60,18 @@ R"(Faunus - the Monte Carlo code you're looking for!
     3. Input prefixing can be suppressed with --nopfx
 )";
 
-int main( int argc, char **argv )
-{
+int main(int argc, char **argv) {
     using namespace Faunus::MPI;
+    bool nofun, quiet;
     try {
-        std::string version="Faunus";
+        std::string version = "Faunus";
 #ifdef GIT_LATEST_TAG
         version += " "s + QUOTE(GIT_LATEST_TAG);
 #endif
 #ifdef GIT_COMMIT_HASH
         version += " git " + std::string(GIT_COMMIT_HASH);
 #endif
-        auto args = docopt::docopt( USAGE,
-                { argv + 1, argv + argc }, true, version);
+        auto args = docopt::docopt(USAGE, {argv + 1, argv + argc}, true, version);
 
         mpi.init(); // initialize MPI, if available
 
@@ -84,17 +84,22 @@ int main( int argc, char **argv )
         mcloop_logger->set_pattern("[%n %P] [%E.%f] %L: %v");
         mcloop_logger->set_level(spdlog::level::warn);
 
+        // --nofun
+        nofun = args["--nofun"].asBool();
+        if (nofun)
+            usageTip.asciiart = false;
+
         // --notips
         if (not args["--notips"].asBool())
-            usageTip.load( {FAUNUS_TIPSFILE} ); 
+            usageTip.load({FAUNUS_TIPSFILE});
 
         // --nobar
         bool showProgress = !args["--nobar"].asBool();
 
         // --quiet
-        bool quiet = args["--quiet"].asBool();
+        quiet = args["--quiet"].asBool();
         if (quiet) {
-            cout.setstate( std::ios_base::failbit ); // hold kæft
+            cout.setstate(std::ios_base::failbit); // hold kæft
             showProgress = false;
         }
 
@@ -104,7 +109,7 @@ int main( int argc, char **argv )
         // --input
         json j;
         auto input = args["--input"].asString();
-        if (input=="/dev/stdin")
+        if (input == "/dev/stdin")
             std::cin >> j;
         else {
             if (prefix)
@@ -121,7 +126,7 @@ int main( int argc, char **argv )
                 std::ifstream f;
                 std::string state = Faunus::MPI::prefix + args["--state"].asString();
                 std::string suffix = state.substr(state.find_last_of(".") + 1);
-                bool binary = (suffix=="ubj");
+                bool binary = (suffix == "ubj");
                 auto mode = std::ios::in;
                 if (binary)
                     mode = std::ifstream::ate | std::ios::binary; // ate = open at end
@@ -132,9 +137,9 @@ int main( int argc, char **argv )
                         mpi.cout() << "Loading state file '" << state << "'" << endl;
                     if (binary) {
                         size_t size = f.tellg(); // get file size
-                        std::vector<std::uint8_t> v(size/sizeof(std::uint8_t));
-                        f.seekg(0, f.beg);       // go back to start
-                        f.read((char*)v.data(), size);
+                        std::vector<std::uint8_t> v(size / sizeof(std::uint8_t));
+                        f.seekg(0, f.beg); // go back to start
+                        f.read((char *)v.data(), size);
                         j = json::from_ubjson(v);
                     } else
                         f >> j;
@@ -145,13 +150,13 @@ int main( int argc, char **argv )
 
             Analysis::CombinedAnalysis analysis(j.at("analysis"), sim.space(), sim.pot());
 
-            auto& loop = j.at("mcloop");
+            auto &loop = j.at("mcloop");
             int macro = loop.at("macro");
             int micro = loop.at("micro");
 
-            ProgressBar progressBar(macro*micro, 70);
-            for (int i=0; i<macro; i++) {
-                for (int j=0; j<micro; j++) {
+            ProgressBar progressBar(macro * micro, 70);
+            for (int i = 0; i < macro; i++) {
+                for (int j = 0; j < micro; j++) {
 
                     if (showProgress and mpi.isMaster()) {
                         ++progressBar;
@@ -168,7 +173,7 @@ int main( int argc, char **argv )
 
             if (not quiet) {
                 faunus_logger->log((sim.drift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
-                        "relative drift = {}", sim.drift());
+                                   "relative drift = {}", sim.drift());
             }
 
             // --output
@@ -178,7 +183,7 @@ int main( int argc, char **argv )
                 Faunus::to_json(j, sim);
                 j["relative drift"] = sim.drift();
                 j["analysis"] = analysis;
-                if (mpi.nproc()>1)
+                if (mpi.nproc() > 1)
                     j["mpi"] = mpi;
 #ifdef GIT_COMMIT_HASH
                 j["git revision"] = GIT_COMMIT_HASH;
@@ -196,34 +201,36 @@ int main( int argc, char **argv )
         std::cerr << e.what() << endl;
 #ifdef ENABLE_SID
         // easter egg...
-        Faunus::random.seed(); // give global random a hardware seed
-        std::string pfx;
-        json j;
-        for (std::string dir :
-             {FAUNUS_INSTALL_PREFIX "/share/faunus/", FAUNUS_BINARY_DIR}) { // installed and uninstalled cmake builds
-            j = Faunus::openjson(dir + "/sids/music.json", false);
-            if (not j.empty()) {
-                pfx = dir + "/";
-                break;
+        if (not nofun or not quiet) { // -> fun
+            Faunus::random.seed();    // give global random a hardware seed
+            std::string pfx;
+            json j;
+            for (std::string dir : {FAUNUS_INSTALL_PREFIX "/share/faunus/",
+                                    FAUNUS_BINARY_DIR}) { // installed and uninstalled cmake builds
+                j = Faunus::openjson(dir + "/sids/music.json", false);
+                if (not j.empty()) {
+                    pfx = dir + "/";
+                    break;
+                }
             }
-        }
-        if (not j.empty()) {
-            j = j.at("songs");                                                            // load playlist
-            auto it = Faunus::random.sample(j.begin(), j.end());                          // pick a random song
-            auto subsongs = (*it).at("subsongs").get<std::vector<int>>();                 // all subsongs
-            int subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
+            if (not j.empty()) {
+                j = j.at("songs");                                                            // load playlist
+                auto it = Faunus::random.sample(j.begin(), j.end());                          // pick a random song
+                auto subsongs = (*it).at("subsongs").get<std::vector<int>>();                 // all subsongs
+                int subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
 
-            CPPSID::Player player; // let's emulate a Commodore 64...
+                CPPSID::Player player; // let's emulate a Commodore 64...
 
-            if (player.load(pfx + it->at("file").get<std::string>(), subsong)) {
-                std::cout << "-~> C64 SID music '" << player.title() << "' by " << player.author() << ", "
-                          << player.info() << " <~-\n\n"
-                          << "Press ctrl-c to quit." << std::flush;
-                player.start();
-                sleep_for(10ns);
-                sleep_until(system_clock::now() + 240s); // play for 4 minutes, then exit
-                player.stop();
-                std::cout << std::endl;
+                if (player.load(pfx + it->at("file").get<std::string>(), subsong)) {
+                    std::cout << "-~> C64 SID music '" << player.title() << "' by " << player.author() << ", "
+                              << player.info() << " <~-\n\n"
+                              << "Press ctrl-c to quit." << std::flush;
+                    player.start();
+                    sleep_for(10ns);
+                    sleep_until(system_clock::now() + 240s); // play for 4 minutes, then exit
+                    player.stop();
+                    std::cout << std::endl;
+                }
             }
         }
 #endif

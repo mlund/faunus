@@ -390,11 +390,10 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                         // additional analysis go here...
 
                         if (this->vec.size() == oldsize)
-                            throw std::runtime_error("unknown analysis");
+                            throw std::runtime_error("unknown analysis: "s + it.key());
 
                     } catch (std::exception &e) {
-                        throw std::runtime_error("Error adding analysis,\n\n\"" + it.key() + "\": " + it->dump() +
-                                                 "\n\n: " + e.what() + usageTip[it.key()]);
+                        throw std::runtime_error(e.what() + usageTip[it.key()]);
                     }
                 }
             }

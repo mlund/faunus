@@ -17,7 +17,7 @@ addons:
             - python-ruamel.yaml
             - libsdl2-dev
             - mpich
-            - mpich-dev
+            - libmpich-dev
 
 matrix:
   include:

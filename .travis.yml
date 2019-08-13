@@ -15,8 +15,8 @@ addons:
     apt:
         packages:
             - python-ruamel.yaml
-            - python-jinja2
             - libsdl2-dev
+            - mpich
 
 matrix:
   include:
@@ -35,8 +35,8 @@ script:
     make unittests || travis_terminate 1
     ctest --output-on-failure -R unittests || travis_terminate 1
 
-    # check SID enabled version
-    cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Release -DENABLE_SID=on -DENABLE_MPI=on
+    # check with SID and MPI enabled
+    cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug -DENABLE_SID=on -DENABLE_MPI=on
     make faunus || travis_terminate 1
     ./faunus --version || travis_terminate 1
 

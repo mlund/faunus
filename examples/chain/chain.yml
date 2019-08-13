@@ -10,7 +10,7 @@ geometry:
 mcloop: {macro: 150, micro: 200}
 
 atomlist:
-   - MER: {r: 2.0, dp: 2.0 }
+   - MER: {sigma: 4.0, dp: 2.0 }
 
 moleculelist:
     - POL:
@@ -67,5 +67,5 @@ moves:
     - pivot: {molecule: POL, dprot: 0.5, repeat: 10}
 
 analysis:
-    - polymershape: {nstep: 10, molecules: [POL]}
+    - polymershape: {nstep: 10, molecule: [POL]}
     - savestate: {file: state.json}

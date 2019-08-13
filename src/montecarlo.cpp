@@ -1,5 +1,6 @@
 #include "montecarlo.h"
 #include "speciation.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 
@@ -9,7 +10,7 @@ bool MCSimulation::metropolis(double du) const {
     if (du < 0)
         return true;
     if (-du > pc::max_exp_argument)
-        std::cerr << "warning: large metropolis energy" << std::endl;
+        mcloop_logger->warn("warning: large metropolis energy");
     return (Move::Movebase::slump() > std::exp(-du)) ? false : true;
 }
 
@@ -214,4 +215,4 @@ double IdealTerm(Space &spc_n, Space &spc_o, const Change &change) {
     return NoverO;
 }
 
-} // end of Faunus namespace
+} // namespace Faunus

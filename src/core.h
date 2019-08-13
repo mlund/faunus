@@ -80,6 +80,8 @@ namespace Faunus {
             std::shared_ptr<Random> random;
 
           public:
+            std::string buffer; // accumulate output here
+            bool quiet = true;  // if operator[] returns empty string
             TipFromTheManual();
             bool asciiart = true;
             bool tip_already_given=false;

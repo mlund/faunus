@@ -1,6 +1,7 @@
 #include "space.h"
 #include "io.h"
 #include "aux/iteratorsupport.h"
+#include "spdlog/spdlog.h"
 #include <iostream>
 #include "aux/eigensupport.h"
 
@@ -194,6 +195,9 @@ void insertMolecules(const json &j, Space &spc) {
                         int cnt = N;
                         bool inactive = it.value().value("inactive", false); // active or not?
 
+                        faunus_logger->info("inserting {0} ({1}) {2} molecules", cnt, inactive ? "inactive" : "active",
+                                            it.key());
+
                         if (mol->atomic) {
                             typename Space::Tpvec p;
                             p.reserve(N * mol->atoms.size());
@@ -219,6 +223,7 @@ void insertMolecules(const json &j, Space &spc) {
                                 Tpvec p;
                                 if (loadStructure(file, p, false)) {
                                     if (p.size() == N * mol->atoms.size()) {
+                                        faunus_logger->info("valid position file {0} found", file);
                                         Point offset = it.value().value("translate", Point(0, 0, 0));
                                         size_t j = spc.p.size() - p.size();
                                         for (auto &i : p) {
@@ -226,7 +231,7 @@ void insertMolecules(const json &j, Space &spc) {
                                             if (spc.geo.collision(i.pos) == false)
                                                 spc.p.at(j++).pos = i.pos;
                                             else
-                                                std::cerr << "position outside box" << std::endl;
+                                                faunus_logger->warn("position outside box");
                                         }
                                         if (j == p.size()) {
                                             success = true;
@@ -235,9 +240,9 @@ void insertMolecules(const json &j, Space &spc) {
                                                     g->begin(), g->end(), spc.geo.getBoundaryFunc(), -g->begin()->pos);
                                         }
                                     } else
-                                        std::cerr << file + ": wrong number of atoms" << std::endl;
+                                        faunus_logger->error("wrong number of atoms in {0}", file);
                                 } else
-                                    std::cerr << "error opening file '" + file + "'" << std::endl;
+                                    faunus_logger->error("cannot open {0}", file);
                                 if (success == false)
                                     throw std::runtime_error("error loading positions from '" + file + "'");
                             }

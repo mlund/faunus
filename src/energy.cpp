@@ -377,8 +377,9 @@ void Hamiltonian::addEwald(const json &j, Space &spc) {
     else
         return;
 
-    if (_j.at("type") == "ewald")
-        push_back<Energy::Ewald<>>(j["coulomb"], spc);
+    if (_j.count("type"))
+        if (_j.at("type") == "ewald")
+            push_back<Energy::Ewald<>>(j["coulomb"], spc);
 }
 
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {
@@ -478,7 +479,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                     throw std::runtime_error("unknown term");
 
             } catch (std::exception &e) {
-                throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
+                throw std::runtime_error("energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
             }
         } // end of loop over energy input terms
     }

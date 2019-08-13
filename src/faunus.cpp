@@ -5,7 +5,7 @@
 #include "move.h"
 #include "montecarlo.h"
 #include "analysis.h"
-#include "multipole.h"
+//#include "multipole.h"
 #include "docopt.h"
 #include <cstdlib>
 #include "ProgressBar.hpp"
@@ -62,7 +62,7 @@ static const char USAGE[] =
 
 int main(int argc, char **argv) {
     using namespace Faunus::MPI;
-    bool nofun, quiet;
+    bool nofun;
     try {
         std::string version = "Faunus";
 #ifdef GIT_LATEST_TAG
@@ -84,11 +84,6 @@ int main(int argc, char **argv) {
         mcloop_logger->set_pattern("[%n %P] [%E.%f] %L: %v");
         mcloop_logger->set_level(spdlog::level::warn);
 
-        // --nofun
-        nofun = args["--nofun"].asBool();
-        if (nofun)
-            usageTip.asciiart = false;
-
         // --notips
         if (not args["--notips"].asBool())
             usageTip.load({FAUNUS_TIPSFILE});
@@ -97,11 +92,19 @@ int main(int argc, char **argv) {
         bool showProgress = !args["--nobar"].asBool();
 
         // --quiet
-        quiet = args["--quiet"].asBool();
+        bool quiet = args["--quiet"].asBool();
         if (quiet) {
             cout.setstate(std::ios_base::failbit); // hold kæft
             showProgress = false;
         }
+
+        // --nofun
+        nofun = args["--nofun"].asBool();
+        if (nofun or quiet)
+            usageTip.asciiart = false;
+#ifdef ENABLE_SID
+        usageTip.asciiart = false; // if SID is enabled, disable ascii
+#endif
 
         // --nopfx
         bool prefix = !args["--nopfx"].asBool();
@@ -134,7 +137,7 @@ int main(int argc, char **argv) {
                 if (f) {
                     json j;
                     if (not quiet)
-                        mpi.cout() << "Loading state file '" << state << "'" << endl;
+                        faunus_logger->info("loading state file {}", state);
                     if (binary) {
                         size_t size = f.tellg(); // get file size
                         std::vector<std::uint8_t> v(size / sizeof(std::uint8_t));
@@ -145,7 +148,7 @@ int main(int argc, char **argv) {
                         f >> j;
                     sim.restore(j);
                 } else
-                    throw std::runtime_error("Error loading state file '" + state + "'");
+                    throw std::runtime_error("state file error: " + state);
             }
 
             Analysis::CombinedAnalysis analysis(j.at("analysis"), sim.space(), sim.pot());
@@ -198,41 +201,49 @@ int main(int argc, char **argv) {
         mpi.finalize();
 
     } catch (std::exception &e) {
-        std::cerr << e.what() << endl;
+        faunus_logger->error(e.what());
+
+        if (not usageTip.buffer.empty())
+            faunus_logger->info(usageTip.buffer);
 #ifdef ENABLE_SID
         // easter egg...
-        if (not nofun or not quiet) { // -> fun
-            Faunus::random.seed();    // give global random a hardware seed
-            std::string pfx;
-            json j;
-            for (std::string dir : {FAUNUS_INSTALL_PREFIX "/share/faunus/",
-                                    FAUNUS_BINARY_DIR}) { // installed and uninstalled cmake builds
-                j = Faunus::openjson(dir + "/sids/music.json", false);
+        if (not nofun) { // -> fun
+            try {
+                // look for json file with hvsc sid tune names
+                std::string pfx;
+                json j;
+                for (std::string dir : {FAUNUS_INSTALL_PREFIX "/share/faunus/",
+                                        FAUNUS_BINARY_DIR}) { // installed and uninstalled cmake builds
+                    j = Faunus::openjson(dir + "/sids/music.json", false);
+                    if (not j.empty()) {
+                        pfx = dir + "/";
+                        break;
+                    }
+                }
                 if (not j.empty()) {
-                    pfx = dir + "/";
-                    break;
-                }
-            }
-            if (not j.empty()) {
-                j = j.at("songs");                                                            // load playlist
-                auto it = Faunus::random.sample(j.begin(), j.end());                          // pick a random song
-                auto subsongs = (*it).at("subsongs").get<std::vector<int>>();                 // all subsongs
-                int subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
+                    j = j.at("songs");                                            // load playlist
+                    Faunus::random.seed();                                        // give global random a hardware seed
+                    auto it = Faunus::random.sample(j.begin(), j.end());          // pick a random song
+                    auto subsongs = (*it).at("subsongs").get<std::vector<int>>(); // all subsongs
+                    int subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
 
-                CPPSID::Player player; // let's emulate a Commodore 64...
+                    CPPSID::Player player; // let's emulate a Commodore 64...
 
-                if (player.load(pfx + it->at("file").get<std::string>(), subsong)) {
-                    std::cout << "-~> C64 SID music '" << player.title() << "' by " << player.author() << ", "
-                              << player.info() << " <~-\n\n"
-                              << "Press ctrl-c to quit." << std::flush;
-                    player.start();
-                    sleep_for(10ns);
-                    sleep_until(system_clock::now() + 240s); // play for 4 minutes, then exit
-                    player.stop();
-                    std::cout << std::endl;
+                    if (player.load(pfx + it->at("file").get<std::string>(), subsong)) {
+                        std::cout << "You're comforted by C64 music '" << player.title() << "' by " << player.author()
+                                  << ", " << player.info() << "\n\n"
+                                  << "Press ctrl-c to quit." << std::flush;
+                        player.start();                          // start music
+                        sleep_for(10ns);                         // short delay
+                        sleep_until(system_clock::now() + 240s); // play for 4 minutes, then exit
+                        player.stop();
+                        std::cout << std::endl;
+                    }
                 }
+            } catch (const std::exception &) {
+                // silently ignore if something fails; it's just for fun
             }
-        }
+        } // end of fun
 #endif
         return EXIT_FAILURE;
     }

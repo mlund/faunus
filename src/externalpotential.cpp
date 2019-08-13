@@ -3,6 +3,7 @@
 #include "aux/eigensupport.h"
 #include "functionparser.h"
 #include "space.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 namespace Energy {
@@ -219,7 +220,7 @@ void ExternalAkesson::load() {
         rho << f;
         update_phi();
     } else
-        std::cerr << "density file '" << filename << "' not loaded." << std::endl;
+        faunus_logger->warn("density file {} not loaded", filename);
 }
 
 double ExternalAkesson::phi_ext(double z, double a) const {

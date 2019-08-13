@@ -370,7 +370,7 @@ void CoulombGalore::from_json(const json &j) {
             }
 
         if (table.empty())
-            throw std::runtime_error(name + ": unknown coulomb type '" + type + "'");
+            throw std::runtime_error("unknown type '" + type + "'");
 
         // Set particle self-energy function. For reasons yet to be understood,
         // rc etc. cannot be lambda captured by reference, but must be hard-copied,
@@ -381,8 +381,7 @@ void CoulombGalore::from_json(const json &j) {
     }
 
     catch (std::exception &e) {
-        std::cerr << "CoulombGalore error: " << e.what();
-        throw;
+        throw std::runtime_error(e.what());
     }
 }
 
@@ -671,7 +670,7 @@ void from_json(const json &j, PairPotentialBase &base) {
         }
         base.from_json(j);
     } catch (std::exception &e) {
-        throw std::runtime_error(base.name + " potential error: " + e.what() + usageTip[base.name]);
+        throw std::runtime_error(e.what() + usageTip[base.name]);
     }
 }
 
@@ -919,8 +918,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                         }
                         // place additional potentials here...
                     } catch (std::exception &e) {
-                        throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() +
-                                                 usageTip[it.key()]);
+                        throw std::runtime_error(it.key() + ": " + e.what() + usageTip[it.key()]);
                     }
 
                     if (_u != nullptr) // if found, sum them into new function object
@@ -928,7 +926,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                             return u(a, b, r) + _u(a, b, r);
                         };
                     else
-                        throw std::runtime_error("unknown pair-potential: " + it.key());
+                        throw std::runtime_error("unknown potential: " + it.key());
                 }
             }
         }
@@ -976,7 +974,7 @@ void TabulatedPotential::from_json(const json &j) {
 
     // if user specifies an anisotropic potential, make sure to bail out
     if (not isotropic)
-        throw std::runtime_error("only isotropic pair-potentials can be splined");
+        throw std::runtime_error("cannot spline anisotropic potentials");
 
     tblt.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
     double u_at_rmin = j.value("u_at_rmin", 20);

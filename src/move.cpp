@@ -5,6 +5,7 @@
 #include "chainmove.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 namespace Move {
@@ -101,8 +102,7 @@ void AtomicTranslateRotate::_from_json(const json &j) {
                 repeat = repeat * v.front().size(); // ...and for each atom
         }
     } catch (std::exception &e) {
-        std::cerr << name << ": " << e.what();
-        throw;
+        throw std::runtime_error(name + ": " + e.what());
     }
 }
 void AtomicTranslateRotate::translateParticle(Space::Tpvec::iterator p, double dp) {
@@ -680,7 +680,7 @@ void QuadrantJump::_move(Change &change) {
                                                                -it->cm)) < 1e-9);
         }
     } else
-        std::cerr << name << ": no molecules found" << std::endl;
+        faunus_logger->warn("{0}: no molecules found", name);
 }
 QuadrantJump::QuadrantJump(Space &spc) : spc(spc) {
     name = "quadrantjump";
@@ -711,8 +711,7 @@ void AtomicSwapCharge::_from_json(const json &j) {
                 repeat = repeat * v.front().size(); // ...and for each atom
         }
     } catch (std::exception &e) {
-        std::cerr << name << ": " << e.what();
-        throw;
+        throw std::runtime_error(name + ": "s + e.what());
     }
 }
 typename Space::Tpvec::iterator AtomicSwapCharge::randomAtom() {

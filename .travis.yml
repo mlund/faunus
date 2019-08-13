@@ -26,8 +26,8 @@ script:
     cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug
     make faunus || travis_terminate 1
     ./faunus --version || travis_terminate 1
-    ctest -R minimal || travis_terminate 1
+    ctest --output-on-failure -R minimal || travis_terminate 1
     make pyfaunus || travis_terminate 1
     make unittests || travis_terminate 1
-    ctest -R unittests || travis_terminate 1
+    ctest --output-on-failure -R unittests || travis_terminate 1
 

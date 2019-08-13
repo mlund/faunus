@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
                     if (player.load(pfx + it->at("file").get<std::string>(), subsong)) {
                         faunus_logger->info("error message music '{}' by {}, {} (6502/SID emulation)", player.title(),
                                             player.author(), player.info());
-                        faunus_logger->info("press ctrl-c to quit");
+                        faunus_logger->info("\033[1mpress ctrl-c to quit\033[0m");
                         player.start();                          // start music
                         sleep_for(10ns);                         // short delay
                         sleep_until(system_clock::now() + 240s); // play for 4 minutes, then exit

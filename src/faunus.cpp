@@ -67,7 +67,13 @@ int main(int argc, char **argv) {
         version += " "s + QUOTE(GIT_LATEST_TAG);
 #endif
 #ifdef GIT_COMMIT_HASH
-        version += " git " + std::string(GIT_COMMIT_HASH);
+        version += " git " + std::string(GIT_COMMIT_HASH) + ". ";
+#endif
+#ifdef ENABLE_SID
+        version += "[SID]";
+#endif
+#ifdef ENABLE_MPI
+        version += "[MPI]";
 #endif
         auto args = docopt::docopt(USAGE, {argv + 1, argv + argc}, true, version);
 

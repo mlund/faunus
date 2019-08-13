@@ -8,10 +8,15 @@ python:
     - "3.7"
 
 addons:
+    homebrew:
+        packages:
+            - sdl2
+            - open-mpi
     apt:
         packages:
             - python-ruamel.yaml
             - python-jinja2
+            - libsdl2-dev
 
 matrix:
   include:
@@ -29,4 +34,9 @@ script:
     make pyfaunus || travis_terminate 1
     make unittests || travis_terminate 1
     ctest --output-on-failure -R unittests || travis_terminate 1
+
+    # check SID enabled version
+    cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Release -DENABLE_SID=on -DENABLE_MPI=on
+    make faunus || travis_terminate 1
+    ./faunus --version || travis_terminate 1
 

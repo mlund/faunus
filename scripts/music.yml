@@ -13,7 +13,7 @@ songs:
     - {subsongs: [1], file: MUSICIANS/B/Bjerregaard_Johannes/Shape.sid}
     - {subsongs: [1], file: MUSICIANS/D/Deenen_Charles/Zamzara.sid}
     - {subsongs: [3], file: MUSICIANS/O/Ouwehand_Reyn/Last_Ninja_3.sid}
-    - {subsongs: [1,2,3], file: open MUSICIANS/L/Laxity/Stormlord_2.sid}
+    - {subsongs: [1,2,3], file: MUSICIANS/L/Laxity/Stormlord_2.sid}
     - {subsongs: [14], file: MUSICIANS/F/FAME/Hendriks_Michael/X-Out.sid}
     - {subsongs: [19], file: MUSICIANS/G/Galway_Martin/Yie_Ar_Kung_Fu.sid}
     - {subsongs: [3,8], file: MUSICIANS/B/Bjerregaard_Johannes/M_A_C_H.sid}

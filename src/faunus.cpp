@@ -1,17 +1,15 @@
-#include <iomanip>
-
 #include "core.h"
 #include "mpi.h"
 #include "move.h"
 #include "montecarlo.h"
 #include "analysis.h"
-//#include "multipole.h"
 #include "docopt.h"
 #include <cstdlib>
 #include "ProgressBar.hpp"
 #include "spdlog/spdlog.h"
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <iomanip>
 
 #ifdef ENABLE_SID
 #include "cppsid.h"
@@ -204,16 +202,16 @@ int main(int argc, char **argv) {
         faunus_logger->error(e.what());
 
         if (not usageTip.buffer.empty())
-            faunus_logger->info(usageTip.buffer);
+            faunus_logger->error(usageTip.buffer);
 #ifdef ENABLE_SID
         // easter egg...
-        if (not nofun) { // -> fun
+        if (not nofun and mpi.isMaster()) { // -> fun
             try {
                 // look for json file with hvsc sid tune names
                 std::string pfx;
                 json j;
-                for (std::string dir : {FAUNUS_INSTALL_PREFIX "/share/faunus/",
-                                        FAUNUS_BINARY_DIR}) { // installed and uninstalled cmake builds
+                for (std::string dir : {FAUNUS_BINARY_DIR, FAUNUS_INSTALL_PREFIX
+                                        "/share/faunus/"}) { // installed and uninstalled cmake builds
                     j = Faunus::openjson(dir + "/sids/music.json", false);
                     if (not j.empty()) {
                         pfx = dir + "/";
@@ -230,9 +228,9 @@ int main(int argc, char **argv) {
                     CPPSID::Player player; // let's emulate a Commodore 64...
 
                     if (player.load(pfx + it->at("file").get<std::string>(), subsong)) {
-                        std::cout << "You're comforted by C64 music '" << player.title() << "' by " << player.author()
-                                  << ", " << player.info() << "\n\n"
-                                  << "Press ctrl-c to quit." << std::flush;
+                        faunus_logger->info("error message music '{}' by {}, {} (6502/SID emulation)", player.title(),
+                                            player.author(), player.info());
+                        faunus_logger->info("press ctrl-c to quit");
                         player.start();                          // start music
                         sleep_for(10ns);                         // short delay
                         sleep_until(system_clock::now() + 240s); // play for 4 minutes, then exit

@@ -17,7 +17,7 @@ with open('scripts/music.yml') as f:
     server = sidlist['server'] + '/'
     dstdir = 'sids/'
     if not os.path.exists(dstdir):
-            os.makedirs(dstdir)
+        os.makedirs(dstdir)
     for i in sidlist['songs']:
         url = server + i['file']
         basename = os.path.basename(url)

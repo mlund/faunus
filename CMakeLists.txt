@@ -11,6 +11,8 @@ find_package(PythonInterp 3 REQUIRED)
 find_package(Threads REQUIRED)
 enable_testing()
 
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+
 # Default build is "RelWithDebInfo"
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo
@@ -341,11 +343,13 @@ add_compile_options($<$<CONFIG:Debug>:-O0>)
 
 # target: functionparser - exprtk very slow, so split out to separate target
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
+set_property(TARGET functionparser PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # targer: libfaunus - main functionality of faunus
 add_library(libfaunus STATIC ${objs} ${hdrs})
 target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
 target_link_libraries(libfaunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser)
+set_property(TARGET libfaunus PROPERTY POSITION_INDEPENDENT_CODE ON)
 if (MPI_CXX_FOUND)
     target_link_libraries(libfaunus PRIVATE MPI::MPI_CXX)
     target_compile_definitions(libfaunus PRIVATE ENABLE_MPI)
@@ -418,7 +422,7 @@ if (ENABLE_PYTHON)
             add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
             pybind11_add_module(pyfaunus src/pyfaunus.cpp)
             #target_link_libraries(pyfaunus PUBLIC ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser libfaunus)
-            target_link_libraries(pyfaunus PUBLIC libfaunus)
+            target_link_libraries(pyfaunus PRIVATE libfaunus)
         endif()
     endif ()
 endif ()

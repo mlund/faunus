@@ -67,15 +67,18 @@ int main(int argc, char **argv) {
         version += " "s + QUOTE(GIT_LATEST_TAG);
 #endif
 #ifdef GIT_COMMIT_HASH
-        version += " git " + std::string(GIT_COMMIT_HASH) + ". ";
+        version += " git " + std::string(GIT_COMMIT_HASH);
 #endif
 #ifdef ENABLE_SID
-        version += "[SID]";
+        version += " [sid]";
 #endif
 #ifdef ENABLE_MPI
-        version += "[MPI]";
+        version += " [mpi]";
 #endif
-        auto args = docopt::docopt(USAGE, {argv + 1, argv + argc}, true, version);
+#ifdef _OPENMP
+        version += " [openmp]"
+#endif
+            auto args = docopt::docopt(USAGE, {argv + 1, argv + argc}, true, version);
 
         mpi.init(); // initialize MPI, if available
 

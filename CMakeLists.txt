@@ -141,8 +141,8 @@ ExternalProject_Add(project_cppsid
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} ""#cppsid player
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
-    URL_MD5 6f43e86ab83dcde0a1be3578ef696614
-    URL "https://github.com/mlund/cppsid//archive/32e2a1b76637ac06d242426b1895d3443ba92105.zip")
+    URL_MD5 b420c4c114e00a147c2c9a974249f0d4
+    URL "https://github.com/mlund/cppsid/archive/v0.2.1.tar.gz")
 ExternalProject_Get_Property(project_cppsid binary_dir)
 ExternalProject_Get_Property(project_cppsid source_dir)
 set(CppsidIncludeDir ${source_dir}/include)
@@ -381,6 +381,8 @@ endif()
 
 if(ENABLE_SID)
     find_package(SDL2 CONFIG REQUIRED)
+    # fix buggy sdl2: https://stackoverflow.com/questions/45730098/cmake-leading-or-trailing-whitespace-policy-cmp0004
+    string(STRIP ${SDL2_LIBRARIES} SDL2_LIBRARIES)
     include_directories(${SDL2_INCLUDE_DIRS})
     target_link_libraries(faunus PRIVATE ${SDL2_LIBRARIES} cppsid)
     target_compile_definitions(faunus PRIVATE ENABLE_SID)

@@ -5,6 +5,7 @@
 #include "multipole.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
+#include "spdlog/spdlog.h"
 
 #include <iomanip>
 #include <iostream>
@@ -274,7 +275,7 @@ void VirtualVolume::_sample() {
         if (-du < pc::max_exp_argument)
             x = std::exp(-du);
         if (std::isinf(x)) {
-            std::cerr << name + ": skipping sample event due to excessive energy likely due to overlaps.";
+            faunus_logger->warn("{0}: skipping sample event due to excessive energy likely due to overlaps.", name);
             cnt--; // cnt is incremented by sample() so we need to decrease
         } else {
             assert(not std::isnan(x));
@@ -389,11 +390,10 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                         // additional analysis go here...
 
                         if (this->vec.size() == oldsize)
-                            throw std::runtime_error("unknown analysis");
+                            throw std::runtime_error("unknown analysis: "s + it.key());
 
                     } catch (std::exception &e) {
-                        throw std::runtime_error("Error adding analysis,\n\n\"" + it.key() + "\": " + it->dump() +
-                                                 "\n\n: " + e.what() + usageTip[it.key()]);
+                        throw std::runtime_error(e.what() + usageTip[it.key()]);
                     }
                 }
             }
@@ -824,7 +824,7 @@ void XTCtraj::_sample() {
     assert(filter);
     bool rc = xtc.save(file, particles.begin(), particles.end());
     if (rc == false)
-        std::cerr << "error saving xtc" << std::endl;
+        faunus_logger->warn("error saving xtc");
 }
 
 // =============== MultipoleDistribution ===============
@@ -1156,8 +1156,7 @@ ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc)
     names = j.at("molecules").get<decltype(names)>(); // molecule names
     ids = names2ids(molecules, names);                // names --> molids
 } catch (std::exception &e) {
-    std::cerr << "Debye Formula Scattering: ";
-    throw;
+    throw std::runtime_error("debye formula: "s + e.what());
 }
 
 ScatteringFunction::~ScatteringFunction() { debye.save(filename); }

@@ -4,6 +4,7 @@
 #include "multipole.h"
 #include <Eigen/Dense>
 #include "aux/eigensupport.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 namespace ReactionCoordinate {
@@ -84,7 +85,7 @@ SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBa
         f = [&g = spc.geo]() { return g.getLength().z(); };
     else if (property == "radius") {
         if (spc.geo.type == Geometry::CUBOID or spc.geo.type == Geometry::SLIT)
-            std::cerr << "`radius` coordinate unavailable for geometry" << std::endl;
+            faunus_logger->warn("`radius` coordinate unavailable for geometry");
         else
             f = [&g = spc.geo]() { return 0.5 * g.getLength().x(); };
     } else if (property == "Q") // system net charge

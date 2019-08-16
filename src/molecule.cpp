@@ -4,6 +4,7 @@
 #include "rotate.h"
 #include "bonds.h"
 #include <fstream>
+#include <iostream>
 #include "spdlog/spdlog.h"
 #include "aux/eigensupport.h"
 
@@ -160,7 +161,7 @@ void from_json(const json &j, MoleculeData &a) {
 
                     else if (_struct.is_object()) {
                         // `structure` is a fasta sequence
-                        if (_struct.count("fasta")) {
+                        if (_struct.count("fasta") == 1) {
                             Potential::HarmonicBond bond; // harmonic bond
                             bond.from_json(_struct);      // read 'k' and 'req' from json
                             std::string fasta = _struct.at("fasta").get<std::string>();
@@ -176,6 +177,8 @@ void from_json(const json &j, MoleculeData &a) {
                                 }
                             }
                         } // end of fasta handling
+                        else
+                            throw std::runtime_error("invalid 'structure' format");
                     }
 
                     // `structure` is a list of atom positions

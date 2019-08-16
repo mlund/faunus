@@ -11,6 +11,10 @@ find_package(PythonInterp 3 REQUIRED)
 find_package(Threads REQUIRED)
 enable_testing()
 
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Default build is "RelWithDebInfo"
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo
@@ -47,10 +51,6 @@ if (ENABLE_MPI)
 endif()
 
 option(ENABLE_SID "Enable SID emulation" off)
-if (ENABLE_SID)
-   list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
-   find_package(SDL2 REQUIRED)
-endif()
 
 include(ExternalProject)
 include(FetchContent)
@@ -86,7 +86,7 @@ ExternalProject_Add(
     #GIT_TAG bb0f3839c1e52948f2ecb66e4e0aa79740a30205
     URL https://github.com/gabime/spdlog/archive/bb0f3839c1e52948f2ecb66e4e0aa79740a30205.zip
     URL_HASH SHA256=dece1767c33da47dbfdf60673af40b04a1557f22b6f4db4e1de8f99c2fb0a609
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DSPDLOG_INSTALL=off
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DSPDLOG_INSTALL=off -DCMAKE_POSITION_INDEPENDENT_CODE=on
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} spdlog
     INSTALL_COMMAND ""
 )
@@ -120,7 +120,7 @@ endif()
 # DOCOPT.CPP
 ExternalProject_Add(project_docopt
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} docopt_s
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
@@ -137,12 +137,12 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 # CPPSID
 ExternalProject_Add(project_cppsid
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} ""#cppsid player
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
-    URL_MD5 2d989c5dde42173ab4eba6374aabf042
-    URL "https://github.com/mlund/cppsid//archive/8d18d8e4109518c15725326f90cef879a161e03f.zip")
+    URL_MD5 b420c4c114e00a147c2c9a974249f0d4
+    URL "https://github.com/mlund/cppsid/archive/v0.2.1.tar.gz")
 ExternalProject_Get_Property(project_cppsid binary_dir)
 ExternalProject_Get_Property(project_cppsid source_dir)
 set(CppsidIncludeDir ${source_dir}/include)
@@ -209,6 +209,16 @@ if (ENABLE_POWERSASA)
     add_definitions("-DENABLE_POWERSASA")
     include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/_deps/sasa")
 endif ()
+
+# Download CoulombGalore header
+foreach (file coulombgalore.h LICENSE)
+    if (NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/_deps/coulombgalore/${file}")
+        file(DOWNLOAD
+            "https://raw.githubusercontent.com/mlund/coulombgalore/master/${file}"
+            "${CMAKE_CURRENT_BINARY_DIR}/_deps/coulombgalore/${file}" STATUS status)
+    endif ()
+endforeach ()
+include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/_deps/coulombgalore")
 
 # GIT
 if (VERSION_STRING)
@@ -335,11 +345,13 @@ add_compile_options($<$<CONFIG:Debug>:-O0>)
 
 # target: functionparser - exprtk very slow, so split out to separate target
 add_library(functionparser STATIC ${CMAKE_SOURCE_DIR}/src/functionparser.cpp ${CMAKE_SOURCE_DIR}/src/functionparser.h)
+set_property(TARGET functionparser PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # targer: libfaunus - main functionality of faunus
 add_library(libfaunus STATIC ${objs} ${hdrs})
 target_compile_definitions(libfaunus PRIVATE SPDLOG_COMPILED_LIB)
 target_link_libraries(libfaunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser)
+set_property(TARGET libfaunus PROPERTY POSITION_INDEPENDENT_CODE ON)
 if (MPI_CXX_FOUND)
     target_link_libraries(libfaunus PRIVATE MPI::MPI_CXX)
     target_compile_definitions(libfaunus PRIVATE ENABLE_MPI)
@@ -347,14 +359,12 @@ endif()
 
 # target: unittests
 add_executable(unittests src/unittests.cpp ${tsts})
-#target_link_libraries(unittests ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser libfaunus)
 target_link_libraries(unittests libfaunus)
 target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
 add_test(NAME unittests COMMAND unittests)
 
 # target: faunus
 add_executable(faunus src/faunus.cpp)
-#target_link_libraries(faunus PRIVATE ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog docopt functionparser libfaunus)
 target_link_libraries(faunus PRIVATE libfaunus docopt)
 target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
 if (MPI_CXX_FOUND)
@@ -370,16 +380,27 @@ if (ENABLE_LTO)
 endif()
 
 if(ENABLE_SID)
+    find_package(SDL2 CONFIG REQUIRED)
+    # fix buggy sdl2: https://stackoverflow.com/questions/45730098/cmake-leading-or-trailing-whitespace-policy-cmp0004
+    string(STRIP ${SDL2_LIBRARIES} SDL2_LIBRARIES)
+    include_directories(${SDL2_INCLUDE_DIRS})
+    target_link_libraries(faunus PRIVATE ${SDL2_LIBRARIES} cppsid)
     target_compile_definitions(faunus PRIVATE ENABLE_SID)
-    target_link_libraries(faunus PRIVATE SDL2::Main cppsid)
-endif()
+    if (PYTHONINTERP_FOUND)
+        execute_process(
+            COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extractsids.py
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR} ERROR_QUIET OUTPUT_QUIET)
+    endif()
+ endif()
 
 if(BUILD_STATIC)
     target_link_libraries(faunus PRIVATE -static-libgcc -static-libstdc++ -static)
 endif()
 
 target_compile_definitions(faunus PRIVATE
-    FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
+    FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_BINARY_DIR}/tips.json\")
+target_compile_definitions(faunus PRIVATE FAUNUS_INSTALL_PREFIX=\"${CMAKE_INSTALL_PREFIX}\")
+target_compile_definitions(faunus PRIVATE FAUNUS_BINARY_DIR=\"${CMAKE_BINARY_DIR}\")
 
 # python bindings
 if (ENABLE_PYTHON)
@@ -405,7 +426,7 @@ if (ENABLE_PYTHON)
             add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
             pybind11_add_module(pyfaunus src/pyfaunus.cpp)
             #target_link_libraries(pyfaunus PUBLIC ${CMAKE_THREAD_LIBS_INIT} xdrfile spdlog functionparser libfaunus)
-            target_link_libraries(pyfaunus PUBLIC libfaunus)
+            target_link_libraries(pyfaunus PRIVATE libfaunus)
         endif()
     endif ()
 endif ()
@@ -594,10 +615,11 @@ if (TARGET pyfaunus)
     install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE} OPTIONAL)
 endif()
 
-install(FILES ${CMAKE_BINARY_DIR}/LICENSE DESTINATION share/faunus)
+install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION share/faunus)
 install(FILES ${CMAKE_BINARY_DIR}/tips.json DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
 install(FILES ${CMAKE_BINARY_DIR}/manual.html DESTINATION share/faunus OPTIONAL)
+install(DIRECTORY ${CMAKE_BINARY_DIR}/sids DESTINATION share/faunus OPTIONAL)
 install(FILES
     ${CMAKE_SOURCE_DIR}/scripts/yason.py
     ${CMAKE_SOURCE_DIR}/scripts/ob2aam.py

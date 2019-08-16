@@ -8,6 +8,7 @@ include/
 3rdparty/
 examples/
 _deps/
+sids/
 
 # CMake
 CMakeCache.txt

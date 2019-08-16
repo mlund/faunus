@@ -1,6 +1,7 @@
 #include "io.h"
 #include "units.h"
 #include "random.h"
+#include "spdlog/spdlog.h"
 #include <fstream>
 #include <iostream>
 
@@ -15,7 +16,7 @@ bool IO::readFile(const std::string &file, std::vector<std::string> &v) {
         f.close();
         return true;
     }
-    std::cerr << "# WARNING! FILE " << file << " NOT READ!\n";
+    faunus_logger->warn("cannot read file: {0}", file);
     return false;
 }
 
@@ -57,16 +58,15 @@ Particle &FormatAAM::s2p(const std::string &s, Particle &a) {
 
     // does charge match AtomData?
     if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl) {
-        std::cerr << "charge mismatch on atom " << num << name << ": " << ((keepcharges) ? "ignoring" : "using")
-                  << " `atomlist` value" << std::endl;
+        faunus_logger->warn("charge mismatch on atom {0} {1}: {2} atomlist value", num, name,
+                            (keepcharges) ? "ignoring" : "using");
         if (not keepcharges)
             a.charge = it->charge; // let's use atomdata charge
     }
 
     // does radius match AtomData?
     if (std::fabs(it->sigma - 2 * radius) > pc::epsilon_dbl)
-        std::cerr << "radius mismatch on atom " << num << name << ": using `atomlist` value" << std::endl;
-
+        faunus_logger->warn("radius mismatch on atom {0} {1}: using atomlist value", num, name);
     return a;
 }
 bool FormatAAM::load(const std::string &file, FormatAAM::Tpvec &target, bool _keepcharges) {
@@ -104,7 +104,7 @@ bool FormatXTC::open(std::string s) {
             return true;
         }
     } else
-        std::cerr << "# ioxtc error: xtc file could not be opened." << std::endl;
+        faunus_logger->warn("xtc file could not be opened");
     return false;
 }
 
@@ -166,21 +166,20 @@ Point FormatPQR::load(const std::string &file, FormatPQR::Tpvec &p, bool keepcha
 
                     // does charge match AtomData?
                     if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl) {
-                        std::cerr << "charge mismatch on atom " << aname << " " << ires;
                         if (keepcharges)
-                            std::cerr << "; using " << it->charge << " instead of `atomlist`s " << a.charge << "."
-                                      << std::endl;
+                            faunus_logger->warn("charge mismatch on atom {0} {1}: using {2} over atomlist's {3}", aname,
+                                                ires, a.charge, it->charge);
                         else {
-                            std::cerr << "; using `atomlist`s " << it->charge << " over " << a.charge << "." << std::endl;
+                            faunus_logger->warn("charge mismatch on atom {0} {1}: using atomlist's {2} over {3}", aname,
+                                                ires, it->charge, a.charge);
                             a.charge = it->charge;
                         }
                     }
 
                     // does radius match AtomData?
                     if (std::fabs(it->sigma - 2 * radius) > pc::epsilon_dbl)
-                        std::cerr << "radius mismatch on atom " << aname << " " << ires << "; using `atomdata`s "
-                                  << it->sigma / 2 << " over " << radius << "." << std::endl;
-
+                        faunus_logger->warn("radius mismatch on atom {0}: using atomlist's {1} over {2}", aname, ires,
+                                            it->sigma / 2, radius);
                     p.push_back(a);
 
                 } else if (key == "CRYST1")
@@ -309,8 +308,8 @@ bool FormatMXYZ::load(const std::string &file, FormatMXYZ::Tpvec &p, Point &len)
         IO::strip(v, "#");
         size_t n = atoi(v[0].c_str());
         if (p.size() != n)
-            std::cerr << "# mxyz load error: number of particles in xyz file " << n << " does not match input file ("
-                      << p.size() << ")!" << std::endl;
+            faunus_logger->error("mxyz load error: number of particles in xyz file {0} does not match input file ({1})",
+                                 n, p.size());
         o << v[1].erase(0, v[1].find_last_of("x") + 1);
         o >> len.x() >> len.y() >> len.z();
         for (size_t i = 2; i < n + 2; i++)

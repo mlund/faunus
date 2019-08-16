@@ -1,3 +1,4 @@
+#!/usr/bin/env yason.py
 {% set eps = 0.05 %}
 {% set pH = 7.0 %}
 {% set Cs = 0.010 %}
@@ -43,7 +44,7 @@ atomlist:
     - GLY  :  { q: 0,  r: 2.9, mw: 54,  dp: 2, eps: {{ eps }} }
     - na   :  { q: 1,  r: 2.3, mw: 1, eps: {{ 0.01 }}, dp: {{ dpsalt }} }
     - cl   :  { q: -1, r: 2.3, mw: 1, eps: {{ 0.01 }}, dp: {{ dpsalt }} }
-    - H+   :  { implicit: True, activity: {{ 10**(-pH) }} }
+    - H+   :  { implicit: True, activity: {{ 10**(-pH) }}}
 
 moleculelist:
     - Na+: {atomic: True, atoms: [na], activity: {{ Cs }} }

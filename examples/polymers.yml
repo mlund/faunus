@@ -5,8 +5,8 @@ geometry: {type: sphere, radius: 100}
 mcloop: {macro: 10, micro: 2500}
 
 atomlist:
-    - Cl: {r: 3, dp: 110, q: -1.0}
-    - MM: {r: 3, dp: 10,  q: 1.0}
+    - Cl: {sigma: 6, dp: 110, q: -1.0}
+    - MM: {sigma: 6, dp: 10,  q: 1.0}
 
 moleculelist:
     - counterions: {atoms: [Cl], atomic: True}

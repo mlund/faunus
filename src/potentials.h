@@ -7,8 +7,15 @@
 #include "tabulate.h"
 #include "functionparser.h"
 #include "multipole.h"
+#include <coulombgalore.h>
 #include <array>
 #include <functional>
+
+/*
+namespace CoulombGalore {
+    class SchemeBase;
+    class Splined;
+}*/
 
 namespace Faunus {
 namespace Potential {
@@ -108,7 +115,7 @@ struct PairPotentialBase {
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
-    virtual Point force(const Particle &, const Particle &, double, const Point &);
+    virtual Point force(const Particle &, const Particle &, double, const Point &) const;
     virtual double operator()(const Particle &a, const Particle &b, const Point &r) const = 0;
 
   protected:
@@ -157,7 +164,7 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
         return first(a, b, r) + second(a, b, r);
     } //!< Combine pair energy
 
-    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
+    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
         return first.force(a, b, r2, p) + second.force(a, b, r2, p);
     } //!< Combine force
 
@@ -212,7 +219,7 @@ class LennardJones : public MixerPairPotentialBase {
                  CombinationRuleType combination_rule = COMB_LORENTZ_BERTHELOT)
         : MixerPairPotentialBase(name, cite, combination_rule){};
 
-    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
+    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
         double s6 = powi((*sigma_squared)(a.id, b.id), 3);
         double r6 = r2 * r2 * r2;
         double r14 = r6 * r6 * r2;
@@ -260,7 +267,7 @@ class WeeksChandlerAndersen : public LennardJones {
         return operator()(a, b, r.squaredNorm());
     }
 
-    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
+    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
         double x = (*sigma_squared)(a.id, b.id); // s^2
         if (r2 > x * twototwosixth)
             return Point(0, 0, 0);
@@ -411,7 +418,7 @@ class CosAttract : public PairPotentialBase {
         return -eps * x * x;
     }
 
-    inline Point force(const Particle &, const Particle &, double r2, const Point &p) override {
+    inline Point force(const Particle &, const Particle &, double r2, const Point &p) const override {
         if (r2 < rc2 || r2 > rcwc2)
             return Point(0, 0, 0);
         double r = sqrt(r2);
@@ -498,7 +505,7 @@ class Polarizability : public Coulomb {
             return (*m_neutral)(a.id, b.id) / r2 * r4inv;
     }
 
-    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
+    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
         double r6inv = 1 / (r2 * r2 * r2);
         if (fabs(a.charge) > 1e-9 or fabs(b.charge) > 1e-9)
             return 4 * m_charged->operator()(a.id, b.id) * r6inv * p;
@@ -535,9 +542,49 @@ class FENE : public PairPotentialBase {
         return (r2 > r02) ? pc::infty : -0.5 * k * r02 * std::log(1 - r2 * r02inv);
     }
 
-    inline Point force(const Particle &, const Particle &, double r2, const Point &p) override {
+    inline Point force(const Particle &, const Particle &, double r2, const Point &p) const override {
         return (r2 > r02) ? -pc::infty * p : -k * r02 / (r02 - r2) * p;
     }
+};
+
+/**
+ * @brief Wrapper for external CoulombGalore library
+ */
+class NewCoulombGalore : public PairPotentialBase {
+  protected:
+    ::CoulombGalore::Splined pot;
+    double lB;
+
+  public:
+    NewCoulombGalore(const std::string & = "coulomb");
+    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
+        return lB * pot.ion_ion_energy(a.charge, b.charge, r.squaredNorm());
+    }
+    Point force(const Particle &, const Particle &, double, const Point &) const override;
+    void from_json(const json &) override;
+    void to_json(json &) const override;
+};
+
+/**
+ * @brief Multipole interactions
+ * @note Only dipole-dipole interactions are currently enabled
+ */
+class Multipole : public NewCoulombGalore {
+  public:
+    Multipole(const std::string & = "coulomb");
+    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
+        // for this to reach reasonable speed, the energy calculations should
+        // be aggregated to avoid SRF lookup multiple times
+        Point mua = a.getExt().mu * a.getExt().mulen;
+        Point mub = b.getExt().mu * b.getExt().mulen;
+        // double ionion = pot.ion_ion_energy(a.charge, b.charge, r.squaredNorm());
+        // double iondip = pot.ion_dipole_energy(a.charge, mub, r) + pot.ion_dipole_energy(b.charge, mua, r);
+        double dipdip = pot.dipole_dipole_energy(mua, mub, r);
+        return lB * (dipdip);
+        // return lB*(ionion + iondip + dipdip);
+    }
+
+    Point force(const Particle &, const Particle &, double, const Point &) const override;
 };
 
 /** @brief Coulomb type potentials with spherical cutoff */
@@ -580,7 +627,7 @@ class CoulombGalore : public PairPotentialBase {
         return operator()(a, b, r.squaredNorm());
     }
 
-    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) override {
+    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
         if (r2 < rc2) {
             double r = sqrt(r2);
             return lB * a.charge * b.charge * (-sf.eval(table, r * rc1i) / r2 + sf.evalDer(table, r * rc1i) / r) * p;
@@ -638,7 +685,7 @@ class DipoleDipoleGalore : public PairPotentialBase {
         return 0.0;
     }
 
-    inline Point force(const Particle &, const Particle &, double, const Point &) override { return {0, 0, 0}; }
+    inline Point force(const Particle &, const Particle &, double, const Point &) const override { return {0, 0, 0}; }
 
     /**
      * @brief Self-energy of the potential
@@ -728,11 +775,13 @@ class FunctorPotential : public PairPotentialBase {
                Hertz,                 // 10
                SquareWell,            // 11
                DipoleDipoleGalore,    // 12
-               Stockmayer             // 13
+               Stockmayer,            // 13
+               NewCoulombGalore,      // 14
+               Multipole              // 15
                >
         potlist;
 
-    uFunc combineFunc(const json &j); // parse json array of potentials to a single potential function object
+    uFunc combineFunc(json &j); // parse json array of potentials to a single potential function object
 
   protected:
     PairMatrix<uFunc, true> umatrix; // matrix with potential for each atom pair; cannot be Eigen matrix

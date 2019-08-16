@@ -6,6 +6,7 @@
 #include "src/aux/iteratorsupport.h"
 #include <range/v3/view.hpp>
 #include <Eigen/Dense>
+#include "spdlog/spdlog.h"
 
 #ifdef ENABLE_POWERSASA
 #include <power_sasa.h>
@@ -557,7 +558,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                         else if (k == "i2all")
                             omp_i2all = true;
 #ifndef _OPENMP
-                    std::cerr << "warning: nonbonded requests unavailable OpenMP." << std::endl;
+                    faunus_logger->warn("{}: requested openmp unavailable", name);
 #endif
                 }
     }

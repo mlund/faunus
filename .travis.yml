@@ -8,10 +8,16 @@ python:
     - "3.7"
 
 addons:
+    homebrew:
+        packages:
+            - sdl2
+            - open-mpi
     apt:
         packages:
             - python-ruamel.yaml
-            - python-jinja2
+            - libsdl2-dev
+            - mpich
+            - libmpich-dev
 
 matrix:
   include:
@@ -26,8 +32,12 @@ script:
     cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug
     make faunus || travis_terminate 1
     ./faunus --version || travis_terminate 1
-    ctest -R minimal || travis_terminate 1
     make pyfaunus || travis_terminate 1
     make unittests || travis_terminate 1
-    ctest -R unittests || travis_terminate 1
+    ctest --output-on-failure -R unittests || travis_terminate 1
+
+    # check with SID and MPI enabled
+    cmake . -DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Debug -DENABLE_SID=on -DENABLE_MPI=on
+    make faunus || travis_terminate 1
+    ./faunus --version || travis_terminate 1
 

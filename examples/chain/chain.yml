@@ -10,7 +10,7 @@ geometry:
 mcloop: {macro: 150, micro: 200}
 
 atomlist:
-   - MER: {r: 2.0, dp: 2.0 }
+   - MER: {sigma: 4.0, dp: 2.0 }
 
 moleculelist:
     - POL:

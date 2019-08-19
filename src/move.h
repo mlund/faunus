@@ -1,7 +1,7 @@
 #pragma once
 
 #include "average.h"
-#include "mpi.h"
+#include "mpicontroller.h"
 #include "molecule.h"
 #include "geometry.h"
 #include "auxiliary.h"

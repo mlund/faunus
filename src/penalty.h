@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mpi.h"
+#include "mpicontroller.h"
 #include "externalpotential.h"
 #include "reactioncoordinate.h"
 

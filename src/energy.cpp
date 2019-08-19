@@ -1,5 +1,3 @@
-
-#include "mpi.h"
 #include "energy.h"
 #include "penalty.h"
 #include "potentials.h"

@@ -1,5 +1,5 @@
 #include "core.h"
-#include "mpi.h"
+#include "mpicontroller.h"
 #include "move.h"
 #include "montecarlo.h"
 #include "analysis.h"

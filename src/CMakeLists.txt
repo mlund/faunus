@@ -6,7 +6,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 set(objs
     ${CMAKE_SOURCE_DIR}/src/random.cpp
-    ${CMAKE_SOURCE_DIR}/src/mpi.cpp
+    ${CMAKE_SOURCE_DIR}/src/mpicontroller.cpp
     ${CMAKE_SOURCE_DIR}/src/bonds.cpp
     ${CMAKE_SOURCE_DIR}/src/chainmove.cpp
     ${CMAKE_SOURCE_DIR}/src/clustermove.cpp
@@ -55,7 +55,7 @@ set(hdrs
     ${CMAKE_SOURCE_DIR}/src/molecule.h
     ${CMAKE_SOURCE_DIR}/src/montecarlo.h
     ${CMAKE_SOURCE_DIR}/src/move.h
-    ${CMAKE_SOURCE_DIR}/src/mpi.h
+    ${CMAKE_SOURCE_DIR}/src/mpicontroller.h
     ${CMAKE_SOURCE_DIR}/src/particle.h
     ${CMAKE_SOURCE_DIR}/src/penalty.h
     ${CMAKE_SOURCE_DIR}/src/potentials.h

@@ -195,25 +195,25 @@ endif()
 # POWERSASA
 if (ENABLE_POWERSASA)
     foreach (powf array.hpp power_diagram.h power_sasa.h LICENSE)
-        if (NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/_deps/sasa/${powf}")
+        if (NOT EXISTS "${CMAKE_BINARY_DIR}/_deps/sasa/${powf}")
             file(DOWNLOAD
                 "https://raw.githubusercontent.com/yesint/pteros/d0b65b7/thirdparty/powersasa/${powf}"
-                "${CMAKE_CURRENT_BINARY_DIR}/_deps/sasa/${powf}" STATUS status)
+                "${CMAKE_BINARY_DIR}/_deps/sasa/${powf}" STATUS status)
         endif ()
     endforeach ()
     add_definitions("-DENABLE_POWERSASA")
-    include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/_deps/sasa")
+    include_directories(SYSTEM "${CMAKE_BINARY_DIR}/_deps/sasa")
 endif ()
 
 # Download CoulombGalore header
 foreach (file coulombgalore.h LICENSE)
-    if (NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/_deps/coulombgalore/${file}")
+    if (NOT EXISTS "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}")
         file(DOWNLOAD
-            "https://raw.githubusercontent.com/mlund/coulombgalore/master/${file}"
-            "${CMAKE_CURRENT_BINARY_DIR}/_deps/coulombgalore/${file}" STATUS status)
+            "https://raw.githubusercontent.com/mlund/coulombgalore/52f2f99/${file}"
+            "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}" STATUS status)
     endif ()
 endforeach ()
-include_directories(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/_deps/coulombgalore")
+include_directories(SYSTEM "${CMAKE_BINARY_DIR}/_deps/coulombgalore")
 
 # GIT
 if (VERSION_STRING)

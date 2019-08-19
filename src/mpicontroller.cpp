@@ -1,6 +1,6 @@
-#include <vector>
-#include "mpi.h"
+#include "mpicontroller.h"
 #include "core.h"
+#include <vector>
 
 namespace Faunus {
     namespace MPI {

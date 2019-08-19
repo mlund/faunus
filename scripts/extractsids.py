@@ -12,7 +12,13 @@ if sys.version_info < (3, 0):
 import os, json, urllib.request
 import ruamel_yaml as yaml
 
-with open('scripts/music.yml') as f:
+if len(sys.argv)!=2:
+    print("usage: {} music.yml".format(sys.argv[0]))
+    sys.exit(1)
+
+filename = sys.argv[1]
+
+with open(filename) as f:
     sidlist = yaml.safe_load(f)
     server = sidlist['server'] + '/'
     dstdir = 'sids/'

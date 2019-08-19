@@ -76,9 +76,9 @@ int main(int argc, char **argv) {
         version += " [mpi]";
 #endif
 #ifdef _OPENMP
-        version += " [openmp]"
+        version += " [openmp]";
 #endif
-            auto args = docopt::docopt(USAGE, {argv + 1, argv + argc}, true, version);
+        auto args = docopt::docopt(USAGE, {argv + 1, argv + argc}, true, version);
 
         mpi.init(); // initialize MPI, if available
 
@@ -228,10 +228,16 @@ int main(int argc, char **argv) {
                     }
                 }
                 if (not j.empty()) {
-                    j = j.at("songs");                                            // load playlist
-                    Faunus::random.seed();                                        // give global random a hardware seed
-                    auto it = Faunus::random.sample(j.begin(), j.end());          // pick a random song
-                    auto subsongs = (*it).at("subsongs").get<std::vector<int>>(); // all subsongs
+                    j = j.at("songs"); // load playlist
+
+                    std::vector<size_t> weight; // weight for each tune (= number of subsongs)
+                    for (auto &i : j)
+                        weight.push_back(i.at("subsongs").size());
+                    std::discrete_distribution<size_t> dist(weight.begin(), weight.end());
+
+                    Faunus::random.seed();                             // give global random a hardware seed
+                    auto it = j.begin() + dist(Faunus::random.engine); // pick random tune weighted by subsongs
+                    auto subsongs = (*it).at("subsongs").get<std::vector<int>>();                 // all subsongs
                     int subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
 
                     CPPSID::Player player; // let's emulate a Commodore 64...

@@ -5,13 +5,13 @@
 #include <pybind11/operators.h>
 #include <pybind11/functional.h>
 
-#include <src/core.h>
-#include <src/space.h>
-#include <src/move.h>
-#include <src/analysis.h>
-#include <src/potentials.h>
-#include <src/regions.h>
-#include <src/montecarlo.h>
+#include <core.h>
+#include <space.h>
+#include <move.h>
+#include <analysis.h>
+#include <potentials.h>
+#include <regions.h>
+#include <montecarlo.h>
 
 namespace py = pybind11;
 using namespace Faunus;

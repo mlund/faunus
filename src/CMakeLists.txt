@@ -121,18 +121,19 @@ if (ENABLE_LTO)
 endif()
 
 if(ENABLE_SID)
-    find_package(SDL2 CONFIG REQUIRED)
-    # fix buggy sdl2: https://stackoverflow.com/questions/45730098/cmake-leading-or-trailing-whitespace-policy-cmp0004
-    string(STRIP ${SDL2_LIBRARIES} SDL2_LIBRARIES)
-    include_directories(${SDL2_INCLUDE_DIRS})
-    target_link_libraries(faunus PRIVATE ${SDL2_LIBRARIES} cppsid)
-    target_compile_definitions(faunus PRIVATE ENABLE_SID)
-    if (PYTHONINTERP_FOUND)
-        execute_process(
-            COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extractsids.py ${CMAKE_SOURCE_DIR}/scripts/music.yml
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR} ERROR_QUIET OUTPUT_QUIET)
+    if (SDL2_FOUND)
+        # fix buggy sdl2: https://stackoverflow.com/questions/45730098/cmake-leading-or-trailing-whitespace-policy-cmp0004
+        string(STRIP ${SDL2_LIBRARIES} SDL2_LIBRARIES)
+        include_directories(${SDL2_INCLUDE_DIRS})
+        target_link_libraries(faunus PRIVATE ${SDL2_LIBRARIES} cppsid)
+        target_compile_definitions(faunus PRIVATE ENABLE_SID)
+        if (PYTHONINTERP_FOUND)
+            execute_process(
+                COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/extractsids.py ${CMAKE_SOURCE_DIR}/scripts/music.yml
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR} ERROR_QUIET OUTPUT_QUIET)
+        endif()
     endif()
- endif()
+endif()
 
 if(BUILD_STATIC)
     target_link_libraries(faunus PRIVATE -static-libgcc -static-libstdc++ -static)

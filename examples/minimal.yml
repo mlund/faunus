@@ -2,7 +2,7 @@
 energy:
     - nonbonded_splined:
         default:
-            - lennardjones: {mixing: LBi}
+            - lennardjones: {mixing: LB}
             - coulomb: {type: yukawa, epsr: 80, debyelength: 7, cutoff: 100}
 atomlist: # define all atom types below
     - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}

@@ -2,6 +2,7 @@
 
 #include <limits>
 #include <ostream>
+#include <istream>
 #include <cmath>
 
 namespace Faunus

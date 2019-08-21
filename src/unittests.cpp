@@ -13,7 +13,7 @@
 #include "random.h"
 #include "core_test.h"
 #include "tensor_test.h"
-#include "mpi.h"
+#include "mpicontroller.h"
 #include "auxiliary.h"
 #include "molecule.h"
 #include "group_test.h"

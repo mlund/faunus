@@ -1,8 +1,10 @@
-#include <Eigen/Dense>
 #include "space.h"
 #include "reactioncoordinate.h"
 #include "average.h"
 #include "multipole.h"
+#include <Eigen/Dense>
+#include "aux/eigensupport.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 namespace ReactionCoordinate {
@@ -83,7 +85,7 @@ SystemProperty::SystemProperty(const json &j, Space &spc) : ReactionCoordinateBa
         f = [&g = spc.geo]() { return g.getLength().z(); };
     else if (property == "radius") {
         if (spc.geo.type == Geometry::CUBOID or spc.geo.type == Geometry::SLIT)
-            std::cerr << "`radius` coordinate unavailable for geometry" << endl;
+            faunus_logger->warn("`radius` coordinate unavailable for geometry");
         else
             f = [&g = spc.geo]() { return 0.5 * g.getLength().x(); };
     } else if (property == "Q") // system net charge
@@ -254,28 +256,6 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
                     Rout += d;
             }
             return 2 * spc.geo.getLength().z() / (Rin.avg() + Rout.avg());
-        };
-    }
-
-    else if (property == "Rcyl") {
-        dir = j.at("dir");
-        indexes = j.value("indexes", decltype(indexes)());
-        assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
-        f = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
-            Average<double> Rj, Ri;
-            Space::Tgroup g(spc.p.begin(), spc.p.end());
-            auto slicei = g.find_id(i);
-            auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
-            auto slicej = g.find_id(j);
-            for (auto p : slicej)
-                Rj += spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
-            double Rjavg = Rj.avg();
-            for (auto p : slicei) {
-                double d = spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
-                if (d < Rjavg)
-                    Ri += d;
-            }
-            return Ri.avg();
         };
     }
 

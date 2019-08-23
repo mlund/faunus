@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fstream>
+
 namespace Faunus {
 
     /** @brief Routines related to scattering */

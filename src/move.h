@@ -1,11 +1,14 @@
 #pragma once
 
-#include "core.h"
-#include "energy.h"
 #include "average.h"
-#include "mpi.h"
+#include "mpicontroller.h"
+#include "molecule.h"
+#include "geometry.h"
+#include "auxiliary.h"
+#include "space.h"
 
 namespace Faunus {
+
 namespace Move {
 
 class Movebase {
@@ -14,7 +17,7 @@ class Movebase {
     virtual void _accept(Change &);                            //!< Call after move is accepted
     virtual void _reject(Change &);                            //!< Call after move is rejected
     virtual void _to_json(json &j) const = 0;                  //!< Extra info for report if needed
-    virtual void _from_json(const json &j) = 0;                //!< Extra info for report if needed
+    virtual void _from_json(const json &) = 0;                 //!< Extra info for report if needed
     TimeRelativeOfTotal<std::chrono::microseconds> timer;      //!< Timer for whole move
     TimeRelativeOfTotal<std::chrono::microseconds> timer_move; //!< Timer for _move() only
   protected:
@@ -38,16 +41,14 @@ class Movebase {
     inline virtual ~Movebase() = default;
 };
 
-void from_json(const json &j, Movebase &m); //!< Configure any move via json
-void to_json(json &j, const Movebase &m);
+void from_json(const json &, Movebase &); //!< Configure any move via json
+void to_json(json &, const Movebase &);
 
 /**
  * @brief Swap the charge of a single atom
  */
 class AtomicSwapCharge : public Movebase {
   private:
-    typedef typename Space::Tpvec Tpvec;
-    typedef typename Space::Tparticle Tparticle;
     Space &spc; // Space to operate on
     int molid = -1;
     double ln10 = log(10);
@@ -57,16 +58,16 @@ class AtomicSwapCharge : public Movebase {
     std::string molname;  // name of molecule to operate on
     Change::data cdata;
 
-    void _to_json(json &j) const override;
-    void _from_json(const json &j) override; //!< Configure via json object
-    typename Tpvec::iterator randomAtom();
+    void _to_json(json &) const override;
+    void _from_json(const json &) override; //!< Configure via json object
+    typename ParticleVector::iterator randomAtom();
     void _move(Change &change) override;
     double bias(Change &, double, double) override; //!< adds extra energy change not captured by the Hamiltonian
     void _accept(Change &) override;
     void _reject(Change &) override;
 
   public:
-    AtomicSwapCharge(Space &spc);
+    AtomicSwapCharge(Space &);
 };
 
 /**
@@ -74,7 +75,6 @@ class AtomicSwapCharge : public Movebase {
  */
 class AtomicTranslateRotate : public Movebase {
   protected:
-    typedef typename Space::Tpvec Tpvec;
     Space &spc; // Space to operate on
     int molid = -1;
     Point dir = {1, 1, 1};
@@ -90,7 +90,7 @@ class AtomicTranslateRotate : public Movebase {
     /**
      * @brief translates a single particle.
      */
-    virtual void translateParticle(typename Tpvec::iterator p, double dp);
+    virtual void translateParticle(typename ParticleVector::iterator p, double dp);
     void _move(Change &change) override;
     void _accept(Change &) override;
     void _reject(Change &) override;
@@ -132,6 +132,7 @@ template<typename Tspace>
                base::_sqd = spc.geo.sqdist(oldpos, p->pos); // squared displacement
                if (not g.atomic) {                          // recalc mass-center for non-molecular groups
                    g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
+
 #ifndef NDEBUG
                    Point cmbak = g.cm;                             // backup mass center
                    g.translate(-cmbak, spc.geo.getBoundaryFunc()); // translate to {0,0,0}
@@ -193,6 +194,54 @@ TEST_CASE("[Faunus] TranslateRotate") {
 #endif
 
 /**
+ * @brief Move that preferentially displaces molecules within a specified region around a specified atom type
+ * Idea based on the chapter 'Smarter Monte Carlo' in 'Computer Simulation of Liquids' by Allen & Tildesley (p. 317)
+ * The current region implemented is an ellipsoid for which you specify radii along length and width of ellipsoid
+ *
+ */
+
+class SmartTranslateRotate : public Movebase {
+  protected:
+    typedef typename Space::Tpvec Tpvec;
+    Space &spc;
+
+    int molid = -1, refid1 = -1, refid2 = -1; // molecule to displace, reference atoms 1 and 2 defining geometry
+    unsigned long cnt;
+    double dptrans = 0, dprot = 0;
+    double p = 1; // initializing probability that a molecule outside geometry is kept as selected molecule
+    double r_x = 0,
+           r_y = 0; // defining lengths of perpendicular radii defining the ellipsoid (or sphere if a and b are equal)
+    double _sqd;    // squared displacement
+    Average<double> msqd, countNin_avg, countNin_avgBlocks, countNout_avg,
+        countNout_avgBlocks; // mean squared displacement and particle counters
+
+    double cosTheta, theta;            // geometrical variables
+    double x, y;                       // x and y coordinate relative to center of geometry of chosen molecule
+    double coord, coordNew, coordTemp; // normalized coordinates to decide if molecule is inside or outside geometry
+    double randNbr;
+    double _bias = 0, rsd = 0.01, Nin, countNin, countNout, Ntot = 0,
+           cntInner = 0; // bias to add when crossing boundary between in and out, counters keeping track of molecules
+                         // inside, outside geomtry etc...
+
+    Point dir = {1, 1, 1};
+    Point cylAxis = {0, 0, 0}; // axis/vector connecting the two reference atoms
+    Point origo = {0, 0, 0};
+    Point molV = {0, 0, 0}; // coordinate vector of chosen molecule
+
+    bool findBias = true;
+
+    void _to_json(json &j) const override;
+    void _from_json(const json &j) override; //!< Configure via json object
+    void _move(Change &change) override;
+    double bias(Change &, double, double) override;
+    void _accept(Change &) override { msqd += _sqd; }
+    void _reject(Change &) override { msqd += 0; }
+
+  public:
+    SmartTranslateRotate(Space &spc);
+};
+
+/**
  * @brief Move that will swap conformation of a molecule
  *
  * This will swap between different molecular conformations
@@ -216,7 +265,6 @@ class ConformationSwap : public Movebase {
     Space &spc; // Space to operate on
     int molid = -1;
     int newconfid = -1;
-    bool keeppos = false;
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override; //!< Configure via json object
@@ -281,7 +329,45 @@ class ChargeMove : public Movebase {
     void _reject(Change &) override;
 
   public:
-    ChargeMove(Tspace &spc);
+    ChargeMove(Space &spc);
+};
+
+/**
+ * @brief Transfers charge between two molecules
+ */
+class ChargeTransfer : public Movebase {
+  private:
+    typedef typename Space::Tpvec Tpvec;
+    Space &spc;           // Space to operate on
+    Average<double> msqd; // mean squared displacement
+    double dq = 0, deltaq = 0;
+
+    struct moldata {
+        double charges = 0;
+        double moves = 0;
+        int numOfAtoms = 0;
+        int id = 0;
+        std::string molname;
+        std::vector<double> min, max;
+        std::vector<double> molrange;
+        std::vector<double> ratio;
+        std::vector<double> changeQ;
+        Change::data cdata;
+    };
+
+    moldata mol1, mol2;
+
+    double sumTemp = 0;
+    int i = 0;
+
+    void _to_json(json &j) const override;
+    void _from_json(const json &j) override;
+    void _move(Change &change) override;
+    void _accept(Change &) override;
+    void _reject(Change &) override;
+
+  public:
+    ChargeTransfer(Space &spc);
 };
 
 /**
@@ -361,18 +447,12 @@ class Propagator : public BasePointerVector<Movebase> {
   public:
     using BasePointerVector<Movebase>::vec;
     Propagator() = default;
-    Propagator(const json &j, Tspace &spc, MPI::MPIController &mpi);
+    Propagator(const json &j, Space &spc, MPI::MPIController &mpi);
     int repeat() { return _repeat; }
     auto sample() {
-        int d;
         if (!vec.empty()) {
             assert(w.size() == vec.size());
-#ifdef ENABLE_MPI
-            d = dist(MPI::mpi.random.engine);
-#else
-            d = dist(Move::Movebase::slump.engine);
-#endif
-            return vec.begin() + d;
+            return vec.begin() + dist(Move::Movebase::slump.engine);
         }
         return vec.end();
     } //!< Pick move from a weighted, random distribution
@@ -380,72 +460,5 @@ class Propagator : public BasePointerVector<Movebase> {
 
 } // namespace Move
 
-class MCSimulation {
-  private:
-    typedef typename Space::Tpvec Tpvec;
-
-    std::string lastMoveName; //!< name of latest move
-
-    bool metropolis(double du) const; //!< Metropolis criterion (true=accept)
-
-    struct State {
-        Space spc;
-        Energy::Hamiltonian pot;
-        State(const json &j);
-
-        void sync(State &other, Change &change);
-    }; //!< Contains everything to describe a state
-
-    State state1, // old state (accepted)
-        state2;   // new state (trial)
-    double uinit = 0, dusum = 0;
-    Average<double> uavg;
-
-    void init();
-
-  public:
-    Move::Propagator moves;
-
-    auto &pot() { return state1.pot; }
-    auto &space() { return state1.spc; }
-    const auto &pot() const { return state1.pot; }
-    const auto &space() const { return state1.spc; }
-    const auto &geometry() const { return state1.spc.geo; }
-    const auto &particles() const { return state1.spc.p; }
-
-    MCSimulation(const json &j, MPI::MPIController &mpi);
-    double drift(); //!< Calculates the relative energy drift from initial configuration
-
-    /* currently unused -- see Analysis::SaveState.
-                    void store(json &j) const {
-                        j = state1.spc;
-                        j["random-move"] = Move::Movebase::slump;
-                        j["random-global"] = Faunus::random;
-                    } // store system to json object
-    */
-    void restore(const json &j); //!< restore system from previously store json object
-    void move();
-    void to_json(json &j);
-};
-
-void to_json(json &j, MCSimulation &mc);
-
-/**
- * @brief Ideal energy contribution of a speciation move
- * This funciton calculates the contribution to the energy change arising from the
- * change in concentration of reactant and products in the current and in the trial state.
- *
- * @f[
- *     \beta \Delta U = - \sum \ln ( N_o!/N_n! V^{N_n - N_o} )
- * @f]
- *
- * where the sum runs over all products and reactants.
- *
- * @todo
- * - use exception message to suggest how to fix the problem
- * - seems out of place; move to another file?
- * - find a better name
- */
-double IdealTerm(Space &spc_n, Space &spc_o, const Change &change);
 
 } // namespace Faunus

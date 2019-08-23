@@ -1,8 +1,14 @@
-#include <iomanip>
 #include "analysis.h"
 #include "move.h"
+#include "energy.h"
 #include "reactioncoordinate.h"
 #include "multipole.h"
+#include "aux/iteratorsupport.h"
+#include "aux/eigensupport.h"
+#include "spdlog/spdlog.h"
+
+#include <iomanip>
+#include <iostream>
 
 namespace Faunus {
 
@@ -269,7 +275,7 @@ void VirtualVolume::_sample() {
         if (-du < pc::max_exp_argument)
             x = std::exp(-du);
         if (std::isinf(x)) {
-            std::cerr << name + ": skipping sample event due to excessive energy likely due to overlaps.";
+            faunus_logger->warn("{0}: skipping sample event due to excessive energy likely due to overlaps.", name);
             cnt--; // cnt is incremented by sample() so we need to decrease
         } else {
             assert(not std::isnan(x));
@@ -357,8 +363,6 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             push_back<MoleculeRDF>(it.value(), spc);
                         else if (it.key() == "multipole")
                             push_back<Multipole>(it.value(), spc);
-                        else if (it.key() == "gyrationtensor")
-                            push_back<GyrationTensor>(it.value(), spc);
                         else if (it.key() == "multipoledist")
                             push_back<MultipoleDistribution>(it.value(), spc);
                         else if (it.key() == "polymershape")
@@ -386,11 +390,10 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                         // additional analysis go here...
 
                         if (this->vec.size() == oldsize)
-                            throw std::runtime_error("unknown analysis");
+                            throw std::runtime_error("unknown analysis: "s + it.key());
 
                     } catch (std::exception &e) {
-                        throw std::runtime_error("Error adding analysis,\n\n\"" + it.key() + "\": " + it->dump() +
-                                                 "\n\n: " + e.what() + usageTip[it.key()]);
+                        throw std::runtime_error(e.what() + usageTip[it.key()]);
                     }
                 }
             }
@@ -479,7 +482,7 @@ void WidomInsertion::_from_json(const json &j) {
                 if (m.begin()->capacity() > 0) {             // and it must have a non-zero capacity
                     change.clear();
                     Change::data d;                                    // construct change object
-                    d.index = distance(spc.groups.begin(), m.begin()); // group index
+                    d.index = Faunus::distance(spc.groups.begin(), m.begin()); // group index
                     d.all = true;
                     d.internal = m.begin()->atomic; // calculate internal energy of non-molecular groups only
                     change.groups.push_back(d);     // add to change object
@@ -663,11 +666,11 @@ void SanityCheck::_sample() {
                 Point cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.cm);
                 double sqd = spc.geo.sqdist(g.cm, cm);
                 if (sqd > 1e-6) {
-                    std::cerr << "step:      " << cnt << endl
-                              << "molecule:  " << &g - &*spc.groups.begin() << endl
-                              << "dist:      " << sqrt(sqd) << endl
-                              << "g.cm:      " << g.cm.transpose() << endl
-                              << "actual cm: " << cm.transpose() << endl;
+                    std::cerr << "step:      " << cnt << std::endl
+                              << "molecule:  " << &g - &*spc.groups.begin() << std::endl
+                              << "dist:      " << sqrt(sqd) << std::endl
+                              << "g.cm:      " << g.cm.transpose() << std::endl
+                              << "actual cm: " << cm.transpose() << std::endl;
                     FormatPQR::save(MPI::prefix + "sanity-" + std::to_string(cnt) + ".pqr", spc.p, spc.geo.getLength());
                     throw std::runtime_error("mass center-out-of-sync");
                 }
@@ -821,7 +824,7 @@ void XTCtraj::_sample() {
     assert(filter);
     bool rc = xtc.save(file, particles.begin(), particles.end());
     if (rc == false)
-        std::cerr << "error saving xtc" << std::endl;
+        faunus_logger->warn("error saving xtc");
 }
 
 // =============== MultipoleDistribution ===============
@@ -883,30 +886,6 @@ MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(sp
 }
 
 MultipoleDistribution::~MultipoleDistribution() { save(); }
-
-// =============== GyrationTensor ===============
-
-void GyrationTensor::_to_json(json &j) const {
-    j["index"] = index;
-}
-void GyrationTensor::_sample() {
-     Space::Tgroup g(spc.p.begin(), spc.p.end());
-     auto slice = g.find_id(index);
-     auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
-     auto S = Geometry::gyration(slice.begin(), slice.end(), spc.geo.getBoundaryFunc(), cm);
-     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
-     Point eivals = esf.eigenvalues();
-     if (file) {
-         file << cnt * steps << " " << eivals.transpose() << "\n";
-     }
-}
-GyrationTensor::GyrationTensor(const json &j, Space &spc) : spc(spc) {
-    from_json(j);
-    name = "Gyration Tensor";
-    filename = MPI::prefix + j.at("file").get<std::string>();
-    file.open(filename); // output file
-    index = j.at("index").get<int>();
-}
 
 // =============== PolymerShape ===============
 
@@ -975,24 +954,15 @@ void AtomProfile::_from_json(const json &j) {
     dr = j.value("dr", 0.1);
     tbl.setResolution(dr, 0);
     count_charge = j.value("charge", false);
-    if (j.count("atomcom") == 1) {
-        atomCOM = j.at("atomcom");
-        idCOM = findName(atoms, atomCOM)->id();
-    }
 }
 void AtomProfile::_to_json(json &j) const {
     j = {{"origo", ref}, {"dir", dir}, {"atoms", names}, {"file", file}, {"dr", dr}, {"charge", count_charge}};
 }
 void AtomProfile::_sample() {
-    Group<Particle> all(spc.p.begin(), spc.p.end());
-    if (idCOM >= 0) { // calc. mass center of selected atoms
-        auto slice = all.find_id(idCOM);
-        ref = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
-    }
     for (auto &g : spc.groups)
         for (auto &p : g)
             if (ids.count(p.id) > 0) {
-		Point rvec = spc.geo.vdist(p.pos, ref);
+                Point rvec = spc.geo.vdist(p.pos, ref);
                 double r = rvec.cwiseProduct(dir.cast<double>()).norm();
                 if (count_charge)
                     tbl(r) += p.charge; // count charges
@@ -1186,8 +1156,7 @@ ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc)
     names = j.at("molecules").get<decltype(names)>(); // molecule names
     ids = names2ids(molecules, names);                // names --> molids
 } catch (std::exception &e) {
-    std::cerr << "Debye Formula Scattering: ";
-    throw;
+    throw std::runtime_error("debye formula: "s + e.what());
 }
 
 ScatteringFunction::~ScatteringFunction() { debye.save(filename); }

@@ -3,6 +3,8 @@
 #include "units.h"
 #include <iomanip>
 #include <fstream>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/null_sink.h>
 
 namespace Faunus {
 
@@ -70,6 +72,11 @@ namespace Faunus {
         return true;
     }
 
+    TipFromTheManual::TipFromTheManual() {
+        random = std::make_shared<Random>();
+        random->seed();
+    }
+
     /**
      * @brief Load JSON tips database
      * @param files vector of file names
@@ -96,7 +103,7 @@ namespace Faunus {
             // look for help for the given `key`
             auto it = db.find(key);
             if (it!=db.end()) {
-                t = "\n\nNeed help, my young apprentice?\n\n" + it->get<std::string>();
+                t = "\nNeed help, my young apprentice?\n\n" + it->get<std::string>();
 
                 // for the Coulomb potential, add additional table w. types
                 if (key=="coulomb")
@@ -109,16 +116,24 @@ namespace Faunus {
                 tip_already_given = true;
 
                 // add ascii art
-                it = db.find("ascii");
-                if (it!=db.end())
-                    if (not it->empty() and it->is_array())
-                        t += random.sample(it->begin(), it->end())->get<std::string>() + "\n";
+                if (asciiart) {
+                    it = db.find("ascii");
+                    if (it != db.end())
+                        if (not it->empty() and it->is_array())
+                            t += random->sample(it->begin(), it->end())->get<std::string>() + "\n";
+                }
             }
+            buffer = t;
         }
-        return t; // empty string of no tip available
+        return (quiet) ? std::string() : t;
     }
 
     TipFromTheManual usageTip; // Global instance
+
+    // global loggers as a dummy instance
+    // they should be replaced with proper instances in faunus, pyfaunus and unittests if desired
+    std::shared_ptr<spdlog::logger> faunus_logger = spdlog::create<spdlog::sinks::null_sink_st>("null");
+    std::shared_ptr<spdlog::logger> mcloop_logger = faunus_logger;
 
     std::string addGrowingSuffix(const std::string& file) {
         //using std::experimental::filesystem; // exp. c++17 feature, not available on MacOS (Dec. 2018)
@@ -141,6 +156,8 @@ namespace Faunus {
 
     SingleUseJSON::SingleUseJSON(const json &j) : json(j) {}
 
+    std::string SingleUseJSON::dump(int w) const { return json::dump(w); }
+
     void SingleUseJSON::clear() { json::clear(); }
 
     json SingleUseJSON::at(const std::string &key) {
@@ -152,6 +169,7 @@ namespace Faunus {
     json SingleUseJSON::operator[](const std::string &key) { return at(key); }
 
     void SingleUseJSON::erase(const std::string &key) { json::erase(key); }
+    bool SingleUseJSON::is_object() const { return json::is_object(); }
 
     Point xyz2rth(const Point &p, const Point &origin, const Point &dir, const Point &dir2) {
         assert(fabs(dir.norm() - 1.0) < 1e-6);
@@ -190,4 +208,7 @@ namespace Faunus {
 
     Point ranunit_polar(Random &rand) { return rtp2xyz({1, 2 * pc::pi * rand(), std::acos(2 * rand() - 1)}); }
 
-} // end of namespace
+} // end of Faunus namespace
+
+template class nlohmann::basic_json<>;
+

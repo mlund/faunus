@@ -1,9 +1,11 @@
 #include "penalty.h"
+#include "space.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 namespace Energy {
 
-Penalty::Penalty(const json &j, Tspace &spc) : spc(spc) {
+Penalty::Penalty(const json &j, Space &spc) : spc(spc) {
     using namespace ReactionCoordinate;
     name = "penalty";
     overwrite_penalty = j.value("overwrite", true);
@@ -42,7 +44,7 @@ Penalty::Penalty(const json &j, Tspace &spc) : spc(spc) {
 
     std::ifstream f(MPI::prefix + file);
     if (f) {
-        cout << "Loading penalty function '" << MPI::prefix + file << "'" << endl;
+        faunus_logger->debug("Loading penalty function {}", MPI::prefix + file);
         std::string hash;
         f >> hash >> f0 >> samplings >> nconv;
         for (int row = 0; row < penalty.rows(); row++)
@@ -104,8 +106,8 @@ void Penalty::update(const std::vector<double> &c) {
             double min = penalty.minCoeff(); // define minimun penalty energy
             penalty = penalty.array() - min; // ...to zero
             if (not quiet)
-                cout << "Barriers/kT: penalty = " << penalty.maxCoeff()
-                     << " histogram = " << std::log(double(histo.maxCoeff()) / histo.minCoeff()) << endl;
+                faunus_logger->debug("Barriers/kT: penalty = {} histogram = {}", penalty.maxCoeff(),
+                     std::log(double(histo.maxCoeff()) / histo.minCoeff()));
             f0 = f0 * scale; // reduce penalty energy
             samplings = std::ceil(samplings / scale);
             histo.setZero();
@@ -134,7 +136,7 @@ void Penalty::sync(Energybase *basePtr, Change &) {
 
 #ifdef ENABLE_MPI
 
-PenaltyMPI::PenaltyMPI(const json &j, Tspace &spc) : Penalty(j, spc) {
+PenaltyMPI::PenaltyMPI(const json &j, Space &spc) : Penalty(j, spc) {
     weights.resize(MPI::mpi.nproc());
     buffer.resize(penalty.size() * MPI::mpi.nproc()); // recieve buffer for penalty func
 }
@@ -186,8 +188,8 @@ void PenaltyMPI::update(const std::vector<double> &c) {
 
             // print information to console
             if (min > 0 and not quiet) {
-                cout << "Barriers/kT: penalty = " << penalty.maxCoeff()
-                     << " histogram = " << std::log(double(histo.maxCoeff()) / histo.minCoeff()) << endl;
+                std::cout << "Barriers/kT: penalty = " << penalty.maxCoeff()
+                     << " histogram = " << std::log(double(histo.maxCoeff()) / histo.minCoeff()) << std::endl;
             }
 
             histo.setZero();

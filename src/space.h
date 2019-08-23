@@ -23,6 +23,7 @@ struct Change {
     bool all = false;        //!< Set to true if *everything* has changed
     bool dN = false;         //!< True if the number of atomic or molecular species has changed
     bool moved2moved = true; //!< If several groups are moved, should they interact with each other?
+    bool chargeMove = false;
 
     struct data {
         bool dNatomic = false;  //!< True if the number of atomic molecules has changed
@@ -102,6 +103,12 @@ struct Space {
      */
     void push_back(int molid, const Tpvec &in); //!< Safely add particles and corresponding group to back
 
+    /**
+     * @brief Find all groups of type `molid` (complexity: order N)
+     * @param molid Molecular id to look for
+     * @param sel Selection
+     * @return range with all groups of molid
+     */
     auto findMolecules(int molid, Selection sel = ACTIVE) {
         std::function<bool(Tgroup &)> f;
         switch (sel) {
@@ -116,7 +123,7 @@ struct Space {
             break;
         }
         return groups | ranges::view::filter(f);
-    } //!< Range with all groups of type `molid` (complexity: order N)
+    }
 
     typename Tgvec::iterator randomMolecule(int molid, Random &rand,
                                             Selection sel = ACTIVE); //!< Random group; groups.end() if not found

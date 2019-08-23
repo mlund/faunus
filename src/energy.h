@@ -2,8 +2,11 @@
 
 #include "bonds.h"
 #include "externalpotential.h" // Energybase implemented here
+#include "space.h"
+#include "aux/iteratorsupport.h"
 #include <range/v3/view.hpp>
 #include <Eigen/Dense>
+#include "spdlog/spdlog.h"
 
 #ifdef ENABLE_POWERSASA
 #include <power_sasa.h>
@@ -169,7 +172,7 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
 
     // selfEnergies should be handled by the real-space pair-potential
     // todo: this should not be used, but replaced by selfEnergy in PairPotential
-    /* double selfEnergy(const EwaldData &d, Change &change) {
+    double selfEnergy(const EwaldData &d, Change &change) {
         double Eq = 0;
         if (change.dN) {
             for (auto cg : change.groups) {
@@ -184,7 +187,7 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
                     Eq += i.charge * i.charge;
         }
         return -d.alpha * Eq / std::sqrt(pc::pi) * d.lB;
-    }*/
+    }
 
     double surfaceEnergy(const EwaldData &d, Change &change) {
         if (d.const_inf < 0.5)
@@ -294,7 +297,8 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
                         policy.updateComplex(data, change);
                 }
             }
-            u = policy.surfaceEnergy(data, change) + policy.reciprocalEnergy(data); // + policy.selfEnergy(data, change);
+            // todo: omit selfEnergy() call as this should be added as a separate term in `Hamiltonian`
+            u = policy.surfaceEnergy(data, change) + policy.reciprocalEnergy(data) + policy.selfEnergy(data, change);
         }
         return u;
     }
@@ -554,7 +558,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                         else if (k == "i2all")
                             omp_i2all = true;
 #ifndef _OPENMP
-                    std::cerr << "warning: nonbonded requests unavailable OpenMP." << endl;
+                    faunus_logger->warn("{}: requested openmp unavailable", name);
 #endif
                 }
     }
@@ -766,6 +770,9 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
     double g2g(const Tgroup &g1, const Tgroup &g2, const std::vector<int> &index = std::vector<int>(),
                const std::vector<int> &jndex = std::vector<int>()) override {
 #pragma GCC diagnostic pop
+        //assert(index.empty() && "unimplemented");
+        //assert(jndex.empty() && "unimplemented");
+
         int i = &g1 - &base::spc.groups.front();
         int j = &g2 - &base::spc.groups.front();
         if (j < i)

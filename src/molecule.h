@@ -1,6 +1,5 @@
 #pragma once
 
-#include <set>
 #include "core.h"
 #include "particle.h"
 #include "random.h"

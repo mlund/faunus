@@ -198,14 +198,13 @@ double IdealTerm(Space &spc_n, Space &spc_o, const Change &change) {
                 }
                 int dN = N_n - N_o;
                 if (dN != 0) {
-                    double V_n = spc_n.geo.getVolume();
-                    double V_o = spc_o.geo.getVolume();
+                    double V = spc_n.geo.getVolume() * 1.0_molar;
                     if (dN > 0)
                         for (int n = 0; n < dN; n++)
-                            NoverO += std::log((N_o + 1 + n) / (V_n * 1.0_molar));
+                            NoverO += std::log( (N_o + 1 + n) / V );
                     else
                         for (int n = 0; n < (-dN); n++)
-                            NoverO -= std::log((N_o - n) / (V_o * 1.0_molar));
+                            NoverO -= std::log( (N_o - n) / V );
                 }
             }
         }

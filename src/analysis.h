@@ -108,6 +108,8 @@ class AtomProfile : public Analysisbase {
     Eigen::Vector3i dir = {1, 1, 1};
     double dr; // radial resolution
     bool count_charge = false;
+    std::string atomCOM;
+    int idCOM = -1; // center at COM of idCOM atoms?
 
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
@@ -393,6 +395,59 @@ class ScatteringFunction : public Analysisbase {
   public:
     ScatteringFunction(const json &j, Space &spc);
     ~ScatteringFunction();
+};
+
+/*
+ * @brief Sample and save gyration tensor of a particle to a file
+ */
+class GyrationTensor : public Analysisbase {
+  private:
+    Space &spc;
+    std::string filename;
+    int index; // index of an atomic species
+    std::ofstream file;
+
+    void _to_json(json &j) const override;
+    void _sample() override;
+
+  public:
+    GyrationTensor(const json &j, Space &spc);
+};
+
+/*
+ * @brief Sample and save quadrupole eigenvalues of a range of indexes within a molecule to a file
+ */
+class QuadrupoleEivals : public Analysisbase {
+  private:
+    Space &spc;
+    std::string filename;
+    std::vector<size_t> indexes;
+    size_t molid;
+    std::ofstream file;
+
+    void _to_json(json &j) const override;
+    void _sample() override;
+
+  public:
+    QuadrupoleEivals(const json &j, Space &spc);
+};
+
+/*
+ * @brief Sample and save the dipole vector of a range of indexes within a molecule to a file
+ */
+class DipoleVector : public Analysisbase {
+  private:
+    Space &spc;
+    std::string filename;
+    std::vector<size_t> indexes;
+    size_t molid;
+    std::ofstream file;
+
+    void _to_json(json &j) const override;
+    void _sample() override;
+
+  public:
+    DipoleVector(const json &j, Space &spc);
 };
 
 /**

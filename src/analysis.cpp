@@ -363,6 +363,12 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             emplace_back<MoleculeRDF>(it.value(), spc);
                         else if (it.key() == "multipole")
                             emplace_back<Multipole>(it.value(), spc);
+                        else if (it.key() == "gyrationtensor")
+                            emplace_back<GyrationTensor>(it.value(), spc);
+                        else if (it.key() == "quadrupoleeivals")
+                            emplace_back<QuadrupoleEivals>(it.value(), spc);
+                        else if (it.key() == "dipolevector")
+                            emplace_back<DipoleVector>(it.value(), spc);
                         else if (it.key() == "multipoledist")
                             emplace_back<MultipoleDistribution>(it.value(), spc);
                         else if (it.key() == "polymershape")
@@ -887,6 +893,91 @@ MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(sp
 
 MultipoleDistribution::~MultipoleDistribution() { save(); }
 
+// =============== GyrationTensor ===============
+
+void GyrationTensor::_to_json(json &j) const {
+    j["index"] = index;
+}
+void GyrationTensor::_sample() {
+     Space::Tgroup g(spc.p.begin(), spc.p.end());
+     auto slice = g.find_id(index);
+     auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
+     auto S = Geometry::gyration(slice.begin(), slice.end(), spc.geo.getBoundaryFunc(), cm);
+     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+     Point eivals = esf.eigenvalues();
+     if (file) {
+         file << cnt * steps << " " << eivals.transpose() << "\n";
+     }
+}
+GyrationTensor::GyrationTensor(const json &j, Space &spc) : spc(spc) {
+    from_json(j);
+    name = "Gyration Tensor";
+    filename = MPI::prefix + j.at("file").get<std::string>();
+    file.open(filename); // output file
+    index = j.at("index").get<int>();
+}
+
+// =============== QuadrupoleEivals ===============
+
+void QuadrupoleEivals::_to_json(json &j) const {
+    j["indexes"] = indexes;
+}
+void QuadrupoleEivals::_sample() {
+    Space::Tgroup g(spc.groups[molid].begin()+indexes[0], spc.groups[molid].begin()+indexes[1]+1);
+    auto cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc());
+    Tensor S;
+    S.setZero();
+    for (auto &i : g) {
+        Point t = i.pos - cm;
+        spc.geo.boundary(t);
+        S += i.charge * ( 3 * t * t.transpose() - Eigen::Matrix<double, 3, 3>::Identity() * t.squaredNorm() );
+    }
+    S = 0.5 * S;
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+    Point eivals = esf.eigenvalues();
+    std::ptrdiff_t i_eival;
+    eivals.minCoeff(&i_eival);
+    Point vec = esf.eigenvectors().col(i_eival).real();
+    if (file) 
+        file << cnt * steps << " " << eivals.transpose() << " " << vec.transpose() << "\n";
+}
+QuadrupoleEivals::QuadrupoleEivals(const json &j, Space &spc) : spc(spc) {
+    from_json(j);
+    name = "Quadrupole Eigenvalues";
+    filename = MPI::prefix + j.at("file").get<std::string>();
+    file.open(filename); // output file
+    indexes = j.value("indexes", decltype(indexes)());
+    auto molname = j.at("molecule").get<std::string>(); // molecule name
+    molid = findName(Faunus::molecules, molname)->id();
+}
+
+// =============== DipoleVector ===============
+
+void DipoleVector::_to_json(json &j) const {
+    j["indexes"] = indexes;
+}
+void DipoleVector::_sample() {
+    Space::Tgroup g(spc.groups[molid].begin()+indexes[0], spc.groups[molid].begin()+indexes[1]+1);
+    auto cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc());
+    Point mu(0, 0, 0);
+    for (auto &i : g) {
+        Point t = i.pos - cm;
+        spc.geo.boundary(t);
+        mu += i.charge * t;
+    }
+    if (file) 
+        file << cnt * steps << " " << mu.transpose() << "\n";
+}
+DipoleVector::DipoleVector(const json &j, Space &spc) : spc(spc) {
+    from_json(j);
+    name = "Dipole Vector";
+    filename = MPI::prefix + j.at("file").get<std::string>();
+    file.open(filename); // output file
+    indexes = j.value("indexes", decltype(indexes)());
+    auto molname = j.at("molecule").get<std::string>(); // molecule name
+    molid = findName(Faunus::molecules, molname)->id();
+}
+
 // =============== PolymerShape ===============
 
 void PolymerShape::_to_json(json &j) const {
@@ -954,15 +1045,24 @@ void AtomProfile::_from_json(const json &j) {
     dr = j.value("dr", 0.1);
     tbl.setResolution(dr, 0);
     count_charge = j.value("charge", false);
+    if (j.count("atomcom") == 1) {
+        atomCOM = j.at("atomcom");
+        idCOM = findName(atoms, atomCOM)->id();
+    }
 }
 void AtomProfile::_to_json(json &j) const {
     j = {{"origo", ref}, {"dir", dir}, {"atoms", names}, {"file", file}, {"dr", dr}, {"charge", count_charge}};
 }
 void AtomProfile::_sample() {
+    Group<Particle> all(spc.p.begin(), spc.p.end());
+    if (idCOM >= 0) { // calc. mass center of selected atoms
+        auto slice = all.find_id(idCOM);
+        ref = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
+    }
     for (auto &g : spc.groups)
         for (auto &p : g)
             if (ids.count(p.id) > 0) {
-                Point rvec = spc.geo.vdist(p.pos, ref);
+		Point rvec = spc.geo.vdist(p.pos, ref);
                 double r = rvec.cwiseProduct(dir.cast<double>()).norm();
                 if (count_charge)
                     tbl(r) += p.charge; // count charges

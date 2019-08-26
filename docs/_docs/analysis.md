@@ -50,6 +50,7 @@ The filename format is `rho-@name.dat`.
 `file`         | Output filename with profile
 `dr=0.1`       | Radial resolution
 `origo=[0,0,0]`| Center of the profile ($r=0$)
+`atomcom`      | Atom name; use the mass center of these atoms as origin
 `dir=[1,1,1]`  | Direction along which the profile is calculated
 
 Calculates the summed density of `atoms` in spherical, cylindrical or planar shells around
@@ -156,8 +157,17 @@ form factor of unity.
 `dq`        | _q_ spacing (1/Å)
 `com=true`  | Treat molecular mass centers as single point scatterers
 
+### Principal Moments of the Gyration Tensor
 
-### Radius of Gyration
+This calculate the radius of gyration, end-to-end distance, and related
+fluctuations for all groups defined in `molecules`.
+
+`gyration`   | Description
+---------------- | ----------------------------------------
+`nstep`          | Interval with which to sample
+`molecules`      | List of molecule names to sample (array); `[*]` selects all 
+
+### Polymer Shape
 
 This calculate the radius of gyration, end-to-end distance, and related
 fluctuations for all groups defined in `molecules`.

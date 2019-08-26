@@ -147,6 +147,7 @@ Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
 ------------------ | ---------------------------------
 `molecule`         |  Molecule name to operate on
 `repeat=N`         |  Number of repeats per MC sweep
+`keeppos=True`     |  Keep original positions of `traj`
 
 This will swap between different molecular conformations
 as defined in the [Molecule Properties](topology.html#molecule-properties) with `traj` and `trajweight`

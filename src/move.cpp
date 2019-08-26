@@ -1033,13 +1033,14 @@ SmartTranslateRotate::SmartTranslateRotate(Space &spc) : spc(spc) {
 }
 
 void ConformationSwap::_to_json(json &j) const {
-    j = {{"molid", molid}, {"molecule", molecules[molid].name}};
+    j = {{"molid", molid}, {"molecule", molecules[molid].name}, {"keeppos", inserter.keeppos}};
     _roundjson(j, 3);
 }
 void ConformationSwap::_from_json(const json &j) {
     assert(!molecules.empty());
     try {
         std::string molname = j.at("molecule");
+        keeppos = j.value("keeppos", false);
         auto it = findName(molecules, molname);
         if (it == molecules.end())
             throw std::runtime_error("unknown molecule '" + molname + "'");
@@ -1096,6 +1097,7 @@ ConformationSwap::ConformationSwap(Space &spc) : spc(spc) {
     repeat = -1; // meaning repeat n times
     inserter.dir = {0, 0, 0};
     inserter.rotate = true;
+    inserter.keeppos = keeppos;
     inserter.allowoverlap = true;
 }
 

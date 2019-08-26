@@ -265,6 +265,7 @@ class ConformationSwap : public Movebase {
     Space &spc; // Space to operate on
     int molid = -1;
     int newconfid = -1;
+    bool keeppos = false;
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override; //!< Configure via json object

@@ -259,6 +259,28 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         };
     }
 
+    else if (property == "Rcyl") {
+        dir = j.at("dir");
+        indexes = j.value("indexes", decltype(indexes)());
+        assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
+        f = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
+            Average<double> Rj, Ri;
+            Space::Tgroup g(spc.p.begin(), spc.p.end());
+            auto slicei = g.find_id(i);
+            auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
+            auto slicej = g.find_id(j);
+            for (auto p : slicej)
+                Rj += spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
+            double Rjavg = Rj.avg();
+            for (auto p : slicei) {
+                double d = spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
+                if (d < Rjavg)
+                    Ri += d;
+            }
+            return Ri.avg();
+        };
+    }
+
     else if (property == "angle") {
         dir = j.at("dir").get<Point>().normalized();
         if (not spc.groups.at(index).atomic) {

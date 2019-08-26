@@ -913,7 +913,7 @@ struct Random;
          * @brief Calculates the gyration tensor of a molecular group
          * The gyration tensor is computed from the dyadic product of the position
          * vectors in the c-o-m reference system, \f$ t_{i} = r_{i} - shift \f$:
-         * \f$ S = \sum_{i=0}^{N} t_{i} t_{i}^{T} \f$
+         * \f$ S = (1 / N) \sum_{i=1}^{N} t_{i} \cdot t_{i} I  - t_{i} \times t_{i} \f$
          */
         template<typename iter>
             Tensor gyration(iter begin, iter end, BoundaryFunction boundary=[](const Point&){}, const Point shift=Point(0,0,0) ) {

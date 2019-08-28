@@ -95,6 +95,9 @@ if (MPI_CXX_FOUND)
     target_link_libraries(libfaunus PRIVATE MPI::MPI_CXX)
     target_compile_definitions(libfaunus PRIVATE ENABLE_MPI)
 endif()
+if(ENABLE_FREESASA)
+    target_link_libraries(libfaunus PRIVATE freesasa)
+endif()
 
 # target: unittests
 add_executable(unittests unittests.cpp ${tsts})

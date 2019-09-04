@@ -192,19 +192,19 @@ add_test(
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} swapconf.yml\
     | $<TARGET_FILE:faunus> --nobar --state swapconf.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} swapconf.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/swapconf)
 
 add_test(
     NAME doublelayer
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} doublelayer.yml\
     | $<TARGET_FILE:faunus> --nobar --state doublelayer.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} doublelayer.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/doublelayer)
 
 add_test(
     NAME penalty
     COMMAND sh -c "jupyter nbconvert --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/penalty)
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
 set_property(TEST penalty APPEND PROPERTY ENVIRONMENT YASON_EXECUTABLE=${YASON})
 
@@ -213,7 +213,7 @@ add_test(
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} minimal.yml\
     | $<TARGET_FILE:faunus> --nobar --state minimal.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} minimal.out.json out.json --tol 0.02"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/minimal)
 
 add_test(
     NAME chain
@@ -227,61 +227,61 @@ add_test(
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} polymers.yml\
     | $<TARGET_FILE:faunus> --nobar --state polymers.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} polymers.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/polymers)
 
 add_test(
     NAME speciation
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} speciation.yml\
     | $<TARGET_FILE:faunus> --quiet --state speciation.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} speciation.out.json out.json --tol 0.02"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/speciation)
 
 add_test(
     NAME phosphate
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} phosphate.yml\
     | $<TARGET_FILE:faunus> --quiet --state phosphate.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} phosphate.out.json out.json --tol 0.02"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/phosphate)
 
 add_test(
     NAME sodiumphosphate
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} sodiumphosphate.yml\
     | $<TARGET_FILE:faunus> --quiet --state sodiumphosphate.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} sodiumphosphate.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/sodiumphosphate)
 
 add_test(
     NAME cluster
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} cluster.yml\
     | $<TARGET_FILE:faunus> --quiet --state cluster.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} cluster.out.json out.json --tol 0.1"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/cluster)
 
 add_test(
     NAME bulk
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bulk.yml\
     | $<TARGET_FILE:faunus> --quiet"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/bulk)
 
 add_test(
     NAME seawater
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} seawater.yml\
     | $<TARGET_FILE:faunus> --quiet"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/seawater)
 
 add_test(
     NAME stockmayer
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} stockmayer.yml\
     | $<TARGET_FILE:faunus> --quiet --state stockmayer.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} stockmayer.out.json out.json --tol 0.065"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/stockmayer)
 
 add_test(
     NAME membrane
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} membrane.yml\
     | $<TARGET_FILE:faunus> --quiet --state membrane.state.json\
     ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} membrane.out.json out.json --tol 0.065"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
+    WORKING_DIRECTORY ${EXAMPLES_DIR}/membrane)
 
 # INSTALL TARGETS
 
@@ -314,49 +314,50 @@ install(FILES
 
 install(FILES
     ${EXAMPLES_DIR}/README.md
-    ${EXAMPLES_DIR}/bulk.yml
-    ${EXAMPLES_DIR}/cluster.yml
-    ${EXAMPLES_DIR}/cluster.agr
-    ${EXAMPLES_DIR}/cluster.out.json
-    ${EXAMPLES_DIR}/cluster.state.json
-    ${EXAMPLES_DIR}/doublelayer.yml
-    ${EXAMPLES_DIR}/doublelayer.agr
-    ${EXAMPLES_DIR}/doublelayer.out.json
-    ${EXAMPLES_DIR}/doublelayer.state.json
-    ${EXAMPLES_DIR}/doublelayer.mfcorr.dat
+    ${EXAMPLES_DIR}/bulk/bulk.yml
+    ${EXAMPLES_DIR}/cluster/cluster.yml
+    ${EXAMPLES_DIR}/cluster/cluster.agr
+    ${EXAMPLES_DIR}/cluster/cluster.out.json
+    ${EXAMPLES_DIR}/cluster/cluster.state.json
+    ${EXAMPLES_DIR}/cluster/water.xyz
+    ${EXAMPLES_DIR}/doublelayer/doublelayer.yml
+    ${EXAMPLES_DIR}/doublelayer/doublelayer.agr
+    ${EXAMPLES_DIR}/doublelayer/doublelayer.out.json
+    ${EXAMPLES_DIR}/doublelayer/doublelayer.state.json
+    ${EXAMPLES_DIR}/doublelayer/doublelayer.mfcorr.dat
     ${EXAMPLES_DIR}/isochoric.yml
     ${EXAMPLES_DIR}/isochoric.xyz
-    ${EXAMPLES_DIR}/membrane.yml
-    ${EXAMPLES_DIR}/membrane.out.json
-    ${EXAMPLES_DIR}/membrane.state.json
+    ${EXAMPLES_DIR}/membrane/membrane.yml
+    ${EXAMPLES_DIR}/membrane/membrane.out.json
+    ${EXAMPLES_DIR}/membrane/membrane.state.json
     ${EXAMPLES_DIR}/lipid.xyz
-    ${EXAMPLES_DIR}/minimal.yml
-    ${EXAMPLES_DIR}/minimal.out.json
-    ${EXAMPLES_DIR}/minimal.state.json
-    ${EXAMPLES_DIR}/penalty.yml
-    ${EXAMPLES_DIR}/penalty.ipynb
+    ${EXAMPLES_DIR}/minimal/minimal.yml
+    ${EXAMPLES_DIR}/minimal/minimal.out.json
+    ${EXAMPLES_DIR}/minimal/minimal.state.json
+    ${EXAMPLES_DIR}/penalty/penalty.yml
+    ${EXAMPLES_DIR}/penalty/penalty.ipynb
     ${EXAMPLES_DIR}/chain/chain.yml
     ${EXAMPLES_DIR}/chain/chain.xyz
     ${EXAMPLES_DIR}/chain/chain.state.json
     ${EXAMPLES_DIR}/chain/chain.out.json
-    ${EXAMPLES_DIR}/polymers.yml
-    ${EXAMPLES_DIR}/polymers.readme
-    ${EXAMPLES_DIR}/polymers.pdf
-    ${EXAMPLES_DIR}/polymers.state.json
-    ${EXAMPLES_DIR}/polymers.out.json
+    ${EXAMPLES_DIR}/polymers/polymers.yml
+    ${EXAMPLES_DIR}/polymers/polymers.readme
+    ${EXAMPLES_DIR}/polymers/polymers.pdf
+    ${EXAMPLES_DIR}/polymers/polymers.state.json
+    ${EXAMPLES_DIR}/polymers/polymers.out.json
     ${EXAMPLES_DIR}/pythontest.py
-    ${EXAMPLES_DIR}/seawater.yml
-    ${EXAMPLES_DIR}/speciation.yml
-    ${EXAMPLES_DIR}/speciation.out.json
-    ${EXAMPLES_DIR}/speciation.state.json
-    ${EXAMPLES_DIR}/stockmayer.yml
-    ${EXAMPLES_DIR}/stockmayer.out.json
-    ${EXAMPLES_DIR}/stockmayer.state.json
-    ${EXAMPLES_DIR}/swapconf.yml
-    ${EXAMPLES_DIR}/swapconf.out.json
-    ${EXAMPLES_DIR}/swapconf.state.json
-    ${EXAMPLES_DIR}/swapconf.conformations.pqr
-    ${EXAMPLES_DIR}/swapconf.weights.dat
+    ${EXAMPLES_DIR}/seawater/seawater.yml
+    ${EXAMPLES_DIR}/speciation/speciation.yml
+    ${EXAMPLES_DIR}/speciation/speciation.out.json
+    ${EXAMPLES_DIR}/speciation/speciation.state.json
+    ${EXAMPLES_DIR}/stockmayer/stockmayer.yml
+    ${EXAMPLES_DIR}/stockmayer/stockmayer.out.json
+    ${EXAMPLES_DIR}/stockmayer/stockmayer.state.json
+    ${EXAMPLES_DIR}/swapconf/swapconf.yml
+    ${EXAMPLES_DIR}/swapconf/swapconf.out.json
+    ${EXAMPLES_DIR}/swapconf/swapconf.state.json
+    ${EXAMPLES_DIR}/swapconf/swapconf.conformations.pqr
+    ${EXAMPLES_DIR}/swapconf/swapconf.weights.dat
     ${EXAMPLES_DIR}/water.yml
     ${EXAMPLES_DIR}/water.xyz
     DESTINATION share/faunus/examples)

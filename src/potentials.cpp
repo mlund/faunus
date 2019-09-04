@@ -743,7 +743,7 @@ void LennardJones::initPairMatrices() {
                             return 4 * x;
                         }).createPairMatrix(atoms, *custom_pairs);
 
-    faunus_logger->debug("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
+    faunus_logger->trace("Pair matrices for {} sigma ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(), epsilon_quadruple->rows(),
                          epsilon_quadruple->cols(), custom_pairs->size());
 }
@@ -762,7 +762,7 @@ void LennardJones::extractorsFromJson(const json &j) {
 void HardSphere::initPairMatrices() {
     sigma_squared = PairMixer(extract_sigma, PairMixer::getCombinator(combination_rule), &PairMixer::modSquared)
                         .createPairMatrix(atoms, *custom_pairs);
-    faunus_logger->debug("Pair matrix for {} sigma ({}×{}) created using {} custom pairs.", name, sigma_squared->rows(),
+    faunus_logger->trace("Pair matrix for {} sigma ({}×{}) created using {} custom pairs.", name, sigma_squared->rows(),
                          sigma_squared->cols(), custom_pairs->size());
 }
 
@@ -782,7 +782,7 @@ void Hertz::initPairMatrices() {
         PairMixer(extract_sigma, comb_diameter, &PairMixer::modSquared).createPairMatrix(atoms, *custom_pairs);
     epsilon = PairMixer(extract_epsilon, comb_epsilon).createPairMatrix(atoms, *custom_pairs);
 
-    faunus_logger->debug("Pair matrix for {} radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
+    faunus_logger->trace("Pair matrix for {} radius ({}×{}) and epsilon ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(), epsilon->rows(), epsilon->cols(),
                          custom_pairs->size());
 }
@@ -806,7 +806,7 @@ void SquareWell::initPairMatrices() {
         PairMixer(extract_sigma, comb_diameter, &PairMixer::modSquared).createPairMatrix(atoms, *custom_pairs);
     epsilon = PairMixer(extract_epsilon, comb_depth).createPairMatrix(atoms, *custom_pairs);
 
-    faunus_logger->debug("Pair matrix for {} diameter ({}×{}) and depth ({}×{}) created using {} custom pairs.", name,
+    faunus_logger->trace("Pair matrix for {} diameter ({}×{}) and depth ({}×{}) created using {} custom pairs.", name,
                          sigma_squared->rows(), sigma_squared->cols(), epsilon->rows(), epsilon->cols(),
                          custom_pairs->size());
 }

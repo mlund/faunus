@@ -35,7 +35,7 @@ static const char USAGE[] =
     http://github.com/mlund/faunus
 
     Usage:
-      faunus [-q] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>]
+      faunus [-q] [--verbosity <N>] [--nobar] [--nopfx] [--notips] [--nofun] [--state=<file>] [--input=<file>] [--output=<file>]
       faunus (-h | --help)
       faunus --version
 
@@ -43,6 +43,7 @@ static const char USAGE[] =
       -i <file> --input <file>   Input file [default: /dev/stdin].
       -o <file> --output <file>  Output file [default: out.json].
       -s <file> --state <file>   State file to start from (.json/.ubj).
+      -v <N> --verbosity <N>     Log verbosity level (0 = off, 1 = critical, ..., 6 = trace) [default: 3]
       -q --quiet                 Less verbose output.
       -h --help                  Show this screen.
       --nobar                    No progress bar.
@@ -86,23 +87,25 @@ int main(int argc, char **argv) {
         // TODO refactor to a standalone function and use cmd line options for different sinks, etc.
         faunus_logger = spdlog::stderr_color_mt("faunus");
         faunus_logger->set_pattern("[%n %P] %^%L: %v%$");
-        faunus_logger->set_level(spdlog::level::info);
         mcloop_logger = spdlog::stderr_color_mt("mcloop");
         mcloop_logger->set_pattern("[%n %P] [%E.%f] %L: %v");
-        mcloop_logger->set_level(spdlog::level::warn);
+
+        // --verbosity (log level)
+        long log_level = spdlog::level::off - args["--verbosity"].asLong(); // reverse sequence 0 → 6 to 6 → 0
+        spdlog::set_level(static_cast<spdlog::level::level_enum>(log_level));
 
         // --notips
         if (not args["--notips"].asBool())
             usageTip.load({FAUNUS_TIPSFILE});
 
         // --nobar
-        bool showProgress = !args["--nobar"].asBool();
+        bool show_progress = !args["--nobar"].asBool();
 
         // --quiet
         bool quiet = args["--quiet"].asBool();
         if (quiet) {
             cout.setstate(std::ios_base::failbit); // hold kæft
-            showProgress = false;
+            show_progress = false;
         }
 
         // --nofun
@@ -168,7 +171,7 @@ int main(int argc, char **argv) {
             for (int i = 0; i < macro; i++) {
                 for (int j = 0; j < micro; j++) {
 
-                    if (showProgress and mpi.isMaster()) {
+                    if (show_progress and mpi.isMaster()) {
                         ++progressBar;
                         if (j % 10 == 0)
                             progressBar.display();
@@ -178,7 +181,7 @@ int main(int argc, char **argv) {
                     analysis.sample();
                 }
             }
-            if (showProgress and mpi.isMaster())
+            if (show_progress and mpi.isMaster())
                 progressBar.done();
 
             if (not quiet) {

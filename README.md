@@ -21,18 +21,18 @@ molecular systems. Below is a brief overview of features:
 Installing
 ===========
 
-On macOS or Linux, install using [conda](https://conda.io/miniconda.html):
+On macOS or Linux, install latest release using [conda](https://conda.io/miniconda.html):
 
     conda install -c conda-forge faunus
 
-Or build from source, see [here](http://mlund.github.io/faunus/docs/install/).
+Or [build development branch from source](https://faunus.readthedocs.io/en/latest/_docs/install.html#building-from-source-code).
 
 Documentation
 =============
 
-- manual for latest stable release: https://github.com/mlund/faunus/releases/latest
-- manual for development branch: https://faunus.readthedocs.io/en/latest/?badge=latest
-- manual for installed version: type `faunus-manual`
+- [latest release](https://github.com/mlund/faunus/releases/latest)
+- [development branch](https://faunus.readthedocs.io/en/latest/?badge=latest)
+- installed version: type `faunus-manual`
 
 Licence
 =======

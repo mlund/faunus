@@ -1,6 +1,7 @@
 #pragma once
 
 #include "move.h"
+#include <set>
 
 namespace Faunus {
 namespace Move {

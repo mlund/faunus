@@ -5,12 +5,13 @@
 #include <pybind11/operators.h>
 #include <pybind11/functional.h>
 
-#include <src/core.h>
-#include <src/space.h>
-#include <src/move.h>
-#include <src/analysis.h>
-#include <src/potentials.h>
-#include <src/regions.h>
+#include <core.h>
+#include <space.h>
+#include <move.h>
+#include <analysis.h>
+#include <potentials.h>
+#include <regions.h>
+#include <montecarlo.h>
 
 namespace py = pybind11;
 using namespace Faunus;
@@ -172,16 +173,18 @@ PYBIND11_MODULE(pyfaunus, m)
     // AtomData
     py::class_<AtomData>(m, "AtomData")
         .def(py::init<>())
-        .def_readwrite("eps", &AtomData::eps)
-        .def_readwrite("sigma", &AtomData::sigma)
+        .def_property("eps", [](const AtomData &a) { return a.getProperty("eps"); },
+                      [](AtomData &a, double val) { a.getProperty("eps") = val; })
+        .def_property("sigma", [](const AtomData &a) { return a.getProperty("sigma"); },
+                      [](AtomData &a, double val) { a.getProperty("sigma") = val; })
         .def_readwrite("name", &AtomData::name)
         .def_readwrite("activity", &AtomData::activity, "Activity = chemical potential in log scale (mol/l)")
         .def("id", (const int& (AtomData::*)() const) &AtomData::id); // explicit signature due to overload in c++
 
     auto _atomdatavec = py::bind_vector<std::vector<AtomData>>(m, "AtomDataVector");
     _atomdatavec
-        .def("from_dict", [](std::vector<AtomData> &a, py::dict dict) {
-                Faunus::from_json(dict2json(dict), a); } );
+        .def("from_list", [](std::vector<AtomData> &a, py::list list) {
+                Faunus::from_json(list2json(list), a); } );
 
     m.attr("atoms") = &Faunus::atoms; // global instance
 

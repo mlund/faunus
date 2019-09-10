@@ -1,3 +1,4 @@
+#!/usr/bin/env yason.py
 {% set T = 0.18 %}
 {% set eps = 1/T %}
 {% set N = 1000 %}
@@ -21,7 +22,7 @@ moleculelist:
 insertmolecules:
     - mymol: { N: {{ N }} }
 energy:
-    - nonbonded_splined:
+    - nonbonded:
         default:
             - custom: # custom pair-potential
                 cutoff: 2.5 # shell size

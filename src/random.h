@@ -1,7 +1,8 @@
 #pragma once
 
 #include <random>
-#include <nlohmann/json.hpp>
+#include <vector>
+#include <nlohmann/json_fwd.hpp>
 
 namespace Faunus {
 
@@ -22,7 +23,14 @@ namespace Faunus {
         Random();
         void seed();
         double operator()(); //!< Double in uniform range [0,1)
-        int range(int, int); //!< Integer in uniform range [min:max]
+
+        /**
+         * @brief Integer in uniform range [min:max]
+         * @param min minimum value
+         * @param max maximum value
+         * @return random value in [min:max] range
+         */
+        int range(int, int);
 
         template<class Titer>
             Titer sample(Titer begin, Titer end) {
@@ -39,9 +47,11 @@ namespace Faunus {
 #ifdef DOCTEST_LIBRARY_INCLUDED
     TEST_CASE("[Faunus] Random")
     {
-        Random slump; // local instance
+        Random slump, slump2; // local instances
 
-        CHECK( slump() == random() );
+        CHECK( slump() == slump2() ); // deterministic initialization by default; the global random variable cannot
+                                      // be used for comparison as its state is not reset at the beginning of
+                                      // each test case
 
         int min=10, max=0, N=1e6;
         double x=0;

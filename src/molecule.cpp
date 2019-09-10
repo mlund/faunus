@@ -4,6 +4,9 @@
 #include "rotate.h"
 #include "bonds.h"
 #include <fstream>
+#include <iostream>
+#include "spdlog/spdlog.h"
+#include "aux/eigensupport.h"
 
 namespace Faunus {
 
@@ -75,10 +78,9 @@ void MoleculeData::createMolecularConformations(SingleUseJSON &val) {
 
         // center mass center for each frame to origo assuming whole molecules
         if (val.value("trajcenter", false)) {
-            cout << "Centering conformations in trajectory file " + traj + ". ";
+            faunus_logger->debug("Centering conformations in trajectory file {}", traj);
             for (auto &p : conformations.vec) // loop over conformations
                 Geometry::cm2origo(p.begin(), p.end());
-            cout << "Done.\n";
         }
 
         // set default uniform weight
@@ -159,7 +161,7 @@ void from_json(const json &j, MoleculeData &a) {
 
                     else if (_struct.is_object()) {
                         // `structure` is a fasta sequence
-                        if (_struct.count("fasta")) {
+                        if (_struct.count("fasta") == 1) {
                             Potential::HarmonicBond bond; // harmonic bond
                             bond.from_json(_struct);      // read 'k' and 'req' from json
                             std::string fasta = _struct.at("fasta").get<std::string>();
@@ -175,6 +177,8 @@ void from_json(const json &j, MoleculeData &a) {
                                 }
                             }
                         } // end of fasta handling
+                        else
+                            throw std::runtime_error("invalid 'structure' format");
                     }
 
                     // `structure` is a list of atom positions

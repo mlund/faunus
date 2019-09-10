@@ -2,11 +2,18 @@ cmake_minimum_required(VERSION 3.11.4 FATAL_ERROR)
 
 project(faunus)
 
+include(CheckIPOSupported)
+include(ExternalProject)
+include(FetchContent)
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 find_package(PythonInterp 3 REQUIRED)
+find_package(Threads REQUIRED)
 enable_testing()
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Default build is "RelWithDebInfo"
 if (NOT CMAKE_BUILD_TYPE)
@@ -23,6 +30,7 @@ endif()
 option(BUILD_STATIC "Build statically linked binaries" off)
 option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" on)
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
+option(ENABLE_LTO "Enable Link-Time Optimizations if available" off)
 
 option(ENABLE_APPROXMATH "Use approximate math" off)
 if (ENABLE_APPROXMATH)
@@ -42,15 +50,11 @@ if (ENABLE_MPI)
     find_package(MPI REQUIRED)
 endif()
 
-option(ENABLE_SID "Enable SID emulation" off)
-if (ENABLE_SID)
-   list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR})
-   find_package(SDL2 REQUIRED)
+option(ENABLE_SID "Enable SID emulation" on)
+if(ENABLE_SID)
+    find_package(SDL2 CONFIG)
 endif()
-
-include(ExternalProject)
-include(FetchContent)
-
+ 
 # EXPRTK
 FetchContent_Declare(
     exprtk
@@ -76,13 +80,11 @@ endif()
 # SPDLOG
 ExternalProject_Add(
     project_spdlog
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
     LOG_DOWNLOAD ON
-    #GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    #GIT_TAG bb0f3839c1e52948f2ecb66e4e0aa79740a30205
     URL https://github.com/gabime/spdlog/archive/bb0f3839c1e52948f2ecb66e4e0aa79740a30205.zip
     URL_HASH SHA256=dece1767c33da47dbfdf60673af40b04a1557f22b6f4db4e1de8f99c2fb0a609
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DSPDLOG_INSTALL=off
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DSPDLOG_INSTALL=off -DCMAKE_POSITION_INDEPENDENT_CODE=on
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} spdlog
     INSTALL_COMMAND ""
 )
@@ -115,8 +117,8 @@ endif()
 
 # DOCOPT.CPP
 ExternalProject_Add(project_docopt
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} docopt_s
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
@@ -132,13 +134,13 @@ set_property(TARGET docopt PROPERTY IMPORTED_LOCATION ${binary_dir}/libdocopt.a)
 
 # CPPSID
 ExternalProject_Add(project_cppsid
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
-    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} ""#cppsid player
     INSTALL_COMMAND "" LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
-    URL_MD5 2d989c5dde42173ab4eba6374aabf042
-    URL "https://github.com/mlund/cppsid//archive/8d18d8e4109518c15725326f90cef879a161e03f.zip")
+    URL_MD5 b420c4c114e00a147c2c9a974249f0d4
+    URL "https://github.com/mlund/cppsid/archive/v0.2.1.tar.gz")
 ExternalProject_Get_Property(project_cppsid binary_dir)
 ExternalProject_Get_Property(project_cppsid source_dir)
 set(CppsidIncludeDir ${source_dir}/include)
@@ -165,7 +167,7 @@ endif()
 # XRDFILE
 ExternalProject_Add(
     project_xdrfile
-    PREFIX "${CMAKE_SOURCE_DIR}/3rdparty"
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
     URL "https://github.com/wesbarnett/libxdrfile/archive/2.1.2.tar.gz"
     URL_MD5 ee114404b4a01613b2f0167a2ad92536
     PATCH_COMMAND echo "add_library(xdrfile-static STATIC \${SRCS})" >> CMakeLists.txt
@@ -196,15 +198,25 @@ endif()
 # POWERSASA
 if (ENABLE_POWERSASA)
     foreach (powf array.hpp power_diagram.h power_sasa.h LICENSE)
-        if (NOT EXISTS "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}")
+        if (NOT EXISTS "${CMAKE_BINARY_DIR}/_deps/sasa/${powf}")
             file(DOWNLOAD
                 "https://raw.githubusercontent.com/yesint/pteros/d0b65b7/thirdparty/powersasa/${powf}"
-                "${CMAKE_SOURCE_DIR}/include/faunus/sasa/${powf}" STATUS status)
+                "${CMAKE_BINARY_DIR}/_deps/sasa/${powf}" STATUS status)
         endif ()
     endforeach ()
     add_definitions("-DENABLE_POWERSASA")
-    include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/include/faunus/sasa")
+    include_directories(SYSTEM "${CMAKE_BINARY_DIR}/_deps/sasa")
 endif ()
+
+# Download CoulombGalore header
+foreach (file coulombgalore.h LICENSE)
+    if (NOT EXISTS "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}")
+        file(DOWNLOAD
+            "https://raw.githubusercontent.com/mlund/coulombgalore/52f2f99/${file}"
+            "${CMAKE_BINARY_DIR}/_deps/coulombgalore/${file}" STATUS status)
+    endif ()
+endforeach ()
+include_directories(SYSTEM "${CMAKE_BINARY_DIR}/_deps/coulombgalore")
 
 # GIT
 if (VERSION_STRING)
@@ -238,71 +250,7 @@ endif ()
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
 	${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR} ${SpdlogIncludeDir} ${exprtk_SOURCE_DIR})
 
-# faunus cpp files
-set(objs
-    ${CMAKE_SOURCE_DIR}/src/functionparser.cpp
-    ${CMAKE_SOURCE_DIR}/src/random.cpp
-    ${CMAKE_SOURCE_DIR}/src/mpi.cpp
-    ${CMAKE_SOURCE_DIR}/src/bonds.cpp
-    ${CMAKE_SOURCE_DIR}/src/chainmove.cpp
-    ${CMAKE_SOURCE_DIR}/src/clustermove.cpp
-    ${CMAKE_SOURCE_DIR}/src/core.cpp
-    ${CMAKE_SOURCE_DIR}/src/units.cpp
-    ${CMAKE_SOURCE_DIR}/src/analysis.cpp
-    ${CMAKE_SOURCE_DIR}/src/atomdata.cpp
-    ${CMAKE_SOURCE_DIR}/src/energy.cpp
-    ${CMAKE_SOURCE_DIR}/src/externalpotential.cpp
-    ${CMAKE_SOURCE_DIR}/src/geometry.cpp
-    ${CMAKE_SOURCE_DIR}/src/group.cpp
-    ${CMAKE_SOURCE_DIR}/src/io.cpp
-    ${CMAKE_SOURCE_DIR}/src/molecule.cpp
-    ${CMAKE_SOURCE_DIR}/src/move.cpp
-    ${CMAKE_SOURCE_DIR}/src/particle.cpp
-    ${CMAKE_SOURCE_DIR}/src/penalty.cpp
-    ${CMAKE_SOURCE_DIR}/src/potentials.cpp
-    ${CMAKE_SOURCE_DIR}/src/reactioncoordinate.cpp
-    ${CMAKE_SOURCE_DIR}/src/regions.cpp
-    ${CMAKE_SOURCE_DIR}/src/rotate.cpp
-    ${CMAKE_SOURCE_DIR}/src/space.cpp
-    ${CMAKE_SOURCE_DIR}/src/speciation.cpp
-    ${CMAKE_SOURCE_DIR}/src/tensor.cpp)
-
-set_source_files_properties(${objs} PROPERTIES LANGUAGE CXX)
-
-# faunus header files
-set(hdrs
-    ${CMAKE_SOURCE_DIR}/src/analysis.h
-    ${CMAKE_SOURCE_DIR}/src/average.h
-    ${CMAKE_SOURCE_DIR}/src/atomdata.h
-    ${CMAKE_SOURCE_DIR}/src/auxiliary.h
-    ${CMAKE_SOURCE_DIR}/src/bonds.h
-    ${CMAKE_SOURCE_DIR}/src/chainmove.h
-    ${CMAKE_SOURCE_DIR}/src/clustermove.h
-    ${CMAKE_SOURCE_DIR}/src/core.h
-    ${CMAKE_SOURCE_DIR}/src/energy.h
-    ${CMAKE_SOURCE_DIR}/src/externalpotential.h
-    ${CMAKE_SOURCE_DIR}/src/functionparser.h
-    ${CMAKE_SOURCE_DIR}/src/geometry.h
-    ${CMAKE_SOURCE_DIR}/src/group.h
-    ${CMAKE_SOURCE_DIR}/src/io.h
-    ${CMAKE_SOURCE_DIR}/src/molecule.h
-    ${CMAKE_SOURCE_DIR}/src/move.h
-    ${CMAKE_SOURCE_DIR}/src/mpi.h
-    ${CMAKE_SOURCE_DIR}/src/particle.h
-    ${CMAKE_SOURCE_DIR}/src/penalty.h
-    ${CMAKE_SOURCE_DIR}/src/potentials.h
-    ${CMAKE_SOURCE_DIR}/src/reactioncoordinate.h
-    ${CMAKE_SOURCE_DIR}/src/rotate.h
-    ${CMAKE_SOURCE_DIR}/src/space.h
-    ${CMAKE_SOURCE_DIR}/src/speciation.h
-    ${CMAKE_SOURCE_DIR}/src/random.h
-    ${CMAKE_SOURCE_DIR}/src/regions.h
-    ${CMAKE_SOURCE_DIR}/src/tensor.h
-    ${CMAKE_SOURCE_DIR}/src/units.h
-    )
-
-# Compiler specific flags
-
+#  Compiler specific flags
 ## GCC
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     add_compile_options(-Wall -Wextra -Wpedantic -Wunreachable-code -Wstrict-aliasing
@@ -317,327 +265,6 @@ endif()
 add_compile_options($<$<CONFIG:Debug>:-Werror>)
 add_compile_options($<$<CONFIG:Debug>:-O0>)
 
-# target: unittests
-add_executable(unittests src/unittests.cpp ${objs} ${hdrs})
-target_link_libraries(unittests xdrfile spdlog)
-target_compile_definitions(unittests PRIVATE SPDLOG_COMPILED_LIB)
-add_test(NAME unittests COMMAND unittests)
+add_subdirectory(src)
+add_subdirectory(docs)
 
-# target: faunus
-
-add_executable(faunus src/faunus.cpp ${objs} ${hdrs})
-target_link_libraries(faunus PRIVATE xdrfile spdlog docopt)
-target_compile_definitions(faunus PRIVATE SPDLOG_COMPILED_LIB)
-
-if(ENABLE_SID)
-    target_compile_definitions(faunus PRIVATE ENABLE_SID)
-    target_link_libraries(faunus PRIVATE SDL2::Main cppsid)
-endif()
-
-if(BUILD_STATIC)
-    target_link_libraries(faunus PRIVATE -static-libgcc -static-libstdc++ -static)
-endif()
-
-target_compile_definitions(faunus PRIVATE
-    FAUNUS_TIPSFILE=\"${CMAKE_INSTALL_PREFIX}/share/faunus/tips.json\",\"${CMAKE_SOURCE_DIR}/tips.json\" )
-
-if (MPI_CXX_FOUND)
-    target_link_libraries(faunus PRIVATE MPI::MPI_CXX)
-    target_compile_definitions(faunus PRIVATE ENABLE_MPI)
-endif()
-
-# python bindings
-if (ENABLE_PYTHON)
-    INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
-    INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-    find_package(PythonLibs 3 REQUIRED)
-
-    if (PYTHONINTERP_FOUND)
-        execute_process(
-            COMMAND ${PYTHON_EXECUTABLE} scripts/yason.py -h
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            ERROR_QUIET OUTPUT_QUIET
-            RESULT_VARIABLE yasontest)
-        if (${yasontest} EQUAL 1)
-            message("missing required python modules 'yaml' or 'ruamel_yaml'")
-        endif()
-    endif()
-
-    if (PYTHONLIBS_FOUND)
-        FetchContent_GetProperties(pybind11)
-        if(NOT pybind11_POPULATED)
-            FetchContent_Populate(pybind11)
-            add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
-            pybind11_add_module(pyfaunus src/pyfaunus.cpp ${objs})
-            target_link_libraries(pyfaunus PUBLIC xdrfile spdlog)
-        endif()
-    endif ()
-endif ()
-
-# MANUAL
-
-find_program(PANDOC pandoc)
-if (PANDOC)
-    add_custom_target(
-        manual
-        COMMENT "Building PDF manual"
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/_docs
-        COMMAND cat
-        header.md
-        docs.md
-        install.md
-        running.md
-        topology.md
-        energy.md
-        moves.md
-        analysis.md |
-        grep -v ".notice--" |
-        grep -v "Github-Improve_this_page" |
-        sed 's.\\\\_._.g' | # this allows us to use \_ in markdown math
-        ${PANDOC} --self-contained --highlight-style=tango --template ../pandoc.tex
-        -V date:${GIT_LATEST_TAG}""
-        -N --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
-        )
-    set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-    add_custom_target(
-        manual_html
-        COMMENT "Building html manual"
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/_docs
-        COMMAND cat
-        header.md
-        docs.md
-        install.md
-        running.md
-        topology.md
-        energy.md
-        moves.md
-        analysis.md |
-        grep -v ".notice--" |
-        grep -v "Github-Improve_this_page" |
-        ${PANDOC} --template ../GitHub.html5 -s --mathjax
-        -M title:The\ Faunus\ User\ Guide
-        -V date:${GIT_LATEST_TAG}""
-        -N --toc -o ${CMAKE_BINARY_DIR}/manual.html
-        )
-
-    if (PYTHONINTERP_FOUND)
-        add_custom_target(
-            usagetips
-            ALL
-            COMMENT "extracting tips from manual"
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            COMMAND ${PYTHON_EXECUTABLE} scripts/extracttips.py)
-        add_dependencies(usagetips manual_html)
-    endif()
-endif()
-
-# TESTS
-
-set(EXAMPLES_DIR ${CMAKE_SOURCE_DIR}/examples)
-set(YASON ${CMAKE_SOURCE_DIR}/scripts/yason.py)
-set(JSON_COMPARE ${CMAKE_SOURCE_DIR}/scripts/jsoncompare.py)
-if (TARGET pyfaunus)
-    add_test(
-        NAME pythontest
-        COMMAND sh -c "${PYTHON_EXECUTABLE} pythontest.py -v"
-        WORKING_DIRECTORY ${EXAMPLES_DIR})
-    set_tests_properties(pythontest PROPERTIES ENVIRONMENT "PYTHONPATH=$<TARGET_FILE_DIR:pyfaunus>")
-endif()
-
-add_test(
-    NAME swapconf
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} swapconf.yml\
-    | $<TARGET_FILE:faunus> --nobar --state swapconf.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} swapconf.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME doublelayer
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} doublelayer.yml\
-    | $<TARGET_FILE:faunus> --nobar --state doublelayer.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} doublelayer.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME penalty
-    COMMAND sh -c "jupyter nbconvert --execute penalty.ipynb --ExecutePreprocessor.timeout=None"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-set_tests_properties(penalty PROPERTIES ENVIRONMENT FAUNUS_EXECUTABLE=$<TARGET_FILE:faunus>)
-
-add_test(
-    NAME minimal
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} minimal.yml\
-    | $<TARGET_FILE:faunus> --nobar --state minimal.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} minimal.out.json out.json --tol 0.02"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME chain
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} chain.yml\
-    | $<TARGET_FILE:faunus> --nobar --state chain.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} chain.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${EXAMPLES_DIR}/chain)
-
-add_test(
-    NAME polymers
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} polymers.yml\
-    | $<TARGET_FILE:faunus> --nobar --state polymers.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} polymers.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME speciation
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} speciation.yml\
-    | $<TARGET_FILE:faunus> --quiet --state speciation.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} speciation.out.json out.json --tol 0.02"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME phosphate
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} phosphate.yml\
-    | $<TARGET_FILE:faunus> --quiet --state phosphate.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} phosphate.out.json out.json --tol 0.02"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME sodiumphosphate
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} sodiumphosphate.yml\
-    | $<TARGET_FILE:faunus> --quiet --state sodiumphosphate.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} sodiumphosphate.out.json out.json --tol 0.05"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME cluster
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} cluster.yml\
-    | $<TARGET_FILE:faunus> --quiet --state cluster.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} cluster.out.json out.json --tol 0.1"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME bulk
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bulk.yml\
-    | $<TARGET_FILE:faunus> --quiet"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME seawater
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} seawater.yml\
-    | $<TARGET_FILE:faunus> --quiet"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME stockmayer
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} stockmayer.yml\
-    | $<TARGET_FILE:faunus> --quiet --state stockmayer.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} stockmayer.out.json out.json --tol 0.065"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-add_test(
-    NAME membrane
-    COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} membrane.yml\
-    | $<TARGET_FILE:faunus> --quiet --state membrane.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} membrane.out.json out.json --tol 0.065"
-    WORKING_DIRECTORY ${EXAMPLES_DIR})
-
-# INSTALL TARGETS
-
-install(TARGETS faunus DESTINATION bin)
-
-if (TARGET pyfaunus)
-    # find _relative_ path of python library and thus respect CMAKE_INSTALL_PREFIX.
-    # could be replaced by FindPython() but req. cmake 3.12
-    # https://stackoverflow.com/questions/1242904/finding-python-site-packages-directory-with-cmake
-    execute_process(
-        COMMAND "${PYTHON_EXECUTABLE}" -c "if True:
-        from distutils import sysconfig as sc
-        print(sc.get_python_lib(prefix='', plat_specific=True))"
-        OUTPUT_VARIABLE PYTHON_SITE
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    install(TARGETS pyfaunus DESTINATION ${PYTHON_SITE} OPTIONAL)
-endif()
-
-install(FILES ${CMAKE_BINARY_DIR}/LICENSE DESTINATION share/faunus)
-install(FILES ${CMAKE_BINARY_DIR}/tips.json DESTINATION share/faunus OPTIONAL)
-install(FILES ${CMAKE_BINARY_DIR}/manual.pdf DESTINATION share/faunus OPTIONAL)
-install(FILES ${CMAKE_BINARY_DIR}/manual.html DESTINATION share/faunus OPTIONAL)
-install(FILES
-    ${CMAKE_SOURCE_DIR}/scripts/yason.py
-    ${CMAKE_SOURCE_DIR}/scripts/ob2aam.py
-    ${CMAKE_SOURCE_DIR}/scripts/faunus-manual
-    DESTINATION bin
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-
-install(FILES
-    ${EXAMPLES_DIR}/README.md
-    ${EXAMPLES_DIR}/bulk.yml
-    ${EXAMPLES_DIR}/cluster.yml
-    ${EXAMPLES_DIR}/cluster.agr
-    ${EXAMPLES_DIR}/cluster.out.json
-    ${EXAMPLES_DIR}/cluster.state.json
-    ${EXAMPLES_DIR}/doublelayer.yml
-    ${EXAMPLES_DIR}/doublelayer.agr
-    ${EXAMPLES_DIR}/doublelayer.out.json
-    ${EXAMPLES_DIR}/doublelayer.state.json
-    ${EXAMPLES_DIR}/doublelayer.mfcorr.dat
-    ${EXAMPLES_DIR}/isochoric.yml
-    ${EXAMPLES_DIR}/isochoric.xyz
-    ${EXAMPLES_DIR}/membrane.yml
-    ${EXAMPLES_DIR}/membrane.out.json
-    ${EXAMPLES_DIR}/membrane.state.json
-    ${EXAMPLES_DIR}/lipid.xyz
-    ${EXAMPLES_DIR}/minimal.yml
-    ${EXAMPLES_DIR}/minimal.out.json
-    ${EXAMPLES_DIR}/minimal.state.json
-    ${EXAMPLES_DIR}/penalty.yml
-    ${EXAMPLES_DIR}/penalty.ipynb
-    ${EXAMPLES_DIR}/chain/chain.yml
-    ${EXAMPLES_DIR}/chain/chain.xyz
-    ${EXAMPLES_DIR}/chain/chain.state.json
-    ${EXAMPLES_DIR}/chain/chain.out.json
-    ${EXAMPLES_DIR}/polymers.yml
-    ${EXAMPLES_DIR}/polymers.readme
-    ${EXAMPLES_DIR}/polymers.pdf
-    ${EXAMPLES_DIR}/polymers.state.json
-    ${EXAMPLES_DIR}/polymers.out.json
-    ${EXAMPLES_DIR}/pythontest.py
-    ${EXAMPLES_DIR}/seawater.yml
-    ${EXAMPLES_DIR}/speciation.yml
-    ${EXAMPLES_DIR}/speciation.out.json
-    ${EXAMPLES_DIR}/speciation.state.json
-    ${EXAMPLES_DIR}/stockmayer.yml
-    ${EXAMPLES_DIR}/stockmayer.out.json
-    ${EXAMPLES_DIR}/stockmayer.state.json
-    ${EXAMPLES_DIR}/swapconf.yml
-    ${EXAMPLES_DIR}/swapconf.out.json
-    ${EXAMPLES_DIR}/swapconf.state.json
-    ${EXAMPLES_DIR}/swapconf.conformations.pqr
-    ${EXAMPLES_DIR}/swapconf.weights.dat
-    ${EXAMPLES_DIR}/water.yml
-    ${EXAMPLES_DIR}/water.xyz
-    DESTINATION share/faunus/examples)
-
-# INFORMATION ABOUT DEBUG MODE
-
-if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
-    string(REPLACE "NDEBUG" "_ndebug" CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}"
-        CACHE STRING "Flags used by the compiler during Release with Debug Info builds" FORCE)
-
-    message(
-        "...............................................................\n"
-        "  Faunus is compiled in Debug mode to enable checks and\n"
-        "  assertions highly recommended when developing and testing.\n"
-        "  For production, switch to Release for optimal performance:\n\n"
-        "  -DCMAKE_BUILD_TYPE=Release\n"
-        "***************************************************************\n")
-endif()
-if (CMAKE_BUILD_TYPE MATCHES "Release")
-    message(
-        "......................................................................\n"
-        "  Faunus is running in Release mode recommended for production runs.\n"
-        "  For setting up simulations it is HIGHLY recommended to use Debug\n"
-        "  mode to enable run-time checks and assertions:\n\n"
-        "  -DCMAKE_BUILD_TYPE=RelWithDebInfo\n"
-        "**********************************************************************\n")
-endif()

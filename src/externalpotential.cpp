@@ -1,5 +1,9 @@
 #include "externalpotential.h"
 #include "multipole.h"
+#include "aux/eigensupport.h"
+#include "functionparser.h"
+#include "space.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 namespace Energy {
@@ -44,7 +48,7 @@ double ExternalPotential::_energy(const Group<Particle> &g) const {
     return u;
 }
 
-ExternalPotential::ExternalPotential(const json &j, Tspace &spc) : spc(spc) {
+ExternalPotential::ExternalPotential(const json &j, Space &spc) : spc(spc) {
     name = "external";
     COM = j.value("com", false);
     _names = j.at("molecules").get<decltype(_names)>(); // molecule names
@@ -216,7 +220,7 @@ void ExternalAkesson::load() {
         rho << f;
         update_phi();
     } else
-        std::cerr << "density file '" << filename << "' not loaded." << endl;
+        faunus_logger->warn("density file {} not loaded", filename);
 }
 
 double ExternalAkesson::phi_ext(double z, double a) const {
@@ -306,6 +310,7 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &j
 // ------------ CustomExternal -------------
 
 CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j, spc) {
+    expr = std::make_unique<ExprFunction<double>>();
     name = "customexternal";
     jin = j;
     auto &_j = jin["constants"];
@@ -328,13 +333,13 @@ CustomExternal::CustomExternal(const json &j, Tspace &spc) : ExternalPotential(j
     } else {
         // if nothing found above, it is assumed that `function`
         // is a valid expression.
-        expr.set(jin, {{"q", &d.q}, {"x", &d.x}, {"y", &d.y}, {"z", &d.z}});
+        expr->set(jin, {{"q", &d.q}, {"x", &d.x}, {"y", &d.y}, {"z", &d.z}});
         func = [&](const Particle &a) {
             d.x = a.pos.x();
             d.y = a.pos.y();
             d.z = a.pos.z();
             d.q = a.charge;
-            return expr();
+            return expr->operator()();
         };
     }
 }
@@ -354,7 +359,9 @@ ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(const Pa
     func = selfEnergy;
 #ifndef NDEBUG
     // test if self energy can be called
+    assert(not Faunus::atoms.empty());
     Particle myparticle;
+    myparticle.id=0;
     if (this->func)
         this->func(myparticle);
 #endif

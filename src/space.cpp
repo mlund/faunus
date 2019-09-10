@@ -1,5 +1,9 @@
 #include "space.h"
 #include "io.h"
+#include "aux/iteratorsupport.h"
+#include "spdlog/spdlog.h"
+#include <iostream>
+#include "aux/eigensupport.h"
 
 namespace Faunus {
 
@@ -117,13 +121,13 @@ void Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
                 Point recalc_cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
                 double cm_error = std::fabs(geo.sqdist(g.cm, recalc_cm));
                 if (cm_error > 1e-6) {
-                    std::cerr << "error: " << cm_error << endl
-                              << "scale: " << scale.transpose() << endl
-                              << "delta: " << delta.transpose() << " norm = " << delta.norm() << endl
-                              << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << endl
-                              << "oldcm: " << oldcm.transpose() << endl
-                              << "newcm: " << g.cm.transpose() << endl
-                              << "actual cm: " << recalc_cm.transpose() << endl;
+                    std::cerr << "error: " << cm_error << std::endl
+                              << "scale: " << scale.transpose() << std::endl
+                              << "delta: " << delta.transpose() << " norm = " << delta.norm() << std::endl
+                              << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << std::endl
+                              << "oldcm: " << oldcm.transpose() << std::endl
+                              << "newcm: " << g.cm.transpose() << std::endl
+                              << "actual cm: " << recalc_cm.transpose() << std::endl;
                     assert(false);
                 }
 #endif
@@ -191,6 +195,9 @@ void insertMolecules(const json &j, Space &spc) {
                         int cnt = N;
                         bool inactive = it.value().value("inactive", false); // active or not?
 
+                        faunus_logger->info("inserting {0} ({1}) {2} molecules", cnt, inactive ? "inactive" : "active",
+                                            it.key());
+
                         if (mol->atomic) {
                             typename Space::Tpvec p;
                             p.reserve(N * mol->atoms.size());
@@ -216,6 +223,7 @@ void insertMolecules(const json &j, Space &spc) {
                                 Tpvec p;
                                 if (loadStructure(file, p, false)) {
                                     if (p.size() == N * mol->atoms.size()) {
+                                        faunus_logger->info("valid position file {0} found", file);
                                         Point offset = it.value().value("translate", Point(0, 0, 0));
                                         size_t j = spc.p.size() - p.size();
                                         for (auto &i : p) {
@@ -223,7 +231,7 @@ void insertMolecules(const json &j, Space &spc) {
                                             if (spc.geo.collision(i.pos) == false)
                                                 spc.p.at(j++).pos = i.pos;
                                             else
-                                                std::cerr << "position outside box" << endl;
+                                                faunus_logger->warn("position outside box");
                                         }
                                         if (j == p.size()) {
                                             success = true;
@@ -232,9 +240,9 @@ void insertMolecules(const json &j, Space &spc) {
                                                     g->begin(), g->end(), spc.geo.getBoundaryFunc(), -g->begin()->pos);
                                         }
                                     } else
-                                        std::cerr << file + ": wrong number of atoms" << endl;
+                                        faunus_logger->error("wrong number of atoms in {0}", file);
                                 } else
-                                    std::cerr << "error opening file '" + file + "'" << endl;
+                                    faunus_logger->error("cannot open {0}", file);
                                 if (success == false)
                                     throw std::runtime_error("error loading positions from '" + file + "'");
                             }

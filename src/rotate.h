@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core.h"
 #include <Eigen/Geometry>
 
 namespace Faunus {
@@ -9,8 +8,8 @@ namespace Faunus {
  * */
 struct QuaternionRotate : public std::pair<Eigen::Quaterniond, Eigen::Matrix3d> {
 
+    typedef Eigen::Vector3d Point;
     typedef std::pair<Eigen::Quaterniond, Eigen::Matrix3d> base;
-    // using base::pair;
     using base::first;
     using base::second;
 

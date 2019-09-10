@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mpi.h"
+#include "mpicontroller.h"
 #include "externalpotential.h"
 #include "reactioncoordinate.h"
 
@@ -16,11 +16,9 @@ namespace Energy {
  */
 class Penalty : public Energybase {
   protected:
-    typedef typename Tspace::Tgroup Tgroup;
-    typedef typename Tspace::Tpvec Tpvec;
     typedef typename std::shared_ptr<ReactionCoordinate::ReactionCoordinateBase> Tcoord;
 
-    Tspace &spc;
+    Space &spc;
     bool overwrite_penalty = true; // overwrites the input penalty function
     bool nodrift;                  // avoid energy drift when upgrading penalty function
     bool quiet;                    // hold mund
@@ -40,7 +38,7 @@ class Penalty : public Energybase {
     Table<double> penalty; // penalty function
 
   public:
-    Penalty(const json &j, Tspace &spc);
+    Penalty(const json &j, Space &spc);
     virtual ~Penalty();
     void to_json(json &j) const override;
     double energy(Change &change) override;
@@ -59,7 +57,7 @@ struct PenaltyMPI : public Penalty {
     Eigen::VectorXi weights; // array w. mininum histogram counts
     Eigen::VectorXd buffer;  // receive buffer for penalty functions
 
-    PenaltyMPI(const json &j, Tspace &spc);
+    PenaltyMPI(const json &j, Space &spc);
     void update(const std::vector<double> &c) override; //!< Average penalty function across all nodes
 };    //!< Penalty function with MPI exchange
 #endif

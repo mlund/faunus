@@ -1,13 +1,19 @@
 #pragma once
 
-#include "space.h"
+#include "group.h"
 #include "auxiliary.h"
-#include "functionparser.h"
+#include <set>
+
+template<typename T> class ExprFunction;
 
 namespace Faunus {
+
+struct Change;
+struct Space;
+
 namespace Energy {
 
-/**
+    /**
  * All energies inherit from this class
  */
 class Energybase {
@@ -37,16 +43,16 @@ void to_json(json &j, const Energybase &base); //!< Converts any energy class to
  */
 class ExternalPotential : public Energybase {
   protected:
-    typedef typename Tspace::Tpvec Tpvec;
+    typedef typename Faunus::ParticleVector Tpvec;
     bool COM = false; // apply on center-of-mass
-    Tspace &spc;
+    Space &spc;
     std::set<int> molids;                                   // molecules to act upon
     std::function<double(const Particle &)> func = nullptr; // energy of single particle
     std::vector<std::string> _names;
 
     double _energy(const Group<Particle> &) const; //!< External potential on a single particle
   public:
-    ExternalPotential(const json &, Tspace &);
+    ExternalPotential(const json &, Space &);
 
     /*
      * @todo The `dN` check is very inefficient
@@ -75,7 +81,7 @@ std::function<double(const Particle &)> createGouyChapmanPotential(const json &)
  */
 class CustomExternal : public ExternalPotential {
   private:
-    ExprFunction<double> expr;
+    std::unique_ptr<ExprFunction<double>> expr;
     struct Data { // variables
         double q = 0, x = 0, y = 0, z = 0;
     };
@@ -83,7 +89,7 @@ class CustomExternal : public ExternalPotential {
     json jin; // initial json input
 
   public:
-    CustomExternal(const json &, Tspace &);
+    CustomExternal(const json &, Space &);
     void to_json(json &) const override;
 };
 
@@ -135,7 +141,7 @@ class ExternalAkesson : public ExternalPotential {
     void update_phi();
 
   public:
-    ExternalAkesson(const json &, Tspace &);
+    ExternalAkesson(const json &, Space &);
     double energy(Change &) override;
     ~ExternalAkesson();
 };
@@ -156,7 +162,7 @@ class Confine : public ExternalPotential {
     std::map<std::string, Variant> m = {{"sphere", sphere}, {"cylinder", cylinder}, {"cuboid", cuboid}};
 
   public:
-    Confine(const json &, Tspace &);
+    Confine(const json &, Space &);
     void to_json(json &) const override;
 }; //!< Confine particles to a sub-region of the simulation container
 

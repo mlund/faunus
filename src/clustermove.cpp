@@ -1,4 +1,5 @@
 #include "clustermove.h"
+#include "aux/eigensupport.h"
 
 namespace Faunus {
 namespace Move {

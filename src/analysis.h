@@ -2,10 +2,10 @@
 
 #include "space.h"
 #include "io.h"
-#include "mpi.h"
 #include "scatter.h"
 #include "reactioncoordinate.h"
 #include "auxiliary.h"
+#include <set>
 
 namespace Faunus {
 

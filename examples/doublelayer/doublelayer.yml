@@ -7,8 +7,8 @@ energy:
     - nonbonded_pm:
         coulomb: {epsr: 80}
 atomlist:
-    - Na: {q:  1.0, r: 2.0, dp: 20} 
-    - Cl: {q: -1.0, r: 2.0, dp: 20} 
+    - Na: {q:  1.0, sigma: 4.0, dp: 20} 
+    - Cl: {q: -1.0, sigma: 4.0, dp: 20} 
 moleculelist:
     - salt: {atoms: [Na,Cl], atomic: true}
     - surface: {atoms: [Na], atomic: true, insdir: [1,1,0], insoffset: [0,0,-50]}

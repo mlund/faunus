@@ -1,12 +1,12 @@
 #pragma once
+#include "random.h"
+#include "core.h"
 
 #include <vector>
 #include <string>
 #include <fstream>
 #include <iostream>
 #include <cstdio>
-#include "core.h"
-#include "random.h"
 
 #ifdef ENABLE_MPI
 #include <mpi.h>
@@ -272,7 +272,7 @@ namespace Faunus {
                     x=recvBuf[i++];
                 assert( (size_t)i==recvBuf.size() );
                 if ( (size_t)i!=recvBuf.size() )
-                    std::cerr << "Particle transmitter says: !!!!!!!!!!!" << endl;
+                    std::cerr << "Particle transmitter says: !!!!!!!!!!!" << std::endl;
             }
 
         /*

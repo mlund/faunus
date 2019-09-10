@@ -300,7 +300,7 @@ void CoulombGalore::sfFennel(const json &j) {
 void CoulombGalore::sfEwald(const json &j) { // is all this true for kappa \ne 0 ?
     alpha = j.at("alpha");
     kappa = j.value("kappa", 0.0);
-    table = sf.generate(
+    table_energy = sf_energy.generate(
         [&](double q) {
             return (std::erfc(alpha * rc * q + kappa / 2.0 / alpha) * std::exp(kappa * rc * q) +
                     std::erfc(alpha * rc * q - kappa / 2.0 / alpha) * std::exp(-kappa * rc * q)) /
@@ -386,7 +386,7 @@ void CoulombGalore::from_json(const json &j) {
                 ecs->set(i.id(), j.id(), ecsi * ecsj);
             }
 
-        if (table.empty())
+        if (table_energy.empty())
             throw std::runtime_error("unknown type '" + type + "'");
 
         // Set particle self-energy function. For reasons yet to be understood,

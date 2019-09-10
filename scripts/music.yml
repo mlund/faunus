@@ -1,0 +1,27 @@
+# C64 SID playlist for the High Voltage SID Collection (HVSC)
+server: "https://www.prg.dtu.dk/HVSC/C64Music.old/"
+songs:
+    - {subsongs: [1], file: DEMOS/UNKNOWN/Dexion.sid}
+    - {subsongs: [1], file: MUSICIANS/J/JO/Better_Weird.sid}
+    - {subsongs: [1], file: MUSICIANS/J/JCH/Secret_Land.sid}
+    - {subsongs: [1,3], file: MUSICIANS/T/Tel_Jeroen/Ice_Age.sid}
+    - {subsongs: [2], file: MUSICIANS/H/Hubbard_Rob/Commando.sid}
+    - {subsongs: [1], file: MUSICIANS/F/Future_Freak/Last_Hero.sid}
+    - {subsongs: [1], file: MUSICIANS/H/Hubbard_Rob/Lightforce.sid}
+    - {subsongs: [3], file: MUSICIANS/D/Daglish_Ben/Last_Ninja.sid}
+    - {subsongs: [1], file: MUSICIANS/T/The_Blue_Ninja/Imploder.sid}
+    - {subsongs: [1], file: MUSICIANS/B/Bjerregaard_Johannes/Shape.sid}
+    - {subsongs: [1], file: MUSICIANS/D/Deenen_Charles/Zamzara.sid}
+    - {subsongs: [3], file: MUSICIANS/O/Ouwehand_Reyn/Last_Ninja_3.sid}
+    - {subsongs: [1,2,3], file: MUSICIANS/L/Laxity/Stormlord_2.sid}
+    - {subsongs: [14], file: MUSICIANS/F/FAME/Hendriks_Michael/X-Out.sid}
+    - {subsongs: [19], file: MUSICIANS/G/Galway_Martin/Yie_Ar_Kung_Fu.sid}
+    - {subsongs: [3,8], file: MUSICIANS/B/Bjerregaard_Johannes/M_A_C_H.sid}
+    - {subsongs: [3,5,6], file: MUSICIANS/O/Ouwehand_Reyn/Flimbos_Quest.sid}
+    - {subsongs: [1,2], file: MUSICIANS/B/Bjerregaard_Johannes/Stormlord.sid}
+    - {subsongs: [1], file: MUSICIANS/S/Schneider_Markus/Beyond_the_Zero.sid}
+    - {subsongs: [1], file: MUSICIANS/0-9/20CC/van_Santen_Edwin/Spijkerhoek.sid}
+    - {subsongs: [1], file: MUSICIANS/0-9/20CC/van_Santen_Edwin/Airwolf_Mix.sid}
+    - {subsongs: [1], file: MUSICIANS/F/FAME/Hendriks_Michael/A_Little_Sample.sid}
+    - {subsongs: [1], file: MUSICIANS/S/Schneider_Markus/Strike_Force_Introtune.sid}
+

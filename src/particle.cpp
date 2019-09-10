@@ -1,5 +1,6 @@
 #include "particle.h"
 #include <Eigen/Geometry>
+#include "aux/eigensupport.h"
 
 namespace Faunus {
 

@@ -1,5 +1,6 @@
 #include "regions.h"
 #include "space.h"
+#include <iostream>
 
 namespace Faunus {
 namespace Region {
@@ -88,7 +89,7 @@ WithinGroups::WithinGroups(const json &j, Space &spc) : RegionBase(WITHIN), spc(
                 throw std::runtime_error("com cannot be used with atomic groups");
 
     if (indexes.empty())
-        std::cerr << "warning: no molecules selected for region" << endl;
+        std::cerr << "warning: no molecules selected for region" << std::endl;
 }
 
 bool WithinGroups::isInside(const Point &a) const {

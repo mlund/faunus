@@ -1,5 +1,4 @@
 #include "rotate.h"
-#include <Eigen/Geometry>
 
 namespace Faunus {
 QuaternionRotate::QuaternionRotate(double angle, Point u) { set(angle, u); }
@@ -15,7 +14,7 @@ void QuaternionRotate::set(double angle, Point u) {
     // second = first.toRotationMatrix()
 }
 
-Point QuaternionRotate::operator()(Point a, std::function<void(Point &)> boundary, const Point &shift) const {
+QuaternionRotate::Point QuaternionRotate::operator()(Point a, std::function<void(Point &)> boundary, const Point &shift) const {
     a = a - shift;
     boundary(a);
     a = first * a + shift;

@@ -1,14 +1,19 @@
 #include "geometry.h"
 #include "atomdata.h"
 #include "random.h"
+#include "aux/eigensupport.h"
 
 namespace Faunus {
 
     namespace Geometry {
 
-        // =============== GeometryBase ===============
+    // =============== GeometryBase ===============
 
     GeometryBase::~GeometryBase() = default;
+
+    // =============== GeometryImplementation ===============
+
+    GeometryImplementation::~GeometryImplementation() = default;
 
     // =============== Cuboid ===============
 

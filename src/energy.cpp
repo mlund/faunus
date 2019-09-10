@@ -1,5 +1,3 @@
-
-#include "mpi.h"
 #include "energy.h"
 #include "penalty.h"
 #include "potentials.h"
@@ -369,16 +367,24 @@ void Hamiltonian::to_json(json &j) const {
 void Hamiltonian::addEwald(const json &j, Space &spc) {
     // note this will not find deeper placed coulomb potentials
     // in FunctorPotential etc. Nor dipolar energies
+    json _j;
     if (j.count("coulomb") == 1)
-        if (j["coulomb"].count("type") == 1)
-            if (j["coulomb"].at("type") == "ewald")
-                push_back<Energy::Ewald<>>(j["coulomb"], spc);
+        _j = j["coulomb"];
+    else if (j.count("newcoulomb") == 1) // temporary
+        _j = j["newcoulomb"];
+    else
+        return;
+
+    if (_j.count("type"))
+        if (_j.at("type") == "ewald")
+            push_back<Energy::Ewald<>>(j["coulomb"], spc);
 }
 
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
     typedef CombinedPairPotential<CoulombGalore, LennardJones> CoulombLJ;
+    typedef CombinedPairPotential<NewCoulombGalore, LennardJones> NewCoulombLJ; // temporary name
     typedef CombinedPairPotential<CoulombGalore, HardSphere> CoulombHS;
     typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen> CoulombWCA;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
@@ -399,6 +405,9 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
             try {
                 if (it.key() == "nonbonded_coulomblj")
                     push_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
+
+                else if (it.key() == "nonbonded_newcoulomblj")
+                    push_back<Energy::Nonbonded<NewCoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulomblj_EM")
                     push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
@@ -468,7 +477,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                     throw std::runtime_error("unknown term");
 
             } catch (std::exception &e) {
-                throw std::runtime_error("Error adding energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
+                throw std::runtime_error("energy '" + it.key() + "': " + e.what() + usageTip[it.key()]);
             }
         } // end of loop over energy input terms
     }

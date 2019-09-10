@@ -1,4 +1,6 @@
 #include "chainmove.h"
+#include "aux/iteratorsupport.h"
+#include "bonds.h"
 
 namespace Faunus {
 namespace Move {

@@ -13,7 +13,7 @@ class Space;
 
 namespace Energy {
 
-    /**
+/**
  * All energies inherit from this class
  */
 class Energybase {
@@ -24,10 +24,10 @@ class Energybase {
     std::string citation_information;                     //!< Possible reference. May be left empty
     TimeRelativeOfTotal<std::chrono::microseconds> timer; //!< Timer for measure speed of each term
     virtual double energy(Change &) = 0;                  //!< energy due to change
-    virtual void to_json(json &j) const;                  //!< json output
+    virtual void to_json(json &) const;                   //!< json output
     virtual void sync(Energybase *, Change &);
-    virtual void init();                               //!< reset and initialize
-    virtual inline void force(std::vector<Point> &){}; // update forces on all particles
+    virtual void init();                                  //!< reset and initialize
+    virtual inline void force(PointVector &){};           //!< update forces on all particles
     inline virtual ~Energybase() = default;
 };
 

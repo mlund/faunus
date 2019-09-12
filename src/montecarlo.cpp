@@ -67,7 +67,7 @@ double MCSimulation::drift() {
  */
 MCSimulation::MCSimulation(const json &j, MPI::MPIController &mpi)
     : log_level(faunus_logger->level()), state1(j), state2((faunus_logger->set_level(spdlog::level::off), j)),
-      moves((faunus_logger->set_level(log_level), j), state2.spc, mpi) {
+      moves((faunus_logger->set_level(log_level), j), state2.spc, state2.pot, mpi) {
     init();
 }
 

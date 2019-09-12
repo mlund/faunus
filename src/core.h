@@ -15,6 +15,7 @@ extern template class nlohmann::basic_json<>;
 namespace Faunus {
 
     typedef Eigen::Vector3d Point; //!< 3d vector
+    typedef std::vector<Point> PointVector; //!< list (c++ vector) of 3d vectors
     typedef nlohmann::json json;  //!< Json object
     class Random;
 

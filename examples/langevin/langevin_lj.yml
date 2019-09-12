@@ -1,0 +1,32 @@
+#!/usr/bin/env yason.py
+# Obtain the radial distribution function in a Lennard-Jones fluid using
+# the Langevin dynamics pseudo move.
+energy:
+    - nonbonded_coulomblj:
+        coulomb: {epsr: 80, type: plain}
+        lennardjones: {mixing: LB}
+
+atomlist:
+    - LJP: {eps: 1.05, sigma: 4.0, q: 0, mw: 15, dp: 10, dprot: 1}
+
+moleculelist:
+    - LJM:
+        atomic: true
+        atoms: [LJP]
+
+insertmolecules:
+    - LJM: {N: 100}
+
+moves:
+    - langevin_dynamics: # Langevin dynamics /w BAOAB splitting (Symmetric Langevin Velocity-Verlet)
+        nsteps: 25
+        integrator: {time_step: 0.005, friction: 5}
+
+analysis:
+    - atomrdf: {file: rdf_ld.dat, nstep: 25, dr: 0.05, name1: LJP, name2: LJP, nskip: 200}
+
+geometry: {type: cuboid, length: 18.6}
+mcloop: {macro: 1, micro: 10000}
+temperature: 298.15
+random: { seed: fixed }
+

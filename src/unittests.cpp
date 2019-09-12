@@ -18,6 +18,7 @@
 #include "bonds_test.h"
 #include "core_test.h"
 #include "energy_test.h"
+#include "forcemove_test.h"
 #include "geometry_test.h"
 #include "group_test.h"
 #include "molecule_test.h"

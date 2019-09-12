@@ -11,9 +11,11 @@ namespace Faunus {
     /** @brief Physical constants */
     namespace PhysicalConstants {
         typedef double T; //!< Float size
-        constexpr T infty = std::numeric_limits<T>::infinity(), //!< Numerical infinity
-            epsilon_dbl = std::numeric_limits<T>::epsilon(),    //!< Numerical precision
-            max_value = std::numeric_limits<T>::max(),          //!< Maximal (finite) representable value
+        constexpr T
+            infty = std::numeric_limits<T>::infinity(),      //!< Numerical infinity
+            neg_infty = -std::numeric_limits<T>::infinity(), //!< Numerical negative infinity
+            epsilon_dbl = std::numeric_limits<T>::epsilon(), //!< Numerical precision
+            max_value = std::numeric_limits<T>::max(),       //!< Maximal (finite) representable value
             max_exp_argument =
                 709.782712893384,    //!< Largest value exp() can take before overflow (hard-coded for double)
             pi = 3.141592653589793,  //!< Pi
@@ -74,7 +76,7 @@ namespace Faunus {
      * dipole moment      | electron-ångström (eÅ)
      * concentration      | number of particles per cubic ångström (Å⁻³)
      * pressure           | number of particles per cubic ångström (Å⁻³)
-     * mass               | dalton (Da)
+     * mass               | grams per mole (g/mol)
      * angle              | radians (rad)
      *
      * The value of pressure in particle densities assumes the ideal gas law.
@@ -94,8 +96,9 @@ namespace Faunus {
         constexpr T operator"" _angstrom3(T l) { return l; }            //!< volume in cubic ångströms
         constexpr T operator"" _m3(T v) { return v * 1e30; }            //!< volume in cubic meters (to cubic ångströms)
         constexpr T operator"" _liter(T v) { return v * 1e27; }         //!< volume in liters (to cubic ångströms)
-        constexpr T operator"" _Da(T m) { return m; }                   //!< mass in daltons
-        constexpr T operator"" _kg(T m) { return m * 1e3 * pc::Nav; }   //!< mass in kilograms (to daltons)
+        constexpr T operator"" _gmol(T m) { return m; }                 //!< mass in grams per mole
+        constexpr T operator"" _kg(T m) { return m * 1e3 * pc::Nav; }   //!< mass in kilograms per particle (to grams per mole)
+        constexpr T operator"" _Da(T m) { return m; }                   //!< mass in daltons per particle (to grams per mole)
         //! amount of substance in moles (to number of particles)
         constexpr T operator"" _mol(T n) { return n * pc::Nav; }
         //! molar concentration (to particle density in number of particles per cubic ångström)

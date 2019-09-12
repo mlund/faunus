@@ -9,6 +9,10 @@
 
 namespace Faunus {
 
+namespace Energy {
+class Hamiltonian;
+}
+
 namespace Move {
 
 class Movebase {
@@ -275,20 +279,6 @@ class ConformationSwap : public Movebase {
 
 }; // end of conformation swap move
 
-/**
- * @brief Sketch for MD move
- */
-class ForceMove : public Movebase {
-  private:
-    typedef typename Space::Tpvec Tpvec;
-    void _to_json(json &) const override{};
-    void _from_json(const json &) override{};
-    std::vector<Point> forces, velocities;
-
-  public:
-    ForceMove();
-}; // end of forcemove
-
 class VolumeMove : public Movebase {
   private:
     const std::map<std::string, Geometry::VolumeMethod> methods = {
@@ -450,7 +440,7 @@ class Propagator {
 
   public:
     Propagator() = default;
-    Propagator(const json &j, Space &spc, MPI::MPIController &mpi);
+    Propagator(const json &j, Space &spc, Energy::Hamiltonian &pot, MPI::MPIController &mpi);
     auto repeat() const -> decltype(_repeat) { return _repeat; }
     auto moves() const -> const decltype(_moves) & { return _moves; };
     auto sample() {

@@ -124,7 +124,7 @@ PairPotentialBase::PairPotentialBase(const std::string &name, const std::string 
 
 Point PairPotentialBase::force(const Particle &, const Particle &, double, const Point &) const {
     assert(false && "We should never reach this point!");
-    return {0, 0, 0};
+    throw(std::logic_error("Force computation not implemented for this setup!"));
 }
 
 // =============== MixerPairPotentialBase ===============

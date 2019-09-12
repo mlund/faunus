@@ -670,6 +670,7 @@ void Hamiltonian::to_json(json &j) const {
     for (auto i : this->vec)
         j.push_back(*i);
 }
+
 void Hamiltonian::addEwald(const json &j, Space &spc) {
     // note this will currently not detect multipolar energies ore
     // deeply nested "coulomb" pair-potentials
@@ -691,6 +692,12 @@ void Hamiltonian::addEwald(const json &j, Space &spc) {
             faunus_logger->debug("adding Ewald reciprocal and surface energy terms");
             emplace_back<Energy::Ewald>(_j, spc);
         }
+    }
+}
+
+void Hamiltonian::force(PointVector &forces) {
+    for (auto energy_ptr : this->vec) { // loop over terms in Hamiltonian
+        energy_ptr->force(forces);      // and update forces
     }
 }
 

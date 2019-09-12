@@ -3,6 +3,7 @@
 #include "speciation.h"
 #include "clustermove.h"
 #include "chainmove.h"
+#include "forcemove.h"
 #include "aux/iteratorsupport.h"
 #include "aux/eigensupport.h"
 #include "spdlog/spdlog.h"
@@ -193,7 +194,7 @@ ParticleVector::iterator AtomicTranslateRotate::randomAtom() {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-Propagator::Propagator(const json &j, Space &spc, MPI::MPIController &mpi) {
+Propagator::Propagator(const json &j, Space &spc, Energy::Hamiltonian &pot, MPI::MPIController &mpi) {
 #pragma GCC diagnostic pop
 
     if (j.count("random") == 1) {
@@ -229,6 +230,10 @@ Propagator::Propagator(const json &j, Space &spc, MPI::MPIController &mpi) {
                     _moves.emplace_back<Move::QuadrantJump>(spc);
                 else if (it.key() == "cluster")
                     _moves.emplace_back<Move::Cluster>(spc);
+                else if (it.key() == "langevin_dynamics") {
+                    auto move_ptr = std::make_shared<Move::LangevinDynamics>(spc, pot);
+                    _moves.push_back<Move::LangevinDynamics>(move_ptr);
+                }
                     // new moves go here...
 #ifdef ENABLE_MPI
                 else if (it.key() == "temper")
@@ -1155,10 +1160,6 @@ ConformationSwap::ConformationSwap(Space &spc) : spc(spc) {
     inserter.dir = {0, 0, 0};
     inserter.rotate = true;
     inserter.allow_overlap = true;
-}
-
-ForceMove::ForceMove() {
-    // resize forces and velocities to mathc spc.p
 }
 
 } // namespace Move

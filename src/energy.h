@@ -855,8 +855,8 @@ template <typename TPairEnergy, typename TCutoff> class PairingBasePolicy {
     void force(std::vector<Point> &forces) {
         // just a temporary hack; perhaps better to allow PairForce instead of the PairEnergy template
         assert(forces.size() == spc.p.size() && "the forces size must match the particle size");
-        for (size_t i = 0; i < spc.p.size() - 1; i++) {
-            for (size_t j = i + 1; j < spc.p.size(); j++) {
+        for (size_t i = 0; i < spc.p.size() - 1; ++i) {
+            for (size_t j = i + 1; j < spc.p.size(); ++j) {
                 const Point f = pair_energy.force(spc.p[i], spc.p[j]);
                 forces[i] += f;
                 forces[j] -= f;
@@ -1178,8 +1178,9 @@ struct Example2D : public Energybase {
 class Hamiltonian : public Energybase, public BasePointerVector<Energybase> {
   protected:
     double maxenergy = pc::infty; //!< Maximum allowed energy change
-    void to_json(json &j) const override;
-    void addEwald(const json &j, Space &spc); //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
+    void to_json(json &) const override;
+    void addEwald(const json &, Space &); //!< Adds an instance of reciprocal space Ewald energies (if appropriate)
+    void force(PointVector &) override;
   public:
     Hamiltonian(Space &spc, const json &j);
     double energy(Change &change) override; //!< Energy due to changes

@@ -24,6 +24,7 @@ if (PANDOC)
         topology.md
         energy.md
         moves.md
+        langevin.md
         analysis.md |
         grep -v ".notice--" |
         grep -v "Github-Improve_this_page" |
@@ -46,6 +47,7 @@ if (PANDOC)
         topology.md
         energy.md
         moves.md
+        langevin.md
         analysis.md |
         grep -v ".notice--" |
         grep -v "Github-Improve_this_page" |

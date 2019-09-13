@@ -462,7 +462,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
 #else
                     push_back<Energy::Penalty>(it.value(), spc);
 #endif
-#if defined ENABLE_FREESASA || defined ENABLE_POWERSASA
+#if defined ENABLE_FREESASA
                 else if (it.key() == "sasa")
                     push_back<Energy::SASAEnergy>(it.value(), spc);
 #endif
@@ -611,86 +611,6 @@ void SASAEnergy::to_json(json &j) const {
     j["radius"] = parameters.probe_radius / 1.0_angstrom;
     j[bracket("SASA") + "/" + angstrom + squared] = avgArea.avg() / 1.0_angstrom;
     _roundjson(j, 5); // set json output precision
-}
-
-#elif defined ENABLE_POWERSASA
-void SASAEnergy::updateSASA(const ParticleVector &p) {
-    assert(ps != nullptr);
-    radii.resize(p.size());
-    std::transform(p.begin(), p.end(), radii.begin(),
-                   [this](auto &a) { return atoms[a.id].sigma * 0.5 + this->probe; });
-
-    ps->update_coords(spc.positions(), radii); // slowest step!
-
-    for (size_t i = 0; i < p.size(); i++) {
-        auto &a = atoms[p[i].id];
-        if (std::fabs(a.tfe) > 1e-9 || std::fabs(a.tension) > 1e-9)
-            ps->calc_sasa_single(i);
-    }
-    sasa = ps->getSasa();
-    assert(sasa.size() == p.size());
-}
-
-void SASAEnergy::to_json(json &j) const {
-    using namespace u8;
-    j["molarity"] = cosolute_concentration / 1.0_molar;
-    j["radius"] = probe / 1.0_angstrom;
-    j[bracket("SASA") + "/" + angstrom + squared] = avgArea.avg() / 1.0_angstrom;
-    _roundjson(j, 5); // set json output precision
-}
-
-void SASAEnergy::sync(Energybase *basePtr, Change &c) {
-    auto other = dynamic_cast<decltype(this)>(basePtr);
-    if (other) {
-        if (c.all || c.dV) {
-            radii = other->radii;
-            sasa = other->sasa;
-        } else {
-            for (auto &d : c.groups) {
-                int offset = std::distance(spc.p.begin(), spc.groups.at(d.index).begin());
-                for (int j : d.atoms) {
-                    int i = j + offset;
-                    radii[i] = other->radii[i];
-                    sasa[i] = other->sasa[i];
-                }
-            }
-        }
-    }
-}
-
-SASAEnergy::SASAEnergy(const json &j, Space &spc) : spc(spc) {
-    name = "sasa";
-    cite = "doi:10.1002/jcc.21844";
-    probe = j.value("radius", 1.4) * 1.0_angstrom;
-    cosolute_concentration = j.at("molarity").get<double>() * 1.0_molar;
-    init();
-}
-
-void SASAEnergy::init() {
-    radii.resize(spc.p.size());
-    std::transform(spc.p.begin(), spc.p.end(), radii.begin(),
-                   [this](auto &a) { return atoms[a.id].sigma * 0.5 + this->probe; });
-
-    if (ps == nullptr)
-        ps = std::make_shared<POWERSASA::PowerSasa<double, Point>>(spc.positions(), radii);
-    updateSASA(spc.p);
-}
-
-double SASAEnergy::energy(Change &) {
-    double u = 0, A = 0;
-    /*
-     * ideally we want to call `update` only if `key==NEW` but
-     * syncronising the PowerSasa object is difficult since it's
-     * non-copyable.
-     */
-    updateSASA(spc.p); // ideally we want
-    for (size_t i = 0; i < spc.p.size(); ++i) {
-        auto &a = atoms[spc.p[i].id];
-        u += sasa[i] * (a.tension + cosolute_concentration * a.tfe);
-        A += sasa[i];
-    }
-    avgArea += A; // sample average area for accepted confs. only
-    return u;
 }
 #endif
 } // end of namespace Energy

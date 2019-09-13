@@ -30,7 +30,6 @@ endif()
 
 option(BUILD_STATIC "Build statically linked binaries" off)
 option(ENABLE_FREESASA "Fetch 3rd-party SASA calculation software" on)
-option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" off)
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 option(ENABLE_LTO "Enable Link-Time Optimizations if available" off)
 
@@ -217,19 +216,6 @@ if (ENABLE_FREESASA)
     add_definitions("-DENABLE_FREESASA")
     include_directories(SYSTEM "${source_dir}/src")
     add_dependencies(freesasa project_freesasa)
-endif ()
-
-# POWERSASA
-if (ENABLE_POWERSASA)
-    foreach (powf array.hpp power_diagram.h power_sasa.h LICENSE)
-        if (NOT EXISTS "${CMAKE_BINARY_DIR}/_deps/sasa/${powf}")
-            file(DOWNLOAD
-                "https://raw.githubusercontent.com/yesint/pteros/d0b65b7/thirdparty/powersasa/${powf}"
-                "${CMAKE_BINARY_DIR}/_deps/sasa/${powf}" STATUS status)
-        endif ()
-    endforeach ()
-    add_definitions("-DENABLE_POWERSASA")
-    include_directories(SYSTEM "${CMAKE_BINARY_DIR}/_deps/sasa")
 endif ()
 
 # Download CoulombGalore header

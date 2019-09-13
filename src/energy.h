@@ -922,40 +922,6 @@ class SASAEnergy : public Energybase {
     void init() override;
     double energy(Change &) override;
 }; //!< SASA energy from transfer free energies
-#elif defined ENABLE_POWERSASA
-/*
- * @todo:
- * - can only a subset of sasa be calculated? Note that it's the
- *   `update_coord()` function that takes up most time.
- * - delegate to GPU? In the PowerSasa paper this is mentioned
- */
-class SASAEnergy : public Energybase {
-  public:
-    std::vector<double> sasa, radii;
-
-  private:
-    Space &spc;
-    double probe;            // sasa probe radius (angstrom)
-    double cosolute_concentration = 0;         // co-solute concentration (mol/l)
-    Average<double> avgArea; // average surface area
-    std::shared_ptr<POWERSASA::PowerSasa<double, Point>> ps = nullptr;
-
-    void updateSASA(const ParticleVector &p);
-    void to_json(json &j) const override;
-
-    /*
-     * @note
-     * This is not enough as the PowerSasa object contains data
-     * that also need syncing. It works due to the `update` (expensive!)
-     * call in `energy`.
-     */
-    void sync(Energybase *basePtr, Change &c) override;
-
-  public:
-    SASAEnergy(const json &j, Space &spc);
-    void init() override;
-    double energy(Change &) override;
-}; //!< SASA energy from transfer free energies
 #endif
 
 struct Example2D : public Energybase {

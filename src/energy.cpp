@@ -530,7 +530,7 @@ SASAEnergy::SASAEnergy(const json &j, Space &spc) : spc(spc) {
     init();
 }
 
-void SASAEnergy::updatePositions(const ParticleVector &p) {
+void SASAEnergy::updatePositions([[gnu::unused]] const ParticleVector &p) {
     assert(p.size() == spc.positions().size());
     positions.resize(0); // clear
     for(auto pos: spc.positions()) {

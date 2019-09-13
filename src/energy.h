@@ -11,6 +11,9 @@
 #ifdef ENABLE_POWERSASA
 #include <power_sasa.h>
 #endif
+#ifdef ENABLE_FREESASA
+#include <freesasa.h>
+#endif
 
 namespace Faunus {
 
@@ -890,7 +893,36 @@ template <typename Tpairpot> class NonbondedCached : public Nonbonded<Tpairpot> 
     } //!< Copy energy matrix from other
 };    //!< Nonbonded with cached energies (Energy Matrix)
 
-#ifdef ENABLE_POWERSASA
+#ifdef ENABLE_FREESASA
+/**
+ * @brief Interface to the FreeSASA C-library. Experimental and unoptimized.
+ *
+ * https://freesasa.github.io/
+ */
+class SASAEnergy : public Energybase {
+  public:
+    std::vector<double> sasa, radii, positions;
+
+  private:
+    Space &spc;
+    double cosolute_concentration;             // co-solute concentration (mol/l)
+    freesasa_parameters parameters;
+    Average<double> avgArea; // average surface area
+
+    void updatePositions(const ParticleVector &p);
+    void updateRadii(const ParticleVector &p);
+
+    void updateSASA(const ParticleVector &p, const Change &change);
+    void to_json(json &j) const override;
+    void sync(Energybase *basePtr, Change &c) override;
+
+  public:
+    SASAEnergy(Space &spc, double cosolute_concentration = 0.0, double probe_radius = 1.4);
+    SASAEnergy(const json &j, Space &spc);
+    void init() override;
+    double energy(Change &) override;
+}; //!< SASA energy from transfer free energies
+#elif defined ENABLE_POWERSASA
 /*
  * @todo:
  * - can only a subset of sasa be calculated? Note that it's the
@@ -904,7 +936,7 @@ class SASAEnergy : public Energybase {
   private:
     Space &spc;
     double probe;            // sasa probe radius (angstrom)
-    double conc = 0;         // co-solute concentration (mol/l)
+    double cosolute_concentration = 0;         // co-solute concentration (mol/l)
     Average<double> avgArea; // average surface area
     std::shared_ptr<POWERSASA::PowerSasa<double, Point>> ps = nullptr;
 

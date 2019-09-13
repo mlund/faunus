@@ -462,7 +462,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
 #else
                     push_back<Energy::Penalty>(it.value(), spc);
 #endif
-#ifdef ENABLE_POWERSASA
+#if defined ENABLE_FREESASA || defined ENABLE_POWERSASA
                 else if (it.key() == "sasa")
                     push_back<Energy::SASAEnergy>(it.value(), spc);
 #endif
@@ -508,6 +508,112 @@ void Hamiltonian::sync(Energybase *basePtr, Change &change) {
         }
     throw std::runtime_error("hamiltonian mismatch");
 }
+
+#ifdef ENABLE_FREESASA
+
+SASAEnergy::SASAEnergy(Space &spc, double cosolute_concentration, double probe_radius)
+    : spc(spc), cosolute_concentration(cosolute_concentration)
+{
+    name = "sasa"; // todo predecessor constructor
+    cite = "doi:10.12688/f1000research.7931.1"; // todo predecessor constructor
+    parameters = freesasa_default_parameters;
+    parameters.probe_radius = probe_radius * 1.0_angstrom;
+    init();
+}
+
+SASAEnergy::SASAEnergy(const json &j, Space &spc) : spc(spc) {
+    name = "sasa"; // todo predecessor constructor
+    cite = "doi:10.12688/f1000research.7931.1"; // todo predecessor constructor
+    parameters = freesasa_default_parameters;
+    parameters.probe_radius = j.value("radius", 1.4) * 1.0_angstrom;
+    cosolute_concentration = j.at("molarity").get<double>() * 1.0_molar;
+    init();
+}
+
+void SASAEnergy::updatePositions(const ParticleVector &p) {
+    assert(p.size() == spc.positions().size());
+    positions.resize(0); // clear
+    for(auto pos: spc.positions()) {
+        auto xyz = pos.data();
+        positions.insert(positions.end(), xyz, xyz+3);
+    }
+}
+
+void SASAEnergy::updateRadii(const ParticleVector &p) {
+    radii.resize(p.size());
+    std::transform(p.begin(), p.end(), radii.begin(),
+                   [](auto &a) { return atoms[a.id].sigma * 0.5; });
+}
+
+void SASAEnergy::updateSASA(const ParticleVector &p, const Change &) {
+    updateRadii(p);
+    updatePositions(p);
+    auto result = freesasa_calc_coord(positions.data(), radii.data(), p.size(), &parameters);
+    if(result) {
+        sasa.resize(0); // clear
+        sasa.insert(sasa.begin(), result->sasa, result->sasa + p.size()); // copy
+        assert(sasa.size() == p.size());
+    } else {
+        throw std::runtime_error("FreeSASA failed");
+    }
+}
+
+void SASAEnergy::init() {
+    auto box = spc.geo.getLength();
+    auto box_pbc = box;
+    spc.geo.boundary(box_pbc);
+    if(box_pbc != box) {
+        faunus_logger->error("PBC applied, but PBC not implemented for FreeSASA. Expect unphysical results.");
+    }
+    Change change;
+    change.all = true;
+    updateSASA(spc.p, change);
+}
+
+double SASAEnergy::energy(Change &change) {
+    double u = 0, A = 0;
+    updateSASA(spc.p, change); // ideally we want
+    for (size_t i = 0; i < spc.p.size(); ++i) {
+        auto &a = atoms[spc.p[i].id];
+        u += sasa[i] * (a.tension + cosolute_concentration * a.tfe);
+        A += sasa[i];
+    }
+    avgArea += A; // sample average area for accepted confs.
+    return u;
+}
+
+void SASAEnergy::sync(Energybase *basePtr, Change &c) {
+    auto other = dynamic_cast<decltype(this)>(basePtr);
+    if (other) {
+        if (c.all || c.dV) {
+            radii = other->radii;
+            positions = other->positions;
+            sasa = other->sasa;
+        } else {
+            for (auto &d : c.groups) {
+                int offset = std::distance(spc.p.begin(), spc.groups.at(d.index).begin());
+                for (int j : d.atoms) {
+                    int i = j + offset;
+                    radii[i] = other->radii[i];
+                    sasa[i] = other->sasa[i];
+                    for(size_t k = 0; k < 3; ++k) {
+                        positions[3*i + k] = spc.positions()[i][k];
+                    }
+                }
+            }
+        }
+    }
+}
+
+void SASAEnergy::to_json(json &j) const {
+    using namespace u8;
+    j["molarity"] = cosolute_concentration / 1.0_molar;
+    j["radius"] = parameters.probe_radius / 1.0_angstrom;
+    j[bracket("SASA") + "/" + angstrom + squared] = avgArea.avg() / 1.0_angstrom;
+    _roundjson(j, 5); // set json output precision
+}
+
+#elif defined ENABLE_POWERSASA
 void SASAEnergy::updateSASA(const ParticleVector &p) {
     assert(ps != nullptr);
     radii.resize(p.size());
@@ -524,13 +630,15 @@ void SASAEnergy::updateSASA(const ParticleVector &p) {
     sasa = ps->getSasa();
     assert(sasa.size() == p.size());
 }
+
 void SASAEnergy::to_json(json &j) const {
     using namespace u8;
-    j["molarity"] = conc / 1.0_molar;
+    j["molarity"] = cosolute_concentration / 1.0_molar;
     j["radius"] = probe / 1.0_angstrom;
     j[bracket("SASA") + "/" + angstrom + squared] = avgArea.avg() / 1.0_angstrom;
     _roundjson(j, 5); // set json output precision
 }
+
 void SASAEnergy::sync(Energybase *basePtr, Change &c) {
     auto other = dynamic_cast<decltype(this)>(basePtr);
     if (other) {
@@ -549,13 +657,15 @@ void SASAEnergy::sync(Energybase *basePtr, Change &c) {
         }
     }
 }
+
 SASAEnergy::SASAEnergy(const json &j, Space &spc) : spc(spc) {
     name = "sasa";
     cite = "doi:10.1002/jcc.21844";
     probe = j.value("radius", 1.4) * 1.0_angstrom;
-    conc = j.at("molarity").get<double>() * 1.0_molar;
+    cosolute_concentration = j.at("molarity").get<double>() * 1.0_molar;
     init();
 }
+
 void SASAEnergy::init() {
     radii.resize(spc.p.size());
     std::transform(spc.p.begin(), spc.p.end(), radii.begin(),
@@ -565,6 +675,7 @@ void SASAEnergy::init() {
         ps = std::make_shared<POWERSASA::PowerSasa<double, Point>>(spc.positions(), radii);
     updateSASA(spc.p);
 }
+
 double SASAEnergy::energy(Change &) {
     double u = 0, A = 0;
     /*
@@ -575,11 +686,12 @@ double SASAEnergy::energy(Change &) {
     updateSASA(spc.p); // ideally we want
     for (size_t i = 0; i < spc.p.size(); ++i) {
         auto &a = atoms[spc.p[i].id];
-        u += sasa[i] * (a.tension + conc * a.tfe);
+        u += sasa[i] * (a.tension + cosolute_concentration * a.tfe);
         A += sasa[i];
     }
     avgArea += A; // sample average area for accepted confs. only
     return u;
 }
+#endif
 } // end of namespace Energy
 } // end of namespace Faunus

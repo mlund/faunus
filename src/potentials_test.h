@@ -302,8 +302,8 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
 
 TEST_CASE("[Faunus] Pair Potentials") {
     json j = R"({ "atomlist" : [
-                 { "A": { "r": 1.5, "tension": 0.023} },
-                 { "B": { "r": 2.1, "tfe": 0.98 } }]})"_json;
+                 { "A": { "r": 1.5, "tension": 0.023, "eps": 1.0, "sigma": 1.3} },
+                 { "B": { "r": 2.1, "tfe": 0.98, "eps": 2.0, "sigma": 1.0 } }]})"_json;
 
     atoms = j["atomlist"].get<decltype(atoms)>();
     Particle a, b;
@@ -326,6 +326,16 @@ TEST_CASE("[Faunus] Pair Potentials") {
         CHECK(pot(a, b, {0, 0, 0}) == Approx(f * 4 * pc::pi * 2.1 * 2.1));                // complete overlap
         CHECK(pot(a, b, {10, 0, 0}) == Approx(f * 4 * pc::pi * (2.1 * 2.1 + 1.5 * 1.5))); // far apart
         CHECK(pot(a, b, {2.5, 0, 0}) == Approx(f * 71.74894965974514));                   // partial overlap
+    }
+
+    SUBCASE("Hertzpotential") {
+        SASApotential pot;
+        json in = R"({ "hertz": {"mixing": LB}})"_json;
+        pot = in["hertz"];
+        CHECK(in == json(pot));
+        CHECK(pot(a, b, {0.7, 0, 0}) == Approx(0.1354570712));   // within cut-off
+        CHECK(pot(a, b, {1.15, 0, 0}) == Approx(0.0));           // at cut-off
+        CHECK(pot(a, b, {2.0, 0, 0}) == Approx(0.0));            // outside of cut-off
     }
 }
 

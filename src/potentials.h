@@ -563,6 +563,13 @@ class NewCoulombGalore : public PairPotentialBase {
     Point force(const Particle &, const Particle &, double, const Point &) const override;
     void from_json(const json &) override;
     void to_json(json &) const override;
+    template <class Tpvec, class Tgroup> double internal(const Tgroup &g) const {
+        double Eq = 0;
+        for (auto i : g)
+            Eq += i.charge * i.charge;
+        return pot.self_energy({Eq, 0.0}) * lB;
+    }
+    double dielectric_constant(double M2V) { return pot.calc_dielectric(M2V); }
 };
 
 /**

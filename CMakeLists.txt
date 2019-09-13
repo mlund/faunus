@@ -50,7 +50,7 @@ if (ENABLE_MPI)
     find_package(MPI REQUIRED)
 endif()
 
-option(ENABLE_SID "Enable SID emulation" on)
+option(ENABLE_SID "Enable SID emulation" off)
 if(ENABLE_SID)
     find_package(SDL2 CONFIG)
 endif()

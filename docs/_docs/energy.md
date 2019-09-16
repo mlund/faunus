@@ -357,7 +357,7 @@ as shown in the example bellow.
       Na Cl: {sigma_hs: 2}
 ~~~
 
-### SASA
+### SASA (pair potential)
 
 This calculates the surface area of two intersecting particles or radii $R$ and $r$
 to estimate an energy based on transfer-free-energies (TFE) and surface tension.
@@ -379,13 +379,14 @@ $$
 where $\gamma\_{ij}$ and $\varepsilon\_{\text{tfe},ij}$ are the arithmetic means of
  `tension` and `tfe` provided in the atomlist.
 
-Note that SASA is strictly not additive and this
-pair-potential is merely a poor-mans way of approximately take into account ion-specificity
-and hydrophobic/hydrophilic interactions.
+Note that SASA is strictly not additive and this pair-potential is merely
+a poor-mans way of approximately take into account ion-specificity and
+hydrophobic/hydrophilic interactions. Faunus offers also a full, albeit yet
+experimental implementation of [Solvent Accessible Surface Area] energy.
 
 `sasa`       | Description
 ------------ | ----------------------------------------------------------
-`molarity`   | Molar concentration of co-solute, $c_s$.
+`molarity`   | Molar concentration of co-solute, $c_s$
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
 `shift=true` | Shift to zero at large separations
 
@@ -660,6 +661,10 @@ elements of `high`.
 
 ## Solvent Accessible Surface Area
 
+Note that the implementation of Solvent Accessible Surface Area potential is considered _experimental_.
+The code is untested, unoptimized and the configuration syntax bellow can change.
+The FreeSASA library option has to be enabled when [compiling].
+
 `sasa`       | SASA Transfer Free Energy
 ------------ | --------------------------------------------
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
@@ -670,7 +675,9 @@ Calculates the free energy contribution due to
 1. atomic surface tension
 2. co-solute concentration (typically electrolytes)
 
-via a [SASA calculation](http://doi.org/dws4qm) for each atom.
+via a [SASA calculation](http://dx.doi.org/10/dbjh) for each atom, as implemented in
+the [FreeSASA library](https://freesasa.github.io/).
+
 The energy term is:
 
 $$

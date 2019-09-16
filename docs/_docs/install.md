@@ -74,7 +74,7 @@ CMake Option                         | Description
 `-DENABLE_MPI=OFF`                   | Enable MPI
 `-DENABLE_OPENMP=ON`                 | Enable OpenMP support
 `-DENABLE_PYTHON=ON`                 | Build python bindings (experimental)
-`-DENABLE_POWERSASA=ON`              | Enable SASA routines (external download)
+`-DENABLE_FREESASA=ON`               | Enable SASA routines (external download)
 `-DBUILD_STATIC=OFF`                 | Build statically linked binaries
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`  | Alternatives: `Debug` or `Release` (faster)
 `-DCMAKE_CXX_FLAGS_RELEASE="..."`    | Compiler options for Release mode

@@ -917,6 +917,11 @@ class SASAEnergy : public Energybase {
     void sync(Energybase *basePtr, Change &c) override;
 
   public:
+    /**
+     * @param spc
+     * @param cosolute_concentration in particles per angstrom cubed
+     * @param probe_radius in angstrom
+     */
     SASAEnergy(Space &spc, double cosolute_concentration = 0.0, double probe_radius = 1.4);
     SASAEnergy(const json &j, Space &spc);
     void init() override;

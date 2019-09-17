@@ -517,18 +517,12 @@ SASAEnergy::SASAEnergy(Space &spc, double cosolute_concentration, double probe_r
     name = "sasa"; // todo predecessor constructor
     cite = "doi:10.12688/f1000research.7931.1"; // todo predecessor constructor
     parameters = freesasa_default_parameters;
-    parameters.probe_radius = probe_radius * 1.0_angstrom;
+    parameters.probe_radius = probe_radius;
     init();
 }
 
-SASAEnergy::SASAEnergy(const json &j, Space &spc) : spc(spc) {
-    name = "sasa"; // todo predecessor constructor
-    cite = "doi:10.12688/f1000research.7931.1"; // todo predecessor constructor
-    parameters = freesasa_default_parameters;
-    parameters.probe_radius = j.value("radius", 1.4) * 1.0_angstrom;
-    cosolute_concentration = j.at("molarity").get<double>() * 1.0_molar;
-    init();
-}
+SASAEnergy::SASAEnergy(const json &j, Space &spc)
+    : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
 
 void SASAEnergy::updatePositions([[gnu::unused]] const ParticleVector &p) {
     assert(p.size() == spc.positions().size());

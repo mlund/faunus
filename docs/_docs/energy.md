@@ -662,7 +662,7 @@ elements of `high`.
 ## Solvent Accessible Surface Area
 
 Note that the implementation of Solvent Accessible Surface Area potential is considered _experimental_.
-The code is untested, unoptimized and the configuration syntax bellow can change.
+The code is untested, unoptimized and the configuration syntax below can change.
 The FreeSASA library option has to be enabled when [compiling].
 
 `sasa`       | SASA Transfer Free Energy

@@ -73,6 +73,7 @@ set(hdrs
 set(tsts
     ${CMAKE_SOURCE_DIR}/src/atomdata_test.h
     ${CMAKE_SOURCE_DIR}/src/core_test.h
+    ${CMAKE_SOURCE_DIR}/src/energy_test.h
     ${CMAKE_SOURCE_DIR}/src/group_test.h
     ${CMAKE_SOURCE_DIR}/src/potentials_test.h
     ${CMAKE_SOURCE_DIR}/src/tensor_test.h
@@ -94,6 +95,9 @@ set_target_properties(libfaunus PROPERTIES
 if (MPI_CXX_FOUND)
     target_link_libraries(libfaunus PRIVATE MPI::MPI_CXX)
     target_compile_definitions(libfaunus PRIVATE ENABLE_MPI)
+endif()
+if(ENABLE_FREESASA)
+    target_link_libraries(libfaunus PRIVATE freesasa)
 endif()
 
 # target: unittests

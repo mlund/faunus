@@ -9,6 +9,7 @@ include(FetchContent)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(PythonInterp 3 REQUIRED)
 find_package(Threads REQUIRED)
 enable_testing()
@@ -28,7 +29,7 @@ if (CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
 endif()
 
 option(BUILD_STATIC "Build statically linked binaries" off)
-option(ENABLE_POWERSASA "Fetch 3rd-party SASA calculation software" on)
+option(ENABLE_FREESASA "Fetch 3rd-party SASA calculation software" on)
 option(ENABLE_PYTHON "Try to compile python bindings (experimental!)" on)
 option(ENABLE_LTO "Enable Link-Time Optimizations if available" off)
 
@@ -195,17 +196,26 @@ if(NOT doctest_POPULATED)
     add_definitions(-DDOCTEST_CONFIG_DISABLE)
 endif()
 
-# POWERSASA
-if (ENABLE_POWERSASA)
-    foreach (powf array.hpp power_diagram.h power_sasa.h LICENSE)
-        if (NOT EXISTS "${CMAKE_BINARY_DIR}/_deps/sasa/${powf}")
-            file(DOWNLOAD
-                "https://raw.githubusercontent.com/yesint/pteros/d0b65b7/thirdparty/powersasa/${powf}"
-                "${CMAKE_BINARY_DIR}/_deps/sasa/${powf}" STATUS status)
-        endif ()
-    endforeach ()
-    add_definitions("-DENABLE_POWERSASA")
-    include_directories(SYSTEM "${CMAKE_BINARY_DIR}/_deps/sasa")
+# FREESASA
+if (ENABLE_FREESASA)
+    ExternalProject_Add(
+            project_freesasa
+            PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
+            LOG_DOWNLOAD ON
+            URL https://github.com/mittinatten/freesasa/releases/download/2.0.3/freesasa-2.0.3.tar.gz
+            URL_HASH SHA256=ba1d4f7e9dd51ae2452b5c3a80ac34039d51da4826dae1dbe173cd7a1d6aca94
+            # -fPIC flag is needed to link with pyfaunus
+            CONFIGURE_COMMAND CFLAGS=-fPIC <SOURCE_DIR>/configure --disable-xml --disable-json
+            BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
+            INSTALL_COMMAND ""
+    )
+    ExternalProject_Get_Property(project_freesasa source_dir)
+    ExternalProject_Get_Property(project_freesasa binary_dir)
+    add_library(freesasa STATIC IMPORTED)
+    set_property(TARGET freesasa PROPERTY IMPORTED_LOCATION ${binary_dir}/src/libfreesasa.a)
+    add_definitions("-DENABLE_FREESASA")
+    include_directories(SYSTEM "${source_dir}/src")
+    add_dependencies(freesasa project_freesasa)
 endif ()
 
 # Download CoulombGalore header

@@ -15,10 +15,15 @@ except ImportError:
     warnings.warn("warning: missing jinja2 module")
     jinja2 = None
 
+
+# API compatibility between pyyaml and ruamel.yaml might break in the future
+# https://yaml.readthedocs.io/en/latest/api.html
 try:
-    # API compatibility between pyyaml and ruamel.yaml might break in the future
-    # https://yaml.readthedocs.io/en/latest/api.html
-    import ruamel_yaml as yaml
+    try:
+        import ruamel.yaml as yaml
+    except ImportError:
+        # anaconda packs it as a standalone module (underscore instead of dot)
+        import ruamel_yaml as yaml
 except ImportError:
     import yaml
 

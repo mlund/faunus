@@ -422,16 +422,16 @@ In addition to user-defined constants, the following symbols are defined:
 `symbol`   | Description
 ---------- | ---------------------------------------------
 `e0`       | Vacuum permittivity [C^2/J/m]
-`inf`      | infinity
-`kB`       | Boltzmann's constant [J/K]
-`kT`       | Boltzmann's constant x temperature [J]
-`Nav`      | Avogadro's number [1/mol]
+`inf`      | Infinity
+`kB`       | Boltzmann constant [J/K]
+`kT`       | Boltzmann constant × temperature [J]
+`Nav`      | Avogadro constant [1/mol]
 `pi`       | Pi
-`q1`,`q2`  | particle charges [e]
-`r`        | particle-particle separation [angstrom]
+`q1`,`q2`  | Particle charges [e]
+`r`        | Particle-particle separation [angstrom]
 `Rc`       | Spherical cut-off [angstrom]
-`s1`,`s2`  | particle sigma [angstrom]
-`T`        | temperature [K]
+`s1`,`s2`  | Particle sigma [angstrom]
+`T`        | Temperature [K]
 
 ## Custom External Potential
 
@@ -451,15 +451,15 @@ In addition to user-defined `constants`, the following symbols are available:
 `symbol`   | Description
 ---------- | ---------------------------------------
 `e0`       | Vacuum permittivity [C^2/J/m]
-`inf`      | infinity
-`kB`       | Boltzmann's constant [J/K]
-`kT`       | Boltzmann's constant x temperature [J]
-`Nav`      | Avogadro's number [1/mol]
+`inf`      | Infinity
+`kB`       | Boltzmann constant [J/K]
+`kT`       | Boltzmann constant × temperature [J]
+`Nav`      | Avogadro constant [1/mol]
 `pi`       | Pi
-`q`        | particle charge [e]
-`s`        | particle sigma [angstrom]
-`x`,`y`,`z`| particle positions [angstrom]
-`T`        | temperature [K]
+`q`        | Particle charge [e]
+`s`        | Particle sigma [angstrom]
+`x`,`y`,`z`| Particle positions [angstrom]
+`T`        | Temperature [K]
 
 If `com=true`, charge refers to the molecular net-charge, and `x,y,z` the mass-center coordinates.
 The following illustrates how to confine molecules in a spherical shell of radius, _r_, and

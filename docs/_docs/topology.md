@@ -19,9 +19,9 @@ temperature: 298.15  # system temperature (K)
 geometry:
   type: cuboid       # Cuboidal simulation container
   length: [40,40,40] # cuboid dimensions (array or number)
-mcloop:              # number of MC steps (macro x micro)
+mcloop:              # number of MC steps (macro × micro)
   macro: 5           # Number of outer MC steps
-  micro: 100         # Number of inner MC steps; total = 5 x 100 = 5000
+  micro: 100         # Number of inner MC steps; total = 5 × 100 = 500
 random:              # seed for pseudo random number generator
   seed: fixed        # "fixed" (default) or "hardware" (non-deterministic)
 ~~~

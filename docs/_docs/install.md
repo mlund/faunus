@@ -92,13 +92,15 @@ Pandoc is required to build the HTML manual:
 make manual_html
 ~~~
 
-In addition to pandoc, a TeX Live installation is required to build
-the PDF manual. Garamond fonts must be available:
+In addition to pandoc, a TeX Live installation containing XeLaTeX is required to build the PDF manual.
+The manual is supposed to be typeset with
+[EB Garamond](https://github.com/octaviopardo/EBGaramond12/tree/master/fonts/otf),
+[Garamond Math](https://github.com/YuanshengZhao/Garamond-Math/blob/master/Garamond-Math.otf) and
+[Fira Code](https://github.com/tonsky/FiraCode/releases/download/2/FiraCode_2.zip)
+fonts thus they have to be available in your system. Alternatively, you can tweak the font options
+in the `header.md` file.
 
 ~~~ bash
-wget https://tug.org/fonts/getnonfreefonts/install-getnonfreefonts
-sudo texlua install-getnonfreefonts
-sudo getnonfreefonts garamond --sys
 make manual
 ~~~
 

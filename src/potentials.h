@@ -95,7 +95,7 @@ class PairMixer {
     static TCombinatorFunc getCombinator(CombinationRuleType combination_rule, CoefficientType coefficient = COEF_ANY);
 
     // when explicit custom pairs are the only option
-    inline static constexpr double combUndefined(double, double) {
+    inline static constexpr double combUndefined(double = 0.0, double = 0.0) {
         return std::numeric_limits<double>::signaling_NaN();
     };
     inline static double combArithmetic(double a, double b) { return 0.5 * (a + b); }

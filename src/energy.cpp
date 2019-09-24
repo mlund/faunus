@@ -526,7 +526,7 @@ SASAEnergy::SASAEnergy(const json &j, Space &spc)
 
 void SASAEnergy::updatePositions([[gnu::unused]] const ParticleVector &p) {
     assert(p.size() == spc.positions().size());
-    positions.resize(0); // clear
+    positions.clear();
     for(auto pos: spc.positions()) {
         auto xyz = pos.data();
         positions.insert(positions.end(), xyz, xyz+3);
@@ -544,9 +544,11 @@ void SASAEnergy::updateSASA(const ParticleVector &p, const Change &) {
     updatePositions(p);
     auto result = freesasa_calc_coord(positions.data(), radii.data(), p.size(), &parameters);
     if(result) {
-        sasa.resize(0); // clear
-        sasa.insert(sasa.begin(), result->sasa, result->sasa + p.size()); // copy
+        assert(result->n_atoms == p.size());
+        sasa.clear();
+        sasa.insert(sasa.begin(), result->sasa, result->sasa + result->n_atoms); // copy
         assert(sasa.size() == p.size());
+        freesasa_result_free(result);
     } else {
         throw std::runtime_error("FreeSASA failed");
     }

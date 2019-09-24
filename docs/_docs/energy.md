@@ -306,7 +306,7 @@ The potentials below are often used to keep particles apart and/or to introduce 
 The atomic interaction parameters, e.g., $\sigma_i$ and $\epsilon\_i$, are taken from the
 topology.
 
-type             | atomic parameters | $u(r)$ (non-zero part)
+Type             | Atomic parameters | $u(r)$ (non-zero part)
 ---------------- | ----------------- | --------------------------------------------------------
 `hardsphere`     | `sigma`           | $\infty$ for $r < \sigma\_{ij}$
 `hertz`          | `sigma`, `eps`    | $\epsilon\_{ij} \left ( 1-r / \sigma\_{ij}\right )^{5/2}$ for $r<\sigma\_{ij}$
@@ -326,7 +326,7 @@ If not described otherwise, the same rule is applied to all atomic parameters us
 No meaningful defaults are defined yet, hence always specify the mixing rule explicitly, e.g.,
 `arithmetic` for `hardsphere`.
 
-rule                  | description        | formula
+Rule                  | Description        | Formula
 --------------------- | ------------------ | ------------------------------------------------------
 `arithmetic`          | arithmetic mean    | $a\_{ij} = \frac 12 \left( a\_{ii} + a_{jj} \right)$
 `geometric`           | geometric mean     | $a\_{ij} = \sqrt{a\_{ii} a_{jj}}$

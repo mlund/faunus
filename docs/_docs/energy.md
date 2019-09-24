@@ -421,12 +421,12 @@ In addition to user-defined constants, the following symbols are defined:
 
 `symbol`   | Description
 ---------- | ---------------------------------------------
-`e0`       | Vacuum permittivity [C^2/J/m]
-`inf`      | Infinity
+`e0`       | Vacuum permittivity [C²/J/m]
+`inf`      | ∞ (infinity)
 `kB`       | Boltzmann constant [J/K]
 `kT`       | Boltzmann constant × temperature [J]
 `Nav`      | Avogadro constant [1/mol]
-`pi`       | Pi
+`pi`       | π (pi)
 `q1`,`q2`  | Particle charges [e]
 `r`        | Particle-particle separation [angstrom]
 `Rc`       | Spherical cut-off [angstrom]
@@ -450,12 +450,12 @@ In addition to user-defined `constants`, the following symbols are available:
 
 `symbol`   | Description
 ---------- | ---------------------------------------
-`e0`       | Vacuum permittivity [C^2/J/m]
-`inf`      | Infinity
+`e0`       | Vacuum permittivity [C²/J/m]
+`inf`      | ∞ (infinity)
 `kB`       | Boltzmann constant [J/K]
 `kT`       | Boltzmann constant × temperature [J]
 `Nav`      | Avogadro constant [1/mol]
-`pi`       | Pi
+`pi`       | π (pi)
 `q`        | Particle charge [e]
 `s`        | Particle sigma [angstrom]
 `x`,`y`,`z`| Particle positions [angstrom]

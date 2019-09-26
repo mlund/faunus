@@ -193,6 +193,29 @@ TEST_CASE("[Faunus] SquareWell") {
     }
 }
 
+TEST_CASE("[Faunus] Hertz") {
+
+    json j = R"({ "atomlist" : [
+                 { "A": { "eps": 1.0, "sigma": 1.3} },
+                 { "B": { "eps": 2.0, "sigma": 1.0 } }]})"_json;
+
+    atoms = j["atomlist"].get<decltype(atoms)>();
+    Particle a = atoms[0], b = atoms[1];
+
+    SUBCASE("JSON serialization") {
+        json hertz_json = R"({ "hertz": {"mixing": "lorentz_berthelot", "eps": "eps", "sigma": "sigma"}})"_json;
+        Hertz hertz = hertz_json;
+        CHECK(hertz_json == json(hertz));
+    }
+    SUBCASE("Lorentz-Berthelot mixing") {
+        pc::temperature = 298.15_K;
+        Hertz hertz = R"({"mixing": "lorentz_berthelot"})"_json;
+        CHECK(hertz(a, b, {0.7, 0, 0}) == Approx(0.0546424449));   // within cut-off
+        CHECK(hertz(a, b, {1.15, 0, 0}) == Approx(0.0));           // at cut-off
+        CHECK(hertz(a, b, {2.0, 0, 0}) == Approx(0.0));            // outside of cut-off
+    }
+}
+
 TEST_SUITE_END();
 
 TEST_CASE("[Faunus] CustomPairPotential") {

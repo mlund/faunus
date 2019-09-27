@@ -99,9 +99,9 @@ void from_json(const json &j, std::vector<InteractionData> &interactions) {
 
 void to_json(json &j, const std::vector<InteractionData> &interactions) {
     if (!interactions.empty()) {
-        auto &j_custom = j["custom"];
+        j = json::array();
         for (auto &i : interactions) {
-            j_custom = i.interaction;
+            j.push_back(i.interaction);
         }
     }
 }

@@ -2162,14 +2162,20 @@ namespace Faunus
             auto end() const noexcept { return vec.end(); }
             auto empty() const noexcept { return vec.empty(); }
             auto size() const noexcept { return vec.size(); }
+            auto back() const noexcept { return vec.back(); }
 
-            template<typename Tderived, class... Args, class = std::enable_if_t<std::is_base_of<T,Tderived>::value>>
-                void push_back(Args&... args) {
-                    vec.push_back( std::make_shared<Tderived>(args...) );
-                } //!< Add (derived) pointer to vector
+            template <typename Tderived, class... Args, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
+            void emplace_back(Args &... args) {
+                vec.push_back(std::make_shared<Tderived>(args...));
+            } //!< Create an (derived) instance and append a pointer to it to the vector
+
+            template<typename Tderived, class Arg, class = std::enable_if_t<std::is_base_of<T,Tderived>::value>>
+            void push_back(std::shared_ptr<Arg> arg) {
+                vec.push_back( arg );
+            } //!< Append a pointer to a (derived) instance to the vector
 
             template<typename Tderived, class = std::enable_if_t<std::is_base_of<T,Tderived>::value>>
-                auto find() {
+                auto find() const {
                     std::vector<std::shared_ptr<Tderived>> _v;
                     for (auto base : vec) {
                         auto derived = std::dynamic_pointer_cast<Tderived>(base);
@@ -2179,7 +2185,9 @@ namespace Faunus
                     return _v;
                 } //!< Pointer list to all matching type
 
-        }; //!< Helper class for storing vectors of base pointers
+                template<typename U>
+                friend void to_json(json&, const BasePointerVector<U>&); //!< Allow serialization to JSON
+                }; //!< Helper class for storing vectors of base pointers
 
     template<typename T>
         void to_json(json &j, const BasePointerVector<T> &b) {

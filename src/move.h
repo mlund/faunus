@@ -437,26 +437,36 @@ class ParallelTempering : public Movebase {
 };
 #endif
 
-class Propagator : public BasePointerVector<Movebase> {
+/**
+ * @brief Class storing a list of MC moves with their probability weights and
+ * randomly selecting one.
+ */
+class Propagator {
   private:
     int _repeat;
-    std::discrete_distribution<> dist;
-    std::vector<double> w; // list of weights for each move
+    std::discrete_distribution<> distribution;
+    BasePointerVector<Movebase> _moves; //!< list of moves
+    std::vector<double> _weights;       //!< list of weights for each move
     void addWeight(double weight = 1);
 
   public:
-    using BasePointerVector<Movebase>::vec;
     Propagator() = default;
     Propagator(const json &j, Space &spc, MPI::MPIController &mpi);
-    int repeat() { return _repeat; }
+    auto repeat() const -> decltype(_repeat) { return _repeat; }
+    auto moves() const -> const decltype(_moves) & { return _moves; };
     auto sample() {
-        if (!vec.empty()) {
-            assert(w.size() == vec.size());
-            return vec.begin() + dist(Move::Movebase::slump.engine);
+        if (!_moves.empty()) {
+            assert(_weights.size() == _moves.size());
+            return _moves.begin() + distribution(Move::Movebase::slump.engine);
         }
-        return vec.end();
+        return _moves.end();
     } //!< Pick move from a weighted, random distribution
+    auto end() { return _moves.end(); }
+
+    friend void to_json(json &j, const Propagator &propagator);
 };
+
+void to_json(json &j, const Propagator &propagator);
 
 } // namespace Move
 

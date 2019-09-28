@@ -377,7 +377,7 @@ void Hamiltonian::addEwald(const json &j, Space &spc) {
 
     if (_j.count("type"))
         if (_j.at("type") == "ewald")
-            push_back<Energy::Ewald<>>(j["coulomb"], spc);
+            emplace_back<Energy::Ewald<>>(j["coulomb"], spc);
 }
 
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {
@@ -397,38 +397,38 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
 
     // add container overlap energy for non-cuboidal geometries
     if (spc.geo.type not_eq Geometry::CUBOID)
-        push_back<Energy::ContainerOverlap>(spc);
+        emplace_back<Energy::ContainerOverlap>(spc);
 
     for (auto &m : j) { // loop over move list
         size_t oldsize = vec.size();
         for (auto it : m.items()) {
             try {
                 if (it.key() == "nonbonded_coulomblj")
-                    push_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_newcoulomblj")
-                    push_back<Energy::Nonbonded<NewCoulombLJ>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<NewCoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulomblj_EM")
-                    push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
+                    emplace_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_splined")
-                    push_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded" or it.key() == "nonbonded_exact")
-                    push_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_cached")
-                    push_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc, *this);
+                    emplace_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulombwca")
-                    push_back<Energy::Nonbonded<CoulombWCA>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<CoulombWCA>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_pm" or it.key() == "nonbonded_coulombhs")
-                    push_back<Energy::Nonbonded<PrimitiveModel>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PrimitiveModel>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_pmwca")
-                    push_back<Energy::Nonbonded<PrimitiveModelWCA>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PrimitiveModelWCA>>(it.value(), spc, *this);
 
                 // this should be moved into `Nonbonded` and added when appropriate
                 // Nonbonded now has access to Hamiltonian (*this) and can therefore
@@ -436,35 +436,35 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                 addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
 
                 if (it.key() == "bonded")
-                    push_back<Energy::Bonded>(it.value(), spc);
+                    emplace_back<Energy::Bonded>(it.value(), spc);
 
                 else if (it.key() == "customexternal")
-                    push_back<Energy::CustomExternal>(it.value(), spc);
+                    emplace_back<Energy::CustomExternal>(it.value(), spc);
 
                 else if (it.key() == "akesson")
-                    push_back<Energy::ExternalAkesson>(it.value(), spc);
+                    emplace_back<Energy::ExternalAkesson>(it.value(), spc);
 
                 else if (it.key() == "confine")
-                    push_back<Energy::Confine>(it.value(), spc);
+                    emplace_back<Energy::Confine>(it.value(), spc);
 
                 else if (it.key() == "constrain")
-                    push_back<Energy::Constrain>(it.value(), spc);
+                    emplace_back<Energy::Constrain>(it.value(), spc);
 
                 else if (it.key() == "example2d")
-                    push_back<Energy::Example2D>(it.value(), spc);
+                    emplace_back<Energy::Example2D>(it.value(), spc);
 
                 else if (it.key() == "isobaric")
-                    push_back<Energy::Isobaric>(it.value(), spc);
+                    emplace_back<Energy::Isobaric>(it.value(), spc);
 
                 else if (it.key() == "penalty")
 #ifdef ENABLE_MPI
-                    push_back<Energy::PenaltyMPI>(it.value(), spc);
+                    emplace_back<Energy::PenaltyMPI>(it.value(), spc);
 #else
-                    push_back<Energy::Penalty>(it.value(), spc);
+                    emplace_back<Energy::Penalty>(it.value(), spc);
 #endif
 #if defined ENABLE_FREESASA
                 else if (it.key() == "sasa")
-                    push_back<Energy::SASAEnergy>(it.value(), spc);
+                    emplace_back<Energy::SASAEnergy>(it.value(), spc);
 #endif
                 // additional energies go here...
 

@@ -544,7 +544,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
     // add self energy term to Hamiltonian if appropriate
     void addPairPotentialSelfEnergy() {
         if (pairpot.selfEnergy) // only add if self energy is defined
-            pot.push_back<Energy::ParticleSelfEnergy>(spc, pairpot.selfEnergy);
+            pot.emplace_back<Energy::ParticleSelfEnergy>(spc, pairpot.selfEnergy);
     }
 
     void configureOpenMP(const json &j) {

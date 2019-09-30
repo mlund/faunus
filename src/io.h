@@ -115,7 +115,7 @@ class FormatPQR {
      *       respect the PQR fixed column format. Has been tested to
      *       work with files from VMD, pdb2pqr, and Faunus.
      */
-    static Point load(const std::string &file, Tpvec &p, bool keepcharges);
+    static Point load(const std::string &file, Tpvec &p, bool keep_charges);
 
     /**
      * @brief Read trajectory. Each frame must be separated by the "END" keyword.

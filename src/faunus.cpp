@@ -4,12 +4,13 @@
 #include "montecarlo.h"
 #include "analysis.h"
 #include "docopt.h"
+#include "progress_tracker.h"
 #include <cstdlib>
-#include "ProgressBar.hpp"
 #include "spdlog/spdlog.h"
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <iomanip>
+#include <unistd.h>
 
 #ifdef ENABLE_SID
 #include "cppsid.h"
@@ -58,6 +59,9 @@ static const char USAGE[] =
     2. standard output is redirected to "mpi{rank}.stdout"
     3. Input prefixing can be suppressed with --nopfx
 )";
+
+using ProgressIndicator::ProgressTracker;
+std::shared_ptr<ProgressTracker> createProgressTracker(bool, unsigned int);
 
 int main(int argc, char **argv) {
     using namespace Faunus::MPI;
@@ -167,22 +171,20 @@ int main(int argc, char **argv) {
             int macro = loop.at("macro");
             int micro = loop.at("micro");
 
-            ProgressBar progressBar(macro * micro, 70);
+            auto progress_tracker = createProgressTracker(show_progress, macro * micro);
             for (int i = 0; i < macro; i++) {
                 for (int j = 0; j < micro; j++) {
-
-                    if (show_progress and mpi.isMaster()) {
-                        ++progressBar;
-                        if (j % 10 == 0)
-                            progressBar.display();
+                    if (progress_tracker && mpi.isMaster()) {
+                        if(++(*progress_tracker) % 10 == 0) {
+                            progress_tracker->display();
+                        }
                     }
-
                     sim.move();
                     analysis.sample();
                 }
             }
-            if (show_progress and mpi.isMaster())
-                progressBar.done();
+            if (progress_tracker && mpi.isMaster()) {
+                progress_tracker->done();
 
             if (not quiet) {
                 faunus_logger->log((sim.drift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
@@ -264,4 +266,24 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
+}
+
+std::shared_ptr<ProgressTracker> createProgressTracker(bool show_progress, unsigned int steps) {
+    using namespace ProgressIndicator;
+    using namespace std::chrono;
+    std::shared_ptr<ProgressTracker> tracker = nullptr;
+    if(show_progress) {
+        if (isatty(fileno(stdout))) {
+            // show a progress bar on the console
+            tracker = std::make_shared<ProgressBar>(steps);
+        } else {
+            // not in a console
+            tracker = std::make_shared<TaciturnDecorator>(
+                // hence print a new line
+                std::make_shared<ProgressLog>(steps),
+                // at most every 10 minutes or after 0.5% of progress, whatever comes first
+                duration_cast<milliseconds>(minutes(10)), 0.005);
+        }
+    }
+    return tracker;
 }

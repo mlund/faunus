@@ -45,7 +45,7 @@ static const char USAGE[] =
       -o <file> --output <file>  Output file [default: out.json].
       -s <file> --state <file>   State file to start from (.json/.ubj).
       -v <N> --verbosity <N>     Log verbosity level (0 = off, 1 = critical, ..., 6 = trace) [default: 3]
-      -q --quiet                 Less verbose output.
+      -q --quiet                 Less verbose output. It implicates -v0 --nobar --notips --nofun.
       -h --help                  Show this screen.
       --nobar                    No progress bar.
       --nopfx                    Do not prefix input file with MPI rank.
@@ -65,7 +65,7 @@ std::shared_ptr<ProgressTracker> createProgressTracker(bool, unsigned int);
 
 int main(int argc, char **argv) {
     using namespace Faunus::MPI;
-    bool nofun;
+    bool quiet = false, nofun = true; // conservative defaults
     try {
         std::string version = "Faunus";
 #ifdef GIT_LATEST_TAG
@@ -85,6 +85,12 @@ int main(int argc, char **argv) {
 #endif
         auto args = docopt::docopt(USAGE, {argv + 1, argv + argc}, true, version);
 
+        // --quiet; set quiet first as it also affects exception handling
+        quiet = args["--quiet"].asBool();
+        if (quiet) {
+            cout.setstate(std::ios_base::failbit); // hold kæft
+        }
+
         mpi.init(); // initialize MPI, if available
 
         // prepare loggers
@@ -95,27 +101,20 @@ int main(int argc, char **argv) {
         mcloop_logger->set_pattern("[%n %P] [%E.%f] %L: %v");
 
         // --verbosity (log level)
-        long log_level = spdlog::level::off - args["--verbosity"].asLong(); // reverse sequence 0 → 6 to 6 → 0
+        long log_level = quiet ? 0 : spdlog::level::off - args["--verbosity"].asLong(); // reverse sequence 0 → 6 to 6 → 0
         spdlog::set_level(static_cast<spdlog::level::level_enum>(log_level));
 
         // --notips
-        if (not args["--notips"].asBool())
+        if (!quiet && !args["--notips"].asBool()) {
             usageTip.load({FAUNUS_TIPSFILE});
+        }
 
         // --nobar
-        bool show_progress = !args["--nobar"].asBool();
-
-        // --quiet
-        bool quiet = args["--quiet"].asBool();
-        if (quiet) {
-            cout.setstate(std::ios_base::failbit); // hold kæft
-            show_progress = false;
-        }
+        bool show_progress = !quiet && !args["--nobar"].asBool();
 
         // --nofun
         nofun = args["--nofun"].asBool();
-        if (nofun or quiet)
-            usageTip.asciiart = false;
+        usageTip.asciiart = !quiet && !nofun;
 #ifdef ENABLE_SID
         usageTip.asciiart = false; // if SID is enabled, disable ascii
 #endif
@@ -126,11 +125,12 @@ int main(int argc, char **argv) {
         // --input
         json json_in;
         auto input = args["--input"].asString();
-        if (input == "/dev/stdin")
+        if (input == "/dev/stdin") {
             std::cin >> json_in;
-        else {
-            if (prefix)
+        } else {
+            if (prefix) {
                 input = Faunus::MPI::prefix + input;
+            }
             json_in = openjson(input);
         }
 
@@ -150,19 +150,20 @@ int main(int argc, char **argv) {
                 f.open(state, mode);
                 if (f) {
                     json json_state;
-                    if (not quiet)
-                        faunus_logger->info("loading state file {}", state);
+                    faunus_logger->info("loading state file {}", state);
                     if (binary) {
                         size_t size = f.tellg(); // get file size
                         std::vector<std::uint8_t> v(size / sizeof(std::uint8_t));
                         f.seekg(0, f.beg); // go back to start
                         f.read((char *)v.data(), size);
                         json_state = json::from_ubjson(v);
-                    } else
+                    } else {
                         f >> json_state;
+                    }
                     sim.restore(json_state);
-                } else
+                } else {
                     throw std::runtime_error("state file error: " + state);
+                }
             }
 
             Analysis::CombinedAnalysis analysis(json_in.at("analysis"), sim.space(), sim.pot());
@@ -185,11 +186,10 @@ int main(int argc, char **argv) {
             }
             if (progress_tracker && mpi.isMaster()) {
                 progress_tracker->done();
-
-            if (not quiet) {
-                faunus_logger->log((sim.drift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
-                                   "relative drift = {}", sim.drift());
             }
+
+            faunus_logger->log((sim.drift() < 1E-9) ? spdlog::level::info : spdlog::level::warn,
+                               "relative drift = {}", sim.drift());
 
             // --output
             std::ofstream f(Faunus::MPI::prefix + args["--output"].asString());
@@ -216,11 +216,12 @@ int main(int argc, char **argv) {
     } catch (std::exception &e) {
         faunus_logger->error(e.what());
 
-        if (not usageTip.buffer.empty())
+        if (!usageTip.buffer.empty()) {
             faunus_logger->error(usageTip.buffer);
+        }
 #ifdef ENABLE_SID
         // easter egg...
-        if (not nofun and mpi.isMaster()) { // -> fun
+        if (!quiet && !nofun && mpi.isMaster()) { // -> fun
             try {
                 // look for json file with hvsc sid tune names
                 std::string pfx;
@@ -241,7 +242,7 @@ int main(int argc, char **argv) {
                         weight.push_back(i.at("subsongs").size());
                     std::discrete_distribution<size_t> dist(weight.begin(), weight.end());
 
-                    Faunus::random.seed();                             // give global random a hardware seed
+                    Faunus::random.seed();                                      // give global random a hardware seed
                     auto it = json_music.begin() + dist(Faunus::random.engine); // pick random tune weighted by subsongs
                     auto subsongs = (*it).at("subsongs").get<std::vector<int>>();                 // all subsongs
                     int subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong

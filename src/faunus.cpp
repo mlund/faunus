@@ -124,19 +124,19 @@ int main(int argc, char **argv) {
         bool prefix = !args["--nopfx"].asBool();
 
         // --input
-        json j;
+        json json_in;
         auto input = args["--input"].asString();
         if (input == "/dev/stdin")
-            std::cin >> j;
+            std::cin >> json_in;
         else {
             if (prefix)
                 input = Faunus::MPI::prefix + input;
-            j = openjson(input);
+            json_in = openjson(input);
         }
 
         {
-            pc::temperature = j.at("temperature").get<double>() * 1.0_K;
-            MCSimulation sim(j, mpi);
+            pc::temperature = json_in.at("temperature").get<double>() * 1.0_K;
+            MCSimulation sim(json_in, mpi);
 
             // --state
             if (args["--state"]) {
@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
                     mode = std::ifstream::ate | std::ios::binary; // ate = open at end
                 f.open(state, mode);
                 if (f) {
-                    json j;
+                    json json_state;
                     if (not quiet)
                         faunus_logger->info("loading state file {}", state);
                     if (binary) {
@@ -157,17 +157,17 @@ int main(int argc, char **argv) {
                         std::vector<std::uint8_t> v(size / sizeof(std::uint8_t));
                         f.seekg(0, f.beg); // go back to start
                         f.read((char *)v.data(), size);
-                        j = json::from_ubjson(v);
+                        json_state = json::from_ubjson(v);
                     } else
-                        f >> j;
-                    sim.restore(j);
+                        f >> json_state;
+                    sim.restore(json_state);
                 } else
                     throw std::runtime_error("state file error: " + state);
             }
 
-            Analysis::CombinedAnalysis analysis(j.at("analysis"), sim.space(), sim.pot());
+            Analysis::CombinedAnalysis analysis(json_in.at("analysis"), sim.space(), sim.pot());
 
-            auto &loop = j.at("mcloop");
+            auto &loop = json_in.at("mcloop");
             int macro = loop.at("macro");
             int micro = loop.at("micro");
 
@@ -194,19 +194,20 @@ int main(int argc, char **argv) {
             // --output
             std::ofstream f(Faunus::MPI::prefix + args["--output"].asString());
             if (f) {
-                json j;
-                Faunus::to_json(j, sim);
-                j["relative drift"] = sim.drift();
-                j["analysis"] = analysis;
-                if (mpi.nproc() > 1)
-                    j["mpi"] = mpi;
+                json json_out;
+                Faunus::to_json(json_out, sim);
+                json_out["relative drift"] = sim.drift();
+                json_out["analysis"] = analysis;
+                if (mpi.nproc() > 1) {
+                    json_out["mpi"] = mpi;
+                }
 #ifdef GIT_COMMIT_HASH
-                j["git revision"] = GIT_COMMIT_HASH;
+                json_out["git revision"] = GIT_COMMIT_HASH;
 #endif
 #ifdef __VERSION__
-                j["compiler"] = __VERSION__;
+                json_out["compiler"] = __VERSION__;
 #endif
-                f << std::setw(4) << j << endl;
+                f << std::setw(4) << json_out << endl;
             }
         }
 
@@ -223,25 +224,25 @@ int main(int argc, char **argv) {
             try {
                 // look for json file with hvsc sid tune names
                 std::string pfx;
-                json j;
+                json json_music;
                 for (std::string dir : {FAUNUS_BINARY_DIR, FAUNUS_INSTALL_PREFIX
                                         "/share/faunus/"}) { // installed and uninstalled cmake builds
-                    j = Faunus::openjson(dir + "/sids/music.json", false);
-                    if (not j.empty()) {
+                    json_music = Faunus::openjson(dir + "/sids/music.json", false);
+                    if (!json_music.empty()) {
                         pfx = dir + "/";
                         break;
                     }
                 }
-                if (not j.empty()) {
-                    j = j.at("songs"); // load playlist
+                if (!json_music.empty()) {
+                    json_music = json_music.at("songs"); // load playlist
 
                     std::vector<size_t> weight; // weight for each tune (= number of subsongs)
-                    for (auto &i : j)
+                    for (auto &i : json_music)
                         weight.push_back(i.at("subsongs").size());
                     std::discrete_distribution<size_t> dist(weight.begin(), weight.end());
 
                     Faunus::random.seed();                             // give global random a hardware seed
-                    auto it = j.begin() + dist(Faunus::random.engine); // pick random tune weighted by subsongs
+                    auto it = json_music.begin() + dist(Faunus::random.engine); // pick random tune weighted by subsongs
                     auto subsongs = (*it).at("subsongs").get<std::vector<int>>();                 // all subsongs
                     int subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
 

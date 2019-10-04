@@ -213,8 +213,10 @@ void insertMolecules(const json &j, Space &spc) {
                         } else {
                             while (cnt-- > 0) { // insert molecules
                                 spc.push_back(mol->id(), mol->getRandomConformation(spc.geo, spc.p));
-                                if (inactive)
+                                if (inactive) {
+                                    spc.groups.back().translate(-spc.groups.back().cm, spc.geo.getBoundaryFunc());
                                     spc.groups.back().resize(0);
+                                }
                             }
                             // load specific positions for the N added molecules
                             std::string file = it.value().value("positions", "");

@@ -264,6 +264,9 @@ void ParallelTempering::_move(Change &change) {
     if (goodPartner()) {
         change.all = true;
         pt.sendExtra[VOLUME] = Vold;  // copy current volume for sending
+        for (auto &g : spc.groups) {
+    	    pt.sendExtra.push_back((float)g.size());
+        }
         pt.recv(mpi, partner, p);     // receive particles
         pt.send(mpi, spc.p, partner); // send everything
         pt.waitrecv();
@@ -280,9 +283,14 @@ void ParallelTempering::_move(Change &change) {
         spc.geo.setVolume(Vnew);
 
         // update mass centers
-        for (auto &g : spc.groups)
-            if (g.atomic == false)
+        size_t i = 0;
+        for (auto &g : spc.groups) {
+            g.resize((int)pt.recvExtra[i+1]);
+            if (g.atomic == false) {
                 g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
+            }
+            ++i;
+        }
     }
 }
 double ParallelTempering::exchangeEnergy(double mydu) {

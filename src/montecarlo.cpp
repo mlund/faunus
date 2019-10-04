@@ -117,9 +117,17 @@ void MCSimulation::move() {
                 else if (std::isnan(du))
                     du = 0; // accept
 
-                double bias = (**mv).bias(change, uold, unew) + IdealTerm(state2.spc, state1.spc, change);
+                double bias = (**mv).bias(change, uold, unew);
+                double ideal = IdealTerm(state2.spc, state1.spc, change);
 
-                if (metropolis(du + bias)) { // accept move
+                if (std::isnan(du + bias + ideal)) {
+                    std::cout << "NaN energy for " << lastMoveName << " move." << std::endl;
+                    std::cout << "du: " << du << std::endl;
+                    std::cout << "Bias: " << bias << std::endl;
+                    std::cout << "Ideal: " << ideal << std::endl;
+                }
+
+                if (metropolis(du + bias + ideal)) { // accept move
                     state1.sync(state2, change);
                     (**mv).accept(change);
                 } else { // reject move

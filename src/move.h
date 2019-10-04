@@ -456,9 +456,15 @@ class Propagator {
     auto repeat() const -> decltype(_repeat) { return _repeat; }
     auto moves() const -> const decltype(_moves) & { return _moves; };
     auto sample() {
+        int d;
         if (!_moves.empty()) {
             assert(_weights.size() == _moves.size());
-            return _moves.begin() + distribution(Move::Movebase::slump.engine);
+#ifdef ENABLE_MPI
+            d = distribution(MPI::mpi.random.engine);
+#else
+            d = distribution(Move::Movebase::slump.engine);
+#endif
+            return _moves.begin() + d;
         }
         return _moves.end();
     } //!< Pick move from a weighted, random distribution

@@ -68,15 +68,23 @@ endif()
 add_definitions("-Dexprtk_disable_string_capabilities")
 add_definitions("-Dexprtk_disable_rtl_io_file")
 
-# PROGRESS BAR
-FetchContent_Declare(
-    progressbar
-    URL https://github.com/mlund/progress-cpp/archive/5ecc63ac263f7fa65b7c5559151328199f9fc5d5.zip
-    URL_HASH MD5=788e8e35930ba66e4dc647890f9c0530)
-FetchContent_GetProperties(progressbar)
-if(NOT progressbar_POPULATED)
-    FetchContent_Populate(progressbar)
-endif()
+# PROGRESS TRACKER
+ExternalProject_Add(
+    project_progresstracker
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
+    CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
+    BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} progresstracker
+    INSTALL_COMMAND ""
+    LOG_DOWNLOAD ON
+    URL https://github.com/mlund/progress-cpp/archive/74c33b1eb21417fef9e5fc2b02c7dbe1d533010c.zip
+    URL_HASH SHA256=45e2e83a351d44fc1723aecdf1fbf7cee1afc5d44b7190128d8fd6b4437d15b4
+)
+ExternalProject_Get_Property(project_progresstracker binary_dir)
+ExternalProject_Get_Property(project_progresstracker source_dir)
+set(ProgressTrackerIncludeDir ${source_dir})
+add_library(progresstracker STATIC IMPORTED GLOBAL)
+add_dependencies(progresstracker project_progresstracker)
+set_property(TARGET progresstracker PROPERTY IMPORTED_LOCATION ${binary_dir}/libprogresstracker.a)
 
 # SPDLOG
 ExternalProject_Add(
@@ -121,7 +129,8 @@ ExternalProject_Add(project_docopt
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/_deps"
     CMAKE_ARGS -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_POSITION_INDEPENDENT_CODE=on
     BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} docopt_s
-    INSTALL_COMMAND "" LOG_DOWNLOAD ON
+    INSTALL_COMMAND ""
+    LOG_DOWNLOAD ON
     UPDATE_DISCONNECTED ON
     URL_MD5 79cfe2f0f057d8e2231ce6969e42d760
     URL "https://github.com/docopt/docopt.cpp/archive/v0.6.2.tar.gz")
@@ -258,7 +267,8 @@ endif ()
 # Add third-party headers to include path. Note this is done with SYSTEM
 # to disable potential compiler warnings
 include_directories(SYSTEM ${eigen_SOURCE_DIR} ${doctest_SOURCE_DIR} ${modernjson_SOURCE_DIR} ${rangev3_SOURCE_DIR}/include
-	${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${progressbar_SOURCE_DIR} ${SpdlogIncludeDir} ${exprtk_SOURCE_DIR})
+    ${Pybind11IncludeDir} ${DocoptIncludeDir} ${CppsidIncludeDir} ${XdrfileIncludeDir} ${SpdlogIncludeDir}
+    ${ProgressTrackerIncludeDir} ${exprtk_SOURCE_DIR})
 
 #  Compiler specific flags
 ## GCC

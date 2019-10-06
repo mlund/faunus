@@ -43,6 +43,7 @@ MoleculeData::MoleculeData() { setInserter(RandomInserter()); }
 void to_json(json &j, const MoleculeData &a) {
     j[a.name] = {{"activity", a.activity / 1.0_molar},
                  {"atomic", a.atomic},
+                 {"compressible", a.compressible},
                  {"id", a.id()},
                  {"insdir", a.insdir},
                  {"insoffset", a.insoffset},
@@ -123,6 +124,7 @@ void from_json(const json &j, MoleculeData &a) {
             a.keeppos = val.value("keeppos", a.keeppos);
             a.keepcharges = val.value("keepcharges", a.keepcharges);
             a.atomic = val.value("atomic", a.atomic);
+            a.compressible = val.value("compressible", a.compressible);
             a.insdir = val.value("insdir", a.insdir);
             a.bonds = val.value("bondlist", a.bonds);
             a.rigid = val.value("rigid", a.rigid);

@@ -639,14 +639,13 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
         double u = 0;
 
         if (change) {
-
             // there's a change in system volume
             if (change.dV) {
 #pragma omp parallel for reduction(+ : u) schedule(dynamic) if (omp_enable and omp_g2g)
                 for (auto i = spc.groups.begin(); i < spc.groups.end(); ++i) {
                     for (auto j = i; ++j != spc.groups.end();)
                         u += g2g(*i, *j);
-                    if (i->atomic)
+                    if (i->atomic or i->compressible)
                         u += g_internal(*i);
                 }
                 return u;

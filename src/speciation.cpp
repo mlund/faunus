@@ -125,11 +125,11 @@ void SpeciationMove::_move(Change &change) {
                 for (int N = 0; N < m.second; N++) {
                     auto git = slump.sample(mollist.begin(), mollist.end());
                     int charge_sum = 0;
-                    for (auto &i : *git)
-                        charge_sum += i.charge;
+                    for (auto i = git->begin(); i != git->trueend(); ++i)
+                        charge_sum += i->charge;
                     if (charge_sum > 0)
                         return;
-                    git->translate(-git->cm, spc.geo.getBoundaryFunc());
+                    git->unwrap(spc.geo.getDistanceFunc());
                     // We store the bonded energy of the deactivated molecule
                     // The change in bonded energy should not affect the acceptance/rejection of the move
                     for (auto &bond : molecules.at(m.first).bonds) {
@@ -177,25 +177,12 @@ void SpeciationMove::_move(Change &change) {
                 for (int N = 0; N < m.second; N++) {
                     auto git = slump.sample(mollist.begin(), mollist.end());
                     int charge_sum = 0;
-                    for (auto &i : *git)
-                        charge_sum += i.charge;
+                    for (auto i = git->begin(); i != git->trueend(); ++i)
+                        charge_sum += i->charge;
                     if (charge_sum > 0)
                         return;
                     git->activate(git->inactive().begin(), git->inactive().end());
-                    // We insert the molecule with random mass center and orientation
                     Point cm = git->cm;
-                    for (auto &bond : molecules.at(m.first).bonds) {
-                        auto bondclone = bond->clone();
-                        bondclone->shift(std::distance(spc.p.begin(), git->begin()));
-                        Potential::setBondEnergyFunction(bondclone, spc.p);
-                        bondenergy -= bondclone->energy(spc.geo.getDistanceFunc());
-                    }
-                    if (std::isinf(-bondenergy)) {
-                        std::cout << cm.transpose() << std::endl;
-                        for (auto &i : *git)
-                            std::cout << i.pos << std::endl;
-                    }
-                    git->translate(-cm, spc.geo.getBoundaryFunc());
                     spc.geo.randompos(cm, slump);
                     git->translate(cm, spc.geo.getBoundaryFunc());
                     Point u = ranunit(slump);

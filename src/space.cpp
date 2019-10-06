@@ -43,6 +43,7 @@ void Space::push_back(int molid, const Space::Tpvec &in) {
         }
         Tgroup g(p.end() - in.size(), p.end());
         g.id = molid;
+        g.compressible = molecules.at(molid).compressible;
         g.atomic = molecules.at(molid).atomic;
 
         if (g.atomic == false) {
@@ -104,33 +105,43 @@ void Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
 
     for (auto &g : groups) {
         if (not g.empty()) {
-            if (g.atomic) // scale all atoms
-                for (auto &i : g)
-                    i.pos = i.pos.cwiseProduct(scale);
-            else { // scale mass center and translate
-#ifndef NDEBUG
-                Point oldcm = g.cm;
-#endif
-                Point delta = g.cm.cwiseProduct(scale) - g.cm;
-                g.cm = g.cm.cwiseProduct(scale);
+            if (g.atomic) { // scale all atoms
                 for (auto &i : g) {
-                    i.pos += delta;
+                    i.pos = i.pos.cwiseProduct(scale);
                     geo.boundary(i.pos);
                 }
+            } else { // scale mass center and translate
+                Point oldcm = g.cm;
+                if (g.compressible) {
+                    for (auto &i : g) {
+                        i.pos = i.pos.cwiseProduct(scale);
+                        geo.boundary(i.pos);
+                    }
+                    g.cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -oldcm);
+                    geo.boundary(g.cm);
+                } else {
+                    g.cm = g.cm.cwiseProduct(scale);
+                    geo.boundary(g.cm);
+                    Point delta = g.cm - oldcm;
+                    for (auto &i : g) {
+                        i.pos += delta;
+                        geo.boundary(i.pos);
+                    }
 #ifndef NDEBUG
-                Point recalc_cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
-                double cm_error = std::fabs(geo.sqdist(g.cm, recalc_cm));
-                if (cm_error > 1e-6) {
-                    std::cerr << "error: " << cm_error << std::endl
-                              << "scale: " << scale.transpose() << std::endl
-                              << "delta: " << delta.transpose() << " norm = " << delta.norm() << std::endl
-                              << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << std::endl
-                              << "oldcm: " << oldcm.transpose() << std::endl
-                              << "newcm: " << g.cm.transpose() << std::endl
-                              << "actual cm: " << recalc_cm.transpose() << std::endl;
-                    assert(false);
-                }
+                    Point recalc_cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
+                    double cm_error = std::fabs(geo.sqdist(g.cm, recalc_cm));
+                    if (cm_error > 1e-6) {
+                        std::cerr << "error: " << cm_error << std::endl
+                                  << "scale: " << scale.transpose() << std::endl
+                                  << "delta: " << delta.transpose() << " norm = " << delta.norm() << std::endl
+                                  << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << std::endl
+                                  << "oldcm: " << oldcm.transpose() << std::endl
+                                  << "newcm: " << g.cm.transpose() << std::endl
+                                  << "actual cm: " << recalc_cm.transpose() << std::endl;
+                        assert(false);
+                    }
 #endif
+                }
             }
         }
     }
@@ -214,7 +225,7 @@ void insertMolecules(const json &j, Space &spc) {
                             while (cnt-- > 0) { // insert molecules
                                 spc.push_back(mol->id(), mol->getRandomConformation(spc.geo, spc.p));
                                 if (inactive) {
-                                    spc.groups.back().translate(-spc.groups.back().cm, spc.geo.getBoundaryFunc());
+                                    spc.groups.back().unwrap(spc.geo.getDistanceFunc());
                                     spc.groups.back().resize(0);
                                 }
                             }

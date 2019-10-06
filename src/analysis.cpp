@@ -899,8 +899,7 @@ void GyrationTensor::_to_json(json &j) const {
     j["index"] = index;
 }
 void GyrationTensor::_sample() {
-     Space::Tgroup g(spc.p.begin(), spc.p.end());
-     auto slice = g.find_id(index);
+     auto slice = spc.findAtoms(index);
      auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
      auto S = Geometry::gyration(slice.begin(), slice.end(), spc.geo.getBoundaryFunc(), cm);
      Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);

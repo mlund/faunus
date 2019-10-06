@@ -89,6 +89,7 @@ class MoleculeData {
     std::string name;            //!< Molecule name
     std::string structure;       //!< Structure file (pqr|aam|xyz)
     bool atomic = false;         //!< True if atomic group (salt etc.)
+    bool compressible = false;   //!< True if compressible group (scales internally upon volume change)
     bool rotate = true;          //!< True if molecule should be rotated upon insertion
     bool keeppos = false;        //!< Keep original positions of `structure`
     bool keepcharges = true;     //!< Set to true to keep charges in PQR file (default: true)

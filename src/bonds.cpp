@@ -111,14 +111,8 @@ void FENEBond::to_json(Faunus::json &j) const {
 std::string FENEBond::name() const { return "fene"; }
 void FENEBond::setEnergyFunction(const ParticleVector &p) {
     energy = [&](Geometry::DistanceFunction dist) {
-        double wca = 0, d = dist(p[index[0]].pos, p[index[1]].pos).squaredNorm();
-        double x = k[3];
-        if (d <= x * 1.2599210498948732) {
-            x = x / d;
-            x = x * x * x;
-            wca = k[2] * (x * x - x + 0.25);
-        }
-        return (d > k[1]) ? pc::infty : -0.5 * k[0] * k[1] * std::log(1 - d / k[1]) + wca;
+        double d = dist(p[index[0]].pos, p[index[1]].pos).squaredNorm();
+        return (d > k[1]) ? pc::infty : -0.5 * k[0] * k[1] * std::log(1 - d / k[1]);
     };
 }
 

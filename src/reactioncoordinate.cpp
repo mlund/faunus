@@ -139,6 +139,7 @@ AtomProperty::AtomProperty(const json &j, Space &spc) : ReactionCoordinateBase(j
                         N_sum++;
             return N_sum;
         };
+
     if (f == nullptr)
         throw std::runtime_error(name + ": unknown property '" + property + "'" + usageTip["coords=[atom]"]);
 }
@@ -241,10 +242,9 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
         f = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
             Average<double> Rj, Rin, Rout;
-            Space::Tgroup g(spc.p.begin(), spc.p.end());
-            auto slicei = g.find_id(i);
+            auto slicei = spc.findAtoms(i);
             auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
-            auto slicej = g.find_id(j);
+            auto slicej = spc.findAtoms(j);
             for (auto p : slicej)
                 Rj += spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
             double Rjavg = Rj.avg();
@@ -259,16 +259,33 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         };
     }
 
+    else if (property == "mindist") {
+        indexes = j.value("indexes", decltype(indexes)());
+        assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
+        f = [&spc, i = indexes[0], j = indexes[1]]() {
+            auto slicei = spc.findAtoms(i);
+            auto slicej = spc.findAtoms(j);
+            double dmin = spc.geo.getLength().norm();
+            for (auto pi : slicei) {
+                for (auto pj : slicej) {
+                    double d = spc.geo.sqdist(pi.pos, pj.pos);
+                    if (d < dmin)
+                        dmin = d;
+                }
+            }
+            return std::sqrt(dmin);
+        };
+    }
+
     else if (property == "Rcyl") {
         dir = j.at("dir");
         indexes = j.value("indexes", decltype(indexes)());
         assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");
         f = [&spc, &dir = dir, i = indexes[0], j = indexes[1]]() {
             Average<double> Rj, Ri;
-            Space::Tgroup g(spc.p.begin(), spc.p.end());
-            auto slicei = g.find_id(i);
+            auto slicei = spc.findAtoms(i);
             auto cm = Geometry::massCenter(slicei.begin(), slicei.end(), spc.geo.getBoundaryFunc());
-            auto slicej = g.find_id(j);
+            auto slicej = spc.findAtoms(j);
             for (auto p : slicej)
                 Rj += spc.geo.vdist(p.pos, cm).cwiseProduct(dir.cast<double>()).norm();
             double Rjavg = Rj.avg();

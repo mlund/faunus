@@ -115,7 +115,7 @@ void MCSimulation::move() {
                     // noted during equilibration.
 
                 else if (std::isnan(du))
-                    du = 0; // accept
+                    du = pc::infty; // reject
 
                 double bias = (**mv).bias(change, uold, unew);
                 double ideal = IdealTerm(state2.spc, state1.spc, change);

@@ -124,8 +124,9 @@ double ContainerOverlap::energy(Change &change) {
             } else
                 // only a subset of atoms were updated
                 for (int i : d.atoms) // loop over specific atoms
-                    if (spc.geo.collision((g.begin() + i)->pos))
-                        return pc::infty;
+                    if (i < g.size())
+                        if (spc.geo.collision((g.begin() + i)->pos))
+                            return pc::infty;
         }
     }
     return 0;

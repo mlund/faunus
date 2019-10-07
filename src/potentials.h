@@ -106,12 +106,17 @@ class PairMixer {
 
 /**
  * @brief Base for all pair-potentials
+ *
+ * The `selfEnergy` functor is by default a nullptr. Coulombic potentials
+ * may change this to add a self-energy stemming from charges and dipoles.
+ * This term is important for for example Widom insertion and grand canonical
+ * Monte Carlo schemes.
  */
 struct PairPotentialBase {
     std::string name; //!< unique name per polymorphic call; used in FunctorPotential::combineFunc
-    std::string cite;
-    bool isotropic; //!< true if pair-potential is independent of particle orientation
-    std::function<double(const Particle &)> selfEnergy; //!< self energy of particle (kT)
+    std::string cite; //!< Typically a short-doi litterature reference
+    bool isotropic = true; //!< true if pair-potential is independent of particle orientation
+    std::function<double(const Particle &)> selfEnergy = nullptr; //!< self energy of particle (kT)
     virtual void to_json(json &) const = 0;
     virtual void from_json(const json &) = 0;
     virtual ~PairPotentialBase() = default;
@@ -563,12 +568,12 @@ class NewCoulombGalore : public PairPotentialBase {
     Point force(const Particle &, const Particle &, double, const Point &) const override;
     void from_json(const json &) override;
     void to_json(json &) const override;
-    template <class Tpvec, class Tgroup> double internal(const Tgroup &g) const {
-        double Eq = 0;
-        for (auto i : g)
-            Eq += i.charge * i.charge;
-        return pot.self_energy({Eq, 0.0}) * lB;
-    }
+    // template <class Tpvec, class Tgroup> double internal(const Tgroup &g) const {
+    //    double Eq = 0;
+    //    for (auto i : g)
+    //        Eq += i.charge * i.charge;
+    //    return pot.self_energy({Eq, 0.0}) * lB;
+    //}
     double dielectric_constant(double M2V) { return pot.calc_dielectric(M2V); }
 };
 
@@ -794,7 +799,7 @@ class FunctorPotential : public PairPotentialBase {
     PairMatrix<uFunc, true> umatrix; // matrix with potential for each atom pair; cannot be Eigen matrix
 
   public:
-    FunctorPotential(const std::string &name = "functor") : PairPotentialBase(name) {};
+    inline FunctorPotential(const std::string &name = "functor potential") : PairPotentialBase(name){};
     void to_json(json &j) const override;
     void from_json(const json &j) override;
 

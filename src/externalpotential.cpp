@@ -362,8 +362,10 @@ ParticleSelfEnergy::ParticleSelfEnergy(Space &spc, std::function<double(const Pa
     assert(not Faunus::atoms.empty());
     Particle myparticle;
     myparticle.id=0;
-    if (this->func)
-        this->func(myparticle);
+    if (this->func) {
+        double u = this->func(myparticle);
+        assert(std::isfinite(u));
+    }
 #endif
     name = "particle-self-energy";
 }

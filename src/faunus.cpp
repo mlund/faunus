@@ -101,7 +101,8 @@ int main(int argc, char **argv) {
         mcloop_logger->set_pattern("[%n %P] [%E.%f] %L: %v");
 
         // --verbosity (log level)
-        long log_level = quiet ? 0 : spdlog::level::off - args["--verbosity"].asLong(); // reverse sequence 0 → 6 to 6 → 0
+        long log_level =
+            spdlog::level::off - (quiet ? 0 : args["--verbosity"].asLong()); // reverse sequence 0 → 6 to 6 → 0
         spdlog::set_level(static_cast<spdlog::level::level_enum>(log_level));
 
         // --notips

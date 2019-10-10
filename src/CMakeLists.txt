@@ -76,6 +76,7 @@ set(tsts
     ${CMAKE_SOURCE_DIR}/src/energy_test.h
     ${CMAKE_SOURCE_DIR}/src/group_test.h
     ${CMAKE_SOURCE_DIR}/src/potentials_test.h
+    ${CMAKE_SOURCE_DIR}/src/space_test.h
     ${CMAKE_SOURCE_DIR}/src/tensor_test.h
     ${CMAKE_SOURCE_DIR}/src/bonds_test.h
     )

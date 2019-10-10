@@ -20,16 +20,25 @@ class MoleculeData;
 /**
  * @brief Random position and orientation - typical for rigid bodies
  *
- * Molecule inserters take care of generating molecules
- * for insertion into space and can be used in Grand Canonical moves,
- * Widom analysis, and for generating initial configurations.
- * Inserters will not actually insert anything, but rather
- * return a particle vector with proposed coordinates.
+ * Molecule inserters take care of generating molecules for insertion into
+ * space and can be used in Grand Canonical moves, Widom analysis, and for
+ * generating initial configurations. Inserters will not actually insert
+ * anything, but rather return a particle vector with proposed coordinates.
  *
- * All inserters are function objects, expecting
- * a geometry, particle vector, and molecule data.
+ * All inserters are function objects, expecting a geometry, particle vector,
+ * and molecule data.
  */
-struct RandomInserter {
+struct MoleculeInserter {
+    virtual ParticleVector operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol) = 0;
+    virtual void from_json(const json&) {};
+    virtual void to_json(json&) const {};
+    virtual ~MoleculeInserter() = default;
+};
+
+void from_json(const json &j, MoleculeInserter &inserter);
+void to_json(json &j, const MoleculeInserter &inserter);
+
+struct RandomInserter : public MoleculeInserter {
     Point dir = {1, 1, 1};     //!< Scalars for random mass center position. Default (1,1,1)
     Point offset = {0, 0, 0};  //!< Added to random position. Default (0,0,0)
     bool rotate = true;           //!< Set to true to randomly rotate molecule when inserted. Default: true
@@ -38,7 +47,9 @@ struct RandomInserter {
     int max_trials = 20'000;      //!< Maximum number of container overlap checks
     int conformation_ndx = -1;    //!< Index of last used conformation
 
-    ParticleVector operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol);
+    ParticleVector operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol) override;
+    void from_json(const json &j) override;
+    void to_json(json &j) const override;
 };
 
 /**
@@ -160,36 +171,27 @@ void to_json(json &j, const ExclusionsVicinity &exclusions);
  * @brief General properties for molecules
  */
 class MoleculeData {
-  private:
+    json json_cfg; //!< data useful only for to_json
     int _id = -1;
 
   protected:
     ExclusionsVicinity exclusions; //!< Implementation of isPairExcluded;
                                    //!< various implementation can be provided in the future
   public:
-    typedef std::function<ParticleVector(Geometry::GeometryBase &, const ParticleVector &, MoleculeData &)>
-        TinserterFunc;
-
-    TinserterFunc inserterFunctor = nullptr; //!< Function for insertion into space
+    std::shared_ptr<MoleculeInserter> inserter = nullptr; //!< Functor for insertion into space
 
     int &id();             //!< Type id
     const int &id() const; //!< Type id
-    void createMolecularConformations(SingleUseJSON &); //!< Add conformations if appropriate
+    void createMolecularConformations(const json&); //!< Add conformations if appropriate
 
     std::string name;            //!< Molecule name
-    std::string structure;       //!< Structure file (pqr|aam|xyz)
     bool atomic = false;         //!< True if atomic group (salt etc.)
     bool compressible = false;   //!< True if compressible group (scales internally upon volume change)
-    bool rotate = true;          //!< True if molecule should be rotated upon insertion
-    bool keeppos = false;        //!< Keep original positions of `structure`
-    bool keepcharges = true;     //!< Set to true to keep charges in PQR file (default: true)
     bool rigid = false;          //!< True if particle should be considered as rigid
-    double activity = 0;         //!< Chemical activity (mol/l)
-    Point insdir = {1, 1, 1};    //!< Insertion directions
-    Point insoffset = {0, 0, 0}; //!< Insertion offset
+    double activity = 0.0;       //!< Chemical activity (mol/l)
 
-    std::vector<std::shared_ptr<Potential::BondData>> bonds;
     std::vector<int> atoms;                    //!< Sequence of atoms in molecule (atom id's)
+    std::vector<std::shared_ptr<Potential::BondData>> bonds;
     WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
 
     MoleculeData();
@@ -202,7 +204,7 @@ class MoleculeData {
      *
      * By default a random position and orientation is generator and overlap with container is avoided.
      */
-    void setInserter(const TinserterFunc &ifunc);
+    void setInserter(std::shared_ptr<MoleculeInserter> ins);
 
     /**
      * @brief Get random conformation that fits in container
@@ -213,9 +215,14 @@ class MoleculeData {
      * no container overlap using the `RandomInserter` class. This behavior can
      * be changed by specifying another inserter using `setInserter()`.
      */
-    ParticleVector getRandomConformation(Geometry::GeometryBase &geo, ParticleVector otherparticles = ParticleVector());
+    ParticleVector getRandomConformation(Geometry::GeometryBase &geo,
+                                         ParticleVector otherparticles = ParticleVector());
 
     void loadConformation(const std::string &file, bool keep_positions, bool keep_charges);
+
+    friend class MoleculeBuilder;
+    friend void to_json(json &j, const MoleculeData &a);
+    friend void from_json(const json &j, MoleculeData &a);
 }; // end of class
 
 inline bool MoleculeData::isPairExcluded(int i, int j) { return exclusions.isExcluded(i, j); }
@@ -229,34 +236,48 @@ void from_json(const json &j, std::vector<MoleculeData> &v);
 // global instance of molecule vector
 extern std::vector<MoleculeData> molecules;
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] MoleculeData") {
-    using doctest::Approx;
+/**
+ * @brief Constructs MoleculeData from JSON.
+ *
+ * The instance is disposable: The method from_json() may be called only once.
+ */
+class MoleculeBuilder {
+    bool is_used = false; //!< from_json may be called only once
+    std::string molecule_name; //!< human readable name of the molecule
+    ParticleVector particles;  //!< vector of particles; it unpacks to atoms and conformations[0]
+    decltype(MoleculeData::bonds) bonds;
+    std::vector<std::pair<int, int>> exclusion_pairs;
+  protected:
+    bool isFasta(const json &j_properties); //!< the structure is read in FASTA format with harmonic bonds
+    void readCompoundValues(const json &j); //!< a director method calling the executive methods in the right order
+    void readAtomic(const json &j_properties); //!< reads "atoms" : ["Na", "Cl"]
+    void readParticles(const json &j_properties); //!< reads "structure" in any format; uses MoleculeStructureReader
+    void readBonds(const json &j_properties); //!< reads "bondlist"
+    void readFastaBonds(const json &j_properties); //!< makes up harmonic bonds for a FASTA sequence
+    void readExclusions(const json &j_properties); //!< reads "exclusionlist"
+    std::shared_ptr<MoleculeInserter> createInserter(const json &j_properties);
+  public:
+    //! initialize MoleculeData from JSON; shall be called only once during the instance lifetime
+    void from_json(const json &j, MoleculeData &molecule);
+};
 
-    json j = R"(
-            { "moleculelist": [
-                { "B": {"activity":0.2, "atomic":true, "insdir": [0.5,0,0], "insoffset": [-1.1, 0.5, 10], "atoms":["A"] } },
-                { "A": { "atomic":false } }
-            ]})"_json;
-
-    molecules = j["moleculelist"].get<decltype(molecules)>(); // fill global instance
-    auto &v = molecules;                                      // reference to global molecule vector
-
-    CHECK(v.size() == 2);
-    CHECK(v.back().id() == 1);
-    CHECK(v.back().name == "A"); // alphabetic order in std::map
-    CHECK(v.back().atomic == false);
-
-    MoleculeData m = json(v.front()); // moldata --> json --> moldata
-
-    CHECK(m.name == "B");
-    CHECK(m.id() == 0);
-    CHECK(m.activity == Approx(0.2_molar));
-    CHECK(m.atomic == true);
-    CHECK(m.insdir == Point(0.5, 0, 0));
-    CHECK(m.insoffset == Point(-1.1, 0.5, 10));
-}
-#endif
+/**
+ * @brief Fills the particle vector from various sources, e.g., files or JSON array.
+ */
+class MoleculeStructureReader {
+    bool read_charges; //!< shall we also read charges when available, e.g., in PQR
+  protected:
+    //! reads array with atom types and positions
+    void readArray(ParticleVector &particles, const json &j_particles);
+    //! reads a FASTA sequence with harmonic bond parameters
+    void readFasta(ParticleVector &particles, const json &j_fasta);
+  public:
+    MoleculeStructureReader(bool read_charges = true) : read_charges(read_charges) {};
+    //! reads atom types, positions and optionally charges from a file
+    void readFile(ParticleVector &particles, const std::string &filename);
+    //! a director determining the executive method based on JSON content
+    void readJson(ParticleVector &particles, const json &j);
+};
 
 /*
  * @brief General properties of reactions
@@ -323,34 +344,5 @@ void from_json(const json &j, ReactionData &a);
 void to_json(json &j, const ReactionData &a);
 
 extern std::vector<ReactionData> reactions; // global instance
-
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] ReactionData") {
-    using doctest::Approx;
-
-    json j = R"(
-            {
-                "atomlist" :
-                    [ {"a": { "r":1.1 } } ],
-                "moleculelist": [
-                    { "A": { "atomic":false, "activity":0.2 } },
-                    { "B": { "atomic":true, "atoms":["a"] } }
-                ],
-                "reactionlist": [
-                    {"A = B": {"lnK":-10.051, "canonic":true, "N":100 } }
-                ]
-            } )"_json;
-
-    Faunus::atoms = j["atomlist"].get<decltype(atoms)>();
-    molecules = j["moleculelist"].get<decltype(molecules)>(); // fill global instance
-
-    auto &r = reactions; // reference to global reaction list
-    r = j["reactionlist"].get<decltype(reactions)>();
-
-    CHECK(r.size() == 1);
-    CHECK(r.front().name == "A = B");
-    CHECK(r.front().lnK == Approx(-10.051 - std::log(0.2)));
-}
-#endif
 
 } // namespace Faunus

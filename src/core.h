@@ -184,4 +184,10 @@ auto filter(iter begin, iter end, std::function<bool(T&)> unarypredicate) {
                   const Point &dir = {1, 1, 1}); //!< Random unit vector using Neuman's method ("sphere picking")
     Point ranunit_polar(Random &);               //!< Random unit vector using polar coordinates ("sphere picking")
 
-}//end of faunus namespace
+    /** Exception to be thrown when parsing json configuration */
+    struct ConfigurationError : public std::runtime_error {
+        explicit ConfigurationError(const std::string &what_arg) : std::runtime_error(what_arg){};
+        explicit ConfigurationError(const char *what_arg) : std::runtime_error(what_arg){};
+    };
+
+    }//end of faunus namespace

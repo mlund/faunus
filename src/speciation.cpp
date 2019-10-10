@@ -21,6 +21,7 @@ void SpeciationMove::_move(Change &change) {
     if (reactions.size() > 0) {
         auto rit = slump.sample(reactions.begin(), reactions.end());
         lnK = rit->lnK;
+        neutral = rit->neutral;
         forward = (bool)slump.range(0, 1); // random boolean
         trialprocess = &(*rit);
         if (rit->empty(forward)) // Enforce canonic constraint if invoked
@@ -120,15 +121,13 @@ void SpeciationMove::_move(Change &change) {
                 std::sort(d.atoms.begin(), d.atoms.end());
                 change.groups.push_back(d); // add to list of moved groups
             } else { // The reagent is a molecule
-                mollist = spc.findMolecules(m.first, Tspace::ACTIVE);
+                if (neutral)
+                    mollist = spc.findMolecules(m.first, Tspace::ACTIVE_NEUTRAL);
+                else
+                    mollist = spc.findMolecules(m.first, Tspace::ACTIVE);
                 // m.second is the stoichiometric coefficient
                 for (int N = 0; N < m.second; N++) {
                     auto git = slump.sample(mollist.begin(), mollist.end());
-                    int charge_sum = 0;
-                    for (auto i = git->begin(); i != git->trueend(); ++i)
-                        charge_sum += i->charge;
-                    if (charge_sum > 0)
-                        return;
                     git->unwrap(spc.geo.getDistanceFunc());
                     // We store the bonded energy of the deactivated molecule
                     // The change in bonded energy should not affect the acceptance/rejection of the move
@@ -172,15 +171,13 @@ void SpeciationMove::_move(Change &change) {
                 std::sort(d.atoms.begin(), d.atoms.end());
                 change.groups.push_back(d); // Add to list of moved groups
             } else { // The product is a molecule
-                mollist = spc.findMolecules(m.first, Tspace::INACTIVE);
+                if (neutral)
+                    mollist = spc.findMolecules(m.first, Tspace::INACTIVE_NEUTRAL);
+                else
+                    mollist = spc.findMolecules(m.first, Tspace::INACTIVE);
                 // m.second is the stoichiometric coefficient
                 for (int N = 0; N < m.second; N++) {
                     auto git = slump.sample(mollist.begin(), mollist.end());
-                    int charge_sum = 0;
-                    for (auto i = git->begin(); i != git->trueend(); ++i)
-                        charge_sum += i->charge;
-                    if (charge_sum > 0)
-                        return;
                     git->activate(git->inactive().begin(), git->inactive().end());
                     Point cm = git->cm;
                     spc.geo.randompos(cm, slump);

@@ -26,6 +26,7 @@ class SpeciationMove : public Movebase {
     double lnK;
     double bondenergy;
     bool forward;
+    bool neutral;
     std::vector<int> molDel;  // index of groups to delete
     std::vector<int> atomDel; // atom index to delete
     std::map<int, int> molcnt_ins, atomcnt_ins, molcnt_del, atomcnt_del, molcnt,

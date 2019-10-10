@@ -923,7 +923,7 @@ void QuadrupoleEivals::_to_json(json &j) const {
 }
 void QuadrupoleEivals::_sample() {
     Space::Tgroup g(spc.groups[molid].begin()+indexes[0], spc.groups[molid].begin()+indexes[1]+1);
-    auto cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc());
+    auto cm = spc.groups[molid].cm;
     Tensor S;
     S.setZero();
     for (auto &i : g) {
@@ -957,7 +957,7 @@ void DipoleVector::_to_json(json &j) const {
 }
 void DipoleVector::_sample() {
     Space::Tgroup g(spc.groups[molid].begin()+indexes[0], spc.groups[molid].begin()+indexes[1]+1);
-    auto cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc());
+    auto cm = spc.groups[molid].cm;
     Point mu(0, 0, 0);
     for (auto &i : g) {
         Point t = i.pos - cm;

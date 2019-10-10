@@ -367,6 +367,8 @@ void from_json(const json &j, ReactionData &a) {
         a.name = it.key();
         auto &val = it.value();
         a.canonic = val.value("canonic", false);
+        if (val.count("neutral") == 1)
+            a.neutral = val.at("neutral").get<bool>();
         if (val.count("lnK") == 1)
             a.lnK = val.at("lnK").get<double>();
         else if (val.count("pK") == 1)
@@ -434,6 +436,7 @@ void to_json(json &j, const ReactionData &a) {
     j[a.name] = {{"pK", a.pK},
                  {"pK'", -a.lnK / std::log(10)},
                  //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
+                 {"neutral", a.neutral},
                  {"products", a._prod},
                  {"reactants", a._reag}};
 } //!< Serialize to JSON object

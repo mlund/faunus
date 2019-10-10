@@ -1043,7 +1043,7 @@ SmartTranslateRotate::SmartTranslateRotate(Space &spc) : spc(spc) {
 }
 
 void ConformationSwap::_to_json(json &j) const {
-    j = {{"molid", molid}, {"molecule", molecules[molid].name}, {"keeppos", inserter.keeppos}};
+    j = {{"molid", molid}, {"molecule", molecules[molid].name}, {"keeppos", inserter.keep_positions}};
     _roundjson(j, 3);
 }
 void ConformationSwap::_from_json(const json &j) {
@@ -1107,8 +1107,8 @@ ConformationSwap::ConformationSwap(Space &spc) : spc(spc) {
     repeat = -1; // meaning repeat n times
     inserter.dir = {0, 0, 0};
     inserter.rotate = true;
-    inserter.keeppos = keeppos;
-    inserter.allowoverlap = true;
+    inserter.keep_positions = keeppos;
+    inserter.allow_overlap = true;
 }
 
 ForceMove::ForceMove() {

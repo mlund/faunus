@@ -430,22 +430,35 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
     double g_internal(const Tgroup &g, const std::vector<int> &index = std::vector<int>()) {
         using namespace ranges;
         double u = 0;
-        if (index.empty() and not molecules.at(g.id).rigid) // assume that all atoms have changed
-            for (auto i = g.begin(); i != g.end(); ++i)
-                for (auto j = i; ++j != g.end();)
-                    u += i2i(*i, *j);
-        else { // only a subset has changed
-            auto fixed = view::ints(0, int(g.size())) |
-                         view::remove_if([&index](int i) { return std::binary_search(index.begin(), index.end(), i); });
-            for (int i : index) { // moved<->static
-                for (int j : fixed) {
-                    u += i2i(*(g.begin() + i), *(g.begin() + j));
+        auto &molecule = molecules.at(g.id);
+        if (index.empty() && !molecule.rigid) { // assume that all atoms have changed
+            for (auto particle_i = g.begin(); particle_i != g.end(); ++particle_i) {
+                int i = std::distance(g.begin(), particle_i);
+                for (auto particle_j = std::next(particle_i); particle_j != g.end(); ++particle_j) {
+                    int j = std::distance(g.begin(), particle_j);
+                    if (!molecule.isPairExcluded(i, j)) {
+                        u += i2i(*particle_i, *particle_j);
+                    }
                 }
             }
-            for (int i : index) // moved<->moved
-                for (int j : index)
-                    if (j > i)
+        } else { // only a subset has changed
+            auto fixed = view::ints(0, int(g.size())) |
+                         view::remove_if([&index](int i) { return std::binary_search(index.begin(), index.end(), i); });
+            for (int i : index) {
+                for (int j : fixed) { // moved<->static
+                    if (!molecule.isPairExcluded(i, j)) {
                         u += i2i(*(g.begin() + i), *(g.begin() + j));
+                    }
+                }
+                for (int j : index) { // moved<->moved
+                    if (j <= i) {
+                        continue;
+                    }
+                    if (!molecule.isPairExcluded(i, j)) {
+                        u += i2i(*(g.begin() + i), *(g.begin() + j));
+                    }
+                }
+            }
         }
         return u;
     }
@@ -456,8 +469,9 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
      * external to space.
      */
     double i2all(const typename Space::Tparticle &i) {
-        if (omp_enable and omp_i2all)
+        if (omp_enable and omp_i2all) {
             return i2all_parallel(i);
+        }
         double u = 0;
         auto it = spc.findGroupContaining(i); // iterator to group
         if (it != spc.groups.end()) {         // check if i belongs to group in space
@@ -468,13 +482,15 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                         for (auto &j : g) // loop over particles in other group
                             u += i2i(i, j);
             }
-            for (auto &j : *it) // i with all particles in own group
-                if (&j != &i)
+            std::ptrdiff_t i_ndx = &i - &(*(it->begin()));   // fixme c++ style
+            u += g_internal(*it, {static_cast<int>(i_ndx)}); // only int indices are used internally
+        } else {                          // particle does not belong to any group
+            for (auto &g : spc.groups) {  // i with all other *active* particles
+                for (auto &j : g) {       // (this will include only active particles)
                     u += i2i(i, j);
-        } else                         // particle does not belong to any group
-            for (auto &g : spc.groups) // i with all other *active* particles
-                for (auto &j : g)      // (this will include only active particles)
-                    u += i2i(i, j);
+                }
+            }
+        }
         return u;
     }
 

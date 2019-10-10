@@ -14,6 +14,17 @@ namespace Faunus {
 std::vector<MoleculeData> molecules;
 std::vector<ReactionData> reactions;
 
+MoleculeData::MoleculeData(const std::string &name, ParticleVector particles,
+                           const std::vector<std::shared_ptr<Potential::BondData>> &bonds)
+    : name(name), bonds(bonds) {
+    for (auto particle : particles) {
+        atoms.push_back(particle.id);
+    }
+    if (!particles.empty()) {
+        conformations.push_back(particles);
+    }
+}
+
 int &MoleculeData::id() { return _id; }
 
 const int &MoleculeData::id() const { return _id; }
@@ -244,6 +255,119 @@ void from_json(const json &j, std::vector<MoleculeData> &v) {
         v.back().id() = v.size() - 1; // id always match vector index
     }
 }
+
+// ============ ExclusionsSimple ============
+
+ExclusionsSimple ExclusionsSimple::create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs) {
+    ExclusionsSimple exclusions(atoms_cnt);
+    exclusions.add(pairs);
+    return exclusions;
+}
+
+ExclusionsSimple::ExclusionsSimple(int size)
+    : size(size), excluded_pairs(std::make_shared<std::vector<unsigned char>>()) {
+    faunus_logger->log(size < 1000 ? spdlog::level::trace : spdlog::level::warn,
+                       "creating exclusion matrix {}×{} for {} atoms", size, size, size);
+    excluded_pairs->resize(size * size, false);
+}
+
+void ExclusionsSimple::add(const std::vector<std::pair<int, int>> &exclusions) {
+    for(auto pair : exclusions) {
+        add(pair.first, pair.second);
+    }
+}
+
+inline void ExclusionsSimple::add(int i, int j) {
+    if(i >= size || j >= size) {
+        throw std::range_error("exclusion index out of range");
+    }
+//    if (i > j) {
+//        std::swap(i, j);
+//    }
+    any_exclusions = true;
+    excluded_pairs->at(i * size + j) = excluded_pairs->at(j * size + i) = true;
+}
+
+void from_json(const json &j, ExclusionsSimple &exclusions) {
+    auto &exclusion_list = j;
+    if (exclusion_list.is_array()) {
+        for (auto exclusion_it = exclusion_list.begin(); exclusion_it != exclusion_list.end(); ++exclusion_it) {
+            if (exclusion_it->is_array() && exclusion_it->size() == 2) {
+                exclusions.add((*exclusion_it)[0], (*exclusion_it)[1]);
+            } else {
+                mcloop_logger->warn("Ignoring unknown exclusion: {}", exclusion_it->dump());
+            }
+        }
+    } else {
+        faunus_logger->warn("Unknown exclusions format: array expected.");
+    }
+}
+
+void to_json(json &j, const ExclusionsSimple &exclusions) {
+    j = json::array();
+    for (auto m = 0; m < exclusions.size; ++m) {
+        for (auto n = m + 1; n < exclusions.size; ++n) {
+            if (exclusions.isExcluded(m, n)) {
+                j.push_back({m, n});
+            }
+        }
+    }
+}
+
+// ============ ExclusionsVicinity ============
+
+ExclusionsVicinity ExclusionsVicinity::create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs) {
+    auto distance = [](int i, int j) -> int { return j > i ? j - i : i - j; };
+    int max_neighbours_distance = 0;
+    for (auto pair : pairs) {
+        auto neighbours_distance = distance(pair.first, pair.second);
+        if (neighbours_distance > max_neighbours_distance) {
+            max_neighbours_distance = neighbours_distance;
+        }
+    }
+    ExclusionsVicinity exclusions(atoms_cnt, max_neighbours_distance);
+    exclusions.add(pairs);
+    return exclusions;
+}
+
+ExclusionsVicinity::ExclusionsVicinity(int atoms_cnt, int max_difference)
+    : atoms_cnt(atoms_cnt), max_bond_distance(max_difference),
+      excluded_pairs(std::make_shared<std::vector<unsigned char>>()) {
+    faunus_logger->log(atoms_cnt * max_difference < 1'000'000 ? spdlog::level::trace : spdlog::level::warn,
+                       "creating exclusion matrix {}×{} for {} atoms within distance {}", atoms_cnt, max_difference,
+                       atoms_cnt, max_difference);
+
+    excluded_pairs->resize(atoms_cnt * max_difference, false);
+}
+
+void ExclusionsVicinity::add(int i, int j) {
+    if (i > j) {
+        std::swap(i, j);
+    }
+    if (j >= atoms_cnt || j - i > max_bond_distance) {
+        throw std::range_error("exclusion indexes out of range");
+    }
+    excluded_pairs->at(toIndex(i, j)) = true;
+}
+
+void ExclusionsVicinity::add(const std::vector<std::pair<int, int>> &pairs) {
+    for (auto pair : pairs) {
+        add(pair.first, pair.second);
+    }
+}
+
+void to_json(json &j, const ExclusionsVicinity &exclusions) {
+    j = json::array();
+    for (auto it = exclusions.excluded_pairs->begin(); it != exclusions.excluded_pairs->end(); ++it) {
+        if (*it) {
+            int n = std::distance(exclusions.excluded_pairs->begin(), it);
+            j.push_back(exclusions.fromIndex(n));
+        }
+    }
+}
+
+void from_json(const json &j, MoleculeInserter &inserter) { inserter.from_json(j); }
+void to_json(json &j, const MoleculeInserter &inserter) { inserter.to_json(j); }
 
 ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol) {
     int cnt = 0;

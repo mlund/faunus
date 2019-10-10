@@ -53,22 +53,108 @@ struct Conformation {
     ParticleVector &toParticleVector(ParticleVector &p) const; // copy conformation into particle vector
 };
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] Conformation") {
-    ParticleVector p(1);
-    Conformation c;
-    CHECK(c.empty());
+/**
+ * @brief Determines if two particles within a group are excluded from mutual nonbonded interactions.
+ *
+ * Simple and naïve implementation storing all possible pairs in a matrix.
+ * @internal Currently not used. MoleculeData can use this class internally.
+ */
+class ExclusionsSimple {
+    bool any_exclusions = false; //!< true if at least one excluded interaction is present
+    int size;                    //!< number of particles within the group; matrix = size × size
+    //! 1D representation of excluded interaction matrix; the shared pointer saves copying
+    //! Note that std::vector<bool> uses packing with performance implications
+    std::shared_ptr<std::vector<unsigned char>> excluded_pairs;
 
-    c.positions.push_back({1, 2, 3});
-    c.charges.push_back(0.5);
-    CHECK(not c.empty());
+  public:
+    //! Creates and populates exclusions.
+    static ExclusionsSimple create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs);
+    explicit ExclusionsSimple(int size = 0);
+    //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
+    void add(int i, int j);
+    void add(const std::vector<std::pair<int, int>> &pairs);
+    //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
+    bool isExcluded(int i, int j) const;
+    bool empty() const; //!< true if no excluded interactions at all
+    friend void from_json(const json &j, ExclusionsSimple &exclusions);
+    friend void to_json(json &j, const ExclusionsSimple &exclusions);
+};
 
-    c.toParticleVector(p);
-
-    CHECK(p[0].pos == Point(1, 2, 3));
-    CHECK(p[0].charge == 0.5);
+inline bool ExclusionsSimple::isExcluded(int i, int j) const {
+    if (i > j) {
+        std::swap(i, j);
+    }
+    // use the bracket syntax to skip checks to speed-up reading
+    return any_exclusions && (*excluded_pairs)[i * size + j];
 }
-#endif
+
+inline bool ExclusionsSimple::empty() const { return !any_exclusions; }
+
+void from_json(const json &j, ExclusionsSimple &exclusions);
+void to_json(json &j, const ExclusionsSimple &exclusions);
+
+/**
+ * @brief Determines if two particles within a group are excluded from mutual nonbonded interactions.
+ *
+ * This is a memory optimized implementation especially for linear molecules. The matrix of excluded pairs
+ * has dimensions of number of atoms × maximal distance between excluded neighbours (in terms of atom indices
+ * within the molecule).
+ *
+ * @internal MoleculeData uses this class internally.
+ */
+class ExclusionsVicinity {
+    //! count of atoms in the molecule; unmutable
+    int atoms_cnt;
+    //! maximal possible distance (difference) between indices of excluded particles
+    int  max_bond_distance;
+    //! 1D representation of excluded interaction matrix; the shared pointer saves copying
+    //! Note that std::vector<bool> uses packing with performance implications
+    std::shared_ptr<std::vector<unsigned char>> excluded_pairs;
+    int toIndex(int i, int j) const;
+    std::pair<int, int> fromIndex(int n) const;
+
+  public:
+    /** Generates memory-optimal structure from underlying pair list.
+     * @param atoms_cnt number of atoms in the molecule
+     * @param pairs list of excluded pairs using intramolecular indices
+     */
+    static ExclusionsVicinity create(int atoms_cnt, const std::vector<std::pair<int, int>> &pairs);
+    /**
+     *
+     * @param atoms_cnt number of atoms in the molecule
+     * @param max_difference maximal allowed distance
+     */
+    explicit ExclusionsVicinity(int atoms_cnt = 0, int max_difference = 0);
+    //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
+    void add(int i, int j);
+    void add(const std::vector<std::pair<int, int>> &pairs);
+    //! @param i, j indices of atoms within molecule with excluded nonbonded interaction
+    bool isExcluded(int i, int j) const;
+    bool empty() const; //!< true if no excluded interactions at all
+    // friend void from_json(const json &j, ExclusionsVicinity &exclusions); // not implemented
+    friend void to_json(json &j, const ExclusionsVicinity &exclusions);
+};
+
+inline bool ExclusionsVicinity::isExcluded(int i, int j) const {
+    if (i > j) {
+        std::swap(i, j);
+    }
+    // use bracket syntax to skip checks to speed-up reading
+    return (j - i <= max_bond_distance && (*excluded_pairs)[toIndex(i, j)]);
+}
+
+inline bool ExclusionsVicinity::empty() const { return max_bond_distance == 0; }
+
+inline int ExclusionsVicinity::toIndex(int i, int j) const { return i * max_bond_distance + (j - i - 1); }
+
+inline std::pair<int, int> ExclusionsVicinity::fromIndex(int n) const {
+    int i = n / max_bond_distance;
+    int j = n % max_bond_distance + i + 1;
+    return std::make_pair(i, j);
+}
+
+// void from_json(const json &j, ExclusionsVicinity &exclusions);  // not implemented
+void to_json(json &j, const ExclusionsVicinity &exclusions);
 
 /**
  * @brief General properties for molecules
@@ -77,6 +163,9 @@ class MoleculeData {
   private:
     int _id = -1;
 
+  protected:
+    ExclusionsVicinity exclusions; //!< Implementation of isPairExcluded;
+                                   //!< various implementation can be provided in the future
   public:
     typedef std::function<ParticleVector(Geometry::GeometryBase &, const ParticleVector &, MoleculeData &)>
         TinserterFunc;
@@ -104,11 +193,14 @@ class MoleculeData {
     WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
 
     MoleculeData();
+    MoleculeData(const std::string &name, ParticleVector particles,
+                 const std::vector<std::shared_ptr<Potential::BondData>> &bonds);
+
+    bool isPairExcluded(int i, int j);
 
     /** @brief Specify function to be used when inserting into space.
      *
-     * By default a random position and orientation is generator and overlap
-     * with container is avoided.
+     * By default a random position and orientation is generator and overlap with container is avoided.
      */
     void setInserter(const TinserterFunc &ifunc);
 
@@ -125,6 +217,8 @@ class MoleculeData {
 
     void loadConformation(const std::string &file, bool keep_positions, bool keep_charges);
 }; // end of class
+
+inline bool MoleculeData::isPairExcluded(int i, int j) { return exclusions.isExcluded(i, j); }
 
 void to_json(json &j, const MoleculeData &a);
 

@@ -115,17 +115,12 @@ void MCSimulation::move() {
                     // noted during equilibration.
 
                 else if (std::isnan(du))
-                    du = pc::infty; // reject
+                    du = 0; // accept
 
                 double bias = (**mv).bias(change, uold, unew);
                 double ideal = IdealTerm(state2.spc, state1.spc, change);
-
-                if (std::isnan(du + bias + ideal)) {
-                    std::cout << "NaN energy for " << lastMoveName << " move." << std::endl;
-                    std::cout << "du: " << du << std::endl;
-                    std::cout << "Bias: " << bias << std::endl;
-                    std::cout << "Ideal: " << ideal << std::endl;
-                }
+                if (std::isnan(du + bias))
+                    faunus_logger->error("Infinite du + bias in "+lastMoveName+" move.");
 
                 if (metropolis(du + bias + ideal)) { // accept move
                     state1.sync(state2, change);

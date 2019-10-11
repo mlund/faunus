@@ -367,8 +367,7 @@ void from_json(const json &j, ReactionData &a) {
         a.name = it.key();
         auto &val = it.value();
         a.canonic = val.value("canonic", false);
-        if (val.count("neutral") == 1)
-            a.neutral = val.at("neutral").get<bool>();
+        a.neutral = val.value("neutral", false);
         if (val.count("lnK") == 1)
             a.lnK = val.at("lnK").get<double>();
         else if (val.count("pK") == 1)

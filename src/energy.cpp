@@ -400,7 +400,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     if (spc.geo.type not_eq Geometry::CUBOID)
         emplace_back<Energy::ContainerOverlap>(spc);
 
-    for (auto &m : j) { // loop over move list
+    for (auto &m : j) { // loop over energy list
         size_t oldsize = vec.size();
         for (auto it : m.items()) {
             try {
@@ -482,6 +482,11 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
             }
         } // end of loop over energy input terms
     }
+    // Check if there are molecules with bonds and warn
+    // if "bonded" has not been added
+    for (auto &a : Faunus::molecules)
+        if (not a.bonds.empty() and this->find<Energy::Bonded>().empty())
+            faunus_logger->warn(a.name + " bonds specified in topology but missing in energy");
 }
 double Hamiltonian::energy(Change &change) {
     double du = 0;

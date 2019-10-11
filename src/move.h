@@ -460,6 +460,8 @@ class Propagator {
         if (!_moves.empty()) {
             assert(_weights.size() == _moves.size());
 #ifdef ENABLE_MPI
+            //!< Avoid parallel processes to get out of sync
+            //!< Needed for replica exchange or parallel tempering
             d = distribution(MPI::mpi.random.engine);
 #else
             d = distribution(Move::Movebase::slump.engine);

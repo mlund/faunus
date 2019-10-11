@@ -183,7 +183,7 @@ class ReactionData {
     int N_reservoir;      //!< Number of molecules in finite reservoir
     double lnK = 0;       //!< Natural logarithm of molar eq. const.
     double pK = 0;        //!< -log10 of molar eq. const.
-    bool neutral = false;  //!< True if only neutral molecules are involved in the reaction
+    bool neutral = false; //!< True if only neutral molecules are involved in the reaction
     std::string name;     //!< Name of reaction
     std::string formula;  //!< Chemical formula
     double weight;        //!< Statistical weight to be given to reaction in speciation

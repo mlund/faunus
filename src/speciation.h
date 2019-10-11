@@ -26,13 +26,13 @@ class SpeciationMove : public Movebase {
     double lnK;
     double bondenergy;
     bool forward;
-    bool neutral;
+    bool neutral; // true if only neutral molecules are involved in the reaction
     std::vector<int> molDel;  // index of groups to delete
     std::vector<int> atomDel; // atom index to delete
     std::map<int, int> molcnt_ins, atomcnt_ins, molcnt_del, atomcnt_del, molcnt,
         atomcnt;                    // id's and number of inserted/deleted mols and atoms
     std::multimap<int, ParticleVector> pmap; // coordinates of mols and atoms to be inserted
-    // unsigned int Ndeleted, Ninserted; // Number of accepted deletions and insertions
+    // unsigned int Ndeleted, Ninserted; // number of accepted deletions and insertions
 
     void _to_json(json &j) const override;
 

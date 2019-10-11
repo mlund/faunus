@@ -131,13 +131,15 @@ void Space::scaleVolume(double Vnew, Geometry::VolumeMethod method) {
                     Point recalc_cm = Geometry::massCenter(g.begin(), g.end(), geo.getBoundaryFunc(), -g.cm);
                     double cm_error = std::fabs(geo.sqdist(g.cm, recalc_cm));
                     if (cm_error > 1e-6) {
-                        std::cerr << "error: " << cm_error << std::endl
+                        std::ostringstream o;
+                               o  << "error: " << cm_error << std::endl
                                   << "scale: " << scale.transpose() << std::endl
                                   << "delta: " << delta.transpose() << " norm = " << delta.norm() << std::endl
                                   << "|o-n|: " << geo.vdist(oldcm, g.cm).norm() << std::endl
                                   << "oldcm: " << oldcm.transpose() << std::endl
                                   << "newcm: " << g.cm.transpose() << std::endl
                                   << "actual cm: " << recalc_cm.transpose() << std::endl;
+                        faunus_logger->error(o.str());
                         assert(false);
                     }
 #endif

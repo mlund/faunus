@@ -93,7 +93,7 @@ void from_json(const json &j, Group<Particle> &g) {
     g.id = j.at("id").get<unsigned int>();
     g.cm = j.at("cm").get<Point>();
     g.atomic = j.at("atomic").template get<bool>();
-    g.compressible = j.at("compressible").template get<bool>();
+    g.compressible = j.value("compressible", false);
     g.confid = j.value("confid", 0);
 }
 

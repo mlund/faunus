@@ -92,23 +92,24 @@ as real molecules. Two particular modes can be specified:
 
 Properties of molecules and their default values:
 
-`moleculelist`      | Description
-------------------- | -------------------------------------------------
-`activity=0`        | Chemical activity for grand canonical MC [mol/l]
-`atomic=false`      | True if collection of atomic species, salt etc.
-`atoms=[]`          | Array of atom names - required if `atomic=true`
-`bondlist`          | List of _internal_ bonds (harmonic, dihedrals etc.)
-`implicit=false`    | If this species is implicit in GCMC schemes
-`insdir=[1,1,1]`    | Insert directions are scaled by this
-`insoffset=[0,0,0]` | Shifts mass center after insertion
-`keeppos=false`     | Keep original positions of `structure`
-`keepcharges=true`  | Keep original charges of `structure` (aam/pqr files)
-`rigid=false`       | Set to true for rigid molecules. Affects energy evaluation.
-`rotate=true`       | If false, the original structure will not be rotated upon insertion
-`structure`         | Structure file or direct information - required if `atomic=false`
-`traj`              | Read conformations from PQR trajectory (`structure` will be ignored)
-`trajweight`        | One column file w. relative weights for each conformation. Must match frames in `traj` file.
-`trajcenter=false`  | Move CM of conformations to origo assuming whole molecules (default: `false`)
+`moleculelist`       | Description
+-------------------  | -------------------------------------------------
+`activity=0`         | Chemical activity for grand canonical MC [mol/l]
+`atomic=false`       | True if collection of atomic species, salt etc.
+`atoms=[]`           | Array of atom names - required if `atomic=true`
+`bondlist`           | List of _internal_ bonds (harmonic, dihedrals etc.)
+`implicit=false`     | If this species is implicit in GCMC schemes
+`insdir=[1,1,1]`     | Insert directions are scaled by this
+`insoffset=[0,0,0]`  | Shifts mass center after insertion
+`keeppos=false`      | Keep original positions of `structure`
+`keepcharges=true`   | Keep original charges of `structure` (aam/pqr files)
+`rigid=false`        | Set to true for rigid molecules. Affects energy evaluation.
+`compressible=false` | If true, molecular internal coordinates are scaled upon volume moves
+`rotate=true`        | If false, the original structure will not be rotated upon insertion
+`structure`          | Structure file or direct information - required if `atomic=false`
+`traj`               | Read conformations from PQR trajectory (`structure` will be ignored)
+`trajweight`         | One column file w. relative weights for each conformation. Must match frames in `traj` file.
+`trajcenter=false`   | Move CM of conformations to origo assuming whole molecules (default: `false`)
 
 Example:
 
@@ -245,4 +246,6 @@ Available keywords:
 `reactionlist`  | Description
 --------------- | ---------------------------------------------------------------
 `lnK`/`pK`      | Molar equilibrium constant either as $\ln K$ or $-\log_{10}(K)$
+`neutral=false` | If true, only neutral molecules participate in the reaction
 
+The `neutral` keyword is needed for molecular groups containing titratable atoms. If `neutral` is set to true, the activity of the neutral molecule should be specified in `moleculelist`.

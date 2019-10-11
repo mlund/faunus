@@ -724,7 +724,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                             u += g2g(*g1, spc.groups.at(cg2->index), ifiltered, jfiltered);
                         jfiltered.clear();
                     }
-                    if (not ifiltered.empty()) {
+                    if (not ifiltered.empty() and not molecules.at(g1->id).rigid) {
                         if (cg1->all) {
                             u += g_internal(*g1);
                         } else

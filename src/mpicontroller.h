@@ -159,7 +159,6 @@ namespace Faunus {
                     enum dataformat {XYZ=3, XYZQ=4, XYZQI=5};
                     std::vector<floatp> sendExtra;                      //!< Put extra data to send here.
                     std::vector<floatp> recvExtra;                      //!< Received extra data will be stored here
- 
                     ParticleTransmitter();
                     void send(MPIController&, const Tpvec&, int); //!< Send particle vector to another node 
                     void recv(MPIController&, int, Tpvec&);       //!< Receive particle vector from another node

@@ -264,6 +264,7 @@ void ParallelTempering::_move(Change &change) {
     if (goodPartner()) {
         change.all = true;
         pt.sendExtra[VOLUME] = Vold;  // copy current volume for sending
+        // store group sizes
         for (auto &g : spc.groups) {
     	    pt.sendExtra.push_back((float)g.size());
         }
@@ -282,11 +283,12 @@ void ParallelTempering::_move(Change &change) {
         spc.p = p;
         spc.geo.setVolume(Vnew);
 
-        // update mass centers
         size_t i = 0;
         for (auto &g : spc.groups) {
+            // assign correct sizes to the groups
             g.resize((int)pt.recvExtra[i+1]);
             if (g.atomic == false) {
+                // update mass center of molecular groups
                 g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
             }
             ++i;

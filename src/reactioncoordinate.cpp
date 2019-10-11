@@ -192,6 +192,14 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
             return std::sqrt(spc.geo.sqdist(spc.groups[i].begin()->pos, (spc.groups[i].end() - 1)->pos));
         };
 
+    else if (property == "Rg")
+        f = [&spc, i = index]() {
+            assert(spc.groups[i].size() > 1);
+            auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.getBoundaryFunc(), -spc.groups[i].cm);
+            Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+            return esf.eigenvalues().norm();
+        };
+
     else if (property == "muangle") {
         dir = j.at("dir").get<Point>().normalized();
         if (not spc.groups.at(index).atomic) {
@@ -216,24 +224,41 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
 
     else if (property == "cmcm_z") {
         indexes = j.value("indexes", decltype(indexes)());
-        if (indexes.size() != 4)
-            throw std::runtime_error("exactly four indices expected");
-        f = [&spc, dir = dir, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
-            auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geo.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geo.getBoundaryFunc());
-            return spc.geo.vdist(cm1, cm2).z();
-        };
+        assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
+        if (indexes.size() == 4) {
+            f = [&spc, dir = dir, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
+                auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geo.getBoundaryFunc());
+                auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geo.getBoundaryFunc());
+                return spc.geo.vdist(cm1, cm2).z();
+            };
+        }
+        if (indexes.size() == 2) {
+            f = [&spc, dir = dir, i = indexes[0], j = indexes[1]]() {
+                auto cm1 = spc.groups[i].cm;
+                auto cm2 = spc.groups[j].cm;
+                return spc.geo.vdist(cm1, cm2).z();
+            };
+        }
     }
 
     else if (property == "cmcm") {
         dir = j.at("dir");
         indexes = j.value("indexes", decltype(indexes)());
-        assert(indexes.size() == 4 && "An array of 4 indexes should be specified.");
-        f = [&spc, dir = dir, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
-            auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geo.getBoundaryFunc());
-            auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geo.getBoundaryFunc());
-            return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
-        };
+        assert(indexes.size() > 1 && "An array of 2 or 4 indexes should be specified.");
+        if (indexes.size() == 4) {
+            f = [&spc, dir = dir, i = indexes[0], j = indexes[1] + 1, k = indexes[2], l = indexes[3] + 1]() {
+                auto cm1 = Geometry::massCenter(spc.p.begin() + i, spc.p.begin() + j, spc.geo.getBoundaryFunc());
+                auto cm2 = Geometry::massCenter(spc.p.begin() + k, spc.p.begin() + l, spc.geo.getBoundaryFunc());
+                return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+            };
+        }
+        if (indexes.size() == 2) {
+            f = [&spc, dir = dir, i = indexes[0], j = indexes[1]]() {
+                auto cm1 = spc.groups[i].cm;
+                auto cm2 = spc.groups[j].cm;
+                return spc.geo.vdist(cm1, cm2).cwiseProduct(dir.cast<double>()).norm();
+            };
+        }
     }
 
     else if (property == "L/R") {
@@ -277,7 +302,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         };
     }
 
-    else if (property == "Rcyl") {
+    else if (property == "Rinner") {
         dir = j.at("dir");
         indexes = j.value("indexes", decltype(indexes)());
         assert(indexes.size() == 2 && "An array of 2 indexes should be specified.");

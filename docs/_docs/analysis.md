@@ -37,7 +37,7 @@ This calculates the average density, $\langle N_i/V \rangle$ of molecules and at
 which may fluctuate in _e.g._ the isobaric ensemble or the Grand Canonical ensemble.
 For atomic groups, densities of individual atom types are reported.
 The analysis also files probability density distributions of atomic and polyatomic molecules
-as well as of atoms involved in ID transformations, _e.g._, acid-base equilibria.
+as well as of atoms involved in id transformations, _e.g._, acid-base equilibria.
 The filename format is `rho-@name.dat`.
 
 ### Density Profile
@@ -157,19 +157,48 @@ form factor of unity.
 `dq`        | _q_ spacing (1/Å)
 `com=true`  | Treat molecular mass centers as single point scatterers
 
-### Principal Moments of the Gyration Tensor
+### Atomic Gyration Eigenvalues
 
-This calculate the radius of gyration, end-to-end distance, and related
-fluctuations for all groups defined in `molecules`.
+This calculates the gyration eigenvalues for all particles having a given id.
+The gyration tensor is defined as
 
-`gyration`   | Description
+$$
+S = \frac{1}{N} \sum_{i=1}^{N} ( \| \bf{t_i} \|^2 \mathrm{I} - \bf{t_i} \bf{t_i^T} )
+$$
+
+where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th particle, $\bf{cm}$ is the
+position of the mass center of the whole group of atoms, $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
+
+`gyration`       | Description
 ---------------- | ----------------------------------------
 `nstep`          | Interval with which to sample
-`molecules`      | List of molecule names to sample (array); `[*]` selects all 
+`index`          | Particle id
+
+### Inertia Tensor
+
+This calculates the inertia eigenvalues and the principal axis for a range of atoms within a molecular group of given index.
+Atom coordinates are considered with respect to the mass center of the group. 
+For protein complex, the analysis can be used to calculate the principal axes of the constituent monomers,
+all originating at the mass center of the complex. 
+The inertia tensor is defined as
+
+$$
+I = \sum_{i=1}^N m_i ( \| \bf{t_i} \|^2 \mathrm{I} - \bf{t_i} \bf{t_i}^T ) 
+$$
+
+where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th particle, $\bf{cm}$ is the
+position of the mass center of the whole group of atoms, $m_i$ is the molecular weight of the _i_th particle,
+$\bf{I}$ is the identity matrix and $N$ is the number of atoms.
+
+`gyration`       | Description
+---------------- | ----------------------------------------
+`nstep`          | Interval with which to sample
+`indexes`        | Array defining a range of indexes within the molecule 
+`index`          | Index of the molecular group
 
 ### Polymer Shape
 
-This calculate the radius of gyration, end-to-end distance, and related
+This calculates the radius of gyration, end-to-end distance, and related
 fluctuations for all groups defined in `molecules`.
 
 `polymershape`   | Description
@@ -186,6 +215,31 @@ Calculates average molecular multipolar moments and their fluctuations.
 `multipole`    | Description
 -------------- | ----------------------
 `nstep`        | Interval between samples.
+
+### Multipole Moments
+
+For a range of atoms within a molecular group of given index, 
+this calculates the total charge and dipole moment,
+as well as the eigenvalues and the major axis of the quadrupole tensor.
+Atom coordinates are considered with respect to the mass center of the group. 
+For a protein complex, the analysis can be used to calculate, e.g., the dipole vectors of the constituent monomers,
+all originating at the mass center of the complex. 
+The quadrupole tensor is defined as
+
+$$
+Q = \frac{1}{2} \sum_{i=1}^N q_i ( 3 \bf{t_i} \bf{t_i}^T - \| \bf{t_i} \|^2 \mathrm{I}) 
+$$
+
+where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th particle, $\bf{cm}$ is the
+position of the mass center of the whole group of atoms, $q_i$ is the charge of the $i$th particle,
+$\bf{I}$ is the identity matrix and $N$ is the number of atoms.
+
+
+`gyration`       | Description
+---------------- | ----------------------------------------
+`nstep`          | Interval with which to sample
+`indexes`        | Array defining a range of indexes within the molecule 
+`index`          | Index of the molecular group
 
 ### Electric Multipole Distribution
 

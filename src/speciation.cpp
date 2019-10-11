@@ -21,8 +21,8 @@ void SpeciationMove::_move(Change &change) {
     if (reactions.size() > 0) {
         auto rit = slump.sample(reactions.begin(), reactions.end());
         lnK = rit->lnK;
-        neutral = rit->neutral;
-        forward = (bool)slump.range(0, 1); // random boolean
+        neutral = rit->neutral; // If true, only neutral molecules participate in the reaction
+        forward = (bool)slump.range(0, 1); // Random boolean
         trialprocess = &(*rit);
         if (rit->empty(forward)) // Enforce canonic constraint if invoked
             return;              // Out of material, slip out the back door
@@ -37,7 +37,10 @@ void SpeciationMove::_move(Change &change) {
                 if (git->size() < m.second) // Assure that there are atoms enough in the group
                     return;                 // Slip out the back door
             } else {
-                mollist = spc.findMolecules(m.first, Tspace::ACTIVE);
+                if (neutral) // Only neutral molecules react
+                    mollist = spc.findMolecules(m.first, Tspace::ACTIVE_NEUTRAL);
+                else
+                    mollist = spc.findMolecules(m.first, Tspace::ACTIVE);
                 if (size(mollist) < m.second)
                     return; // Not possible to perform change, escape through the back door
             }
@@ -54,7 +57,10 @@ void SpeciationMove::_move(Change &change) {
                     return;                                       // Slip out the back door
                 }
             } else {
-                mollist = spc.findMolecules(m.first, Tspace::INACTIVE);
+                if (neutral) // Only neutral molecules react
+                    mollist = spc.findMolecules(m.first, Tspace::INACTIVE_NEUTRAL);
+                else
+                    mollist = spc.findMolecules(m.first, Tspace::INACTIVE);
                 if (size(mollist) < m.second) {
                     return; // Not possible to perform change, escape through the back door
                 }
@@ -121,7 +127,7 @@ void SpeciationMove::_move(Change &change) {
                 std::sort(d.atoms.begin(), d.atoms.end());
                 change.groups.push_back(d); // add to list of moved groups
             } else { // The reagent is a molecule
-                if (neutral)
+                if (neutral) // Only neutral molecules react
                     mollist = spc.findMolecules(m.first, Tspace::ACTIVE_NEUTRAL);
                 else
                     mollist = spc.findMolecules(m.first, Tspace::ACTIVE);
@@ -171,7 +177,7 @@ void SpeciationMove::_move(Change &change) {
                 std::sort(d.atoms.begin(), d.atoms.end());
                 change.groups.push_back(d); // Add to list of moved groups
             } else { // The product is a molecule
-                if (neutral)
+                if (neutral) // Only neutral molecules react
                     mollist = spc.findMolecules(m.first, Tspace::INACTIVE_NEUTRAL);
                 else
                     mollist = spc.findMolecules(m.first, Tspace::INACTIVE);

@@ -106,12 +106,12 @@ void Penalty::update(const std::vector<double> &c) {
             double min = penalty.minCoeff(); // define minimun penalty energy
             penalty = penalty.array() - min; // ...to zero
             if (not quiet)
-                faunus_logger->debug("Barriers/kT: penalty = {} histogram = {}", penalty.maxCoeff(),
+                faunus_logger->warn("Barriers/kT: penalty = {} histogram = {}", penalty.maxCoeff(),
                      std::log(double(histo.maxCoeff()) / histo.minCoeff()));
             f0 = f0 * scale; // reduce penalty energy
             samplings = std::ceil(samplings / scale);
             histo.setZero();
-            udelta += -min;
+            udelta -= min;
         }
     }
     coord = c;

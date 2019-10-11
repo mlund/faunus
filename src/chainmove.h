@@ -90,6 +90,7 @@ class CrankshaftMove : public ChainRotationMove {
     void _from_json(const json &j) override;
 
   private:
+    size_t joint_max; //!< maximum number of bonds between the joints of a crankshaft
     /** Randomly selects two atoms as joints in a random chain. The joints then determine the axis of rotation
      *  of the chain segment between the joints.
      *  The member vectors containing atoms' indices of the axis and the segment are populated accordingly.

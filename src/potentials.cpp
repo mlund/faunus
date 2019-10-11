@@ -1055,7 +1055,7 @@ void TabulatedPotential::from_json(const json &j) {
 NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) {
     selfEnergy = [&](const Particle &p) {
         return pot.self_energy({p.charge * p.charge, 0});
-    }; // expose CoulombGalore self-energy as a functor in potential base class
+    }; // expose self-energy as a functor in potential base class
 }
 
 Point NewCoulombGalore::force(const Particle &a, const Particle &b, double, const Point &r) const {
@@ -1088,10 +1088,10 @@ void NewCoulombGalore::to_json(json &j) const { pot.to_json(j); }
 Multipole::Multipole(const std::string &name) : NewCoulombGalore(name) {
     isotropic = false;
     selfEnergy = [&](const Particle &p) {
-        if (p.hasExtension())
-            return pot.self_energy({p.charge * p.charge, p.getExt().mulen * p.getExt().mulen});
-        else
-            return pot.self_energy({p.charge * p.charge, 0});
+        double mu_x_mu = 0;   // dipole-dipole product
+        if (p.hasExtension()) // only access dipole of the particle has extended properties
+            mu_x_mu = p.getExt().mulen * p.getExt().mulen;
+        return pot.self_energy({p.charge * p.charge, mu_x_mu});
     }; // expose CoulombGalore self-energy as a functor in potential base class
 }
 

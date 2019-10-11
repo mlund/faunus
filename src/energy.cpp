@@ -365,19 +365,24 @@ void Hamiltonian::to_json(json &j) const {
         j.push_back(*i);
 }
 void Hamiltonian::addEwald(const json &j, Space &spc) {
-    // note this will not find deeper placed coulomb potentials
-    // in FunctorPotential etc. Nor dipolar energies
+    // note this will currently not detect multipolar energies ore
+    // deeply nested "coulomb" pair-potentials
     json _j;
-    if (j.count("coulomb") == 1)
+    if (j.count("default") == 1) { // try to detect FunctorPotential
+        for (auto &i : j["default"]) {
+            if (i.count("coulomb") == 1) {
+                _j = i["coulomb"];
+                break;
+            }
+        }
+    } else if (j.count("coulomb") == 1)
         _j = j["coulomb"];
-    else if (j.count("newcoulomb") == 1) // temporary
-        _j = j["newcoulomb"];
     else
         return;
 
     if (_j.count("type"))
         if (_j.at("type") == "ewald")
-            emplace_back<Energy::Ewald<>>(j["coulomb"], spc);
+            emplace_back<Energy::Ewald<>>(_j, spc);
 }
 
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {

@@ -612,7 +612,7 @@ void NewCoulombGalore::to_json(json &j) const {
 }
 
 Multipole::Multipole(const std::string &name) : NewCoulombGalore(name) {
-    isotropic = false;
+    isotropic = false; // this potential is angular dependent
     selfEnergy = [&](const Particle &p) {
         double mu_x_mu = 0;   // dipole-dipole product
         if (p.hasExtension()) // only access dipole of the particle has extended properties

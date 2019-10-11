@@ -558,23 +558,17 @@ class FENE : public PairPotentialBase {
 class NewCoulombGalore : public PairPotentialBase {
   protected:
     ::CoulombGalore::Splined pot;
-    double lB;
 
   public:
     NewCoulombGalore(const std::string & = "coulomb");
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return lB * pot.ion_ion_energy(a.charge, b.charge, r.squaredNorm());
+        return lB * pot.ion_ion_energy(a.charge, b.charge, r.norm());
     }
     Point force(const Particle &, const Particle &, double, const Point &) const override;
     void from_json(const json &) override;
     void to_json(json &) const override;
-    // template <class Tpvec, class Tgroup> double internal(const Tgroup &g) const {
-    //    double Eq = 0;
-    //    for (auto i : g)
-    //        Eq += i.charge * i.charge;
-    //    return pot.self_energy({Eq, 0.0}) * lB;
-    //}
     double dielectric_constant(double M2V) { return pot.calc_dielectric(M2V); }
+    double lB; // Bjerrum length (angstrom)
 };
 
 /**
@@ -583,135 +577,16 @@ class NewCoulombGalore : public PairPotentialBase {
  */
 class Multipole : public NewCoulombGalore {
   public:
-    Multipole(const std::string & = "coulomb");
+    Multipole(const std::string & = "multipole");
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        // for this to reach reasonable speed, the energy calculations should
-        // be aggregated to avoid SRF lookup multiple times
+        // Only dipole-dipole for now!
         Point mua = a.getExt().mu * a.getExt().mulen;
         Point mub = b.getExt().mu * b.getExt().mulen;
-        // double ionion = pot.ion_ion_energy(a.charge, b.charge, r.squaredNorm());
-        // double iondip = pot.ion_dipole_energy(a.charge, mub, r) + pot.ion_dipole_energy(b.charge, mua, r);
         double dipdip = pot.dipole_dipole_energy(mua, mub, r);
         return lB * (dipdip);
-        // return lB*(ionion + iondip + dipdip);
     }
 
     Point force(const Particle &, const Particle &, double, const Point &) const override;
-};
-
-/** @brief Coulomb type potentials with spherical cutoff */
-class CoulombGalore : public PairPotentialBase {
-    std::shared_ptr<PairMatrix<double>> ecs;      // effective charge-scaling
-    Tabulate::Andrea<double> sf;                  // splitting function
-    Tabulate::TabulatorBase<double>::data table;  // data for splitting function
-    std::function<double(double)> calcDielectric; // function for dielectric const. calc.
-    std::string type;
-    double selfenergy_prefactor = 0;
-    double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa, I;
-    int order;
-    unsigned int C, D;
-
-    void sfYukawa(const json &j);
-    void sfReactionField(const json &j);
-    void sfQpotential(const json &j);
-    void sfYonezawa(const json &j);
-    void sfFanourgakis(const json &j);
-    void sfYukawaPoisson(const json &j);
-    void sfPoisson(const json &j);
-    void sfFennel(const json &j);
-    void sfEwald(const json &j);
-    void sfWolf(const json &j);
-    void sfPlain(const json &j, double val = 1);
-
-    inline double operator()(const Particle &a, const Particle &b, double r2) const {
-        if (r2 < rc2) {
-            double r = std::sqrt(r2);
-            return lB * ecs->operator()(a.id, b.id) * a.charge * b.charge / r * sf.eval(table, r * rc1i);
-        }
-        return 0;
-    }
-
-  public:
-    CoulombGalore(const std::string &name = "coulomb") : PairPotentialBase(name) {};
-    void from_json(const json &j) override;
-
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        return operator()(a, b, r.squaredNorm());
-    }
-
-    inline Point force(const Particle &a, const Particle &b, double r2, const Point &p) const override {
-        if (r2 < rc2) {
-            double r = sqrt(r2);
-            return lB * a.charge * b.charge * (-sf.eval(table, r * rc1i) / r2 + sf.evalDer(table, r * rc1i) / r) * p;
-        }
-        return Point(0, 0, 0);
-    }
-
-    /**
-     * @brief Self-energy of the potential
-     */
-    template <class Tpvec, class Tgroup> double internal(const Tgroup &g) const {
-        double Eq = 0;
-        for (auto i : g)
-            Eq += i.charge * i.charge;
-        return selfenergy_prefactor * Eq * lB / rc;
-    }
-
-    double dielectric_constant(double M2V);
-
-    void to_json(json &j) const override;
-};
-
-/** @brief Dipole-dipole type potentials with spherical cutoff */
-class DipoleDipoleGalore : public PairPotentialBase {
-    Tabulate::Andrea<double> sfA, sfB;            // splitting functions
-    Tabulate::TabulatorBase<double>::data tableA, tableB;  // data for splitting function
-    std::function<double(double)> calcDielectric; // function for dielectric const. calc.
-    std::string type;
-    double selfenergy_prefactor;
-    double lB, depsdt, rc, rc2, rc1i, epsr, epsrf, alpha, kappa;
-    int order;
-    // unsigned int C, D;
-
-    void sfEwald(const json &j);
-    void sfReactionField(const json &j);
-    void sfQ0potential(const json &j);
-    void sfQ2potential(const json &j);
-    void sfFanourgakis(const json &j);
-    void sfFennell(const json &j);
-    void sfWolf(const json &j);
-    void sfPlain(const json &j, double val = 1);
-
-  public:
-    DipoleDipoleGalore(const std::string &name = "dipoledipole", const std::string &cite = std::string()) :
-            PairPotentialBase(name, cite, false) {};
-    void from_json(const json &j) override;
-
-    inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
-        double r1 = r.norm();
-        if (r1 < rc) {
-            double af = sfA.eval(tableA,r1*rc1i);
-            double bf = sfB.eval(tableB,r1*rc1i);
-            return lB*mu2mu(a.getExt().mu, b.getExt().mu, a.getExt().mulen*b.getExt().mulen, r,af,bf);
-        }
-        return 0.0;
-    }
-
-    inline Point force(const Particle &, const Particle &, double, const Point &) const override { return {0, 0, 0}; }
-
-    /**
-     * @brief Self-energy of the potential
-     */
-    template <class Tpvec, class Tgroup> double internal(const Tgroup &g) const {
-        double Emu = 0;
-        for (auto i : g)
-            Emu += i.getExt().mulen * i.getExt().mulen;
-        return selfenergy_prefactor * Emu * lB / pow(rc,3.0);
-    }
-
-    double dielectric_constant(double M2V);
-
-    void to_json(json &j) const override;
 };
 
 /**
@@ -762,7 +637,6 @@ class FunctorPotential : public PairPotentialBase {
     json _j; // storage for input json
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
-    typedef CombinedPairPotential<DipoleDipole, LennardJones> Stockmayer;
 
     std::vector<std::function<double(const Particle &)>> self_energy_vector;
     bool have_monopole_self_energy = false;
@@ -774,7 +648,7 @@ class FunctorPotential : public PairPotentialBase {
     // typically use `shared_ptr` so that the created functors _share_
     // the data. That is *only* put the pair-potential here if you can
     // share internal (shared) pointers.
-    std::tuple<CoulombGalore,         // 0
+    std::tuple<NewCoulombGalore,      // 0
                CosAttract,            // 1
                Polarizability,        // 2
                HardSphere,            // 3
@@ -786,10 +660,7 @@ class FunctorPotential : public PairPotentialBase {
                PrimitiveModelWCA,     // 9
                Hertz,                 // 10
                SquareWell,            // 11
-               DipoleDipoleGalore,    // 12
-               Stockmayer,            // 13
-               NewCoulombGalore,      // 14
-               Multipole              // 15
+               Multipole              // 12
                >
         potlist;
 

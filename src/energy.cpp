@@ -383,10 +383,9 @@ void Hamiltonian::addEwald(const json &j, Space &spc) {
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
-    typedef CombinedPairPotential<CoulombGalore, LennardJones> CoulombLJ;
-    typedef CombinedPairPotential<NewCoulombGalore, LennardJones> NewCoulombLJ; // temporary name
-    typedef CombinedPairPotential<CoulombGalore, HardSphere> CoulombHS;
-    typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen> CoulombWCA;
+    typedef CombinedPairPotential<NewCoulombGalore, LennardJones> CoulombLJ; // temporary name
+    typedef CombinedPairPotential<NewCoulombGalore, HardSphere> CoulombHS;
+    typedef CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen> CoulombWCA;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
 
@@ -407,7 +406,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                     emplace_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_newcoulomblj")
-                    emplace_back<Energy::Nonbonded<NewCoulombLJ>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulomblj_EM")
                     emplace_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);

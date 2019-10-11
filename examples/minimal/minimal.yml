@@ -3,7 +3,7 @@ energy:
     - nonbonded_splined:
         default:
             - lennardjones: {mixing: LB}
-            - coulomb: {type: yukawa, epsr: 80, debyelength: 7, cutoff: 100}
+            - coulomb: {type: plain, epsr: 80, debyelength: 7, cutoff: 100}
 atomlist: # define all atom types below
     - Na: {q:  1.0, eps: 0.15, sigma: 4.0, dp: 40}
     - Cl: {q: -1.0, eps: 0.20, sigma: 10.0, dp: 10}

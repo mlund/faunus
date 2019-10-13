@@ -365,28 +365,32 @@ void Hamiltonian::to_json(json &j) const {
         j.push_back(*i);
 }
 void Hamiltonian::addEwald(const json &j, Space &spc) {
-    // note this will not find deeper placed coulomb potentials
-    // in FunctorPotential etc. Nor dipolar energies
+    // note this will currently not detect multipolar energies ore
+    // deeply nested "coulomb" pair-potentials
     json _j;
-    if (j.count("coulomb") == 1)
+    if (j.count("default") == 1) { // try to detect FunctorPotential
+        for (auto &i : j["default"]) {
+            if (i.count("coulomb") == 1) {
+                _j = i["coulomb"];
+                break;
+            }
+        }
+    } else if (j.count("coulomb") == 1)
         _j = j["coulomb"];
-    else if (j.count("newcoulomb") == 1) // temporary
-        _j = j["newcoulomb"];
     else
         return;
 
     if (_j.count("type"))
         if (_j.at("type") == "ewald")
-            emplace_back<Energy::Ewald<>>(j["coulomb"], spc);
+            emplace_back<Energy::Ewald<>>(_j, spc);
 }
 
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
-    typedef CombinedPairPotential<CoulombGalore, LennardJones> CoulombLJ;
-    typedef CombinedPairPotential<NewCoulombGalore, LennardJones> NewCoulombLJ; // temporary name
-    typedef CombinedPairPotential<CoulombGalore, HardSphere> CoulombHS;
-    typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen> CoulombWCA;
+    typedef CombinedPairPotential<NewCoulombGalore, LennardJones> CoulombLJ; // temporary name
+    typedef CombinedPairPotential<NewCoulombGalore, HardSphere> CoulombHS;
+    typedef CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen> CoulombWCA;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
 
@@ -407,7 +411,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                     emplace_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_newcoulomblj")
-                    emplace_back<Energy::Nonbonded<NewCoulombLJ>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulomblj_EM")
                     emplace_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);

@@ -124,6 +124,70 @@ void MoleculeData::createMolecularConformations(const json &val) {
         throw std::runtime_error("Trajectory " + traj + " not loaded or empty.");
 } // done handling conformations
 
+// ============ NeighboursGenerator ============
+
+NeighboursGenerator::NeighboursGenerator(const BondVector &bonds) {
+    createBondMap(bonds);
+}
+
+void NeighboursGenerator::createBondMap(const BondVector &bonds) {
+    for (auto &bond : bonds) {
+        // todo reimplement bonds as BasePointerVector
+        if (bond->type() == Potential::BondData::HARMONIC) {
+            auto add_bond = [this, &bond](int i, int j) -> void {
+                auto atom_emplaced = bond_map.emplace(bond->index[i], AtomList{}); // find or create empty vector
+                atom_emplaced.first->second.push_back(bond->index[j]); // atom_emplaced.<iterator>-><vector>.push_back()
+            };
+            const int head_ndx = 0, tail_ndx = 1;
+            add_bond(head_ndx, tail_ndx); // add the bond to the map in both head-tail
+            add_bond(tail_ndx, head_ndx); // and tail-head directions
+        }
+    }
+}
+
+void NeighboursGenerator::generatePaths(int bonded_distance) {
+    if(paths.empty()) {
+        // starting with a path of length 0 bonds which are just separated atoms
+        paths.emplace_back();
+        for (auto &bonded_atoms : bond_map) {
+          paths.back().emplace(AtomList{bonded_atoms.first});
+        }
+    }
+    // continue wherever the last path generation ended
+    for(int distance = paths.size(); distance <= bonded_distance; ++distance) {
+        paths.emplace_back();
+        const auto &base_paths = paths.rbegin()[1]; // last but one: a set of paths of length (distance - 1)
+        for (auto &base_path : base_paths) {
+            // try to extend the path with every atom bonded to the tail
+            for(auto appending : bond_map.at(base_path.back())) {
+                // avoid loops: the appending atom shall not be anywhere in the path yet
+                if(find(base_path.begin(), base_path.end(), appending) == base_path.end()) {
+                    auto path(base_path);
+                    path.push_back(appending);
+                    paths.back().emplace(path);
+                }
+            }
+        }
+    }
+}
+
+void NeighboursGenerator::generatePairs(AtomPairList &pairs, int bond_distance) {
+    generatePaths(bond_distance);
+    std::set<std::pair<int, int>> pairs_set; // use set to prevent duplicities
+    for (auto &paths_set : paths) {
+        for (auto &path : paths_set) {
+            auto excluded_pair = std::make_pair(path.front(), path.back());
+            if (excluded_pair.first != excluded_pair.second) {
+                if (excluded_pair.first > excluded_pair.second) {
+                    std::swap(excluded_pair.first, excluded_pair.second);
+                }
+                pairs_set.emplace(excluded_pair);
+            }
+        }
+    }
+    // copy the set to the output vector
+    std::copy(pairs_set.begin(), pairs_set.end(), std::back_inserter(pairs));
+}
 
 // ============ MoleculeBuilder ============
 
@@ -246,6 +310,11 @@ void MoleculeBuilder::readFastaBonds(const json &j_properties) {
 }
 
 void MoleculeBuilder::readExclusions(const json &j_properties) {
+    auto excluded_neighbours_distance = j_properties.value("excluded_neighbours", 0);
+    if(excluded_neighbours_distance > 0) {
+        NeighboursGenerator generator(bonds);
+        generator.generatePairs(exclusion_pairs, excluded_neighbours_distance);
+    }
     for (auto j_exclusion_pair : j_properties.value("exclusionlist", json::array())) {
         if (!j_exclusion_pair.is_array() || j_exclusion_pair.size() != 2) {
             throw ConfigurationError("unrecognized molecule's exclusion format");
@@ -259,7 +328,6 @@ bool MoleculeBuilder::isFasta(const json &j_properties) {
     bool is_fasta = (j_structure_it != j_properties.end() && j_structure_it->find("fasta") != j_structure_it->end());
     return is_fasta;
 }
-
 
 // ============ MoleculeStructureReader ============
 
@@ -526,11 +594,11 @@ ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
     assert(not p.empty() and not empty());
     // copy positions
     if (positions.size() == p.size())
-        for (size_t i = 0; i < p.size(); i++)
+        for (int i = 0; i < p.size(); i++)
             p[i].pos = positions[i];
     // copy charges
     if (charges.size() == p.size())
-        for (size_t i = 0; i < p.size(); i++)
+        for (int i = 0; i < p.size(); i++)
             p[i].charge = charges[i];
     return p;
 }

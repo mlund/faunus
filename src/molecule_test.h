@@ -31,6 +31,83 @@ TEST_CASE("[Faunus] Structure") {
     }
 }
 
+TEST_CASE("NeighboursGenerator") {
+    decltype(MoleculeData::bonds) harmonic_bonds;
+    std::vector<std::pair<int, int>> pairs;
+
+    SUBCASE("Linear Chain") {
+        // decamer connected with harmonic bonds
+        const auto mer = 10;
+        for (auto i = 0; i < mer - 1; ++i) {
+            const auto j = i + 1;
+            harmonic_bonds.emplace_back(std::make_shared<Potential::HarmonicBond>(0., 0., std::vector<int>{i, j}));
+        }
+
+        const int distance = 3;
+        NeighboursGenerator generator(harmonic_bonds);
+        generator.generatePairs(pairs, distance);
+        CHECK_EQ(pairs.size(), (mer - 1) + (mer - 2) + (mer - 3));
+        auto pairs_matched = [pairs]() -> int {
+            int match_cnt = 0;
+            for (auto dist = 1; dist <= distance; ++dist) {
+                for (auto n = 0; n < mer - dist; ++n) {
+                    if( std::find(pairs.begin(), pairs.end(), std::make_pair(n, n + dist)) !=
+                    pairs.end()) {
+                        ++match_cnt;
+                    }
+                }
+            }
+            return match_cnt;
+        };
+        CHECK_EQ(pairs_matched(), pairs.size());
+    }
+
+    SUBCASE("Cycle") {
+        // cyclic hexamer connected with harmonic bonds
+        const auto mer = 6;
+        for (auto i = 0; i < mer; ++i) {
+            auto const j = (i + 1) % mer;
+            harmonic_bonds.emplace_back(std::make_shared<Potential::HarmonicBond>(0., 0., std::vector<int>{i, j}));
+        }
+
+        const auto distance = 3; // up to dihedrals
+        NeighboursGenerator generator(harmonic_bonds);
+        generator.generatePairs(pairs, distance);
+        CHECK_EQ(pairs.size(), mer + mer + mer / 2); // 1-4 pairs in the cyclic hexamer are double degenerated
+        auto pairs_matched = [pairs]() -> int {
+          int match_cnt = 0;
+            for (auto dist = 1; dist <= distance; ++dist) {
+                for (auto n = 0; n < mer; ++n) {
+                    auto i = n;
+                    auto j = (n + dist) % mer;
+                    if (i > j) {
+                        std::swap(i, j);
+                        if(j - i == 3) {
+                            continue; // skip the pair doubles in the cyclic hexamer, e.g., 1-4 and 4-1
+                        }
+                    }
+                    if(std::find(pairs.begin(), pairs.end(), std::make_pair(i, j)) != pairs.end()) {
+                        ++match_cnt;
+                    }
+                }
+            }
+          return match_cnt;
+        };
+        CHECK_EQ(pairs_matched(), pairs.size());
+    }
+
+    SUBCASE("Branched") {
+        // isopentane like structure
+        std::vector<std::vector<int>> bonds = {{0, 1}, {1, 2}, {1, 3}, {3, 4}};
+        for (auto bond : bonds) {
+            harmonic_bonds.emplace_back(std::make_shared<Potential::HarmonicBond>(0., 0., bond));
+        }
+        NeighboursGenerator generator(harmonic_bonds);
+        generator.generatePairs(pairs, 2);
+        CHECK_EQ(pairs.size(), 4 + 4);
+    }
+}
+
 TEST_CASE("[Faunus] ExclusionsVicinity") {
     std::vector<std::pair<int, int>> pairs{{0,1}, {1,2}, {1,3}, {6,7}};
     auto exclusions = ExclusionsVicinity::create(10, pairs);

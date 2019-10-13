@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include "core.h"
 #include "particle.h"
 #include "random.h"
@@ -254,7 +255,7 @@ class MoleculeBuilder {
     void readParticles(const json &j_properties); //!< reads "structure" in any format; uses MoleculeStructureReader
     void readBonds(const json &j_properties); //!< reads "bondlist"
     void readFastaBonds(const json &j_properties); //!< makes up harmonic bonds for a FASTA sequence
-    void readExclusions(const json &j_properties); //!< reads "exclusionlist"
+    void readExclusions(const json &j_properties); //!< reads "exclusionlist" and "excluded_neighbours"
     std::shared_ptr<MoleculeInserter> createInserter(const json &j_properties);
   public:
     //! initialize MoleculeData from JSON; shall be called only once during the instance lifetime
@@ -277,6 +278,38 @@ class MoleculeStructureReader {
     void readFile(ParticleVector &particles, const std::string &filename);
     //! a director determining the executive method based on JSON content
     void readJson(ParticleVector &particles, const json &j);
+};
+
+/**
+ * @brief Generate all possible atom pairs within a given bond distance. Only harmonic bonds are considered.
+ *
+ * @internal Used by MoleculeBuilder only to generate exclusions from excluded neighbours count.
+ */
+class NeighboursGenerator {
+    //! a path created from harmonic bonds as an ordered list of atoms involved;
+    //! atoms are addressed by intramolecular indices
+    typedef std::vector<int> AtomList;
+    //! atom → list of directly bonded atoms with a harmonic bond; addressing by indices
+    std::map<int, AtomList> bond_map;
+    //! paths indexed by a path length (starting with a zero distance for a single atom)
+    //! a path is a sequence (without loops) of atoms connected by a harmonic bond,
+    std::vector<std::set<AtomList>> paths;
+
+    typedef decltype(MoleculeData::bonds) BondVector;
+    //! a constructor helper: populates bond_map
+    void createBondMap(const BondVector &bonds);
+    //! a generatePairs helper: populates paths
+    void generatePaths(int bonded_distance);
+  public:
+    //! atom pairs addressed by intramolecular indices
+    typedef std::vector<std::pair<int, int>> AtomPairList;
+    NeighboursGenerator(const BondVector &bonds);
+    /**
+     * Append all atom pairs within a given bond distance to the pair list.
+     * @param pairs atom pair list
+     * @param bond_distance maximal number of harmonic bonds between atoms to consider
+     */
+    void generatePairs(AtomPairList &pairs, int bond_distance);
 };
 
 /*

@@ -2152,42 +2152,48 @@ namespace Faunus
     }
 #endif
 
-    template<typename T>
-        struct BasePointerVector {
-            std::vector<std::shared_ptr<T>> vec; //!< Vector of shared pointers to base class
+    template <typename T> struct BasePointerVector {
+        std::vector<std::shared_ptr<T>> vec; //!< Vector of shared pointers to base class
 
-            auto begin() noexcept { return vec.begin(); }
-            auto begin() const noexcept { return vec.begin(); }
-            auto end() noexcept { return vec.end(); }
-            auto end() const noexcept { return vec.end(); }
-            auto empty() const noexcept { return vec.empty(); }
-            auto size() const noexcept { return vec.size(); }
+        auto begin() noexcept { return vec.begin(); }
+        auto begin() const noexcept { return vec.begin(); }
+        auto end() noexcept { return vec.end(); }
+        auto end() const noexcept { return vec.end(); }
+        auto empty() const noexcept { return vec.empty(); }
+        auto size() const noexcept { return vec.size(); }
+        auto back() const noexcept { return vec.back(); }
 
-            template<typename Tderived, class... Args, class = std::enable_if_t<std::is_base_of<T,Tderived>::value>>
-                void push_back(Args&... args) {
-                    vec.push_back( std::make_shared<Tderived>(args...) );
-                } //!< Add (derived) pointer to vector
+        template <typename Tderived, class... Args, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
+        void emplace_back(Args &... args) {
+            vec.push_back(std::make_shared<Tderived>(args...));
+        } //!< Create an (derived) instance and append a pointer to it to the vector
 
-            template<typename Tderived, class = std::enable_if_t<std::is_base_of<T,Tderived>::value>>
-                auto find() {
-                    std::vector<std::shared_ptr<Tderived>> _v;
-                    for (auto base : vec) {
-                        auto derived = std::dynamic_pointer_cast<Tderived>(base);
-                        if (derived)
-                            _v.push_back(derived);
-                    }
-                    return _v;
-                } //!< Pointer list to all matching type
+        template <typename Tderived, class Arg, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
+        void push_back(std::shared_ptr<Arg> arg) {
+            vec.push_back(arg);
+        } //!< Append a pointer to a (derived) instance to the vector
 
-        }; //!< Helper class for storing vectors of base pointers
-
-    template<typename T>
-        void to_json(json &j, const BasePointerVector<T> &b) {
-            try {
-                for (auto i : b.vec)
-                    j.push_back(*i);
-            } catch (const std::exception& e) {
-                throw std::runtime_error("error converting to json: "s + e.what());
+        template <typename Tderived, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
+        auto find() const {
+            std::vector<std::shared_ptr<Tderived>> _v;
+            for (auto base : vec) {
+                auto derived = std::dynamic_pointer_cast<Tderived>(base);
+                if (derived)
+                    _v.push_back(derived);
             }
+            return _v;
+        } //!< Pointer list to all matching type
+
+        template <typename U>
+        friend void to_json(json &, const BasePointerVector<U> &); //!< Allow serialization to JSON
+    }; //!< Helper class for storing vectors of base pointers
+
+    template <typename T> void to_json(json &j, const BasePointerVector<T> &b) {
+        try {
+            for (auto i : b.vec)
+                j.push_back(*i);
+        } catch (const std::exception &e) {
+            throw std::runtime_error("error converting to json: "s + e.what());
         }
+    }
 }//namespace

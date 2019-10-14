@@ -63,7 +63,8 @@ TEST_CASE("[Faunus] PairMixer") {
 
 TEST_CASE("[Faunus] LennardJones") {
     atoms = R"([{"A": {"sigma":2.0, "eps":0.9}},
-                {"B": {"sigma":8.0, "eps":0.1}}])"_json.get<decltype(atoms)>();
+                {"B": {"sigma":8.0, "eps":0.1}},
+                {"C": {"sigma":5.0, "eps":1.1}}])"_json.get<decltype(atoms)>();
     Particle a = atoms[0], b = atoms[1];
 
     double d = 0.9_nm;
@@ -76,6 +77,18 @@ TEST_CASE("[Faunus] LennardJones") {
         CHECK_NOTHROW(LennardJones lj = R"({})"_json);
         // alternative notation for custom as an array: custom: []
         CHECK_NOTHROW(LennardJones lj = R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json);
+    }
+    SUBCASE("JSON output custom") {
+        json j_in = R"({"mixing": "LB", "sigma": "sigma", "eps": "eps",
+            "custom": [{"A B": {"eps": 0.5, "sigma": 8}}, {"A C": {"eps": 1.0, "sigma": 5}}]})"_json;
+        LennardJones lj = j_in;
+        json j_out = lj;
+        // The custom pair data in the output contain a lot of ballast among the original data.
+        // If the original data match the output data, patching of the output shall not change it.
+        json j_custom = j_out["lennardjones"]["custom"];
+        j_custom[0].merge_patch(j_in["custom"][0]);
+        j_custom[1].merge_patch(j_in["custom"][1]);
+        CHECK_EQ(j_out["lennardjones"]["custom"], j_custom);
     }
     SUBCASE("Lorentz-Berthelot mixing") {
         LennardJones lj = R"({"mixing": "LB"})"_json;
@@ -193,6 +206,29 @@ TEST_CASE("[Faunus] SquareWell") {
     }
 }
 
+TEST_CASE("[Faunus] Hertz") {
+
+    json j = R"({ "atomlist" : [
+                 { "A": { "eps": 1.0, "sigma": 1.3} },
+                 { "B": { "eps": 2.0, "sigma": 1.0 } }]})"_json;
+
+    atoms = j["atomlist"].get<decltype(atoms)>();
+    Particle a = atoms[0], b = atoms[1];
+
+    SUBCASE("JSON serialization") {
+        json hertz_json = R"({ "hertz": {"mixing": "lorentz_berthelot", "eps": "eps", "sigma": "sigma"}})"_json;
+        Hertz hertz = hertz_json;
+        CHECK(hertz_json == json(hertz));
+    }
+    SUBCASE("Lorentz-Berthelot mixing") {
+        pc::temperature = 298.15_K;
+        Hertz hertz = R"({"mixing": "lorentz_berthelot"})"_json;
+        CHECK(hertz(a, b, {0.7, 0, 0}) == Approx(0.0546424449));   // within cut-off
+        CHECK(hertz(a, b, {1.15, 0, 0}) == Approx(0.0));           // at cut-off
+        CHECK(hertz(a, b, {2.0, 0, 0}) == Approx(0.0));            // outside of cut-off
+    }
+}
+
 TEST_SUITE_END();
 
 TEST_CASE("[Faunus] CustomPairPotential") {
@@ -261,12 +297,12 @@ TEST_CASE("[Faunus] Dipole-dipole interactions") {
     FunctorPotential u = R"(
                 {
                   "default": [
-                    { "dipoledipole" : {"epsr": 1.0, "type": "plain", "cutoff":20} }
+                    { "multipole" : {"epsr": 1.0, "type": "plain", "cutoff":20} }
                   ]
                  }
                 )"_json;
 
-    DipoleDipole dipoledipole = R"({ "dipoledipole": {"epsr": 1.0, "type": "plain", "cutoff":20} } )"_json;
+    Multipole dipoledipole = R"({"epsr": 1.0, "type": "plain", "cutoff":20})"_json;
 
     Particle a = atoms[0];
     Particle b = atoms[1];

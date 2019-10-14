@@ -2,6 +2,16 @@
 
 find_program(PANDOC pandoc)
 if (PANDOC)
+    if(NOT TEX_ENGINE)
+        set(TEX_ENGINE xelatex CACHE STRING "TeX engine for PDF manual: xelatex lualatex")
+    endif()
+    set(TEX_ENGINE_OPTION --pdf-engine)
+    execute_process(COMMAND ${PANDOC} ${TEX_ENGINE_OPTION}=${TEX_ENGINE}
+        INPUT_FILE /dev/null ERROR_QUIET RESULT_VARIABLE PANDOC_CMD_SYNTAX)
+    if(NOT PANDOC_CMD_SYNTAX EQUAL 0)
+        # fallback to pandoc version 1 syntax
+        set(TEX_ENGINE_OPTION --latex-engine)
+    endif()
     add_custom_target(
         manual
         COMMENT "Building PDF manual"
@@ -20,7 +30,7 @@ if (PANDOC)
         sed 's.\\\\_._.g' | # this allows us to use \_ in markdown math
         ${PANDOC} --self-contained --highlight-style=tango --template ../pandoc.tex
         -V date:${GIT_LATEST_TAG}""
-        -N --toc -o ${CMAKE_BINARY_DIR}/manual.pdf
+        -N --toc ${TEX_ENGINE_OPTION}=${TEX_ENGINE} -o ${CMAKE_BINARY_DIR}/manual.pdf
         )
     set_target_properties(manual PROPERTIES EXCLUDE_FROM_ALL TRUE)
 

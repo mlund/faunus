@@ -365,28 +365,32 @@ void Hamiltonian::to_json(json &j) const {
         j.push_back(*i);
 }
 void Hamiltonian::addEwald(const json &j, Space &spc) {
-    // note this will not find deeper placed coulomb potentials
-    // in FunctorPotential etc. Nor dipolar energies
+    // note this will currently not detect multipolar energies ore
+    // deeply nested "coulomb" pair-potentials
     json _j;
-    if (j.count("coulomb") == 1)
+    if (j.count("default") == 1) { // try to detect FunctorPotential
+        for (auto &i : j["default"]) {
+            if (i.count("coulomb") == 1) {
+                _j = i["coulomb"];
+                break;
+            }
+        }
+    } else if (j.count("coulomb") == 1)
         _j = j["coulomb"];
-    else if (j.count("newcoulomb") == 1) // temporary
-        _j = j["newcoulomb"];
     else
         return;
 
     if (_j.count("type"))
         if (_j.at("type") == "ewald")
-            push_back<Energy::Ewald<>>(j["coulomb"], spc);
+            emplace_back<Energy::Ewald<>>(_j, spc);
 }
 
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     using namespace Potential;
 
-    typedef CombinedPairPotential<CoulombGalore, LennardJones> CoulombLJ;
-    typedef CombinedPairPotential<NewCoulombGalore, LennardJones> NewCoulombLJ; // temporary name
-    typedef CombinedPairPotential<CoulombGalore, HardSphere> CoulombHS;
-    typedef CombinedPairPotential<CoulombGalore, WeeksChandlerAndersen> CoulombWCA;
+    typedef CombinedPairPotential<NewCoulombGalore, LennardJones> CoulombLJ; // temporary name
+    typedef CombinedPairPotential<NewCoulombGalore, HardSphere> CoulombHS;
+    typedef CombinedPairPotential<NewCoulombGalore, WeeksChandlerAndersen> CoulombWCA;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
 
@@ -397,38 +401,38 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
 
     // add container overlap energy for non-cuboidal geometries
     if (spc.geo.type not_eq Geometry::CUBOID)
-        push_back<Energy::ContainerOverlap>(spc);
+        emplace_back<Energy::ContainerOverlap>(spc);
 
     for (auto &m : j) { // loop over move list
         size_t oldsize = vec.size();
         for (auto it : m.items()) {
             try {
                 if (it.key() == "nonbonded_coulomblj")
-                    push_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_newcoulomblj")
-                    push_back<Energy::Nonbonded<NewCoulombLJ>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulomblj_EM")
-                    push_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
+                    emplace_back<Energy::NonbondedCached<CoulombLJ>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_splined")
-                    push_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<TabulatedPotential>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded" or it.key() == "nonbonded_exact")
-                    push_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<FunctorPotential>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_cached")
-                    push_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc, *this);
+                    emplace_back<Energy::NonbondedCached<TabulatedPotential>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_coulombwca")
-                    push_back<Energy::Nonbonded<CoulombWCA>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<CoulombWCA>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_pm" or it.key() == "nonbonded_coulombhs")
-                    push_back<Energy::Nonbonded<PrimitiveModel>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PrimitiveModel>>(it.value(), spc, *this);
 
                 else if (it.key() == "nonbonded_pmwca")
-                    push_back<Energy::Nonbonded<PrimitiveModelWCA>>(it.value(), spc, *this);
+                    emplace_back<Energy::Nonbonded<PrimitiveModelWCA>>(it.value(), spc, *this);
 
                 // this should be moved into `Nonbonded` and added when appropriate
                 // Nonbonded now has access to Hamiltonian (*this) and can therefore
@@ -436,35 +440,35 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
                 addEwald(it.value(), spc); // add reciprocal Ewald terms if appropriate
 
                 if (it.key() == "bonded")
-                    push_back<Energy::Bonded>(it.value(), spc);
+                    emplace_back<Energy::Bonded>(it.value(), spc);
 
                 else if (it.key() == "customexternal")
-                    push_back<Energy::CustomExternal>(it.value(), spc);
+                    emplace_back<Energy::CustomExternal>(it.value(), spc);
 
                 else if (it.key() == "akesson")
-                    push_back<Energy::ExternalAkesson>(it.value(), spc);
+                    emplace_back<Energy::ExternalAkesson>(it.value(), spc);
 
                 else if (it.key() == "confine")
-                    push_back<Energy::Confine>(it.value(), spc);
+                    emplace_back<Energy::Confine>(it.value(), spc);
 
                 else if (it.key() == "constrain")
-                    push_back<Energy::Constrain>(it.value(), spc);
+                    emplace_back<Energy::Constrain>(it.value(), spc);
 
                 else if (it.key() == "example2d")
-                    push_back<Energy::Example2D>(it.value(), spc);
+                    emplace_back<Energy::Example2D>(it.value(), spc);
 
                 else if (it.key() == "isobaric")
-                    push_back<Energy::Isobaric>(it.value(), spc);
+                    emplace_back<Energy::Isobaric>(it.value(), spc);
 
                 else if (it.key() == "penalty")
 #ifdef ENABLE_MPI
-                    push_back<Energy::PenaltyMPI>(it.value(), spc);
+                    emplace_back<Energy::PenaltyMPI>(it.value(), spc);
 #else
-                    push_back<Energy::Penalty>(it.value(), spc);
+                    emplace_back<Energy::Penalty>(it.value(), spc);
 #endif
-#ifdef ENABLE_POWERSASA
+#if defined ENABLE_FREESASA
                 else if (it.key() == "sasa")
-                    push_back<Energy::SASAEnergy>(it.value(), spc);
+                    emplace_back<Energy::SASAEnergy>(it.value(), spc);
 #endif
                 // additional energies go here...
 
@@ -508,34 +512,82 @@ void Hamiltonian::sync(Energybase *basePtr, Change &change) {
         }
     throw std::runtime_error("hamiltonian mismatch");
 }
-void SASAEnergy::updateSASA(const ParticleVector &p) {
-    assert(ps != nullptr);
+
+#ifdef ENABLE_FREESASA
+
+SASAEnergy::SASAEnergy(Space &spc, double cosolute_concentration, double probe_radius)
+    : spc(spc), cosolute_concentration(cosolute_concentration)
+{
+    name = "sasa"; // todo predecessor constructor
+    cite = "doi:10.12688/f1000research.7931.1"; // todo predecessor constructor
+    parameters = freesasa_default_parameters;
+    parameters.probe_radius = probe_radius;
+    init();
+}
+
+SASAEnergy::SASAEnergy(const json &j, Space &spc)
+    : SASAEnergy(spc, j.value("molarity", 0.0) * 1.0_molar, j.value("radius", 1.4) * 1.0_angstrom) {}
+
+void SASAEnergy::updatePositions([[gnu::unused]] const ParticleVector &p) {
+    assert(p.size() == spc.positions().size());
+    positions.clear();
+    for(auto pos: spc.positions()) {
+        auto xyz = pos.data();
+        positions.insert(positions.end(), xyz, xyz+3);
+    }
+}
+
+void SASAEnergy::updateRadii(const ParticleVector &p) {
     radii.resize(p.size());
     std::transform(p.begin(), p.end(), radii.begin(),
-                   [this](auto &a) { return atoms[a.id].sigma * 0.5 + this->probe; });
+                   [](auto &a) { return atoms[a.id].sigma * 0.5; });
+}
 
-    ps->update_coords(spc.positions(), radii); // slowest step!
-
-    for (size_t i = 0; i < p.size(); i++) {
-        auto &a = atoms[p[i].id];
-        if (std::fabs(a.tfe) > 1e-9 || std::fabs(a.tension) > 1e-9)
-            ps->calc_sasa_single(i);
+void SASAEnergy::updateSASA(const ParticleVector &p, const Change &) {
+    updateRadii(p);
+    updatePositions(p);
+    auto result = freesasa_calc_coord(positions.data(), radii.data(), p.size(), &parameters);
+    if(result) {
+        assert(result->n_atoms == p.size());
+        sasa.clear();
+        sasa.insert(sasa.begin(), result->sasa, result->sasa + result->n_atoms); // copy
+        assert(sasa.size() == p.size());
+        freesasa_result_free(result);
+    } else {
+        throw std::runtime_error("FreeSASA failed");
     }
-    sasa = ps->getSasa();
-    assert(sasa.size() == p.size());
 }
-void SASAEnergy::to_json(json &j) const {
-    using namespace u8;
-    j["molarity"] = conc / 1.0_molar;
-    j["radius"] = probe / 1.0_angstrom;
-    j[bracket("SASA") + "/" + angstrom + squared] = avgArea.avg() / 1.0_angstrom;
-    _roundjson(j, 5); // set json output precision
+
+void SASAEnergy::init() {
+    auto box = spc.geo.getLength();
+    auto box_pbc = box;
+    spc.geo.boundary(box_pbc);
+    if(box_pbc != box) {
+        faunus_logger->error("PBC applied, but PBC not implemented for FreeSASA. Expect unphysical results.");
+    }
+    Change change;
+    change.all = true;
+    updateSASA(spc.p, change);
 }
+
+double SASAEnergy::energy(Change &change) {
+    double u = 0, A = 0;
+    updateSASA(spc.p, change); // ideally we want
+    for (size_t i = 0; i < spc.p.size(); ++i) {
+        auto &a = atoms[spc.p[i].id];
+        u += sasa[i] * (a.tension + cosolute_concentration * a.tfe);
+        A += sasa[i];
+    }
+    avgArea += A; // sample average area for accepted confs.
+    return u;
+}
+
 void SASAEnergy::sync(Energybase *basePtr, Change &c) {
     auto other = dynamic_cast<decltype(this)>(basePtr);
     if (other) {
         if (c.all || c.dV) {
             radii = other->radii;
+            positions = other->positions;
             sasa = other->sasa;
         } else {
             for (auto &d : c.groups) {
@@ -544,42 +596,22 @@ void SASAEnergy::sync(Energybase *basePtr, Change &c) {
                     int i = j + offset;
                     radii[i] = other->radii[i];
                     sasa[i] = other->sasa[i];
+                    for(size_t k = 0; k < 3; ++k) {
+                        positions[3*i + k] = spc.positions()[i][k];
+                    }
                 }
             }
         }
     }
 }
-SASAEnergy::SASAEnergy(const json &j, Space &spc) : spc(spc) {
-    name = "sasa";
-    cite = "doi:10.1002/jcc.21844";
-    probe = j.value("radius", 1.4) * 1.0_angstrom;
-    conc = j.at("molarity").get<double>() * 1.0_molar;
-    init();
-}
-void SASAEnergy::init() {
-    radii.resize(spc.p.size());
-    std::transform(spc.p.begin(), spc.p.end(), radii.begin(),
-                   [this](auto &a) { return atoms[a.id].sigma * 0.5 + this->probe; });
 
-    if (ps == nullptr)
-        ps = std::make_shared<POWERSASA::PowerSasa<double, Point>>(spc.positions(), radii);
-    updateSASA(spc.p);
+void SASAEnergy::to_json(json &j) const {
+    using namespace u8;
+    j["molarity"] = cosolute_concentration / 1.0_molar;
+    j["radius"] = parameters.probe_radius / 1.0_angstrom;
+    j[bracket("SASA") + "/" + angstrom + squared] = avgArea.avg() / 1.0_angstrom;
+    _roundjson(j, 5); // set json output precision
 }
-double SASAEnergy::energy(Change &) {
-    double u = 0, A = 0;
-    /*
-     * ideally we want to call `update` only if `key==NEW` but
-     * syncronising the PowerSasa object is difficult since it's
-     * non-copyable.
-     */
-    updateSASA(spc.p); // ideally we want
-    for (size_t i = 0; i < spc.p.size(); ++i) {
-        auto &a = atoms[spc.p[i].id];
-        u += sasa[i] * (a.tension + conc * a.tfe);
-        A += sasa[i];
-    }
-    avgArea += A; // sample average area for accepted confs. only
-    return u;
-}
+#endif
 } // end of namespace Energy
 } // end of namespace Faunus

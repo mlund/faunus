@@ -75,6 +75,38 @@ To start from the previously saved state, use:
 faunus --input in.json --state state.json
 ~~~
 
+## Diagnostics
+
+Faunus writes various status and diagnostic messages to the standard error
+output. The amount of messages can be control with the `--verbosity` (`-v`)
+option ranging from completely suppressed messages to tracing all
+operations. Only warnings and errors are shown by default. It may be useful
+to increase the verbosity level when debugging to show status and debug
+information.
+
+~~~ bash
+faunus --verbosity 5 --input in.json
+~~~
+
+Note this is an experimental feature, covering only a fraction of actions
+so far.
+
+`-v` | verbosity level
+---- | -----------------------
+0    | off
+1    | critical error
+2    | error
+3    | warning (default)
+4    | information
+5    | debug information
+6    | tracing information
+
+Tip: Redirect the standard error output to a log file.
+
+~~~ bash
+faunus -v 5 -i in.json 2>> error.log
+~~~
+
 ## Message Passing Interface (MPI)
 
 Only few routines in Faunus are currently parallelisable using MPI, for example
@@ -88,13 +120,13 @@ The following starts two processes, reading input from `mpi0.in.json` and
 `mpi1.in.json`. All output files, including those from any analysis are
 prefixed with `mpi0.` and `mpi1.`.
 
-~~~
+~~~ bash
 mpirun -np 2 ./faunus -i in.json
 ~~~
 
 If all processes take the same input:
 
-~~~
+~~~ bash
 mpirun -np 2 ./faunus --nopfx --input in.json
 mpirun -np 2 --stdin all ./faunus < in.json
 ~~~

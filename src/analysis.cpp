@@ -350,43 +350,43 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                     try {
                         size_t oldsize = this->vec.size();
                         if (it.key() == "atomprofile")
-                            push_back<AtomProfile>(it.value(), spc);
+                            emplace_back<AtomProfile>(it.value(), spc);
                         else if (it.key() == "atomrdf")
-                            push_back<AtomRDF>(it.value(), spc);
+                            emplace_back<AtomRDF>(it.value(), spc);
                         else if (it.key() == "atomdipdipcorr")
-                            push_back<AtomDipDipCorr>(it.value(), spc);
+                            emplace_back<AtomDipDipCorr>(it.value(), spc);
                         else if (it.key() == "density")
-                            push_back<Density>(it.value(), spc);
+                            emplace_back<Density>(it.value(), spc);
                         else if (it.key() == "chargefluctuations")
-                            push_back<ChargeFluctuations>(it.value(), spc);
+                            emplace_back<ChargeFluctuations>(it.value(), spc);
                         else if (it.key() == "molrdf")
-                            push_back<MoleculeRDF>(it.value(), spc);
+                            emplace_back<MoleculeRDF>(it.value(), spc);
                         else if (it.key() == "multipole")
-                            push_back<Multipole>(it.value(), spc);
+                            emplace_back<Multipole>(it.value(), spc);
                         else if (it.key() == "multipoledist")
-                            push_back<MultipoleDistribution>(it.value(), spc);
+                            emplace_back<MultipoleDistribution>(it.value(), spc);
                         else if (it.key() == "polymershape")
-                            push_back<PolymerShape>(it.value(), spc);
+                            emplace_back<PolymerShape>(it.value(), spc);
                         else if (it.key() == "qrfile")
-                            push_back<QRtraj>(it.value(), spc);
+                            emplace_back<QRtraj>(it.value(), spc);
                         else if (it.key() == "reactioncoordinate")
-                            push_back<FileReactionCoordinate>(it.value(), spc);
+                            emplace_back<FileReactionCoordinate>(it.value(), spc);
                         else if (it.key() == "sanity")
-                            push_back<SanityCheck>(it.value(), spc);
+                            emplace_back<SanityCheck>(it.value(), spc);
                         else if (it.key() == "savestate")
-                            push_back<SaveState>(it.value(), spc);
+                            emplace_back<SaveState>(it.value(), spc);
                         else if (it.key() == "scatter")
-                            push_back<ScatteringFunction>(it.value(), spc);
+                            emplace_back<ScatteringFunction>(it.value(), spc);
                         else if (it.key() == "sliceddensity")
-                            push_back<SlicedDensity>(it.value(), spc);
+                            emplace_back<SlicedDensity>(it.value(), spc);
                         else if (it.key() == "systemenergy")
-                            push_back<SystemEnergy>(it.value(), pot);
+                            emplace_back<SystemEnergy>(it.value(), pot);
                         else if (it.key() == "virtualvolume")
-                            push_back<VirtualVolume>(it.value(), spc, pot);
+                            emplace_back<VirtualVolume>(it.value(), spc, pot);
                         else if (it.key() == "widom")
-                            push_back<WidomInsertion>(it.value(), spc, pot);
+                            emplace_back<WidomInsertion>(it.value(), spc, pot);
                         else if (it.key() == "xtcfile")
-                            push_back<XTCtraj>(it.value(), spc);
+                            emplace_back<XTCtraj>(it.value(), spc);
                         // additional analysis go here...
 
                         if (this->vec.size() == oldsize)

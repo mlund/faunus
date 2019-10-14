@@ -44,7 +44,10 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
     TPairMatrixPtr matrix = std::make_shared<TPairMatrix>(n, n);
     for (auto &i : atoms) {
         for (auto &j : atoms) {
-            if (i.id() == j.id()) {
+            if(i.implicit || j.implicit) {
+                // implicit atoms are ignored as the missing properties, e.g., sigma and epsilon, might raise errors
+                (*matrix)(i.id(), j.id()) = combUndefined();
+            } else if (i.id() == j.id()) {
                 // if the combinator is "undefined" the homogeneous interaction is still well defined
                 (*matrix)(i.id(), j.id()) = modifier(extractor(i));
             } else {
@@ -96,9 +99,9 @@ void from_json(const json &j, std::vector<InteractionData> &interactions) {
 
 void to_json(json &j, const std::vector<InteractionData> &interactions) {
     if (!interactions.empty()) {
-        auto &j_custom = j["custom"];
+        j = json::array();
         for (auto &i : interactions) {
-            j_custom = i.interaction;
+            j.push_back(i.interaction);
         }
     }
 }
@@ -169,469 +172,6 @@ void CosAttract::from_json(const json &j) {
     rc2 = rc * rc;
     c = pc::pi / 2 / wc;
     rcwc2 = pow((rc + wc), 2);
-}
-
-// -------------- CoulombGalore ---------------
-
-void CoulombGalore::sfYukawa(const json &j) {
-    kappa = 1.0 / j.at("debyelength").get<double>();
-    I = kappa * kappa / (8.0 * lB * pc::pi * pc::Nav / 1e27);
-    table = sf.generate([&](double q) { return std::exp(-q * rc * kappa) - std::exp(-kappa * rc); }, 0, 1); // q=r/Rc
-    // we could also fill in some info std::string or JSON output...
-}
-
-void CoulombGalore::sfYukawaPoisson(const json &j) {
-    kappa = 1.0 / j.at("debyelength").get<double>();
-    I = kappa * kappa / (8.0 * lB * pc::pi * pc::Nav / 1e27);
-    C = j.value("C", 3);
-    D = j.value("D", 3);
-    if ((C < 1) || (D < 1))
-        throw std::runtime_error("`C` and `D` must be larger than zero");
-    table = sf.generate(
-        [&](double q) {
-            double qt = (1.0 - exp(2.0 * kappa * rc * q)) / (1.0 - exp(2.0 * kappa * rc));
-            double tmp = 0.0;
-            for (int c = 0; c < C; c++)
-                tmp += double(factorial(D - 1 + c)) / double(factorial(D - 1)) / double(factorial(c)) * double(C - c) /
-                       double(C) * pow(qt, double(c));
-            return pow(1.0 - qt, double(D) + 1.0) * tmp;
-        },
-        0, 1);
-    calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = -double(C + D) / double(C);
-}
-
-void CoulombGalore::sfReactionField(const json &j) {
-    epsrf = j.at("eps_rf");
-    table = sf.generate(
-        [&](double q) {
-            return 1 + ((epsrf - epsr) / (2 * epsrf + epsr)) * q * q * q - 3 * (epsrf / (2 * epsrf + epsr)) * q;
-        },
-        0, 1);
-    calcDielectric = [&](double M2V) {
-        if (epsrf > 1e10)
-            return 1 + 3 * M2V;
-        if (fabs(epsrf - epsr) < 1e-6)
-            return 2.25 * M2V + 0.25 + 0.75 * sqrt(9 * M2V * M2V + 2 * M2V + 1);
-        if (fabs(epsrf - 1.0) < 1e-6)
-            return (2 * M2V + 1) / (1 - M2V);
-        return 0.5 * (2 * epsrf - 1 + sqrt(-72 * M2V * M2V * epsrf + 4 * epsrf * epsrf + 4 * epsrf + 1)) /
-               (3 * M2V - 1); // Needs to be checked!
-        // return (6*M2V*epsrf + 2*epsrf + 1.0)/(1.0 + 2*epsrf - 3*M2V); // Is OK when epsr=1.0
-    };
-    selfenergy_prefactor = 1.5 * epsrf / (2.0 * epsrf + epsr); // Correct?!, see Eq.14 in DOI: 10.1021/jp510612w
-    // we could also fill in some info std::string or JSON output...
-}
-
-void CoulombGalore::sfQpotential(const json &j) {
-    order = j.value("order", 300);
-    table = sf.generate([&](double q) { return qPochhammerSymbol(q, 1, order); }, 0, 1);
-    calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = -1.0;
-}
-
-void CoulombGalore::sfYonezawa(const json &j) {
-    alpha = j.at("alpha");
-    table = sf.generate([&](double q) { return 1 - std::erfc(alpha * rc) * q + q * q; }, 0, 1);
-    calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = -0.5 * (erfc(alpha * rc) + 2.0 * alpha * rc / sqrt(pc::pi));
-}
-
-void CoulombGalore::sfFanourgakis(const json &) {
-    table =
-        sf.generate([&](double q) { return 1 - 1.75 * q + 5.25 * pow(q, 5) - 7 * pow(q, 6) + 2.5 * pow(q, 7); }, 0, 1);
-    calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = -0.875;
-}
-
-void CoulombGalore::sfPoisson(const json &j) {
-    C = j.value("C", 3);
-    D = j.value("D", 3);
-    if ((C < 1) || (D < 1))
-        throw std::runtime_error("`C` and `D` must be larger than zero");
-    table = sf.generate(
-        [&](double q) {
-            double tmp = 0.0;
-            for (int c = 0; c < C; c++)
-                tmp += double(factorial(D - 1 + c)) / double(factorial(D - 1)) / double(factorial(c)) * double(C - c) /
-                       double(C) * pow(q, double(c));
-            return pow(1.0 - q, double(D) + 1.0) * tmp;
-        },
-        0, 1);
-    calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = -double(C + D) / double(C);
-}
-
-void CoulombGalore::sfFennel(const json &j) {
-    alpha = j.at("alpha");
-    table = sf.generate(
-        [&](double q) {
-            return (
-                erfc(alpha * rc * q) - std::erfc(alpha * rc) * q +
-                (q - 1.0) * q *
-                    (std::erfc(alpha * rc) + 2 * alpha * rc / std::sqrt(pc::pi) * std::exp(-alpha * alpha * rc * rc)));
-        },
-        0, 1);
-    calcDielectric = [&](double M2V) {
-        double T = erf(alpha * rc) -
-                   (2 / (3 * sqrt(pc::pi))) * exp(-alpha * alpha * rc * rc) *
-                       (alpha * alpha * rc * rc * alpha * alpha * rc * rc + 2.0 * alpha * alpha * rc * rc + 3.0);
-        return (((T + 2.0) * M2V + 1.0) / ((T - 1.0) * M2V + 1.0));
-    };
-    selfenergy_prefactor = -(erfc(alpha * rc) + alpha * rc / sqrt(pc::pi) * (1.0 + exp(-alpha * alpha * rc * rc)));
-}
-
-void CoulombGalore::sfEwald(const json &j) { // is all this true for kappa \ne 0 ?
-    alpha = j.at("alpha");
-    kappa = j.value("kappa", 0.0);
-    table = sf.generate(
-        [&](double q) {
-            return (std::erfc(alpha * rc * q + kappa / 2.0 / alpha) * std::exp(kappa * rc * q) +
-                    std::erfc(alpha * rc * q - kappa / 2.0 / alpha) * std::exp(-kappa * rc * q)) /
-                   2.0;
-        },
-        0, 1); // Yukawa potential
-    // table = sf.generate( [&](double q) { return std::erfc(alpha*rc*q); }, 0, 1 ); // pure Coulomb potential
-    calcDielectric = [&](double M2V) {
-        double T = std::erf(alpha * rc) -
-                   (2 / (3 * sqrt(pc::pi))) * std::exp(-alpha * alpha * rc * rc) * (2 * alpha * alpha * rc * rc + 3);
-        return ((T + 2.0) * M2V + 1) / ((T - 1) * M2V + 1);
-    };
-    selfenergy_prefactor = alpha * rc / sqrt(pc::pi);
-}
-
-void CoulombGalore::sfWolf(const json &j) {
-    alpha = j.at("alpha");
-    table = sf.generate([&](double q) { return (erfc(alpha * rc * q) - erfc(alpha * rc) * q); }, 0, 1);
-    calcDielectric = [&](double M2V) {
-        double T = erf(alpha * rc) -
-                   (2 / (3 * sqrt(pc::pi))) * exp(-alpha * alpha * rc * rc) * (2.0 * alpha * alpha * rc * rc + 3.0);
-        return (((T + 2.0) * M2V + 1.0) / ((T - 1.0) * M2V + 1.0));
-    };
-    selfenergy_prefactor = -0.5 * (erfc(alpha * rc) + 2.0 * alpha * rc / sqrt(pc::pi));
-}
-
-void CoulombGalore::sfPlain(const json &, double val) {
-    table = sf.generate([&](double) { return val; }, 0, 1);
-    calcDielectric = [&](double M2V) { return (2.0 * M2V + 1.0) / (1.0 - M2V); };
-    selfenergy_prefactor = 0.0;
-}
-
-void CoulombGalore::from_json(const json &j) {
-    try {
-        kappa = 0.0;
-        type = j.at("type");
-        rc = j.at("cutoff").get<double>();
-        rc2 = rc * rc;
-        rc1i = 1 / rc;
-        epsr = j.at("epsr").get<double>();
-        lB = pc::lB(epsr); // Bjerrum length
-
-        depsdt = j.value("depsdt", -0.368 * pc::temperature / epsr);
-        sf.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
-
-        if (type == "yukawapoisson")
-            sfYukawaPoisson(j);
-        else if (type == "reactionfield")
-            sfReactionField(j);
-        else if (type == "fanourgakis")
-            sfFanourgakis(j);
-        else if (type == "qpotential")
-            sfQpotential(j);
-        else if (type == "yonezawa")
-            sfYonezawa(j);
-        else if (type == "poisson")
-            sfPoisson(j);
-        else if (type == "yukawa")
-            sfYukawa(j);
-        else if (type == "fennel")
-            sfFennel(j);
-        else if (type == "plain")
-            sfPlain(j, 1);
-        else if (type == "ewald")
-            sfEwald(j);
-        else if (type == "none")
-            sfPlain(j, 0);
-        else if (type == "wolf")
-            sfWolf(j);
-
-        ecs = std::make_shared<PairMatrix<double>>();
-        for (auto &i : atoms)
-            for (auto &j : atoms) {
-                double tmpi = kappa * i.sigma / 2.0;
-                double tmpj = kappa * j.sigma / 2.0;
-                double ecsi = 1.0;
-                double ecsj = 1.0;
-                if (tmpi > 1e-6)
-                    ecsi = std::sinh(tmpi) / tmpi;
-                if (tmpj > 1e-6)
-                    ecsj = std::sinh(tmpj) / tmpj;
-                ecs->set(i.id(), j.id(), ecsi * ecsj);
-            }
-
-        if (table.empty())
-            throw std::runtime_error("unknown type '" + type + "'");
-
-        // Set particle self-energy function. For reasons yet to be understood,
-        // rc etc. cannot be lambda captured by reference, but must be hard-copied,
-        // here into `factor`
-        selfEnergy = [factor = selfenergy_prefactor * lB / rc](const Particle &a) {
-            return a.charge * a.charge * factor;
-        };
-    }
-
-    catch (std::exception &e) {
-        throw std::runtime_error(e.what());
-    }
-}
-
-double CoulombGalore::dielectric_constant(double M2V) { return calcDielectric(M2V); }
-
-void CoulombGalore::to_json(json &j) const {
-    using namespace u8;
-    j["epsr"] = epsr;
-    j["T" + partial + epsilon_m + "/" + partial + "T"] = depsdt;
-    j["lB"] = lB;
-    j["cutoff"] = rc;
-    j["type"] = type;
-    if (type == "yukawa" || type == "yukawapoisson") {
-        j["debyelength"] = 1.0 / kappa;
-        j["ionic strength"] = I;
-    }
-    if (type == "yukawapoisson" || type == "poisson") {
-        j["C"] = C;
-        j["D"] = D;
-    }
-    if (type == "qpotential")
-        j["order"] = order;
-    if (type == "yonezawa" || type == "fennel" || type == "wolf" || type == "ewald")
-        j["alpha"] = alpha;
-    if (type == "reactionfield") {
-        if (epsrf > 1e10)
-            j[epsilon_m + "_rf"] = 2e10;
-        else
-            j[epsilon_m + "_rf"] = epsrf;
-    }
-    _roundjson(j, 5);
-}
-
-//-------------- DipoleDipoleGalore ----------------
-
-void DipoleDipoleGalore::sfReactionField(const json &j) { // Preliminary, needs to be checked!
-    epsrf = j.at("epsrf");
-    tableA = sfA.generate([&](double) { return 1.0; }, 0, 1);
-    tableB =
-        sfB.generate([&](double q) { return -(2 * (epsrf - epsr) / (2 * epsrf + epsr)) / epsr * q * q * q; }, 0, 1);
-    calcDielectric = [&](double M2V) {
-        if (epsrf > 1e10)
-            return 1 + 3 * M2V;
-        if (fabs(epsrf - epsr) < 1e-6)
-            return 2.25 * M2V + 0.25 + 0.75 * sqrt(9 * M2V * M2V + 2 * M2V + 1);
-        if (fabs(epsrf - 1.0) < 1e-6)
-            return (2 * M2V + 1) / (1 - M2V);
-        return 0.5 * (2 * epsrf - 1 + sqrt(-72 * M2V * M2V * epsrf + 4 * epsrf * epsrf + 4 * epsrf + 1)) /
-               (3 * M2V - 1); // Needs to be checked!
-        // return (6*M2V*epsrf + 2*epsrf + 1.0)/(1.0 + 2*epsrf - 3*M2V); // Is OK when epsr=1.0
-    };
-    selfenergy_prefactor = 2.0 * (epsr - epsrf) / (2.0 * epsrf + epsr); // Preliminary, needs to be checked!
-}
-
-void DipoleDipoleGalore::sfQ2potential(const json &j) { // Preliminary, needs to be checked!
-    order = j.at("order");
-    tableA = sfA.generate([&](double q) { return qPochhammerSymbol(q, 3, order); }, 0, 1);
-    tableB = sfB.generate([&](double) { return 0.0; }, 0, 1);
-    calcDielectric = [&](double M2V) { return (2 * M2V + 1.0) / (1.0 - M2V); };
-    selfenergy_prefactor = -1.0;
-}
-
-void DipoleDipoleGalore::sfQ0potential(const json &j) { // Preliminary, needs to be checked!
-    order = j.at("order");
-    tableA = sfA.generate([&](double q) { return dipoleDipoleQ2Help(q, 0, order); }, 0, 1);
-    tableB = sfB.generate([&](double q) { return dipoleDipoleQ2Help(q, 0, order, false); }, 0, 1);
-    calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = -1.0;
-}
-
-void DipoleDipoleGalore::sfFanourgakis(const json &) { // Preliminary, needs to be checked!
-    tableA =
-        sfA.generate([&](double q) { return (1.0 + 14.0 * pow(q, 5) - 35.0 * pow(q, 6) + 20.0 * pow(q, 7)); }, 0, 1);
-    tableB = sfB.generate([&](double q) { return 35.0 * pow(q, 5) * pow(1.0 - q, 2.0); }, 0, 1);
-    calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = 0.0; // Seems so but is it really correct? Check!
-}
-
-void DipoleDipoleGalore::sfFennell(const json &j) {
-    alpha = j.at("alpha");
-    double ar = alpha * rc;
-
-    tableA = sfA.generate(
-        [&](double q) {
-            double kq = ar * q;
-            double a = erfc(kq) + 4.0 * kq * exp(-kq * kq) * (kq * kq + 1.5) / (3 * std::sqrt(pc::pi));
-
-            double kqc = ar; // using q=1 (i.e. r=Rc)
-            double kqc2 = kqc * kqc;
-            double ac = erfc(kqc) + 4.0 * kqc * exp(-kqc2) * (kqc2 + 1.5) / (3 * std::sqrt(pc::pi));
-
-            double dac = -(8.0 * (kqc * (kqc2 * kqc2 + 1.5 * kqc2 + 2.25) * exp(-kqc2) +
-                                  9.0 * 0.125 * std::sqrt(pc::pi) * erfc(kqc))) /
-                         (3.0 * std::sqrt(pc::pi));
-
-            double q3 = q * q * q;
-            return (a - ac * q3 - (q - 1.0) * dac * q3);
-        },
-        0, 1);
-    tableB = sfB.generate(
-        [&](double q) {
-            double kq = ar * q;
-            double b = 4.0 * kq * kq * kq * exp(-kq * kq) / (3.0 * std::sqrt(pc::pi));
-
-            double kqc = ar; // using q=1 (i.e. r=Rc)
-            double kqc2 = kqc * kqc;
-            double bc = 4.0 * kqc2 * kqc * exp(-kqc2) / (3.0 * std::sqrt(pc::pi));
-
-            double dbc = -8.0 * kqc2 * kqc2 * kqc * exp(-kqc2) / (3.0 * std::sqrt(pc::pi));
-
-            double q3 = q * q * q; // compensate for later multiplication with r^-3
-            return (b - bc * q3 - (q - 1.0) * dbc * q3);
-        },
-        0, 1);
-    calcDielectric = [&](double M2V) {
-        double T = erf(ar) - (2 / (3 * sqrt(pc::pi))) * exp(-ar * ar) * ar * (ar * ar * ar * ar + 2.0 * ar * ar + 3.0);
-        return (((T + 2.0) * M2V + 1.0) / ((T - 1.0) * M2V + 1.0));
-    };
-    selfenergy_prefactor = -0.5 * (erfc(alpha * rc) + 2.0 * alpha * rc / sqrt(pc::pi) * exp(-alpha * alpha * rc * rc) +
-                                   (4.0 / 3.0) * pow(alpha * rc, 3.0) / sqrt(pc::pi));
-}
-
-void DipoleDipoleGalore::sfWolf(const json &j) {
-    alpha = j.at("alpha");
-    double ar = alpha * rc;
-
-    tableA = sfA.generate(
-        [&](double q) {
-            double kq = ar * q;
-            double a = erfc(kq) + 4.0 * kq * exp(-kq * kq) * (kq * kq + 1.5) / (3 * std::sqrt(pc::pi));
-
-            double kqc = ar; // using q=1 (i.e. r=Rc)
-            double ac = erfc(kqc) + 4.0 * kqc * exp(-kqc * kqc) * (kqc * kqc + 1.5) / (3 * std::sqrt(pc::pi));
-
-            double q3 = q * q * q;
-            return (a - ac * q3);
-        },
-        0, 1);
-    tableB = sfB.generate(
-        [&](double q) {
-            double kq = ar * q;
-            double b = 4.0 * kq * kq * kq * exp(-kq * kq) / (3.0 * std::sqrt(pc::pi));
-
-            double kqc = ar; // using q=1 (i.e. r=Rc)
-            double bc = 4.0 * kqc * kqc * kqc * exp(-kqc * kqc) / (3.0 * std::sqrt(pc::pi));
-
-            double q3 = q * q * q; // compensate for later multiplication with r^-3
-            return (b - bc * q3);
-        },
-        0, 1);
-    calcDielectric = [&](double M2V) {
-        double T = erf(ar) - (2 / (3 * sqrt(pc::pi))) * exp(-ar * ar) * (2.0 * ar * ar + 3.0); // check!
-        return (((T + 2.0) * M2V + 1.0) / ((T - 1.0) * M2V + 1.0));
-    };
-    selfenergy_prefactor =
-        -0.5 * (erfc(ar) + 2.0 * ar / sqrt(pc::pi) * exp(-ar * ar) + (4.0 / 3.0) * pow(ar, 3.0) / sqrt(pc::pi));
-}
-
-void DipoleDipoleGalore::sfEwald(const json &j) {
-    alpha = j.at("alpha");
-    double ar = alpha * rc;
-
-    tableA = sfA.generate(
-        [&](double q) {
-            return (erfc(ar * q) +
-                    4.0 * ar * q * exp(-ar * q * ar * q) * (ar * q * ar * q + 1.5) / (3 * std::sqrt(pc::pi)));
-        },
-        0, 1);
-    tableB = sfB.generate(
-        [&](double q) { return (4.0 * ar * q * ar * q * ar * q * exp(-ar * q * ar * q) / (3.0 * std::sqrt(pc::pi))); },
-        0, 1);
-    calcDielectric = [&](double M2V) { return 1 + 3 * M2V; };
-    selfenergy_prefactor = -2.0 / 3.0 * pow(alpha, 3.0) / std::sqrt(pc::pi);
-}
-
-void DipoleDipoleGalore::sfPlain(const json &, double val) {
-    tableA = sfA.generate([&](double) { return val; }, 0, 1);
-    tableB = sfB.generate([&](double) { return 0; }, 0, 1);
-    calcDielectric = [&](double M2V) { return (2.0 * M2V + 1.0) / (1.0 - M2V); };
-    selfenergy_prefactor = 0.0;
-}
-
-void DipoleDipoleGalore::from_json(const json &j) {
-    try {
-        kappa = 0.0;
-        type = j.at("type");
-        rc = j.at("cutoff").get<double>();
-        rc2 = rc * rc;
-        rc1i = 1 / rc;
-        epsr = j.at("epsr").get<double>();
-        lB = pc::lB(epsr);
-
-        depsdt = j.value("depsdt", -0.368 * pc::temperature / epsr);
-        sfA.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
-        sfB.setTolerance(j.value("utol", 1e-5), j.value("ftol", 1e-2));
-
-        if (type == "plain")
-            sfPlain(j, 1);
-        else if (type == "none")
-            sfPlain(j, 0);
-        else if (type == "ewald")
-            sfEwald(j);
-        else if (type == "wolf")
-            sfWolf(j);
-        else if (type == "fennell")
-            sfFennell(j);
-        else if (type == "fanourgakis")
-            sfFanourgakis(j);
-        else if (type == "qpotential")
-            sfQ0potential(j);
-        else if (type == "q2potential")
-            sfQ2potential(j);
-        else if (type == "reactionfield")
-            sfReactionField(j);
-
-        if (tableA.empty() || tableB.empty())
-            throw std::runtime_error(name + ": unknown dipole-dipole type '" + type + "'");
-
-        // Set particle self-energy function. For reasons yet to be understood,
-        // rc, rc2 etc. cannot be captured to reference, but must be hard-copied,
-        // here into `factor`
-        selfEnergy = [factor = selfenergy_prefactor * lB / (rc * rc2)](const Particle &a) -> double {
-            if (a.hasExtension())
-                return a.getExt().mulen * a.getExt().mulen * factor;
-            return 0.0;
-        };
-    }
-
-    catch (std::exception &e) {
-        throw std::runtime_error(name + ": " + e.what());
-    }
-}
-
-double DipoleDipoleGalore::dielectric_constant(double M2V) { return calcDielectric(M2V); }
-
-void DipoleDipoleGalore::to_json(json &j) const {
-    using namespace u8;
-    j["epsr"] = epsr;
-    j["T" + partial + epsilon_m + "/" + partial + "T"] = depsdt;
-    j["lB"] = lB;
-    j["cutoff"] = rc;
-    j["type"] = type;
-    if (type == "wolf" || type == "fennell" || type == "ewald")
-        j["alpha"] = alpha;
-    else if (type == "qpotential" || type == "q2potential")
-        j["order"] = order;
-    else if (type == "reactionfield")
-        j["epsrf"] = epsrf;
-
-    _roundjson(j, 5);
 }
 
 void Coulomb::to_json(json &j) const {
@@ -858,8 +398,9 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
 
                         // add Coulomb potential and self-energy
                         // terms if not already added
-                        else if (it.key() == "coulomb") {
-                            _u = std::get<0>(potlist) = i;
+                        else if (it.key() == "coulomb") { // temporary name
+                            _u = std::get<0>(potlist) = it.value();
+                            std::get<0>(potlist).to_json(it.value());
                             if (not have_monopole_self_energy) {
                                 registerSelfEnergy(&std::get<0>(potlist));
                                 have_monopole_self_energy = true;
@@ -887,32 +428,15 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                         else if (it.key() == "squarewell")
                             _u = std::get<11>(potlist) = i;
                         else if (it.key() == "dipoledipole") {
-                            isotropic = false; // potential is now angular dependent
-                            _u = std::get<12>(potlist) = i;
-                            if (not have_dipole_self_energy) {
-                                registerSelfEnergy(&std::get<12>(potlist));
-                                have_dipole_self_energy = true;
-                            }
+                            faunus_logger->error("'dipoledipole' is deprecated, use 'multipole' instead");
                         } else if (it.key() == "stockmayer") {
-                            _u = std::get<13>(potlist) = it.value();
-                            isotropic = false; // potential is now angular dependent
-                            if (not have_dipole_self_energy) {
-                                registerSelfEnergy(&std::get<13>(potlist));
-                                have_dipole_self_energy = true;
-                            }
-                        } else if (it.key() == "newcoulomb") { // temporary name
-                            _u = std::get<14>(potlist) = it.value();
-                            std::get<14>(potlist).to_json(it.value());
-                            if (not have_monopole_self_energy) {
-                                registerSelfEnergy(&std::get<14>(potlist));
-                                have_monopole_self_energy = true;
-                            }
+                            faunus_logger->error("'stockmayer' is deprecated, use 'lennardjones'+'multipole' instead");
                         } else if (it.key() == "multipole") {
-                            _u = std::get<15>(potlist) = it.value();
-                            std::get<15>(potlist).to_json(it.value()); // store json output
+                            _u = std::get<12>(potlist) = it.value();
+                            std::get<12>(potlist).to_json(it.value()); // store json output
                             isotropic = false;                         // potential is now angular dependent
                             if (not have_dipole_self_energy) {
-                                registerSelfEnergy(&std::get<15>(potlist));
+                                registerSelfEnergy(&std::get<12>(potlist));
                                 have_dipole_self_energy = true;
                             }
                         }
@@ -1050,9 +574,9 @@ void TabulatedPotential::from_json(const json &j) {
 }
 
 NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) {
-    selfEnergy = [pot = pot](const Particle &p) {
+    selfEnergy = [&](const Particle &p) {
         return pot.self_energy({p.charge * p.charge, 0});
-    }; // expose CoulombGalore self-energy as a functor in potential base class
+    }; // expose self-energy as a functor in potential base class
 }
 
 Point NewCoulombGalore::force(const Particle &a, const Particle &b, double, const Point &r) const {
@@ -1060,10 +584,12 @@ Point NewCoulombGalore::force(const Particle &a, const Particle &b, double, cons
 }
 
 void NewCoulombGalore::from_json(const json &j) {
-    using namespace ::CoulombGalore;
+    using namespace ::CoulombGalore; // namespace for external CoulombGalore library
     double epsr = j.at("epsr");
     lB = pc::lB(epsr); // Bjerrum length
     std::string type = j.at("type");
+    if (type == "yukawa")
+        faunus_logger->error("'yukawa' is deprecated, use 'plain' with 'debyelength'");
     if (type == "plain")
         pot.spline<::CoulombGalore::Plain>(j);
     else if (type == "qpotential")
@@ -1080,15 +606,18 @@ void NewCoulombGalore::from_json(const json &j) {
         throw std::runtime_error("unknown coulomb scheme");
 }
 
-void NewCoulombGalore::to_json(json &j) const { pot.to_json(j); }
+void NewCoulombGalore::to_json(json &j) const {
+    pot.to_json(j);
+    j["lB"] = lB;
+}
 
 Multipole::Multipole(const std::string &name) : NewCoulombGalore(name) {
-    isotropic = false;
-    selfEnergy = [pot = pot](const Particle &p) {
-        if (p.hasExtension())
-            return pot.self_energy({p.charge * p.charge, p.getExt().mulen * p.getExt().mulen});
-        else
-            return pot.self_energy({p.charge * p.charge, 0});
+    isotropic = false; // this potential is angular dependent
+    selfEnergy = [&](const Particle &p) {
+        double mu_x_mu = 0;   // dipole-dipole product
+        if (p.hasExtension()) // only access dipole of the particle has extended properties
+            mu_x_mu = p.getExt().mulen * p.getExt().mulen;
+        return pot.self_energy({p.charge * p.charge, mu_x_mu});
     }; // expose CoulombGalore self-energy as a functor in potential base class
 }
 

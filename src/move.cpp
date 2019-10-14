@@ -178,42 +178,42 @@ Propagator::Propagator(const json &j, Space &spc, MPI::MPIController &mpi) {
     }
 
     for (auto &m : j.at("moves")) { // loop over move list
-        size_t oldsize = vec.size();
+        size_t oldsize = _moves.size();
         for (auto it : m.items()) {
             try {
                 if (it.key() == "moltransrot")
-                    this->template push_back<Move::TranslateRotate>(spc);
+                    _moves.emplace_back<Move::TranslateRotate>(spc);
                 else if (it.key() == "smartmoltransrot")
-                    this->template push_back<Move::SmartTranslateRotate>(spc);
+                    _moves.emplace_back<Move::SmartTranslateRotate>(spc);
                 else if (it.key() == "conformationswap")
-                    this->template push_back<Move::ConformationSwap>(spc);
+                    _moves.emplace_back<Move::ConformationSwap>(spc);
                 else if (it.key() == "transrot")
-                    this->template push_back<Move::AtomicTranslateRotate>(spc);
+                    _moves.emplace_back<Move::AtomicTranslateRotate>(spc);
                 else if (it.key() == "pivot")
-                    this->template push_back<Move::PivotMove>(spc);
+                    _moves.emplace_back<Move::PivotMove>(spc);
                 else if (it.key() == "crankshaft")
-                    this->template push_back<Move::CrankshaftMove>(spc);
+                    _moves.emplace_back<Move::CrankshaftMove>(spc);
                 else if (it.key() == "volume")
-                    this->template push_back<Move::VolumeMove>(spc);
+                    _moves.emplace_back<Move::VolumeMove>(spc);
                 else if (it.key() == "charge")
-                    this->template push_back<Move::ChargeMove>(spc);
+                    _moves.emplace_back<Move::ChargeMove>(spc);
                 else if (it.key() == "chargetransfer")
-                    this->template push_back<Move::ChargeTransfer>(spc);
+                    _moves.emplace_back<Move::ChargeTransfer>(spc);
                 else if (it.key() == "rcmc")
-                    this->template push_back<Move::SpeciationMove>(spc);
+                    _moves.emplace_back<Move::SpeciationMove>(spc);
                 else if (it.key() == "quadrantjump")
-                    this->template push_back<Move::QuadrantJump>(spc);
+                    _moves.emplace_back<Move::QuadrantJump>(spc);
                 else if (it.key() == "cluster")
-                    this->template push_back<Move::Cluster>(spc);
+                    _moves.emplace_back<Move::Cluster>(spc);
                     // new moves go here...
 #ifdef ENABLE_MPI
                 else if (it.key() == "temper")
-                    this->template push_back<Move::ParallelTempering>(spc, mpi);
+                    _moves.emplace_back<Move::ParallelTempering>(spc, mpi);
                     // new moves requiring MPI go here...
 #endif
-                if (vec.size() == oldsize + 1) {
-                    vec.back()->from_json(it.value());
-                    addWeight(vec.back()->repeat);
+                if (_moves.size() == oldsize + 1) {
+                    _moves.back()->from_json(it.value());
+                    addWeight(_moves.back()->repeat);
                 } else
                     throw std::runtime_error("unknown move");
             } catch (std::exception &e) {
@@ -224,9 +224,13 @@ Propagator::Propagator(const json &j, Space &spc, MPI::MPIController &mpi) {
 }
 
 void Propagator::addWeight(double weight) {
-    w.push_back(weight);
-    dist = std::discrete_distribution<>(w.begin(), w.end());
-    _repeat = int(std::accumulate(w.begin(), w.end(), 0.0));
+    _weights.push_back(weight);
+    distribution = std::discrete_distribution<>(_weights.begin(), _weights.end());
+    _repeat = int(std::accumulate(_weights.begin(), _weights.end(), 0.0));
+}
+
+void to_json(json &j, const Propagator &propagator) {
+    j = propagator._moves;
 }
 
 #ifdef ENABLE_MPI

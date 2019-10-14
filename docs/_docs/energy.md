@@ -24,7 +24,7 @@ energy:
     - nonbonded:
         default: # applied to all atoms
         - lennardjones: {mixing: LB}
-        - coulomb: {type: plain, epsr: 1, cutoff: 12}
+        - coulomb: {type: plain, epsr: 1}
         Na CH:   # overwrite specific atom pairs
         - wca: { mixing: LB }
 
@@ -134,12 +134,13 @@ composition. Currently, parallelisation is disabled by default.
 
 ## Electrostatics
 
- `coulomb`   |  Description
- ----------- |  -------------------------------------------------
- `type`      |  Coulomb type, see below
- `cutoff`    |  Spherical cutoff, $R_c$ after which the potential is zero
- `epsr`      |  Relative dielectric constant of the medium
- `utol=1e-5` |  Error tolerence for splining
+ `coulomb`    |  Description
+ ------------ |  -------------------------------------------------
+ `type`       |  Coulomb type, see below
+ `cutoff`     |  Spherical cutoff, $R_c$ after which the potential is zero
+ `epsr`       |  Relative dielectric constant of the medium
+ `utol=1e-5`  |  Error tolerence for splining
+ `debyelength`|  Debye length (Å) if using `plain` or `poisson`
 
 This is a multipurpose potential that handles several electrostatic methods.
 Beyond a spherical real-space cutoff, $R_c$, the potential is zero while if
@@ -149,22 +150,33 @@ $$
 u_{ij} = \frac{e^2 z_i z_j }{ 4\pi\epsilon_0\epsilon_r r_{ij} }\mathcal{S}(q)
 $$
 
-where $\mathcal{S}(q=r/R_c)$ is a splitting function:
+where $\mathcal{S}(q=r/R_c)$ is a short-range function:
 
 coulomb types                            | Keywords      | $\mathcal{S}(q)$
 ---------------------------------------- | ------------- | ---------------------------------------------------
-`none`                                   |               | 0
 [`plain`](http://doi.org/ctnnsj)         |               | 1
 [`fanourgakis`](http://doi.org/f639q5)   |               | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
 [`ewald`](http://doi.org/dgpdmc)         | `alpha`       | $\text{erfc}(\alpha R_cq)$
 [`wolf`](http://doi.org/cfcxdk)          | `alpha`       | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
-[`yukawa`](http://bit.ly/2CbVJ3v)        | `debyelength` | $e^{-\kappa R_c q}-e^{-\kappa R_c}$
-[`yonezawa`](http://dx.doi.org/10/j97)   | `alpha`       | $1+\text{erfc}(\alpha R_c)q+q^2$
 [`qpotential`](http://goo.gl/hynRTS)     | `order=300`   | $\prod_{n=1}^{\text{order}}(1-q^n)$
 [`reactionfield`](http://doi.org/dbs99w) | `epsrf`       | $1+\frac{\epsilon_{RF}-\epsilon_r}{2\epsilon_{RF}+\epsilon_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_r}q$
-[`fennel`](http://doi.org/bqgmv2)        | `alpha`       | $\scriptstyle\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q+(q-1)q \left( \text{erfc}(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right)$
 
 **Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
+
+### Multipoles
+
+If `type=coulomb` is replaced with `type=multipole` the electrostatic energy will in addition to
+monopole-monopole interactions include contributions from monopole-dipole, and dipole-dipole
+interactions. Multipolar properties of each particle is specified in the Topology.
+
+### Self-energies
+
+When using `coulomb` or `multipole`, an electrostatic self-energy term is automatically
+added to the Hamiltonian. The contribution is evaluated according to
+
+$$
+U_{self} = \sum_i^N ...
+$$
 
 ### Ewald Summation
 
@@ -306,7 +318,7 @@ The potentials below are often used to keep particles apart and/or to introduce 
 The atomic interaction parameters, e.g., $\sigma_i$ and $\epsilon\_i$, are taken from the
 topology.
 
-type             | atomic parameters | $u(r)$ (non-zero part)
+Type             | Atomic parameters | $u(r)$ (non-zero part)
 ---------------- | ----------------- | --------------------------------------------------------
 `hardsphere`     | `sigma`           | $\infty$ for $r < \sigma\_{ij}$
 `hertz`          | `sigma`, `eps`    | $\epsilon\_{ij} \left ( 1-r / \sigma\_{ij}\right )^{5/2}$ for $r<\sigma\_{ij}$
@@ -326,7 +338,7 @@ If not described otherwise, the same rule is applied to all atomic parameters us
 No meaningful defaults are defined yet, hence always specify the mixing rule explicitly, e.g.,
 `arithmetic` for `hardsphere`.
 
-rule                  | description        | formula
+Rule                  | Description        | Formula
 --------------------- | ------------------ | ------------------------------------------------------
 `arithmetic`          | arithmetic mean    | $a\_{ij} = \frac 12 \left( a\_{ii} + a_{jj} \right)$
 `geometric`           | geometric mean     | $a\_{ij} = \sqrt{a\_{ii} a_{jj}}$
@@ -357,7 +369,7 @@ as shown in the example bellow.
       Na Cl: {sigma_hs: 2}
 ~~~
 
-### SASA
+### SASA (pair potential)
 
 This calculates the surface area of two intersecting particles or radii $R$ and $r$
 to estimate an energy based on transfer-free-energies (TFE) and surface tension.
@@ -379,13 +391,14 @@ $$
 where $\gamma\_{ij}$ and $\varepsilon\_{\text{tfe},ij}$ are the arithmetic means of
  `tension` and `tfe` provided in the atomlist.
 
-Note that SASA is strictly not additive and this
-pair-potential is merely a poor-mans way of approximately take into account ion-specificity
-and hydrophobic/hydrophilic interactions.
+Note that SASA is strictly not additive and this pair-potential is merely
+a poor-mans way of approximately take into account ion-specificity and
+hydrophobic/hydrophilic interactions. Faunus offers also a full, albeit yet
+experimental implementation of [Solvent Accessible Surface Area] energy.
 
 `sasa`       | Description
 ------------ | ----------------------------------------------------------
-`molarity`   | Molar concentration of co-solute, $c_s$.
+`molarity`   | Molar concentration of co-solute, $c_s$
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
 `shift=true` | Shift to zero at large separations
 
@@ -420,17 +433,17 @@ In addition to user-defined constants, the following symbols are defined:
 
 `symbol`   | Description
 ---------- | ---------------------------------------------
-`e0`       | Vacuum permittivity [C^2/J/m]
-`inf`      | infinity
-`kB`       | Boltzmann's constant [J/K]
-`kT`       | Boltzmann's constant x temperature [J]
-`Nav`      | Avogadro's number [1/mol]
-`pi`       | Pi
-`q1`,`q2`  | particle charges [e]
-`r`        | particle-particle separation [angstrom]
+`e0`       | Vacuum permittivity [C²/J/m]
+`inf`      | ∞ (infinity)
+`kB`       | Boltzmann constant [J/K]
+`kT`       | Boltzmann constant × temperature [J]
+`Nav`      | Avogadro constant [1/mol]
+`pi`       | π (pi)
+`q1`,`q2`  | Particle charges [e]
+`r`        | Particle-particle separation [angstrom]
 `Rc`       | Spherical cut-off [angstrom]
-`s1`,`s2`  | particle sigma [angstrom]
-`T`        | temperature [K]
+`s1`,`s2`  | Particle sigma [angstrom]
+`T`        | Temperature [K]
 
 ## Custom External Potential
 
@@ -449,16 +462,16 @@ In addition to user-defined `constants`, the following symbols are available:
 
 `symbol`   | Description
 ---------- | ---------------------------------------
-`e0`       | Vacuum permittivity [C^2/J/m]
-`inf`      | infinity
-`kB`       | Boltzmann's constant [J/K]
-`kT`       | Boltzmann's constant x temperature [J]
-`Nav`      | Avogadro's number [1/mol]
-`pi`       | Pi
-`q`        | particle charge [e]
-`s`        | particle sigma [angstrom]
-`x`,`y`,`z`| particle positions [angstrom]
-`T`        | temperature [K]
+`e0`       | Vacuum permittivity [C²/J/m]
+`inf`      | ∞ (infinity)
+`kB`       | Boltzmann constant [J/K]
+`kT`       | Boltzmann constant × temperature [J]
+`Nav`      | Avogadro constant [1/mol]
+`pi`       | π (pi)
+`q`        | Particle charge [e]
+`s`        | Particle sigma [angstrom]
+`x`,`y`,`z`| Particle positions [angstrom]
+`T`        | Temperature [K]
 
 If `com=true`, charge refers to the molecular net-charge, and `x,y,z` the mass-center coordinates.
 The following illustrates how to confine molecules in a spherical shell of radius, _r_, and
@@ -660,6 +673,10 @@ elements of `high`.
 
 ## Solvent Accessible Surface Area
 
+Note that the implementation of Solvent Accessible Surface Area potential is considered _experimental_.
+The code is untested, unoptimized and the configuration syntax below can change.
+The FreeSASA library option has to be enabled when [compiling].
+
 `sasa`       | SASA Transfer Free Energy
 ------------ | --------------------------------------------
 `radius=1.4` | Probe radius for SASA calculation (angstrom)
@@ -670,7 +687,9 @@ Calculates the free energy contribution due to
 1. atomic surface tension
 2. co-solute concentration (typically electrolytes)
 
-via a [SASA calculation](http://doi.org/dws4qm) for each atom.
+via a [SASA calculation](http://dx.doi.org/10/dbjh) for each atom, as implemented in
+the [FreeSASA library](https://freesasa.github.io/).
+
 The energy term is:
 
 $$

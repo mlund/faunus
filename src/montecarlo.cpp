@@ -40,10 +40,8 @@ void MCSimulation::init() {
 
     // inject reference to state1 in SpeciationMove (needed to calc. *differences*
     // in ideal excess chem. potentials)
-    for (auto base : moves.vec) {
-        auto derived = std::dynamic_pointer_cast<Move::SpeciationMove>(base);
-        if (derived)
-            derived->setOther(state1.spc);
+    for (auto speciation_move : moves.moves().find<Move::SpeciationMove>()) {
+        speciation_move->setOther(state1.spc);
     }
 }
 

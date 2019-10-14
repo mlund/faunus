@@ -145,13 +145,14 @@ std::string FormatPQR::writeCryst1(const Point &len, const Point &angle) {
     return std::string(buf);
 }
 
-Point FormatPQR::load(const std::string &file, FormatPQR::Tpvec &p, bool keepcharges) {
+Point FormatPQR::load(const std::string &file, FormatPQR::Tpvec &p, bool keep_charges) {
     Point len(0, 0, 0);
     std::ifstream in(file);
     if (in) {
         Particle a;
         int iatom, ires;
         std::string line, key, aname, rname;
+        bool log_charge = true, log_radius = true; // emit warnings only once
         while (std::getline(in, line)) {
             std::stringstream o(line);
             while (o >> key)
@@ -166,20 +167,30 @@ Point FormatPQR::load(const std::string &file, FormatPQR::Tpvec &p, bool keepcha
 
                     // does charge match AtomData?
                     if (std::fabs(it->charge - a.charge) > pc::epsilon_dbl) {
-                        if (keepcharges)
-                            faunus_logger->warn("charge mismatch on atom {0} {1}: using {2} over atomlist's {3}", aname,
-                                                ires, a.charge, it->charge);
+                        if (log_charge) {
+                            faunus_logger->warn("charge mismatches in PQR file {0}: using {1} values", file,
+                                                keep_charges ? "PQR" : "atomlist");
+                            log_charge = false;
+                        }
+                        if (keep_charges)
+                            faunus_logger->info("charge mismatch on atom {0} {1}: using {2} (PQR) over {3} (atomlist)",
+                                                aname, ires, a.charge, it->charge);
                         else {
-                            faunus_logger->warn("charge mismatch on atom {0} {1}: using atomlist's {2} over {3}", aname,
-                                                ires, it->charge, a.charge);
+                            faunus_logger->info("charge mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
+                                                aname, ires, it->charge, a.charge);
                             a.charge = it->charge;
                         }
                     }
 
                     // does radius match AtomData?
-                    if (std::fabs(it->sigma - 2 * radius) > pc::epsilon_dbl)
-                        faunus_logger->warn("radius mismatch on atom {0}: using atomlist's {1} over {2}", aname, ires,
-                                            it->sigma / 2, radius);
+                    if (std::fabs(it->sigma - 2 * radius) > pc::epsilon_dbl) {
+                        if (log_radius) {
+                            faunus_logger->warn("radius mismatches in PQR file {0}: using atomlist values", file);
+                            log_radius = false;
+                        }
+                        faunus_logger->info("radius mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
+                                            aname, ires, it->sigma / 2, radius);
+                    }
                     p.push_back(a);
 
                 } else if (key == "CRYST1")

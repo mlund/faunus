@@ -95,7 +95,7 @@ void from_json(const json &j, AtomData &a) {
         }
 
         if (val.count("r") == 1) {
-            faunus_logger->warn("Atomic property _r_ is obsolute. Use _sigma_ = 2*r instead on the atom {}.", a.name);
+            faunus_logger->warn("Atom property `r` is obsolete; use `sigma = 2*r` instead on atom {}", a.name);
         }
         a.setProperty("sigma", val.value("sigma", 0.0) * 1.0_angstrom);
         if (fabs(a.getProperty("sigma")) < 1e-20)

@@ -363,6 +363,12 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             emplace_back<MoleculeRDF>(it.value(), spc);
                         else if (it.key() == "multipole")
                             emplace_back<Multipole>(it.value(), spc);
+                        else if (it.key() == "gyration")
+                            emplace_back<AtomGyration>(it.value(), spc);
+                        else if (it.key() == "inertia")
+                            emplace_back<InertiaTensor>(it.value(), spc);
+                        else if (it.key() == "multipolemoments")
+                            emplace_back<MultipoleMoments>(it.value(), spc);
                         else if (it.key() == "multipoledist")
                             emplace_back<MultipoleDistribution>(it.value(), spc);
                         else if (it.key() == "polymershape")
@@ -887,6 +893,108 @@ MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(sp
 
 MultipoleDistribution::~MultipoleDistribution() { save(); }
 
+// =============== AtomGyration ===============
+
+void AtomGyration::_to_json(json &j) const {
+    j["index"] = index; // atom id
+}
+Point AtomGyration::compute() {
+    auto slice = spc.findAtoms(index);
+    auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
+    auto S = Geometry::gyration(slice.begin(), slice.end(), spc.geo.getBoundaryFunc(), cm);
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+    return esf.eigenvalues();
+}
+void AtomGyration::_sample() {
+    if (file)
+        file << cnt * steps << " " << compute().transpose() << "\n";
+}
+AtomGyration::AtomGyration(const json &j, Space &spc) : spc(spc) {
+    from_json(j);
+    name = "Atomic Gyration Eigenvalues";
+    filename = MPI::prefix + j.at("file").get<std::string>();
+    file.open(filename); // output file
+    index = j.at("index").get<size_t>(); // atom id
+}
+
+// =============== InertiaTensor ===============
+
+void InertiaTensor::_to_json(json &j) const {
+    j["indexes"] = indexes; // range of indexes within the group
+    j["index"] = index; // group index
+}
+InertiaTensor::Data InertiaTensor::compute() {
+    Space::Tgroup g(spc.groups[index].begin()+indexes[0], spc.groups[index].begin()+indexes[1]+1);
+    auto cm = spc.groups[index].cm;
+    InertiaTensor::Data d;
+    auto I = Geometry::inertia(g.begin(), g.end(), spc.geo.getBoundaryFunc(), cm);
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
+    d.eivals = esf.eigenvalues();
+    std::ptrdiff_t i_eival;
+    d.eivals.minCoeff(&i_eival);
+    d.eivec = esf.eigenvectors().col(i_eival).real(); // eigenvector corresponding to the smallest eigenvalue
+    return d;
+}
+void InertiaTensor::_sample() {
+    InertiaTensor::Data d = compute();
+    if (file)
+        file << cnt * steps << " " << d.eivals.transpose() << " " << d.eivec.transpose() << "\n";
+}
+InertiaTensor::InertiaTensor(const json &j, Space &spc) : spc(spc) {
+    from_json(j);
+    name = "Inertia Tensor";
+    filename = MPI::prefix + j.at("file").get<std::string>();
+    file.open(filename); // output file
+    index = j.at("index").get<size_t>(); // group index
+    indexes = j.value("indexes", std::vector<size_t>({0, spc.groups[index].size()})); // whole molecule by default
+}
+
+// =============== MultipoleMoments ===============
+
+void MultipoleMoments::_to_json(json &j) const {
+    std::ostringstream o;
+    std::string atom1 = atoms[(spc.groups[index].begin()+indexes[0])->id].name;
+    std::string atom2 = atoms[(spc.groups[index].begin()+indexes[1])->id].name;
+    o << atom1 << " " << indexes[0] << " – " << atom2 << " " << indexes[1];
+    j["particles"] = o.str(); // range of particles within the group
+    j["molecule"] = molecules[spc.groups[index].id].name; // group name
+}
+MultipoleMoments::Data MultipoleMoments::compute() {
+    Space::Tgroup g(spc.groups[index].begin()+indexes[0], spc.groups[index].begin()+indexes[1]+1);
+    auto cm = spc.groups[index].cm;
+    MultipoleMoments::Data d;
+    Tensor S; // quadrupole tensor
+    S.setZero();
+    for (auto &i : g) {
+        Point t = i.pos - cm;
+        spc.geo.boundary(t);
+        d.q += i.charge;
+        d.mu += i.charge * t;
+        S += i.charge * ( 3 * t * t.transpose() - Eigen::Matrix<double, 3, 3>::Identity() * t.squaredNorm() );
+    }
+    S = 0.5 * S;
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+    d.eivals = esf.eigenvalues();
+    std::ptrdiff_t i_eival;
+    d.eivals.minCoeff(&i_eival);
+    d.eivec = esf.eigenvectors().col(i_eival).real(); // eigenvector corresponding to the smallest eigenvalue
+    return d;
+}
+void MultipoleMoments::_sample() {
+    MultipoleMoments::Data d = compute();
+    if (file) 
+        file << cnt * steps << " " << d.q << " " << d.mu.transpose() << " " 
+             << d.eivals.transpose() << " " << d.eivec.transpose() << "\n";
+}
+MultipoleMoments::MultipoleMoments(const json &j, Space &spc) : spc(spc) {
+    from_json(j);
+    name = "Multipole Moments";
+    filename = MPI::prefix + j.at("file").get<std::string>();
+    file.open(filename); // output file
+    index = j.at("index").get<size_t>(); // group index
+    indexes = j.value("indexes", std::vector<size_t>({0, spc.groups[index].size()-1})); // whole molecule by default
+}
+
 // =============== PolymerShape ===============
 
 void PolymerShape::_to_json(json &j) const {
@@ -954,11 +1062,20 @@ void AtomProfile::_from_json(const json &j) {
     dr = j.value("dr", 0.1);
     tbl.setResolution(dr, 0);
     count_charge = j.value("charge", false);
+    if (j.count("atomcom") == 1) {
+        atom_com = j.at("atomcom");
+        id_com = findName(atoms, atom_com)->id();
+    }
 }
 void AtomProfile::_to_json(json &j) const {
     j = {{"origo", ref}, {"dir", dir}, {"atoms", names}, {"file", file}, {"dr", dr}, {"charge", count_charge}};
 }
 void AtomProfile::_sample() {
+    Group<Particle> all(spc.p.begin(), spc.p.end());
+    if (id_com >= 0) { // calc. mass center of selected atoms
+        auto slice = all.find_id(id_com);
+        ref = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
+    }
     for (auto &g : spc.groups)
         for (auto &p : g)
             if (ids.count(p.id) > 0) {
@@ -1008,20 +1125,20 @@ void SlicedDensity::_from_json(const json &j) {
     ids = names2ids(atoms, names);                // names --> molids
     dz = j.value("dz", 0.1);
     if (j.count("atomcom") == 1) {
-        atomCOM = j.at("atomcom");
-        idCOM = findName(atoms, atomCOM)->id();
+        atom_com = j.at("atomcom");
+        id_com = findName(atoms, atom_com)->id();
     }
     N.setResolution(dz);
 }
 void SlicedDensity::_to_json(json &j) const {
-    j = {{"atoms", names}, {"file", file}, {"dz", dz}, {"atomcom", atomCOM}};
+    j = {{"atoms", names}, {"file", file}, {"dz", dz}, {"atomcom", atom_com}};
 }
 
 void SlicedDensity::_sample() {
     Group<Particle> all(spc.p.begin(), spc.p.end());
     double zcm = 0;
-    if (idCOM >= 0) { // calc. mass center of selected atoms
-        auto slice = all.find_id(idCOM);
+    if (id_com >= 0) { // calc. mass center of selected atoms
+        auto slice = all.find_id(id_com);
         zcm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc()).z();
     }
     // count atoms in slices

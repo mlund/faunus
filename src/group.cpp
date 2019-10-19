@@ -27,6 +27,7 @@ template <class T> Group<T> &Group<T>::shallowcopy(const Group<T> &o) {
         this->resize(o.size());
         id = o.id;
         atomic = o.atomic;
+        compressible = o.compressible;
         cm = o.cm;
         confid = o.confid;
     }
@@ -78,7 +79,7 @@ template struct Group<Particle>;
 
 void to_json(json &j, const Group<Particle> &g) {
     j = {
-        {"id", g.id}, {"cm", g.cm}, {"atomic", g.atomic}, {"size", g.size()}
+        {"id", g.id}, {"cm", g.cm}, {"atomic", g.atomic}, {"compressible", g.compressible},  {"size", g.size()}
     };
     if (g.capacity()>g.size())
         j["capacity"] = g.capacity();
@@ -92,6 +93,7 @@ void from_json(const json &j, Group<Particle> &g) {
     g.id = j.at("id").get<unsigned int>();
     g.cm = j.at("cm").get<Point>();
     g.atomic = j.at("atomic").template get<bool>();
+    g.compressible = j.value("compressible", false);
     g.confid = j.value("confid", 0);
 }
 

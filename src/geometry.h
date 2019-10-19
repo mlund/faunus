@@ -911,9 +911,9 @@ struct Random;
 
         /**
          * @brief Calculates the gyration tensor of a molecular group
-         * The gyration tensor is computed from the dyadic product of the position
-         * vectors in the c-o-m reference system, \f$ t_{i} = r_{i} - shift \f$:
-         * \f$ S = \sum_{i=0}^{N} t_{i} t_{i}^{T} \f$
+         * The gyration tensor is computed from the atomic position
+         * vectors with respect to a reference point, \f$ t_{i} = r_{i} - shift \f$:
+         * \f$ S = (1 / N) \sum_{i=1}^{N} t_{i} \cdot t_{i} I  - t_{i} t_{i}^{T} \f$
          */
         template<typename iter>
             Tensor gyration(iter begin, iter end, BoundaryFunction boundary=[](const Point&){}, const Point shift=Point(0,0,0) ) {
@@ -923,13 +923,34 @@ struct Random;
                     for (auto it=begin; it!=end; ++it) {
                         Point t = it->pos - shift;
                         boundary(t);
-                        // S += t * t.transpose();
                         S += t.squaredNorm() * Eigen::Matrix<double, 3, 3>::Identity() - t * t.transpose();
                     }
                     return S*(1.0/n);
                 }
                 return S;
             }
+
+        /**
+         * @brief Calculates the inertia tensor of a molecular group
+         * The gyration tensor is computed from the atomic position
+         * vectors with respect to a reference point, \f$ t_{i} = r_{i} - shift \f$:
+         * \f$ S = \sum_{i=1}^{N} m_{i} ( t_{i} \cdot t_{i} I  - t_{i} t_{i}^{T} ) \f$
+         */
+        template<typename iter>
+            Tensor inertia(iter begin, iter end, BoundaryFunction boundary=[](const Point&){}, const Point shift=Point(0,0,0) ) {
+                Tensor I;
+                size_t n = std::distance(begin,end);
+                if (n>0) {
+                    for (auto it=begin; it!=end; ++it) {
+                        Point t = it->pos - shift;
+                        boundary(t);
+                        I += atoms.at(it->id).mw * ( t.squaredNorm() * Eigen::Matrix<double, 3, 3>::Identity() - t * t.transpose() );
+                    }
+                    return I;
+                }
+                return I;
+            }
+
 
     } //geometry namespace
 }//end of faunus namespace

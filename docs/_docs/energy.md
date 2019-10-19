@@ -543,7 +543,7 @@ $\mu V T$ ensembles and Widom insertion are currently unsupported for molecules 
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
 $$
-u(r) = \frac{1}{2}k(r-r_\mathrm{eq})^2
+u(r) = \frac{1}{2}k(r-r_{\mathrm{eq}})^2
 $$
 
 ### Finite Extensible Nonlinear Elastic
@@ -599,11 +599,11 @@ Should one insist on conducting simulations far from equilibrium, a large displa
 `harmonic_torsion` | Harmonic torsion
 ------------------ | -------------------------------------------
 `k`                | Harmonic spring constant (kJ/mol/rad²)
-`aeq`              | Equilibrium angle $\alpha_\mathrm{eq}$ (deg)
+`aeq`              | Equilibrium angle $\alpha_{\mathrm{eq}}$ (deg)
 `index`            | Array with _exactly three_ indices (relative to molecule)
 
 $$
-u(r) = \frac{1}{2}k(\alpha - \alpha_\mathrm{eq})^2
+u(r) = \frac{1}{2}k(\alpha - \alpha_{\mathrm{eq}})^2
 $$
 
 ### Cosine based torsion (GROMOS-96)
@@ -611,11 +611,11 @@ $$
 `g96_torsion`      | Cosine based torsion
 ------------------ | -------------------------------------------
 `k`                | Force constant (kJ/mol)
-`aeq`              | Equilibrium angle $\alpha_\mathrm{eq}$ (deg)
+`aeq`              | Equilibrium angle $\alpha_{{\mathrm{eq}}}$ (deg)
 `index`            | Array with _exactly three_ indices (relative to molecule)
 
 $$
-u(r) = \frac{1}{2}k(\cos(\alpha) - \cos(\alpha_\mathrm{eq}))^2
+u(r) = \frac{1}{2}k(\cos(\alpha) - \cos(\alpha_{{\mathrm{eq}}}))^2
 $$
 
 ### Proper periodic dihedral
@@ -624,11 +624,11 @@ $$
 ------------------- | -------------------------------------------
 `k`                 | Force constant (kJ/mol)
 `n`                 | Periodicity (multiplicity) of the dihedral (integer)
-`phi`               | Angle $\phi_\mathrm{syn}$ (deg)
+`phi`               | Angle $\phi_{\mathrm{syn}}$ (deg)
 `index`             | Array with _exactly four_ indices (relative to molecule)
 
 $$
-u(r) = k(1 + \cos(n\phi - \phi_\mathrm{syn}))
+u(r) = k(1 + \cos(n\phi - \phi_{\mathrm{syn}}))
 $$
 
 
@@ -784,54 +784,62 @@ of the types listed in the next section (via `coords`).
 
 The following reaction coordinates can be used for penalising the energy and can further
 be used when analysing the system (see Analysis).
+Please notice that atom id's are determined by the order of appearance in the `atomlist` whereas molecular id's
+follow the order of insertion specified in `insertmolecules`.
+
+General keywords  | Description 
+----------------- | -------------------------------------------------------------------
+`index`           | Atom index, atom id or group index
+`indexes`         | Array of atomic indexes
+`range`           | Array w. [min:max] value
+`resolution`      | Resolution along the coordinate
+`dir`             | Axes of the reaction coordinate, $e.g.$, `[1,1,0]` for the $xy$-plane  
 
 #### Atom Properties
 
-`coords=[atom]`| Single atom properties
--------------- | ----------------------------------
-`index`        | Atom index
-`property`     | `x`, `y`, `z`, `q`
-`range`        | Array w. [min:max] value
-`resolution`   | Resolution along coordinate
-`N`            | Number of atoms of ID=`index`
+`coords=[atom]`| Property
+-------------- | --------------------------------------------------------------------------
+`x`, `y` or `z`| $x$-, $y$- or $z$-coordinate of the $i$th particle, $i$=`index`
+`q`            | Charge of the $i$th particle, $i$=`index`
+`R`            | Distance of the $i$th particle from the center of the simulation cell, $i$=`index`
+`N`            | Number of atoms of id=`index`
 
 #### Molecule Properties
 
-`coords=[molecule]`       | Single molecule properties
-------------------------- | --------------------------------------------------------------------------------------------------------------------------------
-`index`                   | Molecule index
-`range`                   | Array w. [min:max] value
-`resolution`              | Resolution along coordinate
-`property`                | Options:
-`angle`                   | Angle between instantaneous principal axis and given `dir` vector
-`com_x`, `com_y`, `com_z` | Mass center coordinates
-`confid`                  | Conformation id corresponding to frame in `traj` (see molecular topology).
-`end2end`                 | Distance between first and last atom
-`mu_x`, `mu_y`, `mu_z`    | Molecular dipole moment components
-`mu`                      | Molecular dipole moment scalar (eA/charge)
-`muangle`                 | Angle between dipole moment and given `dir` vector
-`N`                       | Number of atoms in group
-`Q`                       | Monopole moment (net charge)
-`atomatom`                | Distance along `dir` between 2 atoms specified by the `indexes` array
-`cmcm`                    | Absolute mass-center separation between groups defined by the intervals `indexes[0]:indexes[1]` and `indexes[2]:indexes[3]`
-`cmcm_z`                  | _z_-component of mass-center separation between groups defined by the intervals `indexes[0]:indexes[1]` and `indexes[2]:indexes[3]`
-`L/R`                     | Ratio between height and radius of a cylindrical lipid vesicle (ad-hoc RC for bending modulus calculations)
+`coords=[molecule]`         | Property
+--------------------------- | ---------------------------------------------------------------------------
+`angle`                     | Angle between instantaneous principal axis and given `dir` vector
+`com_x`, `com_y` or `com_z` | Mass-center coordinates
+`confid`                    | Conformation id corresponding to frame in `traj` (see molecular topology).
+`end2end`                   | Distance between first and last atom
+`Rg`                        | Radius of gyration
+`mu_x`, `mu_y` or `mu_z`    | Molecular dipole moment components
+`mu`                        | Molecular dipole moment scalar ($e$Å/charge)
+`muangle`                   | Angle between dipole moment and given `dir` vector
+`N`                         | Number of atoms in group
+`Q`                         | Monopole moment (net charge)
+`atomatom`                  | Distance along `dir` between 2 atoms specified by the `indexes` array
+`cmcm`                      | Absolute mass-center separation between groups `indexes[0:1]` or atomic `indexes[0:1]` and `indexes[2:3]`
+`cmcm_z`                    | $z$-component of `cmcm`
+`mindist`                   | Minimum distance between particles of id `indexes[0]` and `indexes[1]`
+`L/R`                       | Ratio between height and radius of a cylindrical vesicle
+`Rinner`                    | Average $d$ of id=`indexes[0]` for particles having a smaller $d$ than id=`indexes[1]`
 
 Notes:
 
-- the molecular dipole moment is defined w. respect to the mass-center
+- the molecular dipole moment is defined with respect to the mass-center
 - for `angle`, the principal axis is the eigenvector corresponding to the smallest eigenvalue of the gyration tensor
+- `Rinner` can be used to calculate the inner radius of cylindrical or spherical vesicles. $d^2=\bf{r} \cdot$`dir` where
+$\bf{r}$ is the position vector
+- `L/R` can be used to calculate the bending modulus of a cylindrical lipid vesicle
 
 #### System Properties
 
-`coords=[system]` | System property
------------------ | ----------------------------------------
-`range`           | Array w. [min:max] value
-`resolution`      | Resolution along coordinate
-`property`        | Options:
+`coords=[system]` | Property
+----------------- | -----------------------------------------------
 `V`               | System volume
 `Q`               | System net-charge
-`Lx`,`Ly`,`Lz`    | Side lengths of enclosing cuboid
+`Lx`, `Ly` or `Lz`| Side length of the cuboidal simulation cell
 `height`          | Alias for `Lz`
 `radius`          | Radius of spherical or cylindrical geometries
 `N`               | Number of active particles
@@ -845,12 +853,12 @@ and `Lx=Ly` is the diameter.
 
 If compiled with MPI, the master process collects the bias function from all nodes
 upon penalty function `update`.
-The _average_ is then re-distributed, offering [linear parallellizing](http://dx.doi.org/10/b5pc4m)
-of the free energy sampling. It is crucial that the walk in coordinate space differs on the different
-nodes, i.e. by specifying a different random number seed; start configuration; or displacement parameter.
-File output and input are prefixed with `mpi{rank}.`
+The _average_ is then re-distributed, offering [linear parallelization](http://dx.doi.org/10/b5pc4m)
+of the free energy sampling. It is crucial that the walk in coordinate space differs in the different
+processes, e.g., by specifying a different random number seed; start configuration; or displacement parameter.
+File output and input are prefixed with `mpi{rank}`.
 
-The following starts all MPI processes with the same input file and MPI prefix is automatically
+The following starts all MPI processes with the same input file, and the MPI prefix is automatically
 appended to all other input and output:
 
 ~~~ bash

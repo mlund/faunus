@@ -147,6 +147,7 @@ Instead, use a hard-coded variant like `nonbonded_coulomblj` etc.
 ------------------ | ---------------------------------
 `molecule`         |  Molecule name to operate on
 `repeat=N`         |  Number of repeats per MC sweep
+`keeppos=True`     |  Keep original positions of `traj`
 
 This will swap between different molecular conformations
 as defined in the [Molecule Properties](topology.html#molecule-properties) with `traj` and `trajweight`
@@ -188,12 +189,13 @@ The default value of `repeat` is the number of harmonic bonds in the `molecule`
 
 ### Crankshaft
 
-`crankshaft`     | Description
----------------- | ----------------------------
-`molecule`       | Molecule name to operate on
-`dprot`          | Rotational displacement
-`repeat=N`       | Number of repeats per MC sweep
-`skiplarge=true` | Skip too large molecules
+`crankshaft`         | Description
+-------------------- | --------------------------------------------------------
+`molecule`           | Molecule name to operate on
+`dprot`              | Rotational displacement
+`repeat=N`           | Number of repeats per MC sweep
+`skiplarge=true`     | Skip too large molecules
+`joint_max=`$\infty$ | Maximum number of bonds between randomly selected atoms
 
 
 Performs a rotation of a chain segment between two randomly selected atoms in the `molecule`.

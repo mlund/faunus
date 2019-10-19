@@ -264,6 +264,10 @@ void ParallelTempering::_move(Change &change) {
     if (goodPartner()) {
         change.all = true;
         pt.sendExtra[VOLUME] = Vold;  // copy current volume for sending
+        // store group sizes
+        for (auto &g : spc.groups) {
+    	    pt.sendExtra.push_back((float)g.size());
+        }
         pt.recv(mpi, partner, p);     // receive particles
         pt.send(mpi, spc.p, partner); // send everything
         pt.waitrecv();
@@ -279,10 +283,16 @@ void ParallelTempering::_move(Change &change) {
         spc.p = p;
         spc.geo.setVolume(Vnew);
 
-        // update mass centers
-        for (auto &g : spc.groups)
-            if (g.atomic == false)
+        size_t i = 0;
+        for (auto &g : spc.groups) {
+            // assign correct sizes to the groups
+            g.resize((int)pt.recvExtra[i+1]);
+            if (g.atomic == false) {
+                // update mass center of molecular groups
                 g.cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc(), -g.begin()->pos);
+            }
+            ++i;
+        }
     }
 }
 double ParallelTempering::exchangeEnergy(double mydu) {
@@ -1033,13 +1043,14 @@ SmartTranslateRotate::SmartTranslateRotate(Space &spc) : spc(spc) {
 }
 
 void ConformationSwap::_to_json(json &j) const {
-    j = {{"molid", molid}, {"molecule", molecules[molid].name}};
+    j = {{"molid", molid}, {"molecule", molecules[molid].name}, {"keeppos", inserter.keeppos}};
     _roundjson(j, 3);
 }
 void ConformationSwap::_from_json(const json &j) {
     assert(!molecules.empty());
     try {
         std::string molname = j.at("molecule");
+        keeppos = j.value("keeppos", false);
         auto it = findName(molecules, molname);
         if (it == molecules.end())
             throw std::runtime_error("unknown molecule '" + molname + "'");
@@ -1096,6 +1107,7 @@ ConformationSwap::ConformationSwap(Space &spc) : spc(spc) {
     repeat = -1; // meaning repeat n times
     inserter.dir = {0, 0, 0};
     inserter.rotate = true;
+    inserter.keeppos = keeppos;
     inserter.allowoverlap = true;
 }
 

@@ -21,7 +21,8 @@ void SpeciationMove::_move(Change &change) {
     if (reactions.size() > 0) {
         auto rit = slump.sample(reactions.begin(), reactions.end());
         lnK = rit->lnK;
-        forward = (bool)slump.range(0, 1); // random boolean
+        neutral = rit->neutral; // If true, only neutral molecules participate in the reaction
+        forward = (bool)slump.range(0, 1); // Random boolean
         trialprocess = &(*rit);
         if (rit->empty(forward)) // Enforce canonic constraint if invoked
             return;              // Out of material, slip out the back door
@@ -36,7 +37,10 @@ void SpeciationMove::_move(Change &change) {
                 if (git->size() < m.second) // Assure that there are atoms enough in the group
                     return;                 // Slip out the back door
             } else {
-                mollist = spc.findMolecules(m.first, Tspace::ACTIVE);
+                if (neutral) // Only neutral molecules react
+                    mollist = spc.findMolecules(m.first, Tspace::ACTIVE_NEUTRAL);
+                else
+                    mollist = spc.findMolecules(m.first, Tspace::ACTIVE);
                 if (size(mollist) < m.second)
                     return; // Not possible to perform change, escape through the back door
             }
@@ -53,7 +57,10 @@ void SpeciationMove::_move(Change &change) {
                     return;                                       // Slip out the back door
                 }
             } else {
-                mollist = spc.findMolecules(m.first, Tspace::INACTIVE);
+                if (neutral) // Only neutral molecules react
+                    mollist = spc.findMolecules(m.first, Tspace::INACTIVE_NEUTRAL);
+                else
+                    mollist = spc.findMolecules(m.first, Tspace::INACTIVE);
                 if (size(mollist) < m.second) {
                     return; // Not possible to perform change, escape through the back door
                 }
@@ -120,10 +127,14 @@ void SpeciationMove::_move(Change &change) {
                 std::sort(d.atoms.begin(), d.atoms.end());
                 change.groups.push_back(d); // add to list of moved groups
             } else { // The reagent is a molecule
-                mollist = spc.findMolecules(m.first, Tspace::ACTIVE);
+                if (neutral) // Only neutral molecules react
+                    mollist = spc.findMolecules(m.first, Tspace::ACTIVE_NEUTRAL);
+                else
+                    mollist = spc.findMolecules(m.first, Tspace::ACTIVE);
                 // m.second is the stoichiometric coefficient
                 for (int N = 0; N < m.second; N++) {
                     auto git = slump.sample(mollist.begin(), mollist.end());
+                    git->unwrap(spc.geo.getDistanceFunc());
                     // We store the bonded energy of the deactivated molecule
                     // The change in bonded energy should not affect the acceptance/rejection of the move
                     for (auto &bond : molecules.at(m.first).bonds) {
@@ -166,14 +177,15 @@ void SpeciationMove::_move(Change &change) {
                 std::sort(d.atoms.begin(), d.atoms.end());
                 change.groups.push_back(d); // Add to list of moved groups
             } else { // The product is a molecule
-                mollist = spc.findMolecules(m.first, Tspace::INACTIVE);
+                if (neutral) // Only neutral molecules react
+                    mollist = spc.findMolecules(m.first, Tspace::INACTIVE_NEUTRAL);
+                else
+                    mollist = spc.findMolecules(m.first, Tspace::INACTIVE);
                 // m.second is the stoichiometric coefficient
                 for (int N = 0; N < m.second; N++) {
                     auto git = slump.sample(mollist.begin(), mollist.end());
                     git->activate(git->inactive().begin(), git->inactive().end());
-                    // We insert the molecule with random mass center and orientation
                     Point cm = git->cm;
-                    git->translate(-cm, spc.geo.getBoundaryFunc());
                     spc.geo.randompos(cm, slump);
                     git->translate(cm, spc.geo.getBoundaryFunc());
                     Point u = ranunit(slump);

@@ -43,6 +43,7 @@ MoleculeData::MoleculeData() { setInserter(RandomInserter()); }
 void to_json(json &j, const MoleculeData &a) {
     j[a.name] = {{"activity", a.activity / 1.0_molar},
                  {"atomic", a.atomic},
+                 {"compressible", a.compressible},
                  {"id", a.id()},
                  {"insdir", a.insdir},
                  {"insoffset", a.insoffset},
@@ -123,6 +124,7 @@ void from_json(const json &j, MoleculeData &a) {
             a.keeppos = val.value("keeppos", a.keeppos);
             a.keepcharges = val.value("keepcharges", a.keepcharges);
             a.atomic = val.value("atomic", a.atomic);
+            a.compressible = val.value("compressible", a.compressible);
             a.insdir = val.value("insdir", a.insdir);
             a.bonds = val.value("bondlist", a.bonds);
             a.rigid = val.value("rigid", a.rigid);
@@ -365,6 +367,7 @@ void from_json(const json &j, ReactionData &a) {
         a.name = it.key();
         auto &val = it.value();
         a.canonic = val.value("canonic", false);
+        a.neutral = val.value("neutral", false);
         if (val.count("lnK") == 1)
             a.lnK = val.at("lnK").get<double>();
         else if (val.count("pK") == 1)
@@ -432,6 +435,7 @@ void to_json(json &j, const ReactionData &a) {
     j[a.name] = {{"pK", a.pK},
                  {"pK'", -a.lnK / std::log(10)},
                  //{"canonic", a.canonic }, {"N_reservoir", a.N_reservoir },
+                 {"neutral", a.neutral},
                  {"products", a._prod},
                  {"reactants", a._reag}};
 } //!< Serialize to JSON object

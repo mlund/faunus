@@ -124,8 +124,9 @@ double ContainerOverlap::energy(Change &change) {
             } else
                 // only a subset of atoms were updated
                 for (int i : d.atoms) // loop over specific atoms
-                    if (spc.geo.collision((g.begin() + i)->pos))
-                        return pc::infty;
+                    if (i < g.size())
+                        if (spc.geo.collision((g.begin() + i)->pos))
+                            return pc::infty;
         }
     }
     return 0;
@@ -229,7 +230,6 @@ Isobaric::Isobaric(const json &j, Space &spc) : spc(spc) {
 
 double Isobaric::energy(Change &change) {
     if (change.dV || change.all || change.dN) {
-        double V = spc.geo.getVolume();
         size_t N = 0;
         for (auto &g : spc.groups) {
             if (!g.empty()) {
@@ -239,7 +239,8 @@ double Isobaric::energy(Change &change) {
                     N++;
             }
         }
-        return P * V - (N + 1) * std::log(V);
+        double V = spc.geo.getVolume();
+        return P * V - (N+1)*std::log(V);
     } else
         return 0;
 }
@@ -403,7 +404,7 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
     if (spc.geo.type not_eq Geometry::CUBOID)
         emplace_back<Energy::ContainerOverlap>(spc);
 
-    for (auto &m : j) { // loop over move list
+    for (auto &m : j) { // loop over energy list
         size_t oldsize = vec.size();
         for (auto it : m.items()) {
             try {
@@ -485,6 +486,11 @@ Hamiltonian::Hamiltonian(Space &spc, const json &j) {
             }
         } // end of loop over energy input terms
     }
+    // Check if there are molecules with bonds and warn
+    // if "bonded" has not been added
+    for (auto &a : Faunus::molecules)
+        if (not a.bonds.empty() and this->find<Energy::Bonded>().empty())
+            faunus_logger->warn(a.name + " bonds specified in topology but missing in energy");
 }
 double Hamiltonian::energy(Change &change) {
     double du = 0;

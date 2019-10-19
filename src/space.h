@@ -90,7 +90,8 @@ struct Space {
         return ranges::view::transform(p, [](auto &i) -> const Point & { return i.pos; });
     } //!< Iterable range with positions
 
-    enum Selection { ALL, ACTIVE, INACTIVE };
+    //!< Keywords to select particles based on the their active/inactive state and charge neutrality
+    enum Selection { ALL, ACTIVE, INACTIVE, ALL_NEUTRAL, ACTIVE_NEUTRAL, INACTIVE_NEUTRAL  };
 
     void clear(); //!< Clears particle and molecule list
 
@@ -121,6 +122,43 @@ struct Space {
         case (ACTIVE):
             f = [molid](Tgroup &i) { return (i.id == molid) && (i.size() == i.capacity()); };
             break;
+        case (ALL_NEUTRAL):
+            f = [molid](Tgroup &i) {
+                if (i.id != molid)
+                    return false;
+                else {
+                    int charge = 0;
+                    for (auto p = i.begin(); p != i.trueend(); ++p)
+                        charge += p->charge;
+                    return (charge == 0);
+                }
+            };
+            break;
+        case (INACTIVE_NEUTRAL):
+            f = [molid](Tgroup &i) {
+                if ((i.id != molid) && (i.size() == i.capacity()))
+                    return false;
+                else {
+                    int charge = 0;
+                    for (auto p = i.begin(); p != i.trueend(); ++p)
+                        charge += p->charge;
+                    return (charge == 0);
+                }
+            };
+            break;
+        case (ACTIVE_NEUTRAL):
+            f = [molid](Tgroup &i) {
+                if ((i.id != molid) && (i.size() != i.capacity()))
+                    return false;
+                else {
+                    int charge = 0;
+                    for (auto p = i.begin(); p != i.trueend(); ++p)
+                        charge += p->charge;
+                    return (charge == 0);
+                }
+            };
+            break;
+
         }
         return groups | ranges::view::filter(f);
     }

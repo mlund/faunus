@@ -89,6 +89,7 @@ class MoleculeData {
     std::string name;            //!< Molecule name
     std::string structure;       //!< Structure file (pqr|aam|xyz)
     bool atomic = false;         //!< True if atomic group (salt etc.)
+    bool compressible = false;   //!< True if compressible group (scales internally upon volume change)
     bool rotate = true;          //!< True if molecule should be rotated upon insertion
     bool keeppos = false;        //!< Keep original positions of `structure`
     bool keepcharges = true;     //!< Set to true to keep charges in PQR file (default: true)
@@ -182,6 +183,7 @@ class ReactionData {
     int N_reservoir;      //!< Number of molecules in finite reservoir
     double lnK = 0;       //!< Natural logarithm of molar eq. const.
     double pK = 0;        //!< -log10 of molar eq. const.
+    bool neutral = false; //!< True if only neutral molecules are involved in the reaction
     std::string name;     //!< Name of reaction
     std::string formula;  //!< Chemical formula
     double weight;        //!< Statistical weight to be given to reaction in speciation

@@ -195,9 +195,9 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     else if (property == "Rg")
         f = [&spc, i = index]() {
             assert(spc.groups[i].size() > 1);
-            auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.getBoundaryFunc(), -spc.groups[i].cm);
+            auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.getBoundaryFunc(), spc.groups[i].cm);
             Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
-            return esf.eigenvalues().norm();
+            return std::sqrt(esf.eigenvalues().sum());
         };
 
     else if (property == "muangle") {

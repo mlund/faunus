@@ -157,17 +157,18 @@ form factor of unity.
 `dq`        | _q_ spacing (1/Å)
 `com=true`  | Treat molecular mass centers as single point scatterers
 
-### Atomic Gyration Eigenvalues
+### Atomic Inertia Eigenvalues
 
-This calculates the gyration eigenvalues for all particles having a given id.
-The gyration tensor is defined as
+This calculates the inertia eigenvalues for all particles having a given id.
+The inertia tensor is defined as
 
 $$
-S = \frac{1}{N} \sum_{i=1}^{N} ( \| \bf{t_i} \|^2 \mathrm{I} - \bf{t_i} \bf{t_i^T} )
+I = \sum_{i=1}^N m_i ( \| \bf{t_i} \|^2 \mathrm{I} - \bf{t_i} \bf{t_i}^T ) 
 $$
 
 where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th particle, $\bf{cm}$ is the
-position of the mass center of the whole group of atoms, $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
+position of the mass center of the whole group of atoms, $m_i$ is the molecular weight of the $i$th particle, 
+$\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 
 `gyration`       | Description
 ---------------- | ----------------------------------------
@@ -187,7 +188,7 @@ I = \sum_{i=1}^N m_i ( \| \bf{t_i} \|^2 \mathrm{I} - \bf{t_i} \bf{t_i}^T )
 $$
 
 where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th particle, $\bf{cm}$ is the
-position of the mass center of the whole group of atoms, $m_i$ is the molecular weight of the _i_th particle,
+position of the mass center of the whole group of atoms, $m_i$ is the molecular weight of the $i$th particle,
 $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 
 `gyration`       | Description
@@ -204,7 +205,7 @@ fluctuations for all groups defined in `molecules`.
 `polymershape`   | Description
 ---------------- | ----------------------------------------
 `nstep`          | Interval with which to sample
-`molecules`      | List of molecule names to sample (array); `[*]` selects all 
+`molecules`      | List of molecule names to sample (array); `[*]` selects all
 
 ## Charge Properties
 

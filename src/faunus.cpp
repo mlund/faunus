@@ -44,7 +44,7 @@ static const char USAGE[] =
       -i <file> --input <file>   Input file [default: /dev/stdin].
       -o <file> --output <file>  Output file [default: out.json].
       -s <file> --state <file>   State file to start from (.json/.ubj).
-      -v <N> --verbosity <N>     Log verbosity level (0 = off, 1 = critical, ..., 6 = trace) [default: 3]
+      -v <N> --verbosity <N>     Log verbosity level (0 = off, 1 = critical, ..., 6 = trace) [default: 4]
       -q --quiet                 Less verbose output. It implicates -v0 --nobar --notips --nofun.
       -h --help                  Show this screen.
       --nobar                    No progress bar.

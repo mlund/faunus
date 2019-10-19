@@ -24,7 +24,7 @@ energy:
     - nonbonded:
         default: # applied to all atoms
         - lennardjones: {mixing: LB}
-        - coulomb: {type: plain, epsr: 1, cutoff: 12}
+        - coulomb: {type: plain, epsr: 1}
         Na CH:   # overwrite specific atom pairs
         - wca: { mixing: LB }
 
@@ -134,37 +134,65 @@ composition. Currently, parallelisation is disabled by default.
 
 ## Electrostatics
 
- `coulomb`   |  Description
- ----------- |  -------------------------------------------------
- `type`      |  Coulomb type, see below
- `cutoff`    |  Spherical cutoff, $R_c$ after which the potential is zero
- `epsr`      |  Relative dielectric constant of the medium
- `utol=1e-5` |  Error tolerence for splining
+ `coulomb`    |  Description
+ ------------ |  -------------------------------------------------
+ `type`       |  Coulomb type, see below
+ `cutoff`     |  Spherical cutoff, $R_c$ after which the potential is zero
+ `epsr`       |  Relative dielectric constant of the medium
+ `utol=1e-5`  |  Error tolerence for splining
+ `debyelength`|  Debye length (Å) if using `plain` or `poisson`
 
 This is a multipurpose potential that handles several electrostatic methods.
 Beyond a spherical real-space cutoff, $R_c$, the potential is zero while if
 below,
 
 $$
-u_{ij} = \frac{e^2 z_i z_j }{ 4\pi\epsilon_0\epsilon_r r_{ij} }\mathcal{S}(q)
+\tilde{u}^{(zz)}_{ij}({\bf r}) = \frac{e^2 z_i z_j }{ 4\pi\epsilon_0\epsilon_r |{\bf r}| }\mathcal{S}(q)
 $$
 
-where $\mathcal{S}(q=r/R_c)$ is a splitting function:
+where ${\bf r} = {\bf r}_j - {\bf r}_i$, and $\mathcal{S}(q=|{\bf r}|/R_c)$ is a short-range function:
 
 coulomb types                            | Keywords      | $\mathcal{S}(q)$
 ---------------------------------------- | ------------- | ---------------------------------------------------
-`none`                                   |               | 0
 [`plain`](http://doi.org/ctnnsj)         |               | 1
+[`poisson`](http://doi.org/10/c5fr)      | `C=3`, `D=3`  | $(1-q)^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}q^c$
 [`fanourgakis`](http://doi.org/f639q5)   |               | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
 [`ewald`](http://doi.org/dgpdmc)         | `alpha`       | $\text{erfc}(\alpha R_cq)$
 [`wolf`](http://doi.org/cfcxdk)          | `alpha`       | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
-[`yukawa`](http://bit.ly/2CbVJ3v)        | `debyelength` | $e^{-\kappa R_c q}-e^{-\kappa R_c}$
-[`yonezawa`](http://dx.doi.org/10/j97)   | `alpha`       | $1+\text{erfc}(\alpha R_c)q+q^2$
-[`qpotential`](http://goo.gl/hynRTS)     | `order=300`   | $\prod_{n=1}^{\text{order}}(1-q^n)$
+[`qpotential`](https://arxiv.org/abs/1904.10335)     | `order=300`   | $\prod_{n=1}^{\text{order}}(1-q^n)$
 [`reactionfield`](http://doi.org/dbs99w) | `epsrf`       | $1+\frac{\epsilon_{RF}-\epsilon_r}{2\epsilon_{RF}+\epsilon_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_r}q$
-[`fennel`](http://doi.org/bqgmv2)        | `alpha`       | $\scriptstyle\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q+(q-1)q \left( \text{erfc}(\alpha R_c) + \frac{2\alpha R_c}{\sqrt{\pi}} e^{-\alpha^2 R_c^2} \right)$
 
 **Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
+
+### Multipoles
+
+If `type=coulomb` is replaced with `type=multipole` the electrostatic energy will in addition to
+monopole-monopole interactions include contributions from monopole-dipole, and dipole-dipole
+interactions. Multipolar properties of each particle is specified in the Topology.
+
+The ion-dipole interaction is described by
+
+$$
+\tilde{u}^{(z\mu)}_{ij}({\bf r}) = -\frac{ez_i\left(\mu_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
+$$
+
+where $\hat{\bf r} = {\bf r}/|{\bf r}|$, and the dipole-dipole interaction by
+
+$$
+\tilde{u}^{\mu\mu}_{ij}({\bf r}) = -\left(\frac{3 ( \boldsymbol{\mu}_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q)
+$$
+
+### Self-energies
+
+When using `coulomb` or `multipole`, an electrostatic self-energy term is automatically
+added to the Hamiltonian. The charge- and dipole-contributions are evaluated according to
+
+$$
+U_{self} = -\frac{1}{2}\sum_i^N\sum_{*\in\{z,\mu\}} \lim_{|{\bf r}_{ii}|\to 0}\left( u^{(**)}_{ii}({\bf r}_{ii}) - \tilde{u}^{(**)}_{ii}({\bf r}_{ii}) \right)
+$$
+
+where no tilde indicate that $\mathcal{S}(q)\equiv 1$ for any $q$.
+
 
 ### Ewald Summation
 
@@ -187,7 +215,7 @@ $$
 $$
 U_{\text{surface}} = \frac{ 2\pi f }{ (2\varepsilon_{surf} + 1) V }
 \left(
-|\sum_{j}q_j{\bf r}_j|^2 + 2 \sum_j q_i {\bf r}_j \cdot \sum_j \boldsymbol{\mu}_j + \vert \sum_j \boldsymbol{\mu}_j \vert^2
+\left|\sum_{j}q_j{\bf r}_j\right|^2 + 2 \sum_j q_i {\bf r}_j \cdot \sum_j \boldsymbol{\mu}_j + \left| \sum_j \boldsymbol{\mu}_j \right|^2
 \right )
 $$
 

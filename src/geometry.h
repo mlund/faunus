@@ -913,7 +913,7 @@ struct Random;
          * @brief Calculates the gyration tensor of a molecular group
          * The gyration tensor is computed from the atomic position
          * vectors with respect to a reference point, \f$ t_{i} = r_{i} - shift \f$:
-         * \f$ S = (1 / N) \sum_{i=1}^{N} t_{i} \cdot t_{i} I  - t_{i} t_{i}^{T} \f$
+         * \f$ S = (1 / N) \sum_{i=1}^{N} t_{i} t_{i}^{T} \f$
          */
         template<typename iter>
             Tensor gyration(iter begin, iter end, BoundaryFunction boundary=[](const Point&){}, const Point shift=Point(0,0,0) ) {
@@ -923,9 +923,9 @@ struct Random;
                     for (auto it=begin; it!=end; ++it) {
                         Point t = it->pos - shift;
                         boundary(t);
-                        S += t.squaredNorm() * Eigen::Matrix<double, 3, 3>::Identity() - t * t.transpose();
+                        S += t * t.transpose();
                     }
-                    return S*(1.0/n);
+                    return S * (1.0 / n);
                 }
                 return S;
             }

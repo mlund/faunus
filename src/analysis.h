@@ -400,7 +400,7 @@ class ScatteringFunction : public Analysisbase {
 /*
  * @brief Sample and save gyration eigenvalues of all particles having the same id
  */
-class AtomGyration : public Analysisbase {
+class AtomInertia : public Analysisbase {
   private:
     Space &spc;
     std::string filename;
@@ -412,7 +412,7 @@ class AtomGyration : public Analysisbase {
     void _sample() override;
 
   public:
-    AtomGyration(const json &j, Space &spc);
+    AtomInertia(const json &j, Space &spc);
 };
 
 /*

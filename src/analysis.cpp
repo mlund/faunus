@@ -363,8 +363,8 @@ CombinedAnalysis::CombinedAnalysis(const json &j, Space &spc, Energy::Hamiltonia
                             emplace_back<MoleculeRDF>(it.value(), spc);
                         else if (it.key() == "multipole")
                             emplace_back<Multipole>(it.value(), spc);
-                        else if (it.key() == "gyration")
-                            emplace_back<AtomGyration>(it.value(), spc);
+                        else if (it.key() == "atominertia")
+                            emplace_back<AtomInertia>(it.value(), spc);
                         else if (it.key() == "inertia")
                             emplace_back<InertiaTensor>(it.value(), spc);
                         else if (it.key() == "multipolemoments")
@@ -893,25 +893,25 @@ MultipoleDistribution::MultipoleDistribution(const json &j, Space &spc) : spc(sp
 
 MultipoleDistribution::~MultipoleDistribution() { save(); }
 
-// =============== AtomGyration ===============
+// =============== AtomInertia ===============
 
-void AtomGyration::_to_json(json &j) const {
+void AtomInertia::_to_json(json &j) const {
     j["index"] = index; // atom id
 }
-Point AtomGyration::compute() {
+Point AtomInertia::compute() {
     auto slice = spc.findAtoms(index);
     auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
-    auto S = Geometry::gyration(slice.begin(), slice.end(), spc.geo.getBoundaryFunc(), cm);
-    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
+    auto I = Geometry::inertia(slice.begin(), slice.end(), spc.geo.getBoundaryFunc(), cm);
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
     return esf.eigenvalues();
 }
-void AtomGyration::_sample() {
+void AtomInertia::_sample() {
     if (file)
         file << cnt * steps << " " << compute().transpose() << "\n";
 }
-AtomGyration::AtomGyration(const json &j, Space &spc) : spc(spc) {
+AtomInertia::AtomInertia(const json &j, Space &spc) : spc(spc) {
     from_json(j);
-    name = "Atomic Gyration Eigenvalues";
+    name = "Atomic Inertia Eigenvalues";
     filename = MPI::prefix + j.at("file").get<std::string>();
     file.open(filename); // output file
     index = j.at("index").get<size_t>(); // atom id
@@ -925,9 +925,8 @@ void InertiaTensor::_to_json(json &j) const {
 }
 InertiaTensor::Data InertiaTensor::compute() {
     Space::Tgroup g(spc.groups[index].begin()+indexes[0], spc.groups[index].begin()+indexes[1]+1);
-    auto cm = spc.groups[index].cm;
     InertiaTensor::Data d;
-    auto I = Geometry::inertia(g.begin(), g.end(), spc.geo.getBoundaryFunc(), cm);
+    auto I = Geometry::inertia(g.begin(), g.end(), spc.geo.getBoundaryFunc(), spc.groups[index].cm);
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
     d.eivals = esf.eigenvalues();
     std::ptrdiff_t i_eival;

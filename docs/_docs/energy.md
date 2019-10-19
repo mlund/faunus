@@ -134,13 +134,13 @@ composition. Currently, parallelisation is disabled by default.
 
 ## Electrostatics
 
- `coulomb`    |  Description
- ------------ |  -------------------------------------------------
- `type`       |  Coulomb type, see below
- `cutoff`     |  Spherical cutoff, $R_c$ after which the potential is zero
- `epsr`       |  Relative dielectric constant of the medium
- `utol=1e-5`  |  Error tolerence for splining
- `debyelength`|  Debye length (Å) if using `plain` or `poisson`
+ `coulomb`             |  Description
+ --------------------- |  -------------------------------------------------
+ `type`                |  Coulomb type, see below
+ `cutoff`              |  Spherical cutoff, $R_c$ (Å) after which the potential is zero
+ `epsr`                |  Relative dielectric constant of the medium
+ `utol=1e-5`           |  Error tolerence for splining
+ `debyelength=`$\infty$|  Debye length (Å) if using `plain` or `poisson`
 
 This is a multipurpose potential that handles several electrostatic methods.
 Beyond a spherical real-space cutoff, $R_c$, the potential is zero while if
@@ -152,17 +152,23 @@ $$
 
 where ${\bf r} = {\bf r}_j - {\bf r}_i$, and $\mathcal{S}(q=|{\bf r}|/R_c)$ is a short-range function:
 
-coulomb types                            | Keywords      | $\mathcal{S}(q)$
----------------------------------------- | ------------- | ---------------------------------------------------
-[`plain`](http://doi.org/ctnnsj)         |               | 1
-[`poisson`](http://doi.org/10/c5fr)      | `C=3`, `D=3`  | $(1-q)^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}q^c$
-[`fanourgakis`](http://doi.org/f639q5)   |               | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
-[`ewald`](http://doi.org/dgpdmc)         | `alpha`       | $\text{erfc}(\alpha R_cq)$
-[`wolf`](http://doi.org/cfcxdk)          | `alpha`       | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
-[`qpotential`](https://arxiv.org/abs/1904.10335)     | `order=300`   | $\prod_{n=1}^{\text{order}}(1-q^n)$
-[`reactionfield`](http://doi.org/dbs99w) | `epsrf`       | $1+\frac{\epsilon_{RF}-\epsilon_r}{2\epsilon_{RF}+\epsilon_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_r}q$
+coulomb types                            | Keywords          | $\mathcal{S}(q)$
+---------------------------------------- | ----------------- | ---------------------------------------------------
+[`plain`](http://doi.org/ctnnsj)         |                   | 1
+[`ewald`](http://doi.org/dgpdmc)         | `alpha`           | $\frac{1}{2}\text{erfc}\left(\alpha R_c q + \frac{\kappa}{2\alpha}\right)\text{exp}\left(2\kappa R_c q\right) + \frac{1}{2}\text{erfc}\left(\alpha R_c q - \frac{\kappa}{2\alpha}\right)$
+[`reactionfield`](http://doi.org/dbs99w) | `epsrf`           | $1+\frac{\epsilon_{RF}-\epsilon_r}{2\epsilon_{RF}+\epsilon_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_r}q$
+[`poisson`](http://doi.org/10/c5fr)      | `C=3`, `D=3`      | $(1-\tilde{q})^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}\tilde{q}^c$
+[`fanourgakis`](http://doi.org/f639q5)   |                   | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
+[`qpotential`](https://arxiv.org/abs/1904.10335) | `order=5` | $\prod_{n=1}^{\text{order}}(1-q^n)$
+[`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
 
-**Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
+**Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed. Also, for the Poisson potential
+
+$$
+\tilde{q} = \frac{1-\exp\left(2\kappa R_c q\right)}{1-\exp\left(2\kappa R_c\right)}
+$$
+
+which as $\kappa\to 0$ gives $\tilde{q}=q$.
 
 ### Multipoles
 
@@ -179,7 +185,7 @@ $$
 where $\hat{\bf r} = {\bf r}/|{\bf r}|$, and the dipole-dipole interaction by
 
 $$
-\tilde{u}^{\mu\mu}_{ij}({\bf r}) = -\left(\frac{3 ( \boldsymbol{\mu}_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q)
+\tilde{u}^{\mu\mu}_{ij}({\bf r}) = -\left(\frac{3 ( \boldsymbol{\mu}_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
 $$
 
 ### Self-energies
@@ -199,12 +205,13 @@ where no tilde indicate that $\mathcal{S}(q)\equiv 1$ for any $q$.
 If type is `ewald`, terms from reciprocal space; surface energies; and
 self energies are automatically added to the Hamiltonian, activating additional keywords:
 
-`type=ewald`         | Description
--------------------- | ---------------------------------------------------------------------
-`kcutoff`            | Reciprocal-space cutoff
-`epss=0`             | Dielectric constant of surroundings, $\varepsilon_{surf}$ (0=tinfoil)
-`ipbc=false`         | Use isotropic periodic boundary conditions, [IPBC](http://doi.org/css8).
-`spherical_sum=true` | Spherical/ellipsoidal summation in reciprocal space; cubic if `false`.
+`type=ewald`          | Description
+--------------------- | ---------------------------------------------------------------------
+`kcutoff`             | Reciprocal-space cutoff
+`epss=0`              | Dielectric constant of surroundings, $\varepsilon_{surf}$ (0=tinfoil)
+`ipbc=false`          | Use isotropic periodic boundary conditions, [IPBC](http://doi.org/css8). Holds also for Yukawa-type interactions.
+`spherical_sum=true`  | Spherical/ellipsoidal summation in reciprocal space; cubic if `false`.
+`debyelength=`$\infty$| Debye length (Å)
 
 The added energy terms are:
 
@@ -226,7 +233,7 @@ $$
 $$
 
 $$
-A_k = \frac{e^{-k^2/4\alpha^2}}{k^2}
+A_k = \frac{e^{-( k^2 + \kappa^2 )/4\alpha^2}}{k^2}
 \quad \quad Q^{q\mu} = \sum_{j}q_j + i({\boldsymbol{\mu}}_j\cdot {\bf k})  e^{i({\bf k}\cdot {\bf r}_j)}
 $$
 
@@ -237,7 +244,7 @@ $$
 Like many other electrostatic methods, the Ewald scheme also adds a self-energy term, please see separate Table.
 In the case of isotropic periodic boundaries (`ipbc=true`), the orientational degeneracy of the
 periodic unit cell is exploited to mimic an isotropic environment, reducing the number
-of wave-vectors by one fourth compared with PBC Ewald.
+of wave-vectors to one fourth compared with PBC Ewald.
 For point charges, [IPBC](http://doi.org/css8) introduce the modification,
 
 $$

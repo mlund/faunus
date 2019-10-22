@@ -33,7 +33,9 @@ struct BondData {
     virtual std::shared_ptr<BondData> clone() const = 0; //!< Make shared pointer *copy* of data
     bool hasEnergyFunction() const;                      //!< test if energy function has been set
     void shift(int offset);                              //!< Shift indices
-    virtual ~BondData();
+    BondData() = default;
+    BondData(const std::vector<int> &index);
+    virtual ~BondData() = default;
 };
 
 /**
@@ -48,6 +50,8 @@ struct HarmonicBond : public BondData {
     void to_json(json &j) const override;
     std::string name() const override;
     void setEnergyFunction(const ParticleVector &p);
+    HarmonicBond() = default;
+    HarmonicBond(double k, double req, const std::vector<int> &index);
 };
 
 /**
@@ -87,6 +91,8 @@ struct HarmonicTorsion : public BondData {
     Variant type() const override;
     std::string name() const override;
     void setEnergyFunction(const ParticleVector &p);
+    HarmonicTorsion() = default;
+    HarmonicTorsion(double k, double aeq, const std::vector<int> &index);
 }; // end of HarmonicTorsion
 
 struct GromosTorsion : public BondData {
@@ -98,6 +104,8 @@ struct GromosTorsion : public BondData {
     Variant type() const override;
     std::string name() const override;
     void setEnergyFunction(const ParticleVector &p);
+    GromosTorsion() = default;
+    GromosTorsion(double k, double cos_aeq, const std::vector<int> &index);
 }; // end of GromosTorsion
 
 struct PeriodicDihedral : public BondData {
@@ -109,6 +117,8 @@ struct PeriodicDihedral : public BondData {
     Variant type() const override;
     std::string name() const override;
     void setEnergyFunction(const ParticleVector &p);
+    PeriodicDihedral() = default;
+    PeriodicDihedral(double k, double phi, double n, const std::vector<int> &index);
 }; // end of PeriodicDihedral
 
 /*

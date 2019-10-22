@@ -67,7 +67,10 @@ void BondData::shift(int offset) {
 
 bool BondData::hasEnergyFunction() const { return energy != nullptr; }
 
-BondData::~BondData() {}
+BondData::BondData(const std::vector<int> &index) : index(index) {}
+
+HarmonicBond::HarmonicBond(double k, double req, const std::vector<int> &index)
+    : BondData(index), k_half(k / 2), req(req) {}
 
 void HarmonicBond::from_json(const Faunus::json &j) {
     k_half = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
@@ -162,6 +165,9 @@ void HarmonicTorsion::to_json(Faunus::json &j) const {
     _roundjson(j, 6);
 }
 
+HarmonicTorsion::HarmonicTorsion(double k, double aeq, const std::vector<int> &index)
+    : BondData(index), k_half(k / 2), aeq(aeq) {}
+
 BondData::Variant HarmonicTorsion::type() const { return BondData::HARMONIC_TORSION; }
 
 std::string HarmonicTorsion::name() const { return "harmonic_torsion"; }
@@ -187,6 +193,9 @@ void GromosTorsion::from_json(const Faunus::json &j) {
 void GromosTorsion::to_json(Faunus::json &j) const {
     j = {{"k", 2 * k_half / 1.0_kJmol}, {"aeq", std::acos(cos_aeq) / 1.0_deg}};
 }
+
+GromosTorsion::GromosTorsion(double k, double cos_aeq, const std::vector<int> &index)
+    : BondData(index), k_half(k / 2), cos_aeq(cos_aeq) {}
 
 BondData::Variant GromosTorsion::type() const { return BondData::GROMOS_TORSION; }
 
@@ -216,6 +225,9 @@ void PeriodicDihedral::from_json(const Faunus::json &j) {
 void PeriodicDihedral::to_json(Faunus::json &j) const {
     j = {{"k", k / 1.0_kJmol}, {"n", n}, {"phi", phi / 1.0_deg}};
 }
+
+PeriodicDihedral::PeriodicDihedral(double k, double phi, double n, const std::vector<int> &index)
+    : BondData(index), k(k), phi(phi), n(n) {}
 
 BondData::Variant PeriodicDihedral::type() const { return BondData::PERIODIC_DIHEDRAL; }
 

@@ -29,6 +29,7 @@
 #include "functionparser.h"
 #include "multipole.h"
 #include "energy_test.h"
+#include "bonds_test.h"
 
 int main(int argc, char** argv) {
     Faunus::faunus_logger = spdlog::basic_logger_mt("faunus", "unittests.log", true);

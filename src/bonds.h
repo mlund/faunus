@@ -19,7 +19,7 @@ namespace Potential {
  * and potentially also the energy function (nullptr per default).
  */
 struct BondData {
-    enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE };
+    enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, NONE };
     std::vector<int> index;
     bool exclude = false;           //!< True if exclusion of non-bonded interaction should be attempted
     bool keepelectrostatics = true; //!< If `exclude==true`, try to keep electrostatic interactions
@@ -40,7 +40,7 @@ struct BondData {
  * @brief Harmonic Bond
  */
 struct HarmonicBond : public BondData {
-    double k = 0, req = 0;
+    double k_half = 0, req = 0;
     int numindex() const override;
     Variant type() const override;
     std::shared_ptr<BondData> clone() const override;
@@ -79,7 +79,7 @@ struct FENEWCABond : public BondData {
 }; // end of FENE+WCA
 
 struct HarmonicTorsion : public BondData {
-    double k = 0, aeq = 0;
+    double k_half = 0, aeq = 0;
     int numindex() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;
@@ -90,7 +90,7 @@ struct HarmonicTorsion : public BondData {
 }; // end of HarmonicTorsion
 
 struct GromosTorsion : public BondData {
-    double k = 0, aeq = 0;
+    double k_half = 0, cos_aeq = 0;
     int numindex() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;
@@ -101,7 +101,7 @@ struct GromosTorsion : public BondData {
 }; // end of GromosTorsion
 
 struct PeriodicDihedral : public BondData {
-    std::array<double, 3> k;
+    double k = 0, phi = 0, n = 1;
     int numindex() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;

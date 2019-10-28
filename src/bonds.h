@@ -19,7 +19,7 @@ namespace Potential {
  * and potentially also the energy function (nullptr per default).
  */
 struct BondData {
-    enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, G96_TORSION, PERIODIC_DIHEDRAL, NONE };
+    enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, NONE };
     std::vector<int> index;
     bool exclude = false;           //!< True if exclusion of non-bonded interaction should be attempted
     bool keepelectrostatics = true; //!< If `exclude==true`, try to keep electrostatic interactions
@@ -33,14 +33,16 @@ struct BondData {
     virtual std::shared_ptr<BondData> clone() const = 0; //!< Make shared pointer *copy* of data
     bool hasEnergyFunction() const;                      //!< test if energy function has been set
     void shift(int offset);                              //!< Shift indices
-    virtual ~BondData();
+    BondData() = default;
+    BondData(const std::vector<int> &index);
+    virtual ~BondData() = default;
 };
 
 /**
  * @brief Harmonic Bond
  */
 struct HarmonicBond : public BondData {
-    double k = 0, req = 0;
+    double k_half = 0, req = 0;
     int numindex() const override;
     Variant type() const override;
     std::shared_ptr<BondData> clone() const override;
@@ -48,6 +50,8 @@ struct HarmonicBond : public BondData {
     void to_json(json &j) const override;
     std::string name() const override;
     void setEnergyFunction(const ParticleVector &p);
+    HarmonicBond() = default;
+    HarmonicBond(double k, double req, const std::vector<int> &index);
 };
 
 /**
@@ -79,7 +83,7 @@ struct FENEWCABond : public BondData {
 }; // end of FENE+WCA
 
 struct HarmonicTorsion : public BondData {
-    double k = 0, aeq = 0;
+    double k_half = 0, aeq = 0;
     int numindex() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;
@@ -87,10 +91,12 @@ struct HarmonicTorsion : public BondData {
     Variant type() const override;
     std::string name() const override;
     void setEnergyFunction(const ParticleVector &p);
+    HarmonicTorsion() = default;
+    HarmonicTorsion(double k, double aeq, const std::vector<int> &index);
 }; // end of HarmonicTorsion
 
 struct GromosTorsion : public BondData {
-    double k = 0, aeq = 0;
+    double k_half = 0, cos_aeq = 0;
     int numindex() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;
@@ -98,10 +104,12 @@ struct GromosTorsion : public BondData {
     Variant type() const override;
     std::string name() const override;
     void setEnergyFunction(const ParticleVector &p);
+    GromosTorsion() = default;
+    GromosTorsion(double k, double cos_aeq, const std::vector<int> &index);
 }; // end of GromosTorsion
 
 struct PeriodicDihedral : public BondData {
-    std::array<double, 3> k;
+    double k = 0, phi = 0, n = 1;
     int numindex() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;
@@ -109,6 +117,8 @@ struct PeriodicDihedral : public BondData {
     Variant type() const override;
     std::string name() const override;
     void setEnergyFunction(const ParticleVector &p);
+    PeriodicDihedral() = default;
+    PeriodicDihedral(double k, double phi, double n, const std::vector<int> &index);
 }; // end of PeriodicDihedral
 
 /*
@@ -130,66 +140,5 @@ inline auto filterBonds(const std::vector<std::shared_ptr<BondData>> &bonds, Bon
     return filt;
 } //!< Filter bond container for matching bond type and return _reference_ to original
 
-#ifdef DOCTEST_LIBRARY_INCLUDED
-TEST_CASE("[Faunus] BondData") {
-    std::shared_ptr<BondData> b;
-
-    // exact match required
-    CHECK_THROWS(b = R"({ "harmoNIC": {"index":[2,3], "k":0.5, "req":2.1}} )"_json;);
-
-    // test harmonic
-    SUBCASE("HarmonicBond") {
-        json j = R"({ "harmonic": {"index":[2,3], "k":0.5, "req":2.1}} )"_json;
-        b = j;
-        CHECK(j == json(b));
-        CHECK_THROWS(b = R"({"harmonic": { "index":[2], "k":0.5, "req":2.1}} )"_json);
-        CHECK_THROWS(b = R"({"harmonic": { "index":[2,3], "req":2.1}} )"_json);
-        CHECK_THROWS(b = R"({"harmonic": { "index":[2,3], "k":2.1}} )"_json);
-    }
-
-    // test fene
-    SUBCASE("FENEBond") {
-        json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1 }} )"_json;
-        b = j;
-        CHECK(j == json(b));
-        CHECK_THROWS(b = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1}} )"_json);
-        CHECK_THROWS(b = R"({"fene": { "index":[2,3], "rmax":2.1}} )"_json);
-        CHECK_THROWS(b = R"({"fene": { "index":[2,3], "k":1}} )"_json);
-    }
-
-    // test fene+wca
-    SUBCASE("FENEWCABond") {
-        json j = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json;
-        b = j;
-        CHECK(j == json(b));
-        CHECK_THROWS(b = R"({"fene+wca": { "index":[2,3,4], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json);
-        CHECK_THROWS(b = R"({"fene+wca": { "index":[2,3], "rmax":2.1, "eps":2.48, "sigma":2}} )"_json);
-        CHECK_THROWS(b = R"({"fene+wca": { "index":[2,3], "k":1, "eps":2.48, "sigma":2}} )"_json);
-        CHECK_THROWS(b = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json);
-        CHECK_THROWS(b = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "sigma":2}} )"_json);
-    }
-
-    // test harmonic
-    SUBCASE("HarmonicTorsion") {
-        json j = R"({ "harmonic_torsion": {"index":[0,1,2], "k":0.5, "aeq":60}} )"_json;
-        b = j;
-        CHECK(j == json(b));
-        CHECK_THROWS(b = R"({"harmonic_torsion": { "index":[2], "k":0.5, "aeq":2.1}} )"_json);
-        CHECK_THROWS(b = R"({"harmonic_torsion": { "index":[0,1,2], "aeq":2.1}} )"_json);
-        CHECK_THROWS(b = R"({"harmonic_torsion": { "index":[0,1,3], "k":2.1}} )"_json);
-    }
-
-    // test bond filter
-    SUBCASE("filterBonds()") {
-        std::vector<std::shared_ptr<BondData>> bonds = {
-            R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json,
-            R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1} } )"_json};
-        auto filt = filterBonds(bonds, BondData::HARMONIC);
-        CHECK(filt.size() == 1);
-        CHECK(filt[0]->type() == BondData::HARMONIC);
-        CHECK(filt[0] == bonds[1]); // filt should contain references to bonds
-    }
-}
-#endif
 } // namespace Potential
 } // namespace Faunus

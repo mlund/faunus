@@ -286,11 +286,24 @@ void VirtualVolume::_sample() {
             if (std::isfinite(err))                                // catch if Uold==0
                 assert(err < 1e-4);
 #endif
+            // write excess pressure to output file
+            if (f)
+                f << cnt << " " << -std::log(x) / (dV * 1.0_mM) << "\n";
         }
     }
 }
 
-void VirtualVolume::_from_json(const json &j) { dV = j.at("dV"); }
+void VirtualVolume::_from_json(const json &j) {
+    dV = j.at("dV");
+    file = MPI::prefix + j.value("file", std::string());
+    if (not file.empty()) { // if filename is given, create output file
+        if (f)
+            f.close();
+        f.open(file);
+        if (!f)
+            throw std::runtime_error(name + ": cannot open output file " + file);
+    }
+}
 
 void VirtualVolume::_to_json(json &j) const {
     double pex = log(duexp.avg()) / dV; // excess pressure

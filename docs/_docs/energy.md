@@ -615,7 +615,7 @@ $$
 
 ### Cosine based torsion (GROMOS-96)
 
-`g96_torsion`      | Cosine based torsion
+`gromos_torsion`   | Cosine based torsion
 ------------------ | -------------------------------------------
 `k`                | Force constant (kJ/mol)
 `aeq`              | Equilibrium angle $\alpha_{{\mathrm{eq}}}$ (deg)

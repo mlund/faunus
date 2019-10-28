@@ -415,6 +415,7 @@ surface tension etc., see [here](http://doi.org/ckfh).
 --------------- | -------------------------------------
 `dV`            | Volume perturbation (angstrom cubed)
 `nstep`         | Interval between samples
+`file`          | Optional filename for excess pressure as a function of steps
 
 
 ## Widom Insertion

@@ -332,6 +332,8 @@ class XTCtraj : public Analysisbase {
  * @brief Excess pressure using virtual volume move
  */
 class VirtualVolume : public Analysisbase {
+    std::string file; // output filename
+    std::ofstream f;  // output filestream
     double dV; // volume perturbation
     Change c;
     Energy::Energybase &pot;

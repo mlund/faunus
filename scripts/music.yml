@@ -13,15 +13,16 @@ songs:
     - {subsongs: [1], file: MUSICIANS/B/Bjerregaard_Johannes/Shape.sid}
     - {subsongs: [1], file: MUSICIANS/D/Deenen_Charles/Zamzara.sid}
     - {subsongs: [3], file: MUSICIANS/O/Ouwehand_Reyn/Last_Ninja_3.sid}
-    - {subsongs: [1,2,3], file: MUSICIANS/L/Laxity/Stormlord_2.sid}
+    - {subsongs: [2], file: MUSICIANS/L/Laxity/Stormlord_2.sid}
     - {subsongs: [14], file: MUSICIANS/F/FAME/Hendriks_Michael/X-Out.sid}
     - {subsongs: [19], file: MUSICIANS/G/Galway_Martin/Yie_Ar_Kung_Fu.sid}
     - {subsongs: [3,8], file: MUSICIANS/B/Bjerregaard_Johannes/M_A_C_H.sid}
     - {subsongs: [3,5,6], file: MUSICIANS/O/Ouwehand_Reyn/Flimbos_Quest.sid}
-    - {subsongs: [1,2], file: MUSICIANS/B/Bjerregaard_Johannes/Stormlord.sid}
     - {subsongs: [1], file: MUSICIANS/S/Schneider_Markus/Beyond_the_Zero.sid}
     - {subsongs: [1], file: MUSICIANS/0-9/20CC/van_Santen_Edwin/Spijkerhoek.sid}
     - {subsongs: [1], file: MUSICIANS/0-9/20CC/van_Santen_Edwin/Airwolf_Mix.sid}
     - {subsongs: [1], file: MUSICIANS/F/FAME/Hendriks_Michael/A_Little_Sample.sid}
+    - {subsongs: [3,4], file: MUSICIANS/M/Mitch_and_Dane/Dane/Uncensored_part_1.sid}
+    - {subsongs: [1,4], file: MUSICIANS/M/Mitch_and_Dane/Dane/Uncensored_part_2.sid}
     - {subsongs: [1], file: MUSICIANS/S/Schneider_Markus/Strike_Force_Introtune.sid}
 

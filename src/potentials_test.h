@@ -284,6 +284,17 @@ TEST_CASE("[Faunus] FunctorPotential") {
     CHECK(u(a, b, r) == Approx(coulomb(a, b, r) + wca(a, b, r)));
     CHECK(u(c, c, r * 1.01) == 0);
     CHECK(u(c, c, r * 0.99) == pc::infty);
+
+    SUBCASE("selfEnergy()") {
+        // let's check that the self energy gets properly transferred to the functor potential
+        json j = R"(
+                {"default": [{ "coulomb" : {"epsr": 80.0, "type": "fanourgakis", "cutoff":20} }]})"_json;
+
+        FunctorPotential functor = j;
+        NewCoulombGalore galore = j["default"][0];
+
+        CHECK(functor.selfEnergy(a) == Approx(galore.selfEnergy(a)));
+    }
 }
 
 TEST_CASE("[Faunus] Dipole-dipole interactions") {

@@ -382,7 +382,8 @@ void FunctorPotential::registerSelfEnergy(PairPotentialBase *pot) {
     if (pot->selfEnergy) {
         self_energy_vector.push_back(pot->selfEnergy);
         assert(self_energy_vector.back());
-    }
+    } else
+        faunus_logger->trace("Failed to register non-defined selfEnergy() for {}", pot->name);
 }
 
 FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
@@ -404,6 +405,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                             if (not have_monopole_self_energy) {
                                 registerSelfEnergy(&std::get<0>(potlist));
                                 have_monopole_self_energy = true;
+                                assert(not self_energy_vector.empty());
                             }
                         } else if (it.key() == "cos2")
                             _u = std::get<1>(potlist) = i;
@@ -438,6 +440,7 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                             if (not have_dipole_self_energy) {
                                 registerSelfEnergy(&std::get<12>(potlist));
                                 have_dipole_self_energy = true;
+                                assert(not self_energy_vector.empty());
                             }
                         }
                         // place additional potentials here...
@@ -457,20 +460,6 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
     } else
         throw std::runtime_error("dictionary of potentials required");
 
-    // set self energy function
-    if (self_energy_vector.empty())
-        selfEnergy = nullptr;
-    else
-        // why must self_energy_vector be copied? Using [=] or [&]
-        // lambda capturing causes bad access on copied objects
-        selfEnergy = [vec = self_energy_vector](const Particle &p) {
-            double sum = 0;
-            for (auto &func : vec) {
-                assert(func);
-                sum += func(p);
-            }
-            return sum;
-        };
     return u;
 }
 
@@ -488,6 +477,22 @@ void FunctorPotential::from_json(const json &j) {
             auto ids = names2ids(atoms, atompair);
             umatrix.set(ids[0], ids[1], combineFunc(it.value()));
         }
+    }
+    // at the moment we assume that self energies apply to all
+    // pairs of particle types
+    if (self_energy_vector.empty())
+        selfEnergy = nullptr;
+    else {
+        // sum self energies from all registered pair-potentials
+        selfEnergy = [&](const Particle &p) {
+            double sum = 0;
+            for (auto &func : self_energy_vector) {
+                assert(func);
+                sum += func(p);
+            }
+            return sum;
+        };
+        faunus_logger->debug("added {} selfEnergy terms to {}", self_energy_vector.size(), name);
     }
 }
 

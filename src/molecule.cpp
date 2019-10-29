@@ -23,17 +23,17 @@ ParticleVector MoleculeData::getRandomConformation(Geometry::GeometryBase &geo, 
     return inserterFunctor(geo, otherparticles, *this);
 }
 
-void MoleculeData::loadConformation(const std::string &file, bool keepcharges) {
+void MoleculeData::loadConformation(const std::string &file, bool keep_positions, bool keep_charges) {
     ParticleVector v;
-    if (loadStructure(file, v, false, keepcharges)) {
-        if (keeppos == false)
+    if (loadStructure(file, v, false, keep_charges)) {
+        if (keep_positions == false)
             Geometry::cm2origo(v.begin(), v.end()); // move to origo
         conformations.push_back(v);
         for (auto &p : v) // add atoms to atomlist
             atoms.push_back(p.id);
     }
     if (v.empty())
-        throw std::runtime_error("Structure " + structure + " not loaded. Filetype must be .aam/.pqr/.xyz");
+        throw std::runtime_error("Structure " + file + " not loaded. Filetype must be .aam/.pqr/.xyz");
 }
 
 void MoleculeData::setInserter(const MoleculeData::TinserterFunc &ifunc) { inserterFunctor = ifunc; }
@@ -159,7 +159,7 @@ void from_json(const json &j, MoleculeData &a) {
 
                     // `structure` is a file name
                     if (_struct.is_string()) // structure from file
-                        a.loadConformation(_struct.get<std::string>(), a.keepcharges);
+                        a.loadConformation(_struct.get<std::string>(), a.keeppos, a.keepcharges);
 
                     else if (_struct.is_object()) {
                         // `structure` is a fasta sequence
@@ -217,7 +217,7 @@ void from_json(const json &j, MoleculeData &a) {
             ins.dir = a.insdir;
             ins.rotate = a.rotate;
             ins.offset = a.insoffset;
-            ins.keeppos = a.keeppos;
+            ins.keep_positions = a.keeppos;
             a.setInserter(ins);
 
             // assert that all bonds are *internal*
@@ -254,10 +254,10 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
         throw std::runtime_error("geometry has zero volume");
 
     ParticleVector v = mol.conformations.get(); // get random, weighted conformation
-    confindex = mol.conformations.index; // lastest index
+    conformation_ndx = mol.conformations.index; // lastest index
 
     do {
-        if (cnt++ > maxtrials)
+        if (cnt++ > max_trials)
             throw std::runtime_error("Max. # of overlap checks reached upon insertion.");
 
         if (mol.atomic) {       // insert atomic species
@@ -271,7 +271,7 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
                 geo.boundary(i.pos);
             }
         } else {                  // insert molecule
-            if (keeppos) {        // keep original positions (no rotation/trans)
+            if (keep_positions) {        // keep original positions (no rotation/trans)
                 for (auto &i : v) // ...but let's make sure it fits
                     if (geo.collision(i.pos))
                         throw std::runtime_error("Error: Inserted molecule does not fit in container");
@@ -297,7 +297,7 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
 
         // check if molecules / atoms fit inside simulation container
         containerOverlap = false;
-        if (allowoverlap == false) {
+        if (allow_overlap == false) {
             for (auto &i : v) {
                 if (geo.collision(i.pos)) {
                     containerOverlap = true;
@@ -308,6 +308,7 @@ ParticleVector RandomInserter::operator()(Geometry::GeometryBase &geo, const Par
     } while (containerOverlap);
     return v;
 }
+
 bool Conformation::empty() const {
     if (positions.empty())
         if (charges.empty())

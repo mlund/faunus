@@ -3,6 +3,7 @@
 #include "core.h"
 #include "particle.h"
 #include "random.h"
+#include "spdlog/spdlog.h"
 
 namespace Faunus {
 
@@ -31,11 +32,11 @@ class MoleculeData;
 struct RandomInserter {
     Point dir = {1, 1, 1};     //!< Scalars for random mass center position. Default (1,1,1)
     Point offset = {0, 0, 0};  //!< Added to random position. Default (0,0,0)
-    bool rotate = true;        //!< Set to true to randomly rotate molecule when inserted. Default: true
-    bool keeppos = false;      //!< Set to true to keep original positions (default: false)
-    bool allowoverlap = false; //!< Set to true to skip container overlap check
-    int maxtrials = 2e4;       //!< Maximum number of container overlap checks
-    int confindex = -1;        //!< Index of last used conformation
+    bool rotate = true;           //!< Set to true to randomly rotate molecule when inserted. Default: true
+    bool keep_positions = false;  //!< Set to true to keep original positions (default: false)
+    bool allow_overlap = false;   //!< Set to true to skip container overlap check
+    int max_trials = 20'000;      //!< Maximum number of container overlap checks
+    int conformation_ndx = -1;    //!< Index of last used conformation
 
     ParticleVector operator()(Geometry::GeometryBase &geo, const ParticleVector &, MoleculeData &mol);
 };
@@ -122,7 +123,7 @@ class MoleculeData {
      */
     ParticleVector getRandomConformation(Geometry::GeometryBase &geo, ParticleVector otherparticles = ParticleVector());
 
-    void loadConformation(const std::string &file, bool keepcharges);
+    void loadConformation(const std::string &file, bool keep_positions, bool keep_charges);
 }; // end of class
 
 void to_json(json &j, const MoleculeData &a);

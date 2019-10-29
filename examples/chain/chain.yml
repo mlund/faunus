@@ -7,7 +7,7 @@ random: {seed: default}
 geometry:
   type: cuboid
   length: [500., 500., 500.]
-mcloop: {macro: 150, micro: 200}
+mcloop: {macro: 400, micro: 100}
 
 atomlist:
    - MER: {sigma: 4.0, dp: 2.0 }
@@ -57,12 +57,12 @@ insertmolecules:
 
 energy:
     - bonded: {}
-    - nonbonded_splined:
+    - nonbonded_exact:
         default:
-        - hardsphere
+        - hardsphere: {}
 
 moves:
-    - transrot: {molecule: POL, repeat: 100}
+    - transrot: {molecule: POL, repeat: 10}
     - crankshaft: {molecule: POL, dprot: 0.5, repeat: 10}
     - pivot: {molecule: POL, dprot: 0.5, repeat: 10}
 

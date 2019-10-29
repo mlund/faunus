@@ -2161,10 +2161,20 @@ namespace Faunus
         auto end() const noexcept { return vec.end(); }
         auto empty() const noexcept { return vec.empty(); }
         auto size() const noexcept { return vec.size(); }
-        auto back() const noexcept { return vec.back(); }
+        auto& back() noexcept { return vec.back(); }
+        auto& back() const noexcept { return vec.back(); }
+        auto& front() noexcept { return vec.front(); }
+        auto& front() const noexcept { return vec.front(); }
+        auto& at(size_t n) { return vec.at(n); }
+        auto& at(size_t n) const { return vec.at(n); }
 
         template <typename Tderived, class... Args, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
         void emplace_back(Args &... args) {
+            vec.push_back(std::make_shared<Tderived>(args...));
+        } //!< Create an (derived) instance and append a pointer to it to the vector
+
+        template <typename Tderived, class... Args, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
+        void emplace_back(const Args &... args) {
             vec.push_back(std::make_shared<Tderived>(args...));
         } //!< Create an (derived) instance and append a pointer to it to the vector
 
@@ -2174,12 +2184,18 @@ namespace Faunus
         } //!< Append a pointer to a (derived) instance to the vector
 
         template <typename Tderived, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
+        auto& operator=(const BasePointerVector<Tderived> &d) {
+            vec.assign(d.vec.begin(), d.vec.end());
+            return *this;
+        } //!< Allow assignment to a vector of ancestors
+
+        template <typename Tderived, class = std::enable_if_t<std::is_base_of<T, Tderived>::value>>
         auto find() const {
-            std::vector<std::shared_ptr<Tderived>> _v;
+            BasePointerVector<Tderived> _v;
             for (auto base : vec) {
                 auto derived = std::dynamic_pointer_cast<Tderived>(base);
                 if (derived)
-                    _v.push_back(derived);
+                    _v.template push_back<Tderived>(derived);
             }
             return _v;
         } //!< Pointer list to all matching type
@@ -2190,10 +2206,22 @@ namespace Faunus
 
     template <typename T> void to_json(json &j, const BasePointerVector<T> &b) {
         try {
-            for (auto i : b.vec)
-                j.push_back(*i);
+            for (auto shared_ptr : b.vec) {
+                j.push_back(*shared_ptr);
+            }
         } catch (const std::exception &e) {
             throw std::runtime_error("error converting to json: "s + e.what());
         }
     }
-}//namespace
+
+    template <typename T> void from_json(const json &j, BasePointerVector<T> &b) {
+        try {
+            for (auto it : j) {
+                std::shared_ptr<T> ptr = it;
+                b.template push_back<T>(ptr);
+            }
+        } catch (const std::exception &e) {
+            throw std::runtime_error("error converting from json: "s + e.what());
+        }
+    }
+} //namespace Faunus

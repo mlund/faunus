@@ -8,9 +8,6 @@
 #include <Eigen/Dense>
 #include "spdlog/spdlog.h"
 
-#ifdef ENABLE_POWERSASA
-#include <power_sasa.h>
-#endif
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>
 #endif

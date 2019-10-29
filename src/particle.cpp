@@ -75,6 +75,8 @@ const AtomData &Particle::traits() {
  */
 Particle::Particle(const AtomData &a) { *this = json(a).front(); }
 
+Particle::Particle(const AtomData &a, const Point &pos) : Particle(a) { this->pos = pos; }
+
 // copy constructor
 Particle::Particle(const Particle &p) : id(p.id), charge(p.charge), pos(p.pos) {
     if (p.ext != nullptr)

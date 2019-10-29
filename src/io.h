@@ -399,9 +399,9 @@ std::vector<Particle> fastaToParticles(const std::string &fasta, double spacing 
  * @param file filename to load (aam, pqr, xyz, ...)
  * @param dst destination particle vector
  * @param append if true, expand dst vector
- * @param keepcharges if true, ignore AtomData charges
+ * @param keep_charges if true, ignore AtomData charges
  * @return true if successfully loaded
  */
-bool loadStructure(const std::string &file, std::vector<Particle> &dst, bool append, bool keepcharges = true);
+bool loadStructure(const std::string &file, std::vector<Particle> &dst, bool append, bool keep_charges = true);
 
 } // namespace Faunus

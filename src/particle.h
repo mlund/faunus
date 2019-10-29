@@ -159,6 +159,7 @@ class Particle {
     const AtomData &traits();
     Particle() = default;
     Particle(const AtomData &a);
+    Particle(const AtomData &a, const Point &pos);
     Particle(const Particle &);            //!< copy constructor
     Particle &operator=(const Particle &); //!< assignment operator
     void rotate(const Eigen::Quaterniond &q, const Eigen::Matrix3d &m);

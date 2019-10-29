@@ -173,10 +173,10 @@ Point FormatPQR::load(const std::string &file, FormatPQR::Tpvec &p, bool keep_ch
                             log_charge = false;
                         }
                         if (keep_charges)
-                            faunus_logger->info("charge mismatch on atom {0} {1}: using {2} (PQR) over {3} (atomlist)",
+                            faunus_logger->debug("charge mismatch on atom {0} {1}: using {2} (PQR) over {3} (atomlist)",
                                                 aname, ires, a.charge, it->charge);
                         else {
-                            faunus_logger->info("charge mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
+                            faunus_logger->debug("charge mismatch on atom {0} {1}: using {2} (atomlist) over {3} (PQR)",
                                                 aname, ires, it->charge, a.charge);
                             a.charge = it->charge;
                         }
@@ -396,14 +396,14 @@ std::vector<Particle> fastaToParticles(const std::string &fasta, double spacing,
     return vec;
 }
 
-bool loadStructure(const std::string &file, std::vector<Particle> &dst, bool append, bool keepcharges) {
+bool loadStructure(const std::string &file, std::vector<Particle> &dst, bool append, bool keep_charges) {
     if (append == false)
         dst.clear();
     std::string suffix = file.substr(file.find_last_of(".") + 1);
     if (suffix == "aam")
-        FormatAAM::load(file, dst, keepcharges);
+        FormatAAM::load(file, dst, keep_charges);
     if (suffix == "pqr")
-        FormatPQR::load(file, dst, keepcharges);
+        FormatPQR::load(file, dst, keep_charges);
     if (suffix == "xyz")
         FormatXYZ::load(file, dst);
     if (not dst.empty())

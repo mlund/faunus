@@ -21,8 +21,6 @@ namespace Potential {
 struct BondData {
     enum Variant { HARMONIC = 0, FENE, FENEWCA, HARMONIC_TORSION, GROMOS_TORSION, PERIODIC_DIHEDRAL, NONE };
     std::vector<int> index;
-    bool exclude = false;           //!< True if exclusion of non-bonded interaction should be attempted
-    bool keepelectrostatics = true; //!< If `exclude==true`, try to keep electrostatic interactions
     std::function<double(Geometry::DistanceFunction)> energy = nullptr; //!< potential energy (kT)
 
     virtual void from_json(const json &) = 0;
@@ -38,12 +36,25 @@ struct BondData {
     virtual ~BondData() = default;
 };
 
+struct StretchData : public BondData {
+    int numindex() const override { return 2; }
+    StretchData() = default;
+    StretchData(const std::vector<int> &index) : BondData(index) {};
+};
+
+struct TorsionData : public BondData {
+    int numindex() const override { return 3; }
+    TorsionData() = default;
+    TorsionData(const std::vector<int> &index) : BondData(index) {};
+};
+
 /**
  * @brief Harmonic Bond
+ *
+ * U(r) = k/2 * (r - r_eq)^2
  */
-struct HarmonicBond : public BondData {
+struct HarmonicBond : public StretchData {
     double k_half = 0, req = 0;
-    int numindex() const override;
     Variant type() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;
@@ -56,35 +67,44 @@ struct HarmonicBond : public BondData {
 
 /**
  * @brief FENE bond
+ *
+ * U(r) = -k/2 * r_max^2 * ln(1 - r^2 / r_max^2) if r < r_max, ∞ otherwise
  */
-struct FENEBond : public BondData {
-    std::array<double, 4> k = {{0, 0, 0, 0}};
-    int numindex() const override;
+struct FENEBond : public StretchData {
+    double k_half = 0, rmax_squared = 0;
     Variant type() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     std::string name() const override;
     void setEnergyFunction(const ParticleVector &p);
-}; // end of FENE
+    FENEBond() = default;
+    FENEBond(double k, double rmax, const std::vector<int> &index);
+};
 
 /**
  * @brief FENE+WCA bond
  */
-struct FENEWCABond : public BondData {
+struct FENEWCABond : public StretchData {
+    double k_half = 0, rmax_squared = 0, epsilon = 0, sigma_squared = 0;
     std::array<double, 4> k = {{0, 0, 0, 0}};
-    int numindex() const override;
     Variant type() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
     std::string name() const override;
     void setEnergyFunction(const ParticleVector &p);
-}; // end of FENE+WCA
+    FENEWCABond() = default;
+    FENEWCABond(double k, double rmax, double epsilon, double sigma, const std::vector<int> &index);
+};
 
-struct HarmonicTorsion : public BondData {
+/**
+ * @brief Harmonic torsion
+ *
+ * U(a) = k/2 * (a - a_eq)^2
+ */
+struct HarmonicTorsion : public TorsionData {
     double k_half = 0, aeq = 0;
-    int numindex() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
@@ -93,11 +113,15 @@ struct HarmonicTorsion : public BondData {
     void setEnergyFunction(const ParticleVector &p);
     HarmonicTorsion() = default;
     HarmonicTorsion(double k, double aeq, const std::vector<int> &index);
-}; // end of HarmonicTorsion
+};
 
-struct GromosTorsion : public BondData {
+/**
+ * @brief Gromos torsion
+ *
+ * U(a) = k/2 * (cos(a) - cos(a_eq))^2
+ */
+struct GromosTorsion : public TorsionData {
     double k_half = 0, cos_aeq = 0;
-    int numindex() const override;
     std::shared_ptr<BondData> clone() const override;
     void from_json(const json &j) override;
     void to_json(json &j) const override;
@@ -106,8 +130,13 @@ struct GromosTorsion : public BondData {
     void setEnergyFunction(const ParticleVector &p);
     GromosTorsion() = default;
     GromosTorsion(double k, double cos_aeq, const std::vector<int> &index);
-}; // end of GromosTorsion
+};
 
+/**
+ * @brief Periodic dihedral
+ *
+ * U(a) = k * (1 + cos(n * a - phi))
+ */
 struct PeriodicDihedral : public BondData {
     double k = 0, phi = 0, n = 1;
     int numindex() const override;
@@ -119,7 +148,7 @@ struct PeriodicDihedral : public BondData {
     void setEnergyFunction(const ParticleVector &p);
     PeriodicDihedral() = default;
     PeriodicDihedral(double k, double phi, double n, const std::vector<int> &index);
-}; // end of PeriodicDihedral
+};
 
 /*
  * Serialize to/from json

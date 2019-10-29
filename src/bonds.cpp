@@ -42,6 +42,7 @@ void from_json(const Faunus::json &j, std::shared_ptr<BondData> &b) {
         }
     throw std::runtime_error("invalid bond data");
 }
+
 void setBondEnergyFunction(std::shared_ptr<BondData> &b, const ParticleVector &p) {
     if (b->type() == BondData::HARMONIC)
         std::dynamic_pointer_cast<HarmonicBond>(b)->setEnergyFunction(p);
@@ -70,7 +71,7 @@ bool BondData::hasEnergyFunction() const { return energy != nullptr; }
 BondData::BondData(const std::vector<int> &index) : index(index) {}
 
 HarmonicBond::HarmonicBond(double k, double req, const std::vector<int> &index)
-    : BondData(index), k_half(k / 2), req(req) {}
+    : StretchData(index), k_half(k / 2), req(req) {}
 
 void HarmonicBond::from_json(const Faunus::json &j) {
     k_half = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
@@ -85,8 +86,6 @@ std::string HarmonicBond::name() const { return "harmonic"; }
 
 std::shared_ptr<BondData> HarmonicBond::clone() const { return std::make_shared<HarmonicBond>(*this); }
 
-int HarmonicBond::numindex() const { return 2; }
-
 BondData::Variant HarmonicBond::type() const { return BondData::HARMONIC; }
 
 void HarmonicBond::setEnergyFunction(const ParticleVector &p) {
@@ -96,64 +95,68 @@ void HarmonicBond::setEnergyFunction(const ParticleVector &p) {
     };
 }
 
-std::shared_ptr<BondData> FENEBond::clone() const { return std::make_shared<FENEBond>(*this); }
+FENEBond::FENEBond(double k, double rmax, const std::vector<int> &index)
+    : StretchData(index), k_half(k / 2), rmax_squared(rmax * rmax) {}
 
-int FENEBond::numindex() const { return 2; }
+std::shared_ptr<BondData> FENEBond::clone() const { return std::make_shared<FENEBond>(*this); }
 
 BondData::Variant FENEBond::type() const { return BondData::FENE; }
 
 void FENEBond::from_json(const Faunus::json &j) {
-    k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
-    k[1] = std::pow(j.at("rmax").get<double>() * 1.0_angstrom, 2);
+    k_half = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2; // k
+    rmax_squared = std::pow(j.at("rmax").get<double>() * 1.0_angstrom, 2); // rmax
 }
 
 void FENEBond::to_json(Faunus::json &j) const {
-    j = {{"k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2))}, {"rmax", std::sqrt(k[1]) / 1.0_angstrom}};
+    j = {{"k", 2 * k_half / (1.0_kJmol / std::pow(1.0_angstrom, 2))}, {"rmax", std::sqrt(rmax_squared) / 1.0_angstrom}};
 }
 
 std::string FENEBond::name() const { return "fene"; }
+
 void FENEBond::setEnergyFunction(const ParticleVector &p) {
     energy = [&](Geometry::DistanceFunction dist) {
-        double d = dist(p[index[0]].pos, p[index[1]].pos).squaredNorm();
-        return (d > k[1]) ? pc::infty : -0.5 * k[0] * k[1] * std::log(1 - d / k[1]);
+        double r_squared = dist(p[index[0]].pos, p[index[1]].pos).squaredNorm();
+        return (r_squared >= rmax_squared) ? pc::infty
+                                           : -k_half * rmax_squared * std::log(1 - r_squared / rmax_squared);
     };
 }
 
-std::shared_ptr<BondData> FENEWCABond::clone() const { return std::make_shared<FENEWCABond>(*this); }
+FENEWCABond::FENEWCABond(double k, double rmax, double epsilon, double sigma, const std::vector<int> &index)
+    : StretchData(index), k_half(k / 2), rmax_squared(rmax * rmax), epsilon(epsilon), sigma_squared(sigma * sigma) {}
 
-int FENEWCABond::numindex() const { return 2; }
+std::shared_ptr<BondData> FENEWCABond::clone() const { return std::make_shared<FENEWCABond>(*this); }
 
 BondData::Variant FENEWCABond::type() const { return BondData::FENEWCA; }
 
 void FENEWCABond::from_json(const Faunus::json &j) {
-    k[0] = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2);
-    k[1] = std::pow(j.at("rmax").get<double>() * 1.0_angstrom, 2);
-    k[2] = j.at("eps").get<double>() * 1.0_kJmol;
-    k[3] = std::pow(j.at("sigma").get<double>() * 1.0_angstrom, 2);
+    k_half = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_angstrom, 2) / 2;
+    rmax_squared = std::pow(j.at("rmax").get<double>() * 1.0_angstrom, 2);
+    epsilon = j.at("eps").get<double>() * 1.0_kJmol;
+    sigma_squared = std::pow(j.at("sigma").get<double>() * 1.0_angstrom, 2);
 }
 
 void FENEWCABond::to_json(Faunus::json &j) const {
-    j = {{"k", k[0] / (1.0_kJmol / std::pow(1.0_angstrom, 2))},
-         {"rmax", std::sqrt(k[1]) / 1.0_angstrom},
-         {"eps", k[2] / 1.0_kJmol},
-         {"sigma", std::sqrt(k[3]) / 1.0_angstrom}};
+    j = {{"k", 2 * k_half / (1.0_kJmol / std::pow(1.0_angstrom, 2))},
+         {"rmax", std::sqrt(rmax_squared) / 1.0_angstrom},
+         {"eps", epsilon / 1.0_kJmol},
+         {"sigma", std::sqrt(sigma_squared) / 1.0_angstrom}};
 }
 
 std::string FENEWCABond::name() const { return "fene+wca"; }
 void FENEWCABond::setEnergyFunction(const ParticleVector &p) {
     energy = [&](Geometry::DistanceFunction dist) {
-        double wca = 0, d = dist(p[index[0]].pos, p[index[1]].pos).squaredNorm();
-        double x = k[3];
-        if (d <= x * 1.2599210498948732) {
-            x = x / d;
+        double r_squared = dist(p[index[0]].pos, p[index[1]].pos).squaredNorm();
+        double wca = 0;
+        double x = sigma_squared;
+        if (r_squared <= x * 1.2599210498948732) {
+            x = x / r_squared;
             x = x * x * x;
-            wca = k[2] * (x * x - x + 0.25);
+            wca = epsilon * (x * x - x + 0.25);
         }
-        return (d > k[1]) ? pc::infty : -0.5 * k[0] * k[1] * std::log(1 - d / k[1]) + wca;
+        return (r_squared > rmax_squared) ? pc::infty
+                                          : -k_half * rmax_squared * std::log(1 - r_squared / rmax_squared) + wca;
     };
 }
-
-int HarmonicTorsion::numindex() const { return 3; }
 
 void HarmonicTorsion::from_json(const Faunus::json &j) {
     k_half = j.at("k").get<double>() * 1.0_kJmol / std::pow(1.0_rad, 2) / 2;
@@ -166,7 +169,7 @@ void HarmonicTorsion::to_json(Faunus::json &j) const {
 }
 
 HarmonicTorsion::HarmonicTorsion(double k, double aeq, const std::vector<int> &index)
-    : BondData(index), k_half(k / 2), aeq(aeq) {}
+    : TorsionData(index), k_half(k / 2), aeq(aeq) {}
 
 BondData::Variant HarmonicTorsion::type() const { return BondData::HARMONIC_TORSION; }
 
@@ -183,8 +186,6 @@ void HarmonicTorsion::setEnergyFunction(const ParticleVector &p) {
     };
 }
 
-int GromosTorsion::numindex() const { return 3; }
-
 void GromosTorsion::from_json(const Faunus::json &j) {
     k_half = j.at("k").get<double>() * 1.0_kJmol / 2;   // k
     cos_aeq = cos(j.at("aeq").get<double>() * 1.0_deg); // cos(angle)
@@ -195,7 +196,7 @@ void GromosTorsion::to_json(Faunus::json &j) const {
 }
 
 GromosTorsion::GromosTorsion(double k, double cos_aeq, const std::vector<int> &index)
-    : BondData(index), k_half(k / 2), cos_aeq(cos_aeq) {}
+    : TorsionData(index), k_half(k / 2), cos_aeq(cos_aeq) {}
 
 BondData::Variant GromosTorsion::type() const { return BondData::GROMOS_TORSION; }
 

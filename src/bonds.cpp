@@ -3,11 +3,16 @@
 
 namespace Faunus {
 namespace Potential {
-void to_json(Faunus::json &j, const std::shared_ptr<BondData> &b) {
+
+void to_json(Faunus::json &j, const std::shared_ptr<const BondData> &b) {
+    to_json(j, *b);
+}
+
+void to_json(Faunus::json &j, const BondData &b) {
     json val;
-    b->to_json(val);
-    val["index"] = b->index;
-    j = {{b->name(), val}};
+    b.to_json(val);
+    val["index"] = b.index;
+    j = {{b.name(), val}};
 }
 
 void from_json(const Faunus::json &j, std::shared_ptr<BondData> &b) {

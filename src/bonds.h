@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core.h"
+#include "auxiliary.h"
 #include "particle.h"
 
 namespace Faunus {
@@ -154,13 +155,15 @@ struct PeriodicDihedral : public BondData {
  * Serialize to/from json
  */
 
-void to_json(json &j, const std::shared_ptr<BondData> &b);
 void from_json(const json &j, std::shared_ptr<BondData> &b);
+void to_json(json &j, const std::shared_ptr<const BondData> &b);
+void to_json(Faunus::json &j, const BondData &b);
 
 void setBondEnergyFunction(std::shared_ptr<BondData> &b,
                            const ParticleVector &p); //!< Set the bond energy function of `BondData` which
                                                      //!< require a reference to the particle vector
 
+[[deprecated("Use bonds.find<TClass>() method instead.")]]
 inline auto filterBonds(const std::vector<std::shared_ptr<BondData>> &bonds, BondData::Variant bondtype) {
     std::vector<std::shared_ptr<BondData>> filt;
     filt.reserve(bonds.size());

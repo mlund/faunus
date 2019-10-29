@@ -1,6 +1,7 @@
 #pragma once
 
 #include "move.h"
+#include "bonds.h"
 
 namespace Faunus {
 namespace Move {
@@ -111,7 +112,7 @@ class PivotMove : public ChainRotationMove {
     using Tbase = ChainRotationMove;
 
   private:
-    std::vector<std::shared_ptr<Potential::BondData>> bonds;
+    BasePointerVector<Potential::HarmonicBond> bonds;
 
   public:
     explicit PivotMove(Space &spc);

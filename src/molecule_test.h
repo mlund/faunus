@@ -32,7 +32,7 @@ TEST_CASE("[Faunus] Structure") {
 }
 
 TEST_CASE("NeighboursGenerator") {
-    decltype(MoleculeData::bonds) harmonic_bonds;
+    BasePointerVector<Potential::BondData> bonds;
     std::vector<std::pair<int, int>> pairs;
 
     SUBCASE("Linear Chain") {
@@ -40,11 +40,11 @@ TEST_CASE("NeighboursGenerator") {
         const auto mer = 10;
         for (auto i = 0; i < mer - 1; ++i) {
             const auto j = i + 1;
-            harmonic_bonds.emplace_back(std::make_shared<Potential::HarmonicBond>(0., 0., std::vector<int>{i, j}));
+            bonds.emplace_back<Potential::HarmonicBond>(0., 0., std::vector<int>{i, j});
         }
 
         const int distance = 3;
-        NeighboursGenerator generator(harmonic_bonds);
+        NeighboursGenerator generator(bonds);
         generator.generatePairs(pairs, distance);
         CHECK_EQ(pairs.size(), (mer - 1) + (mer - 2) + (mer - 3));
         auto pairs_matched = [pairs]() -> int {
@@ -67,11 +67,11 @@ TEST_CASE("NeighboursGenerator") {
         const auto mer = 6;
         for (auto i = 0; i < mer; ++i) {
             auto const j = (i + 1) % mer;
-            harmonic_bonds.emplace_back(std::make_shared<Potential::HarmonicBond>(0., 0., std::vector<int>{i, j}));
+            bonds.emplace_back<Potential::HarmonicBond>(0., 0., std::vector<int>{i, j});
         }
 
         const auto distance = 3; // up to dihedrals
-        NeighboursGenerator generator(harmonic_bonds);
+        NeighboursGenerator generator(bonds);
         generator.generatePairs(pairs, distance);
         CHECK_EQ(pairs.size(), mer + mer + mer / 2); // 1-4 pairs in the cyclic hexamer are double degenerated
         auto pairs_matched = [pairs]() -> int {
@@ -98,13 +98,22 @@ TEST_CASE("NeighboursGenerator") {
 
     SUBCASE("Branched") {
         // isopentane like structure
-        std::vector<std::vector<int>> bonds = {{0, 1}, {1, 2}, {1, 3}, {3, 4}};
-        for (auto bond : bonds) {
-            harmonic_bonds.emplace_back(std::make_shared<Potential::HarmonicBond>(0., 0., bond));
+        std::vector<std::vector<int>> bonds_ndxs = {{0, 1}, {1, 2}, {1, 3}, {3, 4}};
+        for (auto bond_ndxs : bonds_ndxs) {
+            bonds.emplace_back<Potential::HarmonicBond>(0., 0., bond_ndxs);
         }
-        NeighboursGenerator generator(harmonic_bonds);
+        NeighboursGenerator generator(bonds);
         generator.generatePairs(pairs, 2);
         CHECK_EQ(pairs.size(), 4 + 4);
+    }
+
+    SUBCASE("Harmonic and FENE") {
+        bonds.emplace_back<Potential::HarmonicBond>(0., 0., std::vector<int> {1,2});
+        bonds.emplace_back<Potential::FENEBond>(0., 0., std::vector<int> {2,3});
+        bonds.emplace_back<Potential::FENEBond>(0., 0., std::vector<int> {4,5});
+        bonds.emplace_back<Potential::HarmonicBond>(0., 0., std::vector<int> {4,5});
+        NeighboursGenerator generator(bonds);
+        generator.generatePairs(pairs, 7);
     }
 }
 

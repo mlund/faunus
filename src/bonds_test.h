@@ -178,15 +178,14 @@ TEST_CASE("[Faunus] BondData") {
         }
     }
 
-    // test bond filter
-    SUBCASE("filterBonds()") {
-        std::vector<std::shared_ptr<BondData>> bonds = {
-            R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json,
-            R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1} } )"_json};
-        auto filt = filterBonds(bonds, BondData::HARMONIC);
-        CHECK(filt.size() == 1);
-        CHECK(filt[0]->type() == BondData::HARMONIC);
-        CHECK(filt[0] == bonds[1]); // filt should contain references to bonds
+    SUBCASE("Find") {
+        BasePointerVector<BondData> bonds;
+        bonds.emplace_back<FENEBond>(1.0, 2.1, std::vector<int>{2, 3});
+        bonds.emplace_back<HarmonicBond>(1.0, 2.1, std::vector<int>{2, 3});
+        auto harmonic_bonds = bonds.find<HarmonicBond>();
+        CHECK(harmonic_bonds.size() == 1);
+        CHECK(harmonic_bonds.front()->type() == BondData::HARMONIC);
+        CHECK(harmonic_bonds.front() == bonds.back()); // harmonic_bonds should contain references to bonds
     }
 }
 TEST_SUITE_END();

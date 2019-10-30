@@ -277,7 +277,7 @@ void Bonded::update_intra() {
     for (size_t i = 0; i < spc.groups.size(); i++) {
         auto &group = spc.groups.at(i);
         for (auto &bond : molecules.at(group.id).bonds) {
-            intra[i].push_back(bond->clone()); // deep copy BondData from MoleculeData
+            intra[i].push_back<BondData>(bond->clone()); // deep copy BondData from MoleculeData
             intra[i].back()->shift(std::distance(spc.p.begin(), group.begin()));
             Potential::setBondEnergyFunction(intra[i].back(), spc.p);
         }

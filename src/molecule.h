@@ -2,6 +2,7 @@
 
 #include <set>
 #include "core.h"
+#include "auxiliary.h"
 #include "particle.h"
 #include "random.h"
 #include "spdlog/spdlog.h"
@@ -192,12 +193,12 @@ class MoleculeData {
     double activity = 0.0;       //!< Chemical activity (mol/l)
 
     std::vector<int> atoms;                    //!< Sequence of atoms in molecule (atom id's)
-    std::vector<std::shared_ptr<Potential::BondData>> bonds;
+    BasePointerVector<Potential::BondData> bonds;
     WeightedDistribution<ParticleVector> conformations; //!< Conformations of molecule
 
     MoleculeData();
     MoleculeData(const std::string &name, ParticleVector particles,
-                 const std::vector<std::shared_ptr<Potential::BondData>> &bonds);
+                 const BasePointerVector<Potential::BondData> &bonds);
 
     bool isPairExcluded(int i, int j);
 
@@ -281,18 +282,19 @@ class MoleculeStructureReader {
 };
 
 /**
- * @brief Generate all possible atom pairs within a given bond distance. Only harmonic bonds are considered.
+ * @brief Generate all possible atom pairs within a given bond distance. Only 1-2 bonds (e.g., harmonic or FENE)
+ * are considered.
  *
  * @internal Used by MoleculeBuilder only to generate exclusions from excluded neighbours count.
  */
 class NeighboursGenerator {
-    //! a path created from harmonic bonds as an ordered list of atoms involved;
+    //! a path created from 1-2 bonds (e.g., harmonic or FENE) as an ordered list of atoms involved;
     //! atoms are addressed by intramolecular indices
     typedef std::vector<int> AtomList;
-    //! atom → list of directly bonded atoms with a harmonic bond; addressing by indices
+    //! atom → list of directly bonded atoms with a 1-2 bond; addressing by indices
     std::map<int, AtomList> bond_map;
     //! paths indexed by a path length (starting with a zero distance for a single atom)
-    //! a path is a sequence (without loops) of atoms connected by a harmonic bond,
+    //! a path is a sequence (without loops) of atoms connected by a 1-2 bond,
     std::vector<std::set<AtomList>> paths;
 
     typedef decltype(MoleculeData::bonds) BondVector;
@@ -307,7 +309,7 @@ class NeighboursGenerator {
     /**
      * Append all atom pairs within a given bond distance to the pair list.
      * @param pairs atom pair list
-     * @param bond_distance maximal number of harmonic bonds between atoms to consider
+     * @param bond_distance maximal number of 1-2 bonds between atoms to consider
      */
     void generatePairs(AtomPairList &pairs, int bond_distance);
 };

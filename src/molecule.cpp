@@ -15,7 +15,7 @@ std::vector<MoleculeData> molecules;
 std::vector<ReactionData> reactions;
 
 MoleculeData::MoleculeData(const std::string &name, ParticleVector particles,
-                           const std::vector<std::shared_ptr<Potential::BondData>> &bonds)
+                           const BasePointerVector<Potential::BondData> &bonds)
     : name(name), bonds(bonds) {
     for (auto particle : particles) {
         atoms.push_back(particle.id);
@@ -131,17 +131,14 @@ NeighboursGenerator::NeighboursGenerator(const BondVector &bonds) {
 }
 
 void NeighboursGenerator::createBondMap(const BondVector &bonds) {
-    for (auto &bond : bonds) {
-        // todo reimplement bonds as BasePointerVector
-        if (bond->type() == Potential::BondData::HARMONIC) {
-            auto add_bond = [this, &bond](int i, int j) -> void {
-                auto atom_emplaced = bond_map.emplace(bond->index[i], AtomList{}); // find or create empty vector
-                atom_emplaced.first->second.push_back(bond->index[j]); // atom_emplaced.<iterator>-><vector>.push_back()
-            };
-            const int head_ndx = 0, tail_ndx = 1;
-            add_bond(head_ndx, tail_ndx); // add the bond to the map in both head-tail
-            add_bond(tail_ndx, head_ndx); // and tail-head directions
-        }
+    for (auto &bond : bonds.find<Potential::StretchData>()) {
+        auto add_bond = [this, &bond](int i, int j) -> void {
+            auto atom_emplaced = bond_map.emplace(bond->index[i], AtomList{}); // find or create empty vector
+            atom_emplaced.first->second.push_back(bond->index[j]); // atom_emplaced.<iterator>-><vector>.push_back()
+        };
+        const int head_ndx = 0, tail_ndx = 1;
+        add_bond(head_ndx, tail_ndx); // add the bond to the map in both head-tail
+        add_bond(tail_ndx, head_ndx); // and tail-head directions
     }
 }
 
@@ -303,9 +300,9 @@ void MoleculeBuilder::readFastaBonds(const json &j_properties) {
     auto &j_structure = j_properties.at("structure");
     Potential::HarmonicBond bond; // harmonic bond
     bond.from_json(j_structure);  // read 'k' and 'req' from json
-    for (int i = 0; i < particles.size() - 1; i++) {
-        bond.index = {i, i + 1};
-        bonds.push_back(bond.clone());
+    for (int i = 1; i < particles.size(); ++i) {
+        bond.index = {i - 1, i};
+        bonds.push_back<Potential::HarmonicBond>(bond.clone());
     }
 }
 

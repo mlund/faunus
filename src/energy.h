@@ -352,7 +352,7 @@ class Constrain : public Energybase {
 class Bonded : public Energybase {
   private:
     Space &spc;
-    typedef std::vector<std::shared_ptr<Potential::BondData>> BondVector;
+    typedef BasePointerVector<Potential::BondData> BondVector;
     BondVector inter;                // inter-molecular bonds
     std::map<int, BondVector> intra; // intra-molecular bonds
 

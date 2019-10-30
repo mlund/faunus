@@ -146,7 +146,7 @@ size_t CrankshaftMove::select_segment() {
 PivotMove::PivotMove(Space &spc) : ChainRotationMove(spc) { this->name = "pivot"; }
 void PivotMove::_from_json(const json &j) {
     Tbase::_from_json(j);
-    bonds = Potential::filterBonds(molecules[this->molid].bonds, Potential::BondData::HARMONIC);
+    bonds = molecules[this->molid].bonds.find<Potential::HarmonicBond>();
 
     if (this->repeat < 0) {
         // set the number of repetitions to the length of the chain (minus 2) times the number of the chains

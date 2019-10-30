@@ -33,41 +33,68 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(bond.energy(distance), Approx(50));
         }
         SUBCASE("HarmonicBond JSON") {
-            json j = R"({ "harmonic": {"index":[1,2], "k":10.0, "req":2.0}} )"_json;
+            json j = R"({"harmonic": {"index":[1,2], "k":10.0, "req":2.0}})"_json;
             bond_ptr = j;
             CHECK_EQ(json(bond_ptr), j);
             std::dynamic_pointer_cast<HarmonicBond>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energy(distance), Approx(10.0_kJmol / 2 * 4));
         }
         SUBCASE("HarmonicBond JSON Invalid") {
-            CHECK_NOTHROW((R"({"harmonic": {"index":[0,9], "k":0.5, "req":2.1}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"harmoNIC": {"index":[2,3], "k":0.5, "req":2.1}} )"_json).get<BondDataPtr>()); // exact match required
-            CHECK_THROWS((R"({"harmonic": {"index":[2], "k":0.5, "req":2.1}} )"_json).get<BondDataPtr>());   // 2 atom indices
-            CHECK_THROWS((R"({"harmonic": {"index":[2,3], "req":2.1}} )"_json).get<BondDataPtr>()); // k missing
-            CHECK_THROWS((R"({"harmonic": {"index":[2,3], "k":2.1}} )"_json).get<BondDataPtr>());   // req missing
+            CHECK_NOTHROW((R"({"harmonic": {"index":[0,9], "k":0.5, "req":2.1}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"harmoNIC": {"index":[2,3], "k":0.5, "req":2.1}})"_json).get<BondDataPtr>()); // exact match required
+            CHECK_THROWS((R"({"harmonic": {"index":[2], "k":0.5, "req":2.1}})"_json).get<BondDataPtr>());   // 2 atom indices
+            CHECK_THROWS((R"({"harmonic": {"index":[2,3], "req":2.1}})"_json).get<BondDataPtr>()); // k missing
+            CHECK_THROWS((R"({"harmonic": {"index":[2,3], "k":2.1}})"_json).get<BondDataPtr>());   // req missing
         }
     }
 
-    // test fene
     SUBCASE("FENEBond") {
-        json j = R"({"fene": { "index":[2,3], "k":1, "rmax":2.1 }} )"_json;
-        bond_ptr = j;
-        CHECK(j == json(bond_ptr));
-        CHECK_THROWS(bond_ptr = R"({"fene": { "index":[2,3,4], "k":1, "rmax":2.1}} )"_json);
-        CHECK_THROWS(bond_ptr = R"({"fene": { "index":[2,3], "rmax":2.1}} )"_json);
-        CHECK_THROWS(bond_ptr = R"({"fene": { "index":[2,3], "k":1}} )"_json);
+        SUBCASE("FENEBond Energy") {
+            FENEBond bond(100.0, 5.0, {0, 1});
+            bond.setEnergyFunction(p_4a);
+            CHECK_EQ(bond.energy(distance_5a), pc::infty);
+            CHECK_EQ(bond.energy(distance_3a), Approx(557.86));
+            CHECK_EQ(bond.energy(distance), Approx(1277.06));
+        }
+        SUBCASE("FENEBond JSON") {
+            json j = R"({"fene": {"index":[1,2], "k":8, "rmax":6.0 }})"_json;
+            bond_ptr = j;
+            CHECK_EQ(json(bond_ptr), j);
+            std::dynamic_pointer_cast<FENEBond>(bond_ptr)->setEnergyFunction(p_60deg_4a);
+            CHECK_EQ(bond_ptr->energy(distance), Approx(84.641_kJmol));
+        }
+        SUBCASE("FENEBond JSON Invalid") {
+            CHECK_NOTHROW((R"({"fene": {"index":[0,9], "k":0.5, "rmax":2.1}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"FENE": {"index":[0,9], "k":0.5, "rmax":2.1}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"fene": {"index":[2,3,4], "k":1, "rmax":2.1}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"fene": {"index":[2,3], "rmax":2.1}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"fene": {"index":[2,3], "k":1}})"_json).get<BondDataPtr>());
+        }
     }
 
-    // test fene+wca
     SUBCASE("FENEWCABond") {
-        json j = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json;
-        bond_ptr = j;
-        CHECK(j == json(bond_ptr));
-        CHECK_THROWS(bond_ptr = R"({"fene+wca": { "index":[2,3,4], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}} )"_json);
-        CHECK_THROWS(bond_ptr = R"({"fene+wca": { "index":[2,3], "rmax":2.1, "eps":2.48, "sigma":2}} )"_json);
-        CHECK_THROWS(bond_ptr = R"({"fene+wca": { "index":[2,3], "k":1, "eps":2.48, "sigma":2}} )"_json);
-        CHECK_THROWS(bond_ptr = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json);
-        CHECK_THROWS(bond_ptr = R"({"fene+wca": { "index":[2,3], "k":1, "rmax":2.1, "sigma":2}} )"_json);
+        SUBCASE("FENEWCABond Energy") {
+            FENEWCABond bond(100.0, 5.0, 20.0, 3.2, {0, 1});
+            bond.setEnergyFunction(p_4a);
+            CHECK_EQ(bond.energy(distance_5a), pc::infty);
+            CHECK_EQ(bond.energy(distance_3a), Approx(557.86 + 18.931));
+            CHECK_EQ(bond.energy(distance), Approx(1277.06));
+        }
+        SUBCASE("FENEWCABond JSON") {
+            json j = R"({"fene+wca": {"index":[1,2], "k":8, "rmax":6.0, "eps":3.5, "sigma":4.5}})"_json;
+            bond_ptr = j;
+            CHECK_EQ(json(bond_ptr), j);
+            std::dynamic_pointer_cast<FENEWCABond>(bond_ptr)->setEnergyFunction(p_60deg_4a);
+            CHECK_EQ(bond_ptr->energy(distance), Approx(92.805_kJmol));
+        }
+        SUBCASE("FENEWCABond JSON Invalid") {
+            CHECK_NOTHROW((R"({"fene+wca": {"index":[0,9], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"fene+wca": {"index":[2,3,4], "k":1, "rmax":2.1, "eps":2.48, "sigma":2}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"fene+wca": {"index":[2,3], "rmax":2.1, "eps":2.48, "sigma":2}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"fene+wca": {"index":[2,3], "k":1, "eps":2.48, "sigma":2}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"fene+wca": {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"fene+wca": {"index":[2,3], "k":1, "rmax":2.1, "sigma":2}})"_json).get<BondDataPtr>());
+        }
     }
 
     SUBCASE("HarmonicTorsion") {
@@ -77,17 +104,17 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(bond.energy(distance), Approx(100.0 / 2 * std::pow(15.0_deg, 2)));
         }
         SUBCASE("HarmonicTorsion JSON") {
-            json j = R"({ "harmonic_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}} )"_json;
+            json j = R"({"harmonic_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;
             bond_ptr = j;
             CHECK_EQ(json(bond_ptr), j);
             std::dynamic_pointer_cast<HarmonicTorsion>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energy(distance), Approx(0.5_kJmol / 2 * std::pow(5.0_deg, 2)));
         }
         SUBCASE("HarmonicTorsion JSON Invalid") {
-            CHECK_NOTHROW((R"({"harmonic_torsion": { "index":[0,1,9], "k":0.5, "aeq":30.5}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"harmonic_torsion": { "index":[2], "k":0.5, "aeq":30.5}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"harmonic_torsion": { "index":[0,1,2], "aeq":30.5}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"harmonic_torsion": { "index":[0,1,3], "k":0.5}} )"_json).get<BondDataPtr>());
+            CHECK_NOTHROW((R"({"harmonic_torsion": {"index":[0,1,9], "k":0.5, "aeq":30.5}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"harmonic_torsion": {"index":[2], "k":0.5, "aeq":30.5}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"harmonic_torsion": {"index":[0,1,2], "aeq":30.5}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"harmonic_torsion": {"index":[0,1,3], "k":0.5}})"_json).get<BondDataPtr>());
         }
     }
 
@@ -98,17 +125,17 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(bond.energy(distance), Approx(100.0 / 2 * std::pow(cos(60.0_deg) - cos(45.0_deg), 2)));
         }
         SUBCASE("GromosTorsion JSON") {
-            json j = R"({ "gromos_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}} )"_json;
+            json j = R"({"gromos_torsion": {"index":[0,1,2], "k":0.5, "aeq":65}})"_json;
             bond_ptr = j;
             CHECK_EQ(json(bond_ptr), j);
             std::dynamic_pointer_cast<GromosTorsion>(bond_ptr)->setEnergyFunction(p_60deg_4a);
             CHECK_EQ(bond_ptr->energy(distance), Approx(0.5_kJmol / 2 * std::pow(cos(60.0_deg) - cos(65.0_deg), 2)));
         }
         SUBCASE("GromosTorsion JSON Invalid") {
-            CHECK_NOTHROW((R"({"gromos_torsion": { "index":[0,1,9], "k":0.5, "aeq":30.5}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"gromos_torsion": { "index":[2], "k":0.5, "aeq":30.5}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"gromos_torsion": { "index":[0,1,2], "aeq":30.5}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"gromos_torsion": { "index":[0,1,3], "k":0.5}} )"_json).get<BondDataPtr>());
+            CHECK_NOTHROW((R"({"gromos_torsion": {"index":[0,1,9], "k":0.5, "aeq":30.5}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"gromos_torsion": {"index":[2], "k":0.5, "aeq":30.5}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"gromos_torsion": {"index":[0,1,2], "aeq":30.5}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"gromos_torsion": {"index":[0,1,3], "k":0.5}})"_json).get<BondDataPtr>());
         }
     }
 
@@ -136,30 +163,29 @@ TEST_CASE("[Faunus] BondData") {
             CHECK_EQ(bond.energy(distance), Approx(100.0));
         }
         SUBCASE("PeriodicDihedral JSON") {
-            json j = R"({"periodic_dihedral": { "index":[0,1,2,3], "k":10, "phi":0.0, "n": 3}} )"_json;
+            json j = R"({"periodic_dihedral": {"index":[0,1,2,3], "k":10, "phi":0.0, "n": 3}})"_json;
             bond_ptr = j;
             CHECK_EQ(json(bond_ptr), j);
             std::dynamic_pointer_cast<PeriodicDihedral>(bond_ptr)->setEnergyFunction(p_90deg);
             CHECK_EQ(bond_ptr->energy(distance), Approx(10.0_kJmol));
         }
         SUBCASE("PeriodicDihedral JSON Invalid") {
-            CHECK_NOTHROW((R"({"periodic_dihedral": { "index":[0,1,2,9], "k":0.5, "phi":2.1, "n": 2}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"periodic_dihedral": { "index":[0,1,2], "k":0.5, "phi":2.1, "n": 2}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"periodic_dihedral": { "index":[0,1,2,3], "phi":2.1, "n": 2}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"periodic_dihedral": { "index":[0,1,2,3], "k":0.5, "n": 2}} )"_json).get<BondDataPtr>());
-            CHECK_THROWS((R"({"periodic_dihedral": { "index":[0,1,2,3], "k":0.5, "phi":2.1}} )"_json).get<BondDataPtr>());
+            CHECK_NOTHROW((R"({"periodic_dihedral": {"index":[0,1,2,9], "k":0.5, "phi":2.1, "n": 2}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"periodic_dihedral": {"index":[0,1,2], "k":0.5, "phi":2.1, "n": 2}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"periodic_dihedral": {"index":[0,1,2,3], "phi":2.1, "n": 2}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"periodic_dihedral": {"index":[0,1,2,3], "k":0.5, "n": 2}})"_json).get<BondDataPtr>());
+            CHECK_THROWS((R"({"periodic_dihedral": {"index":[0,1,2,3], "k":0.5, "phi":2.1}})"_json).get<BondDataPtr>());
         }
     }
 
-    // test bond filter
-    SUBCASE("filterBonds()") {
-        std::vector<std::shared_ptr<BondData>> bonds = {
-            R"({"fene":      {"index":[2,3], "k":1, "rmax":2.1, "eps":2.48}} )"_json,
-            R"({"harmonic" : {"index":[2,3], "k":0.5, "req":2.1} } )"_json};
-        auto filt = filterBonds(bonds, BondData::HARMONIC);
-        CHECK(filt.size() == 1);
-        CHECK(filt[0]->type() == BondData::HARMONIC);
-        CHECK(filt[0] == bonds[1]); // filt should contain references to bonds
+    SUBCASE("Find") {
+        BasePointerVector<BondData> bonds;
+        bonds.emplace_back<FENEBond>(1.0, 2.1, std::vector<int>{2, 3});
+        bonds.emplace_back<HarmonicBond>(1.0, 2.1, std::vector<int>{2, 3});
+        auto harmonic_bonds = bonds.find<HarmonicBond>();
+        CHECK(harmonic_bonds.size() == 1);
+        CHECK(harmonic_bonds.front()->type() == BondData::HARMONIC);
+        CHECK(harmonic_bonds.front() == bonds.back()); // harmonic_bonds should contain references to bonds
     }
 }
 TEST_SUITE_END();

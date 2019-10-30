@@ -581,22 +581,23 @@ void RandomInserter::to_json(json &j) const {
 }
 
 bool Conformation::empty() const {
-    if (positions.empty())
-        if (charges.empty())
-            return true;
-    return false;
+    return positions.empty() && charges.empty();
 }
 
 ParticleVector &Conformation::toParticleVector(ParticleVector &p) const {
     assert(not p.empty() and not empty());
     // copy positions
-    if (positions.size() == p.size())
-        for (int i = 0; i < p.size(); i++)
+    if (positions.size() == p.size()) {
+        for (size_t i = 0; i < p.size(); ++i) {
             p[i].pos = positions[i];
+        }
+    }
     // copy charges
-    if (charges.size() == p.size())
-        for (int i = 0; i < p.size(); i++)
+    if (charges.size() == p.size()) {
+        for (size_t i = 0; i < p.size(); ++i) {
             p[i].charge = charges[i];
+        }
+    }
     return p;
 }
 
@@ -616,12 +617,11 @@ std::vector<int> ReactionData::participatingMolecules() const {
         v.push_back(i.first);
     return v;
 }
+
 bool ReactionData::containsMolecule(int molid) const {
-    if (_reagid_m.count(molid) == 0)
-        if (_prodid_m.count(molid) == 0)
-            return false;
-    return true;
+    return _reagid_m.count(molid) > 0 || _prodid_m.count(molid) > 0;
 }
+
 const ReactionData::Tmap &ReactionData::Molecules2Add(bool forward) const { return (forward) ? _prodid_m : _reagid_m; }
 const ReactionData::Tmap &ReactionData::Atoms2Add(bool forward) const { return (forward) ? _prodid_a : _reagid_a; }
 
@@ -633,7 +633,7 @@ void from_json(const json &j, ReactionData &a) {
     for (auto &m : Faunus::molecules)
         for (auto &a : Faunus::atoms)
             if (m.name == a.name)
-                throw std::runtime_error("Molecules and atoms nust have different names");
+                throw std::runtime_error("Molecules and atoms must have different names");
 
     for (auto it = j.begin(); it != j.end(); ++it) {
         a.name = it.key();

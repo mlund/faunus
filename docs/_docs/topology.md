@@ -99,6 +99,8 @@ Properties of molecules and their default values:
 `atoms=[]`              | Array of atom names; required if `atomic=true`
 `bondlist`              | List of _internal_ bonds (harmonic, dihedrals etc.)
 `compressible=false`    | If true, molecular internal coordinates are scaled upon volume moves
+`excluded_neighbours=0` | Generate an `exclusionlist` from the bonded interaction: Add all atom pairs which are `excluded_neighbours` or less bonds apart
+`exclusionlist`         | List of _internal_ atom pairs which nonbonded interactions are excluded
 `implicit=false`        | If this species is implicit in GCMC schemes
 `insdir=[1,1,1]`        | Insert directions are scaled by this
 `insoffset=[0,0,0]`     | Shifts mass center after insertion
@@ -121,6 +123,17 @@ moleculelist:
       bondlist:
         - harmonic: {index: [0,1], k: 100, req: 1.5}
         - ...
+  - carbon_dioxide:
+      structure:
+        - O: [-1.162,0,0]
+        - C: [0,0,0]
+        - O: [1.162,0,0]
+      bondlist:
+        - harmonic: {index: [1,0], k: 8443, req: 1.162}
+        - harmonic: {index: [1,2], k: 8443, req: 1.162}
+        - harmonic_torsion: {index: [0,1,2], k: 451.9, aeq: 180}
+      excluded_neighbours: 2 # generates an exclusionlist as shown below
+      exclusionlist: [ [0,1], [1,2], [0,2] ] # redundant in this topology
   - ...
 ~~~
 
@@ -142,6 +155,21 @@ When giving structures using the `structure` keyword, the following policies app
   Use `keepcharges=False` to override.
 - A warning is issued if radii/charges differ in files and `atomlist`.
 - Box dimensions in files are ignored.
+
+### Nonbonded Interaction Exclusion
+
+Some nonbonded interactions between atoms within a molecule may be excluded in the topology.
+Force fields almost always exclude nonbonded interactions between directly bonded atoms. However
+other nonbonded interactions may be excluded as well; refer to your force field parametrization.
+If a molecule contains overlapping hard spheres, e.g., if the bond length is shorter than
+the spheresʼ diameter, it is necessary to exclude corresponding nonbonded interactions to avoid
+infinite energies.
+
+The excluded nonbonded interactions can be given as an explicit list of atom pairs `excludelist`,
+or they can be deduced from the moleculeʼs topology using the `excluded_neighbours=n` option:
+If the atoms are `n` or less bonds apart from each other in the molecule, the nonbonded interactions
+between them are excluded. Both options `excluded_neighbours` and `exclusionlist` can be used together
+making a union.
 
 ## Initial Configuration
 

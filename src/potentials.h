@@ -637,8 +637,6 @@ class FunctorPotential : public PairPotentialBase {
     json _j; // storage for input json
     typedef CombinedPairPotential<Coulomb, HardSphere> PrimitiveModel;
     typedef CombinedPairPotential<Coulomb, WeeksChandlerAndersen> PrimitiveModelWCA;
-
-    std::vector<std::function<double(const Particle &)>> self_energy_vector;
     bool have_monopole_self_energy = false;
     bool have_dipole_self_energy = false;
     void registerSelfEnergy(PairPotentialBase *); //!< helper func to add to selv_energy_vector

@@ -253,7 +253,7 @@ TEST_CASE("[Faunus] FunctorPotential") {
     json j = R"({ "atomlist" : [
                  {"A": { "q":1.0,  "r":1.1, "eps":0.1 }},
                  {"B": { "q":-1.0, "r":2.0, "eps":0.05 }},
-                 {"C": { "r":1.0 }} ]})"_json;
+                 {"C": { "r":1.0, "mu":[2,0,0] }} ]})"_json;
 
     atoms = j["atomlist"].get<decltype(atoms)>();
 
@@ -288,12 +288,21 @@ TEST_CASE("[Faunus] FunctorPotential") {
     SUBCASE("selfEnergy()") {
         // let's check that the self energy gets properly transferred to the functor potential
         json j = R"(
-                {"default": [{ "coulomb" : {"epsr": 80.0, "type": "fanourgakis", "cutoff":20} }]})"_json;
+                {"default": [{ "coulomb" : {"epsr": 80.0, "type": "qpotential", "cutoff":20, "order":4} }]})"_json;
 
         FunctorPotential functor = j;
-        NewCoulombGalore galore = j["default"][0];
 
-        // CHECK(functor.selfEnergy(a) == Approx(galore.selfEnergy(a)));
+        NewCoulombGalore galore = j["default"][0];
+        CHECK(functor.selfEnergy(a) == Approx(galore.selfEnergy(a)));
+
+        // now test w. dipolar particles
+        j = R"(
+                {"default": [{ "multipole" : {"epsr": 80.0, "type": "qpotential", "cutoff":20, "order":4} }]})"_json;
+
+        functor = j;
+        Multipole multipole = j["default"][0];
+        CHECK(functor.selfEnergy(a) == Approx(multipole.selfEnergy(a)));
+        CHECK(functor.selfEnergy(c) == Approx(multipole.selfEnergy(c)));
     }
 }
 

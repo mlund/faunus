@@ -173,6 +173,9 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
     // selfEnergies should be handled by the real-space pair-potential
     // todo: this should not be used, but replaced by selfEnergy in PairPotential
     double selfEnergy(const EwaldData &d, Change &change) {
+#ifndef NDEBUG
+        // std::cerr << "we should ideally not arrive here!\n";
+#endif
         double Eq = 0;
         if (change.dN) {
             for (auto cg : change.groups) {
@@ -298,7 +301,8 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
                 }
             }
             // todo: omit selfEnergy() call as this should be added as a separate term in `Hamiltonian`
-            u = policy.surfaceEnergy(data, change) + policy.reciprocalEnergy(data) + policy.selfEnergy(data, change);
+            u = policy.surfaceEnergy(data, change) +
+                policy.reciprocalEnergy(data); // + policy.selfEnergy(data, change);
         }
         return u;
     }

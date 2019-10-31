@@ -198,14 +198,14 @@ add_test(
     NAME swapconf
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} swapconf.yml\
     | $<TARGET_FILE:faunus> --nobar --state swapconf.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} swapconf.out.json out.json --tol 0.05"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} swapconf.out.json out.json --tol 0.05"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/swapconf)
 
 add_test(
     NAME doublelayer
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} doublelayer.yml\
     | $<TARGET_FILE:faunus> --nobar --state doublelayer.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} doublelayer.out.json out.json --tol 0.05"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} doublelayer.out.json out.json --tol 0.05"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/doublelayer)
 
 add_test(
@@ -219,49 +219,49 @@ add_test(
     NAME minimal
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} minimal.yml\
     | $<TARGET_FILE:faunus> --nobar --state minimal.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} minimal.out.json out.json --tol 0.02"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} minimal.out.json out.json --tol 0.02"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/minimal)
 
 add_test(
     NAME chain
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} chain.yml\
     | $<TARGET_FILE:faunus> --nobar --state chain.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} chain.out.json out.json --tol 0.05"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} chain.out.json out.json --tol 0.05"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/chain)
 
 add_test(
     NAME polymers
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} polymers.yml\
     | $<TARGET_FILE:faunus> --nobar --state polymers.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} polymers.out.json out.json --tol 0.05"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} polymers.out.json out.json --tol 0.05"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/polymers)
 
 add_test(
     NAME speciation
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} speciation.yml\
     | $<TARGET_FILE:faunus> --quiet --state speciation.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} speciation.out.json out.json --tol 0.02"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} speciation.out.json out.json --tol 0.02"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/speciation)
 
 add_test(
     NAME phosphate
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} phosphate.yml\
     | $<TARGET_FILE:faunus> --quiet --state phosphate.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} phosphate.out.json out.json --tol 0.02"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} phosphate.out.json out.json --tol 0.02"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/phosphate)
 
 add_test(
     NAME sodiumphosphate
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} sodiumphosphate.yml\
     | $<TARGET_FILE:faunus> --quiet --state sodiumphosphate.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} sodiumphosphate.out.json out.json --tol 0.05"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} sodiumphosphate.out.json out.json --tol 0.05"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/sodiumphosphate)
 
 add_test(
     NAME cluster
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} cluster.yml\
     | $<TARGET_FILE:faunus> --quiet --state cluster.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} cluster.out.json out.json --tol 0.1"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} cluster.out.json out.json --tol 0.1"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/cluster)
 
 add_test(
@@ -280,14 +280,14 @@ add_test(
     NAME stockmayer
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} stockmayer.yml\
     | $<TARGET_FILE:faunus> --quiet --state stockmayer.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} stockmayer.out.json out.json --tol 0.065"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} stockmayer.out.json out.json --tol 0.065"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/stockmayer)
 
 add_test(
     NAME membrane
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} membrane.yml\
     | $<TARGET_FILE:faunus> --quiet --state membrane.state.json\
-    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} membrane.out.json out.json --tol 0.065"
+    && ${PYTHON_EXECUTABLE} ${JSON_COMPARE} membrane.out.json out.json --tol 0.065"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/membrane)
 
 # INSTALL TARGETS

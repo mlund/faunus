@@ -26,7 +26,7 @@ returncode = 0
 def equals(a, b):
     if fabs(a-b)<args.small:
         return True
-    return fabs(a-b)/a < args.tol
+    return fabs(a-b)/fabs(a) < args.tol
 
 def isnumber(key, val):
     ''' filter to compare only ints and floats '''
@@ -67,4 +67,3 @@ if (len(d)==2):
     sys.exit(returncode)
 
 sys.exit(1)
-

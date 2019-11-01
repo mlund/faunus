@@ -503,45 +503,54 @@ Point trigoCom(const Tspace &spc, const GroupIndex &groups, const std::vector<in
 }
 
 /**
- * @brief Calculates the gyration tensor of a molecular group
- * The gyration tensor is computed from the atomic position
- * vectors with respect to a reference point, \f$ t_{i} = r_{i} - shift \f$:
- * \f$ S = (1 / N) \sum_{i=1}^{N} t_{i} t_{i}^{T} \f$
+ * @brief Calculates a gyration tensor of a molecular group
+ *
+ * The gyration tensor is computed from the atomic position vectors with respect to the reference point
+ * which is always a center of mass,
+ * \f$ t_{i} = r_{i} - r_\mathrm{cm} \f$:
+ * \f$ S = (1 / \sum_{i=1}^{N} m_{i}) \sum_{i=1}^{N} m_{i} t_{i} t_{i}^{T} \f$
+ *
+ * @param origin center of mass of the molecular group
+ * @return gyration tensor (a zero tensor for an empty group)
  */
 template <typename iter>
-Tensor gyration(iter begin, iter end, BoundaryFunction boundary = [](const Point &) {},
-    const Point shift = Point(0, 0, 0)) {
-    Tensor S;
-    size_t n = std::distance(begin, end);
-    if (n > 0) {
-        for (auto it = begin; it != end; ++it) {
-            Point t = it->pos - shift;
-            boundary(t);
-            S += t * t.transpose();
-        }
-        return S * (1.0 / n);
+Tensor gyration(iter begin, iter end, const Point origin = {0,0,0},
+        const BoundaryFunction boundary = [](const Point &) {}) {
+    Tensor S = Tensor::Zero();
+    double mw_sum = 0;
+    for (auto it = begin; it != end; ++it) {
+        const auto mw = atoms.at(it->id).mw;
+        Point t = it->pos - origin;
+        boundary(t);
+        mw_sum += mw;
+        S += mw * t * t.transpose();
+    }
+    if (mw_sum != 0) {
+        S /= mw_sum;
+    } else {
+        assert(S == Tensor::Zero()); // otherwise we have negative atom weights
     }
     return S;
 }
 
 /**
- * @brief Calculates the inertia tensor of a molecular group
- * The gyration tensor is computed from the atomic position
- * vectors with respect to a reference point, \f$ t_{i} = r_{i} - shift \f$:
+ * @brief Calculates an inertia tensor of a molecular group
+ *
+ * The inertia tensor is computed from the atomic position vectors with respect to a reference point,
+ * \f$ t_{i} = r_{i} - r_\mathrm{origin} \f$:
  * \f$ S = \sum_{i=1}^{N} m_{i} ( t_{i} \cdot t_{i} I  - t_{i} t_{i}^{T} ) \f$
+ *
+ * @param origin a reference point
+ * @return inertia tensor (a zero tensor for an empty group)
  */
 template <typename iter>
-Tensor inertia(iter begin, iter end, BoundaryFunction boundary = [](const Point &) {},
-    const Point shift = Point(0, 0, 0)) {
-    Tensor I;
-    size_t n = std::distance(begin, end);
-    if (n > 0) {
-        for (auto it = begin; it != end; ++it) {
-            Point t = it->pos - shift;
-            boundary(t);
-            I += atoms.at(it->id).mw * (t.squaredNorm() * Eigen::Matrix<double, 3, 3>::Identity() - t * t.transpose());
-        }
-        return I;
+Tensor inertia(iter begin, iter end, const Point origin = {0,0,0},
+        const BoundaryFunction boundary = [](const Point &) {}) {
+    Tensor I = Tensor::Zero();
+    for (auto it = begin; it != end; ++it) {
+        Point t = it->pos - origin;
+        boundary(t);
+        I += atoms.at(it->id).mw * (t.squaredNorm() * Tensor::Identity() - t * t.transpose());
     }
     return I;
 }

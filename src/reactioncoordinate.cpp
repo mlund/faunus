@@ -195,9 +195,8 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
     else if (property == "Rg")
         f = [&spc, i = index]() {
             assert(spc.groups[i].size() > 1);
-            auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.getBoundaryFunc(), spc.groups[i].cm);
-            Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
-            return std::sqrt(esf.eigenvalues().sum());
+            auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.groups[i].cm, spc.geo.getBoundaryFunc());
+            return std::sqrt(S.trace()); // S.trace() == S.eigenvalues().sum() but faster
         };
 
     else if (property == "muangle") {
@@ -328,7 +327,7 @@ MoleculeProperty::MoleculeProperty(const json &j, Space &spc) : ReactionCoordina
         if (not spc.groups.at(index).atomic) {
             f = [&spc, &dir = dir, i = index]() {
                 auto &cm = spc.groups[i].cm;
-                auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), spc.geo.getBoundaryFunc(), cm);
+                auto S = Geometry::gyration(spc.groups[i].begin(), spc.groups[i].end(), cm, spc.geo.getBoundaryFunc());
                 Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(S);
                 Point eivals = esf.eigenvalues();
                 std::ptrdiff_t i_eival;

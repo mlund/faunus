@@ -76,6 +76,7 @@ set(tsts
     ${CMAKE_SOURCE_DIR}/src/core_test.h
     ${CMAKE_SOURCE_DIR}/src/energy_test.h
     ${CMAKE_SOURCE_DIR}/src/geometry_test.h
+    ${CMAKE_SOURCE_DIR}/src/externalpotential_test.h
     ${CMAKE_SOURCE_DIR}/src/group_test.h
     ${CMAKE_SOURCE_DIR}/src/molecule_test.h
     ${CMAKE_SOURCE_DIR}/src/potentials_test.h

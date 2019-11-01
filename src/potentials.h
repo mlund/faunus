@@ -164,7 +164,7 @@ class MixerPairPotentialBase : public PairPotentialBase {
 template <class T1, class T2> struct CombinedPairPotential : public PairPotentialBase {
     T1 first;  //!< First pair potential of type T1
     T2 second; //!< Second pair potential of type T2
-    CombinedPairPotential(const std::string &name = "") : PairPotentialBase(name) {};
+    CombinedPairPotential(const std::string &name = "") : PairPotentialBase(name){};
     inline double operator()(const Particle &a, const Particle &b, const Point &r) const override {
         return first(a, b, r) + second(a, b, r);
     } //!< Combine pair energy
@@ -174,8 +174,8 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
     } //!< Combine force
 
     void from_json(const json &j) override {
-        first = j;
-        second = j;
+        Faunus::Potential::from_json(j, first);
+        Faunus::Potential::from_json(j, second);
         // combine self-energies
         if (first.selfEnergy or second.selfEnergy) {
             selfEnergy = [u1 = first.selfEnergy, u2 = second.selfEnergy](const Particle &p) {
@@ -188,7 +188,6 @@ template <class T1, class T2> struct CombinedPairPotential : public PairPotentia
         } else
             selfEnergy = nullptr;
     }
-
     void to_json(json &j) const override { j = {first, second}; }
 };
 

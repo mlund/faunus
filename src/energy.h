@@ -592,7 +592,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
 
     Nonbonded(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : spc(spc), pot(pot) {
         name = "nonbonded";
-        pairpot = j;
+        pairpot.from_json(j);
 
         // some pair-potentials give rise to self-energies (Wolf etc.)
         // which are added here if needed

@@ -23,6 +23,7 @@
 #include "potentials_test.h"
 #include "space_test.h"
 #include "tensor_test.h"
+#include "externalpotential_test.h"
 
 #include "mpicontroller.h"
 #include "auxiliary.h"

@@ -59,7 +59,7 @@ class TestCoulomb(unittest.TestCase):
     # this doesn't test anything yet
     def test_pairpot(self):
         d = { 'default' : [
-            { 'coulomb': { 'epsr': 80, 'type': 'qpotential', 'cutoff': 100 } }
+            { 'coulomb': { 'epsr': 80, 'type': 'qpotential', 'cutoff': 100, 'order': 5 } }
             ] }
         pot = FunctorPotential( d )
         r = np.linspace(1,10,5)

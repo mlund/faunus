@@ -268,7 +268,8 @@ add_test(
 add_test(
     NAME bulk
     COMMAND sh -c "${PYTHON_EXECUTABLE} ${YASON} bulk.yml\
-    | $<TARGET_FILE:faunus> --quiet"
+    | $<TARGET_FILE:faunus> --quiet --state bulk.state.json\
+    ; ${PYTHON_EXECUTABLE} ${JSON_COMPARE} bulk.out.json out.json --tol 0.05"
     WORKING_DIRECTORY ${EXAMPLES_DIR}/bulk)
 
 add_test(

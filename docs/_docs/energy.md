@@ -159,7 +159,7 @@ coulomb types                            | Keywords          | $\mathcal{S}(q)$
 [`reactionfield`](http://doi.org/dbs99w) | `epsrf`           | $1+\frac{\epsilon_{RF}-\epsilon_r}{2\epsilon_{RF}+\epsilon_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_r}q$
 [`poisson`](http://doi.org/10/c5fr)      | `C=3`, `D=3`      | $(1-\tilde{q})^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}\tilde{q}^c$
 [`fanourgakis`](http://doi.org/f639q5)   |                   | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
-[`qpotential`](https://arxiv.org/abs/1904.10335) | `order=5` | $\prod_{n=1}^{\text{order}}(1-q^n)$
+[`qpotential`](https://arxiv.org/abs/1904.10335) | `order`   | $\prod_{n=1}^{\text{order}}(1-q^n)$
 [`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
 
 **Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed. Also, for the Poisson potential

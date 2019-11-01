@@ -583,11 +583,14 @@ void NewCoulombGalore::from_json(const json &j) {
     double epsr = j.at("epsr");
     lB = pc::lB(epsr); // Bjerrum length
     std::string type = j.at("type");
-    if (type == "yukawa")
+    if (type == "yukawa") {
         faunus_logger->error("'yukawa' is deprecated, use 'plain' with 'debyelength'");
-    if (type == "plain")
+    }
+    if (type == "plain") {
+        if (j.count("cutoff") > 0)
+            faunus_logger->warn("Given cutoff for {} is ignored and always infinity", type);
         pot.spline<::CoulombGalore::Plain>(j);
-    else if (type == "qpotential")
+    } else if (type == "qpotential")
         pot.spline<::CoulombGalore::qPotential>(j);
     else if (type == "wolf")
         pot.spline<Wolf>(j);

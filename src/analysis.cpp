@@ -350,7 +350,7 @@ void CombinedAnalysis::sample() {
 }
 
 CombinedAnalysis::~CombinedAnalysis() {
-    // this is really a hack; the constructor should not be in charge of this
+    // this is really a hack; the destructor should not be in charge of this
     for (auto &ptr : this->vec)
         ptr->to_disk();
 }
@@ -914,7 +914,7 @@ void AtomInertia::_to_json(json &j) const {
 Point AtomInertia::compute() {
     auto slice = spc.findAtoms(index);
     auto cm = Geometry::massCenter(slice.begin(), slice.end(), spc.geo.getBoundaryFunc());
-    auto I = Geometry::inertia(slice.begin(), slice.end(), spc.geo.getBoundaryFunc(), cm);
+    auto I = Geometry::inertia(slice.begin(), slice.end(), cm, spc.geo.getBoundaryFunc());
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
     return esf.eigenvalues();
 }
@@ -939,7 +939,7 @@ void InertiaTensor::_to_json(json &j) const {
 InertiaTensor::Data InertiaTensor::compute() {
     Space::Tgroup g(spc.groups[index].begin()+indexes[0], spc.groups[index].begin()+indexes[1]+1);
     InertiaTensor::Data d;
-    auto I = Geometry::inertia(g.begin(), g.end(), spc.geo.getBoundaryFunc(), spc.groups[index].cm);
+    auto I = Geometry::inertia(g.begin(), g.end(), spc.groups[index].cm, spc.geo.getBoundaryFunc());
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> esf(I);
     d.eivals = esf.eigenvalues();
     std::ptrdiff_t i_eival;

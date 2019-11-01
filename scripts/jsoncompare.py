@@ -67,4 +67,3 @@ if (len(d)==2):
     sys.exit(returncode)
 
 sys.exit(1)
-

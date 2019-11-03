@@ -20,7 +20,6 @@
         },
         {
             "systemenergy": {
-                "Cv/kB": 2003.0,
                 "file": "energy.dat",
                 "final": [
                     -24999.880050022806,

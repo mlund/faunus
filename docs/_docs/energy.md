@@ -140,7 +140,7 @@ composition. Currently, parallelisation is disabled by default.
  `cutoff`              |  Spherical cutoff, $R_c$ (Å) after which the potential is zero
  `epsr`                |  Relative dielectric constant of the medium
  `utol=1e-5`           |  Error tolerence for splining
- `debyelength=`$\infty$|  Debye length (Å) if using `plain` or `poisson`
+ `debyelength=`$\infty$|  Debye length (Å) if using `ewald`, `poisson`, `yukawa`
 
 This is a multipurpose potential that handles several electrostatic methods.
 Beyond a spherical real-space cutoff, $R_c$, the potential is zero while if
@@ -161,6 +161,7 @@ coulomb types                            | Keywords          | $\mathcal{S}(q)$
 [`fanourgakis`](http://doi.org/f639q5)   |                   | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
 [`qpotential`](https://arxiv.org/abs/1904.10335) | `order`   | $\prod_{n=1}^{\text{order}}(1-q^n)$
 [`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
+`yukawa`                                 | `debyelength`     | Same as `poisson` with `C=1` and `D=1`
 
 **Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed. Also, for the Poisson potential
 
@@ -168,7 +169,30 @@ $$
 \tilde{q} = \frac{1-\exp\left(2\kappa R_c q\right)}{1-\exp\left(2\kappa R_c\right)}
 $$
 
-which as $\kappa\to 0$ gives $\tilde{q}=q$.
+which as the inverse Debye length, $\kappa\to 0$ gives $\tilde{q}=q$.
+The `poisson` scheme can generate a number of other truncated pair-potentials found in the litterature, depending on `C` and `D`
+Thus, for an infinite Debye length:
+
+`C` | `D` | Reference / Comment
+--- | --- | ----------------------
+ 1  | -1  | Plain Coulomb
+ 1  |  0  | [Undamped Wolf](http://doi.org/10.1063/1.478738)
+ 1  |  1  | [Levitt](http://doi.org/10/fp959p) / [Undamped Fenell](http://doi.org/10/bqgmv2)
+ 1  |  2  | [Kale](http://doi.org/10/csh8bg)
+ 1  |  3  | [McCann](http://doi.org/10.1021/ct300961)
+ 2  |  1  | [Undamped(Fukuda](http://doi.org/10.1063/1.3582791)
+ 2  |  2  | [Markland](http://doi.org/10.1016/j.cplett.2008.09.019)
+ 3  |  3  | [Stenqvist](http://doi.org/10/c5fr)
+ 4  |  3  | [Fanourgakis](http://doi.org/10.1063/1.3216520)
+
+
+
+### Debye Screening Length
+
+A background screening due to implicit ions can be added by specifying the keyword `debyelength` to the schemes
+`ewald`, `poisson`, and `yukawa`. The latter is merely an alias for `poisson` with `C=1`, and `D=-1` which
+gives a plain and shifted Coulomb potential with exponential screening.
+
 
 ### Multipoles
 
@@ -187,6 +211,7 @@ where $\hat{\bf r} = {\bf r}/|{\bf r}|$, and the dipole-dipole interaction by
 $$
 \tilde{u}^{\mu\mu}_{ij}({\bf r}) = -\left(\frac{3 ( \boldsymbol{\mu}_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
 $$
+
 
 ### Self-energies
 

@@ -584,22 +584,28 @@ void NewCoulombGalore::from_json(const json &j) {
     lB = pc::lB(epsr); // Bjerrum length
     std::string type = j.at("type");
     if (type == "yukawa") {
-        faunus_logger->error("'yukawa' is deprecated, use 'plain' with 'debyelength'");
-    }
-    if (type == "plain") {
+        faunus_logger->debug("'yukawa' is using the 'poisson' scheme with C=1 and D=-1");
+        json _j = j;
+        _j["C"] = -1;
+        _j["D"] = 1;
+        _j["type"] = "poisson";
+        pot.spline<::CoulombGalore::Poisson>(_j);
+    } else if (type == "plain") {
         if (j.count("cutoff") > 0)
             faunus_logger->warn("Given cutoff for {} is ignored and always infinity", type);
         pot.spline<::CoulombGalore::Plain>(j);
     } else if (type == "qpotential")
         pot.spline<::CoulombGalore::qPotential>(j);
     else if (type == "wolf")
-        pot.spline<Wolf>(j);
+        pot.spline<::CoulombGalore::Wolf>(j);
     else if (type == "poisson")
-        pot.spline<Poisson>(j);
+        pot.spline<::CoulombGalore::Poisson>(j);
     else if (type == "fanourgakis")
-        pot.spline<Fanourgakis>(j);
+        pot.spline<::CoulombGalore::Fanourgakis>(j);
     else if (type == "ewald")
-        pot.spline<Ewald>(j);
+        pot.spline<::CoulombGalore::Ewald>(j);
+    else if (type == "reactionfield")
+        pot.spline<::CoulombGalore::ReactionField>(j);
     else
         throw std::runtime_error("unknown coulomb scheme");
 }

@@ -768,20 +768,20 @@ void AtomDipDipCorr::_sample() {
                 Point rvec = spc.geo.vdist(i->pos, j->pos);
                 if (slicedir.sum() > 0) {
                     if (rvec.cwiseProduct(slicedir.cast<double>()).norm() < thickness) {
-                        //if(i->getExt().mu && j->getExt().mu) {
+                        if(i->hasExtension() && j->hasExtension()) {
                             double dipdip = i->getExt().mu.dot(j->getExt().mu);
                             double r1 = rvec.norm();
                             hist2(r1) += dipdip;
                             hist(r1)++; // get g(r) for free
-                        //}
+                        }
                     }
                 } else {
-                    //if(i->getExt().mu && j->getExt().mu) {
+                    if(i->hasExtension() && j->hasExtension()) {
                         double dipdip = i->getExt().mu.dot(j->getExt().mu);
                         double r1 = rvec.norm();
                         hist2(r1) += dipdip;
                         hist(r1)++; // get g(r) for free
-                    //}
+                    }
                 }
             }
         }

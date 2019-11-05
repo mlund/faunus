@@ -254,7 +254,8 @@ PairAngleFunctionBase::~PairAngleFunctionBase() {
         };
         f << hist2;
     }
-    file = file+".gr"; // name file where free g(r) is saved, and make sure that the file is not overwritten by base-destructor
+    file = file + "gofr.dat"; // name file where free g(r) is saved, and make sure that the file is not overwritten by
+                              // base-destructor
 }
 
 void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0); }
@@ -978,6 +979,8 @@ void MultipoleMoments::_to_json(json &j) const {
 MultipoleMoments::Data MultipoleMoments::compute() {
     Space::Tgroup g(spc.groups[index].begin()+indexes[0], spc.groups[index].begin()+indexes[1]+1);
     auto cm = spc.groups[index].cm;
+    if (not mol_cm)
+        cm = Geometry::massCenter(g.begin(), g.end(), spc.geo.getBoundaryFunc());
     MultipoleMoments::Data d;
     Tensor S; // quadrupole tensor
     S.setZero();
@@ -994,12 +997,13 @@ MultipoleMoments::Data MultipoleMoments::compute() {
     std::ptrdiff_t i_eival;
     d.eivals.minCoeff(&i_eival);
     d.eivec = esf.eigenvectors().col(i_eival).real(); // eigenvector corresponding to the smallest eigenvalue
+    d.center = cm;
     return d;
 }
 void MultipoleMoments::_sample() {
     MultipoleMoments::Data d = compute();
     if (file) 
-        file << cnt * steps << " " << d.q << " " << d.mu.transpose() << " " 
+        file << cnt * steps << " " << d.q << " " << d.mu.transpose() << " " << d.center.transpose() << " "
              << d.eivals.transpose() << " " << d.eivec.transpose() << "\n";
 }
 MultipoleMoments::MultipoleMoments(const json &j, Space &spc) : spc(spc) {
@@ -1009,6 +1013,7 @@ MultipoleMoments::MultipoleMoments(const json &j, Space &spc) : spc(spc) {
     file.open(filename); // output file
     index = j.at("index").get<size_t>(); // group index
     indexes = j.value("indexes", std::vector<size_t>({0, spc.groups[index].size()-1})); // whole molecule by default
+    mol_cm = j.value("mol_cm", true); // use the mass center of the whole molecule
 }
 
 // =============== PolymerShape ===============

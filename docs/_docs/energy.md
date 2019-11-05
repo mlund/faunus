@@ -873,9 +873,9 @@ $\bf{r}$ is the position vector
 - `L/R` can be used to calculate the bending modulus of a cylindrical lipid vesicle
 - `Rg` is calculated as the square-root of the sum of the eigenvalues of the gyration tensor, $S$. 
 $$
-S = \frac{1}{N} \sum_{i=1}^{N} \bf{t_i} \bf{t_i^T}
+S = \frac{1}{\sum_{i=1}^{N} m_{i}} \sum_{i=1}^{N} m_{i} \bf{t_i} \bf{t_i^T}
 $$
-where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th atom, $\bf{cm}$ is the
+where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th atom, $m_i$ is the mass of the $i$th atom, $\bf{cm}$ is the
 mass center of the group and $N$ is the number of atoms in the molecule.
 
 #### System Properties

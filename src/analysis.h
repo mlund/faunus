@@ -448,11 +448,12 @@ class MultipoleMoments : public Analysisbase {
     std::string filename;
     std::vector<size_t> indexes; // range of indexes within the group
     size_t index; // group index
+    bool mol_cm;
     std::ofstream file;
     struct Data {
         int q = 0; // total charge
         Point mu {0,0,0}; // dipole vector
-        Point eivals, eivec; // quadrupole eigenvalues and major axis
+        Point eivals, eivec, center; // quadrupole eigenvalues and major axis
     };
 
     Data compute();

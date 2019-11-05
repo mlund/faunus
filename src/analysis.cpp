@@ -254,7 +254,8 @@ PairAngleFunctionBase::~PairAngleFunctionBase() {
         };
         f << hist2;
     }
-    file = file+".gr"; // name file where free g(r) is saved, and make sure that the file is not overwritten by base-destructor
+    file = file + "gofr.dat"; // name file where free g(r) is saved, and make sure that the file is not overwritten by
+                              // base-destructor
 }
 
 void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0); }

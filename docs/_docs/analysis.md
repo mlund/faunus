@@ -131,18 +131,20 @@ Same as `atomrdf` but for molecular mass-centers.
 `dim=3`        |  Dimensions for volume element
 `nstep=0`      |  Interval between samples.
 
-### Dipole-dipole correlations $\langle \pmb{\hat{\mu}}(0)\cdot \pmb{\hat{\mu}}(r) \rangle$
+### Dipole-dipole Correlation
 
-Sample the angular correlation between atoms. Gets $g(r)$ for free and saves it in `file`.gr.
+Sample the dipole-dipole angular correlation, $\langle \pmb{\hat{\mu}}(0)\cdot \pmb{\hat{\mu}}(r) \rangle$, between dipolar atoms
+and as a function of separation, _r_. In addition, the radial distribution function, $g(r)$ is sampled and saved to `{file}.gofr.dat`.
 
 `atomdipdipcorr` |  Description
 ---------------- | ------------------------------
-`file`           |  Output file, two column
+`file`           |  Output filename
 `name1`          |  Atom name 1
 `name2`          |  Atom name 2
 `dr=0.1`         |  Angular correlation resolution
-`dim=3`          |  Dimensions for volume element (only needed for the free $g(r)$)
+`dim=3`          |  Dimensions for volume element (affects only $g(r)$)
 `nstep=0`        |  Interval between samples.
+
 
 ### Structure Factor
 

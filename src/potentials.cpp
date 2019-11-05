@@ -602,6 +602,12 @@ void NewCoulombGalore::from_json(const json &j) {
         pot.spline<::CoulombGalore::Poisson>(j);
     else if (type == "fanourgakis")
         pot.spline<::CoulombGalore::Fanourgakis>(j);
+    else if (type == "zahn")
+        pot.spline<::CoulombGalore::Zahn>(j);
+    else if (type == "fennell")
+        pot.spline<::CoulombGalore::Fennell>(j);
+    else if (type == "zerodipole")
+        pot.spline<::CoulombGalore::ZeroDipole>(j);
     else if (type == "ewald")
         pot.spline<::CoulombGalore::Ewald>(j);
     else if (type == "reactionfield")

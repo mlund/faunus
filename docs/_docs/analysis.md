@@ -191,7 +191,7 @@ where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th
 position of the mass center of the whole group of atoms, $m_i$ is the molecular weight of the $i$th particle,
 $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 
-`gyration`       | Description
+`atominertia`    | Description
 ---------------- | ----------------------------------------
 `nstep`          | Interval with which to sample
 `indexes`        | Array defining a range of indexes within the molecule 
@@ -236,11 +236,12 @@ position of the mass center of the whole group of atoms, $q_i$ is the charge of 
 $\bf{I}$ is the identity matrix and $N$ is the number of atoms.
 
 
-`gyration`       | Description
----------------- | ----------------------------------------
-`nstep`          | Interval with which to sample
-`indexes`        | Array defining a range of indexes within the molecule 
-`index`          | Index of the molecular group
+`multipolemoments`  | Description
+------------------- | -------------------------------------
+`nstep`             | Interval with which to sample
+`indexes`           | Array defining a range of indexes within the molecule 
+`index`             | Index of the molecular group
+`mol_cm=true`       | Moments w.r.t. the mass center of the whole molecule (instead of the subgroup)
 
 ### Electric Multipole Distribution
 

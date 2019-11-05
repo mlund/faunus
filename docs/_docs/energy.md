@@ -150,26 +150,29 @@ $$
 \tilde{u}^{(zz)}_{ij}({\bf r}) = \frac{e^2 z_i z_j }{ 4\pi\epsilon_0\epsilon_r |{\bf r}| }\mathcal{S}(q)
 $$
 
-where ${\bf r} = {\bf r}_j - {\bf r}_i$, and $\mathcal{S}(q=|{\bf r}|/R_c)$ is a short-range function:
+where ${\bf r} = {\bf r}_j - {\bf r}_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|{\bf r}|/R_c)$ is used to trucate the interactions. The available short-range functions are:
 
 coulomb types                            | Keywords          | $\mathcal{S}(q)$
 ---------------------------------------- | ----------------- | ---------------------------------------------------
 [`plain`](http://doi.org/ctnnsj)         |                   | 1
 [`ewald`](http://doi.org/dgpdmc)         | `alpha`           | $\frac{1}{2}\text{erfc}\left(\alpha R_c q + \frac{\kappa}{2\alpha}\right)\text{exp}\left(2\kappa R_c q\right) + \frac{1}{2}\text{erfc}\left(\alpha R_c q - \frac{\kappa}{2\alpha}\right)$
 [`reactionfield`](http://doi.org/dbs99w) | `epsrf`           | $1+\frac{\epsilon_{RF}-\epsilon_r}{2\epsilon_{RF}+\epsilon_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_r}q$
-[`poisson`](http://doi.org/10/c5fr)      | `C=3`, `D=3`      | $(1-\tilde{q})^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}\tilde{q}^c$
-[`fanourgakis`](http://doi.org/f639q5)   |                   | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
+[`poisson`](http://doi.org/10/c5fr)      | `C=3`, `D=3`      | $(1-\acute{q})^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}\acute{q}^c$
 [`qpotential`](https://arxiv.org/abs/1904.10335) | `order`   | $\prod_{n=1}^{\text{order}}(1-q^n)$
+[`fanourgakis`](http://doi.org/f639q5)   |                   | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
+[`fennell`](http://doi.org/10/bqgmv2)    | `alpha`           | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
+[`zerodipole`](http://doi.org/10/fhcfn4) | `alpha`           | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+\frac{(q^2-1)}{2}q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
+[`zahn`](http://doi.org/10/cmx5vd)       | `alpha`           | $\text{erfc}(\alpha R_c q)-(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
 [`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
-`yukawa`                                 | `debyelength`     | Same as `poisson` with `C=1` and `D=1`
+`yukawa`                                 | `debyelength`     | Same as `poisson` with `C=1` and `D=-1`
 
-**Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed. Also, for the Poisson potential
+**Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed. The `zahn` and `fennell` approaches have undefined dipolar self-energies and are therefore not recommended for such systems. For the Poisson potential
 
 $$
-\tilde{q} = \frac{1-\exp\left(2\kappa R_c q\right)}{1-\exp\left(2\kappa R_c\right)}
+\acute{q} = \frac{1-\exp\left(2\kappa R_c q\right)}{1-\exp\left(2\kappa R_c\right)}
 $$
 
-which as the inverse Debye length, $\kappa\to 0$ gives $\tilde{q}=q$.
+which as the inverse Debye length, $\kappa\to 0$ gives $\acute{q}=q$.
 The `poisson` scheme can generate a number of other truncated pair-potentials found in the litterature, depending on `C` and `D`
 Thus, for an infinite Debye length:
 
@@ -180,7 +183,7 @@ Thus, for an infinite Debye length:
  1  |  1  | [Levitt](http://doi.org/10/fp959p) / [Undamped Fenell](http://doi.org/10/bqgmv2)
  1  |  2  | [Kale](http://doi.org/10/csh8bg)
  1  |  3  | [McCann](http://doi.org/10.1021/ct300961)
- 2  |  1  | [Undamped(Fukuda](http://doi.org/10.1063/1.3582791)
+ 2  |  1  | [Undamped Fukuda](http://doi.org/10.1063/1.3582791)
  2  |  2  | [Markland](http://doi.org/10.1016/j.cplett.2008.09.019)
  3  |  3  | [Stenqvist](http://doi.org/10/c5fr)
  4  |  3  | [Fanourgakis](http://doi.org/10.1063/1.3216520)
@@ -259,7 +262,11 @@ $$
 
 $$
 A_k = \frac{e^{-( k^2 + \kappa^2 )/4\alpha^2}}{k^2}
-\quad \quad Q^{q\mu} = \sum_{j}q_j + i({\boldsymbol{\mu}}_j\cdot {\bf k})  e^{i({\bf k}\cdot {\bf r}_j)}
+\quad \quad Q^{q\mu} = Q^{q} + Q^{\mu}
+$$
+
+$$
+Q^{q} = \sum_{j}q_je^{i({\bf k}\cdot {\bf r}_j)} \quad Q^{\mu} = \sum_{j}i({\boldsymbol{\mu}}_j\cdot {\bf k})  e^{i({\bf k}\cdot {\bf r}_j)}
 $$
 
 $$

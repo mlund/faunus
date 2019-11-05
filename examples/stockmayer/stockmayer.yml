@@ -29,4 +29,3 @@ analysis:
     - atomdipdipcorr: {file: mumu.dat, nstep: 1, dr: 0.1, name1: dip, name2: dip}
     - savestate: {file: confout.pqr}
     - savestate: {file: state.json}
-

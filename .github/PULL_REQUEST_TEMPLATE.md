@@ -16,8 +16,8 @@ Please edit this text to include a summary of the change and which issue is fixe
 
 - [ ] code naming scheme follows the convention:
 
-  Style      | Elements
-  ---------- | -------------------
-  PascalCase | classes, namespaces
-  camelCase  | functions
-  snake_case | variables
+  Style        | Elements
+  ------------ | ---------------------
+  `PascalCase` | classes, namespaces
+  `camelCase`  | functions
+  `snake_case` | variables

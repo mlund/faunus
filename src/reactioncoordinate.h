@@ -15,7 +15,7 @@ namespace ReactionCoordinate {
  * A reaction coordinate (RC) is an arbitrary, one-dimensional property of
  * the simulated system. This could be the x-position of a specific particle,
  * the system volume, a mass center of something else. RC's are used in
- * the penalty function energy function and can also be used to prope the system
+ * the penalty's energy function and can also be used to probe the system
  * during analysis.
  */
 struct ReactionCoordinateBase {

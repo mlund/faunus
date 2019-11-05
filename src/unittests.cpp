@@ -9,26 +9,33 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "aux/eigensupport.h"
-#include "atomdata_test.h"
+#include "core.h"
+#include "units.h"
 #include "random.h"
+
+#include "atomdata_test.h"
+#include "bonds_test.h"
 #include "core_test.h"
+#include "energy_test.h"
+#include "geometry_test.h"
+#include "group_test.h"
+#include "molecule_test.h"
+#include "potentials_test.h"
+#include "space_test.h"
 #include "tensor_test.h"
+#include "externalpotential_test.h"
+
 #include "mpicontroller.h"
 #include "auxiliary.h"
 #include "molecule.h"
-#include "group_test.h"
-#include "geometry.h"
 #include "regions.h"
-#include "space.h"
 #include "average.h"
-#include "potentials_test.h"
 #include "tabulate.h"
 #include "move.h"
 #include "penalty.h"
 #include "celllist.h"
 #include "functionparser.h"
 #include "multipole.h"
-#include "energy_test.h"
 
 int main(int argc, char** argv) {
     Faunus::faunus_logger = spdlog::basic_logger_mt("faunus", "unittests.log", true);

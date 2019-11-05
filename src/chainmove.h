@@ -1,6 +1,7 @@
 #pragma once
 
 #include "move.h"
+#include "bonds.h"
 
 namespace Faunus {
 namespace Move {
@@ -90,6 +91,7 @@ class CrankshaftMove : public ChainRotationMove {
     void _from_json(const json &j) override;
 
   private:
+    size_t joint_max; //!< maximum number of bonds between the joints of a crankshaft
     /** Randomly selects two atoms as joints in a random chain. The joints then determine the axis of rotation
      *  of the chain segment between the joints.
      *  The member vectors containing atoms' indices of the axis and the segment are populated accordingly.
@@ -110,7 +112,7 @@ class PivotMove : public ChainRotationMove {
     using Tbase = ChainRotationMove;
 
   private:
-    std::vector<std::shared_ptr<Potential::BondData>> bonds;
+    BasePointerVector<Potential::HarmonicBond> bonds;
 
   public:
     explicit PivotMove(Space &spc);

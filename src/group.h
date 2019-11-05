@@ -112,6 +112,7 @@ namespace Faunus {
             int id=-1;           //!< Molecule id
             int confid=0;        //!< Conformation index / id
             Point cm={0,0,0};    //!< Mass center
+            bool compressible=false;   //!< Is it a compressible group?
             bool atomic=false;   //!< Is it an atomic group?
 
             const auto &traits() const { return molecules.at(id); } //!< Convenient access to molecule properties

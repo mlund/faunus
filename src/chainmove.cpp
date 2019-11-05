@@ -100,6 +100,7 @@ bool ChainRotationMove::box_big_enough() {
 }
 void CrankshaftMove::_from_json(const json &j) {
     Tbase::_from_json(j);
+    joint_max = j.value("joint_max", pc::infty); //!< maximum number of bonds between the joints of a crankshaft
     if (this->repeat < 0) {
         // set the number of repetitions to the length of the chain (minus 2) times the number of the chains
         auto moliter = this->spc.findMolecules(this->molid);
@@ -115,7 +116,11 @@ size_t CrankshaftMove::select_segment() {
         auto &molecule = *this->molecule_iter;
         if (molecule.size() > 2) { // must have at least three atoms
             auto joint0 = this->slump.sample(molecule.begin(), molecule.end());
-            auto joint1 = this->slump.sample(molecule.begin(), molecule.end());
+            int distance_begin = std::distance(molecule.begin(), joint0);
+            distance_begin = distance_begin < joint_max ? distance_begin : joint_max;
+            int distance_end = std::distance(joint0, molecule.end());
+            distance_end = distance_end < joint_max ? distance_end : joint_max;
+            auto joint1 = molecule.begin() + this->slump.range(-distance_begin,distance_end);
             if (joint0 != molecule.end() && joint1 != molecule.end()) {
                 auto joint_distance = std::distance(joint0, joint1);
                 if (joint_distance < 0) {
@@ -141,7 +146,7 @@ size_t CrankshaftMove::select_segment() {
 PivotMove::PivotMove(Space &spc) : ChainRotationMove(spc) { this->name = "pivot"; }
 void PivotMove::_from_json(const json &j) {
     Tbase::_from_json(j);
-    bonds = Potential::filterBonds(molecules[this->molid].bonds, Potential::BondData::HARMONIC);
+    bonds = molecules[this->molid].bonds.find<Potential::HarmonicBond>();
 
     if (this->repeat < 0) {
         // set the number of repetitions to the length of the chain (minus 2) times the number of the chains

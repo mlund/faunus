@@ -2,6 +2,7 @@
 
 #include <random>
 #include <vector>
+#include <cassert>
 #include <nlohmann/json_fwd.hpp>
 
 namespace Faunus {

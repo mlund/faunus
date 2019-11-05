@@ -1,0 +1,44 @@
+{
+    "title": "Faunus - A Framework for Molecular Simulation",
+    "description": "Faunus is a modular molecular simulation package for Metropolis Monte Carlo simulations of molecular systems",
+    "creators": [
+        {
+            "name": "Björn Stenqvist",
+            "affiliation": "Division of Physical Chemistry, Department of Chemistry, Lund University, Sweden",
+            "orcid": "0000-0002-9099-0663"
+        },
+        {
+            "name": "Mikael Lund",
+            "affiliation": "Division of Theoretical Chemistry, Department of Chemistry, Lund University, Sweden",
+            "orcid": "0000-0001-8178-8175"
+        }
+    ],
+    "keywords": [
+        "statistical thermodynamics",
+        "electrostatics",
+        "molecular dynamics",
+        "monte carlo simulation",
+        "intermolecular interactions",
+        "multipoles"
+    ],
+    "related_identifiers": [
+        {
+            "scheme": "url",
+            "identifier": "https://github.com/mlund/faunus",
+            "relation": "isSupplementTo"
+        },
+        {
+            "scheme": "doi",
+            "identifier": "10.1080/08927022.2013.828207",
+            "relation": "isSupplementTo"
+        },
+        {
+            "scheme": "doi",
+            "identifier": "10.1186/1751-0473-3-1",
+            "relation": "isSupplementTo"
+        }
+    ],
+    "license": "mit-license",
+    "access_right": "open",
+    "upload_type": "software"
+}

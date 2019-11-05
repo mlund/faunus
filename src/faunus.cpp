@@ -18,6 +18,9 @@
 using namespace std::this_thread;     // sleep_for, sleep_until
 using namespace std::chrono_literals; // ns, us, ms, s, h, etc.
 using std::chrono::system_clock;
+// some forward declarations
+std::pair<std::string, int> findSIDsong();
+std::shared_ptr<CPPSID::Player> createLoadedSIDplayer();
 #endif
 
 using namespace Faunus;
@@ -61,6 +64,8 @@ static const char USAGE[] =
 )";
 
 using ProgressIndicator::ProgressTracker;
+
+// forward declarations
 std::shared_ptr<ProgressTracker> createProgressTracker(bool, unsigned int);
 
 int main(int argc, char **argv) {
@@ -223,53 +228,83 @@ int main(int argc, char **argv) {
 #ifdef ENABLE_SID
         // easter egg...
         if (!quiet && !nofun && mpi.isMaster()) { // -> fun
-            try {
-                // look for json file with hvsc sid tune names
-                std::string pfx;
-                json json_music;
-                for (std::string dir : {FAUNUS_BINARY_DIR, FAUNUS_INSTALL_PREFIX
-                                        "/share/faunus/"}) { // installed and uninstalled cmake builds
-                    json_music = Faunus::openjson(dir + "/sids/music.json", false);
-                    if (!json_music.empty()) {
-                        pfx = dir + "/";
-                        break;
-                    }
-                }
-                if (!json_music.empty()) {
-                    json_music = json_music.at("songs"); // load playlist
 
-                    std::vector<size_t> weight; // weight for each tune (= number of subsongs)
-                    for (auto &i : json_music)
-                        weight.push_back(i.at("subsongs").size());
-                    std::discrete_distribution<size_t> dist(weight.begin(), weight.end());
+            auto player = createLoadedSIDplayer(); // create C64 SID emulation and load a random tune
 
-                    Faunus::random.seed();                                      // give global random a hardware seed
-                    auto it = json_music.begin() + dist(Faunus::random.engine); // pick random tune weighted by subsongs
-                    auto subsongs = (*it).at("subsongs").get<std::vector<int>>();                 // all subsongs
-                    int subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
-
-                    CPPSID::Player player; // let's emulate a Commodore 64...
-
-                    if (player.load(pfx + it->at("file").get<std::string>(), subsong)) {
-                        faunus_logger->info("error message music '{}' by {}, {} (6502/SID emulation)", player.title(),
-                                            player.author(), player.info());
-                        faunus_logger->info("\033[1mpress ctrl-c to quit\033[0m");
-                        player.start();                          // start music
-                        sleep_for(10ns);                         // short delay
-                        sleep_until(system_clock::now() + 240s); // play for 4 minutes, then exit
-                        player.stop();
-                        std::cout << std::endl;
-                    }
-                }
-            } catch (const std::exception &) {
-                // silently ignore if something fails; it's just for fun
+            if (player) {
+                faunus_logger->info("error message music '{}' by {}, {} (6502/SID emulation)", player->title(),
+                                    player->author(), player->info());
+                faunus_logger->info("\033[1mpress ctrl-c to quit\033[0m");
+                player->start();                         // start music
+                sleep_for(10ns);                         // short delay
+                sleep_until(system_clock::now() + 240s); // play for 4 minutes, then exit
+                player->stop();
+                std::cout << std::endl;
             }
-        } // end of fun
+        } // end of easter egg
 #endif
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
 }
+
+#ifdef ENABLE_SID
+/*
+ * finds a random SID music file and picks a random sub-song if available
+ *
+ * will look for `music.json` as well as sid files in the following
+ * directories and order:
+ *
+ * - BINARY_DIR/sids/
+ * - INSTALL_PREFIX/share/faunus/sids
+ */
+std::pair<std::string, int> findSIDsong() {
+    std::string filename;
+    int subsong = -1;
+    try {
+        // look for json file with hvsc sid tune names
+        std::string pfx;
+        json json_music;
+        for (std::string dir :
+             {FAUNUS_BINARY_DIR, FAUNUS_INSTALL_PREFIX "/share/faunus/"}) { // installed and uninstalled cmake builds
+            json_music = Faunus::openjson(dir + "/sids/music.json", false);
+            if (!json_music.empty()) {
+                pfx = dir + "/";
+                break;
+            }
+        }
+        if (not json_music.empty()) {
+            json_music = json_music.at("songs"); // load playlist
+
+            std::vector<size_t> weight; // weight for each tune (= number of subsongs)
+            for (auto &i : json_music)
+                weight.push_back(i.at("subsongs").size());
+            std::discrete_distribution<size_t> dist(weight.begin(), weight.end());
+
+            Faunus::random.seed();                                        // give global random a hardware seed
+            auto it = json_music.begin() + dist(Faunus::random.engine);   // pick random tune weighted by subsongs
+            auto subsongs = (*it).at("subsongs").get<std::vector<int>>(); // all subsongs
+            subsong = *(Faunus::random.sample(subsongs.begin(), subsongs.end())) - 1; // random subsong
+            filename = pfx + it->at("file").get<std::string>();
+        }
+    } catch (const std::exception &) {
+        // silently ignore if something fails; it's just for fun!
+    }
+    return {filename, subsong};
+}
+
+std::shared_ptr<CPPSID::Player> createLoadedSIDplayer() {
+    std::shared_ptr<CPPSID::Player> player;
+    if (isatty(fileno(stdout))) {                        // only play music if on console
+        if (not std::getenv("SSH_CLIENT")) {             // and not through a ssh connection
+            player = std::make_shared<CPPSID::Player>(); // let's emulate a Commodore 64...
+            auto tune = findSIDsong();                   // pick a song from our pre-defined library
+            player->load(tune.first, tune.second);
+        }
+    }
+    return player;
+}
+#endif
 
 std::shared_ptr<ProgressTracker> createProgressTracker(bool show_progress, unsigned int steps) {
     using namespace ProgressIndicator;

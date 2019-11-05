@@ -108,6 +108,8 @@ class AtomProfile : public Analysisbase {
     Eigen::Vector3i dir = {1, 1, 1};
     double dr; // radial resolution
     bool count_charge = false;
+    std::string atom_com;
+    int id_com = -1; // center at COM of id_com atoms?
 
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
@@ -128,8 +130,8 @@ class SlicedDensity : public Analysisbase {
     std::vector<int> ids;
     std::string file;
     double dz;
-    std::string atomCOM;
-    int idCOM = -1; // center at COM of idCOM atoms?
+    std::string atom_com;
+    int id_com = -1; // center at COM of id_com atoms?
 
     void _from_json(const json &j) override;
     void _to_json(json &j) const override;
@@ -330,6 +332,8 @@ class XTCtraj : public Analysisbase {
  * @brief Excess pressure using virtual volume move
  */
 class VirtualVolume : public Analysisbase {
+    std::string file; // output filename
+    std::ofstream f;  // output filestream
     double dV; // volume perturbation
     Change c;
     Energy::Energybase &pot;
@@ -393,6 +397,70 @@ class ScatteringFunction : public Analysisbase {
   public:
     ScatteringFunction(const json &j, Space &spc);
     ~ScatteringFunction();
+};
+
+/*
+ * @brief Sample and save gyration eigenvalues of all particles having the same id
+ */
+class AtomInertia : public Analysisbase {
+  private:
+    Space &spc;
+    std::string filename;
+    int index; // atom id
+    std::ofstream file;
+
+    Point compute();
+    void _to_json(json &j) const override;
+    void _sample() override;
+
+  public:
+    AtomInertia(const json &j, Space &spc);
+};
+
+/*
+ * @brief Sample and save the eigenvalues of the inertia tensor for a range of indexes within a molecule
+ */
+class InertiaTensor : public Analysisbase {
+  private:
+    Space &spc;
+    std::string filename;
+    std::vector<size_t> indexes; // range of indexes within the group
+    int index; // group indes
+    std::ofstream file;
+    struct Data {
+        Point eivals, eivec; // eigenvalues and principal axis
+    };
+
+    Data compute();
+    void _to_json(json &j) const override;
+    void _sample() override;
+
+  public:
+    InertiaTensor(const json &j, Space &spc);
+};
+
+/*
+ * @brief Sample and save charge, dipole and quadrupole moments for a range of indexes within a molecule
+ */
+class MultipoleMoments : public Analysisbase {
+  private:
+    Space &spc;
+    std::string filename;
+    std::vector<size_t> indexes; // range of indexes within the group
+    size_t index; // group index
+    std::ofstream file;
+    struct Data {
+        int q = 0; // total charge
+        Point mu {0,0,0}; // dipole vector
+        Point eivals, eivec; // quadrupole eigenvalues and major axis
+    };
+
+    Data compute();
+    void _to_json(json &j) const override;
+    void _sample() override;
+
+  public:
+    MultipoleMoments(const json &j, Space &spc);
 };
 
 /**

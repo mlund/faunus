@@ -1,0 +1,157 @@
+{
+    "analysis": [
+        {
+            "atomrdf": {
+                "dim": 3,
+                "dr": 0.1,
+                "file": "rdf.dat",
+                "name1": "Na",
+                "name2": "Cl",
+                "nstep": 10,
+                "relative time": 0.0163,
+                "samples": 25,
+                "slicedir": [
+                    0,
+                    0,
+                    0
+                ],
+                "thickness": 0.0
+            }
+        },
+        {
+            "systemenergy": {
+                "file": "energy.dat",
+                "final": [
+                    -24999.880050022806,
+                    -69806.24477221734
+                ],
+                "init": -94739.0,
+                "mean": -94731.0,
+                "nstep": 50,
+                "samples": 5
+            }
+        },
+        {
+            "xtcfile": {
+                "file": "traj.xtc",
+                "nstep": 25,
+                "samples": 10
+            }
+        },
+        {
+            "savestate": {
+                "file": "confout.pqr"
+            }
+        },
+        {
+            "savestate": {
+                "file": "state.json"
+            }
+        },
+        {
+            "density": {
+                "atomic": {
+                    "Cl": {
+                        "c/M": 24.919255197284038
+                    },
+                    "Na": {
+                        "c/M": 24.919255197284038
+                    }
+                },
+                "molecular": null,
+                "nstep": 50,
+                "samples": 5,
+                "∛⟨V⟩": 42.5,
+                "⟨1/V⟩": 1.303e-05,
+                "⟨V⟩": 76770.0,
+                "⟨∛V⟩": 42.5
+            }
+        }
+    ],
+    "compiler": "4.2.1 Compatible Apple LLVM 11.0.0 (clang-1100.0.33.8)",
+    "energy": [
+        {
+            "hamiltonian": [
+                {
+                    "particle-self-energy": {
+                        "com": false,
+                        "molecules": [
+                            "*"
+                        ],
+                        "relative time": 3.5977420188060404e-06
+                    }
+                },
+                {
+                    "nonbonded": {
+                        "cutoff_g2g": {
+                            "salt salt": null
+                        },
+                        "pairpot": [
+                            {
+                                "coulomb": {
+                                    "cutoff": 14.0,
+                                    "doi": "10.1063/1.3216520",
+                                    "lB": 151.90899335952005,
+                                    "type": "fanourgakis"
+                                }
+                            },
+                            {
+                                "lennardjones": {
+                                    "eps": "eps",
+                                    "mixing": "lorentz_berthelot",
+                                    "sigma": "sigma"
+                                }
+                            }
+                        ],
+                        "relative time": 0.47866669355165475
+                    }
+                }
+            ]
+        }
+    ],
+    "geometry": {
+        "length": [
+            42.5,
+            42.5,
+            42.5
+        ],
+        "type": "cuboid"
+    },
+    "git revision": "76f393dc (2019-10-31)",
+    "groups": [
+        {
+            "salt": {
+                "compressible": false,
+                "index": [
+                    0,
+                    2303
+                ],
+                "size": 2304
+            }
+        }
+    ],
+    "last move": "transrot",
+    "moves": [
+        {
+            "transrot": {
+                "acceptance": 0.393,
+                "dir": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "molecule": "salt",
+                "molid": 0,
+                "moves": 576000,
+                "relative time": 0.967,
+                "repeat": 2304,
+                "√⟨r²⟩": 0.166
+            }
+        }
+    ],
+    "number of groups": 1,
+    "number of particles": 2304,
+    "reactionlist": null,
+    "relative drift": -2.0735932315564e-14,
+    "temperature": 1100.0
+}

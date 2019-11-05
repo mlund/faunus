@@ -8,9 +8,6 @@
 #include <Eigen/Dense>
 #include "spdlog/spdlog.h"
 
-#ifdef ENABLE_POWERSASA
-#include <power_sasa.h>
-#endif
 #ifdef ENABLE_FREESASA
 #include <freesasa.h>
 #endif
@@ -176,6 +173,9 @@ template <bool eigenopt = false /** use Eigen matrix ops where possible */> stru
     // selfEnergies should be handled by the real-space pair-potential
     // todo: this should not be used, but replaced by selfEnergy in PairPotential
     double selfEnergy(const EwaldData &d, Change &change) {
+#ifndef NDEBUG
+        // std::cerr << "we should ideally not arrive here!\n";
+#endif
         double Eq = 0;
         if (change.dN) {
             for (auto cg : change.groups) {
@@ -301,7 +301,8 @@ template <class Policy = PolicyIonIon<>> class Ewald : public Energybase {
                 }
             }
             // todo: omit selfEnergy() call as this should be added as a separate term in `Hamiltonian`
-            u = policy.surfaceEnergy(data, change) + policy.reciprocalEnergy(data) + policy.selfEnergy(data, change);
+            u = policy.surfaceEnergy(data, change) +
+                policy.reciprocalEnergy(data); // + policy.selfEnergy(data, change);
         }
         return u;
     }
@@ -355,7 +356,7 @@ class Constrain : public Energybase {
 class Bonded : public Energybase {
   private:
     Space &spc;
-    typedef std::vector<std::shared_ptr<Potential::BondData>> BondVector;
+    typedef BasePointerVector<Potential::BondData> BondVector;
     BondVector inter;                // inter-molecular bonds
     std::map<int, BondVector> intra; // intra-molecular bonds
 
@@ -433,22 +434,35 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
     double g_internal(const Tgroup &g, const std::vector<int> &index = std::vector<int>()) {
         using namespace ranges;
         double u = 0;
-        if (index.empty() and not molecules.at(g.id).rigid) // assume that all atoms have changed
-            for (auto i = g.begin(); i != g.end(); ++i)
-                for (auto j = i; ++j != g.end();)
-                    u += i2i(*i, *j);
-        else { // only a subset has changed
-            auto fixed = view::ints(0, int(g.size())) |
-                         view::remove_if([&index](int i) { return std::binary_search(index.begin(), index.end(), i); });
-            for (int i : index) { // moved<->static
-                for (int j : fixed) {
-                    u += i2i(*(g.begin() + i), *(g.begin() + j));
+        auto &molecule = molecules.at(g.id);
+        if (index.empty() && !molecule.rigid) { // assume that all atoms have changed
+            for (auto particle_i = g.begin(); particle_i != g.end(); ++particle_i) {
+                int i = std::distance(g.begin(), particle_i);
+                for (auto particle_j = std::next(particle_i); particle_j != g.end(); ++particle_j) {
+                    int j = std::distance(g.begin(), particle_j);
+                    if (!molecule.isPairExcluded(i, j)) {
+                        u += i2i(*particle_i, *particle_j);
+                    }
                 }
             }
-            for (int i : index) // moved<->moved
-                for (int j : index)
-                    if (j > i)
+        } else { // only a subset has changed
+            auto fixed = view::ints(0, int(g.size())) |
+                         view::remove_if([&index](int i) { return std::binary_search(index.begin(), index.end(), i); });
+            for (int i : index) {
+                for (int j : fixed) { // moved<->static
+                    if (!molecule.isPairExcluded(i, j)) {
                         u += i2i(*(g.begin() + i), *(g.begin() + j));
+                    }
+                }
+                for (int j : index) { // moved<->moved
+                    if (j <= i) {
+                        continue;
+                    }
+                    if (!molecule.isPairExcluded(i, j)) {
+                        u += i2i(*(g.begin() + i), *(g.begin() + j));
+                    }
+                }
+            }
         }
         return u;
     }
@@ -459,8 +473,9 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
      * external to space.
      */
     double i2all(const typename Space::Tparticle &i) {
-        if (omp_enable and omp_i2all)
+        if (omp_enable and omp_i2all) {
             return i2all_parallel(i);
+        }
         double u = 0;
         auto it = spc.findGroupContaining(i); // iterator to group
         if (it != spc.groups.end()) {         // check if i belongs to group in space
@@ -471,13 +486,15 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
                         for (auto &j : g) // loop over particles in other group
                             u += i2i(i, j);
             }
-            for (auto &j : *it) // i with all particles in own group
-                if (&j != &i)
+            std::ptrdiff_t i_ndx = &i - &(*(it->begin()));   // fixme c++ style
+            u += g_internal(*it, {static_cast<int>(i_ndx)}); // only int indices are used internally
+        } else {                          // particle does not belong to any group
+            for (auto &g : spc.groups) {  // i with all other *active* particles
+                for (auto &j : g) {       // (this will include only active particles)
                     u += i2i(i, j);
-        } else                         // particle does not belong to any group
-            for (auto &g : spc.groups) // i with all other *active* particles
-                for (auto &j : g)      // (this will include only active particles)
-                    u += i2i(i, j);
+                }
+            }
+        }
         return u;
     }
 
@@ -575,7 +592,7 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
 
     Nonbonded(const json &j, Space &spc, BasePointerVector<Energybase> &pot) : spc(spc), pot(pot) {
         name = "nonbonded";
-        pairpot = j;
+        pairpot.from_json(j);
 
         // some pair-potentials give rise to self-energies (Wolf etc.)
         // which are added here if needed
@@ -639,14 +656,13 @@ template <typename Tpairpot> class Nonbonded : public Energybase {
         double u = 0;
 
         if (change) {
-
             // there's a change in system volume
             if (change.dV) {
 #pragma omp parallel for reduction(+ : u) schedule(dynamic) if (omp_enable and omp_g2g)
                 for (auto i = spc.groups.begin(); i < spc.groups.end(); ++i) {
                     for (auto j = i; ++j != spc.groups.end();)
                         u += g2g(*i, *j);
-                    if (i->atomic)
+                    if (i->atomic or i->compressible)
                         u += g_internal(*i);
                 }
                 return u;

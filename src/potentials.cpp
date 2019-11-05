@@ -380,9 +380,15 @@ void Polarizability::from_json(const json &j) {
 
 void FunctorPotential::registerSelfEnergy(PairPotentialBase *pot) {
     if (pot->selfEnergy) {
-        self_energy_vector.push_back(pot->selfEnergy);
-        assert(self_energy_vector.back());
-    }
+        if (not selfEnergy) // no self energy is defined
+            selfEnergy = pot->selfEnergy;
+        else // accumulate self energies
+            selfEnergy = [pot = pot, &selfEnergy = selfEnergy](const Particle &p) {
+                return pot->selfEnergy(p) + selfEnergy(p);
+            };
+        faunus_logger->debug("Added selfEnergy function from {} to {}", pot->name, name);
+    } else
+        faunus_logger->trace("Failed to register non-defined selfEnergy() for {}", pot->name);
 }
 
 FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
@@ -399,8 +405,9 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                         // add Coulomb potential and self-energy
                         // terms if not already added
                         else if (it.key() == "coulomb") { // temporary name
-                            _u = std::get<0>(potlist) = it.value();
-                            std::get<0>(potlist).to_json(it.value());
+                            std::get<0>(potlist).from_json(it.value()); // initialize w. json object
+                            std::get<0>(potlist).to_json(it.value());   // write back to json object with added values
+                            _u = std::get<0>(potlist);
                             if (not have_monopole_self_energy) {
                                 registerSelfEnergy(&std::get<0>(potlist));
                                 have_monopole_self_energy = true;
@@ -428,12 +435,14 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
                         else if (it.key() == "squarewell")
                             _u = std::get<11>(potlist) = i;
                         else if (it.key() == "dipoledipole") {
-                            faunus_logger->error("'dipoledipole' is deprecated, use 'multipole' instead");
+                            faunus_logger->error("'{}' is deprecated, use 'multipole' instead", it.key());
                         } else if (it.key() == "stockmayer") {
-                            faunus_logger->error("'stockmayer' is deprecated, use 'lennardjones'+'multipole' instead");
+                            faunus_logger->error("'{}' is deprecated, use 'lennardjones'+'multipole' instead",
+                                                 it.key());
                         } else if (it.key() == "multipole") {
-                            _u = std::get<12>(potlist) = it.value();
-                            std::get<12>(potlist).to_json(it.value()); // store json output
+                            std::get<12>(potlist).from_json(it.value()); // init from json
+                            std::get<12>(potlist).to_json(it.value());   // write back added info to json
+                            _u = std::get<12>(potlist);
                             isotropic = false;                         // potential is now angular dependent
                             if (not have_dipole_self_energy) {
                                 registerSelfEnergy(&std::get<12>(potlist));
@@ -457,20 +466,6 @@ FunctorPotential::uFunc FunctorPotential::combineFunc(json &j) {
     } else
         throw std::runtime_error("dictionary of potentials required");
 
-    // set self energy function
-    if (self_energy_vector.empty())
-        selfEnergy = nullptr;
-    else
-        // why must self_energy_vector be copied? Using [=] or [&]
-        // lambda capturing causes bad access on copied objects
-        selfEnergy = [vec = self_energy_vector](const Particle &p) {
-            double sum = 0;
-            for (auto &func : vec) {
-                assert(func);
-                sum += func(p);
-            }
-            return sum;
-        };
     return u;
 }
 
@@ -574,8 +569,8 @@ void TabulatedPotential::from_json(const json &j) {
 }
 
 NewCoulombGalore::NewCoulombGalore(const std::string &name) : PairPotentialBase(name) {
-    selfEnergy = [&](const Particle &p) {
-        return pot.self_energy({p.charge * p.charge, 0});
+    selfEnergy = [&lB = lB, &pot = pot](const Particle &p) {
+        return lB * pot.self_energy({p.charge * p.charge, 0.0});
     }; // expose self-energy as a functor in potential base class
 }
 
@@ -588,20 +583,29 @@ void NewCoulombGalore::from_json(const json &j) {
     double epsr = j.at("epsr");
     lB = pc::lB(epsr); // Bjerrum length
     std::string type = j.at("type");
-    if (type == "yukawa")
-        faunus_logger->error("'yukawa' is deprecated, use 'plain' with 'debyelength'");
-    if (type == "plain")
+    if (type == "yukawa") {
+        faunus_logger->debug("'yukawa' is using the 'poisson' scheme with C=1 and D=-1");
+        json _j = j;
+        _j["C"] = -1;
+        _j["D"] = 1;
+        _j["type"] = "poisson";
+        pot.spline<::CoulombGalore::Poisson>(_j);
+    } else if (type == "plain") {
+        if (j.count("cutoff") > 0)
+            faunus_logger->warn("Given cutoff for {} is ignored and always infinity", type);
         pot.spline<::CoulombGalore::Plain>(j);
-    else if (type == "qpotential")
+    } else if (type == "qpotential")
         pot.spline<::CoulombGalore::qPotential>(j);
     else if (type == "wolf")
-        pot.spline<Wolf>(j);
+        pot.spline<::CoulombGalore::Wolf>(j);
     else if (type == "poisson")
-        pot.spline<Poisson>(j);
+        pot.spline<::CoulombGalore::Poisson>(j);
     else if (type == "fanourgakis")
-        pot.spline<Fanourgakis>(j);
+        pot.spline<::CoulombGalore::Fanourgakis>(j);
     else if (type == "ewald")
-        pot.spline<Ewald>(j);
+        pot.spline<::CoulombGalore::Ewald>(j);
+    else if (type == "reactionfield")
+        pot.spline<::CoulombGalore::ReactionField>(j);
     else
         throw std::runtime_error("unknown coulomb scheme");
 }
@@ -613,12 +617,12 @@ void NewCoulombGalore::to_json(json &j) const {
 
 Multipole::Multipole(const std::string &name) : NewCoulombGalore(name) {
     isotropic = false; // this potential is angular dependent
-    selfEnergy = [&](const Particle &p) {
+    selfEnergy = [&lB = lB, &pot = pot](const Particle &p) {
         double mu_x_mu = 0;   // dipole-dipole product
         if (p.hasExtension()) // only access dipole of the particle has extended properties
             mu_x_mu = p.getExt().mulen * p.getExt().mulen;
-        return pot.self_energy({p.charge * p.charge, mu_x_mu});
-    }; // expose CoulombGalore self-energy as a functor in potential base class
+        return lB * pot.self_energy({p.charge * p.charge, mu_x_mu});
+    }; // expose self-energy as a functor in potential base class
 }
 
 Point Multipole::force(const Faunus::Particle &a, const Faunus::Particle &b, double, const Faunus::Point &r) const {

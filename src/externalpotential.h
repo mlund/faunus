@@ -173,7 +173,7 @@ class Confine : public ExternalPotential {
  * and will automatically inject an instance of ParticleSelfEnergy into the
  * Hamiltonian.
  *
- * The constructor requires a functor that operators on each particle
+ * The constructor requires a functor that operates on each particle
  * and returns the resulting energy (kT)
  */
 class ParticleSelfEnergy : public ExternalPotential {

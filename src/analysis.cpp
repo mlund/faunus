@@ -289,7 +289,7 @@ void VirtualVolume::_sample() {
 #endif
             // write excess pressure to output file
             if (f)
-                f << cnt << " " << -std::log(x) / (dV * 1.0_mM) << "\n";
+                f << cnt << " " << dV << " " << du << " " << x  << "\n";
         }
     }
 }
@@ -301,6 +301,8 @@ void VirtualVolume::_from_json(const json &j) {
         if (f)
             f.close();
         f.open(file);
+        f << "# steps dV/"+ u8::angstrom + u8::cubed + " du/kT exp(-du/kT)" << "\n";
+        f.precision(14);
         if (!f)
             throw std::runtime_error(name + ": cannot open output file " + file);
     }

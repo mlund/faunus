@@ -397,10 +397,6 @@ inline Point Chameleon::vdist(const Point &a, const Point &b) const {
             else if (distance.z() < -len_half.z())
                 distance.z() += len.z();
         }
-    } else if (boundary_conditions.coordinates == ORTHOHEXAGONAL ||
-               boundary_conditions.coordinates == TRUNC_OCTAHEDRAL) {
-        distance = a - b;
-        boundary(distance);
     } else {
         distance = geometry->vdist(a, b);
     }

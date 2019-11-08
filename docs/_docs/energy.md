@@ -90,7 +90,7 @@ Finally, the spline precision can be controlled with `utol=1e-5` kT.
 Below is a description of possible nonbonded methods. For simple potentials, the hard coded
 variants are often the fastest option. For better performance, it is recommended to use `nonbonded_splined` in place of the more robust `nonbonded` method. To check that the combined potential is splined correctly, set `to_disk=true` to print to `A-B_tabulated.dat` the exact and splined combined potentials between species A and B.
 
-`energy`               | $u_{ij}$
+`energy`               | $u\_{ij}$
 ---------------------- | ------------------------------------------------------
 `nonbonded`            | Any combination of pair potentials (slower, but exact)
 `nonbonded_exact`      | An alias for `nonbonded`
@@ -164,19 +164,20 @@ coulomb types                            | Keywords          | $\mathcal{S}(q)$
 [`zerodipole`](http://doi.org/10/fhcfn4) | `alpha`           | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+\frac{(q^2-1)}{2}q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
 [`zahn`](http://doi.org/10/cmx5vd)       | `alpha`           | $\text{erfc}(\alpha R_c q)-(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
 [`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
-`yukawa`                                 | `debyelength`     | Same as `poisson` with `C=1` and `D=-1`
+`yukawa`                                 | `debyelength`, `shift=true` | Same as `poisson` with `C=1` and `D=-1`
 
-**Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed. The `zahn` and `fennell` approaches have undefined dipolar self-energies and are therefore not recommended for such systems. For the Poisson potential
+Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
+For the `poisson` potential,
 
 $$
 \acute{q} = \frac{1-\exp\left(2\kappa R_c q\right)}{1-\exp\left(2\kappa R_c\right)}
 $$
 
 which as the inverse Debye length, $\kappa\to 0$ gives $\acute{q}=q$.
-The `poisson` scheme can generate a number of other truncated pair-potentials found in the litterature, depending on `C` and `D`
-Thus, for an infinite Debye length:
+The `poisson` scheme can generate a number of other truncated pair-potentials found in the litterature,
+depending on `C` and `D`. Thus, for an infinite Debye length, the following holds:
 
-`C` | `D` | Reference / Comment
+`C` | `D` | Equivalent to
 --- | --- | ----------------------
  1  | -1  | Plain Coulomb
  1  |  0  | [Undamped Wolf](http://doi.org/10.1063/1.478738)
@@ -189,43 +190,46 @@ Thus, for an infinite Debye length:
  4  |  3  | [Fanourgakis](http://doi.org/10.1063/1.3216520)
 
 
-
 ### Debye Screening Length
 
 A background screening due to implicit ions can be added by specifying the keyword `debyelength` to the schemes
-`ewald`, `poisson`, and `yukawa`. The latter is merely an alias for `poisson` with `C=1`, and `D=-1` which
+`ewald`, `poisson`, and `yukawa`. The latter is an alias for `poisson` with `C=1`, and `D=-1` which
 gives a plain and shifted Coulomb potential with exponential screening.
-
+If `shift=false`, the potential is left unshifted and any given cutoff is ignored and instead set to infinity.
 
 ### Multipoles
 
 If `type=coulomb` is replaced with `type=multipole` the electrostatic energy will in addition to
 monopole-monopole interactions include contributions from monopole-dipole, and dipole-dipole
 interactions. Multipolar properties of each particle is specified in the Topology.
+The `zahn` and `fennell` approaches have undefined dipolar self-energies and are therefore not recommended for such systems.
 
 The ion-dipole interaction is described by
 
 $$
-\tilde{u}^{(z\mu)}_{ij}({\bf r}) = -\frac{ez_i\left(\mu_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
+\tilde{u}^{(z\mu)}_{ij}({\bf r}) =
+-\frac{ez_i\left(\mu_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q)
+- q\mathcal{S}^{\prime}(q) \right)
 $$
 
 where $\hat{\bf r} = {\bf r}/|{\bf r}|$, and the dipole-dipole interaction by
 
 $$
-\tilde{u}^{\mu\mu}_{ij}({\bf r}) = -\left(\frac{3 ( \boldsymbol{\mu}_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
+\tilde{u}^{\mu\mu}_{ij}({\bf r}) = -\left ( \frac{3 ( \boldsymbol{\mu}_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
 $$
 
 
 ### Self-energies
 
 When using `coulomb` or `multipole`, an electrostatic self-energy term is automatically
-added to the Hamiltonian. The charge- and dipole-contributions are evaluated according to
+added to the Hamiltonian. The monopole and dipole contributions are evaluated according to
 
 $$
-U_{self} = -\frac{1}{2}\sum_i^N\sum_{*\in\{z,\mu\}} \lim_{|{\bf r}_{ii}|\to 0}\left( u^{(**)}_{ii}({\bf r}_{ii}) - \tilde{u}^{(**)}_{ii}({\bf r}_{ii}) \right)
+U\_{self} = -\frac{1}{2}\sum\_i^N\sum\_{*\in\{z,\mu\}} \lim\_{|{\bf r}\_{ii}|\to 0}\left( u^{(**)}\_{ii}({\bf r}\_{ii})
+- \tilde{u}^{(**)}\_{ii}({\bf r}\_{ii}) \right )
 $$
 
-where no tilde indicate that $\mathcal{S}(q)\equiv 1$ for any $q$.
+where no tilde indicates that $\mathcal{S}(q)\equiv 1$ for any $q$.
 
 
 ### Ewald Summation
@@ -273,14 +277,14 @@ $$
 {\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right), {\bf n} \in \mathbb{Z}^3
 $$
 
-Like many other electrostatic methods, the Ewald scheme also adds a self-energy term, please see separate Table.
+Like many other electrostatic methods, the Ewald scheme also adds a self-energy term as described above.
 In the case of isotropic periodic boundaries (`ipbc=true`), the orientational degeneracy of the
 periodic unit cell is exploited to mimic an isotropic environment, reducing the number
 of wave-vectors to one fourth compared with PBC Ewald.
 For point charges, [IPBC](http://doi.org/css8) introduce the modification,
 
 $$
-Q^q = \sum_j q_j \prod\_{\alpha\in\{x,y,z\}} \cos \left( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right)
+Q^q = \sum\_j q\_j \prod\_{\alpha\in\{x,y,z\}} \cos \left( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right)
 $$
 
 while for point dipoles (currently unavailable),

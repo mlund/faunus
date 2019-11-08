@@ -298,9 +298,12 @@ void Hamiltonian::addEwald(const json &j, Space &spc) {
     else
         return;
 
-    if (_j.count("type"))
-        if (_j.at("type") == "ewald")
+    if (_j.count("type")) {
+        if (_j.at("type") == "ewald") {
+            faunus_logger->debug("adding Ewald reciprocal and surface energy terms");
             emplace_back<Energy::Ewald<>>(_j, spc);
+        }
+    }
 }
 
 Hamiltonian::Hamiltonian(Space &spc, const json &j) {

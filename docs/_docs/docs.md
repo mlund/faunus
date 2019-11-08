@@ -15,7 +15,7 @@ are available.
 The development is a team effort with, in reverse chronological order,
 many valiant contributions from:
 
-_Vidar Aspelin, Stefan Hervø-Hansen,
+_Marco Polimeni, Vidar Aspelin, Stefan Hervø-Hansen,
 Richard Chudoba, Niels Kouwenhoven,
 Coralie Pasquier, Lukáš Sukeník,
 Giulio Tesei, Alexei Abrikossov,

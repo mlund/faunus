@@ -92,7 +92,7 @@ atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 `dir=[1,1,1]`  | Directions to translate
 `dprot`        | Rotational displacement (radians)
 `dp`           | Translational displacement
-`spread`       | If false, stops cluster-growth after one layer around centered molecule. Untested!
+`spread`       | If false, stops cluster-growth after one layer around centered molecule (experimental)
 `satellites`   | Subset of `molecules` that cannot be cluster centers
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
@@ -121,7 +121,7 @@ cluster:
 ```
 
 **Restrictions:**
-Currently, the number of `molecules` must be constant throughout simulation, i.e.
+Currently, the number of `molecules` must be constant throughout simulation, _i.e._
 grand canonical schemes are unsupported.
 
 ## Internal Degrees of Freedom

@@ -295,9 +295,6 @@ Q^{\mu} = \sum\_j \boldsymbol{\mu}\_j
 \left( \prod\_{ \alpha \in \{ x,y,z \} } \cos \left ( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right ) \right )
 $$
 
-**Limitations:** Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles
-and Widom insertion are currently unsupported.
-
 
 ### Mean-Field Correction
 
@@ -622,7 +619,7 @@ Should one insist on conducting simulations far from equilibrium, a large displa
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
 Finite extensible nonlinear elastic potential long range repulsive potential combined
-with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` non-bonded energy.
+with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` energy.
 
 $$
      u(r) =
@@ -633,8 +630,7 @@ $$
   \end{cases}
 $$
 
-**Note:**
-It is recommend to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
+It is recommended to only use this potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
 Should one insist on conducting simulations far from equilibrium, a large displacement parameter is recommended to reach finite energies.
 
 ### Harmonic torsion
@@ -685,18 +681,16 @@ $$
 `k`          | Harmonic spring constant in kJ/mol or `inf` for infinity
 
 Confines `molecules` in a given region of the simulation container by applying a harmonic potential on
-exterior atom positions, $\mathbf{r}_i$:
+exterior atom positions, $\mathbf{r}\_i$:
 
 $$
-U = \frac{1}{2} k \sum^{\text{exterior}} f_i
+U = \frac{1}{2} k \sum\_{i}^{\text{exterior}} f\_i
 $$
 
-where $f_i$ is a function that depends on the confinement `type`,
+where $f\_i$ is a function that depends on the confinement `type`,
 and $k$ is a spring constant. The latter
-may be _infinite_ which renders the exterior region strictly inaccessible and may evaluate faster than for finite values.
+may be _infinite_ which renders the exterior region strictly inaccessible.
 During equilibration it is advised to use a _finite_ spring constant to drive exterior particles inside the region.
-
-**Note:**
 Should you insist on equilibrating with $k=\infty$, ensure that displacement parameters are large enough to transport molecules inside the allowed region, or all moves may be rejected. Further, some analysis routines have undefined behavior for configurations with infinite energies.
 
 Available values for `type` and their additional keywords:
@@ -733,7 +727,7 @@ elements of `high`.
 ## Solvent Accessible Surface Area
 
 Note that the implementation of Solvent Accessible Surface Area potential is considered _experimental_.
-The code is untested, unoptimized and the configuration syntax below can change.
+The code is untested, unoptimized, and the configuration syntax below can change.
 The FreeSASA library option has to be enabled when [compiling].
 
 `sasa`       | SASA Transfer Free Energy

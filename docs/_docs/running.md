@@ -96,8 +96,8 @@ so far.
 0    | off
 1    | critical error
 2    | error
-3    | warning (default)
-4    | information
+3    | warning
+4    | information (default)
 5    | debug information
 6    | tracing information
 

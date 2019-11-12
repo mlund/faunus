@@ -262,34 +262,25 @@ void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0
 
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {
-        // store old volume and energy
-        double Vold = getVolume(), Uold = pot.energy(c);
-        // scale entire system to new volume
-        scaleVolume(Vold + dV);
-        double Unew = pot.energy(c);
-        // restore saved system
-        scaleVolume(Vold);
+        double Vold = getVolume(), Uold = pot.energy(c); // store old volume and energy
+        scaleVolume(Vold + dV);                          // scale entire system to new volume
+        double Unew = pot.energy(c);                     // energy after scaling
+        scaleVolume(Vold);                               // restore saved system
 
-        // check if energy change is too big for exp()
-        double x = pc::infty;
-        double du = Unew - Uold; // system energy change
-        if (-du < pc::max_exp_argument)
-            x = std::exp(-du);
-        if (std::isinf(x)) {
-            faunus_logger->warn("{0}: skipping sample event due to excessive energy likely due to overlaps.", name);
-            cnt--; // cnt is incremented by sample() so we need to decrease
-        } else {
-            assert(not std::isnan(x));
-            duexp += x;
+        double du = Unew - Uold;          // system energy change
+        if (-du < pc::max_exp_argument) { // does minus energy change fits exp() function?
+            double exp_du = std::exp(-du);
+            assert(not std::isnan(exp_du));
+            duexp += exp_du; // collect average, <exp(-du)>
+            if (f)           // write sample event to output file
+                f << cnt << " " << dV << " " << du << " " << exp_du << " " << std::log(duexp.avg()) / dV << "\n";
 #ifndef NDEBUG
-            // check volume and particle positions are properly restored
-            double err = std::fabs((Uold - pot.energy(c)) / Uold); // must be ~zero!
-            if (std::isfinite(err))                                // catch if Uold==0
-                assert(err < 1e-4);
+            if (Uold != 0) // check if volume and particle positions are properly restored
+                assert(std::fabs((Uold - pot.energy(c)) / Uold) < 1e-4); // expensive
 #endif
-            // write excess pressure to output file
-            if (f)
-                f << cnt << " " << dV << " " << du << " " << x  << "\n";
+        } else {   // energy change too large (negative) to fit exp() function
+            cnt--; // cnt is incremented by sample() so we need to decrease
+            faunus_logger->warn("{0}: skipping sample event due to excessive energy, dU/kT={1}", name, du);
         }
     }
 }
@@ -301,10 +292,11 @@ void VirtualVolume::_from_json(const json &j) {
         if (f)
             f.close();
         f.open(file);
-        f << "# steps dV/"+ u8::angstrom + u8::cubed + " du/kT exp(-du/kT)" << "\n";
-        f.precision(14);
         if (!f)
             throw std::runtime_error(name + ": cannot open output file " + file);
+        f << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom + u8::cubed
+          << "\n"; // file header
+        f.precision(14);
     }
 }
 

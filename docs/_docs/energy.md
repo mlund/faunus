@@ -311,7 +311,7 @@ To enable the correction, use the `akesson` keyword at the top level of `energy`
 `molecules`       | Array of molecules to operate on
 `epsr`            | Relative dielectric constant
 `nstep`           | Number of energy evalutations between updating $\rho(z)$
-`dz=0.2`          | $z$ resolution (angstrom)
+`dz=0.2`          | $z$ resolution (Å)
 `nphi=10`         | Multiple of `nstep` in between updating $\varphi(z)$
 `file=mfcorr.dat` | File with $\rho(z)$ to either load or save
 `fixed=false`     | If true, assume that `file` is converged. No further updating and faster.
@@ -455,7 +455,7 @@ experimental implementation of [Solvent Accessible Surface Area] energy.
 `sasa`       | Description
 ------------ | ----------------------------------------------------------
 `molarity`   | Molar concentration of co-solute, $c_s$
-`radius=1.4` | Probe radius for SASA calculation (angstrom)
+`radius=1.4` | Probe radius for SASA calculation (Å)
 `shift=true` | Shift to zero at large separations
 
 ### Custom
@@ -493,12 +493,12 @@ In addition to user-defined constants, the following symbols are defined:
 `inf`      | ∞ (infinity)
 `kB`       | Boltzmann constant [J/K]
 `kT`       | Boltzmann constant × temperature [J]
-`Nav`      | Avogadro constant [1/mol]
+`Nav`      | Avogadro's number [1/mol]
 `pi`       | π (pi)
 `q1`,`q2`  | Particle charges [e]
-`r`        | Particle-particle separation [angstrom]
-`Rc`       | Spherical cut-off [angstrom]
-`s1`,`s2`  | Particle sigma [angstrom]
+`r`        | Particle-particle separation [Å]
+`Rc`       | Spherical cut-off [Å]
+`s1`,`s2`  | Particle sigma [Å]
 `T`        | Temperature [K]
 
 ## Custom External Potential
@@ -522,11 +522,11 @@ In addition to user-defined `constants`, the following symbols are available:
 `inf`      | ∞ (infinity)
 `kB`       | Boltzmann constant [J/K]
 `kT`       | Boltzmann constant × temperature [J]
-`Nav`      | Avogadro constant [1/mol]
+`Nav`      | Avogadro's number [1/mol]
 `pi`       | π (pi)
 `q`        | Particle charge [e]
-`s`        | Particle sigma [angstrom]
-`x`,`y`,`z`| Particle positions [angstrom]
+`s`        | Particle sigma [Å]
+`x`,`y`,`z`| Particle positions [Å]
 `T`        | Temperature [K]
 
 If `com=true`, charge refers to the molecular net-charge, and `x,y,z` the mass-center coordinates.
@@ -732,7 +732,7 @@ The FreeSASA library option has to be enabled when [compiling].
 
 `sasa`       | SASA Transfer Free Energy
 ------------ | --------------------------------------------
-`radius=1.4` | Probe radius for SASA calculation (angstrom)
+`radius=1.4` | Probe radius for SASA calculation (Å)
 `molarity`   | Molar concentration of co-solute
 
 Calculates the free energy contribution due to
@@ -803,14 +803,14 @@ Options:
 
 `penalty`        |  Description
 ---------------- | --------------------
-`f0`             |  Penalty energy increment (_kT_)
+`f0`             |  Penalty energy increment (kT)
 `update`         |  Interval between scaling of `f0`
 `scale`          |  Scaling factor for `f0`
 `nodrift=true`   |  Suppress energy drift
 `quiet=false`    |  Set to true to get verbose output
 `file`           |  Name of saved/loaded penalty function
 `overwrite=true` |  If `false`, don't save final penalty function
-`histogram`      |  Name of saved histogram (not required)
+`histogram`      |  Name of saved histogram (optional)
 `coords`         |  Array of _one or two_ coordinates
 
 The coordinate, $\mathcal{X}$, can be freely composed by one or two
@@ -829,7 +829,7 @@ General keywords  | Description
 `index`           | Atom index, atom id or group index
 `indexes`         | Array of atomic indexes
 `range`           | Array w. [min:max] value
-`resolution`      | Resolution along the coordinate
+`resolution`      | Resolution along the coordinate (Å)
 `dir`             | Axes of the reaction coordinate, $e.g.$, `[1,1,0]` for the $xy$-plane  
 
 #### Atom Properties

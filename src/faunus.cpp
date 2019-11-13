@@ -3,6 +3,7 @@
 #include "move.h"
 #include "montecarlo.h"
 #include "analysis.h"
+#include "multipole.h"
 #include "docopt.h"
 #include "progress_tracker.h"
 #include <cstdlib>
@@ -170,6 +171,14 @@ int main(int argc, char **argv) {
                 } else {
                     throw std::runtime_error("state file error: " + state);
                 }
+            }
+
+            // warn if initial system has a net charge
+            {
+                auto p = sim.space().activeParticles();
+                double system_charge = Faunus::monopoleMoment(p.begin(), p.end());
+                if (std::fabs(system_charge) > 0)
+                    faunus_logger->warn("non-zero system charge of {}e", system_charge);
             }
 
             Analysis::CombinedAnalysis analysis(json_in.at("analysis"), sim.space(), sim.pot());

@@ -65,7 +65,7 @@ TEST_CASE("[Faunus] Ewald - EwaldData") {
 
     EwaldData data(R"({
                 "ipbc": false, "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json);
 
     data.update(Point(10, 10, 10));
 
@@ -235,7 +235,7 @@ TEST_CASE("[Faunus] Ewald - IonIonPolicy") {
 
     EwaldData data = R"({
                 "epsr": 1.0, "alpha": 0.894427190999916, "epss": 1.0,
-                "kcutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
+                "ncutoff": 11.0, "spherical_sum": true, "cutoff": 5.0})"_json;
     Change c;
     c.all = true;
     data.ipbc = false; // PBC Ewald (http://dx.doi.org/10.1063/1.481216)

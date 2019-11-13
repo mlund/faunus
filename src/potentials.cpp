@@ -585,9 +585,10 @@ void NewCoulombGalore::from_json(const json &j) {
     std::string type = j.at("type");
     if (type == "yukawa") {
         faunus_logger->debug("'yukawa' is using the 'poisson' scheme with C=1 and D=-1");
+	double debyelength = j.at("debyelength"); // tries to find 'debyelength', should give error if not found
         json _j = j;
-        _j["C"] = -1;
-        _j["D"] = 1;
+        _j["C"] = 1;
+        _j["D"] = -1;
         _j["type"] = "poisson";
         pot.spline<::CoulombGalore::Poisson>(_j);
     } else if (type == "plain") {

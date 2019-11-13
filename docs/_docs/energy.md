@@ -101,11 +101,11 @@ variants are often the fastest option. For better performance, it is recommended
 `nonbonded_pm`         | `coulomb`+`hardsphere` (fixed `type=plain`, `cutoff`$=\infty$)
 `nonbonded_pmwca`      | `coulomb`+`wca` (fixed `type=plain`, `cutoff`$=\infty$)
 
-### Mass Center Cut-offs
+### Mass Center Cutoffs
 
-For cut-off based pair-potentials working between large molecules, it can be efficient to
-use mass center cut-offs between molecular groups, thus skipping all pair-interactions.
-A single cut-off can be used between all molecules (`default`), or specified for specific
+For cutoff based pair-potentials working between large molecules, it can be efficient to
+use mass center cutoffs between molecular groups, thus skipping all pair-interactions.
+A single cutoff can be used between all molecules (`default`), or specified for specific
 combinations:
 
 ~~~ yaml
@@ -140,45 +140,54 @@ composition. Currently, parallelisation is disabled by default.
  `cutoff`              |  Spherical cutoff, $R_c$ (Å) after which the potential is zero
  `epsr`                |  Relative dielectric constant of the medium
  `utol=1e-5`           |  Error tolerence for splining
- `debyelength=`$\infty$|  Debye length (Å) if using `ewald`, `poisson`, `yukawa`
+ `debyelength=`$\infty$|  Debye length (Å) if using `ewald`, `poisson`, or `yukawa`
 
 This is a multipurpose potential that handles several electrostatic methods.
-Beyond a spherical real-space cutoff, $R_c$, the potential is zero while if
-below,
+Beyond a spherical real-space cutoff, $R_c$, the potential is zero while otherwise
 
 $$
-\tilde{u}^{(zz)}_{ij}({\bf r}) = \frac{e^2 z_i z_j }{ 4\pi\epsilon_0\epsilon_r |{\bf r}| }\mathcal{S}(q)
+\tilde{u}^{(zz)}_{ij}(\bar{r}) = \frac{e^2 z_i z_j }{ 4\pi\epsilon_0\epsilon_r |\bar{r}| }\mathcal{S}(q)
 $$
 
-where ${\bf r} = {\bf r}_j - {\bf r}_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|{\bf r}|/R_c)$ is used to trucate the interactions. The available short-range functions are:
+where $\bar{r} = \bar{r}_j - \bar{r}_i$, and tilde indicate that a short-range function $\mathcal{S}(q=|\bar{r}|/R_c)$ is used to trucate the interactions. The available short-range functions are:
 
-coulomb types                            | Keywords          | $\mathcal{S}(q)$
----------------------------------------- | ----------------- | ---------------------------------------------------
-[`plain`](http://doi.org/ctnnsj)         |                   | 1
-[`ewald`](http://doi.org/dgpdmc)         | `alpha`           | $\frac{1}{2}\text{erfc}\left(\alpha R_c q + \frac{\kappa}{2\alpha}\right)\text{exp}\left(2\kappa R_c q\right) + \frac{1}{2}\text{erfc}\left(\alpha R_c q - \frac{\kappa}{2\alpha}\right)$
-[`reactionfield`](http://doi.org/dbs99w) | `epsrf`           | $1+\frac{\epsilon_{RF}-\epsilon_r}{2\epsilon_{RF}+\epsilon_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_r}q$
-[`poisson`](http://doi.org/10/c5fr)      | `C=3`, `D=3`      | $(1-\acute{q})^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}\acute{q}^c$
-[`qpotential`](https://arxiv.org/abs/1904.10335) | `order`   | $\prod_{n=1}^{\text{order}}(1-q^n)$
-[`fanourgakis`](http://doi.org/f639q5)   |                   | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
-[`fennell`](http://doi.org/10/bqgmv2)    | `alpha`           | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
-[`zerodipole`](http://doi.org/10/fhcfn4) | `alpha`           | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+\frac{(q^2-1)}{2}q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
-[`zahn`](http://doi.org/10/cmx5vd)       | `alpha`           | $\text{erfc}(\alpha R_c q)-(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
-[`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
-`yukawa`                                 | `debyelength`     | Same as `poisson` with `C=1` and `D=-1`
+coulomb types                            | Keywords                         | $\mathcal{S}(q)$
+---------------------------------------- | -------------------------------- | ---------------------------------------------------
+[`plain`](http://doi.org/ctnnsj)         |                                  | 1
+[`ewald`](http://doi.org/dgpdmc)         | `alpha`, `debyelength=`$\infty$  | $\frac{1}{2}\text{erfc}\left(\alpha R_c q + \frac{\kappa}{2\alpha}\right)\text{exp}\left(2\kappa R_c q\right) + \frac{1}{2}\text{erfc}\left(\alpha R_c q - \frac{\kappa}{2\alpha}\right)$
+[`reactionfield`](http://doi.org/dbs99w) | `epsrf`, `shifted`               | $1+\frac{\epsilon_{RF}-\epsilon_r}{2\epsilon_{RF}+\epsilon_r}q^3-3\frac{\epsilon_{RF}}{2\epsilon_{RF}+\epsilon_r}q$
+[`poisson`](http://doi.org/10/c5fr)      | `C`, `D`, `debyelength=`$\infty$ | $(1-\check{q})^{D+1}\sum_{c=0}^{C-1}\frac{C-c}{C}{D-1+c\choose c}\check{q}^c$
+[`qpotential`](https://arxiv.org/abs/1904.10335) | `order`                  | $\prod_{n=1}^{\text{order}}(1-q^n)$
+[`fanourgakis`](http://doi.org/f639q5)   |                                  | $1-\frac{7}{4}q+\frac{21}{4}q^5-7q^6+\frac{5}{2}q^7$
+[`fennell`](http://doi.org/10/bqgmv2)    | `alpha`                          | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
+[`zerodipole`](http://doi.org/10/fhcfn4) | `alpha`                          | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+\frac{(q^2-1)}{2}q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
+[`zahn`](http://doi.org/10/cmx5vd)       | `alpha`                          | $\text{erfc}(\alpha R_c q)-(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
+[`wolf`](http://doi.org/cfcxdk)          | `alpha`                          | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
+`yukawa`                                 | `debyelength`                    | Same as `poisson` with `C=1` and `D=-1`
 
-**Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed. The `zahn` and `fennell` approaches have undefined dipolar self-energies and are therefore not recommended for such systems. For the Poisson potential
+**Note:**
+
+ - Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
+
+ - The `ewald` type here only referes to the real space Ewald potential. For more information on the full Ewald summation, see section ``Ewald Summation''.
+
+ - The Debye length is described in units of Ångstrom.
+
+ - The last term in using `reactionfield` is only included if `shifted=true`.
+
+For the Poisson potential
 
 $$
-\acute{q} = \frac{1-\exp\left(2\kappa R_c q\right)}{1-\exp\left(2\kappa R_c\right)}
+\check{q} = \frac{1-\exp\left(2\kappa R_c q\right)}{1-\exp\left(2\kappa R_c\right)}
 $$
 
-which as the inverse Debye length, $\kappa\to 0$ gives $\acute{q}=q$.
-The `poisson` scheme can generate a number of other truncated pair-potentials found in the litterature, depending on `C` and `D`
+which as the inverse Debye length $\kappa\to 0$ gives $\check{q}=q$.
+The `poisson` scheme can generate a number of other truncated pair-potentials found in the litterature, depending on `C` and `D`.
 Thus, for an infinite Debye length:
 
 `C` | `D` | Reference / Comment
 --- | --- | ----------------------
- 1  | -1  | Plain Coulomb
+ 1  | -1  | Plain Coulomb within cutoff, zero outside
  1  |  0  | [Undamped Wolf](http://doi.org/10.1063/1.478738)
  1  |  1  | [Levitt](http://doi.org/10/fp959p) / [Undamped Fenell](http://doi.org/10/bqgmv2)
  1  |  2  | [Kale](http://doi.org/10/csh8bg)
@@ -199,21 +208,25 @@ gives a plain and shifted Coulomb potential with exponential screening.
 
 ### Multipoles
 
-If `type=coulomb` is replaced with `type=multipole` the electrostatic energy will in addition to
+If `type=coulomb` is replaced with `type=multipole` then the electrostatic energy will in addition to
 monopole-monopole interactions include contributions from monopole-dipole, and dipole-dipole
-interactions. Multipolar properties of each particle is specified in the Topology.
+interactions. Multipolar properties of each particle are specified in the Topology.
 
 The ion-dipole interaction is described by
 
 $$
-\tilde{u}^{(z\mu)}_{ij}({\bf r}) = -\frac{ez_i\left(\mu_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
+\tilde{u}^{(z\mu)}_{ij}(\bar{r}) = -\frac{ez_i\left(\bar{\mu}_j\cdot \hat{r}\right) }{|\bar{r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
 $$
 
-where $\hat{\bf r} = {\bf r}/|{\bf r}|$, and the dipole-dipole interaction by
+where $\hat{r} = \bar{r}/|\bar{r}|$, and the dipole-dipole interaction by
 
 $$
-\tilde{u}^{\mu\mu}_{ij}({\bf r}) = -\left(\frac{3 ( \boldsymbol{\mu}_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
+\tilde{u}^{\mu\mu}_{ij}(\bar{r}) = -\left(\frac{3 ( \bar{\mu}_i \cdot \hat{r} ) \left(\bar{\mu}_j\cdot\hat{r}\right) - \bar{\mu}_i\cdot\bar{\mu}_j }{|\bar{r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\bar{\mu}_i\cdot\bar{\mu}_j\right)}{|\bar{r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
 $$
+
+**Warning:**
+
+ - The `zahn` and `fennell` approaches have undefined dipolar self-energies (see next section) and are therefore not recommended for dipolar systems. 
 
 
 ### Self-energies
@@ -222,7 +235,7 @@ When using `coulomb` or `multipole`, an electrostatic self-energy term is automa
 added to the Hamiltonian. The charge- and dipole-contributions are evaluated according to
 
 $$
-U_{self} = -\frac{1}{2}\sum_i^N\sum_{*\in\{z,\mu\}} \lim_{|{\bf r}_{ii}|\to 0}\left( u^{(**)}_{ii}({\bf r}_{ii}) - \tilde{u}^{(**)}_{ii}({\bf r}_{ii}) \right)
+U_{self} = -\frac{1}{2}\sum_i^N\sum_{*\in\{z,\mu\}} \lim_{|\bar{r}_{ii}|\to 0}\left( u^{(**)}_{ii}(\bar{r}_{ii}) - \tilde{u}^{(**)}_{ii}(\bar{r}_{ii}) \right)
 $$
 
 where no tilde indicate that $\mathcal{S}(q)\equiv 1$ for any $q$.
@@ -230,68 +243,64 @@ where no tilde indicate that $\mathcal{S}(q)\equiv 1$ for any $q$.
 
 ### Ewald Summation
 
-If type is `ewald`, terms from reciprocal space; surface energies; and
-self energies are automatically added to the Hamiltonian, activating additional keywords:
+If type is `ewald`, terms from reciprocal space and surface energies are automatically added (in addition to the previously mentioned self- and real space-energy) to the Hamiltonian which activates the additional keywords:
 
 `type=ewald`          | Description
 --------------------- | ---------------------------------------------------------------------
-`kcutoff`             | Reciprocal-space cutoff
+`ncutoff`             | Reciprocal-space cutoff (unitless)
 `epss=0`              | Dielectric constant of surroundings, $\varepsilon_{surf}$ (0=tinfoil)
 `ipbc=false`          | Use isotropic periodic boundary conditions, [IPBC](http://doi.org/css8). Holds also for Yukawa-type interactions.
-`spherical_sum=true`  | Spherical/ellipsoidal summation in reciprocal space; cubic if `false`.
-`debyelength=`$\infty$| Debye length (Å)
+`spherical_sum=true`  | Spherical summation in reciprocal space; cubic if `false`.
 
 The added energy terms are:
 
 $$
-U_{\text{reciprocal}} = \frac{2\pi f}{V} \sum_{ {\bf k} \ne {\bf 0}} A_k \vert Q^{q\mu} \vert^2 
+U_{\text{reciprocal}} = \frac{1}{4\pi\varepsilon_0\varepsilon_r}\frac{2\pi}{V} \sum_{ \bar{k} \ne \bar{0}} A_k \vert Q^{q\mu} \vert^2 
 $$
 
 $$
-U_{\text{surface}} = \frac{ 2\pi f }{ (2\varepsilon_{surf} + 1) V }
+U_{\text{surface}} = \frac{1}{4\pi\varepsilon_0\varepsilon_r}\frac{ 2\pi }{ (2\varepsilon_{surf} + 1) V }
 \left(
-\left|\sum_{j}q_j{\bf r}_j\right|^2 + 2 \sum_j q_i {\bf r}_j \cdot \sum_j \boldsymbol{\mu}_j + \left| \sum_j \boldsymbol{\mu}_j \right|^2
+\left|\sum_{j}q_j\bar{r}_j\right|^2 + 2 \left(\sum_j q_i \bar{r}_j\right) \cdot \left(\sum_j \bar{\mu}_j\right) + \left| \sum_j \bar{\mu}_j \right|^2
 \right )
 $$
 
 where
 
 $$
-    f = \frac{1}{4\pi\varepsilon_0\varepsilon_r} \quad\quad V=L_xL_yL_z
-$$
-
-$$
-A_k = \frac{e^{-( k^2 + \kappa^2 )/4\alpha^2}}{k^2}
+V=L_xL_yL_z \quad\quad A_k = \frac{e^{-\left( |\bar{k}|^2 + \kappa^2 \right)/4\alpha^2}}{|\bar{k}|^2}
 \quad \quad Q^{q\mu} = Q^{q} + Q^{\mu}
 $$
 
 $$
-Q^{q} = \sum_{j}q_je^{i({\bf k}\cdot {\bf r}_j)} \quad Q^{\mu} = \sum_{j}i({\boldsymbol{\mu}}_j\cdot {\bf k})  e^{i({\bf k}\cdot {\bf r}_j)}
+Q^{q} = \sum_{j}q_je^{i(\bar{k}\cdot \bar{r}_j)} \quad Q^{\mu} = \sum_{j}i({\bar{\mu}}_j\cdot \bar{k})  e^{i(\bar{k}\cdot \bar{r}_j)}
 $$
 
 $$
-{\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right), {\bf n} \in \mathbb{Z}^3
+\bar{k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right)\quad \bar{n} \in \mathbb{Z}^3
 $$
 
-Like many other electrostatic methods, the Ewald scheme also adds a self-energy term, please see separate Table.
+Like the other electrostatic methods, the Ewald scheme also adds a self-energy term, please see separate Table.
 In the case of isotropic periodic boundaries (`ipbc=true`), the orientational degeneracy of the
 periodic unit cell is exploited to mimic an isotropic environment, reducing the number
-of wave-vectors to one fourth compared with PBC Ewald.
+of wave-vectors to one fourth compared with 3D PBC Ewald.
 For point charges, [IPBC](http://doi.org/css8) introduce the modification,
 
 $$
-Q^q = \sum_j q_j \prod\_{\alpha\in\{x,y,z\}} \cos \left( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right)
+Q^q = \sum_j q_j \prod\_{\alpha\in\{x,y,z\}} \cos \left( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} \bar{r}\_{\alpha,j} \right)
 $$
 
 while for point dipoles (currently unavailable),
 
 $$
-Q^{\mu} = \sum\_j \boldsymbol{\mu}\_j
+Q^{\mu} = \sum\_j \bar{\mu}\_j
 \cdot \nabla\_j
-\left( \prod\_{ \alpha \in \{ x,y,z \} } \cos \left ( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right ) \right )
+\left( \prod\_{ \alpha \in \{ x,y,z \} } \cos \left ( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} \bar{r}\_{\alpha,j} \right ) \right )
 $$
 
-**Limitations:** Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles
+**Limitations:**
+
+ - Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles
 and Widom insertion are currently unsupported.
 
 
@@ -469,7 +478,7 @@ there is no overhead since all potentials are splined.
 ------------ | --------------------------------------------------------
 `function`   | Mathematical expression for the potential (units of kT)
 `constants`  | User-defined constants
-`cutoff`     | Spherical cut-off distance
+`cutoff`     | Spherical cutoff distance
 
 The following illustrates how to define a Yukawa potential:
 
@@ -496,7 +505,7 @@ In addition to user-defined constants, the following symbols are defined:
 `pi`       | π (pi)
 `q1`,`q2`  | Particle charges [e]
 `r`        | Particle-particle separation [angstrom]
-`Rc`       | Spherical cut-off [angstrom]
+`Rc`       | Spherical cutoff [angstrom]
 `s1`,`s2`  | Particle sigma [angstrom]
 `T`        | Temperature [K]
 

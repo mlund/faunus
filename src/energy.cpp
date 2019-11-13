@@ -63,7 +63,7 @@ void EwaldData::update(const Point &box) {
 EwaldData::EwaldData(const json &j) {
     alpha = j.at("alpha"); // damping-parameter
     rc = j.at("cutoff");   // real space cut-off
-    kc = j.at("kcutoff");  // reciprocal space cut-off
+    kc = j.at("ncutoff");  // reciprocal space cut-off
     ipbc = j.value("ipbc", false); // using PBC or IPBC?
     spherical_sum = j.value("spherical_sum", true); // Using spherical summation of k-vectors in reciprocal space?
     lB = pc::lB(j.at("epsr"));
@@ -79,7 +79,7 @@ void to_json(json &j, const EwaldData &d) {
          {"epss", d.eps_surf},
          {"alpha", d.alpha},
          {"cutoff", d.rc},
-         {"kcutoff", d.kc},
+         {"ncutoff", d.kc},
          {"wavefunctions", d.kVectors.cols()},
          {"spherical_sum", d.spherical_sum},
          {"kappa", d.kappa}};

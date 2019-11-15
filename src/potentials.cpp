@@ -49,9 +49,9 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
                 (*matrix)(i.id(), j.id()) = combUndefined();
             } else if (i.id() == j.id()) {
                 // if the combinator is "undefined" the homogeneous interaction is still well defined
-                (*matrix)(i.id(), j.id()) = modifier(extractor(i));
+                (*matrix)(i.id(), j.id()) = modifier(extractor(i.interaction));
             } else {
-                (*matrix)(i.id(), j.id()) = modifier(combinator(extractor(i), extractor(j)));
+                (*matrix)(i.id(), j.id()) = modifier(combinator(extractor(i.interaction), extractor(j.interaction)));
             }
         }
     }
@@ -59,7 +59,7 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms) {
 }
 
 TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
-                                           const std::vector<InteractionData> &interactions) {
+                                           const std::vector<CustomInteractionData> &interactions) {
     TPairMatrixPtr matrix = PairMixer::createPairMatrix(atoms);
     auto dimension = std::min(matrix->rows(), matrix->cols());
     for (auto &i : interactions) {
@@ -68,41 +68,52 @@ TPairMatrixPtr PairMixer::createPairMatrix(const std::vector<AtomData> &atoms,
             (*matrix)(i.atom_id[0], i.atom_id[1]) = (*matrix)(i.atom_id[1], i.atom_id[0]) =
                 modifier(extractor(i.interaction));
         } else {
-            throw std::runtime_error("atomtype index out of range");
+            throw std::range_error("atomtype index out of range");
         }
     }
     return matrix;
 }
 
-void from_json(const json &j, std::vector<InteractionData> &interactions) {
-    auto &custom_list = j.at("custom");
-    if (!custom_list.is_object() && !custom_list.is_array()) {
-        throw PairPotentialException("custom parameters syntax error");
+void from_json(const json &j, CustomInteractionData &c) {
+    if (!j.is_object() || j.size() != 1) {
+        throw ConfigurationError("invalid JSON for custom interaction parameters");
     }
-
-    for (auto custom_pair = custom_list.begin(); custom_pair != custom_list.end(); ++custom_pair) {
-        // atomdata is an array with items ecapsulated as objects hence we emulate here
-        AtomData a = custom_list.is_object() ? json::object({{custom_pair.key(), *custom_pair}}) : (*custom_pair);
-        auto atoms_name = words2vec<std::string>(a.name);
-        if (atoms_name.size() == 2) {
-            auto atom0 = findName(atoms, atoms_name[0]);
-            auto atom1 = findName(atoms, atoms_name[1]);
-            if (atom0 == atoms.end() or atom1 == atoms.end()) {
-                throw PairPotentialException(("unknown atom(s): ["s + atoms_name[0] + " " + atoms_name[1] + "]"));
-            }
-            interactions.push_back({{atom0->id(), atom1->id()}, a});
-        } else {
-            throw PairPotentialException("custom parameters require exactly two space-separated atoms");
+    auto j_item = j.items().begin();
+    try {
+        const auto atom_names = words2vec<std::string>(j_item.key());
+        const auto atom_ids = names2ids(atoms, atom_names);
+        if (atom_ids.size() != c.atom_id.size()) {
+            faunus_logger->error("Custom interaction parameters require exactly {} space-separated atoms: {}.",
+                                 c.atom_id.size(), vec2words(atom_names));
+            throw ConfigurationError("wrong number of atoms in custom interaction parameters");
         }
+        std::copy(atom_ids.begin(), atom_ids.end(), c.atom_id.begin());
+    } catch (std::out_of_range &e) {
+        faunus_logger->error("Unknown atom pair [{}] in custom interaction parameters.", j_item.key());
+        throw ConfigurationError("unknown atom pair in custom interaction parameters");
     }
+    c.interaction = j_item.value();
 }
 
-void to_json(json &j, const std::vector<InteractionData> &interactions) {
-    if (!interactions.empty()) {
-        j = json::array();
-        for (auto &i : interactions) {
-            j.push_back(i.interaction);
+void to_json(json &j, const CustomInteractionData &interaction) {
+    std::vector<std::string> atom_names;
+    for(auto atom_id : interaction.atom_id) {
+        atom_names.push_back(atoms[atom_id].name);
+    }
+    j = {{vec2words(atom_names), interaction.interaction}};
+}
+
+void from_json(const json &j, std::vector<CustomInteractionData> &interactions) {
+    if(j.is_array()) {
+        for (const auto j_pair: j) {
+            interactions.push_back(j_pair);
         }
+    } else if(j.is_object()) {
+        for (const auto j_kv: j.items()) {
+            interactions.push_back(json {{j_kv.key(), j_kv.value()}});
+        }
+    } else {
+        throw ConfigurationError("invalid JSON for custom interaction parameters");
     }
 }
 
@@ -135,11 +146,12 @@ void MixerPairPotentialBase::from_json(const json &j) {
             }
         }
         if (j.count("custom") == 1) {
-            *custom_pairs = j;
+            // *custom_pairs = j["custom"]; // does not work, perhaps as from_json is also a method (a namespace conflict)
+            Potential::from_json(j["custom"], *custom_pairs);
         }
-    } catch (const PairPotentialException &e) {
+    } catch (const ConfigurationError &e) {
         faunus_logger->error(std::string(e.what()) + " in potential " + name);
-        throw std::runtime_error("error deserialising potential " + name + " from json");
+        throw std::runtime_error("error reading potential " + name + " from json");
     }
     extractorsFromJson(j);
     init();
@@ -291,10 +303,10 @@ void LennardJones::initPairMatrices() {
 void LennardJones::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
     auto epsilon_name = j.value("eps", "eps");
     json_extra_params["eps"] = epsilon_name;
-    extract_epsilon = [epsilon_name](const AtomData &a) -> double { return a.getProperty(epsilon_name) * 1.0_kJmol; };
+    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.get(epsilon_name) * 1.0_kJmol; };
 }
 
 // =============== HardSphere ===============
@@ -309,7 +321,7 @@ void HardSphere::initPairMatrices() {
 void HardSphere::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
 }
 
 // =============== Hertz ===============
@@ -330,10 +342,10 @@ void Hertz::initPairMatrices() {
 void Hertz::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
     auto epsilon_name = j.value("eps", "eps");
     json_extra_params["eps"] = epsilon_name;
-    extract_epsilon = [epsilon_name](const AtomData &a) -> double { return a.getProperty(epsilon_name) * 1.0_kJmol; };
+    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.get(epsilon_name) * 1.0_kJmol; };
 }
 
 // =============== SquareWell ===============
@@ -354,10 +366,10 @@ void SquareWell::initPairMatrices() {
 void SquareWell::extractorsFromJson(const json &j) {
     auto sigma_name = j.value("sigma", "sigma");
     json_extra_params["sigma"] = sigma_name;
-    extract_sigma = [sigma_name](const AtomData &a) -> double { return a.getProperty(sigma_name) * 1.0_angstrom; };
+    extract_sigma = [sigma_name](const InteractionData &a) -> double { return a.get(sigma_name) * 1.0_angstrom; };
     auto epsilon_name = j.value("eps", "eps");
     json_extra_params["eps"] = epsilon_name;
-    extract_epsilon = [epsilon_name](const AtomData &a) -> double { return a.getProperty(epsilon_name) * 1.0_kJmol; };
+    extract_epsilon = [epsilon_name](const InteractionData &a) -> double { return a.get(epsilon_name) * 1.0_kJmol; };
 }
 
 // =============== Polarizability ===============

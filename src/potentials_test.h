@@ -27,9 +27,9 @@ TEST_CASE("[Faunus] PairMixer") {
         SUBCASE("") {
             atoms =
                 R"([{"A": {"sigma":2.0}}, {"B": {"sigma":8.0}}, {"C": {"sigma":18.0}}])"_json.get<decltype(atoms)>();
-            REQUIRE(atoms.front().getProperty("sigma") == Approx(2.0));
-            std::vector<InteractionData> pairs = R"({"custom": {"A C": {"sigma": 9.5}, "C B": {"sigma": 12.5}}})"_json;
-            TExtractorFunc sigma = [](AtomData a) -> double { return a.getProperty("sigma"); };
+            REQUIRE(atoms.front().interaction.get("sigma") == Approx(2.0));
+            std::vector<CustomInteractionData> pairs = R"([{"A C": {"sigma": 9.5}}, {"C B": {"sigma": 12.5}}])"_json;
+            TExtractorFunc sigma = [](InteractionData a) -> double { return a.get("sigma"); };
 
             SUBCASE("") {
                 PairMixer mixer(sigma, &PairMixer::combArithmetic);
@@ -56,6 +56,11 @@ TEST_CASE("[Faunus] PairMixer") {
                 CHECK((*matrix)(0, 1) == Approx(50.0));
                 CHECK((*matrix)(2, 0) == Approx(95.0));
                 CHECK((*matrix)(2, 1) == Approx(125.0));
+            }
+            SUBCASE("Alternative JSON") {
+                CHECK_NOTHROW(R"({"A C": {"sigma": 9.5}})"_json.get<std::vector<CustomInteractionData>>());
+                std::vector<CustomInteractionData> alt_pairs = R"({"A C": {"sigma": 9.5}, "C B": {"sigma": 12.5}})"_json;
+                CHECK_EQ(alt_pairs.size(), pairs.size());
             }
         }
     }
@@ -101,7 +106,7 @@ TEST_CASE("[Faunus] LennardJones") {
         CHECK(lj(a, b, {0, 0, d}) == Approx(lj_func(0.4_nm, 0.3_kJmol)));
     }
     SUBCASE("Custom pairs") {
-        LennardJones lj = R"({"mixing": "LB", "custom": {"A B": {"eps": 0.5, "sigma": 8}}})"_json;
+        LennardJones lj = R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json;
         CHECK(lj(a, b, {0, 0, d}) == Approx(lj_func(0.8_nm, 0.5_kJmol)));
         CHECK(lj(a, a, {0, 0, d}) == Approx(lj_func(0.2_nm, 0.9_kJmol)));
     }
@@ -115,7 +120,7 @@ TEST_CASE("[Faunus] WeeksChandlerAndersen") {
 
         CHECK_THROWS_AS(WeeksChandlerAndersen wca = R"({"mixing": "unknown"})"_json, std::runtime_error);
         CHECK_NOTHROW(WeeksChandlerAndersen wca = R"({})"_json);
-        CHECK_NOTHROW(WeeksChandlerAndersen wca = R"({"mixing": "LB", "custom": {"A B": {"eps": 0.5, "sigma": 8}}})"_json);
+        CHECK_NOTHROW(WeeksChandlerAndersen wca = R"({"mixing": "LB", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json);
 
         SUBCASE("Missing coefficient") {
             WeeksChandlerAndersen wca = R"({"mixing": "LB", "sigma": "sigma_wca"})"_json;
@@ -138,7 +143,7 @@ TEST_CASE("[Faunus] WeeksChandlerAndersen") {
         // different atom and custom coefficient names are not allowed
         // CHECK_THROWS_AS_MESSAGE(
         //     WeeksChandlerAndersen wca =
-        //         R"({"mixing": "LB", "sigma": "sigma_wca", "custom": {"A B": {"eps": 0.5, "sigma": 8}}})"_json,
+        //         R"({"mixing": "LB", "sigma": "sigma_wca", "custom": [{"A B": {"eps": 0.5, "sigma": 8}}]})"_json,
         //     std::runtime_error, "unknown atom property");
     }
     SUBCASE("JSON serialization") {
@@ -175,7 +180,7 @@ TEST_CASE("[Faunus] HardSphere") {
         CHECK(hs(a, b, {0, 0, 4.99_angstrom}) == pc::infty);
     }
     SUBCASE("Custom pairs with implicit mixing") {
-        HardSphere hs = R"({"custom": {"A B": {"sigma": 6}}})"_json;
+        HardSphere hs = R"({"custom": [{"A B": {"sigma": 6}}]})"_json;
         CHECK(hs(a, a, {0, 0, 2.01_angstrom}) == 0);
         CHECK(hs(a, a, {0, 0, 1.99_angstrom}) == pc::infty);
         CHECK(hs(a, b, {0, 0, 6.01_angstrom}) == 0);

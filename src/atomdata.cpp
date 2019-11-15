@@ -1,39 +1,69 @@
 #include <spdlog/spdlog.h>
+#include <cmath>
 #include "atomdata.h"
 #include "units.h"
 #include "aux/eigensupport.h"
 
 namespace Faunus {
 
-AtomData::Tid &AtomData::id() { return _id; }
-
-const AtomData::Tid &AtomData::id() const { return _id; }
-
-void AtomData::setProperty(const TPropertyName name, const double value) {
-    property[name] = value;
-    // an ugly temporal hack needed until the refactorization is finished
-    // as sigma is unfortunately accessed in loops
-    if (name == "sigma") {
-        sigma = 1.0_angstrom * value;
-    }
+bool InteractionData::has(const Tkey name) const {
+    auto it = data.find(name);
+    return it != data.end() && !std::isnan(it->second);
 }
-double AtomData::getProperty(const TPropertyName name) const {
+
+double InteractionData::get(const Tkey name) const {
     try {
-        return property.at(name);
+        return data.at(name);
     } catch (const std::out_of_range &e) {
-        faunus_logger->error("Unknown property {} of atom {}", name, this->name);
         // cannot throw until non-used atomic pairs are eliminated from the potential matrices
-        // throw std::runtime_error("unknown atom property");
+        faunus_logger->error("Unknown/unset atom property {} required.", name);
         return std::numeric_limits<double>::signaling_NaN();
     }
 }
-double &AtomData::getProperty(const TPropertyName name) {
-    if(property.count(name) == 0) {
-        setProperty(name, std::numeric_limits<double>::signaling_NaN());
+
+double& InteractionData::get(const Tkey name) {
+    if(data.find(name) == data.end()) {
+        set(name, std::numeric_limits<double>::signaling_NaN());
     }
-    return property.at(name);
+    return data.at(name);
 }
 
+void InteractionData::set(const Tkey name, const double value) {
+    auto it = data.find(name);
+    if(it != data.end()) {
+        it->second = value;
+    } else {
+        data.insert({name, value});
+    }
+}
+
+void from_json(const json &j, InteractionData &a) {
+    for (const auto &j_it : j.items()) {
+        if (j_it.value().is_number()) {
+            a.set(j_it.key(), j_it.value());
+        }
+    }
+}
+
+void from_json(SingleUseJSON &j, InteractionData &a) {
+    auto j_copy = j;
+    for (const auto &j_it : j_copy.items()) {
+        if (j_it.value().is_number()) {
+            a.set(j_it.key(), j_it.value());
+            j.erase(j_it.key());
+        }
+    }
+}
+
+void to_json(json &j, const InteractionData &a) {
+    for (const auto &kv : a.data) {
+        j[kv.first] = kv.second;
+    }
+}
+
+AtomData::Tid &AtomData::id() { return _id; }
+
+const AtomData::Tid &AtomData::id() const { return _id; }
 
 void to_json(json &j, const AtomData &a) {
     auto &_j = j[a.name];
@@ -51,9 +81,7 @@ void to_json(json &j, const AtomData &a) {
           {"scdir", a.scdir},
           {"sclen", a.sclen},
           {"id", a.id()}};
-    for (const auto &property : a.property) {
-        _j[property.first] = property.second;
-    }
+    to_json(_j, a.interaction); // append other interactions
     if (a.hydrophobic)
         _j["hydrophobic"] = a.hydrophobic;
     if (a.implicit)
@@ -97,19 +125,21 @@ void from_json(const json &j, AtomData &a) {
         if (val.count("r") == 1) {
             faunus_logger->warn("Atom property `r` is obsolete; use `sigma = 2*r` instead on atom {}", a.name);
         }
-        a.setProperty("sigma", val.value("sigma", 0.0) * 1.0_angstrom);
-        if (fabs(a.getProperty("sigma")) < 1e-20)
-            a.setProperty("sigma", 2.0 * val.value("r", 0.0) * 1.0_angstrom);
+        a.interaction.set("sigma", val.value("sigma", 0.0) * 1.0_angstrom);
+        if (fabs(a.interaction.get("sigma")) < 1e-20)
+            a.interaction.set("sigma", 2.0 * val.value("r", 0.0) * 1.0_angstrom);
+        // an ugly temporal hack needed until the refactorization is finished
+        // as sigma is unfortunately accessed in loops
+        a.sigma = a.interaction.get("sigma");
 
-        json j_remaining_properties = val;
-        for (auto &property_iter : j_remaining_properties.items()) {
-            if (property_iter.value().is_number()) {
-                a.setProperty(property_iter.key(), property_iter.value());
-            } else {
-                throw std::runtime_error("unused key(s) for atom '"s + a.name + "':\n" + property_iter.key() +
-                                         usageTip["atomlist"]);
-            }
+        from_json(val, a.interaction);
+        if (!val.empty()) {
+            throw std::runtime_error("unused key(s) for atom '"s + a.name + "':\n" + val.items().begin().key() +
+                                     usageTip["atomlist"]);
         }
+
+        if (std::isnan(a.interaction.get("sigma")))
+            throw ConfigurationError("no sigma parameter defined");
     }
 }
 

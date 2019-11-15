@@ -22,11 +22,11 @@ TEST_CASE("[Faunus] AtomData") {
     CHECK_EQ(v.size(), 2);
     CHECK_EQ(v.front().id(), 0);
     CHECK_EQ(v.front().name, "A");                             // alphabetic order in std::map
-    CHECK(v.front().getProperty("sigma") == Approx(2.5));      // raw number, no units
-    CHECK(v.front().getProperty("eps_custom") == Approx(0.1)); // raw number, no units
+    CHECK(v.front().interaction.get("sigma") == Approx(2.5));      // raw number, no units
+    CHECK(v.front().interaction.get("eps_custom") == Approx(0.1)); // raw number, no units
 
-    CHECK_EQ(std::isnan(v.front().getProperty("eps_unknown")), true);
-    // CHECK_THROWS_AS_MESSAGE(v.front().getProperty("eps_unknown"), std::runtime_error, "unknown atom property");
+    CHECK_EQ(std::isnan(v.front().interaction.get("eps_unknown")), true);
+    // CHECK_THROWS_AS_MESSAGE(v.front().interaction.get("eps_unknown"), std::runtime_error, "unknown atom property");
     CHECK(v.front().sigma == Approx(2.5e-10_m));
     CHECK(v.front().activity == Approx(0.01_molar));
     CHECK(v.back().tfe == Approx(0.98_kJmol / (1.0_angstrom * 1.0_angstrom * 1.0_molar)));
@@ -36,8 +36,8 @@ TEST_CASE("[Faunus] AtomData") {
     CHECK_EQ(a.name, "B");
     CHECK_EQ(a.id(), 1);
     CHECK(a.activity == Approx(0.2_molar));
-    CHECK(a.getProperty("sigma") == Approx(2.2)); // raw number, no units
-    CHECK(a.getProperty("eps") == Approx(0.05));  // raw number, no units
+    CHECK(a.interaction.get("sigma") == Approx(2.2)); // raw number, no units
+    CHECK(a.interaction.get("eps") == Approx(0.05));  // raw number, no units
     CHECK(a.dp == Approx(9.8));
     CHECK(a.dprot == Approx(3.14));
     CHECK(a.mw == Approx(1.1));

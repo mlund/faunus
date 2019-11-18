@@ -275,8 +275,10 @@ void VirtualVolume::_sample() {
             if (f)           // write sample event to output file
                 f << cnt << " " << dV << " " << du << " " << exp_du << " " << std::log(duexp.avg()) / dV << "\n";
 #ifndef NDEBUG
-            if (Uold != 0) // check if volume and particle positions are properly restored
-                assert(std::fabs((Uold - pot.energy(c)) / Uold) < 1e-4); // expensive
+            if (Uold != 0) { // check if volume and particle positions are properly restored
+                double should_be_small = std::fabs((Uold - pot.energy(c)) / Uold);
+                assert(should_be_small < 1e-4); // expensive
+            }
 #endif
         } else {   // energy change too large (negative) to fit exp() function
             cnt--; // cnt is incremented by sample() so we need to decrease

@@ -262,34 +262,27 @@ void PairAngleFunctionBase::_from_json(const json &) { hist2.setResolution(dr, 0
 
 void VirtualVolume::_sample() {
     if (fabs(dV) > 1e-10) {
-        // store old volume and energy
-        double Vold = getVolume(), Uold = pot.energy(c);
-        // scale entire system to new volume
-        scaleVolume(Vold + dV);
-        double Unew = pot.energy(c);
-        // restore saved system
-        scaleVolume(Vold);
+        double Vold = getVolume(), Uold = pot.energy(c); // store old volume and energy
+        scaleVolume(Vold + dV);                          // scale entire system to new volume
+        double Unew = pot.energy(c);                     // energy after scaling
+        scaleVolume(Vold);                               // restore saved system
 
-        // check if energy change is too big for exp()
-        double x = pc::infty;
-        double du = Unew - Uold; // system energy change
-        if (-du < pc::max_exp_argument)
-            x = std::exp(-du);
-        if (std::isinf(x)) {
-            faunus_logger->warn("{0}: skipping sample event due to excessive energy likely due to overlaps.", name);
-            cnt--; // cnt is incremented by sample() so we need to decrease
-        } else {
-            assert(not std::isnan(x));
-            duexp += x;
+        double du = Unew - Uold;          // system energy change
+        if (-du < pc::max_exp_argument) { // does minus energy change fits exp() function?
+            double exp_du = std::exp(-du);
+            assert(not std::isnan(exp_du));
+            duexp += exp_du; // collect average, <exp(-du)>
+            if (f)           // write sample event to output file
+                f << cnt << " " << dV << " " << du << " " << exp_du << " " << std::log(duexp.avg()) / dV << "\n";
 #ifndef NDEBUG
-            // check volume and particle positions are properly restored
-            double err = std::fabs((Uold - pot.energy(c)) / Uold); // must be ~zero!
-            if (std::isfinite(err))                                // catch if Uold==0
-                assert(err < 1e-4);
+            if (Uold != 0) { // check if volume and particle positions are properly restored
+                double should_be_small = std::fabs((Uold - pot.energy(c)) / Uold);
+                assert(should_be_small < 1e-4); // expensive
+            }
 #endif
-            // write excess pressure to output file
-            if (f)
-                f << cnt << " " << dV << " " << du << " " << x  << "\n";
+        } else {   // energy change too large (negative) to fit exp() function
+            cnt--; // cnt is incremented by sample() so we need to decrease
+            faunus_logger->warn("{0}: skipping sample event due to excessive energy, dU/kT={1}", name, du);
         }
     }
 }
@@ -301,10 +294,11 @@ void VirtualVolume::_from_json(const json &j) {
         if (f)
             f.close();
         f.open(file);
-        f << "# steps dV/"+ u8::angstrom + u8::cubed + " du/kT exp(-du/kT)" << "\n";
-        f.precision(14);
         if (!f)
             throw std::runtime_error(name + ": cannot open output file " + file);
+        f << "# steps dV/" + u8::angstrom + u8::cubed + " du/kT exp(-du/kT) <Pex>/kT/" + u8::angstrom + u8::cubed
+          << "\n"; // file header
+        f.precision(14);
     }
 }
 
@@ -1284,22 +1278,67 @@ void ScatteringFunction::_sample() {
                 for (auto &i : g) // loop over particle index in group
                     p.push_back(i.pos);
     }
-    debye.sample(p, spc.geo.getVolume());
+    switch (scheme) {
+    case DEBYE:
+        debye->sample(p, spc.geo.getVolume());
+        break;
+    case EXPLICIT:
+        explicit_average->sample(p, spc.geo.getLength().x());
+        break;
+    }
 }
-void ScatteringFunction::_to_json(json &j) const { j = {{"molecules", names}, {"com", usecom}}; }
+void ScatteringFunction::_to_json(json &j) const {
+    j = {{"molecules", names}, {"com", usecom}};
+    switch (scheme) {
+    case DEBYE:
+        j["scheme"] = "debye";
+        j["qmin"] = debye->qmin;
+        j["qmax"] = debye->qmax;
+        break;
+    case EXPLICIT:
+        j["scheme"] = "explicit";
+        j["pmax"] = explicit_average->pmax;
+        break;
+    }
+}
 
-ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc), debye(j) {
+ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc) {
     from_json(j);
     name = "scatter";
     usecom = j.value("com", true);
     filename = j.at("file").get<std::string>();
     names = j.at("molecules").get<decltype(names)>(); // molecule names
     ids = names2ids(molecules, names);                // names --> molids
+
+    std::string scheme_str = j.value("scheme", "explicit");
+    if (scheme_str == "debye") {
+        scheme = DEBYE;
+        debye = std::make_shared<Scatter::DebyeFormula<Tformfactor>>(j);
+        // todo: add warning if used on PBC system
+        // if (spc.geo.geometry->boundary_conditions.x() == Geometry::PERIODIC)
+        //    faunus_logger->warn("{0}: '{1}' scheme used on PBC system; consider 'explicit' instead", name,
+        //    scheme_str);
+    } else if (scheme_str == "explicit") {
+        scheme = EXPLICIT;
+        int pmax = j.value("pmax", 15);
+        explicit_average = std::make_shared<Scatter::StructureFactor<double>>(pmax);
+        // todo: add warning if used a non-cubic system
+    } else
+        throw std::runtime_error("unknown scheme");
 } catch (std::exception &e) {
-    throw std::runtime_error("debye formula: "s + e.what());
+    throw std::runtime_error("scatter: "s + e.what());
 }
 
-ScatteringFunction::~ScatteringFunction() { debye.save(filename); }
+void ScatteringFunction::_to_disk() {
+    switch (scheme) {
+    case DEBYE:
+        debye->save(filename);
+        break;
+    case EXPLICIT:
+        explicit_average->save(filename);
+        break;
+    }
+}
 
 } // namespace Analysis
 } // namespace Faunus

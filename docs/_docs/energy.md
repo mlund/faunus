@@ -90,7 +90,7 @@ Finally, the spline precision can be controlled with `utol=1e-5` kT.
 Below is a description of possible nonbonded methods. For simple potentials, the hard coded
 variants are often the fastest option. For better performance, it is recommended to use `nonbonded_splined` in place of the more robust `nonbonded` method. To check that the combined potential is splined correctly, set `to_disk=true` to print to `A-B_tabulated.dat` the exact and splined combined potentials between species A and B.
 
-`energy`               | $u_{ij}$
+`energy`               | $u\_{ij}$
 ---------------------- | ------------------------------------------------------
 `nonbonded`            | Any combination of pair potentials (slower, but exact)
 `nonbonded_exact`      | An alias for `nonbonded`
@@ -164,19 +164,20 @@ coulomb types                            | Keywords          | $\mathcal{S}(q)$
 [`zerodipole`](http://doi.org/10/fhcfn4) | `alpha`           | $\text{erfc}(\alpha R_cq)-q\text{erfc}(\alpha R_c)+\frac{(q^2-1)}{2}q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
 [`zahn`](http://doi.org/10/cmx5vd)       | `alpha`           | $\text{erfc}(\alpha R_c q)-(q-1)q\left(\text{erfc}(\alpha R_c)+\frac{2\alpha R_c}{\sqrt{\pi}}\text{exp}(-\alpha^2R_c^2)\right)$
 [`wolf`](http://doi.org/cfcxdk)          | `alpha`           | $\text{erfc}(\alpha R_cq)-\text{erfc}(\alpha R_c)q$
-`yukawa`                                 | `debyelength`     | Same as `poisson` with `C=1` and `D=-1`
+`yukawa`                                 | `debyelength`, `shift=true` | Same as `poisson` with `C=1` and `D=-1`
 
-**Note:** Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed. The `zahn` and `fennell` approaches have undefined dipolar self-energies and are therefore not recommended for such systems. For the Poisson potential
+Internally $\mathcal{S}(q)$ is _splined_ whereby all types evaluate at similar speed.
+For the `poisson` potential,
 
 $$
 \acute{q} = \frac{1-\exp\left(2\kappa R_c q\right)}{1-\exp\left(2\kappa R_c\right)}
 $$
 
 which as the inverse Debye length, $\kappa\to 0$ gives $\acute{q}=q$.
-The `poisson` scheme can generate a number of other truncated pair-potentials found in the litterature, depending on `C` and `D`
-Thus, for an infinite Debye length:
+The `poisson` scheme can generate a number of other truncated pair-potentials found in the litterature,
+depending on `C` and `D`. Thus, for an infinite Debye length, the following holds:
 
-`C` | `D` | Reference / Comment
+`C` | `D` | Equivalent to
 --- | --- | ----------------------
  1  | -1  | Plain Coulomb
  1  |  0  | [Undamped Wolf](http://doi.org/10.1063/1.478738)
@@ -189,43 +190,46 @@ Thus, for an infinite Debye length:
  4  |  3  | [Fanourgakis](http://doi.org/10.1063/1.3216520)
 
 
-
 ### Debye Screening Length
 
 A background screening due to implicit ions can be added by specifying the keyword `debyelength` to the schemes
-`ewald`, `poisson`, and `yukawa`. The latter is merely an alias for `poisson` with `C=1`, and `D=-1` which
+`ewald`, `poisson`, and `yukawa`. The latter is an alias for `poisson` with `C=1`, and `D=-1` which
 gives a plain and shifted Coulomb potential with exponential screening.
-
+If `shift=false`, the potential is left unshifted and any given cutoff is ignored and instead set to infinity.
 
 ### Multipoles
 
 If `type=coulomb` is replaced with `type=multipole` the electrostatic energy will in addition to
 monopole-monopole interactions include contributions from monopole-dipole, and dipole-dipole
 interactions. Multipolar properties of each particle is specified in the Topology.
+The `zahn` and `fennell` approaches have undefined dipolar self-energies and are therefore not recommended for such systems.
 
 The ion-dipole interaction is described by
 
 $$
-\tilde{u}^{(z\mu)}_{ij}({\bf r}) = -\frac{ez_i\left(\mu_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q) \right)
+\tilde{u}^{(z\mu)}_{ij}({\bf r}) =
+-\frac{ez_i\left(\mu_j\cdot \hat{\bf r}\right) }{|{\bf r}|^2} \left( \mathcal{S}(q)
+- q\mathcal{S}^{\prime}(q) \right)
 $$
 
 where $\hat{\bf r} = {\bf r}/|{\bf r}|$, and the dipole-dipole interaction by
 
 $$
-\tilde{u}^{\mu\mu}_{ij}({\bf r}) = -\left(\frac{3 ( \boldsymbol{\mu}_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
+\tilde{u}^{\mu\mu}_{ij}({\bf r}) = -\left ( \frac{3 ( \boldsymbol{\mu}_i \cdot \hat{\bf r} ) \left(\boldsymbol{\mu}_j\cdot\hat{\bf r}\right) - \boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j }{|{\bf r}|^3}\right) \left( \mathcal{S}(q) - q\mathcal{S}^{\prime}(q)  + \frac{q^2}{3}\mathcal{S}^{\prime\prime}(q) \right) - \frac{\left(\boldsymbol{\mu}_i\cdot\boldsymbol{\mu}_j\right)}{|{\bf r}|^3}\frac{q^2}{3}\mathcal{S}^{\prime\prime}(q).
 $$
 
 
 ### Self-energies
 
 When using `coulomb` or `multipole`, an electrostatic self-energy term is automatically
-added to the Hamiltonian. The charge- and dipole-contributions are evaluated according to
+added to the Hamiltonian. The monopole and dipole contributions are evaluated according to
 
 $$
-U_{self} = -\frac{1}{2}\sum_i^N\sum_{*\in\{z,\mu\}} \lim_{|{\bf r}_{ii}|\to 0}\left( u^{(**)}_{ii}({\bf r}_{ii}) - \tilde{u}^{(**)}_{ii}({\bf r}_{ii}) \right)
+U\_{self} = -\frac{1}{2}\sum\_i^N\sum\_{*\in\{z,\mu\}} \lim\_{|{\bf r}\_{ii}|\to 0}\left( u^{(**)}\_{ii}({\bf r}\_{ii})
+- \tilde{u}^{(**)}\_{ii}({\bf r}\_{ii}) \right )
 $$
 
-where no tilde indicate that $\mathcal{S}(q)\equiv 1$ for any $q$.
+where no tilde indicates that $\mathcal{S}(q)\equiv 1$ for any $q$.
 
 
 ### Ewald Summation
@@ -273,14 +277,14 @@ $$
 {\bf k} = 2\pi\left( \frac{n_x}{L_x} , \frac{n_y}{L_y} ,\frac{n_z}{L_z} \right), {\bf n} \in \mathbb{Z}^3
 $$
 
-Like many other electrostatic methods, the Ewald scheme also adds a self-energy term, please see separate Table.
+Like many other electrostatic methods, the Ewald scheme also adds a self-energy term as described above.
 In the case of isotropic periodic boundaries (`ipbc=true`), the orientational degeneracy of the
 periodic unit cell is exploited to mimic an isotropic environment, reducing the number
 of wave-vectors to one fourth compared with PBC Ewald.
 For point charges, [IPBC](http://doi.org/css8) introduce the modification,
 
 $$
-Q^q = \sum_j q_j \prod\_{\alpha\in\{x,y,z\}} \cos \left( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right)
+Q^q = \sum\_j q\_j \prod\_{\alpha\in\{x,y,z\}} \cos \left( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right)
 $$
 
 while for point dipoles (currently unavailable),
@@ -290,9 +294,6 @@ Q^{\mu} = \sum\_j \boldsymbol{\mu}\_j
 \cdot \nabla\_j
 \left( \prod\_{ \alpha \in \{ x,y,z \} } \cos \left ( \frac{2\pi}{L\_{\alpha}} n\_{\alpha} r\_{\alpha,j} \right ) \right )
 $$
-
-**Limitations:** Ewald summation requires a constant number of particles, i.e. $\mu V T$ ensembles
-and Widom insertion are currently unsupported.
 
 
 ### Mean-Field Correction
@@ -310,7 +311,7 @@ To enable the correction, use the `akesson` keyword at the top level of `energy`
 `molecules`       | Array of molecules to operate on
 `epsr`            | Relative dielectric constant
 `nstep`           | Number of energy evalutations between updating $\rho(z)$
-`dz=0.2`          | $z$ resolution (angstrom)
+`dz=0.2`          | $z$ resolution (Å)
 `nphi=10`         | Multiple of `nstep` in between updating $\varphi(z)$
 `file=mfcorr.dat` | File with $\rho(z)$ to either load or save
 `fixed=false`     | If true, assume that `file` is converged. No further updating and faster.
@@ -454,7 +455,7 @@ experimental implementation of [Solvent Accessible Surface Area] energy.
 `sasa`       | Description
 ------------ | ----------------------------------------------------------
 `molarity`   | Molar concentration of co-solute, $c_s$
-`radius=1.4` | Probe radius for SASA calculation (angstrom)
+`radius=1.4` | Probe radius for SASA calculation (Å)
 `shift=true` | Shift to zero at large separations
 
 ### Custom
@@ -492,12 +493,12 @@ In addition to user-defined constants, the following symbols are defined:
 `inf`      | ∞ (infinity)
 `kB`       | Boltzmann constant [J/K]
 `kT`       | Boltzmann constant × temperature [J]
-`Nav`      | Avogadro constant [1/mol]
+`Nav`      | Avogadro's number [1/mol]
 `pi`       | π (pi)
 `q1`,`q2`  | Particle charges [e]
-`r`        | Particle-particle separation [angstrom]
-`Rc`       | Spherical cut-off [angstrom]
-`s1`,`s2`  | Particle sigma [angstrom]
+`r`        | Particle-particle separation [Å]
+`Rc`       | Spherical cut-off [Å]
+`s1`,`s2`  | Particle sigma [Å]
 `T`        | Temperature [K]
 
 ## Custom External Potential
@@ -521,11 +522,11 @@ In addition to user-defined `constants`, the following symbols are available:
 `inf`      | ∞ (infinity)
 `kB`       | Boltzmann constant [J/K]
 `kT`       | Boltzmann constant × temperature [J]
-`Nav`      | Avogadro constant [1/mol]
+`Nav`      | Avogadro's number [1/mol]
 `pi`       | π (pi)
 `q`        | Particle charge [e]
-`s`        | Particle sigma [angstrom]
-`x`,`y`,`z`| Particle positions [angstrom]
+`s`        | Particle sigma [Å]
+`x`,`y`,`z`| Particle positions [Å]
 `T`        | Temperature [K]
 
 If `com=true`, charge refers to the molecular net-charge, and `x,y,z` the mass-center coordinates.
@@ -618,7 +619,7 @@ Should one insist on conducting simulations far from equilibrium, a large displa
 `index`        | Array with _exactly two_ indices (relative to molecule)
 
 Finite extensible nonlinear elastic potential long range repulsive potential combined
-with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` non-bonded energy.
+with the short ranged Weeks-Chandler-Anderson (wca) repulsive potential. This potential is particularly useful in combination with the `nonbonded_cached` energy.
 
 $$
      u(r) =
@@ -629,8 +630,7 @@ $$
   \end{cases}
 $$
 
-**Note:**
-It is recommend to only use the potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
+It is recommended to only use this potential if the initial configuration is near equilibrium, which prevalently depends on the value of `rmax`.
 Should one insist on conducting simulations far from equilibrium, a large displacement parameter is recommended to reach finite energies.
 
 ### Harmonic torsion
@@ -681,18 +681,16 @@ $$
 `k`          | Harmonic spring constant in kJ/mol or `inf` for infinity
 
 Confines `molecules` in a given region of the simulation container by applying a harmonic potential on
-exterior atom positions, $\mathbf{r}_i$:
+exterior atom positions, $\mathbf{r}\_i$:
 
 $$
-U = \frac{1}{2} k \sum^{\text{exterior}} f_i
+U = \frac{1}{2} k \sum\_{i}^{\text{exterior}} f\_i
 $$
 
-where $f_i$ is a function that depends on the confinement `type`,
+where $f\_i$ is a function that depends on the confinement `type`,
 and $k$ is a spring constant. The latter
-may be _infinite_ which renders the exterior region strictly inaccessible and may evaluate faster than for finite values.
+may be _infinite_ which renders the exterior region strictly inaccessible.
 During equilibration it is advised to use a _finite_ spring constant to drive exterior particles inside the region.
-
-**Note:**
 Should you insist on equilibrating with $k=\infty$, ensure that displacement parameters are large enough to transport molecules inside the allowed region, or all moves may be rejected. Further, some analysis routines have undefined behavior for configurations with infinite energies.
 
 Available values for `type` and their additional keywords:
@@ -729,12 +727,12 @@ elements of `high`.
 ## Solvent Accessible Surface Area
 
 Note that the implementation of Solvent Accessible Surface Area potential is considered _experimental_.
-The code is untested, unoptimized and the configuration syntax below can change.
+The code is untested, unoptimized, and the configuration syntax below can change.
 The FreeSASA library option has to be enabled when [compiling].
 
 `sasa`       | SASA Transfer Free Energy
 ------------ | --------------------------------------------
-`radius=1.4` | Probe radius for SASA calculation (angstrom)
+`radius=1.4` | Probe radius for SASA calculation (Å)
 `molarity`   | Molar concentration of co-solute
 
 Calculates the free energy contribution due to
@@ -805,14 +803,14 @@ Options:
 
 `penalty`        |  Description
 ---------------- | --------------------
-`f0`             |  Penalty energy increment (_kT_)
+`f0`             |  Penalty energy increment (kT)
 `update`         |  Interval between scaling of `f0`
 `scale`          |  Scaling factor for `f0`
 `nodrift=true`   |  Suppress energy drift
 `quiet=false`    |  Set to true to get verbose output
 `file`           |  Name of saved/loaded penalty function
 `overwrite=true` |  If `false`, don't save final penalty function
-`histogram`      |  Name of saved histogram (not required)
+`histogram`      |  Name of saved histogram (optional)
 `coords`         |  Array of _one or two_ coordinates
 
 The coordinate, $\mathcal{X}$, can be freely composed by one or two
@@ -831,7 +829,7 @@ General keywords  | Description
 `index`           | Atom index, atom id or group index
 `indexes`         | Array of atomic indexes
 `range`           | Array w. [min:max] value
-`resolution`      | Resolution along the coordinate
+`resolution`      | Resolution along the coordinate (Å)
 `dir`             | Axes of the reaction coordinate, $e.g.$, `[1,1,0]` for the $xy$-plane  
 
 #### Atom Properties

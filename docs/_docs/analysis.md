@@ -171,6 +171,25 @@ form factor of unity.
 `qmax`      | Maximum _q_ value (1/Å)
 `dq`        | _q_ spacing (1/Å)
 `com=true`  | Treat molecular mass centers as single point scatterers
+`pmax=15`   | Multiples of $(h,k,l)$ when using the `explicit` scheme
+`scheme=explicit` | The following schemes are available: `debye`, `explicit`
+
+The `explicit` scheme is recommended for cuboids with PBC and the calculation is performed by explicitly
+averaging the following equation over the 3+6+4 directions obtained by permuting
+the crystallographic index `[100]`, `[110]`, `[111]` to define the scattering vector
+$\mathbf{q} = 2\pi p/L(h,k,l)$ where $p=1,2,\dots,p\_{max}$.
+
+$$
+S(q) = \frac{1}{N} \left <
+     \left ( \sum_i^N \sin(\mathbf{qr}\_i) \right )^2 +
+     \left ( \sum_j^N \cos(\mathbf{qr}\_j) \right )^2
+    \right >
+$$
+
+The sampled $q$-interval is always $\left [ 2\pi/L,\, 2\pi p\_{max} \sqrt{3} / L \right ]$,
+$L$ being the box side length. Currently only cubic boxes are supported.
+For more information, see [doi:10.1063/1.449987](http://dx.doi.org/10.1063/1.449987).
+
 
 ### Atomic Inertia Eigenvalues
 
@@ -178,7 +197,7 @@ This calculates the inertia eigenvalues for all particles having a given id.
 The inertia tensor is defined as
 
 $$
-I = \sum_{i=1}^N m_i ( \| \bf{t_i} \|^2 \mathrm{I} - \bf{t_i} \bf{t_i}^T ) 
+I = \sum\_{i=1}^N m\_i ( \| \bf{t\_i} \|^2 \mathrm{I} - \bf{t\_i} \bf{t\_i}^T ) 
 $$
 
 where $\bf{t_i} = \bf{r_i} - \bf{cm}$, $\bf{r_i}$ is the coordinate of the $i$th particle, $\bf{cm}$ is the
@@ -429,9 +448,9 @@ surface tension etc., see [here](http://doi.org/ckfh).
 
 `virtualvolume` | Description
 --------------- | -------------------------------------
-`dV`            | Volume perturbation (angstrom cubed)
+`dV`            | Volume perturbation (Å³)
 `nstep`         | Interval between samples
-`file`          | Optional filename for excess pressure as a function of steps
+`file`          | Optional output filename for writing data as a function of steps
 
 
 ## Widom Insertion

@@ -24,7 +24,7 @@ random: { seed: hardware }
 The pseudo-random number engine used for MC moves can be seeded in three ways,
 
 `seed`       | Description
------------  | ----------------------------------------------
+------------ | ----------------------------------------------
 `fixed`      | Deterministic (default if `random` is absent)
 `hardware`   | [Non-deterministric seed](http://en.cppreference.com/w/cpp/numeric/random/random_device)
 engine state | [A previously saved stae](http://en.cppreference.com/w/cpp/numeric/random/mersenne_twister_engine/operator_ltltgtgt)
@@ -79,9 +79,7 @@ As `moltransrot` but instead of operating on the molecular mass center, this tra
 and rotates individual atoms in the group. The repeat is set to the number of atoms in the specified group and the
 displacement parameters `dp` and `dprot` for the individual atoms are taken from
 the atom properties defined in the [topology](topology).
-
-**note:**
-atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
+Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocylinders, quadrupoles etc.
 
 ### Cluster Move
 
@@ -91,8 +89,8 @@ atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 `threshold`    | Mass-center threshold for forming a cluster
 `dir=[1,1,1]`  | Directions to translate
 `dprot`        | Rotational displacement (radians)
-`dp`           | Translational displacement
-`spread`       | If false, stops cluster-growth after one layer around centered molecule. Untested!
+`dp`           | Translational displacement (Å)
+`spread`       | If false, stops cluster-growth after one layer around centered molecule (experimental)
 `satellites`   | Subset of `molecules` that cannot be cluster centers
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
@@ -121,7 +119,7 @@ cluster:
 ```
 
 **Restrictions:**
-Currently, the number of `molecules` must be constant throughout simulation, i.e.
+Currently, the number of `molecules` must be constant throughout simulation, _i.e._
 grand canonical schemes are unsupported.
 
 ## Internal Degrees of Freedom

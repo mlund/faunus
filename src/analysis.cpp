@@ -1276,22 +1276,67 @@ void ScatteringFunction::_sample() {
                 for (auto &i : g) // loop over particle index in group
                     p.push_back(i.pos);
     }
-    debye.sample(p, spc.geo.getVolume());
+    switch (scheme) {
+    case DEBYE:
+        debye->sample(p, spc.geo.getVolume());
+        break;
+    case EXPLICIT:
+        explicit_average->sample(p, spc.geo.getLength().x());
+        break;
+    }
 }
-void ScatteringFunction::_to_json(json &j) const { j = {{"molecules", names}, {"com", usecom}}; }
+void ScatteringFunction::_to_json(json &j) const {
+    j = {{"molecules", names}, {"com", usecom}};
+    switch (scheme) {
+    case DEBYE:
+        j["scheme"] = "debye";
+        j["qmin"] = debye->qmin;
+        j["qmax"] = debye->qmax;
+        break;
+    case EXPLICIT:
+        j["scheme"] = "explicit";
+        j["pmax"] = explicit_average->pmax;
+        break;
+    }
+}
 
-ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc), debye(j) {
+ScatteringFunction::ScatteringFunction(const json &j, Space &spc) try : spc(spc) {
     from_json(j);
     name = "scatter";
     usecom = j.value("com", true);
     filename = j.at("file").get<std::string>();
     names = j.at("molecules").get<decltype(names)>(); // molecule names
     ids = names2ids(molecules, names);                // names --> molids
+
+    std::string scheme_str = j.value("scheme", "explicit");
+    if (scheme_str == "debye") {
+        scheme = DEBYE;
+        debye = std::make_shared<Scatter::DebyeFormula<Tformfactor>>(j);
+        // todo: add warning if used on PBC system
+        // if (spc.geo.geometry->boundary_conditions.x() == Geometry::PERIODIC)
+        //    faunus_logger->warn("{0}: '{1}' scheme used on PBC system; consider 'explicit' instead", name,
+        //    scheme_str);
+    } else if (scheme_str == "explicit") {
+        scheme = EXPLICIT;
+        int pmax = j.value("pmax", 15);
+        explicit_average = std::make_shared<Scatter::StructureFactor<double>>(pmax);
+        // todo: add warning if used a non-cubic system
+    } else
+        throw std::runtime_error("unknown scheme");
 } catch (std::exception &e) {
-    throw std::runtime_error("debye formula: "s + e.what());
+    throw std::runtime_error("scatter: "s + e.what());
 }
 
-ScatteringFunction::~ScatteringFunction() { debye.save(filename); }
+void ScatteringFunction::_to_disk() {
+    switch (scheme) {
+    case DEBYE:
+        debye->save(filename);
+        break;
+    case EXPLICIT:
+        explicit_average->save(filename);
+        break;
+    }
+}
 
 } // namespace Analysis
 } // namespace Faunus

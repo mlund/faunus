@@ -380,8 +380,13 @@ class MultipoleDistribution : public Analysisbase {
 
 }; // end of multipole distribution
 
-/** @brief Sample scattering intensity */
+/**
+ * @brief Sample scattering intensity
+ */
 class ScatteringFunction : public Analysisbase {
+  private:
+    enum Schemes { DEBYE, EXPLICIT }; // two different schemes
+    Schemes scheme = DEBYE;
     Space &spc;
     bool usecom;                    // scatter from mass center, only?
     std::string filename;           // output file name
@@ -389,14 +394,16 @@ class ScatteringFunction : public Analysisbase {
     std::vector<int> ids;           // Molecule ids
     std::vector<std::string> names; // Molecule names
     typedef Scatter::FormFactorUnity<double> Tformfactor;
-    Scatter::DebyeFormula<Tformfactor> debye;
+
+    std::shared_ptr<Scatter::DebyeFormula<Tformfactor>> debye;
+    std::shared_ptr<Scatter::StructureFactor<double>> explicit_average;
 
     void _sample() override;
+    void _to_disk() override;
     void _to_json(json &j) const override;
 
   public:
     ScatteringFunction(const json &j, Space &spc);
-    ~ScatteringFunction();
 };
 
 /*

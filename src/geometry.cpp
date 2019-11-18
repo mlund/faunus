@@ -581,7 +581,10 @@ void from_json(const json &j, Chameleon &g) {
 
 void to_json(json &j, const Chameleon &g) { g.to_json(j); }
 
-Chameleon::Chameleon(const Variant type) { makeGeometry(type); }
+Chameleon::Chameleon(const Variant type) {
+    makeGeometry(type);
+    _setLength(geometry->getLength());
+}
 
 Chameleon::Chameleon(const GeometryImplementation &geo, const Variant type) : geometry(geo.clone()), _type(type) {
     _setLength(geometry->getLength());

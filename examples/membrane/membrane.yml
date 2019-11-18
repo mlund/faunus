@@ -32,18 +32,18 @@ energy:
             - wca:
                 mixing: LB
                 custom:
-                    TL TL: {sigma: 9, eps: 2.2525}
+                    - TL TL: {sigma: 9, eps: 2.2525}
             - cos2: {rc: 10.1021, eps: 2.2525, wc: 14.4}
         HD TL:
             - wca:
                 mixing: LB
                 custom:
-                    HD TL: {sigma: 9, eps: 2.2525}
+                    - HD TL: {sigma: 9, eps: 2.2525}
         HD HD:
             - wca:
                 mixing: LB
                 custom:
-                    HD HD: {sigma: 8.55, eps: 2.2525}
+                    - HD HD: {sigma: 8.55, eps: 2.2525}
 moves:
     - moltransrot: {molecule: lipid, dp: 1.0, dprot: 0.5, repeat: 100}
     - transrot: {molecule: lipid, repeat: 100}

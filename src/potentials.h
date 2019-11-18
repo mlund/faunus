@@ -25,8 +25,8 @@ using namespace std::string_literals;
 //! type of a matrix containing pair potential coefficients
 typedef Eigen::MatrixXd TPairMatrix;
 typedef std::shared_ptr<TPairMatrix> TPairMatrixPtr;
-//! type of a function extracting a potential coefficient from the AtomData, e.g., sigma or eps
-typedef std::function<double(const AtomData &)> TExtractorFunc;
+//! type of a function extracting a potential coefficient from the InteractionData, e.g., sigma or eps
+typedef std::function<double(const InteractionData &)> TExtractorFunc;
 //! type of a function defining a combination rule of a heterogeneous pair interaction
 typedef std::function<double(double, double)> TCombinatorFunc;
 //! type of a function modifying combinator's output
@@ -37,13 +37,15 @@ typedef std::function<double(double)> TModifierFunc;
  *
  * The very same format is used as for a homogeneous interaction specified directly on an atom type.
  */
-struct InteractionData {
+struct CustomInteractionData {
     std::array<AtomData::Tid, 2> atom_id;
-    AtomData interaction;
+    InteractionData interaction;
 };
 
-void from_json(const json &j, std::vector<InteractionData> &interactions);
-void to_json(json &j, const std::vector<InteractionData> &interactions);
+void from_json(const json &j, CustomInteractionData &interaction);
+void to_json(json &j, const CustomInteractionData &interaction);
+
+void from_json(const json &j, std::vector<CustomInteractionData> &interactions);
 
 /**
  * @brief Known named combination rules for parameters of pair potential interaction.
@@ -77,7 +79,7 @@ struct PairPotentialException : public std::runtime_error {
  * function).
  */
 class PairMixer {
-    TExtractorFunc extractor;   //!< Function extracting the coefficient from the AtomData structure
+    TExtractorFunc extractor;   //!< Function extracting the coefficient from the InteractionData structure
     TCombinatorFunc combinator; //!< Function combining two values
     TModifierFunc modifier;     //!< Function modifying the result for fast computations, e.g., a square of
 
@@ -89,7 +91,7 @@ class PairMixer {
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms);
     //! @return a square matrix of atoms.size()
     TPairMatrixPtr createPairMatrix(const std::vector<AtomData> &atoms,
-                                    const std::vector<InteractionData> &interactions);
+                                    const std::vector<CustomInteractionData> &interactions);
 
     enum CoefficientType {COEF_ANY, COEF_SIGMA, COEF_EPSILON};
     static TCombinatorFunc getCombinator(CombinationRuleType combination_rule, CoefficientType coefficient = COEF_ANY);
@@ -141,7 +143,7 @@ void from_json(const json &j, PairPotentialBase &base); //!< Serialize any pair 
 class MixerPairPotentialBase : public PairPotentialBase {
   protected:
     CombinationRuleType combination_rule;
-    std::shared_ptr<std::vector<InteractionData>> custom_pairs = std::make_shared<std::vector<InteractionData>>();
+    std::shared_ptr<std::vector<CustomInteractionData>> custom_pairs = std::make_shared<std::vector<CustomInteractionData>>();
     json json_extra_params;              //!< pickled extra parameters like a coefficient names mapping
     void init();                         //!< initialize the potential when data, e.g., atom parameters, are available
     virtual void initPairMatrices() = 0; //!< potential-specific initialization of parameter matrices

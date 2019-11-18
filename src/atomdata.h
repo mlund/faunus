@@ -4,15 +4,36 @@
 namespace Faunus {
 
 /**
+ * @brief A stub to hold various parameters of interactions.
+ *
+ * The class serves as a container for parameters of MixerPairPotentialBase. Currently only raw numbers
+ * without units are stored. In the future, it is supposed to keep a track which parameters are needed
+ * by potentials employed, as well as to convert units when initialized from JSON.
+ */
+class InteractionData {
+    typedef std::string Tkey;
+    std::map<Tkey, double> data; //!< arbitrary additional properties
+    friend void to_json(json &, const InteractionData &);
+    friend void from_json(const json &, InteractionData &);
+  public:
+    bool has(const Tkey name) const;               // like C++20 map::contains
+    double get(const Tkey name) const;             // like map::at()
+    double &get(const Tkey name);                  // like map::at()
+    void set(const Tkey name, const double value); // like C++17 map::insert_or_assign
+};
+
+void to_json(json &j, const InteractionData &a);
+void from_json(const json &j, InteractionData &a);
+void from_json(SingleUseJSON &j, InteractionData &a);
+
+/**
  * @brief General properties for atoms
  */
 class AtomData { // has to be a class when a constant reference is used
   public:
     typedef int Tid;
-    typedef std::string TPropertyName;
 
   private:
-    std::map<TPropertyName, double> property; //!< arbitrary additional properties
     Tid _id = -1;
     friend void to_json(json &, const AtomData &);
     friend void from_json(const json &, AtomData &);
@@ -35,12 +56,10 @@ class AtomData { // has to be a class when a constant reference is used
     Point scdir = {1, 0, 0};  //!< Sphero-cylinder direction
     bool hydrophobic = false; //!< Is the particle hydrophobic?
     bool implicit = false;    //!< Is the particle implicit (e.g. proton)?
+    InteractionData interaction; //!< Arbitrary interaction parameters, e.g., epsilons in various potentials
 
     Tid &id();                //!< Type id
     const Tid &id() const;    //!< Type id
-    double getProperty(const TPropertyName name) const;
-    double &getProperty(const TPropertyName name);
-    void setProperty(const TPropertyName name, const double value);
 };
 
 void to_json(json &j, const AtomData &a);
@@ -74,7 +93,7 @@ template <class Trange> std::vector<int> names2ids(Trange &rng, const std::vecto
         if (it != rng.end())
             index.push_back(it->id());
         else
-            throw std::runtime_error("name '" + n + "' not found");
+            throw std::out_of_range("name '" + n + "' not found");
     }
     return index;
 } //!< Convert vector of names into vector of id's from Trange (exception if not found)

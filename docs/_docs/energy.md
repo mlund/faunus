@@ -408,20 +408,20 @@ as shown in the example bellow.
 - lennardjones:
     mixing: LB
     custom:
-      Na Cl: {eps: 0.2, sigma: 2}
-      K Cl: { ... }
+      - Na Cl: {eps: 0.2, sigma: 2}
+      - K Cl: { ... }
 
 - hertz:
     mixing: LB
     eps: eps_hz
     custom:
-      Na Cl: {eps_hz: 0.2, sigma: 2}
+      - Na Cl: {eps_hz: 0.2, sigma: 2}
 
 - hardsphere:
     mixing: arithmetic
     sigma: sigma_hs
     custom:
-      Na Cl: {sigma_hs: 2}
+      - Na Cl: {sigma_hs: 2}
 ~~~
 
 ### SASA (pair potential)

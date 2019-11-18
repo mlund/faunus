@@ -173,10 +173,10 @@ PYBIND11_MODULE(pyfaunus, m)
     // AtomData
     py::class_<AtomData>(m, "AtomData")
         .def(py::init<>())
-        .def_property("eps", [](const AtomData &a) { return a.getProperty("eps"); },
-                      [](AtomData &a, double val) { a.getProperty("eps") = val; })
-        .def_property("sigma", [](const AtomData &a) { return a.getProperty("sigma"); },
-                      [](AtomData &a, double val) { a.getProperty("sigma") = val; })
+        .def_property("eps", [](const AtomData &a) { return a.interaction.get("eps"); },
+                      [](AtomData &a, double val) { a.interaction.get("eps") = val; })
+        .def_property("sigma", [](const AtomData &a) { return a.interaction.get("sigma"); },
+                      [](AtomData &a, double val) { a.interaction.get("sigma") = val; })
         .def_readwrite("name", &AtomData::name)
         .def_readwrite("activity", &AtomData::activity, "Activity = chemical potential in log scale (mol/l)")
         .def("id", (const int& (AtomData::*)() const) &AtomData::id); // explicit signature due to overload in c++

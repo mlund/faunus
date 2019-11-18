@@ -94,13 +94,13 @@ energy:
                 # custom parameters to match bulk electrolyte
                 # activity coefficient measurements. Valid
                 # for LJ potential + Coulomb potential.
-                "na cl" :  {sigma: 4.6,  eps: 0.01}
-                "na GLU":  {sigma: 5.25, eps: 0.01}
-                "na ASP":  {sigma: 5.25, eps: 0.01}
-                "na CTR":  {sigma: 5.25, eps: 0.01}
-                "cl HNTR": {sigma: 4.7,  eps: 0.01}
-                "cl HLYS": {sigma: 4.7,  eps: 0.01}
-                "cl HARG": {sigma: 3.5,  eps: 0.01}
+                - "na cl" :  {sigma: 4.6,  eps: 0.01}
+                - "na GLU":  {sigma: 5.25, eps: 0.01}
+                - "na ASP":  {sigma: 5.25, eps: 0.01}
+                - "na CTR":  {sigma: 5.25, eps: 0.01}
+                - "cl HNTR": {sigma: 4.7,  eps: 0.01}
+                - "cl HLYS": {sigma: 4.7,  eps: 0.01}
+                - "cl HARG": {sigma: 3.5,  eps: 0.01}
         coulomb: {epsr: 80, type: yukawa, debyelength: {{ debyelength }}, cutoff: 30}
 moves:
     - rcmc:  {}

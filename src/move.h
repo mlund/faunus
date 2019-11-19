@@ -159,6 +159,7 @@ class TranslateRotate : public Movebase {
     double dptrans = 0;
     double dprot = 0;
     Point dir = {1, 1, 1};
+    Point dirrot = {0, 0, 0}; // predefined axis of rotation
     double _sqd;          // squared displacement
     Average<double> msqd; // mean squared displacement
 
@@ -265,7 +266,6 @@ class ConformationSwap : public Movebase {
     Space &spc; // Space to operate on
     int molid = -1;
     int newconfid = -1;
-    bool keeppos = false;
 
     void _to_json(json &j) const override;
     void _from_json(const json &j) override; //!< Configure via json object

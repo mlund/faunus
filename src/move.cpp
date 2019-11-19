@@ -766,6 +766,7 @@ void TranslateRotate::_to_json(json &j) const {
     j = {{"dir", dir},
          {"dp", dptrans},
          {"dprot", dprot},
+         {"dirrot", dirrot},
          {"molid", molid},
          {u8::rootof + u8::bracket("r" + u8::squared), std::sqrt(msqd.avg())},
          {"molecule", molecules[molid].name}};
@@ -781,6 +782,7 @@ void TranslateRotate::_from_json(const json &j) {
         molid = it->id();
         dir = j.value("dir", Point(1, 1, 1));
         dprot = j.at("dprot");
+        dirrot = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
         dptrans = j.at("dp");
         if (repeat < 0) {
             auto v = spc.findMolecules(molid);
@@ -813,6 +815,8 @@ void TranslateRotate::_move(Change &change) {
 
             if (dprot > 0) { // rotate
                 Point u = ranunit(slump);
+                if (dirrot.count() > 0)
+                    u = dirrot;
                 double angle = dprot * (slump() - 0.5);
                 Eigen::Quaterniond Q(Eigen::AngleAxisd(angle, u));
                 it->rotate(Q, spc.geo.getBoundaryFunc());
@@ -1050,7 +1054,7 @@ void ConformationSwap::_from_json(const json &j) {
     assert(!molecules.empty());
     try {
         std::string molname = j.at("molecule");
-        keeppos = j.value("keeppos", false);
+        inserter.keep_positions = j.value("keeppos", false);
         auto it = findName(molecules, molname);
         if (it == molecules.end())
             throw std::runtime_error("unknown molecule '" + molname + "'");
@@ -1107,7 +1111,6 @@ ConformationSwap::ConformationSwap(Space &spc) : spc(spc) {
     repeat = -1; // meaning repeat n times
     inserter.dir = {0, 0, 0};
     inserter.rotate = true;
-    inserter.keep_positions = keeppos;
     inserter.allow_overlap = true;
 }
 

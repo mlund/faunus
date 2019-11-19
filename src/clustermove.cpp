@@ -15,6 +15,7 @@ void Cluster::_to_json(json &j) const {
          {"dp", dptrans},
          {"dprot", dprot},
          {"spread", spread},
+         {"dirrot", dirrot},
          {rootof + bracket("r" + squared), std::sqrt(msqd.avg())},
          {rootof + bracket(theta + squared) + "/" + degrees, std::sqrt(msqd_angle.avg()) / 1.0_deg},
          {bracket("N"), N.avg()},
@@ -41,9 +42,10 @@ void Cluster::_to_json(json &j) const {
     }
 }
 void Cluster::_from_json(const json &j) {
-    assertKeys(j, {"dp", "dprot", "dir", "threshold", "molecules", "repeat", "satellites"});
+    assertKeys(j, {"dp", "dprot", "dir", "threshold", "molecules", "repeat", "satellites", "dirrot"});
     dptrans = j.at("dp");
     dir = j.value("dir", Point(1, 1, 1));
+    dirrot = j.value("dirrot", Point(0, 0, 0)); // predefined axis of rotation
     dprot = j.at("dprot");
     spread = j.value("spread", true);
     names = j.at("molecules").get<decltype(names)>(); // molecule names
@@ -177,7 +179,10 @@ void Cluster::_move(Change &change) {
 
         Point COM = clusterCOM(); // org. cluster center
         Eigen::Quaterniond Q;
-        Q = Eigen::AngleAxisd(angle, ranunit(slump)); // quaternion
+        Point u = ranunit(slump);
+        if (dirrot.count() > 0)
+            u = dirrot;
+        Q = Eigen::AngleAxisd(angle, u); // quaternion
 
         for (auto i : cluster) { // loop over molecules in cluster
             auto &g = spc.groups[i];

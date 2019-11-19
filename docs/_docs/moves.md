@@ -50,6 +50,7 @@ and if `dir=[0,0,1]` on a line (here $z$).
 ---------------- |  ---------------------------------
 `molecule`       |  Molecule name to operate on
 `dir=[1,1,1]`    |  Translational directions
+`dirrot=[0,0,0]` |  Predefined axis of rotation
 `dp`             |  Translational displacement parameter
 `dprot`          |  Rotational displacement parameter (radians)
 `repeat=N`       |  Number of repeats per MC sweep. `N` equals $N\_{molid}$ times.
@@ -64,8 +65,9 @@ where $\mbox{Rot}$ rotates `dprot`$\cdot \left (\zeta-\frac{1}{2} \right )$ radi
 emanating from the mass center,
 $\zeta$ is a random number in the interval $[0,1[$, and
 $\delta$ is a random unit vector scaled by a random number in the interval `[0,dp]`.
-Upon MC movement, the mean squared displacement
-will be tracked.
+A predefined axis of rotation can be specified as `dirrot`. For example, setting `dirrot` to [1,0,0], [0,1,0] or [0,0,1] 
+results in rotations about the $x-$, $y-$, and $z-$axis, respectively.
+Upon MC movement, the mean squared displacement will be tracked.
 
 
 ### Atomic
@@ -83,15 +85,16 @@ Atomic _rotation_ affects only anisotropic particles such as dipoles, spherocyli
 
 ### Cluster Move
 
-`cluster`      | Description
--------------- | -----------------------
-`molecules`    | Array of molecule names; `[*]` selects all
-`threshold`    | Mass-center threshold for forming a cluster
-`dir=[1,1,1]`  | Directions to translate
-`dprot`        | Rotational displacement (radians)
-`dp`           | Translational displacement (Å)
-`spread`       | If false, stops cluster-growth after one layer around centered molecule (experimental)
-`satellites`   | Subset of `molecules` that cannot be cluster centers
+`cluster`       | Description
+--------------– | -----------------------
+`molecules`     | Array of molecule names; `[*]` selects all
+`threshold`     | Mass-center threshold for forming a cluster
+`dir=[1,1,1]`   | Directions to translate
+`dirrot=[0,0,0]`| Predefined axis of rotation
+`dprot`         | Rotational displacement (radians)
+`dp`            | Translational displacement (Å)
+`spread`        | If false, stops cluster-growth after one layer around centered molecule (experimental)
+`satellites`    | Subset of `molecules` that cannot be cluster centers
 
 This will attempt to rotate and translate clusters of molecular `molecules` defined by a distance `threshold`
 between mass centers.
@@ -99,6 +102,8 @@ The `threshold` can be specified as a single number or as a complete list of com
 For simulations where small molecules cluster around a large macro-molecules it can be useful to use the `satellites`
 keyword which denotes a list of molecules that can be part of a cluster, but cannot be the cluster nucleus or
 starting point. All molecules listed in `satellites` must be part of `molecules`.
+A predefined axis of rotation can be specified as `dirrot`. For example, setting `dirrot` to [1,0,0], [0,1,0] or [0,0,1] 
+results in rotations about the $x-$, $y-$, and $z-$axis, respectively.
 
 The move is associated with [bias](http://dx.doi.org/10/cj9gnn), such that
 the cluster size and composition remain unaltered.
